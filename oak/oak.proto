@@ -1,0 +1,30 @@
+syntax = "proto2";
+
+package oak;
+
+import "asylo/enclave.proto";
+
+message InitialiseInput {
+  optional string lisp_script = 1;
+}
+
+message InitialiseOutput {
+}
+
+message EvaluateInput {
+  optional string input_data = 1;
+}
+
+message EvaluateOutput {
+  optional string output_data = 1;
+}
+
+extend asylo.EnclaveInput {
+  optional InitialiseInput initialise_input = 9100;
+  optional EvaluateInput evaluate_input = 9101;
+}
+
+extend asylo.EnclaveOutput {
+  optional InitialiseOutput initialise_output = 9200;
+  optional EvaluateOutput evaluate_output = 9201;
+}

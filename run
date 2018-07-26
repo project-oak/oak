@@ -1,0 +1,9 @@
+#!/bin/sh
+
+docker run --interactive \
+  --tty \
+  --volume bazel-cache:/root/.cache/bazel \
+  --volume $PWD:/opt/my-project \
+  --workdir /opt/my-project \
+  gcr.io/asylo-framework/asylo \
+  bazel run --config=enc-sim //oak
