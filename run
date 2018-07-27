@@ -6,4 +6,4 @@ docker run --interactive \
   --volume $PWD:/opt/my-project \
   --workdir /opt/my-project \
   gcr.io/asylo-framework/asylo \
-  bazel run --config=enc-sim //oak
+  bazel run --config=enc-sim //oak -- --expressions='(* 10 20),(fib 10)'
