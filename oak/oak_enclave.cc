@@ -56,6 +56,7 @@ private:
 
   oak::InitialiseOutput Initialise(oak::InitialiseInput input) {
     add_globals(this->env);
+    add_oak_intrinsics(this->env);
     std::stringstream ss(input.lisp_script());
     std::string line;
     while (std::getline(ss, line)) {

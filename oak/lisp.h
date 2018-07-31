@@ -76,6 +76,10 @@ struct environment {
         return env_[var];
     }
 
+
+public:
+    std::vector<int> samples_;
+
 private:
     map env_; // inner symbol->cell mapping
     environment * outer_; // next adjacent outer env, or 0 if there are no further environments
@@ -187,6 +191,11 @@ void add_globals(environment & env)
     env["<"]      = cell(&proc_less);     env["<="]   = cell(&proc_less_equal);
 }
 
+// Oak.
+void add_oak_intrinsics(environment & env) {
+    env["add-sample"] = cell(Symbol, "add-sample");
+    env["get-average"] = cell(Symbol, "get-average");
+}
 
 ////////////////////// eval
 
@@ -219,6 +228,25 @@ cell eval(cell x, environment * env)
             for (size_t i = 1; i < x.list.size() - 1; ++i)
                 eval(x.list[i], env);
             return eval(x.list[x.list.size() - 1], env);
+        }
+
+        // Oak.
+        if (x.list[0].val == "add-sample") {
+            cell in =  eval(x.list[1], env);
+            env->samples_.push_back(atol(in.val.c_str()));
+            return in;
+        }
+        if (x.list[0].val == "get-average") {
+            if (env->samples_.size() > 1) {
+                int sum = 0;
+                for (auto& i : env->samples_) {
+                    sum += i;
+                }
+                int average = sum / env->samples_.size();
+                return cell(Number, str(average));
+            } else {
+                return nil;
+            }
         }
     }
                                             // (proc exp*)
