@@ -28,6 +28,7 @@ sim_enclave(
         "@com_google_absl//absl/strings",
         "@com_google_asylo//asylo:enclave_runtime",
         "@com_google_asylo//asylo/util:status",
+        "//wac:wa",
     ],
 )
 

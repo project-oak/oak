@@ -29,6 +29,7 @@
 #include "oak/oak.pb.h"
 
 #include "lisp.h"
+#include "wac/wa.h"
 
 class OakApplication : public asylo::TrustedApplication {
 public:
@@ -53,11 +54,22 @@ public:
 
 private:
   environment env;
+  Module *module;
 
   oak::InitialiseOutput Initialise(oak::InitialiseInput input) {
     add_globals(this->env);
     add_oak_intrinsics(this->env);
-    std::stringstream ss(input.lisp_script());
+    std::stringstream ss(input.wasm_module());
+
+    Options opts {
+      .disable_memory_bounds = false,
+      .mangle_table_index = false,
+      .dlsym_trim_underscore = false,
+    };
+    LOG(INFO) << opts.disable_memory_bounds;
+
+    load_module((uint8_t *) input.wasm_module().c_str(), opts);
+
     std::string line;
     while (std::getline(ss, line)) {
       LOG(INFO) << "evaluating: " << line;

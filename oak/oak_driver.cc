@@ -20,14 +20,20 @@
 #include "asylo/client.h"
 #include "asylo/util/logging.h"
 #include "gflags/gflags.h"
+
 #include "oak/oak.pb.h"
+
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <vector>
 
 DEFINE_string(enclave_path, "", "Path to enclave to load");
+
 DEFINE_string(expressions, "",
               "A comma-separated list of expressions to pass to the enclave");
+DEFINE_string(wasm_module, "",
+              "A wasm module to load");
 
 int main(int argc, char *argv[]) {
 
@@ -63,10 +69,16 @@ int main(int argc, char *argv[]) {
   // Program enclave with initial script.
   {
     LOG(INFO) << "Programming enclave";
+
+    // Read wasm module into a string.
+    std::ifstream t(FLAGS_wasm_module, std::ifstream::in);
+    std::stringstream buffer;
+    buffer << t.rdbuf();
+
+    LOG(INFO) << "Loaded module: " << buffer.str();
+
     asylo::EnclaveInput input;
-    input.MutableExtension(oak::initialise_input)
-        ->set_lisp_script("(define fib (lambda (n) (if (<= n 2) 1 (+ (fib (- n "
-                          "1)) (fib (- n 2))))))");
+    input.MutableExtension(oak::initialise_input)->set_wasm_module(buffer.str());
     asylo::EnclaveOutput output;
     status = client->EnterAndRun(input, &output);
     if (!status.ok()) {

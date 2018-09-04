@@ -1,0 +1,65 @@
+{
+  "tools": [
+  {
+    "id": "clang",
+    "version": "incoming",
+    "bitness": 64,
+    "install_path": "clang/fastcomp",
+    "git_branch": "incoming",
+    "url": "https://github.com/kripken/emscripten-fastcomp/",
+    "clang_url": "https://github.com/kripken/emscripten-fastcomp-clang/",
+    "custom_install_script": "build_fastcomp",
+    "activated_path": "%installation_dir%/%fastcomp_build_bin_dir%",
+    "activated_cfg": "LLVM_ROOT='%installation_dir%/%fastcomp_build_bin_dir%'",
+    "cmake_build_type": "RelWithDebInfo"
+  },
+  {
+    "id": "node",
+    "version": "8.0.0-nightly20170427892ce06dbd",
+    "bitness": 64,
+    "windows_url": "https://nodejs.org/download/nightly/v8.0.0-nightly20170427892ce06dbd/node-v8.0.0-nightly20170427892ce06dbd-win-x64.zip",
+    "linux_url": "https://nodejs.org/download/nightly/v8.0.0-nightly20170427892ce06dbd/node-v8.0.0-nightly20170427892ce06dbd-linux-x64.tar.gz",
+    "activated_path": "%installation_dir%/bin",
+    "activated_cfg": "NODE_JS='%installation_dir%/bin/node%.exe%'"
+  },
+  {
+    "id": "emscripten",
+    "version": "kanaka",
+    "bitness": 64,
+    "append_bitness": false,
+    "url": "https://github.com/kanaka/emscripten/",
+    "git_branch": "incoming",
+    "activated_cfg": "EMSCRIPTEN_ROOT='%installation_dir%';EMSCRIPTEN_NATIVE_OPTIMIZER='%installation_dir%%generator_prefix%_64bit_optimizer/%cmake_build_type_on_win%optimizer%.exe%'",
+    "activated_path": "%installation_dir%",
+    "activated_env": "EMSCRIPTEN=%installation_dir%",
+    "cmake_build_type": "RelWithDebInfo",
+    "custom_install_script": "build_optimizer",
+    "custom_is_installed_script": "is_optimizer_installed",
+    "custom_uninstall_script": "uninstall_optimizer"
+  },
+  {
+    "id": "binaryen",
+    "version": "master",
+    "bitness": 64,
+    "append_bitness": false,
+    "url": "https://github.com/WebAssembly/binaryen/",
+    "git_branch": "master",
+    "activated_cfg": "BINARYEN_ROOT='%installation_dir%%generator_prefix%_64bit_binaryen'",
+    "activated_path": "%installation_dir%%generator_prefix%_64bit_binaryen/bin",
+    "activated_env": "BINARYEN_ROOT=%installation_dir%%generator_prefix%_64bit_binaryen",
+    "cmake_build_type": "Release",
+    "custom_install_script": "build_binaryen",
+    "custom_is_installed_script": "is_binaryen_installed",
+    "custom_uninstall_script": "uninstall_binaryen"
+  }
+  ],
+
+  "sdks": [
+  {
+    "version": "kanaka",
+    "bitness": 64,
+    "uses": ["clang-incoming-64bit", "binaryen-master-64bit", "node-8.0.0-nightly20170427892ce06dbd-64bit", "emscripten-kanaka-64bit"],
+    "os": "linux"
+  }
+  ]
+}

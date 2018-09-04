@@ -5,7 +5,7 @@ package oak;
 import "asylo/enclave.proto";
 
 message InitialiseInput {
-  optional string lisp_script = 1;
+  optional bytes wasm_module = 1;
 }
 
 message InitialiseOutput {

@@ -1,0 +1,11 @@
+*.o
+*.a
+wac
+wace
+examples_c/*.js
+examples_c/*.html
+examples_c/*.wasm
+examples_c/*.wast
+examples_wast/*.wasm
+spec/
+wabt/
