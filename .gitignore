@@ -1,4 +1,5 @@
 /bazel-bin
 /bazel-genfiles
+/bazel-my-project
 /bazel-out
 /bazel-testlogs
