@@ -9,10 +9,17 @@ http_archive(
     strip_prefix = "asylo-0.3.0",
 #   sha256 = "<insert hash here>",
 )
-load("@com_google_asylo//asylo/bazel:asylo_deps.bzl", "asylo_deps",
-     "asylo_testonly_deps")
+
+load(
+    "@com_google_asylo//asylo/bazel:asylo_deps.bzl",
+    "asylo_deps",
+    "asylo_testonly_deps",
+)
 asylo_deps()
 asylo_testonly_deps()
 
-load("@com_google_asylo//asylo/bazel:sgx_deps.bzl", "sgx_deps")
+load(
+    "@com_google_asylo//asylo/bazel:sgx_deps.bzl",
+    "sgx_deps",
+)
 sgx_deps()

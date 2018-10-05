@@ -1,14 +1,18 @@
 licenses(["notice"])  # Apache v2.0
 
+package(
+    default_visibility = ["//visibility:public"],
+)
+
 load(
     "@com_google_asylo//asylo/bazel:asylo.bzl",
     "enclave_loader",
     "sim_enclave",
 )
-load("@com_google_asylo//asylo/bazel:proto.bzl", "asylo_proto_library", "asylo_grpc_proto_library")
-
-package(
-    default_visibility = ["//visibility:public"],
+load(
+    "@com_google_asylo//asylo/bazel:proto.bzl",
+    "asylo_proto_library",
+    "asylo_grpc_proto_library",
 )
 
 asylo_proto_library(

@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package oak;
+
+message InitiateComputationRequest {
+}
+
+message InitiateComputationResponse {
+}
+
+service OakServer {
+  rpc InitiateComputation(InitiateComputationRequest) returns (InitiateComputationResponse)
+}
