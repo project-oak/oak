@@ -68,7 +68,7 @@ private:
     };
     LOG(INFO) << opts.disable_memory_bounds;
 
-    load_module((uint8_t *) input.wasm_module().c_str(), opts);
+    //load_module((uint8_t *) input.wasm_module().c_str(), opts);
 
     std::string line;
     while (std::getline(ss, line)) {

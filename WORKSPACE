@@ -5,8 +5,8 @@ workspace(name = "oak")
 # out because this file is part of the hash computation.
 http_archive(
     name = "com_google_asylo",
-    urls = ["https://github.com/google/asylo/archive/v0.2.1.tar.gz"],
-    strip_prefix = "asylo-0.2.1",
+    urls = ["https://github.com/google/asylo/archive/v0.3.0.tar.gz"],
+    strip_prefix = "asylo-0.3.0",
 #   sha256 = "<insert hash here>",
 )
 load("@com_google_asylo//asylo/bazel:asylo_deps.bzl", "asylo_deps",
