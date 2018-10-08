@@ -9,5 +9,5 @@ message InitiateComputationResponse {
 }
 
 service OakServer {
-  rpc InitiateComputation(InitiateComputationRequest) returns (InitiateComputationResponse)
+  rpc InitiateComputation(InitiateComputationRequest) returns (InitiateComputationResponse);
 }
