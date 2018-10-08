@@ -43,6 +43,7 @@ sim_enclave(
     ],
     deps = [
         ":oak_proto_cc",
+        ":oak_server",
         "@com_google_absl//absl/strings",
         "@com_google_asylo//asylo:enclave_runtime",
         "@com_google_asylo//asylo/util:status",

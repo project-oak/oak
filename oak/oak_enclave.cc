@@ -91,5 +91,9 @@ private:
 };
 
 namespace asylo {
-TrustedApplication *BuildTrustedApplication() { return new OakApplication; }
+
+TrustedApplication *BuildTrustedApplication() {
+  return new OakApplication;
+}
+
 } // namespace asylo
