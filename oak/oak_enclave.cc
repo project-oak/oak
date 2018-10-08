@@ -23,10 +23,17 @@
 #include <string>
 #include <unordered_set>
 
+#include "absl/memory/memory.h"
 #include "absl/strings/str_cat.h"
+
+#include "asylo/grpc/auth/enclave_server_credentials.h"
+#include "asylo/grpc/auth/null_credentials_options.h"
+#include "asylo/grpc/util/enclave_server.h"
 #include "asylo/trusted_application.h"
 #include "asylo/util/status.h"
+
 #include "oak/oak.pb.h"
+#include "oak/oak_server.h"
 
 #include "lisp.h"
 #include "wac/wa.h"
@@ -93,7 +100,8 @@ private:
 namespace asylo {
 
 TrustedApplication *BuildTrustedApplication() {
-  return new OakApplication;
+  return new EnclaveServer(absl::make_unique<::oak::grpc_server::OakServer>(),
+      asylo::EnclaveServerCredentials(asylo::BidirectionalNullCredentialsOptions()));
 }
 
 } // namespace asylo

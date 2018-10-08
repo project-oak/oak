@@ -32,6 +32,7 @@ cc_library(
     hdrs =  ["oak_server.h"],
     deps = [
         ":oak_server_grpc_proto",
+        "@com_github_grpc_grpc//:grpc++",
     ],
 )
 
@@ -44,8 +45,12 @@ sim_enclave(
     deps = [
         ":oak_proto_cc",
         ":oak_server",
+        "@com_google_absl//absl/memory",
         "@com_google_absl//absl/strings",
+        "@com_google_asylo//asylo/grpc/auth:grpc++_security_enclave",
+        "@com_google_asylo//asylo/grpc/auth:null_credentials_options",
         "@com_google_asylo//asylo:enclave_runtime",
+        "@com_google_asylo//asylo/grpc/util:enclave_server",
         "@com_google_asylo//asylo/util:status",
         "//wac:wa",
     ],
