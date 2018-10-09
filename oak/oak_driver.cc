@@ -17,6 +17,8 @@
  */
 
 #include "absl/strings/str_split.h"
+#include "absl/synchronization/notification.h"
+#include "absl/time/time.h"
 #include "asylo/client.h"
 #include "asylo/util/logging.h"
 #include "gflags/gflags.h"
@@ -108,6 +110,10 @@ int main(int argc, char *argv[]) {
               << output.GetExtension(oak::evaluate_output).output_data()
               << std::endl;
   }
+
+  // Wait.
+  absl::Notification server_timeout;
+  server_timeout.WaitForNotificationWithTimeout(absl::Seconds(30));
 
   // Finalization
 

@@ -65,6 +65,8 @@ enclave_loader(
         ":oak_proto_cc",
         "@com_github_gflags_gflags//:gflags_nothreads",
         "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/synchronization",
+        "@com_google_absl//absl/time",
         "@com_google_asylo//asylo:enclave_client",
         "@com_google_asylo//asylo/util:logging",
         "@com_google_asylo//asylo/grpc/util:enclave_server_proto_cc",

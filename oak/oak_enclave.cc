@@ -100,8 +100,10 @@ private:
 namespace asylo {
 
 TrustedApplication *BuildTrustedApplication() {
+  //return new EnclaveServer(absl::make_unique<::oak::grpc_server::OakServer>(),
+      //asylo::EnclaveServerCredentials(asylo::BidirectionalNullCredentialsOptions()));
   return new EnclaveServer(absl::make_unique<::oak::grpc_server::OakServer>(),
-      asylo::EnclaveServerCredentials(asylo::BidirectionalNullCredentialsOptions()));
+      ::grpc::InsecureServerCredentials());
 }
 
 } // namespace asylo

@@ -1,10 +1,12 @@
 #!/bin/sh
 
-docker run --interactive \
+docker run \
+  --interactive \
   --tty \
-  --volume bazel-cache:/root/.cache/bazel \
-  --volume $PWD:/opt/my-project \
-  --volume $PWD/../wac:/opt/wac \
-  --workdir /opt/my-project \
+  --volume=bazel-cache:/root/.cache/bazel \
+  --volume=$PWD:/opt/my-project \
+  --volume=$PWD/../wac:/opt/wac \
+  --workdir=/opt/my-project \
+  --publish=8888:8888 \
   gcr.io/asylo-framework/asylo \
   bazel run --config=enc-sim //oak -- --expressions='(get-average),(add-sample (* 10 20)),(get-average),(add-sample (fib 10)),(get-average)'
