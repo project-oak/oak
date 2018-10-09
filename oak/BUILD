@@ -67,5 +67,6 @@ enclave_loader(
         "@com_google_absl//absl/strings",
         "@com_google_asylo//asylo:enclave_client",
         "@com_google_asylo//asylo/util:logging",
+        "@com_google_asylo//asylo/grpc/util:enclave_server_proto_cc",
     ],
 )
