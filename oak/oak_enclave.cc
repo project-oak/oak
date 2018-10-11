@@ -35,7 +35,6 @@
 #include "oak/oak.pb.h"
 #include "oak/oak_server.h"
 
-#include "lisp.h"
 #include "wac/wa.h"
 
 class OakApplication : public asylo::TrustedApplication {
@@ -59,12 +58,9 @@ class OakApplication : public asylo::TrustedApplication {
   }
 
  private:
-  environment env;
   Module *module;
 
   oak::InitialiseOutput Initialise(oak::InitialiseInput input) {
-    add_globals(this->env);
-    add_oak_intrinsics(this->env);
     std::stringstream ss(input.wasm_module());
 
     Options opts{
@@ -79,7 +75,6 @@ class OakApplication : public asylo::TrustedApplication {
     std::string line;
     while (std::getline(ss, line)) {
       LOG(INFO) << "evaluating: " << line;
-      eval(read(line), &this->env);
     }
 
     LOG(INFO) << "enclave initialised";
@@ -90,8 +85,6 @@ class OakApplication : public asylo::TrustedApplication {
 
   oak::EvaluateOutput Evaluate(oak::EvaluateInput input) {
     oak::EvaluateOutput out;
-    // TODO: Note that this modifies the env and therefore leaks sensitive data.
-    out.set_output_data(to_string(eval(read(input.input_data()), &this->env)));
     return out;
   }
 };

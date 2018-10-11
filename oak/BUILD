@@ -40,7 +40,6 @@ sim_enclave(
     name = "oak_enclave.so",
     srcs = [
         "oak_enclave.cc",
-        "lisp.h",
     ],
     deps = [
         ":oak_proto_cc",
