@@ -33,20 +33,17 @@
 
 DEFINE_string(enclave_path, "", "Path to enclave to load");
 
-DEFINE_string(expressions, "",
-              "A comma-separated list of expressions to pass to the enclave");
+DEFINE_string(expressions, "", "A comma-separated list of expressions to pass to the enclave");
 DEFINE_string(wasm_module, "", "A wasm module to load");
 
 int main(int argc, char *argv[]) {
-
   // Setup.
   ::google::ParseCommandLineFlags(&argc, &argv,
                                   /*remove_flags=*/true);
 
   // Validate flags.
   if (FLAGS_expressions.empty()) {
-    LOG(QFATAL)
-        << "Must supply a non-empty list of expressions with --expressions";
+    LOG(QFATAL) << "Must supply a non-empty list of expressions with --expressions";
   }
 
   std::vector<std::string> expressions = absl::StrSplit(FLAGS_expressions, ',');
@@ -62,8 +59,7 @@ int main(int argc, char *argv[]) {
   asylo::SimLoader loader(FLAGS_enclave_path, /*debug=*/true);
 
   asylo::EnclaveConfig config;
-  asylo::ServerConfig *server_config =
-      config.MutableExtension(asylo::server_input_config);
+  asylo::ServerConfig *server_config = config.MutableExtension(asylo::server_input_config);
   server_config->set_host("0.0.0.0");
   server_config->set_port(8888);
   asylo::Status status = manager->LoadEnclave("oak_enclave", loader, config);
@@ -86,8 +82,7 @@ int main(int argc, char *argv[]) {
     LOG(INFO) << "Loaded module: " << buffer.str();
 
     asylo::EnclaveInput input;
-    input.MutableExtension(oak::initialise_input)
-        ->set_wasm_module(buffer.str());
+    input.MutableExtension(oak::initialise_input)->set_wasm_module(buffer.str());
     asylo::EnclaveOutput output;
     status = client->EnterAndRun(input, &output);
     if (!status.ok()) {
@@ -107,8 +102,7 @@ int main(int argc, char *argv[]) {
       LOG(QFATAL) << "EnterAndRun failed: " << status;
     }
 
-    std::cout << "Message from enclave: "
-              << output.GetExtension(oak::evaluate_output).output_data()
+    std::cout << "Message from enclave: " << output.GetExtension(oak::evaluate_output).output_data()
               << std::endl;
   }
 

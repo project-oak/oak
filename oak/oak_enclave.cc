@@ -39,11 +39,10 @@
 #include "wac/wa.h"
 
 class OakApplication : public asylo::TrustedApplication {
-public:
+ public:
   OakApplication() {}
 
-  asylo::Status Run(const asylo::EnclaveInput &input,
-                    asylo::EnclaveOutput *output) override {
+  asylo::Status Run(const asylo::EnclaveInput &input, asylo::EnclaveOutput *output) override {
     if (input.HasExtension(oak::initialise_input)) {
       oak::InitialiseInput in = input.GetExtension(oak::initialise_input);
       oak::InitialiseOutput out = this->Initialise(in);
@@ -59,7 +58,7 @@ public:
     return asylo::Status::OkStatus();
   }
 
-private:
+ private:
   environment env;
   Module *module;
 
@@ -107,4 +106,4 @@ TrustedApplication *BuildTrustedApplication() {
                            ::grpc::InsecureServerCredentials());
 }
 
-} // namespace asylo
+}  // namespace asylo
