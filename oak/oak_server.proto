@@ -2,7 +2,10 @@ syntax = "proto3";
 
 package oak;
 
-message InitiateComputationRequest {}
+message InitiateComputationRequest {
+  bytes business_logic = 1;
+  string expression = 2;
+}
 
 message InitiateComputationResponse {}
 
