@@ -1,3 +1,2 @@
 BasedOnStyle: Google
-AllowShortFunctionsOnASingleLine: Empty
 ColumnLimit: 100
