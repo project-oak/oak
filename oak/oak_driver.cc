@@ -23,11 +23,11 @@
 #include "asylo/util/logging.h"
 #include "gflags/gflags.h"
 
-#include "oak/oak.pb.h"
 #include "asylo/grpc/util/enclave_server.pb.h"
+#include "oak/oak.pb.h"
 
-#include <iostream>
 #include <fstream>
+#include <iostream>
 #include <string>
 #include <vector>
 
@@ -35,8 +35,7 @@ DEFINE_string(enclave_path, "", "Path to enclave to load");
 
 DEFINE_string(expressions, "",
               "A comma-separated list of expressions to pass to the enclave");
-DEFINE_string(wasm_module, "",
-              "A wasm module to load");
+DEFINE_string(wasm_module, "", "A wasm module to load");
 
 int main(int argc, char *argv[]) {
 
@@ -63,7 +62,8 @@ int main(int argc, char *argv[]) {
   asylo::SimLoader loader(FLAGS_enclave_path, /*debug=*/true);
 
   asylo::EnclaveConfig config;
-  asylo::ServerConfig* server_config = config.MutableExtension(asylo::server_input_config);
+  asylo::ServerConfig *server_config =
+      config.MutableExtension(asylo::server_input_config);
   server_config->set_host("0.0.0.0");
   server_config->set_port(8888);
   asylo::Status status = manager->LoadEnclave("oak_enclave", loader, config);
@@ -86,7 +86,8 @@ int main(int argc, char *argv[]) {
     LOG(INFO) << "Loaded module: " << buffer.str();
 
     asylo::EnclaveInput input;
-    input.MutableExtension(oak::initialise_input)->set_wasm_module(buffer.str());
+    input.MutableExtension(oak::initialise_input)
+        ->set_wasm_module(buffer.str());
     asylo::EnclaveOutput output;
     status = client->EnterAndRun(input, &output);
     if (!status.ok()) {

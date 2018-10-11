@@ -2,12 +2,11 @@ syntax = "proto3";
 
 package oak;
 
-message InitiateComputationRequest {
-}
+message InitiateComputationRequest {}
 
-message InitiateComputationResponse {
-}
+message InitiateComputationResponse {}
 
 service OakServer {
-  rpc InitiateComputation(InitiateComputationRequest) returns (InitiateComputationResponse);
+  rpc InitiateComputation(InitiateComputationRequest)
+      returns (InitiateComputationResponse);
 }

@@ -8,8 +8,7 @@ message InitialiseInput {
   optional bytes wasm_module = 1;
 }
 
-message InitialiseOutput {
-}
+message InitialiseOutput {}
 
 message EvaluateInput {
   optional string input_data = 1;

@@ -68,14 +68,14 @@ private:
     add_oak_intrinsics(this->env);
     std::stringstream ss(input.wasm_module());
 
-    Options opts {
-      .disable_memory_bounds = false,
-      .mangle_table_index = false,
-      .dlsym_trim_underscore = false,
+    Options opts{
+        .disable_memory_bounds = false,
+        .mangle_table_index = false,
+        .dlsym_trim_underscore = false,
     };
     LOG(INFO) << opts.disable_memory_bounds;
 
-    //load_module((uint8_t *) input.wasm_module().c_str(), opts);
+    // load_module((uint8_t *) input.wasm_module().c_str(), opts);
 
     std::string line;
     while (std::getline(ss, line)) {
@@ -100,10 +100,11 @@ private:
 namespace asylo {
 
 TrustedApplication *BuildTrustedApplication() {
-  //return new EnclaveServer(absl::make_unique<::oak::grpc_server::OakServer>(),
-      //asylo::EnclaveServerCredentials(asylo::BidirectionalNullCredentialsOptions()));
+  // return new
+  // EnclaveServer(absl::make_unique<::oak::grpc_server::OakServer>(),
+  // asylo::EnclaveServerCredentials(asylo::BidirectionalNullCredentialsOptions()));
   return new EnclaveServer(absl::make_unique<::oak::grpc_server::OakServer>(),
-      ::grpc::InsecureServerCredentials());
+                           ::grpc::InsecureServerCredentials());
 }
 
 } // namespace asylo
