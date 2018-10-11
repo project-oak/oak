@@ -8,7 +8,9 @@ OakServer::OakServer() : Service() {}
 ::grpc::Status
 OakServer::InitiateComputation(::grpc::ServerContext *context,
                                const ::oak::InitiateComputationRequest *request,
-                               ::oak::InitiateComputationResponse *response) {}
+                               ::oak::InitiateComputationResponse *response) {
+  return ::grpc::Status::OK;
+}
 
 } // namespace grpc_server
 } // namespace oak
