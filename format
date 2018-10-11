@@ -1,4 +1,5 @@
 #!/bin/sh
 
-clang-format -i **/**.cc
-clang-format -i **/**.proto
+clang-format -i ./oak/**.cc
+clang-format -i ./oak/**.h
+clang-format -i ./oak/**.proto

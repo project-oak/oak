@@ -4,14 +4,14 @@ namespace oak {
 namespace grpc_server {
 
 class OakServer final : public oak::OakServer::Service {
-  public:
-    OakServer();
+ public:
+  OakServer();
 
-  private:
-    ::grpc::Status InitiateComputation(::grpc::ServerContext *context,
-                                      const ::oak::InitiateComputationRequest *request,
-                                      ::oak::InitiateComputationResponse *response) override;
+ private:
+  ::grpc::Status InitiateComputation(::grpc::ServerContext *context,
+                                     const ::oak::InitiateComputationRequest *request,
+                                     ::oak::InitiateComputationResponse *response) override;
 };
 
-}
-}
+}  // namespace grpc_server
+}  // namespace oak
