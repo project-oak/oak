@@ -32,6 +32,7 @@ cc_library(
     hdrs =  ["oak_server.h"],
     deps = [
         ":oak_server_grpc_proto",
+        "//wac:wa",
         "@com_github_grpc_grpc//:grpc++",
     ],
 )
