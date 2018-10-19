@@ -5,9 +5,55 @@ package oak;
 message InitiateComputationRequest {
   bytes business_logic = 1;
   string expression = 2;
+
+  repeated Input inputs = 3;
+  repeated Channel output_channels = 4;
 }
 
 message InitiateComputationResponse {}
+
+message Input {
+  // Name to use to refer to this input from the business logic.
+  // Must be unique among other input names.
+  string name = 1;
+
+  oneof data {
+    bytes inline_data = 2;
+    Channel channel = 3;
+  }
+}
+
+message Output {
+  // Name to use to refer to this output from the business logic.
+  // Must be unique among other output names.
+  string name = 1;
+
+  oneof data {
+    Channel channel = 2;
+  }
+}
+
+message Channel {
+  // Address of the endpoint providing the data.
+  // hostname:port or IP:port format.
+  string address = 1;
+
+  // The identity of the party on the other side of this channel that must be
+  // asserted.
+  CertIdentity cert_identity = 2;
+
+  // The identity of the enclave on the other side of this channel that must be
+  // asserted.
+  EnclaveIdentity enclave_identity = 3;
+}
+
+message CertIdentity {
+  bytes signature = 1;
+}
+
+message EnclaveIdentity {
+  bytes measurement = 1;
+}
 
 service OakServer {
   rpc InitiateComputation(InitiateComputationRequest) returns (InitiateComputationResponse);

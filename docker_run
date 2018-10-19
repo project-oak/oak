@@ -10,3 +10,5 @@ docker run \
   --publish=8888:8888 \
   gcr.io/asylo-framework/asylo \
   bazel run --config=enc-sim //oak -- --expressions='(get-average),(add-sample (* 10 20)),(get-average),(add-sample (fib 10)),(get-average)'
+
+grpc_cli ls 127.0.0.1:8888
