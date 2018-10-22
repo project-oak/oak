@@ -14,8 +14,9 @@ TrustedApplication *BuildTrustedApplication() {
   // return new
   // EnclaveServer(absl::make_unique<::oak::grpc_server::OakServer>(),
   // asylo::EnclaveServerCredentials(asylo::BidirectionalNullCredentialsOptions()));
-  return new EnclaveServer(absl::make_unique<::oak::grpc_server::OakServer>(),
-                           ::grpc::InsecureServerCredentials());
+  return new EnclaveServer(
+      absl::make_unique<::oak::grpc_server::OakServer>(),
+      ::asylo::EnclaveServerCredentials(::asylo::BidirectionalNullCredentialsOptions()));
 }
 
 }  // namespace asylo

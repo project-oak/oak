@@ -32,8 +32,9 @@ sim_enclave(
     ],
     config = "grpc_enclave_config",
     deps = [
-        "//oak/proto:oak_proto_cc",
         ":oak_server",
+        "//wac:wa",
+        "//oak/proto:oak_proto_cc",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/strings",
         "@com_google_asylo//asylo/grpc/auth:grpc++_security_enclave",
@@ -41,7 +42,6 @@ sim_enclave(
         "@com_google_asylo//asylo:enclave_runtime",
         "@com_google_asylo//asylo/grpc/util:enclave_server",
         "@com_google_asylo//asylo/util:status",
-        "//wac:wa",
     ],
 )
 
