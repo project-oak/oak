@@ -1,3 +1,5 @@
+#include "asylo/util/logging.h"
+
 #include "oak/oak_server.h"
 
 namespace oak {
@@ -8,6 +10,7 @@ OakServer::OakServer() : Service() {}
 ::grpc::Status OakServer::InitiateComputation(::grpc::ServerContext *context,
                                               const ::oak::InitiateComputationRequest *request,
                                               ::oak::InitiateComputationResponse *response) {
+  LOG(INFO) << "Initate Computation" << request;
   Options opts{
       .disable_memory_bounds = false,
       .mangle_table_index = false,

@@ -34,6 +34,7 @@ cc_library(
         ":oak_server_grpc_proto",
         "//wac:wa",
         "@com_github_grpc_grpc//:grpc++",
+        "@com_google_asylo//asylo/util:logging",
     ],
 )
 
