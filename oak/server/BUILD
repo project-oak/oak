@@ -30,6 +30,7 @@ sim_enclave(
     srcs = [
         "oak_enclave.cc",
     ],
+    config = "grpc_enclave_config",
     deps = [
         "//oak/proto:oak_proto_cc",
         ":oak_server",
