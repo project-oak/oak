@@ -1,4 +1,4 @@
-#include "oak/oak_server.grpc.pb.h"
+#include "oak/proto/oak_server.grpc.pb.h"
 
 extern "C" {
 #include "wac/wa.h"

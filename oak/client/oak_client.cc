@@ -2,7 +2,7 @@
 #include "gflags/gflags.h"
 #include "include/grpcpp/grpcpp.h"
 
-#include "oak/oak_server.grpc.pb.h"
+#include "oak/proto/oak_server.grpc.pb.h"
 
 DEFINE_string(server_address, "127.0.0.1:8888", "Address of the server to connect to");
 

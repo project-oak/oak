@@ -6,7 +6,7 @@
 #include "asylo/trusted_application.h"
 #include "asylo/util/status.h"
 
-#include "oak/oak_server.h"
+#include "oak/server/oak_server.h"
 
 namespace asylo {
 

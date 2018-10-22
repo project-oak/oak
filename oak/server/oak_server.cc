@@ -1,6 +1,6 @@
 #include "asylo/util/logging.h"
 
-#include "oak/oak_server.h"
+#include "oak/server/oak_server.h"
 
 namespace oak {
 namespace grpc_server {

@@ -24,7 +24,7 @@
 #include "gflags/gflags.h"
 
 #include "asylo/grpc/util/enclave_server.pb.h"
-#include "oak/oak.pb.h"
+#include "oak/proto/oak.pb.h"
 
 #include <fstream>
 #include <iostream>
