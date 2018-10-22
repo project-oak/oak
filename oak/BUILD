@@ -29,7 +29,7 @@ asylo_grpc_proto_library(
 cc_library(
     name = "oak_server",
     srcs = ["oak_server.cc"],
-    hdrs =  ["oak_server.h"],
+    hdrs = ["oak_server.h"],
     deps = [
         ":oak_server_grpc_proto",
         "//wac:wa",
