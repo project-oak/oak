@@ -15,6 +15,8 @@ load(
     "asylo_grpc_proto_library",
 )
 
+load("@linux_sgx//:sgx_sdk.bzl", "sgx_enclave_configuration")
+
 asylo_proto_library(
     name = "oak_proto",
     srcs = ["oak.proto"],
@@ -36,6 +38,13 @@ cc_library(
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_asylo//asylo/util:logging",
     ],
+)
+
+sgx_enclave_configuration(
+    name = "grpc_enclave_config",
+    # gRPC needs more than the default amount of heap to run. ~1.2GB.
+    heap_max_size = "0x47000000",
+    tcs_num = "200",
 )
 
 sim_enclave(
