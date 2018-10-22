@@ -38,8 +38,7 @@ DEFINE_string(wasm_module, "", "A wasm module to load");
 
 int main(int argc, char *argv[]) {
   // Setup.
-  ::google::ParseCommandLineFlags(&argc, &argv,
-                                  /*remove_flags=*/true);
+  ::google::ParseCommandLineFlags(&argc, &argv, /*remove_flags=*/true);
 
   // Validate flags.
   if (FLAGS_expressions.empty()) {
