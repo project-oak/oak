@@ -1836,10 +1836,13 @@ bool invoke(Module *m, char *entry, int argc, char **argv) {
     }
     type = m->functions[fidx].type;
 
+    info("executing function #%d\n", fidx);
+
     // Parse and add arguments to the stack
     for (int i=0; i<argc; i++) {
+        info("parsing argument %d", i);
         for (int j=0; argv[i][j]; j++) {
-            argv[i][j] = tolower(argv[i][j]); // lowecase
+            /*argv[i][j] = tolower(argv[i][j]); // lowecase*/
         }
         m->sp++;
         StackValue *sv = &m->stack[m->sp];

@@ -10,7 +10,9 @@ message InitiateComputationRequest {
   repeated Channel output_channels = 4;
 }
 
-message InitiateComputationResponse {}
+message InitiateComputationResponse {
+  string value = 1;
+}
 
 message Input {
   // Name to use to refer to this input from the business logic.

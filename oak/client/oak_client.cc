@@ -11,6 +11,7 @@
 
 DEFINE_string(server_address, "127.0.0.1:8888", "Address of the server to connect to");
 DEFINE_string(business_logic, "", "File containing the compiled Wasm business logic");
+DEFINE_string(expression, "", "The top-level Wasm expression to evaluate");
 
 class OakClient {
  public:
@@ -29,6 +30,8 @@ class OakClient {
     LOG(INFO) << "Module size: " << buffer.str().size();
 
     request.set_business_logic(buffer.str());
+
+    request.set_expression(FLAGS_expression);
 
     LOG(INFO) << "request: " << request.DebugString();
 
@@ -53,6 +56,10 @@ int main(int argc, char** argv) {
 
   if (FLAGS_business_logic.empty()) {
     LOG(QFATAL) << "Must supply a non-empty business logic with --business_logic";
+  }
+
+  if (FLAGS_expression.empty()) {
+    LOG(QFATAL) << "Must supply a non-empty expression logic with --expression";
   }
 
   ::std::vector<::asylo::EnclaveAssertionAuthorityConfig> configs;

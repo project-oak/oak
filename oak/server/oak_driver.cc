@@ -20,10 +20,10 @@
 #include "absl/synchronization/notification.h"
 #include "absl/time/time.h"
 #include "asylo/client.h"
+#include "asylo/grpc/util/enclave_server.pb.h"
 #include "asylo/util/logging.h"
 #include "gflags/gflags.h"
 
-#include "asylo/grpc/util/enclave_server.pb.h"
 #include "oak/proto/oak.pb.h"
 
 #include <fstream>
