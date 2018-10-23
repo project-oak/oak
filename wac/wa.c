@@ -1493,8 +1493,7 @@ uint32_t get_export_fidx(Module *m, char *name) {
     return -1;
 }
 
-Module *load_module(uint8_t *bytes, Options options) {
-    uint32_t  mod_len;
+Module *load_module(uint8_t *bytes, uint32_t mod_len, Options options) {
     uint8_t   vt;
     uint32_t  pos = 0, word;
     Module   *m;
@@ -1509,7 +1508,7 @@ Module *load_module(uint8_t *bytes, Options options) {
     m->fp  = -1;
     m->csp = -1;
 
-    mod_len = sizeof(bytes);
+    /*mod_len = sizeof(bytes);*/
     m->byte_count = mod_len;
     m->bytes = bytes;
     m->block_lookup = acalloc(m->byte_count, sizeof(Block *),
@@ -1522,6 +1521,8 @@ Module *load_module(uint8_t *bytes, Options options) {
     ASSERT(word == WA_MAGIC, "Wrong module magic 0x%x\n", word);
     word = read_uint32(bytes, &pos);
     ASSERT(word == WA_VERSION, "Wrong module version 0x%x\n", word);
+
+    debug("Reading sections\n");
 
     // Read the sections
     while (pos < mod_len) {

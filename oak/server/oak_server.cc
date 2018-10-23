@@ -10,13 +10,13 @@ OakServer::OakServer() : Service() {}
 ::grpc::Status OakServer::InitiateComputation(::grpc::ServerContext *context,
                                               const ::oak::InitiateComputationRequest *request,
                                               ::oak::InitiateComputationResponse *response) {
-  LOG(INFO) << "Initate Computation" << request;
+  LOG(INFO) << "Initate Computation: " << request->DebugString();
   Options opts{
       .disable_memory_bounds = false,
       .mangle_table_index = false,
       .dlsym_trim_underscore = false,
   };
-  load_module((uint8_t *)request->business_logic().c_str(), opts);
+  load_module((uint8_t *)request->business_logic().c_str(), request->business_logic().size(), opts);
   return ::grpc::Status::OK;
 }
 

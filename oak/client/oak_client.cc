@@ -7,7 +7,10 @@
 
 #include "oak/proto/oak_server.grpc.pb.h"
 
+#include <fstream>
+
 DEFINE_string(server_address, "127.0.0.1:8888", "Address of the server to connect to");
+DEFINE_string(business_logic, "", "File containing the compiled Wasm business logic");
 
 class OakClient {
  public:
@@ -17,12 +20,24 @@ class OakClient {
     ::oak::InitiateComputationRequest request;
     ::oak::InitiateComputationResponse response;
 
+    std::ifstream t(FLAGS_business_logic, std::ifstream::in);
+    if (!t.is_open()) {
+      LOG(QFATAL) << "Could not open file " << FLAGS_business_logic;
+    }
+    std::stringstream buffer;
+    buffer << t.rdbuf();
+    LOG(INFO) << "Module size: " << buffer.str().size();
+
+    request.set_business_logic(buffer.str());
+
+    LOG(INFO) << "request: " << request.DebugString();
+
     ::grpc::Status status = this->stub_->InitiateComputation(&context, request, &response);
     if (!status.ok()) {
       LOG(QFATAL) << "Failed: " << status.error_message();
     }
 
-    LOG(INFO) << "response";
+    LOG(INFO) << "response: " << response.DebugString();
   }
 
  private:
@@ -34,6 +49,10 @@ int main(int argc, char** argv) {
 
   if (FLAGS_server_address.empty()) {
     LOG(QFATAL) << "Must supply a non-empty address with --server_address";
+  }
+
+  if (FLAGS_business_logic.empty()) {
+    LOG(QFATAL) << "Must supply a non-empty business logic with --business_logic";
   }
 
   ::std::vector<::asylo::EnclaveAssertionAuthorityConfig> configs;

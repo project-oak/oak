@@ -107,7 +107,7 @@ int main(int argc, char *argv[]) {
 
   // Wait.
   absl::Notification server_timeout;
-  server_timeout.WaitForNotificationWithTimeout(absl::Seconds(30));
+  server_timeout.WaitForNotificationWithTimeout(absl::Seconds(300));
 
   // Finalization
 
