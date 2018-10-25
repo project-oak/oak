@@ -24,18 +24,16 @@ OakServer::OakServer() : Service() {}
   char *tokens[] = {(char *)"mul", (char *)"11", (char *)"22"};
 
   int res = 0;
-  fprintf(stderr, "Invoking function\n");
-  // LOG(DEBUG) << "Invoking function";
+  LOG(INFO) << "Invoking function";
   res = invoke(m, tokens[0], token_cnt - 1, tokens + 1);
-  fprintf(stderr, "Function invoked\n");
+  LOG(INFO) << "Function invoked";
   if (res) {
-    // LOG(INFO) << "Result: " << value_repr(&m->stack[m->sp]);
     char *value = value_repr(&m->stack[m->sp]);
-    fprintf(stderr, "value: %s", value);
+    LOG(INFO) << "value: " << value;
     response->set_value(value);
   } else {
-    // LOG(INFO) << "Error";
     fprintf(stderr, "error");
+    LOG(INFO) << "error";
     response->set_value("error");
   }
 
