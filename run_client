@@ -2,5 +2,5 @@
 
 bazel run //oak/client -- \
   --server_address=127.0.0.1:8888 \
-  --business_logic=$PWD/wac/examples_wast/arith.wasm \
+  --business_logic=$PWD/bazel-bin/examples/hello_world/js_wasm_pure_stripped/hello_world \
   --expression='add 11 22'
