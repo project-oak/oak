@@ -5,6 +5,8 @@ go_binary(
     srcs = [
         "hello_world.go",
     ],
+    # Exclude cgo.
+    pure = "on",
     goos = "js",
     goarch = "wasm",
 )
