@@ -1570,7 +1570,18 @@ Module *load_module(uint8_t *bytes, uint32_t mod_len, Options options) {
             break;
         case 2:
             warn("Parsing Import(2) section (length: 0x%x)\n", slen);
-            FATAL("Import not supported");
+            uint32_t import_count = read_LEB(bytes, &pos, 32);
+            for (uint32_t gidx=0; gidx<import_count; gidx++) {
+                uint32_t module_len, field_len;
+                char *import_module = read_string(bytes, &pos, &module_len);
+                char *import_field = read_string(bytes, &pos, &field_len);
+
+                uint32_t external_kind = bytes[pos++];
+
+                debug("  import: %d/%d, external_kind: %d, %s.%s\n",
+                      gidx, import_count, external_kind, import_module,
+                      import_field);
+            }
             break;
         case 3:
             warn("Parsing Function(3) section (length: 0x%x)\n", slen);
