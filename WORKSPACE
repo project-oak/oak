@@ -17,7 +17,6 @@ load(
     "asylo_testonly_deps",
 )
 asylo_deps()
-asylo_go_deps()
 asylo_testonly_deps()
 
 load(
@@ -34,11 +33,14 @@ grpc_deps()
 
 # io_bazel_rules is defined by asylo_go_deps(). Skylark loads cannot be
 # produced by macros, so this must come after asylo_go_deps() in WORKSPACE.
-load(
-    "@io_bazel_rules_go//go:def.bzl",
-    "go_rules_dependencies",
-    "go_register_toolchains",
+# We override the Go bazel rules to a release version that supports Go 1.11, since we need support
+# for the wasm backend.
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+http_archive(
+    name = "io_bazel_rules_go",
+    urls = ["https://github.com/bazelbuild/rules_go/releases/download/0.16.1/rules_go-0.16.1.tar.gz"],
+    sha256 = "f5127a8f911468cd0b2d7a141f17253db81177523e4429796e14d429f5444f5f",
 )
-# Load go bazel rules and toolchain.
+load("@io_bazel_rules_go//go:def.bzl", "go_rules_dependencies", "go_register_toolchains")
 go_rules_dependencies()
 go_register_toolchains()
