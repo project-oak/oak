@@ -53,3 +53,9 @@ git_repository(
 load("@io_bazel_rules_go//go:def.bzl", "go_rules_dependencies", "go_register_toolchains")
 go_rules_dependencies()
 go_register_toolchains()
+
+git_repository(
+    name = "wabt",
+    commit = "2d31cda394fc67c7969a9bd44066cb8eafa82e23",
+    remote = "https://github.com/tiziano88/wabt",
+)
