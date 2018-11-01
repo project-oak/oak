@@ -21,27 +21,30 @@ static wabt::interp::Result PrintCallback(const wabt::interp::HostFunc* func,
                                           const wabt::interp::FuncSignature* sig,
                                           const wabt::interp::TypedValues& args,
                                           wabt::interp::TypedValues& results) {
-  printf("called host ");
+  LOG(INFO) << "Called host";
   return wabt::interp::Result::Ok;
 }
 
-static void InitEnvironment(wabt::interp::Environment* env) {
-  wabt::interp::HostModule* host_module = env->AppendHostModule("host");
-  host_module->on_unknown_func_export =
-      [](wabt::interp::Environment* env, wabt::interp::HostModule* host_module,
-         wabt::string_view name, wabt::Index sig_index) -> wabt::Index {
-    if (name != "print") {
-      return wabt::kInvalidIndex;
-    }
+static wabt::Index UnknownFuncHandler(wabt::interp::Environment* env,
+                                      wabt::interp::HostModule* host_module, wabt::string_view name,
+                                      wabt::Index sig_index) {
+  LOG(INFO) << "Unknown func export";
+  std::pair<wabt::interp::HostFunc*, wabt::Index> pair =
+      host_module->AppendFuncExport(name, sig_index, PrintCallback);
+  return pair.second;
+}
 
-    std::pair<wabt::interp::HostFunc*, wabt::Index> pair =
-        host_module->AppendFuncExport(name, sig_index, PrintCallback);
-    return pair.second;
-  };
+static void InitEnvironment(wabt::interp::Environment* env) {
+  wabt::interp::HostModule* go_module = env->AppendHostModule("go");
+  go_module->on_unknown_func_export = UnknownFuncHandler;
+
+  wabt::interp::HostModule* oak_module = env->AppendHostModule("oak");
+  oak_module->on_unknown_func_export = UnknownFuncHandler;
 }
 
 static wabt::Result ReadModule(std::string module_bytes, wabt::interp::Environment* env,
                                wabt::Errors* errors, wabt::interp::DefinedModule** out_module) {
+  LOG(INFO) << "Reading module";
   wabt::Result result;
 
   *out_module = nullptr;
@@ -51,12 +54,17 @@ static wabt::Result ReadModule(std::string module_bytes, wabt::interp::Environme
   const bool kFailOnCustomSectionError = true;
   wabt::ReadBinaryOptions options(s_features, s_log_stream.get(), kReadDebugNames,
                                   kStopOnFirstError, kFailOnCustomSectionError);
+
+  LOG(INFO) << "xxx";
   result = wabt::ReadBinaryInterp(env, module_bytes.data(), module_bytes.size(), options, errors,
                                   out_module);
+  LOG(INFO) << "yyy";
 
   if (Succeeded(result)) {
     env->DisassembleModule(s_stdout_stream.get(), *out_module);
   }
+
+  LOG(INFO) << "Read module";
   return result;
 }
 
@@ -66,6 +74,8 @@ OakServer::OakServer() : Service() {}
                                               const ::oak::InitiateComputationRequest* request,
                                               ::oak::InitiateComputationResponse* response) {
   LOG(INFO) << "Initate Computation: " << request->DebugString();
+
+  s_stdout_stream = wabt::FileStream::CreateStdout();
 
   wabt::Result result;
   wabt::interp::Environment env;
