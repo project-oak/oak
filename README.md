@@ -36,11 +36,32 @@ and is targeted by most LLVM-based languages (including C++ and Rust).
 
 # Oak Server
 
-The Oak Server is a gRPC server that allows clients to request and interact with
+The Oak Server is a [gRPC](https://grpc.io/) server that allows clients to request and interact with
 Oak VM instances. It exposes a gRPC API allowing clients to interact with the
-untrusted runtime and create trusted Oak VM instances within enclaves. Each Oak
+untrusted runtime and create ad-hoc trusted Oak VM instances within enclaves. Each Oak
 VM instance lives in its own enclave and is isolated from both the host as well
 as other enclaves and Oak VM instances.
+
+# Remote Attestation
+
+Remote attestation is a core part of Project Oak. When an Oak Client connects to an Oak Server, the two first establish 
+a fresh ephemeral session key, and then they provide assertions to each other; the Oak Client relies on this
+assertion to determine whether it is connecting to a valid version of
+the Oak VM (see below for what constitutes a valid version). In particular, the attestation includes
+a _measurement_ (i.e. a hash) of the code running in the remote enclave, cryptographically bound
+to the session itself.
+
+## Platform Upgrades
+
+Under regular circumstances, an Oak Client connecting to an Oak Server validates the
+attestation it receives from the Oak Server when establishing the connection channel. The
+measurement in the attestation report corresponds to the hash of the code loaded in enclave
+memory at the time the connection was established. Because the Oak VM changes relatively slowly,
+the list of known measurements is small enough that the client is able to just check the inclusion
+of the received measurement in the list.
+
+Occasionally, a particular version of the Oak VM may be found to contain security vulnerabilities or bugs,
+and we would like to prevent further clients from connecting to servers using such versions. TODO
 
 # Workflow
 
