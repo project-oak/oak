@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
 
   asylo::EnclaveClient *client = manager->GetClient("oak_enclave");
 
-  // Initialise enclave.
+  // Initialisation.
   {
     LOG(INFO) << "Initialising enclave";
     asylo::EnclaveInput input;
@@ -71,18 +71,21 @@ int main(int argc, char *argv[]) {
   }
 
   // Wait.
-  absl::Notification server_timeout;
-  server_timeout.WaitForNotificationWithTimeout(absl::Seconds(300));
-
-  // Finalization
-
-  LOG(INFO) << "Destroying enclave";
-  asylo::EnclaveFinal final_input;
-  status = manager->DestroyEnclave(client, final_input);
-  if (!status.ok()) {
-    LOG(QFATAL) << "Destroy " << FLAGS_enclave_path << " failed: " << status;
+  {
+    absl::Notification server_timeout;
+    server_timeout.WaitForNotificationWithTimeout(absl::Seconds(300));
   }
-  LOG(INFO) << "Enclave destroyed";
+
+  // Finalisation.
+  {
+    LOG(INFO) << "Destroying enclave";
+    asylo::EnclaveFinal final_input;
+    status = manager->DestroyEnclave(client, final_input);
+    if (!status.ok()) {
+      LOG(QFATAL) << "Destroy " << FLAGS_enclave_path << " failed: " << status;
+    }
+    LOG(INFO) << "Enclave destroyed";
+  }
 
   return 0;
 }
