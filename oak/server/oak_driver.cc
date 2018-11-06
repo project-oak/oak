@@ -47,23 +47,27 @@ int main(int argc, char *argv[]) {
   std::cout << "Loading " << FLAGS_enclave_path << std::endl;
   asylo::SimLoader loader(FLAGS_enclave_path, /*debug=*/true);
 
-  asylo::EnclaveConfig config;
-  asylo::ServerConfig *server_config = config.MutableExtension(asylo::server_input_config);
-  server_config->set_host("0.0.0.0");
-  server_config->set_port(8888);
-  asylo::Status status = manager->LoadEnclave("oak_enclave", loader, config);
-  if (!status.ok()) {
-    LOG(QFATAL) << "Load " << FLAGS_enclave_path << " failed: " << status;
+  // Loading.
+  {
+    asylo::EnclaveConfig config;
+    asylo::ServerConfig *server_config = config.MutableExtension(asylo::server_input_config);
+    server_config->set_host("0.0.0.0");
+    server_config->set_port(8888);
+    asylo::Status status = manager->LoadEnclave("oak_enclave", loader, config);
+    if (!status.ok()) {
+      LOG(QFATAL) << "Load " << FLAGS_enclave_path << " failed: " << status;
+    }
   }
 
   asylo::EnclaveClient *client = manager->GetClient("oak_enclave");
 
   // Initialisation.
+  // This does not actually do anything interesting at the moment.
   {
     LOG(INFO) << "Initialising enclave";
     asylo::EnclaveInput input;
     asylo::EnclaveOutput output;
-    status = client->EnterAndRun(input, &output);
+    asylo::Status status = client->EnterAndRun(input, &output);
     if (!status.ok()) {
       LOG(QFATAL) << "EnterAndRun failed: " << status;
     }
@@ -80,7 +84,7 @@ int main(int argc, char *argv[]) {
   {
     LOG(INFO) << "Destroying enclave";
     asylo::EnclaveFinal final_input;
-    status = manager->DestroyEnclave(client, final_input);
+    asylo::Status status = manager->DestroyEnclave(client, final_input);
     if (!status.ok()) {
       LOG(QFATAL) << "Destroy " << FLAGS_enclave_path << " failed: " << status;
     }
