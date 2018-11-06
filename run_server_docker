@@ -5,11 +5,10 @@ docker run \
   --tty \
   --volume=bazel-cache:/root/.cache/bazel \
   --volume=$PWD:/opt/my-project \
-  --volume=$PWD/../wac:/opt/wac \
   --workdir=/opt/my-project \
   --publish=8888:8888 \
   gcr.io/asylo-framework/asylo \
-  bazel run --config=enc-sim //oak/server:oak -- --expressions='(get-average),(add-sample (* 10 20)),(get-average),(add-sample (fib 10)),(get-average)'
+  bazel run --config=enc-sim //oak/server:oak
 
 #bazel run //oak/client -- --server_address=127.0.0.1:8888
 #grpc_cli ls 127.0.0.1:8888

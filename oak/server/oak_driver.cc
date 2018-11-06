@@ -33,19 +33,9 @@
 
 DEFINE_string(enclave_path, "", "Path to enclave to load");
 
-DEFINE_string(expressions, "", "A comma-separated list of expressions to pass to the enclave");
-DEFINE_string(wasm_module, "", "A wasm module to load");
-
 int main(int argc, char *argv[]) {
   // Setup.
   ::google::ParseCommandLineFlags(&argc, &argv, /*remove_flags=*/true);
-
-  // Validate flags.
-  if (FLAGS_expressions.empty()) {
-    LOG(QFATAL) << "Must supply a non-empty list of expressions with --expressions";
-  }
-
-  std::vector<std::string> expressions = absl::StrSplit(FLAGS_expressions, ',');
 
   // Initialise enclave.
   asylo::EnclaveManager::Configure(asylo::EnclaveManagerOptions());
@@ -65,44 +55,19 @@ int main(int argc, char *argv[]) {
   if (!status.ok()) {
     LOG(QFATAL) << "Load " << FLAGS_enclave_path << " failed: " << status;
   }
-  LOG(INFO) << "Enclave initialised";
 
   asylo::EnclaveClient *client = manager->GetClient("oak_enclave");
 
-  // Program enclave with initial script.
+  // Initialise enclave.
   {
-    LOG(INFO) << "Programming enclave";
-
-    // Read wasm module into a string.
-    std::ifstream t(FLAGS_wasm_module, std::ifstream::in);
-    std::stringstream buffer;
-    buffer << t.rdbuf();
-
-    LOG(INFO) << "Loaded module: " << buffer.str();
-
+    LOG(INFO) << "Initialising enclave";
     asylo::EnclaveInput input;
-    input.MutableExtension(oak::initialise_input)->set_wasm_module(buffer.str());
     asylo::EnclaveOutput output;
     status = client->EnterAndRun(input, &output);
     if (!status.ok()) {
       LOG(QFATAL) << "EnterAndRun failed: " << status;
     }
-    LOG(INFO) << "Enclave programmed";
-  }
-
-  // Evaluate expressions in the enclave.
-  for (const auto &expression : expressions) {
-    LOG(INFO) << "sending expression to enclave: " << expression;
-    asylo::EnclaveInput input;
-    input.MutableExtension(oak::evaluate_input)->set_input_data(expression);
-    asylo::EnclaveOutput output;
-    status = client->EnterAndRun(input, &output);
-    if (!status.ok()) {
-      LOG(QFATAL) << "EnterAndRun failed: " << status;
-    }
-
-    std::cout << "Message from enclave: " << output.GetExtension(oak::evaluate_output).output_data()
-              << std::endl;
+    LOG(INFO) << "Enclave initialised";
   }
 
   // Wait.
