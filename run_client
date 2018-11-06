@@ -2,7 +2,9 @@
 
 bazel build //examples/go/hello_world
 
+#--business_logic=$PWD/bazel-bin/examples/go/hello_world/js_wasm_pure_stripped/hello_world \
+
 bazel run //oak/client -- \
   --server_address=127.0.0.1:8888 \
-  --business_logic=$PWD/bazel-bin/examples/go/hello_world/js_wasm_pure_stripped/hello_world \
+  --business_logic=$PWD/examples/rust/hello_world/target/wasm32-unknown-unknown/debug/hello_world.wasm \
   --expression='add 11 22'

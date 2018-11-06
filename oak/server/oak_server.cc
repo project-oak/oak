@@ -61,6 +61,12 @@ static void InitEnvironment(wabt::interp::Environment* env) {
 
   wabt::interp::HostModule* oak_module = env->AppendHostModule("oak");
   oak_module->on_unknown_func_export = UnknownFuncHandler;
+
+  // Rust.
+  wabt::interp::HostModule* rust_module = env->AppendHostModule("__wbindgen_placeholder__");
+  rust_module->AppendFuncExport("__wbindgen_describe", 3, PrintCallback);
+  rust_module->AppendFuncExport("__wbindgen_throw", 0, PrintCallback);
+  rust_module->AppendFuncExport("__wbg_oakprint_4faf40bd429ff008", 0, PrintCallback);
 }
 
 static wabt::Result ReadModule(std::string module_bytes, wabt::interp::Environment* env,
@@ -119,12 +125,13 @@ OakServer::OakServer() : Service() {}
 
     wabt::interp::TypedValues args;
 
-    wabt::interp::TypedValue zero(wabt::Type::I32);
-    zero.set_i32(0);
-    args.push_back(zero);
-    args.push_back(zero);
+    //wabt::interp::TypedValue zero(wabt::Type::I32);
+    //zero.set_i32(0);
+    //args.push_back(zero);
+    //args.push_back(zero);
 
-    wabt::interp::ExecResult exec_result = executor.RunExportByName(module, "run", args);
+    //wabt::interp::ExecResult exec_result = executor.RunExportByName(module, "run", args);
+    wabt::interp::ExecResult exec_result = executor.RunExportByName(module, "oak_main", args);
 
     if (exec_result.result == wabt::interp::Result::Ok) {
       LOG(INFO) << "Executed module";
