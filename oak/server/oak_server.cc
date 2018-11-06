@@ -28,7 +28,7 @@ static wabt::interp::Result PrintCallback(const wabt::interp::HostFunc* func,
 static wabt::Index UnknownFuncHandler(wabt::interp::Environment* env,
                                       wabt::interp::HostModule* host_module, wabt::string_view name,
                                       wabt::Index sig_index) {
-  LOG(INFO) << "Unknown func export";
+  LOG(INFO) << "Unknown func export: " << name.to_string();
   std::pair<wabt::interp::HostFunc*, wabt::Index> pair =
       host_module->AppendFuncExport(name, sig_index, PrintCallback);
   return pair.second;
@@ -61,7 +61,7 @@ static wabt::Result ReadModule(std::string module_bytes, wabt::interp::Environme
   LOG(INFO) << "yyy";
 
   if (Succeeded(result)) {
-    env->DisassembleModule(s_stdout_stream.get(), *out_module);
+    // env->DisassembleModule(s_stdout_stream.get(), *out_module);
   }
 
   LOG(INFO) << "Read module";
