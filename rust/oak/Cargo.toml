@@ -1,11 +1,7 @@
 [package]
-name = "hello_world"
+name = "oak"
 version = "0.1.0"
 authors = ["Tiziano Santoro <tzn@google.com>"]
 
-[lib]
-crate-type = ["cdylib"]
-
 [dependencies]
 wasm-bindgen = "0.2"
-oak = { path = "../../" }
