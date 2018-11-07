@@ -1,8 +1,11 @@
 #!/bin/sh
+set -e
 
-bazel build //examples/go/hello_world
+#bazel build //examples/go/hello_world
 
 #--business_logic=$PWD/bazel-bin/examples/go/hello_world/js_wasm_pure_stripped/hello_world \
+
+cargo +nightly build --target=wasm32-unknown-unknown --manifest-path=examples/rust/hello_world/Cargo.toml
 
 bazel run //oak/client -- \
   --server_address=127.0.0.1:8888 \
