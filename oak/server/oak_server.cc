@@ -21,7 +21,32 @@ static wabt::interp::Result PrintCallback(const wabt::interp::HostFunc* func,
                                           const wabt::interp::TypedValues& args,
                                           wabt::interp::TypedValues& results) {
   LOG(INFO) << "Called host function: " << func->module_name << "." << func->field_name;
+  for (auto const& arg : args) {
+    LOG(INFO) << "Arg: " << wabt::interp::TypedValueToString(arg);
+  }
   return wabt::interp::Result::Ok;
+}
+
+static std::vector<char> ReadMemory(wabt::interp::Environment* env, uint32_t offset, uint32_t size) {
+  std::vector<char> data = env->GetMemory(0)->data;
+  return std::vector<char>(data.cbegin() + offset, data.cbegin() + offset + size);
+}
+
+static std::string ReadString(wabt::interp::Environment* env, uint32_t offset, uint32_t size) {
+  std::vector<char> mem = ReadMemory(env, offset, size);
+  return std::string(mem.cbegin(), mem.cend());
+}
+
+static wabt::interp::HostFunc::Callback PrintString(wabt::interp::Environment* env) {
+  return [env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
+               const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
+    LOG(INFO) << "Called host function: " << func->module_name << "." << func->field_name;
+    for (auto const& arg : args) {
+      LOG(INFO) << "Arg: " << wabt::interp::TypedValueToString(arg);
+    }
+    LOG(INFO) << "Arg0-string: " << ReadString(env, args[0].get_i32(), args[1].get_i32());
+    return wabt::interp::Result::Ok;
+  };
 }
 
 static wabt::Index UnknownFuncHandler(wabt::interp::Environment* env,
@@ -66,7 +91,7 @@ static void InitEnvironment(wabt::interp::Environment* env) {
   wabt::interp::HostModule* rust_module = env->AppendHostModule("__wbindgen_placeholder__");
   rust_module->AppendFuncExport("__wbindgen_describe", 3, PrintCallback);
   rust_module->AppendFuncExport("__wbindgen_throw", 0, PrintCallback);
-  rust_module->AppendFuncExport("__wbg_oakprint_4faf40bd429ff008", 0, PrintCallback);
+  rust_module->AppendFuncExport("__wbg_oakprint_4faf40bd429ff008", 0, PrintString(env));
 }
 
 static wabt::Result ReadModule(std::string module_bytes, wabt::interp::Environment* env,
@@ -125,12 +150,12 @@ OakServer::OakServer() : Service() {}
 
     wabt::interp::TypedValues args;
 
-    //wabt::interp::TypedValue zero(wabt::Type::I32);
-    //zero.set_i32(0);
-    //args.push_back(zero);
-    //args.push_back(zero);
+    // wabt::interp::TypedValue zero(wabt::Type::I32);
+    // zero.set_i32(0);
+    // args.push_back(zero);
+    // args.push_back(zero);
 
-    //wabt::interp::ExecResult exec_result = executor.RunExportByName(module, "run", args);
+    // wabt::interp::ExecResult exec_result = executor.RunExportByName(module, "run", args);
     wabt::interp::ExecResult exec_result = executor.RunExportByName(module, "oak_main", args);
 
     if (exec_result.result == wabt::interp::Result::Ok) {
