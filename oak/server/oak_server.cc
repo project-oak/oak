@@ -27,12 +27,14 @@ static wabt::interp::Result PrintCallback(const wabt::interp::HostFunc* func,
   return wabt::interp::Result::Ok;
 }
 
-static std::vector<char> ReadMemory(wabt::interp::Environment* env, uint32_t offset, uint32_t size) {
+static std::vector<char> ReadMemory(wabt::interp::Environment* env, const uint32_t offset,
+                                    const uint32_t size) {
   std::vector<char> data = env->GetMemory(0)->data;
   return std::vector<char>(data.cbegin() + offset, data.cbegin() + offset + size);
 }
 
-static std::string ReadString(wabt::interp::Environment* env, uint32_t offset, uint32_t size) {
+static std::string ReadString(wabt::interp::Environment* env, const uint32_t offset,
+                              const uint32_t size) {
   std::vector<char> mem = ReadMemory(env, offset, size);
   return std::string(mem.cbegin(), mem.cend());
 }
@@ -50,8 +52,8 @@ static wabt::interp::HostFunc::Callback PrintString(wabt::interp::Environment* e
 }
 
 static wabt::Index UnknownFuncHandler(wabt::interp::Environment* env,
-                                      wabt::interp::HostModule* host_module, wabt::string_view name,
-                                      wabt::Index sig_index) {
+                                      wabt::interp::HostModule* host_module,
+                                      const wabt::string_view name, const wabt::Index sig_index) {
   LOG(WARNING) << "Unknown func export: " << name.to_string() << " (sig=" << sig_index << ")";
   std::pair<wabt::interp::HostFunc*, wabt::Index> pair =
       host_module->AppendFuncExport(name, sig_index, PrintCallback);
@@ -94,7 +96,7 @@ static void InitEnvironment(wabt::interp::Environment* env) {
   rust_module->AppendFuncExport("__wbg_oakprint_4faf40bd429ff008", 0, PrintString(env));
 }
 
-static wabt::Result ReadModule(std::string module_bytes, wabt::interp::Environment* env,
+static wabt::Result ReadModule(const std::string module_bytes, wabt::interp::Environment* env,
                                wabt::Errors* errors, wabt::interp::DefinedModule** out_module) {
   LOG(INFO) << "Reading module";
   wabt::Result result;
