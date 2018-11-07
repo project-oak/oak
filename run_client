@@ -5,6 +5,12 @@ set -e
 
 #--business_logic=$PWD/bazel-bin/examples/go/hello_world/js_wasm_pure_stripped/hello_world \
 
+# To install rust:
+#
+# curl https://sh.rustup.rs -sSf | sh
+# rustup toolchain install nightly
+# rustup target add wasm32-unknown-unknown --toolchain nightly
+
 cargo +nightly build --target=wasm32-unknown-unknown --manifest-path=examples/rust/hello_world/Cargo.toml
 
 bazel run //oak/client -- \
