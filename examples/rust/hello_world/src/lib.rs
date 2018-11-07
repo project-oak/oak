@@ -5,6 +5,7 @@ use wasm_bindgen::prelude::*;
 #[wasm_bindgen]
 extern {
     fn oak_print(s: &str);
+    fn oak_get_time() -> i32;
 }
 
 #[wasm_bindgen]
