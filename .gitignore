@@ -1,1 +1,3 @@
 /bazel-*
+/examples/rust/hello_world/target
+/examples/go/hello_world/static
