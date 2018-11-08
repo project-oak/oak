@@ -39,6 +39,11 @@ static std::string ReadString(wabt::interp::Environment* env, const uint32_t off
   return std::string(mem.cbegin(), mem.cend());
 }
 
+static void WriteMemory(wabt::interp::Environment* env, const uint32_t offset,
+                        const std::vector<char> data) {
+  std::copy(data.cbegin(), data.cend(), env->GetMemory(0)->data.begin() + offset);
+}
+
 static wabt::interp::HostFunc::Callback PrintString(wabt::interp::Environment* env) {
   return [env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
                const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
@@ -65,7 +70,7 @@ static wabt::interp::HostFunc::Callback OakGetTime(wabt::interp::Environment* en
     auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
     std::vector<char> ns_bytes = i64Bytes(ns);
     uint32_t p = args[0].get_i32();
-    std::copy(ns_bytes.cbegin(), ns_bytes.cend(), env->GetMemory(0)->data.begin() + p);
+    WriteMemory(env, p, ns_bytes);
     return wabt::interp::Result::Ok;
   };
 }
