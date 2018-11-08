@@ -51,22 +51,21 @@ static wabt::interp::HostFunc::Callback PrintString(wabt::interp::Environment* e
   };
 }
 
+static std::vector<char> i64Bytes(uint64_t val) {
+  std::vector<char> vec(8);
+  std::memcpy(&vec[0], &val, 8);
+  return vec;
+}
+
 static wabt::interp::HostFunc::Callback OakGetTime(wabt::interp::Environment* env) {
   return [env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
                const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
     LOG(INFO) << "Called host function: " << func->module_name << "." << func->field_name;
     auto now = std::chrono::system_clock::now();
     auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
+    std::vector<char> ns_bytes = i64Bytes(ns);
     uint32_t p = args[0].get_i32();
-    // TODO: There must be a better way.
-    env->GetMemory(0)->data[p + 0] = ns >> 0 * 8 & 0xFF;
-    env->GetMemory(0)->data[p + 1] = ns >> 1 * 8 & 0xFF;
-    env->GetMemory(0)->data[p + 2] = ns >> 2 * 8 & 0xFF;
-    env->GetMemory(0)->data[p + 3] = ns >> 3 * 8 & 0xFF;
-    env->GetMemory(0)->data[p + 4] = ns >> 4 * 8 & 0xFF;
-    env->GetMemory(0)->data[p + 5] = ns >> 5 * 8 & 0xFF;
-    env->GetMemory(0)->data[p + 6] = ns >> 6 * 8 & 0xFF;
-    env->GetMemory(0)->data[p + 7] = ns >> 7 * 8 & 0xFF;
+    std::copy(ns_bytes.cbegin(), ns_bytes.cend(), env->GetMemory(0)->data.begin() + p);
     return wabt::interp::Result::Ok;
   };
 }
