@@ -96,7 +96,7 @@ them.
 
 By default, an input channel and an output channel are implicitly created by the
 Oak VM and connected to the input and output of the client performing the gRPC
-request that initiated the computation.
+request that initiated the computation. These are available at index 0.
 
 ## Storage
 
