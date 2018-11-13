@@ -1,16 +1,11 @@
 # Project Oak
 
-The goal of Project Oak is to create a specification for secure transfer,
-storage and processing of data.
+The goal of Project Oak is to create a specification (and a reference
+implementation) for the secure transfer, storage and processing of data.
 
-Optionally it may also include a reference implementation and / or an official
-SDK.
-
-In traditional systems, data may be encrypted at rest and in transit, but it
-must be available in plaintext to any system that needs to process them; this
-means there are opportunities for system administrators, hardware vendors,
-privileged software running on the same machine to compromise the
-confidentiality and integrity of the data.
+In traditional systems, data may be encrypted at rest and in transit, but it is
+ultimately available in unencrypted form to any part of the system that needs to
+process them.
 
 Even if the application is securely designed and data are encrypted, the
 operating system kernel (and any user or piece of software with root or
@@ -19,24 +14,33 @@ to the machine hardware resources, and can leverage that to bypass any security
 mechanism on the machine and extract secret keys and data.
 
 As part of Project Oak, data is end-to-end encrypted between _enclaves_, which
-are isolated compartments that can be created on-demand, and provide strong
-confidentiality, integrity, and attestation capabilities, usually backed by
-hardware features. Enclaves protect data and code even from the operating system
-kernel and privileged software, and from most hardware attacks.
+are isolated computation compartments that can be created on-demand, and provide
+strong confidentiality, integrity, and attestation capabilities, usually backed
+by hardware features. Enclaves protect data and code even from the operating
+system kernel and privileged software, and from most hardware attacks.
 
 # Oak VM
 
 The _Oak VM_ is the core software component of Project Oak; it is responsible
 for executing business logic and enforcing policies on top of data, as well as
-producing hardware-backed attestations for clients.
+producing remote attestations.
+
+## WebAssembly target
 
 The current version of the Oak VM supports
-[WebAssembly](https://webassembly.org) as the target language for business logic
-applications. Developers wishing to run their code as part of Project Oak need
-to be able to compile their code to WebAssembly. WebAssembly has a well-defined,
-unambiguous
+[WebAssembly](https://webassembly.org) as the first-class target language for
+business logic applications. Developers wishing to run their code as part of
+Project Oak need to be able to compile their code to WebAssembly.
+
+WebAssembly has a well-defined, unambiguous
 [formal specification](https://webassembly.github.io/spec/core/valid/instructions.html),
 and is targeted by most LLVM-based languages (including C++ and Rust).
+
+Each Oak VM instance lives in its own dedicated enclave and is isolated from
+both the host as well as other enclaves and Oak VM instances on the same
+machine.
+
+## Rust SDK
 
 Project Oak also offers a Rust SDK with helper functions to facilitate
 interactions with the Oak VM from Rust code compiled to WebAssembly. This
@@ -44,12 +48,63 @@ provides idiomatic Rust abstractions over the lower level WebAssembly interface.
 
 # Oak Server
 
-The Oak Server is a [gRPC](https://grpc.io/) server that allows clients to
-request and interact with Oak VM instances. It exposes a gRPC API allowing
-clients to interact with the untrusted runtime and request the creation of
-ad-hoc trusted Oak VM instances within enclaves. Each Oak VM instance lives in
-its own enclave and is isolated from both the host as well as other enclaves and
-Oak VM instances.
+The Oak Server is a [gRPC](https://grpc.io/) server that allows developers to
+deploy code to Oak VM instances, and clients to interact with them.
+
+# Deployment
+
+Developers use the untrusted side of the Oak Server to deploy code to the Oak
+platform. Note that this is not part of the Trusted Computing Base, and the
+actual trusted attestation only happens between client and server at execution
+time.
+
+Oak Functions follow the _serverless_ approach, in which functions are scheduled
+on-demand and without developers having to provision or manage servers or
+virtual machines.
+
+Developers compile their code for the Oak Platform using the Oak SDK for their
+language, resulting in a self-contained Wasm module. They also manually create a
+manifest file in [TOML](https://github.com/toml-lang/toml) format, specifying
+any extra capabilities that the module is allowed to have access to. They
+finally upload both of them to the Oak Server using the `oak_deploy`
+command-line tool.
+
+# Capabilities
+
+A baseline module without any extra capabilities specified in the manifest file
+can be considered as a pure function, executing some computation and returning
+its result to the caller, with no side effects allowed.
+
+In order to allow the module to perform side effects, capabilities need to be
+granted to it that allow the Oak VM to expose the appropriate logic to the
+module itself.
+
+## Input / Output Channels
+
+The `input_channel` and `output_channel` capabilities allow the module to have
+access to an input or output channel, respectively, managed by the Oak VM. The
+channel is securely encrypted by construction (the encryption is performed by
+the Oak VM itself).
+
+The public key with which to perform the encryption must be provided as part of
+the capability instantiation in the manifest file, so that it becomes part of
+the Oak attestation offered by the Oak VM to clients before they exchange any
+data with it.
+
+Channels are identified by a sequential number, which is used to interact with
+them.
+
+By default, an input channel and an output channel are implicitly created by the
+Oak VM and connected to the input and output of the client performing the gRPC
+request that initiated the computation.
+
+## Storage
+
+TODO
+
+## Logging
+
+TODO
 
 # Remote Attestation
 
@@ -62,19 +117,21 @@ In particular, the attestation includes a _measurement_ (i.e. a hash) of the
 code running in the remote enclave, cryptographically bound to the session
 itself.
 
-## Platform Upgrades
+# Oak VM Updates
 
-Under regular circumstances, an Oak Client connecting to an Oak Server validates
-the attestation it receives from the Oak Server when establishing the connection
+Under regular circumstances, an Oak Client connecting to an Oak VM validates the
+attestation it receives from the Oak VM when establishing the connection
 channel. The measurement in the attestation report corresponds to the hash of
 the code loaded in enclave memory at the time the connection was established.
-Because the Oak VM changes relatively slowly, the list of known measurements is
-small enough that the client is able to just check the inclusion of the received
-measurement in the list.
+Because the Oak VM changes relatively infrequently, the list of known
+measurements is small enough that the client is able to just check the inclusion
+of the received measurement in the list.
 
 Occasionally, a particular version of the Oak VM may be found to contain
 security vulnerabilities or bugs, and we would like to prevent further clients
-from connecting to servers using such versions. TODO
+from connecting to servers using such versions.
+
+TODO: Verifiable log of known versions.
 
 # Workflow
 
