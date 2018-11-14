@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package oak;
+
+message DeployRequest {
+  bytes business_logic = 1;
+  bytes manifest = 2;
+}
+
+message DeployResponse {
+  string endpoint = 1;
+}
+
+service DeploymentService {
+  rpc Deploy(DeployRequest) returns (DeployResponse);
+}

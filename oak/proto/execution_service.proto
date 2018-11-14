@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package oak;
+
+message ExecuteRequest {
+}
+
+message ExecuteResponse {
+}
+
+service ExecutionService {
+  rpc Execute(ExecuteRequest) returns (ExecuteResponse);
+}
