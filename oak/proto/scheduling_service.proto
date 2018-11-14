@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package oak;
+
+message Manifest {
+}
+
+message ScheduleRequest {
+  string module_id = 1;
+  Manifest manifest = 2;
+}
+
+message ScheduleResponse {
+}
+
+service SchedulingService {
+  rpc Schedule(ScheduleRequest) returns (ScheduleResponse);
+}

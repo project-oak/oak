@@ -4,11 +4,10 @@ package oak;
 
 message DeployRequest {
   bytes business_logic = 1;
-  bytes manifest = 2;
 }
 
 message DeployResponse {
-  string endpoint = 1;
+  string module_id = 1;
 }
 
 service DeploymentService {

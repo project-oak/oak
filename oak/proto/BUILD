@@ -23,3 +23,20 @@ asylo_grpc_proto_library(
     name = "oak_server_grpc_proto",
     srcs = ["oak_server.proto"],
 )
+
+# TODO: Use plain cc_proto_library for the rules below.
+
+asylo_grpc_proto_library(
+    name = "deployment_service_grpc_proto",
+    srcs = ["deployment_service.proto"],
+)
+
+asylo_grpc_proto_library(
+    name = "execution_service_grpc_proto",
+    srcs = ["execution_service.proto"],
+)
+
+asylo_grpc_proto_library(
+    name = "scheduling_service_grpc_proto",
+    srcs = ["scheduling_service.proto"],
+)
