@@ -19,13 +19,13 @@ strong confidentiality, integrity, and attestation capabilities, usually backed
 by hardware features. Enclaves protect data and code even from the operating
 system kernel and privileged software, and from most hardware attacks.
 
-# Oak VM
+## Oak VM
 
 The _Oak VM_ is the core software component of Project Oak; it is responsible
 for executing business logic and enforcing policies on top of data, as well as
 producing remote attestations.
 
-## WebAssembly target
+### WebAssembly target
 
 The current version of the Oak VM supports
 [WebAssembly](https://webassembly.org) as the first-class target language for
@@ -40,18 +40,20 @@ Each Oak VM instance lives in its own dedicated enclave and is isolated from
 both the host as well as other enclaves and Oak VM instances on the same
 machine.
 
-## Rust SDK
+### Rust SDK
 
 Project Oak also offers a Rust SDK with helper functions to facilitate
 interactions with the Oak VM from Rust code compiled to WebAssembly. This
 provides idiomatic Rust abstractions over the lower level WebAssembly interface.
 
-# Oak Server
+## Oak Server
 
 The Oak Server is a [gRPC](https://grpc.io/) server that allows developers to
 deploy code to Oak VM instances, and clients to interact with them.
 
-# Deployment
+It consists of various exposed gRPC services with which various categories of users interact.
+
+### Deployment Service
 
 Developers use the untrusted side of the Oak Server to deploy code to the Oak
 platform. Note that this is not part of the Trusted Computing Base, and the
@@ -69,7 +71,15 @@ any extra capabilities that the module is allowed to have access to. They
 finally upload both of them to the Oak Server using the `oak_deploy`
 command-line tool.
 
-# Capabilities
+### Scheduling Service
+
+TODO
+
+### Execution Service
+
+TODO
+
+## Capabilities
 
 A baseline module without any extra capabilities specified in the manifest file
 can be considered as a pure function, executing some computation and returning
@@ -79,7 +89,7 @@ In order to allow the module to perform side effects, capabilities need to be
 granted to it that allow the Oak VM to expose the appropriate logic to the
 module itself.
 
-## Input / Output Channels
+### Input / Output Channels
 
 The `input_channel` and `output_channel` capabilities allow the module to have
 access to an input or output channel, respectively, managed by the Oak VM. The
@@ -98,15 +108,15 @@ By default, an input channel and an output channel are implicitly created by the
 Oak VM and connected to the input and output of the client performing the gRPC
 request that initiated the computation. These are available at index 0.
 
-## Storage
+### Storage
 
 TODO
 
-## Logging
+### Logging
 
 TODO
 
-# Remote Attestation
+## Remote Attestation
 
 Remote attestation is a core part of Project Oak. When an Oak Client connects to
 an Oak Server, the two first establish a fresh ephemeral session key, and then
@@ -117,7 +127,7 @@ In particular, the attestation includes a _measurement_ (i.e. a hash) of the
 code running in the remote enclave, cryptographically bound to the session
 itself.
 
-# Oak VM Updates
+## Oak VM Updates
 
 Under regular circumstances, an Oak Client connecting to an Oak VM validates the
 attestation it receives from the Oak VM when establishing the connection
@@ -133,7 +143,7 @@ from connecting to servers using such versions.
 
 TODO: Verifiable log of known versions.
 
-# Workflow
+## Workflow
 
 Sample flow:
 
@@ -165,15 +175,15 @@ Sample flow:
     pre-determined) computation on top of them, and sends the results back to
     the Oak Client.
 
-# Oak Policies
+## Oak Policies
 
 TODO
 
-# Time
+## Time
 
 TODO: Roughtime
 
-# Compile and run
+## Compile and run
 
 `./run_server_docker`
 

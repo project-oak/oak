@@ -32,11 +32,11 @@ asylo_grpc_proto_library(
 )
 
 asylo_grpc_proto_library(
-    name = "execution_service_grpc_proto",
-    srcs = ["execution_service.proto"],
+    name = "scheduling_service_grpc_proto",
+    srcs = ["scheduling_service.proto"],
 )
 
 asylo_grpc_proto_library(
-    name = "scheduling_service_grpc_proto",
-    srcs = ["scheduling_service.proto"],
+    name = "execution_service_grpc_proto",
+    srcs = ["execution_service.proto"],
 )
