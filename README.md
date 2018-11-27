@@ -1,23 +1,24 @@
 # Project Oak
 
-The goal of Project Oak is to create a specification (and a reference
-implementation) for the secure transfer, storage and processing of data.
+The goal of Project Oak is to create a specification and a reference
+implementation for the secure transfer, storage and processing of data.
 
-In traditional systems, data may be encrypted at rest and in transit, but it is
-ultimately available in unencrypted form to any part of the system that needs to
-process them.
+In traditional systems, data may be encrypted at rest and in transit, but they
+are exposed to any part of the system that needs to process them. Even if the
+application is securely designed and data are encrypted, the operating system
+kernel (and any component with privileged access to the machine that handles the
+data) has unrestricted access to the machine hardware resources, and can
+leverage that to bypass any security mechanism on the machine itself and extract
+secret keys and data.
 
-Even if the application is securely designed and data are encrypted, the
-operating system kernel (and any user or piece of software with root or
-privileged access on the machine that handles the data) has unrestricted access
-to the machine hardware resources, and can leverage that to bypass any security
-mechanism on the machine and extract secret keys and data.
-
-As part of Project Oak, data is end-to-end encrypted between _enclaves_, which
+As part of Project Oak, data are end-to-end encrypted between _enclaves_, which
 are isolated computation compartments that can be created on-demand, and provide
-strong confidentiality, integrity, and attestation capabilities, usually backed
-by hardware features. Enclaves protect data and code even from the operating
-system kernel and privileged software, and from most hardware attacks.
+strong confidentiality, integrity, and attestation capabilities at the hardware
+level. Enclaves protect data and code even from the operating system kernel and
+privileged software, and from most hardware attacks.
+
+Additionally, data are associated with policies when they enter the system, and
+policies are enforced and propagated even as data move from enclave to enclave.
 
 ## Oak VM
 
@@ -25,7 +26,13 @@ The _Oak VM_ is the core software component of Project Oak; it is responsible
 for executing business logic and enforcing policies on top of data, as well as
 producing remote attestations.
 
-### WebAssembly target
+### Business Logic - Oak Modules
+
+The unit of compilation and execution in Oak is the Oak Module. Each Oak Module
+is a self-contained [WebAssembly module](https://webassembly.org/docs/modules/)
+that is interpreted by the Oak VM.
+
+#### WebAssembly
 
 The current version of the Oak VM supports
 [WebAssembly](https://webassembly.org) as the first-class target language for
@@ -40,7 +47,50 @@ Each Oak VM instance lives in its own dedicated enclave and is isolated from
 both the host as well as other enclaves and Oak VM instances on the same
 machine.
 
-### Rust SDK
+#### WebAssembly FFI
+
+The entry point of an Oak Module is a WebAssembly exported function named
+`oak_main` with signature `() -> nil` (i.e. taking no arguments and returning no
+value). This is somewhat similar to a regular `main` function in other
+programming languages, except that it does not expect any explicit parameters;
+any I/O is instead performed via separate, dedicated methods.
+
+TODO: Use https://webassembly.org/docs/modules/#module-start-function when Rust
+supports it.
+
+An Oak Module may optionally rely on one or more functions offered by the Oak VM
+in order to perform side-effects or interact with the host system or other Oak
+Servers.
+
+The currently supported functions are the following:
+
+-   `oak_print: (i32, 132) -> nil`: Prints a string to standard output on the
+    host system. To be used for debugging only, as it leaks data. Will be
+    removed before release.
+
+    *   arg 0: Offset of block to print
+    *   arg 1: Length of block to print
+
+-   `oak_get_time: (i32) -> nil`: Retrieves the current time from the host
+    system. TODO: Implement this via
+    [Roughtime](https://blog.cloudflare.com/roughtime/).
+
+    *   arg 0: Offset of block to receive number of milliseconds.
+
+-   `oak_read: (i32, i32, i32) -> i32`: Reads from the specified input channel.
+
+    *   arg 0: Input channel ID
+    *   arg 1: Buffer address
+    *   arg 2: Buffer size in bytes
+    *   return 0: Number of bytes read
+
+-   `oak_write: (i32, i32) -> i32`
+
+    *   arg 0: Buffer address
+    *   arg 1: Buffer size in bytes
+    *   return 0: Number of bytes written
+
+#### Rust SDK
 
 Project Oak also offers a Rust SDK with helper functions to facilitate
 interactions with the Oak VM from Rust code compiled to WebAssembly. This
@@ -51,33 +101,46 @@ provides idiomatic Rust abstractions over the lower level WebAssembly interface.
 The Oak Server is a [gRPC](https://grpc.io/) server that allows developers to
 deploy code to Oak VM instances, and clients to interact with them.
 
-It consists of various exposed gRPC services with which various categories of users interact.
+It consists of various gRPC services with which various categories of users
+interact.
 
 ### Deployment Service
 
-Developers use the untrusted side of the Oak Server to deploy code to the Oak
-platform. Note that this is not part of the Trusted Computing Base, and the
-actual trusted attestation only happens between client and server at execution
-time.
+Developers use the Deployment Service to deploy code to the Oak platform. Note
+that this is not part of the Trusted Computing Base, and the actual trusted
+attestation only happens between client and server at execution time.
 
 Oak Functions follow the _serverless_ approach, in which functions are scheduled
 on-demand and without developers having to provision or manage servers or
 virtual machines.
 
 Developers compile their code for the Oak Platform using the Oak SDK for their
-language, resulting in a self-contained Wasm module. They also manually create a
+language, resulting in a self-contained Oak Module. They also manually create a
 manifest file in [TOML](https://github.com/toml-lang/toml) format, specifying
 any extra capabilities that the module is allowed to have access to. They
 finally upload both of them to the Oak Server using the `oak_deploy`
 command-line tool.
 
+TODO: Implement `oak_deploy`.
+
 ### Scheduling Service
 
-TODO
+When a client needs to perform a computation, it connects to the Scheduling
+Service over gRPC and sends a request containing details about the Oak Module to
+load, and any associated policies. The Scheduling Service itself is not part of
+the Trusted Computing Base, and therefore must be considered untrusted by the
+client, i.e. the scheduling service is assumed to be able to modify any (part
+of) scheduling requests.
+
+In response to a scheduling request, the Scheduling Service sends back to the
+caller details about the gRPC endpoint of the newly created enclave, initialised
+with the module and policies specified.
 
 ### Execution Service
 
-TODO
+Once a new enclave is initialised and its endpoint available, a client connects
+to it using an authenticated and attested channel. The attestation proves to the
+client that the remote enclave is indeed running a genuine Oak VM.
 
 ## Capabilities
 
