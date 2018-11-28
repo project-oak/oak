@@ -1,5 +1,6 @@
 #!/bin/sh
 set -e
+set -x
 
 #bazel build //examples/go/hello_world
 

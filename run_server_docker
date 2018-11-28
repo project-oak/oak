@@ -1,5 +1,7 @@
 #!/bin/sh
 
+./build_server_docker
+
 docker run \
   --interactive \
   --tty \
@@ -8,7 +10,7 @@ docker run \
   --workdir=/opt/my-project \
   --publish=8888:8888 \
   gcr.io/asylo-framework/asylo \
-  bazel build --config=enc-sim //oak/server:oak
+  ./bazel-bin/oak/server/oak
 
 #bazel run //oak/client -- --server_address=127.0.0.1:8888
 #grpc_cli ls 127.0.0.1:8888

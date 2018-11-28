@@ -33,7 +33,7 @@ class OakClient {
 
     request.set_expression(FLAGS_expression);
 
-    LOG(INFO) << "request: " << request.DebugString();
+    //LOG(INFO) << "request: " << request.DebugString();
 
     ::grpc::Status status = this->stub_->InitiateComputation(&context, request, &response);
     if (!status.ok()) {

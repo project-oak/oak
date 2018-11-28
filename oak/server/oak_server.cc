@@ -130,14 +130,36 @@ static void InitEnvironment(wabt::interp::Environment* env) {
 
   // Rust.
   wabt::interp::HostModule* rust_module = env->AppendHostModule("__wbindgen_placeholder__");
-  rust_module->AppendFuncExport("__wbindgen_describe", 0, PrintCallback);
-  rust_module->AppendFuncExport("__wbindgen_throw", 1, PrintCallback);
+  rust_module->on_unknown_func_export = UnknownFuncHandler;
+  rust_module->AppendFuncExport(
+      "__wbindgen_describe",
+      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32},
+                                  std::vector<wabt::Type>{}),
+      PrintCallback);
+  rust_module->AppendFuncExport(
+      "__wbindgen_throw",
+      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
+                                  std::vector<wabt::Type>{}),
+      PrintCallback);
 
   // This is computed in
   // https://github.com/rustwasm/wasm-bindgen/blob/ac6a230d83d6c903f1c96b8f2990c9e331fbee80/crates/macro-support/src/parser.rs#L537-L544
-  rust_module->AppendFuncExport("__wbg_oakprint_595a20b20932503a", 1, PrintString(env));
-  rust_module->AppendFuncExport("__wbg_oakgettime_fbdd8c74eb5da902", 0, OakGetTime(env));
-  rust_module->AppendFuncExport("__wbg_oakread_582e04b907894d42", 2, OakRead(env));
+  rust_module->AppendFuncExport(
+      "__wbg_oakprint_595a20b20932503a",
+      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
+                                  std::vector<wabt::Type>{}),
+      PrintString(env));
+  rust_module->AppendFuncExport(
+      "__wbg_oakgettime_fbdd8c74eb5da902",
+      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32},
+                                  std::vector<wabt::Type>{}),
+      OakGetTime(env));
+  rust_module->AppendFuncExport(
+      "__wbg_oakread_582e04b907894d42",
+      wabt::interp::FuncSignature(
+          std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32, wabt::Type::I32},
+          std::vector<wabt::Type>{wabt::Type::I32}),
+      OakRead(env));
 }
 
 static wabt::Result ReadModule(const std::string module_bytes, wabt::interp::Environment* env,
