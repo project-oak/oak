@@ -12,9 +12,10 @@ set -x
 # rustup toolchain install nightly
 # rustup target add wasm32-unknown-unknown --toolchain nightly
 
-cargo +nightly build --target=wasm32-unknown-unknown --manifest-path=rust/oak/examples/hello_world/Cargo.toml
+cargo +nightly build --release --target=wasm32-unknown-unknown --manifest-path=rust/oak/examples/hello_world/Cargo.toml
+cargo +nightly build --release --target=wasm32-unknown-unknown --manifest-path=rust/oak/examples/machine_learning/Cargo.toml
 
 bazel run //oak/client -- \
   --server_address=127.0.0.1:8888 \
-  --business_logic=$PWD/rust/oak/examples/hello_world/target/wasm32-unknown-unknown/debug/hello_world.wasm \
+  --business_logic=$PWD/rust/oak/examples/machine_learning/target/wasm32-unknown-unknown/release/machine_learning.wasm \
   --expression='add 11 22'
