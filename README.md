@@ -58,7 +58,7 @@ any I/O is instead performed via separate, dedicated methods.
 TODO: Use https://webassembly.org/docs/modules/#module-start-function when Rust
 supports it.
 
-An Oak Module may optionally rely on one or more *host calls*: these are invoked
+An Oak Module may optionally rely on one or more **host calls**: these are invoked
 as regular WebAssembly functions, but their implementation is fulfilled by the
 Oak VM itself in order to perform side-effects or interact with the host system
 or other Oak Servers.
