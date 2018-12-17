@@ -58,11 +58,12 @@ any I/O is instead performed via separate, dedicated methods.
 TODO: Use https://webassembly.org/docs/modules/#module-start-function when Rust
 supports it.
 
-An Oak Module may optionally rely on one or more functions offered by the Oak VM
-in order to perform side-effects or interact with the host system or other Oak
-Servers.
+An Oak Module may optionally rely on one or more *host calls*: these are invoked
+as regular WebAssembly functions, but their implementation is fulfilled by the
+Oak VM itself in order to perform side-effects or interact with the host system
+or other Oak Servers.
 
-The currently supported functions are the following:
+The currently supported host calls are the following:
 
 -   `oak_print: (i32, 132) -> nil`: Prints a string to standard output on the
     host system. To be used for debugging only, as it leaks data. Will be
