@@ -20,6 +20,45 @@ privileged software, and from most hardware attacks.
 Additionally, data are associated with policies when they enter the system, and
 policies are enforced and propagated even as data move from enclave to enclave.
 
+## Terminology
+
+- **Trusted Execution Environment (TEE)**: A secure CPU compartment containing
+  code and data; it enforces isolation from the host and other TEE instances
+  running on the same system. It guarantees _confidentiality_ and _integrity_
+  of both data and code running within it, and it is capable of creating
+  hardware-backed _remote attestations_ to prove to other parties a measurement
+  of the TEE itself.
+- **TEE Manufacturer**: The entity in charge of manufacturing the CPU or SoC
+  supporting the TEE.
+- **Platform Provider**: The entity in charge of maintaining and running the
+  combined hardware and software stack surrounding the TEE, for instance in a
+  cloud context.
+- **Trusted Computing Base (TCB)**: The set of hardware, firmware, software
+  components critical to the security of the system; bugs or vulnerabilities
+  inside the TCB may jeopardise the security properties of the entire system.
+- **Business Logic Developer**: The entity or person providing the code for the
+  service running on top of the Project Oak; in the most common case this may
+  be a third party developer.
+
+## Threat Model
+
+- **untrusted**:
+  * hardware (memory, disk, motherboard, network card, external devices)
+  * Operating System (kernel, drivers, libraries, applications)
+  * platform provider (hardware, software, employees)
+  * third-party developers
+- **trusted-but-verifiable**:
+  * Project Oak codebase (and its transitive dependencies)
+- **trusted**:
+  * TEE manufacturer
+- **partly or conditionally trusted**:
+  * end users
+
+Side channels are out of scope for Project Oak software implementation. While we
+acknowledge that most existing TEE have compromises and may be vulnerable to
+various kinds of attacks, we leave their resolution to the respective TEE
+manufacturers.
+
 ## Oak VM
 
 The _Oak VM_ is the core software component of Project Oak; it is responsible
@@ -47,7 +86,7 @@ Each Oak VM instance lives in its own dedicated enclave and is isolated from
 both the host as well as other enclaves and Oak VM instances on the same
 machine.
 
-#### WebAssembly FFI
+#### WebAssembly Interface
 
 The entry point of an Oak Module is a WebAssembly exported function named
 `oak_main` with signature `() -> nil` (i.e. taking no arguments and returning no
@@ -107,20 +146,21 @@ interact.
 
 ### Deployment Service
 
-Developers use the Deployment Service to deploy code to the Oak platform. Note
-that this is not part of the Trusted Computing Base, and the actual trusted
-attestation only happens between client and server at execution time.
+Business Logic Developers use the Deployment Service to deploy code to an Oak
+instance run by a platform provider. Note that this is not part of the TCB,
+since the actual trusted attestation only happens between client and server
+running in the TEE at execution time.
 
-Oak Functions follow the _serverless_ approach, in which functions are scheduled
+Oak Modules follow the _serverless_ approach, in which functions are scheduled
 on-demand and without developers having to provision or manage servers or
 virtual machines.
 
-Developers compile their code for the Oak Platform using the Oak SDK for their
-language, resulting in a self-contained Oak Module. They also manually create a
-manifest file in [TOML](https://github.com/toml-lang/toml) format, specifying
-any extra capabilities that the module is allowed to have access to. They
-finally upload both of them to the Oak Server using the `oak_deploy`
-command-line tool.
+Business Logic Developers first compile their code for the Oak Platform using
+the Oak SDK for their language, resulting in a self-contained Oak Module. They
+also manually create a manifest file in
+[TOML](https://github.com/toml-lang/toml) format, specifying any extra
+capabilities that the module is allowed to have access to. They finally upload
+both of them to the Oak Server using the `oak_deploy` command-line tool.
 
 TODO: Implement `oak_deploy`.
 
@@ -129,19 +169,25 @@ TODO: Implement `oak_deploy`.
 When a client needs to perform a computation, it connects to the Scheduling
 Service over gRPC and sends a request containing details about the Oak Module to
 load, and any associated policies. The Scheduling Service itself is not part of
-the Trusted Computing Base, and therefore must be considered untrusted by the
-client, i.e. the scheduling service is assumed to be able to modify any (part
-of) scheduling requests.
+the TCB, and therefore must be considered untrusted by the client, i.e. the
+scheduling service is assumed to be able to modify any (part of) scheduling
+requests.
 
 In response to a scheduling request, the Scheduling Service sends back to the
 caller details about the gRPC endpoint of the newly created enclave, initialised
 with the module and policies specified.
 
+All of this is handled by the `oak_schedule` command-line tool.
+
+TODO: Implement `oak_schedule`.
+
 ### Execution Service
 
 Once a new enclave is initialised and its endpoint available, a client connects
 to it using an authenticated and attested channel. The attestation proves to the
-client that the remote enclave is indeed running a genuine Oak VM.
+client that the remote enclave is indeed running a genuine Oak VM, and the Oak
+VM itself may prove additional details about the business logic and its
+properties.
 
 ## Capabilities
 
