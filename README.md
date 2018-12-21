@@ -293,10 +293,26 @@ TODO
 
 TODO: Roughtime
 
-## Compile and run
+## Development
+
+### Prerequisites
+
+- Docker: https://docs.docker.com/install
+- Bazel: https://docs.bazel.build/versions/master/install.html
+- Rust: https://rustup.rs/
+
+### Compile and Run
+
+#### Server
+
+The following command builds and runs an Oak Server instance.
 
 `./run_server_docker`
 
-(in another terminal)
+#### Client
+
+The following command (run in a separate terminal) compiles a sample business
+logic from Rust to WebAssembly, and sends it to the Oak Server running on the
+same machine.
 
 `./run_client`
