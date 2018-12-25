@@ -158,20 +158,19 @@ static void InitEnvironment(wabt::interp::Environment* env) {
                                   std::vector<wabt::Type>{}),
       PrintCallback);
 
-  // This is computed in
-  // https://github.com/rustwasm/wasm-bindgen/blob/ac6a230d83d6c903f1c96b8f2990c9e331fbee80/crates/macro-support/src/parser.rs#L537-L544
-  rust_module->AppendFuncExport(
-      "__wbg_oakprint_595a20b20932503a",
+  wabt::interp::HostModule* env_module = env->AppendHostModule("env");
+  env_module->AppendFuncExport(
+      "oak_print",
       wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
                                   std::vector<wabt::Type>{}),
       PrintString(env));
-  rust_module->AppendFuncExport(
-      "__wbg_oakgettime_fbdd8c74eb5da902",
+  env_module->AppendFuncExport(
+      "oak_get_time",
       wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32},
                                   std::vector<wabt::Type>{}),
       OakGetTime(env));
-  rust_module->AppendFuncExport(
-      "__wbg_oakread_582e04b907894d42",
+  env_module->AppendFuncExport(
+      "oak_read",
       wabt::interp::FuncSignature(
           std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32, wabt::Type::I32},
           std::vector<wabt::Type>{wabt::Type::I32}),
