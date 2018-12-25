@@ -116,31 +116,6 @@ static wabt::Index UnknownFuncHandler(wabt::interp::Environment* env,
 }
 
 static void InitEnvironment(wabt::interp::Environment* env) {
-  wabt::interp::HostModule* go_module = env->AppendHostModule("go");
-
-  go_module->AppendFuncExport("debug", 1, PrintCallback);
-
-  go_module->AppendFuncExport("runtime.wasmExit", 1, PrintCallback);
-  go_module->AppendFuncExport("runtime.wasmWrite", 1, PrintCallback);
-  go_module->AppendFuncExport("runtime.scheduleCallback", 1, PrintCallback);
-  go_module->AppendFuncExport("runtime.clearScheduledCallback", 1, PrintCallback);
-  go_module->AppendFuncExport("runtime.getRandomData", 1, PrintCallback);
-  go_module->AppendFuncExport("runtime.nanotime", 1, PrintCallback);
-  go_module->AppendFuncExport("runtime.walltime", 1, PrintCallback);
-
-  go_module->AppendFuncExport("syscall/js.stringVal", 1, PrintCallback);
-  go_module->AppendFuncExport("syscall/js.valueGet", 1, PrintCallback);
-  go_module->AppendFuncExport("syscall/js.valueSet", 1, PrintCallback);
-  go_module->AppendFuncExport("syscall/js.valueIndex", 1, PrintCallback);
-  go_module->AppendFuncExport("syscall/js.valueSetIndex", 1, PrintCallback);
-  go_module->AppendFuncExport("syscall/js.valueCall", 1, PrintCallback);
-  go_module->AppendFuncExport("syscall/js.valueNew", 1, PrintCallback);
-  go_module->AppendFuncExport("syscall/js.valueLength", 1, PrintCallback);
-  go_module->AppendFuncExport("syscall/js.valuePrepareString", 1, PrintCallback);
-  go_module->AppendFuncExport("syscall/js.valueLoadString", 1, PrintCallback);
-
-  go_module->on_unknown_func_export = UnknownFuncHandler;
-
   // Rust.
   wabt::interp::HostModule* rust_module = env->AppendHostModule("__wbindgen_placeholder__");
   rust_module->on_unknown_func_export = UnknownFuncHandler;
