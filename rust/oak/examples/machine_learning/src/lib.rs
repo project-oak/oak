@@ -20,7 +20,6 @@
 extern crate oak;
 extern crate rand;
 extern crate rusty_machine;
-extern crate wasm_bindgen;
 
 use rand::distributions::Distribution;
 use rand::distributions::Normal;
@@ -29,7 +28,6 @@ use rand::prelude::*;
 use rusty_machine::learning::naive_bayes::{self, NaiveBayes};
 use rusty_machine::learning::SupModel;
 use rusty_machine::linalg::{BaseMatrix, Matrix};
-use wasm_bindgen::prelude::*;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Type {
@@ -140,8 +138,8 @@ fn evaluate_prediction(hits: &mut u32, animal: &Animal, prediction: &[f64]) -> (
     (actual_type, accurate)
 }
 
-#[wasm_bindgen]
-pub fn oak_main() {
+#[no_mangle]
+pub extern "system" fn oak_main() {
     oak::print("Start\n");
     let (training_set_size, test_set_size) = (1000, 1000);
     // Generate all of our train and test data

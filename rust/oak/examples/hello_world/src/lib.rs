@@ -15,13 +15,11 @@
 //
 
 extern crate oak;
-extern crate wasm_bindgen;
 
 use std::io::Read;
-use wasm_bindgen::prelude::*;
 
-#[wasm_bindgen]
-pub fn oak_main() {
+#[no_mangle]
+pub extern "system" fn oak_main() {
     oak::print("HELLO OAK\n");
 
     let t = oak::get_time();
