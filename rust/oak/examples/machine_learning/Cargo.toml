@@ -8,5 +8,5 @@ crate-type = ["cdylib"]
 
 [dependencies]
 rusty-machine = "0.5.4"
-rand = { version = "0.6.1", features = ["wasm-bindgen"] }
+rand = "0.6.1"
 oak = { path = "../../" }
