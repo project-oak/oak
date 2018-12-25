@@ -14,21 +14,23 @@
 // limitations under the License.
 //
 
-// See https://rustwasm.github.io/book/reference/js-ffi.html
-#[link(wasm_import_module = "oak")]
-extern "system" {
-    fn oak_print(s: &str);
-    fn oak_get_time() -> u64;
-    fn oak_read(id: u32, buf: &mut [u8]) -> usize;
-    fn oak_write(id: u32, buf: &[u8]) -> usize;
+mod wasm {
+    // See https://rustwasm.github.io/book/reference/js-ffi.html
+    #[link(wasm_import_module = "oak")]
+    extern "system" {
+        pub fn oak_print(s: &str);
+        pub fn oak_get_time() -> u64;
+        pub fn oak_read(id: u32, buf: &mut [u8]) -> usize;
+        pub fn oak_write(id: u32, buf: &[u8]) -> usize;
+    }
 }
 
 pub fn print(s: &str) {
-    unsafe { oak_print(s) }
+    unsafe { wasm::oak_print(s) }
 }
 
 pub fn get_time() -> std::time::SystemTime {
-    let ns = unsafe { oak_get_time() };
+    let ns = unsafe { wasm::oak_get_time() };
     std::time::UNIX_EPOCH + std::time::Duration::from_nanos(ns)
 }
 
@@ -38,7 +40,7 @@ pub struct OakReader {
 
 impl std::io::Read for OakReader {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        Ok(unsafe { oak_read(self.id, buf) })
+        Ok(unsafe { wasm::oak_read(self.id, buf) })
     }
 }
 
@@ -52,7 +54,7 @@ pub struct OakWriter {
 
 impl std::io::Write for OakWriter {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        Ok(unsafe { oak_write(self.id, buf) })
+        Ok(unsafe { wasm::oak_write(self.id, buf) })
     }
     fn flush(&mut self) -> std::io::Result<()> {
         Ok(())
