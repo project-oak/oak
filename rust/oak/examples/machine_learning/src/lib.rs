@@ -139,7 +139,7 @@ fn evaluate_prediction(hits: &mut u32, animal: &Animal, prediction: &[f64]) -> (
 }
 
 #[no_mangle]
-pub extern "system" fn oak_main() {
+pub extern "C" fn oak_main() {
     oak::print("Start\n");
     let (training_set_size, test_set_size) = (1000, 1000);
     // Generate all of our train and test data

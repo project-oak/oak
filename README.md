@@ -102,29 +102,31 @@ as regular WebAssembly functions, but their implementation is fulfilled by the
 Oak VM itself in order to perform side-effects or interact with the host system
 or other Oak Servers.
 
+All Oak host calls are defined in the `oak` import module.
+
 The currently supported host calls are the following:
 
--   `oak_print: (i32, 132) -> nil`: Prints a string to standard output on the
+-   `print: (i32, 132) -> nil`: Prints a string to standard output on the
     host system. To be used for debugging only, as it leaks data. Will be
     removed before release.
 
     *   arg 0: Offset of block to print
     *   arg 1: Length of block to print
 
--   `oak_get_time: (i32) -> nil`: Retrieves the current time from the host
+-   `get_time: (i32) -> nil`: Retrieves the current time from the host
     system. TODO: Implement this via
     [Roughtime](https://blog.cloudflare.com/roughtime/).
 
     *   arg 0: Offset of block to receive number of milliseconds.
 
--   `oak_read: (i32, i32, i32) -> i32`: Reads from the specified input channel.
+-   `read: (i32, i32, i32) -> i32`: Reads from the specified input channel.
 
     *   arg 0: Input channel ID
     *   arg 1: Buffer address
     *   arg 2: Buffer size in bytes
     *   return 0: Number of bytes read
 
--   `oak_write: (i32, i32) -> i32`
+-   `write: (i32, i32) -> i32`
 
     *   arg 0: Buffer address
     *   arg 1: Buffer size in bytes

@@ -116,20 +116,6 @@ static wabt::Index UnknownFuncHandler(wabt::interp::Environment* env,
 }
 
 static void InitEnvironment(wabt::interp::Environment* env) {
-  // Rust.
-  wabt::interp::HostModule* rust_module = env->AppendHostModule("__wbindgen_placeholder__");
-  rust_module->on_unknown_func_export = UnknownFuncHandler;
-  rust_module->AppendFuncExport(
-      "__wbindgen_describe",
-      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32},
-                                  std::vector<wabt::Type>{}),
-      PrintCallback);
-  rust_module->AppendFuncExport(
-      "__wbindgen_throw",
-      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
-                                  std::vector<wabt::Type>{}),
-      PrintCallback);
-
   wabt::interp::HostModule* oak_module = env->AppendHostModule("oak");
   oak_module->AppendFuncExport(
       "print",

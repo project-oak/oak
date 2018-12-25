@@ -17,7 +17,7 @@
 mod wasm {
     // See https://rustwasm.github.io/book/reference/js-ffi.html
     #[link(wasm_import_module = "oak")]
-    extern "system" {
+    extern "C" {
         pub fn print(s: &str);
         pub fn get_time() -> u64;
         pub fn read(id: u32, buf: &mut [u8]) -> usize;

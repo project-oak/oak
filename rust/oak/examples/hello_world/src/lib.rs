@@ -19,7 +19,7 @@ extern crate oak;
 use std::io::Read;
 
 #[no_mangle]
-pub extern "system" fn oak_main() {
+pub extern "C" fn oak_main() {
     oak::print("HELLO OAK\n");
 
     let t = oak::get_time();
