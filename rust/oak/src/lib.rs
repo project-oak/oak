@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+// See https://rustwasm.github.io/book/reference/js-ffi.html
+#[link(wasm_import_module = "oak")]
 extern "system" {
     fn oak_print(s: &str);
     fn oak_get_time() -> u64;

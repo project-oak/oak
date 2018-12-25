@@ -141,9 +141,6 @@ static void InitEnvironment(wabt::interp::Environment* env) {
 
   go_module->on_unknown_func_export = UnknownFuncHandler;
 
-  wabt::interp::HostModule* oak_module = env->AppendHostModule("oak");
-  oak_module->on_unknown_func_export = UnknownFuncHandler;
-
   // Rust.
   wabt::interp::HostModule* rust_module = env->AppendHostModule("__wbindgen_placeholder__");
   rust_module->on_unknown_func_export = UnknownFuncHandler;
@@ -158,18 +155,18 @@ static void InitEnvironment(wabt::interp::Environment* env) {
                                   std::vector<wabt::Type>{}),
       PrintCallback);
 
-  wabt::interp::HostModule* env_module = env->AppendHostModule("env");
-  env_module->AppendFuncExport(
+  wabt::interp::HostModule* oak_module = env->AppendHostModule("oak");
+  oak_module->AppendFuncExport(
       "oak_print",
       wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
                                   std::vector<wabt::Type>{}),
       PrintString(env));
-  env_module->AppendFuncExport(
+  oak_module->AppendFuncExport(
       "oak_get_time",
       wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32},
                                   std::vector<wabt::Type>{}),
       OakGetTime(env));
-  env_module->AppendFuncExport(
+  oak_module->AppendFuncExport(
       "oak_read",
       wabt::interp::FuncSignature(
           std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32, wabt::Type::I32},
