@@ -157,17 +157,17 @@ static void InitEnvironment(wabt::interp::Environment* env) {
 
   wabt::interp::HostModule* oak_module = env->AppendHostModule("oak");
   oak_module->AppendFuncExport(
-      "oak_print",
+      "print",
       wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
                                   std::vector<wabt::Type>{}),
       PrintString(env));
   oak_module->AppendFuncExport(
-      "oak_get_time",
+      "get_time",
       wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32},
                                   std::vector<wabt::Type>{}),
       OakGetTime(env));
   oak_module->AppendFuncExport(
-      "oak_read",
+      "read",
       wabt::interp::FuncSignature(
           std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32, wabt::Type::I32},
           std::vector<wabt::Type>{wabt::Type::I32}),
