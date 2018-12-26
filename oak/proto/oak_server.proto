@@ -65,6 +65,7 @@ message CertIdentityRequirement {
 }
 
 // Requirement for the remote platform to be an Intel SGX enclave.
+// See https://software.intel.com/en-us/node/702979.
 message IntelSgxEnclaveIdentityRequirement {
   bytes measurement = 1;
 }
