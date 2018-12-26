@@ -56,21 +56,33 @@ message Channel {
   // hostname:port or IP:port format.
   string address = 1;
 
-  // The identity of the party on the other side of this channel that must be
-  // asserted.
-  CertIdentity cert_identity = 2;
-
-  // The identity of the enclave on the other side of this channel that must be
-  // asserted.
-  EnclaveIdentity enclave_identity = 3;
+  PlatformIdentityRequirementRule platform_identity_requirement_rule = 2;
 }
 
-message CertIdentity {
+// Requirement for the remote platform to possess a certificate.
+message CertIdentityRequirement {
   bytes signature = 1;
 }
 
-message EnclaveIdentity {
+// Requirement for the remote platform to be an Intel SGX enclave.
+message IntelSgxEnclaveIdentityRequirement {
   bytes measurement = 1;
+}
+
+message PlatformIdentityRequirement {
+  oneof identity_requirement {
+    CertIdentityRequirement cert_identity_requirement = 1;
+    IntelSgxEnclaveIdentityRequirement intel_sgx_enclave_identity_requirement = 2;
+  }
+}
+
+// Rule defining allowed platform identities.
+// Expressed in Disjunctive Normal Form (OR of ANDs).
+message PlatformIdentityRequirementRule {
+  message PlatformIdentityRequirementClause {
+    repeated PlatformIdentityRequirement platform_identity_requirements = 1;
+  }
+  repeated PlatformIdentityRequirementClause clauses = 1;
 }
 
 service OakServer {
