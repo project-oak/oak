@@ -27,6 +27,7 @@ pub extern "C" fn oak_main() {
 
     let mut in1 = oak::get_input(0);
     let mut buf = [0; 10];
+    // TODO: Use Read::read_to_string when the Oak VM supports read cursors.
     in1.read(&mut buf);
     let s = std::str::from_utf8(&buf).unwrap();
     oak::print(&format!("Val: {}\n", s));

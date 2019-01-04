@@ -100,6 +100,8 @@ static wabt::interp::HostFunc::Callback OakRead(wabt::interp::Environment* env) 
     std::vector<char> val_bytes(val.cbegin(), val.cend());
     uint32_t p = args[1].get_i32();
     WriteMemory(env, p, val_bytes);
+    // TODO: Maintain cursor between read calls.
+    results[0].set_i32(val_bytes.size());
     return wabt::interp::Result::Ok;
   };
 }

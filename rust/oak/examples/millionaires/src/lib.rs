@@ -23,4 +23,12 @@ pub extern "C" fn oak_main() {
     // TODO: Implement https://en.wikipedia.org/wiki/Yao%27s_Millionaires%27_Problem .
 
     oak::print("HELLO OAK\n");
+
+    for i in 0..2 {
+        let mut in_channel = oak::get_input(i);
+        let mut buf = [0; 10];
+        in_channel.read(&mut buf);
+        let s = std::str::from_utf8(&buf).expect("could not parse string");
+        oak::print(&format!("buffer {}: {}\n", i, s));
+    }
 }
