@@ -56,8 +56,14 @@ static std::string ReadString(wabt::interp::Environment* env, const uint32_t off
 }
 
 static void WriteMemory(wabt::interp::Environment* env, const uint32_t offset,
+                        std::vector<char>::const_iterator begin,
+                        std::vector<char>::const_iterator end) {
+  std::copy(begin, end, env->GetMemory(0)->data.begin() + offset);
+}
+
+static void WriteMemory(wabt::interp::Environment* env, const uint32_t offset,
                         const std::vector<char> data) {
-  std::copy(data.cbegin(), data.cend(), env->GetMemory(0)->data.begin() + offset);
+  WriteMemory(env, offset, data.cbegin(), data.cend());
 }
 
 static wabt::interp::HostFunc::Callback PrintString(wabt::interp::Environment* env) {
@@ -89,23 +95,6 @@ static wabt::interp::HostFunc::Callback OakGetTime(wabt::interp::Environment* en
   };
 }
 
-static wabt::interp::HostFunc::Callback OakRead(wabt::interp::Environment* env) {
-  return [env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
-               const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
-    LOG(INFO) << "Called host function: " << func->module_name << "." << func->field_name;
-    for (auto const& arg : args) {
-      LOG(INFO) << "Arg: " << wabt::interp::TypedValueToString(arg);
-    }
-    std::string val = "XYZ";
-    std::vector<char> val_bytes(val.cbegin(), val.cend());
-    uint32_t p = args[1].get_i32();
-    WriteMemory(env, p, val_bytes);
-    // TODO: Maintain cursor between read calls.
-    results[0].set_i32(val_bytes.size());
-    return wabt::interp::Result::Ok;
-  };
-}
-
 static wabt::Index UnknownFuncHandler(wabt::interp::Environment* env,
                                       wabt::interp::HostModule* host_module,
                                       const wabt::string_view name, const wabt::Index sig_index) {
@@ -113,26 +102,6 @@ static wabt::Index UnknownFuncHandler(wabt::interp::Environment* env,
   std::pair<wabt::interp::HostFunc*, wabt::Index> pair =
       host_module->AppendFuncExport(name, sig_index, PrintCallback);
   return pair.second;
-}
-
-static void InitEnvironment(wabt::interp::Environment* env) {
-  wabt::interp::HostModule* oak_module = env->AppendHostModule("oak");
-  oak_module->AppendFuncExport(
-      "print",
-      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
-                                  std::vector<wabt::Type>{}),
-      PrintString(env));
-  oak_module->AppendFuncExport(
-      "get_time",
-      wabt::interp::FuncSignature(std::vector<wabt::Type>{},
-                                  std::vector<wabt::Type>{wabt::Type::I64}),
-      OakGetTime(env));
-  oak_module->AppendFuncExport(
-      "read",
-      wabt::interp::FuncSignature(
-          std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32, wabt::Type::I32},
-          std::vector<wabt::Type>{wabt::Type::I32}),
-      OakRead(env));
 }
 
 static wabt::Result ReadModule(const std::string module_bytes, wabt::interp::Environment* env,
@@ -171,6 +140,16 @@ OakServer::OakServer() : Service() {}
     LOG(INFO) << "Auth Identity " << identity;
   }
 
+  std::string val0 = "this is test bucket number 0 -- this is test bucket number 0";
+  std::vector<char> val0_bytes(val0.cbegin(), val0.cend());
+  this->in_buckets.push_back(val0_bytes);
+  this->in_cursors.push_back(0);
+
+  std::string val1 = "this is test bucket number 1 -- this is test bucket number 1";
+  std::vector<char> val1_bytes(val1.cbegin(), val1.cend());
+  this->in_buckets.push_back(val1_bytes);
+  this->in_cursors.push_back(0);
+
   wabt::Result result;
   wabt::interp::Environment env;
   InitEnvironment(&env);
@@ -207,6 +186,63 @@ OakServer::OakServer() : Service() {}
   }
 
   return ::grpc::Status::OK;
+}
+
+void OakServer::InitEnvironment(wabt::interp::Environment* env) {
+  wabt::interp::HostModule* oak_module = env->AppendHostModule("oak");
+  oak_module->AppendFuncExport(
+      "print",
+      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
+                                  std::vector<wabt::Type>{}),
+      PrintString(env));
+  oak_module->AppendFuncExport(
+      "get_time",
+      wabt::interp::FuncSignature(std::vector<wabt::Type>{},
+                                  std::vector<wabt::Type>{wabt::Type::I64}),
+      OakGetTime(env));
+  oak_module->AppendFuncExport(
+      "read",
+      wabt::interp::FuncSignature(
+          std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32, wabt::Type::I32},
+          std::vector<wabt::Type>{wabt::Type::I32}),
+      this->OakRead(env));
+}
+
+::wabt::interp::HostFunc::Callback OakServer::OakRead(wabt::interp::Environment* env) {
+  return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
+                     const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
+    LOG(INFO) << "Called host function: " << func->module_name << "." << func->field_name;
+    for (auto const& arg : args) {
+      LOG(INFO) << "Arg: " << wabt::interp::TypedValueToString(arg);
+    }
+
+    // TODO: Synchronise this?
+    uint32_t bucket_id = args[0].get_i32();
+
+    if (bucket_id >= this->in_buckets.size()) {
+      results[0].set_i32(0);
+      return wabt::interp::Result::Ok;
+    }
+
+    uint32_t p = args[1].get_i32();
+    uint32_t len = args[2].get_i32();
+
+    std::vector<char> in_bucket = this->in_buckets[bucket_id];
+    uint32_t in_bucket_start = this->in_cursors[bucket_id];
+    uint32_t in_bucket_end = in_bucket_start + len;
+    if (in_bucket_end > in_bucket.size()) {
+      in_bucket_end = in_bucket.size();
+    }
+    LOG(INFO) << "start: " << in_bucket_start;
+    LOG(INFO) << "end: " << in_bucket_end;
+
+    WriteMemory(env, p, in_bucket.cbegin() + in_bucket_start, in_bucket.cbegin() + in_bucket_end);
+    results[0].set_i32(in_bucket_end - in_bucket_start);
+
+    this->in_cursors[bucket_id] = in_bucket_end;
+
+    return wabt::interp::Result::Ok;
+  };
 }
 
 }  // namespace grpc_server

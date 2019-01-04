@@ -26,9 +26,10 @@ pub extern "C" fn oak_main() {
 
     for i in 0..2 {
         let mut in_channel = oak::get_input(i);
-        let mut buf = [0; 10];
-        in_channel.read(&mut buf);
-        let s = std::str::from_utf8(&buf).expect("could not parse string");
+        let mut s = String::new();
+        in_channel
+            .read_to_string(&mut s)
+            .expect("could not read string");
         oak::print(&format!("buffer {}: {}\n", i, s));
     }
 }

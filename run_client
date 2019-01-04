@@ -12,9 +12,9 @@ set -x
 # rustup toolchain install nightly
 # rustup target add wasm32-unknown-unknown --toolchain nightly
 
-#readonly EXAMPLE_NAME=hello_world
+readonly EXAMPLE_NAME=hello_world
 #readonly EXAMPLE_NAME=machine_learning
-readonly EXAMPLE_NAME=millionaires
+#readonly EXAMPLE_NAME=millionaires
 
 cargo +nightly build --release --target=wasm32-unknown-unknown --manifest-path=rust/oak/examples/$EXAMPLE_NAME/Cargo.toml
 

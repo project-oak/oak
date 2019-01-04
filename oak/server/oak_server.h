@@ -16,10 +16,12 @@
 
 #include "oak/proto/oak_server.grpc.pb.h"
 
+#include "src/interp/interp.h"
+
 namespace oak {
 namespace grpc_server {
 
-class OakServer final : public oak::OakServer::Service {
+class OakServer final : public ::oak::OakServer::Service {
  public:
   OakServer();
 
@@ -27,6 +29,15 @@ class OakServer final : public oak::OakServer::Service {
   ::grpc::Status InitiateComputation(::grpc::ServerContext *context,
                                      const ::oak::InitiateComputationRequest *request,
                                      ::oak::InitiateComputationResponse *response) override;
+
+  void InitEnvironment(wabt::interp::Environment *env);
+  ::wabt::interp::HostFunc::Callback OakRead(wabt::interp::Environment *env);
+
+  std::vector<std::vector<char>> in_buckets;
+  std::vector<uint32_t> in_cursors;
+
+  std::vector<std::vector<char>> out_buckets;
+  std::vector<uint32_t> out_cursors;
 };
 
 }  // namespace grpc_server
