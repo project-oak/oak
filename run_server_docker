@@ -11,7 +11,7 @@ docker run \
   --volume=$PWD:/opt/my-project \
   --workdir=/opt/my-project \
   --publish=8888:8888 \
-  gcr.io/asylo-framework/asylo \
+  gcr.io/asylo-framework/asylo:buildenv-v0.3.2 \
   ./bazel-bin/oak/server/oak
 
 #bazel run //oak/client -- --server_address=127.0.0.1:8888
