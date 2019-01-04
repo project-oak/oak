@@ -84,9 +84,7 @@ static wabt::interp::HostFunc::Callback OakGetTime(wabt::interp::Environment* en
     LOG(INFO) << "Called host function: " << func->module_name << "." << func->field_name;
     auto now = std::chrono::system_clock::now();
     auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
-    std::vector<char> ns_bytes = i64Bytes(ns);
-    uint32_t p = args[0].get_i32();
-    WriteMemory(env, p, ns_bytes);
+    results[0].set_i64(ns);
     return wabt::interp::Result::Ok;
   };
 }
@@ -124,8 +122,8 @@ static void InitEnvironment(wabt::interp::Environment* env) {
       PrintString(env));
   oak_module->AppendFuncExport(
       "get_time",
-      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32},
-                                  std::vector<wabt::Type>{}),
+      wabt::interp::FuncSignature(std::vector<wabt::Type>{},
+                                  std::vector<wabt::Type>{wabt::Type::I64}),
       OakGetTime(env));
   oak_module->AppendFuncExport(
       "read",

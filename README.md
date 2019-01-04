@@ -22,37 +22,37 @@ policies are enforced and propagated even as data move from enclave to enclave.
 
 ## Terminology
 
-- **Trusted Execution Environment (TEE)**: A secure CPU compartment containing
-  code and data; it enforces isolation from the host and other TEE instances
-  running on the same system. It guarantees _confidentiality_ and _integrity_
-  of both data and code running within it, and it is capable of creating
-  hardware-backed _remote attestations_ to prove to other parties a measurement
-  of the TEE itself.
-- **TEE Manufacturer**: The entity in charge of manufacturing the CPU or SoC
-  supporting the TEE.
-- **Platform Provider**: The entity in charge of maintaining and running the
-  combined hardware and software stack surrounding the TEE, for instance in a
-  cloud context.
-- **Trusted Computing Base (TCB)**: The set of hardware, firmware, software
-  components critical to the security of the system; bugs or vulnerabilities
-  inside the TCB may jeopardise the security properties of the entire system.
-- **Business Logic Developer**: The entity or person providing the code for the
-  service running on top of the Project Oak; in the most common case this may
-  be a third party developer.
+-   **Trusted Execution Environment (TEE)**: A secure CPU compartment containing
+    code and data; it enforces isolation from the host and other TEE instances
+    running on the same system. It guarantees _confidentiality_ and _integrity_
+    of both data and code running within it, and it is capable of creating
+    hardware-backed _remote attestations_ to prove to other parties a
+    measurement of the TEE itself.
+-   **TEE Manufacturer**: The entity in charge of manufacturing the CPU or SoC
+    supporting the TEE.
+-   **Platform Provider**: The entity in charge of maintaining and running the
+    combined hardware and software stack surrounding the TEE, for instance in a
+    cloud context.
+-   **Trusted Computing Base (TCB)**: The set of hardware, firmware, software
+    components critical to the security of the system; bugs or vulnerabilities
+    inside the TCB may jeopardise the security properties of the entire system.
+-   **Business Logic Developer**: The entity or person providing the code for
+    the service running on top of the Project Oak; in the most common case this
+    may be a third party developer.
 
 ## Threat Model
 
-- **untrusted**:
-  * hardware (memory, disk, motherboard, network card, external devices)
-  * Operating System (kernel, drivers, libraries, applications)
-  * platform provider (hardware, software, employees)
-  * third-party developers
-- **trusted-but-verifiable**:
-  * Project Oak codebase (and its transitive dependencies)
-- **trusted**:
-  * TEE manufacturer
-- **partly or conditionally trusted**:
-  * end users
+-   **untrusted**:
+    *   hardware (memory, disk, motherboard, network card, external devices)
+    *   Operating System (kernel, drivers, libraries, applications)
+    *   platform provider (hardware, software, employees)
+    *   third-party developers
+-   **trusted-but-verifiable**:
+    *   Project Oak codebase (and its transitive dependencies)
+-   **trusted**:
+    *   TEE manufacturer
+-   **partly or conditionally trusted**:
+    *   end users
 
 Side channels are out of scope for Project Oak software implementation. While we
 acknowledge that most existing TEE have compromises and may be vulnerable to
@@ -97,27 +97,27 @@ any I/O is instead performed via separate, dedicated methods.
 TODO: Use https://webassembly.org/docs/modules/#module-start-function when Rust
 supports it.
 
-An Oak Module may optionally rely on one or more **host calls**: these are invoked
-as regular WebAssembly functions, but their implementation is fulfilled by the
-Oak VM itself in order to perform side-effects or interact with the host system
-or other Oak Servers.
+An Oak Module may optionally rely on one or more **host calls**: these are
+invoked as regular WebAssembly functions, but their implementation is fulfilled
+by the Oak VM itself in order to perform side-effects or interact with the host
+system or other Oak Servers.
 
 All Oak host calls are defined in the `oak` import module.
 
 The currently supported host calls are the following:
 
--   `print: (i32, 132) -> nil`: Prints a string to standard output on the
-    host system. To be used for debugging only, as it leaks data. Will be
-    removed before release.
+-   `print: (i32, 132) -> nil`: Prints a string to standard output on the host
+    system. To be used for debugging only, as it leaks data. Will be removed
+    before release.
 
     *   arg 0: Offset of block to print
     *   arg 1: Length of block to print
 
--   `get_time: (i32) -> nil`: Retrieves the current time from the host
-    system. TODO: Implement this via
+-   `get_time: () -> i64`: Retrieves the current time from the host system.
+    TODO: Implement this via
     [Roughtime](https://blog.cloudflare.com/roughtime/).
 
-    *   arg 0: Offset of block to receive number of milliseconds.
+    *   return 0: Number of nanoseconds.
 
 -   `read: (i32, i32, i32) -> i32`: Reads from the specified input channel.
 
@@ -299,9 +299,9 @@ TODO: Roughtime
 
 ### Prerequisites
 
-- Docker: https://docs.docker.com/install
-- Bazel: https://docs.bazel.build/versions/master/install.html
-- Rust: https://rustup.rs/
+-   Docker: https://docs.docker.com/install
+-   Bazel: https://docs.bazel.build/versions/master/install.html
+-   Rust: https://rustup.rs/
 
 ### Compile and Run
 

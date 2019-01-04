@@ -14,8 +14,9 @@ set -x
 
 cargo +nightly build --release --target=wasm32-unknown-unknown --manifest-path=rust/oak/examples/hello_world/Cargo.toml
 cargo +nightly build --release --target=wasm32-unknown-unknown --manifest-path=rust/oak/examples/machine_learning/Cargo.toml
+cargo +nightly build --release --target=wasm32-unknown-unknown --manifest-path=rust/oak/examples/millionaires/Cargo.toml
 
 bazel run //oak/client -- \
   --server_address=127.0.0.1:8888 \
-  --business_logic=$PWD/rust/oak/examples/machine_learning/target/wasm32-unknown-unknown/release/machine_learning.wasm \
+  --business_logic=$PWD/rust/oak/examples/millionaires/target/wasm32-unknown-unknown/release/millionaires.wasm \
   --expression='add 11 22'
