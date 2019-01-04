@@ -78,7 +78,7 @@ int main(int argc, char** argv) {
     LOG(QFATAL) << "Must supply a non-empty expression logic with --expression";
   }
 
-  ::std::vector<::asylo::EnclaveAssertionAuthorityConfig> configs;
+  std::vector<::asylo::EnclaveAssertionAuthorityConfig> configs;
   ::asylo::Status status =
       ::asylo::InitializeEnclaveAssertionAuthorities(configs.begin(), configs.end());
   if (!status.ok()) {
