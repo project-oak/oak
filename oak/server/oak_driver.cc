@@ -40,6 +40,8 @@ int main(int argc, char *argv[]) {
   // Setup.
   ::google::ParseCommandLineFlags(&argc, &argv, /*remove_flags=*/true);
 
+  // We install an explicit SIGINT handler, as for some reason the default one does not seem to
+  // work.
   signal(SIGINT, sigint_handler);
 
   // Initialise enclave.
