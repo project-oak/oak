@@ -126,10 +126,11 @@ The currently supported host calls are the following:
     *   arg 2: Buffer size in bytes
     *   return 0: Number of bytes read
 
--   `write: (i32, i32) -> i32`
+-   `write: (i32, i32, i32) -> i32`: Writes to the specified output channel.
 
-    *   arg 0: Buffer address
-    *   arg 1: Buffer size in bytes
+    *   arg 0: Output channel ID
+    *   arg 1: Buffer address
+    *   arg 2: Buffer size in bytes
     *   return 0: Number of bytes written
 
 #### Rust SDK

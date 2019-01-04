@@ -245,5 +245,16 @@ void OakServer::InitEnvironment(wabt::interp::Environment* env) {
   };
 }
 
+::grpc::Status OakServer::SetChannelData(::grpc::ServerContext* context,
+                                         const ::oak::SetChannelDataRequest* request,
+                                         ::oak::SetChannelDataResponse* response) {
+  LOG(INFO) << "setting channel data";
+  uint32_t in_channel_id = request->channel_id();
+  auto source_data = request->data();
+  auto destination_data = this->in_buckets[in_channel_id];
+  destination_data.insert(destination_data.end(), source_data.begin(), source_data.end());
+  return ::grpc::Status::OK;
+}
+
 }  // namespace grpc_server
 }  // namespace oak

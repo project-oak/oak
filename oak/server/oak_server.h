@@ -30,6 +30,10 @@ class OakServer final : public ::oak::OakServer::Service {
                                      const ::oak::InitiateComputationRequest *request,
                                      ::oak::InitiateComputationResponse *response) override;
 
+  ::grpc::Status SetChannelData(::grpc::ServerContext *context,
+                                const ::oak::SetChannelDataRequest *request,
+                                ::oak::SetChannelDataResponse *response) override;
+
   void InitEnvironment(wabt::interp::Environment *env);
   ::wabt::interp::HostFunc::Callback OakRead(wabt::interp::Environment *env);
 

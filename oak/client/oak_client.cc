@@ -33,30 +33,47 @@ class OakClient {
  public:
   OakClient(const std::shared_ptr<::grpc::ChannelInterface>& channel)
       : stub_(::oak::OakServer::NewStub(channel, ::grpc::StubOptions())) {
-    ::grpc::ClientContext context;
-    ::oak::InitiateComputationRequest request;
-    ::oak::InitiateComputationResponse response;
+    {
+      ::grpc::ClientContext context;
 
-    std::ifstream t(FLAGS_business_logic, std::ifstream::in);
-    if (!t.is_open()) {
-      LOG(QFATAL) << "Could not open file " << FLAGS_business_logic;
+      ::oak::InitiateComputationRequest request;
+      ::oak::InitiateComputationResponse response;
+
+      std::ifstream t(FLAGS_business_logic, std::ifstream::in);
+      if (!t.is_open()) {
+        LOG(QFATAL) << "Could not open file " << FLAGS_business_logic;
+      }
+      std::stringstream buffer;
+      buffer << t.rdbuf();
+      LOG(INFO) << "Module size: " << buffer.str().size();
+
+      request.set_business_logic(buffer.str());
+
+      request.set_expression(FLAGS_expression);
+
+      // LOG(INFO) << "request: " << request.DebugString();
+
+      ::grpc::Status status = this->stub_->InitiateComputation(&context, request, &response);
+      if (!status.ok()) {
+        LOG(QFATAL) << "Failed: " << status.error_message();
+      }
+
+      LOG(INFO) << "response: " << response.DebugString();
     }
-    std::stringstream buffer;
-    buffer << t.rdbuf();
-    LOG(INFO) << "Module size: " << buffer.str().size();
 
-    request.set_business_logic(buffer.str());
+    {
+      ::grpc::ClientContext context;
 
-    request.set_expression(FLAGS_expression);
+      ::oak::SetChannelDataRequest request;
+      ::oak::SetChannelDataResponse response;
 
-    // LOG(INFO) << "request: " << request.DebugString();
-
-    ::grpc::Status status = this->stub_->InitiateComputation(&context, request, &response);
-    if (!status.ok()) {
-      LOG(QFATAL) << "Failed: " << status.error_message();
+      request.set_channel_id(0);
+      request.set_data("123");
+      ::grpc::Status status = this->stub_->SetChannelData(&context, request, &response);
+      if (!status.ok()) {
+        LOG(QFATAL) << "Failed: " << status.error_message();
+      }
     }
-
-    LOG(INFO) << "response: " << response.DebugString();
   }
 
  private:
