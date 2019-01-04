@@ -31,9 +31,16 @@
 
 DEFINE_string(enclave_path, "", "Path to enclave to load");
 
+void sigint_handler(int param) {
+  LOG(QFATAL) << "SIGINT received";
+  exit(1);
+}
+
 int main(int argc, char *argv[]) {
   // Setup.
   ::google::ParseCommandLineFlags(&argc, &argv, /*remove_flags=*/true);
+
+  signal(SIGINT, sigint_handler);
 
   // Initialise enclave.
   asylo::EnclaveManager::Configure(asylo::EnclaveManagerOptions());
@@ -75,7 +82,7 @@ int main(int argc, char *argv[]) {
   // Wait.
   {
     absl::Notification server_timeout;
-    server_timeout.WaitForNotificationWithTimeout(absl::Seconds(300));
+    server_timeout.WaitForNotificationWithTimeout(absl::Hours(24));
   }
 
   // Finalisation.
