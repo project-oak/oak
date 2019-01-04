@@ -186,17 +186,8 @@ OakServer::OakServer() : Service() {}
     wabt::interp::Executor executor(&env, trace_stream, thread_options);
     LOG(INFO) << "Executing module";
 
-    // module->start_func_index = 1;
-    // wabt::interp::ExecResult exec_result = executor.RunStartFunction(module);
-
     wabt::interp::TypedValues args;
 
-    // wabt::interp::TypedValue zero(wabt::Type::I32);
-    // zero.set_i32(0);
-    // args.push_back(zero);
-    // args.push_back(zero);
-
-    // wabt::interp::ExecResult exec_result = executor.RunExportByName(module, "run", args);
     wabt::interp::ExecResult exec_result = executor.RunExportByName(module, "oak_main", args);
 
     if (exec_result.result == wabt::interp::Result::Ok) {
