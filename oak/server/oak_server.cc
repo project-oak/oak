@@ -165,7 +165,11 @@ OakServer::OakServer() : Service() {}
 ::grpc::Status OakServer::InitiateComputation(::grpc::ServerContext* context,
                                               const ::oak::InitiateComputationRequest* request,
                                               ::oak::InitiateComputationResponse* response) {
-  LOG(INFO) << "Initate Computation: " << request->DebugString();
+  LOG(INFO) << "Initate Computation";
+  LOG(INFO) << "Peer " << context->peer();
+  for (auto const& identity : context->auth_context()->GetPeerIdentity()) {
+    LOG(INFO) << "Auth Identity " << identity;
+  }
 
   wabt::Result result;
   wabt::interp::Environment env;
