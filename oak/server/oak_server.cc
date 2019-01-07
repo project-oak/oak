@@ -140,15 +140,11 @@ OakServer::OakServer() : Service() {}
     LOG(INFO) << "Auth Identity " << identity;
   }
 
-  std::string val0 = "this is test bucket number 0 -- this is test bucket number 0";
-  std::vector<char> val0_bytes(val0.cbegin(), val0.cend());
-  this->in_buckets.push_back(val0_bytes);
-  this->in_cursors.push_back(0);
-
-  std::string val1 = "this is test bucket number 1 -- this is test bucket number 1";
-  std::vector<char> val1_bytes(val1.cbegin(), val1.cend());
-  this->in_buckets.push_back(val1_bytes);
-  this->in_cursors.push_back(0);
+  for (auto const& input : request->inputs()) {
+    LOG(INFO) << "Adding input channel";
+    Channel channel;
+    this->in_channels.push_back(channel);
+  }
 
   wabt::Result result;
   wabt::interp::Environment env;
@@ -217,9 +213,9 @@ void OakServer::InitEnvironment(wabt::interp::Environment* env) {
     }
 
     // TODO: Synchronise this?
-    uint32_t bucket_id = args[0].get_i32();
+    uint32_t in_channel_id = args[0].get_i32();
 
-    if (bucket_id >= this->in_buckets.size()) {
+    if (in_channel_id >= this->in_channels.size()) {
       results[0].set_i32(0);
       return wabt::interp::Result::Ok;
     }
@@ -227,19 +223,20 @@ void OakServer::InitEnvironment(wabt::interp::Environment* env) {
     uint32_t p = args[1].get_i32();
     uint32_t len = args[2].get_i32();
 
-    std::vector<char> in_bucket = this->in_buckets[bucket_id];
-    uint32_t in_bucket_start = this->in_cursors[bucket_id];
+    Channel* in_channel = &this->in_channels[in_channel_id];
+    uint32_t in_bucket_start = in_channel->read_cursor;
     uint32_t in_bucket_end = in_bucket_start + len;
-    if (in_bucket_end > in_bucket.size()) {
-      in_bucket_end = in_bucket.size();
+    std::vector<char>* data = &in_channel->data;
+    if (in_bucket_end > data->size()) {
+      in_bucket_end = data->size();
     }
     LOG(INFO) << "start: " << in_bucket_start;
     LOG(INFO) << "end: " << in_bucket_end;
 
-    WriteMemory(env, p, in_bucket.cbegin() + in_bucket_start, in_bucket.cbegin() + in_bucket_end);
+    WriteMemory(env, p, data->cbegin() + in_bucket_start, data->cbegin() + in_bucket_end);
     results[0].set_i32(in_bucket_end - in_bucket_start);
 
-    this->in_cursors[bucket_id] = in_bucket_end;
+    in_channel->read_cursor = in_bucket_end;
 
     return wabt::interp::Result::Ok;
   };
@@ -248,10 +245,10 @@ void OakServer::InitEnvironment(wabt::interp::Environment* env) {
 ::grpc::Status OakServer::SetChannelData(::grpc::ServerContext* context,
                                          const ::oak::SetChannelDataRequest* request,
                                          ::oak::SetChannelDataResponse* response) {
-  LOG(INFO) << "setting channel data";
   uint32_t in_channel_id = request->channel_id();
+  LOG(INFO) << "setting data for channel " << in_channel_id;
   auto source_data = request->data();
-  auto destination_data = this->in_buckets[in_channel_id];
+  auto destination_data = this->in_channels[in_channel_id].data;
   destination_data.insert(destination_data.end(), source_data.begin(), source_data.end());
   return ::grpc::Status::OK;
 }

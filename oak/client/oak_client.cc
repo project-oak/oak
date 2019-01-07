@@ -49,6 +49,16 @@ class OakClient {
 
       request.set_business_logic(buffer.str());
 
+      // Add two input channels for the business logic.
+      {
+        ::oak::Input* input = request.add_inputs();
+        input->set_name("xxx");
+      }
+      {
+        ::oak::Input* input = request.add_inputs();
+        input->set_name("yyy");
+      }
+
       ::grpc::Status status = this->stub_->InitiateComputation(&context, request, &response);
       if (!status.ok()) {
         LOG(QFATAL) << "Failed: " << status.error_message();
@@ -64,7 +74,21 @@ class OakClient {
       ::oak::SetChannelDataResponse response;
 
       request.set_channel_id(0);
-      request.set_data("123");
+      request.set_data("aaa:111");
+      ::grpc::Status status = this->stub_->SetChannelData(&context, request, &response);
+      if (!status.ok()) {
+        LOG(QFATAL) << "Failed: " << status.error_message();
+      }
+    }
+
+    {
+      ::grpc::ClientContext context;
+
+      ::oak::SetChannelDataRequest request;
+      ::oak::SetChannelDataResponse response;
+
+      request.set_channel_id(1);
+      request.set_data("bbb:222");
       ::grpc::Status status = this->stub_->SetChannelData(&context, request, &response);
       if (!status.ok()) {
         LOG(QFATAL) << "Failed: " << status.error_message();

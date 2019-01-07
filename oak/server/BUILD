@@ -24,8 +24,13 @@ load("@linux_sgx//:sgx_sdk.bzl", "sgx_enclave_configuration")
 
 cc_library(
     name = "oak_server",
-    srcs = ["oak_server.cc"],
-    hdrs = ["oak_server.h"],
+    srcs = [
+        "oak_server.cc",
+    ],
+    hdrs = [
+        "oak_server.h",
+        "channel.h",
+    ],
     deps = [
         "//oak/proto:oak_server_grpc_proto",
         "@com_github_grpc_grpc//:grpc++",
