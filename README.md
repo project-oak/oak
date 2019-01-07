@@ -13,9 +13,10 @@ secret keys and data.
 
 As part of Project Oak, data are end-to-end encrypted between _enclaves_, which
 are isolated computation compartments that can be created on-demand, and provide
-strong confidentiality, integrity, and attestation capabilities at the hardware
-level. Enclaves protect data and code even from the operating system kernel and
-privileged software, and from most hardware attacks.
+strong confidentiality, integrity, and attestation capabilities via a
+combination of hardware and software functionality. Enclaves protect data and
+code even from the operating system kernel and privileged software, and are
+intended to protect from most hardware attacks.
 
 Additionally, data are associated with policies when they enter the system, and
 policies are enforced and propagated even as data move from enclave to enclave.
@@ -56,8 +57,15 @@ policies are enforced and propagated even as data move from enclave to enclave.
 
 Side channels are out of scope for Project Oak software implementation. While we
 acknowledge that most existing TEE have compromises and may be vulnerable to
-various kinds of attacks, we leave their resolution to the respective TEE
-manufacturers.
+various kinds of attacks, and hence we do need resistance to side channels we
+leave their resolution to the respective TEE manufacturers and other
+researchers.
+
+End users are considered "partly trusted" in that we assume that when two users
+exchange data, there is a pre-existing basic trust relationship between them; in
+particular we assume that the recipient of the data is not going to
+intentionally circumvent protection mechanisms on their device in order to
+extract the received data.
 
 ## Oak VM
 
@@ -67,7 +75,7 @@ producing remote attestations.
 
 ### Business Logic - Oak Modules
 
-The unit of compilation and execution in Oak is the Oak Module. Each Oak Module
+The unit of compilation and execution in Oak is an Oak Module. Each Oak Module
 is a self-contained [WebAssembly module](https://webassembly.org/docs/modules/)
 that is interpreted by the Oak VM.
 
@@ -80,7 +88,8 @@ Project Oak need to be able to compile their code to WebAssembly.
 
 WebAssembly has a well-defined, unambiguous
 [formal specification](https://webassembly.github.io/spec/core/valid/instructions.html),
-and is targeted by most LLVM-based languages (including C++ and Rust).
+and is targeted by most LLVM-based languages (including C++ and Rust), and
+others, for example Go.
 
 Each Oak VM instance lives in its own dedicated enclave and is isolated from
 both the host as well as other enclaves and Oak VM instances on the same
@@ -106,7 +115,7 @@ All Oak host calls are defined in the `oak` import module.
 
 The currently supported host calls are the following:
 
--   `print: (i32, 132) -> nil`: Prints a string to standard output on the host
+-   `print: (i32, i32) -> nil`: Prints a string to standard output on the host
     system. To be used for debugging only, as it leaks data. Will be removed
     before release.
 
@@ -154,9 +163,9 @@ instance run by a platform provider. Note that this is not part of the TCB,
 since the actual trusted attestation only happens between client and server
 running in the TEE at execution time.
 
-Oak Modules follow the _serverless_ approach, in which functions are scheduled
-on-demand and without developers having to provision or manage servers or
-virtual machines.
+Oak Modules currently follow the _serverless_ approach, in which functions are
+scheduled on-demand and without developers having to provision or manage servers
+or virtual machines.
 
 Business Logic Developers first compile their code for the Oak Platform using
 the Oak SDK for their language, resulting in a self-contained Oak Module. They
@@ -271,7 +280,7 @@ Sample flow:
     endpoint at a newly allocated endpoint (host:port). The endpoint gets
     forwarded to the client as part of the scheduling response.
     +   Note up to this point no sensitive data has been exchanged.
-    +   The Oak Client still has not guarantees that the endpoint is in fact
+    +   The Oak Client still has no guarantees that the endpoint is in fact
         running an Oak VM, as the scheduler is itself untrusted.
 -   The Oak Client connects to the Oak VM endpoint, and exchanges keys using the
     [Asylo assertion framework](https://asylo.dev/docs/reference/proto/identity/asylo.identity.v1.html).
