@@ -20,7 +20,6 @@ package oak;
 
 message InitiateComputationRequest {
   bytes business_logic = 1;
-  string expression = 2;
 
   repeated Input inputs = 3;
   repeated Channel output_channels = 4;

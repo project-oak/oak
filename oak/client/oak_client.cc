@@ -49,10 +49,6 @@ class OakClient {
 
       request.set_business_logic(buffer.str());
 
-      request.set_expression(FLAGS_expression);
-
-      // LOG(INFO) << "request: " << request.DebugString();
-
       ::grpc::Status status = this->stub_->InitiateComputation(&context, request, &response);
       if (!status.ok()) {
         LOG(QFATAL) << "Failed: " << status.error_message();
