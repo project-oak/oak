@@ -98,13 +98,10 @@ machine.
 #### WebAssembly Interface
 
 The entry point of an Oak Module is a WebAssembly exported function named
-`oak_main` with signature `() -> nil` (i.e. taking no arguments and returning no
-value). This is somewhat similar to a regular `main` function in other
-programming languages, except that it does not expect any explicit parameters;
-any I/O is instead performed via separate, dedicated methods.
-
-TODO: Use https://webassembly.org/docs/modules/#module-start-function when Rust
-supports it.
+`oak_main: () -> nil` (i.e. taking no arguments and returning no value). This is
+somewhat similar to a regular `main` function in other programming languages,
+except that it does not expect any explicit parameters; any I/O is instead
+performed via separate mechanisms.
 
 An Oak Module may optionally rely on one or more **host calls**: these are
 invoked as regular WebAssembly functions, but their implementation is fulfilled
