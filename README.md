@@ -37,9 +37,9 @@ policies are enforced and propagated even as data move from enclave to enclave.
 -   **Trusted Computing Base (TCB)**: The set of hardware, firmware, software
     components critical to the security of the system; bugs or vulnerabilities
     inside the TCB may jeopardise the security properties of the entire system.
--   **Business Logic Developer**: The entity or person providing the code for
-    the service running on top of the Project Oak; in the most common case this
-    may be a third party developer.
+- **Independent Software Vendor (ISV)**: The entity or person providing the code
+  for the service running on top of the Project Oak; in the most common case
+  this may be a third party developer.
 
 ## Threat Model
 
@@ -155,21 +155,21 @@ interact.
 
 ### Deployment Service
 
-Business Logic Developers use the Deployment Service to deploy code to an Oak
-instance run by a platform provider. Note that this is not part of the TCB,
-since the actual trusted attestation only happens between client and server
-running in the TEE at execution time.
+ISVs use the Deployment Service to deploy code to an Oak instance run by a
+platform provider. Note that this is not part of the TCB, since the actual
+trusted attestation only happens between client and server running in the TEE
+at execution time.
 
 Oak Modules currently follow the _serverless_ approach, in which functions are
 scheduled on-demand and without developers having to provision or manage servers
 or virtual machines.
 
-Business Logic Developers first compile their code for the Oak Platform using
-the Oak SDK for their language, resulting in a self-contained Oak Module. They
-also manually create a manifest file in
-[TOML](https://github.com/toml-lang/toml) format, specifying any extra
-capabilities that the module is allowed to have access to. They finally upload
-both of them to the Oak Server using the `oak_deploy` command-line tool.
+ISVs first compile their code for the Oak Platform using the Oak SDK for their
+language, resulting in a self-contained Oak Module. They also manually create a
+manifest file in [TOML](https://github.com/toml-lang/toml) format, specifying
+any extra capabilities that the module is allowed to have access to. They
+finally upload both of them to the Oak Server using the `oak_deploy`
+command-line tool.
 
 TODO: Implement `oak_deploy`.
 
@@ -266,8 +266,8 @@ TODO: Verifiable log of known versions.
 
 Sample flow:
 
--   Developer writes business logic for the Oak VM using a high-level language
-    and compiles it to WebAssembly for the Oak platform.
+-   ISV writes business logic for the Oak VM using a high-level language and
+    compiles it to WebAssembly for the Oak platform.
 -   The Oak Client connects to the Oak Server scheduler, and requests the
     creation of an Oak VM instance running the compiled WebAssembly business
     logic.
