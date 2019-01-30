@@ -37,9 +37,9 @@ policies are enforced and propagated even as data move from enclave to enclave.
 -   **Trusted Computing Base (TCB)**: The set of hardware, firmware, software
     components critical to the security of the system; bugs or vulnerabilities
     inside the TCB may jeopardise the security properties of the entire system.
-- **Independent Software Vendor (ISV)**: The entity or person providing the code
-  for the service running on top of the Project Oak; in the most common case
-  this may be a third party developer.
+-   **Independent Software Vendor (ISV)**: The entity or person providing the
+    code for the service running on top of the Project Oak; in the most common
+    case this may be a third party developer.
 
 ## Threat Model
 
@@ -157,8 +157,8 @@ interact.
 
 ISVs use the Deployment Service to deploy code to an Oak instance run by a
 platform provider. Note that this is not part of the TCB, since the actual
-trusted attestation only happens between client and server running in the TEE
-at execution time.
+trusted attestation only happens between client and server running in the TEE at
+execution time.
 
 Oak Modules currently follow the _serverless_ approach, in which functions are
 scheduled on-demand and without developers having to provision or manage servers
