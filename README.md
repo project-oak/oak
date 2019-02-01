@@ -70,10 +70,10 @@ extract the received data.
 ## Oak VM
 
 The _Oak VM_ is the core software component of Project Oak; it is responsible
-for executing business logic and enforcing policies on top of data, as well as
+for executing Oak Modules and enforcing policies on top of data, as well as
 producing remote attestations.
 
-### Business Logic - Oak Modules
+### Oak Modules
 
 The unit of compilation and execution in Oak is an Oak Module. Each Oak Module
 is a self-contained [WebAssembly module](https://webassembly.org/docs/modules/)
@@ -83,8 +83,8 @@ that is interpreted by the Oak VM.
 
 The current version of the Oak VM supports
 [WebAssembly](https://webassembly.org) as the first-class target language for
-business logic applications. Developers wishing to run their code as part of
-Project Oak need to be able to compile their code to WebAssembly.
+Oak Module development. Developers wishing to run their code as part of Project
+Oak need to be able to compile their code to WebAssembly.
 
 WebAssembly has a well-defined, unambiguous
 [formal specification](https://webassembly.github.io/spec/core/valid/instructions.html),
@@ -97,46 +97,50 @@ machine.
 
 #### WebAssembly Interface
 
-The entry point of an Oak Module is a WebAssembly exported function named
-`oak_main: () -> nil` (i.e. taking no arguments and returning no value). This is
-somewhat similar to a regular `main` function in other programming languages,
-except that it does not expect any explicit parameters; any I/O is instead
-performed via separate mechanisms.
+Each Oak Module must expose the following **exported functions** as
+[WebAssembly exports](https://webassembly.github.io/spec/core/syntax/modules.html#exports):
 
-An Oak Module may optionally rely on one or more **host calls**: these are
-invoked as regular WebAssembly functions, but their implementation is fulfilled
-by the Oak VM itself in order to perform side-effects or interact with the host
-system or other Oak Servers.
+-   `oak_initialize: () -> nil`: Invoked when initializing the Oak Module.
 
-All Oak host calls are defined in the `oak` import module.
+-   `oak_finalize: () -> nil`: Invoked when finalizing the Oak Module. Note that
+    this is best effort, and not guaranteed to be invoked before the Oak Module
+    is finalized.
 
-The currently supported host calls are the following:
+-   `oak_invoke: () -> nil`: Invoked when interacting with the Oak Module. Each
+    interaction results in a new invocation, and concurrent invocations are
+    guaranteed to only invoke `oak_invoke` sequentially, therefore from the
+    point of view of the Oak Module these calls will not interleave.
+
+Each Oak Module may also optionally rely on zero or more of the following **host
+functions** as
+[WebAssembly imports](https://webassembly.github.io/spec/core/syntax/modules.html#imports)
+(all of them defined in the `oak` module):
 
 -   `print: (i32, i32) -> nil`: Prints a string to standard output on the host
     system. To be used for debugging only, as it leaks data. Will be removed
     before release.
 
-    *   arg 0: Offset of block to print
-    *   arg 1: Length of block to print
+    *   arg 0: Source buffer address
+    *   arg 1: Source buffer size in bytes
 
 -   `get_time: () -> i64`: Retrieves the current time from the host system.
     TODO: Implement this via
     [Roughtime](https://blog.cloudflare.com/roughtime/).
 
-    *   return 0: Number of nanoseconds.
+    *   return 0: Number of nanoseconds since epoch (1970-01-01T00:00:00Z).
 
--   `read: (i32, i32, i32) -> i32`: Reads from the specified input channel.
+-   `read: (i32, i32) -> i32`: Reads incoming gRPC data for the current
+    invocation.
 
-    *   arg 0: Input channel ID
-    *   arg 1: Buffer address
-    *   arg 2: Buffer size in bytes
+    *   arg 0: Destination buffer address
+    *   arg 1: Destination buffer size in bytes
     *   return 0: Number of bytes read
 
--   `write: (i32, i32, i32) -> i32`: Writes to the specified output channel.
+-   `write: (i32, i32) -> i32`: Writes outgoing gRPC data for the current
+    invocation.
 
-    *   arg 0: Output channel ID
-    *   arg 1: Buffer address
-    *   arg 2: Buffer size in bytes
+    *   arg 0: Source buffer address
+    *   arg 1: Source buffer size in bytes
     *   return 0: Number of bytes written
 
 #### Rust SDK
@@ -195,8 +199,7 @@ TODO: Implement `oak_schedule`.
 Once a new enclave is initialised and its endpoint available, a client connects
 to it using an authenticated and attested channel. The attestation proves to the
 client that the remote enclave is indeed running a genuine Oak VM, and the Oak
-VM itself may prove additional details about the business logic and its
-properties.
+VM itself may prove additional details about the Oak Module and its properties.
 
 ## Capabilities
 
@@ -266,11 +269,10 @@ TODO: Verifiable log of known versions.
 
 Sample flow:
 
--   ISV writes business logic for the Oak VM using a high-level language and
-    compiles it to WebAssembly for the Oak platform.
+-   ISV writes an Oak Module for the Oak VM using a high-level language and
+    compiles it to WebAssembly.
 -   The Oak Client connects to the Oak Server scheduler, and requests the
-    creation of an Oak VM instance running the compiled WebAssembly business
-    logic.
+    creation of an Oak VM instance running the compiled Oak Module.
     +   The code itself is passed as part of the scheduling request.
 -   The Oak Server scheduler creates a new enclave and initialises it with a
     fresh Oak VM instance, and then seals the enclave. The Oak VM exposes a gRPC
@@ -320,8 +322,7 @@ The following command builds and runs an Oak Server instance.
 
 #### Client
 
-The following command (run in a separate terminal) compiles a sample business
-logic from Rust to WebAssembly, and sends it to the Oak Server running on the
-same machine.
+The following command (run in a separate terminal) compiles a sample module from
+Rust to WebAssembly, and sends it to the Oak Server running on the same machine.
 
 `./run_client`

@@ -29,12 +29,12 @@ cc_library(
     ],
     hdrs = [
         "oak_server.h",
-        "channel.h",
     ],
     deps = [
         ":enclave_server",
         "//oak/proto:oak_server_grpc_proto",
         "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/memory",
         "@com_google_asylo//asylo/util:logging",
         "@wabt//:wabt",
     ],

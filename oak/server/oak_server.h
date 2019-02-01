@@ -16,7 +16,6 @@
 
 #include "oak/proto/oak_server.grpc.pb.h"
 
-#include "oak/server/channel.h"
 #include "src/interp/interp.h"
 
 namespace oak {
@@ -31,15 +30,24 @@ class OakServer final : public ::oak::OakServer::Service {
                                      const ::oak::InitiateComputationRequest *request,
                                      ::oak::InitiateComputationResponse *response) override;
 
-  ::grpc::Status SetChannelData(::grpc::ServerContext *context,
-                                const ::oak::SetChannelDataRequest *request,
-                                ::oak::SetChannelDataResponse *response) override;
+  ::grpc::Status Invoke(::grpc::ServerContext *context, const ::oak::InvokeRequest *request,
+                        ::oak::InvokeResponse *response) override;
 
   void InitEnvironment(wabt::interp::Environment *env);
   ::wabt::interp::HostFunc::Callback OakRead(wabt::interp::Environment *env);
 
-  std::vector<Channel> in_channels;
-  std::vector<Channel> out_channels;
+  wabt::interp::Environment env_;
+  // TODO: Use smart pointers.
+  wabt::interp::DefinedModule *module_;
+
+  // Incoming gRPC data for the current invocation.
+  std::unique_ptr<std::vector<char>> request_data_;
+  // Cursor keeping track of how many bytes of request_data have been consumed by the Oak Module
+  // during the current invocation.
+  uint32_t request_data_cursor_;
+
+  // Outgoing gRPC data for the current invocation.
+  std::unique_ptr<std::vector<char>> response_data_;
 };
 
 }  // namespace grpc_server

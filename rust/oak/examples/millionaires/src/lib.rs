@@ -19,17 +19,21 @@ extern crate oak;
 use std::io::Read;
 
 #[no_mangle]
-pub extern "C" fn oak_main() {
+pub extern "C" fn oak_initialize() {}
+
+#[no_mangle]
+pub extern "C" fn oak_finalize() {}
+
+#[no_mangle]
+pub extern "C" fn oak_invoke() {
     // TODO: Implement https://en.wikipedia.org/wiki/Yao%27s_Millionaires%27_Problem .
 
     oak::print("HELLO OAK\n");
 
-    for i in 0..2 {
-        let mut in_channel = oak::get_input(i);
-        let mut s = String::new();
-        in_channel
-            .read_to_string(&mut s)
-            .expect("could not read string");
-        oak::print(&format!("buffer {}: {}\n", i, s));
-    }
+    let mut in_channel = oak::get_input();
+    let mut s = String::new();
+    in_channel
+        .read_to_string(&mut s)
+        .expect("could not read string");
+    oak::print(&format!("buffer: {}\n", s));
 }

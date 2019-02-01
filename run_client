@@ -10,4 +10,4 @@ readonly EXAMPLE_NAME=hello_world
 
 ./bazel-bin/oak/client/client \
   --server_address=127.0.0.1:8888 \
-  --business_logic=$PWD/rust/oak/examples/$EXAMPLE_NAME/target/wasm32-unknown-unknown/release/$EXAMPLE_NAME.wasm
+  --module=$PWD/rust/oak/examples/$EXAMPLE_NAME/target/wasm32-unknown-unknown/release/$EXAMPLE_NAME.wasm

@@ -26,7 +26,7 @@
 #include <fstream>
 
 DEFINE_string(server_address, "127.0.0.1:8888", "Address of the server to connect to");
-DEFINE_string(business_logic, "", "File containing the compiled Wasm business logic");
+DEFINE_string(module, "", "File containing the compiled WebAssembly module");
 
 class OakClient {
  public:
@@ -38,25 +38,15 @@ class OakClient {
       ::oak::InitiateComputationRequest request;
       ::oak::InitiateComputationResponse response;
 
-      std::ifstream t(FLAGS_business_logic, std::ifstream::in);
+      std::ifstream t(FLAGS_module, std::ifstream::in);
       if (!t.is_open()) {
-        LOG(QFATAL) << "Could not open file " << FLAGS_business_logic;
+        LOG(QFATAL) << "Could not open file " << FLAGS_module;
       }
       std::stringstream buffer;
       buffer << t.rdbuf();
       LOG(INFO) << "Module size: " << buffer.str().size();
 
-      request.set_business_logic(buffer.str());
-
-      // Add two input channels for the business logic.
-      {
-        ::oak::Input* input = request.add_inputs();
-        input->set_name("xxx");
-      }
-      {
-        ::oak::Input* input = request.add_inputs();
-        input->set_name("yyy");
-      }
+      request.set_module(buffer.str());
 
       ::grpc::Status status = this->stub_->InitiateComputation(&context, request, &response);
       if (!status.ok()) {
@@ -69,28 +59,13 @@ class OakClient {
     {
       ::grpc::ClientContext context;
 
-      ::oak::SetChannelDataRequest request;
-      ::oak::SetChannelDataResponse response;
+      ::oak::InvokeRequest request;
+      ::oak::InvokeResponse response;
 
-      request.set_channel_id(0);
       request.set_data("aaa:111");
-      ::grpc::Status status = this->stub_->SetChannelData(&context, request, &response);
+      ::grpc::Status status = this->stub_->Invoke(&context, request, &response);
       if (!status.ok()) {
-        LOG(QFATAL) << "Failed: " << status.error_message();
-      }
-    }
-
-    {
-      ::grpc::ClientContext context;
-
-      ::oak::SetChannelDataRequest request;
-      ::oak::SetChannelDataResponse response;
-
-      request.set_channel_id(1);
-      request.set_data("bbb:222");
-      ::grpc::Status status = this->stub_->SetChannelData(&context, request, &response);
-      if (!status.ok()) {
-        LOG(QFATAL) << "Failed: " << status.error_message();
+        LOG(QFATAL) << "Failed export call: " << status.error_message();
       }
     }
   }
@@ -106,8 +81,8 @@ int main(int argc, char** argv) {
     LOG(QFATAL) << "Must supply a non-empty address with --server_address";
   }
 
-  if (FLAGS_business_logic.empty()) {
-    LOG(QFATAL) << "Must supply a non-empty business logic with --business_logic";
+  if (FLAGS_module.empty()) {
+    LOG(QFATAL) << "Must supply a non-empty module file with --module";
   }
 
   std::vector<::asylo::EnclaveAssertionAuthorityConfig> configs;

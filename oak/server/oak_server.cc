@@ -24,6 +24,8 @@
 #include "src/interp/binary-reader-interp.h"
 #include "src/interp/interp.h"
 
+#include "absl/memory/memory.h"
+
 namespace oak {
 namespace grpc_server {
 
@@ -66,6 +68,7 @@ static void WriteMemory(wabt::interp::Environment* env, const uint32_t offset,
   WriteMemory(env, offset, data.cbegin(), data.cend());
 }
 
+// Native implementation of the `oak.print` host function.
 static wabt::interp::HostFunc::Callback PrintString(wabt::interp::Environment* env) {
   return [env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
                const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
@@ -84,6 +87,7 @@ static std::vector<char> i64Bytes(uint64_t val) {
   return vec;
 }
 
+// Native implementation of the `oak.get_time` host function.
 static wabt::interp::HostFunc::Callback OakGetTime(wabt::interp::Environment* env) {
   return [env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
                const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
@@ -140,34 +144,29 @@ OakServer::OakServer() : Service() {}
     LOG(INFO) << "Auth Identity " << identity;
   }
 
-  for (auto const& input : request->inputs()) {
-    LOG(INFO) << "Adding input channel";
-    Channel channel;
-    this->in_channels.push_back(channel);
-  }
-
   wabt::Result result;
-  wabt::interp::Environment env;
-  InitEnvironment(&env);
-  LOG(INFO) << "Func count: " << env.GetFuncCount();
+  InitEnvironment(&env_);
+  LOG(INFO) << "Func count: " << env_.GetFuncCount();
+
+  // TODO: Check that all the expected exports are present in the module.
 
   wabt::Errors errors;
-  wabt::interp::DefinedModule* module = nullptr;
 
   LOG(INFO) << "Reading module";
-  result = ReadModule(request->business_logic(), &env, &errors, &module);
+  result = ReadModule(request->module(), &env_, &errors, &module_);
   if (wabt::Succeeded(result)) {
     LOG(INFO) << "Read module";
     wabt::interp::Thread::Options thread_options;
 
     // wabt::Stream* trace_stream = s_stdout_stream.get();
     wabt::Stream* trace_stream = nullptr;
-    wabt::interp::Executor executor(&env, trace_stream, thread_options);
+    wabt::interp::Executor executor(&env_, trace_stream, thread_options);
     LOG(INFO) << "Executing module";
 
     wabt::interp::TypedValues args;
 
-    wabt::interp::ExecResult exec_result = executor.RunExportByName(module, "oak_main", args);
+    wabt::interp::ExecResult exec_result =
+        executor.RunExportByName(module_, "oak_initialize", args);
 
     if (exec_result.result == wabt::interp::Result::Ok) {
       LOG(INFO) << "Executed module";
@@ -184,6 +183,10 @@ OakServer::OakServer() : Service() {}
   return ::grpc::Status::OK;
 }
 
+// Register all available host functions so that they are available to the Oak Module at runtime.
+//
+// TODO: Selectively install only the host functions allowed by the policies associated with the Oak
+// Module.
 void OakServer::InitEnvironment(wabt::interp::Environment* env) {
   wabt::interp::HostModule* oak_module = env->AppendHostModule("oak");
   oak_module->AppendFuncExport(
@@ -198,12 +201,12 @@ void OakServer::InitEnvironment(wabt::interp::Environment* env) {
       OakGetTime(env));
   oak_module->AppendFuncExport(
       "read",
-      wabt::interp::FuncSignature(
-          std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32, wabt::Type::I32},
-          std::vector<wabt::Type>{wabt::Type::I32}),
+      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
+                                  std::vector<wabt::Type>{wabt::Type::I32}),
       this->OakRead(env));
 }
 
+// Native implementation of the `oak.read` host function.
 ::wabt::interp::HostFunc::Callback OakServer::OakRead(wabt::interp::Environment* env) {
   return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
                      const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
@@ -212,44 +215,61 @@ void OakServer::InitEnvironment(wabt::interp::Environment* env) {
       LOG(INFO) << "Arg: " << wabt::interp::TypedValueToString(arg);
     }
 
-    // TODO: Synchronise this?
-    uint32_t in_channel_id = args[0].get_i32();
+    // TODO: Synchronise this method.
 
-    if (in_channel_id >= this->in_channels.size()) {
-      results[0].set_i32(0);
-      return wabt::interp::Result::Ok;
+    uint32_t p = args[0].get_i32();
+    uint32_t len = args[1].get_i32();
+
+    uint32_t start = request_data_cursor_;
+    uint32_t end = start + len;
+    if (end > request_data_->size()) {
+      end = request_data_->size();
     }
 
-    uint32_t p = args[1].get_i32();
-    uint32_t len = args[2].get_i32();
-
-    Channel* in_channel = &this->in_channels[in_channel_id];
-    uint32_t in_bucket_start = in_channel->read_cursor;
-    uint32_t in_bucket_end = in_bucket_start + len;
-    std::vector<char>* data = &in_channel->data;
-    if (in_bucket_end > data->size()) {
-      in_bucket_end = data->size();
-    }
-    LOG(INFO) << "start: " << in_bucket_start;
-    LOG(INFO) << "end: " << in_bucket_end;
-
-    WriteMemory(env, p, data->cbegin() + in_bucket_start, data->cbegin() + in_bucket_end);
-    results[0].set_i32(in_bucket_end - in_bucket_start);
-
-    in_channel->read_cursor = in_bucket_end;
+    WriteMemory(env, p, request_data_->cbegin() + start, request_data_->cbegin() + end);
+    results[0].set_i32(end - start);
+    request_data_cursor_ = end;
 
     return wabt::interp::Result::Ok;
   };
 }
 
-::grpc::Status OakServer::SetChannelData(::grpc::ServerContext* context,
-                                         const ::oak::SetChannelDataRequest* request,
-                                         ::oak::SetChannelDataResponse* response) {
-  uint32_t in_channel_id = request->channel_id();
-  LOG(INFO) << "setting data for channel " << in_channel_id;
-  auto source_data = request->data();
-  auto destination_data = this->in_channels[in_channel_id].data;
-  destination_data.insert(destination_data.end(), source_data.begin(), source_data.end());
+::grpc::Status OakServer::Invoke(::grpc::ServerContext* context,
+                                 const ::oak::InvokeRequest* request,
+                                 ::oak::InvokeResponse* response) {
+  // TODO: Synchronise this method.
+
+  LOG(INFO) << "Running Oak module";
+
+  // TODO: Avoid this copy.
+  request_data_ =
+      absl::make_unique<std::vector<char>>(request->data().cbegin(), request->data().cend());
+  request_data_cursor_ = 0;
+
+  response_data_ = absl::make_unique<std::vector<char>>();
+
+  wabt::Stream* trace_stream = nullptr;
+  wabt::interp::Thread::Options thread_options;
+  wabt::interp::Executor executor(&env_, trace_stream, thread_options);
+  LOG(INFO) << "Executing module";
+
+  // Note that inputs and outputs are not bound to the args of the invocation, because the memory of
+  // the receiving buffer must be allocated and managed by the runtime rather than the interpreter.
+  // The Oak Module can consume the input data by calling the `oak.read` host function, and produce
+  // output data by calling the `oak.write` host function.
+  wabt::interp::TypedValues args;
+  wabt::interp::ExecResult exec_result = executor.RunExportByName(module_, "oak_invoke", args);
+
+  if (exec_result.result == wabt::interp::Result::Ok) {
+    LOG(INFO) << "Executed module";
+  } else {
+    LOG(WARNING) << "Could not execute module";
+    wabt::interp::WriteResult(s_stdout_stream.get(), "error", exec_result.result);
+    // TODO: Print error.
+  }
+
+  // TODO: Retrieve response data.
+
   return ::grpc::Status::OK;
 }
 

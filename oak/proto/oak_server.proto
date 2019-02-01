@@ -19,43 +19,13 @@ syntax = "proto3";
 package oak;
 
 message InitiateComputationRequest {
-  bytes business_logic = 1;
-
-  repeated Input inputs = 3;
-  repeated Channel output_channels = 4;
+  // The compiled code of the Oak Module to instantiate, in WebAssembly binary
+  // format.
+  // See https://webassembly.org/docs/binary-encoding/ .
+  bytes module = 1;
 }
 
 message InitiateComputationResponse {
-  string value = 1;
-}
-
-message Input {
-  // Name to use to refer to this input from the business logic.
-  // Must be unique among other input names.
-  string name = 1;
-
-  oneof data {
-    bytes inline_data = 2;
-    Channel channel = 3;
-  }
-}
-
-message Output {
-  // Name to use to refer to this output from the business logic.
-  // Must be unique among other output names.
-  string name = 1;
-
-  oneof data {
-    Channel channel = 2;
-  }
-}
-
-message Channel {
-  // Address of the endpoint providing the data.
-  // hostname:port or IP:port format.
-  string address = 1;
-
-  PlatformIdentityRequirementRule platform_identity_requirement_rule = 2;
 }
 
 // Requirement for the remote platform to possess a certificate.
@@ -85,15 +55,46 @@ message PlatformIdentityRequirementRule {
   repeated PlatformIdentityRequirementClause clauses = 1;
 }
 
-message SetChannelDataRequest {
-  uint32 channel_id = 1;
-  bytes data = 2;
+message InvokeRequest {
+  // Raw data to pass as input to the Oak Module invocation.
+  // Consumed by the Oak Module via the `oak.read` host function.
+  bytes data = 1;
 }
 
-message SetChannelDataResponse {
+message InvokeResponse {
+  // Raw data received as output from the Oak Module invocation.
+  // Produced by the Oak Module via the `oak.write` host function.
+  bytes data = 1;
 }
 
+// OakServer is conceptually similar to
+// https://github.com/google/asylo/blob/5ec0af9fca8ce564435eb87d888a8fcc55805aa1/asylo/platform/core/trusted_application.h
 service OakServer {
+  // Initializes the Oak Module for subsequent invocations.
+  //
+  // Must be called before Invoke.
+  //
+  // TODO: Rename to Initialize.
   rpc InitiateComputation(InitiateComputationRequest) returns (InitiateComputationResponse);
-  rpc SetChannelData(SetChannelDataRequest) returns (SetChannelDataResponse);
+
+  // Interact with the Oak Module by passing some data in and possibly expecting
+  // some data out.
+  //
+  // Must be called after Initialize.
+  //
+  // May be called multiple times; in case of concurrent invocations, the Oak VM
+  // serializes the invocations so that they do not overlap, by waiting for the
+  // previous invocation(s) to complete before processing a new invocation.
+  // Invocations are not guaranteed to terminate, and the Oak VM makes no
+  // guarantees about how much time each invocation is allowed to run for.
+  //
+  // This results in the `oak_invoke` exported function being invoked on the Oak
+  // Module.
+  //
+  // TODO: Modulate completion time so that it is constant or at least quantized
+  // so that it cannot be used as side / covert channel by malicious modules to
+  // exfiltrate data.
+  rpc Invoke(InvokeRequest) returns (InvokeResponse);
+
+  // TODO: Add Finalize.
 }

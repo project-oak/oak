@@ -20,8 +20,8 @@ mod wasm {
     extern "C" {
         pub fn print(s: &str);
         pub fn get_time() -> u64;
-        pub fn read(id: u32, buf: &mut [u8]) -> usize;
-        pub fn write(id: u32, buf: &[u8]) -> usize;
+        pub fn read(buf: &mut [u8]) -> usize;
+        pub fn write(buf: &[u8]) -> usize;
     }
 }
 
@@ -34,33 +34,29 @@ pub fn get_time() -> std::time::SystemTime {
     std::time::UNIX_EPOCH + std::time::Duration::from_nanos(ns)
 }
 
-pub struct OakReader {
-    id: u32,
-}
+pub struct OakReader {}
 
 impl std::io::Read for OakReader {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        Ok(unsafe { wasm::read(self.id, buf) })
+        Ok(unsafe { wasm::read(buf) })
     }
 }
 
-pub fn get_input(id: u32) -> OakReader {
-    OakReader { id: id }
+pub fn get_input() -> OakReader {
+    OakReader {}
 }
 
-pub struct OakWriter {
-    id: u32,
-}
+pub struct OakWriter {}
 
 impl std::io::Write for OakWriter {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        Ok(unsafe { wasm::write(self.id, buf) })
+        Ok(unsafe { wasm::write(buf) })
     }
     fn flush(&mut self) -> std::io::Result<()> {
         Ok(())
     }
 }
 
-pub fn get_output(id: u32) -> OakWriter {
-    OakWriter { id: id }
+pub fn get_output() -> OakWriter {
+    OakWriter {}
 }
