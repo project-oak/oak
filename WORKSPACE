@@ -45,6 +45,8 @@ load(
 )
 grpc_deps()
 
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+
 git_repository(
     name = "wabt",
     commit = "2d31cda394fc67c7969a9bd44066cb8eafa82e23",
