@@ -25,6 +25,15 @@ http_archive(
     sha256 = "4af6fcc16b7dc1ba8cccdce9086859e66f180f042b946abd8a45ed76dd330016",
 )
 
+http_archive(
+    name = "com_google_protobuf",
+    strip_prefix = "protobuf-3.6.1.2",
+    sha256 = "2244b0308846bb22b4ff0bcc675e99290ff9f1115553ae9671eba1030af31bc0",
+    urls = [
+        "https://github.com/protocolbuffers/protobuf/archive/v3.6.1.2.tar.gz",
+    ],
+)
+
 load(
     "@com_google_asylo//asylo/bazel:asylo_deps.bzl",
     "asylo_deps",
