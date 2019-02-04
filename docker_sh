@@ -1,5 +1,6 @@
 #!/bin/sh
 
+docker build --tag=oak .
 docker run \
   --interactive \
   --tty \
@@ -7,5 +8,5 @@ docker run \
   --volume=$PWD:/opt/my-project \
   --workdir=/opt/my-project \
   --publish=8888:8888 \
-  gcr.io/asylo-framework/asylo \
+  oak:latest \
   bash
