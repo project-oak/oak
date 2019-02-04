@@ -32,10 +32,26 @@ cc_library(
         "channel.h",
     ],
     deps = [
+        ":enclave_server",
         "//oak/proto:oak_server_grpc_proto",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_asylo//asylo/util:logging",
         "@wabt//:wabt",
+    ],
+)
+
+cc_library(
+    name = "enclave_server",
+    hdrs = [
+        "enclave_server.h",
+    ],
+    deps = [
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/synchronization",
+        "@com_google_asylo//asylo:enclave_runtime",
+        "@com_google_asylo//asylo/grpc/util:enclave_server_proto_cc",
+        "@com_google_asylo//asylo/util:logging",
+        "@com_google_asylo//asylo/util:status",
     ],
 )
 
