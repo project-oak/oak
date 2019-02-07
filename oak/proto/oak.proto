@@ -20,16 +20,30 @@ package oak;
 
 import "asylo/enclave.proto";
 
-message InitialiseInput {
+message InitializeInput {
+  // The compiled code of the Oak Module to instantiate, in WebAssembly binary
+  // format.
+  // See https://webassembly.org/docs/binary-encoding/.
+  optional bytes module = 1;
 }
 
-message InitialiseOutput {
+// See
+// https://github.com/google/asylo/blob/master/asylo/grpc/util/enclave_server.proto.
+message InitializeOutput {
+  // The port on which the Oak Module instance is listening.
+  optional int32 port = 2;
 }
 
-extend asylo.EnclaveInput {
-  optional InitialiseInput initialise_input = 9100;
+// This message defines the data that is passed to the enclave at initialization
+// time, corresponding to TrustedApplication::Initialize, see
+// https://github.com/google/asylo/blob/master/asylo/platform/core/trusted_application.h.
+extend asylo.EnclaveConfig {
+  optional InitializeInput initialize_input = 9100;
 }
 
+// Because Initialization cannot return any data to the caller (only a status),
+// we return the allocated port on which the Oak VM server is listening via the
+// TrustedApplication::Run call, which returns a message of type EnclaveOutput.
 extend asylo.EnclaveOutput {
-  optional InitialiseOutput initialise_output = 9200;
+  optional InitializeOutput initialize_output = 9200;
 }

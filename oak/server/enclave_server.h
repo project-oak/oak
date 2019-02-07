@@ -36,6 +36,8 @@
 #include "include/grpcpp/server.h"
 #include "include/grpcpp/server_builder.h"
 
+#include "oak/proto/oak.pb.h"
+
 namespace oak {
 
 // Enclave for hosting a gRPC service.
@@ -57,36 +59,17 @@ namespace oak {
 // application.
 class EnclaveServer final : public asylo::TrustedApplication {
  public:
-  using GrpcServiceFactory = std::function<asylo::StatusOr<std::unique_ptr<::grpc::Service>>()>;
-
   EnclaveServer(std::unique_ptr<::grpc::Service> service,
                 std::shared_ptr<::grpc::ServerCredentials> credentials)
-      : service_{std::move(service)}, service_factory_{NoFactory}, credentials_{credentials} {}
-
-  EnclaveServer(GrpcServiceFactory service_factory,
-                std::shared_ptr<::grpc::ServerCredentials> credentials)
-      : service_factory_{service_factory}, credentials_{credentials} {}
+      : service_{std::move(service)}, credentials_{credentials} {}
 
   ~EnclaveServer() = default;
 
   // From TrustedApplication.
-
   asylo::Status Initialize(const asylo::EnclaveConfig &config) {
-    const asylo::ServerConfig &config_server_proto =
-        config.GetExtension(asylo::server_input_config);
-    if (!config_server_proto.has_host()) {
-      return asylo::Status(asylo::error::GoogleError::FAILED_PRECONDITION,
-                           "No host was set in server_input_config extension of EnclaveConfig");
-    }
-    if (!config_server_proto.has_port()) {
-      return asylo::Status(asylo::error::GoogleError::FAILED_PRECONDITION,
-                           "No port was set in server_input_config extension of EnclaveConfig");
-    }
-    host_ = config_server_proto.host();
-    port_ = config_server_proto.port();
-
-    LOG(INFO) << "gRPC server configured with address: " << host_ << ":" << port_;
-
+    LOG(INFO) << "Initializing Oak Instance";
+    const oak::InitializeInput &initialize_input = config.GetExtension(oak::initialize_input);
+    // TODO: Load module from the incoming request.
     return InitializeServer();
   }
 
@@ -114,31 +97,19 @@ class EnclaveServer final : public asylo::TrustedApplication {
     return asylo::Status::OkStatus();
   }
 
-  // Creates a gRPC server that hosts service_ on host_ and port_ with
-  // credentials_.
+  // Creates a gRPC server that hosts service_ on a free port with credentials_.
   asylo::StatusOr<std::unique_ptr<::grpc::Server>> CreateServer()
       EXCLUSIVE_LOCKS_REQUIRED(server_mutex_) {
-    int port;
     ::grpc::ServerBuilder builder;
-    builder.AddListeningPort(absl::StrCat(host_, ":", port_), credentials_, &port);
-    if (service_ == nullptr) {
-      asylo::StatusOr<std::unique_ptr<::grpc::Service>> service_result = service_factory_();
-      if (!service_result.ok()) {
-        return service_result.status();
-      }
-      service_ = std::move(service_result).ValueOrDie();
-    }
-    if (service_ == nullptr) {
-      return asylo::Status(asylo::error::GoogleError::INTERNAL, "No gRPC service configured");
-    }
+    // TODO: Listen on a free port (using ":0" notation).
+    builder.AddListeningPort("0.0.0.0:8888", credentials_, &port_);
     builder.RegisterService(service_.get());
     std::unique_ptr<::grpc::Server> server = builder.BuildAndStart();
     if (!server) {
       return asylo::Status(asylo::error::GoogleError::INTERNAL, "Failed to start gRPC server");
     }
 
-    port_ = port;
-    LOG(INFO) << "gRPC server is listening on " << host_ << ":" << port_;
+    LOG(INFO) << "gRPC server is listening on port :" << port_;
 
     return std::move(server);
   }
@@ -146,9 +117,8 @@ class EnclaveServer final : public asylo::TrustedApplication {
   // Gets the address of the hosted gRPC server and writes it to
   // server_output_config extension of |output|.
   void GetServerAddress(asylo::EnclaveOutput *output) EXCLUSIVE_LOCKS_REQUIRED(server_mutex_) {
-    asylo::ServerConfig *config = output->MutableExtension(asylo::server_output_config);
-    config->set_host(host_);
-    config->set_port(port_);
+    oak::InitializeOutput *initialize_output = output->MutableExtension(oak::initialize_output);
+    initialize_output->set_port(port_);
   }
 
   // Finalizes the gRPC server by calling ::gprc::Server::Shutdown().
@@ -161,22 +131,16 @@ class EnclaveServer final : public asylo::TrustedApplication {
     }
   }
 
-  static asylo::StatusOr<std::unique_ptr<::grpc::Service>> NoFactory() {
-    return asylo::Status(asylo::error::GoogleError::INTERNAL, "No factory configured");
-  }
-
   // Guards state related to the gRPC server (|server_| and |port_|).
   absl::Mutex server_mutex_;
 
   // A gRPC server hosting |messenger_|.
-  std::unique_ptr<::grpc::Server> server_ GUARDED_BY(server_mutex);
+  std::unique_ptr<::grpc::Server> server_ GUARDED_BY(server_mutex_);
 
-  // The host and port of the server's address.
-  std::string host_;
+  // The port on which the server is listening.
   int port_;
 
   std::unique_ptr<::grpc::Service> service_;
-  GrpcServiceFactory service_factory_;
   std::shared_ptr<::grpc::ServerCredentials> credentials_;
 };
 

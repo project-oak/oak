@@ -23,13 +23,25 @@
 #include "gflags/gflags.h"
 
 #include "oak/proto/oak.pb.h"
+#include "oak/proto/scheduling_service.grpc.pb.h"
 
+#include <csignal>
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <vector>
 
 DEFINE_string(enclave_path, "", "Path to enclave to load");
+
+class OakService final : public ::oak::SchedulingService::Service {
+  ::grpc::Status Create(::grpc::ServerContext *context, const ::oak::CreateRequest *request,
+                        ::oak::CreateResponse *response) {
+    // TODO: Implement this method.
+    // The logic currently in the main method of this file must really live inside this gRPC
+    // service, so that enclaves can be created on demand by calling the Scheduling Service.
+    return ::grpc::Status::OK;
+  }
+};
 
 void sigint_handler(int param) {
   LOG(QFATAL) << "SIGINT received";
@@ -42,9 +54,9 @@ int main(int argc, char *argv[]) {
 
   // We install an explicit SIGINT handler, as for some reason the default one does not seem to
   // work.
-  signal(SIGINT, sigint_handler);
+  std::signal(SIGINT, sigint_handler);
 
-  // Initialise enclave.
+  // Initialize enclave.
   asylo::EnclaveManager::Configure(asylo::EnclaveManagerOptions());
   auto manager_result = asylo::EnclaveManager::Instance();
   if (!manager_result.ok()) {
@@ -57,9 +69,9 @@ int main(int argc, char *argv[]) {
   // Loading.
   {
     asylo::EnclaveConfig config;
-    asylo::ServerConfig *server_config = config.MutableExtension(asylo::server_input_config);
-    server_config->set_host("0.0.0.0");
-    server_config->set_port(8888);
+    oak::InitializeInput *initialize_input = config.MutableExtension(oak::initialize_input);
+    // TODO: Load Oak Module and pass it to the enclave.
+    initialize_input->set_module("TODO");
     asylo::Status status = manager->LoadEnclave("oak_enclave", loader, config);
     if (!status.ok()) {
       LOG(QFATAL) << "Load " << FLAGS_enclave_path << " failed: " << status;
@@ -71,14 +83,14 @@ int main(int argc, char *argv[]) {
   // Initialisation.
   // This does not actually do anything interesting at the moment.
   {
-    LOG(INFO) << "Initialising enclave";
+    LOG(INFO) << "Initializing enclave";
     asylo::EnclaveInput input;
     asylo::EnclaveOutput output;
     asylo::Status status = client->EnterAndRun(input, &output);
     if (!status.ok()) {
       LOG(QFATAL) << "EnterAndRun failed: " << status;
     }
-    LOG(INFO) << "Enclave initialised";
+    LOG(INFO) << "Enclave initialized";
   }
 
   // Wait.

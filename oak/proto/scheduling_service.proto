@@ -21,14 +21,17 @@ package oak;
 message Manifest {
 }
 
-message ScheduleRequest {
-  string module_id = 1;
+message CreateRequest {
+  // The compiled code of the Oak Module to instantiate, in WebAssembly binary
+  // format.
+  // See https://webassembly.org/docs/binary-encoding/ .
+  bytes module = 1;
   Manifest manifest = 2;
 }
 
-message ScheduleResponse {
+message CreateResponse {
 }
 
 service SchedulingService {
-  rpc Schedule(ScheduleRequest) returns (ScheduleResponse);
+  rpc Create(CreateRequest) returns (CreateResponse);
 }

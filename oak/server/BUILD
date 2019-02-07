@@ -46,6 +46,7 @@ cc_library(
         "enclave_server.h",
     ],
     deps = [
+        "//oak/proto:oak_proto_cc",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/synchronization",
         "@com_google_asylo//asylo:enclave_runtime",
@@ -88,6 +89,7 @@ enclave_loader(
     loader_args = ["--enclave_path='{enclave}'"],
     deps = [
         "//oak/proto:oak_proto_cc",
+        "//oak/proto:scheduling_service_grpc_proto",
         "@com_github_gflags_gflags//:gflags_nothreads",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/synchronization",
