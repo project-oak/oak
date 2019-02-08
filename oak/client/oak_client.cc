@@ -21,80 +21,92 @@
 #include "gflags/gflags.h"
 #include "include/grpcpp/grpcpp.h"
 
-#include "oak/proto/oak_server.grpc.pb.h"
+#include "oak/proto/node.grpc.pb.h"
+#include "oak/proto/scheduler.grpc.pb.h"
 
 #include <fstream>
 
-DEFINE_string(server_address, "127.0.0.1:8888", "Address of the server to connect to");
+DEFINE_string(scheduler_address, "127.0.0.1:8888", "Address of the Oak Scheduler to connect to");
 DEFINE_string(module, "", "File containing the compiled WebAssembly module");
 
-class OakClient {
+// TODO: Move to a separate file.
+class OakSchedulingClient {
  public:
-  OakClient(const std::shared_ptr<::grpc::ChannelInterface>& channel)
-      : stub_(::oak::OakServer::NewStub(channel, ::grpc::StubOptions())) {
-    {
-      ::grpc::ClientContext context;
+  OakSchedulingClient(const std::shared_ptr<::grpc::ChannelInterface>& channel)
+      : stub_(::oak::Scheduler::NewStub(channel, ::grpc::StubOptions())) {}
 
-      ::oak::InitiateComputationRequest request;
-      ::oak::InitiateComputationResponse response;
+  oak::CreateNodeResponse CreateNode() {
+    ::grpc::ClientContext context;
 
-      std::ifstream t(FLAGS_module, std::ifstream::in);
-      if (!t.is_open()) {
-        LOG(QFATAL) << "Could not open file " << FLAGS_module;
-      }
-      std::stringstream buffer;
-      buffer << t.rdbuf();
-      LOG(INFO) << "Module size: " << buffer.str().size();
+    ::oak::CreateNodeRequest request;
+    ::oak::CreateNodeResponse response;
 
-      request.set_module(buffer.str());
+    std::ifstream t(FLAGS_module, std::ifstream::in);
+    if (!t.is_open()) {
+      LOG(QFATAL) << "Could not open file " << FLAGS_module;
+    }
+    std::stringstream buffer;
+    buffer << t.rdbuf();
+    LOG(INFO) << "Module size: " << buffer.str().size();
 
-      ::grpc::Status status = this->stub_->InitiateComputation(&context, request, &response);
-      if (!status.ok()) {
-        LOG(QFATAL) << "Failed: " << status.error_message();
-      }
+    request.set_module(buffer.str());
 
-      LOG(INFO) << "response: " << response.DebugString();
+    LOG(INFO) << "Creating Oak Node";
+    ::grpc::Status status = stub_->CreateNode(&context, request, &response);
+    if (!status.ok()) {
+      LOG(QFATAL) << "Failed: " << status.error_message();
     }
 
-    {
-      ::grpc::ClientContext context;
-
-      ::oak::InvokeRequest request;
-      ::oak::InvokeResponse response;
-
-      request.set_data("aaa:111");
-      ::grpc::Status status = this->stub_->Invoke(&context, request, &response);
-      if (!status.ok()) {
-        LOG(QFATAL) << "Failed export call: " << status.error_message();
-      }
-    }
+    LOG(INFO) << "Oak Node created: " << response.DebugString();
+    return response;
   }
 
  private:
-  std::unique_ptr<::oak::OakServer::Stub> stub_;
+  std::unique_ptr<::oak::Scheduler::Stub> stub_;
 };
 
 int main(int argc, char** argv) {
   ::google::ParseCommandLineFlags(&argc, &argv, /*remove_flags=*/true);
 
-  if (FLAGS_server_address.empty()) {
-    LOG(QFATAL) << "Must supply a non-empty address with --server_address";
+  if (FLAGS_scheduler_address.empty()) {
+    LOG(QFATAL) << "Must supply a non-empty address with --scheduler_address";
   }
 
   if (FLAGS_module.empty()) {
     LOG(QFATAL) << "Must supply a non-empty module file with --module";
   }
 
-  std::vector<::asylo::EnclaveAssertionAuthorityConfig> configs;
-  ::asylo::Status status =
-      ::asylo::InitializeEnclaveAssertionAuthorities(configs.begin(), configs.end());
-  if (!status.ok()) {
-    LOG(QFATAL) << "Could not initialise assertion authorities";
+  {
+    LOG(INFO) << "Initializing assertion authorities";
+    std::vector<::asylo::EnclaveAssertionAuthorityConfig> configs;
+    ::asylo::Status status =
+        ::asylo::InitializeEnclaveAssertionAuthorities(configs.begin(), configs.end());
+    if (!status.ok()) {
+      LOG(QFATAL) << "Could not initialize assertion authorities";
+    }
+    LOG(INFO) << "Assertion authorities initialized";
   }
 
-  LOG(INFO) << "start";
+  OakSchedulingClient scheduling_client(
+      ::grpc::CreateChannel(FLAGS_scheduler_address, ::grpc::InsecureChannelCredentials()));
+  oak::CreateNodeResponse create_node_response = scheduling_client.CreateNode();
 
-  OakClient client(::grpc::CreateChannel(
-      FLAGS_server_address,
+  std::stringstream addr;
+  addr << "127.0.0.1:" << create_node_response.port();
+  LOG(INFO) << "Connecting to Oak Node: " << addr.str();
+  std::unique_ptr<oak::Node::Stub> node = oak::Node::NewStub(::grpc::CreateChannel(
+      addr.str(),
       ::asylo::EnclaveChannelCredentials(::asylo::BidirectionalNullCredentialsOptions())));
+  LOG(INFO) << "Connected to Oak Node";
+
+  {
+    ::grpc::ClientContext context;
+
+    ::oak::InvokeRequest request;
+    ::oak::InvokeResponse response;
+
+    request.set_data("WORLD");
+
+    node->Invoke(&context, request, &response);
+  }
 }

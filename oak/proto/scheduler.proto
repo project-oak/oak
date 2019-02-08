@@ -18,20 +18,26 @@ syntax = "proto3";
 
 package oak;
 
-message Manifest {
-}
-
-message CreateRequest {
+message CreateNodeRequest {
   // The compiled code of the Oak Module to instantiate, in WebAssembly binary
   // format.
   // See https://webassembly.org/docs/binary-encoding/ .
   bytes module = 1;
-  Manifest manifest = 2;
 }
 
-message CreateResponse {
+message CreateNodeResponse {
+  // The unique ID of the newly created Oak Node.
+  string node_id = 1;
+  // The port on which the Oak Node is listening.
+  int32 port = 2;
 }
 
-service SchedulingService {
-  rpc Create(CreateRequest) returns (CreateResponse);
+// Untrusted service in charge of creating Oak Nodes on demand.
+service Scheduler {
+  // Request the creation of a new Oak Node with the specified configuration.
+  //
+  // After the Oak Node is created, the client should connect to the returned
+  // endpoint via gRPC and perform a direct attestation against the Node itself,
+  // to verify that its configuration corresponds to what the client expects.
+  rpc CreateNode(CreateNodeRequest) returns (CreateNodeResponse);
 }

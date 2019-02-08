@@ -25,6 +25,7 @@ message InitializeInput {
   // format.
   // See https://webassembly.org/docs/binary-encoding/.
   optional bytes module = 1;
+  optional string node_id = 2;
 }
 
 // See

@@ -23,14 +23,9 @@
 #include "asylo/util/status.h"
 
 #include "oak/server/enclave_server.h"
-#include "oak/server/oak_server.h"
 
 namespace asylo {
 
-TrustedApplication *BuildTrustedApplication() {
-  return new oak::EnclaveServer(
-      absl::make_unique<::oak::grpc_server::OakServer>(),
-      ::asylo::EnclaveServerCredentials(::asylo::BidirectionalNullCredentialsOptions()));
-}
+TrustedApplication *BuildTrustedApplication() { return new oak::EnclaveServer(); }
 
 }  // namespace asylo

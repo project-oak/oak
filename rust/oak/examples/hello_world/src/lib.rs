@@ -32,13 +32,11 @@ pub extern "C" fn oak_finalize() {
 pub extern "C" fn oak_invoke() {
     oak::print("Oak invoke\n");
 
-    oak::print("HELLO OAK\n");
-
     let t = oak::get_time();
     oak::print(&format!("Time: {:?}\n", t));
 
     let mut in1 = oak::get_input();
     let mut s = String::new();
     in1.read_to_string(&mut s).expect("could not read string");
-    oak::print(&format!("Val: {}\n", s));
+    oak::print(&format!("HELLO {}\n", s));
 }

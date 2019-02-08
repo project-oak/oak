@@ -16,7 +16,7 @@
 
 #include "asylo/util/logging.h"
 
-#include "oak/server/oak_server.h"
+#include "oak/server/oak_node.h"
 
 #include "src/binary-reader.h"
 #include "src/error-formatter.h"
@@ -133,17 +133,9 @@ static wabt::Result ReadModule(const std::string module_bytes, wabt::interp::Env
   return result;
 }
 
-OakServer::OakServer() : Service() {}
-
-::grpc::Status OakServer::InitiateComputation(::grpc::ServerContext* context,
-                                              const ::oak::InitiateComputationRequest* request,
-                                              ::oak::InitiateComputationResponse* response) {
-  LOG(INFO) << "Initate Computation";
-  LOG(INFO) << "Peer " << context->peer();
-  for (auto const& identity : context->auth_context()->GetPeerIdentity()) {
-    LOG(INFO) << "Auth Identity " << identity;
-  }
-
+OakNode::OakNode(const std::string& node_id, const std::string& module)
+    : Service(), node_id_(node_id) {
+  LOG(INFO) << "Creating Oak Node";
   wabt::Result result;
   InitEnvironment(&env_);
   LOG(INFO) << "Func count: " << env_.GetFuncCount();
@@ -153,7 +145,7 @@ OakServer::OakServer() : Service() {}
   wabt::Errors errors;
 
   LOG(INFO) << "Reading module";
-  result = ReadModule(request->module(), &env_, &errors, &module_);
+  result = ReadModule(module, &env_, &errors, &module_);
   if (wabt::Succeeded(result)) {
     LOG(INFO) << "Read module";
     wabt::interp::Thread::Options thread_options;
@@ -179,15 +171,13 @@ OakServer::OakServer() : Service() {}
     LOG(WARNING) << "Could not read module: " << result;
     LOG(WARNING) << "Errors: " << wabt::FormatErrorsToString(errors, wabt::Location::Type::Binary);
   }
-
-  return ::grpc::Status::OK;
 }
 
 // Register all available host functions so that they are available to the Oak Module at runtime.
 //
 // TODO: Selectively install only the host functions allowed by the policies associated with the Oak
 // Module.
-void OakServer::InitEnvironment(wabt::interp::Environment* env) {
+void OakNode::InitEnvironment(wabt::interp::Environment* env) {
   wabt::interp::HostModule* oak_module = env->AppendHostModule("oak");
   oak_module->AppendFuncExport(
       "print",
@@ -207,7 +197,7 @@ void OakServer::InitEnvironment(wabt::interp::Environment* env) {
 }
 
 // Native implementation of the `oak.read` host function.
-::wabt::interp::HostFunc::Callback OakServer::OakRead(wabt::interp::Environment* env) {
+::wabt::interp::HostFunc::Callback OakNode::OakRead(wabt::interp::Environment* env) {
   return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
                      const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
     LOG(INFO) << "Called host function: " << func->module_name << "." << func->field_name;
@@ -234,9 +224,8 @@ void OakServer::InitEnvironment(wabt::interp::Environment* env) {
   };
 }
 
-::grpc::Status OakServer::Invoke(::grpc::ServerContext* context,
-                                 const ::oak::InvokeRequest* request,
-                                 ::oak::InvokeResponse* response) {
+::grpc::Status OakNode::Invoke(::grpc::ServerContext* context, const ::oak::InvokeRequest* request,
+                               ::oak::InvokeResponse* response) {
   // TODO: Synchronise this method.
 
   LOG(INFO) << "Running Oak module";

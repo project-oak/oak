@@ -9,5 +9,5 @@ readonly EXAMPLE_NAME=hello_world
 #readonly EXAMPLE_NAME=millionaires
 
 ./bazel-bin/oak/client/client \
-  --server_address=127.0.0.1:8888 \
+  --scheduler_address=127.0.0.1:8888 \
   --module=$PWD/rust/oak/examples/$EXAMPLE_NAME/target/wasm32-unknown-unknown/release/$EXAMPLE_NAME.wasm

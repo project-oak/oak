@@ -23,16 +23,15 @@ load(
 load("@linux_sgx//:sgx_sdk.bzl", "sgx_enclave_configuration")
 
 cc_library(
-    name = "oak_server",
+    name = "oak_node",
     srcs = [
-        "oak_server.cc",
+        "oak_node.cc",
     ],
     hdrs = [
-        "oak_server.h",
+        "oak_node.h",
     ],
     deps = [
-        ":enclave_server",
-        "//oak/proto:oak_server_grpc_proto",
+        "//oak/proto:node_grpc_proto",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/memory",
         "@com_google_asylo//asylo/util:logging",
@@ -46,7 +45,8 @@ cc_library(
         "enclave_server.h",
     ],
     deps = [
-        "//oak/proto:oak_proto_cc",
+        ":oak_node",
+        "//oak/proto:enclave_proto_cc",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/synchronization",
         "@com_google_asylo//asylo:enclave_runtime",
@@ -70,8 +70,8 @@ sim_enclave(
     ],
     config = "grpc_enclave_config",
     deps = [
-        ":oak_server",
-        "//oak/proto:oak_proto_cc",
+        ":enclave_server",
+        "//oak/proto:enclave_proto_cc",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/strings",
         "@com_google_asylo//asylo/grpc/auth:grpc++_security_enclave",
@@ -88,9 +88,10 @@ enclave_loader(
     enclaves = {"enclave": ":oak_enclave.so"},
     loader_args = ["--enclave_path='{enclave}'"],
     deps = [
-        "//oak/proto:oak_proto_cc",
-        "//oak/proto:scheduling_service_grpc_proto",
+        "//oak/proto:enclave_proto_cc",
+        "//oak/proto:scheduler_grpc_proto",
         "@com_github_gflags_gflags//:gflags_nothreads",
+        "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/synchronization",
         "@com_google_absl//absl/time",

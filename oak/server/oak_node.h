@@ -14,22 +14,21 @@
  * limitations under the License.
  */
 
-#include "oak/proto/oak_server.grpc.pb.h"
+#ifndef OAK_SERVER_OAK_NODE_H_
+#define OAK_SERVER_OAK_NODE_H_
+
+#include "oak/proto/node.grpc.pb.h"
 
 #include "src/interp/interp.h"
 
 namespace oak {
 namespace grpc_server {
 
-class OakServer final : public ::oak::OakServer::Service {
+class OakNode final : public ::oak::Node::Service {
  public:
-  OakServer();
+  OakNode(const std::string &node_id, const std::string &module);
 
  private:
-  ::grpc::Status InitiateComputation(::grpc::ServerContext *context,
-                                     const ::oak::InitiateComputationRequest *request,
-                                     ::oak::InitiateComputationResponse *response) override;
-
   ::grpc::Status Invoke(::grpc::ServerContext *context, const ::oak::InvokeRequest *request,
                         ::oak::InvokeResponse *response) override;
 
@@ -48,7 +47,11 @@ class OakServer final : public ::oak::OakServer::Service {
 
   // Outgoing gRPC data for the current invocation.
   std::unique_ptr<std::vector<char>> response_data_;
+
+  std::string node_id_;
 };
 
 }  // namespace grpc_server
 }  // namespace oak
+
+#endif  // OAK_SERVER_OAK_NODE_H_

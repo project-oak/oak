@@ -21,9 +21,11 @@
 #include "asylo/grpc/util/enclave_server.pb.h"
 #include "asylo/util/logging.h"
 #include "gflags/gflags.h"
+#include "include/grpcpp/server.h"
+#include "include/grpcpp/server_builder.h"
 
-#include "oak/proto/oak.pb.h"
-#include "oak/proto/scheduling_service.grpc.pb.h"
+#include "oak/proto/enclave.pb.h"
+#include "oak/proto/scheduler.grpc.pb.h"
 
 #include <csignal>
 #include <fstream>
@@ -33,14 +35,84 @@
 
 DEFINE_string(enclave_path, "", "Path to enclave to load");
 
-class OakService final : public ::oak::SchedulingService::Service {
-  ::grpc::Status Create(::grpc::ServerContext *context, const ::oak::CreateRequest *request,
-                        ::oak::CreateResponse *response) {
-    // TODO: Implement this method.
-    // The logic currently in the main method of this file must really live inside this gRPC
-    // service, so that enclaves can be created on demand by calling the Scheduling Service.
+// TODO: Move to separate file.
+class OakScheduler final : public ::oak::Scheduler::Service {
+ public:
+  OakScheduler() : Service(), node_id_(0) { InitializeEnclaveManager(); }
+
+  ::grpc::Status CreateNode(::grpc::ServerContext *context, const ::oak::CreateNodeRequest *request,
+                            ::oak::CreateNodeResponse *response) override {
+    std::string node_id = NewNodeId();
+    CreateEnclave(node_id, request->module());
+    oak::InitializeOutput out = GetEnclaveOutput(node_id);
+    response->set_port(out.port());
+    response->set_node_id(node_id);
     return ::grpc::Status::OK;
   }
+
+ private:
+  void InitializeEnclaveManager() {
+    LOG(INFO) << "Initializing enclave manager";
+    asylo::EnclaveManager::Configure(asylo::EnclaveManagerOptions());
+    auto manager_result = asylo::EnclaveManager::Instance();
+    if (!manager_result.ok()) {
+      LOG(QFATAL) << "Could not initialize enclave manager: " << manager_result.status();
+    }
+    enclave_manager_ = manager_result.ValueOrDie();
+    LOG(INFO) << "Enclave manager initialized";
+    LOG(INFO) << "Loading enclave code from " << FLAGS_enclave_path;
+    enclave_loader_ = absl::make_unique<asylo::SimLoader>(FLAGS_enclave_path, /*debug=*/true);
+  }
+
+  void CreateEnclave(const std::string &node_id, const std::string &module) {
+    LOG(INFO) << "Creating enclave";
+    asylo::EnclaveConfig config;
+    oak::InitializeInput *initialize_input = config.MutableExtension(oak::initialize_input);
+    initialize_input->set_node_id(node_id);
+    initialize_input->set_module(module);
+    asylo::Status status = enclave_manager_->LoadEnclave(node_id, *enclave_loader_, config);
+    if (!status.ok()) {
+      LOG(QFATAL) << "Could not load enclave " << FLAGS_enclave_path << ": " << status;
+    }
+    LOG(INFO) << "Enclave created";
+  }
+
+  oak::InitializeOutput GetEnclaveOutput(const std::string &node_id) {
+    LOG(INFO) << "Initializing enclave";
+    asylo::EnclaveClient *client = enclave_manager_->GetClient(node_id);
+    asylo::EnclaveInput input;
+    asylo::EnclaveOutput output;
+    asylo::Status status = client->EnterAndRun(input, &output);
+    if (!status.ok()) {
+      LOG(QFATAL) << "EnterAndRun failed: " << status;
+    }
+    LOG(INFO) << "Enclave initialized";
+    return output.GetExtension(oak::initialize_output);
+  }
+
+  std::string NewNodeId() {
+    // TODO: Generate UUID.
+    std::stringstream id_str;
+    id_str << node_id_;
+    node_id_ += 1;
+    return id_str.str();
+  }
+
+  void DestroyEnclave(const std::string &node_id) {
+    LOG(INFO) << "Destroying enclave";
+    asylo::EnclaveClient *client = enclave_manager_->GetClient(node_id);
+    asylo::EnclaveFinal final_input;
+    asylo::Status status = enclave_manager_->DestroyEnclave(client, final_input);
+    if (!status.ok()) {
+      LOG(QFATAL) << "Destroy " << FLAGS_enclave_path << " failed: " << status;
+    }
+    LOG(INFO) << "Enclave destroyed";
+  }
+
+  asylo::EnclaveManager *enclave_manager_;
+  std::unique_ptr<asylo::SimLoader> enclave_loader_;
+
+  uint64_t node_id_;
 };
 
 void sigint_handler(int param) {
@@ -56,59 +128,21 @@ int main(int argc, char *argv[]) {
   // work.
   std::signal(SIGINT, sigint_handler);
 
-  // Initialize enclave.
-  asylo::EnclaveManager::Configure(asylo::EnclaveManagerOptions());
-  auto manager_result = asylo::EnclaveManager::Instance();
-  if (!manager_result.ok()) {
-    LOG(QFATAL) << "EnclaveManager unavailable: " << manager_result.status();
-  }
-  asylo::EnclaveManager *manager = manager_result.ValueOrDie();
-  std::cout << "Loading " << FLAGS_enclave_path << std::endl;
-  asylo::SimLoader loader(FLAGS_enclave_path, /*debug=*/true);
+  // Create scheduler instance.
+  std::unique_ptr<OakScheduler> service = absl::make_unique<OakScheduler>();
 
-  // Loading.
-  {
-    asylo::EnclaveConfig config;
-    oak::InitializeInput *initialize_input = config.MutableExtension(oak::initialize_input);
-    // TODO: Load Oak Module and pass it to the enclave.
-    initialize_input->set_module("TODO");
-    asylo::Status status = manager->LoadEnclave("oak_enclave", loader, config);
-    if (!status.ok()) {
-      LOG(QFATAL) << "Load " << FLAGS_enclave_path << " failed: " << status;
-    }
-  }
-
-  asylo::EnclaveClient *client = manager->GetClient("oak_enclave");
-
-  // Initialisation.
-  // This does not actually do anything interesting at the moment.
-  {
-    LOG(INFO) << "Initializing enclave";
-    asylo::EnclaveInput input;
-    asylo::EnclaveOutput output;
-    asylo::Status status = client->EnterAndRun(input, &output);
-    if (!status.ok()) {
-      LOG(QFATAL) << "EnterAndRun failed: " << status;
-    }
-    LOG(INFO) << "Enclave initialized";
-  }
+  // Initialize and run gRPC server.
+  LOG(INFO) << "Starting gRPC server";
+  ::grpc::ServerBuilder builder;
+  int selected_port;
+  builder.AddListeningPort("[::]:8888", ::grpc::InsecureServerCredentials(), &selected_port);
+  builder.RegisterService(service.get());
+  std::unique_ptr<::grpc::Server> server = builder.BuildAndStart();
+  LOG(INFO) << "gRPC server started on port " << selected_port;
 
   // Wait.
-  {
-    absl::Notification server_timeout;
-    server_timeout.WaitForNotificationWithTimeout(absl::Hours(24));
-  }
-
-  // Finalisation.
-  {
-    LOG(INFO) << "Destroying enclave";
-    asylo::EnclaveFinal final_input;
-    asylo::Status status = manager->DestroyEnclave(client, final_input);
-    if (!status.ok()) {
-      LOG(QFATAL) << "Destroy " << FLAGS_enclave_path << " failed: " << status;
-    }
-    LOG(INFO) << "Enclave destroyed";
-  }
+  absl::Notification server_timeout;
+  server_timeout.WaitForNotificationWithTimeout(absl::Hours(24));
 
   return 0;
 }

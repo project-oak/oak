@@ -18,43 +18,6 @@ syntax = "proto3";
 
 package oak;
 
-message InitiateComputationRequest {
-  // The compiled code of the Oak Module to instantiate, in WebAssembly binary
-  // format.
-  // See https://webassembly.org/docs/binary-encoding/ .
-  bytes module = 1;
-}
-
-message InitiateComputationResponse {
-}
-
-// Requirement for the remote platform to possess a certificate.
-message CertIdentityRequirement {
-  bytes signature = 1;
-}
-
-// Requirement for the remote platform to be an Intel SGX enclave.
-// See https://software.intel.com/en-us/node/702979.
-message IntelSgxEnclaveIdentityRequirement {
-  bytes measurement = 1;
-}
-
-message PlatformIdentityRequirement {
-  oneof identity_requirement {
-    CertIdentityRequirement cert_identity_requirement = 1;
-    IntelSgxEnclaveIdentityRequirement intel_sgx_enclave_identity_requirement = 2;
-  }
-}
-
-// Rule defining allowed platform identities.
-// Expressed in Disjunctive Normal Form (OR of ANDs).
-message PlatformIdentityRequirementRule {
-  message PlatformIdentityRequirementClause {
-    repeated PlatformIdentityRequirement platform_identity_requirements = 1;
-  }
-  repeated PlatformIdentityRequirementClause clauses = 1;
-}
-
 message InvokeRequest {
   // Raw data to pass as input to the Oak Module invocation.
   // Consumed by the Oak Module via the `oak.read` host function.
@@ -67,20 +30,11 @@ message InvokeResponse {
   bytes data = 1;
 }
 
-// OakServer is conceptually similar to
-// https://github.com/google/asylo/blob/5ec0af9fca8ce564435eb87d888a8fcc55805aa1/asylo/platform/core/trusted_application.h
-service OakServer {
-  // Initializes the Oak Module for subsequent invocations.
-  //
-  // Must be called before Invoke.
-  //
-  // TODO: Rename to Initialize.
-  rpc InitiateComputation(InitiateComputationRequest) returns (InitiateComputationResponse);
-
-  // Interact with the Oak Module by passing some data in and possibly expecting
+// An Oak Node is an instance of an Oak Module an Oak VM, usually running within
+// an enclave.
+service Node {
+  // Interact with the Oak Node by passing some data in and possibly expecting
   // some data out.
-  //
-  // Must be called after Initialize.
   //
   // May be called multiple times; in case of concurrent invocations, the Oak VM
   // serializes the invocations so that they do not overlap, by waiting for the
@@ -95,6 +49,4 @@ service OakServer {
   // so that it cannot be used as side / covert channel by malicious modules to
   // exfiltrate data.
   rpc Invoke(InvokeRequest) returns (InvokeResponse);
-
-  // TODO: Add Finalize.
 }
