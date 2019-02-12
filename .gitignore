@@ -1,5 +1,4 @@
 /bazel-*
-/examples/go/hello_world/static
 
 # Rust artifacts.
-/rust/oak/examples/**/target
+/**/target

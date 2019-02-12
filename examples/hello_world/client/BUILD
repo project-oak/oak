@@ -1,5 +1,5 @@
 #
-# Copyright 2018 The Project Oak Authors
+# Copyright 2019 The Project Oak Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,25 +14,16 @@
 # limitations under the License.
 #
 
-cc_library(
-    name = "scheduler_client",
-    hdrs = ["scheduler_client.h"],
+cc_binary(
+    name = "client",
+    srcs = ["hello_world.cc"],
     deps = [
-        "//oak/proto:scheduler_grpc_proto",
-        "@com_github_grpc_grpc//:grpc++",
-    ],
-    visibility = ["//visibility:public"],
-)
-
-cc_library(
-    name = "node_client",
-    hdrs = ["node_client.h"],
-    deps = [
-        "//oak/proto:node_grpc_proto",
-        "@com_github_grpc_grpc//:grpc++",
-        "@com_google_asylo//asylo/grpc/auth:null_credentials_options",
-        "@com_google_asylo//asylo/identity:init",
+        "//examples/utils",
+        "//oak/client:node_client",
+        "//oak/client:scheduler_client",
+        "@com_google_absl//absl/memory",
         "@com_google_asylo//asylo/util:logging",
+        "@com_github_gflags_gflags//:gflags_nothreads",
+        "@com_github_grpc_grpc//:grpc++",
     ],
-    visibility = ["//visibility:public"],
 )

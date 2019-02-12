@@ -9,4 +9,4 @@ crate-type = ["cdylib"]
 [dependencies]
 rusty-machine = "0.5.4"
 rand = "0.6.1"
-oak = { path = "../../" }
+oak = { path = "../../rust/oak" }

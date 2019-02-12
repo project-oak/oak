@@ -322,7 +322,7 @@ The following command builds and runs an Oak Server instance.
 
 #### Client
 
-The following command (run in a separate terminal) compiles a sample module from
+The following command (run in a separate terminal) compiles an example module from
 Rust to WebAssembly, and sends it to the Oak Server running on the same machine.
 
-`./run_client`
+`./examples/hello_world/run`
