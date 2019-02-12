@@ -48,9 +48,18 @@ int main(int argc, char** argv) {
                                             ::asylo::BidirectionalNullCredentialsOptions())));
 
   // Perform multiple invocations of the same Oak Node, with different parameters.
-  node_client->Invoke("WORLD");
-  node_client->Invoke("MONDO");
-  node_client->Invoke("世界");
+  {
+    std::string response = node_client->Invoke("WORLD");
+    LOG(INFO) << "response: " << response;
+  }
+  {
+    std::string response = node_client->Invoke("MONDO");
+    LOG(INFO) << "response: " << response;
+  }
+  {
+    std::string response = node_client->Invoke("世界");
+    LOG(INFO) << "response: " << response;
+  }
 
   return 0;
 }

@@ -34,6 +34,7 @@ class OakNode final : public ::oak::Node::Service {
 
   void InitEnvironment(wabt::interp::Environment *env);
   ::wabt::interp::HostFunc::Callback OakRead(wabt::interp::Environment *env);
+  ::wabt::interp::HostFunc::Callback OakWrite(wabt::interp::Environment *env);
 
   wabt::interp::Environment env_;
   // TODO: Use smart pointers.

@@ -194,6 +194,11 @@ void OakNode::InitEnvironment(wabt::interp::Environment* env) {
       wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
                                   std::vector<wabt::Type>{wabt::Type::I32}),
       this->OakRead(env));
+  oak_module->AppendFuncExport(
+      "write",
+      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
+                                  std::vector<wabt::Type>{wabt::Type::I32}),
+      this->OakWrite(env));
 }
 
 // Native implementation of the `oak.read` host function.
@@ -224,11 +229,34 @@ void OakNode::InitEnvironment(wabt::interp::Environment* env) {
   };
 }
 
+// Native implementation of the `oak.write` host function.
+::wabt::interp::HostFunc::Callback OakNode::OakWrite(wabt::interp::Environment* env) {
+  return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
+                     const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
+    LOG(INFO) << "Called host function: " << func->module_name << "." << func->field_name;
+    for (auto const& arg : args) {
+      LOG(INFO) << "Arg: " << wabt::interp::TypedValueToString(arg);
+    }
+
+    // TODO: Synchronise this method.
+
+    uint32_t p = args[0].get_i32();
+    uint32_t len = args[1].get_i32();
+
+    std::vector<char> data = ReadMemory(env, p, len);
+    response_data_->insert(response_data_->end(), data.cbegin(), data.cend());
+
+    results[0].set_i32(len);
+
+    return wabt::interp::Result::Ok;
+  };
+}
+
 ::grpc::Status OakNode::Invoke(::grpc::ServerContext* context, const ::oak::InvokeRequest* request,
                                ::oak::InvokeResponse* response) {
   // TODO: Synchronise this method.
 
-  LOG(INFO) << "Running Oak module";
+  LOG(INFO) << "Invoking Oak Node";
 
   // TODO: Avoid this copy.
   request_data_ =
@@ -257,7 +285,10 @@ void OakNode::InitEnvironment(wabt::interp::Environment* env) {
     // TODO: Print error.
   }
 
-  // TODO: Retrieve response data.
+  // TODO: Check policies before allowing returning data.
+  // TODO: Avoid this copy.
+  std::string response_data_string(response_data_->cbegin(), response_data_->cend());
+  response->set_data(response_data_string);
 
   return ::grpc::Status::OK;
 }
