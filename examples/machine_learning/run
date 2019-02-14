@@ -1,0 +1,6 @@
+#!/bin/sh
+set -e
+set -x
+
+cargo +nightly build --release --target=wasm32-unknown-unknown --manifest-path=examples/machine_learning/Cargo.toml
+# TODO: Implement client.

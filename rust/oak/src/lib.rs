@@ -14,14 +14,16 @@
 // limitations under the License.
 //
 
+use std::cell::RefCell;
+
 mod wasm {
     // See https://rustwasm.github.io/book/reference/js-ffi.html
     #[link(wasm_import_module = "oak")]
     extern "C" {
         pub fn print(s: &str);
         pub fn get_time() -> u64;
-        pub fn read(buf: &mut [u8]) -> usize;
-        pub fn write(buf: &[u8]) -> usize;
+        pub fn read(buf: *mut u8, size: usize) -> usize;
+        pub fn write(buf: *const u8, size: usize) -> usize;
     }
 }
 
@@ -34,29 +36,90 @@ pub fn get_time() -> std::time::SystemTime {
     std::time::UNIX_EPOCH + std::time::Duration::from_nanos(ns)
 }
 
-pub struct OakReader {}
+pub struct Reader {
+    _private: (),
+}
 
-impl std::io::Read for OakReader {
+impl std::io::Read for Reader {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        Ok(unsafe { wasm::read(buf) })
+        Ok(unsafe { wasm::read(buf.as_mut_ptr(), buf.len()) })
     }
 }
 
-pub fn get_input() -> OakReader {
-    OakReader {}
+pub struct Writer {
+    _private: (),
 }
 
-pub struct OakWriter {}
-
-impl std::io::Write for OakWriter {
+impl std::io::Write for Writer {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        Ok(unsafe { wasm::write(buf) })
+        Ok(unsafe { wasm::write(buf.as_ptr(), buf.len()) })
     }
     fn flush(&mut self) -> std::io::Result<()> {
         Ok(())
     }
 }
 
-pub fn get_output() -> OakWriter {
-    OakWriter {}
+/// Trait encapsulating the operations required for an Oak Node.
+pub trait Node {
+    fn new() -> Self
+    where
+        Self: Sized;
+    fn invoke(&mut self, request: &mut Reader, response: &mut Writer);
+}
+
+/// No-op implementation of Node, so that we have a placeholder value until the actual one is set
+/// via `set_node`.
+struct NopNode;
+
+impl Node for NopNode {
+    fn new() -> Self {
+        NopNode
+    }
+    fn invoke(&mut self, request: &mut Reader, response: &mut Writer) {}
+}
+
+thread_local! {
+    static NODE: RefCell<Box<dyn Node>> = RefCell::new(Box::new(NopNode));
+}
+
+/// Sets the Oak Node to execute in the current instance.
+///
+/// This function may only be called once, and only from an exported `oak_initialize` function:
+///
+/// ```rust
+/// struct Node;
+///
+/// impl oak::Node for Node {
+///     fn new() -> Self { Node }
+///     fn invoke(&mut self, request: &mut oak::Reader, response: &mut oak::Writer) { /* ... */ }
+/// }
+///
+/// #[no_mangle]
+/// pub extern "C" fn oak_initialize() {
+///     oak::set_node::<Node>();
+/// }
+/// ```
+pub fn set_node<T: Node + 'static>() {
+    // TODO: Detect multiple invocations.
+    NODE.with(|node| {
+        *node.borrow_mut() = Box::new(T::new());
+    });
+}
+
+#[no_mangle]
+pub extern "C" fn oak_invoke() {
+    NODE.with(|node| {
+        node.borrow_mut()
+            .invoke(&mut Reader { _private: () }, &mut Writer { _private: () });
+    });
+}
+
+#[macro_export]
+macro_rules! oak_node {
+    ($node_type: ty) => {
+        #[no_mangle]
+        pub extern "C" fn oak_initialize() {
+            $crate::set_node::<$node_type>();
+        }
+    };
 }

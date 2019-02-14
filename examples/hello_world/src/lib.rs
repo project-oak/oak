@@ -18,22 +18,19 @@ extern crate oak;
 
 use std::io::{Read, Write};
 
-#[no_mangle]
-pub extern "C" fn oak_initialize() {
-    oak::print("Oak initialize\n");
+struct Node;
+
+impl oak::Node for Node {
+    fn new() -> Self {
+        Node
+    }
+    fn invoke(&mut self, request: &mut oak::Reader, response: &mut oak::Writer) {
+        let mut s = String::new();
+        request
+            .read_to_string(&mut s)
+            .expect("could not read string");
+        response.write(format!("HELLO {}", s).as_bytes());
+    }
 }
 
-#[no_mangle]
-pub extern "C" fn oak_finalize() {
-    oak::print("Oak finalize\n");
-}
-
-#[no_mangle]
-pub extern "C" fn oak_invoke() {
-    oak::print("Oak invoke\n");
-
-    let mut in1 = oak::get_input();
-    let mut s = String::new();
-    in1.read_to_string(&mut s).expect("could not read string");
-    oak::get_output().write(format!("HELLO {}", s).as_bytes());
-}
+oak::oak_node!(Node);

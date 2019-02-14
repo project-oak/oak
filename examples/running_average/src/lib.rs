@@ -26,33 +26,27 @@ extern crate oak;
 
 use std::io::{Read, Write};
 
-#[no_mangle]
-pub extern "C" fn oak_initialize() {
-    oak::print("Oak initialize\n");
+#[derive(Default)]
+struct Node {
+    sum: u64,
+    count: u64,
 }
 
-#[no_mangle]
-pub extern "C" fn oak_finalize() {
-    oak::print("Oak finalize\n");
-}
-
-static mut sum: u64 = 0;
-static mut count: u64 = 0;
-
-#[no_mangle]
-pub extern "C" fn oak_invoke() {
-    oak::print("Oak invoke\n");
-
-    let mut in1 = oak::get_input();
-    let mut s = String::new();
-    in1.read_to_string(&mut s).expect("could not read string");
-    let val = s.parse::<u64>().expect("could not parse value");
-    let current_average;
-    // TODO: Expose a more ergonomic API that avoids global mutable state.
-    unsafe {
-        sum += val;
-        count += 1;
-        current_average = sum / count;
+impl oak::Node for Node {
+    fn new() -> Self {
+        Node::default()
     }
-    oak::get_output().write(format!("{}", current_average).as_bytes());
+    fn invoke(&mut self, request: &mut oak::Reader, response: &mut oak::Writer) {
+        let mut s = String::new();
+        request
+            .read_to_string(&mut s)
+            .expect("could not read string");
+        let val = s.parse::<u64>().expect("could not parse value");
+        self.sum += val;
+        self.count += 1;
+        let current_average = self.sum / self.count;
+        response.write(format!("{}", current_average).as_bytes());
+    }
 }
+
+oak::oak_node!(Node);
