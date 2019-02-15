@@ -19,7 +19,7 @@ code even from the operating system kernel and privileged software, and are
 intended to protect from most hardware attacks.
 
 Additionally, data are associated with policies when they enter the system, and
-policies are enforced and propagated even as data move from enclave to enclave.
+policies are enforced and propagated as data move from enclave to enclave.
 
 ## Terminology
 
@@ -56,7 +56,7 @@ policies are enforced and propagated even as data move from enclave to enclave.
     *   end users
 
 Side channels are out of scope for Project Oak software implementation. While we
-acknowledge that most existing TEE have compromises and may be vulnerable to
+acknowledge that most existing TEEs have compromises and may be vulnerable to
 various kinds of attacks, and hence we do need resistance to side channels we
 leave their resolution to the respective TEE manufacturers and other
 researchers.
@@ -69,17 +69,18 @@ extract the received data.
 
 ## Oak VM
 
-The _Oak VM_ is the core software component of Project Oak; it is responsible
+The **Oak VM** is the core software component of Project Oak; it is responsible
 for executing Oak Modules and enforcing policies on top of data, as well as
-producing remote attestations.
+producing remote attestations for clients.
 
-### Oak Modules
+## Oak Module
 
-The unit of compilation and execution in Oak is an Oak Module. Each Oak Module
-is a self-contained [WebAssembly module](https://webassembly.org/docs/modules/)
-that is interpreted by the Oak VM.
+The unit of compilation and execution in Oak is an **Oak Module**. Each Oak
+Module is a self-contained
+[WebAssembly module](https://webassembly.org/docs/modules/) that is interpreted
+by an Oak VM instance as part of an Oak Node.
 
-#### WebAssembly
+### WebAssembly
 
 The current version of the Oak VM supports
 [WebAssembly](https://webassembly.org) as the first-class target language for
@@ -95,21 +96,29 @@ Each Oak VM instance lives in its own dedicated enclave and is isolated from
 both the host as well as other enclaves and Oak VM instances on the same
 machine.
 
-#### WebAssembly Interface
+### WebAssembly Interface
 
 Each Oak Module must expose the following **exported functions** as
 [WebAssembly exports](https://webassembly.github.io/spec/core/syntax/modules.html#exports):
 
--   `oak_initialize: () -> nil`: Invoked when initializing the Oak Module.
+-   `oak_initialize: () -> nil`: Invoked when the Oak Scheduler initializes the
+    Oak Node. The Oak VM guarantees that this is invoked exactly once.
 
--   `oak_finalize: () -> nil`: Invoked when finalizing the Oak Module. Note that
-    this is best effort, and not guaranteed to be invoked before the Oak Module
-    is finalized.
+-   `oak_finalize: () -> nil`: Invoked when the Oak Scheduler finalizes the Oak
+    Node. Note that this is best effort, and not guaranteed to be invoked before
+    the Oak Node is finalized (e.g. in case of sudden shutdown of the host this
+    may fail to be invoked). No further interactions with the Oak Node are
+    possible after finalization.
 
--   `oak_invoke: () -> nil`: Invoked when interacting with the Oak Module. Each
-    interaction results in a new invocation, and concurrent invocations are
-    guaranteed to only invoke `oak_invoke` sequentially, therefore from the
-    point of view of the Oak Module these calls will not interleave.
+-   `oak_invoke: () -> nil`: Invoked when a client interacts with the Oak Node.
+    Each client interaction results in a new invocation of this function, and
+    the Oak VM guarantees that concurrent invocations only invoke `oak_invoke`
+    sequentially, therefore from the point of view of the Oak Node these calls
+    will never overlap in time and each execution of this function has full
+    access to the underlying internal state until it completes. In the future we
+    may relax some of these restrictions, when we can reason more accurately
+    about the semantics of concurrent invocations, and how they relate to the
+    policy system.
 
 Each Oak Module may also optionally rely on zero or more of the following **host
 functions** as
@@ -143,94 +152,93 @@ functions** as
     *   arg 1: Source buffer size in bytes
     *   return 0: Number of bytes written
 
-#### Rust SDK
+### Rust SDK
 
-Project Oak also offers a Rust SDK with helper functions to facilitate
-interactions with the Oak VM from Rust code compiled to WebAssembly. This
-provides idiomatic Rust abstractions over the lower level WebAssembly interface.
+Project Oak provides a Rust SDK with helper functions to facilitate interactions
+with the Oak VM from Rust code compiled to WebAssembly. This provides idiomatic
+Rust abstractions over the lower level WebAssembly interface.
 
-## Oak Server
+## Oak Node
 
-The Oak Server is a [gRPC](https://grpc.io/) server that allows developers to
-deploy code to Oak VM instances, and clients to interact with them.
+An **Oak Node** is an instance of an Oak Module together with a policy
+configuration, running on an Oak VM, potentially within a TEE.
 
-It consists of various gRPC services with which various categories of users
-interact.
+Once a new Oak Node is initialized and its endpoint available, one or more
+clients (according to the policy configuration) connect to it using individually
+end-to-end encrypted, authenticated and attested channels. The remote
+attestation process proves to the client that the remote enclave is indeed
+running a genuine Oak VM and will therefore obey the policies set on the Oak
+Node; the Oak VM itself may then optionally prove additional details about the
+Oak Module and its properties, which may require reasoning about its internal
+structure.
 
-### Deployment Service
+The Oak Module and the policies associated with an Oak Node are established once
+and for all at the time the Oak Node is created by the Oak Scheduler, and they
+cannot be modified once the Oak Node is running. Therefore each client only
+needs to verify the attestation once before it starts invoking the Oak Node.
 
-ISVs use the Deployment Service to deploy code to an Oak instance run by a
-platform provider. Note that this is not part of the TCB, since the actual
-trusted attestation only happens between client and server running in the TEE at
-execution time.
+Each Oak Node also encapsulates an internal mutable state, corresponding the
+[WebAssembly linear memory](https://webassembly.org/docs/semantics/#linear-memory)
+on which the Oak Module operates. Concurrent invocations of the same Oak Node
+are serialized so that they do not concurrently access the same underlying
+memory, but individual invocations may modify the internal state in such a way
+that it is observable in subsequent invocations, potentially by different
+clients (assuming this is allowed by the policies associated with the Oak Node
+in the first place). Clients may rely on this together with additional
+properties related to the Oak Module to decide whether the Oak Node provides
+sufficient guarantees for the data they intend to exchange with the Oak Node;
+for instance a client may wish to send data to an Oak Node that allows multiple
+invocations, but only if it can also be shown that the data can only be
+retrieved in sufficiently anonymized form in subsequent invocations by other
+clients.
 
-Oak Modules currently follow the _serverless_ approach, in which functions are
-scheduled on-demand and without developers having to provision or manage servers
-or virtual machines.
+## Oak Scheduler
 
-ISVs first compile their code for the Oak Platform using the Oak SDK for their
-language, resulting in a self-contained Oak Module. They also manually create a
-manifest file in [TOML](https://github.com/toml-lang/toml) format, specifying
-any extra capabilities that the module is allowed to have access to. They
-finally upload both of them to the Oak Server using the `oak_deploy`
-command-line tool.
+The **Oak Scheduler** creates Oak Nodes running within a platform provider. Note
+that the Oak Scheduler is not part of the TCB: the actual trusted attestation
+only happens between client and the Oak Node running in the TEE at execution
+time.
 
-TODO: Implement `oak_deploy`.
+A scheduling request contains the Oak Module and the policies to run as part of
+the newly created Oak Node.
 
-### Scheduling Service
+In response to a scheduling request, the Oak Scheduler sends back to the caller
+details about the gRPC endpoint of the newly created Oak Node, initialized with
+the Oak Module and policy configuration specified in the scheduling request.
 
-When a client needs to perform a computation, it connects to the Scheduling
-Service over gRPC and sends a request containing details about the Oak Module to
-load, and any associated policies. The Scheduling Service itself is not part of
-the TCB, and therefore must be considered untrusted by the client, i.e. the
-scheduling service is assumed to be able to modify any (part of) scheduling
-requests.
+## Policy Configuration
 
-In response to a scheduling request, the Scheduling Service sends back to the
-caller details about the gRPC endpoint of the newly created enclave, initialised
-with the module and policies specified.
+A baseline Oak Node with an empty policy configuration may be considered as a
+pure function, executing some computation and returning its result to the
+caller, with no side effects allowed.
 
-All of this is handled by the `oak_schedule` command-line tool.
+In order to allow the Oak Node to perform side effects, capabilities are granted
+to it that allow the Oak VM to expose the appropriate functionality to the Oak
+Module based on the policy configuration specified as part of the scheduling
+request.
 
-TODO: Implement `oak_schedule`.
+### Read / Write
 
-### Execution Service
+For each invocation of the Oak Node over gRPC, the client may send data to the
+Oak Node in the request message, and get data back from the Oak Node in the
+response message.
 
-Once a new enclave is initialised and its endpoint available, a client connects
-to it using an authenticated and attested channel. The attestation proves to the
-client that the remote enclave is indeed running a genuine Oak VM, and the Oak
-VM itself may prove additional details about the Oak Module and its properties.
+The `read` and `write` policies allow the Oak Node to have access to the input
+or output data for a given invocation:
 
-## Capabilities
+-   the Oak Node is allowed to read input data from the client iff the `read`
+    policy is granted to it
 
-A baseline module without any extra capabilities specified in the manifest file
-can be considered as a pure function, executing some computation and returning
-its result to the caller, with no side effects allowed.
+-   the Oak Node is allowed to write output data to the client iff the `write`
+    policy is granted to it
 
-In order to allow the module to perform side effects, capabilities need to be
-granted to it that allow the Oak VM to expose the appropriate logic to the
-module itself.
+If neither of these policies is granted to the Oak Node, the Oak Node will still
+be invoked, but it will not be able to either read from or write to the client
+that performed the invocation.
 
-### Input / Output Channels
+TODO
 
-The `input_channel` and `output_channel` capabilities allow the module to have
-access to an input or output channel, respectively, managed by the Oak VM. The
-channel is securely encrypted by construction (the encryption is performed by
-the Oak VM itself).
-
-The public key with which to perform the encryption must be provided as part of
-the capability instantiation in the manifest file, so that it becomes part of
-the Oak attestation offered by the Oak VM to clients before they exchange any
-data with it.
-
-Channels are identified by a sequential number, which is used to interact with
-them.
-
-By default, an input channel and an output channel are implicitly created by the
-Oak VM and connected to the input and output of the client performing the gRPC
-request that initiated the computation. These are available at index 0.
-
-### Storage
+### Persistent Storage
 
 TODO
 
@@ -240,19 +248,27 @@ TODO
 
 ## Remote Attestation
 
-Remote attestation is a core part of Project Oak. When an Oak Client connects to
-an Oak Server, the two first establish a fresh ephemeral session key, and then
-they provide assertions to each other over a channel encrypted with such key;
-the Oak Client relies on this assertion to determine whether it is connecting to
-a valid version of the Oak VM (see below for what constitutes a valid version).
-In particular, the attestation includes a _measurement_ (i.e. a hash) of the
-code running in the remote enclave, cryptographically bound to the session
+Remote attestation is a core part of Project Oak. When a client connects to an
+Oak Node, the two first establish a fresh ephemeral session key, and then they
+provide assertions to each other over a channel encrypted with such key; the
+client relies on this assertion to determine whether it is connecting to a valid
+version of the Oak VM (see below for what constitutes a valid version). In
+particular, the attestation includes a _measurement_ (i.e. a hash) of the Oak
+Module running in the remote enclave, cryptographically bound to the session
 itself.
+
+The client may then infer additional properties about the Oak Module running on
+the remote enclave, e.g. by means of "static attestation" certificates that are
+produced as a byproduct of compiling the Oak Module source code itself on a TEE
+and having the TEE sign a statement that binds the (hash of the) compiled Oak
+Module to some high-level properties of the source code.
+
+TODO: Expand on this.
 
 ## Oak VM Updates
 
-Under regular circumstances, an Oak Client connecting to an Oak VM validates the
-attestation it receives from the Oak VM when establishing the connection
+Under normal circumstances, a client connecting to an Oak Node validates the
+attestation it receives from the Oak Node when establishing the connection
 channel. The measurement in the attestation report corresponds to the hash of
 the code loaded in enclave memory at the time the connection was established.
 Because the Oak VM changes relatively infrequently, the list of known
@@ -263,7 +279,7 @@ Occasionally, a particular version of the Oak VM may be found to contain
 security vulnerabilities or bugs, and we would like to prevent further clients
 from connecting to servers using such versions.
 
-TODO: Verifiable log of known versions.
+TODO: Verifiable log of known versions, Binary Transparency, Key Transparency.
 
 ## Workflow
 
@@ -271,34 +287,28 @@ Sample flow:
 
 -   ISV writes an Oak Module for the Oak VM using a high-level language and
     compiles it to WebAssembly.
--   The Oak Client connects to the Oak Server scheduler, and requests the
-    creation of an Oak VM instance running the compiled Oak Module.
+-   The client connects to the Oak Scheduler, and requests the creation of an
+    Oak Node running the compiled Oak Module.
     +   The code itself is passed as part of the scheduling request.
--   The Oak Server scheduler creates a new enclave and initialises it with a
-    fresh Oak VM instance, and then seals the enclave. The Oak VM exposes a gRPC
-    endpoint at a newly allocated endpoint (host:port). The endpoint gets
-    forwarded to the client as part of the scheduling response.
+-   The Oak Scheduler creates a new enclave and initializes it with a fresh Oak
+    Node, and then seals the enclave. The Oak Node exposes a gRPC endpoint at a
+    newly allocated endpoint (host:port). The endpoint gets forwarded to the
+    client as part of the scheduling response.
     +   Note up to this point no sensitive data has been exchanged.
-    +   The Oak Client still has no guarantees that the endpoint is in fact
-        running an Oak VM, as the scheduler is itself untrusted.
--   The Oak Client connects to the Oak VM endpoint, and exchanges keys using the
+    +   The client still has no guarantees that the endpoint is in fact running
+        an Oak VM, as the Oak Scheduler is itself untrusted.
+-   The client connects to the Oak Node endpoint, and exchanges keys using the
     [Asylo assertion framework](https://asylo.dev/docs/reference/proto/identity/asylo.identity.v1.html).
-    +   This allows the client to verify the integrity of the server and the
+    +   This allows the client to verify the integrity of the Oak Node and the
         fact that it is indeed running an actual Oak VM, and optionally also
         asserting further properties about the remote system (e.g. possession of
         additional secret keys, etc.).
-    +   If the Oak Client is satisfied with the attestation, it continues with
-        the rest of the exchange, otherwise it aborts immediately.
--   The Oak Client sends its (potentially sensitive) data to the Oak Server,
-    alongside one or more policies that it requires the Oak Server to enforce on
-    the data.
--   The Oak Server receives the data and performs the desired (and
-    pre-determined) computation on top of them, and sends the results back to
-    the Oak Client.
-
-## Oak Policies
-
-TODO
+    +   If the client is satisfied with the attestation, it continues with the
+        rest of the exchange, otherwise it aborts immediately.
+-   The client sends its (potentially sensitive) data to the Oak Node, alongside
+    one or more policies that it requires the Oak Node to enforce on the data.
+-   The Oak Node receives the data and performs the desired (and pre-determined)
+    computation on top of them, and sends the results back to the client.
 
 ## Time
 
@@ -312,17 +322,16 @@ TODO: Roughtime
 -   Bazel: https://docs.bazel.build/versions/master/install.html
 -   Rust: https://rustup.rs/
 
-### Compile and Run
-
-#### Server
+### Run Server
 
 The following command builds and runs an Oak Server instance.
 
 `./run_server_docker`
 
-#### Client
+### Run Client
 
-The following command (run in a separate terminal) compiles an example module from
-Rust to WebAssembly, and sends it to the Oak Server running on the same machine.
+The following command (run in a separate terminal) compiles an example module
+from Rust to WebAssembly, and sends it to the Oak Server running on the same
+machine.
 
 `./examples/hello_world/run`
