@@ -23,8 +23,11 @@
 //! to and including the value provided in the request.
 
 extern crate oak;
+extern crate protobuf;
 
-use std::io::{Read, Write};
+mod proto;
+
+use protobuf::Message;
 
 #[derive(Default)]
 struct Node {
@@ -36,16 +39,29 @@ impl oak::Node for Node {
     fn new() -> Self {
         Node::default()
     }
-    fn invoke(&mut self, request: &mut oak::Reader, response: &mut oak::Writer) {
-        let mut s = String::new();
-        request
-            .read_to_string(&mut s)
-            .expect("could not read string");
-        let val = s.parse::<u64>().expect("could not parse value");
-        self.sum += val;
-        self.count += 1;
-        let current_average = self.sum / self.count;
-        response.write(format!("{}", current_average).as_bytes());
+    fn invoke(&mut self, method_name: &str, request: &mut oak::Reader, response: &mut oak::Writer) {
+        // TODO: Generate this code via a macro or code generation (e.g. a protoc plugin).
+        match method_name {
+            "/oak.examples.running_average.RunningAverage/SubmitSample" => {
+                let mut in_stream = protobuf::CodedInputStream::new(request);
+                let mut req = proto::running_average::SubmitSampleRequest::new();
+                req.merge_from(&mut in_stream)
+                    .expect("could not read request");
+                self.sum += req.value;
+                self.count += 1;
+            }
+            "/oak.examples.running_average.RunningAverage/GetAverage" => {
+                let mut res = proto::running_average::GetAverageResponse::new();
+                let mut out_stream = protobuf::CodedOutputStream::new(response);
+                res.average = self.sum / self.count;
+                res.write_to(&mut out_stream)
+                    .expect("could not write response");
+                out_stream.flush().expect("could not flush");
+            }
+            _ => {
+                panic!("unknown method name");
+            }
+        };
     }
 }
 

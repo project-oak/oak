@@ -35,27 +35,13 @@ class NodeClient {
     InitializeAssertionAuthorities();
   }
 
-  // TODO: Return StatusOr<std::string>.
-  std::string Invoke(const std::string& in_data) {
-    ::grpc::ClientContext context;
-
-    ::oak::InvokeRequest request;
-    ::oak::InvokeResponse response;
-
-    request.set_data(in_data);
-
-    ::grpc::Status status = stub_->Invoke(&context, request, &response);
-    if (!status.ok()) {
-      LOG(QFATAL) << "Failed: " << status.error_message();
-    }
-
-    return response.data();
+  void GetAttestation() {
+    // TODO: Implement this method.
   }
 
- private:
   // This method sets up the necessary global state for Asylo to be able to validate authorities
   // (e.g. root CAs, remote attestation endpoints, etc.).
-  void InitializeAssertionAuthorities() {
+  static void InitializeAssertionAuthorities() {
     LOG(INFO) << "Initializing assertion authorities";
 
     // TODO: Provide a list of Assertion Authorities when available.

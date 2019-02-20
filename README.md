@@ -110,15 +110,15 @@ Each Oak Module must expose the following **exported functions** as
     may fail to be invoked). No further interactions with the Oak Node are
     possible after finalization.
 
--   `oak_invoke: () -> nil`: Invoked when a client interacts with the Oak Node.
-    Each client interaction results in a new invocation of this function, and
-    the Oak VM guarantees that concurrent invocations only invoke `oak_invoke`
-    sequentially, therefore from the point of view of the Oak Node these calls
-    will never overlap in time and each execution of this function has full
-    access to the underlying internal state until it completes. In the future we
-    may relax some of these restrictions, when we can reason more accurately
-    about the semantics of concurrent invocations, and how they relate to the
-    policy system.
+-   `oak_handle_grpc_call: () -> nil`: Invoked when a client interacts with the
+    Oak Node over gRPC. Each client interaction results in a new invocation of
+    this function, and the Oak VM guarantees that concurrent invocations only
+    invoke it sequentially, therefore from the point of view of the Oak Node
+    these calls will never overlap in time and each execution of this function
+    has full access to the underlying internal state until it completes. In the
+    future we may relax some of these restrictions, when we can reason more
+    accurately about the semantics of concurrent invocations, and how they
+    relate to the policy system.
 
 Each Oak Module may also optionally rely on zero or more of the following **host
 functions** as
@@ -151,6 +151,13 @@ functions** as
     *   arg 0: Source buffer address
     *   arg 1: Source buffer size in bytes
     *   return 0: Number of bytes written
+
+-   `read_method_name: (i32, i32) -> i32`: Reads gRPC method name for the
+    current invocation.
+
+    *   arg 0: Destination buffer address
+    *   arg 1: Destination buffer size in bytes
+    *   return 0: Number of bytes read
 
 ### Rust SDK
 

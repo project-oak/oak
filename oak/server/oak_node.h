@@ -28,12 +28,24 @@ class OakNode final : public ::oak::Node::Service {
  public:
   OakNode(const std::string &node_id, const std::string &module);
 
+  ::grpc::Status HandleGrpcCall(const ::grpc::GenericServerContext *context,
+                                const ::grpc::ByteBuffer *request_data,
+                                ::grpc::ByteBuffer *response_data);
+
  private:
-  ::grpc::Status Invoke(::grpc::ServerContext *context, const ::oak::InvokeRequest *request,
-                        ::oak::InvokeResponse *response) override;
+  ::grpc::Status GetAttestation(::grpc::ServerContext *context,
+                                const ::oak::GetAttestationRequest *request,
+                                ::oak::GetAttestationResponse *response) override;
 
   void InitEnvironment(wabt::interp::Environment *env);
+
+  // Native implementation of the `oak.read_method_name` host function.
+  ::wabt::interp::HostFunc::Callback OakReadMethodName(wabt::interp::Environment *env);
+
+  // Native implementation of the `oak.read` host function.
   ::wabt::interp::HostFunc::Callback OakRead(wabt::interp::Environment *env);
+
+  // Native implementation of the `oak.write` host function.
   ::wabt::interp::HostFunc::Callback OakWrite(wabt::interp::Environment *env);
 
   wabt::interp::Environment env_;
@@ -41,15 +53,17 @@ class OakNode final : public ::oak::Node::Service {
   wabt::interp::DefinedModule *module_;
 
   // Incoming gRPC data for the current invocation.
+  const ::grpc::GenericServerContext *server_context_;
+
   std::unique_ptr<std::vector<char>> request_data_;
-  // Cursor keeping track of how many bytes of request_data have been consumed by the Oak Module
+  // Cursor keeping track of how many bytes of request_data_ have been consumed by the Oak Module
   // during the current invocation.
   uint32_t request_data_cursor_;
 
   // Outgoing gRPC data for the current invocation.
   std::unique_ptr<std::vector<char>> response_data_;
 
-  std::string node_id_;
+  const std::string node_id_;
 };
 
 }  // namespace grpc_server

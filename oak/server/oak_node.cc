@@ -25,6 +25,7 @@
 #include "src/interp/interp.h"
 
 #include "absl/memory/memory.h"
+#include "absl/types/span.h"
 
 namespace oak {
 namespace grpc_server {
@@ -45,27 +46,31 @@ static wabt::interp::Result PrintCallback(const wabt::interp::HostFunc* func,
   return wabt::interp::Result::Ok;
 }
 
-static std::vector<char> ReadMemory(wabt::interp::Environment* env, const uint32_t offset,
-                                    const uint32_t size) {
-  std::vector<char> data = env->GetMemory(0)->data;
-  return std::vector<char>(data.cbegin() + offset, data.cbegin() + offset + size);
+static const absl::Span<const char> ReadMemory(wabt::interp::Environment* env,
+                                               const uint32_t offset, const uint32_t size) {
+  return absl::MakeConstSpan(env->GetMemory(0)->data).subspan(offset, size);
 }
 
-static std::string ReadString(wabt::interp::Environment* env, const uint32_t offset,
-                              const uint32_t size) {
-  std::vector<char> mem = ReadMemory(env, offset, size);
+static const std::string ReadString(wabt::interp::Environment* env, const uint32_t offset,
+                                    const uint32_t size) {
+  auto mem = ReadMemory(env, offset, size);
   return std::string(mem.cbegin(), mem.cend());
 }
 
-static void WriteMemory(wabt::interp::Environment* env, const uint32_t offset,
-                        std::vector<char>::const_iterator begin,
-                        std::vector<char>::const_iterator end) {
+template <class Iterator>
+static void WriteMemory(wabt::interp::Environment* env, const uint32_t offset, Iterator begin,
+                        Iterator end) {
   std::copy(begin, end, env->GetMemory(0)->data.begin() + offset);
 }
 
 static void WriteMemory(wabt::interp::Environment* env, const uint32_t offset,
-                        const std::vector<char> data) {
+                        const absl::Span<const char> data) {
   WriteMemory(env, offset, data.cbegin(), data.cend());
+}
+
+static void WriteString(wabt::interp::Environment* env, const uint32_t offset,
+                        const std::string str) {
+  WriteMemory(env, offset, str.cbegin(), str.cend());
 }
 
 // Native implementation of the `oak.print` host function.
@@ -179,6 +184,7 @@ OakNode::OakNode(const std::string& node_id, const std::string& module)
 // Module.
 void OakNode::InitEnvironment(wabt::interp::Environment* env) {
   wabt::interp::HostModule* oak_module = env->AppendHostModule("oak");
+
   oak_module->AppendFuncExport(
       "print",
       wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
@@ -189,6 +195,12 @@ void OakNode::InitEnvironment(wabt::interp::Environment* env) {
       wabt::interp::FuncSignature(std::vector<wabt::Type>{},
                                   std::vector<wabt::Type>{wabt::Type::I64}),
       OakGetTime(env));
+
+  oak_module->AppendFuncExport(
+      "read_method_name",
+      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
+                                  std::vector<wabt::Type>{wabt::Type::I32}),
+      this->OakReadMethodName(env));
   oak_module->AppendFuncExport(
       "read",
       wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
@@ -201,7 +213,31 @@ void OakNode::InitEnvironment(wabt::interp::Environment* env) {
       this->OakWrite(env));
 }
 
-// Native implementation of the `oak.read` host function.
+::wabt::interp::HostFunc::Callback OakNode::OakReadMethodName(wabt::interp::Environment* env) {
+  return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
+                     const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
+    LOG(INFO) << "Called host function: " << func->module_name << "." << func->field_name;
+    for (auto const& arg : args) {
+      LOG(INFO) << "Arg: " << wabt::interp::TypedValueToString(arg);
+    }
+
+    uint32_t p = args[0].get_i32();
+    uint32_t len = args[1].get_i32();
+
+    std::string grpc_method_name = server_context_->method();
+
+    uint32_t end = len;
+    if (end > grpc_method_name.size()) {
+      end = grpc_method_name.size();
+    }
+
+    WriteString(env, p, grpc_method_name);
+    results[0].set_i32(end);
+
+    return wabt::interp::Result::Ok;
+  };
+}
+
 ::wabt::interp::HostFunc::Callback OakNode::OakRead(wabt::interp::Environment* env) {
   return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
                      const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
@@ -229,7 +265,6 @@ void OakNode::InitEnvironment(wabt::interp::Environment* env) {
   };
 }
 
-// Native implementation of the `oak.write` host function.
 ::wabt::interp::HostFunc::Callback OakNode::OakWrite(wabt::interp::Environment* env) {
   return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
                      const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
@@ -243,7 +278,7 @@ void OakNode::InitEnvironment(wabt::interp::Environment* env) {
     uint32_t p = args[0].get_i32();
     uint32_t len = args[1].get_i32();
 
-    std::vector<char> data = ReadMemory(env, p, len);
+    auto data = ReadMemory(env, p, len);
     response_data_->insert(response_data_->end(), data.cbegin(), data.cend());
 
     results[0].set_i32(len);
@@ -252,15 +287,37 @@ void OakNode::InitEnvironment(wabt::interp::Environment* env) {
   };
 }
 
-::grpc::Status OakNode::Invoke(::grpc::ServerContext* context, const ::oak::InvokeRequest* request,
-                               ::oak::InvokeResponse* response) {
+// Converts a gRPC ByteBuffer into a vector of bytes.
+static std::unique_ptr<std::vector<char>> Unwrap(const ::grpc::ByteBuffer* buffer) {
+  auto bytes = absl::make_unique<std::vector<char>>();
+  std::vector<::grpc::Slice> slices;
+  ::grpc::Status status = buffer->Dump(&slices);
+  if (!status.ok()) {
+    LOG(QFATAL) << "Could not unwrap buffer";
+  }
+  for (const auto& slice : slices) {
+    bytes->insert(bytes->end(), slice.begin(), slice.end());
+  }
+  return bytes;
+}
+
+// Converts a vector of bytes into a gRPC ByteBuffer.
+static const ::grpc::ByteBuffer Wrap(const std::vector<char>* bytes) {
+  ::grpc::Slice slice(bytes->data(), bytes->size());
+  ::grpc::ByteBuffer buffer(&slice, /*nslices=*/1);
+  return buffer;
+}
+
+::grpc::Status OakNode::HandleGrpcCall(const ::grpc::GenericServerContext* context,
+                                       const ::grpc::ByteBuffer* request_data,
+                                       ::grpc::ByteBuffer* response_data) {
   // TODO: Synchronise this method.
 
-  LOG(INFO) << "Invoking Oak Node";
+  LOG(INFO) << "Handling gRPC call: " << context->method();
 
-  // TODO: Avoid this copy.
-  request_data_ =
-      absl::make_unique<std::vector<char>>(request->data().cbegin(), request->data().cend());
+  server_context_ = context;
+
+  request_data_ = Unwrap(request_data);
   request_data_cursor_ = 0;
 
   response_data_ = absl::make_unique<std::vector<char>>();
@@ -275,7 +332,8 @@ void OakNode::InitEnvironment(wabt::interp::Environment* env) {
   // The Oak Module can consume the input data by calling the `oak.read` host function, and produce
   // output data by calling the `oak.write` host function.
   wabt::interp::TypedValues args;
-  wabt::interp::ExecResult exec_result = executor.RunExportByName(module_, "oak_invoke", args);
+  wabt::interp::ExecResult exec_result =
+      executor.RunExportByName(module_, "oak_handle_grpc_call", args);
 
   if (exec_result.result == wabt::interp::Result::Ok) {
     LOG(INFO) << "Executed module";
@@ -285,12 +343,15 @@ void OakNode::InitEnvironment(wabt::interp::Environment* env) {
     // TODO: Print error.
   }
 
-  // TODO: Check policies before allowing returning data.
-  // TODO: Avoid this copy.
-  std::string response_data_string(response_data_->cbegin(), response_data_->cend());
-  response->set_data(response_data_string);
+  *response_data = Wrap(response_data_.get());
 
   return ::grpc::Status::OK;
+}
+
+::grpc::Status OakNode::GetAttestation(::grpc::ServerContext* context,
+                                       const ::oak::GetAttestationRequest* request,
+                                       ::oak::GetAttestationResponse* response) {
+  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "TODO");
 }
 
 }  // namespace grpc_server

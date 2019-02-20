@@ -22,6 +22,7 @@
 
 #include <memory>
 #include <string>
+#include <thread>
 
 #include "absl/strings/str_cat.h"
 #include "absl/synchronization/mutex.h"
@@ -55,17 +56,18 @@ namespace oak {
 class EnclaveServer final : public asylo::TrustedApplication {
  public:
   EnclaveServer()
-      : service_(nullptr),
+      : node_(nullptr),
         credentials_(
-            ::asylo::EnclaveServerCredentials(::asylo::BidirectionalNullCredentialsOptions())){};
+            ::asylo::EnclaveServerCredentials(::asylo::BidirectionalNullCredentialsOptions())),
+        completion_queue_(nullptr){};
 
   ~EnclaveServer() = default;
 
   asylo::Status Initialize(const asylo::EnclaveConfig &config) override {
     LOG(INFO) << "Initializing Oak Instance";
     const oak::InitializeInput &initialize_input = config.GetExtension(oak::initialize_input);
-    service_ = absl::make_unique<oak::grpc_server::OakNode>(initialize_input.node_id(),
-                                                            initialize_input.module());
+    node_ = absl::make_unique<oak::grpc_server::OakNode>(initialize_input.node_id(),
+                                                         initialize_input.module());
     return InitializeServer();
   }
 
@@ -80,8 +82,7 @@ class EnclaveServer final : public asylo::TrustedApplication {
   }
 
  private:
-  // Initializes a gRPC server. If the server is already initialized, does
-  // nothing.
+  // Initializes a gRPC server. If the server is already initialized, does nothing.
   asylo::Status InitializeServer() LOCKS_EXCLUDED(server_mutex_) {
     // Ensure that the server is only created and initialized once.
     absl::MutexLock lock(&server_mutex_);
@@ -90,16 +91,27 @@ class EnclaveServer final : public asylo::TrustedApplication {
     }
 
     ASYLO_ASSIGN_OR_RETURN(server_, CreateServer());
+
+    // Start a new thread to process the gRPC completion queue.
+    std::thread thread(&EnclaveServer::CompletionQueueLoop, this);
+    thread.detach();
+
     return asylo::Status::OkStatus();
   }
 
-  // Creates a gRPC server that hosts service_ on a free port with credentials_.
+  // Creates a gRPC server that hosts node_ on a free port with credentials_.
   asylo::StatusOr<std::unique_ptr<::grpc::Server>> CreateServer()
       EXCLUSIVE_LOCKS_REQUIRED(server_mutex_) {
     ::grpc::ServerBuilder builder;
     // TODO: Listen on a free port (using ":0" notation).
     builder.AddListeningPort("[::]:30000", credentials_, &port_);
-    builder.RegisterService(service_.get());
+    builder.RegisterService(node_.get());
+
+    // Add a completion queue and a generic service, in order to proxy incoming RPCs to the Oak
+    // Node.
+    completion_queue_ = builder.AddCompletionQueue();
+    builder.RegisterAsyncGenericService(&generic_service_);
+
     std::unique_ptr<::grpc::Server> server = builder.BuildAndStart();
     if (!server) {
       return asylo::Status(asylo::error::GoogleError::INTERNAL, "Failed to start gRPC server");
@@ -127,6 +139,64 @@ class EnclaveServer final : public asylo::TrustedApplication {
     }
   }
 
+  // Creates a new gRPC event tag based on a number. gRPC tags are usually employed to uniquely
+  // identify events, but we do not need to keep track of them, and therefore we just create them
+  // based on arbitrary numbers.
+  // See https://grpc.io/grpc/cpp/classgrpc_1_1_completion_queue.html.
+  static void *tag(int i) { return reinterpret_cast<void *>(i); }
+
+  // Processes the next available event from the completion queue, blocking if none is available.
+  void ProcessNextEvent() {
+    void *out_tag;
+    bool ok = false;
+    completion_queue_->Next(&out_tag, &ok);
+    // TODO: Return the value of ok so that we can break the completion queue loop.
+    if (!ok) {
+      LOG(INFO) << "Could not process gRPC event from completion queue";
+    }
+  }
+
+  // Consumes gRPC events from the completion queue in an infinite loop.
+  void CompletionQueueLoop() {
+    LOG(INFO) << "Starting gRPC completion queue loop";
+    int i = 0;
+    while (true) {
+      ::grpc::GenericServerContext context;
+      ::grpc::GenericServerAsyncReaderWriter stream(&context);
+
+      // We request a new event corresponding to a generic call. This will create an entry in the
+      // completion queue when a new call is available.
+      generic_service_.RequestCall(&context, &stream, completion_queue_.get(),
+                                   completion_queue_.get(), tag(i++));
+
+      // Wait for a generic call to arrive.
+      ProcessNextEvent();
+
+      // Read request data.
+      ::grpc::ByteBuffer request;
+      stream.Read(&request, tag(i++));
+
+      // Process the event related to the read we just requested.
+      ProcessNextEvent();
+
+      ::grpc::ByteBuffer response;
+
+      // Invoke the actual gRPC handler on the Oak Node.
+      ::grpc::Status status = node_->HandleGrpcCall(&context, &request, &response);
+      if (!status.ok()) {
+        LOG(INFO) << "Failed: " << status.error_message();
+      }
+
+      ::grpc::WriteOptions options;
+
+      // Write response data.
+      stream.WriteAndFinish(response, options, status, tag(i++));
+
+      // Process the event related to the write we just requested.
+      ProcessNextEvent();
+    }
+  }
+
   // Guards state related to the gRPC server (|server_| and |port_|).
   absl::Mutex server_mutex_;
 
@@ -136,8 +206,11 @@ class EnclaveServer final : public asylo::TrustedApplication {
   // The port on which the server is listening.
   int port_;
 
-  std::unique_ptr<::grpc::Service> service_;
+  std::unique_ptr<::oak::grpc_server::OakNode> node_;
   std::shared_ptr<::grpc::ServerCredentials> credentials_;
+
+  ::grpc::AsyncGenericService generic_service_;
+  std::unique_ptr<::grpc::ServerCompletionQueue> completion_queue_;
 };
 
 }  // namespace oak

@@ -1,5 +1,5 @@
 //
-// Copyright 2018 The Project Oak Authors
+// Copyright 2019 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,20 +16,19 @@
 
 syntax = "proto3";
 
-package oak;
+package oak.examples.running_average;
 
-message GetAttestationRequest {
-  // TODO: Specify this message.
+import "google/protobuf/empty.proto";
+
+message SubmitSampleRequest {
+  uint64 value = 1;
 }
 
-message GetAttestationResponse {
-  // TODO: Specify this message.
+message GetAverageResponse {
+  uint64 average = 1;
 }
 
-// An Oak Node is an instance of an Oak Module an Oak VM, usually running within
-// an enclave.
-service Node {
-  // Returns an attestation of the policies and the Oak Module with which the
-  // Oak Node was instantiated.
-  rpc GetAttestation(GetAttestationRequest) returns (GetAttestationResponse);
+service RunningAverage {
+  rpc SubmitSample(SubmitSampleRequest) returns (google.protobuf.Empty);
+  rpc GetAverage(google.protobuf.Empty) returns (GetAverageResponse);
 }

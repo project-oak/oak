@@ -35,9 +35,12 @@ asylo_grpc_proto_library(
     srcs = ["node.proto"],
 )
 
-# TODO: Use plain cc_proto_library for the rules below.
+load(
+    "@com_github_grpc_grpc//bazel:grpc_build_system.bzl",
+    "grpc_proto_library",
+)
 
-asylo_grpc_proto_library(
+grpc_proto_library(
     name = "scheduler_grpc_proto",
     srcs = ["scheduler.proto"],
 )

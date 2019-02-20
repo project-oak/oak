@@ -24,7 +24,21 @@ mod wasm {
         pub fn get_time() -> u64;
         pub fn read(buf: *mut u8, size: usize) -> usize;
         pub fn write(buf: *const u8, size: usize) -> usize;
+        pub fn read_method_name(buf: *mut u8, size: usize) -> usize;
     }
+}
+
+fn method_name() -> String {
+    // We do a single fixed-size read for the method name to simplify the server logic, so we do
+    // not have to keep track of how many bytes have been read already.
+    let mut buf = [0u8; 255];
+    let len: usize;
+    unsafe {
+        len = wasm::read_method_name(buf.as_mut_ptr(), buf.len());
+    }
+    std::str::from_utf8(&buf[0..len])
+        .expect("could not read method name")
+        .to_string()
 }
 
 pub fn print(s: &str) {
@@ -64,7 +78,7 @@ pub trait Node {
     fn new() -> Self
     where
         Self: Sized;
-    fn invoke(&mut self, request: &mut Reader, response: &mut Writer);
+    fn invoke(&mut self, grpc_method_name: &str, request: &mut Reader, response: &mut Writer);
 }
 
 /// No-op implementation of Node, so that we have a placeholder value until the actual one is set
@@ -75,7 +89,7 @@ impl Node for NopNode {
     fn new() -> Self {
         NopNode
     }
-    fn invoke(&mut self, request: &mut Reader, response: &mut Writer) {}
+    fn invoke(&mut self, grpc_method_name: &str, request: &mut Reader, response: &mut Writer) {}
 }
 
 thread_local! {
@@ -107,10 +121,14 @@ pub fn set_node<T: Node + 'static>() {
 }
 
 #[no_mangle]
-pub extern "C" fn oak_invoke() {
+pub extern "C" fn oak_handle_grpc_call() {
     NODE.with(|node| {
-        node.borrow_mut()
-            .invoke(&mut Reader { _private: () }, &mut Writer { _private: () });
+        let method_name = method_name();
+        node.borrow_mut().invoke(
+            &method_name,
+            &mut Reader { _private: () },
+            &mut Writer { _private: () },
+        );
     });
 }
 

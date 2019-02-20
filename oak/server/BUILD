@@ -34,6 +34,7 @@ cc_library(
         "//oak/proto:node_grpc_proto",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/types:span",
         "@com_google_asylo//asylo/util:logging",
         "@wabt//:wabt",
     ],
