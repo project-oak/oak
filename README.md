@@ -23,14 +23,15 @@ policies are enforced and propagated as data move from enclave to enclave.
 
 ## Terminology
 
--   **Trusted Execution Environment (TEE)**: A secure CPU compartment containing
-    code and data; it enforces isolation from the host and other TEE instances
-    running on the same system. It guarantees _confidentiality_ and _integrity_
-    of both data and code running within it, and it is capable of creating
-    hardware-backed _remote attestations_ to prove to other parties a
-    measurement of the TEE itself.
--   **TEE Manufacturer**: The entity in charge of manufacturing the CPU or SoC
-    supporting the TEE.
+-   **Enclave**: A secure CPU compartment that can be created on-demand,
+    containing code and data; it enforces isolation from the host and other
+    enclave instances running on the same system. It guarantees
+    _confidentiality_ and _integrity_ of both data and code running within it,
+    and it is capable of creating hardware-backed _remote attestations_ to prove
+    to other parties a measurement (i.e. hash) of the code and data within the
+    enclave itself. Also known as Trusted Execution Environment (TEE).
+-   **Enclave Manufacturer**: The entity in charge of manufacturing the CPU or
+    System on a Chip (SoC) supporting enclaves.
 -   **Platform Provider**: The entity in charge of maintaining and running the
     combined hardware and software stack surrounding the TEE, for instance in a
     cloud context.
@@ -44,34 +45,36 @@ policies are enforced and propagated as data move from enclave to enclave.
 ## Threat Model
 
 -   **untrusted**:
-    *   hardware (memory, disk, motherboard, network card, external devices)
+    *   most hardware (memory, disk, motherboard, network card, external
+        devices)
     *   Operating System (kernel, drivers, libraries, applications)
     *   platform provider (hardware, software, employees)
     *   third-party developers
 -   **trusted-but-verifiable**:
     *   Project Oak codebase (and its transitive dependencies)
 -   **trusted**:
-    *   TEE manufacturer
+    *   enclave manufacturer (and therefore at least some hardware / software)
 -   **partly or conditionally trusted**:
     *   end users
 
 Side channels are out of scope for Project Oak software implementation. While we
-acknowledge that most existing TEEs have compromises and may be vulnerable to
-various kinds of attacks, and hence we do need resistance to side channels we
-leave their resolution to the respective TEE manufacturers and other
-researchers.
+acknowledge that most existing enclaves have compromises and may be vulnerable
+to various kinds of attacks (and therefore we do need resistance to side
+channels) we leave their resolution to the respective enclave manufacturers and
+other researchers.
 
 End users are considered "partly trusted" in that we assume that when two users
 exchange data, there is a pre-existing basic trust relationship between them; in
 particular we assume that the recipient of the data is not going to
-intentionally circumvent protection mechanisms on their device in order to
-extract the received data.
+intentionally circumvent robust protection mechanisms on their device in order
+to extract the received data.
 
 ## Oak VM
 
-The **Oak VM** is the core software component of Project Oak; it is responsible
-for executing Oak Modules and enforcing policies on top of data, as well as
-producing remote attestations for clients.
+The **Oak VM** is currently the core software component of Project Oak; it is
+responsible for executing Oak Modules and enforcing policies on top of data, as
+well as producing remote attestations for clients. Other models are also
+possible.
 
 ## Oak Module
 
@@ -168,7 +171,7 @@ Rust abstractions over the lower level WebAssembly interface.
 ## Oak Node
 
 An **Oak Node** is an instance of an Oak Module together with a policy
-configuration, running on an Oak VM, potentially within a TEE.
+configuration, running on an Oak VM, potentially within an enclave.
 
 Once a new Oak Node is initialized and its endpoint available, one or more
 clients (according to the policy configuration) connect to it using individually
@@ -203,7 +206,7 @@ clients.
 
 The **Oak Scheduler** creates Oak Nodes running within a platform provider. Note
 that the Oak Scheduler is not part of the TCB: the actual trusted attestation
-only happens between client and the Oak Node running in the TEE at execution
+only happens between client and the Oak Node running in the enclave at execution
 time.
 
 A scheduling request contains the Oak Module and the policies to run as part of
@@ -266,9 +269,9 @@ itself.
 
 The client may then infer additional properties about the Oak Module running on
 the remote enclave, e.g. by means of "static attestation" certificates that are
-produced as a byproduct of compiling the Oak Module source code itself on a TEE
-and having the TEE sign a statement that binds the (hash of the) compiled Oak
-Module to some high-level properties of the source code.
+produced as a byproduct of compiling the Oak Module source code itself on an
+enclave and having the enclave sign a statement that binds the (hash of the)
+compiled Oak Module to some high-level properties of the source code.
 
 TODO: Expand on this.
 
