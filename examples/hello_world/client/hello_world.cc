@@ -19,12 +19,31 @@
 #include "gflags/gflags.h"
 #include "include/grpcpp/grpcpp.h"
 
+#include "examples/hello_world/proto/hello_world.grpc.pb.h"
+#include "examples/hello_world/proto/hello_world.pb.h"
 #include "examples/utils/utils.h"
 #include "oak/client/node_client.h"
 #include "oak/client/scheduler_client.h"
 
 DEFINE_string(scheduler_address, "127.0.0.1:8888", "Address of the Oak Scheduler to connect to");
 DEFINE_string(module, "", "File containing the compiled WebAssembly module");
+
+using ::oak::examples::hello_world::HelloWorld;
+using ::oak::examples::hello_world::SayHelloRequest;
+using ::oak::examples::hello_world::SayHelloResponse;
+
+std::string say_hello(HelloWorld::Stub* stub, std::string name) {
+  ::grpc::ClientContext context;
+  SayHelloRequest request;
+  request.set_name(name);
+  SayHelloResponse response;
+  ::grpc::Status status = stub->SayHello(&context, request, &response);
+  if (!status.ok()) {
+    LOG(QFATAL) << "Could not submit sample: " << status.error_code() << ": "
+                << status.error_message();
+  }
+  return response.message();
+}
 
 int main(int argc, char** argv) {
   ::google::ParseCommandLineFlags(&argc, &argv, /*remove_flags=*/true);
@@ -42,24 +61,22 @@ int main(int argc, char** argv) {
   addr << "127.0.0.1:" << create_node_response.port();
   LOG(INFO) << "Connecting to Oak Node: " << addr.str();
 
+  ::oak::NodeClient::InitializeAssertionAuthorities();
+
   // Connect to the newly created Oak Node.
-  std::unique_ptr<::oak::NodeClient> node_client = ::absl::make_unique<::oak::NodeClient>(
-      ::grpc::CreateChannel(addr.str(), ::asylo::EnclaveChannelCredentials(
-                                            ::asylo::BidirectionalNullCredentialsOptions())));
+  auto stub = HelloWorld::NewStub(::grpc::CreateChannel(
+      addr.str(),
+      ::asylo::EnclaveChannelCredentials(::asylo::BidirectionalNullCredentialsOptions())));
 
   // Perform multiple invocations of the same Oak Node, with different parameters.
-  {
-    std::string response = node_client->Invoke("WORLD");
-    LOG(INFO) << "response: " << response;
-  }
-  {
-    std::string response = node_client->Invoke("MONDO");
-    LOG(INFO) << "response: " << response;
-  }
-  {
-    std::string response = node_client->Invoke("世界");
-    LOG(INFO) << "response: " << response;
-  }
+  auto message_0 = say_hello(stub.get(), "WORLD");
+  LOG(INFO) << "message 0: " << message_0;
+
+  auto message_1 = say_hello(stub.get(), "MONDO");
+  LOG(INFO) << "message 1: " << message_1;
+
+  auto message_2 = say_hello(stub.get(), "世界");
+  LOG(INFO) << "message 2: " << message_2;
 
   return 0;
 }

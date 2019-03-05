@@ -15,8 +15,11 @@
 //
 
 extern crate oak;
+extern crate protobuf;
 
-use std::io::{Read, Write};
+mod proto;
+
+use protobuf::Message;
 
 struct Node;
 
@@ -24,12 +27,25 @@ impl oak::Node for Node {
     fn new() -> Self {
         Node
     }
-    fn invoke(&mut self, request: &mut oak::Reader, response: &mut oak::Writer) {
-        let mut s = String::new();
-        request
-            .read_to_string(&mut s)
-            .expect("could not read string");
-        response.write(format!("HELLO {}", s).as_bytes());
+    fn invoke(&mut self, method_name: &str, request: &mut oak::Reader, response: &mut oak::Writer) {
+        // TODO: Generate this code via a macro or code generation (e.g. a protoc plugin).
+        match method_name {
+            "/oak.examples.hello_world.HelloWorld/SayHello" => {
+                let mut in_stream = protobuf::CodedInputStream::new(request);
+                let mut req = proto::hello_world::SayHelloRequest::new();
+                req.merge_from(&mut in_stream)
+                    .expect("could not read request");
+                let mut res = proto::hello_world::SayHelloResponse::new();
+                res.message = format!("HELLO {}!", req.name);
+                let mut out_stream = protobuf::CodedOutputStream::new(response);
+                res.write_to(&mut out_stream)
+                    .expect("could not write response");
+                out_stream.flush().expect("could not flush");
+            }
+            _ => {
+                panic!("unknown method name");
+            }
+        };
     }
 }
 
