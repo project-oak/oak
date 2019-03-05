@@ -4,4 +4,4 @@ set -x
 
 cargo +nightly build --release --target=wasm32-unknown-unknown --manifest-path=examples/hello_world/Cargo.toml
 bazel run //examples/hello_world/client -- \
-  --module=$PWD/examples/hello_world/target/wasm32-unknown-unknown/release/hello_world.wasm
+  --module=$PWD/examples/target/wasm32-unknown-unknown/release/hello_world.wasm

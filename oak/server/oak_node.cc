@@ -325,7 +325,6 @@ static const ::grpc::ByteBuffer Wrap(const std::vector<char>* bytes) {
   wabt::Stream* trace_stream = nullptr;
   wabt::interp::Thread::Options thread_options;
   wabt::interp::Executor executor(&env_, trace_stream, thread_options);
-  LOG(INFO) << "Executing module";
 
   // Note that inputs and outputs are not bound to the args of the invocation, because the memory of
   // the receiving buffer must be allocated and managed by the runtime rather than the interpreter.
@@ -336,11 +335,10 @@ static const ::grpc::ByteBuffer Wrap(const std::vector<char>* bytes) {
       executor.RunExportByName(module_, "oak_handle_grpc_call", args);
 
   if (exec_result.result == wabt::interp::Result::Ok) {
-    LOG(INFO) << "Executed module";
+    LOG(INFO) << "Handled gRPC call";
   } else {
-    LOG(WARNING) << "Could not execute module";
-    wabt::interp::WriteResult(s_stdout_stream.get(), "error", exec_result.result);
-    // TODO: Print error.
+    LOG(WARNING) << "Could not handle gRPC call: "
+                 << wabt::interp::ResultToString(exec_result.result);
   }
 
   *response_data = Wrap(response_data_.get());

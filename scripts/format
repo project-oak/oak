@@ -1,0 +1,8 @@
+#!/bin/sh
+set -x
+
+/google/data/ro/teams/g3doc/mdformat --in_place README.md
+
+clang-format -i ./oak/**.cc
+clang-format -i ./oak/**.h
+clang-format -i ./oak/**.proto

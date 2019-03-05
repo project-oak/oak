@@ -14,17 +14,27 @@
 # limitations under the License.
 #
 
-cc_binary(
-    name = "client",
-    srcs = ["hello_world.cc"],
+package(
+    default_visibility = ["//visibility:public"],
+)
+
+load(
+    "@com_github_grpc_grpc//bazel:grpc_build_system.bzl",
+    "grpc_proto_library",
+)
+
+proto_library(
+    name = "hello_world",
+    srcs = ["hello_world.proto"],
     deps = [
-        "//examples/hello_world/proto:hello_world_proto_grpc",
-        "//examples/utils",
-        "//oak/client:node_client",
-        "//oak/client:scheduler_client",
-        "@com_google_absl//absl/memory",
-        "@com_google_asylo//asylo/util:logging",
-        "@com_github_gflags_gflags//:gflags_nothreads",
-        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_protobuf//:empty_proto",
     ],
+)
+
+grpc_proto_library(
+    name = "hello_world_proto_grpc",
+    srcs = ["hello_world.proto"],
+    has_services = True,
+    well_known_protos = True,
+    deps = [],
 )
