@@ -38,6 +38,8 @@
 #include "include/grpcpp/server_builder.h"
 
 #include "oak/proto/enclave.pb.h"
+#include "oak/server/grpc_event.h"
+#include "oak/server/grpc_stream.h"
 #include "oak/server/oak_node.h"
 
 namespace oak {
@@ -139,61 +141,45 @@ class EnclaveServer final : public asylo::TrustedApplication {
     }
   }
 
-  // Creates a new gRPC event tag based on a number. gRPC tags are usually employed to uniquely
-  // identify events, but we do not need to keep track of them, and therefore we just create them
-  // based on arbitrary numbers.
-  // See https://grpc.io/grpc/cpp/classgrpc_1_1_completion_queue.html.
-  static void *tag(int i) { return reinterpret_cast<void *>(i); }
-
-  // Processes the next available event from the completion queue, blocking if none is available.
-  void ProcessNextEvent() {
-    void *out_tag;
-    bool ok = false;
-    completion_queue_->Next(&out_tag, &ok);
-    // TODO: Return the value of ok so that we can break the completion queue loop.
-    if (!ok) {
-      LOG(INFO) << "Could not process gRPC event from completion queue";
-    }
+  void RequestNextCall() {
+    // The stream will delete itself when it finishes.
+    auto stream = new grpc_server::GrpcStream(node_);
+    generic_service_.RequestCall(stream->server_context(), stream->server_reader_writer(), completion_queue_.get(), completion_queue_.get(),
+                                 new grpc_server::GrpcEvent(grpc_server::GrpcEvent::NEW_STREAM, stream));
   }
 
   // Consumes gRPC events from the completion queue in an infinite loop.
   void CompletionQueueLoop() {
     LOG(INFO) << "Starting gRPC completion queue loop";
-    int i = 0;
+    RequestNextCall();
     while (true) {
-      ::grpc::GenericServerContext context;
-      ::grpc::GenericServerAsyncReaderWriter stream(&context);
-
-      // We request a new event corresponding to a generic call. This will create an entry in the
-      // completion queue when a new call is available.
-      generic_service_.RequestCall(&context, &stream, completion_queue_.get(),
-                                   completion_queue_.get(), tag(i++));
-
-      // Wait for a generic call to arrive.
-      ProcessNextEvent();
-
-      // Read request data.
-      ::grpc::ByteBuffer request;
-      stream.Read(&request, tag(i++));
-
-      // Process the event related to the read we just requested.
-      ProcessNextEvent();
-
-      ::grpc::ByteBuffer response;
-
-      // Invoke the actual gRPC handler on the Oak Node.
-      ::grpc::Status status = node_->HandleGrpcCall(&context, &request, &response);
-      if (!status.ok()) {
-        LOG(INFO) << "Failed: " << status.error_message();
+      grpc_server::GrpcEvent *tag = nullptr;
+      bool ok = false;
+      if (!completion_queue_->Next(reinterpret_cast<void **>(&tag), &ok)) {
+        return;
       }
 
-      ::grpc::WriteOptions options;
-
-      // Write response data.
-      stream.WriteAndFinish(response, options, status, tag(i++));
-
-      // Process the event related to the write we just requested.
-      ProcessNextEvent();
+      if (tag != nullptr) {
+        auto stream = tag->stream();
+        LOG(INFO) << "Grpc Event:" << tag->event();
+        switch (tag->event()) {
+          case grpc_server::GrpcEvent::NEW_STREAM: {
+            if (ok) {
+              // Indicate to GRPC library that we can handle another call
+              // immediately after this.
+              RequestNextCall();
+            }
+            stream->OnNewGrpc(ok);
+          } break;
+          case grpc_server::GrpcEvent::REQUEST_READ: {
+            stream->OnRequestRead(ok);
+          } break;
+          case grpc_server::GrpcEvent::RESPONSE_WRITTEN: {
+            stream->OnResponseWritten(ok);
+          } break;
+        }
+        delete tag;
+      }
     }
   }
 
@@ -206,7 +192,7 @@ class EnclaveServer final : public asylo::TrustedApplication {
   // The port on which the server is listening.
   int port_;
 
-  std::unique_ptr<::oak::grpc_server::OakNode> node_;
+  std::shared_ptr<::oak::grpc_server::OakNode> node_;
   std::shared_ptr<::grpc::ServerCredentials> credentials_;
 
   ::grpc::AsyncGenericService generic_service_;
