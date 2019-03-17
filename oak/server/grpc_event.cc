@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 The Project Oak Authors
+ * Copyright 2019 The Project Oak Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,18 +22,14 @@
 namespace oak {
 namespace grpc_server {
 
-GrpcStream::GrpcStream(std::shared_ptr<::oak::grpc_server::OakNode> node_)
-    : server_reader_writer_(&server_context_), node_(node_) {}
-
-void GrpcStream::OnNewGrpc(bool ok) {
-  // Read request data.
-  server_reader_writer_.Read(&request_buffer_, new GrpcEvent(GrpcEvent::REQUEST_READ, this));
+void StreamCreationEvent::handle() {
+  stream_->server_reader_writer().Read(&stream_->request_buffer(), new RequestReadEvent(stream_));
 }
 
-void GrpcStream::OnRequestRead(bool ok) {
+void RequestReadEvent::handle() {
   // Invoke the actual gRPC handler on the Oak Node.
-  const grpc::GenericServerContext* x = &server_context_;
-  ::grpc::Status status = node_->HandleGrpcCall(x, &request_buffer_, &response_buffer_);
+  ::grpc::Status status = stream_->node()->HandleGrpcCall(
+      &stream_->server_context(), &stream_->request_buffer(), &stream_->response_buffer());
   if (!status.ok()) {
     LOG(INFO) << "Failed: " << status.error_message();
   }
@@ -41,13 +37,11 @@ void GrpcStream::OnRequestRead(bool ok) {
   ::grpc::WriteOptions options;
 
   // Write response data.
-  server_reader_writer_.WriteAndFinish(response_buffer_, options, status,
-                                       new GrpcEvent(GrpcEvent::RESPONSE_WRITTEN, this));
+  stream_->server_reader_writer().WriteAndFinish(stream_->response_buffer(), options, status,
+                                                 new ResponseWrittenEvent(stream_));
 }
 
-void GrpcStream::OnResponseWritten(bool ok) {
-  // Ignore for now.
-}
+void ResponseWrittenEvent::handle() {}
 
 }  // namespace grpc_server
 }  // namespace oak

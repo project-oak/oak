@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 The Project Oak Authors
+ * Copyright 2019 The Project Oak Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,23 +29,24 @@
 namespace oak {
 namespace grpc_server {
 
+// gRPC stream state, needed to process requests.
 class GrpcStream {
  public:
-  explicit GrpcStream(std::shared_ptr<::oak::grpc_server::OakNode> node);
+  GrpcStream(std::shared_ptr<OakNode> node_)
+      : server_reader_writer_(&server_context_), node_(node_) {}
 
-  void OnNewGrpc(bool ok);
-  void OnRequestRead(bool ok);
-  void OnResponseWritten(bool ok);
-
-  grpc::GenericServerContext* server_context() { return &server_context_; }
-  grpc::GenericServerAsyncReaderWriter* server_reader_writer() { return &server_reader_writer_; }
+  grpc::GenericServerContext& server_context() { return server_context_; }
+  grpc::GenericServerAsyncReaderWriter& server_reader_writer() { return server_reader_writer_; }
+  grpc::ByteBuffer& request_buffer() { return request_buffer_; }
+  grpc::ByteBuffer& response_buffer() { return response_buffer_; }
+  std::shared_ptr<OakNode> node() { return node_; }
 
  private:
   grpc::GenericServerContext server_context_;
   grpc::GenericServerAsyncReaderWriter server_reader_writer_;
   grpc::ByteBuffer request_buffer_;
   grpc::ByteBuffer response_buffer_;
-  std::shared_ptr<::oak::grpc_server::OakNode> node_;
+  std::shared_ptr<OakNode> node_;
 };
 }  // namespace grpc_server
 }  // namespace oak

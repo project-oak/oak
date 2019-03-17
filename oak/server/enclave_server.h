@@ -143,9 +143,10 @@ class EnclaveServer final : public asylo::TrustedApplication {
 
   void RequestNextCall() {
     // The stream will delete itself when it finishes.
-    auto stream = new grpc_server::GrpcStream(node_);
-    generic_service_.RequestCall(stream->server_context(), stream->server_reader_writer(), completion_queue_.get(), completion_queue_.get(),
-                                 new grpc_server::GrpcEvent(grpc_server::GrpcEvent::NEW_STREAM, stream));
+    auto stream = std::make_shared<grpc_server::GrpcStream>(node_);
+    generic_service_.RequestCall(&stream->server_context(), &stream->server_reader_writer(),
+                                 completion_queue_.get(), completion_queue_.get(),
+                                 new grpc_server::StreamCreationEvent(stream));
   }
 
   // Consumes gRPC events from the completion queue in an infinite loop.
@@ -153,31 +154,18 @@ class EnclaveServer final : public asylo::TrustedApplication {
     LOG(INFO) << "Starting gRPC completion queue loop";
     RequestNextCall();
     while (true) {
-      grpc_server::GrpcEvent *tag = nullptr;
+      grpc_server::BaseGrpcEvent *tag = nullptr;
       bool ok = false;
       if (!completion_queue_->Next(reinterpret_cast<void **>(&tag), &ok)) {
         return;
       }
 
+      if (ok) {
+        RequestNextCall();
+      }
+
       if (tag != nullptr) {
-        auto stream = tag->stream();
-        LOG(INFO) << "Grpc Event:" << tag->event();
-        switch (tag->event()) {
-          case grpc_server::GrpcEvent::NEW_STREAM: {
-            if (ok) {
-              // Indicate to GRPC library that we can handle another call
-              // immediately after this.
-              RequestNextCall();
-            }
-            stream->OnNewGrpc(ok);
-          } break;
-          case grpc_server::GrpcEvent::REQUEST_READ: {
-            stream->OnRequestRead(ok);
-          } break;
-          case grpc_server::GrpcEvent::RESPONSE_WRITTEN: {
-            stream->OnResponseWritten(ok);
-          } break;
-        }
+        tag->handle();
         delete tag;
       }
     }

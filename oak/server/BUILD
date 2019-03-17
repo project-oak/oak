@@ -43,7 +43,7 @@ cc_library(
 cc_library(
     name = "grpc",
     srcs = [
-        "grpc_stream.cc",
+        "grpc_event.cc",
     ],
     hdrs = [
         "grpc_event.h",
