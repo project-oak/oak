@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-#ifndef OAK_GRPC_SERVER_GRPC_EVENT_H_
-#define OAK_GRPC_SERVER_GRPC_EVENT_H_
+#ifndef OAK_GRPC_SERVER_GRPC_EVENT_HANDLER_H_
+#define OAK_GRPC_SERVER_GRPC_EVENT_HANDLER_H_
 
 #include "grpc_stream.h"
 
 namespace oak {
 namespace grpc_server {
 
-// Representation of a gRPC event.
+// Representation of a gRPC event handler.
 //
-// An event object is added to the gRPC completion queue once an event is
+// An event handler is added to the gRPC completion queue once an event is
 // completed. Then handle() is called to invoke any subsequent dependent
 // work.
 class BaseGrpcEventHandler {
@@ -61,4 +61,4 @@ class ResponseWrittenEventHandler : BaseGrpcEventHandler {
 }  // namespace grpc_server
 }  // namespace oak
 
-#endif  // OAK_GRPC_SERVER_GRPC_EVENT_H_
+#endif  // OAK_GRPC_SERVER_GRPC_EVENT_HANDLER_H_
