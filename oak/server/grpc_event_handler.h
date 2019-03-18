@@ -27,33 +27,34 @@ namespace grpc_server {
 // An event object is added to the gRPC completion queue once an event is
 // completed. Then handle() is called to invoke any subsequent dependent
 // work.
-class BaseGrpcEvent {
+class BaseGrpcEventHandler {
  public:
   virtual void handle() = 0;
 
  protected:
-  BaseGrpcEvent(std::shared_ptr<GrpcStream> stream_) : stream_(stream_) {}
+  BaseGrpcEventHandler(std::shared_ptr<GrpcStream> stream_) : stream_(stream_) {}
   std::shared_ptr<GrpcStream> stream_;
 };
 
 // Event: A new gRPC stream was created (new RPC).
-class StreamCreationEvent : BaseGrpcEvent {
+class StreamCreationEventHandler : BaseGrpcEventHandler {
  public:
-  StreamCreationEvent(std::shared_ptr<GrpcStream> stream_) : BaseGrpcEvent(stream_) {}
+  StreamCreationEventHandler(std::shared_ptr<GrpcStream> stream_) : BaseGrpcEventHandler(stream_) {}
   void handle() override;
 };
 
 // Event: Completed reading the request.
-class RequestReadEvent : BaseGrpcEvent {
+class RequestReadEventHandler : BaseGrpcEventHandler {
  public:
-  RequestReadEvent(std::shared_ptr<GrpcStream> stream_) : BaseGrpcEvent(stream_) {}
+  RequestReadEventHandler(std::shared_ptr<GrpcStream> stream_) : BaseGrpcEventHandler(stream_) {}
   void handle() override;
 };
 
 // Event: Completed writing the response.
-class ResponseWrittenEvent : BaseGrpcEvent {
+class ResponseWrittenEventHandler : BaseGrpcEventHandler {
  public:
-  ResponseWrittenEvent(std::shared_ptr<GrpcStream> stream_) : BaseGrpcEvent(stream_) {}
+  ResponseWrittenEventHandler(std::shared_ptr<GrpcStream> stream_)
+      : BaseGrpcEventHandler(stream_) {}
   void handle() override;
 };
 

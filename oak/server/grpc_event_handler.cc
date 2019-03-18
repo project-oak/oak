@@ -16,32 +16,37 @@
 
 #include "asylo/util/logging.h"
 
-#include "oak/server/grpc_event.h"
+#include "oak/server/grpc_event_handler.h"
 #include "oak/server/grpc_stream.h"
 
 namespace oak {
 namespace grpc_server {
 
-void StreamCreationEvent::handle() {
-  stream_->server_reader_writer().Read(&stream_->request_buffer(), new RequestReadEvent(stream_));
+void StreamCreationEventHandler::handle() {
+  LOG(INFO) << "gRPC Event: New stream created";
+  stream_->server_reader_writer().Read(&stream_->request_buffer(),
+                                       new RequestReadEventHandler(stream_));
 }
 
-void RequestReadEvent::handle() {
+void RequestReadEventHandler::handle() {
+  LOG(INFO) << "gRPC Event: Completed reading request";
   // Invoke the actual gRPC handler on the Oak Node.
   ::grpc::Status status = stream_->node()->HandleGrpcCall(
       &stream_->server_context(), &stream_->request_buffer(), &stream_->response_buffer());
   if (!status.ok()) {
-    LOG(INFO) << "Failed: " << status.error_message();
+    LOG(WARNING) << "Failed: " << status.error_message();
   }
 
   ::grpc::WriteOptions options;
 
   // Write response data.
   stream_->server_reader_writer().WriteAndFinish(stream_->response_buffer(), options, status,
-                                                 new ResponseWrittenEvent(stream_));
+                                                 new ResponseWrittenEventHandler(stream_));
 }
 
-void ResponseWrittenEvent::handle() {}
+void ResponseWrittenEventHandler::handle() {
+  LOG(INFO) << "gRPC Event: Completed writing response";
+}
 
 }  // namespace grpc_server
 }  // namespace oak

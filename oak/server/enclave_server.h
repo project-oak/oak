@@ -38,7 +38,7 @@
 #include "include/grpcpp/server_builder.h"
 
 #include "oak/proto/enclave.pb.h"
-#include "oak/server/grpc_event.h"
+#include "oak/server/grpc_event_handler.h"
 #include "oak/server/grpc_stream.h"
 #include "oak/server/oak_node.h"
 
@@ -146,28 +146,33 @@ class EnclaveServer final : public asylo::TrustedApplication {
     auto stream = std::make_shared<grpc_server::GrpcStream>(node_);
     generic_service_.RequestCall(&stream->server_context(), &stream->server_reader_writer(),
                                  completion_queue_.get(), completion_queue_.get(),
-                                 new grpc_server::StreamCreationEvent(stream));
+                                 new grpc_server::StreamCreationEventHandler(stream));
   }
 
   // Consumes gRPC events from the completion queue in an infinite loop.
   void CompletionQueueLoop() {
     LOG(INFO) << "Starting gRPC completion queue loop";
-    RequestNextCall();
     while (true) {
-      grpc_server::BaseGrpcEvent *tag = nullptr;
+      RequestNextCall();
+
+      grpc_server::BaseGrpcEventHandler *eventHandler = nullptr;
       bool ok = false;
-      if (!completion_queue_->Next(reinterpret_cast<void **>(&tag), &ok)) {
+      if (!completion_queue_->Next(reinterpret_cast<void **>(&eventHandler), &ok)) {
+        LOG(FATAL) << "Failure reading from completion queue";
         return;
       }
 
-      if (ok) {
-        RequestNextCall();
+      if (!ok) {
+        LOG(INFO) << "Received termination signal from gRPC. Shutting down...";
+        return;
+      }
+      if (eventHandler == nullptr) {
+        LOG(FATAL) << "Received unexpected null event on queue. Aborting.";
+        return;
       }
 
-      if (tag != nullptr) {
-        tag->handle();
-        delete tag;
-      }
+      eventHandler->handle();
+      delete eventHandler;
     }
   }
 
