@@ -35,19 +35,41 @@ class GrpcStream {
   GrpcStream(std::shared_ptr<OakNode> node_)
       : server_reader_writer_(&server_context_), node_(node_) {}
 
+  void HandleCreateStream() {
+    LOG(INFO) << "gRPC Event: New stream created";
+    auto callback = new std::function<void()>([this]() { HandleReadEvent(); });
+    server_reader_writer_.Read(&request_buffer_, callback);
+  }
+
   grpc::GenericServerContext& server_context() { return server_context_; }
   grpc::GenericServerAsyncReaderWriter& server_reader_writer() { return server_reader_writer_; }
-  grpc::ByteBuffer& request_buffer() { return request_buffer_; }
-  grpc::ByteBuffer& response_buffer() { return response_buffer_; }
-  std::shared_ptr<OakNode> node() { return node_; }
 
  private:
+  void HandleReadEvent() {
+    LOG(INFO) << "gRPC Event: Completed reading request";
+    // Invoke the actual gRPC handler on the Oak Node.
+    ::grpc::Status status =
+        node_->HandleGrpcCall(&server_context_, &request_buffer_, &response_buffer_);
+    if (!status.ok()) {
+      LOG(WARNING) << "Failed: " << status.error_message();
+    }
+
+    ::grpc::WriteOptions options;
+
+    // Write response data.
+    auto callback = new std::function<void()>([this]() { HandleWriteEvent(); });
+    server_reader_writer_.WriteAndFinish(response_buffer_, options, status, callback);
+  }
+
+  void HandleWriteEvent() { LOG(INFO) << "gRPC Event: Completed writing response"; }
+
   grpc::GenericServerContext server_context_;
   grpc::GenericServerAsyncReaderWriter server_reader_writer_;
   grpc::ByteBuffer request_buffer_;
   grpc::ByteBuffer response_buffer_;
   std::shared_ptr<OakNode> node_;
 };
+
 }  // namespace grpc_server
 }  // namespace oak
 

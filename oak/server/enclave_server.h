@@ -20,6 +20,7 @@
 #ifndef OAK_SERVER_ENCLAVE_SERVER_H_
 #define OAK_SERVER_ENCLAVE_SERVER_H_
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <thread>
@@ -38,7 +39,6 @@
 #include "include/grpcpp/server_builder.h"
 
 #include "oak/proto/enclave.pb.h"
-#include "oak/server/grpc_event_handler.h"
 #include "oak/server/grpc_stream.h"
 #include "oak/server/oak_node.h"
 
@@ -143,10 +143,11 @@ class EnclaveServer final : public asylo::TrustedApplication {
 
   void RequestNextCall() {
     // The stream will delete itself when it finishes.
-    auto stream = std::make_shared<grpc_server::GrpcStream>(node_);
+    // auto stream = std::make_shared<grpc_server::GrpcStream>(node_);
+    auto stream = new grpc_server::GrpcStream(node_);
+    auto callback = new std::function<void()>([stream]() { stream->HandleCreateStream(); });
     generic_service_.RequestCall(&stream->server_context(), &stream->server_reader_writer(),
-                                 completion_queue_.get(), completion_queue_.get(),
-                                 new grpc_server::StreamCreationEventHandler(stream));
+                                 completion_queue_.get(), completion_queue_.get(), callback);
   }
 
   // Consumes gRPC events from the completion queue in an infinite loop.
@@ -155,7 +156,7 @@ class EnclaveServer final : public asylo::TrustedApplication {
     while (true) {
       RequestNextCall();
 
-      grpc_server::BaseGrpcEventHandler *eventHandler = nullptr;
+      std::function<void()> *eventHandler = nullptr;
       bool ok = false;
       if (!completion_queue_->Next(reinterpret_cast<void **>(&eventHandler), &ok)) {
         LOG(FATAL) << "Failure reading from completion queue";
@@ -171,7 +172,7 @@ class EnclaveServer final : public asylo::TrustedApplication {
         return;
       }
 
-      eventHandler->handle();
+      (*eventHandler)();
       delete eventHandler;
     }
   }
