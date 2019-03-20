@@ -342,7 +342,7 @@ TODO: Roughtime
 
 The following command builds and runs an Oak Server instance.
 
-`./run_server_docker`
+`scripts/run_server_docker`
 
 ### Run Client
 
