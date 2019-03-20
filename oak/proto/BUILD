@@ -41,6 +41,6 @@ load(
 )
 
 grpc_proto_library(
-    name = "scheduler_grpc_proto",
-    srcs = ["scheduler.proto"],
+    name = "manager_grpc_proto",
+    srcs = ["manager.proto"],
 )
