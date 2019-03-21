@@ -1,5 +1,9 @@
 services:
   - docker
 
+cache:
+  directories:
+  - ./bazel-cache
+
 script:
   - ./scripts/build_server_docker
