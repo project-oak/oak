@@ -1,5 +1,7 @@
 # Project Oak
 
+[![Build Status](https://travis-ci.org/project-oak/oak.svg?branch=master)](https://travis-ci.org/project-oak/oak)
+
 The goal of Project Oak is to create a specification and a reference
 implementation for the secure transfer, storage and processing of data.
 
@@ -342,7 +344,7 @@ TODO: Roughtime
 
 The following command builds and runs an Oak Server instance.
 
-`scripts/run_server_docker`
+`./scripts/run_server_docker`
 
 ### Run Client
 

@@ -1,0 +1,5 @@
+services:
+  - docker
+
+script:
+  - ./scripts/build_server_docker
