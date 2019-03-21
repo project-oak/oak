@@ -9,7 +9,7 @@ $SCRIPTS_DIR/build_server_docker
 docker run \
   --interactive \
   --tty \
-  --volume=bazel-cache:/root/.cache/bazel \
+  --volume=$PWD/bazel-cache:/root/.cache/bazel \
   --volume=$PWD:/opt/my-project \
   --workdir=/opt/my-project \
   --publish=8888:8888 \
