@@ -18,9 +18,20 @@ again.
 ## Code reviews
 
 All submissions, including submissions by project members, require review. We
-use GitHub pull requests for this purpose. Consult
+use GitHub Pull Requests (PR) for this purpose. Consult
 [GitHub Help](https://help.github.com/articles/about-pull-requests/) for more
-information on using pull requests.
+information on using PRs.
+
+During a review, the author of the change addresses review comments by adding
+new commits to the same branch / PR and then pushing again (note: we discourage
+force-pushing to any branch, even during review).
+
+Once approved, each PR is merged via the "Squash and merge" button in the
+GitHub UI. The final commit message is taken from the PR description, and
+individual commit messages are discarded; for this reason, we do not expect
+commits to have meaningful messages during a review; the PR description should
+follow [standard git commit
+conventions](https://chris.beams.io/posts/git-commit/).
 
 ## Community Guidelines
 
