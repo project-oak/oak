@@ -19,8 +19,28 @@ load(
     "enclave_loader",
     "sim_enclave",
 )
-
 load("@linux_sgx//:sgx_sdk.bzl", "sgx_enclave_configuration")
+
+cc_library(
+    name = "oak_manager",
+    srcs = [
+        "oak_manager.cc",
+    ],
+    hdrs = [
+        "oak_manager.h",
+    ],
+    deps = [
+        "//oak/proto:enclave_proto_cc",
+        "//oak/proto:manager_grpc_proto",
+        "//oak/proto:node_grpc_proto",
+        "@com_github_gflags_gflags//:gflags_nothreads",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/memory",
+        "@com_google_asylo//asylo:enclave_client",
+        "@com_google_asylo//asylo/grpc/util:enclave_server_proto_cc",
+        "@com_google_asylo//asylo/util:logging",
+    ],
+)
 
 cc_library(
     name = "oak_node",
@@ -36,7 +56,7 @@ cc_library(
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/types:span",
         "@com_google_asylo//asylo/util:logging",
-        "@wabt//:wabt",
+        "@wabt",
     ],
 )
 
@@ -55,7 +75,7 @@ cc_library(
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/types:span",
         "@com_google_asylo//asylo/util:logging",
-        "@wabt//:wabt",
+        "@wabt",
     ],
 )
 
@@ -95,9 +115,9 @@ sim_enclave(
         "//oak/proto:enclave_proto_cc",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/strings",
+        "@com_google_asylo//asylo:enclave_runtime",
         "@com_google_asylo//asylo/grpc/auth:grpc++_security_enclave",
         "@com_google_asylo//asylo/grpc/auth:null_credentials_options",
-        "@com_google_asylo//asylo:enclave_runtime",
         "@com_google_asylo//asylo/grpc/util:enclave_server",
         "@com_google_asylo//asylo/util:status",
     ],
@@ -105,19 +125,16 @@ sim_enclave(
 
 enclave_loader(
     name = "oak",
-    srcs = ["oak_driver.cc"],
+    srcs = ["oak_main.cc"],
     enclaves = {"enclave": ":oak_enclave.so"},
     loader_args = ["--enclave_path='{enclave}'"],
     deps = [
-        "//oak/proto:enclave_proto_cc",
-        "//oak/proto:scheduler_grpc_proto",
+        ":oak_manager",
         "@com_github_gflags_gflags//:gflags_nothreads",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/synchronization",
         "@com_google_absl//absl/time",
-        "@com_google_asylo//asylo:enclave_client",
         "@com_google_asylo//asylo/util:logging",
-        "@com_google_asylo//asylo/grpc/util:enclave_server_proto_cc",
     ],
 )
