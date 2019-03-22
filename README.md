@@ -335,7 +335,6 @@ TODO: Roughtime
     +   `less /tmp/rustup` (inspect downloaded script before running it)
     +   `sh /tmp/rustup` (follow on-screen instructions -- option 1 is fine to start with)
     +   add `source $HOME/.cargo/env` to your shell init script (e.g. `.bashrc` or `.zshrc`)
-    +   `rustup toolchain install nightly`
     +   `rustup target add --toolchain=nightly wasm32-unknown-unknown`
 
 ### Run Server
