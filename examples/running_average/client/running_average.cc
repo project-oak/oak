@@ -22,10 +22,10 @@
 #include "examples/running_average/proto/running_average.grpc.pb.h"
 #include "examples/running_average/proto/running_average.pb.h"
 #include "examples/utils/utils.h"
+#include "oak/client/manager_client.h"
 #include "oak/client/node_client.h"
-#include "oak/client/scheduler_client.h"
 
-DEFINE_string(scheduler_address, "127.0.0.1:8888", "Address of the Oak Scheduler to connect to");
+DEFINE_string(manager_address, "127.0.0.1:8888", "Address of the Oak Manager to connect to");
 DEFINE_string(module, "", "File containing the compiled WebAssembly module");
 
 using ::oak::examples::running_average::GetAverageResponse;
@@ -59,14 +59,13 @@ int retrieve_average(RunningAverage::Stub* stub) {
 int main(int argc, char** argv) {
   ::google::ParseCommandLineFlags(&argc, &argv, /*remove_flags=*/true);
 
-  // Connect to the Oak Scheduler.
-  std::unique_ptr<::oak::SchedulerClient> scheduler_client =
-      ::absl::make_unique<::oak::SchedulerClient>(
-          ::grpc::CreateChannel(FLAGS_scheduler_address, ::grpc::InsecureChannelCredentials()));
+  // Connect to the Oak Manager.
+  std::unique_ptr<::oak::ManagerClient> manager_client = ::absl::make_unique<::oak::ManagerClient>(
+      ::grpc::CreateChannel(FLAGS_manager_address, ::grpc::InsecureChannelCredentials()));
 
   // Load the Oak Module to execute. This needs to be compiled from Rust to WebAssembly separately.
   std::string module_bytes = ::oak::utils::read_file(FLAGS_module);
-  ::oak::CreateNodeResponse create_node_response = scheduler_client->CreateNode(module_bytes);
+  ::oak::CreateNodeResponse create_node_response = manager_client->CreateNode(module_bytes);
 
   std::stringstream addr;
   addr << "127.0.0.1:" << create_node_response.port();
