@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-#include "oak/proto/scheduler.grpc.pb.h"
+#include "oak/proto/manager.grpc.pb.h"
 
 namespace oak {
 
-// A client connected to an Oak Scheduler instance.
+// A client connected to an Oak Manager instance.
 //
 // It allows creating new Oak Node instances based on the Oak Module provided.
 //
 // TODO: Allow specifying policy configuration in the CreateNode request.
-class SchedulerClient {
+class ManagerClient {
  public:
-  SchedulerClient(const std::shared_ptr<::grpc::ChannelInterface>& channel)
-      : stub_(::oak::Scheduler::NewStub(channel, ::grpc::StubOptions())) {}
+  ManagerClient(const std::shared_ptr<::grpc::ChannelInterface>& channel)
+      : stub_(::oak::Manager::NewStub(channel, ::grpc::StubOptions())) {}
 
   // TODO: Return StatusOr<::oak::CreateNodeResponse>.
   ::oak::CreateNodeResponse CreateNode(const std::string& module_bytes) {
@@ -48,7 +48,7 @@ class SchedulerClient {
   }
 
  private:
-  std::unique_ptr<::oak::Scheduler::Stub> stub_;
+  std::unique_ptr<::oak::Manager::Stub> stub_;
 };
 
 }  // namespace oak
