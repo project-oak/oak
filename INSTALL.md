@@ -48,7 +48,7 @@ In the end, you should end up with an Oak server running.
 Then:
 
 ```
-$ examples/hello_worl/run
+$ examples/hello_world/run
 ```
 
 Which should result in some logs ending with:
