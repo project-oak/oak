@@ -2,6 +2,6 @@
 set -e
 set -x
 
-cargo +nightly build --release --target=wasm32-unknown-unknown --manifest-path=examples/hello_world/Cargo.toml
+cargo build --release --target=wasm32-unknown-unknown --manifest-path=examples/hello_world/Cargo.toml
 bazel run //examples/hello_world/client -- \
   --module=$PWD/examples/target/wasm32-unknown-unknown/release/hello_world.wasm
