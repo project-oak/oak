@@ -20,8 +20,8 @@ cc_binary(
     deps = [
         "//examples/hello_world/proto:hello_world_proto_grpc",
         "//examples/utils",
+        "//oak/client:manager_client",
         "//oak/client:node_client",
-        "//oak/client:scheduler_client",
         "@com_google_absl//absl/memory",
         "@com_google_asylo//asylo/util:logging",
         "@com_github_gflags_gflags//:gflags_nothreads",

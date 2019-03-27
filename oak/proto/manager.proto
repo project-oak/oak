@@ -33,7 +33,7 @@ message CreateNodeResponse {
 }
 
 // Untrusted service in charge of creating Oak Nodes on demand.
-service Scheduler {
+service Manager {
   // Request the creation of a new Oak Node with the specified configuration.
   //
   // After the Oak Node is created, the client should connect to the returned

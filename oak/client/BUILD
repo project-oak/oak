@@ -15,10 +15,10 @@
 #
 
 cc_library(
-    name = "scheduler_client",
-    hdrs = ["scheduler_client.h"],
+    name = "manager_client",
+    hdrs = ["manager_client.h"],
     deps = [
-        "//oak/proto:scheduler_grpc_proto",
+        "//oak/proto:manager_grpc_proto",
         "@com_github_grpc_grpc//:grpc++",
     ],
     visibility = ["//visibility:public"],

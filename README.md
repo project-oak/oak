@@ -1,5 +1,7 @@
 # Project Oak
 
+[![Build Status](https://travis-ci.org/project-oak/oak.svg?branch=master)](https://travis-ci.org/project-oak/oak)
+
 The goal of Project Oak is to create a specification and a reference
 implementation for the secure transfer, storage and processing of data.
 
@@ -104,10 +106,10 @@ machine.
 Each Oak Module must expose the following **exported functions** as
 [WebAssembly exports](https://webassembly.github.io/spec/core/syntax/modules.html#exports):
 
--   `oak_initialize: () -> nil`: Invoked when the Oak Scheduler initializes the
+-   `oak_initialize: () -> nil`: Invoked when the Oak Manager initializes the
     Oak Node. The Oak VM guarantees that this is invoked exactly once.
 
--   `oak_finalize: () -> nil`: Invoked when the Oak Scheduler finalizes the Oak
+-   `oak_finalize: () -> nil`: Invoked when the Oak Manager finalizes the Oak
     Node. Note that this is best effort, and not guaranteed to be invoked before
     the Oak Node is finalized (e.g. in case of sudden shutdown of the host this
     may fail to be invoked). No further interactions with the Oak Node are
@@ -183,7 +185,7 @@ Oak Module and its properties, which may require reasoning about its internal
 structure.
 
 The Oak Module and the policies associated with an Oak Node are established once
-and for all at the time the Oak Node is created by the Oak Scheduler, and they
+and for all at the time the Oak Node is created by the Oak Manager, and they
 cannot be modified once the Oak Node is running. Therefore each client only
 needs to verify the attestation once before it starts invoking the Oak Node.
 
@@ -202,19 +204,19 @@ invocations, but only if it can also be shown that the data can only be
 retrieved in sufficiently anonymized form in subsequent invocations by other
 clients.
 
-## Oak Scheduler
+## Oak Manager
 
-The **Oak Scheduler** creates Oak Nodes running within a platform provider. Note
-that the Oak Scheduler is not part of the TCB: the actual trusted attestation
+The **Oak Manager** creates Oak Nodes running within a platform provider. Note
+that the Oak Manager is not part of the TCB: the actual trusted attestation
 only happens between client and the Oak Node running in the enclave at execution
 time.
 
-A scheduling request contains the Oak Module and the policies to run as part of
+A node creation request contains the Oak Module and the policies to run as part of
 the newly created Oak Node.
 
-In response to a scheduling request, the Oak Scheduler sends back to the caller
+In response to the request, the Oak Manager sends back to the caller
 details about the gRPC endpoint of the newly created Oak Node, initialized with
-the Oak Module and policy configuration specified in the scheduling request.
+the Oak Module and policy configuration specified in the request.
 
 ## Policy Configuration
 
@@ -224,7 +226,7 @@ caller, with no side effects allowed.
 
 In order to allow the Oak Node to perform side effects, capabilities are granted
 to it that allow the Oak VM to expose the appropriate functionality to the Oak
-Module based on the policy configuration specified as part of the scheduling
+Module based on the policy configuration specified as part of the creation
 request.
 
 ### Read / Write
@@ -297,16 +299,16 @@ Sample flow:
 
 -   ISV writes an Oak Module for the Oak VM using a high-level language and
     compiles it to WebAssembly.
--   The client connects to the Oak Scheduler, and requests the creation of an
+-   The client connects to the Oak Manager, and requests the creation of an
     Oak Node running the compiled Oak Module.
-    +   The code itself is passed as part of the scheduling request.
--   The Oak Scheduler creates a new enclave and initializes it with a fresh Oak
+    +   The module code itself is passed as part of the creation request.
+-   The Oak Manager creates a new enclave and initializes it with a fresh Oak
     Node, and then seals the enclave. The Oak Node exposes a gRPC endpoint at a
     newly allocated endpoint (host:port). The endpoint gets forwarded to the
-    client as part of the scheduling response.
+    client as part of the creation response.
     +   Note up to this point no sensitive data has been exchanged.
     +   The client still has no guarantees that the endpoint is in fact running
-        an Oak VM, as the Oak Scheduler is itself untrusted.
+        an Oak VM, as the Oak Manager is itself untrusted.
 -   The client connects to the Oak Node endpoint, and exchanges keys using the
     [Asylo assertion framework](https://asylo.dev/docs/reference/proto/identity/asylo.identity.v1.html).
     +   This allows the client to verify the integrity of the Oak Node and the
@@ -341,7 +343,7 @@ TODO: Roughtime
 
 The following command builds and runs an Oak Server instance.
 
-`./run_server_docker`
+`./scripts/run_server_docker`
 
 ### Run Client
 
