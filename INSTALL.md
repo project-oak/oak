@@ -34,7 +34,9 @@ $ git clone https://github.com/project-oak/oak.git
 $ scripts/run_server_docker  # this may take some time
 ```
 
-While you're waiting, you might want to take a look at what that script does.
+add source $HOME/.cargo/env to your shell init script (e.g. .bashrc or .zshrc)
+
+While you're waiting for docker, you might want to take a look at what that script does.
 The one mystery you might run into is: what does Bazel build?
 
 This: `oak/server/BUILD`

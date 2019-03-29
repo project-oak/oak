@@ -211,12 +211,12 @@ that the Oak Manager is not part of the TCB: the actual trusted attestation
 only happens between client and the Oak Node running in the enclave at execution
 time.
 
-A scheduling request contains the Oak Module and the policies to run as part of
+A node creation request contains the Oak Module and the policies to run as part of
 the newly created Oak Node.
 
-In response to a scheduling request, the Oak Manager sends back to the caller
+In response to the request, the Oak Manager sends back to the caller
 details about the gRPC endpoint of the newly created Oak Node, initialized with
-the Oak Module and policy configuration specified in the scheduling request.
+the Oak Module and policy configuration specified in the request.
 
 ## Policy Configuration
 
@@ -226,7 +226,7 @@ caller, with no side effects allowed.
 
 In order to allow the Oak Node to perform side effects, capabilities are granted
 to it that allow the Oak VM to expose the appropriate functionality to the Oak
-Module based on the policy configuration specified as part of the scheduling
+Module based on the policy configuration specified as part of the creation
 request.
 
 ### Read / Write
@@ -301,11 +301,11 @@ Sample flow:
     compiles it to WebAssembly.
 -   The client connects to the Oak Manager, and requests the creation of an
     Oak Node running the compiled Oak Module.
-    +   The code itself is passed as part of the scheduling request.
+    +   The module code itself is passed as part of the creation request.
 -   The Oak Manager creates a new enclave and initializes it with a fresh Oak
     Node, and then seals the enclave. The Oak Node exposes a gRPC endpoint at a
     newly allocated endpoint (host:port). The endpoint gets forwarded to the
-    client as part of the scheduling response.
+    client as part of the creation response.
     +   Note up to this point no sensitive data has been exchanged.
     +   The client still has no guarantees that the endpoint is in fact running
         an Oak VM, as the Oak Manager is itself untrusted.
@@ -337,8 +337,7 @@ TODO: Roughtime
     +   `less /tmp/rustup` (inspect downloaded script before running it)
     +   `sh /tmp/rustup` (follow on-screen instructions -- option 1 is fine to start with)
     +   add `source $HOME/.cargo/env` to your shell init script (e.g. `.bashrc` or `.zshrc`)
-    +   `rustup toolchain install nightly`
-    +   `rustup target add --toolchain=nightly wasm32-unknown-unknown`
+    +   `rustup target add wasm32-unknown-unknown`
 
 ### Run Server
 
