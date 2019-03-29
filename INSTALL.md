@@ -8,6 +8,7 @@ enclave creation to work.
 # apt install docker.io
 # apt install curl
 # apt install protobuf-compiler
+# apt install libprotobuf-dev
 # apt install openjdk-8-jdk-headless
 # echo "deb [arch=amd64] http://storage.googleapis.com/bazel-apt stable jdk1.8" | tee /etc/apt/sources.list.d/bazel.list
 # curl https://bazel.build/bazel-release.pub.gpg | apt-key add -
@@ -25,11 +26,12 @@ package.
 
 ```
 $ curl https://sh.rustup.rs -sSf > /tmp/rustup  # make sure you're happy to run
-$ sh /tmp/rustup
+$ sh /tmp/rustup  # choose option 1
 $ rustup target add wasm32-unknown-unknown
+$ source $HOME/.cargo/env
 $ cd $WHERE_YOU_LIKE_TO_KEEP_GIT_REPOS
 $ git clone https://github.com/project-oak/oak.git
-$ scripts/run_server_docker  # this make take some time
+$ scripts/run_server_docker  # this may take some time
 ```
 
 add source $HOME/.cargo/env to your shell init script (e.g. .bashrc or .zshrc)
