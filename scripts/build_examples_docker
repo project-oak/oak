@@ -1,0 +1,15 @@
+#!/bin/sh
+set -e
+set -x
+
+docker build --tag=oak .
+# TODO: Actually build all the examples.
+docker run \
+  --interactive \
+  --tty \
+  --volume=$PWD/bazel-cache:/root/.cache/bazel \
+  --volume=$PWD:/opt/my-project \
+  --workdir=/opt/my-project \
+  --publish=8888:8888 \
+  oak:latest \
+  cargo build --release --target=wasm32-unknown-unknown --manifest-path=examples/hello_world/Cargo.toml

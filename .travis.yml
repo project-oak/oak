@@ -3,3 +3,4 @@ services:
 
 script:
   - ./scripts/build_server_docker
+  - ./scripts/build_examples_docker
