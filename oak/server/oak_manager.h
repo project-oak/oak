@@ -24,21 +24,21 @@ class OakManager final : public ::oak::Manager::Service {
  public:
   OakManager();
 
-  ::grpc::Status CreateNode(::grpc::ServerContext *context, const ::oak::CreateNodeRequest *request,
-                            ::oak::CreateNodeResponse *response) override;
+  ::grpc::Status CreateNode(::grpc::ServerContext* context, const ::oak::CreateNodeRequest* request,
+                            ::oak::CreateNodeResponse* response) override;
 
  private:
   void InitializeEnclaveManager();
 
-  void CreateEnclave(const std::string &node_id, const std::string &module);
+  void CreateEnclave(const std::string& node_id, const std::string& module);
 
-  oak::InitializeOutput GetEnclaveOutput(const std::string &node_id);
+  oak::InitializeOutput GetEnclaveOutput(const std::string& node_id);
 
   std::string NewNodeId();
 
-  void DestroyEnclave(const std::string &node_id);
+  void DestroyEnclave(const std::string& node_id);
 
-  asylo::EnclaveManager *enclave_manager_;
+  asylo::EnclaveManager* enclave_manager_;
   std::unique_ptr<asylo::SimLoader> enclave_loader_;
 
   uint64_t node_id_;

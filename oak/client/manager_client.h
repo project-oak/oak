@@ -40,8 +40,8 @@ class ManagerClient {
     LOG(INFO) << "Creating Oak Node";
     ::grpc::Status status = stub_->CreateNode(&context, request, &response);
     if (!status.ok()) {
-      LOG(QFATAL) << "Failed: " << status.error_code() << '/'
-		  << status.error_message() << '/' << status.error_details();
+      LOG(QFATAL) << "Failed: " << status.error_code() << '/' << status.error_message() << '/'
+                  << status.error_details();
     }
 
     LOG(INFO) << "Oak Node created: " << response.DebugString();
