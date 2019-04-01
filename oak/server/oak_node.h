@@ -26,34 +26,34 @@ namespace grpc_server {
 
 class OakNode final : public ::oak::Node::Service {
  public:
-  OakNode(const std::string &node_id, const std::string &module);
+  OakNode(const std::string& node_id, const std::string& module);
 
-  ::grpc::Status HandleGrpcCall(const ::grpc::GenericServerContext *context,
-                                const ::grpc::ByteBuffer *request_data,
-                                ::grpc::ByteBuffer *response_data);
+  ::grpc::Status HandleGrpcCall(const ::grpc::GenericServerContext* context,
+                                const ::grpc::ByteBuffer* request_data,
+                                ::grpc::ByteBuffer* response_data);
 
  private:
-  ::grpc::Status GetAttestation(::grpc::ServerContext *context,
-                                const ::oak::GetAttestationRequest *request,
-                                ::oak::GetAttestationResponse *response) override;
+  ::grpc::Status GetAttestation(::grpc::ServerContext* context,
+                                const ::oak::GetAttestationRequest* request,
+                                ::oak::GetAttestationResponse* response) override;
 
-  void InitEnvironment(wabt::interp::Environment *env);
+  void InitEnvironment(wabt::interp::Environment* env);
 
   // Native implementation of the `oak.read_method_name` host function.
-  ::wabt::interp::HostFunc::Callback OakReadMethodName(wabt::interp::Environment *env);
+  ::wabt::interp::HostFunc::Callback OakReadMethodName(wabt::interp::Environment* env);
 
   // Native implementation of the `oak.read` host function.
-  ::wabt::interp::HostFunc::Callback OakRead(wabt::interp::Environment *env);
+  ::wabt::interp::HostFunc::Callback OakRead(wabt::interp::Environment* env);
 
   // Native implementation of the `oak.write` host function.
-  ::wabt::interp::HostFunc::Callback OakWrite(wabt::interp::Environment *env);
+  ::wabt::interp::HostFunc::Callback OakWrite(wabt::interp::Environment* env);
 
   wabt::interp::Environment env_;
   // TODO: Use smart pointers.
-  wabt::interp::DefinedModule *module_;
+  wabt::interp::DefinedModule* module_;
 
   // Incoming gRPC data for the current invocation.
-  const ::grpc::GenericServerContext *server_context_;
+  const ::grpc::GenericServerContext* server_context_;
 
   std::unique_ptr<std::vector<char>> request_data_;
   // Cursor keeping track of how many bytes of request_data_ have been consumed by the Oak Module

@@ -65,20 +65,20 @@ class EnclaveServer final : public asylo::TrustedApplication {
 
   ~EnclaveServer() = default;
 
-  asylo::Status Initialize(const asylo::EnclaveConfig &config) override {
+  asylo::Status Initialize(const asylo::EnclaveConfig& config) override {
     LOG(INFO) << "Initializing Oak Instance";
-    const oak::InitializeInput &initialize_input = config.GetExtension(oak::initialize_input);
+    const oak::InitializeInput& initialize_input = config.GetExtension(oak::initialize_input);
     node_ = absl::make_unique<oak::grpc_server::OakNode>(initialize_input.node_id(),
                                                          initialize_input.module());
     return InitializeServer();
   }
 
-  asylo::Status Run(const asylo::EnclaveInput &input, asylo::EnclaveOutput *output) override {
+  asylo::Status Run(const asylo::EnclaveInput& input, asylo::EnclaveOutput* output) override {
     GetServerAddress(output);
     return asylo::Status::OkStatus();
   }
 
-  asylo::Status Finalize(const asylo::EnclaveFinal &enclave_final) override {
+  asylo::Status Finalize(const asylo::EnclaveFinal& enclave_final) override {
     FinalizeServer();
     return asylo::Status::OkStatus();
   }
@@ -126,8 +126,8 @@ class EnclaveServer final : public asylo::TrustedApplication {
 
   // Gets the address of the hosted gRPC server and writes it to
   // server_output_config extension of |output|.
-  void GetServerAddress(asylo::EnclaveOutput *output) EXCLUSIVE_LOCKS_REQUIRED(server_mutex_) {
-    oak::InitializeOutput *initialize_output = output->MutableExtension(oak::initialize_output);
+  void GetServerAddress(asylo::EnclaveOutput* output) EXCLUSIVE_LOCKS_REQUIRED(server_mutex_) {
+    oak::InitializeOutput* initialize_output = output->MutableExtension(oak::initialize_output);
     initialize_output->set_port(port_);
   }
 
@@ -155,9 +155,9 @@ class EnclaveServer final : public asylo::TrustedApplication {
     while (true) {
       RequestNextCall();
 
-      grpc_server::BaseGrpcEventHandler *eventHandler = nullptr;
+      grpc_server::BaseGrpcEventHandler* eventHandler = nullptr;
       bool ok = false;
-      if (!completion_queue_->Next(reinterpret_cast<void **>(&eventHandler), &ok)) {
+      if (!completion_queue_->Next(reinterpret_cast<void**>(&eventHandler), &ok)) {
         LOG(FATAL) << "Failure reading from completion queue";
         return;
       }

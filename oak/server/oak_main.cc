@@ -34,7 +34,7 @@ void sigint_handler(int param) {
   exit(1);
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   // Setup.
   ::google::ParseCommandLineFlags(&argc, &argv, /*remove_flags=*/true);
 
