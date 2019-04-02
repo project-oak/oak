@@ -1,0 +1,14 @@
+[package]
+name = "private_set_intersection"
+version = "0.1.0"
+authors = ["Tiziano Santoro <tzn@google.com>"]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+oak = { path = "../../rust/oak" }
+protobuf = "2.0"
+
+[build-dependencies]
+protoc-rust = "2.0"
