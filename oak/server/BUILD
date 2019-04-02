@@ -61,21 +61,12 @@ cc_library(
 )
 
 cc_library(
-    name = "grpc",
-    srcs = [
-        "grpc_event_handler.cc",
-    ],
-    hdrs = [
-        "grpc_event_handler.h",
-        "grpc_stream.h",
-    ],
+    name = "grpc_stream",
+    srcs = ["grpc_stream.cc"],
+    hdrs = ["grpc_stream.h"],
     deps = [
         ":oak_node",
         "@com_github_grpc_grpc//:grpc++",
-        "@com_google_absl//absl/memory",
-        "@com_google_absl//absl/types:span",
-        "@com_google_asylo//asylo/util:logging",
-        "@wabt",
     ],
 )
 
@@ -85,7 +76,7 @@ cc_library(
         "enclave_server.h",
     ],
     deps = [
-        ":grpc",
+        ":grpc_stream",
         ":oak_node",
         "//oak/proto:enclave_proto_cc",
         "@com_github_grpc_grpc//:grpc++",

@@ -14,41 +14,55 @@
  * limitations under the License.
  */
 
-#ifndef OAK_GRPC_SERVER_GRPC_STREAM_H_
-#define OAK_GRPC_SERVER_GRPC_STREAM_H_
+#ifndef OAK_GRPC_STREAM_H_
+#define OAK_GRPC_STREAM_H_
 
 #include "include/grpcpp/generic/async_generic_service.h"
-#include "include/grpcpp/impl/codegen/service_type.h"
-#include "include/grpcpp/security/server_credentials.h"
-#include "include/grpcpp/server.h"
-#include "include/grpcpp/server_builder.h"
-
-#include "oak/server/grpc_stream.h"
 #include "oak/server/oak_node.h"
 
 namespace oak {
-namespace grpc_server {
 
-// gRPC stream state, needed to process requests.
+// GrpcStream encapsulates the state necessary to process gRPC requests for
+// an Oak Module invocation and execute them in the Oak VM.
+// TODO: Consider renaming, OakModuleInvocation?
 class GrpcStream {
  public:
-  GrpcStream(std::shared_ptr<OakNode> node_)
-      : server_reader_writer_(&server_context_), node_(node_) {}
+  // All constructor arguments must outlive this object.  It manages its own
+  // lifetime after RequestNext is called.
+  GrpcStream(::grpc::AsyncGenericService* service, ::grpc::ServerCompletionQueue* queue,
+             OakNode* node)
+      : service_(service), queue_(queue), node_(node), stream_(&context_) {}
 
-  grpc::GenericServerContext& server_context() { return server_context_; }
-  grpc::GenericServerAsyncReaderWriter& server_reader_writer() { return server_reader_writer_; }
-  grpc::ByteBuffer& request_buffer() { return request_buffer_; }
-  grpc::ByteBuffer& response_buffer() { return response_buffer_; }
-  std::shared_ptr<OakNode> node() { return node_; }
+  // This object deletes itself.
+  ~GrpcStream() = default;
+
+  // Starts the asynchronous gRPC flow, which calls ReadRequest when the next
+  // Oak Module invocation request arrives.
+  // Must be called once.
+  void RequestNext();
+
+  // Calls ProcessRequest after asynchronously reading the request.
+  void ReadRequest(bool ok);
+
+  // Performs the Oak Module invocation synchronously and calls Finish after
+  // asynchronously writing the response.
+  // Restarts the gRPC flow with a new GrpcStream object for the next request.
+  void ProcessRequest(bool ok);
+
+  // Cleans up by deleting this object.
+  void Finish(bool ok);
 
  private:
-  grpc::GenericServerContext server_context_;
-  grpc::GenericServerAsyncReaderWriter server_reader_writer_;
-  grpc::ByteBuffer request_buffer_;
-  grpc::ByteBuffer response_buffer_;
-  std::shared_ptr<OakNode> node_;
+  ::grpc::AsyncGenericService* const service_;
+  ::grpc::ServerCompletionQueue* const queue_;
+  ::oak::OakNode* const node_;
+
+  ::grpc::GenericServerContext context_;
+  ::grpc::GenericServerAsyncReaderWriter stream_;
+  ::grpc::ByteBuffer request_;
+  ::grpc::ByteBuffer response_;
 };
-}  // namespace grpc_server
+
 }  // namespace oak
 
 #endif  // OAK_GRPC_SERVER_GRPC_STREAM_H_
