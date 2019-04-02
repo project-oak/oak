@@ -18,6 +18,12 @@
 //!
 //! Clients invoke the module by providing their own private set, and the module keeps track of the
 //! intersection of all the provided sets from all the clients that have interacted with it.
+//!
+//! The (common) intersection can then be retrieved by each client by a separate invocation.
+//!
+//! TODO: Limit number of clients / sets that may contribute to the intersection.
+//! TODO: Consider stopping accepting contributions after the first client retrieves the
+//! intersection.
 
 extern crate oak;
 extern crate protobuf;

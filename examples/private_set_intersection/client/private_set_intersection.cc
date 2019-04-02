@@ -32,7 +32,7 @@ using ::oak::examples::private_set_intersection::GetIntersectionResponse;
 using ::oak::examples::private_set_intersection::PrivateSetIntersection;
 using ::oak::examples::private_set_intersection::SubmitSetRequest;
 
-void submit_set(PrivateSetIntersection::Stub* stub, std::vector<std::string> set) {
+void SubmitSet(PrivateSetIntersection::Stub* stub, std::vector<std::string> set) {
   ::grpc::ClientContext context;
   SubmitSetRequest request;
   for (auto item : set) {
@@ -46,7 +46,7 @@ void submit_set(PrivateSetIntersection::Stub* stub, std::vector<std::string> set
   }
 }
 
-std::vector<std::string> retrieve_intersection(PrivateSetIntersection::Stub* stub) {
+std::vector<std::string> RetrieveIntersection(PrivateSetIntersection::Stub* stub) {
   std::vector<std::string> values;
   ::grpc::ClientContext context;
   ::google::protobuf::Empty request;
@@ -90,19 +90,19 @@ int main(int argc, char** argv) {
 
   // Submit sets from different clients.
   std::vector<std::string> set_0{"a", "b", "c"};
-  submit_set(stub_0.get(), set_0);
+  SubmitSet(stub_0.get(), set_0);
 
   std::vector<std::string> set_1{"b", "c", "d"};
-  submit_set(stub_1.get(), set_1);
+  SubmitSet(stub_1.get(), set_1);
 
   // Retrieve intersection.
-  std::vector<std::string> intersection_0 = retrieve_intersection(stub_0.get());
+  std::vector<std::string> intersection_0 = RetrieveIntersection(stub_0.get());
   LOG(INFO) << "client 0 intersection:";
   for (auto item : intersection_0) {
     LOG(INFO) << "- " << item;
   }
 
-  std::vector<std::string> intersection_1 = retrieve_intersection(stub_1.get());
+  std::vector<std::string> intersection_1 = RetrieveIntersection(stub_1.get());
   LOG(INFO) << "client 1 intersection:";
   for (auto item : intersection_1) {
     LOG(INFO) << "- " << item;
