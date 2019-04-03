@@ -1,12 +1,7 @@
 #!/bin/sh
+set -e
+set -x
 
-docker build --tag=oak .
-docker run \
-  --interactive \
-  --tty \
-  --volume=$PWD/bazel-cache:/root/.cache/bazel \
-  --volume=$PWD:/opt/my-project \
-  --workdir=/opt/my-project \
-  --publish=8888:8888 \
-  oak:latest \
-  bazel build --config=enc-sim //oak/server:oak
+readonly SCRIPTS_DIR="$(dirname "$0")"
+
+$SCRIPTS_DIR/docker_run bazel build --config=enc-sim //oak/server:oak

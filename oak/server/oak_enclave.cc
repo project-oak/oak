@@ -26,6 +26,6 @@
 
 namespace asylo {
 
-TrustedApplication *BuildTrustedApplication() { return new oak::EnclaveServer(); }
+TrustedApplication* BuildTrustedApplication() { return new oak::EnclaveServer(); }
 
 }  // namespace asylo

@@ -8,6 +8,7 @@ enclave creation to work.
 # apt install docker.io
 # apt install curl
 # apt install protobuf-compiler
+# apt install libprotobuf-dev
 # apt install openjdk-8-jdk-headless
 # echo "deb [arch=amd64] http://storage.googleapis.com/bazel-apt stable jdk1.8" | tee /etc/apt/sources.list.d/bazel.list
 # curl https://bazel.build/bazel-release.pub.gpg | apt-key add -
@@ -25,14 +26,17 @@ package.
 
 ```
 $ curl https://sh.rustup.rs -sSf > /tmp/rustup  # make sure you're happy to run
-$ sh /tmp/rustup
+$ sh /tmp/rustup  # choose option 1
 $ rustup target add wasm32-unknown-unknown
+$ source $HOME/.cargo/env
 $ cd $WHERE_YOU_LIKE_TO_KEEP_GIT_REPOS
 $ git clone https://github.com/project-oak/oak.git
-$ scripts/run_server_docker  # this make take some time
+$ scripts/run_server_docker  # this may take some time
 ```
 
-While you're waiting, you might want to take a look at what that script does.
+add source $HOME/.cargo/env to your shell init script (e.g. .bashrc or .zshrc)
+
+While you're waiting for docker, you might want to take a look at what that script does.
 The one mystery you might run into is: what does Bazel build?
 
 This: `oak/server/BUILD`
@@ -46,7 +50,7 @@ In the end, you should end up with an Oak server running.
 Then:
 
 ```
-$ examples/hello_worl/run
+$ examples/hello_world/run
 ```
 
 Which should result in some logs ending with:

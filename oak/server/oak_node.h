@@ -25,18 +25,18 @@ namespace oak {
 
 class OakNode final : public ::oak::Node::Service {
  public:
-  OakNode(const std::string &node_id, const std::string &module);
+  OakNode(const std::string& node_id, const std::string& module);
 
   // Performs an Oak Module invocation.
   void ProcessModuleCall(::grpc::GenericServerContext* context, ::grpc::ByteBuffer* request,
                          ::grpc::ByteBuffer* response);
 
  private:
-  ::grpc::Status GetAttestation(::grpc::ServerContext *context,
-                                const ::oak::GetAttestationRequest *request,
-                                ::oak::GetAttestationResponse *response) override;
+  ::grpc::Status GetAttestation(::grpc::ServerContext* context,
+                                const ::oak::GetAttestationRequest* request,
+                                ::oak::GetAttestationResponse* response) override;
 
-  void InitEnvironment(wabt::interp::Environment *env);
+  void InitEnvironment(wabt::interp::Environment* env);
 
   // Native implementation of the `oak.read_method_name` host function.
   ::wabt::interp::HostFunc::Callback OakReadMethodName(wabt::interp::Environment* env);

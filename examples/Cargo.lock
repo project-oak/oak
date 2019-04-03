@@ -55,6 +55,15 @@ name = "oak"
 version = "0.1.0"
 
 [[package]]
+name = "private_set_intersection"
+version = "0.1.0"
+dependencies = [
+ "oak 0.1.0",
+ "protobuf 2.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "protoc-rust 2.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "protobuf"
 version = "2.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
