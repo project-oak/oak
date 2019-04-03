@@ -67,7 +67,7 @@ class OakNode final : public ::oak::Node::Service {
   // configuration will result in Oak Node instances with distinct node_id_.
   const std::string node_id_;
 
-  // Hash (measurement) of the Oak Module with which this Oak Node was initialized.
+  // Hash of the Oak Module with which this Oak Node was initialized.
   // To be used as the basis for remote attestation based on code identity.
   const std::string module_hash_sha_256_;
 };

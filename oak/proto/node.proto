@@ -23,8 +23,8 @@ message GetAttestationRequest {
 }
 
 message GetAttestationResponse {
-  // SHA256 hash of the WebAssembly bytecode of the Oak Module loaded by the Oak
-  // Node.
+  // SHA256 hash of the WebAssembly bytecode for the Oak Module loaded by the
+  // Oak Node.
   // May be used by client to determine whether the Oak Node is running a
   // particular expected / whitelisted version of an Oak Module.
   bytes module_hash_sha_256 = 1;

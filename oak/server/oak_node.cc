@@ -140,13 +140,13 @@ static wabt::Result ReadModule(const std::string module_bytes, wabt::interp::Env
   return result;
 }
 
-const std::string Sha256Hash(const std::string& data) {
-  std::vector<uint8_t> digest(SHA256_DIGEST_LENGTH);
+std::string Sha256Hash(const std::string& data) {
   SHA256_CTX context;
   SHA256_Init(&context);
   SHA256_Update(&context, data.data(), data.size());
-  SHA256_Final(digest.data(), &context);
-  return std::string(digest.cbegin(), digest.cend());
+  std::vector<uint8_t> hash(SHA256_DIGEST_LENGTH);
+  SHA256_Final(hash.data(), &context);
+  return std::string(hash.cbegin(), hash.cend());
 }
 
 OakNode::OakNode(const std::string& node_id, const std::string& module)

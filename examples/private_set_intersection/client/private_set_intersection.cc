@@ -83,8 +83,8 @@ int main(int argc, char** argv) {
   auto channel_0 = ::grpc::CreateChannel(
       addr.str(),
       ::asylo::EnclaveChannelCredentials(::asylo::BidirectionalNullCredentialsOptions()));
-  auto node_client_0 = ::oak::NodeClient(channel_0);
-  auto attestation = node_client_0.GetAttestation();
+  ::oak::NodeClient node_client_0(channel_0);
+  ::oak::GetAttestationResponse attestation = node_client_0.GetAttestation();
   LOG(INFO) << "Oak Node attestation: " << attestation.DebugString();
   auto stub_0 = PrivateSetIntersection::NewStub(channel_0);
 
