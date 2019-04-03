@@ -80,9 +80,13 @@ int main(int argc, char** argv) {
   ::oak::NodeClient::InitializeAssertionAuthorities();
 
   // Connect to the newly created Oak Node from different clients.
-  auto stub_0 = PrivateSetIntersection::NewStub(::grpc::CreateChannel(
+  auto channel_0 = ::grpc::CreateChannel(
       addr.str(),
-      ::asylo::EnclaveChannelCredentials(::asylo::BidirectionalNullCredentialsOptions())));
+      ::asylo::EnclaveChannelCredentials(::asylo::BidirectionalNullCredentialsOptions()));
+  ::oak::NodeClient node_client_0(channel_0);
+  ::oak::GetAttestationResponse attestation = node_client_0.GetAttestation();
+  LOG(INFO) << "Oak Node attestation: " << attestation.DebugString();
+  auto stub_0 = PrivateSetIntersection::NewStub(channel_0);
 
   auto stub_1 = PrivateSetIntersection::NewStub(::grpc::CreateChannel(
       addr.str(),

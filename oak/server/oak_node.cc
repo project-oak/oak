@@ -27,6 +27,8 @@
 #include "absl/memory/memory.h"
 #include "absl/types/span.h"
 
+#include <openssl/sha.h>
+
 namespace oak {
 namespace grpc_server {
 
@@ -138,8 +140,17 @@ static wabt::Result ReadModule(const std::string module_bytes, wabt::interp::Env
   return result;
 }
 
+std::string Sha256Hash(const std::string& data) {
+  SHA256_CTX context;
+  SHA256_Init(&context);
+  SHA256_Update(&context, data.data(), data.size());
+  std::vector<uint8_t> hash(SHA256_DIGEST_LENGTH);
+  SHA256_Final(hash.data(), &context);
+  return std::string(hash.cbegin(), hash.cend());
+}
+
 OakNode::OakNode(const std::string& node_id, const std::string& module)
-    : Service(), node_id_(node_id) {
+    : Service(), node_id_(node_id), module_hash_sha_256_(Sha256Hash(module)) {
   LOG(INFO) << "Creating Oak Node";
   wabt::Result result;
   InitEnvironment(&env_);
@@ -349,7 +360,8 @@ static const ::grpc::ByteBuffer Wrap(const std::vector<char>* bytes) {
 ::grpc::Status OakNode::GetAttestation(::grpc::ServerContext* context,
                                        const ::oak::GetAttestationRequest* request,
                                        ::oak::GetAttestationResponse* response) {
-  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "TODO");
+  response->set_module_hash_sha_256(module_hash_sha_256_);
+  return ::grpc::Status::OK;
 }
 
 }  // namespace grpc_server
