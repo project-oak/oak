@@ -146,7 +146,7 @@ class EnclaveServer final : public asylo::TrustedApplication {
     // The stream object will delete itself when finished with the request,
     // after creating a new stream object for the next request.
     auto *stream = new GrpcStream(&module_service_, completion_queue_.get(), node_.get());
-    stream->RequestNext();
+    stream->Start();
     while (true) {
       bool ok;
       void *tag;

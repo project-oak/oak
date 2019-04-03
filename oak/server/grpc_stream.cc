@@ -18,7 +18,7 @@
 
 namespace oak {
 
-void GrpcStream::RequestNext() {
+void GrpcStream::Start() {
   auto* callback = new std::function<void(bool)>(
       std::bind(&GrpcStream::ReadRequest, this, std::placeholders::_1));
   service_->RequestCall(&context_, &stream_, queue_, queue_, callback);
@@ -41,8 +41,10 @@ void GrpcStream::ProcessRequest(bool ok) {
   }
   node_->ProcessModuleCall(&context_, &request_, &response_);
 
+  // Restarts the gRPC flow with a new GrpcStream object for the next request
+  // after processing this request.  This ensures that processing is serialized.
   auto* request = new GrpcStream(service_, queue_, node_);
-  request->RequestNext();
+  request->Start();
 
   ::grpc::WriteOptions options;
   auto* callback =

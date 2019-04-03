@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef OAK_GRPC_STREAM_H_
-#define OAK_GRPC_STREAM_H_
+#ifndef OAK_SERVER_GRPC_STREAM_H_
+#define OAK_SERVER_GRPC_STREAM_H_
 
 #include "include/grpcpp/generic/async_generic_service.h"
 #include "oak/server/oak_node.h"
@@ -39,7 +39,7 @@ class GrpcStream {
   // Starts the asynchronous gRPC flow, which calls ReadRequest when the next
   // Oak Module invocation request arrives.
   // Must be called once.
-  void RequestNext();
+  void Start();
 
   // Calls ProcessRequest after asynchronously reading the request.
   void ReadRequest(bool ok);
@@ -65,4 +65,4 @@ class GrpcStream {
 
 }  // namespace oak
 
-#endif  // OAK_GRPC_SERVER_GRPC_STREAM_H_
+#endif  // OAK_SERVER_GRPC_STREAM_H_
