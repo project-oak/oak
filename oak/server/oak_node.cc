@@ -30,7 +30,6 @@
 #include <openssl/sha.h>
 
 namespace oak {
-namespace grpc_server {
 
 // From https://github.com/WebAssembly/wabt/blob/master/src/tools/wasm-interp.cc .
 
@@ -299,6 +298,7 @@ void OakNode::InitEnvironment(wabt::interp::Environment* env) {
 }
 
 // Converts a gRPC ByteBuffer into a vector of bytes.
+// TODO: Move to GrpcStream.
 static std::unique_ptr<std::vector<char>> Unwrap(const ::grpc::ByteBuffer* buffer) {
   auto bytes = absl::make_unique<std::vector<char>>();
   std::vector<::grpc::Slice> slices;
@@ -313,22 +313,21 @@ static std::unique_ptr<std::vector<char>> Unwrap(const ::grpc::ByteBuffer* buffe
 }
 
 // Converts a vector of bytes into a gRPC ByteBuffer.
+// TODO: Move to GrpcStream.
 static const ::grpc::ByteBuffer Wrap(const std::vector<char>* bytes) {
   ::grpc::Slice slice(bytes->data(), bytes->size());
   ::grpc::ByteBuffer buffer(&slice, /*nslices=*/1);
   return buffer;
 }
 
-::grpc::Status OakNode::HandleGrpcCall(const ::grpc::GenericServerContext* context,
-                                       const ::grpc::ByteBuffer* request_data,
-                                       ::grpc::ByteBuffer* response_data) {
+// TODO: Refactor Oak Module code into a separate class.
+void OakNode::ProcessModuleCall(::grpc::GenericServerContext* context, ::grpc::ByteBuffer* request,
+                                ::grpc::ByteBuffer* response) {
   // TODO: Synchronise this method.
-
   LOG(INFO) << "Handling gRPC call: " << context->method();
-
   server_context_ = context;
 
-  request_data_ = Unwrap(request_data);
+  request_data_ = Unwrap(request);
   request_data_cursor_ = 0;
 
   response_data_ = absl::make_unique<std::vector<char>>();
@@ -345,16 +344,12 @@ static const ::grpc::ByteBuffer Wrap(const std::vector<char>* bytes) {
   wabt::interp::ExecResult exec_result =
       executor.RunExportByName(module_, "oak_handle_grpc_call", args);
 
-  if (exec_result.result == wabt::interp::Result::Ok) {
-    LOG(INFO) << "Handled gRPC call";
-  } else {
+  if (exec_result.result != wabt::interp::Result::Ok) {
+    // TODO: This should be an error?
     LOG(WARNING) << "Could not handle gRPC call: "
                  << wabt::interp::ResultToString(exec_result.result);
   }
-
-  *response_data = Wrap(response_data_.get());
-
-  return ::grpc::Status::OK;
+  *response = Wrap(response_data_.get());
 }
 
 ::grpc::Status OakNode::GetAttestation(::grpc::ServerContext* context,
@@ -364,5 +359,4 @@ static const ::grpc::ByteBuffer Wrap(const std::vector<char>* bytes) {
   return ::grpc::Status::OK;
 }
 
-}  // namespace grpc_server
 }  // namespace oak
