@@ -63,7 +63,13 @@ class OakNode final : public ::oak::Node::Service {
   // Outgoing gRPC data for the current invocation.
   std::unique_ptr<std::vector<char>> response_data_;
 
+  // Unique ID of the Oak Node instance. Creating multiple Oak Nodes with the same module and policy
+  // configuration will result in Oak Node instances with distinct node_id_.
   const std::string node_id_;
+
+  // Hash (measurement) of the Oak Module with which this Oak Node was initialized.
+  // To be used as the basis for remote attestation based on code identity.
+  const std::string module_hash_sha_256_;
 };
 
 }  // namespace grpc_server
