@@ -138,63 +138,92 @@ fn evaluate_prediction(hits: &mut u32, animal: &Animal, prediction: &[f64]) -> (
     (actual_type, accurate)
 }
 
-struct Node;
+struct Node<'n> {
+    training_set_size: u32,
+    test_set_size: u32,
+    training_matrix: &'n Matrix<f64>,
+    target_matrix: &'n Matrix<f64>,
+    test_matrix: &'n Matrix<f64>,
+    test_animals: &'n Vec<Animal>,
+    model: NaiveBayes<naive_bayes::Gaussian>,
+}
 
-impl oak::Node for Node {
+impl<'n> oak::Node for Node<'n> {
     fn new() -> Self {
-        Node
+        Node {
+	    training_set_size: 1000,
+	    test_set_size: 1000,
+	    training_matrix: &Matrix::new(0, 0, vec![]),
+	    target_matrix: &Matrix::new(0, 0, vec![]),
+	    test_matrix: &Matrix::new(0, 0, vec![]),
+	    test_animals: &Vec::new(),
+	    model: NaiveBayes::<naive_bayes::Gaussian>::new(),
+	}
     }
-    fn invoke(&mut self, request: &mut oak::Reader, response: &mut oak::Writer) {
-        oak::print("Start\n");
-        let (training_set_size, test_set_size) = (1000, 1000);
-        // Generate all of our train and test data
-        let (training_matrix, target_matrix, test_matrix, test_animals) =
-            generate_animal_data(training_set_size, test_set_size);
+    fn invoke(&mut self, method_name: &str, request: &mut oak::Reader, response: &mut oak::Writer) {
+        oak::print(method_name);
+        match method_name {
+	    "/oak.examples.machine_learning.MachineLearning/Data" => {
+	        
+		oak::print("Data");
+		//(self.training_set_size, self.test_set_size) = (1000, 1000);
+        	// Generate all of our train and test data
+		let (training_matrix, target_matrix, test_matrix, test_animals) =
+            	     generate_animal_data(self.training_set_size, self.test_set_size);
+		 self.training_matrix = &training_matrix;
+		 self.target_matrix = &target_matrix;
+		 self.test_matrix = &test_matrix;
+		 self.test_animals = &test_animals;
+	    }
+	    "/oak.examples.machine_learning.MachineLearning/Learn" => {
+	        oak::print("Training model\n");
+		self.model = NaiveBayes::<naive_bayes::Gaussian>::new();
+        	self.model
+            	    .train(&self.training_matrix, &self.target_matrix)
+            	    .expect("failed to train model of dogs");
+	    }
+	    "/oak.examples.machine_learning.MachineLearning/Predict" => {
+                oak::print("Predicting\n");
+        	let predictions = self.model
+            	    .predict(&self.test_matrix)
+            	    .expect("failed to predict dogs!?");
 
-        oak::print("Training model\n");
-        let mut model = NaiveBayes::<naive_bayes::Gaussian>::new();
-        model
-            .train(&training_matrix, &target_matrix)
-            .expect("failed to train model of dogs");
+		// Score how well we did.
+        	let mut hits = 0;
+        	let unprinted_total = self.test_set_size.saturating_sub(10) as usize;
+        	for (animal, prediction) in self.test_animals
+            	    .iter()
+            	    .zip(predictions.iter_rows())
+            	    .take(unprinted_total) {
+            		evaluate_prediction(&mut hits, animal, prediction);
+        	     }
 
-        oak::print("Predicting\n");
-        let predictions = model
-            .predict(&test_matrix)
-            .expect("failed to predict dogs!?");
+		 if unprinted_total > 0 {
+            	     println!("...");
+        	 }
 
-        // Score how well we did.
-        let mut hits = 0;
-        let unprinted_total = test_set_size.saturating_sub(10) as usize;
-        for (animal, prediction) in test_animals
-            .iter()
-            .zip(predictions.iter_rows())
-            .take(unprinted_total)
-        {
-            evaluate_prediction(&mut hits, animal, prediction);
-        }
+        	 for (animal, prediction) in self.test_animals
+            	     .iter()
+            	     .zip(predictions.iter_rows())
+            	     .skip(unprinted_total) {
+		         let (actual_type, accurate) = evaluate_prediction(&mut hits, animal, prediction);
+            		 println!(
+                	     "Predicted: {:?}; Actual: {:?}; Accurate? {:?}",
+                	     animal.type_, actual_type, accurate
+            		 );
+        	    }
 
-        if unprinted_total > 0 {
-            println!("...");
-        }
-
-        for (animal, prediction) in test_animals
-            .iter()
-            .zip(predictions.iter_rows())
-            .skip(unprinted_total)
-        {
-            let (actual_type, accurate) = evaluate_prediction(&mut hits, animal, prediction);
-            println!(
-                "Predicted: {:?}; Actual: {:?}; Accurate? {:?}",
-                animal.type_, actual_type, accurate
-            );
-        }
-
-        oak::print(&format!(
-            "Accuracy: {}/{} = {:.1}%",
-            hits,
-            test_set_size,
-            (f64::from(hits)) / (f64::from(test_set_size)) * 100.
-        ));
+		    oak::print(&format!(
+		                "Accuracy: {}/{} = {:.1}%",
+				hits,
+				self.test_set_size,
+				(f64::from(hits)) / (f64::from(self.test_set_size)) * 100.
+        	    ));
+		}
+            _ => {
+                panic!("unknown method name");
+            }
+	    }
     }
 }
 

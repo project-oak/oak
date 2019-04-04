@@ -3,4 +3,5 @@
 members = [
     "hello_world",
     "running_average",
+    "machine_learning",
 ]
