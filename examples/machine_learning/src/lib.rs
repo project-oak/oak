@@ -47,13 +47,13 @@ impl Distribution<Animal> for Standard {
     /// Generate a random animal.
     fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> Animal {
         // Friendliness, furriness, and speed are normally distributed and (given type) independent.
-        let mut cat_friendliness = Normal::new(0., 1.);
-        let mut cat_furriness = Normal::new(0., 1.);
-        let mut cat_speed = Normal::new(0., 1.);
+        let cat_friendliness = Normal::new(0., 1.);
+        let cat_furriness = Normal::new(0., 1.);
+        let cat_speed = Normal::new(0., 1.);
 
-        let mut dog_friendliness = Normal::new(1., 1.);
-        let mut dog_furriness = Normal::new(1., 1.);
-        let mut dog_speed = Normal::new(-1., 1.);
+        let dog_friendliness = Normal::new(1., 1.);
+        let dog_furriness = Normal::new(1., 1.);
+        let dog_speed = Normal::new(-1., 1.);
 
         // Flip a coin to decide whether to generate a cat or a dog.
         let coin: f64 = rng.gen();
@@ -82,7 +82,7 @@ fn generate_animal_data(
 ) -> (Matrix<f64>, Matrix<f64>, Matrix<f64>, Vec<Animal>) {
     oak::print("rnd xxx\n");
     //let mut rng = rand::thread_rng();
-    let mut rng = rand::StdRng::seed_from_u64(123);
+    let mut rng = rand::rngs::StdRng::seed_from_u64(123);
     oak::print("rnd OK\n");
 
     // We'll train the model on these dogs
@@ -160,7 +160,7 @@ impl oak::Node for Node {
 	    model: NaiveBayes::<naive_bayes::Gaussian>::new(),
 	}
     }
-    fn invoke(&mut self, method_name: &str, request: &mut oak::Reader, response: &mut oak::Writer) {
+    fn invoke(&mut self, method_name: &str, _request: &mut oak::Reader, _response: &mut oak::Writer) {
         oak::print(method_name);
         match method_name {
 	    "/oak.examples.machine_learning.MachineLearning/Data" => {
@@ -179,47 +179,58 @@ impl oak::Node for Node {
 	        oak::print("Training model\n");
 		//self.model = NaiveBayes::<naive_bayes::Gaussian>::new();
 		match self.training_matrix {
-		    Some(tr) => match self.target_matrix {
-		        Some(ta) => self.model
+		    Some(ref tr) => match self.target_matrix {
+		        Some(ref ta) => self.model
 			    .train(&tr, &ta)
             	    	    .expect("failed to train model of dogs"),
+                        None => oak::print("target_matrix not set"),
 		    }
+                    None => oak::print("training_matrix not set"),
 		}
 	    }
 	    "/oak.examples.machine_learning.MachineLearning/Predict" => {
                 oak::print("Predicting\n");
-		let predictions = match self.test_matrix {
-		    Some(t) => self.model
-            	        .predict(&t)
-            	        .expect("failed to predict dogs!?"),
-		};
+                let mut predictions = None;
+		match self.test_matrix {
+		    Some(ref t) => predictions = Some(self.model
+            	                                  .predict(&t)
+            	                                  .expect("failed to predict dogs!?")),
+                    None => oak::print("test_matrix not set"),
+		}
 		// Score how well we did.
         	let mut hits = 0;
         	let unprinted_total = self.test_set_size.saturating_sub(10) as usize;
 		match self.test_animals {
-		    Some(a) => for (animal, prediction) in a
-            	    	    .iter()
-            	    	    .zip(predictions.iter_rows())
-            	    	    .take(unprinted_total) {
-            		        evaluate_prediction(&mut hits, animal, prediction);
-        	     	     }
-		}
+		    Some(ref a) => {
+                        if let Some(ref p) = predictions {
+                            for (animal, prediction) in a
+            	    	        .iter()
+            	    	        .zip(p.iter_rows())
+            	    	        .take(unprinted_total) {
+            		            evaluate_prediction(&mut hits, animal, prediction);
+        	     	        }
+		        }
+                    }
+                    None => oak::print("test_animals not set"),
+                }
 
 		 if unprinted_total > 0 {
             	     println!("...");
         	 }
 
-		match self.test_animals {
-		    Some(a) => for (animal, prediction) in a
-            	        .iter()
-            	        .zip(predictions.iter_rows())
-            	        .skip(unprinted_total) {
-		            let (actual_type, accurate) = evaluate_prediction(&mut hits, animal, prediction);
-            		    println!(
-                	        "Predicted: {:?}; Actual: {:?}; Accurate? {:?}",
-                	        animal.type_, actual_type, accurate
-            		    );
-        	        }
+		if let Some(ref a) = self.test_animals {
+                    if let Some(ref p) = predictions {
+                        for (animal, prediction) in a
+            	            .iter()
+            	            .zip(p.iter_rows())
+            	            .skip(unprinted_total) {
+		                let (actual_type, accurate) = evaluate_prediction(&mut hits, animal, prediction);
+            		        println!(
+                	            "Predicted: {:?}; Actual: {:?}; Accurate? {:?}",
+                	            animal.type_, actual_type, accurate
+            		        );
+                            }
+        	    }
                 }
 		oak::print(&format!(
 		    "Accuracy: {}/{} = {:.1}%",
