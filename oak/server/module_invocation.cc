@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "oak/server/grpc_stream.h"
+#include "oak/server/module_invocation.h"
 
 #include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
@@ -46,43 +46,42 @@ const ::grpc::ByteBuffer Wrap(const std::vector<uint8_t>& bytes) {
 
 }  // namespace
 
-void GrpcStream::Start() {
+void ModuleInvocation::Start() {
   auto* callback = new std::function<void(bool)>(
-      std::bind(&GrpcStream::ReadRequest, this, std::placeholders::_1));
+      std::bind(&ModuleInvocation::ReadRequest, this, std::placeholders::_1));
   service_->RequestCall(&context_, &stream_, queue_, queue_, callback);
 }
 
-void GrpcStream::ReadRequest(bool ok) {
+void ModuleInvocation::ReadRequest(bool ok) {
   if (!ok) {
     delete this;
     return;
   }
   auto* callback = new std::function<void(bool)>(
-      std::bind(&GrpcStream::ProcessRequest, this, std::placeholders::_1));
+      std::bind(&ModuleInvocation::ProcessRequest, this, std::placeholders::_1));
   stream_.Read(&request_, callback);
 }
 
-void GrpcStream::ProcessRequest(bool ok) {
+void ModuleInvocation::ProcessRequest(bool ok) {
   if (!ok) {
     delete this;
     return;
   }
   std::vector<uint8_t> request_data = Unwrap(request_);
   std::vector<uint8_t> response_data;
-  node_->ProcessModuleCall(&context_, request_data, &response_data);
-
-  // Restarts the gRPC flow with a new GrpcStream object for the next request
+  node_->ProcessModuleInvocation(&context_, request_data, &response_data);
+  // Restarts the gRPC flow with a new ModuleInvocation object for the next request
   // after processing this request.  This ensures that processing is serialized.
-  auto* request = new GrpcStream(service_, queue_, node_);
+  auto* request = new ModuleInvocation(service_, queue_, node_);
   request->Start();
 
   response_ = Wrap(response_data);
   ::grpc::WriteOptions options;
-  auto* callback =
-      new std::function<void(bool)>(std::bind(&GrpcStream::Finish, this, std::placeholders::_1));
+  auto* callback = new std::function<void(bool)>(
+      std::bind(&ModuleInvocation::Finish, this, std::placeholders::_1));
   stream_.WriteAndFinish(response_, options, ::grpc::Status::OK, callback);
 }
 
-void GrpcStream::Finish(bool ok) { delete this; }
+void ModuleInvocation::Finish(bool ok) { delete this; }
 
 }  // namespace oak
