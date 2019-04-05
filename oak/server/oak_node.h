@@ -63,10 +63,12 @@ class OakNode final : public ::oak::Node::Service {
   // Guards data used by OakRead and OakWrite host methods.
   ::absl::Mutex module_data_mutex_;
 
-  // Span containing the gRPC request data read by the module.
+  // Span containing the gRPC request data passed to ProcessModuleCall.
+  // This is a view of the data which advances each time the OakRead host function is called.
   ::absl::Span<const uint8_t> GUARDED_BY(module_data_mutex_) module_data_input_;
 
-  // Pointer to the gRPC response data written by the module.
+  // Pointer to the gRPC response data passed to ProcessModuleCall.
+  // Data is inserted each time the OakWrite host function is called.
   std::vector<uint8_t>* GUARDED_BY(module_data_mutex_) module_data_output_;
 
   // Unique ID of the Oak Node instance. Creating multiple Oak Nodes with the same module and policy

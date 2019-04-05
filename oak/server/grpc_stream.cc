@@ -24,15 +24,15 @@ namespace oak {
 namespace {
 
 // Converts a gRPC ByteBuffer into a vector of bytes.
-std::unique_ptr<std::vector<uint8_t>> Unwrap(const ::grpc::ByteBuffer& buffer) {
-  auto bytes = absl::make_unique<std::vector<uint8_t>>();
+std::vector<uint8_t> Unwrap(const ::grpc::ByteBuffer& buffer) {
+  std::vector<uint8_t> bytes;
   std::vector<::grpc::Slice> slices;
   ::grpc::Status status = buffer.Dump(&slices);
   if (!status.ok()) {
     LOG(QFATAL) << "Could not unwrap buffer";
   }
   for (const auto& slice : slices) {
-    bytes->insert(bytes->end(), slice.begin(), slice.end());
+    bytes.insert(bytes.end(), slice.begin(), slice.end());
   }
   return bytes;
 }
@@ -67,9 +67,9 @@ void GrpcStream::ProcessRequest(bool ok) {
     delete this;
     return;
   }
-  std::unique_ptr<std::vector<uint8_t>> request_data = Unwrap(request_);
+  std::vector<uint8_t> request_data = Unwrap(request_);
   std::vector<uint8_t> response_data;
-  node_->ProcessModuleCall(&context_, *request_data, &response_data);
+  node_->ProcessModuleCall(&context_, request_data, &response_data);
 
   // Restarts the gRPC flow with a new GrpcStream object for the next request
   // after processing this request.  This ensures that processing is serialized.
