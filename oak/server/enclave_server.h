@@ -69,6 +69,7 @@ class EnclaveServer final : public asylo::TrustedApplication {
     const oak::InitializeInput& initialize_input = config.GetExtension(oak::initialize_input);
     node_ =
         absl::make_unique<::oak::OakNode>(initialize_input.node_id(), initialize_input.module());
+    assigned_port_ = initialize_input.grpc_port();
     return InitializeServer();
   }
 
@@ -104,8 +105,10 @@ class EnclaveServer final : public asylo::TrustedApplication {
   asylo::StatusOr<std::unique_ptr<::grpc::Server>> CreateServer()
       EXCLUSIVE_LOCKS_REQUIRED(server_mutex_) {
     ::grpc::ServerBuilder builder;
-    // TODO: Listen on a free port (using ":0" notation).
-    builder.AddListeningPort("[::]:30000", credentials_, &port_);
+    // Bind address should be localhost + assigned port number.
+    std::stringstream bind_addr;
+    bind_addr << "[::]:" << assigned_port_;
+    builder.AddListeningPort(bind_addr.str(), credentials_, &port_);
     builder.RegisterService(node_.get());
 
     // Add a completion queue and a generic service, in order to proxy incoming RPCs to the Oak
@@ -165,6 +168,9 @@ class EnclaveServer final : public asylo::TrustedApplication {
 
   // The gRPC server.
   std::unique_ptr<::grpc::Server> server_ GUARDED_BY(server_mutex_);
+
+  // The port for GRPC set by client; if 0 the server will bind to any available port.
+  int assigned_port_;
 
   // The port on which the server is listening.
   int port_;
