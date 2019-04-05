@@ -14,20 +14,17 @@
  * limitations under the License.
  */
 
-#include "asylo/util/logging.h"
-
 #include "oak/server/oak_node.h"
 
+#include <openssl/sha.h>
+
+#include "absl/memory/memory.h"
+#include "asylo/util/logging.h"
 #include "src/binary-reader.h"
 #include "src/error-formatter.h"
 #include "src/error.h"
 #include "src/interp/binary-reader-interp.h"
 #include "src/interp/interp.h"
-
-#include "absl/memory/memory.h"
-#include "absl/types/span.h"
-
-#include <openssl/sha.h>
 
 namespace oak {
 
@@ -47,15 +44,15 @@ static wabt::interp::Result PrintCallback(const wabt::interp::HostFunc* func,
   return wabt::interp::Result::Ok;
 }
 
-static const absl::Span<const char> ReadMemory(wabt::interp::Environment* env,
-                                               const uint32_t offset, const uint32_t size) {
+static ::absl::Span<const char> ReadMemory(::wabt::interp::Environment* env, const uint32_t offset,
+                                           const uint32_t size) {
   return absl::MakeConstSpan(env->GetMemory(0)->data).subspan(offset, size);
 }
 
 static const std::string ReadString(wabt::interp::Environment* env, const uint32_t offset,
                                     const uint32_t size) {
-  auto mem = ReadMemory(env, offset, size);
-  return std::string(mem.cbegin(), mem.cend());
+  ::absl::Span<const char> memory = ReadMemory(env, offset, size);
+  return std::string(memory.cbegin(), memory.cend());
 }
 
 template <class Iterator>
@@ -255,23 +252,17 @@ void OakNode::InitEnvironment(wabt::interp::Environment* env) {
     for (auto const& arg : args) {
       LOG(INFO) << "Arg: " << wabt::interp::TypedValueToString(arg);
     }
+    uint32_t offset = args[0].get_i32();
+    uint32_t size = args[1].get_i32();
 
-    // TODO: Synchronise this method.
-
-    uint32_t p = args[0].get_i32();
-    uint32_t len = args[1].get_i32();
-
-    uint32_t start = request_data_cursor_;
-    uint32_t end = start + len;
-    if (end > request_data_->size()) {
-      end = request_data_->size();
+    if (size > module_data_input_.size()) {
+      size = module_data_input_.size();
     }
+    WriteMemory(env, offset, module_data_input_.cbegin(), module_data_input_.cbegin() + size);
+    results[0].set_i32(size);
+    module_data_input_.remove_prefix(size);
 
-    WriteMemory(env, p, request_data_->cbegin() + start, request_data_->cbegin() + end);
-    results[0].set_i32(end - start);
-    request_data_cursor_ = end;
-
-    return wabt::interp::Result::Ok;
+    return ::wabt::interp::Result::Ok;
   };
 }
 
@@ -282,55 +273,26 @@ void OakNode::InitEnvironment(wabt::interp::Environment* env) {
     for (auto const& arg : args) {
       LOG(INFO) << "Arg: " << wabt::interp::TypedValueToString(arg);
     }
+    uint32_t offset = args[0].get_i32();
+    uint32_t size = args[1].get_i32();
 
-    // TODO: Synchronise this method.
-
-    uint32_t p = args[0].get_i32();
-    uint32_t len = args[1].get_i32();
-
-    auto data = ReadMemory(env, p, len);
-    response_data_->insert(response_data_->end(), data.cbegin(), data.cend());
-
-    results[0].set_i32(len);
+    ::absl::Span<const char> memory = ReadMemory(env, offset, size);
+    module_data_output_->insert(module_data_output_->end(), memory.cbegin(), memory.cend());
+    results[0].set_i32(size);
 
     return wabt::interp::Result::Ok;
   };
 }
 
-// Converts a gRPC ByteBuffer into a vector of bytes.
-// TODO: Move to GrpcStream.
-static std::unique_ptr<std::vector<char>> Unwrap(const ::grpc::ByteBuffer* buffer) {
-  auto bytes = absl::make_unique<std::vector<char>>();
-  std::vector<::grpc::Slice> slices;
-  ::grpc::Status status = buffer->Dump(&slices);
-  if (!status.ok()) {
-    LOG(QFATAL) << "Could not unwrap buffer";
-  }
-  for (const auto& slice : slices) {
-    bytes->insert(bytes->end(), slice.begin(), slice.end());
-  }
-  return bytes;
-}
-
-// Converts a vector of bytes into a gRPC ByteBuffer.
-// TODO: Move to GrpcStream.
-static const ::grpc::ByteBuffer Wrap(const std::vector<char>* bytes) {
-  ::grpc::Slice slice(bytes->data(), bytes->size());
-  ::grpc::ByteBuffer buffer(&slice, /*nslices=*/1);
-  return buffer;
-}
-
-// TODO: Refactor Oak Module code into a separate class.
-void OakNode::ProcessModuleCall(::grpc::GenericServerContext* context, ::grpc::ByteBuffer* request,
-                                ::grpc::ByteBuffer* response) {
-  // TODO: Synchronise this method.
+::grpc::Status OakNode::ProcessModuleCall(::grpc::GenericServerContext* context,
+                                          const std::vector<uint8_t>& request_data,
+                                          std::vector<uint8_t>* response_data) {
   LOG(INFO) << "Handling gRPC call: " << context->method();
   server_context_ = context;
 
-  request_data_ = Unwrap(request);
-  request_data_cursor_ = 0;
-
-  response_data_ = absl::make_unique<std::vector<char>>();
+  ::absl::MutexLock lock(&module_data_mutex_);
+  module_data_input_ = ::absl::Span<const uint8_t>(request_data);
+  module_data_output_ = response_data;
 
   wabt::Stream* trace_stream = nullptr;
   wabt::interp::Thread::Options thread_options;
@@ -349,7 +311,7 @@ void OakNode::ProcessModuleCall(::grpc::GenericServerContext* context, ::grpc::B
     LOG(WARNING) << "Could not handle gRPC call: "
                  << wabt::interp::ResultToString(exec_result.result);
   }
-  *response = Wrap(response_data_.get());
+  return ::grpc::Status::OK;
 }
 
 ::grpc::Status OakNode::GetAttestation(::grpc::ServerContext* context,
