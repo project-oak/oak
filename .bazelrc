@@ -1,20 +1,19 @@
-# Copied from https://github.com/google/asylo/blob/master/.bazelrc
+# Copied from https://github.com/google/asylo/blob/v0.3.4/.bazelrc
 
-build:sgx --crosstool_top=@com_google_asylo_sgx_backend//toolchain:crosstool
-build:sgx --dynamic_mode=off
-build:sgx --host_crosstool_top=@bazel_tools//tools/cpp:toolchain
-build:sgx --fission=no
-build:sgx --custom_malloc=@com_google_asylo_sgx_backend//toolchain:malloc
+build:asylo --crosstool_top=@com_google_asylo_toolchain//toolchain:crosstool
+build:asylo --dynamic_mode=off
+build:asylo --host_crosstool_top=@bazel_tools//tools/cpp:toolchain
+build:asylo --fission=no
+build:asylo --custom_malloc=@com_google_asylo_toolchain//toolchain:malloc
+build:asylo --define=grpc_no_ares=true
+
+build:sgx --config=asylo
+build:sgx --define=ASYLO_SGX=1
 build:sgx --define=SGX_SIM=0
-build:sgx --define=grpc_no_ares=true
 
-build:sgx-sim --crosstool_top=@com_google_asylo_sgx_backend//toolchain:crosstool
-build:sgx-sim --dynamic_mode=off
-build:sgx-sim --host_crosstool_top=@bazel_tools//tools/cpp:toolchain
-build:sgx-sim --fission=no
-build:sgx-sim --custom_malloc=@com_google_asylo_sgx_backend//toolchain:malloc
+build:sgx-sim --config=asylo
+build:sgx-sim --define=ASYLO_SGX=1
 build:sgx-sim --define=SGX_SIM=1
-build:sgx-sim --define=grpc_no_ares=true
 
 # The enclave simulation backend currently makes use of the SGX simulator.
 # However, this is subject to change and users of this config should not
