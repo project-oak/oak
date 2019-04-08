@@ -14,27 +14,26 @@
  * limitations under the License.
  */
 
-#ifndef OAK_SERVER_GRPC_STREAM_H_
-#define OAK_SERVER_GRPC_STREAM_H_
+#ifndef OAK_SERVER_MODULE_INVOCATION_H_
+#define OAK_SERVER_MODULE_INVOCATION_H_
 
 #include "include/grpcpp/generic/async_generic_service.h"
 #include "oak/server/oak_node.h"
 
 namespace oak {
 
-// GrpcStream encapsulates the state necessary to process gRPC requests for
+// ModuleInvocation encapsulates the state necessary to process gRPC requests for
 // an Oak Module invocation and execute them in the Oak VM.
-// TODO: Consider renaming, OakModuleInvocation?
-class GrpcStream {
+class ModuleInvocation {
  public:
   // All constructor arguments must outlive this object.  It manages its own
   // lifetime after RequestNext is called.
-  GrpcStream(::grpc::AsyncGenericService* service, ::grpc::ServerCompletionQueue* queue,
-             OakNode* node)
+  ModuleInvocation(::grpc::AsyncGenericService* service, ::grpc::ServerCompletionQueue* queue,
+                   OakNode* node)
       : service_(service), queue_(queue), node_(node), stream_(&context_) {}
 
   // This object deletes itself.
-  ~GrpcStream() = default;
+  ~ModuleInvocation() = default;
 
   // Starts the asynchronous gRPC flow, which calls ReadRequest when the next
   // Oak Module invocation request arrives.
@@ -46,7 +45,7 @@ class GrpcStream {
 
   // Performs the Oak Module invocation synchronously and calls Finish after
   // asynchronously writing the response.
-  // Restarts the gRPC flow with a new GrpcStream object for the next request.
+  // Restarts the gRPC flow with a new Moduleinvocation object for the next request.
   void ProcessRequest(bool ok);
 
   // Cleans up by deleting this object.
@@ -65,4 +64,4 @@ class GrpcStream {
 
 }  // namespace oak
 
-#endif  // OAK_SERVER_GRPC_STREAM_H_
+#endif  // OAK_SERVER_MODULE_INVOCATION_H_

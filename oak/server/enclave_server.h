@@ -38,7 +38,7 @@
 #include "include/grpcpp/server_builder.h"
 
 #include "oak/proto/enclave.pb.h"
-#include "oak/server/grpc_stream.h"
+#include "oak/server/module_invocation.h"
 #include "oak/server/oak_node.h"
 
 namespace oak {
@@ -143,10 +143,10 @@ class EnclaveServer final : public asylo::TrustedApplication {
   // Consumes gRPC events from the completion queue in an infinite loop.
   void CompletionQueueLoop() {
     LOG(INFO) << "Starting gRPC completion queue loop";
-    // The stream object will delete itself when finished with the request,
-    // after creating a new stream object for the next request.
-    auto *stream = new GrpcStream(&module_service_, completion_queue_.get(), node_.get());
-    stream->Start();
+    // The invocation object will delete itself when finished with the request,
+    // after creating a new invocation object for the next request.
+    auto* invocation = new ModuleInvocation(&module_service_, completion_queue_.get(), node_.get());
+    invocation->Start();
     while (true) {
       bool ok;
       void* tag;

@@ -30,9 +30,9 @@ class OakNode final : public ::oak::Node::Service {
   OakNode(const std::string& node_id, const std::string& module);
 
   // Performs an Oak Module invocation.
-  ::grpc::Status ProcessModuleCall(::grpc::GenericServerContext* context,
-                                   const std::vector<uint8_t>& request_data,
-                                   std::vector<uint8_t>* response_data)
+  ::grpc::Status ProcessModuleInvocation(::grpc::GenericServerContext* context,
+                                         const std::vector<uint8_t>& request_data,
+                                         std::vector<uint8_t>* response_data)
       LOCKS_EXCLUDED(module_data_mutex_);
 
  private:
