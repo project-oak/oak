@@ -24,13 +24,15 @@ class OakManager final : public ::oak::Manager::Service {
  public:
   OakManager();
 
-  ::grpc::Status CreateNode(::grpc::ServerContext* context, const ::oak::CreateNodeRequest* request,
+  ::grpc::Status CreateNode(::grpc::ServerContext* context,
+                            const ::oak::CreateNodeRequest* request,
                             ::oak::CreateNodeResponse* response) override;
 
  private:
   void InitializeEnclaveManager();
 
-  void CreateEnclave(const std::string& node_id, const std::string& module);
+  void CreateEnclave(const std::string& node_id, const std::string& module,
+                     uint32_t port);
 
   oak::InitializeOutput GetEnclaveOutput(const std::string& node_id);
 
@@ -42,4 +44,11 @@ class OakManager final : public ::oak::Manager::Service {
   std::unique_ptr<asylo::SimLoader> enclave_loader_;
 
   uint64_t node_id_;
+
+  // Initialized to the value of FLAGS_node_port_min; the port number is
+  // incremented by 1 for each new node, until it hits FLAGS_node_port_max, at
+  // which time CreateNode will return a RESOURCE_EXHAUSTED error.
+  // TODO: Internally keeping track of "open" nodes, and freeing up ports when
+  // their corresponding enclaves are destroyed.
+  uint32_t node_port_;
 };
