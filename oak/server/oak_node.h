@@ -17,8 +17,10 @@
 #ifndef OAK_SERVER_OAK_NODE_H_
 #define OAK_SERVER_OAK_NODE_H_
 
+#include "absl/base/thread_annotations.h"
+#include "absl/synchronization/mutex.h"
+#include "absl/types/span.h"
 #include "oak/proto/node.grpc.pb.h"
-
 #include "src/interp/interp.h"
 
 namespace oak {
@@ -28,8 +30,10 @@ class OakNode final : public ::oak::Node::Service {
   OakNode(const std::string& node_id, const std::string& module);
 
   // Performs an Oak Module invocation.
-  void ProcessModuleCall(::grpc::GenericServerContext* context, ::grpc::ByteBuffer* request,
-                         ::grpc::ByteBuffer* response);
+  ::grpc::Status ProcessModuleCall(::grpc::GenericServerContext* context,
+                                   const std::vector<uint8_t>& request_data,
+                                   std::vector<uint8_t>* response_data)
+      LOCKS_EXCLUDED(module_data_mutex_);
 
  private:
   ::grpc::Status GetAttestation(::grpc::ServerContext* context,
@@ -42,10 +46,12 @@ class OakNode final : public ::oak::Node::Service {
   ::wabt::interp::HostFunc::Callback OakReadMethodName(wabt::interp::Environment* env);
 
   // Native implementation of the `oak.read` host function.
-  ::wabt::interp::HostFunc::Callback OakRead(wabt::interp::Environment* env);
+  ::wabt::interp::HostFunc::Callback OakRead(::wabt::interp::Environment* env)
+      EXCLUSIVE_LOCKS_REQUIRED(module_data_mutex_);
 
   // Native implementation of the `oak.write` host function.
-  ::wabt::interp::HostFunc::Callback OakWrite(wabt::interp::Environment* env);
+  ::wabt::interp::HostFunc::Callback OakWrite(::wabt::interp::Environment* env)
+      EXCLUSIVE_LOCKS_REQUIRED(module_data_mutex_);
 
   wabt::interp::Environment env_;
   // TODO: Use smart pointers.
@@ -54,13 +60,16 @@ class OakNode final : public ::oak::Node::Service {
   // Incoming gRPC data for the current invocation.
   const ::grpc::GenericServerContext* server_context_;
 
-  std::unique_ptr<std::vector<char>> request_data_;
-  // Cursor keeping track of how many bytes of request_data_ have been consumed by the Oak Module
-  // during the current invocation.
-  uint32_t request_data_cursor_;
+  // Guards data used by OakRead and OakWrite host methods.
+  ::absl::Mutex module_data_mutex_;
 
-  // Outgoing gRPC data for the current invocation.
-  std::unique_ptr<std::vector<char>> response_data_;
+  // Span containing the gRPC request data passed to ProcessModuleCall.
+  // This is a view of the data which advances each time the OakRead host function is called.
+  ::absl::Span<const uint8_t> GUARDED_BY(module_data_mutex_) module_data_input_;
+
+  // Pointer to the gRPC response data passed to ProcessModuleCall.
+  // Data is inserted each time the OakWrite host function is called.
+  std::vector<uint8_t>* GUARDED_BY(module_data_mutex_) module_data_output_;
 
   // Unique ID of the Oak Node instance. Creating multiple Oak Nodes with the same module and policy
   // configuration will result in Oak Node instances with distinct node_id_.
