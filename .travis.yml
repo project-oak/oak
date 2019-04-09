@@ -12,6 +12,7 @@ script:
   - ls -als bazel-cache/_bazel_root
   - ./scripts/build_server_docker
   - ./scripts/build_examples_docker
+  - chown --recursive travis:travis bazel-cache
   - ls -als .
   - ls -als bazel-cache
   - ls -als bazel-cache/_bazel_root
