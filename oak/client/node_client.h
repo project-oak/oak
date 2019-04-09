@@ -18,7 +18,6 @@
 #include "asylo/grpc/auth/null_credentials_options.h"
 #include "asylo/identity/init.h"
 #include "asylo/util/logging.h"
-
 #include "oak/proto/node.grpc.pb.h"
 
 namespace oak {

@@ -36,7 +36,6 @@
 #include "include/grpcpp/security/server_credentials.h"
 #include "include/grpcpp/server.h"
 #include "include/grpcpp/server_builder.h"
-
 #include "oak/proto/enclave.pb.h"
 #include "oak/server/module_invocation.h"
 #include "oak/server/oak_node.h"
@@ -154,7 +153,7 @@ class EnclaveServer final : public asylo::TrustedApplication {
         LOG(FATAL) << "Failure reading from completion queue";
         return;
       }
-      auto *callback = static_cast<std::function<void(bool)> *>(tag);
+      auto* callback = static_cast<std::function<void(bool)>*>(tag);
       (*callback)(ok);
       delete callback;
     }
