@@ -285,8 +285,8 @@ void OakNode::InitEnvironment(wabt::interp::Environment* env) {
 }
 
 ::grpc::Status OakNode::ProcessModuleInvocation(::grpc::GenericServerContext* context,
-                                          const std::vector<uint8_t>& request_data,
-                                          std::vector<uint8_t>* response_data) {
+                                                const std::vector<uint8_t>& request_data,
+                                                std::vector<uint8_t>* response_data) {
   LOG(INFO) << "Handling gRPC call: " << context->method();
   server_context_ = context;
 
