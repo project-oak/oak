@@ -10,6 +10,6 @@ docker run \
   --volume=$PWD:/opt/my-project \
   --workdir=/opt/my-project \
   --publish=8888:8888 \
-  --publish=7000-8000:7000-8000 \
+  --publish=30000:30000 \
   oak:latest \
   "$@"

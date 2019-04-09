@@ -26,9 +26,6 @@ message InitializeInput {
   // See https://webassembly.org/docs/binary-encoding/.
   optional bytes module = 1;
   optional string node_id = 2;
-  // The port number that the enclave's GRPC server listens on; set this to 0
-  // to bind to any available port.
-  optional int32 grpc_port = 3;
 }
 
 // See

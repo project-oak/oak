@@ -16,16 +16,11 @@
 
 #include "oak_manager.h"
 
-#include <cstdlib>
-#include <ctime>
-
 #include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
 #include "gflags/gflags.h"
 
 DEFINE_string(enclave_path, "", "Path to enclave to load");
-DEFINE_int32(node_port_min, 7000, "Minimum value of port number assigned to a node");
-DEFINE_int32(node_port_max, 8000, "Maximum value of port number assigned to a node");
 
 OakManager::OakManager() : Service(), node_id_(0) { InitializeEnclaveManager(); }
 
@@ -41,8 +36,6 @@ OakManager::OakManager() : Service(), node_id_(0) { InitializeEnclaveManager(); 
 }
 
 void OakManager::InitializeEnclaveManager() {
-  std::srand(std::time(nullptr));
-
   LOG(INFO) << "Initializing enclave manager";
   ::asylo::EnclaveManager::Configure(::asylo::EnclaveManagerOptions());
   auto manager_result = ::asylo::EnclaveManager::Instance();
@@ -62,12 +55,6 @@ void OakManager::CreateEnclave(const std::string& node_id, const std::string& mo
   ::oak::InitializeInput* initialize_input = config.MutableExtension(::oak::initialize_input);
   initialize_input->set_node_id(node_id);
   initialize_input->set_module(module);
-
-  // Uses a random port number in range of [node_port_min, node_port_max].
-  // TODO: keep track of "free" ports.
-  initialize_input->set_grpc_port(FLAGS_node_port_min +
-      std::rand() % (FLAGS_node_port_max - FLAGS_node_port_min + 1));
-
   ::asylo::Status status = enclave_manager_->LoadEnclave(node_id, *enclave_loader_, config);
   if (!status.ok()) {
     LOG(QFATAL) << "Could not load enclave " << FLAGS_enclave_path << ": " << status;
