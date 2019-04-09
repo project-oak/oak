@@ -170,6 +170,9 @@ class EnclaveServer final : public asylo::TrustedApplication {
   // The gRPC server.
   std::unique_ptr<::grpc::Server> server_ GUARDED_BY(server_mutex_);
 
+  // The port for GRPC set by client; if 0 the server will bind to any available port.
+  int assigned_port_;
+
   // The port on which the server is listening.
   uint32_t port_;
 

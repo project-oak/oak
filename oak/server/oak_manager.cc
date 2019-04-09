@@ -16,6 +16,9 @@
 
 #include "oak_manager.h"
 
+#include <cstdlib>
+#include <ctime>
+
 #include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
 #include "gflags/gflags.h"
@@ -51,6 +54,8 @@ OakManager::OakManager()
 }
 
 void OakManager::InitializeEnclaveManager() {
+  std::srand(std::time(nullptr));
+
   LOG(INFO) << "Initializing enclave manager";
   ::asylo::EnclaveManager::Configure(::asylo::EnclaveManagerOptions());
   auto manager_result = ::asylo::EnclaveManager::Instance();
