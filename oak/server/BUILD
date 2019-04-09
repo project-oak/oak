@@ -77,6 +77,9 @@ cc_library(
     hdrs = [
         "enclave_server.h",
     ],
+    srcs = [
+        "enclave_server.cc",
+    ],
     deps = [
         ":module_invocation",
         ":oak_node",
