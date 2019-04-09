@@ -6,5 +6,8 @@ cache:
   - ./bazel-cache
 
 script:
+  - ls -als .
+  - ls -als bazel-cache
+  - ls -als bazel-cache/_bazel_root
   - ./scripts/build_server_docker
   - ./scripts/build_examples_docker
