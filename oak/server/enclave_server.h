@@ -104,8 +104,8 @@ class EnclaveServer final : public asylo::TrustedApplication {
   asylo::StatusOr<std::unique_ptr<::grpc::Server>> CreateServer()
       EXCLUSIVE_LOCKS_REQUIRED(server_mutex_) {
     ::grpc::ServerBuilder builder;
-    // TODO: Listen on a free port (using ":0" notation).
-    builder.AddListeningPort("[::]:30000", credentials_, &port_);
+    // Uses ":0" notation so that server listens on a free port.
+    builder.AddListeningPort("[::]:0", credentials_, &port_);
     builder.RegisterService(node_.get());
 
     // Add a completion queue and a generic service, in order to proxy incoming RPCs to the Oak
