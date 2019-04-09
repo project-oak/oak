@@ -9,7 +9,6 @@ docker run \
   --volume=$PWD/bazel-cache:/root/.cache/bazel \
   --volume=$PWD:/opt/my-project \
   --workdir=/opt/my-project \
-  --publish=8888:8888 \
-  --publish=30000:30000 \
+  --network host \
   oak:latest \
   "$@"
