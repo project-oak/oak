@@ -65,7 +65,7 @@ std::string predict(MachineLearning::Stub* stub) {
   MLResponse response;
   ::grpc::Status status = stub->Predict(&context, predict, &response);
   if (!status.ok()) {
-    LOG(QFATAL) << "Could not learn: " << status.error_code() << ": "
+    LOG(QFATAL) << "Could not predict: " << status.error_code() << ": "
                 << status.error_message();
   }
   return response.message();

@@ -76,9 +76,10 @@ impl Distribution<Animal> for Standard {
     }
 }
 
+// FIXME: move data generation to client once we can write clients in Rust.
 fn generate_animal_data(
-    training_set_size: u32,
-    test_set_size: u32,
+    training_set_size: usize,
+    test_set_size: usize,
 ) -> (Matrix<f64>, Matrix<f64>, Matrix<f64>, Vec<Animal>) {
     oak::print("rnd xxx\n");
     //let mut rng = rand::thread_rng();
@@ -139,8 +140,8 @@ fn evaluate_prediction(hits: &mut u32, animal: &Animal, prediction: &[f64]) -> (
 }
 
 struct Node {
-    training_set_size: u32,
-    test_set_size: u32,
+    training_set_size: usize,
+    test_set_size: usize,
     training_matrix: Option<Matrix<f64>>,
     target_matrix: Option<Matrix<f64>>,
     test_matrix: Option<Matrix<f64>>,
@@ -193,8 +194,8 @@ impl oak::Node for Node {
                 let mut predictions = None;
 		match self.test_matrix {
 		    Some(ref t) => predictions = Some(self.model
-            	                                  .predict(&t)
-            	                                  .expect("failed to predict dogs!?")),
+            	                                      .predict(&t)
+            	                                      .expect("failed to predict dogs!?")),
                     None => oak::print("test_matrix not set"),
 		}
 		// Score how well we did.
@@ -214,9 +215,9 @@ impl oak::Node for Node {
                     None => oak::print("test_animals not set"),
                 }
 
-		 if unprinted_total > 0 {
-            	     println!("...");
-        	 }
+		if unprinted_total > 0 {
+            	    println!("...");
+        	}
 
 		if let Some(ref a) = self.test_animals {
                     if let Some(ref p) = predictions {
@@ -236,7 +237,7 @@ impl oak::Node for Node {
 		    "Accuracy: {}/{} = {:.1}%",
 		    hits,
 		    self.test_set_size,
-		    (f64::from(hits)) / (f64::from(self.test_set_size)) * 100.
+		    (f64::from(hits)) / (f64::from(self.test_set_size as u32)) * 100.
         	));
 	    }
             _ => {

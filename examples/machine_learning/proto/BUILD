@@ -26,9 +26,6 @@ load(
 proto_library(
     name = "machine_learning",
     srcs = ["machine_learning.proto"],
-    deps = [
-        "@com_google_protobuf//:empty_proto",
-    ],
 )
 
 grpc_proto_library(
