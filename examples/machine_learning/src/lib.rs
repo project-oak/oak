@@ -158,7 +158,7 @@ impl oak::Node for Node {
 	    target_matrix: None,
 	    test_matrix: None,
 	    test_animals: None,
-	    model: NaiveBayes::<naive_bayes::Gaussian>::new(),
+	    model: NaiveBayes::new(),
 	}
     }
     fn invoke(&mut self, method_name: &str, _request: &mut oak::Reader, _response: &mut oak::Writer) {
@@ -212,7 +212,10 @@ impl oak::Node for Node {
         	     	        }
 		        }
                     }
-                    None => oak::print("test_animals not set"),
+                    None => {
+                        oak::print("test_animals not set");
+                        return;
+                    }
                 }
 
 		if unprinted_total > 0 {
