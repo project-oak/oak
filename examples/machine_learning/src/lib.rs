@@ -139,13 +139,17 @@ fn evaluate_prediction(hits: &mut u32, animal: &Animal, prediction: &[f64]) -> (
     (actual_type, accurate)
 }
 
+struct Config {
+    training_matrix: Matrix<f64>,
+    target_matrix: Matrix<f64>,
+    test_matrix: Matrix<f64>,
+    test_animals: Vec<Animal>,
+}
+
 struct Node {
     training_set_size: usize,
     test_set_size: usize,
-    training_matrix: Option<Matrix<f64>>,
-    target_matrix: Option<Matrix<f64>>,
-    test_matrix: Option<Matrix<f64>>,
-    test_animals: Option<Vec<Animal>>,
+    config: Option<Config>,
     model: NaiveBayes<naive_bayes::Gaussian>,
 }
 
@@ -154,10 +158,7 @@ impl oak::Node for Node {
         Node {
 	    training_set_size: 1000,
 	    test_set_size: 1000,
-	    training_matrix: None,
-	    target_matrix: None,
-	    test_matrix: None,
-	    test_animals: None,
+            config: None,
 	    model: NaiveBayes::new(),
 	}
     }
@@ -170,41 +171,40 @@ impl oak::Node for Node {
 		//(self.training_set_size, self.test_set_size) = (1000, 1000);
         	// Generate all of our train and test data
 		let (training_matrix, target_matrix, test_matrix, test_animals) =
-            	     generate_animal_data(self.training_set_size, self.test_set_size);
-		 self.training_matrix = Some(training_matrix);
-		 self.target_matrix = Some(target_matrix);
-		 self.test_matrix = Some(test_matrix);
-		 self.test_animals = Some(test_animals);
+            	    generate_animal_data(self.training_set_size, self.test_set_size);
+                self.config = Some(Config {
+		    training_matrix: training_matrix,
+		    target_matrix: target_matrix,
+		    test_matrix: test_matrix,
+		    test_animals: test_animals,
+                });
 	    }
 	    "/oak.examples.machine_learning.MachineLearning/Learn" => {
 	        oak::print("Training model\n");
 		//self.model = NaiveBayes::<naive_bayes::Gaussian>::new();
-		match self.training_matrix {
-		    Some(ref tr) => match self.target_matrix {
-		        Some(ref ta) => self.model
-			    .train(&tr, &ta)
+		match self.config {
+                    Some(ref c) => self.model
+			    .train(&c.training_matrix, &c.target_matrix)
             	    	    .expect("failed to train model of dogs"),
-                        None => oak::print("target_matrix not set"),
-		    }
-                    None => oak::print("training_matrix not set"),
+                    None => oak::print("config not set"),
 		}
 	    }
 	    "/oak.examples.machine_learning.MachineLearning/Predict" => {
                 oak::print("Predicting\n");
                 let mut predictions = None;
-		match self.test_matrix {
-		    Some(ref t) => predictions = Some(self.model
-            	                                      .predict(&t)
+		match self.config {
+		    Some(ref c) => predictions = Some(self.model
+            	                                      .predict(&c.test_matrix)
             	                                      .expect("failed to predict dogs!?")),
-                    None => oak::print("test_matrix not set"),
+                    None => oak::print("config not set"),
 		}
 		// Score how well we did.
         	let mut hits = 0;
         	let unprinted_total = self.test_set_size.saturating_sub(10) as usize;
-		match self.test_animals {
-		    Some(ref a) => {
+		match self.config {
+		    Some(ref c) => {
                         if let Some(ref p) = predictions {
-                            for (animal, prediction) in a
+                            for (animal, prediction) in c.test_animals
             	    	        .iter()
             	    	        .zip(p.iter_rows())
             	    	        .take(unprinted_total) {
@@ -222,9 +222,9 @@ impl oak::Node for Node {
             	    println!("...");
         	}
 
-		if let Some(ref a) = self.test_animals {
+		if let Some(ref c) = self.config {
                     if let Some(ref p) = predictions {
-                        for (animal, prediction) in a
+                        for (animal, prediction) in c.test_animals
             	            .iter()
             	            .zip(p.iter_rows())
             	            .skip(unprinted_total) {
