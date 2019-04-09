@@ -54,7 +54,6 @@ impl oak::Node for Node {
                 let next = match self.values {
                     Some(ref previous) => previous.intersection(&set).cloned().collect(),
                     None => set,
-
                 };
                 self.values = Some(next);
             }

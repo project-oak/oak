@@ -16,12 +16,11 @@
 
 #include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
-#include "gflags/gflags.h"
-#include "include/grpcpp/grpcpp.h"
-
 #include "examples/running_average/proto/running_average.grpc.pb.h"
 #include "examples/running_average/proto/running_average.pb.h"
 #include "examples/utils/utils.h"
+#include "gflags/gflags.h"
+#include "include/grpcpp/grpcpp.h"
 #include "oak/client/manager_client.h"
 #include "oak/client/node_client.h"
 
