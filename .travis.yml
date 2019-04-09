@@ -2,6 +2,7 @@ services:
   - docker
 
 cache:
+  timeout: 3600
   directories:
   - ./bazel-cache
 
