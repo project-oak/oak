@@ -3,9 +3,6 @@ set -e
 set -x
 
 docker build --tag=oak .
-# The second --publish option below publishes a range of ports, of which the minimum value needs
-# to match value of flag node_port_min, and the maximum the flag node_port_max (see
-# oak/server/oak_manager.cc).
 docker run \
   --interactive \
   --tty \

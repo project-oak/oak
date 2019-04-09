@@ -26,16 +26,16 @@ message InitializeInput {
   // See https://webassembly.org/docs/binary-encoding/.
   optional bytes module = 1;
   optional string node_id = 2;
-  // A non-zero port number that the enclave's GRPC server listens on;
-  // OakManager needs to ensure that the port specified is open, otherwise
-  // enclave initialization will fail.
-  optional uint32 port = 3;
+  // The port number that the enclave's GRPC server listens on; set this to 0
+  // to bind to any available port.
+  optional int32 grpc_port = 3;
 }
 
 // See
 // https://github.com/google/asylo/blob/master/asylo/grpc/util/enclave_server.proto.
 message InitializeOutput {
-  // TODO: Specify this message.
+  // The port on which the Oak Module instance is listening.
+  optional int32 port = 2;
 }
 
 // This message defines the data that is passed to the enclave at initialization

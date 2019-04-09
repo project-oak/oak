@@ -36,6 +36,7 @@
 #include "include/grpcpp/security/server_credentials.h"
 #include "include/grpcpp/server.h"
 #include "include/grpcpp/server_builder.h"
+
 #include "oak/proto/enclave.pb.h"
 #include "oak/server/module_invocation.h"
 #include "oak/server/oak_node.h"
@@ -57,28 +58,23 @@ class EnclaveServer final : public asylo::TrustedApplication {
  public:
   EnclaveServer()
       : node_(nullptr),
-        credentials_(::asylo::EnclaveServerCredentials(
-            ::asylo::BidirectionalNullCredentialsOptions())),
+        credentials_(
+            ::asylo::EnclaveServerCredentials(::asylo::BidirectionalNullCredentialsOptions())),
         completion_queue_(nullptr){};
 
   ~EnclaveServer() = default;
 
   asylo::Status Initialize(const asylo::EnclaveConfig& config) override {
     LOG(INFO) << "Initializing Oak Instance";
-    const oak::InitializeInput& initialize_input =
-        config.GetExtension(oak::initialize_input);
-    node_ = absl::make_unique<::oak::OakNode>(initialize_input.node_id(),
-                                              initialize_input.module());
-    port_ = initialize_input.port();
-    if (port_ == 0) {
-      return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT,
-                           "Port number must be non-zero.");
-    }
+    const oak::InitializeInput& initialize_input = config.GetExtension(oak::initialize_input);
+    node_ =
+        absl::make_unique<::oak::OakNode>(initialize_input.node_id(), initialize_input.module());
+    assigned_port_ = initialize_input.grpc_port();
     return InitializeServer();
   }
 
-  asylo::Status Run(const asylo::EnclaveInput& input,
-                    asylo::EnclaveOutput* output) override {
+  asylo::Status Run(const asylo::EnclaveInput& input, asylo::EnclaveOutput* output) override {
+    GetServerAddress(output);
     return asylo::Status::OkStatus();
   }
 
@@ -88,8 +84,7 @@ class EnclaveServer final : public asylo::TrustedApplication {
   }
 
  private:
-  // Initializes a gRPC server. If the server is already initialized, does
-  // nothing.
+  // Initializes a gRPC server. If the server is already initialized, does nothing.
   asylo::Status InitializeServer() LOCKS_EXCLUDED(server_mutex_) {
     // Ensure that the server is only created and initialized once.
     absl::MutexLock lock(&server_mutex_);
@@ -110,27 +105,32 @@ class EnclaveServer final : public asylo::TrustedApplication {
   asylo::StatusOr<std::unique_ptr<::grpc::Server>> CreateServer()
       EXCLUSIVE_LOCKS_REQUIRED(server_mutex_) {
     ::grpc::ServerBuilder builder;
-    // Bind address should be localhost + specified port number.
+    // Bind address should be localhost + assigned port number.
     std::stringstream bind_addr;
-    bind_addr << "[::]:" << port_;
-    int assigned_port;
-    builder.AddListeningPort(bind_addr.str(), credentials_, &assigned_port);
+    bind_addr << "[::]:" << assigned_port_;
+    builder.AddListeningPort(bind_addr.str(), credentials_, &port_);
     builder.RegisterService(node_.get());
 
-    // Add a completion queue and a generic service, in order to proxy incoming
-    // RPCs to the Oak Node.
+    // Add a completion queue and a generic service, in order to proxy incoming RPCs to the Oak
+    // Node.
     completion_queue_ = builder.AddCompletionQueue();
     builder.RegisterAsyncGenericService(&module_service_);
 
     std::unique_ptr<::grpc::Server> server = builder.BuildAndStart();
     if (!server) {
-      return asylo::Status(asylo::error::GoogleError::INTERNAL,
-                           "Failed to start gRPC server");
+      return asylo::Status(asylo::error::GoogleError::INTERNAL, "Failed to start gRPC server");
     }
 
     LOG(INFO) << "gRPC server is listening on port :" << port_;
 
     return std::move(server);
+  }
+
+  // Gets the address of the hosted gRPC server and writes it to
+  // server_output_config extension of |output|.
+  void GetServerAddress(asylo::EnclaveOutput* output) EXCLUSIVE_LOCKS_REQUIRED(server_mutex_) {
+    oak::InitializeOutput* initialize_output = output->MutableExtension(oak::initialize_output);
+    initialize_output->set_port(port_);
   }
 
   // Finalizes the gRPC server by calling ::gprc::Server::Shutdown().
@@ -148,8 +148,7 @@ class EnclaveServer final : public asylo::TrustedApplication {
     LOG(INFO) << "Starting gRPC completion queue loop";
     // The invocation object will delete itself when finished with the request,
     // after creating a new invocation object for the next request.
-    auto* invocation = new ModuleInvocation(
-        &module_service_, completion_queue_.get(), node_.get());
+    auto* invocation = new ModuleInvocation(&module_service_, completion_queue_.get(), node_.get());
     invocation->Start();
     while (true) {
       bool ok;
@@ -158,7 +157,7 @@ class EnclaveServer final : public asylo::TrustedApplication {
         LOG(FATAL) << "Failure reading from completion queue";
         return;
       }
-      auto* callback = static_cast<std::function<void(bool)>*>(tag);
+      auto *callback = static_cast<std::function<void(bool)> *>(tag);
       (*callback)(ok);
       delete callback;
     }
@@ -170,8 +169,11 @@ class EnclaveServer final : public asylo::TrustedApplication {
   // The gRPC server.
   std::unique_ptr<::grpc::Server> server_ GUARDED_BY(server_mutex_);
 
+  // The port for GRPC set by client; if 0 the server will bind to any available port.
+  int assigned_port_;
+
   // The port on which the server is listening.
-  uint32_t port_;
+  int port_;
 
   std::unique_ptr<::oak::OakNode> node_;
   std::shared_ptr<::grpc::ServerCredentials> credentials_;

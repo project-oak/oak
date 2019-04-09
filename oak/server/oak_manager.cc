@@ -16,47 +16,38 @@
 
 #include "oak_manager.h"
 
+#include <cstdlib>
+#include <ctime>
+
 #include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
 #include "gflags/gflags.h"
 
 DEFINE_string(enclave_path, "", "Path to enclave to load");
-DEFINE_uint32(node_port_min, 7000,
-              "Minimum value of port number assigned to a node");
-DEFINE_uint32(node_port_max, 8000,
-              "Maximum value of port number assigned to a node");
+DEFINE_int32(node_port_min, 7000, "Minimum value of port number assigned to a node");
+DEFINE_int32(node_port_max, 8000, "Maximum value of port number assigned to a node");
 
-OakManager::OakManager()
-    : Service(), node_id_(0), node_port_(FLAGS_node_port_min) {
-  InitializeEnclaveManager();
-}
+OakManager::OakManager() : Service(), node_id_(0) { InitializeEnclaveManager(); }
 
 ::grpc::Status OakManager::CreateNode(::grpc::ServerContext* context,
                                       const ::oak::CreateNodeRequest* request,
                                       ::oak::CreateNodeResponse* response) {
   std::string node_id = NewNodeId();
-
-  if (node_port_ > FLAGS_node_port_max) {
-    return ::grpc::Status(::grpc::StatusCode::RESOURCE_EXHAUSTED,
-                          "No free port available for new node.");
-  }
-
-  CreateEnclave(node_id, request->module(), node_port_);
+  CreateEnclave(node_id, request->module());
   ::oak::InitializeOutput out = GetEnclaveOutput(node_id);
-  response->set_port(node_port_);
+  response->set_port(out.port());
   response->set_node_id(node_id);
-  // Increments the port number.
-  node_port_ += 1;
   return ::grpc::Status::OK;
 }
 
 void OakManager::InitializeEnclaveManager() {
+  std::srand(std::time(nullptr));
+
   LOG(INFO) << "Initializing enclave manager";
   ::asylo::EnclaveManager::Configure(::asylo::EnclaveManagerOptions());
   auto manager_result = ::asylo::EnclaveManager::Instance();
   if (!manager_result.ok()) {
-    LOG(QFATAL) << "Could not initialize enclave manager: "
-                << manager_result.status();
+    LOG(QFATAL) << "Could not initialize enclave manager: " << manager_result.status();
   }
   enclave_manager_ = manager_result.ValueOrDie();
   LOG(INFO) << "Enclave manager initialized";
@@ -65,27 +56,26 @@ void OakManager::InitializeEnclaveManager() {
                                                             /*debug=*/true);
 }
 
-void OakManager::CreateEnclave(const std::string& node_id,
-                               const std::string& module, uint32_t port) {
+void OakManager::CreateEnclave(const std::string& node_id, const std::string& module) {
   LOG(INFO) << "Creating enclave";
   ::asylo::EnclaveConfig config;
-  ::oak::InitializeInput* initialize_input =
-      config.MutableExtension(::oak::initialize_input);
+  ::oak::InitializeInput* initialize_input = config.MutableExtension(::oak::initialize_input);
   initialize_input->set_node_id(node_id);
   initialize_input->set_module(module);
-  initialize_input->set_port(port);
 
-  ::asylo::Status status =
-      enclave_manager_->LoadEnclave(node_id, *enclave_loader_, config);
+  // Uses a random port number in range of [node_port_min, node_port_max].
+  // TODO: keep track of "free" ports.
+  initialize_input->set_grpc_port(FLAGS_node_port_min +
+      std::rand() % (FLAGS_node_port_max - FLAGS_node_port_min + 1));
+
+  ::asylo::Status status = enclave_manager_->LoadEnclave(node_id, *enclave_loader_, config);
   if (!status.ok()) {
-    LOG(QFATAL) << "Could not load enclave " << FLAGS_enclave_path << ": "
-                << status;
+    LOG(QFATAL) << "Could not load enclave " << FLAGS_enclave_path << ": " << status;
   }
   LOG(INFO) << "Enclave created";
 }
 
-::oak::InitializeOutput OakManager::GetEnclaveOutput(
-    const std::string& node_id) {
+::oak::InitializeOutput OakManager::GetEnclaveOutput(const std::string& node_id) {
   LOG(INFO) << "Initializing enclave";
   ::asylo::EnclaveClient* client = enclave_manager_->GetClient(node_id);
   ::asylo::EnclaveInput input;
@@ -110,8 +100,7 @@ void OakManager::DestroyEnclave(const std::string& node_id) {
   LOG(INFO) << "Destroying enclave";
   ::asylo::EnclaveClient* client = enclave_manager_->GetClient(node_id);
   ::asylo::EnclaveFinal final_input;
-  ::asylo::Status status =
-      enclave_manager_->DestroyEnclave(client, final_input);
+  ::asylo::Status status = enclave_manager_->DestroyEnclave(client, final_input);
   if (!status.ok()) {
     LOG(QFATAL) << "Destroy " << FLAGS_enclave_path << " failed: " << status;
   }
