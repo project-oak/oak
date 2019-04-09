@@ -189,6 +189,7 @@ OakNode::OakNode(const std::string& node_id, const std::string& module)
 //
 // TODO: Selectively install only the host functions allowed by the policies associated with the Oak
 // Module.
+// TEST
 void OakNode::InitEnvironment(wabt::interp::Environment* env) {
   wabt::interp::HostModule* oak_module = env->AppendHostModule("oak");
 
