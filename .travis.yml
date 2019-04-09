@@ -4,7 +4,8 @@ services:
 cache:
   timeout: 3600
   directories:
-  - ./bazel-cache/_bazel_root/b6bc0828d5b43c7085b650e0698bf388/action_cache
+  - ./bazel-cache
+  #- ./bazel-cache/_bazel_root/b6bc0828d5b43c7085b650e0698bf388/action_cache
 
 script:
   - ls -als .
