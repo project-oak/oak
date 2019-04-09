@@ -34,6 +34,41 @@ do not expect commits to have meaningful messages during a review; the PR
 description should follow
 [standard git commit conventions](https://chris.beams.io/posts/git-commit/).
 
+## Style Guide
+
+### C++
+
+-   Use [`clang-format`](https://clang.llvm.org/docs/ClangFormat.html) to keep
+    C++ code formatted consistently.
+-   Use fully qualified names or `using` directives when referring to symbols
+    both inside and outside the current namespace.
+
+    ```C++
+    namespace oak {
+      ...
+      ::oak::OakNode
+      ...
+    }
+    ```
+
+    ```C++
+    namespace oak {
+      using ::oak::OakNode;
+      ...
+      OakNode
+      ...
+    }
+    ```
+
+-   Prefix fully qualified names with `::` unless they refer to symbols in the
+    `std` namespace.
+
+    ```C++
+    ::oak::OakNode
+    ::grpc::ServerCredentials
+    std::unique_ptr`
+    ```
+
 ## Community Guidelines
 
 This project follows
