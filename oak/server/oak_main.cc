@@ -20,7 +20,6 @@
 #include <string>
 #include <vector>
 
-#include "absl/memory/memory.h"
 #include "absl/synchronization/notification.h"
 #include "absl/time/time.h"
 #include "asylo/util/logging.h"
@@ -36,22 +35,22 @@ void sigint_handler(int param) {
 
 int main(int argc, char* argv[]) {
   // Setup.
-  ::google::ParseCommandLineFlags(&argc, &argv, /*remove_flags=*/true);
+  google::ParseCommandLineFlags(&argc, &argv, /*remove_flags=*/true);
 
   // We install an explicit SIGINT handler, as for some reason the default one
   // does not seem to work.
   std::signal(SIGINT, sigint_handler);
 
   // Create manager instance.
-  std::unique_ptr<OakManager> service = absl::make_unique<OakManager>();
+  std::unique_ptr<oak::OakManager> service = absl::make_unique<oak::OakManager>();
 
   // Initialize and run gRPC server.
   LOG(INFO) << "Starting gRPC server";
-  ::grpc::ServerBuilder builder;
+  grpc::ServerBuilder builder;
   int selected_port;
-  builder.AddListeningPort("[::]:8888", ::grpc::InsecureServerCredentials(), &selected_port);
+  builder.AddListeningPort("[::]:8888", grpc::InsecureServerCredentials(), &selected_port);
   builder.RegisterService(service.get());
-  std::unique_ptr<::grpc::Server> server = builder.BuildAndStart();
+  std::unique_ptr<grpc::Server> server = builder.BuildAndStart();
   LOG(INFO) << "gRPC server started on port " << selected_port;
 
   // Wait.

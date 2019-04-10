@@ -32,11 +32,11 @@ using ::oak::examples::running_average::RunningAverage;
 using ::oak::examples::running_average::SubmitSampleRequest;
 
 void submit_sample(RunningAverage::Stub* stub, int sample_value) {
-  ::grpc::ClientContext context;
+  grpc::ClientContext context;
   SubmitSampleRequest request;
   request.set_value(sample_value);
-  ::google::protobuf::Empty response;
-  ::grpc::Status status = stub->SubmitSample(&context, request, &response);
+  google::protobuf::Empty response;
+  grpc::Status status = stub->SubmitSample(&context, request, &response);
   if (!status.ok()) {
     LOG(QFATAL) << "Could not submit sample: " << status.error_code() << ": "
                 << status.error_message();
@@ -44,10 +44,10 @@ void submit_sample(RunningAverage::Stub* stub, int sample_value) {
 }
 
 int retrieve_average(RunningAverage::Stub* stub) {
-  ::grpc::ClientContext context;
-  ::google::protobuf::Empty request;
+  grpc::ClientContext context;
+  google::protobuf::Empty request;
   GetAverageResponse response;
-  ::grpc::Status status = stub->GetAverage(&context, request, &response);
+  grpc::Status status = stub->GetAverage(&context, request, &response);
   if (!status.ok()) {
     LOG(QFATAL) << "Could not retrieve average: " << status.error_code() << ": "
                 << status.error_message();
@@ -56,30 +56,28 @@ int retrieve_average(RunningAverage::Stub* stub) {
 }
 
 int main(int argc, char** argv) {
-  ::google::ParseCommandLineFlags(&argc, &argv, /*remove_flags=*/true);
+  google::ParseCommandLineFlags(&argc, &argv, /*remove_flags=*/true);
 
   // Connect to the Oak Manager.
-  std::unique_ptr<::oak::ManagerClient> manager_client = ::absl::make_unique<::oak::ManagerClient>(
-      ::grpc::CreateChannel(FLAGS_manager_address, ::grpc::InsecureChannelCredentials()));
+  std::unique_ptr<oak::ManagerClient> manager_client = absl::make_unique<oak::ManagerClient>(
+      grpc::CreateChannel(FLAGS_manager_address, grpc::InsecureChannelCredentials()));
 
   // Load the Oak Module to execute. This needs to be compiled from Rust to WebAssembly separately.
-  std::string module_bytes = ::oak::utils::read_file(FLAGS_module);
-  ::oak::CreateNodeResponse create_node_response = manager_client->CreateNode(module_bytes);
+  std::string module_bytes = oak::utils::read_file(FLAGS_module);
+  oak::CreateNodeResponse create_node_response = manager_client->CreateNode(module_bytes);
 
   std::stringstream addr;
   addr << "127.0.0.1:" << create_node_response.port();
   LOG(INFO) << "Connecting to Oak Node: " << addr.str();
 
-  ::oak::NodeClient::InitializeAssertionAuthorities();
+  oak::NodeClient::InitializeAssertionAuthorities();
 
   // Connect to the newly created Oak Node from different clients.
-  auto stub_0 = RunningAverage::NewStub(::grpc::CreateChannel(
-      addr.str(),
-      ::asylo::EnclaveChannelCredentials(::asylo::BidirectionalNullCredentialsOptions())));
+  auto stub_0 = RunningAverage::NewStub(grpc::CreateChannel(
+      addr.str(), asylo::EnclaveChannelCredentials(asylo::BidirectionalNullCredentialsOptions())));
 
-  auto stub_1 = RunningAverage::NewStub(::grpc::CreateChannel(
-      addr.str(),
-      ::asylo::EnclaveChannelCredentials(::asylo::BidirectionalNullCredentialsOptions())));
+  auto stub_1 = RunningAverage::NewStub(grpc::CreateChannel(
+      addr.str(), asylo::EnclaveChannelCredentials(asylo::BidirectionalNullCredentialsOptions())));
 
   // Submit samples from different clients.
   submit_sample(stub_0.get(), 100);
