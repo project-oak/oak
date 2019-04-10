@@ -49,7 +49,7 @@ description should follow
     ```C++
     namespace oak {
       ...
-      OakNode n;
+      Node n;
       grpc::Status s;
       ...
     }
@@ -61,7 +61,7 @@ description should follow
     namespace oak {
       using ::grpc::Status;
       ...
-      OakNode n;
+      Node n;
       Status s;
       ...
     }
