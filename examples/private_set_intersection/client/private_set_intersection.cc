@@ -65,7 +65,7 @@ int main(int argc, char** argv) {
   google::ParseCommandLineFlags(&argc, &argv, /*remove_flags=*/true);
 
   // Connect to the Oak Manager.
-  std::unique_ptr<::oak::ManagerClient> manager_client = absl::make_unique<::oak::ManagerClient>(
+  std::unique_ptr<oak::ManagerClient> manager_client = absl::make_unique<oak::ManagerClient>(
       grpc::CreateChannel(FLAGS_manager_address, grpc::InsecureChannelCredentials()));
 
   // Load the Oak Module to execute. This needs to be compiled from Rust to WebAssembly separately.
@@ -79,16 +79,15 @@ int main(int argc, char** argv) {
   oak::NodeClient::InitializeAssertionAuthorities();
 
   // Connect to the newly created Oak Node from different clients.
-  auto channel_0 = ::grpc::CreateChannel(
-      addr.str(), asylo::EnclaveChannelCredentials(::asylo::BidirectionalNullCredentialsOptions()));
+  auto channel_0 = grpc::CreateChannel(
+      addr.str(), asylo::EnclaveChannelCredentials(asylo::BidirectionalNullCredentialsOptions()));
   oak::NodeClient node_client_0(channel_0);
   oak::GetAttestationResponse attestation = node_client_0.GetAttestation();
   LOG(INFO) << "Oak Node attestation: " << attestation.DebugString();
   auto stub_0 = PrivateSetIntersection::NewStub(channel_0);
 
-  auto stub_1 = PrivateSetIntersection::NewStub(::grpc::CreateChannel(
-      addr.str(),
-      asylo::EnclaveChannelCredentials(::asylo::BidirectionalNullCredentialsOptions())));
+  auto stub_1 = PrivateSetIntersection::NewStub(grpc::CreateChannel(
+      addr.str(), asylo::EnclaveChannelCredentials(asylo::BidirectionalNullCredentialsOptions())));
 
   // Submit sets from different clients.
   std::vector<std::string> set_0{"a", "b", "c"};
