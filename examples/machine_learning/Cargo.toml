@@ -10,3 +10,4 @@ crate-type = ["cdylib"]
 rusty-machine = "*"
 rand = "*"
 oak = { path = "../../rust/oak" }
+oak_derive = { path = "../../rust/oak_derive" }

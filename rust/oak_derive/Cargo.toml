@@ -1,0 +1,15 @@
+[package]
+name = "oak_derive"
+version = "0.1.0"
+authors = ["Tiziano Santoro <tzn@google.com>"]
+edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+quote = "*"
+syn = { version = "*", features = ["extra-traits"]}
+
+[dev-dependencies]
+oak = { path = "../oak" }
