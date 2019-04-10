@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
   google::ParseCommandLineFlags(&argc, &argv, /*remove_flags=*/true);
 
   // Connect to the Oak Manager.
-  std::unique_ptr<::oak::ManagerClient> manager_client = absl::make_unique<::oak::ManagerClient>(
+  std::unique_ptr<oak::ManagerClient> manager_client = absl::make_unique<oak::ManagerClient>(
       grpc::CreateChannel(FLAGS_manager_address, grpc::InsecureChannelCredentials()));
 
   // Load the Oak Module to execute. This needs to be compiled from Rust to WebAssembly separately.

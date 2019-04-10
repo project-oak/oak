@@ -26,6 +26,8 @@
 
 #include "absl/strings/str_cat.h"
 #include "absl/synchronization/mutex.h"
+#include "asylo/grpc/auth/enclave_server_credentials.h"
+#include "asylo/grpc/auth/null_credentials_options.h"
 #include "asylo/grpc/util/enclave_server.pb.h"
 #include "asylo/trusted_application.h"
 #include "asylo/util/logging.h"
