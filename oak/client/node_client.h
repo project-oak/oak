@@ -16,6 +16,7 @@
 
 #include "asylo/grpc/auth/enclave_channel_credentials.h"
 #include "asylo/grpc/auth/null_credentials_options.h"
+#include "asylo/identity/descriptions.h"
 #include "asylo/identity/init.h"
 #include "asylo/util/logging.h"
 #include "oak/proto/node.grpc.pb.h"
@@ -49,13 +50,21 @@ class NodeClient {
     return response;
   }
 
+  static asylo::EnclaveAssertionAuthorityConfig GetNullAssertionAuthorityConfig() {
+    asylo::EnclaveAssertionAuthorityConfig test_config;
+    asylo::SetNullAssertionDescription(test_config.mutable_description());
+    return test_config;
+  }
+
   // This method sets up the necessary global state for Asylo to be able to validate authorities
   // (e.g. root CAs, remote attestation endpoints, etc.).
   static void InitializeAssertionAuthorities() {
     LOG(INFO) << "Initializing assertion authorities";
 
-    // TODO: Provide a list of Assertion Authorities when available.
-    std::vector<asylo::EnclaveAssertionAuthorityConfig> configs;
+    // TODO: Provide a list of non-null Assertion Authorities when available.
+    std::vector<asylo::EnclaveAssertionAuthorityConfig> configs = {
+        GetNullAssertionAuthorityConfig(),
+    };
 
     asylo::Status status =
         asylo::InitializeEnclaveAssertionAuthorities(configs.begin(), configs.end());
