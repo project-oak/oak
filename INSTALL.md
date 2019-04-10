@@ -1,7 +1,7 @@
 # Step by step instructions for installing Oak on Ubuntu 18.04
 
-This is starting with a clean Ubuntu install. I needed 4 GB of RAM for
-enclave creation to work.
+This is starting with a clean Ubuntu install. I needed 4 GB of RAM for enclave
+creation to work.
 
 ```
 # apt install git
@@ -17,12 +17,11 @@ enclave creation to work.
 # usermod -a -G docker $USER
 ```
 
-If `$USER` is logged in, you'll need to Log out and log in again (so the
-group change takes effect).
+If `$USER` is logged in, you'll need to Log out and log in again (so the group
+change takes effect).
 
-We use `rustup` rather than `apt install rustc` because we need `rustup` to
-add the webassembly target and it seems that is not in the rustc
-package.
+We use `rustup` rather than `apt install rustc` because we need `rustup` to add
+the webassembly target and it seems that is not in the rustc package.
 
 ```
 $ curl https://sh.rustup.rs -sSf > /tmp/rustup  # make sure you're happy to run
@@ -36,8 +35,8 @@ $ scripts/run_server_docker  # this may take some time
 
 add source $HOME/.cargo/env to your shell init script (e.g. .bashrc or .zshrc)
 
-While you're waiting for docker, you might want to take a look at what that script does.
-The one mystery you might run into is: what does Bazel build?
+While you're waiting for docker, you might want to take a look at what that
+script does. The one mystery you might run into is: what does Bazel build?
 
 This: `oak/server/BUILD`
 

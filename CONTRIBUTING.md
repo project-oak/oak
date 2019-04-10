@@ -26,15 +26,15 @@ During a review, the author of the change addresses review comments by adding
 new commits to the same branch / PR and then pushing again (note: we discourage
 force-pushing to any branch, even during review).
 
-Once approved, each PR is merged via the ["Squash and
-merge"](https://help.github.com/en/articles/about-pull-request-merges#squash-and-merge-your-pull-request-commits)
+Once approved, each PR is merged via the
+["Squash and merge"](https://help.github.com/en/articles/about-pull-request-merges#squash-and-merge-your-pull-request-commits)
 button in the GitHub UI. The final commit message is taken from the PR
 description, and individual commit messages are discarded; for this reason, we
 do not expect commits to have meaningful messages during a review; the PR
-description should follow [standard git commit
-conventions](https://chris.beams.io/posts/git-commit/).
+description should follow
+[standard git commit conventions](https://chris.beams.io/posts/git-commit/).
 
 ## Community Guidelines
 
-This project follows [Google's Open Source Community
-Guidelines](https://opensource.google.com/conduct/).
+This project follows
+[Google's Open Source Community Guidelines](https://opensource.google.com/conduct/).

@@ -16,8 +16,8 @@
 
 #include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
-#include "examples/running_average/proto/running_average.grpc.pb.h"
-#include "examples/running_average/proto/running_average.pb.h"
+#include "examples/private_set_intersection/proto/private_set_intersection.grpc.pb.h"
+#include "examples/private_set_intersection/proto/private_set_intersection.pb.h"
 #include "examples/utils/utils.h"
 #include "gflags/gflags.h"
 #include "include/grpcpp/grpcpp.h"
@@ -27,32 +27,38 @@
 DEFINE_string(manager_address, "127.0.0.1:8888", "Address of the Oak Manager to connect to");
 DEFINE_string(module, "", "File containing the compiled WebAssembly module");
 
-using ::oak::examples::running_average::GetAverageResponse;
-using ::oak::examples::running_average::RunningAverage;
-using ::oak::examples::running_average::SubmitSampleRequest;
+using ::oak::examples::private_set_intersection::GetIntersectionResponse;
+using ::oak::examples::private_set_intersection::PrivateSetIntersection;
+using ::oak::examples::private_set_intersection::SubmitSetRequest;
 
-void submit_sample(RunningAverage::Stub* stub, int sample_value) {
+void SubmitSet(PrivateSetIntersection::Stub* stub, std::vector<std::string> set) {
   ::grpc::ClientContext context;
-  SubmitSampleRequest request;
-  request.set_value(sample_value);
+  SubmitSetRequest request;
+  for (auto item : set) {
+    request.add_values(item);
+  }
   ::google::protobuf::Empty response;
-  ::grpc::Status status = stub->SubmitSample(&context, request, &response);
+  ::grpc::Status status = stub->SubmitSet(&context, request, &response);
   if (!status.ok()) {
-    LOG(QFATAL) << "Could not submit sample: " << status.error_code() << ": "
+    LOG(QFATAL) << "Could not submit set: " << status.error_code() << ": "
                 << status.error_message();
   }
 }
 
-int retrieve_average(RunningAverage::Stub* stub) {
+std::vector<std::string> RetrieveIntersection(PrivateSetIntersection::Stub* stub) {
+  std::vector<std::string> values;
   ::grpc::ClientContext context;
   ::google::protobuf::Empty request;
-  GetAverageResponse response;
-  ::grpc::Status status = stub->GetAverage(&context, request, &response);
+  GetIntersectionResponse response;
+  ::grpc::Status status = stub->GetIntersection(&context, request, &response);
   if (!status.ok()) {
-    LOG(QFATAL) << "Could not retrieve average: " << status.error_code() << ": "
+    LOG(QFATAL) << "Could not retrieve intersection: " << status.error_code() << ": "
                 << status.error_message();
   }
-  return response.average();
+  for (auto item : response.values()) {
+    values.push_back(item);
+  }
+  return values;
 }
 
 int main(int argc, char** argv) {
@@ -73,26 +79,37 @@ int main(int argc, char** argv) {
   ::oak::NodeClient::InitializeAssertionAuthorities();
 
   // Connect to the newly created Oak Node from different clients.
-  auto stub_0 = RunningAverage::NewStub(::grpc::CreateChannel(
+  auto channel_0 = ::grpc::CreateChannel(
+      addr.str(),
+      ::asylo::EnclaveChannelCredentials(::asylo::BidirectionalNullCredentialsOptions()));
+  ::oak::NodeClient node_client_0(channel_0);
+  ::oak::GetAttestationResponse attestation = node_client_0.GetAttestation();
+  LOG(INFO) << "Oak Node attestation: " << attestation.DebugString();
+  auto stub_0 = PrivateSetIntersection::NewStub(channel_0);
+
+  auto stub_1 = PrivateSetIntersection::NewStub(::grpc::CreateChannel(
       addr.str(),
       ::asylo::EnclaveChannelCredentials(::asylo::BidirectionalNullCredentialsOptions())));
 
-  auto stub_1 = RunningAverage::NewStub(::grpc::CreateChannel(
-      addr.str(),
-      ::asylo::EnclaveChannelCredentials(::asylo::BidirectionalNullCredentialsOptions())));
+  // Submit sets from different clients.
+  std::vector<std::string> set_0{"a", "b", "c"};
+  SubmitSet(stub_0.get(), set_0);
 
-  // Submit samples from different clients.
-  submit_sample(stub_0.get(), 100);
-  submit_sample(stub_1.get(), 200);
-  submit_sample(stub_0.get(), 40);
-  submit_sample(stub_1.get(), 60);
+  std::vector<std::string> set_1{"b", "c", "d"};
+  SubmitSet(stub_1.get(), set_1);
 
-  // Retrieve average.
-  int average_0 = retrieve_average(stub_0.get());
-  LOG(INFO) << "client 0 average: " << average_0;
+  // Retrieve intersection.
+  std::vector<std::string> intersection_0 = RetrieveIntersection(stub_0.get());
+  LOG(INFO) << "client 0 intersection:";
+  for (auto item : intersection_0) {
+    LOG(INFO) << "- " << item;
+  }
 
-  int average_1 = retrieve_average(stub_1.get());
-  LOG(INFO) << "client 1 average: " << average_1;
+  std::vector<std::string> intersection_1 = RetrieveIntersection(stub_1.get());
+  LOG(INFO) << "client 1 intersection:";
+  for (auto item : intersection_1) {
+    LOG(INFO) << "- " << item;
+  }
 
   return 0;
 }

@@ -18,7 +18,6 @@
 #include "asylo/grpc/auth/null_credentials_options.h"
 #include "asylo/identity/init.h"
 #include "asylo/util/logging.h"
-
 #include "oak/proto/node.grpc.pb.h"
 
 namespace oak {
@@ -28,6 +27,9 @@ namespace oak {
 // It allows invoking the Oak Node as specified by the Oak Node policies.
 //
 // TODO: Verify remote attestations.
+// TODO: Make this class take ownership of the gRPC channel (e.g. via a unique_ptr), and force
+// clients to instantiate gRPC stubs via it, or parametrize this class with the type of the stub to
+// instantiate.
 class NodeClient {
  public:
   NodeClient(const std::shared_ptr<::grpc::ChannelInterface>& channel)
@@ -35,8 +37,16 @@ class NodeClient {
     InitializeAssertionAuthorities();
   }
 
-  void GetAttestation() {
-    // TODO: Implement this method.
+  ::oak::GetAttestationResponse GetAttestation() {
+    ::grpc::ClientContext context;
+    ::oak::GetAttestationRequest request;
+    ::oak::GetAttestationResponse response;
+    auto status = stub_->GetAttestation(&context, request, &response);
+    if (!status.ok()) {
+      LOG(QFATAL) << "Could not get attestation: " << status.error_code() << ": "
+                  << status.error_message();
+    }
+    return response;
   }
 
   // This method sets up the necessary global state for Asylo to be able to validate authorities

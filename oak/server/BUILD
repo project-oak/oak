@@ -52,8 +52,10 @@ cc_library(
     ],
     deps = [
         "//oak/proto:node_grpc_proto",
+        "@boringssl//:crypto",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/synchronization",
         "@com_google_absl//absl/types:span",
         "@com_google_asylo//asylo/util:logging",
         "@wabt",
@@ -61,21 +63,13 @@ cc_library(
 )
 
 cc_library(
-    name = "grpc",
-    srcs = [
-        "grpc_event_handler.cc",
-    ],
-    hdrs = [
-        "grpc_event_handler.h",
-        "grpc_stream.h",
-    ],
+    name = "module_invocation",
+    srcs = ["module_invocation.cc"],
+    hdrs = ["module_invocation.h"],
     deps = [
         ":oak_node",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/memory",
-        "@com_google_absl//absl/types:span",
-        "@com_google_asylo//asylo/util:logging",
-        "@wabt",
     ],
 )
 
@@ -85,7 +79,7 @@ cc_library(
         "enclave_server.h",
     ],
     deps = [
-        ":grpc",
+        ":module_invocation",
         ":oak_node",
         "//oak/proto:enclave_proto_cc",
         "@com_github_grpc_grpc//:grpc++",

@@ -207,16 +207,16 @@ clients.
 ## Oak Manager
 
 The **Oak Manager** creates Oak Nodes running within a platform provider. Note
-that the Oak Manager is not part of the TCB: the actual trusted attestation
-only happens between client and the Oak Node running in the enclave at execution
+that the Oak Manager is not part of the TCB: the actual trusted attestation only
+happens between client and the Oak Node running in the enclave at execution
 time.
 
-A node creation request contains the Oak Module and the policies to run as part of
-the newly created Oak Node.
+A node creation request contains the Oak Module and the policies to run as part
+of the newly created Oak Node.
 
-In response to the request, the Oak Manager sends back to the caller
-details about the gRPC endpoint of the newly created Oak Node, initialized with
-the Oak Module and policy configuration specified in the request.
+In response to the request, the Oak Manager sends back to the caller details
+about the gRPC endpoint of the newly created Oak Node, initialized with the Oak
+Module and policy configuration specified in the request.
 
 ## Policy Configuration
 
@@ -299,8 +299,8 @@ Sample flow:
 
 -   ISV writes an Oak Module for the Oak VM using a high-level language and
     compiles it to WebAssembly.
--   The client connects to the Oak Manager, and requests the creation of an
-    Oak Node running the compiled Oak Module.
+-   The client connects to the Oak Manager, and requests the creation of an Oak
+    Node running the compiled Oak Module.
     +   The module code itself is passed as part of the creation request.
 -   The Oak Manager creates a new enclave and initializes it with a fresh Oak
     Node, and then seals the enclave. The Oak Node exposes a gRPC endpoint at a
@@ -335,8 +335,10 @@ TODO: Roughtime
 -   Rust: https://rustup.rs/
     +   `curl https://sh.rustup.rs -sSf > /tmp/rustup`
     +   `less /tmp/rustup` (inspect downloaded script before running it)
-    +   `sh /tmp/rustup` (follow on-screen instructions -- option 1 is fine to start with)
-    +   add `source $HOME/.cargo/env` to your shell init script (e.g. `.bashrc` or `.zshrc`)
+    +   `sh /tmp/rustup` (follow on-screen instructions -- option 1 is fine to
+        start with)
+    +   add `source $HOME/.cargo/env` to your shell init script (e.g. `.bashrc`
+        or `.zshrc`)
     +   `rustup target add wasm32-unknown-unknown`
 
 ### Run Server

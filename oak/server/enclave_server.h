@@ -36,10 +36,8 @@
 #include "include/grpcpp/security/server_credentials.h"
 #include "include/grpcpp/server.h"
 #include "include/grpcpp/server_builder.h"
-
 #include "oak/proto/enclave.pb.h"
-#include "oak/server/grpc_event_handler.h"
-#include "oak/server/grpc_stream.h"
+#include "oak/server/module_invocation.h"
 #include "oak/server/oak_node.h"
 
 namespace oak {
@@ -68,8 +66,8 @@ class EnclaveServer final : public asylo::TrustedApplication {
   asylo::Status Initialize(const asylo::EnclaveConfig& config) override {
     LOG(INFO) << "Initializing Oak Instance";
     const oak::InitializeInput& initialize_input = config.GetExtension(oak::initialize_input);
-    node_ = absl::make_unique<oak::grpc_server::OakNode>(initialize_input.node_id(),
-                                                         initialize_input.module());
+    node_ =
+        absl::make_unique<::oak::OakNode>(initialize_input.node_id(), initialize_input.module());
     return InitializeServer();
   }
 
@@ -105,14 +103,14 @@ class EnclaveServer final : public asylo::TrustedApplication {
   asylo::StatusOr<std::unique_ptr<::grpc::Server>> CreateServer()
       EXCLUSIVE_LOCKS_REQUIRED(server_mutex_) {
     ::grpc::ServerBuilder builder;
-    // TODO: Listen on a free port (using ":0" notation).
-    builder.AddListeningPort("[::]:30000", credentials_, &port_);
+    // Uses ":0" notation so that server listens on a free port.
+    builder.AddListeningPort("[::]:0", credentials_, &port_);
     builder.RegisterService(node_.get());
 
     // Add a completion queue and a generic service, in order to proxy incoming RPCs to the Oak
     // Node.
     completion_queue_ = builder.AddCompletionQueue();
-    builder.RegisterAsyncGenericService(&generic_service_);
+    builder.RegisterAsyncGenericService(&module_service_);
 
     std::unique_ptr<::grpc::Server> server = builder.BuildAndStart();
     if (!server) {
@@ -141,38 +139,23 @@ class EnclaveServer final : public asylo::TrustedApplication {
     }
   }
 
-  void RequestNextCall() {
-    // The stream will delete itself when it finishes.
-    auto stream = std::make_shared<grpc_server::GrpcStream>(node_);
-    generic_service_.RequestCall(&stream->server_context(), &stream->server_reader_writer(),
-                                 completion_queue_.get(), completion_queue_.get(),
-                                 new grpc_server::StreamCreationEventHandler(stream));
-  }
-
   // Consumes gRPC events from the completion queue in an infinite loop.
   void CompletionQueueLoop() {
     LOG(INFO) << "Starting gRPC completion queue loop";
+    // The invocation object will delete itself when finished with the request,
+    // after creating a new invocation object for the next request.
+    auto* invocation = new ModuleInvocation(&module_service_, completion_queue_.get(), node_.get());
+    invocation->Start();
     while (true) {
-      RequestNextCall();
-
-      grpc_server::BaseGrpcEventHandler* eventHandler = nullptr;
-      bool ok = false;
-      if (!completion_queue_->Next(reinterpret_cast<void**>(&eventHandler), &ok)) {
+      bool ok;
+      void* tag;
+      if (!completion_queue_->Next(&tag, &ok)) {
         LOG(FATAL) << "Failure reading from completion queue";
         return;
       }
-
-      if (!ok) {
-        LOG(INFO) << "Received termination signal from gRPC. Shutting down...";
-        return;
-      }
-      if (eventHandler == nullptr) {
-        LOG(FATAL) << "Received unexpected null event on queue. Aborting.";
-        return;
-      }
-
-      eventHandler->handle();
-      delete eventHandler;
+      auto* callback = static_cast<std::function<void(bool)>*>(tag);
+      (*callback)(ok);
+      delete callback;
     }
   }
 
@@ -185,10 +168,10 @@ class EnclaveServer final : public asylo::TrustedApplication {
   // The port on which the server is listening.
   int port_;
 
-  std::shared_ptr<::oak::grpc_server::OakNode> node_;
+  std::unique_ptr<::oak::OakNode> node_;
   std::shared_ptr<::grpc::ServerCredentials> credentials_;
 
-  ::grpc::AsyncGenericService generic_service_;
+  ::grpc::AsyncGenericService module_service_;
   std::unique_ptr<::grpc::ServerCompletionQueue> completion_queue_;
 };
 

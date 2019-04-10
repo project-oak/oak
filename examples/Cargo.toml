@@ -2,6 +2,7 @@
 
 members = [
     "hello_world",
+    "private_set_intersection",
     "running_average",
     "machine_learning",
 ]
