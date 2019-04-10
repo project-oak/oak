@@ -55,11 +55,11 @@ RUSTFMT_EXIT_CODE=0
 find examples rust -type f -name '*.rs' | xargs -I{} -P ${NPROC} rustfmt --check {} \
   && RUSTFMT_EXIT_CODE=$? || RUSTFMT_EXIT_CODE=$?
 
-# When looking for clang-format "replacement" tags, grep will return 0 if it 
+# When looking for clang-format "replacement" tags, grep will return 0 if it
 # has found anything and 1 if not, so here we'll invert the return code to
 # indicate an error when the formatting is insufficient. Rustfmt behaves as
 # expected.
-if [ $CLANG_FORMAT_EXIT_CODE -ne 1 ] || [ $RUSTFMT_EXIT_CODE -ne 0 ]; then 
+if [ $CLANG_FORMAT_EXIT_CODE -ne 1 ] || [ $RUSTFMT_EXIT_CODE -ne 0 ]; then
   echo "Codebase violates formatting conventions, please fix."
   exit 1
 else
