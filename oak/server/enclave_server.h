@@ -57,17 +57,16 @@ class EnclaveServer final : public asylo::TrustedApplication {
  public:
   EnclaveServer()
       : node_(nullptr),
-        credentials_(
-            ::asylo::EnclaveServerCredentials(::asylo::BidirectionalNullCredentialsOptions())),
+        credentials_(asylo::EnclaveServerCredentials(asylo::BidirectionalNullCredentialsOptions())),
         completion_queue_(nullptr){};
 
   ~EnclaveServer() = default;
 
   asylo::Status Initialize(const asylo::EnclaveConfig& config) override {
     LOG(INFO) << "Initializing Oak Instance";
-    const oak::InitializeInput& initialize_input = config.GetExtension(oak::initialize_input);
-    node_ =
-        absl::make_unique<::oak::OakNode>(initialize_input.node_id(), initialize_input.module());
+    const InitializeInput& initialize_input_message = config.GetExtension(initialize_input);
+    node_ = absl::make_unique<OakNode>(initialize_input_message.node_id(),
+                                       initialize_input_message.module());
     return InitializeServer();
   }
 
@@ -100,9 +99,9 @@ class EnclaveServer final : public asylo::TrustedApplication {
   }
 
   // Creates a gRPC server that hosts node_ on a free port with credentials_.
-  asylo::StatusOr<std::unique_ptr<::grpc::Server>> CreateServer()
+  asylo::StatusOr<std::unique_ptr<grpc::Server>> CreateServer()
       EXCLUSIVE_LOCKS_REQUIRED(server_mutex_) {
-    ::grpc::ServerBuilder builder;
+    grpc::ServerBuilder builder;
     // Uses ":0" notation so that server listens on a free port.
     builder.AddListeningPort("[::]:0", credentials_, &port_);
     builder.RegisterService(node_.get());
@@ -125,11 +124,11 @@ class EnclaveServer final : public asylo::TrustedApplication {
   // Gets the address of the hosted gRPC server and writes it to
   // server_output_config extension of |output|.
   void GetServerAddress(asylo::EnclaveOutput* output) EXCLUSIVE_LOCKS_REQUIRED(server_mutex_) {
-    oak::InitializeOutput* initialize_output = output->MutableExtension(oak::initialize_output);
-    initialize_output->set_port(port_);
+    InitializeOutput* initialize_output_message = output->MutableExtension(initialize_output);
+    initialize_output_message->set_port(port_);
   }
 
-  // Finalizes the gRPC server by calling ::gprc::Server::Shutdown().
+  // Finalizes the gRPC server by calling gprc::Server::Shutdown().
   void FinalizeServer() LOCKS_EXCLUDED(server_mutex_) {
     absl::MutexLock lock(&server_mutex_);
     if (server_) {
@@ -168,11 +167,11 @@ class EnclaveServer final : public asylo::TrustedApplication {
   // The port on which the server is listening.
   int port_;
 
-  std::unique_ptr<::oak::OakNode> node_;
-  std::shared_ptr<::grpc::ServerCredentials> credentials_;
+  std::unique_ptr<OakNode> node_;
+  std::shared_ptr<grpc::ServerCredentials> credentials_;
 
-  ::grpc::AsyncGenericService module_service_;
-  std::unique_ptr<::grpc::ServerCompletionQueue> completion_queue_;
+  grpc::AsyncGenericService module_service_;
+  std::unique_ptr<grpc::ServerCompletionQueue> completion_queue_;
 };
 
 }  // namespace oak

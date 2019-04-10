@@ -38,35 +38,33 @@ description should follow
 
 ### C++
 
+-   Follow https://google.github.io/styleguide/cppguide.html
+-   Follow https://abseil.io/tips/
 -   Use [`clang-format`](https://clang.llvm.org/docs/ClangFormat.html) to keep
     C++ code formatted consistently.
--   Use fully qualified names or `using` directives when referring to symbols
-    both inside and outside the current namespace.
+-   Use fully qualified names (leading `::`) for `using` declarations and
+    namespace aliases, and avoid fully qualified names for everything else,
+    unless it is necessary to make the code compile.
 
     ```C++
     namespace oak {
       ...
-      ::oak::OakNode
+      OakNode n;
+      grpc::Status s;
       ...
     }
     ```
+
+    or
 
     ```C++
     namespace oak {
-      using ::oak::OakNode;
+      using ::grpc::Status;
       ...
-      OakNode
+      OakNode n;
+      Status s;
       ...
     }
-    ```
-
--   Prefix fully qualified names with `::` unless they refer to symbols in the
-    `std` namespace.
-
-    ```C++
-    ::oak::OakNode
-    ::grpc::ServerCredentials
-    std::unique_ptr`
     ```
 
 ## Community Guidelines

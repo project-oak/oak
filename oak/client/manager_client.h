@@ -25,20 +25,20 @@ namespace oak {
 // TODO: Allow specifying policy configuration in the CreateNode request.
 class ManagerClient {
  public:
-  ManagerClient(const std::shared_ptr<::grpc::ChannelInterface>& channel)
-      : stub_(::oak::Manager::NewStub(channel, ::grpc::StubOptions())) {}
+  ManagerClient(const std::shared_ptr<grpc::ChannelInterface>& channel)
+      : stub_(Manager::NewStub(channel, grpc::StubOptions())) {}
 
   // TODO: Return StatusOr<::oak::CreateNodeResponse>.
-  ::oak::CreateNodeResponse CreateNode(const std::string& module_bytes) {
-    ::grpc::ClientContext context;
+  CreateNodeResponse CreateNode(const std::string& module_bytes) {
+    grpc::ClientContext context;
 
-    ::oak::CreateNodeRequest request;
-    ::oak::CreateNodeResponse response;
+    CreateNodeRequest request;
+    CreateNodeResponse response;
 
     request.set_module(module_bytes);
 
     LOG(INFO) << "Creating Oak Node";
-    ::grpc::Status status = stub_->CreateNode(&context, request, &response);
+    grpc::Status status = stub_->CreateNode(&context, request, &response);
     if (!status.ok()) {
       LOG(QFATAL) << "Failed: " << status.error_code() << '/' << status.error_message() << '/'
                   << status.error_details();
@@ -49,7 +49,7 @@ class ManagerClient {
   }
 
  private:
-  std::unique_ptr<::oak::Manager::Stub> stub_;
+  std::unique_ptr<Manager::Stub> stub_;
 };
 
 }  // namespace oak

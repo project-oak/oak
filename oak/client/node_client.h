@@ -32,15 +32,15 @@ namespace oak {
 // instantiate.
 class NodeClient {
  public:
-  NodeClient(const std::shared_ptr<::grpc::ChannelInterface>& channel)
-      : stub_(::oak::Node::NewStub(channel, ::grpc::StubOptions())) {
+  NodeClient(const std::shared_ptr<grpc::ChannelInterface>& channel)
+      : stub_(Node::NewStub(channel, grpc::StubOptions())) {
     InitializeAssertionAuthorities();
   }
 
-  ::oak::GetAttestationResponse GetAttestation() {
-    ::grpc::ClientContext context;
-    ::oak::GetAttestationRequest request;
-    ::oak::GetAttestationResponse response;
+  GetAttestationResponse GetAttestation() {
+    grpc::ClientContext context;
+    GetAttestationRequest request;
+    GetAttestationResponse response;
     auto status = stub_->GetAttestation(&context, request, &response);
     if (!status.ok()) {
       LOG(QFATAL) << "Could not get attestation: " << status.error_code() << ": "
@@ -55,10 +55,10 @@ class NodeClient {
     LOG(INFO) << "Initializing assertion authorities";
 
     // TODO: Provide a list of Assertion Authorities when available.
-    std::vector<::asylo::EnclaveAssertionAuthorityConfig> configs;
+    std::vector<asylo::EnclaveAssertionAuthorityConfig> configs;
 
-    ::asylo::Status status =
-        ::asylo::InitializeEnclaveAssertionAuthorities(configs.begin(), configs.end());
+    asylo::Status status =
+        asylo::InitializeEnclaveAssertionAuthorities(configs.begin(), configs.end());
     if (!status.ok()) {
       LOG(QFATAL) << "Could not initialize assertion authorities";
     }
@@ -66,7 +66,7 @@ class NodeClient {
     LOG(INFO) << "Assertion authorities initialized";
   }
 
-  std::unique_ptr<::oak::Node::Stub> stub_;
+  std::unique_ptr<Node::Stub> stub_;
 };
 
 }  // namespace oak

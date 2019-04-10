@@ -32,13 +32,13 @@ using ::oak::examples::private_set_intersection::PrivateSetIntersection;
 using ::oak::examples::private_set_intersection::SubmitSetRequest;
 
 void SubmitSet(PrivateSetIntersection::Stub* stub, std::vector<std::string> set) {
-  ::grpc::ClientContext context;
+  grpc::ClientContext context;
   SubmitSetRequest request;
   for (auto item : set) {
     request.add_values(item);
   }
-  ::google::protobuf::Empty response;
-  ::grpc::Status status = stub->SubmitSet(&context, request, &response);
+  google::protobuf::Empty response;
+  grpc::Status status = stub->SubmitSet(&context, request, &response);
   if (!status.ok()) {
     LOG(QFATAL) << "Could not submit set: " << status.error_code() << ": "
                 << status.error_message();
@@ -47,10 +47,10 @@ void SubmitSet(PrivateSetIntersection::Stub* stub, std::vector<std::string> set)
 
 std::vector<std::string> RetrieveIntersection(PrivateSetIntersection::Stub* stub) {
   std::vector<std::string> values;
-  ::grpc::ClientContext context;
-  ::google::protobuf::Empty request;
+  grpc::ClientContext context;
+  google::protobuf::Empty request;
   GetIntersectionResponse response;
-  ::grpc::Status status = stub->GetIntersection(&context, request, &response);
+  grpc::Status status = stub->GetIntersection(&context, request, &response);
   if (!status.ok()) {
     LOG(QFATAL) << "Could not retrieve intersection: " << status.error_code() << ": "
                 << status.error_message();
@@ -62,34 +62,33 @@ std::vector<std::string> RetrieveIntersection(PrivateSetIntersection::Stub* stub
 }
 
 int main(int argc, char** argv) {
-  ::google::ParseCommandLineFlags(&argc, &argv, /*remove_flags=*/true);
+  google::ParseCommandLineFlags(&argc, &argv, /*remove_flags=*/true);
 
   // Connect to the Oak Manager.
-  std::unique_ptr<::oak::ManagerClient> manager_client = ::absl::make_unique<::oak::ManagerClient>(
-      ::grpc::CreateChannel(FLAGS_manager_address, ::grpc::InsecureChannelCredentials()));
+  std::unique_ptr<::oak::ManagerClient> manager_client = absl::make_unique<::oak::ManagerClient>(
+      grpc::CreateChannel(FLAGS_manager_address, grpc::InsecureChannelCredentials()));
 
   // Load the Oak Module to execute. This needs to be compiled from Rust to WebAssembly separately.
-  std::string module_bytes = ::oak::utils::read_file(FLAGS_module);
-  ::oak::CreateNodeResponse create_node_response = manager_client->CreateNode(module_bytes);
+  std::string module_bytes = oak::utils::read_file(FLAGS_module);
+  oak::CreateNodeResponse create_node_response = manager_client->CreateNode(module_bytes);
 
   std::stringstream addr;
   addr << "127.0.0.1:" << create_node_response.port();
   LOG(INFO) << "Connecting to Oak Node: " << addr.str();
 
-  ::oak::NodeClient::InitializeAssertionAuthorities();
+  oak::NodeClient::InitializeAssertionAuthorities();
 
   // Connect to the newly created Oak Node from different clients.
   auto channel_0 = ::grpc::CreateChannel(
-      addr.str(),
-      ::asylo::EnclaveChannelCredentials(::asylo::BidirectionalNullCredentialsOptions()));
-  ::oak::NodeClient node_client_0(channel_0);
-  ::oak::GetAttestationResponse attestation = node_client_0.GetAttestation();
+      addr.str(), asylo::EnclaveChannelCredentials(::asylo::BidirectionalNullCredentialsOptions()));
+  oak::NodeClient node_client_0(channel_0);
+  oak::GetAttestationResponse attestation = node_client_0.GetAttestation();
   LOG(INFO) << "Oak Node attestation: " << attestation.DebugString();
   auto stub_0 = PrivateSetIntersection::NewStub(channel_0);
 
   auto stub_1 = PrivateSetIntersection::NewStub(::grpc::CreateChannel(
       addr.str(),
-      ::asylo::EnclaveChannelCredentials(::asylo::BidirectionalNullCredentialsOptions())));
+      asylo::EnclaveChannelCredentials(::asylo::BidirectionalNullCredentialsOptions())));
 
   // Submit sets from different clients.
   std::vector<std::string> set_0{"a", "b", "c"};
