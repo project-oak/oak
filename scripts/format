@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+
+# Runs clang-format and rustfmt on the entire codebase.
+# Applies all formattings in-place.
+
+find oak examples -type f -name '*.h' -o -name '*.cc' -o -name '*.proto' \
+    | xargs -I{} clang-format -i -style=file {}
+find examples rust -type f -name '*.rs' | xargs -I{} rustfmt {}

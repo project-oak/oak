@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+
+# Runs clang-format and rustfmt on the entire codebase to check if it's 
+# well formatted. Exit codes:
+#  - 1 there are files to be formatted.
+#  - 0 everything looks fine.
+
+# We ask clang-format to generate an XML output with the deisred formattings.
+# We check if any "replacement" tag exists in the output.
+CLANG_FORMAT_EXIT_CODE=0
+find oak examples -type f -name '*.h' -o -name '*.cc' -o -name '*.proto' \
+  | xargs -I{} clang-format -style=file -output-replacements-xml {} \
+  | grep "<replacement " >/dev/null \
+  && CLANG_FORMAT_EXIT_CODE=$? || CLANG_FORMAT_EXIT_CODE=$?
+
+# Fortunately, rustfmt has the --check option that will make it exit with 1
+# if formatting has to be applied.
+RUSTFMT_EXIT_CODE=0
+find examples rust -type f -name '*.rs' | xargs -I{} rustfmt --check {} \
+  && RUSTFMT_EXIT_CODE=$? || RUSTFMT_EXIT_CODE=$?
+
+# When looking for clang-format "replacement" tags, grep will return 0 if it
+# has found anything and 1 if not, so here we'll invert the return code to
+# indicate an error when the formatting is insufficient. Rustfmt behaves as
+# expected.
+if [ $CLANG_FORMAT_EXIT_CODE -ne 1 ] || [ $RUSTFMT_EXIT_CODE -ne 0 ]; then
+  echo "Codebase violates formatting conventions, please fix."
+  exit 1
+else
+  exit 0
+fi
