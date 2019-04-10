@@ -9,6 +9,6 @@ docker run \
   --volume=$PWD/bazel-cache:/root/.cache/bazel \
   --volume=$PWD:/opt/my-project \
   --workdir=/opt/my-project \
-  --network host \
+  --network=host \
   oak:latest \
   "$@"
