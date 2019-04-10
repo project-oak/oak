@@ -2,5 +2,6 @@ services:
   - docker
 
 script:
+  - ./scripts/run_formatters
   - ./scripts/build_server_docker
   - ./scripts/build_examples_docker
