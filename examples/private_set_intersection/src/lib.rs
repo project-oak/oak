@@ -26,14 +26,16 @@
 //! intersection.
 
 extern crate oak;
+extern crate oak_derive;
 extern crate protobuf;
 
 mod proto;
 
+use oak_derive::OakNode;
 use protobuf::Message;
 use std::collections::HashSet;
 
-#[derive(Default)]
+#[derive(Default, OakNode)]
 struct Node {
     values: Option<HashSet<String>>,
 }
@@ -73,5 +75,3 @@ impl oak::Node for Node {
         };
     }
 }
-
-oak::oak_node!(Node);

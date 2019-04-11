@@ -105,7 +105,7 @@ thread_local! {
 ///
 /// impl oak::Node for Node {
 ///     fn new() -> Self { Node }
-///     fn invoke(&mut self, request: &mut oak::Reader, response: &mut oak::Writer) { /* ... */ }
+///     fn invoke(&mut self, grpc_method_name: &str, request: &mut oak::Reader, response: &mut oak::Writer) { /* ... */ }
 /// }
 ///
 /// #[no_mangle]
@@ -130,14 +130,4 @@ pub extern "C" fn oak_handle_grpc_call() {
             &mut Writer { _private: () },
         );
     });
-}
-
-#[macro_export]
-macro_rules! oak_node {
-    ($node_type: ty) => {
-        #[no_mangle]
-        pub extern "C" fn oak_initialize() {
-            $crate::set_node::<$node_type>();
-        }
-    };
 }
