@@ -39,14 +39,6 @@
 
 namespace oak {
 
-namespace {
-asylo::EnclaveAssertionAuthorityConfig GetNullAssertionAuthorityConfig() {
-  asylo::EnclaveAssertionAuthorityConfig test_config;
-  asylo::SetNullAssertionDescription(test_config.mutable_description());
-  return test_config;
-}
-}  // namespace
-
 EnclaveServer::EnclaveServer()
     : credentials_(asylo::EnclaveServerCredentials(asylo::BidirectionalNullCredentialsOptions())) {}
 
@@ -73,16 +65,6 @@ asylo::Status EnclaveServer::InitializeServer() {
   absl::MutexLock lock(&server_mutex_);
   if (server_) {
     return asylo::Status::OkStatus();
-  }
-
-  std::vector<asylo::EnclaveAssertionAuthorityConfig> configs = {
-      GetNullAssertionAuthorityConfig(),
-  };
-
-  asylo::Status status =
-      asylo::InitializeEnclaveAssertionAuthorities(configs.begin(), configs.end());
-  if (!status.ok()) {
-    LOG(QFATAL) << "Could not initialize assertion authorities";
   }
 
   ASYLO_ASSIGN_OR_RETURN(server_, CreateServer());
