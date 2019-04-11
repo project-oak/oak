@@ -266,5 +266,3 @@ impl oak::Node for Node {
         }
     }
 }
-
-oak::oak_node!(Node);
