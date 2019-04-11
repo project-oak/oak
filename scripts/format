@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -x
+set -o xtrace
 
 /google/data/ro/teams/g3doc/mdformat --in_place $(find -name "*.md")
 

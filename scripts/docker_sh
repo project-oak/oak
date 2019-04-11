@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-set -e
-set -x
+set -o errexit
+set -o xtrace
 
 readonly SCRIPTS_DIR="$(dirname "$0")"
 
