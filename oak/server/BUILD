@@ -38,6 +38,8 @@ cc_library(
         "@com_google_absl//absl/memory",
         "@com_google_asylo//asylo:enclave_client",
         "@com_google_asylo//asylo/grpc/util:enclave_server_proto_cc",
+        "@com_google_asylo//asylo/identity:descriptions",
+        "@com_google_asylo//asylo/identity:enclave_assertion_authority_config_proto_cc",
         "@com_google_asylo//asylo/util:logging",
     ],
 )

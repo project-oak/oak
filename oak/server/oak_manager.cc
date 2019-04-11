@@ -17,6 +17,8 @@
 #include "oak_manager.h"
 
 #include "absl/memory/memory.h"
+#include "asylo/identity/descriptions.h"
+#include "asylo/identity/enclave_assertion_authority_config.pb.h"
 #include "asylo/util/logging.h"
 #include "gflags/gflags.h"
 
@@ -54,6 +56,10 @@ void OakManager::InitializeEnclaveManager() {
 void OakManager::CreateEnclave(const std::string& node_id, const std::string& module) {
   LOG(INFO) << "Creating enclave";
   asylo::EnclaveConfig config;
+  // Explicitly initialize the null assertion authority in the enclave.
+  asylo::EnclaveAssertionAuthorityConfig* authority_config =
+      config.add_enclave_assertion_authority_configs();
+  asylo::SetNullAssertionDescription(authority_config->mutable_description());
   oak::InitializeInput* initialize_input = config.MutableExtension(oak::initialize_input);
   initialize_input->set_node_id(node_id);
   initialize_input->set_module(module);
