@@ -22,9 +22,7 @@
 
 #include <memory>
 #include <string>
-#include <thread>
 
-#include "absl/strings/str_cat.h"
 #include "absl/synchronization/mutex.h"
 #include "asylo/grpc/auth/enclave_server_credentials.h"
 #include "asylo/grpc/auth/null_credentials_options.h"
@@ -32,16 +30,12 @@
 #include "asylo/identity/descriptions.h"
 #include "asylo/identity/init.h"
 #include "asylo/trusted_application.h"
-#include "asylo/util/logging.h"
 #include "asylo/util/status.h"
-#include "asylo/util/status_macros.h"
 #include "asylo/util/statusor.h"
 #include "include/grpcpp/impl/codegen/service_type.h"
 #include "include/grpcpp/security/server_credentials.h"
 #include "include/grpcpp/server.h"
-#include "include/grpcpp/server_builder.h"
 #include "oak/proto/enclave.pb.h"
-#include "oak/server/module_invocation.h"
 #include "oak/server/oak_node.h"
 
 namespace oak {
@@ -59,124 +53,32 @@ namespace oak {
 // application.
 class EnclaveServer final : public asylo::TrustedApplication {
  public:
-  EnclaveServer()
-      : node_(nullptr),
-        credentials_(asylo::EnclaveServerCredentials(asylo::BidirectionalNullCredentialsOptions())),
-        completion_queue_(nullptr){};
+  EnclaveServer();
 
   ~EnclaveServer() = default;
 
-  asylo::Status Initialize(const asylo::EnclaveConfig& config) override {
-    LOG(INFO) << "Initializing Oak Instance";
-    const InitializeInput& initialize_input_message = config.GetExtension(initialize_input);
-    node_ = absl::make_unique<OakNode>(initialize_input_message.node_id(),
-                                       initialize_input_message.module());
-    return InitializeServer();
-  }
+  asylo::Status Initialize(const asylo::EnclaveConfig& config) override;
 
-  asylo::Status Run(const asylo::EnclaveInput& input, asylo::EnclaveOutput* output) override {
-    GetServerAddress(output);
-    return asylo::Status::OkStatus();
-  }
+  asylo::Status Run(const asylo::EnclaveInput& input, asylo::EnclaveOutput* output) override;
 
-  asylo::Status Finalize(const asylo::EnclaveFinal& enclave_final) override {
-    FinalizeServer();
-    return asylo::Status::OkStatus();
-  }
-
- private:
-  static asylo::EnclaveAssertionAuthorityConfig GetNullAssertionAuthorityConfig() {
-    asylo::EnclaveAssertionAuthorityConfig test_config;
-    asylo::SetNullAssertionDescription(test_config.mutable_description());
-    return test_config;
-  }
+  asylo::Status Finalize(const asylo::EnclaveFinal& enclave_final) override;
 
   // Initializes a gRPC server. If the server is already initialized, does nothing.
-  asylo::Status InitializeServer() LOCKS_EXCLUDED(server_mutex_) {
-    // Ensure that the server is only created and initialized once.
-    absl::MutexLock lock(&server_mutex_);
-    if (server_) {
-      return asylo::Status::OkStatus();
-    }
-
-    std::vector<asylo::EnclaveAssertionAuthorityConfig> configs = {
-        GetNullAssertionAuthorityConfig(),
-    };
-
-    asylo::Status status =
-        asylo::InitializeEnclaveAssertionAuthorities(configs.begin(), configs.end());
-    if (!status.ok()) {
-      LOG(QFATAL) << "Could not initialize assertion authorities";
-    }
-
-    ASYLO_ASSIGN_OR_RETURN(server_, CreateServer());
-
-    // Start a new thread to process the gRPC completion queue.
-    std::thread thread(&EnclaveServer::CompletionQueueLoop, this);
-    thread.detach();
-
-    return asylo::Status::OkStatus();
-  }
+  asylo::Status InitializeServer() LOCKS_EXCLUDED(server_mutex_);
 
   // Creates a gRPC server that hosts node_ on a free port with credentials_.
-  asylo::StatusOr<std::unique_ptr<grpc::Server>> CreateServer()
-      EXCLUSIVE_LOCKS_REQUIRED(server_mutex_) {
-    grpc::ServerBuilder builder;
-    // Uses ":0" notation so that server listens on a free port.
-    builder.AddListeningPort("[::]:0", credentials_, &port_);
-    builder.RegisterService(node_.get());
+  asylo::StatusOr<std::unique_ptr<::grpc::Server>> CreateServer()
+      EXCLUSIVE_LOCKS_REQUIRED(server_mutex_);
 
-    // Add a completion queue and a generic service, in order to proxy incoming RPCs to the Oak
-    // Node.
-    completion_queue_ = builder.AddCompletionQueue();
-    builder.RegisterAsyncGenericService(&module_service_);
+  // Gets the address of the hosted gRPC server and writes it to server_output_config
+  // extension of |output|.
+  void GetServerAddress(asylo::EnclaveOutput* output) EXCLUSIVE_LOCKS_REQUIRED(server_mutex_);
 
-    std::unique_ptr<::grpc::Server> server = builder.BuildAndStart();
-    if (!server) {
-      return asylo::Status(asylo::error::GoogleError::INTERNAL, "Failed to start gRPC server");
-    }
-
-    LOG(INFO) << "gRPC server is listening on port :" << port_;
-
-    return std::move(server);
-  }
-
-  // Gets the address of the hosted gRPC server and writes it to
-  // server_output_config extension of |output|.
-  void GetServerAddress(asylo::EnclaveOutput* output) EXCLUSIVE_LOCKS_REQUIRED(server_mutex_) {
-    InitializeOutput* initialize_output_message = output->MutableExtension(initialize_output);
-    initialize_output_message->set_port(port_);
-  }
-
-  // Finalizes the gRPC server by calling gprc::Server::Shutdown().
-  void FinalizeServer() LOCKS_EXCLUDED(server_mutex_) {
-    absl::MutexLock lock(&server_mutex_);
-    if (server_) {
-      LOG(INFO) << "Shutting down...";
-      server_->Shutdown();
-      server_ = nullptr;
-    }
-  }
+  // Finalizes the gRPC server by calling ::gprc::Server::Shutdown().
+  void FinalizeServer() LOCKS_EXCLUDED(server_mutex_);
 
   // Consumes gRPC events from the completion queue in an infinite loop.
-  void CompletionQueueLoop() {
-    LOG(INFO) << "Starting gRPC completion queue loop";
-    // The invocation object will delete itself when finished with the request,
-    // after creating a new invocation object for the next request.
-    auto* invocation = new ModuleInvocation(&module_service_, completion_queue_.get(), node_.get());
-    invocation->Start();
-    while (true) {
-      bool ok;
-      void* tag;
-      if (!completion_queue_->Next(&tag, &ok)) {
-        LOG(FATAL) << "Failure reading from completion queue";
-        return;
-      }
-      auto* callback = static_cast<std::function<void(bool)>*>(tag);
-      (*callback)(ok);
-      delete callback;
-    }
-  }
+  void CompletionQueueLoop();
 
   // Guards state related to the gRPC server (|server_| and |port_|).
   absl::Mutex server_mutex_;
