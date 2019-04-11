@@ -17,62 +17,70 @@
 #include "oak_manager.h"
 
 #include "absl/memory/memory.h"
+#include "asylo/identity/descriptions.h"
+#include "asylo/identity/enclave_assertion_authority_config.pb.h"
 #include "asylo/util/logging.h"
 #include "gflags/gflags.h"
 
 DEFINE_string(enclave_path, "", "Path to enclave to load");
 
+namespace oak {
+
 OakManager::OakManager() : Service(), node_id_(0) { InitializeEnclaveManager(); }
 
-::grpc::Status OakManager::CreateNode(::grpc::ServerContext* context,
-                                      const ::oak::CreateNodeRequest* request,
-                                      ::oak::CreateNodeResponse* response) {
+grpc::Status OakManager::CreateNode(grpc::ServerContext* context,
+                                    const oak::CreateNodeRequest* request,
+                                    oak::CreateNodeResponse* response) {
   std::string node_id = NewNodeId();
   CreateEnclave(node_id, request->module());
-  ::oak::InitializeOutput out = GetEnclaveOutput(node_id);
+  oak::InitializeOutput out = GetEnclaveOutput(node_id);
   response->set_port(out.port());
   response->set_node_id(node_id);
-  return ::grpc::Status::OK;
+  return grpc::Status::OK;
 }
 
 void OakManager::InitializeEnclaveManager() {
   LOG(INFO) << "Initializing enclave manager";
-  ::asylo::EnclaveManager::Configure(::asylo::EnclaveManagerOptions());
-  auto manager_result = ::asylo::EnclaveManager::Instance();
+  asylo::EnclaveManager::Configure(asylo::EnclaveManagerOptions());
+  auto manager_result = asylo::EnclaveManager::Instance();
   if (!manager_result.ok()) {
     LOG(QFATAL) << "Could not initialize enclave manager: " << manager_result.status();
   }
   enclave_manager_ = manager_result.ValueOrDie();
   LOG(INFO) << "Enclave manager initialized";
   LOG(INFO) << "Loading enclave code from " << FLAGS_enclave_path;
-  enclave_loader_ = ::absl::make_unique<::asylo::SimLoader>(FLAGS_enclave_path,
-                                                            /*debug=*/true);
+  enclave_loader_ = absl::make_unique<asylo::SimLoader>(FLAGS_enclave_path,
+                                                        /*debug=*/true);
 }
 
 void OakManager::CreateEnclave(const std::string& node_id, const std::string& module) {
   LOG(INFO) << "Creating enclave";
-  ::asylo::EnclaveConfig config;
-  ::oak::InitializeInput* initialize_input = config.MutableExtension(::oak::initialize_input);
+  asylo::EnclaveConfig config;
+  // Explicitly initialize the null assertion authority in the enclave.
+  asylo::EnclaveAssertionAuthorityConfig* authority_config =
+      config.add_enclave_assertion_authority_configs();
+  asylo::SetNullAssertionDescription(authority_config->mutable_description());
+  oak::InitializeInput* initialize_input = config.MutableExtension(oak::initialize_input);
   initialize_input->set_node_id(node_id);
   initialize_input->set_module(module);
-  ::asylo::Status status = enclave_manager_->LoadEnclave(node_id, *enclave_loader_, config);
+  asylo::Status status = enclave_manager_->LoadEnclave(node_id, *enclave_loader_, config);
   if (!status.ok()) {
     LOG(QFATAL) << "Could not load enclave " << FLAGS_enclave_path << ": " << status;
   }
   LOG(INFO) << "Enclave created";
 }
 
-::oak::InitializeOutput OakManager::GetEnclaveOutput(const std::string& node_id) {
+oak::InitializeOutput OakManager::GetEnclaveOutput(const std::string& node_id) {
   LOG(INFO) << "Initializing enclave";
-  ::asylo::EnclaveClient* client = enclave_manager_->GetClient(node_id);
-  ::asylo::EnclaveInput input;
-  ::asylo::EnclaveOutput output;
-  ::asylo::Status status = client->EnterAndRun(input, &output);
+  asylo::EnclaveClient* client = enclave_manager_->GetClient(node_id);
+  asylo::EnclaveInput input;
+  asylo::EnclaveOutput output;
+  asylo::Status status = client->EnterAndRun(input, &output);
   if (!status.ok()) {
     LOG(QFATAL) << "EnterAndRun failed: " << status;
   }
   LOG(INFO) << "Enclave initialized";
-  return output.GetExtension(::oak::initialize_output);
+  return output.GetExtension(oak::initialize_output);
 }
 
 std::string OakManager::NewNodeId() {
@@ -85,11 +93,13 @@ std::string OakManager::NewNodeId() {
 
 void OakManager::DestroyEnclave(const std::string& node_id) {
   LOG(INFO) << "Destroying enclave";
-  ::asylo::EnclaveClient* client = enclave_manager_->GetClient(node_id);
-  ::asylo::EnclaveFinal final_input;
-  ::asylo::Status status = enclave_manager_->DestroyEnclave(client, final_input);
+  asylo::EnclaveClient* client = enclave_manager_->GetClient(node_id);
+  asylo::EnclaveFinal final_input;
+  asylo::Status status = enclave_manager_->DestroyEnclave(client, final_input);
   if (!status.ok()) {
     LOG(QFATAL) << "Destroy " << FLAGS_enclave_path << " failed: " << status;
   }
   LOG(INFO) << "Enclave destroyed";
 }
+
+}  // namespace oak

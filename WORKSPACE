@@ -19,12 +19,12 @@ workspace(name = "oak")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
-# Asylo Framework v0.3.4
+# Asylo Framework v0.3.4.1
 http_archive(
     name = "com_google_asylo",
-    urls = ["https://github.com/google/asylo/archive/v0.3.4.tar.gz"],
-    strip_prefix = "asylo-0.3.4",
-    sha256 = "e408c614ad129dd7dff0dc7a816f77aae81f22eb851f63fc0bba7de61a467b62",
+    urls = ["https://github.com/google/asylo/archive/v0.3.4.1.tar.gz"],
+    strip_prefix = "asylo-0.3.4.1",
+    sha256 = "5001ff28b03b9a604d77b393deedfa75ed7c553cd7d75332fe52ef147bedbbba",
 )
 
 # Google Protocol Buffers v3.6.1.2

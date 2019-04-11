@@ -16,6 +16,7 @@
 
 #include "asylo/grpc/auth/enclave_channel_credentials.h"
 #include "asylo/grpc/auth/null_credentials_options.h"
+#include "asylo/identity/descriptions.h"
 #include "asylo/identity/init.h"
 #include "asylo/util/logging.h"
 #include "oak/proto/node.grpc.pb.h"
@@ -32,15 +33,15 @@ namespace oak {
 // instantiate.
 class NodeClient {
  public:
-  NodeClient(const std::shared_ptr<::grpc::ChannelInterface>& channel)
-      : stub_(::oak::Node::NewStub(channel, ::grpc::StubOptions())) {
+  NodeClient(const std::shared_ptr<grpc::ChannelInterface>& channel)
+      : stub_(Node::NewStub(channel, grpc::StubOptions())) {
     InitializeAssertionAuthorities();
   }
 
-  ::oak::GetAttestationResponse GetAttestation() {
-    ::grpc::ClientContext context;
-    ::oak::GetAttestationRequest request;
-    ::oak::GetAttestationResponse response;
+  GetAttestationResponse GetAttestation() {
+    grpc::ClientContext context;
+    GetAttestationRequest request;
+    GetAttestationResponse response;
     auto status = stub_->GetAttestation(&context, request, &response);
     if (!status.ok()) {
       LOG(QFATAL) << "Could not get attestation: " << status.error_code() << ": "
@@ -49,16 +50,24 @@ class NodeClient {
     return response;
   }
 
+  static asylo::EnclaveAssertionAuthorityConfig GetNullAssertionAuthorityConfig() {
+    asylo::EnclaveAssertionAuthorityConfig test_config;
+    asylo::SetNullAssertionDescription(test_config.mutable_description());
+    return test_config;
+  }
+
   // This method sets up the necessary global state for Asylo to be able to validate authorities
   // (e.g. root CAs, remote attestation endpoints, etc.).
   static void InitializeAssertionAuthorities() {
     LOG(INFO) << "Initializing assertion authorities";
 
-    // TODO: Provide a list of Assertion Authorities when available.
-    std::vector<::asylo::EnclaveAssertionAuthorityConfig> configs;
+    // TODO: Provide a list of non-null Assertion Authorities when available.
+    std::vector<asylo::EnclaveAssertionAuthorityConfig> configs = {
+        GetNullAssertionAuthorityConfig(),
+    };
 
-    ::asylo::Status status =
-        ::asylo::InitializeEnclaveAssertionAuthorities(configs.begin(), configs.end());
+    asylo::Status status =
+        asylo::InitializeEnclaveAssertionAuthorities(configs.begin(), configs.end());
     if (!status.ok()) {
       LOG(QFATAL) << "Could not initialize assertion authorities";
     }
@@ -66,7 +75,7 @@ class NodeClient {
     LOG(INFO) << "Assertion authorities initialized";
   }
 
-  std::unique_ptr<::oak::Node::Stub> stub_;
+  std::unique_ptr<Node::Stub> stub_;
 };
 
 }  // namespace oak

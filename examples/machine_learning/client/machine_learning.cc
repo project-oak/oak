@@ -16,12 +16,11 @@
 
 #include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
-#include "gflags/gflags.h"
-#include "include/grpcpp/grpcpp.h"
-
 #include "examples/machine_learning/proto/machine_learning.grpc.pb.h"
 #include "examples/machine_learning/proto/machine_learning.pb.h"
 #include "examples/utils/utils.h"
+#include "gflags/gflags.h"
+#include "include/grpcpp/grpcpp.h"
 #include "oak/client/manager_client.h"
 #include "oak/client/node_client.h"
 

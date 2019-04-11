@@ -34,6 +34,39 @@ do not expect commits to have meaningful messages during a review; the PR
 description should follow
 [standard git commit conventions](https://chris.beams.io/posts/git-commit/).
 
+## Style Guide
+
+### C++
+
+-   Follow https://google.github.io/styleguide/cppguide.html
+-   Follow https://abseil.io/tips/
+-   Use [`clang-format`](https://clang.llvm.org/docs/ClangFormat.html) to keep
+    C++ code formatted consistently.
+-   Use fully qualified names (leading `::`) for `using` declarations and
+    namespace aliases, and avoid fully qualified names for everything else,
+    unless it is necessary to make the code compile.
+
+    ```C++
+    namespace oak {
+      ...
+      Node n;
+      grpc::Status s;
+      ...
+    }
+    ```
+
+    or
+
+    ```C++
+    namespace oak {
+      using ::grpc::Status;
+      ...
+      Node n;
+      Status s;
+      ...
+    }
+    ```
+
 ## Community Guidelines
 
 This project follows

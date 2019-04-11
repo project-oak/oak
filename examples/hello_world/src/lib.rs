@@ -15,12 +15,15 @@
 //
 
 extern crate oak;
+extern crate oak_derive;
 extern crate protobuf;
 
 mod proto;
 
+use oak_derive::OakNode;
 use protobuf::Message;
 
+#[derive(OakNode)]
 struct Node;
 
 impl oak::Node for Node {
@@ -48,5 +51,3 @@ impl oak::Node for Node {
         };
     }
 }
-
-oak::oak_node!(Node);

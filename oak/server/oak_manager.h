@@ -20,19 +20,21 @@
 #include "oak/proto/enclave.pb.h"
 #include "oak/proto/manager.grpc.pb.h"
 
-class OakManager final : public ::oak::Manager::Service {
+namespace oak {
+
+class OakManager final : public Manager::Service {
  public:
   OakManager();
 
-  ::grpc::Status CreateNode(::grpc::ServerContext* context, const ::oak::CreateNodeRequest* request,
-                            ::oak::CreateNodeResponse* response) override;
+  grpc::Status CreateNode(grpc::ServerContext* context, const CreateNodeRequest* request,
+                          CreateNodeResponse* response) override;
 
  private:
   void InitializeEnclaveManager();
 
   void CreateEnclave(const std::string& node_id, const std::string& module);
 
-  oak::InitializeOutput GetEnclaveOutput(const std::string& node_id);
+  InitializeOutput GetEnclaveOutput(const std::string& node_id);
 
   std::string NewNodeId();
 
@@ -43,3 +45,5 @@ class OakManager final : public ::oak::Manager::Service {
 
   uint64_t node_id_;
 };
+
+}  // namespace oak

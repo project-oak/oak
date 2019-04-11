@@ -38,6 +38,8 @@ cc_library(
         "@com_google_absl//absl/memory",
         "@com_google_asylo//asylo:enclave_client",
         "@com_google_asylo//asylo/grpc/util:enclave_server_proto_cc",
+        "@com_google_asylo//asylo/identity:descriptions",
+        "@com_google_asylo//asylo/identity:enclave_assertion_authority_config_proto_cc",
         "@com_google_asylo//asylo/util:logging",
     ],
 )
@@ -69,7 +71,6 @@ cc_library(
     deps = [
         ":oak_node",
         "@com_github_grpc_grpc//:grpc++",
-        "@com_google_absl//absl/memory",
     ],
 )
 
@@ -78,6 +79,9 @@ cc_library(
     hdrs = [
         "enclave_server.h",
     ],
+    srcs = [
+        "enclave_server.cc",
+    ],
     deps = [
         ":module_invocation",
         ":oak_node",
@@ -85,6 +89,8 @@ cc_library(
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/synchronization",
         "@com_google_asylo//asylo:enclave_runtime",
+        "@com_google_asylo//asylo/grpc/auth:grpc++_security_enclave",
+        "@com_google_asylo//asylo/grpc/auth:null_credentials_options",
         "@com_google_asylo//asylo/grpc/util:enclave_server_proto_cc",
         "@com_google_asylo//asylo/util:logging",
         "@com_google_asylo//asylo/util:status",
@@ -106,14 +112,7 @@ sim_enclave(
     config = "grpc_enclave_config",
     deps = [
         ":enclave_server",
-        "//oak/proto:enclave_proto_cc",
-        "@com_google_absl//absl/memory",
-        "@com_google_absl//absl/strings",
-        "@com_google_asylo//asylo:enclave_runtime",
-        "@com_google_asylo//asylo/grpc/auth:grpc++_security_enclave",
-        "@com_google_asylo//asylo/grpc/auth:null_credentials_options",
         "@com_google_asylo//asylo/grpc/util:enclave_server",
-        "@com_google_asylo//asylo/util:status",
     ],
 )
 
@@ -126,7 +125,6 @@ enclave_loader(
         ":oak_manager",
         "@com_github_gflags_gflags//:gflags_nothreads",
         "@com_github_grpc_grpc//:grpc++",
-        "@com_google_absl//absl/strings",
         "@com_google_absl//absl/synchronization",
         "@com_google_absl//absl/time",
         "@com_google_asylo//asylo/util:logging",

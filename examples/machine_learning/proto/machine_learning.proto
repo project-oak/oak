@@ -18,18 +18,15 @@ syntax = "proto3";
 
 package oak.examples.machine_learning;
 
-message MLData {
-}
+message MLData {}
 
 message MLResponse {
   string message = 1;
 }
 
-message MLLearn {
-}
+message MLLearn {}
 
-message MLPredict {
-}
+message MLPredict {}
 
 service MachineLearning {
   rpc Data(MLData) returns (MLResponse);

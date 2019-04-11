@@ -7,6 +7,7 @@ authors = ["Tiziano Santoro <tzn@google.com>"]
 crate-type = ["cdylib"]
 
 [dependencies]
-rusty-machine = "0.5.4"
-rand = "0.6.1"
+rusty-machine = "*"
+rand = "*"
 oak = { path = "../../rust/oak" }
+oak_derive = { path = "../../rust/oak_derive" }

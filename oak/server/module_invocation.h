@@ -28,7 +28,7 @@ class ModuleInvocation {
  public:
   // All constructor arguments must outlive this object.  It manages its own
   // lifetime after RequestNext is called.
-  ModuleInvocation(::grpc::AsyncGenericService* service, ::grpc::ServerCompletionQueue* queue,
+  ModuleInvocation(grpc::AsyncGenericService* service, grpc::ServerCompletionQueue* queue,
                    OakNode* node)
       : service_(service), queue_(queue), node_(node), stream_(&context_) {}
 
@@ -52,14 +52,14 @@ class ModuleInvocation {
   void Finish(bool ok);
 
  private:
-  ::grpc::AsyncGenericService* const service_;
-  ::grpc::ServerCompletionQueue* const queue_;
-  ::oak::OakNode* const node_;
+  grpc::AsyncGenericService* const service_;
+  grpc::ServerCompletionQueue* const queue_;
+  OakNode* const node_;
 
-  ::grpc::GenericServerContext context_;
-  ::grpc::GenericServerAsyncReaderWriter stream_;
-  ::grpc::ByteBuffer request_;
-  ::grpc::ByteBuffer response_;
+  grpc::GenericServerContext context_;
+  grpc::GenericServerAsyncReaderWriter stream_;
+  grpc::ByteBuffer request_;
+  grpc::ByteBuffer response_;
 };
 
 }  // namespace oak

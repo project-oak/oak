@@ -18,9 +18,11 @@
 // https://github.com/AtheMathmo/rusty-machine/blob/master/examples/naive_bayes_dogs.rs .
 
 extern crate oak;
+extern crate oak_derive;
 extern crate rand;
 extern crate rusty_machine;
 
+use oak_derive::OakNode;
 use rand::distributions::Distribution;
 use rand::distributions::Normal;
 use rand::distributions::Standard;
@@ -146,6 +148,7 @@ struct Config {
     test_animals: Vec<Animal>,
 }
 
+#[derive(OakNode)]
 struct Node {
     training_set_size: usize,
     test_set_size: usize,

@@ -23,13 +23,15 @@
 //! to and including the value provided in the request.
 
 extern crate oak;
+extern crate oak_derive;
 extern crate protobuf;
 
 mod proto;
 
+use oak_derive::OakNode;
 use protobuf::Message;
 
-#[derive(Default)]
+#[derive(Default, OakNode)]
 struct Node {
     sum: u64,
     count: u64,
@@ -64,5 +66,3 @@ impl oak::Node for Node {
         };
     }
 }
-
-oak::oak_node!(Node);

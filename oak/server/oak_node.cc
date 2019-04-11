@@ -44,14 +44,14 @@ static wabt::interp::Result PrintCallback(const wabt::interp::HostFunc* func,
   return wabt::interp::Result::Ok;
 }
 
-static ::absl::Span<const char> ReadMemory(::wabt::interp::Environment* env, const uint32_t offset,
-                                           const uint32_t size) {
+static absl::Span<const char> ReadMemory(wabt::interp::Environment* env, const uint32_t offset,
+                                         const uint32_t size) {
   return absl::MakeConstSpan(env->GetMemory(0)->data).subspan(offset, size);
 }
 
 static const std::string ReadString(wabt::interp::Environment* env, const uint32_t offset,
                                     const uint32_t size) {
-  ::absl::Span<const char> memory = ReadMemory(env, offset, size);
+  absl::Span<const char> memory = ReadMemory(env, offset, size);
   return std::string(memory.cbegin(), memory.cend());
 }
 
@@ -220,7 +220,7 @@ void OakNode::InitEnvironment(wabt::interp::Environment* env) {
       this->OakWrite(env));
 }
 
-::wabt::interp::HostFunc::Callback OakNode::OakReadMethodName(wabt::interp::Environment* env) {
+wabt::interp::HostFunc::Callback OakNode::OakReadMethodName(wabt::interp::Environment* env) {
   return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
                      const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
     LOG(INFO) << "Called host function: " << func->module_name << "." << func->field_name;
@@ -245,7 +245,7 @@ void OakNode::InitEnvironment(wabt::interp::Environment* env) {
   };
 }
 
-::wabt::interp::HostFunc::Callback OakNode::OakRead(wabt::interp::Environment* env) {
+wabt::interp::HostFunc::Callback OakNode::OakRead(wabt::interp::Environment* env) {
   return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
                      const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
     LOG(INFO) << "Called host function: " << func->module_name << "." << func->field_name;
@@ -262,11 +262,11 @@ void OakNode::InitEnvironment(wabt::interp::Environment* env) {
     results[0].set_i32(size);
     module_data_input_.remove_prefix(size);
 
-    return ::wabt::interp::Result::Ok;
+    return wabt::interp::Result::Ok;
   };
 }
 
-::wabt::interp::HostFunc::Callback OakNode::OakWrite(wabt::interp::Environment* env) {
+wabt::interp::HostFunc::Callback OakNode::OakWrite(wabt::interp::Environment* env) {
   return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
                      const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
     LOG(INFO) << "Called host function: " << func->module_name << "." << func->field_name;
@@ -276,7 +276,7 @@ void OakNode::InitEnvironment(wabt::interp::Environment* env) {
     uint32_t offset = args[0].get_i32();
     uint32_t size = args[1].get_i32();
 
-    ::absl::Span<const char> memory = ReadMemory(env, offset, size);
+    absl::Span<const char> memory = ReadMemory(env, offset, size);
     module_data_output_->insert(module_data_output_->end(), memory.cbegin(), memory.cend());
     results[0].set_i32(size);
 
@@ -284,14 +284,14 @@ void OakNode::InitEnvironment(wabt::interp::Environment* env) {
   };
 }
 
-::grpc::Status OakNode::ProcessModuleInvocation(::grpc::GenericServerContext* context,
-                                                const std::vector<uint8_t>& request_data,
-                                                std::vector<uint8_t>* response_data) {
+grpc::Status OakNode::ProcessModuleInvocation(grpc::GenericServerContext* context,
+                                              const std::vector<uint8_t>& request_data,
+                                              std::vector<uint8_t>* response_data) {
   LOG(INFO) << "Handling gRPC call: " << context->method();
   server_context_ = context;
 
-  ::absl::MutexLock lock(&module_data_mutex_);
-  module_data_input_ = ::absl::Span<const uint8_t>(request_data);
+  absl::MutexLock lock(&module_data_mutex_);
+  module_data_input_ = absl::Span<const uint8_t>(request_data);
   module_data_output_ = response_data;
 
   wabt::Stream* trace_stream = nullptr;
@@ -311,12 +311,12 @@ void OakNode::InitEnvironment(wabt::interp::Environment* env) {
     LOG(WARNING) << "Could not handle gRPC call: "
                  << wabt::interp::ResultToString(exec_result.result);
   }
-  return ::grpc::Status::OK;
+  return grpc::Status::OK;
 }
 
-::grpc::Status OakNode::GetAttestation(::grpc::ServerContext* context,
-                                       const ::oak::GetAttestationRequest* request,
-                                       ::oak::GetAttestationResponse* response) {
+grpc::Status OakNode::GetAttestation(grpc::ServerContext* context,
+                                     const GetAttestationRequest* request,
+                                     GetAttestationResponse* response) {
   response->set_module_hash_sha_256(module_hash_sha_256_);
   return ::grpc::Status::OK;
 }

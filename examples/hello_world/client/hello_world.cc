@@ -32,11 +32,11 @@ using ::oak::examples::hello_world::SayHelloRequest;
 using ::oak::examples::hello_world::SayHelloResponse;
 
 std::string say_hello(HelloWorld::Stub* stub, std::string name) {
-  ::grpc::ClientContext context;
+  grpc::ClientContext context;
   SayHelloRequest request;
   request.set_name(name);
   SayHelloResponse response;
-  ::grpc::Status status = stub->SayHello(&context, request, &response);
+  grpc::Status status = stub->SayHello(&context, request, &response);
   if (!status.ok()) {
     LOG(QFATAL) << "Could not submit sample: " << status.error_code() << ": "
                 << status.error_message();
@@ -45,26 +45,25 @@ std::string say_hello(HelloWorld::Stub* stub, std::string name) {
 }
 
 int main(int argc, char** argv) {
-  ::google::ParseCommandLineFlags(&argc, &argv, /*remove_flags=*/true);
+  google::ParseCommandLineFlags(&argc, &argv, /*remove_flags=*/true);
 
   // Connect to the Oak Manager.
-  std::unique_ptr<::oak::ManagerClient> manager_client = ::absl::make_unique<::oak::ManagerClient>(
-      ::grpc::CreateChannel(FLAGS_manager_address, ::grpc::InsecureChannelCredentials()));
+  std::unique_ptr<oak::ManagerClient> manager_client = absl::make_unique<oak::ManagerClient>(
+      grpc::CreateChannel(FLAGS_manager_address, grpc::InsecureChannelCredentials()));
 
   // Load the Oak Module to execute. This needs to be compiled from Rust to WebAssembly separately.
-  std::string module_bytes = ::oak::utils::read_file(FLAGS_module);
-  ::oak::CreateNodeResponse create_node_response = manager_client->CreateNode(module_bytes);
+  std::string module_bytes = oak::utils::read_file(FLAGS_module);
+  oak::CreateNodeResponse create_node_response = manager_client->CreateNode(module_bytes);
 
   std::stringstream addr;
   addr << "127.0.0.1:" << create_node_response.port();
   LOG(INFO) << "Connecting to Oak Node: " << addr.str();
 
-  ::oak::NodeClient::InitializeAssertionAuthorities();
+  oak::NodeClient::InitializeAssertionAuthorities();
 
   // Connect to the newly created Oak Node.
-  auto stub = HelloWorld::NewStub(::grpc::CreateChannel(
-      addr.str(),
-      ::asylo::EnclaveChannelCredentials(::asylo::BidirectionalNullCredentialsOptions())));
+  auto stub = HelloWorld::NewStub(grpc::CreateChannel(
+      addr.str(), asylo::EnclaveChannelCredentials(asylo::BidirectionalNullCredentialsOptions())));
 
   // Perform multiple invocations of the same Oak Node, with different parameters.
   auto message_0 = say_hello(stub.get(), "WORLD");

@@ -16,7 +16,6 @@
 
 #include "oak/server/module_invocation.h"
 
-#include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
 
 namespace oak {
@@ -24,10 +23,10 @@ namespace oak {
 namespace {
 
 // Converts a gRPC ByteBuffer into a vector of bytes.
-std::vector<uint8_t> Unwrap(const ::grpc::ByteBuffer& buffer) {
+std::vector<uint8_t> Unwrap(const grpc::ByteBuffer& buffer) {
   std::vector<uint8_t> bytes;
   std::vector<::grpc::Slice> slices;
-  ::grpc::Status status = buffer.Dump(&slices);
+  grpc::Status status = buffer.Dump(&slices);
   if (!status.ok()) {
     LOG(QFATAL) << "Could not unwrap buffer";
   }
@@ -38,9 +37,9 @@ std::vector<uint8_t> Unwrap(const ::grpc::ByteBuffer& buffer) {
 }
 
 // Converts a vector of bytes into a gRPC ByteBuffer.
-const ::grpc::ByteBuffer Wrap(const std::vector<uint8_t>& bytes) {
-  ::grpc::Slice slice(bytes.data(), bytes.size());
-  ::grpc::ByteBuffer buffer(&slice, /*nslices=*/1);
+const grpc::ByteBuffer Wrap(const std::vector<uint8_t>& bytes) {
+  grpc::Slice slice(bytes.data(), bytes.size());
+  grpc::ByteBuffer buffer(&slice, /*nslices=*/1);
   return buffer;
 }
 
@@ -76,10 +75,10 @@ void ModuleInvocation::ProcessRequest(bool ok) {
   request->Start();
 
   response_ = Wrap(response_data);
-  ::grpc::WriteOptions options;
+  grpc::WriteOptions options;
   auto* callback = new std::function<void(bool)>(
       std::bind(&ModuleInvocation::Finish, this, std::placeholders::_1));
-  stream_.WriteAndFinish(response_, options, ::grpc::Status::OK, callback);
+  stream_.WriteAndFinish(response_, options, grpc::Status::OK, callback);
 }
 
 void ModuleInvocation::Finish(bool ok) { delete this; }
