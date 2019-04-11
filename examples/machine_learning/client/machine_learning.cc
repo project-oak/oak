@@ -16,12 +16,11 @@
 
 #include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
-#include "gflags/gflags.h"
-#include "include/grpcpp/grpcpp.h"
-
 #include "examples/machine_learning/proto/machine_learning.grpc.pb.h"
 #include "examples/machine_learning/proto/machine_learning.pb.h"
 #include "examples/utils/utils.h"
+#include "gflags/gflags.h"
+#include "include/grpcpp/grpcpp.h"
 #include "oak/client/manager_client.h"
 #include "oak/client/node_client.h"
 
@@ -53,8 +52,7 @@ std::string learn(MachineLearning::Stub* stub) {
   MLResponse response;
   ::grpc::Status status = stub->Learn(&context, learn, &response);
   if (!status.ok()) {
-    LOG(QFATAL) << "Could not learn: " << status.error_code() << ": "
-                << status.error_message();
+    LOG(QFATAL) << "Could not learn: " << status.error_code() << ": " << status.error_message();
   }
   return response.message();
 }
@@ -65,8 +63,7 @@ std::string predict(MachineLearning::Stub* stub) {
   MLResponse response;
   ::grpc::Status status = stub->Predict(&context, predict, &response);
   if (!status.ok()) {
-    LOG(QFATAL) << "Could not predict: " << status.error_code() << ": "
-                << status.error_message();
+    LOG(QFATAL) << "Could not predict: " << status.error_code() << ": " << status.error_message();
   }
   return response.message();
 }

@@ -156,61 +156,72 @@ struct Node {
 impl oak::Node for Node {
     fn new() -> Self {
         Node {
-	    training_set_size: 1000,
-	    test_set_size: 1000,
+            training_set_size: 1000,
+            test_set_size: 1000,
             config: None,
-	    model: NaiveBayes::new(),
-	}
+            model: NaiveBayes::new(),
+        }
     }
-    fn invoke(&mut self, method_name: &str, _request: &mut oak::Reader, _response: &mut oak::Writer) {
+    fn invoke(
+        &mut self,
+        method_name: &str,
+        _request: &mut oak::Reader,
+        _response: &mut oak::Writer,
+    ) {
         oak::print(method_name);
         match method_name {
-	    "/oak.examples.machine_learning.MachineLearning/Data" => {
-	        
-		oak::print("Data");
-		//(self.training_set_size, self.test_set_size) = (1000, 1000);
-        	// Generate all of our train and test data
-		let (training_matrix, target_matrix, test_matrix, test_animals) =
-            	    generate_animal_data(self.training_set_size, self.test_set_size);
+            "/oak.examples.machine_learning.MachineLearning/Data" => {
+                oak::print("Data");
+                //(self.training_set_size, self.test_set_size) = (1000, 1000);
+                // Generate all of our train and test data
+                let (training_matrix, target_matrix, test_matrix, test_animals) =
+                    generate_animal_data(self.training_set_size, self.test_set_size);
                 self.config = Some(Config {
-		    training_matrix: training_matrix,
-		    target_matrix: target_matrix,
-		    test_matrix: test_matrix,
-		    test_animals: test_animals,
+                    training_matrix: training_matrix,
+                    target_matrix: target_matrix,
+                    test_matrix: test_matrix,
+                    test_animals: test_animals,
                 });
-	    }
-	    "/oak.examples.machine_learning.MachineLearning/Learn" => {
-	        oak::print("Training model\n");
-		//self.model = NaiveBayes::<naive_bayes::Gaussian>::new();
-		match self.config {
-                    Some(ref c) => self.model
-			    .train(&c.training_matrix, &c.target_matrix)
-            	    	    .expect("failed to train model of dogs"),
+            }
+            "/oak.examples.machine_learning.MachineLearning/Learn" => {
+                oak::print("Training model\n");
+                //self.model = NaiveBayes::<naive_bayes::Gaussian>::new();
+                match self.config {
+                    Some(ref c) => self
+                        .model
+                        .train(&c.training_matrix, &c.target_matrix)
+                        .expect("failed to train model of dogs"),
                     None => oak::print("config not set"),
-		}
-	    }
-	    "/oak.examples.machine_learning.MachineLearning/Predict" => {
+                }
+            }
+            "/oak.examples.machine_learning.MachineLearning/Predict" => {
                 oak::print("Predicting\n");
                 let mut predictions = None;
-		match self.config {
-		    Some(ref c) => predictions = Some(self.model
-            	                                      .predict(&c.test_matrix)
-            	                                      .expect("failed to predict dogs!?")),
+                match self.config {
+                    Some(ref c) => {
+                        predictions = Some(
+                            self.model
+                                .predict(&c.test_matrix)
+                                .expect("failed to predict dogs!?"),
+                        )
+                    }
                     None => oak::print("config not set"),
-		}
-		// Score how well we did.
-        	let mut hits = 0;
-        	let unprinted_total = self.test_set_size.saturating_sub(10) as usize;
-		match self.config {
-		    Some(ref c) => {
+                }
+                // Score how well we did.
+                let mut hits = 0;
+                let unprinted_total = self.test_set_size.saturating_sub(10) as usize;
+                match self.config {
+                    Some(ref c) => {
                         if let Some(ref p) = predictions {
-                            for (animal, prediction) in c.test_animals
-            	    	        .iter()
-            	    	        .zip(p.iter_rows())
-            	    	        .take(unprinted_total) {
-            		            evaluate_prediction(&mut hits, animal, prediction);
-        	     	        }
-		        }
+                            for (animal, prediction) in c
+                                .test_animals
+                                .iter()
+                                .zip(p.iter_rows())
+                                .take(unprinted_total)
+                            {
+                                evaluate_prediction(&mut hits, animal, prediction);
+                            }
+                        }
                     }
                     None => {
                         oak::print("test_animals not set");
@@ -218,35 +229,38 @@ impl oak::Node for Node {
                     }
                 }
 
-		if unprinted_total > 0 {
-            	    println!("...");
-        	}
-
-		if let Some(ref c) = self.config {
-                    if let Some(ref p) = predictions {
-                        for (animal, prediction) in c.test_animals
-            	            .iter()
-            	            .zip(p.iter_rows())
-            	            .skip(unprinted_total) {
-		                let (actual_type, accurate) = evaluate_prediction(&mut hits, animal, prediction);
-            		        println!(
-                	            "Predicted: {:?}; Actual: {:?}; Accurate? {:?}",
-                	            animal.type_, actual_type, accurate
-            		        );
-                            }
-        	    }
+                if unprinted_total > 0 {
+                    println!("...");
                 }
-		oak::print(&format!(
-		    "Accuracy: {}/{} = {:.1}%",
-		    hits,
-		    self.test_set_size,
-		    (f64::from(hits)) / (f64::from(self.test_set_size as u32)) * 100.
-        	));
-	    }
+
+                if let Some(ref c) = self.config {
+                    if let Some(ref p) = predictions {
+                        for (animal, prediction) in c
+                            .test_animals
+                            .iter()
+                            .zip(p.iter_rows())
+                            .skip(unprinted_total)
+                        {
+                            let (actual_type, accurate) =
+                                evaluate_prediction(&mut hits, animal, prediction);
+                            println!(
+                                "Predicted: {:?}; Actual: {:?}; Accurate? {:?}",
+                                animal.type_, actual_type, accurate
+                            );
+                        }
+                    }
+                }
+                oak::print(&format!(
+                    "Accuracy: {}/{} = {:.1}%",
+                    hits,
+                    self.test_set_size,
+                    (f64::from(hits)) / (f64::from(self.test_set_size as u32)) * 100.
+                ));
+            }
             _ => {
                 panic!("unknown method name");
             }
-	}
+        }
     }
 }
 
