@@ -1,4 +1,5 @@
-#!/bin/sh
+#!/usr/bin/env bash
+
 set -x
 
 /google/data/ro/teams/g3doc/mdformat --in_place $(find -name "*.md")
