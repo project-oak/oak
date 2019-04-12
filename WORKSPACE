@@ -19,15 +19,15 @@ workspace(name = "oak")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
-# Asylo Framework v0.3.4.1
+# Asylo Framework.
 http_archive(
     name = "com_google_asylo",
-    urls = ["https://github.com/google/asylo/archive/v0.3.4.1.tar.gz"],
-    strip_prefix = "asylo-0.3.4.1",
-    sha256 = "5001ff28b03b9a604d77b393deedfa75ed7c553cd7d75332fe52ef147bedbbba",
+    urls = ["https://github.com/google/asylo/archive/v0.3.4.2.tar.gz"],
+    strip_prefix = "asylo-0.3.4.2",
+    sha256 = "82226be212b9f3e2fb14fdf9223e4f376df89424874ac45faff215fa1027797e",
 )
 
-# Google Protocol Buffers v3.6.1.2
+# Google Protocol Buffers.
 http_archive(
     name = "com_google_protobuf",
     urls = [
@@ -37,7 +37,7 @@ http_archive(
     sha256 = "2244b0308846bb22b4ff0bcc675e99290ff9f1115553ae9671eba1030af31bc0",
 )
 
-# WebAssembly Binary Toolkit (forked by tiziano88)
+# WebAssembly Binary Toolkit (forked by tiziano88).
 git_repository(
     name = "wabt",
     commit = "2d31cda394fc67c7969a9bd44066cb8eafa82e23",

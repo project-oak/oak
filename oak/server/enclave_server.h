@@ -27,8 +27,6 @@
 #include "asylo/grpc/auth/enclave_server_credentials.h"
 #include "asylo/grpc/auth/null_credentials_options.h"
 #include "asylo/grpc/util/enclave_server.pb.h"
-#include "asylo/identity/descriptions.h"
-#include "asylo/identity/init.h"
 #include "asylo/trusted_application.h"
 #include "asylo/util/status.h"
 #include "asylo/util/statusor.h"
