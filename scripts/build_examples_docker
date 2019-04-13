@@ -5,7 +5,7 @@ set -o xtrace
 
 readonly SCRIPTS_DIR="$(dirname "$0")"
 
-$SCRIPTS_DIR/docker_run cargo build --release --target=wasm32-unknown-unknown --manifest-path=examples/hello_world/Cargo.toml
-$SCRIPTS_DIR/docker_run cargo build --release --target=wasm32-unknown-unknown --manifest-path=examples/machine_learning/Cargo.toml
-$SCRIPTS_DIR/docker_run cargo build --release --target=wasm32-unknown-unknown --manifest-path=examples/private_set_intersection/Cargo.toml
-$SCRIPTS_DIR/docker_run cargo build --release --target=wasm32-unknown-unknown --manifest-path=examples/running_average/Cargo.toml
+"$SCRIPTS_DIR/docker_run" cargo build --release --target=wasm32-unknown-unknown --manifest-path=examples/hello_world/Cargo.toml
+"$SCRIPTS_DIR/docker_run" cargo build --release --target=wasm32-unknown-unknown --manifest-path=examples/machine_learning/Cargo.toml
+"$SCRIPTS_DIR/docker_run" cargo build --release --target=wasm32-unknown-unknown --manifest-path=examples/private_set_intersection/Cargo.toml
+"$SCRIPTS_DIR/docker_run" cargo build --release --target=wasm32-unknown-unknown --manifest-path=examples/running_average/Cargo.toml

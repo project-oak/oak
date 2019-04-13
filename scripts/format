@@ -2,10 +2,10 @@
 
 set -o xtrace
 
-/google/data/ro/teams/g3doc/mdformat --in_place $(find -name "*.md")
+/google/data/ro/teams/g3doc/mdformat --in_place "$(find . -name "*.md")"
 
-rustfmt $(find -name "*.rs")
+rustfmt "$(find . -name "*.rs")"
 
-clang-format -i $(find -name "*.cc")
-clang-format -i $(find -name "*.h")
-clang-format -i $(find -name "*.proto")
+clang-format -i "$(find . -name "*.cc")"
+clang-format -i "$(find . -name "*.h")"
+clang-format -i "$(find . -name "*.proto")"

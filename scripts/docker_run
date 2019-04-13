@@ -7,8 +7,8 @@ docker build --tag=oak .
 docker run \
   --interactive \
   --tty \
-  --volume=$PWD/bazel-cache:/root/.cache/bazel \
-  --volume=$PWD:/opt/my-project \
+  --volume="$PWD/bazel-cache":/root/.cache/bazel \
+  --volume="$PWD":/opt/my-project \
   --workdir=/opt/my-project \
   --network=host \
   oak:latest \

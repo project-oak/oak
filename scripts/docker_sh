@@ -5,4 +5,4 @@ set -o xtrace
 
 readonly SCRIPTS_DIR="$(dirname "$0")"
 
-$SCRIPTS_DIR/docker_run bash
+"$SCRIPTS_DIR/docker_run" bash
