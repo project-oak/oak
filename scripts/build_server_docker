@@ -5,4 +5,4 @@ set -o xtrace
 
 readonly SCRIPTS_DIR="$(dirname "$0")"
 
-$SCRIPTS_DIR/docker_run bazel build --config=enc-sim //oak/server:oak
+"$SCRIPTS_DIR/docker_run" bazel build --config=enc-sim //oak/server:oak
