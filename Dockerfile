@@ -1,6 +1,6 @@
 FROM gcr.io/asylo-framework/asylo:buildenv-v0.3.4
 
-RUN apt-get -y update && apt-get install -y git curl clang-format
+RUN apt-get -y update && apt-get install -y git curl clang-format shellcheck
 
 # Install protobuf compiler.
 ARG PROTOBUF_VERSION=3.7.1
