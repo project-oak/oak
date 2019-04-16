@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 
-set -o xtrace
+set -o errexit
+set -o nounset
 
-/google/data/ro/teams/g3doc/mdformat --in_place "$(find . -name "*.md")"
+# Not everyone has mdformat installed, so we ignore failures for now.
 
-rustfmt "$(find . -name "*.rs")"
+find . \( -type d -name 'bazel-cache' -prune \) -o \( -type f -name '*.md' -exec /google/data/ro/teams/g3doc/mdformat --in_place {} + \) || true
 
-clang-format -i "$(find . -name "*.cc")"
-clang-format -i "$(find . -name "*.h")"
-clang-format -i "$(find . -name "*.proto")"
+# Run clang-format and rustfmt on the entire codebase.
+# Applies all formattings in-place.
+
+find oak examples \( -type f -name '*.h' -o -name '*.cc' -o -name '*.proto' \) \
+    -exec clang-format -i -style=file {} +
+find examples rust -type f -name '*.rs' -exec rustfmt {} +

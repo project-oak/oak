@@ -1,6 +1,10 @@
 FROM gcr.io/asylo-framework/asylo:buildenv-v0.3.4
 
-RUN apt-get -y update && apt-get install -y git curl
+RUN apt-get -y update && apt-get install -y git curl clang-format shellcheck
+
+RUN git --version
+RUN clang-format -version
+RUN shellcheck --version
 
 # Install protobuf compiler.
 ARG PROTOBUF_VERSION=3.7.1
@@ -15,6 +19,9 @@ RUN curl https://sh.rustup.rs -sSf > /tmp/rustup
 RUN sh /tmp/rustup -y
 ENV PATH "/root/.cargo/bin:$PATH"
 RUN rustup --version
+
+# Install rustfmt.
+RUN rustup component add rustfmt --toolchain stable-x86_64-unknown-linux-gnu
 
 # Install WebAssembly target for Rust.
 RUN rustup target add wasm32-unknown-unknown
