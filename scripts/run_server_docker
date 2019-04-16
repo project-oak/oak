@@ -5,5 +5,5 @@ set -o xtrace
 
 readonly SCRIPTS_DIR="$(dirname "$0")"
 
-$SCRIPTS_DIR/build_server_docker
-$SCRIPTS_DIR/docker_run ./bazel-bin/oak/server/oak
+"$SCRIPTS_DIR/build_server_docker"
+"$SCRIPTS_DIR/docker_run" ./bazel-bin/oak/server/oak

@@ -3,6 +3,8 @@
 set -o errexit
 set -o nounset
 
+/google/data/ro/teams/g3doc/mdformat --in_place "$(find . -name "*.md")"
+
 # Runs clang-format and rustfmt on the entire codebase.
 # Applies all formattings in-place.
 
