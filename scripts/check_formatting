@@ -3,7 +3,11 @@
 set -o errexit
 set -o nounset
 
-# Runs clang-format and rustfmt on the entire codebase to check if it's 
+# Check shell scripts for common mistakes.
+
+find scripts -type f -exec shellcheck {} +
+
+# Run clang-format and rustfmt on the entire codebase to check if it's
 # well formatted. Exit codes:
 #  - 1 there are files to be formatted.
 #  - 0 everything looks fine.
