@@ -3,7 +3,9 @@
 set -o errexit
 set -o nounset
 
-find . \( -type d -name 'bazel-cache' -prune \) -o \( -type f -name '*.md' -exec /google/data/ro/teams/g3doc/mdformat --in_place {} + \)
+# Not everyone has mdformat installed, so we ignore failures for now.
+
+find . \( -type d -name 'bazel-cache' -prune \) -o \( -type f -name '*.md' -exec /google/data/ro/teams/g3doc/mdformat --in_place {} + \) || true
 
 # Run clang-format and rustfmt on the entire codebase.
 # Applies all formattings in-place.

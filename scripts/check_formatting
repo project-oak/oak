@@ -16,7 +16,7 @@ find scripts -type f -exec shellcheck {} +
 # We check if any "replacement" tag exists in the output.
 CLANG_FORMAT_EXIT_CODE=0
 find oak examples \( -type f -name '*.h' -o -name '*.cc' -o -name '*.proto' \) \
-  -exec clang-format -style=file -output-replacements-xml {} + \
+  -exec clang-format -verbose -style=file -output-replacements-xml {} + 2> /dev/null \
   | grep '<replacement ' > /dev/null \
   && CLANG_FORMAT_EXIT_CODE=$? || CLANG_FORMAT_EXIT_CODE=$?
 
@@ -24,6 +24,7 @@ find oak examples \( -type f -name '*.h' -o -name '*.cc' -o -name '*.proto' \) \
 # has found anything and 1 if not, so here we'll invert the return code to
 # indicate an error when the formatting is insufficient.
 if [ $CLANG_FORMAT_EXIT_CODE -ne 1 ]; then
+  echo 'Please format code with clang-format'
   exit 1
 fi
 
