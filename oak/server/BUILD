@@ -121,6 +121,22 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "storage_service",
+    srcs = [
+        "storage_service.cc",
+    ],
+    hdrs = [
+        "storage_service.h",
+    ],
+    deps = [
+        "//oak/proto:storage_cc_grpc",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_asylo//asylo/util:logging",
+        "@com_google_googleapis//google/spanner/v1:spanner_cc_grpc",
+    ],
+)
+
 sgx_enclave_configuration(
     name = "grpc_enclave_config",
     # gRPC needs more than the default amount of heap to run. ~1.2GB.

@@ -50,6 +50,33 @@ patch_repository(
     ],
     patches = ["@com_google_asylo//asylo/distrib:grpc_1_19_1.patch"],
     strip_prefix = "grpc-cb9b43b9f7291ceb714d92e0a717c6364c1fcc61",
+    sha256 = "8492eae54b2032c5993bd720c9ffe6ea4b05b9bdeb33534453b7129bd98d500a",
+)
+
+# Google APIs for Cloud Spanner protos.
+# TODO: Switch from fork after https://github.com/googleapis/googleapis/pull/553 is merged.
+http_archive(
+    name = "com_google_googleapis",
+    urls = [
+        "https://github.com/michael-kernel-sanders/googleapis/archive/66d43496b46c26915d7d37302cddbd81481302d7.zip"
+    ],
+    strip_prefix = "googleapis-66d43496b46c26915d7d37302cddbd81481302d7",
+    sha256 = "3a426981242af9c05dbc3cdfc72f6627516232bbccaebaab1711397606184973",
+)
+
+http_archive(
+    name = "io_grpc_grpc_java",
+    # sha256 = "update",
+    strip_prefix = "grpc-java-1.20.0",
+    urls = [
+        "https://github.com/grpc/grpc-java/archive/v1.20.0.zip",
+    ],
+)
+
+http_archive(
+    name = "com_google_api_codegen",
+    urls = ["https://github.com/googleapis/gapic-generator/archive/8e930b79e846b9d4876462be9dc4c1dbc04e2903.zip"],
+    strip_prefix = "gapic-generator-8e930b79e846b9d4876462be9dc4c1dbc04e2903",
 )
 
 # WebAssembly Binary Toolkit (forked by tiziano88).
@@ -72,3 +99,4 @@ sgx_deps()
 
 load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
 grpc_deps()
+
