@@ -165,12 +165,7 @@ impl oak::Node for Node {
             model: NaiveBayes::new(),
         }
     }
-    fn invoke(
-        &mut self,
-        method_name: &str,
-        _request: &mut oak::Reader,
-        _response: &mut oak::Writer,
-    ) {
+    fn invoke(&mut self, method_name: &str, grpc: &mut oak::Channel) {
         oak::print(method_name);
         match method_name {
             "/oak.examples.machine_learning.MachineLearning/Data" => {

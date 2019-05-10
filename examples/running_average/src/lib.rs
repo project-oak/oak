@@ -41,11 +41,11 @@ impl oak::Node for Node {
     fn new() -> Self {
         Node::default()
     }
-    fn invoke(&mut self, method_name: &str, request: &mut oak::Reader, response: &mut oak::Writer) {
+    fn invoke(&mut self, method_name: &str, grpc: &mut oak::Channel) {
         // TODO: Generate this code via a macro or code generation (e.g. a protoc plugin).
         match method_name {
             "/oak.examples.running_average.RunningAverage/SubmitSample" => {
-                let mut in_stream = protobuf::CodedInputStream::new(request);
+                let mut in_stream = protobuf::CodedInputStream::new(grpc);
                 let mut req = proto::running_average::SubmitSampleRequest::new();
                 req.merge_from(&mut in_stream)
                     .expect("could not read request");
@@ -54,7 +54,7 @@ impl oak::Node for Node {
             }
             "/oak.examples.running_average.RunningAverage/GetAverage" => {
                 let mut res = proto::running_average::GetAverageResponse::new();
-                let mut out_stream = protobuf::CodedOutputStream::new(response);
+                let mut out_stream = protobuf::CodedOutputStream::new(grpc);
                 res.average = self.sum / self.count;
                 res.write_to(&mut out_stream)
                     .expect("could not write response");

@@ -115,9 +115,9 @@ Each Oak Module must expose the following **exported functions** as
     may fail to be invoked). No further interactions with the Oak Node are
     possible after finalization.
 
--   `oak_handle_grpc_call: () -> nil`: Invoked when a client interacts with the
-    Oak Node over gRPC. Each client interaction results in a new invocation of
-    this function, and the Oak VM guarantees that concurrent invocations only
+-   `oak_handle_grpc_call: (i64) -> nil`: Invoked when a client interacts with
+    the Oak Node over gRPC. Each client interaction results in a new invocation
+    of this function, and the Oak VM guarantees that concurrent invocations only
     invoke it sequentially, therefore from the point of view of the Oak Node
     these calls will never overlap in time and each execution of this function
     has full access to the underlying internal state until it completes. In the
@@ -125,44 +125,38 @@ Each Oak Module must expose the following **exported functions** as
     accurately about the semantics of concurrent invocations, and how they
     relate to the policy system.
 
+    *   arg 0: Id of the built-in gRPC channel, used to read the incoming gRPC
+        request and write the outgoing gRPC response; this channel is implicitly
+        available to any invocation and can be used with the standard methods
+        below, but it cannot be opened or closed.
+
 Each Oak Module may also optionally rely on zero or more of the following **host
 functions** as
 [WebAssembly imports](https://webassembly.github.io/spec/core/syntax/modules.html#imports)
 (all of them defined in the `oak` module):
 
--   `print: (i32, i32) -> nil`: Prints a string to standard output on the host
-    system. To be used for debugging only, as it leaks data. Will be removed
-    before release.
+-   `open_channel (i32, i32) -> i64`: Opens the channel specified by the
+    provided name.
 
-    *   arg 0: Source buffer address
-    *   arg 1: Source buffer size in bytes
-
--   `get_time: () -> i64`: Retrieves the current time from the host system.
-    TODO: Implement this via
-    [Roughtime](https://blog.cloudflare.com/roughtime/).
-
-    *   return 0: Number of nanoseconds since epoch (1970-01-01T00:00:00Z).
-
--   `read: (i32, i32) -> i32`: Reads incoming gRPC data for the current
-    invocation.
-
-    *   arg 0: Destination buffer address
-    *   arg 1: Destination buffer size in bytes
+    *   arg 0: Channel name address
+    *   arg 1: Channel name size in bytes
     *   return 0: Number of bytes read
 
--   `write: (i32, i32) -> i32`: Writes outgoing gRPC data for the current
-    invocation.
+-   `read_channel: (i64, i32, i32) -> i32`: Reads data from the specified
+    channel.
 
-    *   arg 0: Source buffer address
-    *   arg 1: Source buffer size in bytes
+    *   arg 0: Channel id
+    *   arg 1: Destination buffer address
+    *   arg 2: Destination buffer size in bytes
+    *   return 0: Number of bytes read
+
+-   `write_channel: (i64, i32, i32) -> i32`: Writes data to the specified
+    channel.
+
+    *   arg 0: Channel id
+    *   arg 1: Source buffer address
+    *   arg 2: Source buffer size in bytes
     *   return 0: Number of bytes written
-
--   `read_method_name: (i32, i32) -> i32`: Reads gRPC method name for the
-    current invocation.
-
-    *   arg 0: Destination buffer address
-    *   arg 1: Destination buffer size in bytes
-    *   return 0: Number of bytes read
 
 ### Rust SDK
 

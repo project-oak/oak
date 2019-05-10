@@ -23,8 +23,8 @@ namespace oak {
 namespace {
 
 // Converts a gRPC ByteBuffer into a vector of bytes.
-std::vector<uint8_t> Unwrap(const grpc::ByteBuffer& buffer) {
-  std::vector<uint8_t> bytes;
+std::vector<char> Unwrap(const grpc::ByteBuffer& buffer) {
+  std::vector<char> bytes;
   std::vector<::grpc::Slice> slices;
   grpc::Status status = buffer.Dump(&slices);
   if (!status.ok()) {
@@ -37,7 +37,7 @@ std::vector<uint8_t> Unwrap(const grpc::ByteBuffer& buffer) {
 }
 
 // Converts a vector of bytes into a gRPC ByteBuffer.
-const grpc::ByteBuffer Wrap(const std::vector<uint8_t>& bytes) {
+const grpc::ByteBuffer Wrap(const std::vector<char>& bytes) {
   grpc::Slice slice(bytes.data(), bytes.size());
   grpc::ByteBuffer buffer(&slice, /*nslices=*/1);
   return buffer;
@@ -66,8 +66,8 @@ void ModuleInvocation::ProcessRequest(bool ok) {
     delete this;
     return;
   }
-  std::vector<uint8_t> request_data = Unwrap(request_);
-  std::vector<uint8_t> response_data;
+  std::vector<char> request_data = Unwrap(request_);
+  std::vector<char> response_data;
   node_->ProcessModuleInvocation(&context_, request_data, &response_data);
   // Restarts the gRPC flow with a new ModuleInvocation object for the next request
   // after processing this request.  This ensures that processing is serialized.

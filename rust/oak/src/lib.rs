@@ -15,62 +15,70 @@
 //
 
 use std::cell::RefCell;
+use std::io::{Read, Write};
 
 mod wasm {
     // See https://rustwasm.github.io/book/reference/js-ffi.html
     #[link(wasm_import_module = "oak")]
     extern "C" {
-        pub fn print(s: &str);
-        pub fn get_time() -> u64;
-        pub fn read(buf: *mut u8, size: usize) -> usize;
-        pub fn write(buf: *const u8, size: usize) -> usize;
-        pub fn read_method_name(buf: *mut u8, size: usize) -> usize;
+        pub fn open_channel(name: *const u8, size: usize) -> u64;
+        pub fn close_channel(channel_id: u64);
+
+        pub fn read_channel(channel_id: u64, buf: *mut u8, size: usize) -> usize;
+        pub fn write_channel(channel_id: u64, buf: *const u8, size: usize) -> usize;
     }
 }
 
-fn method_name() -> String {
-    // We do a single fixed-size read for the method name to simplify the server logic, so we do
-    // not have to keep track of how many bytes have been read already.
-    let mut buf = [0u8; 255];
-    let len: usize;
-    unsafe {
-        len = wasm::read_method_name(buf.as_mut_ptr(), buf.len());
+pub struct Channel {
+    channel_id: u64,
+}
+
+impl Channel {
+    fn open(name: &str) -> Channel {
+        let channel_id = unsafe { wasm::open_channel(name.as_ptr(), name.len()) };
+        Channel {
+            channel_id: channel_id,
+        }
     }
-    std::str::from_utf8(&buf[0..len])
-        .expect("could not read method name")
-        .to_string()
 }
 
-pub fn print(s: &str) {
-    unsafe { wasm::print(s) }
+impl Drop for Channel {
+    fn drop(&mut self) {
+        //unsafe { wasm::close_channel(self.channel_id) };
+    }
 }
 
-pub fn get_time() -> std::time::SystemTime {
-    let ns = unsafe { wasm::get_time() };
-    std::time::UNIX_EPOCH + std::time::Duration::from_nanos(ns)
-}
-
-pub struct Reader {
-    _private: (),
-}
-
-impl std::io::Read for Reader {
+impl Read for Channel {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        Ok(unsafe { wasm::read(buf.as_mut_ptr(), buf.len()) })
+        Ok(unsafe { wasm::read_channel(self.channel_id, buf.as_mut_ptr(), buf.len()) })
     }
 }
 
-pub struct Writer {
-    _private: (),
-}
-
-impl std::io::Write for Writer {
+impl Write for Channel {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        Ok(unsafe { wasm::write(buf.as_ptr(), buf.len()) })
+        Ok(unsafe { wasm::write_channel(self.channel_id, buf.as_ptr(), buf.len()) })
     }
     fn flush(&mut self) -> std::io::Result<()> {
         Ok(())
     }
+}
+
+fn grpc_method_name() -> String {
+    let mut c = Channel::open("grpc_method_name");
+    let mut buffer = String::new();
+    // TODO: Check errors.
+    c.read_to_string(&mut buffer);
+    buffer
+}
+
+pub fn print(s: &str) {
+    let mut c = Channel::open("print");
+    c.write(s.as_bytes());
+}
+
+pub fn get_time() -> std::time::SystemTime {
+    let ns = 11; // unsafe { wasm::get_time() };
+    std::time::UNIX_EPOCH + std::time::Duration::from_nanos(ns)
 }
 
 /// Trait encapsulating the operations required for an Oak Node.
@@ -78,7 +86,7 @@ pub trait Node {
     fn new() -> Self
     where
         Self: Sized;
-    fn invoke(&mut self, grpc_method_name: &str, request: &mut Reader, response: &mut Writer);
+    fn invoke(&mut self, grpc_method_name: &str, grpc: &mut Channel);
 }
 
 /// No-op implementation of Node, so that we have a placeholder value until the actual one is set
@@ -89,7 +97,7 @@ impl Node for NopNode {
     fn new() -> Self {
         NopNode
     }
-    fn invoke(&mut self, grpc_method_name: &str, request: &mut Reader, response: &mut Writer) {}
+    fn invoke(&mut self, _grpc_method_name: &str, _grpc: &mut Channel) {}
 }
 
 thread_local! {
@@ -121,13 +129,12 @@ pub fn set_node<T: Node + 'static>() {
 }
 
 #[no_mangle]
-pub extern "C" fn oak_handle_grpc_call() {
+pub extern "C" fn oak_handle_grpc_call(grpc_channel_id: u64) {
     NODE.with(|node| {
-        let method_name = method_name();
-        node.borrow_mut().invoke(
-            &method_name,
-            &mut Reader { _private: () },
-            &mut Writer { _private: () },
-        );
+        let method_name = grpc_method_name();
+        let mut grpc_channel = Channel {
+            channel_id: grpc_channel_id,
+        };
+        node.borrow_mut().invoke(&method_name, &mut grpc_channel);
     });
 }

@@ -44,11 +44,11 @@ impl oak::Node for Node {
     fn new() -> Self {
         Node::default()
     }
-    fn invoke(&mut self, method_name: &str, request: &mut oak::Reader, response: &mut oak::Writer) {
+    fn invoke(&mut self, method_name: &str, grpc: &mut oak::Channel) {
         // TODO: Generate this code via a macro or code generation (e.g. a protoc plugin).
         match method_name {
             "/oak.examples.private_set_intersection.PrivateSetIntersection/SubmitSet" => {
-                let mut in_stream = protobuf::CodedInputStream::new(request);
+                let mut in_stream = protobuf::CodedInputStream::new(grpc);
                 let mut req = proto::private_set_intersection::SubmitSetRequest::new();
                 req.merge_from(&mut in_stream)
                     .expect("could not read request");
@@ -64,7 +64,7 @@ impl oak::Node for Node {
                 if let Some(ref set) = self.values {
                     res.values = set.iter().cloned().collect();
                 };
-                let mut out_stream = protobuf::CodedOutputStream::new(response);
+                let mut out_stream = protobuf::CodedOutputStream::new(grpc);
                 res.write_to(&mut out_stream)
                     .expect("could not write response");
                 out_stream.flush().expect("could not flush");

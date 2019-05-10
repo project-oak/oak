@@ -18,13 +18,16 @@
 
 #include <openssl/sha.h>
 
+#include <utility>
+
 #include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
+#include "oak/server/buffer_channel.h"
+#include "oak/server/print_channel.h"
 #include "src/binary-reader.h"
 #include "src/error-formatter.h"
 #include "src/error.h"
 #include "src/interp/binary-reader-interp.h"
-#include "src/interp/interp.h"
 
 namespace oak {
 
@@ -32,17 +35,6 @@ namespace oak {
 
 static std::unique_ptr<wabt::FileStream> s_log_stream = wabt::FileStream::CreateStdout();
 static std::unique_ptr<wabt::FileStream> s_stdout_stream = wabt::FileStream::CreateStdout();
-
-static wabt::interp::Result PrintCallback(const wabt::interp::HostFunc* func,
-                                          const wabt::interp::FuncSignature* sig,
-                                          const wabt::interp::TypedValues& args,
-                                          wabt::interp::TypedValues& results) {
-  LOG(INFO) << "Called host function: " << func->module_name << "." << func->field_name;
-  for (auto const& arg : args) {
-    LOG(INFO) << "Arg: " << wabt::interp::TypedValueToString(arg);
-  }
-  return wabt::interp::Result::Ok;
-}
 
 static absl::Span<const char> ReadMemory(wabt::interp::Environment* env, const uint32_t offset,
                                          const uint32_t size) {
@@ -55,60 +47,24 @@ static const std::string ReadString(wabt::interp::Environment* env, const uint32
   return std::string(memory.cbegin(), memory.cend());
 }
 
-template <class Iterator>
-static void WriteMemory(wabt::interp::Environment* env, const uint32_t offset, Iterator begin,
-                        Iterator end) {
-  std::copy(begin, end, env->GetMemory(0)->data.begin() + offset);
-}
-
 static void WriteMemory(wabt::interp::Environment* env, const uint32_t offset,
                         const absl::Span<const char> data) {
-  WriteMemory(env, offset, data.cbegin(), data.cend());
+  std::copy(data.cbegin(), data.cend(), env->GetMemory(0)->data.begin() + offset);
 }
 
-static void WriteString(wabt::interp::Environment* env, const uint32_t offset,
-                        const std::string str) {
-  WriteMemory(env, offset, str.cbegin(), str.cend());
+// Creates a TypedValue of type i64 with the specified inner value.
+static wabt::interp::TypedValue MakeI64(uint64_t v) {
+  wabt::interp::TypedValue tv(wabt::Type::I64);
+  tv.set_i64(v);
+  return tv;
 }
 
-// Native implementation of the `oak.print` host function.
-static wabt::interp::HostFunc::Callback PrintString(wabt::interp::Environment* env) {
-  return [env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
-               const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
-    LOG(INFO) << "Called host function: " << func->module_name << "." << func->field_name;
-    for (auto const& arg : args) {
-      LOG(INFO) << "Arg: " << wabt::interp::TypedValueToString(arg);
-    }
-    LOG(INFO) << "Arg0-string: " << ReadString(env, args[0].get_i32(), args[1].get_i32());
-    return wabt::interp::Result::Ok;
-  };
-}
-
-static std::vector<char> i64Bytes(uint64_t val) {
-  std::vector<char> vec(8);
-  std::memcpy(&vec[0], &val, 8);
-  return vec;
-}
-
-// Native implementation of the `oak.get_time` host function.
-static wabt::interp::HostFunc::Callback OakGetTime(wabt::interp::Environment* env) {
-  return [env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
-               const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
-    LOG(INFO) << "Called host function: " << func->module_name << "." << func->field_name;
-    auto now = std::chrono::system_clock::now();
-    auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
-    results[0].set_i64(ns);
-    return wabt::interp::Result::Ok;
-  };
-}
-
-static wabt::Index UnknownFuncHandler(wabt::interp::Environment* env,
-                                      wabt::interp::HostModule* host_module,
-                                      const wabt::string_view name, const wabt::Index sig_index) {
-  LOG(WARNING) << "Unknown func export: " << name.to_string() << " (sig=" << sig_index << ")";
-  std::pair<wabt::interp::HostFunc*, wabt::Index> pair =
-      host_module->AppendFuncExport(name, sig_index, PrintCallback);
-  return pair.second;
+static void LogHostFunctionCall(const wabt::interp::HostFunc* func,
+                                const wabt::interp::TypedValues& args) {
+  LOG(INFO) << "Called host function: " << func->module_name << "." << func->field_name;
+  for (auto const& arg : args) {
+    LOG(INFO) << "Arg: " << wabt::interp::TypedValueToString(arg);
+  }
 }
 
 static wabt::Result ReadModule(const std::string module_bytes, wabt::interp::Environment* env,
@@ -168,7 +124,6 @@ OakNode::OakNode(const std::string& node_id, const std::string& module)
     LOG(INFO) << "Executing module";
 
     wabt::interp::TypedValues args;
-
     wabt::interp::ExecResult exec_result =
         executor.RunExportByName(module_, "oak_initialize", args);
 
@@ -186,123 +141,119 @@ OakNode::OakNode(const std::string& node_id, const std::string& module)
 }
 
 // Register all available host functions so that they are available to the Oak Module at runtime.
-//
-// TODO: Selectively install only the host functions allowed by the policies associated with the Oak
-// Module.
 void OakNode::InitEnvironment(wabt::interp::Environment* env) {
   wabt::interp::HostModule* oak_module = env->AppendHostModule("oak");
-
   oak_module->AppendFuncExport(
-      "print",
+      "open_channel",
       wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
-                                  std::vector<wabt::Type>{}),
-      PrintString(env));
-  oak_module->AppendFuncExport(
-      "get_time",
-      wabt::interp::FuncSignature(std::vector<wabt::Type>{},
                                   std::vector<wabt::Type>{wabt::Type::I64}),
-      OakGetTime(env));
-
+      this->OakOpenChannel(env));
   oak_module->AppendFuncExport(
-      "read_method_name",
-      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
-                                  std::vector<wabt::Type>{wabt::Type::I32}),
-      this->OakReadMethodName(env));
+      "read_channel",
+      wabt::interp::FuncSignature(
+          std::vector<wabt::Type>{wabt::Type::I64, wabt::Type::I32, wabt::Type::I32},
+          std::vector<wabt::Type>{wabt::Type::I32}),
+      this->OakReadChannel(env));
   oak_module->AppendFuncExport(
-      "read",
-      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
-                                  std::vector<wabt::Type>{wabt::Type::I32}),
-      this->OakRead(env));
-  oak_module->AppendFuncExport(
-      "write",
-      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
-                                  std::vector<wabt::Type>{wabt::Type::I32}),
-      this->OakWrite(env));
+      "write_channel",
+      wabt::interp::FuncSignature(
+          std::vector<wabt::Type>{wabt::Type::I64, wabt::Type::I32, wabt::Type::I32},
+          std::vector<wabt::Type>{wabt::Type::I32}),
+      this->OakWriteChannel(env));
+  // TODO: Implement and register close_channel function.
 }
 
-wabt::interp::HostFunc::Callback OakNode::OakReadMethodName(wabt::interp::Environment* env) {
+ChannelId OakNode::NewChannelId() {
+  // TODO: Generate random channel ID.
+  channel_id_ += 1;
+  return channel_id_;
+}
+
+wabt::interp::HostFunc::Callback OakNode::OakOpenChannel(wabt::interp::Environment* env) {
   return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
                      const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
-    LOG(INFO) << "Called host function: " << func->module_name << "." << func->field_name;
-    for (auto const& arg : args) {
-      LOG(INFO) << "Arg: " << wabt::interp::TypedValueToString(arg);
+    LogHostFunctionCall(func, args);
+
+    std::string name = ReadString(env, args[0].get_i32(), args[1].get_i32());
+    LOG(INFO) << "open_channel(" << name << ")";
+
+    ChannelId channel_id = NewChannelId();
+    std::unique_ptr<Channel> channel;
+    if (name == "grpc_method_name") {
+      absl::Span<const char> grpc_method_name_span = absl::MakeConstSpan(grpc_method_name_);
+      channel = absl::make_unique<BufferChannel>(grpc_method_name_span, nullptr);
+    } else if (name == "print") {
+      channel = absl::make_unique<PrintChannel>();
     }
+    channels_[channel_id] = std::move(channel);
 
-    uint32_t p = args[0].get_i32();
-    uint32_t len = args[1].get_i32();
-
-    std::string grpc_method_name = server_context_->method();
-
-    uint32_t end = len;
-    if (end > grpc_method_name.size()) {
-      end = grpc_method_name.size();
-    }
-
-    WriteString(env, p, grpc_method_name);
-    results[0].set_i32(end);
+    results[0].set_i64(channel_id);
 
     return wabt::interp::Result::Ok;
   };
 }
 
-wabt::interp::HostFunc::Callback OakNode::OakRead(wabt::interp::Environment* env) {
+wabt::interp::HostFunc::Callback OakNode::OakReadChannel(wabt::interp::Environment* env) {
   return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
                      const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
-    LOG(INFO) << "Called host function: " << func->module_name << "." << func->field_name;
-    for (auto const& arg : args) {
-      LOG(INFO) << "Arg: " << wabt::interp::TypedValueToString(arg);
-    }
-    uint32_t offset = args[0].get_i32();
-    uint32_t size = args[1].get_i32();
+    LogHostFunctionCall(func, args);
 
-    if (size > module_data_input_.size()) {
-      size = module_data_input_.size();
-    }
-    WriteMemory(env, offset, module_data_input_.cbegin(), module_data_input_.cbegin() + size);
-    results[0].set_i32(size);
-    module_data_input_.remove_prefix(size);
+    ChannelId channel_id = args[0].get_i64();
+    uint32_t offset = args[1].get_i32();
+    uint32_t size = args[2].get_i32();
+
+    std::unique_ptr<Channel>& channel = channels_[channel_id];
+
+    absl::Span<const char> data = channel->Read(size);
+    WriteMemory(env, offset, data);
+    results[0].set_i32(data.size());
 
     return wabt::interp::Result::Ok;
   };
 }
 
-wabt::interp::HostFunc::Callback OakNode::OakWrite(wabt::interp::Environment* env) {
+wabt::interp::HostFunc::Callback OakNode::OakWriteChannel(wabt::interp::Environment* env) {
   return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
                      const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
-    LOG(INFO) << "Called host function: " << func->module_name << "." << func->field_name;
-    for (auto const& arg : args) {
-      LOG(INFO) << "Arg: " << wabt::interp::TypedValueToString(arg);
-    }
-    uint32_t offset = args[0].get_i32();
-    uint32_t size = args[1].get_i32();
+    LogHostFunctionCall(func, args);
 
-    absl::Span<const char> memory = ReadMemory(env, offset, size);
-    module_data_output_->insert(module_data_output_->end(), memory.cbegin(), memory.cend());
-    results[0].set_i32(size);
+    ChannelId channel_id = args[0].get_i64();
+    uint32_t offset = args[1].get_i32();
+    uint32_t size = args[2].get_i32();
+
+    std::unique_ptr<Channel>& channel = channels_[channel_id];
+
+    absl::Span<const char> data = ReadMemory(env, offset, size);
+    channel->Write(data);
+    results[0].set_i32(data.size());
 
     return wabt::interp::Result::Ok;
   };
 }
 
 grpc::Status OakNode::ProcessModuleInvocation(grpc::GenericServerContext* context,
-                                              const std::vector<uint8_t>& request_data,
-                                              std::vector<uint8_t>* response_data) {
+                                              const std::vector<char>& request_data,
+                                              std::vector<char>* response_data) {
   LOG(INFO) << "Handling gRPC call: " << context->method();
   server_context_ = context;
 
-  absl::MutexLock lock(&module_data_mutex_);
-  module_data_input_ = absl::Span<const uint8_t>(request_data);
-  module_data_output_ = response_data;
+  // Create the gRPC channel, used by the module to perform basic input and output.
+  std::unique_ptr<Channel> grpc_channel =
+      absl::make_unique<BufferChannel>(request_data, response_data);
+  ChannelId grpc_channel_id = NewChannelId();
+  LOG(INFO) << "Created gRPC channel: " << grpc_channel_id;
+  channels_[grpc_channel_id] = std::move(grpc_channel);
+
+  // Store a copy of the gRPC method name so that we can refer to it via a Span when the Module
+  // tries to read it from a channel; otherwise we would need to allocate a new string every time
+  // and ensure it can outlive the Span reference.
+  grpc_method_name_ = context->method();
 
   wabt::Stream* trace_stream = nullptr;
   wabt::interp::Thread::Options thread_options;
   wabt::interp::Executor executor(&env_, trace_stream, thread_options);
 
-  // Note that inputs and outputs are not bound to the args of the invocation, because the memory of
-  // the receiving buffer must be allocated and managed by the runtime rather than the interpreter.
-  // The Oak Module can consume the input data by calling the `oak.read` host function, and produce
-  // output data by calling the `oak.write` host function.
-  wabt::interp::TypedValues args;
+  wabt::interp::TypedValues args = {MakeI64(grpc_channel_id)};
   wabt::interp::ExecResult exec_result =
       executor.RunExportByName(module_, "oak_handle_grpc_call", args);
 
