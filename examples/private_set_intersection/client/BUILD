@@ -18,13 +18,14 @@ cc_binary(
     name = "client",
     srcs = ["private_set_intersection.cc"],
     deps = [
-        "//examples/private_set_intersection/proto:private_set_intersection_proto_grpc",
+        "//examples/private_set_intersection/proto:private_set_intersection_cc_grpc",
+        "//examples/private_set_intersection/proto:private_set_intersection_cc_proto",
         "//examples/utils",
         "//oak/client:manager_client",
         "//oak/client:node_client",
-        "@com_google_absl//absl/memory",
-        "@com_google_asylo//asylo/util:logging",
         "@com_github_gflags_gflags//:gflags_nothreads",
         "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/memory",
+        "@com_google_asylo//asylo/util:logging",
     ],
 )

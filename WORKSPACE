@@ -37,6 +37,21 @@ http_archive(
     sha256 = "2244b0308846bb22b4ff0bcc675e99290ff9f1115553ae9671eba1030af31bc0",
 )
 
+# gRPC
+# TODO: Remove after Asylo upgrades for 0803c79411597f58eae0b12b4eb272c506b8cdbb.
+load(
+    "@com_google_asylo//asylo/bazel:patch_repository.bzl",
+    "patch_repository",
+)
+patch_repository(
+    name = "com_github_grpc_grpc",
+    urls = [
+        "https://github.com/grpc/grpc/archive/cb9b43b9f7291ceb714d92e0a717c6364c1fcc61.zip",
+    ],
+    patches = ["@com_google_asylo//asylo/distrib:grpc_1_19_1.patch"],
+    strip_prefix = "grpc-cb9b43b9f7291ceb714d92e0a717c6364c1fcc61",
+)
+
 # WebAssembly Binary Toolkit (forked by tiziano88).
 git_repository(
     name = "wabt",

@@ -19,28 +19,53 @@ package(
 )
 
 load(
-    "@com_google_asylo//asylo/bazel:proto.bzl",
-    "asylo_proto_library",
-    "asylo_grpc_proto_library",
+    "@com_github_grpc_grpc//bazel:cc_grpc_library.bzl",
+    "cc_grpc_library",
 )
 
-asylo_proto_library(
+proto_library(
     name = "enclave_proto",
     srcs = ["enclave.proto"],
     deps = ["@com_google_asylo//asylo:enclave_proto"],
 )
 
-asylo_grpc_proto_library(
-    name = "node_grpc_proto",
+cc_proto_library(
+    name = "enclave_cc_proto",
+    deps = [":enclave_proto"],
+)
+
+proto_library(
+    name = "node_proto",
     srcs = ["node.proto"],
 )
 
-load(
-    "@com_github_grpc_grpc//bazel:grpc_build_system.bzl",
-    "grpc_proto_library",
+cc_proto_library(
+    name = "node_cc_proto",
+    deps = [":node_proto"],
 )
 
-grpc_proto_library(
-    name = "manager_grpc_proto",
+cc_grpc_library(
+    name = "node_cc_grpc",
+    srcs = [":node_proto"],
+    grpc_only = True,
+    well_known_protos = True,
+    deps = [":node_cc_proto"],
+)
+
+proto_library(
+    name = "manager_proto",
     srcs = ["manager.proto"],
+)
+
+cc_proto_library(
+    name = "manager_cc_proto",
+    deps = [":manager_proto"],
+)
+
+cc_grpc_library(
+    name = "manager_cc_grpc",
+    srcs = [":manager_proto"],
+    grpc_only = True,
+    well_known_protos = True,
+    deps = [":manager_cc_proto"],
 )

@@ -19,19 +19,24 @@ package(
 )
 
 load(
-    "@com_github_grpc_grpc//bazel:grpc_build_system.bzl",
-    "grpc_proto_library",
+    "@com_github_grpc_grpc//bazel:cc_grpc_library.bzl",
+    "cc_grpc_library",
 )
 
 proto_library(
-    name = "machine_learning",
+    name = "machine_learning_proto",
     srcs = ["machine_learning.proto"],
 )
 
-grpc_proto_library(
-    name = "machine_learning_proto_grpc",
-    srcs = ["machine_learning.proto"],
-    has_services = True,
+cc_proto_library(
+    name = "machine_learning_cc_proto",
+    deps = [":machine_learning_proto"],
+)
+
+cc_grpc_library(
+    name = "machine_learning_cc_grpc",
+    srcs = [":machine_learning_proto"],
+    grpc_only = True,
     well_known_protos = True,
-    deps = [],
+    deps = [":machine_learning_cc_proto"],
 )

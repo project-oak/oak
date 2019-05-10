@@ -18,13 +18,13 @@ cc_binary(
     name = "client",
     srcs = ["running_average.cc"],
     deps = [
-        "//examples/running_average/proto:running_average_proto_grpc",
+        "//examples/running_average/proto:running_average_cc_grpc",
         "//examples/utils",
         "//oak/client:manager_client",
         "//oak/client:node_client",
-        "@com_google_absl//absl/memory",
-        "@com_google_asylo//asylo/util:logging",
         "@com_github_gflags_gflags//:gflags_nothreads",
         "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/memory",
+        "@com_google_asylo//asylo/util:logging",
     ],
 )
