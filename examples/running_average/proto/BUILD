@@ -19,22 +19,25 @@ package(
 )
 
 load(
-    "@com_github_grpc_grpc//bazel:grpc_build_system.bzl",
-    "grpc_proto_library",
+    "@com_github_grpc_grpc//bazel:cc_grpc_library.bzl",
+    "cc_grpc_library",
 )
 
 proto_library(
     name = "running_average_proto",
     srcs = ["running_average.proto"],
-    deps = [
-        "@com_google_protobuf//:empty_proto",
-    ],
+    deps = ["@com_google_protobuf//:empty_proto"],
 )
 
-grpc_proto_library(
-    name = "running_average_proto_grpc",
-    srcs = ["running_average.proto"],
-    has_services = True,
+cc_proto_library(
+    name = "running_average_cc_proto",
+    deps = [":running_average_proto"],
+)
+
+cc_grpc_library(
+    name = "running_average_cc_grpc",
+    srcs = [":running_average_proto"],
+    grpc_only = True,
     well_known_protos = True,
-    deps = [],
+    deps = [":running_average_cc_proto"],
 )

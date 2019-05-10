@@ -19,22 +19,25 @@ package(
 )
 
 load(
-    "@com_github_grpc_grpc//bazel:grpc_build_system.bzl",
-    "grpc_proto_library",
+    "@com_github_grpc_grpc//bazel:cc_grpc_library.bzl",
+    "cc_grpc_library",
 )
 
 proto_library(
     name = "private_set_intersection_proto",
     srcs = ["private_set_intersection.proto"],
-    deps = [
-        "@com_google_protobuf//:empty_proto",
-    ],
+    deps = ["@com_google_protobuf//:empty_proto"],
 )
 
-grpc_proto_library(
-    name = "private_set_intersection_proto_grpc",
-    srcs = ["private_set_intersection.proto"],
-    has_services = True,
-    well_known_protos = True,
-    deps = [],
+cc_proto_library(
+    name = "private_set_intersection_cc_proto",
+    deps = [":private_set_intersection_proto"],
+)
+
+cc_grpc_library(
+    name = "private_set_intersection_cc_grpc",
+    srcs = [":private_set_intersection_proto"],
+    grpc_only = True,
+    use_external = False,
+    deps = [":private_set_intersection_cc_proto"],
 )

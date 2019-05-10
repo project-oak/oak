@@ -30,9 +30,9 @@ cc_library(
         "oak_manager.h",
     ],
     deps = [
-        "//oak/proto:enclave_proto_cc",
-        "//oak/proto:manager_grpc_proto",
-        "//oak/proto:node_grpc_proto",
+        "//oak/proto:enclave_cc_proto",
+        "//oak/proto:manager_cc_grpc",
+        "//oak/proto:node_cc_grpc",
         "@com_github_gflags_gflags//:gflags_nothreads",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/memory",
@@ -53,7 +53,7 @@ cc_library(
         "oak_node.h",
     ],
     deps = [
-        "//oak/proto:node_grpc_proto",
+        "//oak/proto:node_cc_grpc",
         "@boringssl//:crypto",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/memory",
@@ -76,16 +76,16 @@ cc_library(
 
 cc_library(
     name = "enclave_server",
-    hdrs = [
-        "enclave_server.h",
-    ],
     srcs = [
         "enclave_server.cc",
+    ],
+    hdrs = [
+        "enclave_server.h",
     ],
     deps = [
         ":module_invocation",
         ":oak_node",
-        "//oak/proto:enclave_proto_cc",
+        "//oak/proto:enclave_cc_proto",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/synchronization",
         "@com_google_asylo//asylo:enclave_runtime",

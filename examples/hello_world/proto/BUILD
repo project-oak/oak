@@ -19,22 +19,27 @@ package(
 )
 
 load(
-    "@com_github_grpc_grpc//bazel:grpc_build_system.bzl",
-    "grpc_proto_library",
+    "@com_github_grpc_grpc//bazel:cc_grpc_library.bzl",
+    "cc_grpc_library",
 )
 
 proto_library(
-    name = "hello_world",
+    name = "hello_world_proto",
     srcs = ["hello_world.proto"],
     deps = [
         "@com_google_protobuf//:empty_proto",
     ],
 )
 
-grpc_proto_library(
-    name = "hello_world_proto_grpc",
-    srcs = ["hello_world.proto"],
-    has_services = True,
+cc_proto_library(
+    name = "hello_world_cc_proto",
+    deps = [":hello_world_proto"],
+)
+
+cc_grpc_library(
+    name = "hello_world_cc_grpc",
+    srcs = ["hello_world_proto"],
+    grpc_only = True,
     well_known_protos = True,
-    deps = [],
+    deps = ["hello_world_cc_proto"],
 )

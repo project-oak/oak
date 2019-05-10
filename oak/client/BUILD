@@ -17,22 +17,22 @@
 cc_library(
     name = "manager_client",
     hdrs = ["manager_client.h"],
+    visibility = ["//visibility:public"],
     deps = [
-        "//oak/proto:manager_grpc_proto",
+        "//oak/proto:manager_cc_grpc",
         "@com_github_grpc_grpc//:grpc++",
     ],
-    visibility = ["//visibility:public"],
 )
 
 cc_library(
     name = "node_client",
     hdrs = ["node_client.h"],
+    visibility = ["//visibility:public"],
     deps = [
-        "//oak/proto:node_grpc_proto",
+        "//oak/proto:node_cc_grpc",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_asylo//asylo/grpc/auth:null_credentials_options",
         "@com_google_asylo//asylo/identity:init",
         "@com_google_asylo//asylo/util:logging",
     ],
-    visibility = ["//visibility:public"],
 )

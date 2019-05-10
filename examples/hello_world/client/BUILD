@@ -18,13 +18,13 @@ cc_binary(
     name = "client",
     srcs = ["hello_world.cc"],
     deps = [
-        "//examples/hello_world/proto:hello_world_proto_grpc",
+        "//examples/hello_world/proto:hello_world_cc_grpc",
         "//examples/utils",
         "//oak/client:manager_client",
         "//oak/client:node_client",
-        "@com_google_absl//absl/memory",
-        "@com_google_asylo//asylo/util:logging",
         "@com_github_gflags_gflags//:gflags_nothreads",
         "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/memory",
+        "@com_google_asylo//asylo/util:logging",
     ],
 )
