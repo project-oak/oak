@@ -14,31 +14,29 @@
  * limitations under the License.
  */
 
-#ifndef OAK_SERVER_PRINT_CHANNEL_H_
-#define OAK_SERVER_PRINT_CHANNEL_H_
+#ifndef OAK_SERVER_LOGGING_CHANNEL_H
+#define OAK_SERVER_LOGGING_CHANNEL_H
 
-#include "asylo/util/logging.h"
 #include "oak/server/channel.h"
 
 namespace oak {
 
-// A channel implementation that prints to stderr the data written to it.
+// A channel implementation that logs to stderr the data written to it.
 //
 // Reading from this channel always returns an empty Span.
-class PrintChannel final : public Channel {
+class LoggingChannel final : public Channel {
  public:
   absl::Span<const char> Read(uint32_t size) override {
     absl::Span<const char> empty;
     return empty;
-  };
+  }
 
   uint32_t Write(absl::Span<const char> data) override {
-    std::string s(data.cbegin(), data.cend());
-    LOG(INFO) << "--> " << s;
-    return data.size();
+    std::string log_message(data.cbegin(), data.cend());
+    LOG(INFO) << "LOG: " << log_message;
   };
 };
 
 }  // namespace oak
 
-#endif  // OAK_SERVER_PRINT_CHANNEL_H_
+#endif  // OAK_SERVER_LOGGING_CHANNEL_H

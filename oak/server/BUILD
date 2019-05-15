@@ -53,9 +53,9 @@ cc_library(
         "oak_node.h",
     ],
     deps = [
-        ":buffer_channel",
-        ":print_channel",
+        ":buffered_channel",
         ":channel",
+        ":logging_channel",
         "//oak/proto:node_cc_grpc",
         "@boringssl//:crypto",
         "@com_github_grpc_grpc//:grpc++",
@@ -83,16 +83,16 @@ cc_library(
 )
 
 cc_library(
-    name = "buffer_channel",
-    hdrs = ["buffer_channel.h"],
+    name = "buffered_channel",
+    hdrs = ["buffered_channel.h"],
     deps = [
         ":channel",
     ],
 )
 
 cc_library(
-    name = "print_channel",
-    hdrs = ["print_channel.h"],
+    name = "logging_channel",
+    hdrs = ["logging_channel.h"],
     deps = [
         ":channel",
     ],

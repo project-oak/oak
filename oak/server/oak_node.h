@@ -27,7 +27,12 @@
 
 namespace oak {
 
-using ChannelId = uint64_t;
+using Handle = uint64_t;
+
+// Keep in sync with /rust/oak/src/lib.rs.
+const Handle LOGGING_CHANNEL_HANDLE = 1;
+const Handle GRPC_CHANNEL_HANDLE = 2;
+const Handle GRPC_METHOD_NAME_CHANNEL_HANDLE = 3;
 
 class OakNode final : public Node::Service {
  public:
@@ -38,22 +43,19 @@ class OakNode final : public Node::Service {
                                        const std::vector<char>& request_data,
                                        std::vector<char>* response_data);
 
+  std::string grpc_method_name_;
+
  private:
   grpc::Status GetAttestation(grpc::ServerContext* context, const GetAttestationRequest* request,
                               GetAttestationResponse* response) override;
 
   void InitEnvironment(wabt::interp::Environment* env);
 
-  // Native implementation of the `oak.open_channel` host function.
-  wabt::interp::HostFunc::Callback OakOpenChannel(wabt::interp::Environment* env);
+  // Native implementation of the `oak.channel_read` host function.
+  wabt::interp::HostFunc::Callback OakChannelRead(wabt::interp::Environment* env);
 
-  // Native implementation of the `oak.read_channel` host function.
-  wabt::interp::HostFunc::Callback OakReadChannel(wabt::interp::Environment* env);
-
-  // Native implementation of the `oak.write_channel` host function.
-  wabt::interp::HostFunc::Callback OakWriteChannel(wabt::interp::Environment* env);
-
-  ChannelId NewChannelId();
+  // Native implementation of the `oak.channel_write` host function.
+  wabt::interp::HostFunc::Callback OakChannelWrite(wabt::interp::Environment* env);
 
   wabt::interp::Environment env_;
   // TODO: Use smart pointers.
@@ -62,9 +64,7 @@ class OakNode final : public Node::Service {
   // Incoming gRPC data for the current invocation.
   const ::grpc::GenericServerContext* server_context_;
 
-  std::unordered_map<ChannelId, std::unique_ptr<Channel>> channels_;
-
-  std::string grpc_method_name_;
+  std::unordered_map<Handle, std::unique_ptr<Channel>> channels_;
 
   // Unique ID of the Oak Node instance. Creating multiple Oak Nodes with the same module and policy
   // configuration will result in Oak Node instances with distinct node_id_.
@@ -73,8 +73,6 @@ class OakNode final : public Node::Service {
   // Hash of the Oak Module with which this Oak Node was initialized.
   // To be used as the basis for remote attestation based on code identity.
   const std::string module_hash_sha_256_;
-
-  ChannelId channel_id_;
 };
 
 }  // namespace oak

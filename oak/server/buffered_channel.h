@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-#ifndef OAK_SERVER_BUFFER_CHANNEL_H_
-#define OAK_SERVER_BUFFER_CHANNEL_H_
+#ifndef OAK_SERVER_BUFFERED_CHANNEL_H_
+#define OAK_SERVER_BUFFERED_CHANNEL_H_
 
 #include "asylo/util/logging.h"
 #include "oak/server/channel.h"
 
 namespace oak {
 
-// A channel implementation that forwards read and writes to underlying data structures, keeping
-// track of read and write cursors.
-class BufferChannel final : public Channel {
+// A channel implementation that forwards read and writes to underlying local buffers, keeping track
+// of read and write cursors.
+class BufferedChannel final : public Channel {
  public:
-  BufferChannel(absl::Span<const char> data_input, std::vector<char>* data_output)
+  BufferedChannel(absl::Span<const char> data_input, std::vector<char>* data_output)
       : data_input_(data_input), data_output_(data_output){};
 
   absl::Span<const char> Read(uint32_t size) override {
@@ -55,4 +55,4 @@ class BufferChannel final : public Channel {
 
 }  // namespace oak
 
-#endif  // OAK_SERVER_BUFFER_CHANNEL_H_
+#endif  // OAK_SERVER_BUFFERED_CHANNEL_H_

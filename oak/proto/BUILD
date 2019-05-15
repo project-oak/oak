@@ -69,3 +69,17 @@ cc_grpc_library(
     well_known_protos = True,
     deps = [":manager_cc_proto"],
 )
+
+proto_library(
+    name = "system_proto",
+    srcs = ["system.proto"],
+    deps = [
+        "@com_google_protobuf//:empty_proto",
+        "@com_google_protobuf//:timestamp_proto",
+    ],
+)
+
+cc_proto_library(
+    name = "system_cc_proto",
+    deps = [":system_proto"],
+)

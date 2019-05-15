@@ -123,40 +123,46 @@ Each Oak Module must expose the following **exported functions** as
     has full access to the underlying internal state until it completes. In the
     future we may relax some of these restrictions, when we can reason more
     accurately about the semantics of concurrent invocations, and how they
-    relate to the policy system.
+    relate to the policy system. The parameter to this function is the handle to
+    the system channel that the Oak Module may use to invoke methods on the Oak 
+    VM system interface.
 
-    *   arg 0: Id of the built-in gRPC channel, used to read the incoming gRPC
-        request and write the outgoing gRPC response; this channel is implicitly
-        available to any invocation and can be used with the standard methods
-        below, but it cannot be opened or closed.
+Communication from the Oak Module to the Oak VM and to other modules is
+implemented via **channels**. A channel represents a bi-directional stream of
+bytes, that the Oak Module can write to and read from using the appropriate host
+functions defined below. Each channel is identified by a **handle**, which is
+used as a parameter to the corresponding host function calls. Note that channels
+do not natively implement any kind of framing, i.e. they do not expose a concept
+of messages, just raw bytes.
 
 Each Oak Module may also optionally rely on zero or more of the following **host
 functions** as
 [WebAssembly imports](https://webassembly.github.io/spec/core/syntax/modules.html#imports)
 (all of them defined in the `oak` module):
 
--   `open_channel (i32, i32) -> i64`: Opens the channel specified by the
-    provided name.
-
-    *   arg 0: Channel name address
-    *   arg 1: Channel name size in bytes
-    *   return 0: Number of bytes read
-
--   `read_channel: (i64, i32, i32) -> i32`: Reads data from the specified
+-   `channel_read: (i64, i32, i32) -> i32`: Reads data from the specified
     channel.
 
-    *   arg 0: Channel id
+    *   arg 0: Channel handle
     *   arg 1: Destination buffer address
     *   arg 2: Destination buffer size in bytes
     *   return 0: Number of bytes read
 
--   `write_channel: (i64, i32, i32) -> i32`: Writes data to the specified
+    Similar to
+    [`zx_channel_read`](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/zircon/docs/syscalls/channel_read.md)
+    in Fuchsia.
+
+-   `channel_write: (i64, i32, i32) -> i32`: Writes data to the specified
     channel.
 
-    *   arg 0: Channel id
+    *   arg 0: Channel handle
     *   arg 1: Source buffer address
     *   arg 2: Source buffer size in bytes
     *   return 0: Number of bytes written
+
+    Similar to
+    [`zx_channel_write`](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/zircon/docs/syscalls/channel_write.md)
+    in Fuchsia.
 
 ### Rust SDK
 
