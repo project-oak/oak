@@ -115,17 +115,15 @@ Each Oak Module must expose the following **exported functions** as
     may fail to be invoked). No further interactions with the Oak Node are
     possible after finalization.
 
--   `oak_handle_grpc_call: (i64) -> nil`: Invoked when a client interacts with
-    the Oak Node over gRPC. Each client interaction results in a new invocation
-    of this function, and the Oak VM guarantees that concurrent invocations only
+-   `oak_handle_grpc_call: () -> nil`: Invoked when a client interacts with the
+    Oak Node over gRPC. Each client interaction results in a new invocation of
+    this function, and the Oak VM guarantees that concurrent invocations only
     invoke it sequentially, therefore from the point of view of the Oak Node
     these calls will never overlap in time and each execution of this function
     has full access to the underlying internal state until it completes. In the
     future we may relax some of these restrictions, when we can reason more
     accurately about the semantics of concurrent invocations, and how they
-    relate to the policy system. The parameter to this function is the handle to
-    the system channel that the Oak Module may use to invoke methods on the Oak 
-    VM system interface.
+    relate to the policy system.
 
 Communication from the Oak Module to the Oak VM and to other modules is
 implemented via **channels**. A channel represents a bi-directional stream of

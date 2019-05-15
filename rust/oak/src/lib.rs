@@ -114,7 +114,7 @@ pub fn set_node<T: Node + 'static>() {
 }
 
 #[no_mangle]
-pub extern "C" fn oak_handle_grpc_call(system_channel_id: u64) {
+pub extern "C" fn oak_handle_grpc_call() {
     NODE.with(|node| {
         let mut grpc_method_channel = Channel::new(GRPC_METHOD_NAME_CHANNEL_HANDLE);
         let mut grpc_method_name = String::new();

@@ -234,7 +234,7 @@ grpc::Status OakNode::ProcessModuleInvocation(grpc::GenericServerContext* contex
   wabt::interp::Thread::Options thread_options;
   wabt::interp::Executor executor(&env_, trace_stream, thread_options);
 
-  wabt::interp::TypedValues args = {MakeI64(123)};
+  wabt::interp::TypedValues args = {};
   wabt::interp::ExecResult exec_result =
       executor.RunExportByName(module_, "oak_handle_grpc_call", args);
 
