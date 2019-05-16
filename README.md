@@ -133,6 +133,13 @@ used as a parameter to the corresponding host function calls. Note that channels
 do not natively implement any kind of framing, i.e. they do not expose a concept
 of messages, just raw bytes.
 
+At each invocation, the following channels are implicitly available to the Oak
+Node (see /oak/server/oak_node.h):
+
+-   `logging` (handle: 1)
+-   `grpc` (handle: 2)
+-   `grpc_method` (handle: 3)
+
 Each Oak Module may also optionally rely on zero or more of the following **host
 functions** as
 [WebAssembly imports](https://webassembly.github.io/spec/core/syntax/modules.html#imports)

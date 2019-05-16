@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef OAK_SERVER_BUFFERED_CHANNEL_H_
-#define OAK_SERVER_BUFFERED_CHANNEL_H_
+#ifndef OAK_SERVER_BUFFER_CHANNEL_H_
+#define OAK_SERVER_BUFFER_CHANNEL_H_
 
 #include "asylo/util/logging.h"
 #include "oak/server/channel.h"
@@ -24,9 +24,11 @@ namespace oak {
 
 // A channel implementation that forwards read and writes to underlying local buffers, keeping track
 // of read and write cursors.
-class BufferedChannel final : public Channel {
+//
+// The channel owns the output buffer (std::vector), but does not own the input buffer (absl::Span).
+class BufferChannel final : public Channel {
  public:
-  BufferedChannel(absl::Span<const char> data_input, std::vector<char>* data_output)
+  BufferChannel(absl::Span<const char> data_input, std::vector<char>* data_output)
       : data_input_(data_input), data_output_(data_output){};
 
   absl::Span<const char> Read(uint32_t size) override {
@@ -39,6 +41,7 @@ class BufferedChannel final : public Channel {
   uint32_t Write(absl::Span<const char> data) override {
     LOG(INFO) << "Writing to channel: " << data.size() << " bytes";
     if (data_output_ == nullptr) {
+      LOG(WARNING) << "Channel is read-only, discarding output";
       return 0;
     }
     data_output_->insert(data_output_->end(), data.cbegin(), data.cend());
@@ -55,4 +58,4 @@ class BufferedChannel final : public Channel {
 
 }  // namespace oak
 
-#endif  // OAK_SERVER_BUFFERED_CHANNEL_H_
+#endif  // OAK_SERVER_BUFFER_CHANNEL_H_

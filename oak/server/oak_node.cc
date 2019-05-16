@@ -22,7 +22,7 @@
 
 #include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
-#include "oak/server/buffered_channel.h"
+#include "oak/server/buffer_channel.h"
 #include "oak/server/logging_channel.h"
 #include "src/binary-reader.h"
 #include "src/error-formatter.h"
@@ -214,14 +214,14 @@ grpc::Status OakNode::ProcessModuleInvocation(grpc::GenericServerContext* contex
 
   // Create the gRPC channel, used by the module to perform basic input and output.
   std::unique_ptr<Channel> grpc_channel =
-      absl::make_unique<BufferedChannel>(request_data, response_data);
+      absl::make_unique<BufferChannel>(request_data, response_data);
   channels_[GRPC_CHANNEL_HANDLE] = std::move(grpc_channel);
   LOG(INFO) << "Created gRPC channel";
 
   // Create the gRPC method name channel, used by the module to read the gRPC method name from the
   // current context.
   std::unique_ptr<Channel> grpc_method_name_channel =
-      absl::make_unique<BufferedChannel>(grpc_method_name_, nullptr);
+      absl::make_unique<BufferChannel>(grpc_method_name_, nullptr);
   channels_[GRPC_METHOD_NAME_CHANNEL_HANDLE] = std::move(grpc_method_name_channel);
   LOG(INFO) << "Created gRPC method name channel";
 

@@ -53,7 +53,7 @@ cc_library(
         "oak_node.h",
     ],
     deps = [
-        ":buffered_channel",
+        ":buffer_channel",
         ":channel",
         ":logging_channel",
         "//oak/proto:node_cc_grpc",
@@ -83,8 +83,8 @@ cc_library(
 )
 
 cc_library(
-    name = "buffered_channel",
-    hdrs = ["buffered_channel.h"],
+    name = "buffer_channel",
+    hdrs = ["buffer_channel.h"],
     deps = [
         ":channel",
     ],

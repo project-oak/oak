@@ -43,8 +43,6 @@ class OakNode final : public Node::Service {
                                        const std::vector<char>& request_data,
                                        std::vector<char>* response_data);
 
-  std::string grpc_method_name_;
-
  private:
   grpc::Status GetAttestation(grpc::ServerContext* context, const GetAttestationRequest* request,
                               GetAttestationResponse* response) override;
@@ -63,6 +61,8 @@ class OakNode final : public Node::Service {
 
   // Incoming gRPC data for the current invocation.
   const ::grpc::GenericServerContext* server_context_;
+
+  std::string grpc_method_name_;
 
   std::unordered_map<Handle, std::unique_ptr<Channel>> channels_;
 
