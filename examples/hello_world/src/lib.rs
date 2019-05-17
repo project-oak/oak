@@ -22,6 +22,7 @@ mod proto;
 
 use oak_derive::OakNode;
 use protobuf::Message;
+use std::io::Write;
 
 #[derive(OakNode)]
 struct Node;
@@ -30,22 +31,29 @@ impl oak::Node for Node {
     fn new() -> Self {
         Node
     }
-    fn invoke(&mut self, method_name: &str, request: &mut oak::Reader, response: &mut oak::Writer) {
+    fn invoke(&mut self, grpc_method_name: &str, grpc_channel: &mut oak::Channel) {
+        let mut logging_channel = oak::logging_channel();
         // TODO: Generate this code via a macro or code generation (e.g. a protoc plugin).
-        match method_name {
+        match grpc_method_name {
             "/oak.examples.hello_world.HelloWorld/SayHello" => {
-                let mut in_stream = protobuf::CodedInputStream::new(request);
-                let mut req = proto::hello_world::SayHelloRequest::new();
-                req.merge_from(&mut in_stream)
-                    .expect("could not read request");
+                let mut req;
+                {
+                    let mut in_stream = protobuf::CodedInputStream::new(grpc_channel);
+                    req = proto::hello_world::SayHelloRequest::new();
+                    req.merge_from(&mut in_stream)
+                        .expect("could not read request");
+                }
                 let mut res = proto::hello_world::SayHelloResponse::new();
                 res.message = format!("HELLO {}!", req.name);
-                let mut out_stream = protobuf::CodedOutputStream::new(response);
-                res.write_to(&mut out_stream)
-                    .expect("could not write response");
-                out_stream.flush().expect("could not flush");
+                {
+                    let mut out_stream = protobuf::CodedOutputStream::new(grpc_channel);
+                    res.write_to(&mut out_stream)
+                        .expect("could not write response");
+                    out_stream.flush().expect("could not flush");
+                }
             }
             _ => {
+                writeln!(logging_channel, "unknown method name: {}", grpc_method_name);
                 panic!("unknown method name");
             }
         };

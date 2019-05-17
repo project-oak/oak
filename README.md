@@ -125,44 +125,49 @@ Each Oak Module must expose the following **exported functions** as
     accurately about the semantics of concurrent invocations, and how they
     relate to the policy system.
 
+Communication from the Oak Module to the Oak VM and to other modules is
+implemented via **channels**. A channel represents a bi-directional stream of
+bytes, that the Oak Module can write to and read from using the appropriate host
+functions defined below. Each channel is identified by a **handle**, which is
+used as a parameter to the corresponding host function calls. Note that channels
+do not natively implement any kind of framing, i.e. they do not expose a concept
+of messages, just raw bytes.
+
+At each invocation, the following channels are implicitly available to the Oak
+Node (see /oak/server/oak_node.h):
+
+-   `logging` (handle: 1)
+-   `grpc` (handle: 2)
+-   `grpc_method` (handle: 3)
+
 Each Oak Module may also optionally rely on zero or more of the following **host
 functions** as
 [WebAssembly imports](https://webassembly.github.io/spec/core/syntax/modules.html#imports)
 (all of them defined in the `oak` module):
 
--   `print: (i32, i32) -> nil`: Prints a string to standard output on the host
-    system. To be used for debugging only, as it leaks data. Will be removed
-    before release.
+-   `channel_read: (i64, i32, i32) -> i32`: Reads data from the specified
+    channel.
 
-    *   arg 0: Source buffer address
-    *   arg 1: Source buffer size in bytes
-
--   `get_time: () -> i64`: Retrieves the current time from the host system.
-    TODO: Implement this via
-    [Roughtime](https://blog.cloudflare.com/roughtime/).
-
-    *   return 0: Number of nanoseconds since epoch (1970-01-01T00:00:00Z).
-
--   `read: (i32, i32) -> i32`: Reads incoming gRPC data for the current
-    invocation.
-
-    *   arg 0: Destination buffer address
-    *   arg 1: Destination buffer size in bytes
+    *   arg 0: Channel handle
+    *   arg 1: Destination buffer address
+    *   arg 2: Destination buffer size in bytes
     *   return 0: Number of bytes read
 
--   `write: (i32, i32) -> i32`: Writes outgoing gRPC data for the current
-    invocation.
+    Similar to
+    [`zx_channel_read`](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/zircon/docs/syscalls/channel_read.md)
+    in Fuchsia.
 
-    *   arg 0: Source buffer address
-    *   arg 1: Source buffer size in bytes
+-   `channel_write: (i64, i32, i32) -> i32`: Writes data to the specified
+    channel.
+
+    *   arg 0: Channel handle
+    *   arg 1: Source buffer address
+    *   arg 2: Source buffer size in bytes
     *   return 0: Number of bytes written
 
--   `read_method_name: (i32, i32) -> i32`: Reads gRPC method name for the
-    current invocation.
-
-    *   arg 0: Destination buffer address
-    *   arg 1: Destination buffer size in bytes
-    *   return 0: Number of bytes read
+    Similar to
+    [`zx_channel_write`](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/zircon/docs/syscalls/channel_write.md)
+    in Fuchsia.
 
 ### Rust SDK
 

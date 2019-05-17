@@ -17,13 +17,22 @@
 #ifndef OAK_SERVER_OAK_NODE_H_
 #define OAK_SERVER_OAK_NODE_H_
 
+#include <unordered_map>
+
 #include "absl/base/thread_annotations.h"
-#include "absl/synchronization/mutex.h"
 #include "absl/types/span.h"
 #include "oak/proto/node.grpc.pb.h"
+#include "oak/server/channel.h"
 #include "src/interp/interp.h"
 
 namespace oak {
+
+using Handle = uint64_t;
+
+// Keep in sync with /rust/oak/src/lib.rs.
+const Handle LOGGING_CHANNEL_HANDLE = 1;
+const Handle GRPC_CHANNEL_HANDLE = 2;
+const Handle GRPC_METHOD_NAME_CHANNEL_HANDLE = 3;
 
 class OakNode final : public Node::Service {
  public:
@@ -31,9 +40,8 @@ class OakNode final : public Node::Service {
 
   // Performs an Oak Module invocation.
   grpc::Status ProcessModuleInvocation(grpc::GenericServerContext* context,
-                                       const std::vector<uint8_t>& request_data,
-                                       std::vector<uint8_t>* response_data)
-      LOCKS_EXCLUDED(module_data_mutex_);
+                                       const std::vector<char>& request_data,
+                                       std::vector<char>* response_data);
 
  private:
   grpc::Status GetAttestation(grpc::ServerContext* context, const GetAttestationRequest* request,
@@ -41,16 +49,11 @@ class OakNode final : public Node::Service {
 
   void InitEnvironment(wabt::interp::Environment* env);
 
-  // Native implementation of the `oak.read_method_name` host function.
-  wabt::interp::HostFunc::Callback OakReadMethodName(wabt::interp::Environment* env);
+  // Native implementation of the `oak.channel_read` host function.
+  wabt::interp::HostFunc::Callback OakChannelRead(wabt::interp::Environment* env);
 
-  // Native implementation of the `oak.read` host function.
-  wabt::interp::HostFunc::Callback OakRead(wabt::interp::Environment* env)
-      EXCLUSIVE_LOCKS_REQUIRED(module_data_mutex_);
-
-  // Native implementation of the `oak.write` host function.
-  wabt::interp::HostFunc::Callback OakWrite(wabt::interp::Environment* env)
-      EXCLUSIVE_LOCKS_REQUIRED(module_data_mutex_);
+  // Native implementation of the `oak.channel_write` host function.
+  wabt::interp::HostFunc::Callback OakChannelWrite(wabt::interp::Environment* env);
 
   wabt::interp::Environment env_;
   // TODO: Use smart pointers.
@@ -59,16 +62,9 @@ class OakNode final : public Node::Service {
   // Incoming gRPC data for the current invocation.
   const ::grpc::GenericServerContext* server_context_;
 
-  // Guards data used by OakRead and OakWrite host methods.
-  absl::Mutex module_data_mutex_;
+  std::string grpc_method_name_;
 
-  // Span containing the gRPC request data passed to ProcessModuleCall.
-  // This is a view of the data which advances each time the OakRead host function is called.
-  absl::Span<const uint8_t> GUARDED_BY(module_data_mutex_) module_data_input_;
-
-  // Pointer to the gRPC response data passed to ProcessModuleCall.
-  // Data is inserted each time the OakWrite host function is called.
-  std::vector<uint8_t>* GUARDED_BY(module_data_mutex_) module_data_output_;
+  std::unordered_map<Handle, std::unique_ptr<Channel>> channels_;
 
   // Unique ID of the Oak Node instance. Creating multiple Oak Nodes with the same module and policy
   // configuration will result in Oak Node instances with distinct node_id_.
