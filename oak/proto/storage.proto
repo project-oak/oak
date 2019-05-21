@@ -20,7 +20,8 @@ package oak;
 
 message ReadRequest {
   bytes data_store_id = 1;
-  bytes name = 2;
+  bytes transaction_id = 2;
+  bytes name = 3;
 }
 
 message ReadResponse {
@@ -29,15 +30,17 @@ message ReadResponse {
 
 message WriteRequest {
   bytes data_store_id = 1;
-  bytes name = 2;
-  bytes value = 3;
+  bytes transaction_id = 2;
+  bytes name = 3;
+  bytes value = 4;
 }
 
 message WriteResponse {}
 
 message DeleteRequest {
   bytes data_store_id = 1;
-  bytes name = 2;
+  bytes transaction_id = 2;
+  bytes name = 3;
 }
 
 message DeleteResponse {}

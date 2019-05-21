@@ -64,19 +64,22 @@ http_archive(
     sha256 = "3a426981242af9c05dbc3cdfc72f6627516232bbccaebaab1711397606184973",
 )
 
+# TODO: Create a deps function for the googleapis repo.
 http_archive(
     name = "io_grpc_grpc_java",
-    # sha256 = "update",
-    strip_prefix = "grpc-java-1.20.0",
     urls = [
         "https://github.com/grpc/grpc-java/archive/v1.20.0.zip",
     ],
+    strip_prefix = "grpc-java-1.20.0",
+    sha256 = "9d23d9fec84e24bd3962f5ef9d1fd61ce939d3f649a22bcab0f19e8167fae8ef",
 )
 
+# TODO: Create a deps function for the googleapis repo.
 http_archive(
     name = "com_google_api_codegen",
     urls = ["https://github.com/googleapis/gapic-generator/archive/8e930b79e846b9d4876462be9dc4c1dbc04e2903.zip"],
     strip_prefix = "gapic-generator-8e930b79e846b9d4876462be9dc4c1dbc04e2903",
+    sha256 = "ba19948ebc4ea39358ba07fc0253f8927d7a2c9ba3462e8f34faad7ad5ac4142",
 )
 
 # WebAssembly Binary Toolkit (forked by tiziano88).

@@ -14,41 +14,41 @@
  * limitations under the License.
  */
 
-#include "storage_service.h"
+#include "spanner_service.h"
 
 namespace oak {
 
 using google::spanner::v1::Spanner;
 
-StorageService::StorageService(std::shared_ptr<grpc::ChannelInterface> channel)
+SpannerService::SpannerService(std::shared_ptr<grpc::ChannelInterface> channel)
     : Storage::Service(), spanner_service_(Spanner::NewStub(channel)) {}
 
-grpc::Status StorageService::Read(grpc::ServerContext* context, const ReadRequest* request,
+grpc::Status SpannerService::Read(grpc::ServerContext* context, const ReadRequest* request,
                                   ReadResponse* response) {
   return grpc::Status(grpc::StatusCode::UNIMPLEMENTED, "");
 }
 
-grpc::Status StorageService::Write(grpc::ServerContext* context, const WriteRequest* request,
+grpc::Status SpannerService::Write(grpc::ServerContext* context, const WriteRequest* request,
                                    WriteResponse* response) {
   return grpc::Status(grpc::StatusCode::UNIMPLEMENTED, "");
 }
 
-grpc::Status StorageService::Delete(grpc::ServerContext* context, const DeleteRequest* request,
+grpc::Status SpannerService::Delete(grpc::ServerContext* context, const DeleteRequest* request,
                                     DeleteResponse* response) {
   return grpc::Status(grpc::StatusCode::UNIMPLEMENTED, "");
 }
 
-grpc::Status StorageService::Begin(grpc::ServerContext* context, const BeginRequest* request,
+grpc::Status SpannerService::Begin(grpc::ServerContext* context, const BeginRequest* request,
                                    BeginResponse* response) {
   return grpc::Status(grpc::StatusCode::UNIMPLEMENTED, "");
 }
 
-grpc::Status StorageService::Commit(grpc::ServerContext* context, const CommitRequest* request,
+grpc::Status SpannerService::Commit(grpc::ServerContext* context, const CommitRequest* request,
                                     CommitResponse* response) {
   return grpc::Status(grpc::StatusCode::UNIMPLEMENTED, "");
 }
 
-grpc::Status StorageService::Rollback(grpc::ServerContext* context, const RollbackRequest* request,
+grpc::Status SpannerService::Rollback(grpc::ServerContext* context, const RollbackRequest* request,
                                       RollbackResponse* response) {
   return grpc::Status(grpc::StatusCode::UNIMPLEMENTED, "");
 }

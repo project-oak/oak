@@ -121,22 +121,6 @@ cc_library(
     ],
 )
 
-cc_library(
-    name = "storage_service",
-    srcs = [
-        "storage_service.cc",
-    ],
-    hdrs = [
-        "storage_service.h",
-    ],
-    deps = [
-        "//oak/proto:storage_cc_grpc",
-        "@com_github_grpc_grpc//:grpc++",
-        "@com_google_asylo//asylo/util:logging",
-        "@com_google_googleapis//google/spanner/v1:spanner_cc_grpc",
-    ],
-)
-
 sgx_enclave_configuration(
     name = "grpc_enclave_config",
     # gRPC needs more than the default amount of heap to run. ~1.2GB.
@@ -163,6 +147,7 @@ enclave_loader(
     loader_args = ["--enclave_path='{enclave}'"],
     deps = [
         ":oak_manager",
+        "//oak/server/storage:spanner_service",
         "@com_github_gflags_gflags//:gflags_nothreads",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/synchronization",
