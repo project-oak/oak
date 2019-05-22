@@ -69,3 +69,21 @@ cc_grpc_library(
     well_known_protos = True,
     deps = [":manager_cc_proto"],
 )
+
+proto_library(
+    name = "storage_proto",
+    srcs = ["storage.proto"],
+)
+
+cc_proto_library(
+    name = "storage_cc_proto",
+    deps = [":storage_proto"],
+)
+
+cc_grpc_library(
+    name = "storage_cc_grpc",
+    srcs = [":storage_proto"],
+    grpc_only = True,
+    well_known_protos = True,
+    deps = [":storage_cc_proto"],
+)
