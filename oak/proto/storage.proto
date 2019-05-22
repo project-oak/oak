@@ -35,7 +35,8 @@ message WriteRequest {
   bytes value = 4;
 }
 
-message WriteResponse {}
+message WriteResponse {
+}
 
 message DeleteRequest {
   bytes data_store_id = 1;
@@ -43,7 +44,8 @@ message DeleteRequest {
   bytes name = 3;
 }
 
-message DeleteResponse {}
+message DeleteResponse {
+}
 
 message BeginRequest {
   bytes data_store_id = 1;
@@ -57,13 +59,15 @@ message CommitRequest {
   bytes transaction_id = 1;
 }
 
-message CommitResponse {}
+message CommitResponse {
+}
 
 message RollbackRequest {
   bytes transaction_id = 1;
 }
 
-message RollbackResponse {}
+message RollbackResponse {
+}
 
 service Storage {
   rpc Read(ReadRequest) returns (ReadResponse);
