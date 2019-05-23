@@ -19,7 +19,7 @@ use quote::quote;
 ///
 /// impl oak::Node for Node {
 ///     fn new() -> Self { Node }
-///     fn invoke(&mut self, grpc_method_name: &str, request: &mut oak::Reader, response: &mut oak::Writer) { /* ... */ }
+///     fn invoke(&mut self, grpc_method_name: &str, grpc_channel: &mut oak::Channel) { /* ... */ }
 /// }
 /// ```
 #[proc_macro_derive(OakNode)]

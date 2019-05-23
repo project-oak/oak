@@ -98,7 +98,7 @@ thread_local! {
 ///
 /// impl oak::Node for Node {
 ///     fn new() -> Self { Node }
-///     fn invoke(&mut self, system_channel: &mut Channel) { /* ... */ }
+///     fn invoke(&mut self, grpc_method_name: &str, grpc_channel: &mut oak::Channel) { /* ... */ }
 /// }
 ///
 /// #[no_mangle]
