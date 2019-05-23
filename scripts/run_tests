@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+
+(cd rust && cargo test)
+(cd examples && cargo test)
