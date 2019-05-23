@@ -20,13 +20,13 @@
 #include "asylo/identity/descriptions.h"
 #include "asylo/identity/enclave_assertion_authority_config.pb.h"
 #include "asylo/util/logging.h"
-#include "gflags/gflags.h"
-
-DEFINE_string(enclave_path, "", "Path to enclave to load");
 
 namespace oak {
 
-OakManager::OakManager() : Service(), node_id_(0) { InitializeEnclaveManager(); }
+OakManager::OakManager(const std::string& enclave_path)
+    : Service(), enclave_path_(enclave_path), node_id_(0) {
+  InitializeEnclaveManager();
+}
 
 grpc::Status OakManager::CreateNode(grpc::ServerContext* context,
                                     const oak::CreateNodeRequest* request,
@@ -48,8 +48,8 @@ void OakManager::InitializeEnclaveManager() {
   }
   enclave_manager_ = manager_result.ValueOrDie();
   LOG(INFO) << "Enclave manager initialized";
-  LOG(INFO) << "Loading enclave code from " << FLAGS_enclave_path;
-  enclave_loader_ = absl::make_unique<asylo::SimLoader>(FLAGS_enclave_path,
+  LOG(INFO) << "Loading enclave code from " << enclave_path_;
+  enclave_loader_ = absl::make_unique<asylo::SimLoader>(enclave_path_,
                                                         /*debug=*/true);
 }
 
@@ -65,7 +65,7 @@ void OakManager::CreateEnclave(const std::string& node_id, const std::string& mo
   initialize_input->set_module(module);
   asylo::Status status = enclave_manager_->LoadEnclave(node_id, *enclave_loader_, config);
   if (!status.ok()) {
-    LOG(QFATAL) << "Could not load enclave " << FLAGS_enclave_path << ": " << status;
+    LOG(QFATAL) << "Could not load enclave " << enclave_path_ << ": " << status;
   }
   LOG(INFO) << "Enclave created";
 }
@@ -97,7 +97,7 @@ void OakManager::DestroyEnclave(const std::string& node_id) {
   asylo::EnclaveFinal final_input;
   asylo::Status status = enclave_manager_->DestroyEnclave(client, final_input);
   if (!status.ok()) {
-    LOG(QFATAL) << "Destroy " << FLAGS_enclave_path << " failed: " << status;
+    LOG(QFATAL) << "Destroy " << enclave_path_ << " failed: " << status;
   }
   LOG(INFO) << "Enclave destroyed";
 }

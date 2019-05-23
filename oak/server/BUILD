@@ -33,7 +33,6 @@ cc_library(
         "//oak/proto:enclave_cc_proto",
         "//oak/proto:manager_cc_grpc",
         "//oak/proto:node_cc_grpc",
-        "@com_github_gflags_gflags//:gflags_nothreads",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/memory",
         "@com_google_asylo//asylo:enclave_client",
@@ -148,8 +147,9 @@ enclave_loader(
     deps = [
         ":oak_manager",
         "//oak/server/storage:spanner_service",
-        "@com_github_gflags_gflags//:gflags_nothreads",
         "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/flags:parse",
         "@com_google_absl//absl/synchronization",
         "@com_google_absl//absl/time",
         "@com_google_asylo//asylo/util:logging",
