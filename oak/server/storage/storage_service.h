@@ -1,0 +1,57 @@
+/*
+ * Copyright 2019 The Project Oak Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OAK_SERVER_STORAGE_STORAGE_SERVICE_H_
+#define OAK_SERVER_STORAGE_STORAGE_SERVICE_H_
+
+#include "oak/proto/storage.grpc.pb.h"
+#include "storage_provider.h"
+
+namespace oak {
+
+// StorageService processes gRPC Storage::Service requests and proxies them to a
+// StorageProvider implementation.
+class StorageService final : public Storage::ExperimentalCallbackService {
+ public:
+  // Takes ownership of storage_provider.
+  explicit StorageService(StorageProvider* storage_provider);
+
+  void Read(grpc::ServerContext* context, const ReadRequest* request, ReadResponse* response,
+            grpc::experimental::ServerCallbackRpcController* controller) override;
+
+  void Write(grpc::ServerContext* context, const WriteRequest* request, WriteResponse* response,
+             grpc::experimental::ServerCallbackRpcController* controller) override;
+
+  void Delete(grpc::ServerContext* context, const DeleteRequest* request, DeleteResponse* response,
+              grpc::experimental::ServerCallbackRpcController* controller) override;
+
+  void Begin(grpc::ServerContext* context, const BeginRequest* request, BeginResponse* response,
+             grpc::experimental::ServerCallbackRpcController* controller) override;
+
+  void Commit(grpc::ServerContext* context, const CommitRequest* request, CommitResponse* response,
+              grpc::experimental::ServerCallbackRpcController* controller) override;
+
+  void Rollback(grpc::ServerContext* context, const RollbackRequest* request,
+                RollbackResponse* response,
+                grpc::experimental::ServerCallbackRpcController* controller) override;
+
+ private:
+  std::unique_ptr<StorageProvider> storage_provider_;
+};
+
+}  // namespace oak
+
+#endif  // OAK_SERVER_STORAGE_STORAGE_SERVICE_H_
