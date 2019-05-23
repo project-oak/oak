@@ -23,7 +23,7 @@
 
 namespace oak {
 
-OakManager::OakManager(const std::string& enclave_path)
+OakManager::OakManager(absl::string_view enclave_path)
     : Service(), enclave_path_(enclave_path), node_id_(0) {
   InitializeEnclaveManager();
 }

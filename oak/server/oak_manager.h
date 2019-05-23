@@ -16,6 +16,7 @@
 
 #include <string>
 
+#include "absl/strings/string_view.h"
 #include "asylo/client.h"
 #include "asylo/grpc/util/enclave_server.pb.h"
 #include "asylo/util/logging.h"
@@ -26,7 +27,7 @@ namespace oak {
 
 class OakManager final : public Manager::Service {
  public:
-  explicit OakManager(const std::string& enclave_path);
+  explicit OakManager(absl::string_view enclave_path);
 
   grpc::Status CreateNode(grpc::ServerContext* context, const CreateNodeRequest* request,
                           CreateNodeResponse* response) override;

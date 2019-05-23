@@ -35,6 +35,7 @@ cc_library(
         "//oak/proto:node_cc_grpc",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/strings",
         "@com_google_asylo//asylo:enclave_client",
         "@com_google_asylo//asylo/grpc/util:enclave_server_proto_cc",
         "@com_google_asylo//asylo/identity:descriptions",
