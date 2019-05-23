@@ -6,6 +6,8 @@
 # based on the name of the directory bazel is cloned into.
 /bazel-*
 
+# Generated vscode files
+.vscode/*
 
 # emacs stuff
 *~
