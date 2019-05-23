@@ -20,13 +20,16 @@
 #include <string>
 #include <vector>
 
+#include "absl/flags/flag.h"
+#include "absl/flags/parse.h"
 #include "absl/synchronization/notification.h"
 #include "absl/time/time.h"
 #include "asylo/util/logging.h"
-#include "gflags/gflags.h"
 #include "include/grpcpp/server.h"
 #include "include/grpcpp/server_builder.h"
 #include "oak/server/oak_manager.h"
+
+ABSL_FLAG(std::string, enclave_path, "", "Path of the enclave to load");
 
 void sigint_handler(int param) {
   LOG(QFATAL) << "SIGINT received";
@@ -34,15 +37,15 @@ void sigint_handler(int param) {
 }
 
 int main(int argc, char* argv[]) {
-  // Setup.
-  google::ParseCommandLineFlags(&argc, &argv, /*remove_flags=*/true);
+  absl::ParseCommandLine(argc, argv);
 
   // We install an explicit SIGINT handler, as for some reason the default one
   // does not seem to work.
   std::signal(SIGINT, sigint_handler);
 
   // Create manager instance.
-  std::unique_ptr<oak::OakManager> service = absl::make_unique<oak::OakManager>();
+  std::unique_ptr<oak::OakManager> service =
+      absl::make_unique<oak::OakManager>(absl::GetFlag(FLAGS_enclave_path));
 
   // Initialize and run gRPC server.
   LOG(INFO) << "Starting gRPC server";

@@ -14,18 +14,20 @@
  * limitations under the License.
  */
 
+#include "absl/flags/flag.h"
+#include "absl/flags/parse.h"
 #include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
 #include "examples/machine_learning/proto/machine_learning.grpc.pb.h"
 #include "examples/machine_learning/proto/machine_learning.pb.h"
 #include "examples/utils/utils.h"
-#include "gflags/gflags.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/manager_client.h"
 #include "oak/client/node_client.h"
 
-DEFINE_string(manager_address, "127.0.0.1:8888", "Address of the Oak Manager to connect to");
-DEFINE_string(module, "", "File containing the compiled WebAssembly module");
+ABSL_FLAG(std::string, manager_address, "127.0.0.1:8888",
+          "Address of the Oak Manager to connect to");
+ABSL_FLAG(std::string, module, "", "File containing the compiled WebAssembly module");
 
 using ::oak::examples::machine_learning::MachineLearning;
 using ::oak::examples::machine_learning::MLData;
@@ -69,14 +71,15 @@ std::string predict(MachineLearning::Stub* stub) {
 }
 
 int main(int argc, char** argv) {
-  ::google::ParseCommandLineFlags(&argc, &argv, /*remove_flags=*/true);
+  absl::ParseCommandLine(argc, argv);
 
   // Connect to the Oak Manager.
-  std::unique_ptr<::oak::ManagerClient> manager_client = ::absl::make_unique<::oak::ManagerClient>(
-      ::grpc::CreateChannel(FLAGS_manager_address, ::grpc::InsecureChannelCredentials()));
+  std::unique_ptr<::oak::ManagerClient> manager_client =
+      ::absl::make_unique<::oak::ManagerClient>(::grpc::CreateChannel(
+          absl::GetFlag(FLAGS_manager_address), ::grpc::InsecureChannelCredentials()));
 
   // Load the Oak Module to execute. This needs to be compiled from Rust to WebAssembly separately.
-  std::string module_bytes = ::oak::utils::read_file(FLAGS_module);
+  std::string module_bytes = ::oak::utils::read_file(absl::GetFlag(FLAGS_module));
   ::oak::CreateNodeResponse create_node_response = manager_client->CreateNode(module_bytes);
 
   std::stringstream addr;

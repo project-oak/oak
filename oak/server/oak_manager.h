@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+#include <string>
+
+#include "absl/strings/string_view.h"
 #include "asylo/client.h"
 #include "asylo/grpc/util/enclave_server.pb.h"
 #include "asylo/util/logging.h"
@@ -24,7 +27,7 @@ namespace oak {
 
 class OakManager final : public Manager::Service {
  public:
-  OakManager();
+  explicit OakManager(absl::string_view enclave_path);
 
   grpc::Status CreateNode(grpc::ServerContext* context, const CreateNodeRequest* request,
                           CreateNodeResponse* response) override;
@@ -42,6 +45,7 @@ class OakManager final : public Manager::Service {
 
   asylo::EnclaveManager* enclave_manager_;
   std::unique_ptr<asylo::SimLoader> enclave_loader_;
+  std::string enclave_path_;
 
   uint64_t node_id_;
 };
