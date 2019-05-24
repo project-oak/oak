@@ -3,11 +3,19 @@
 set -o errexit
 set -o xtrace
 
-docker build --tag=oak .
+USERNAME=$(id -un)
+
+mkdir -p $PWD/bazel-cache
+touch $PWD/bazel-cache/.placeholder
+mkdir -p $PWD/cargo-cache
+touch $PWD/cargo-cache/.placeholder
+
+docker build --tag=oak --build-arg USERNAME="$USERNAME" --build-arg USERID="$(id -u)" --build-arg USERGRP="$(id -g)" .
 docker run \
   --interactive \
   --tty \
-  --volume="$PWD/bazel-cache":/root/.cache/bazel \
+  --volume="$PWD/bazel-cache:/home/$USERNAME/.cache/bazel" \
+  --volume="$PWD/cargo-cache:/home/$USERNAME/.cargo/registry" \
   --volume="$PWD":/opt/my-project \
   --workdir=/opt/my-project \
   --network=host \
