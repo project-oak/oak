@@ -73,6 +73,9 @@ cc_grpc_library(
 proto_library(
     name = "storage_proto",
     srcs = ["storage.proto"],
+    deps = [
+        "@com_google_googleapis//google/rpc:status_proto",
+    ],
 )
 
 cc_proto_library(

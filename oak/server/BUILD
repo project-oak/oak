@@ -14,6 +14,10 @@
 # limitations under the License.
 #
 
+package(
+    default_visibility = ["//oak/server:__subpackages__"],
+)
+
 load(
     "@com_google_asylo//asylo/bazel:asylo.bzl",
     "enclave_loader",

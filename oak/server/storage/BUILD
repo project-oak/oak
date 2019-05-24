@@ -18,16 +18,6 @@ package(
     default_visibility = ["//oak/server:__pkg__"],
 )
 
-cc_library(
-    name = "storage_provider",
-    hdrs = [
-        "storage_provider.h",
-    ],
-    deps = [
-        "//oak/proto:storage_cc_grpc",
-    ],
-)
-
 cc_binary(
     name = "storage_server",
     srcs = ["storage_server.cc"],
@@ -39,6 +29,31 @@ cc_binary(
         "@com_google_absl//absl/flags:parse",
         "@com_google_absl//absl/strings",
         "@com_google_asylo//asylo/util:logging",
+    ],
+)
+
+cc_library(
+    name = "storage_channel",
+    srcs = [
+        "storage_channel.cc",
+    ],
+    hdrs = [
+        "storage_channel.h",
+    ],
+    deps = [
+        "//oak/proto:storage_cc_grpc",
+        "//oak/server:channel",
+        "@com_google_absl//absl/types:span",
+    ],
+)
+
+cc_library(
+    name = "storage_provider",
+    hdrs = [
+        "storage_provider.h",
+    ],
+    deps = [
+        "//oak/proto:storage_cc_proto",
     ],
 )
 

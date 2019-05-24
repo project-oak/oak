@@ -24,29 +24,28 @@ namespace oak {
 
 // StorageService processes gRPC Storage::Service requests and proxies them to a
 // StorageProvider implementation.
-class StorageService final : public Storage::ExperimentalCallbackService {
+class StorageService final : public Storage::Service {
  public:
   // Takes ownership of storage_provider.
   explicit StorageService(StorageProvider* storage_provider);
 
-  void Read(grpc::ServerContext* context, const ReadRequest* request, ReadResponse* response,
-            grpc::experimental::ServerCallbackRpcController* controller) override;
+  grpc::Status Read(grpc::ServerContext* context, const ReadRequest* request,
+                    ReadResponse* response) override;
 
-  void Write(grpc::ServerContext* context, const WriteRequest* request, WriteResponse* response,
-             grpc::experimental::ServerCallbackRpcController* controller) override;
+  grpc::Status Write(grpc::ServerContext* context, const WriteRequest* request,
+                     WriteResponse* response) override;
 
-  void Delete(grpc::ServerContext* context, const DeleteRequest* request, DeleteResponse* response,
-              grpc::experimental::ServerCallbackRpcController* controller) override;
+  grpc::Status Delete(grpc::ServerContext* context, const DeleteRequest* request,
+                      DeleteResponse* response) override;
 
-  void Begin(grpc::ServerContext* context, const BeginRequest* request, BeginResponse* response,
-             grpc::experimental::ServerCallbackRpcController* controller) override;
+  grpc::Status Begin(grpc::ServerContext* context, const BeginRequest* request,
+                     BeginResponse* response) override;
 
-  void Commit(grpc::ServerContext* context, const CommitRequest* request, CommitResponse* response,
-              grpc::experimental::ServerCallbackRpcController* controller) override;
+  grpc::Status Commit(grpc::ServerContext* context, const CommitRequest* request,
+                      CommitResponse* response) override;
 
-  void Rollback(grpc::ServerContext* context, const RollbackRequest* request,
-                RollbackResponse* response,
-                grpc::experimental::ServerCallbackRpcController* controller) override;
+  grpc::Status Rollback(grpc::ServerContext* context, const RollbackRequest* request,
+                        RollbackResponse* response) override;
 
  private:
   std::unique_ptr<StorageProvider> storage_provider_;

@@ -18,41 +18,37 @@
 
 namespace oak {
 
-#include "oak/proto/storage.grpc.pb.h"
-
-using grpc::experimental::ServerCallbackRpcController;
-
 StorageService::StorageService(StorageProvider* storage_provider)
     : storage_provider_(storage_provider) {}
 
-void StorageService::Read(grpc::ServerContext* context, const ReadRequest* request,
-                          ReadResponse* response, ServerCallbackRpcController* controller) {
-  controller->Finish(storage_provider_->Read(request, response));
+grpc::Status StorageService::Read(grpc::ServerContext* context, const ReadRequest* request,
+                                  ReadResponse* response) {
+  return storage_provider_->Read(request, response);
 }
 
-void StorageService::Write(grpc::ServerContext* context, const WriteRequest* request,
-                           WriteResponse* response, ServerCallbackRpcController* controller) {
-  controller->Finish(storage_provider_->Write(request, response));
+grpc::Status StorageService::Write(grpc::ServerContext* context, const WriteRequest* request,
+                                   WriteResponse* response) {
+  return storage_provider_->Write(request, response);
 }
 
-void StorageService::Delete(grpc::ServerContext* context, const DeleteRequest* request,
-                            DeleteResponse* response, ServerCallbackRpcController* controller) {
-  controller->Finish(storage_provider_->Delete(request, response));
+grpc::Status StorageService::Delete(grpc::ServerContext* context, const DeleteRequest* request,
+                                    DeleteResponse* response) {
+  return storage_provider_->Delete(request, response);
 }
 
-void StorageService::Begin(grpc::ServerContext* context, const BeginRequest* request,
-                           BeginResponse* response, ServerCallbackRpcController* controller) {
-  controller->Finish(storage_provider_->Begin(request, response));
+grpc::Status StorageService::Begin(grpc::ServerContext* context, const BeginRequest* request,
+                                   BeginResponse* response) {
+  return storage_provider_->Begin(request, response);
 }
 
-void StorageService::Commit(grpc::ServerContext* context, const CommitRequest* request,
-                            CommitResponse* response, ServerCallbackRpcController* controller) {
-  controller->Finish(storage_provider_->Commit(request, response));
+grpc::Status StorageService::Commit(grpc::ServerContext* context, const CommitRequest* request,
+                                    CommitResponse* response) {
+  return storage_provider_->Commit(request, response);
 }
 
-void StorageService::Rollback(grpc::ServerContext* context, const RollbackRequest* request,
-                              RollbackResponse* response, ServerCallbackRpcController* controller) {
-  controller->Finish(storage_provider_->Rollback(request, response));
+grpc::Status StorageService::Rollback(grpc::ServerContext* context, const RollbackRequest* request,
+                                      RollbackResponse* response) {
+  return storage_provider_->Rollback(request, response);
 }
 
 }  // namespace oak

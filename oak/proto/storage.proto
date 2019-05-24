@@ -18,6 +18,8 @@ syntax = "proto3";
 
 package oak;
 
+import "google/rpc/status.proto";
+
 message ReadRequest {
   bytes data_store_id = 1;
   bytes transaction_id = 2;
@@ -67,6 +69,34 @@ message RollbackRequest {
 }
 
 message RollbackResponse {
+}
+
+// Wrapper message used to send requests via the StorageChannel interface.
+message StorageOperationRequest {
+  google.rpc.Status status = 1;
+
+  oneof operation {
+    ReadRequest read_request = 2;
+    WriteRequest write_request = 3;
+    DeleteRequest delete_request = 4;
+    BeginRequest begin_request = 5;
+    CommitRequest commit_request = 6;
+    RollbackRequest rollback_request = 7;
+  }
+}
+
+// Wrapper message used to send responses via the StorageChannel interface.
+message StorageOperationResponse {
+  google.rpc.Status status = 1;
+
+  oneof operation {
+    ReadResponse read_response = 2;
+    WriteResponse write_response = 3;
+    DeleteResponse delete_response = 4;
+    BeginResponse begin_response = 5;
+    CommitResponse commit_response = 6;
+    RollbackResponse rollback_response = 7;
+  }
 }
 
 service Storage {
