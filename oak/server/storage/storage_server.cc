@@ -28,8 +28,6 @@
 ABSL_FLAG(std::string, port, "7867", "Port on which the Storage Server listens.");
 
 int main(int argc, char** argv) {
-  // absl::SetFlag(&FLAGS_grpc_register_event_manager, true);
-  // absl::SetFlag(&FLAGS_alsologtostderr, true);
   absl::ParseCommandLine(argc, argv);
 
   std::shared_ptr<grpc::ChannelInterface> provider_channel;
