@@ -31,52 +31,33 @@ uint32_t StorageChannel::Write(absl::Span<const char> request_data) {
 
   switch (operation_request.operation_case()) {
     case StorageOperationRequest::kReadRequest: {
-      ReadResponse response;
-      status = storage_service_->Read(&context, operation_request.read_request(), &response);
-      if (status.ok()) {
-        *operation_response.mutable_read_response() = response;
-      }
+      status = storage_service_->Read(&context, operation_request.read_request(),
+                                      operation_response.mutable_read_response());
       break;
     }
     case StorageOperationRequest::kWriteRequest: {
-      WriteResponse response;
-      status = storage_service_->Write(&context, operation_request.write_request(), &response);
-      if (status.ok()) {
-        *operation_response.mutable_write_response() = response;
-      }
+      status = storage_service_->Write(&context, operation_request.write_request(),
+                                       operation_response.mutable_write_response());
       break;
     }
     case StorageOperationRequest::kDeleteRequest: {
-      DeleteResponse response;
-      status = storage_service_->Delete(&context, operation_request.delete_request(), &response);
-      if (status.ok()) {
-        *operation_response.mutable_delete_response() = response;
-      }
+      status = storage_service_->Delete(&context, operation_request.delete_request(),
+                                        operation_response.mutable_delete_response());
       break;
     }
     case StorageOperationRequest::kBeginRequest: {
-      BeginResponse response;
-      status = storage_service_->Begin(&context, operation_request.begin_request(), &response);
-      if (status.ok()) {
-        *operation_response.mutable_begin_response() = response;
-      }
+      status = storage_service_->Begin(&context, operation_request.begin_request(),
+                                       operation_response.mutable_begin_response());
       break;
     }
     case StorageOperationRequest::kCommitRequest: {
-      CommitResponse response;
-      status = storage_service_->Commit(&context, operation_request.commit_request(), &response);
-      if (status.ok()) {
-        *operation_response.mutable_commit_response() = response;
-      }
+      status = storage_service_->Commit(&context, operation_request.commit_request(),
+                                        operation_response.mutable_commit_response());
       break;
     }
     case StorageOperationRequest::kRollbackRequest: {
-      RollbackResponse response;
-      status =
-          storage_service_->Rollback(&context, operation_request.rollback_request(), &response);
-      if (status.ok()) {
-        *operation_response.mutable_rollback_response() = response;
-      }
+      status = storage_service_->Rollback(&context, operation_request.rollback_request(),
+                                          operation_response.mutable_rollback_response());
       break;
     }
     case StorageOperationRequest::OPERATION_NOT_SET: {

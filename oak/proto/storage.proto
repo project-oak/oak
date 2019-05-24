@@ -73,8 +73,6 @@ message RollbackResponse {
 
 // Wrapper message used to send requests via the StorageChannel interface.
 message StorageOperationRequest {
-  google.rpc.Status status = 1;
-
   oneof operation {
     ReadRequest read_request = 2;
     WriteRequest write_request = 3;
