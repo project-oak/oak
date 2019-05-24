@@ -6,8 +6,11 @@
 # based on the name of the directory bazel is cloned into.
 /bazel-*
 
+# Cargo cache
+/cargo-cache/
+
 # Generated vscode files
-.vscode/*
+/.vscode/
 
 # emacs stuff
 *~
