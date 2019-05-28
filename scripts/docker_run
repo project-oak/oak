@@ -5,14 +5,14 @@ set -o xtrace
 
 readonly USERNAME="$(id --user --name)"
 
-mkdir -p "./bazel-cache"
-mkdir -p "./cargo-cache"
+mkdir -p './bazel-cache'
+mkdir -p './cargo-cache'
 
 docker build \
   --tag=oak \
-  --build-arg "USERNAME=$USERNAME" \
-  --build-arg "UID=$(id --user)" \
-  --build-arg "GID=$(id --group)" \
+  --build-arg="USERNAME=$USERNAME" \
+  --build-arg="UID=$(id --user)" \
+  --build-arg="GID=$(id --group)" \
   .
 docker run \
   --interactive \
