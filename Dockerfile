@@ -7,12 +7,13 @@ RUN clang-format -version
 RUN shellcheck --version
 
 # Create an user so we don't run this as root.
-ARG USERID
-ARG USERNAME
-ARG USERGRP
+ARG GID
+ARG UID
+ARG USERNAME=docker
+ARG GROUPNAME=docker
 
-RUN groupadd -g $USERGRP primarygroup
-RUN useradd -mu $USERID -g $USERGRP $USERNAME
+RUN groupadd --gid $GID $GROUPNAME
+RUN useradd --create-home --uid $UID --gid $GID $USERNAME
 USER $USERNAME
 
 # Install protobuf compiler.
