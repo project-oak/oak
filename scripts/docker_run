@@ -3,14 +3,17 @@
 set -o errexit
 set -o xtrace
 
-USERNAME=$(id -un)
+readonly USERNAME="$(id --user --name)"
 
-mkdir -p $PWD/bazel-cache
-touch $PWD/bazel-cache/.placeholder
-mkdir -p $PWD/cargo-cache
-touch $PWD/cargo-cache/.placeholder
+mkdir -p "./bazel-cache"
+mkdir -p "./cargo-cache"
 
-docker build --tag=oak --build-arg USERNAME="$USERNAME" --build-arg USERID="$(id -u)" --build-arg USERGRP="$(id -g)" .
+docker build \
+  --tag=oak \
+  --build-arg "USERNAME=$USERNAME" \
+  --build-arg "UID=$(id --user)" \
+  --build-arg "GID=$(id --group)" \
+  .
 docker run \
   --interactive \
   --tty \
