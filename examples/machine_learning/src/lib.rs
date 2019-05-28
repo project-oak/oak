@@ -255,7 +255,8 @@ impl oak::Node for Node {
                                 logging_channel,
                                 "Predicted: {:?}; Actual: {:?}; Accurate? {:?}",
                                 animal.type_, actual_type, accurate
-                            ).unwrap();
+                            )
+                            .unwrap();
                         }
                     }
                 }
@@ -265,7 +266,8 @@ impl oak::Node for Node {
                     hits,
                     self.test_set_size,
                     (f64::from(hits)) / (f64::from(self.test_set_size as u32)) * 100.
-                ).unwrap();
+                )
+                .unwrap();
             }
             _ => {
                 writeln!(logging_channel, "unknown method name: {}", grpc_method_name).unwrap();
