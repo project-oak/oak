@@ -3,6 +3,12 @@ language: shell
 services:
   - docker
 
+cache:
+  timeout: 36000
+  directories:
+    - ./cargo-cache
+    - ./bazel-cache
+
 script:
   - ./scripts/docker_run ./scripts/check_formatting
   - ./scripts/build_server_docker
