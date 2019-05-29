@@ -63,7 +63,7 @@ impl oak::Node for Node {
                 out_stream.flush().expect("could not flush");
             }
             _ => {
-                writeln!(logging_channel, "unknown method name: {}", grpc_method_name);
+                writeln!(logging_channel, "unknown method name: {}", grpc_method_name).unwrap();
                 panic!("unknown method name");
             }
         };

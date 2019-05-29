@@ -53,7 +53,7 @@ impl oak::Node for Node {
                 }
             }
             _ => {
-                writeln!(logging_channel, "unknown method name: {}", grpc_method_name);
+                writeln!(logging_channel, "unknown method name: {}", grpc_method_name).unwrap();
                 panic!("unknown method name");
             }
         };

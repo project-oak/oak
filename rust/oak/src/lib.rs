@@ -41,12 +41,12 @@ pub struct Channel {
 
 impl Channel {
     pub fn new(handle: Handle) -> Channel {
-        Channel { handle: handle }
+        Channel { handle }
     }
 }
 
 pub fn logging_channel() -> impl Write {
-    let mut logging_channel = Channel::new(LOGGING_CHANNEL_HANDLE);
+    let logging_channel = Channel::new(LOGGING_CHANNEL_HANDLE);
     // Only flush logging channel on newlines.
     std::io::LineWriter::new(logging_channel)
 }
@@ -118,7 +118,9 @@ pub extern "C" fn oak_handle_grpc_call() {
     NODE.with(|node| {
         let mut grpc_method_channel = Channel::new(GRPC_METHOD_NAME_CHANNEL_HANDLE);
         let mut grpc_method_name = String::new();
-        grpc_method_channel.read_to_string(&mut grpc_method_name);
+        grpc_method_channel
+            .read_to_string(&mut grpc_method_name)
+            .unwrap();
         let mut grpc_channel = Channel::new(GRPC_CHANNEL_HANDLE);
         node.borrow_mut()
             .invoke(&grpc_method_name, &mut grpc_channel);
