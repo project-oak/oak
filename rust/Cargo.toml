@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+  "oak",
+  "oak_derive",
+]

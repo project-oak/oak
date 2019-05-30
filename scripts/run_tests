@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+
+cargo test --manifest-path=./rust/Cargo.toml
+cargo test --manifest-path=./examples/Cargo.toml
