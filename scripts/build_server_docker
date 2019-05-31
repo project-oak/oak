@@ -4,5 +4,27 @@ set -o errexit
 set -o xtrace
 
 readonly SCRIPTS_DIR="$(dirname "$0")"
+readonly OAK_REMOTE_CACHE_KEY='./.oak_remote_cache_key.json'
 
-"$SCRIPTS_DIR/docker_run" bazel build --config=enc-sim //oak/server:oak
+echo "TEST"
+# Do we have a json key for the remote cache
+if [ ! -f $OAK_REMOTE_CACHE_KEY ]; then
+    # Check if this exists in the environment
+    if [ ! -z "$BAZEL_GOOGLE_CREDENTIALS" ]; then
+        echo "$BAZEL_GOOGLE_CREDENTIALS" > "$OAK_REMOTE_CACHE_KEY"
+    fi
+fi
+
+# If we now have a key file, use it. Otherwise build without remote cache
+if [ -f $OAK_REMOTE_CACHE_KEY ]; then
+    "$SCRIPTS_DIR/docker_run" bazel build \
+        --remote_cache=https://storage.googleapis.com/oak-bazel-cache \
+        --google_credentials="$OAK_REMOTE_CACHE_KEY" \
+        --config=enc-sim \
+        //oak/server:oak
+else
+    "$SCRIPTS_DIR/docker_run" bazel build \
+        --config=enc-sim \
+        //oak/server:oak
+fi
+
