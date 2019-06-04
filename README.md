@@ -78,6 +78,10 @@ responsible for executing Oak Modules and enforcing policies on top of data, as
 well as producing remote attestations for clients. Other models are also
 possible.
 
+Each Oak VM instance lives in its own dedicated enclave and is isolated from
+both the host as well as other enclaves and Oak VM instances on the same
+machine.
+
 ## Oak Module
 
 The unit of compilation and execution in Oak is an **Oak Module**. Each Oak
@@ -96,10 +100,6 @@ WebAssembly has a well-defined, unambiguous
 [formal specification](https://webassembly.github.io/spec/core/valid/instructions.html),
 and is targeted by most LLVM-based languages (including C++ and Rust), and
 others, for example Go.
-
-Each Oak VM instance lives in its own dedicated enclave and is isolated from
-both the host as well as other enclaves and Oak VM instances on the same
-machine.
 
 ### WebAssembly Interface
 
@@ -134,7 +134,7 @@ do not natively implement any kind of framing, i.e. they do not expose a concept
 of messages, just raw bytes.
 
 At each invocation, the following channels are implicitly available to the Oak
-Node (see /oak/server/oak_node.h):
+Node (see [/oak/server/oak_node.h](oak/server/oak_node.h)):
 
 -   `logging` (handle: 1)
 -   `grpc` (handle: 2)
@@ -222,6 +222,16 @@ of the newly created Oak Node.
 In response to the request, the Oak Manager sends back to the caller details
 about the gRPC endpoint of the newly created Oak Node, initialized with the Oak
 Module and policy configuration specified in the request.
+
+The following sequence diagram shows a basic flow of requests between a client,
+the Oak Manager and an Oak Node.
+
+<img src="docs/BasicFlow.png" width="850">
+
+The particular case where the TEE is provided by Intel SGX is shown in the
+following system diagram.
+
+<img src="docs/SystemDiagram.png" width="850">
 
 ## Policy Configuration
 
