@@ -71,7 +71,7 @@ uint32_t StorageChannel::Write(absl::Span<const char> request_data) {
   operation_response_view_ =
       absl::Span<const char>(operation_response_data_.data(), operation_response_data_.size());
 
-  return 0;
+  return request_data.size();
 }
 
 absl::Span<const char> StorageChannel::Read(uint32_t size) {
