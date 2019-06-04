@@ -14,6 +14,10 @@
 # limitations under the License.
 #
 
+package(
+    default_visibility = ["//oak/server:__subpackages__"],
+)
+
 load(
     "@com_google_asylo//asylo/bazel:asylo.bzl",
     "enclave_loader",
@@ -147,7 +151,6 @@ enclave_loader(
     loader_args = ["--enclave_path='{enclave}'"],
     deps = [
         ":oak_manager",
-        "//oak/server/storage:spanner_service",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
