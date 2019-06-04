@@ -18,16 +18,71 @@ package(
     default_visibility = ["//oak/server:__pkg__"],
 )
 
+cc_binary(
+    name = "storage_server",
+    srcs = ["storage_server.cc"],
+    deps = [
+        ":spanner_provider",
+        ":storage_service",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/flags:parse",
+        "@com_google_absl//absl/strings",
+        "@com_google_asylo//asylo/util:logging",
+    ],
+)
+
 cc_library(
-    name = "spanner_service",
+    name = "storage_channel",
     srcs = [
-        "spanner_service.cc",
+        "storage_channel.cc",
     ],
     hdrs = [
-        "spanner_service.h",
+        "storage_channel.h",
     ],
     deps = [
         "//oak/proto:storage_cc_grpc",
+        "//oak/server:channel",
+        "@com_google_absl//absl/types:span",
+    ],
+)
+
+cc_library(
+    name = "storage_provider",
+    hdrs = [
+        "storage_provider.h",
+    ],
+    deps = [
+        "//oak/proto:storage_cc_proto",
+    ],
+)
+
+cc_library(
+    name = "storage_service",
+    srcs = [
+        "storage_service.cc",
+    ],
+    hdrs = [
+        "storage_service.h",
+    ],
+    deps = [
+        ":storage_provider",
+        "//oak/proto:storage_cc_grpc",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_asylo//asylo/util:logging",
+    ],
+)
+
+cc_library(
+    name = "spanner_provider",
+    srcs = [
+        "spanner_provider.cc",
+    ],
+    hdrs = [
+        "spanner_provider.h",
+    ],
+    deps = [
+        ":storage_provider",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_asylo//asylo/util:logging",
         "@com_google_googleapis//google/spanner/v1:spanner_cc_grpc",

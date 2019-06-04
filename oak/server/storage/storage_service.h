@@ -14,17 +14,20 @@
  * limitations under the License.
  */
 
-#ifndef OAK_SERVER_STORAGE_SPANNER_SERVICE_H_
-#define OAK_SERVER_STORAGE_SPANNER_SERVICE_H_
+#ifndef OAK_SERVER_STORAGE_STORAGE_SERVICE_H_
+#define OAK_SERVER_STORAGE_STORAGE_SERVICE_H_
 
-#include "google/spanner/v1/spanner.grpc.pb.h"
 #include "oak/proto/storage.grpc.pb.h"
+#include "storage_provider.h"
 
 namespace oak {
 
-class SpannerService final : public Storage::Service {
+// StorageService processes gRPC Storage::Service requests and proxies them to a
+// StorageProvider implementation.
+class StorageService final : public Storage::Service {
  public:
-  SpannerService(std::shared_ptr<grpc::ChannelInterface> channel);
+  // Takes ownership of storage_provider.
+  explicit StorageService(StorageProvider* storage_provider);
 
   grpc::Status Read(grpc::ServerContext* context, const ReadRequest* request,
                     ReadResponse* response) override;
@@ -45,9 +48,9 @@ class SpannerService final : public Storage::Service {
                         RollbackResponse* response) override;
 
  private:
-  std::unique_ptr<google::spanner::v1::Spanner::Stub> spanner_service_;
+  std::unique_ptr<StorageProvider> storage_provider_;
 };
 
 }  // namespace oak
 
-#endif  // OAK_SERVER_STORAGE_SPANNER_SERVICE_H_
+#endif  // OAK_SERVER_STORAGE_STORAGE_SERVICE_H_
