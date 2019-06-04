@@ -34,15 +34,18 @@ class StorageChannel final : public Channel {
   // StorageService method.  Must be called before Read.
   uint32_t Write(absl::Span<const char> request_data) override;
 
-  // Returns a serialized StorageOperationResponse protocol message containing
-  // the response from the StorageService method.  Must be called after Write.
-  // The size argument is ignored.
+  // Returns size bytes of the serialized StorageOperationResponse protocol
+  // message containing the response from the StorageService method.
+  // Must be called repeatedly until an empty span is returned.
   absl::Span<const char> Read(uint32_t size) override;
 
  private:
   std::unique_ptr<Storage::Stub> storage_service_;
 
+  // The serialized StorageOperationResponse message.
   std::string operation_response_data_;
+  // A view of the response which advances each time the Read method is called.
+  absl::Span<const char> operation_response_view_;
 };
 
 }  // namespace oak

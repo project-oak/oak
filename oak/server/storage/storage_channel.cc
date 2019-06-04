@@ -68,11 +68,16 @@ uint32_t StorageChannel::Write(absl::Span<const char> request_data) {
   operation_response.mutable_status()->set_message(status.error_message());
   operation_response.SerializeToString(&operation_response_data_);
 
+  operation_response_view_ =
+      absl::Span<const char>(operation_response_data_.data(), operation_response_data_.size());
+
   return 0;
 }
 
 absl::Span<const char> StorageChannel::Read(uint32_t size) {
-  return absl::Span<const char>(operation_response_data_.data(), operation_response_data_.size());
+  absl::Span<const char> data = operation_response_view_.subspan(0, size);
+  operation_response_view_.remove_prefix(data.size());
+  return data;
 }
 
 }  // namespace oak
