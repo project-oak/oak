@@ -43,12 +43,6 @@ static absl::Span<const char> ReadMemory(wabt::interp::Environment* env, const u
   return absl::MakeConstSpan(env->GetMemory(0)->data).subspan(offset, size);
 }
 
-static const std::string ReadString(wabt::interp::Environment* env, const uint32_t offset,
-                                    const uint32_t size) {
-  absl::Span<const char> memory = ReadMemory(env, offset, size);
-  return std::string(memory.cbegin(), memory.cend());
-}
-
 static void WriteMemory(wabt::interp::Environment* env, const uint32_t offset,
                         const absl::Span<const char> data) {
   std::copy(data.cbegin(), data.cend(), env->GetMemory(0)->data.begin() + offset);
