@@ -18,12 +18,14 @@
 
 #include <openssl/sha.h>
 
+#include <iostream>
 #include <utility>
 
 #include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
 #include "oak/server/buffer_channel.h"
 #include "oak/server/logging_channel.h"
+#include "oak/server/wabt_output.h"
 #include "src/binary-reader.h"
 #include "src/error-formatter.h"
 #include "src/error.h"
@@ -92,6 +94,81 @@ static wabt::Result ReadModule(const std::string module_bytes, wabt::interp::Env
   return result;
 }
 
+// Describes an expected export from an Oak module.
+struct RequiredExport {
+  std::string name_;
+  bool mandatory_;
+  wabt::interp::FuncSignature sig_;
+};
+
+}  // namespace oak
+
+std::ostream& operator<<(std::ostream& os, const oak::RequiredExport& r) {
+  return os << (r.mandatory_ ? "required" : "optional") << " export '" << r.name_
+            << "' with signature " << &r.sig_;
+}
+
+namespace oak {
+
+const RequiredExport kRequiredExports[] = {
+    {"oak_initialize", true, {}},
+    {"oak_handle_grpc_call", true, {}},
+    {"oak_finalize", false, {}},
+};
+
+// Check module exports all required functions with the correct signatures,
+// returning true if so.
+static bool CheckModuleExport(wabt::interp::Environment* env, wabt::interp::DefinedModule* module,
+                              const RequiredExport& req) {
+  LOG(INFO) << "check for " << req;
+  wabt::interp::Export* exp = module->GetExport(req.name_);
+  if (exp == nullptr) {
+    if (req.mandatory_) {
+      LOG(WARNING) << "Could not find required export '" << req.name_ << "' in module";
+      return false;
+    }
+    LOG(INFO) << "optional import '" << req.name_ << "' missing";
+    return true;
+  }
+  if (exp->kind != wabt::ExternalKind::Func) {
+    LOG(WARNING) << "Required export of kind " << exp->kind << " not func in module";
+    return false;
+  }
+  LOG(INFO) << "check signature of function #" << exp->index;
+  wabt::interp::Func* func = env->GetFunc(exp->index);
+  if (func == nullptr) {
+    LOG(WARNING) << "failed to retrieve function #" << exp->index;
+    return false;
+  }
+  if (func->sig_index >= env->GetFuncSignatureCount()) {
+    LOG(WARNING) << "Function #" << func->sig_index << " beyond range of signature types";
+    return false;
+  }
+  wabt::interp::FuncSignature* sig = env->GetFuncSignature(func->sig_index);
+  if (sig == nullptr) {
+    LOG(WARNING) << "Could not find signature for function #" << exp->index;
+    return false;
+  }
+  LOG(INFO) << "function #" << exp->index << " has type #" << func->sig_index << " with signature "
+            << *sig;
+  if ((sig->param_types != req.sig_.param_types) || (sig->result_types != req.sig_.result_types)) {
+    LOG(WARNING) << "Function signature mismatch for " << req.name_ << ": got " << *sig << ", want "
+                 << req.sig_;
+    return false;
+  }
+  return true;
+}
+static bool CheckModuleExports(wabt::interp::Environment* env,
+                               wabt::interp::DefinedModule* module) {
+  bool rc = true;
+  for (const RequiredExport& req : kRequiredExports) {
+    if (!CheckModuleExport(env, module, req)) {
+      rc = false;
+    }
+  }
+  return rc;
+}
+
 std::string Sha256Hash(const std::string& data) {
   SHA256_CTX context;
   SHA256_Init(&context);
@@ -108,16 +185,16 @@ OakNode::OakNode(const std::string& node_id, const std::string& module)
   InitEnvironment(&env_);
   LOG(INFO) << "Func count: " << env_.GetFuncCount();
 
-  // TODO: Check that all the expected exports are present in the module.
-
   wabt::Errors errors;
-
   LOG(INFO) << "Reading module";
   result = ReadModule(module, &env_, &errors, &module_);
   if (wabt::Succeeded(result)) {
     LOG(INFO) << "Read module";
-    wabt::interp::Thread::Options thread_options;
+    if (!CheckModuleExports(&env_, module_)) {
+      LOG(WARNING) << "Failed to validate module";
+    }
 
+    wabt::interp::Thread::Options thread_options;
     // wabt::Stream* trace_stream = s_stdout_stream.get();
     wabt::Stream* trace_stream = nullptr;
     wabt::interp::Executor executor(&env_, trace_stream, thread_options);
