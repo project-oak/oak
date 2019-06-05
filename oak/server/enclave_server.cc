@@ -45,8 +45,11 @@ EnclaveServer::EnclaveServer()
 asylo::Status EnclaveServer::Initialize(const asylo::EnclaveConfig& config) {
   LOG(INFO) << "Initializing Oak Instance";
   const InitializeInput& initialize_input_message = config.GetExtension(initialize_input);
-  node_ = absl::make_unique<OakNode>(initialize_input_message.node_id(),
-                                     initialize_input_message.module());
+  node_ = OakNode::Create(initialize_input_message.node_id(), initialize_input_message.module());
+  if (node_ == nullptr) {
+    return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT, "Failed to create Oak Node");
+  }
+
   return InitializeServer();
 }
 

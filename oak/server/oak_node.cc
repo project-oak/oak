@@ -179,42 +179,48 @@ std::string Sha256Hash(const std::string& data) {
 }
 
 OakNode::OakNode(const std::string& node_id, const std::string& module)
-    : Service(), node_id_(node_id), module_hash_sha_256_(Sha256Hash(module)) {
+    : Service(), node_id_(node_id), module_hash_sha_256_(Sha256Hash(module)) {}
+
+std::unique_ptr<OakNode> OakNode::Create(const std::string& node_id, const std::string& module) {
   LOG(INFO) << "Creating Oak Node";
-  wabt::Result result;
-  InitEnvironment(&env_);
-  LOG(INFO) << "Func count: " << env_.GetFuncCount();
+
+  std::unique_ptr<OakNode> node = absl::WrapUnique(new OakNode(node_id, module));
+  node->InitEnvironment(&node->env_);
+  LOG(INFO) << "Host func count: " << node->env_.GetFuncCount();
 
   wabt::Errors errors;
   LOG(INFO) << "Reading module";
-  result = ReadModule(module, &env_, &errors, &module_);
-  if (wabt::Succeeded(result)) {
-    LOG(INFO) << "Read module";
-    if (!CheckModuleExports(&env_, module_)) {
-      LOG(WARNING) << "Failed to validate module";
-    }
-
-    wabt::interp::Thread::Options thread_options;
-    // wabt::Stream* trace_stream = s_stdout_stream.get();
-    wabt::Stream* trace_stream = nullptr;
-    wabt::interp::Executor executor(&env_, trace_stream, thread_options);
-    LOG(INFO) << "Executing module";
-
-    wabt::interp::TypedValues args;
-    wabt::interp::ExecResult exec_result =
-        executor.RunExportByName(module_, "oak_initialize", args);
-
-    if (exec_result.result == wabt::interp::Result::Ok) {
-      LOG(INFO) << "Executed module";
-    } else {
-      LOG(WARNING) << "Could not execute module";
-      wabt::interp::WriteResult(s_stdout_stream.get(), "error", exec_result.result);
-      // TODO: Print error.
-    }
-  } else {
+  wabt::Result result = ReadModule(module, &node->env_, &errors, &node->module_);
+  if (!wabt::Succeeded(result)) {
     LOG(WARNING) << "Could not read module: " << result;
     LOG(WARNING) << "Errors: " << wabt::FormatErrorsToString(errors, wabt::Location::Type::Binary);
+    return nullptr;
   }
+
+  LOG(INFO) << "Reading module done";
+  if (!CheckModuleExports(&node->env_, node->module_)) {
+    LOG(WARNING) << "Failed to validate module";
+    return nullptr;
+  }
+
+  wabt::interp::Thread::Options thread_options;
+  // wabt::Stream* trace_stream = s_stdout_stream.get();
+  wabt::Stream* trace_stream = nullptr;
+  wabt::interp::Executor executor(&node->env_, trace_stream, thread_options);
+  LOG(INFO) << "Executing module";
+
+  wabt::interp::TypedValues args;
+  wabt::interp::ExecResult exec_result =
+      executor.RunExportByName(node->module_, "oak_initialize", args);
+  if (exec_result.result != wabt::interp::Result::Ok) {
+    LOG(WARNING) << "Could not execute module";
+    wabt::interp::WriteResult(s_stdout_stream.get(), "error", exec_result.result);
+    // TODO: Print error.
+    return nullptr;
+  }
+
+  LOG(INFO) << "Executed module";
+  return node;
 }
 
 // Register all available host functions so that they are available to the Oak Module at runtime.
