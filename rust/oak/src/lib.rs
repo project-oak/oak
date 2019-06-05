@@ -74,19 +74,8 @@ pub trait Node {
     fn invoke(&mut self, grpc_method_name: &str, grpc_channel: &mut Channel);
 }
 
-/// No-op implementation of Node, so that we have a placeholder value until the actual one is set
-/// via `set_node`.
-struct NopNode;
-
-impl Node for NopNode {
-    fn new() -> Self {
-        NopNode
-    }
-    fn invoke(&mut self, _grpc_method_name: &str, _grpc_channel: &mut Channel) {}
-}
-
 thread_local! {
-    static NODE: RefCell<Box<dyn Node>> = RefCell::new(Box::new(NopNode));
+    static NODE: RefCell<Option<Box<dyn Node>>> = RefCell::new(None);
 }
 
 /// Sets the Oak Node to execute in the current instance.
@@ -109,20 +98,25 @@ thread_local! {
 pub fn set_node<T: Node + 'static>() {
     // TODO: Detect multiple invocations.
     NODE.with(|node| {
-        *node.borrow_mut() = Box::new(T::new());
+        *node.borrow_mut() = Some(Box::new(T::new()));
     });
 }
 
 #[no_mangle]
 pub extern "C" fn oak_handle_grpc_call() {
-    NODE.with(|node| {
-        let mut grpc_method_channel = Channel::new(GRPC_METHOD_NAME_CHANNEL_HANDLE);
-        let mut grpc_method_name = String::new();
-        grpc_method_channel
-            .read_to_string(&mut grpc_method_name)
-            .unwrap();
-        let mut grpc_channel = Channel::new(GRPC_CHANNEL_HANDLE);
-        node.borrow_mut()
-            .invoke(&grpc_method_name, &mut grpc_channel);
+    NODE.with(|node| match *node.borrow_mut() {
+        Some(ref mut node) => {
+            let mut grpc_method_channel = Channel::new(GRPC_METHOD_NAME_CHANNEL_HANDLE);
+            let mut grpc_method_name = String::new();
+            grpc_method_channel
+                .read_to_string(&mut grpc_method_name)
+                .unwrap();
+            let mut grpc_channel = Channel::new(GRPC_CHANNEL_HANDLE);
+            node.invoke(&grpc_method_name, &mut grpc_channel);
+        }
+        None => {
+            writeln!(logging_channel(), "gRPC call with no loaded Node").unwrap();
+            panic!("gRPC call with no loaded Node");
+        }
     });
 }
