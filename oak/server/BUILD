@@ -52,9 +52,11 @@ cc_library(
     name = "oak_node",
     srcs = [
         "oak_node.cc",
+        "wabt_output.cc",
     ],
     hdrs = [
         "oak_node.h",
+        "wabt_output.h",
     ],
     deps = [
         ":buffer_channel",
