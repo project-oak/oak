@@ -17,6 +17,7 @@
 #ifndef OAK_SERVER_OAK_NODE_H_
 #define OAK_SERVER_OAK_NODE_H_
 
+#include <memory>
 #include <unordered_map>
 
 #include "absl/base/thread_annotations.h"
@@ -36,7 +37,9 @@ const Handle GRPC_METHOD_NAME_CHANNEL_HANDLE = 3;
 
 class OakNode final : public Node::Service {
  public:
-  OakNode(const std::string& node_id, const std::string& module);
+  // Creates an Oak node with the given node_id by loading the Wasm
+  // module code.
+  static std::unique_ptr<OakNode> Create(const std::string& node_id, const std::string& module);
 
   // Performs an Oak Module invocation.
   grpc::Status ProcessModuleInvocation(grpc::GenericServerContext* context,
@@ -44,6 +47,10 @@ class OakNode final : public Node::Service {
                                        std::vector<char>* response_data);
 
  private:
+  // Clients should construct OakNode instances with Create() (which
+  // can fail).
+  OakNode(const std::string& node_id, const std::string& module);
+
   grpc::Status GetAttestation(grpc::ServerContext* context, const GetAttestationRequest* request,
                               GetAttestationResponse* response) override;
 
