@@ -29,6 +29,7 @@ extern crate protobuf;
 mod proto;
 
 use oak_derive::OakNode;
+use proto::running_average::{GetAverageResponse, SubmitSampleRequest};
 use protobuf::Message;
 use std::io::Write;
 
@@ -47,20 +48,14 @@ impl oak::Node for Node {
         // TODO: Generate this code via a macro or code generation (e.g. a protoc plugin).
         match grpc_method_name {
             "/oak.examples.running_average.RunningAverage/SubmitSample" => {
-                let mut in_stream = protobuf::CodedInputStream::new(grpc_channel);
-                let mut req = proto::running_average::SubmitSampleRequest::new();
-                req.merge_from(&mut in_stream)
-                    .expect("could not read request");
+                let req: SubmitSampleRequest = protobuf::parse_from_reader(grpc_channel).unwrap();
                 self.sum += req.value;
                 self.count += 1;
             }
             "/oak.examples.running_average.RunningAverage/GetAverage" => {
-                let mut res = proto::running_average::GetAverageResponse::new();
-                let mut out_stream = protobuf::CodedOutputStream::new(grpc_channel);
+                let mut res = GetAverageResponse::new();
                 res.average = self.sum / self.count;
-                res.write_to(&mut out_stream)
-                    .expect("could not write response");
-                out_stream.flush().expect("could not flush");
+                res.write_to_writer(grpc_channel).unwrap();
             }
             _ => {
                 writeln!(logging_channel, "unknown method name: {}", grpc_method_name).unwrap();

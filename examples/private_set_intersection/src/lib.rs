@@ -32,6 +32,7 @@ extern crate protobuf;
 mod proto;
 
 use oak_derive::OakNode;
+use proto::private_set_intersection::{GetIntersectionResponse, SubmitSetRequest};
 use protobuf::Message;
 use std::collections::HashSet;
 use std::io::Write;
@@ -50,10 +51,7 @@ impl oak::Node for Node {
         // TODO: Generate this code via a macro or code generation (e.g. a protoc plugin).
         match grpc_method_name {
             "/oak.examples.private_set_intersection.PrivateSetIntersection/SubmitSet" => {
-                let mut in_stream = protobuf::CodedInputStream::new(grpc_channel);
-                let mut req = proto::private_set_intersection::SubmitSetRequest::new();
-                req.merge_from(&mut in_stream)
-                    .expect("could not read request");
+                let req: SubmitSetRequest = protobuf::parse_from_reader(grpc_channel).unwrap();
                 let set = req.values.iter().cloned().collect::<HashSet<_>>();
                 let next = match self.values {
                     Some(ref previous) => previous.intersection(&set).cloned().collect(),
@@ -62,14 +60,11 @@ impl oak::Node for Node {
                 self.values = Some(next);
             }
             "/oak.examples.private_set_intersection.PrivateSetIntersection/GetIntersection" => {
-                let mut res = proto::private_set_intersection::GetIntersectionResponse::new();
+                let mut res = GetIntersectionResponse::new();
                 if let Some(ref set) = self.values {
                     res.values = set.iter().cloned().collect();
                 };
-                let mut out_stream = protobuf::CodedOutputStream::new(grpc_channel);
-                res.write_to(&mut out_stream)
-                    .expect("could not write response");
-                out_stream.flush().expect("could not flush");
+                res.write_to_writer(grpc_channel).unwrap();
             }
             _ => {
                 writeln!(logging_channel, "unknown method name: {}", grpc_method_name).unwrap();

@@ -21,11 +21,20 @@ extern crate protobuf;
 mod proto;
 
 use oak_derive::OakNode;
+use proto::hello_world::{SayHelloRequest, SayHelloResponse};
 use protobuf::Message;
 use std::io::Write;
 
 #[derive(OakNode)]
 struct Node;
+
+impl Node {
+    fn say_hello(&self, req: &SayHelloRequest) -> SayHelloResponse {
+        let mut res = SayHelloResponse::new();
+        res.message = format!("HELLO {}!", req.name);
+        res
+    }
+}
 
 impl oak::Node for Node {
     fn new() -> Self {
@@ -36,21 +45,9 @@ impl oak::Node for Node {
         // TODO: Generate this code via a macro or code generation (e.g. a protoc plugin).
         match grpc_method_name {
             "/oak.examples.hello_world.HelloWorld/SayHello" => {
-                let mut req;
-                {
-                    let mut in_stream = protobuf::CodedInputStream::new(grpc_channel);
-                    req = proto::hello_world::SayHelloRequest::new();
-                    req.merge_from(&mut in_stream)
-                        .expect("could not read request");
-                }
-                let mut res = proto::hello_world::SayHelloResponse::new();
-                res.message = format!("HELLO {}!", req.name);
-                {
-                    let mut out_stream = protobuf::CodedOutputStream::new(grpc_channel);
-                    res.write_to(&mut out_stream)
-                        .expect("could not write response");
-                    out_stream.flush().expect("could not flush");
-                }
+                let req = protobuf::parse_from_reader(grpc_channel).unwrap();
+                let res = self.say_hello(&req);
+                res.write_to_writer(grpc_channel).unwrap();
             }
             _ => {
                 writeln!(logging_channel, "unknown method name: {}", grpc_method_name).unwrap();
