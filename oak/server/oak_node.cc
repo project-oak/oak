@@ -260,6 +260,7 @@ wabt::interp::HostFunc::Callback OakNode::OakChannelRead(wabt::interp::Environme
 
     if (channels_.count(channel_handle) == 0) {
       LOG(WARNING) << "Invalid channel handle: " << channel_handle;
+      return wabt::interp::Result::Ok;
     }
     std::unique_ptr<Channel>& channel = channels_.at(channel_handle);
 
@@ -282,6 +283,7 @@ wabt::interp::HostFunc::Callback OakNode::OakChannelWrite(wabt::interp::Environm
 
     if (channels_.count(channel_handle) == 0) {
       LOG(WARNING) << "Invalid channel handle: " << channel_handle;
+      return wabt::interp::Result::Ok;
     }
     std::unique_ptr<Channel>& channel = channels_.at(channel_handle);
 
