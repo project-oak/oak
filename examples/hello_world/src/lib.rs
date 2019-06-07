@@ -21,7 +21,7 @@ extern crate protobuf;
 mod proto;
 
 use oak_derive::OakNode;
-use proto::hello_world::{SayHelloRequest, SayHelloResponse};
+use proto::hello_world::{HelloRequest, HelloResponse};
 use protobuf::Message;
 use std::io::Write;
 
@@ -29,9 +29,9 @@ use std::io::Write;
 struct Node;
 
 impl Node {
-    fn say_hello(&self, req: &SayHelloRequest) -> SayHelloResponse {
-        let mut res = SayHelloResponse::new();
-        res.message = format!("HELLO {}!", req.name);
+    fn say_hello(&self, req: &HelloRequest) -> HelloResponse {
+        let mut res = HelloResponse::new();
+        res.reply = format!("HELLO {}!", req.greeting);
         res
     }
 }

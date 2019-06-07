@@ -18,14 +18,18 @@ syntax = "proto3";
 
 package oak.examples.hello_world;
 
-message SayHelloRequest {
-  string name = 1;
+message HelloRequest {
+  string greeting = 1;
 }
 
-message SayHelloResponse {
-  string message = 1;
+message HelloResponse {
+  string reply = 1;
 }
 
+// As seen in https://grpc.io/docs/guides/concepts/.
 service HelloWorld {
-  rpc SayHello(SayHelloRequest) returns (SayHelloResponse);
+  rpc SayHello(HelloRequest) returns (HelloResponse);
+  rpc LotsOfReplies(HelloRequest) returns (stream HelloResponse);
+  rpc LotsOfGreetings(stream HelloRequest) returns (HelloResponse);
+  rpc BidiHello(stream HelloRequest) returns (stream HelloResponse);
 }
