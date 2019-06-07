@@ -209,9 +209,18 @@ std::unique_ptr<OakNode> OakNode::Create(const std::string& node_id, const std::
   wabt::interp::Executor executor(&node->env_, trace_stream, thread_options);
   LOG(INFO) << "Executing module";
 
+  // Create a logging channel to allow the module to log during initialization.
+  std::unique_ptr<Channel> logging_channel = absl::make_unique<LoggingChannel>();
+  node->channels_[LOGGING_CHANNEL_HANDLE] = std::move(logging_channel);
+  LOG(INFO) << "Created logging channel";
+
   wabt::interp::TypedValues args;
   wabt::interp::ExecResult exec_result =
       executor.RunExportByName(node->module_, "oak_initialize", args);
+
+  // Drop all channels used in the current invocation.
+  node->channels_ = std::unordered_map<Handle, std::unique_ptr<Channel>>();
+
   if (exec_result.result != wabt::interp::Result::Ok) {
     LOG(WARNING) << "Could not execute module";
     wabt::interp::WriteResult(s_stdout_stream.get(), "error", exec_result.result);
