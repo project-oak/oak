@@ -32,8 +32,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "hello_world"
 version = "0.1.0"
 dependencies = [
+ "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "oak 0.1.0",
  "oak_derive 0.1.0",
+ "oak_log 0.1.0",
  "protobuf 2.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "protoc-rust 2.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -111,6 +113,14 @@ version = "0.1.0"
 dependencies = [
  "quote 0.6.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "syn 0.15.30 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "oak_log"
+version = "0.1.0"
+dependencies = [
+ "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oak 0.1.0",
 ]
 
 [[package]]
