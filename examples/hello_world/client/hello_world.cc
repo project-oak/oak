@@ -33,17 +33,33 @@ using ::oak::examples::hello_world::HelloRequest;
 using ::oak::examples::hello_world::HelloResponse;
 using ::oak::examples::hello_world::HelloWorld;
 
-std::string say_hello(HelloWorld::Stub* stub, std::string name) {
+void say_hello(HelloWorld::Stub* stub, std::string name) {
   grpc::ClientContext context;
   HelloRequest request;
   request.set_greeting(name);
+  LOG(INFO) << "Request: " << request.greeting();
   HelloResponse response;
   grpc::Status status = stub->SayHello(&context, request, &response);
   if (!status.ok()) {
-    LOG(QFATAL) << "Could not submit sample: " << status.error_code() << ": "
+    LOG(QFATAL) << "Could not call SayHello: " << status.error_code() << ": "
                 << status.error_message();
   }
-  return response.reply();
+  LOG(INFO) << "Response: " << response.reply();
+}
+
+void lots_of_replies(HelloWorld::Stub* stub, std::string name) {
+  grpc::ClientContext context;
+  HelloRequest request;
+  request.set_greeting(name);
+  LOG(INFO) << "Request: " << request.greeting();
+  auto reader = stub->LotsOfReplies(&context, request);
+  if (reader == nullptr) {
+    LOG(QFATAL) << "Could not call LotsOfReplies";
+  }
+  HelloResponse response;
+  while (reader->Read(&response)) {
+    LOG(INFO) << "Response: " << response.reply();
+  }
 }
 
 int main(int argc, char** argv) {
@@ -69,14 +85,12 @@ int main(int argc, char** argv) {
       addr.str(), asylo::EnclaveChannelCredentials(asylo::BidirectionalNullCredentialsOptions())));
 
   // Perform multiple invocations of the same Oak Node, with different parameters.
-  auto message_0 = say_hello(stub.get(), "WORLD");
-  LOG(INFO) << "message 0: " << message_0;
+  say_hello(stub.get(), "WORLD");
+  say_hello(stub.get(), "MONDO");
+  say_hello(stub.get(), "世界");
 
-  auto message_1 = say_hello(stub.get(), "MONDO");
-  LOG(INFO) << "message 1: " << message_1;
-
-  auto message_2 = say_hello(stub.get(), "世界");
-  LOG(INFO) << "message 2: " << message_2;
+  // TODO(#97): Uncomment this line when gRPC server streaming is implemented.
+  // lots_of_replies(stub.get(), "WORLDS");
 
   return 0;
 }
