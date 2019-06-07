@@ -14,8 +14,11 @@
 // limitations under the License.
 //
 
+#[macro_use]
+extern crate log;
 extern crate oak;
 extern crate oak_derive;
+extern crate oak_log;
 extern crate protobuf;
 
 mod proto;
@@ -31,6 +34,7 @@ struct Node;
 impl Node {
     fn say_hello(&self, req: &HelloRequest) -> HelloResponse {
         let mut res = HelloResponse::new();
+        info!("Say hello to {}", req.greeting);
         res.reply = format!("HELLO {}!", req.greeting);
         res
     }
@@ -38,6 +42,7 @@ impl Node {
 
 impl oak::Node for Node {
     fn new() -> Self {
+        oak_log::init(log::Level::Debug).unwrap();
         Node
     }
     fn invoke(&mut self, grpc_method_name: &str, grpc_channel: &mut oak::Channel) {

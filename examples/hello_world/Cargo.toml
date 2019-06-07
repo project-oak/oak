@@ -7,8 +7,10 @@ authors = ["Tiziano Santoro <tzn@google.com>"]
 crate-type = ["cdylib"]
 
 [dependencies]
+log = "*"
 oak = { path = "../../rust/oak" }
 oak_derive = { path = "../../rust/oak_derive" }
+oak_log = { path = "../../rust/oak_log" }
 protobuf = "*"
 
 [build-dependencies]
