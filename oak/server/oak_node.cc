@@ -330,15 +330,14 @@ grpc::Status OakNode::ProcessModuleInvocation(grpc::GenericServerContext* contex
   wabt::interp::ExecResult exec_result =
       executor.RunExportByName(module_, "oak_handle_grpc_call", args);
 
-  if (exec_result.result != wabt::interp::Result::Ok) {
-    // TODO: This should be an error?
-    LOG(WARNING) << "Could not handle gRPC call: "
-                 << wabt::interp::ResultToString(exec_result.result);
-  }
-
   // Drop all the channels used in the current invocation.
   channels_ = std::unordered_map<Handle, std::unique_ptr<Channel>>();
 
+  if (exec_result.result != wabt::interp::Result::Ok) {
+    std::string err = wabt::interp::ResultToString(exec_result.result);
+    LOG(ERROR) << "Could not handle gRPC call: " << err;
+    return grpc::Status(grpc::StatusCode::INTERNAL, err);
+  }
   return grpc::Status::OK;
 }
 

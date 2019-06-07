@@ -68,7 +68,7 @@ void ModuleInvocation::ProcessRequest(bool ok) {
   }
   std::vector<char> request_data = Unwrap(request_);
   std::vector<char> response_data;
-  node_->ProcessModuleInvocation(&context_, request_data, &response_data);
+  grpc::Status status = node_->ProcessModuleInvocation(&context_, request_data, &response_data);
   // Restarts the gRPC flow with a new ModuleInvocation object for the next request
   // after processing this request.  This ensures that processing is serialized.
   auto* request = new ModuleInvocation(service_, queue_, node_);
@@ -78,7 +78,7 @@ void ModuleInvocation::ProcessRequest(bool ok) {
   grpc::WriteOptions options;
   auto* callback = new std::function<void(bool)>(
       std::bind(&ModuleInvocation::Finish, this, std::placeholders::_1));
-  stream_.WriteAndFinish(response_, options, grpc::Status::OK, callback);
+  stream_.WriteAndFinish(response_, options, status, callback);
 }
 
 void ModuleInvocation::Finish(bool ok) { delete this; }
