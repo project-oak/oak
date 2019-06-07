@@ -29,21 +29,21 @@ ABSL_FLAG(std::string, manager_address, "127.0.0.1:8888",
           "Address of the Oak Manager to connect to");
 ABSL_FLAG(std::string, module, "", "File containing the compiled WebAssembly module");
 
+using ::oak::examples::hello_world::HelloRequest;
+using ::oak::examples::hello_world::HelloResponse;
 using ::oak::examples::hello_world::HelloWorld;
-using ::oak::examples::hello_world::SayHelloRequest;
-using ::oak::examples::hello_world::SayHelloResponse;
 
 std::string say_hello(HelloWorld::Stub* stub, std::string name) {
   grpc::ClientContext context;
-  SayHelloRequest request;
-  request.set_name(name);
-  SayHelloResponse response;
+  HelloRequest request;
+  request.set_greeting(name);
+  HelloResponse response;
   grpc::Status status = stub->SayHello(&context, request, &response);
   if (!status.ok()) {
     LOG(QFATAL) << "Could not submit sample: " << status.error_code() << ": "
                 << status.error_message();
   }
-  return response.message();
+  return response.reply();
 }
 
 int main(int argc, char** argv) {
