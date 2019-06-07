@@ -96,8 +96,16 @@ thread_local! {
 /// }
 /// ```
 pub fn set_node<T: Node + 'static>() {
-    // TODO: Detect multiple invocations.
     NODE.with(|node| {
+        match *node.borrow_mut() {
+            Some(_) => {
+                writeln!(logging_channel(), "attempt to set_node() when already set!").unwrap();
+                panic!("attempt to set_node when already set");
+            }
+            None => {
+                writeln!(logging_channel(), "setting current node instance").unwrap();
+            }
+        }
         *node.borrow_mut() = Some(Box::new(T::new()));
     });
 }
