@@ -1,0 +1,36 @@
+participant Client [fillcolor="green"]
+participant Oak Manager\n(untrusted) as Mgr [fillcolor="orange"]
+participant Oak VM\n(in Enclave) as OVM [fillcolor="palegreen"]
+participant Oak Module\n(in Enclave) as Node [fillcolor="palegreen"]
+
+Client --> Mgr: CreateNodeReq(.wasm data)
+Note over Mgr: load engine and\n.wasm into enclave [fillcolor="orange"]
+Mgr -->> OVM: create
+OVM -> Node: oak_initialize()
+Mgr --> Client: CreateNodeRsp(port)
+OVM --> Client: GetAttestationReq()
+Client --> OVM: GetAttestationRsp(key exchange)
+
+Note over Client: [color="white"]
+
+Client --> OVM: gRPC: DoSomethingRequest
+Note over OVM: store (encrypted)\ngRPC request [fillcolor="palegreen"]
+OVM -> Node: oak_handle_grpc_call()
+Note over Node: (prepare linear memory\narea for receives) [fillcolor="palegreen"]
+Node -> OVM: channel_read(GRPC_METHOD=3, &name)
+OVM -> Node: "DoSomethingRequest"
+Node -> OVM: channel_read(GRPC=2, &req)
+OVM -> Node: encrypted, serialized\ngRPC request
+Note over Node: decrypt &\nunmarshal request [fillcolor="palegreen"]
+Note over Node: do something [fillcolor="palegreen"]
+Node -> OVM: channel_write(LOG=1, "doing something")
+Note over Node: serialize &\nencrypt response [fillcolor="palegreen"]
+Node -> OVM: channel_write(GRPC=2, &rsp)
+Note over OVM: send (encrypted)\ngRPC response [fillcolor="palegreen"]
+OVM -> Client: gRPC: DoSomethingResponse
+
+Note over Client: [color="white"]
+
+Client --> Mgr: destroy Node
+OVM -> Node: oak_finalize()
+Mgr -->> Node: destroy
