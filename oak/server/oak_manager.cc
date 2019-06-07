@@ -20,6 +20,7 @@
 #include "asylo/identity/descriptions.h"
 #include "asylo/identity/enclave_assertion_authority_config.pb.h"
 #include "asylo/util/logging.h"
+#include "asylo/util/statusor.h"
 
 namespace oak {
 
@@ -32,8 +33,15 @@ grpc::Status OakManager::CreateNode(grpc::ServerContext* context,
                                     const oak::CreateNodeRequest* request,
                                     oak::CreateNodeResponse* response) {
   std::string node_id = NewNodeId();
-  CreateEnclave(node_id, request->module());
-  oak::InitializeOutput out = GetEnclaveOutput(node_id);
+  grpc::Status status = CreateEnclave(node_id, request->module());
+  if (!status.ok()) {
+    return status;
+  }
+  asylo::StatusOr<oak::InitializeOutput> result = GetEnclaveOutput(node_id);
+  if (!result.ok()) {
+    return result.status().ToOtherStatus<grpc::Status>();
+  }
+  oak::InitializeOutput out = result.ValueOrDie();
   response->set_port(out.port());
   response->set_node_id(node_id);
   return grpc::Status::OK;
@@ -53,7 +61,7 @@ void OakManager::InitializeEnclaveManager() {
                                                         /*debug=*/true);
 }
 
-void OakManager::CreateEnclave(const std::string& node_id, const std::string& module) {
+grpc::Status OakManager::CreateEnclave(const std::string& node_id, const std::string& module) {
   LOG(INFO) << "Creating enclave";
   asylo::EnclaveConfig config;
   // Explicitly initialize the null assertion authority in the enclave.
@@ -65,19 +73,22 @@ void OakManager::CreateEnclave(const std::string& node_id, const std::string& mo
   initialize_input->set_module(module);
   asylo::Status status = enclave_manager_->LoadEnclave(node_id, *enclave_loader_, config);
   if (!status.ok()) {
-    LOG(QFATAL) << "Could not load enclave " << enclave_path_ << ": " << status;
+    LOG(ERROR) << "Could not load enclave " << enclave_path_ << ": " << status;
+    return status.ToOtherStatus<grpc::Status>();
   }
   LOG(INFO) << "Enclave created";
+  return grpc::Status::OK;
 }
 
-oak::InitializeOutput OakManager::GetEnclaveOutput(const std::string& node_id) {
+asylo::StatusOr<oak::InitializeOutput> OakManager::GetEnclaveOutput(const std::string& node_id) {
   LOG(INFO) << "Initializing enclave";
   asylo::EnclaveClient* client = enclave_manager_->GetClient(node_id);
   asylo::EnclaveInput input;
   asylo::EnclaveOutput output;
   asylo::Status status = client->EnterAndRun(input, &output);
   if (!status.ok()) {
-    LOG(QFATAL) << "EnterAndRun failed: " << status;
+    LOG(ERROR) << "EnterAndRun failed: " << status;
+    return status;
   }
   LOG(INFO) << "Enclave initialized";
   return output.GetExtension(oak::initialize_output);

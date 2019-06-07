@@ -35,9 +35,9 @@ class OakManager final : public Manager::Service {
  private:
   void InitializeEnclaveManager();
 
-  void CreateEnclave(const std::string& node_id, const std::string& module);
+  grpc::Status CreateEnclave(const std::string& node_id, const std::string& module);
 
-  InitializeOutput GetEnclaveOutput(const std::string& node_id);
+  asylo::StatusOr<InitializeOutput> GetEnclaveOutput(const std::string& node_id);
 
   std::string NewNodeId();
 
