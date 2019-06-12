@@ -30,6 +30,7 @@
 #include "oak/server/oak_manager.h"
 
 ABSL_FLAG(std::string, enclave_path, "", "Path of the enclave to load");
+ABSL_FLAG(int, grpc_port, 8888, "Port to listen on");
 
 void sigint_handler(int param) {
   LOG(QFATAL) << "SIGINT received";
@@ -48,12 +49,17 @@ int main(int argc, char* argv[]) {
       absl::make_unique<oak::OakManager>(absl::GetFlag(FLAGS_enclave_path));
 
   // Initialize and run gRPC server.
-  LOG(INFO) << "Starting gRPC server";
+  int selected_port = absl::GetFlag(FLAGS_grpc_port);
+  std::string addr = "[::]:" + std::to_string(selected_port);
+  LOG(INFO) << "Starting gRPC server on " << addr;
   grpc::ServerBuilder builder;
-  int selected_port;
-  builder.AddListeningPort("[::]:8888", grpc::InsecureServerCredentials(), &selected_port);
+  builder.AddListeningPort(addr, grpc::InsecureServerCredentials(), &selected_port);
   builder.RegisterService(service.get());
   std::unique_ptr<grpc::Server> server = builder.BuildAndStart();
+  if (!server) {
+    LOG(ERROR) << "failed to create gRPC server";
+    return 1;
+  }
   LOG(INFO) << "gRPC server started on port " << selected_port;
 
   // Wait.
