@@ -3,9 +3,31 @@ language: shell
 services:
   - docker
 
+env:
+  - FORMAT_CHECKS=true
+  - BUILD_SERVER=true
+  - BUILD_EXAMPLES=true
+  - UNIT_TEST=true
+  - EXAMPLES_TEST=true
+
 script:
-  - ./scripts/docker_run ./scripts/check_formatting
-  - ./scripts/docker_run ./scripts/run_tests
-  - ./scripts/build_server_docker
-  - ./scripts/build_examples_docker
-  - ./scripts/run_examples
+  - |
+    if [[ "${FORMAT_CHECKS}" == "true" ]]; then
+      ./scripts/docker_run ./scripts/check_formatting
+    fi
+  - |
+    if [[ "${BUILD_SERVER}" == "true" ]]; then
+      ./scripts/build_server_docker
+    fi
+  - |
+    if [[ "${BUILD_EXAMPLES}" == "true" ]]; then
+      ./scripts/build_examples_docker
+    fi
+  - |
+    if [[ "${UNIT_TEST}" == "true" ]]; then
+      ./scripts/docker_run ./scripts/run_tests
+    fi
+  - |
+    if [[ "${EXAMPLES_TEST}" == "true" ]]; then
+      ./scripts/run_examples
+    fi
