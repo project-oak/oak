@@ -1,12 +1,2 @@
 #!/bin/sh
-set -e
-set -x
-
-OAK_MANAGER_ADDRESS=${OAK_MANAGER_ADDRESS:-"127.0.0.1:8888"}
-
-cargo build --release --target=wasm32-unknown-unknown --manifest-path=examples/hello_world/Cargo.toml
-bazel run //examples/hello_world/client \
-  ${BAZEL_OPTS:+ "${BAZEL_OPTS}"} \
-  -- \
-  --manager_address="${OAK_MANAGER_ADDRESS}" \
-  --module=$PWD/examples/target/wasm32-unknown-unknown/release/hello_world.wasm
+$PWD/scripts/run_example hello_world
