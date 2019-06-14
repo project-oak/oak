@@ -8,3 +8,4 @@ script:
   - ./scripts/docker_run ./scripts/run_tests
   - ./scripts/build_server_docker
   - ./scripts/build_examples_docker
+  - ./scripts/run_examples
