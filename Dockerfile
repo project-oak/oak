@@ -14,7 +14,7 @@ ARG UID
 ARG USERNAME=docker
 ARG GROUPNAME=docker
 
-RUN groupadd --gid $GID $GROUPNAME
+RUN groupadd --force --gid $GID $GROUPNAME
 RUN useradd --create-home --uid $UID --gid $GID $USERNAME
 USER $USERNAME
 
