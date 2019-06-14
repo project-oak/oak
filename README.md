@@ -359,6 +359,11 @@ TODO: Roughtime
         or `.zshrc`)
     +   `rustup target add wasm32-unknown-unknown`
 
+[Step by step instructions for installing Oak on Ubuntu 18.04](INSTALL.md)
+shows how to install the prerequisites starting off with a clean Ubuntu install.
+Note the server runs in the Docker container but the examples run on the host machine.
+This means you might be missaing other dependencies like the `protoc` protocol compiler.
+
 ### Run Server
 
 The following command builds and runs an Oak Server instance.
