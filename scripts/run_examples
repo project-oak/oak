@@ -3,7 +3,7 @@
 set -o errexit
 set -o nounset
 
-readonly USERNAME="$(id --user --name)"
+readonly USERNAME="$(id -u -n)"
 readonly SCRIPTS_DIR="$(dirname "$0")"
 
 # Run oak server
