@@ -3,26 +3,33 @@
 set -o errexit
 set -o nounset
 
-readonly USERNAME="$(id -u -n)"
+readonly DOCKER_UID="${UID:-0}"
+readonly DOCKER_GID="${GID:-0}"
+readonly DOCKER_USER="${USER:-root}"
+
 readonly SCRIPTS_DIR="$(dirname "$0")"
 
-# Run oak server
+# Run Oak server.
 "$SCRIPTS_DIR/build_server_docker"
 
-# Same command as launched in scripts/docker_run but detached. Keep them in sync
-SERVER_DOCKER_ID=$(docker run \
+# Keep this in sync with /scripts/docker_run .
+readonly SERVER_DOCKER_ID="$(\
+  docker run \
   --detach \
   --interactive \
   --tty \
-  --volume="$PWD/bazel-cache:/home/$USERNAME/.cache/bazel" \
-  --volume="$PWD/cargo-cache:/home/$USERNAME/.cargo/registry" \
-  --volume="$PWD":/opt/my-project \
+  --user="$DOCKER_UID" \
+  --env="USER=$DOCKER_USER" \
+  --volume="$PWD/bazel-cache:/.cache/bazel" \
+  --volume="$PWD/cargo-cache:/usr/local/cargo/registry" \
+  --volume="$PWD:/opt/my-project" \
   --workdir=/opt/my-project \
   --network=host \
   oak:latest \
-  ./bazel-bin/oak/server/oak)
+  ./bazel-bin/oak/server/oak \
+  )"
 
-# Run oak examples
+# Run Oak examples.
 find examples -type f -name run -exec "$SCRIPTS_DIR/docker_run" {} \;
 
 docker stop "$SERVER_DOCKER_ID"

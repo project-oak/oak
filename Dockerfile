@@ -6,28 +6,22 @@ RUN git --version
 RUN clang-format -version
 RUN shellcheck --version
 
-# Create an user so we don't run this as root.
-ARG GID
-ARG UID
-ARG USERNAME=docker
-ARG GROUPNAME=docker
-
-RUN groupadd --force --gid $GID $GROUPNAME
-RUN useradd --create-home --uid $UID --gid $GID $USERNAME
-USER $USERNAME
-
-# Install protobuf compiler.
+# Install Protobuf compiler.
 ARG PROTOBUF_VERSION=3.7.1
+ARG PROTOBUF_DIR=/usr/local/protobuf
 RUN curl -L https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOBUF_VERSION}/protoc-${PROTOBUF_VERSION}-linux-x86_64.zip > /tmp/protobuf.zip
-RUN unzip /tmp/protobuf.zip -d ~/protobuf
-ENV PATH "/home/$USERNAME/protobuf/bin:$PATH"
+RUN unzip /tmp/protobuf.zip -d $PROTOBUF_DIR
+ENV PATH "$PROTOBUF_DIR/bin:$PATH"
 RUN protoc --version
 
 # Install Rust compiler.
 # TODO: We should pin a specific Rust version rather than just installing the current stable.
+ARG RUSTUP_DIR=/usr/local/cargo
+ENV RUSTUP_HOME $RUSTUP_DIR
+ENV CARGO_HOME $RUSTUP_DIR
 RUN curl https://sh.rustup.rs -sSf > /tmp/rustup
 RUN sh /tmp/rustup -y
-ENV PATH "/home/$USERNAME/.cargo/bin:$PATH"
+ENV PATH "$RUSTUP_DIR/bin:$PATH"
 RUN rustup --version
 
 # Install rustfmt.

@@ -3,24 +3,31 @@
 set -o errexit
 set -o xtrace
 
-readonly USERNAME="$(id -u -n)"
+# The default user for a Docker container has uid 0 (root). To avoid creating
+# root-owned files in the build directory we tell Docker to use the current user
+# ID, if known.
+# See
+# https://github.com/googleapis/google-cloud-cpp/blob/a186208b79d900b4ec71c6f9df3acf7638f01dc6/ci/kokoro/docker/build.sh#L147-L152
+readonly DOCKER_UID="${UID:-0}"
+readonly DOCKER_GID="${GID:-0}"
+readonly DOCKER_USER="${USER:-root}"
 
 mkdir -p './bazel-cache'
 mkdir -p './cargo-cache'
 
 docker build \
   --tag=oak \
-  --build-arg="USERNAME=$USERNAME" \
-  --build-arg="UID=$(id -u)" \
-  --build-arg="GID=$(id -g)" \
   .
 
+# Keep this in sync with /scripts/run_examples .
 docker run \
   --interactive \
   --tty \
-  --volume="$PWD/bazel-cache:/home/$USERNAME/.cache/bazel" \
-  --volume="$PWD/cargo-cache:/home/$USERNAME/.cargo/registry" \
-  --volume="$PWD":/opt/my-project \
+  --user="$DOCKER_UID:$DOCKER_GID" \
+  --env="USER=$DOCKER_USER" \
+  --volume="$PWD/bazel-cache:/.cache/bazel" \
+  --volume="$PWD/cargo-cache:/usr/local/cargo/registry" \
+  --volume="$PWD:/opt/my-project" \
   --workdir=/opt/my-project \
   --network=host \
   oak:latest \
