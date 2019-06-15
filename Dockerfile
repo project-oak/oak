@@ -19,7 +19,7 @@ RUN useradd --create-home --uid $UID --gid $GID $USERNAME
 USER $USERNAME
 
 # Install protobuf compiler.
-ARG PROTOBUF_VERSION=3.7.1
+ARG PROTOBUF_VERSION=3.8.0
 RUN curl -L https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOBUF_VERSION}/protoc-${PROTOBUF_VERSION}-linux-x86_64.zip > /tmp/protobuf.zip
 RUN unzip /tmp/protobuf.zip -d ~/protobuf
 ENV PATH "/home/$USERNAME/protobuf/bin:$PATH"

@@ -40,11 +40,17 @@ http_archive(
 http_archive(
     name = "com_google_protobuf",
     urls = [
-        "https://github.com/protocolbuffers/protobuf/archive/v3.6.1.2.tar.gz",
+        "https://github.com/protocolbuffers/protobuf/archive/v3.8.0.tar.gz",
     ],
-    strip_prefix = "protobuf-3.6.1.2",
-    sha256 = "2244b0308846bb22b4ff0bcc675e99290ff9f1115553ae9671eba1030af31bc0",
+    strip_prefix = "protobuf-3.8.0",
+    sha256 = "03d2e5ef101aee4c2f6ddcf145d2a04926b9c19e7086944df3842b1b8502b783",
 )
+
+load(
+    "@com_google_protobuf//:protobuf_deps.bzl",
+    "protobuf_deps"
+)
+protobuf_deps()
 
 # gRPC
 # TODO: Remove after Asylo upgrades for 0803c79411597f58eae0b12b4eb272c506b8cdbb.
