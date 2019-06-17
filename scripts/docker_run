@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# Usage: docker_run [--detach] COMMAND
+
 set -o errexit
 set -o xtrace
 
@@ -19,16 +21,23 @@ docker build \
   --tag=oak \
   .
 
-# Keep this in sync with /scripts/run_examples .
-docker run \
-  --interactive \
-  --tty \
-  --user="$DOCKER_UID:$DOCKER_GID" \
-  --env="USER=$DOCKER_USER" \
-  --volume="$PWD/bazel-cache:/.cache/bazel" \
-  --volume="$PWD/cargo-cache:/usr/local/cargo/registry" \
-  --volume="$PWD:/opt/my-project" \
-  --workdir=/opt/my-project \
-  --network=host \
-  oak:latest \
-  "$@"
+docker_run_flags=(
+  "--interactive"
+  "--tty"
+  "--user=$DOCKER_UID:$DOCKER_GID"
+  "--env=USER=$DOCKER_USER"
+  "--volume=$PWD/bazel-cache:/.cache/bazel"
+  "--volume=$PWD/cargo-cache:/usr/local/cargo/registry"
+  "--volume=$PWD:/opt/my-project"
+  "--workdir=/opt/my-project"
+  "--network=host"
+)
+
+if [[ "$1" == "--detach" ]]; then
+  docker_run_flags+=("--detach")
+  docker run "${docker_run_flags[@]}" oak:latest "${@:2}"
+  # Run `docker ps --quiet --latest` in caller to get reference to detached container.
+else
+  docker run "${docker_run_flags[@]}" oak:latest "$@"
+fi
+

@@ -11,25 +11,11 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 
 # Run Oak server.
 "$SCRIPTS_DIR/build_server_docker"
-
-# Keep this in sync with /scripts/docker_run .
-readonly SERVER_DOCKER_ID="$(\
-  docker run \
-  --detach \
-  --interactive \
-  --tty \
-  --user="$DOCKER_UID" \
-  --env="USER=$DOCKER_USER" \
-  --volume="$PWD/bazel-cache:/.cache/bazel" \
-  --volume="$PWD/cargo-cache:/usr/local/cargo/registry" \
-  --volume="$PWD:/opt/my-project" \
-  --workdir=/opt/my-project \
-  --network=host \
-  oak:latest \
-  ./bazel-bin/oak/server/oak \
-  )"
+"$SCRIPTS_DIR/docker_run" --detach ./bazel-bin/oak/server/oak
+readonly SERVER_CONTAINER_ID="$(docker ps --quiet --latest)"
 
 # Run Oak examples.
 find examples -type f -name run -exec "$SCRIPTS_DIR/docker_run" {} \;
 
-docker stop "$SERVER_DOCKER_ID"
+docker stop "$SERVER_CONTAINER_ID"
+
