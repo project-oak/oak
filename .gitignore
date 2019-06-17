@@ -10,7 +10,7 @@
 /cargo-cache/
 
 # Generated vscode files.
-/.vscode/
+**/.vscode/
 
 # emacs stuff
 *~
