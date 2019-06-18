@@ -67,4 +67,3 @@ impl HelloWorldNode for Node {
         res
     }
 }
-
