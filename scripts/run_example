@@ -11,9 +11,20 @@ fi
 
 readonly OAK_MANAGER_ADDRESS="${OAK_MANAGER_ADDRESS:-127.0.0.1:8888}"
 
+# Bazel 0.27.0 deprecates features that our dependencies (gRPC, protobuf) rely on, so disable
+# the checks until all dependencies have been updated to cope with a later Bazel.
+# TODO: remove these options when possible
+readonly BAZEL_WARNING_OPTS=(
+  "--incompatible_disable_deprecated_attr_params=false"
+  "--incompatible_depset_is_not_iterable=false"
+  "--incompatible_new_actions_api=false"
+  "--incompatible_no_support_tools_in_action_inputs=false"
+)
+
 cargo build --release --target=wasm32-unknown-unknown --manifest-path="examples/${NAME}/Cargo.toml"
 bazel run "//examples/${NAME}/client" \
   ${BAZEL_OPTS:+ "${BAZEL_OPTS}"} \
+  "${BAZEL_WARNING_OPTS[@]}" \
   -- \
   --manager_address="${OAK_MANAGER_ADDRESS}" \
   --module="$PWD/examples/target/wasm32-unknown-unknown/release/${NAME}.wasm"
