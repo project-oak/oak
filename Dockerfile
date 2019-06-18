@@ -1,8 +1,6 @@
 FROM gcr.io/asylo-framework/asylo:buildenv-v0.3.4
 
 RUN apt-get -y update && apt-get install -y git curl clang-format shellcheck
-# TODO: remove this when asylo updates their bazel version
-RUN apt-get install --only-upgrade bazel
 
 RUN git --version
 RUN clang-format -version
