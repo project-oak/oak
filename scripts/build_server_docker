@@ -20,7 +20,7 @@ readonly BAZEL_WARNING_OPTS=(
 # https://docs.bazel.build/versions/master/remote-caching.html#google-cloud-storage
 if [[ ! -f "$OAK_REMOTE_CACHE_KEY" ]]; then
     # Check if this exists in the environment.
-    if [ ! -z "$BAZEL_GOOGLE_CREDENTIALS" ]; then
+    if [[ -n "$BAZEL_GOOGLE_CREDENTIALS" ]]; then
         echo "$BAZEL_GOOGLE_CREDENTIALS" > "$OAK_REMOTE_CACHE_KEY"
     fi
 fi
