@@ -40,10 +40,10 @@ http_archive(
 http_archive(
     name = "com_google_protobuf",
     urls = [
-        "https://github.com/protocolbuffers/protobuf/archive/v3.6.1.2.tar.gz",
+        "https://github.com/protocolbuffers/protobuf/archive/v3.7.1.tar.gz",
     ],
-    strip_prefix = "protobuf-3.6.1.2",
-    sha256 = "2244b0308846bb22b4ff0bcc675e99290ff9f1115553ae9671eba1030af31bc0",
+    strip_prefix = "protobuf-3.7.1",
+    sha256 = "f1748989842b46fa208b2a6e4e2785133cfcc3e4d43c17fecb023733f0f5443f",
 )
 
 # gRPC
