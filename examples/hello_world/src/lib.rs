@@ -31,15 +31,12 @@ use std::io::Write;
 #[derive(OakNode)]
 struct Node;
 
-impl Node {
-    fn say_hello(&self, req: &HelloRequest) -> HelloResponse {
-        let mut res = HelloResponse::new();
-        info!("Say hello to {}", req.greeting);
-        res.reply = format!("HELLO {}!", req.greeting);
-        res
-    }
+// TODO: Generate this code via a macro or code generation (e.g. a protoc plugin).
+trait HelloWorldNode {
+    fn say_hello(&self, req: &HelloRequest) -> HelloResponse;
 }
 
+// TODO: Generate this code via a macro or code generation (e.g. a protoc plugin).
 impl oak::Node for Node {
     fn new() -> Self {
         oak_log::init(log::Level::Debug).unwrap();
@@ -47,11 +44,10 @@ impl oak::Node for Node {
     }
     fn invoke(&mut self, grpc_method_name: &str, grpc_channel: &mut oak::Channel) {
         let mut logging_channel = oak::logging_channel();
-        // TODO: Generate this code via a macro or code generation (e.g. a protoc plugin).
         match grpc_method_name {
             "/oak.examples.hello_world.HelloWorld/SayHello" => {
                 let req = protobuf::parse_from_reader(grpc_channel).unwrap();
-                let res = self.say_hello(&req);
+                let res = (self as &mut HelloWorldNode).say_hello(&req);
                 res.write_to_writer(grpc_channel).unwrap();
             }
             _ => {
@@ -59,5 +55,15 @@ impl oak::Node for Node {
                 panic!("unknown method name");
             }
         };
+    }
+}
+
+// TODO: Generate parts of this code via a macro or code generation (e.g. a protoc plugin).
+impl HelloWorldNode for Node {
+    fn say_hello(&self, req: &HelloRequest) -> HelloResponse {
+        let mut res = HelloResponse::new();
+        info!("Say hello to {}", req.greeting);
+        res.reply = format!("HELLO {}!", req.greeting);
+        res
     }
 }
