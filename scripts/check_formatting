@@ -4,29 +4,13 @@ set -o errexit
 set -o nounset
 
 # Check shell scripts for common mistakes.
-
 find scripts -type f -exec shellcheck {} +
 
 # Run clang-format and rustfmt on the entire codebase to check if it's
 # well formatted. Exit codes:
 #  - 1 there are files to be formatted.
 #  - 0 everything looks fine.
-
-# We ask clang-format to generate an XML output with the deisred formattings.
-# We check if any "replacement" tag exists in the output.
-CLANG_FORMAT_EXIT_CODE=0
-find oak examples \( -type f -name '*.h' -o -name '*.cc' -o -name '*.proto' \) \
-  -exec clang-format -verbose -style=file -output-replacements-xml {} + 2> /dev/null \
-  | grep '<replacement ' > /dev/null \
-  && CLANG_FORMAT_EXIT_CODE=$? || CLANG_FORMAT_EXIT_CODE=$?
-
-# When looking for clang-format "replacement" tags, grep will return 0 if it
-# has found anything and 1 if not, so here we'll invert the return code to
-# indicate an error when the formatting is insufficient.
-if [ $CLANG_FORMAT_EXIT_CODE -ne 1 ]; then
-  echo 'Please format code with clang-format'
-  exit 1
-fi
+./third_party/run-clang-format/run-clang-format.py -r oak examples
 
 # Fortunately, rustfmt has the --check option that will make it exit with 1
 # if formatting has to be applied.
