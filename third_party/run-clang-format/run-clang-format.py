@@ -24,7 +24,7 @@ import traceback
 
 from functools import partial
 
-DEFAULT_EXTENSIONS = 'c,h,C,H,cpp,hpp,cc,hh,c++,h++,cxx,hxx'
+DEFAULT_EXTENSIONS = 'c,h,C,H,cpp,hpp,cc,hh,c++,h++,cxx,hxx,proto'
 
 
 class ExitStatus:
