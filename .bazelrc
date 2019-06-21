@@ -19,3 +19,11 @@ build:sgx-sim --define=SGX_SIM=1
 # However, this is subject to change and users of this config should not
 # make assumptions about it being related to SGX.
 build:enc-sim --config=sgx-sim
+
+# Bazel 0.27.0 deprecates features that our dependencies (gRPC, protobuf) rely on, so disable
+# the checks until all dependencies have been updated to cope with a later Bazel.
+# TODO: remove these options when possible
+build --incompatible_disable_deprecated_attr_params=false
+build --incompatible_depset_is_not_iterable=false
+build --incompatible_new_actions_api=false
+build --incompatible_no_support_tools_in_action_inputs=false
