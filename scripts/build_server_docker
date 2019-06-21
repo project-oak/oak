@@ -18,14 +18,12 @@ fi
 # If we now have a key file, use it. Otherwise build without remote cache.
 if [[ -f "$OAK_REMOTE_CACHE_KEY" ]]; then
     "$SCRIPTS_DIR/docker_run" bazel build \
-        ${BAZEL_OPTS:+ "${BAZEL_OPTS}"} \
         --remote_cache=https://storage.googleapis.com/oak-bazel-cache \
         --google_credentials="$OAK_REMOTE_CACHE_KEY" \
         --config=enc-sim \
         //oak/server:oak
 else
     "$SCRIPTS_DIR/docker_run" bazel build \
-        ${BAZEL_OPTS:+ "${BAZEL_OPTS}"} \
         --config=enc-sim \
         //oak/server:oak
 fi

@@ -11,7 +11,7 @@ env:
   - EXAMPLES_TEST=true
 
 script:
-  - export BAZEL_OPTS=--show_progress_rate_limit=5.0
+  - echo "build --show_progress_rate_limit=5.0" >> .bazelrc
   - |
     if [[ "${FORMAT_CHECKS}" == "true" ]]; then
       ./scripts/docker_run ./scripts/check_formatting
