@@ -1,0 +1,5 @@
+[workspace]
+members = [
+    "grpc-compiler",
+    "protoc-rust-grpc",
+]

@@ -1,0 +1,19 @@
+[package]
+name = "grpc-compiler"
+version = "0.7.0"
+description = "gRPC compiler for rust-grpc"
+license = "MIT/Apache-2.0"
+authors = ["Stepan Koltsov <stepan.koltsov@gmail.com>"]
+
+[dependencies]
+protobuf = "2"
+protobuf-codegen = "2"
+
+[[bin]]
+
+name = "protoc-gen-rust-grpc"
+test = false
+
+[lib]
+
+doctest = false
