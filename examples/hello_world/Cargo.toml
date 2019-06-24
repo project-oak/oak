@@ -14,4 +14,4 @@ oak_log = { path = "../../rust/oak_log" }
 protobuf = "*"
 
 [build-dependencies]
-protoc-rust = "*"
+protoc-rust-grpc = { path = "../../third_party/grpc-rust/protoc-rust-grpc" }

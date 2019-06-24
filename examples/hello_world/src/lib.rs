@@ -36,19 +36,19 @@ impl oak::Node for Node {
         Node
     }
     fn invoke(&mut self, grpc_method_name: &str, grpc_channel: &mut oak::Channel) {
-        dispatch(self as &HelloWorldNode, grpc_method_name, grpc_channel)
+        dispatch(self, grpc_method_name, grpc_channel)
     }
 }
 
 impl HelloWorldNode for Node {
-    fn say_hello(&self, req: HelloRequest) -> HelloResponse {
+    fn say_hello(&mut self, req: HelloRequest) -> HelloResponse {
         info!("Say hello to {}", req.greeting);
         let mut res = HelloResponse::new();
         res.reply = format!("HELLO {}!", req.greeting);
         res
     }
 
-    fn lots_of_replies(&self, req: HelloRequest) -> Vec<HelloResponse> {
+    fn lots_of_replies(&mut self, req: HelloRequest) -> Vec<HelloResponse> {
         info!("Say hello to {}", req.greeting);
         let mut res1 = HelloResponse::new();
         res1.reply = format!("HELLO {}!", req.greeting);
@@ -57,7 +57,7 @@ impl HelloWorldNode for Node {
         vec![res1, res2]
     }
 
-    fn lots_of_greetings(&self, reqs: Vec<HelloRequest>) -> HelloResponse {
+    fn lots_of_greetings(&mut self, reqs: Vec<HelloRequest>) -> HelloResponse {
         info!("Say hello");
         let mut msg = String::new();
         msg.push_str("Hello ");
@@ -67,7 +67,7 @@ impl HelloWorldNode for Node {
         res
     }
 
-    fn bidi_hello(&self, reqs: Vec<HelloRequest>) -> Vec<HelloResponse> {
+    fn bidi_hello(&mut self, reqs: Vec<HelloRequest>) -> Vec<HelloResponse> {
         info!("Say hello");
         let msg = recipients(&reqs);
         let mut res1 = HelloResponse::new();
