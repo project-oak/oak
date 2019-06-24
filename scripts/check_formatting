@@ -16,10 +16,6 @@ find scripts -type f -exec shellcheck {} +
 # if formatting has to be applied.
 find examples rust -type f -name '*.rs' -exec rustfmt --check {} +
 
-# Run clippy to lint the rust code
-# First do the examples folder
-(cd "$PWD/examples/" && cargo clippy)
-
-# After this run it on all the subfolders in rust
-# TODO: change this once we have a single workspace
-find rust -type f -name 'Cargo.toml' -execdir cargo clippy \;
+# Run clippy to lint the Rust code.
+cargo clippy --manifest-path="$PWD/examples/Cargo.toml"
+cargo clippy --manifest-path="$PWD/rust/Cargo.toml"
