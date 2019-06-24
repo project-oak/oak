@@ -29,6 +29,14 @@ version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "grpc-compiler"
+version = "0.7.0"
+dependencies = [
+ "protobuf 2.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "protobuf-codegen 2.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "hello_world"
 version = "0.1.0"
 dependencies = [
@@ -37,7 +45,7 @@ dependencies = [
  "oak_derive 0.1.0",
  "oak_log 0.1.0",
  "protobuf 2.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "protoc-rust 2.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "protoc-rust-grpc 0.7.0",
 ]
 
 [[package]]
@@ -175,6 +183,17 @@ dependencies = [
  "protobuf-codegen 2.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "protoc 2.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempfile 3.0.7 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "protoc-rust-grpc"
+version = "0.7.0"
+dependencies = [
+ "grpc-compiler 0.7.0",
+ "protobuf 2.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "protoc 2.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "protoc-rust 2.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tempdir 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -368,6 +387,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tempdir"
+version = "0.3.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "remove_dir_all 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "tempfile"
 version = "3.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -442,6 +470,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum rulinalg 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)" = "5670ce3717deb2d4436bdb29f07c549b56595f1fd8af1ca4682f1c1b1ac57f86"
 "checksum rusty-machine 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)" = "dee5358236bbd0835aeee9a8b04c8b9b0aaea243a1a1a71253957b4606fb9171"
 "checksum syn 0.15.30 (registry+https://github.com/rust-lang/crates.io-index)" = "66c8865bf5a7cbb662d8b011950060b3c8743dca141b054bf7195b20d314d8e2"
+"checksum tempdir 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)" = "15f2b5fb00ccdf689e0149d1b1b3c03fead81c2b37735d812fa8bddbbf41b6d8"
 "checksum tempfile 3.0.7 (registry+https://github.com/rust-lang/crates.io-index)" = "b86c784c88d98c801132806dadd3819ed29d8600836c4088e855cdf3e178ed8a"
 "checksum unicode-xid 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "fc72304796d0818e357ead4e000d19c9c174ab23dc11093ac919054d20a6a7fc"
 "checksum winapi 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)" = "f10e386af2b13e47c89e7236a7a14a086791a2b88ebad6df9bf42040195cf770"
