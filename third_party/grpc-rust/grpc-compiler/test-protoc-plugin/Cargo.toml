@@ -1,0 +1,16 @@
+[package]
+name = "test-protoc-plugin"
+version = "0.0.0"
+authors = ["Stepan Koltsov <stepan.koltsov@gmail.com>"]
+publish = false
+
+[dependencies]
+tls-api         = "0.1.*"
+protobuf        = "2"
+grpc            = { path = "../../grpc" }
+grpc-protobuf   = { path = "../../grpc-protobuf" }
+futures-cpupool = "0.1.*"
+
+[lib]
+test = false
+doctest = false

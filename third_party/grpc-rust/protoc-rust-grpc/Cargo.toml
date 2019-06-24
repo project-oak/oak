@@ -1,0 +1,21 @@
+[package]
+name = "protoc-rust-grpc"
+version = "0.7.0"
+authors = ["Stepan Koltsov <stepan.koltsov@gmail.com>"]
+homepage = "https://github.com/stepancheg/rust-protobuf/protoc-rust/"
+repository = "https://github.com/stepancheg/rust-protobuf/protoc-rust/"
+license = "MIT/Apache-2.0"
+description = """
+protoc --rust-grpc_out=... available as API. protoc needs to be in $PATH, protoc-gen-rust-grpc does not.
+"""
+
+[lib]
+doctest = false
+test = false
+
+[dependencies]
+protoc        = "2"
+protoc-rust   = "2"
+protobuf      = "2"
+grpc-compiler = { path = "../grpc-compiler", version = "=0.7.0" }
+tempdir       = "0.3"
