@@ -87,35 +87,6 @@ impl<'a> MethodGen<'a> {
         )
     }
 
-    fn client_resp_type(&self) -> String {
-        match self.proto.get_server_streaming() {
-            false => format!("::grpc::SingleResponse<{}>", self.output_message()),
-            true => format!("::grpc::StreamingResponse<{}>", self.output_message()),
-        }
-    }
-
-    fn client_sig(&self) -> String {
-        let req_param = match self.proto.get_client_streaming() {
-            false => format!(", req: {}", self.input_message()),
-            true => format!(""),
-        };
-        let resp_type = self.client_resp_type();
-        let return_type = match self.proto.get_client_streaming() {
-            false => resp_type,
-            true => format!(
-                "impl ::futures::future::Future<Item=(::grpc::ClientRequestSink<{}>, {}), Error=::grpc::Error>",
-                self.input_message(),
-                resp_type
-            ),
-        };
-        format!(
-            "{}(&self, o: ::grpc::RequestOptions{}) -> {}",
-            self.snake_name(),
-            req_param,
-            return_type,
-        )
-    }
-
     fn server_req_type(&self) -> String {
         match self.proto.get_client_streaming() {
             false => format!("::grpc::ServerRequestSingle<{}>", self.input_message()),
@@ -153,38 +124,6 @@ impl<'a> MethodGen<'a> {
             (true, false) => "ClientStreaming",
             (true, true) => "Bidi",
         }
-    }
-
-    fn streaming_lower(&self) -> &'static str {
-        match (
-            self.proto.get_client_streaming(),
-            self.proto.get_server_streaming(),
-        ) {
-            (false, false) => "unary",
-            (false, true) => "server_streaming",
-            (true, false) => "client_streaming",
-            (true, true) => "bidi",
-        }
-    }
-
-    fn write_client(&self, w: &mut CodeWriter) {
-        w.pub_fn(&self.client_sig(), |w| {
-            self.write_descriptor(
-                w,
-                "let descriptor = ::grpc::rt::ArcOrStatic::Static(&",
-                ");",
-            );
-
-            let req = match self.proto.get_client_streaming() {
-                false => ", req",
-                true => "",
-            };
-            w.write_line(&format!(
-                "self.grpc_client.call_{}(o{}, descriptor)",
-                self.streaming_lower(),
-                req,
-            ))
-        });
     }
 
     fn write_descriptor(&self, w: &mut CodeWriter, before: &str, after: &str) {
@@ -256,11 +195,6 @@ impl<'a> ServiceGen<'a> {
         self.proto.get_name()
     }
 
-    // client struct name
-    fn client_name(&self) -> String {
-        format!("{}Client", self.proto.get_name())
-    }
-
     // server struct name
     fn server_name(&self) -> String {
         format!("{}Server", self.proto.get_name())
@@ -274,39 +208,6 @@ impl<'a> ServiceGen<'a> {
                 }
 
                 method.write_server_intf(w);
-            }
-        });
-    }
-
-    fn write_client_object(&self, grpc_client: &str, w: &mut CodeWriter) {
-        w.expr_block(&self.client_name(), |w| {
-            w.field_entry("grpc_client", grpc_client);
-        });
-    }
-
-    fn write_client(&self, w: &mut CodeWriter) {
-        w.pub_struct(&self.client_name(), |w| {
-            w.field_decl("grpc_client", "::std::sync::Arc<::grpc::Client>");
-        });
-
-        w.write_line("");
-
-        w.impl_for_block("::grpc::ClientStub", &self.client_name(), |w| {
-            let sig = "with_client(grpc_client: ::std::sync::Arc<::grpc::Client>) -> Self";
-            w.def_fn(sig, |w| {
-                self.write_client_object("grpc_client", w);
-            });
-        });
-
-        w.write_line("");
-
-        w.impl_self_block(&self.client_name(), |w| {
-            for (i, method) in self.methods.iter().enumerate() {
-                if i != 0 {
-                    w.write_line("");
-                }
-
-                method.write_client(w);
             }
         });
     }
@@ -359,10 +260,6 @@ impl<'a> ServiceGen<'a> {
         w.comment("server interface");
         w.write_line("");
         self.write_server_intf(w);
-        w.write_line("");
-        w.comment("client");
-        w.write_line("");
-        self.write_client(w);
         w.write_line("");
         w.comment("server");
         w.write_line("");
