@@ -12,4 +12,4 @@ oak_derive = { path = "../../rust/oak_derive" }
 protobuf = "*"
 
 [build-dependencies]
-protoc-rust = "*"
+protoc-rust-grpc = { path = "../../third_party/grpc-rust/protoc-rust-grpc" }

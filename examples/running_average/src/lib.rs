@@ -30,8 +30,7 @@ mod proto;
 
 use oak_derive::OakNode;
 use proto::running_average::{GetAverageResponse, SubmitSampleRequest};
-use protobuf::Message;
-use std::io::Write;
+use proto::running_average_grpc::{dispatch, RunningAverageNode};
 
 #[derive(Default, OakNode)]
 struct Node {
@@ -44,23 +43,19 @@ impl oak::Node for Node {
         Node::default()
     }
     fn invoke(&mut self, grpc_method_name: &str, grpc_channel: &mut oak::Channel) {
-        let mut logging_channel = oak::logging_channel();
-        // TODO: Generate this code via a macro or code generation (e.g. a protoc plugin).
-        match grpc_method_name {
-            "/oak.examples.running_average.RunningAverage/SubmitSample" => {
-                let req: SubmitSampleRequest = protobuf::parse_from_reader(grpc_channel).unwrap();
-                self.sum += req.value;
-                self.count += 1;
-            }
-            "/oak.examples.running_average.RunningAverage/GetAverage" => {
-                let mut res = GetAverageResponse::new();
-                res.average = self.sum / self.count;
-                res.write_to_writer(grpc_channel).unwrap();
-            }
-            _ => {
-                writeln!(logging_channel, "unknown method name: {}", grpc_method_name).unwrap();
-                panic!("unknown method name");
-            }
-        };
+        dispatch(self, grpc_method_name, grpc_channel)
+    }
+}
+
+impl RunningAverageNode for Node {
+    fn submit_sample(&mut self, req: SubmitSampleRequest) {
+        self.sum += req.value;
+        self.count += 1;
+    }
+
+    fn get_average(&mut self) -> GetAverageResponse {
+        let mut res = GetAverageResponse::new();
+        res.average = self.sum / self.count;
+        res
     }
 }
