@@ -1,11 +1,12 @@
-extern crate protoc_rust;
+extern crate protoc_rust_grpc;
 
 fn main() {
-    protoc_rust::run(protoc_rust::Args {
+    protoc_rust_grpc::run(protoc_rust_grpc::Args {
         out_dir: "src/proto",
         input: &["proto/private_set_intersection.proto"],
         includes: &[],
-        customize: protoc_rust::Customize::default(),
+        rust_protobuf: true, // also generate protobuf messages, not just services
+        ..Default::default()
     })
-    .expect("protoc");
+    .expect("protoc-rust-grpc");
 }
