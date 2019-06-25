@@ -148,18 +148,6 @@ impl<'a> MethodGen<'a> {
         w.fn_def(&self.server_sig())
     }
 
-    fn streaming_upper(&self) -> &'static str {
-        match (
-            self.proto.get_client_streaming(),
-            self.proto.get_server_streaming(),
-        ) {
-            (false, false) => "Unary",
-            (false, true) => "ServerStreaming",
-            (true, false) => "ClientStreaming",
-            (true, true) => "Bidi",
-        }
-    }
-
     fn write_dispatch(&self, w: &mut CodeWriter) {
         // TODO: rather than explicitly generating dispatch() boilerplate, instead
         // invoke a generic method that accepts the relevant request/response types.
@@ -213,42 +201,12 @@ impl<'a> MethodGen<'a> {
             }
         }
     }
-
-    fn write_descriptor(&self, w: &mut CodeWriter, before: &str, after: &str) {
-        w.block(
-            &format!("{}{}", before, "::grpc::rt::MethodDescriptor {"),
-            &format!("{}{}", "}", after),
-            |w| {
-                w.field_entry(
-                    "name",
-                    &format!(
-                        "::grpc::rt::StringOrStatic::Static(\"{}/{}\")",
-                        self.service_path,
-                        self.proto.get_name()
-                    ),
-                );
-                w.field_entry(
-                    "streaming",
-                    &format!("::grpc::rt::GrpcStreaming::{}", self.streaming_upper()),
-                );
-                w.field_entry(
-                    "req_marshaller",
-                    "::grpc::rt::ArcOrStatic::Static(&::grpc_protobuf::MarshallerProtobuf)",
-                );
-                w.field_entry(
-                    "resp_marshaller",
-                    "::grpc::rt::ArcOrStatic::Static(&::grpc_protobuf::MarshallerProtobuf)",
-                );
-            },
-        );
-    }
 }
 
 struct ServiceGen<'a> {
     proto: &'a ServiceDescriptorProto,
     _root_scope: &'a RootScope<'a>,
     methods: Vec<MethodGen<'a>>,
-    service_path: String,
     _package: String,
 }
 
@@ -273,14 +231,8 @@ impl<'a> ServiceGen<'a> {
             proto,
             _root_scope: root_scope,
             methods,
-            service_path,
             _package: file.get_package().to_string(),
         }
-    }
-
-    // server struct name
-    fn server_name(&self) -> String {
-        format!("{}Server", self.proto.get_name())
     }
 
     // trait name
@@ -297,50 +249,6 @@ impl<'a> ServiceGen<'a> {
 
                 method.write_server_intf(w);
             }
-        });
-    }
-
-    fn write_service_definition(
-        &self,
-        before: &str,
-        after: &str,
-        handler: &str,
-        w: &mut CodeWriter,
-    ) {
-        w.block(
-            &format!("{}::grpc::rt::ServerServiceDefinition::new(\"{}\",",
-                before, self.service_path),
-            &format!("){}", after),
-            |w| {
-                w.block("vec![", "],", |w| {
-                    for method in &self.methods {
-                        w.block("::grpc::rt::ServerMethod::new(", "),", |w| {
-                            method.write_descriptor(w, "::grpc::rt::ArcOrStatic::Static(&", "),");
-                            w.block("{", "},", |w| {
-                                w.write_line(&format!("let handler_copy = {}.clone();", handler));
-                                w.write_line(&format!("::grpc::rt::MethodHandler{}::new(move |ctx, req, resp| (*handler_copy).{}(ctx, req, resp))",
-                                    method.streaming_upper(),
-                                    method.snake_name()));
-                            });
-                        });
-                    }
-                });
-            });
-    }
-
-    fn write_server(&self, w: &mut CodeWriter) {
-        w.write_line(&format!("pub struct {};", self.server_name()));
-
-        w.write_line("");
-
-        w.write_line("");
-
-        w.impl_self_block(&self.server_name(), |w| {
-            w.pub_fn(&format!("new_service_def<H : {} + 'static + Sync + Send + 'static>(handler: H) -> ::grpc::rt::ServerServiceDefinition", self.server_intf_name()), |w| {
-                w.write_line("let handler_arc = ::std::sync::Arc::new(handler);");
-
-                self.write_service_definition("", "", "handler_arc", w);
-            });
         });
     }
 
