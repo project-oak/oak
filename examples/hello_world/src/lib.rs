@@ -25,45 +25,66 @@ mod proto;
 
 use oak_derive::OakNode;
 use proto::hello_world::{HelloRequest, HelloResponse};
-use protobuf::Message;
-use std::io::Write;
+use proto::hello_world_grpc::{dispatch, HelloWorldNode};
 
 #[derive(OakNode)]
 struct Node;
 
-// TODO: Generate this code via a macro or code generation (e.g. a protoc plugin).
-trait HelloWorldNode {
-    fn say_hello(&self, req: &HelloRequest) -> HelloResponse;
-}
-
-// TODO: Generate this code via a macro or code generation (e.g. a protoc plugin).
 impl oak::Node for Node {
     fn new() -> Self {
         oak_log::init(log::Level::Debug).unwrap();
         Node
     }
     fn invoke(&mut self, grpc_method_name: &str, grpc_channel: &mut oak::Channel) {
-        let mut logging_channel = oak::logging_channel();
-        match grpc_method_name {
-            "/oak.examples.hello_world.HelloWorld/SayHello" => {
-                let req = protobuf::parse_from_reader(grpc_channel).unwrap();
-                let res = (self as &mut HelloWorldNode).say_hello(&req);
-                res.write_to_writer(grpc_channel).unwrap();
-            }
-            _ => {
-                writeln!(logging_channel, "unknown method name: {}", grpc_method_name).unwrap();
-                panic!("unknown method name");
-            }
-        };
+        dispatch(self as &HelloWorldNode, grpc_method_name, grpc_channel)
     }
 }
 
-// TODO: Generate parts of this code via a macro or code generation (e.g. a protoc plugin).
 impl HelloWorldNode for Node {
-    fn say_hello(&self, req: &HelloRequest) -> HelloResponse {
-        let mut res = HelloResponse::new();
+    fn say_hello(&self, req: HelloRequest) -> HelloResponse {
         info!("Say hello to {}", req.greeting);
+        let mut res = HelloResponse::new();
         res.reply = format!("HELLO {}!", req.greeting);
         res
     }
+
+    fn lots_of_replies(&self, req: HelloRequest) -> Vec<HelloResponse> {
+        info!("Say hello to {}", req.greeting);
+        let mut res1 = HelloResponse::new();
+        res1.reply = format!("HELLO {}!", req.greeting);
+        let mut res2 = HelloResponse::new();
+        res2.reply = format!("BONJOUR {}!", req.greeting);
+        vec![res1, res2]
+    }
+
+    fn lots_of_greetings(&self, reqs: Vec<HelloRequest>) -> HelloResponse {
+        info!("Say hello");
+        let mut msg = String::new();
+        msg.push_str("Hello ");
+        msg.push_str(&recipients(&reqs));
+        let mut res = HelloResponse::new();
+        res.reply = msg;
+        res
+    }
+
+    fn bidi_hello(&self, reqs: Vec<HelloRequest>) -> Vec<HelloResponse> {
+        info!("Say hello");
+        let msg = recipients(&reqs);
+        let mut res1 = HelloResponse::new();
+        res1.reply = format!("HELLO {}!", msg);
+        let mut res2 = HelloResponse::new();
+        res2.reply = format!("BONJOUR {}!", msg);
+        vec![res1, res2]
+    }
+}
+
+fn recipients(reqs: &Vec<HelloRequest>) -> String {
+    let mut result = String::new();
+    for (i, req) in reqs.iter().enumerate() {
+        if i > 0 {
+            result.push_str(", ");
+        }
+        result.push_str(&req.greeting);
+    }
+    result
 }
