@@ -6,7 +6,7 @@ use protobuf::descriptor::*;
 use protobuf::descriptorx::*;
 use protobuf_codegen::code_writer::CodeWriter;
 
-/// Adjust method name to follow the rust's style.
+/// Adjust method name to follow Rust style.
 fn snake_name(name: &str) -> String {
     let mut snake_method_name = String::with_capacity(name.len());
     let mut chars = name.chars();
@@ -89,25 +89,42 @@ impl<'a> MethodGen<'a> {
 
     fn server_req_type(&self) -> String {
         match self.proto.get_client_streaming() {
-            false => format!("::grpc::ServerRequestSingle<{}>", self.input_message()),
-            true => format!("::grpc::ServerRequest<{}>", self.input_message()),
+            false => format!("{}", self.input_message()),
+            // TODO: better streaming
+            true => format!("Vec<{}>", self.input_message()),
         }
     }
 
     fn server_resp_type(&self) -> String {
         match self.proto.get_server_streaming() {
-            false => format!("::grpc::ServerResponseUnarySink<{}>", self.output_message()),
-            true => format!("::grpc::ServerResponseSink<{}>", self.output_message()),
+            false => format!("{}", self.output_message()),
+            // TODO: better streaming
+            true => format!("Vec<{}>", self.output_message()),
         }
     }
 
     fn server_sig(&self) -> String {
-        format!(
-            "{}(&self, o: ::grpc::ServerHandlerContext, req: {}, resp: {}) -> ::grpc::Result<()>",
-            self.snake_name(),
-            self.server_req_type(),
-            self.server_resp_type(),
-        )
+        let arg;
+        if self.input_empty() {
+            arg = "".to_string();
+        } else {
+            arg = format!(
+                ", {}: {}",
+                if self.proto.get_client_streaming() {
+                    "reqs"
+                } else {
+                    "req"
+                },
+                self.server_req_type(),
+            );
+        }
+        let result;
+        if self.output_empty() {
+            result = "".to_string();
+        } else {
+            result = format!(" -> {}", self.server_resp_type());
+        }
+        format!("{}(&mut self{}){}", self.snake_name(), arg, result)
     }
 
     fn write_server_intf(&self, w: &mut CodeWriter) {
@@ -190,14 +207,14 @@ impl<'a> ServiceGen<'a> {
         }
     }
 
-    // trait name
-    fn server_intf_name(&self) -> &str {
-        self.proto.get_name()
-    }
-
     // server struct name
     fn server_name(&self) -> String {
         format!("{}Server", self.proto.get_name())
+    }
+
+    // trait name
+    fn server_intf_name(&self) -> String {
+        format!("{}Node", self.proto.get_name())
     }
 
     fn write_server_intf(&self, w: &mut CodeWriter) {
@@ -257,7 +274,7 @@ impl<'a> ServiceGen<'a> {
     }
 
     fn write(&self, w: &mut CodeWriter) {
-        w.comment("server interface");
+        w.comment("Oak node server interface");
         w.write_line("");
         self.write_server_intf(w);
         w.write_line("");
