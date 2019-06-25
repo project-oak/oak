@@ -33,9 +33,8 @@ mod proto;
 
 use oak_derive::OakNode;
 use proto::private_set_intersection::{GetIntersectionResponse, SubmitSetRequest};
-use protobuf::Message;
+use proto::private_set_intersection_grpc::{dispatch, PrivateSetIntersectionNode};
 use std::collections::HashSet;
-use std::io::Write;
 
 #[derive(Default, OakNode)]
 struct Node {
@@ -47,29 +46,25 @@ impl oak::Node for Node {
         Node::default()
     }
     fn invoke(&mut self, grpc_method_name: &str, grpc_channel: &mut oak::Channel) {
-        let mut logging_channel = oak::logging_channel();
-        // TODO: Generate this code via a macro or code generation (e.g. a protoc plugin).
-        match grpc_method_name {
-            "/oak.examples.private_set_intersection.PrivateSetIntersection/SubmitSet" => {
-                let req: SubmitSetRequest = protobuf::parse_from_reader(grpc_channel).unwrap();
-                let set = req.values.iter().cloned().collect::<HashSet<_>>();
-                let next = match self.values {
-                    Some(ref previous) => previous.intersection(&set).cloned().collect(),
-                    None => set,
-                };
-                self.values = Some(next);
-            }
-            "/oak.examples.private_set_intersection.PrivateSetIntersection/GetIntersection" => {
-                let mut res = GetIntersectionResponse::new();
-                if let Some(ref set) = self.values {
-                    res.values = set.iter().cloned().collect();
-                };
-                res.write_to_writer(grpc_channel).unwrap();
-            }
-            _ => {
-                writeln!(logging_channel, "unknown method name: {}", grpc_method_name).unwrap();
-                panic!("unknown method name");
-            }
+        dispatch(self, grpc_method_name, grpc_channel)
+    }
+}
+
+impl PrivateSetIntersectionNode for Node {
+    fn submit_set(&mut self, req: SubmitSetRequest) {
+        let set = req.values.iter().cloned().collect::<HashSet<_>>();
+        let next = match self.values {
+            Some(ref previous) => previous.intersection(&set).cloned().collect(),
+            None => set,
         };
+        self.values = Some(next);
+    }
+
+    fn get_intersection(&mut self) -> GetIntersectionResponse {
+        let mut res = GetIntersectionResponse::new();
+        if let Some(ref set) = self.values {
+            res.values = set.iter().cloned().collect();
+        };
+        res
     }
 }
