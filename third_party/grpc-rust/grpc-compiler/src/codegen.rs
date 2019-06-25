@@ -4,6 +4,7 @@ use protobuf;
 use protobuf::compiler_plugin;
 use protobuf::descriptor::*;
 use protobuf::descriptorx::*;
+use protobuf::Message;
 use protobuf_codegen::code_writer::CodeWriter;
 
 /// Adjust method name to follow Rust style.
@@ -69,22 +70,38 @@ impl<'a> MethodGen<'a> {
         snake_name(self.proto.get_name())
     }
 
+    fn input_empty(&self) -> bool {
+        self.root_scope
+            .find_message(self.proto.get_input_type())
+            .message
+            == protobuf::well_known_types::Empty::descriptor_static().get_proto()
+    }
+
+    fn output_empty(&self) -> bool {
+        self.root_scope
+            .find_message(self.proto.get_output_type())
+            .message
+            == protobuf::well_known_types::Empty::descriptor_static().get_proto()
+    }
+
     fn input_message(&self) -> String {
-        format!(
-            "super::{}",
-            self.root_scope
-                .find_message(self.proto.get_input_type())
-                .rust_fq_name()
-        )
+        let msg = self.root_scope.find_message(self.proto.get_input_type());
+        let empty = protobuf::well_known_types::Empty::descriptor_static();
+        if msg.message == empty.get_proto() {
+            "()".to_string()
+        } else {
+            format!("super::{}", msg.rust_fq_name())
+        }
     }
 
     fn output_message(&self) -> String {
-        format!(
-            "super::{}",
-            self.root_scope
-                .find_message(self.proto.get_output_type())
-                .rust_fq_name()
-        )
+        let msg = self.root_scope.find_message(self.proto.get_output_type());
+        let empty = protobuf::well_known_types::Empty::descriptor_static();
+        if msg.message == empty.get_proto() {
+            "()".to_string()
+        } else {
+            format!("super::{}", msg.rust_fq_name())
+        }
     }
 
     fn server_req_type(&self) -> String {
@@ -140,6 +157,60 @@ impl<'a> MethodGen<'a> {
             (false, true) => "ServerStreaming",
             (true, false) => "ClientStreaming",
             (true, true) => "Bidi",
+        }
+    }
+
+    fn write_dispatch(&self, w: &mut CodeWriter) {
+        // TODO: rather than explicitly generating dispatch() boilerplate, instead
+        // invoke a generic method that accepts the relevant request/response types.
+        let param_in;
+        if self.input_empty() {
+            param_in = "";
+        } else {
+            match self.proto.get_client_streaming() {
+                false => {
+                    param_in = "req";
+                    w.write_line("let req = protobuf::parse_from_reader(grpc_channel).unwrap();")
+                }
+                true => {
+                    param_in = "reqs";
+                    w.write_line("let mut reqs = vec![];");
+                    w.block("loop {", "}", |w| {
+                        w.block(
+                            "match protobuf::parse_from_reader(grpc_channel) {",
+                            "}",
+                            |w| {
+                                w.write_line("Err(_) => break,");
+                                w.write_line("Ok(req) => reqs.push(req),");
+                            },
+                        );
+                    });
+                }
+            }
+        }
+        if self.output_empty() {
+            w.write_line(&format!("node.{}({});", self.snake_name(), param_in));
+        } else {
+            match self.proto.get_server_streaming() {
+                false => {
+                    w.write_line(&format!(
+                        "let rsp = node.{}({});",
+                        self.snake_name(),
+                        param_in
+                    ));
+                    w.write_line("rsp.write_to_writer(grpc_channel).unwrap();");
+                }
+                true => {
+                    w.write_line(&format!(
+                        "let rsps = node.{}({});",
+                        self.snake_name(),
+                        param_in
+                    ));
+                    w.block("for rsp in rsps {", "}", |w| {
+                        w.write_line("rsp.write_to_writer(grpc_channel).unwrap();");
+                    });
+                }
+            }
         }
     }
 
@@ -273,14 +344,32 @@ impl<'a> ServiceGen<'a> {
         });
     }
 
+    fn write_dispatcher(&self, w: &mut CodeWriter) {
+        w.pub_fn(&format!("dispatch(node: &mut {}, grpc_method_name: &str, grpc_channel: &mut oak::Channel)", self.server_intf_name()), |w| {
+            w.block("match grpc_method_name {", "};", |w| {
+                for method in &self.methods {
+                    let full_path = format!("{}/{}", method.service_path, method.proto.get_name());
+                    w.block(&format!("\"{}\" => {{", full_path), "}", |w| {
+                        method.write_dispatch(w);
+                    });
+                }
+                w.block("_ => {", "}", |w| {
+                    w.write_line("writeln!(oak::logging_channel(), \"unknown method name: {}\", grpc_method_name).unwrap();");
+                    w.write_line("panic!(\"unknown method name\");");
+                });
+            });
+        });
+    }
+
     fn write(&self, w: &mut CodeWriter) {
-        w.comment("Oak node server interface");
+        w.write_line("use protobuf::Message;");
+        w.write_line("use std::io::Write;");
         w.write_line("");
+        w.comment("Oak node server interface");
         self.write_server_intf(w);
         w.write_line("");
-        w.comment("server");
-        w.write_line("");
-        self.write_server(w);
+        w.comment("Oak node gRPC method dispatcher");
+        self.write_dispatcher(w);
     }
 }
 
