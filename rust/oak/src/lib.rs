@@ -14,8 +14,12 @@
 // limitations under the License.
 //
 
+extern crate protobuf;
+
 use std::cell::RefCell;
 use std::io::{Read, Write};
+
+mod proto;
 
 type Handle = u64;
 

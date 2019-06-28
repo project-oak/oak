@@ -106,6 +106,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "oak"
 version = "0.1.0"
+dependencies = [
+ "protobuf 2.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "protoc-rust 2.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "oak_derive"
