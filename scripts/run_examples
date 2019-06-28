@@ -11,8 +11,9 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 
 # Run Oak server.
 "$SCRIPTS_DIR/build_server_docker"
-"$SCRIPTS_DIR/docker_run" --detach ./bazel-bin/oak/server/oak
-readonly SERVER_CONTAINER_ID="$(docker ps --quiet --latest)"
+readonly SERVER_CONTAINER_ID=$("$SCRIPTS_DIR/docker_run" \
+  --detach \
+  ./bazel-bin/oak/server/oak)
 
 # Run Oak examples.
 find examples -type f -name run -exec "$SCRIPTS_DIR/docker_run" {} \;
