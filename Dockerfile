@@ -1,4 +1,4 @@
-FROM gcr.io/asylo-framework/asylo:buildenv-v0.3.4
+FROM gcr.io/asylo-framework/asylo:buildenv-v0.4.0
 
 RUN apt-get -y update && apt-get install -y git curl clang-format shellcheck
 

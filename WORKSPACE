@@ -31,9 +31,9 @@ http_archive(
 # Asylo Framework.
 http_archive(
     name = "com_google_asylo",
-    urls = ["https://github.com/google/asylo/archive/v0.3.4.2.tar.gz"],
-    strip_prefix = "asylo-0.3.4.2",
-    sha256 = "82226be212b9f3e2fb14fdf9223e4f376df89424874ac45faff215fa1027797e",
+    urls = ["https://github.com/google/asylo/archive/v0.4.0.tar.gz"],
+    strip_prefix = "asylo-0.4.0",
+    sha256 = "9dd8063d1a8002f6cc729f0115e2140a2eb1b14a10c111411f6b554e14ee739c",
 )
 
 # Google Protocol Buffers.
@@ -44,22 +44,6 @@ http_archive(
     ],
     strip_prefix = "protobuf-3.7.1",
     sha256 = "f1748989842b46fa208b2a6e4e2785133cfcc3e4d43c17fecb023733f0f5443f",
-)
-
-# gRPC
-# TODO: Remove after Asylo upgrades for 0803c79411597f58eae0b12b4eb272c506b8cdbb.
-load(
-    "@com_google_asylo//asylo/bazel:patch_repository.bzl",
-    "patch_repository",
-)
-patch_repository(
-    name = "com_github_grpc_grpc",
-    urls = [
-        "https://github.com/grpc/grpc/archive/cb9b43b9f7291ceb714d92e0a717c6364c1fcc61.zip",
-    ],
-    patches = ["@com_google_asylo//asylo/distrib:grpc_1_19_1.patch"],
-    strip_prefix = "grpc-cb9b43b9f7291ceb714d92e0a717c6364c1fcc61",
-    sha256 = "8492eae54b2032c5993bd720c9ffe6ea4b05b9bdeb33534453b7129bd98d500a",
 )
 
 # Google APIs for Cloud Spanner protos.
