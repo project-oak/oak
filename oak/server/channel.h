@@ -32,6 +32,8 @@ namespace oak {
 // Each channel may be connected to a built-in component, or to a local or remote Oak Node.
 class Channel {
  public:
+  virtual ~Channel() {}
+
   // Read |size| bytes from the Channel. The actual size of the data read may be less than |size|.
   virtual absl::Span<const char> Read(uint32_t size) = 0;
 
