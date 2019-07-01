@@ -81,17 +81,27 @@ impl Read for ReceiveChannelHalf {
     }
 }
 
+/// Convenience wrapper for a send/receive pair of channels.
+pub struct ChannelPair {
+    pub receive: ReceiveChannelHalf,
+    pub send: SendChannelHalf,
+}
+
+impl ChannelPair {
+    pub fn new(in_handle: Handle, out_handle: Handle) -> ChannelPair {
+        ChannelPair {
+            receive: ReceiveChannelHalf::new(in_handle),
+            send: SendChannelHalf::new(out_handle),
+        }
+    }
+}
+
 /// Trait encapsulating the operations required for an Oak Node.
 pub trait Node {
     fn new() -> Self
     where
         Self: Sized;
-    fn invoke(
-        &mut self,
-        grpc_method_name: &str,
-        grpc_in: &mut ReceiveChannelHalf,
-        grpc_out: &mut SendChannelHalf,
-    );
+    fn invoke(&mut self, grpc_method_name: &str, grpc_pair: &mut ChannelPair);
 }
 
 thread_local! {
@@ -107,7 +117,7 @@ thread_local! {
 ///
 /// impl oak::Node for Node {
 ///     fn new() -> Self { Node }
-///     fn invoke(&mut self, grpc_method_name: &str, grpc_in: &mut oak::ReceiveChannelHalf, grpc_out: &mut oak::SendChannelHalf) { /* ... */ }
+///     fn invoke(&mut self, grpc_method_name: &str, grpc_pair: &mut oak::ChannelPair) { /* ... */ }
 /// }
 ///
 /// #[no_mangle]
@@ -139,9 +149,8 @@ pub extern "C" fn oak_handle_grpc_call() {
             grpc_method_channel
                 .read_to_string(&mut grpc_method_name)
                 .unwrap();
-            let mut grpc_in = ReceiveChannelHalf::new(GRPC_IN_CHANNEL_HANDLE);
-            let mut grpc_out = SendChannelHalf::new(GRPC_OUT_CHANNEL_HANDLE);
-            node.invoke(&grpc_method_name, &mut grpc_in, &mut grpc_out);
+            let mut grpc_pair = ChannelPair::new(GRPC_IN_CHANNEL_HANDLE, GRPC_OUT_CHANNEL_HANDLE);
+            node.invoke(&grpc_method_name, &mut grpc_pair);
         }
         None => {
             writeln!(logging_channel(), "gRPC call with no loaded Node").unwrap();
