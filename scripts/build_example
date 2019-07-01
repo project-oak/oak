@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+
+set -o errexit
+
+readonly SCRIPTS_DIR="$(dirname "$0")"
+
+COMPILATION_MODE='opt'
+
+while getopts "hd" opt; do
+    case "$opt" in
+    h)
+        echo -e "Usage: $0 [-d] [example_name]
+  -d    Build using debug mode
+  -h    Print this message"
+        exit 0
+        ;;
+    d)  
+        COMPILATION_MODE='dbg'
+        ;;
+    *) 
+        exit 1
+        ;;
+    esac
+done
+
+readonly NAME="${*:$OPTIND:1}"
+
+if [[ -z "${NAME}" ]]; then
+    readonly EXAMPLES="$(find examples -mindepth 2 -maxdepth 2 -type f -name Cargo.toml | cut -d'/' -f2)"
+    PS3='Choose example to build: '
+
+    readarray -t options <<< "$EXAMPLES"
+    select opt in "${options[@]}";
+    do
+        echo "Building $opt"
+        cargo build --release --target=wasm32-unknown-unknown --manifest-path="examples/$opt/Cargo.toml"
+        bazel build --compilation_mode="$COMPILATION_MODE" "//examples/$opt/client"
+        break
+    done
+else
+    cargo build --release --target=wasm32-unknown-unknown --manifest-path="examples/$NAME/Cargo.toml"
+    bazel build --compilation_mode="$COMPILATION_MODE" "//examples/$NAME/client"
+fi
