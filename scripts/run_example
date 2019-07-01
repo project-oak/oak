@@ -10,8 +10,9 @@ if [[ -z "${NAME}" ]]; then
 fi
 
 readonly OAK_MANAGER_ADDRESS="${OAK_MANAGER_ADDRESS:-127.0.0.1:8888}"
+readonly SCRIPTS_DIR="$(dirname "$0")"
 
-cargo build --release --target=wasm32-unknown-unknown --manifest-path="examples/${NAME}/Cargo.toml"
+"$SCRIPTS_DIR/build_example" "$NAME"
 bazel run "//examples/${NAME}/client" \
   -- \
   --manager_address="${OAK_MANAGER_ADDRESS}" \
