@@ -23,13 +23,13 @@ while getopts "hd" opt; do
     esac
 done
 
-readonly NAME="${@:$OPTIND:1}"
+readonly NAME="${*:$OPTIND:1}"
 
 if [[ -z "${NAME}" ]]; then
     readonly EXAMPLES="$(find examples -mindepth 2 -maxdepth 2 -type f -name Cargo.toml | cut -d'/' -f2)"
     PS3='Choose example to build: '
 
-    options=($EXAMPLES)
+    readarray -t options <<< "$EXAMPLES"
     select opt in "${options[@]}";
     do
         echo "Building $opt"
