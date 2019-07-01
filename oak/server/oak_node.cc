@@ -294,16 +294,17 @@ grpc::Status OakNode::ProcessModuleInvocation(grpc::GenericServerContext* contex
   // Create a receive channel half for reading the gRPC method name, using a local copy
   // to ensure its lifetime outlives the span reference.
   std::string grpc_method_name = context->method();
-  channel_halves_[GRPC_METHOD_NAME_CHANNEL_HANDLE] =
-      absl::make_unique<ReadBufferChannelHalf>(grpc_method_name);
+  ChannelMapping with_name_half(&channel_halves_, GRPC_METHOD_NAME_CHANNEL_HANDLE,
+                                absl::make_unique<ReadBufferChannelHalf>(grpc_method_name));
   LOG(INFO) << "Created gRPC method name channel " << GRPC_METHOD_NAME_CHANNEL_HANDLE;
 
   // Create the gRPC channel halves, used by the module to perform basic input and output.
   // Read from the serialized request, and allow the response to be written to the
   // passed in response data buffer.
-  channel_halves_[GRPC_IN_CHANNEL_HANDLE] = absl::make_unique<ReadBufferChannelHalf>(request_data);
-  channel_halves_[GRPC_OUT_CHANNEL_HANDLE] =
-      absl::make_unique<WriteBufferChannelHalf>(response_data);
+  ChannelMapping with_in_half(&channel_halves_, GRPC_IN_CHANNEL_HANDLE,
+                              absl::make_unique<ReadBufferChannelHalf>(request_data));
+  ChannelMapping with_out_half(&channel_halves_, GRPC_OUT_CHANNEL_HANDLE,
+                               absl::make_unique<WriteBufferChannelHalf>(response_data));
   LOG(INFO) << "Created gRPC channels in:" << GRPC_IN_CHANNEL_HANDLE
             << " out:" << GRPC_OUT_CHANNEL_HANDLE;
 
@@ -319,11 +320,6 @@ grpc::Status OakNode::ProcessModuleInvocation(grpc::GenericServerContext* contex
   wabt::interp::TypedValues args = {};
   wabt::interp::ExecResult exec_result =
       executor.RunExportByName(module_, "oak_handle_grpc_call", args);
-
-  // Drop the channels that are specific to the current invocation.
-  channel_halves_.erase(GRPC_METHOD_NAME_CHANNEL_HANDLE);
-  channel_halves_.erase(GRPC_IN_CHANNEL_HANDLE);
-  channel_halves_.erase(GRPC_OUT_CHANNEL_HANDLE);
 
   if (exec_result.result != wabt::interp::Result::Ok) {
     std::string err = wabt::interp::ResultToString(exec_result.result);

@@ -36,6 +36,8 @@ const Handle GRPC_METHOD_NAME_CHANNEL_HANDLE = 2;
 const Handle GRPC_IN_CHANNEL_HANDLE = 3;
 const Handle GRPC_OUT_CHANNEL_HANDLE = 4;
 
+typedef std::unordered_map<Handle, std::unique_ptr<ChannelHalf>> ChannelHalfTable;
+
 class OakNode final : public Node::Service {
  public:
   // Creates an Oak node with the given node_id by loading the Wasm
@@ -67,7 +69,7 @@ class OakNode final : public Node::Service {
   // TODO: Use smart pointers.
   wabt::interp::DefinedModule* module_;
 
-  std::unordered_map<Handle, std::unique_ptr<ChannelHalf>> channel_halves_;
+  ChannelHalfTable channel_halves_;
 
   // Unique ID of the Oak Node instance. Creating multiple Oak Nodes with the same module and policy
   // configuration will result in Oak Node instances with distinct node_id_.
@@ -76,6 +78,20 @@ class OakNode final : public Node::Service {
   // Hash of the Oak Module with which this Oak Node was initialized.
   // To be used as the basis for remote attestation based on code identity.
   const std::string module_hash_sha_256_;
+};
+
+// RAII class to add a mapping from a handle to a channel half for the duration of a scope.
+class ChannelMapping {
+ public:
+  ChannelMapping(ChannelHalfTable* table, Handle handle, std::unique_ptr<ChannelHalf> half)
+      : table_(table), handle_(handle) {
+    (*table_)[handle_] = std::move(half);
+  }
+  ~ChannelMapping() { table_->erase(handle_); }
+
+ private:
+  ChannelHalfTable* table_;
+  Handle handle_;
 };
 
 }  // namespace oak
