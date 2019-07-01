@@ -293,13 +293,12 @@ grpc::Status OakNode::ProcessModuleInvocation(grpc::GenericServerContext* contex
                                               const std::vector<char>& request_data,
                                               std::vector<char>* response_data) {
   LOG(INFO) << "Handling gRPC call: " << context->method();
-  server_context_ = context;
 
   // Create a receive channel half for reading the gRPC method name, using a local copy
   // to ensure its lifetime outlives the span reference.
-  grpc_method_name_ = context->method();
+  std::string grpc_method_name = context->method();
   std::unique_ptr<ChannelHalf> grpc_method_name_channel =
-      absl::make_unique<ReadBufferChannelHalf>(grpc_method_name_);
+      absl::make_unique<ReadBufferChannelHalf>(grpc_method_name);
   channel_halves_[GRPC_METHOD_NAME_CHANNEL_HANDLE] = std::move(grpc_method_name_channel);
   LOG(INFO) << "Created gRPC method name channel";
 
