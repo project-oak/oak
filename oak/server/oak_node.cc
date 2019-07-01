@@ -203,17 +203,14 @@ std::unique_ptr<OakNode> OakNode::Create(const std::string& node_id, const std::
   wabt::interp::Executor executor(&node->env_, trace_stream, thread_options);
   LOG(INFO) << "Executing module";
 
-  // Create a logging channel to allow the module to log during initialization.
+  // Create a (persistent) logging channel to allow the module to log during initialization.
   std::unique_ptr<ChannelHalf> logging_channel = absl::make_unique<LoggingChannelHalf>();
   node->channel_halves_[LOGGING_CHANNEL_HANDLE] = std::move(logging_channel);
-  LOG(INFO) << "Created logging channel";
+  LOG(INFO) << "Created logging channel " << LOGGING_CHANNEL_HANDLE;
 
   wabt::interp::TypedValues args;
   wabt::interp::ExecResult exec_result =
       executor.RunExportByName(node->module_, "oak_initialize", args);
-
-  // Drop all channels used in the current invocation.
-  node->channel_halves_ = std::unordered_map<Handle, std::unique_ptr<ChannelHalf>>();
 
   if (exec_result.result != wabt::interp::Result::Ok) {
     LOG(WARNING) << "Could not execute module";
@@ -297,19 +294,18 @@ grpc::Status OakNode::ProcessModuleInvocation(grpc::GenericServerContext* contex
   // Create a receive channel half for reading the gRPC method name, using a local copy
   // to ensure its lifetime outlives the span reference.
   std::string grpc_method_name = context->method();
-  std::unique_ptr<ChannelHalf> grpc_method_name_channel =
+  channel_halves_[GRPC_METHOD_NAME_CHANNEL_HANDLE] =
       absl::make_unique<ReadBufferChannelHalf>(grpc_method_name);
-  channel_halves_[GRPC_METHOD_NAME_CHANNEL_HANDLE] = std::move(grpc_method_name_channel);
-  LOG(INFO) << "Created gRPC method name channel";
+  LOG(INFO) << "Created gRPC method name channel " << GRPC_METHOD_NAME_CHANNEL_HANDLE;
 
   // Create the gRPC channel halves, used by the module to perform basic input and output.
   // Read from the serialized request, and allow the response to be written to the
   // passed in response data buffer.
-  std::unique_ptr<ChannelHalf> grpc_in = absl::make_unique<ReadBufferChannelHalf>(request_data);
-  channel_halves_[GRPC_IN_CHANNEL_HANDLE] = std::move(grpc_in);
-  std::unique_ptr<ChannelHalf> grpc_out = absl::make_unique<WriteBufferChannelHalf>(response_data);
-  channel_halves_[GRPC_OUT_CHANNEL_HANDLE] = std::move(grpc_out);
-  LOG(INFO) << "Created gRPC channels";
+  channel_halves_[GRPC_IN_CHANNEL_HANDLE] = absl::make_unique<ReadBufferChannelHalf>(request_data);
+  channel_halves_[GRPC_OUT_CHANNEL_HANDLE] =
+      absl::make_unique<WriteBufferChannelHalf>(response_data);
+  LOG(INFO) << "Created gRPC channels in:" << GRPC_IN_CHANNEL_HANDLE
+            << " out:" << GRPC_OUT_CHANNEL_HANDLE;
 
   // Create the logging channel, used by the module to log statements for debugging.
   std::unique_ptr<ChannelHalf> logging_channel = absl::make_unique<LoggingChannelHalf>();
@@ -324,8 +320,10 @@ grpc::Status OakNode::ProcessModuleInvocation(grpc::GenericServerContext* contex
   wabt::interp::ExecResult exec_result =
       executor.RunExportByName(module_, "oak_handle_grpc_call", args);
 
-  // Drop all the channels used in the current invocation.
-  channel_halves_ = std::unordered_map<Handle, std::unique_ptr<ChannelHalf>>();
+  // Drop the channels that are specific to the current invocation.
+  channel_halves_.erase(GRPC_METHOD_NAME_CHANNEL_HANDLE);
+  channel_halves_.erase(GRPC_IN_CHANNEL_HANDLE);
+  channel_halves_.erase(GRPC_OUT_CHANNEL_HANDLE);
 
   if (exec_result.result != wabt::interp::Result::Ok) {
     std::string err = wabt::interp::ResultToString(exec_result.result);
