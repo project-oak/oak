@@ -126,19 +126,21 @@ Each Oak Module must expose the following **exported functions** as
     relate to the policy system.
 
 Communication from the Oak Module to the Oak VM and to other modules is
-implemented via **channels**. A channel represents a bi-directional stream of
-bytes, that the Oak Module can write to and read from using the appropriate host
-functions defined below. Each channel is identified by a **handle**, which is
-used as a parameter to the corresponding host function calls. Note that channels
-do not natively implement any kind of framing, i.e. they do not expose a concept
-of messages, just raw bytes.
+implemented via **channels**. A channel represents a uni-directional stream of
+bytes, with a receive half and a send half that an Oak module can read from or
+write to respectively. Each half of a channel is identified by a **handle**,
+which is used as a parameter to the corresponding host function calls.
 
-At each invocation, the following channels are implicitly available to the Oak
+Note that channels do not natively implement any kind of framing, i.e. they do
+not expose a concept of messages, just raw bytes.
+
+At each invocation, the following channel halves are implicitly available to the Oak
 Node (see [/oak/server/oak_node.h](oak/server/oak_node.h)):
 
--   `logging` (handle: 1)
--   `grpc` (handle: 2)
--   `grpc_method` (handle: 3)
+-   `logging` (handle: 1, send)
+-   `grpc_method` (handle: 2, receive)
+-   `grpc_in` (handle: 3, receive)
+-   `grpc_out` (handle: 4, send)
 
 Each Oak Module may also optionally rely on zero or more of the following **host
 functions** as
@@ -148,7 +150,7 @@ functions** as
 -   `channel_read: (i64, i32, i32) -> i32`: Reads data from the specified
     channel.
 
-    *   arg 0: Channel handle
+    *   arg 0: Handle to channel receive half
     *   arg 1: Destination buffer address
     *   arg 2: Destination buffer size in bytes
     *   return 0: Number of bytes read
@@ -160,7 +162,7 @@ functions** as
 -   `channel_write: (i64, i32, i32) -> i32`: Writes data to the specified
     channel.
 
-    *   arg 0: Channel handle
+    *   arg 0: Handle to channel send half
     *   arg 1: Source buffer address
     *   arg 2: Source buffer size in bytes
     *   return 0: Number of bytes written

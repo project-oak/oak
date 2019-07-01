@@ -30,15 +30,15 @@ pub trait RunningAverageNode {
 }
 
 // Oak node gRPC method dispatcher
-pub fn dispatch(node: &mut RunningAverageNode, grpc_method_name: &str, grpc_channel: &mut oak::Channel) {
+pub fn dispatch(node: &mut RunningAverageNode, grpc_method_name: &str, grpc_in: &mut oak::ChannelHalf, grpc_out: &mut oak::ChannelHalf) {
     match grpc_method_name {
         "/oak.examples.running_average.RunningAverage/SubmitSample" => {
-            let req = protobuf::parse_from_reader(grpc_channel).unwrap();
+            let req = protobuf::parse_from_reader(grpc_in).unwrap();
             node.submit_sample(req);
         }
         "/oak.examples.running_average.RunningAverage/GetAverage" => {
             let rsp = node.get_average();
-            rsp.write_to_writer(grpc_channel).unwrap();
+            rsp.write_to_writer(grpc_out).unwrap();
         }
         _ => {
             writeln!(oak::logging_channel(), "unknown method name: {}", grpc_method_name).unwrap();

@@ -300,11 +300,12 @@ grpc::Status OakNode::ProcessModuleInvocation(grpc::GenericServerContext* contex
   // and ensure it can outlive the Span reference.
   grpc_method_name_ = context->method();
 
-  // Create the gRPC channel, used by the module to perform basic input and output.
-  std::unique_ptr<Channel> grpc_channel =
-      absl::make_unique<BufferChannel>(request_data, response_data);
-  channels_[GRPC_CHANNEL_HANDLE] = std::move(grpc_channel);
-  LOG(INFO) << "Created gRPC channel";
+  // Create the gRPC channels, used by the module to perform basic input and output.
+  std::unique_ptr<Channel> grpc_in = absl::make_unique<BufferChannel>(request_data, response_data);
+  channels_[GRPC_IN_CHANNEL_HANDLE] = std::move(grpc_in);
+  std::unique_ptr<Channel> grpc_out = absl::make_unique<BufferChannel>(request_data, response_data);
+  channels_[GRPC_OUT_CHANNEL_HANDLE] = std::move(grpc_out);
+  LOG(INFO) << "Created gRPC channels";
 
   // Create the gRPC method name channel, used by the module to read the gRPC method name from the
   // current context.

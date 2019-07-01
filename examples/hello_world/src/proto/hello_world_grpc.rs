@@ -34,42 +34,42 @@ pub trait HelloWorldNode {
 }
 
 // Oak node gRPC method dispatcher
-pub fn dispatch(node: &mut HelloWorldNode, grpc_method_name: &str, grpc_channel: &mut oak::Channel) {
+pub fn dispatch(node: &mut HelloWorldNode, grpc_method_name: &str, grpc_in: &mut oak::ChannelHalf, grpc_out: &mut oak::ChannelHalf) {
     match grpc_method_name {
         "/oak.examples.hello_world.HelloWorld/SayHello" => {
-            let req = protobuf::parse_from_reader(grpc_channel).unwrap();
+            let req = protobuf::parse_from_reader(grpc_in).unwrap();
             let rsp = node.say_hello(req);
-            rsp.write_to_writer(grpc_channel).unwrap();
+            rsp.write_to_writer(grpc_out).unwrap();
         }
         "/oak.examples.hello_world.HelloWorld/LotsOfReplies" => {
-            let req = protobuf::parse_from_reader(grpc_channel).unwrap();
+            let req = protobuf::parse_from_reader(grpc_in).unwrap();
             let rsps = node.lots_of_replies(req);
             for rsp in rsps {
-                rsp.write_to_writer(grpc_channel).unwrap();
+                rsp.write_to_writer(grpc_out).unwrap();
             }
         }
         "/oak.examples.hello_world.HelloWorld/LotsOfGreetings" => {
             let mut reqs = vec![];
             loop {
-                match protobuf::parse_from_reader(grpc_channel) {
+                match protobuf::parse_from_reader(grpc_in) {
                     Err(_) => break,
                     Ok(req) => reqs.push(req),
                 }
             }
             let rsp = node.lots_of_greetings(reqs);
-            rsp.write_to_writer(grpc_channel).unwrap();
+            rsp.write_to_writer(grpc_out).unwrap();
         }
         "/oak.examples.hello_world.HelloWorld/BidiHello" => {
             let mut reqs = vec![];
             loop {
-                match protobuf::parse_from_reader(grpc_channel) {
+                match protobuf::parse_from_reader(grpc_in) {
                     Err(_) => break,
                     Ok(req) => reqs.push(req),
                 }
             }
             let rsps = node.bidi_hello(reqs);
             for rsp in rsps {
-                rsp.write_to_writer(grpc_channel).unwrap();
+                rsp.write_to_writer(grpc_out).unwrap();
             }
         }
         _ => {

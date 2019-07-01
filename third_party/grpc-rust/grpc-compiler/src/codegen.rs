@@ -158,20 +158,16 @@ impl<'a> MethodGen<'a> {
             match self.proto.get_client_streaming() {
                 false => {
                     param_in = "req";
-                    w.write_line("let req = protobuf::parse_from_reader(grpc_channel).unwrap();")
+                    w.write_line("let req = protobuf::parse_from_reader(grpc_in).unwrap();")
                 }
                 true => {
                     param_in = "reqs";
                     w.write_line("let mut reqs = vec![];");
                     w.block("loop {", "}", |w| {
-                        w.block(
-                            "match protobuf::parse_from_reader(grpc_channel) {",
-                            "}",
-                            |w| {
-                                w.write_line("Err(_) => break,");
-                                w.write_line("Ok(req) => reqs.push(req),");
-                            },
-                        );
+                        w.block("match protobuf::parse_from_reader(grpc_in) {", "}", |w| {
+                            w.write_line("Err(_) => break,");
+                            w.write_line("Ok(req) => reqs.push(req),");
+                        });
                     });
                 }
             }
@@ -186,7 +182,7 @@ impl<'a> MethodGen<'a> {
                         self.snake_name(),
                         param_in
                     ));
-                    w.write_line("rsp.write_to_writer(grpc_channel).unwrap();");
+                    w.write_line("rsp.write_to_writer(grpc_out).unwrap();");
                 }
                 true => {
                     w.write_line(&format!(
@@ -195,7 +191,7 @@ impl<'a> MethodGen<'a> {
                         param_in
                     ));
                     w.block("for rsp in rsps {", "}", |w| {
-                        w.write_line("rsp.write_to_writer(grpc_channel).unwrap();");
+                        w.write_line("rsp.write_to_writer(grpc_out).unwrap();");
                     });
                 }
             }
@@ -253,7 +249,7 @@ impl<'a> ServiceGen<'a> {
     }
 
     fn write_dispatcher(&self, w: &mut CodeWriter) {
-        w.pub_fn(&format!("dispatch(node: &mut {}, grpc_method_name: &str, grpc_channel: &mut oak::Channel)", self.server_intf_name()), |w| {
+        w.pub_fn(&format!("dispatch(node: &mut {}, grpc_method_name: &str, grpc_in: &mut oak::ChannelHalf, grpc_out: &mut oak::ChannelHalf)", self.server_intf_name()), |w| {
             w.block("match grpc_method_name {", "};", |w| {
                 for method in &self.methods {
                     let full_path = format!("{}/{}", method.service_path, method.proto.get_name());

@@ -45,8 +45,13 @@ impl oak::Node for Node {
     fn new() -> Self {
         Node::default()
     }
-    fn invoke(&mut self, grpc_method_name: &str, grpc_channel: &mut oak::Channel) {
-        dispatch(self, grpc_method_name, grpc_channel)
+    fn invoke(
+        &mut self,
+        grpc_method_name: &str,
+        grpc_in: &mut oak::ChannelHalf,
+        grpc_out: &mut oak::ChannelHalf,
+    ) {
+        dispatch(self, grpc_method_name, grpc_in, grpc_out)
     }
 }
 
