@@ -21,16 +21,9 @@
 
 namespace oak {
 
-// A channel implementation that logs to stderr the data written to it.
-//
-// Reading from this channel always returns an empty Span.
-class LoggingChannel final : public Channel {
+// A channel implementation that only has a send half, which logs to stderr the data written to it.
+class LoggingChannelHalf final : public ChannelHalf {
  public:
-  absl::Span<const char> Read(uint32_t size) override {
-    absl::Span<const char> empty;
-    return empty;
-  }
-
   uint32_t Write(absl::Span<const char> data) override {
     std::string log_message(data.cbegin(), data.cend());
     LOG(INFO) << "LOG: " << log_message;

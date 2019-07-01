@@ -26,7 +26,7 @@ namespace oak {
 // of read and write cursors.
 //
 // The channel owns the output buffer (std::vector), but does not own the input buffer (absl::Span).
-class BufferChannel final : public Channel {
+class BufferChannel final : public ChannelHalf {
  public:
   BufferChannel(absl::Span<const char> data_input, std::vector<char>* data_output)
       : data_input_(data_input), data_output_(data_output){};
