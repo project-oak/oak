@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 
-# Usage: docker_run [--detach] COMMAND
+# Usage: docker_run [OPTIONS] COMMAND
+# 
+# Options:
+#    --detach    Run container in background and print container ID
 
 set -o errexit
 set -o xtrace
@@ -19,7 +22,7 @@ mkdir -p './cargo-cache'
 
 docker build \
   --tag=oak \
-  .
+  . 1>&2
 
 docker_run_flags=(
   "--interactive"
@@ -36,7 +39,6 @@ docker_run_flags=(
 if [[ "$1" == "--detach" ]]; then
   docker_run_flags+=("--detach")
   docker run "${docker_run_flags[@]}" oak:latest "${@:2}"
-  # Run `docker ps --quiet --latest` in caller to get reference to detached container.
 else
   docker run "${docker_run_flags[@]}" oak:latest "$@"
 fi
