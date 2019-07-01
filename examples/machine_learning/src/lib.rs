@@ -171,8 +171,8 @@ impl oak::Node for Node {
     fn invoke(
         &mut self,
         grpc_method_name: &str,
-        _grpc_in: &mut oak::ChannelHalf,
-        _grpc_out: &mut oak::ChannelHalf,
+        _grpc_in: &mut oak::ReceiveChannelHalf,
+        _grpc_out: &mut oak::SendChannelHalf,
     ) {
         let mut logging_channel = oak::logging_channel();
         match grpc_method_name {

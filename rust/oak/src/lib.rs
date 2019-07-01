@@ -40,34 +40,44 @@ mod wasm {
     }
 }
 
-pub struct ChannelHalf {
+pub struct SendChannelHalf {
     handle: Handle,
 }
 
-impl ChannelHalf {
-    pub fn new(handle: Handle) -> ChannelHalf {
-        ChannelHalf { handle }
+impl SendChannelHalf {
+    pub fn new(handle: Handle) -> SendChannelHalf {
+        SendChannelHalf { handle }
     }
 }
 
-pub fn logging_channel() -> impl Write {
-    let logging_channel = ChannelHalf::new(LOGGING_CHANNEL_HANDLE);
-    // Only flush logging channel on newlines.
-    std::io::LineWriter::new(logging_channel)
-}
-
-impl Read for ChannelHalf {
-    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        Ok(unsafe { wasm::channel_read(self.handle, buf.as_mut_ptr(), buf.len()) })
-    }
-}
-
-impl Write for ChannelHalf {
+impl Write for SendChannelHalf {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         Ok(unsafe { wasm::channel_write(self.handle, buf.as_ptr(), buf.len()) })
     }
     fn flush(&mut self) -> std::io::Result<()> {
         Ok(())
+    }
+}
+
+pub fn logging_channel() -> impl Write {
+    let logging_channel = SendChannelHalf::new(LOGGING_CHANNEL_HANDLE);
+    // Only flush logging channel on newlines.
+    std::io::LineWriter::new(logging_channel)
+}
+
+pub struct ReceiveChannelHalf {
+    handle: Handle,
+}
+
+impl ReceiveChannelHalf {
+    pub fn new(handle: Handle) -> ReceiveChannelHalf {
+        ReceiveChannelHalf { handle }
+    }
+}
+
+impl Read for ReceiveChannelHalf {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        Ok(unsafe { wasm::channel_read(self.handle, buf.as_mut_ptr(), buf.len()) })
     }
 }
 
@@ -79,8 +89,8 @@ pub trait Node {
     fn invoke(
         &mut self,
         grpc_method_name: &str,
-        grpc_in: &mut ChannelHalf,
-        grpc_out: &mut ChannelHalf,
+        grpc_in: &mut ReceiveChannelHalf,
+        grpc_out: &mut SendChannelHalf,
     );
 }
 
@@ -97,7 +107,7 @@ thread_local! {
 ///
 /// impl oak::Node for Node {
 ///     fn new() -> Self { Node }
-///     fn invoke(&mut self, grpc_method_name: &str, grpc_in: &mut oak::ChannelHalf, grpc_out: &mut oak::ChannelHalf) { /* ... */ }
+///     fn invoke(&mut self, grpc_method_name: &str, grpc_in: &mut oak::ReceiveChannelHalf, grpc_out: &mut oak::SendChannelHalf) { /* ... */ }
 /// }
 ///
 /// #[no_mangle]
@@ -124,13 +134,13 @@ pub fn set_node<T: Node + 'static>() {
 pub extern "C" fn oak_handle_grpc_call() {
     NODE.with(|node| match *node.borrow_mut() {
         Some(ref mut node) => {
-            let mut grpc_method_channel = ChannelHalf::new(GRPC_METHOD_NAME_CHANNEL_HANDLE);
+            let mut grpc_method_channel = ReceiveChannelHalf::new(GRPC_METHOD_NAME_CHANNEL_HANDLE);
             let mut grpc_method_name = String::new();
             grpc_method_channel
                 .read_to_string(&mut grpc_method_name)
                 .unwrap();
-            let mut grpc_in = ChannelHalf::new(GRPC_IN_CHANNEL_HANDLE);
-            let mut grpc_out = ChannelHalf::new(GRPC_OUT_CHANNEL_HANDLE);
+            let mut grpc_in = ReceiveChannelHalf::new(GRPC_IN_CHANNEL_HANDLE);
+            let mut grpc_out = SendChannelHalf::new(GRPC_OUT_CHANNEL_HANDLE);
             node.invoke(&grpc_method_name, &mut grpc_in, &mut grpc_out);
         }
         None => {
