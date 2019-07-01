@@ -38,8 +38,8 @@ impl oak::Node for Node {
     fn invoke(
         &mut self,
         grpc_method_name: &str,
-        grpc_in: &mut oak::ChannelHalf,
-        grpc_out: &mut oak::ChannelHalf,
+        grpc_in: &mut oak::ReceiveChannelHalf,
+        grpc_out: &mut oak::SendChannelHalf,
     ) {
         dispatch(self, grpc_method_name, grpc_in, grpc_out)
     }

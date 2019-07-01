@@ -34,7 +34,7 @@ pub trait HelloWorldNode {
 }
 
 // Oak node gRPC method dispatcher
-pub fn dispatch(node: &mut HelloWorldNode, grpc_method_name: &str, grpc_in: &mut oak::ChannelHalf, grpc_out: &mut oak::ChannelHalf) {
+pub fn dispatch(node: &mut HelloWorldNode, grpc_method_name: &str, grpc_in: &mut oak::ReceiveChannelHalf, grpc_out: &mut oak::SendChannelHalf) {
     match grpc_method_name {
         "/oak.examples.hello_world.HelloWorld/SayHello" => {
             let req = protobuf::parse_from_reader(grpc_in).unwrap();
