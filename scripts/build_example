@@ -4,18 +4,18 @@ set -o errexit
 
 readonly SCRIPTS_DIR="$(dirname "$0")"
 
-COMPILATION_MODE="opt"
+COMPILATION_MODE='opt'
 
 while getopts "hd" opt; do
     case "$opt" in
     h)
-        echo -e "Usage: ./scripts/build_example [-d] [example_name]
+        echo -e "Usage: $0 [-d] [example_name]
   -d    Build using debug mode
-  -h    Pritn this message"
+  -h    Print this message"
         exit 0
         ;;
     d)  
-        COMPILATION_MODE="dbg" 
+        COMPILATION_MODE='dbg'
         ;;
     *) 
         exit 1
