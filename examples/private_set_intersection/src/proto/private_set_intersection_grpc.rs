@@ -30,15 +30,15 @@ pub trait PrivateSetIntersectionNode {
 }
 
 // Oak node gRPC method dispatcher
-pub fn dispatch(node: &mut PrivateSetIntersectionNode, grpc_method_name: &str, grpc_in: &mut oak::ReceiveChannelHalf, grpc_out: &mut oak::SendChannelHalf) {
+pub fn dispatch(node: &mut PrivateSetIntersectionNode, grpc_method_name: &str, grpc_pair: &mut oak::ChannelPair) {
     match grpc_method_name {
         "/oak.examples.private_set_intersection.PrivateSetIntersection/SubmitSet" => {
-            let req = protobuf::parse_from_reader(grpc_in).unwrap();
+            let req = protobuf::parse_from_reader(&mut grpc_pair.receive).unwrap();
             node.submit_set(req);
         }
         "/oak.examples.private_set_intersection.PrivateSetIntersection/GetIntersection" => {
             let rsp = node.get_intersection();
-            rsp.write_to_writer(grpc_out).unwrap();
+            rsp.write_to_writer(&mut grpc_pair.send).unwrap();
         }
         _ => {
             writeln!(oak::logging_channel(), "unknown method name: {}", grpc_method_name).unwrap();
