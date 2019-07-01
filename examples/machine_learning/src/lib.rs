@@ -20,13 +20,14 @@
 extern crate oak;
 extern crate oak_derive;
 extern crate rand;
+extern crate rand_distr;
 extern crate rusty_machine;
 
 use oak_derive::OakNode;
-use rand::distributions::Distribution;
-use rand::distributions::Normal;
-use rand::distributions::Standard;
 use rand::prelude::*;
+use rand_distr::Distribution;
+use rand_distr::Normal;
+use rand_distr::Standard;
 use rusty_machine::learning::naive_bayes::{self, NaiveBayes};
 use rusty_machine::learning::SupModel;
 use rusty_machine::linalg::{BaseMatrix, Matrix};
@@ -50,13 +51,13 @@ impl Distribution<Animal> for Standard {
     /// Generate a random animal.
     fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> Animal {
         // Friendliness, furriness, and speed are normally distributed and (given type) independent.
-        let cat_friendliness = Normal::new(0., 1.);
-        let cat_furriness = Normal::new(0., 1.);
-        let cat_speed = Normal::new(0., 1.);
+        let cat_friendliness = Normal::new(0., 1.).unwrap();
+        let cat_furriness = Normal::new(0., 1.).unwrap();
+        let cat_speed = Normal::new(0., 1.).unwrap();
 
-        let dog_friendliness = Normal::new(1., 1.);
-        let dog_furriness = Normal::new(1., 1.);
-        let dog_speed = Normal::new(-1., 1.);
+        let dog_friendliness = Normal::new(1., 1.).unwrap();
+        let dog_furriness = Normal::new(1., 1.).unwrap();
+        let dog_speed = Normal::new(-1., 1.).unwrap();
 
         // Flip a coin to decide whether to generate a cat or a dog.
         let coin: f64 = rng.gen();
