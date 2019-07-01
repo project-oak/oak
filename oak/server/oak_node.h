@@ -67,11 +67,6 @@ class OakNode final : public Node::Service {
   // TODO: Use smart pointers.
   wabt::interp::DefinedModule* module_;
 
-  // Incoming gRPC data for the current invocation.
-  const ::grpc::GenericServerContext* server_context_;
-
-  std::string grpc_method_name_;
-
   std::unordered_map<Handle, std::unique_ptr<ChannelHalf>> channel_halves_;
 
   // Unique ID of the Oak Node instance. Creating multiple Oak Nodes with the same module and policy
