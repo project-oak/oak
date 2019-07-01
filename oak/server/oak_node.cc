@@ -295,26 +295,22 @@ grpc::Status OakNode::ProcessModuleInvocation(grpc::GenericServerContext* contex
   LOG(INFO) << "Handling gRPC call: " << context->method();
   server_context_ = context;
 
-  // Store a copy of the gRPC method name so that we can refer to it via a Span when the Module
-  // tries to read it from a channel; otherwise we would need to allocate a new string every time
-  // and ensure it can outlive the Span reference.
+  // Create a receive channel half for reading the gRPC method name, using a local copy
+  // to ensure its lifetime outlives the span reference.
   grpc_method_name_ = context->method();
-
-  // Create the gRPC channels, used by the module to perform basic input and output.
-  std::unique_ptr<ChannelHalf> grpc_in =
-      absl::make_unique<BufferChannel>(request_data, response_data);
-  channel_halves_[GRPC_IN_CHANNEL_HANDLE] = std::move(grpc_in);
-  std::unique_ptr<ChannelHalf> grpc_out =
-      absl::make_unique<BufferChannel>(request_data, response_data);
-  channel_halves_[GRPC_OUT_CHANNEL_HANDLE] = std::move(grpc_out);
-  LOG(INFO) << "Created gRPC channels";
-
-  // Create the gRPC method name channel, used by the module to read the gRPC method name from the
-  // current context.
   std::unique_ptr<ChannelHalf> grpc_method_name_channel =
-      absl::make_unique<BufferChannel>(grpc_method_name_, nullptr);
+      absl::make_unique<ReadBufferChannelHalf>(grpc_method_name_);
   channel_halves_[GRPC_METHOD_NAME_CHANNEL_HANDLE] = std::move(grpc_method_name_channel);
   LOG(INFO) << "Created gRPC method name channel";
+
+  // Create the gRPC channel halves, used by the module to perform basic input and output.
+  // Read from the serialized request, and allow the response to be written to the
+  // passed in response data buffer.
+  std::unique_ptr<ChannelHalf> grpc_in = absl::make_unique<ReadBufferChannelHalf>(request_data);
+  channel_halves_[GRPC_IN_CHANNEL_HANDLE] = std::move(grpc_in);
+  std::unique_ptr<ChannelHalf> grpc_out = absl::make_unique<WriteBufferChannelHalf>(response_data);
+  channel_halves_[GRPC_OUT_CHANNEL_HANDLE] = std::move(grpc_out);
+  LOG(INFO) << "Created gRPC channels";
 
   // Create the logging channel, used by the module to log statements for debugging.
   std::unique_ptr<ChannelHalf> logging_channel = absl::make_unique<LoggingChannelHalf>();
