@@ -21,7 +21,7 @@ namespace oak {
 
 // Abstract interface for Oak communication channels, in the context of a single gRPC invocation.
 //
-// Each channel represents a bi-directional stream of bytes, similar to a TCP socket. No message
+// Each channel represents a uni-directional stream of bytes, similar to a TCP socket. No message
 // framing or flow control is implemented at this level; application may decide to build some of
 // these abstractions on top of the Channel interface.
 // In particular, a single Read is not guaranteed to return an entire message as one piece, and a
