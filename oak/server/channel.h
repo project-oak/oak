@@ -19,26 +19,38 @@
 
 namespace oak {
 
-// Abstract interface for Oak communication channels, in the context of a single gRPC invocation.
+// Abstract interface for Oak communication channels.
 //
-// Each channel represents a uni-directional stream of bytes, similar to a TCP socket. No message
-// framing or flow control is implemented at this level; application may decide to build some of
-// these abstractions on top of the Channel interface.
-// In particular, a single Read is not guaranteed to return an entire message as one piece, and a
-// single Write is not guaranteed to write the entire message in one piece.
+// A Channel represents a uni-directional stream of bytes, similar to a TCP socket. Each
+// Channel has two halves, a send half and a receive half.  A channel half is represented
+// by a common ChannelHalf type so that they can be referenced from a common numbering
+// space, even though the send and receive halves have distinct functionality.
+//
+// No message framing or flow control is implemented at this level; application
+// may decide to build some of these abstractions on top of the Channel
+// interface.  In particular, a single Read is not guaranteed to return an
+// entire message as one piece, and a single Write is not guaranteed to write
+// the entire message in one piece.
 //
 // See https://blog.stephencleary.com/2009/04/message-framing.html
 //
 // Each channel may be connected to a built-in component, or to a local or remote Oak Node.
-class Channel {
+class ChannelHalf {
  public:
-  virtual ~Channel() {}
+  virtual ~ChannelHalf() {}
 
   // Read |size| bytes from the Channel. The actual size of the data read may be less than |size|.
-  virtual absl::Span<const char> Read(uint32_t size) = 0;
+  // An attempt to read from the send half of a channel will reach this fallback implementation
+  // and always return an empty slice.
+  virtual absl::Span<const char> Read(uint32_t size) {
+    absl::Span<const char> empty;
+    return empty;
+  }
 
   // Write the provided bytes to the Channel. Return the number of bytes actually written.
-  virtual uint32_t Write(absl::Span<const char> data) = 0;
+  // An attempt to write to the receive half of a channel will reach this fallback implementation
+  // and always return zero bytes.
+  virtual uint32_t Write(absl::Span<const char> data) { return 0; }
 };
 
 }  // namespace oak

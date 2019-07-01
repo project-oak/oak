@@ -72,7 +72,7 @@ class OakNode final : public Node::Service {
 
   std::string grpc_method_name_;
 
-  std::unordered_map<Handle, std::unique_ptr<Channel>> channels_;
+  std::unordered_map<Handle, std::unique_ptr<ChannelHalf>> channel_halves_;
 
   // Unique ID of the Oak Node instance. Creating multiple Oak Nodes with the same module and policy
   // configuration will result in Oak Node instances with distinct node_id_.
