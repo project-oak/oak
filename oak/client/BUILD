@@ -25,11 +25,11 @@ cc_library(
 )
 
 cc_library(
-    name = "node_client",
-    hdrs = ["node_client.h"],
+    name = "application_client",
+    hdrs = ["application_client.h"],
     visibility = ["//visibility:public"],
     deps = [
-        "//oak/proto:node_cc_grpc",
+        "//oak/proto:application_cc_grpc",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_asylo//asylo/grpc/auth:null_credentials_options",
         "@com_google_asylo//asylo/identity:init",

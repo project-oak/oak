@@ -25,25 +25,25 @@
 namespace oak {
 
 OakManager::OakManager(absl::string_view enclave_path)
-    : Service(), enclave_path_(enclave_path), node_id_(0) {
+    : Service(), enclave_path_(enclave_path), application_id_(0) {
   InitializeEnclaveManager();
 }
 
-grpc::Status OakManager::CreateNode(grpc::ServerContext* context,
-                                    const oak::CreateNodeRequest* request,
-                                    oak::CreateNodeResponse* response) {
-  std::string node_id = NewNodeId();
-  grpc::Status status = CreateEnclave(node_id, request->module());
+grpc::Status OakManager::CreateApplication(grpc::ServerContext* context,
+                                           const oak::CreateApplicationRequest* request,
+                                           oak::CreateApplicationResponse* response) {
+  std::string application_id = NewApplicationId();
+  grpc::Status status = CreateEnclave(application_id, request->application_configuration());
   if (!status.ok()) {
     return status;
   }
-  asylo::StatusOr<oak::InitializeOutput> result = GetEnclaveOutput(node_id);
+  asylo::StatusOr<oak::InitializeOutput> result = GetEnclaveOutput(application_id);
   if (!result.ok()) {
     return result.status().ToOtherStatus<grpc::Status>();
   }
   oak::InitializeOutput out = result.ValueOrDie();
-  response->set_port(out.port());
-  response->set_node_id(node_id);
+  response->set_application_id(application_id);
+  response->set_grpc_port(out.grpc_port());
   return grpc::Status::OK;
 }
 
@@ -61,17 +61,19 @@ void OakManager::InitializeEnclaveManager() {
                                                         /*debug=*/true);
 }
 
-grpc::Status OakManager::CreateEnclave(const std::string& node_id, const std::string& module) {
-  LOG(INFO) << "Creating enclave";
+grpc::Status OakManager::CreateEnclave(
+    const std::string& application_id,
+    const oak::ApplicationConfiguration& application_configuration) {
+  LOG(INFO) << "Creating application enclave";
   asylo::EnclaveConfig config;
   // Explicitly initialize the null assertion authority in the enclave.
   asylo::EnclaveAssertionAuthorityConfig* authority_config =
       config.add_enclave_assertion_authority_configs();
   asylo::SetNullAssertionDescription(authority_config->mutable_description());
   oak::InitializeInput* initialize_input = config.MutableExtension(oak::initialize_input);
-  initialize_input->set_node_id(node_id);
-  initialize_input->set_module(module);
-  asylo::Status status = enclave_manager_->LoadEnclave(node_id, *enclave_loader_, config);
+  initialize_input->set_application_id(application_id);
+  *initialize_input->mutable_application_configuration() = application_configuration;
+  asylo::Status status = enclave_manager_->LoadEnclave(application_id, *enclave_loader_, config);
   if (!status.ok()) {
     LOG(ERROR) << "Could not load enclave " << enclave_path_ << ": " << status;
     return status.ToOtherStatus<grpc::Status>();
@@ -94,11 +96,11 @@ asylo::StatusOr<oak::InitializeOutput> OakManager::GetEnclaveOutput(const std::s
   return output.GetExtension(oak::initialize_output);
 }
 
-std::string OakManager::NewNodeId() {
+std::string OakManager::NewApplicationId() {
   // TODO: Generate UUID.
   std::stringstream id_str;
-  id_str << node_id_;
-  node_id_ += 1;
+  id_str << application_id_;
+  application_id_ += 1;
   return id_str.str();
 }
 

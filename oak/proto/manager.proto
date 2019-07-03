@@ -18,26 +18,96 @@ syntax = "proto3";
 
 package oak;
 
-message CreateNodeRequest {
+// An ApplicationConfiguration represents a unit of deployment in Oak.
+//
+// It defines a connectivity graph using unidirectional Channels between Nodes.
+//
+// The following constraints apply to the Application configuration:
+// - at most one GrpcServerNode
+// - at most one LogNode
+message ApplicationConfiguration {
+  repeated Node nodes = 1;
+  repeated Channel channels = 2;
+}
+
+// A Node represents a unit of computation in Oak.
+message Node {
+  // The name of the Node. Must be unique within the Application.
+  string node_name = 1;
+
+  oneof node_type {
+    LogNode log_node = 2;
+    GrpcServerNode grpc_server_node = 3;
+    WebAssemblyNode web_assembly_node = 4;
+  }
+}
+
+// A pseudo-Node that corresponds to an external-facing gRPC server interface
+// exposed by the Application. External clients can connect to the server and
+// interact with the Application over gRPC.
+//
+// An Application that exposes an external gRPC server interface should
+// therefore include a single GrpcServerNode, and should configure a pair of
+// Channels (send + receive) between that Node and a WebAssemblyNode that
+// handles the gRPC requests.
+message GrpcServerNode {
+}
+
+// A pseudo-Node that logs anything that is sent to it on the machine on which
+// the Application is running.
+//
+// This is unsafe and only to be used for testing, since it leaks all the data
+// that it handles.
+message LogNode {
+}
+
+message WebAssemblyNode {
   // The compiled code of the Oak Module to instantiate, in WebAssembly binary
   // format.
   // See https://webassembly.org/docs/binary-encoding/ .
-  bytes module = 1;
+  // TODO: Replace this with just a hash of the bytecode to instantiate, and
+  // pass the actual bytecode to the Oak Manager in some other way.
+  bytes module_bytes = 1;
 }
 
-message CreateNodeResponse {
-  // The unique ID of the newly created Oak Node.
-  string node_id = 1;
-  // The port on which the Oak Node is listening.
-  int32 port = 2;
+// A Channel represents a unidirectional communication primitive between Nodes.
+//
+// There may be multiple Channels connecting the same (source, destination)
+// pair.
+message Channel {
+  // The name of the Channel. Must be unique within the Application.
+  //
+  // This is used to identify the Channel from the point of view of the Nodes
+  // that it connects.
+  string channel_name = 1;
+
+  // The name of the Node that can write to this Channel.
+  // Must correspond to the name of a Node in the Application.
+  string source_node_name = 2;
+
+  // The name of the Node that can read from this Channel.
+  // Must correspond to the name of a Node in the Application.
+  string destination_node_name = 3;
 }
 
-// Untrusted service in charge of creating Oak Nodes on demand.
+message CreateApplicationRequest {
+  ApplicationConfiguration application_configuration = 1;
+}
+
+message CreateApplicationResponse {
+  // The unique ID of the newly created Application.
+  string application_id = 1;
+
+  // The port on which the Application is listening over gRPC.
+  int32 grpc_port = 2;
+}
+
+// Untrusted service in charge of creating Oak Applications on demand.
 service Manager {
-  // Request the creation of a new Oak Node with the specified configuration.
+  // Request the creation of a new Oak Application with the specified configuration.
   //
   // After the Oak Node is created, the client should connect to the returned
   // endpoint via gRPC and perform a direct attestation against the Node itself,
   // to verify that its configuration corresponds to what the client expects.
-  rpc CreateNode(CreateNodeRequest) returns (CreateNodeResponse);
+  rpc CreateApplication(CreateApplicationRequest) returns (CreateApplicationResponse);
 }

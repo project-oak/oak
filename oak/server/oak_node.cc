@@ -163,22 +163,12 @@ static bool CheckModuleExports(wabt::interp::Environment* env,
   return rc;
 }
 
-std::string Sha256Hash(const std::string& data) {
-  SHA256_CTX context;
-  SHA256_Init(&context);
-  SHA256_Update(&context, data.data(), data.size());
-  std::vector<uint8_t> hash(SHA256_DIGEST_LENGTH);
-  SHA256_Final(hash.data(), &context);
-  return std::string(hash.cbegin(), hash.cend());
-}
+OakNode::OakNode(const std::string& module) : Service() {}
 
-OakNode::OakNode(const std::string& node_id, const std::string& module)
-    : Service(), node_id_(node_id), module_hash_sha_256_(Sha256Hash(module)) {}
-
-std::unique_ptr<OakNode> OakNode::Create(const std::string& node_id, const std::string& module) {
+std::unique_ptr<OakNode> OakNode::Create(const std::string& module) {
   LOG(INFO) << "Creating Oak Node";
 
-  std::unique_ptr<OakNode> node = absl::WrapUnique(new OakNode(node_id, module));
+  std::unique_ptr<OakNode> node = absl::WrapUnique(new OakNode(module));
   node->InitEnvironment(&node->env_);
   LOG(INFO) << "Host func count: " << node->env_.GetFuncCount();
 
@@ -291,6 +281,8 @@ grpc::Status OakNode::ProcessModuleInvocation(grpc::GenericServerContext* contex
                                               std::vector<char>* response_data) {
   LOG(INFO) << "Handling gRPC call: " << context->method();
 
+  // TODO: Move channel creation up to the application level.
+
   // Create a receive channel half for reading the gRPC method name, using a local copy
   // to ensure its lifetime outlives the span reference.
   std::string grpc_method_name = context->method();
@@ -332,7 +324,7 @@ grpc::Status OakNode::ProcessModuleInvocation(grpc::GenericServerContext* contex
 grpc::Status OakNode::GetAttestation(grpc::ServerContext* context,
                                      const GetAttestationRequest* request,
                                      GetAttestationResponse* response) {
-  response->set_module_hash_sha_256(module_hash_sha_256_);
+  // TODO: Move this method to the application and implement it there.
   return ::grpc::Status::OK;
 }
 

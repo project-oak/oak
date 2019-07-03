@@ -19,22 +19,22 @@
 #include "asylo/identity/descriptions.h"
 #include "asylo/identity/init.h"
 #include "asylo/util/logging.h"
-#include "oak/proto/node.grpc.pb.h"
+#include "oak/proto/application.grpc.pb.h"
 
 namespace oak {
 
-// A client connected to a previously created Oak Node.
+// A client connected to a previously created Oak Application.
 //
-// It allows invoking the Oak Node as specified by the Oak Node policies.
+// It allows invoking the Oak Application as specified by the Oak Application policies.
 //
 // TODO: Verify remote attestations.
 // TODO: Make this class take ownership of the gRPC channel (e.g. via a unique_ptr), and force
 // clients to instantiate gRPC stubs via it, or parametrize this class with the type of the stub to
 // instantiate.
-class NodeClient {
+class ApplicationClient {
  public:
-  NodeClient(const std::shared_ptr<grpc::ChannelInterface>& channel)
-      : stub_(Node::NewStub(channel, grpc::StubOptions())) {
+  ApplicationClient(const std::shared_ptr<grpc::ChannelInterface>& channel)
+      : stub_(Application::NewStub(channel, grpc::StubOptions())) {
     InitializeAssertionAuthorities();
   }
 
@@ -75,7 +75,7 @@ class NodeClient {
     LOG(INFO) << "Assertion authorities initialized";
   }
 
-  std::unique_ptr<Node::Stub> stub_;
+  std::unique_ptr<Application::Stub> stub_;
 };
 
 }  // namespace oak

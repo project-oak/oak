@@ -28,17 +28,25 @@ class ManagerClient {
   ManagerClient(const std::shared_ptr<grpc::ChannelInterface>& channel)
       : stub_(Manager::NewStub(channel, grpc::StubOptions())) {}
 
-  // TODO: Return StatusOr<::oak::CreateNodeResponse>.
-  CreateNodeResponse CreateNode(const std::string& module_bytes) {
+  // TODO: Return StatusOr<::oak::CreateApplicationResponse>.
+  CreateApplicationResponse CreateApplication(const std::string& module_bytes) {
     grpc::ClientContext context;
 
-    CreateNodeRequest request;
-    CreateNodeResponse response;
+    CreateApplicationRequest request;
+    CreateApplicationResponse response;
 
-    request.set_module(module_bytes);
+    // Build an application configuration with a single WebAssembly node with the provided
+    // WebAssembly module bytes and no channels.
+    // TODO: Replace with explicit gRPC and Log pseudo-Nodes (and associated channels) when
+    // available.
+    ApplicationConfiguration* application_configuration =
+        request.mutable_application_configuration();
+    Node* node = application_configuration->add_nodes();
+    WebAssemblyNode* web_assembly_node = node->mutable_web_assembly_node();
+    web_assembly_node->set_module_bytes(module_bytes);
 
     LOG(INFO) << "Creating Oak Node";
-    grpc::Status status = stub_->CreateNode(&context, request, &response);
+    grpc::Status status = stub_->CreateApplication(&context, request, &response);
     if (!status.ok()) {
       LOG(QFATAL) << "Failed: " << status.error_code() << '/' << status.error_message() << '/'
                   << status.error_details();

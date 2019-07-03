@@ -87,7 +87,7 @@ machine.
 The unit of compilation and execution in Oak is an **Oak Module**. Each Oak
 Module is a self-contained
 [WebAssembly module](https://webassembly.org/docs/modules/) that is interpreted
-by an Oak VM instance as part of an Oak Node.
+by an Oak VM instance as part of an Oak Application.
 
 ### WebAssembly
 
@@ -179,22 +179,7 @@ Rust abstractions over the lower level WebAssembly interface.
 
 ## Oak Node
 
-An **Oak Node** is an instance of an Oak Module together with a policy
-configuration, running on an Oak VM, potentially within an enclave.
-
-Once a new Oak Node is initialized and its endpoint available, one or more
-clients (according to the policy configuration) connect to it using individually
-end-to-end encrypted, authenticated and attested channels. The remote
-attestation process proves to the client that the remote enclave is indeed
-running a genuine Oak VM and will therefore obey the policies set on the Oak
-Node; the Oak VM itself may then optionally prove additional details about the
-Oak Module and its properties, which may require reasoning about its internal
-structure.
-
-The Oak Module and the policies associated with an Oak Node are established once
-and for all at the time the Oak Node is created by the Oak Manager, and they
-cannot be modified once the Oak Node is running. Therefore each client only
-needs to verify the attestation once before it starts invoking the Oak Node.
+An **Oak Node** is an instance of an Oak Module running on an Oak VM.
 
 Each Oak Node also encapsulates an internal mutable state, corresponding the
 [WebAssembly linear memory](https://webassembly.org/docs/semantics/#linear-memory)
@@ -211,22 +196,38 @@ invocations, but only if it can also be shown that the data can only be
 retrieved in sufficiently anonymized form in subsequent invocations by other
 clients.
 
+## Oak Application
+
+An **Oak Application** is a set of Oak Nodes running within the same enclave,
+and connected by unidirectional channels. The connectivity graph is specified as
+part of an [Application Configuration](/oak/proto/manager.proto) and is
+immutable once an application is running.
+
+An Oak Application may have one or more entry points from which it can be
+invoked by clients over a gRPC connection.
+
+Once a new Oak Application is initialized and its endpoint available, clients
+may connect to it using individually end-to-end encrypted, authenticated and
+attested channels. The remote attestation process proves to the client that the
+remote enclave is indeed running a genuine Oak VM and will therefore obey the
+policies set on the Oak Node; the Oak VM itself may then optionally prove
+additional details about the Oak Module and its properties, which may require
+reasoning about its internal structure.
+
 ## Oak Manager
 
-The **Oak Manager** creates Oak Nodes running within a platform provider. Note
-that the Oak Manager is not part of the TCB: the actual trusted attestation only
-happens between client and the Oak Node running in the enclave at execution
-time.
+The **Oak Manager** creates Oak Applications running within a platform provider.
 
-A node creation request contains the Oak Module and the policies to run as part
-of the newly created Oak Node.
+Note that the Oak Manager is not part of the TCB: the actual trusted attestation
+only happens between client and the Oak Application running in the enclave at
+execution time.
 
-In response to the request, the Oak Manager sends back to the caller details
-about the gRPC endpoint of the newly created Oak Node, initialized with the Oak
-Module and policy configuration specified in the request.
+In response to an application creation request, the Oak Manager sends back to
+the caller details about the gRPC endpoint of the newly created Oak Application,
+initialized with the application configuration specified in the request.
 
 The following sequence diagram shows a basic flow of requests between a client,
-the Oak Manager and an Oak Node.
+the Oak Manager and an Oak Application.
 
 <!-- From (Google-internal): http://go/sequencediagram/view/5170404486283264 -->
 <img src="docs/BasicFlow.png" width="850">
@@ -237,46 +238,6 @@ following system diagram.
 <!-- From: -->
 <!-- https://docs.google.com/drawings/d/1YJ8Rt-nunZ7NJ9diQswbwjEMAtGfzjGVY9ogwhA7hsI -->
 <img src="docs/SystemDiagram.png" width="850">
-
-## Policy Configuration
-
-A baseline Oak Node with an empty policy configuration may be considered as a
-pure function, executing some computation and returning its result to the
-caller, with no side effects allowed.
-
-In order to allow the Oak Node to perform side effects, capabilities are granted
-to it that allow the Oak VM to expose the appropriate functionality to the Oak
-Module based on the policy configuration specified as part of the creation
-request.
-
-### Read / Write
-
-For each invocation of the Oak Node over gRPC, the client may send data to the
-Oak Node in the request message, and get data back from the Oak Node in the
-response message.
-
-The `read` and `write` policies allow the Oak Node to have access to the input
-or output data for a given invocation:
-
--   the Oak Node is allowed to read input data from the client iff the `read`
-    policy is granted to it
-
--   the Oak Node is allowed to write output data to the client iff the `write`
-    policy is granted to it
-
-If neither of these policies is granted to the Oak Node, the Oak Node will still
-be invoked, but it will not be able to either read from or write to the client
-that performed the invocation.
-
-TODO
-
-### Persistent Storage
-
-TODO
-
-### Logging
-
-TODO
 
 ## Remote Attestation
 

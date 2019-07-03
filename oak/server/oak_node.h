@@ -22,7 +22,7 @@
 
 #include "absl/base/thread_annotations.h"
 #include "absl/types/span.h"
-#include "oak/proto/node.grpc.pb.h"
+#include "oak/proto/application.grpc.pb.h"
 #include "oak/server/channel.h"
 #include "src/interp/interp.h"
 
@@ -38,11 +38,10 @@ const Handle GRPC_OUT_CHANNEL_HANDLE = 4;
 
 typedef std::unordered_map<Handle, std::unique_ptr<ChannelHalf>> ChannelHalfTable;
 
-class OakNode final : public Node::Service {
+class OakNode final : public Application::Service {
  public:
-  // Creates an Oak node with the given node_id by loading the Wasm
-  // module code.
-  static std::unique_ptr<OakNode> Create(const std::string& node_id, const std::string& module);
+  // Creates an Oak node by loading the Wasm module code.
+  static std::unique_ptr<OakNode> Create(const std::string& module);
 
   // Performs an Oak Module invocation.
   grpc::Status ProcessModuleInvocation(grpc::GenericServerContext* context,
@@ -52,7 +51,7 @@ class OakNode final : public Node::Service {
  private:
   // Clients should construct OakNode instances with Create() (which
   // can fail).
-  OakNode(const std::string& node_id, const std::string& module);
+  OakNode(const std::string& module);
 
   grpc::Status GetAttestation(grpc::ServerContext* context, const GetAttestationRequest* request,
                               GetAttestationResponse* response) override;
@@ -70,14 +69,6 @@ class OakNode final : public Node::Service {
   wabt::interp::DefinedModule* module_;
 
   ChannelHalfTable channel_halves_;
-
-  // Unique ID of the Oak Node instance. Creating multiple Oak Nodes with the same module and policy
-  // configuration will result in Oak Node instances with distinct node_id_.
-  const std::string node_id_;
-
-  // Hash of the Oak Module with which this Oak Node was initialized.
-  // To be used as the basis for remote attestation based on code identity.
-  const std::string module_hash_sha_256_;
 };
 
 // RAII class to add a mapping from a handle to a channel half for the duration of a scope.
