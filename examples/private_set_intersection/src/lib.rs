@@ -31,6 +31,7 @@ extern crate protobuf;
 
 mod proto;
 
+use oak::GrpcResult;
 use oak_derive::OakNode;
 use proto::private_set_intersection::{GetIntersectionResponse, SubmitSetRequest};
 use proto::private_set_intersection_grpc::{dispatch, PrivateSetIntersectionNode};
@@ -51,20 +52,21 @@ impl oak::Node for Node {
 }
 
 impl PrivateSetIntersectionNode for Node {
-    fn submit_set(&mut self, req: SubmitSetRequest) {
+    fn submit_set(&mut self, req: SubmitSetRequest) -> GrpcResult<()> {
         let set = req.values.iter().cloned().collect::<HashSet<_>>();
         let next = match self.values {
             Some(ref previous) => previous.intersection(&set).cloned().collect(),
             None => set,
         };
         self.values = Some(next);
+        Ok(())
     }
 
-    fn get_intersection(&mut self) -> GetIntersectionResponse {
+    fn get_intersection(&mut self) -> GrpcResult<GetIntersectionResponse> {
         let mut res = GetIntersectionResponse::new();
         if let Some(ref set) = self.values {
             res.values = set.iter().cloned().collect();
         };
-        res
+        Ok(res)
     }
 }

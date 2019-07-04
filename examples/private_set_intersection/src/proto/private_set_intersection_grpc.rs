@@ -19,14 +19,15 @@
 #![allow(unused_results)]
 
 
+use oak::GrpcResult;
 use protobuf::Message;
 use std::io::Write;
 
 // Oak node server interface
 pub trait PrivateSetIntersectionNode {
-    fn submit_set(&mut self, req: super::private_set_intersection::SubmitSetRequest);
+    fn submit_set(&mut self, req: super::private_set_intersection::SubmitSetRequest) -> GrpcResult<()>;
 
-    fn get_intersection(&mut self) -> super::private_set_intersection::GetIntersectionResponse;
+    fn get_intersection(&mut self) -> GrpcResult<super::private_set_intersection::GetIntersectionResponse>;
 }
 
 // Oak node gRPC method dispatcher
@@ -34,10 +35,10 @@ pub fn dispatch(node: &mut PrivateSetIntersectionNode, grpc_method_name: &str, g
     match grpc_method_name {
         "/oak.examples.private_set_intersection.PrivateSetIntersection/SubmitSet" => {
             let req = protobuf::parse_from_reader(&mut grpc_pair.receive).unwrap();
-            node.submit_set(req);
+            node.submit_set(req).unwrap();
         }
         "/oak.examples.private_set_intersection.PrivateSetIntersection/GetIntersection" => {
-            let rsp = node.get_intersection();
+            let rsp = node.get_intersection().unwrap();
             rsp.write_to_writer(&mut grpc_pair.send).unwrap();
         }
         _ => {

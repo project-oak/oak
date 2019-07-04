@@ -21,6 +21,8 @@ use std::io::{Read, Write};
 
 mod proto;
 
+pub type GrpcResult<T> = Result<T, proto::status::Status>;
+
 type Handle = u64;
 
 // Keep in sync with /oak/server/oak_node.h.

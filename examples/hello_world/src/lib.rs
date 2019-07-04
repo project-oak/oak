@@ -23,6 +23,7 @@ extern crate protobuf;
 
 mod proto;
 
+use oak::GrpcResult;
 use oak_derive::OakNode;
 use proto::hello_world::{HelloRequest, HelloResponse};
 use proto::hello_world_grpc::{dispatch, HelloWorldNode};
@@ -41,40 +42,40 @@ impl oak::Node for Node {
 }
 
 impl HelloWorldNode for Node {
-    fn say_hello(&mut self, req: HelloRequest) -> HelloResponse {
+    fn say_hello(&mut self, req: HelloRequest) -> GrpcResult<HelloResponse> {
         info!("Say hello to {}", req.greeting);
         let mut res = HelloResponse::new();
         res.reply = format!("HELLO {}!", req.greeting);
-        res
+        Ok(res)
     }
 
-    fn lots_of_replies(&mut self, req: HelloRequest) -> Vec<HelloResponse> {
+    fn lots_of_replies(&mut self, req: HelloRequest) -> GrpcResult<Vec<HelloResponse>> {
         info!("Say hello to {}", req.greeting);
         let mut res1 = HelloResponse::new();
         res1.reply = format!("HELLO {}!", req.greeting);
         let mut res2 = HelloResponse::new();
         res2.reply = format!("BONJOUR {}!", req.greeting);
-        vec![res1, res2]
+        Ok(vec![res1, res2])
     }
 
-    fn lots_of_greetings(&mut self, reqs: Vec<HelloRequest>) -> HelloResponse {
+    fn lots_of_greetings(&mut self, reqs: Vec<HelloRequest>) -> GrpcResult<HelloResponse> {
         info!("Say hello");
         let mut msg = String::new();
         msg.push_str("Hello ");
         msg.push_str(&recipients(&reqs));
         let mut res = HelloResponse::new();
         res.reply = msg;
-        res
+        Ok(res)
     }
 
-    fn bidi_hello(&mut self, reqs: Vec<HelloRequest>) -> Vec<HelloResponse> {
+    fn bidi_hello(&mut self, reqs: Vec<HelloRequest>) -> GrpcResult<Vec<HelloResponse>> {
         info!("Say hello");
         let msg = recipients(&reqs);
         let mut res1 = HelloResponse::new();
         res1.reply = format!("HELLO {}!", msg);
         let mut res2 = HelloResponse::new();
         res2.reply = format!("BONJOUR {}!", msg);
-        vec![res1, res2]
+        Ok(vec![res1, res2])
     }
 }
 
