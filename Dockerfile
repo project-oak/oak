@@ -14,21 +14,27 @@ RUN unzip /tmp/protobuf.zip -d $PROTOBUF_DIR
 ENV PATH "$PROTOBUF_DIR/bin:$PATH"
 RUN protoc --version
 
-# Install Rust compiler.
-# TODO: We should pin a specific Rust version rather than just installing the current stable.
+# Install rustup.
 ARG RUSTUP_DIR=/usr/local/cargo
 ENV RUSTUP_HOME $RUSTUP_DIR
 ENV CARGO_HOME $RUSTUP_DIR
 RUN curl https://sh.rustup.rs -sSf > /tmp/rustup
-RUN sh /tmp/rustup -y
+RUN sh /tmp/rustup -y --default-toolchain=none
 ENV PATH "$RUSTUP_DIR/bin:$PATH"
 RUN rustup --version
 
-# Install rustfmt.
-RUN rustup component add rustfmt --toolchain stable-x86_64-unknown-linux-gnu
+# Install Rust toolchain.
+ARG RUST_VERSION=1.35.0
+RUN rustup toolchain install $RUST_VERSION
+RUN rustup default $RUST_VERSION
 
 # Install WebAssembly target for Rust.
 RUN rustup target add wasm32-unknown-unknown
 
-# Install Rust-clippy.
-RUN rustup component add clippy
+# Install rustfmt, clippy, and the Rust Language Server.
+RUN rustup component add \
+  rustfmt \
+  clippy \
+  rls \
+  rust-analysis \
+  rust-src
