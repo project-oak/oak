@@ -114,9 +114,9 @@ impl<'a> MethodGen<'a> {
 
     fn server_resp_type(&self) -> String {
         match self.proto.get_server_streaming() {
-            false => format!("{}", self.output_message()),
+            false => format!("GrpcResult<{}>", self.output_message()),
             // TODO: better streaming
-            true => format!("Vec<{}>", self.output_message()),
+            true => format!("GrpcResult<Vec<{}>>", self.output_message()),
         }
     }
 
@@ -135,12 +135,7 @@ impl<'a> MethodGen<'a> {
                 self.server_req_type(),
             );
         }
-        let result;
-        if self.output_empty() {
-            result = "".to_string();
-        } else {
-            result = format!(" -> {}", self.server_resp_type());
-        }
+        let result = format!(" -> {}", self.server_resp_type());
         format!("{}(&mut self{}){}", self.snake_name(), arg, result)
     }
 
@@ -179,12 +174,17 @@ impl<'a> MethodGen<'a> {
             }
         }
         if self.output_empty() {
-            w.write_line(&format!("node.{}({});", self.snake_name(), param_in));
+            w.write_line(&format!(
+                "node.{}({}).unwrap();",
+                self.snake_name(),
+                param_in
+            ));
         } else {
+            // TODO: deal with Err(status)
             match self.proto.get_server_streaming() {
                 false => {
                     w.write_line(&format!(
-                        "let rsp = node.{}({});",
+                        "let rsp = node.{}({}).unwrap();",
                         self.snake_name(),
                         param_in
                     ));
@@ -192,7 +192,7 @@ impl<'a> MethodGen<'a> {
                 }
                 true => {
                     w.write_line(&format!(
-                        "let rsps = node.{}({});",
+                        "let rsps = node.{}({}).unwrap();",
                         self.snake_name(),
                         param_in
                     ));
@@ -272,6 +272,7 @@ impl<'a> ServiceGen<'a> {
     }
 
     fn write(&self, w: &mut CodeWriter) {
+        w.write_line("use oak::GrpcResult;");
         w.write_line("use protobuf::Message;");
         w.write_line("use std::io::Write;");
         w.write_line("");
