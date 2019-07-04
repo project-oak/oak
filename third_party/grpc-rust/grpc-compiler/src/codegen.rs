@@ -153,20 +153,28 @@ impl<'a> MethodGen<'a> {
             match self.proto.get_client_streaming() {
                 false => {
                     param_in = "req";
-                    w.write_line(
-                        "let req = protobuf::parse_from_reader(&mut grpc_pair.receive).unwrap();",
-                    )
+                    w.comment("If the data fits in 256 bytes it will be read immediately.");
+                    w.comment("If not, the vector will be resized and read on second attempt.");
+                    w.write_line("let mut buf = Vec::<u8>::with_capacity(256);");
+                    w.write_line("grpc_pair.receive.read_message(&mut buf).unwrap();");
+                    w.write_line("let req = protobuf::parse_from_bytes(&buf).unwrap();")
                 }
                 true => {
                     param_in = "reqs";
                     w.write_line("let mut reqs = vec![];");
                     w.block("loop {", "}", |w| {
+                        w.comment("If the data fits in 256 bytes it will be read immediately.");
+                        w.comment("If not, the vector will be resized and read on second attempt.");
+                        w.write_line("let mut buf = Vec::<u8>::with_capacity(256);");
                         w.block(
-                            "match protobuf::parse_from_reader(&mut grpc_pair.receive) {",
+                            "match grpc_pair.receive.read_message(&mut buf) {",
                             "}",
                             |w| {
                                 w.write_line("Err(_) => break,");
-                                w.write_line("Ok(req) => reqs.push(req),");
+                                w.write_line("Ok(0) => break,");
+                                w.write_line(
+                                "Ok(_size) => reqs.push(protobuf::parse_from_bytes(&buf).unwrap()),",
+                            );
                             },
                         );
                     });

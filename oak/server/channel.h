@@ -21,36 +21,51 @@ namespace oak {
 
 // Abstract interface for Oak communication channels.
 //
-// A Channel represents a uni-directional stream of bytes, similar to a TCP socket. Each
-// Channel has two halves, a send half and a receive half.  A channel half is represented
-// by a common ChannelHalf type so that they can be referenced from a common numbering
-// space, even though the send and receive halves have distinct functionality.
+// A Channel represents a uni-directional stream of messages. Each Channel has
+// two halves, a send half and a receive half.  A channel half is represented by
+// a common ChannelHalf type so that they can be referenced from a common
+// numbering space, even though the send and receive halves have distinct
+// functionality.
 //
-// No message framing or flow control is implemented at this level; application
+// No flow control is implemented at this level; application
 // may decide to build some of these abstractions on top of the Channel
-// interface.  In particular, a single Read is not guaranteed to return an
-// entire message as one piece, and a single Write is not guaranteed to write
-// the entire message in one piece.
+// interface.
 //
-// See https://blog.stephencleary.com/2009/04/message-framing.html
+// Each channel may be connected to a built-in component, or to a local or
+// remote Oak Node.
 //
-// Each channel may be connected to a built-in component, or to a local or remote Oak Node.
+// TODO: add a hard limit for message size
 class ChannelHalf {
  public:
+  // Result of a read operation. If not enough space was provided for the
+  // message, then |msg_size| will be non-zero and indicates the required size.
+  // Otherwise, |msg_size| will be zero and |data| references the data of the
+  // message that has been read.
+  struct ReadResult {
+    uint32_t required_size;
+    absl::Span<const char> data;
+  };
+
   virtual ~ChannelHalf() {}
 
-  // Read |size| bytes from the Channel. The actual size of the data read may be less than |size|.
-  // An attempt to read from the send half of a channel will reach this fallback implementation
-  // and always return an empty slice.
-  virtual absl::Span<const char> Read(uint32_t size) {
-    absl::Span<const char> empty;
-    return empty;
+  // Read a message of up to |size| bytes from the Channel. The actual size of
+  // the returned message may be less than |size|.  If the next available
+  // message on the channel is larger than |size|, ???? will be returned.
+  virtual ReadResult Read(uint32_t size) {
+    // Fallback implementation that returns an empty message; attempting to
+    // read from the send half of a channel will reach this fallback.
+    ReadResult nothing;
+    return nothing;
   }
 
-  // Write the provided bytes to the Channel. Return the number of bytes actually written.
-  // An attempt to write to the receive half of a channel will reach this fallback implementation
-  // and always return zero bytes.
-  virtual uint32_t Write(absl::Span<const char> data) { return 0; }
+  // Write the provided message to the Channel. Return the number of bytes
+  // actually written, which will either be zero or the size of the provided
+  // message.
+  virtual uint32_t Write(absl::Span<const char> data) {
+    // Fallback implementation that indicates nothing was written; attempting to
+    // write to the receive half of a channel will reach this fallback.
+    return 0;
+  }
 };
 
 }  // namespace oak

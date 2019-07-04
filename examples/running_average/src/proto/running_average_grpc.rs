@@ -23,18 +23,22 @@ use oak::GrpcResult;
 use protobuf::Message;
 use std::io::Write;
 
-// Oak node server interface
+// Oak Node server interface
 pub trait RunningAverageNode {
     fn submit_sample(&mut self, req: super::running_average::SubmitSampleRequest) -> GrpcResult<()>;
 
     fn get_average(&mut self) -> GrpcResult<super::running_average::GetAverageResponse>;
 }
 
-// Oak node gRPC method dispatcher
+// Oak Node gRPC method dispatcher
 pub fn dispatch(node: &mut RunningAverageNode, grpc_method_name: &str, grpc_pair: &mut oak::ChannelPair) {
     match grpc_method_name {
         "/oak.examples.running_average.RunningAverage/SubmitSample" => {
-            let req = protobuf::parse_from_reader(&mut grpc_pair.receive).unwrap();
+            // If the data fits in 256 bytes it will be read immediately.
+            // If not, the vector will be resized and read on second attempt.
+            let mut buf = Vec::<u8>::with_capacity(256);
+            grpc_pair.receive.read_message(&mut buf).unwrap();
+            let req = protobuf::parse_from_bytes(&buf).unwrap();
             node.submit_sample(req).unwrap();
         }
         "/oak.examples.running_average.RunningAverage/GetAverage" => {

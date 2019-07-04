@@ -14,10 +14,14 @@
 // limitations under the License.
 //
 
+extern crate fmt;
+#[macro_use]
+extern crate log;
 extern crate protobuf;
 
 use std::cell::RefCell;
-use std::io::{Read, Write};
+use std::io;
+use std::io::Write;
 
 mod proto;
 
@@ -31,14 +35,63 @@ pub const GRPC_METHOD_NAME_CHANNEL_HANDLE: Handle = 2;
 pub const GRPC_IN_CHANNEL_HANDLE: Handle = 3;
 pub const GRPC_OUT_CHANNEL_HANDLE: Handle = 4;
 
+// Status values returned across the host function interface
+pub enum Status {
+    Ok,
+    BadHandle,
+    InvalidArgs,
+    ChannelClosed,
+    BufferTooSmall,
+    OutOfRange,
+    Unknown(i32),
+}
+
+fn status_from_i32(raw: i32) -> Status {
+    // Keep in sync with /oak/server/status.h
+    match raw {
+        0 => Status::Ok,
+        1 => Status::BadHandle,
+        2 => Status::InvalidArgs,
+        3 => Status::ChannelClosed,
+        4 => Status::BufferTooSmall,
+        5 => Status::OutOfRange,
+        _ => Status::Unknown(raw),
+    }
+}
+
+/// Map a host function status to the nearest available std::io::Result.
+fn result_from_status<T>(status: Status, val: T) -> std::io::Result<T> {
+    match status {
+        Status::Ok => Ok(val),
+        Status::BadHandle => Err(io::Error::new(io::ErrorKind::NotConnected, "Bad handle")),
+        Status::InvalidArgs => Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "Invalid arguments",
+        )),
+        Status::ChannelClosed => Err(io::Error::new(
+            io::ErrorKind::ConnectionReset,
+            "Channel closed",
+        )),
+        Status::BufferTooSmall => Err(io::Error::new(
+            io::ErrorKind::UnexpectedEof,
+            "Buffer too small",
+        )),
+        Status::OutOfRange => Err(io::Error::new(io::ErrorKind::NotConnected, "Out of range")),
+        Status::Unknown(raw) => Err(io::Error::new(
+            io::ErrorKind::Other,
+            format!("Unknown Oak status value {}", raw),
+        )),
+    }
+}
+
 // TODO: Implement panic handler.
 
 mod wasm {
     // See https://rustwasm.github.io/book/reference/js-ffi.html
     #[link(wasm_import_module = "oak")]
     extern "C" {
-        pub fn channel_read(handle: u64, buf: *mut u8, size: usize) -> usize;
-        pub fn channel_write(handle: u64, buf: *const u8, size: usize) -> usize;
+        pub fn channel_read(handle: u64, buf: *mut u8, size: usize, actual_size: *mut u32) -> i32;
+        pub fn channel_write(handle: u64, buf: *const u8, size: usize) -> i32;
     }
 }
 
@@ -52,9 +105,23 @@ impl SendChannelHalf {
     }
 }
 
+impl SendChannelHalf {
+    pub fn write_message(&mut self, buf: &[u8]) -> std::io::Result<()> {
+        result_from_status(
+            status_from_i32(unsafe { wasm::channel_write(self.handle, buf.as_ptr(), buf.len()) }),
+            (),
+        )
+    }
+}
+
+// Implement the Write trait on a send channel for convenience, particularly for
+// the logging channel.
 impl Write for SendChannelHalf {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        Ok(unsafe { wasm::channel_write(self.handle, buf.as_ptr(), buf.len()) })
+        match self.write_message(buf) {
+            Ok(_) => Ok(buf.len()),
+            Err(e) => Err(e),
+        }
     }
     fn flush(&mut self) -> std::io::Result<()> {
         Ok(())
@@ -77,9 +144,52 @@ impl ReceiveChannelHalf {
     }
 }
 
-impl Read for ReceiveChannelHalf {
-    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        Ok(unsafe { wasm::channel_read(self.handle, buf.as_mut_ptr(), buf.len()) })
+impl ReceiveChannelHalf {
+    pub fn read_message(&mut self, buf: &mut Vec<u8>) -> std::io::Result<usize> {
+        // Try reading from the channel twice: first with provided vector,
+        // then with a vector that's been resized to meet size requirements.
+        for resized in &[false, true] {
+            let mut actual_size: u32 = 0;
+            let status = status_from_i32(unsafe {
+                wasm::channel_read(
+                    self.handle,
+                    buf.as_mut_ptr(),
+                    buf.capacity(),
+                    &mut actual_size,
+                )
+            });
+            match status {
+                Status::Ok => {
+                    unsafe {
+                        buf.set_len(actual_size as usize);
+                    };
+                    return Ok(actual_size as usize);
+                }
+                Status::BufferTooSmall => {
+                    if *resized {
+                        return result_from_status(status, 0);
+                    }
+                    // Can escape the match if buffer is too small and !resized.
+                }
+                _ => return result_from_status(status, 0),
+            }
+
+            // Extend the vector to be large enough for the message
+            debug!("Got {}, need {}", buf.capacity(), actual_size);
+            if (actual_size as usize) < buf.len() {
+                return Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    format!(
+                        "Internal error: provided {} bytes for receive, asked for {}",
+                        buf.len(),
+                        actual_size
+                    ),
+                ));
+            }
+            let extra = (actual_size as usize) - buf.len();
+            buf.reserve(extra);
+        }
+        Err(io::Error::new(io::ErrorKind::Other, "Unreachable reached!"))
     }
 }
 
@@ -147,10 +257,9 @@ pub extern "C" fn oak_handle_grpc_call() {
     NODE.with(|node| match *node.borrow_mut() {
         Some(ref mut node) => {
             let mut grpc_method_channel = ReceiveChannelHalf::new(GRPC_METHOD_NAME_CHANNEL_HANDLE);
-            let mut grpc_method_name = String::new();
-            grpc_method_channel
-                .read_to_string(&mut grpc_method_name)
-                .unwrap();
+            let mut buf = Vec::<u8>::with_capacity(256);
+            grpc_method_channel.read_message(&mut buf).unwrap();
+            let grpc_method_name = String::from_utf8_lossy(&buf);
             let mut grpc_pair = ChannelPair::new(GRPC_IN_CHANNEL_HANDLE, GRPC_OUT_CHANNEL_HANDLE);
             node.invoke(&grpc_method_name, &mut grpc_pair);
         }
