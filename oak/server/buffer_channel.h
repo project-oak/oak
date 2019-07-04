@@ -22,18 +22,27 @@
 
 namespace oak {
 
-// A channel implementation that only has a receive half, which reads from a fixed
-// buffer provided at construction.  The channel does not own the provided buffer,
-// so the caller must ensure its lifetime is longer than that of the channel.
-class ReadBufferChannelHalf final : public ChannelHalf {
+// A channel implementation that only has a receive half, which reads a single
+// message from a fixed buffer provided at construction.  The channel does not
+// own the provided buffer, so the caller must ensure its lifetime is longer
+// than that of the channel.
+class ReadMessageChannelHalf final : public ChannelHalf {
  public:
-  ReadBufferChannelHalf(absl::Span<const char> data) : data_(data) {}
+  ReadMessageChannelHalf(absl::Span<const char> data) : data_(data) {}
 
-  absl::Span<const char> Read(uint32_t size) override {
-    LOG(INFO) << "Reading from channel: " << size << " bytes";
-    absl::Span<const char> data = data_.subspan(0, size);
-    data_.remove_prefix(data.size());
-    return data;
+  ReadResult Read(uint32_t size) override {
+    ReadResult result{0};
+    if (size >= data_.size()) {
+      LOG(INFO) << "Reading all " << data_.size() << " bytes from channel into space of size "
+                << size;
+      result.data = data_;
+      data_.remove_prefix(data_.size());
+    } else {
+      LOG(INFO) << "Need to read " << data_.size() << " bytes from channel but only " << size
+                << " bytes of space available";
+      result.required_size = data_.size();
+    }
+    return result;
   }
 
  private:

@@ -23,7 +23,7 @@ use oak::GrpcResult;
 use protobuf::Message;
 use std::io::Write;
 
-// Oak node server interface
+// Oak Node server interface
 pub trait HelloWorldNode {
     fn say_hello(&mut self, req: super::hello_world::HelloRequest) -> GrpcResult<super::hello_world::HelloResponse>;
 
@@ -34,16 +34,24 @@ pub trait HelloWorldNode {
     fn bidi_hello(&mut self, reqs: Vec<super::hello_world::HelloRequest>) -> GrpcResult<Vec<super::hello_world::HelloResponse>>;
 }
 
-// Oak node gRPC method dispatcher
+// Oak Node gRPC method dispatcher
 pub fn dispatch(node: &mut HelloWorldNode, grpc_method_name: &str, grpc_pair: &mut oak::ChannelPair) {
     match grpc_method_name {
         "/oak.examples.hello_world.HelloWorld/SayHello" => {
-            let req = protobuf::parse_from_reader(&mut grpc_pair.receive).unwrap();
+            // If the data fits in 256 bytes it will be read immediately.
+            // If not, the vector will be resized and read on second attempt.
+            let mut buf = Vec::<u8>::with_capacity(256);
+            grpc_pair.receive.read_message(&mut buf).unwrap();
+            let req = protobuf::parse_from_bytes(&buf).unwrap();
             let rsp = node.say_hello(req).unwrap();
             rsp.write_to_writer(&mut grpc_pair.send).unwrap();
         }
         "/oak.examples.hello_world.HelloWorld/LotsOfReplies" => {
-            let req = protobuf::parse_from_reader(&mut grpc_pair.receive).unwrap();
+            // If the data fits in 256 bytes it will be read immediately.
+            // If not, the vector will be resized and read on second attempt.
+            let mut buf = Vec::<u8>::with_capacity(256);
+            grpc_pair.receive.read_message(&mut buf).unwrap();
+            let req = protobuf::parse_from_bytes(&buf).unwrap();
             let rsps = node.lots_of_replies(req).unwrap();
             for rsp in rsps {
                 rsp.write_to_writer(&mut grpc_pair.send).unwrap();
@@ -52,9 +60,13 @@ pub fn dispatch(node: &mut HelloWorldNode, grpc_method_name: &str, grpc_pair: &m
         "/oak.examples.hello_world.HelloWorld/LotsOfGreetings" => {
             let mut reqs = vec![];
             loop {
-                match protobuf::parse_from_reader(&mut grpc_pair.receive) {
+                // If the data fits in 256 bytes it will be read immediately.
+                // If not, the vector will be resized and read on second attempt.
+                let mut buf = Vec::<u8>::with_capacity(256);
+                match grpc_pair.receive.read_message(&mut buf) {
                     Err(_) => break,
-                    Ok(req) => reqs.push(req),
+                    Ok(0) => break,
+                    Ok(_size) => reqs.push(protobuf::parse_from_bytes(&buf).unwrap()),
                 }
             }
             let rsp = node.lots_of_greetings(reqs).unwrap();
@@ -63,9 +75,13 @@ pub fn dispatch(node: &mut HelloWorldNode, grpc_method_name: &str, grpc_pair: &m
         "/oak.examples.hello_world.HelloWorld/BidiHello" => {
             let mut reqs = vec![];
             loop {
-                match protobuf::parse_from_reader(&mut grpc_pair.receive) {
+                // If the data fits in 256 bytes it will be read immediately.
+                // If not, the vector will be resized and read on second attempt.
+                let mut buf = Vec::<u8>::with_capacity(256);
+                match grpc_pair.receive.read_message(&mut buf) {
                     Err(_) => break,
-                    Ok(req) => reqs.push(req),
+                    Ok(0) => break,
+                    Ok(_size) => reqs.push(protobuf::parse_from_bytes(&buf).unwrap()),
                 }
             }
             let rsps = node.bidi_hello(reqs).unwrap();

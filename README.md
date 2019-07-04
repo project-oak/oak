@@ -127,12 +127,9 @@ Each Oak Module must expose the following **exported functions** as
 
 Communication from the Oak Module to the Oak VM and to other modules is
 implemented via **channels**. A channel represents a uni-directional stream of
-bytes, with a receive half and a send half that an Oak module can read from or
-write to respectively. Each half of a channel is identified by a **handle**,
+messages, with a receive half and a send half that an Oak module can read from
+or write to respectively. Each half of a channel is identified by a **handle**,
 which is used as a parameter to the corresponding host function calls.
-
-Note that channels do not natively implement any kind of framing, i.e. they do
-not expose a concept of messages, just raw bytes.
 
 At each invocation, the following channel halves are implicitly available to the Oak
 Node (see [/oak/server/oak_node.h](oak/server/oak_node.h)):
@@ -147,29 +144,35 @@ functions** as
 [WebAssembly imports](https://webassembly.github.io/spec/core/syntax/modules.html#imports)
 (all of them defined in the `oak` module):
 
--   `channel_read: (i64, i32, i32) -> i32`: Reads data from the specified
-    channel.
+-   `channel_read: (i64, i32, i32, i32) -> i32`: Reads a single message from the
+    specified channel, and sets the size of the message in the location provided
+    by arg 3. If the destination buffer is not large enough for the entire
+    message, then no data will be read and a `STATUS_ERR_BUFFER_TOO_SMALL`
+    status will be returned.
 
     *   arg 0: Handle to channel receive half
     *   arg 1: Destination buffer address
     *   arg 2: Destination buffer size in bytes
-    *   return 0: Number of bytes read
+    *   arg 3: Address of a 4-byte location that will receive the number of
+               bytes in the message (as a little-endian u32).
+    *   return 0: Status of operation
 
     Similar to
     [`zx_channel_read`](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/zircon/docs/syscalls/channel_read.md)
     in Fuchsia.
 
--   `channel_write: (i64, i32, i32) -> i32`: Writes data to the specified
-    channel.
+-   `channel_write: (i64, i32, i32) -> i32`: Writes a single message to the
+    specified channel.
 
     *   arg 0: Handle to channel send half
-    *   arg 1: Source buffer address
+    *   arg 1: Source buffer address holding message
     *   arg 2: Source buffer size in bytes
-    *   return 0: Number of bytes written
+    *   return 0: Status of operation
 
     Similar to
     [`zx_channel_write`](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/zircon/docs/syscalls/channel_write.md)
     in Fuchsia.
+
 
 ### Rust SDK
 

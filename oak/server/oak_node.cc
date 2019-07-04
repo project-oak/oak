@@ -25,6 +25,7 @@
 #include "asylo/util/logging.h"
 #include "oak/server/buffer_channel.h"
 #include "oak/server/logging_channel.h"
+#include "oak/server/status.h"
 #include "oak/server/wabt_output.h"
 #include "src/binary-reader.h"
 #include "src/error-formatter.h"
@@ -46,6 +47,15 @@ static absl::Span<const char> ReadMemory(wabt::interp::Environment* env, const u
 static void WriteMemory(wabt::interp::Environment* env, const uint32_t offset,
                         const absl::Span<const char> data) {
   std::copy(data.cbegin(), data.cend(), env->GetMemory(0)->data.begin() + offset);
+}
+
+static void WriteI32(wabt::interp::Environment* env, const uint32_t offset, const int32_t value) {
+  uint32_t v = static_cast<uint32_t>(value);
+  auto base = env->GetMemory(0)->data.begin() + offset;
+  base[0] = v & 0xff;
+  base[1] = (v >> 8) & 0xff;
+  base[2] = (v >> 16) & 0xff;
+  base[3] = (v >> 24) & 0xff;
 }
 
 // Creates a TypedValue of type i64 with the specified inner value.
@@ -222,9 +232,9 @@ void OakNode::InitEnvironment(wabt::interp::Environment* env) {
   wabt::interp::HostModule* oak_module = env->AppendHostModule("oak");
   oak_module->AppendFuncExport(
       "channel_read",
-      wabt::interp::FuncSignature(
-          std::vector<wabt::Type>{wabt::Type::I64, wabt::Type::I32, wabt::Type::I32},
-          std::vector<wabt::Type>{wabt::Type::I32}),
+      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I64, wabt::Type::I32,
+                                                          wabt::Type::I32, wabt::Type::I32},
+                                  std::vector<wabt::Type>{wabt::Type::I32}),
       this->OakChannelRead(env));
   oak_module->AppendFuncExport(
       "channel_write",
@@ -242,16 +252,24 @@ wabt::interp::HostFunc::Callback OakNode::OakChannelRead(wabt::interp::Environme
     Handle channel_handle = args[0].get_i64();
     uint32_t offset = args[1].get_i32();
     uint32_t size = args[2].get_i32();
+    uint32_t size_offset = args[3].get_i32();
 
     if (channel_halves_.count(channel_handle) == 0) {
       LOG(WARNING) << "Invalid channel handle: " << channel_handle;
+      results[0].set_i32(STATUS_ERR_BAD_HANDLE);
       return wabt::interp::Result::Ok;
     }
     std::unique_ptr<ChannelHalf>& channel = channel_halves_.at(channel_handle);
 
-    absl::Span<const char> data = channel->Read(size);
-    WriteMemory(env, offset, data);
-    results[0].set_i32(data.size());
+    ChannelHalf::ReadResult result = channel->Read(size);
+    if (result.required_size > 0) {
+      WriteI32(env, size_offset, result.required_size);
+      results[0].set_i32(STATUS_ERR_BUFFER_TOO_SMALL);
+    } else {
+      WriteI32(env, size_offset, result.data.size());
+      WriteMemory(env, offset, result.data);
+      results[0].set_i32(STATUS_OK);
+    }
 
     return wabt::interp::Result::Ok;
   };
@@ -268,13 +286,14 @@ wabt::interp::HostFunc::Callback OakNode::OakChannelWrite(wabt::interp::Environm
 
     if (channel_halves_.count(channel_handle) == 0) {
       LOG(WARNING) << "Invalid channel handle: " << channel_handle;
+      results[0].set_i32(STATUS_ERR_BAD_HANDLE);
       return wabt::interp::Result::Ok;
     }
     std::unique_ptr<ChannelHalf>& channel = channel_halves_.at(channel_handle);
 
     absl::Span<const char> data = ReadMemory(env, offset, size);
     channel->Write(data);
-    results[0].set_i32(data.size());
+    results[0].set_i32(STATUS_OK);
 
     return wabt::interp::Result::Ok;
   };
@@ -291,14 +310,14 @@ grpc::Status OakNode::ProcessModuleInvocation(grpc::GenericServerContext* contex
   // to ensure its lifetime outlives the span reference.
   std::string grpc_method_name = context->method();
   ChannelMapping with_name_half(&channel_halves_, GRPC_METHOD_NAME_CHANNEL_HANDLE,
-                                absl::make_unique<ReadBufferChannelHalf>(grpc_method_name));
+                                absl::make_unique<ReadMessageChannelHalf>(grpc_method_name));
   LOG(INFO) << "Created gRPC method name channel " << GRPC_METHOD_NAME_CHANNEL_HANDLE;
 
   // Create the gRPC channel halves, used by the module to perform basic input and output.
   // Read from the serialized request, and allow the response to be written to the
   // passed in response data buffer.
   ChannelMapping with_in_half(&channel_halves_, GRPC_IN_CHANNEL_HANDLE,
-                              absl::make_unique<ReadBufferChannelHalf>(request_data));
+                              absl::make_unique<ReadMessageChannelHalf>(request_data));
   ChannelMapping with_out_half(&channel_halves_, GRPC_OUT_CHANNEL_HANDLE,
                                absl::make_unique<WriteBufferChannelHalf>(response_data));
   LOG(INFO) << "Created gRPC channels in:" << GRPC_IN_CHANNEL_HANDLE
