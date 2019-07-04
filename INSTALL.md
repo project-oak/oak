@@ -17,7 +17,7 @@ creation to work.
 # usermod -a -G docker $USER
 ```
 
-If `$USER` is logged in, you'll need to Log out and log in again (so the group
+If `$USER` is logged in, you'll need to log out and log in again (so the group
 change takes effect).
 
 We use `rustup` rather than `apt install rustc` because we need `rustup` to add
