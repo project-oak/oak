@@ -26,7 +26,10 @@ load(
 proto_library(
     name = "enclave_proto",
     srcs = ["enclave.proto"],
-    deps = ["@com_google_asylo//asylo:enclave_proto"],
+    deps = [
+        ":manager_proto",
+        "@com_google_asylo//asylo:enclave_proto",
+    ],
 )
 
 cc_proto_library(
@@ -35,21 +38,24 @@ cc_proto_library(
 )
 
 proto_library(
-    name = "node_proto",
-    srcs = ["node.proto"],
+    name = "application_proto",
+    srcs = ["application.proto"],
+    deps = [
+        ":manager_proto",
+    ],
 )
 
 cc_proto_library(
-    name = "node_cc_proto",
-    deps = [":node_proto"],
+    name = "application_cc_proto",
+    deps = [":application_proto"],
 )
 
 cc_grpc_library(
-    name = "node_cc_grpc",
-    srcs = [":node_proto"],
+    name = "application_cc_grpc",
+    srcs = [":application_proto"],
     grpc_only = True,
     well_known_protos = True,
-    deps = [":node_cc_proto"],
+    deps = [":application_cc_proto"],
 )
 
 proto_library(

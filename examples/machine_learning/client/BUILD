@@ -20,8 +20,8 @@ cc_binary(
     deps = [
         "//examples/machine_learning/proto:machine_learning_cc_grpc",
         "//examples/utils",
+        "//oak/client:application_client",
         "//oak/client:manager_client",
-        "//oak/client:node_client",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",

@@ -276,10 +276,10 @@ impl<'a> ServiceGen<'a> {
         w.write_line("use protobuf::Message;");
         w.write_line("use std::io::Write;");
         w.write_line("");
-        w.comment("Oak node server interface");
+        w.comment("Oak Node server interface");
         self.write_server_intf(w);
         w.write_line("");
-        w.comment("Oak node gRPC method dispatcher");
+        w.comment("Oak Node gRPC method dispatcher");
         self.write_dispatcher(w);
     }
 }

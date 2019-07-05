@@ -43,9 +43,26 @@ EnclaveServer::EnclaveServer()
     : credentials_(asylo::EnclaveServerCredentials(asylo::BidirectionalNullCredentialsOptions())) {}
 
 asylo::Status EnclaveServer::Initialize(const asylo::EnclaveConfig& config) {
-  LOG(INFO) << "Initializing Oak Instance";
+  LOG(INFO) << "Initializing Oak Application";
   const InitializeInput& initialize_input_message = config.GetExtension(initialize_input);
-  node_ = OakNode::Create(initialize_input_message.node_id(), initialize_input_message.module());
+  const ApplicationConfiguration& application_configuration =
+      initialize_input_message.application_configuration();
+  if (application_configuration.nodes_size() != 1) {
+    return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT,
+                         "Only application configurations with 1 Node are currently supported");
+  }
+  if (application_configuration.channels_size() != 0) {
+    return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT,
+                         "Only application configurations with 0 Channels are currently supported");
+  }
+  const Node& node_configuration = application_configuration.nodes(0);
+  if (!node_configuration.has_web_assembly_node()) {
+    return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT,
+                         "Only WebAssembly Nodes are currently supported");
+  }
+  // TODO: Support creating multiple Nodes and Channels connecting them.
+  const WebAssemblyNode& web_assembly_node = node_configuration.web_assembly_node();
+  node_ = OakNode::Create(web_assembly_node.module_bytes());
   if (node_ == nullptr) {
     return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT, "Failed to create Oak Node");
   }
@@ -95,14 +112,14 @@ asylo::StatusOr<std::unique_ptr<grpc::Server>> EnclaveServer::CreateServer() {
     return asylo::Status(asylo::error::GoogleError::INTERNAL, "Failed to start gRPC server");
   }
 
-  LOG(INFO) << "gRPC server is listening on port :" << port_;
+  LOG(INFO) << "gRPC server is listening on port: " << port_;
 
   return std::move(server);
 }
 
 void EnclaveServer::GetServerAddress(asylo::EnclaveOutput* output) {
   oak::InitializeOutput* initialize_output = output->MutableExtension(oak::initialize_output);
-  initialize_output->set_port(port_);
+  initialize_output->set_grpc_port(port_);
 }
 
 void EnclaveServer::FinalizeServer() {

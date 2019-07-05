@@ -22,8 +22,8 @@
 #include "examples/private_set_intersection/proto/private_set_intersection.pb.h"
 #include "examples/utils/utils.h"
 #include "include/grpcpp/grpcpp.h"
+#include "oak/client/application_client.h"
 #include "oak/client/manager_client.h"
-#include "oak/client/node_client.h"
 
 ABSL_FLAG(std::string, manager_address, "127.0.0.1:8888",
           "Address of the Oak Manager to connect to");
@@ -73,20 +73,21 @@ int main(int argc, char** argv) {
 
   // Load the Oak Module to execute. This needs to be compiled from Rust to WebAssembly separately.
   std::string module_bytes = oak::utils::read_file(absl::GetFlag(FLAGS_module));
-  oak::CreateNodeResponse create_node_response = manager_client->CreateNode(module_bytes);
+  oak::CreateApplicationResponse create_application_response =
+      manager_client->CreateApplication(module_bytes);
 
   std::stringstream addr;
-  addr << "127.0.0.1:" << create_node_response.port();
-  LOG(INFO) << "Connecting to Oak Node: " << addr.str();
+  addr << "127.0.0.1:" << create_application_response.grpc_port();
+  LOG(INFO) << "Connecting to Oak Application: " << addr.str();
 
-  oak::NodeClient::InitializeAssertionAuthorities();
+  oak::ApplicationClient::InitializeAssertionAuthorities();
 
-  // Connect to the newly created Oak Node from different clients.
+  // Connect to the newly created Oak Application from different clients.
   auto channel_0 = grpc::CreateChannel(
       addr.str(), asylo::EnclaveChannelCredentials(asylo::BidirectionalNullCredentialsOptions()));
-  oak::NodeClient node_client_0(channel_0);
-  oak::GetAttestationResponse attestation = node_client_0.GetAttestation();
-  LOG(INFO) << "Oak Node attestation: " << attestation.DebugString();
+  oak::ApplicationClient client_0(channel_0);
+  oak::GetAttestationResponse attestation = client_0.GetAttestation();
+  LOG(INFO) << "Oak Application attestation: " << attestation.DebugString();
   auto stub_0 = PrivateSetIntersection::NewStub(channel_0);
 
   auto stub_1 = PrivateSetIntersection::NewStub(grpc::CreateChannel(
