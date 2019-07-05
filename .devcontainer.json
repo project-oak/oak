@@ -1,0 +1,9 @@
+// See https://code.visualstudio.com/docs/remote/containers for details.
+{
+  "dockerFile": "Dockerfile",
+  "extensions": [
+    "bazelbuild.vscode-bazel",
+    "xaver.clang-format",
+    "rust-lang.rust"
+  ]
+}
