@@ -24,10 +24,10 @@ SpannerProvider::SpannerProvider(std::shared_ptr<grpc::ChannelInterface> channel
     : spanner_service_(Spanner::NewStub(channel)) {}
 
 grpc::Status SpannerProvider::Read(const ReadRequest* request, ReadResponse* response) {
-  return grpc::Status(grpc::StatusCode::UNIMPLEMENTED, "");
+  return grpc::Status(grpc::StatusCode::UNIMPLEMENTED, "Read method not implemented.");
 }
 grpc::Status SpannerProvider::Write(const WriteRequest* request, WriteResponse* response) {
-  return grpc::Status(grpc::StatusCode::UNIMPLEMENTED, "");
+  return grpc::Status(grpc::StatusCode::UNIMPLEMENTED, "Write method not implemented.");
 }
 grpc::Status SpannerProvider::Delete(const DeleteRequest* request, DeleteResponse* response) {
   return grpc::Status(grpc::StatusCode::UNIMPLEMENTED, "");

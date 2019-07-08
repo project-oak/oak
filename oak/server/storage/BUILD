@@ -44,6 +44,7 @@ cc_library(
         "//oak/proto:storage_cc_grpc",
         "//oak/server:channel",
         "@com_google_absl//absl/types:span",
+        "@com_google_asylo//asylo/util:logging",
     ],
 )
 

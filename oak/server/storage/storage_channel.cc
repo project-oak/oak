@@ -18,6 +18,10 @@
 
 namespace oak {
 
+static std::string GetStorageId(const std::string& storage_name) {
+  // TODO: Generate name-based UUID.
+  return storage_name;
+}
 StorageChannel::StorageChannel(std::unique_ptr<Storage::Stub> storage_service)
     : storage_service_(std::move(storage_service)) {}
 
@@ -31,31 +35,43 @@ uint32_t StorageChannel::Write(absl::Span<const char> request_data) {
 
   switch (operation_request.operation_case()) {
     case StorageOperationRequest::kReadRequest: {
+      operation_request.mutable_read_request()->set_storage_id(
+          GetStorageId(operation_request.storage_name()));
       status = storage_service_->Read(&context, operation_request.read_request(),
                                       operation_response.mutable_read_response());
       break;
     }
     case StorageOperationRequest::kWriteRequest: {
+      operation_request.mutable_write_request()->set_storage_id(
+          GetStorageId(operation_request.storage_name()));
       status = storage_service_->Write(&context, operation_request.write_request(),
                                        operation_response.mutable_write_response());
       break;
     }
     case StorageOperationRequest::kDeleteRequest: {
+      operation_request.mutable_delete_request()->set_storage_id(
+          GetStorageId(operation_request.storage_name()));
       status = storage_service_->Delete(&context, operation_request.delete_request(),
                                         operation_response.mutable_delete_response());
       break;
     }
     case StorageOperationRequest::kBeginRequest: {
+      operation_request.mutable_begin_request()->set_storage_id(
+          GetStorageId(operation_request.storage_name()));
       status = storage_service_->Begin(&context, operation_request.begin_request(),
                                        operation_response.mutable_begin_response());
       break;
     }
     case StorageOperationRequest::kCommitRequest: {
+      operation_request.mutable_commit_request()->set_storage_id(
+          GetStorageId(operation_request.storage_name()));
       status = storage_service_->Commit(&context, operation_request.commit_request(),
                                         operation_response.mutable_commit_response());
       break;
     }
     case StorageOperationRequest::kRollbackRequest: {
+      operation_request.mutable_rollback_request()->set_storage_id(
+          GetStorageId(operation_request.storage_name()));
       status = storage_service_->Rollback(&context, operation_request.rollback_request(),
                                           operation_response.mutable_rollback_response());
       break;

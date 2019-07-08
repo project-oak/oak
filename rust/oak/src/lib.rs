@@ -23,10 +23,16 @@ extern crate protobuf;
 use byteorder::WriteBytesExt;
 use proto::oak_api::{ChannelHandle, OakStatus};
 use protobuf::{Message, ProtobufEnum};
+use std::cell::RefCell;
+
+mod proto;
+
+use proto::storage::{
+    DeleteRequest, ReadRequest, StorageOperationRequest, StorageOperationResponse, WriteRequest,
+};
 use std::io;
 use std::io::Write;
 
-pub mod proto;
 #[cfg(test)]
 mod tests;
 
@@ -67,6 +73,38 @@ type Handle = u64;
 
 /// Map an OakStatus to the nearest available std::io::Result.
 fn result_from_status<T>(status: Option<OakStatus>, val: T) -> std::io::Result<T> {
+// Keep in sync with /oak/server/oak_node.h.
+pub const LOGGING_CHANNEL_HANDLE: Handle = 1;
+pub const GRPC_IN_CHANNEL_HANDLE: Handle = 2;
+pub const GRPC_OUT_CHANNEL_HANDLE: Handle = 3;
+
+// Status values returned across the host function interface
+#[derive(Debug, PartialEq)]
+pub enum Status {
+    Ok,
+    BadHandle,
+    InvalidArgs,
+    ChannelClosed,
+    BufferTooSmall,
+    OutOfRange,
+    Unknown(i32),
+}
+
+fn status_from_i32(raw: i32) -> Status {
+    // Keep in sync with /oak/server/status.h
+    match raw {
+        0 => Status::Ok,
+        1 => Status::BadHandle,
+        2 => Status::InvalidArgs,
+        3 => Status::ChannelClosed,
+        4 => Status::BufferTooSmall,
+        5 => Status::OutOfRange,
+        _ => Status::Unknown(raw),
+    }
+}
+
+/// Map a host function status to the nearest available std::io::Result.
+fn result_from_status<T>(status: Status, val: T) -> std::io::Result<T> {
     match status {
         Some(OakStatus::OAK_STATUS_UNSPECIFIED) => Err(io::Error::new(
             io::ErrorKind::Other,
@@ -303,4 +341,96 @@ fn set_panic_hook() {
             file, line, msg
         );
     }));
+}
+
+#[no_mangle]
+pub extern "C" fn oak_handle_grpc_call() {
+    NODE.with(|node| match *node.borrow_mut() {
+        Some(ref mut node) => {
+            let mut grpc_method_channel = ReceiveChannelHalf::new(GRPC_METHOD_NAME_CHANNEL_HANDLE);
+            let mut buf = Vec::<u8>::with_capacity(256);
+            grpc_method_channel.read_message(&mut buf).unwrap();
+            let grpc_method_name = String::from_utf8_lossy(&buf);
+            let mut grpc_pair = ChannelPair::new(GRPC_IN_CHANNEL_HANDLE, GRPC_OUT_CHANNEL_HANDLE);
+            node.invoke(&grpc_method_name, &mut grpc_pair);
+        }
+        None => {
+            writeln!(logging_channel(), "gRPC call with no loaded Node").unwrap();
+            panic!("gRPC call with no loaded Node");
+        }
+    });
+}
+
+/// Return whether an Oak Node is currently available.
+pub fn have_node() -> bool {
+    NODE.with(|node| (*node.borrow()).is_some())
+}
+
+#[test]
+fn reset_node() {
+    NODE.with(|node| {
+        *node.borrow_mut() = None;
+    })
+}
+
+pub fn execute_storage_operation(
+    operation_request: &StorageOperationRequest,
+) -> StorageOperationResponse {
+    writeln!(
+        logging_channel(),
+        "StorageOperationRequest: {}",
+        protobuf::text_format::print_to_string(operation_request)
+    )
+    .unwrap();
+
+    let mut storage_channel = Channel::new(STORAGE_CHANNEL_HANDLE);
+    operation_request
+        .write_to_writer(&mut storage_channel)
+        .unwrap();
+    let response: StorageOperationResponse =
+        protobuf::parse_from_reader(&mut storage_channel).unwrap();
+    writeln!(
+        logging_channel(),
+        "StorageOperationResponse: {}",
+        protobuf::text_format::print_to_string(&response)
+    )
+    .unwrap();
+
+    return response;
+}
+
+pub fn storage_read(storage_name: &Vec<u8>, name: &Vec<u8>) -> Vec<u8> {
+    let mut read_request = ReadRequest::new();
+    read_request.name = name.clone();
+
+    let mut operation_request = StorageOperationRequest::new();
+    operation_request.storage_name = storage_name.clone();
+    operation_request.set_read_request(read_request);
+
+    let operation_response = execute_storage_operation(&operation_request);
+
+    return operation_response.get_read_response().get_value().to_vec();
+}
+
+pub fn storage_write(storage_name: &Vec<u8>, name: &Vec<u8>, value: &Vec<u8>) {
+    let mut write_request = WriteRequest::new();
+    write_request.name = name.clone();
+    write_request.value = value.clone();
+
+    let mut operation_request = StorageOperationRequest::new();
+    operation_request.storage_name = storage_name.clone();
+    operation_request.set_write_request(write_request);
+
+    execute_storage_operation(&operation_request);
+}
+
+pub fn storage_delete(storage_name: &Vec<u8>, name: &Vec<u8>) {
+    let mut delete_request = DeleteRequest::new();
+    delete_request.name = name.clone();
+
+    let mut operation_request = StorageOperationRequest::new();
+    operation_request.storage_name = storage_name.clone();
+    operation_request.set_delete_request(delete_request);
+
+    execute_storage_operation(&operation_request);
 }
