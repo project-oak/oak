@@ -50,17 +50,27 @@ message Node {
 // therefore include a single GrpcServerNode, and should configure a pair of
 // Channels (send + receive) between that Node and a WebAssemblyNode that
 // handles the gRPC requests.
+//
+// This Node defines the following implicit Ports:
+// - `request`: OUT port on which incoming requests are sent to a WebAssembly
+//   processing Node
+// - `response`: IN port on which outgoing responses are sent back by the
+//   WebAssembly processing Node
 message GrpcServerNode {
 }
 
 // A pseudo-Node that logs anything that is sent to it on the machine on which
 // the Application is running.
 //
-// This is unsafe and only to be used for testing, since it leaks all the data
-// that it handles.
+// This Node is unsafe and only to be used for testing, since it leaks all the
+// data that it handles.
+//
+// This Node defines the following implicit Ports:
+// - `in`: IN port on which other Nodes send entries to log
 message LogNode {
 }
 
+// A Node that runs the provided WebAssembly code.
 message WebAssemblyNode {
   // The compiled code of the Oak Module to instantiate, in WebAssembly binary
   // format.
@@ -68,26 +78,46 @@ message WebAssemblyNode {
   // TODO: Replace this with just a hash of the bytecode to instantiate, and
   // pass the actual bytecode to the Oak Manager in some other way.
   bytes module_bytes = 1;
+
+  // The set of Ports available to the Node, which it can use to communicate
+  // with other Nodes or with the System.
+  // They may be of different types and specified in any order.
+  repeated Port ports = 2;
+}
+
+// A Port represents an endpoint within a Node that can be connected via a
+// Channel to the Port of another Node.
+//
+// Ports are of two types: IN or OUT, based on whether they are used to read or
+// write to the connected Channel, respectively.
+message Port {
+  string name = 1;
+
+  enum Type {
+    TYPE_UNSPECIFIED = 0;
+    IN = 1;
+    OUT = 2;
+  };
+  Type type = 2;
 }
 
 // A Channel represents a unidirectional communication primitive between Nodes.
 //
-// There may be multiple Channels connecting the same (source, destination)
-// pair.
+// Each Channel connects the OUT Port of a Node to the IN Port of another
+// (potentially the same) Node.
 message Channel {
-  // The name of the Channel. Must be unique within the Application.
-  //
-  // This is used to identify the Channel from the point of view of the Nodes
-  // that it connects.
-  string channel_name = 1;
+  // A unique identifier for a Port on a Node. This does not specify the type
+  // of the Port.
+  message Endpoint {
+    string node_name = 1;
+    string port_name = 2;
+  }
 
-  // The name of the Node that can write to this Channel.
-  // Must correspond to the name of a Node in the Application.
-  string source_node_name = 2;
+  // The OUT Port of the source Node.
+  Endpoint source_endpoint = 1;
 
-  // The name of the Node that can read from this Channel.
-  // Must correspond to the name of a Node in the Application.
-  string destination_node_name = 3;
+  // The IN Port of the destination Node.
+  Endpoint destination_endpoint = 2;
 }
 
 message CreateApplicationRequest {
