@@ -57,10 +57,14 @@ static wabt::interp::TypedValue MakeI64(uint64_t v) {
 
 static void LogHostFunctionCall(const wabt::interp::HostFunc* func,
                                 const wabt::interp::TypedValues& args) {
-  LOG(INFO) << "Called host function: " << func->module_name << "." << func->field_name;
+  std::stringstream params;
+  bool first = true;
   for (auto const& arg : args) {
-    LOG(INFO) << "Arg: " << wabt::interp::TypedValueToString(arg);
+    params << std::string(first ? "" : ", ") << wabt::interp::TypedValueToString(arg);
+    first = false;
   }
+  LOG(INFO) << "Called host function: " << func->module_name << "." << func->field_name << "("
+            << params.str() << ")";
 }
 
 static wabt::Result ReadModule(const std::string module_bytes, wabt::interp::Environment* env,
