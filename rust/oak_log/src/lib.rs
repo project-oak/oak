@@ -19,6 +19,9 @@
 extern crate log;
 extern crate oak;
 
+#[cfg(test)]
+mod tests;
+
 use log::{Level, Log, Metadata, Record, SetLoggerError};
 use std::io::Write;
 

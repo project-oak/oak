@@ -71,6 +71,7 @@ version = "0.1.0"
 dependencies = [
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "oak 0.1.0",
+ "oak_tests 0.1.0",
 ]
 
 [[package]]

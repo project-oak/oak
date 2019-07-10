@@ -7,3 +7,6 @@ edition = "2018"
 [dependencies]
 oak = { path = "../oak" }
 log = { version = "^0.4.0", features = ["std"] }
+
+[dev-dependencies]
+oak_tests = { path = "../oak_tests" }
