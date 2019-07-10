@@ -36,6 +36,13 @@ http_archive(
     sha256 = "9dd8063d1a8002f6cc729f0115e2140a2eb1b14a10c111411f6b554e14ee739c",
 )
 
+# Google Test
+git_repository(
+    name = "gtest",
+    remote = "https://github.com/google/googletest",
+    commit = "2fe3bd994b3189899d93f1d5a881e725e046fdc2",
+)
+
 # Google Protocol Buffers.
 http_archive(
     name = "com_google_protobuf",
@@ -95,4 +102,3 @@ sgx_deps()
 
 load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
 grpc_deps()
-
