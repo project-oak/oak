@@ -39,6 +39,14 @@ fn test_write_message() {
 }
 
 #[test]
+fn test_write_message_failure() {
+    let mut send_channel = SendChannelHalf::new(123);
+    let data = [0x44, 0x4d, 0x44];
+    oak_tests::set_status(Some(99));
+    assert_matches!(send_channel.write_message(&data), Err(_));
+}
+
+#[test]
 fn test_write() {
     writeln!(logging_channel(), "ABC").unwrap();
     assert_eq!("ABC\n", oak_tests::last_message());
@@ -59,6 +67,24 @@ fn test_read_message() {
     let mut big_buf = Vec::with_capacity(100);
     assert_matches!(rcv.read_message(&mut big_buf), Ok(3));
     assert_eq!(data.to_vec(), big_buf);
+}
+
+#[test]
+fn test_read_message_failure() {
+    let mut rcv = ReceiveChannelHalf::new(123);
+    let mut buf = Vec::with_capacity(100);
+    oak_tests::set_status(Some(99));
+    assert_matches!(rcv.read_message(&mut buf), Err(_));
+}
+
+#[test]
+fn test_read_message_internal_failure() {
+    let mut rcv = ReceiveChannelHalf::new(123);
+    let mut buf = Vec::with_capacity(100);
+
+    // Set buffer too small but don't set actual size, so the retry gets confused.
+    oak_tests::set_status(Some(oak_tests::STATUS_ERR_BUFFER_TOO_SMALL));
+    assert_matches!(rcv.read_message(&mut buf), Err(_));
 }
 
 #[test]
