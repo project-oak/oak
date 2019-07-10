@@ -24,6 +24,12 @@ use std::io;
 use std::io::Write;
 
 mod proto;
+#[cfg(test)]
+mod tests;
+
+#[cfg(test)]
+#[macro_use]
+extern crate assert_matches;
 
 pub type GrpcResult<T> = Result<T, proto::status::Status>;
 
@@ -36,6 +42,7 @@ pub const GRPC_IN_CHANNEL_HANDLE: Handle = 3;
 pub const GRPC_OUT_CHANNEL_HANDLE: Handle = 4;
 
 // Status values returned across the host function interface
+#[derive(Debug, PartialEq)]
 pub enum Status {
     Ok,
     BadHandle,
