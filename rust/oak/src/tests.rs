@@ -45,7 +45,21 @@ fn test_write() {
     assert_matches!(logging_channel().flush(), Ok(()));
 }
 
-// TODO: test_read_message
+#[test]
+fn test_read_message() {
+    let mut send = SendChannelHalf::new(123);
+    let data = [0x44, 0x4d, 0x44];
+    assert_matches!(send.write_message(&data), Ok(()));
+
+    let mut rcv = ReceiveChannelHalf::new(123);
+    let mut buf = Vec::with_capacity(1);
+    assert_matches!(rcv.read_message(&mut buf), Ok(3));
+    assert_eq!(data.to_vec(), buf);
+
+    let mut big_buf = Vec::with_capacity(100);
+    assert_matches!(rcv.read_message(&mut big_buf), Ok(3));
+    assert_eq!(data.to_vec(), big_buf);
+}
 
 #[test]
 fn test_channel_pair() {
