@@ -74,6 +74,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_tests"
+version = "0.1.0"
+dependencies = [
+ "oak 0.1.0",
+ "oak_derive 0.1.0",
+]
+
+[[package]]
 name = "proc-macro2"
 version = "0.4.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
