@@ -269,3 +269,8 @@ pub extern "C" fn oak_handle_grpc_call() {
         }
     });
 }
+
+/// Return whether an Oak Node is currently available.
+pub fn have_node() -> bool {
+    NODE.with(|node| (*node.borrow()).is_some())
+}
