@@ -58,13 +58,6 @@ static void WriteI32(wabt::interp::Environment* env, const uint32_t offset, cons
   base[3] = (v >> 24) & 0xff;
 }
 
-// Creates a TypedValue of type i64 with the specified inner value.
-static wabt::interp::TypedValue MakeI64(uint64_t v) {
-  wabt::interp::TypedValue tv(wabt::Type::I64);
-  tv.set_i64(v);
-  return tv;
-}
-
 static void LogHostFunctionCall(const wabt::interp::HostFunc* func,
                                 const wabt::interp::TypedValues& args) {
   std::stringstream params;
