@@ -26,7 +26,7 @@ std::ostream& operator<<(std::ostream& os, const wabt::Type& t) {
 
 std::ostream& operator<<(std::ostream& os, const std::vector<wabt::Type>& vt) {
   os << "(";
-  for (int ii = 0; ii < vt.size(); ii++) {
+  for (size_t ii = 0; ii < vt.size(); ii++) {
     if (ii > 0) {
       os << ", ";
     }
