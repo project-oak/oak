@@ -73,6 +73,17 @@ cc_library(
     ],
 )
 
+cc_test(
+    name = "oak_node_test",
+    srcs = [
+        "wabt_output_test.cc",
+    ],
+    deps = [
+        ":oak_node",
+        "@gtest//:gtest_main",
+    ],
+)
+
 cc_library(
     name = "module_invocation",
     srcs = ["module_invocation.cc"],
