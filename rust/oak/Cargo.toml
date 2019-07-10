@@ -10,3 +10,7 @@ log = "*"
 
 [build-dependencies]
 protoc-rust = "*"
+
+[dev-dependencies]
+assert_matches = "*"
+oak_tests = { path = "../oak_tests" }
