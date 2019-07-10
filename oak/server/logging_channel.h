@@ -27,7 +27,8 @@ class LoggingChannelHalf final : public ChannelHalf {
   uint32_t Write(absl::Span<const char> data) override {
     std::string log_message(data.cbegin(), data.cend());
     LOG(INFO) << "LOG: " << log_message;
-  };
+    return data.size();
+  }
 };
 
 }  // namespace oak
