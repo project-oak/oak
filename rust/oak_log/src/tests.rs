@@ -18,7 +18,7 @@ extern crate oak_tests;
 
 use crate::OakChannelLogger;
 use log::{Level, LevelFilter, Log, Metadata, Record};
-use oak_tests::last_message;
+use oak_tests::last_message_as_string;
 
 #[test]
 fn test_enabled() {
@@ -67,7 +67,7 @@ fn test_log() {
         .module_path(Some("server"))
         .build();
     logger.log(&r1);
-    assert_eq!("", last_message());
+    assert_eq!("", last_message_as_string());
 
     let error = Metadata::builder()
         .level(Level::Error)
@@ -81,7 +81,7 @@ fn test_log() {
         .module_path(Some("server"))
         .build();
     logger.log(&r2);
-    assert_eq!("ERROR  app.rs : 433 : Error!\n", last_message());
+    assert_eq!("ERROR  app.rs : 433 : Error!\n", last_message_as_string());
 }
 
 #[test]
