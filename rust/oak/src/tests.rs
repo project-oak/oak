@@ -35,21 +35,21 @@ fn test_write_message() {
     let mut send_channel = SendChannelHalf::new(123);
     let data = [0x44, 0x4d, 0x44];
     assert_matches!(send_channel.write_message(&data), Ok(()));
-    assert_eq!("DMD", oak_tests::last_message());
+    assert_eq!("DMD", oak_tests::last_message_as_string());
 }
 
 #[test]
 fn test_write_message_failure() {
     let mut send_channel = SendChannelHalf::new(123);
     let data = [0x44, 0x4d, 0x44];
-    oak_tests::set_status(Some(99));
+    oak_tests::set_write_status(Some(99));
     assert_matches!(send_channel.write_message(&data), Err(_));
 }
 
 #[test]
 fn test_write() {
     writeln!(logging_channel(), "ABC").unwrap();
-    assert_eq!("ABC\n", oak_tests::last_message());
+    assert_eq!("ABC\n", oak_tests::last_message_as_string());
     assert_matches!(logging_channel().flush(), Ok(()));
 }
 
@@ -57,6 +57,7 @@ fn test_write() {
 fn test_read_message() {
     let mut send = SendChannelHalf::new(123);
     let data = [0x44, 0x4d, 0x44];
+    assert_matches!(send.write_message(&data), Ok(()));
     assert_matches!(send.write_message(&data), Ok(()));
 
     let mut rcv = ReceiveChannelHalf::new(123);
@@ -73,7 +74,7 @@ fn test_read_message() {
 fn test_read_message_failure() {
     let mut rcv = ReceiveChannelHalf::new(123);
     let mut buf = Vec::with_capacity(100);
-    oak_tests::set_status(Some(99));
+    oak_tests::set_read_status(Some(99));
     assert_matches!(rcv.read_message(&mut buf), Err(_));
 }
 
@@ -83,7 +84,7 @@ fn test_read_message_internal_failure() {
     let mut buf = Vec::with_capacity(100);
 
     // Set buffer too small but don't set actual size, so the retry gets confused.
-    oak_tests::set_status(Some(oak_tests::STATUS_ERR_BUFFER_TOO_SMALL));
+    oak_tests::set_read_status(Some(oak_tests::STATUS_ERR_BUFFER_TOO_SMALL));
     assert_matches!(rcv.read_message(&mut buf), Err(_));
 }
 
@@ -92,7 +93,7 @@ fn test_channel_pair() {
     let mut pair = ChannelPair::new(1, 2);
     let data = [0x44, 0x44];
     assert_matches!(pair.send.write_message(&data), Ok(()));
-    assert_eq!("DD", oak_tests::last_message());
+    assert_eq!("DD", oak_tests::last_message_as_string());
 }
 
 struct TestNode;
