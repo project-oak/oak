@@ -1,8 +1,8 @@
 [workspace]
 
 members = [
-    "hello_world",
-    "private_set_intersection",
-    "running_average",
-    "machine_learning",
+    "hello_world/module/rust",
+    "private_set_intersection/module/rust",
+    "running_average/module/rust",
+    "machine_learning/module/rust",
 ]
