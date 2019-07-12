@@ -1,0 +1,17 @@
+[package]
+name = "hello_world"
+version = "0.1.0"
+authors = ["Tiziano Santoro <tzn@google.com>"]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+log = "*"
+oak = { path = "../../rust/oak" }
+oak_derive = { path = "../../rust/oak_derive" }
+oak_log = { path = "../../rust/oak_log" }
+protobuf = "*"
+
+[build-dependencies]
+protoc-rust-grpc = { path = "../../third_party/grpc-rust/protoc-rust-grpc" }

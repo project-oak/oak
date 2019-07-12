@@ -26,18 +26,18 @@ done
 readonly NAME="${*:$OPTIND:1}"
 
 if [[ -z "${NAME}" ]]; then
-    readonly EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type f -name Cargo.toml | cut -d'/' -f2)"
+    readonly EXAMPLES="$(find examples -mindepth 2 -maxdepth 2 -type f -name Cargo.toml | cut -d'/' -f2)"
     PS3='Choose example to build: '
 
     readarray -t options <<< "$EXAMPLES"
     select opt in "${options[@]}";
     do
         echo "Building $opt"
-        cargo build --release --target=wasm32-unknown-unknown --manifest-path="examples/$opt/module/rust/Cargo.toml"
+        cargo build --release --target=wasm32-unknown-unknown --manifest-path="examples/$opt/Cargo.toml"
         bazel build --compilation_mode="$COMPILATION_MODE" "//examples/$opt/client"
         break
     done
 else
-    cargo build --release --target=wasm32-unknown-unknown --manifest-path="examples/$NAME/module/rust/Cargo.toml"
+    cargo build --release --target=wasm32-unknown-unknown --manifest-path="examples/$NAME/Cargo.toml"
     bazel build --compilation_mode="$COMPILATION_MODE" "//examples/$NAME/client"
 fi

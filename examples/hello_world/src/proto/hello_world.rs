@@ -22,42 +22,53 @@ use protobuf::Message as Message_imported_for_functions;
 use protobuf::ProtobufEnum as ProtobufEnum_imported_for_functions;
 
 #[derive(PartialEq,Clone,Default)]
-pub struct SubmitSampleRequest {
+pub struct HelloRequest {
     // message fields
-    pub value: u64,
+    pub greeting: ::std::string::String,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
 }
 
-impl<'a> ::std::default::Default for &'a SubmitSampleRequest {
-    fn default() -> &'a SubmitSampleRequest {
-        <SubmitSampleRequest as ::protobuf::Message>::default_instance()
+impl<'a> ::std::default::Default for &'a HelloRequest {
+    fn default() -> &'a HelloRequest {
+        <HelloRequest as ::protobuf::Message>::default_instance()
     }
 }
 
-impl SubmitSampleRequest {
-    pub fn new() -> SubmitSampleRequest {
+impl HelloRequest {
+    pub fn new() -> HelloRequest {
         ::std::default::Default::default()
     }
 
-    // uint64 value = 1;
+    // string greeting = 1;
 
 
-    pub fn get_value(&self) -> u64 {
-        self.value
+    pub fn get_greeting(&self) -> &str {
+        &self.greeting
     }
-    pub fn clear_value(&mut self) {
-        self.value = 0;
+    pub fn clear_greeting(&mut self) {
+        self.greeting.clear();
     }
 
     // Param is passed by value, moved
-    pub fn set_value(&mut self, v: u64) {
-        self.value = v;
+    pub fn set_greeting(&mut self, v: ::std::string::String) {
+        self.greeting = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_greeting(&mut self) -> &mut ::std::string::String {
+        &mut self.greeting
+    }
+
+    // Take field
+    pub fn take_greeting(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.greeting, ::std::string::String::new())
     }
 }
 
-impl ::protobuf::Message for SubmitSampleRequest {
+impl ::protobuf::Message for HelloRequest {
     fn is_initialized(&self) -> bool {
         true
     }
@@ -67,11 +78,7 @@ impl ::protobuf::Message for SubmitSampleRequest {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    let tmp = is.read_uint64()?;
-                    self.value = tmp;
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.greeting)?;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -85,8 +92,8 @@ impl ::protobuf::Message for SubmitSampleRequest {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        if self.value != 0 {
-            my_size += ::protobuf::rt::value_size(1, self.value, ::protobuf::wire_format::WireTypeVarint);
+        if !self.greeting.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.greeting);
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
@@ -94,8 +101,8 @@ impl ::protobuf::Message for SubmitSampleRequest {
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
-        if self.value != 0 {
-            os.write_uint64(1, self.value)?;
+        if !self.greeting.is_empty() {
+            os.write_string(1, &self.greeting)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -127,8 +134,8 @@ impl ::protobuf::Message for SubmitSampleRequest {
         Self::descriptor_static()
     }
 
-    fn new() -> SubmitSampleRequest {
-        SubmitSampleRequest::new()
+    fn new() -> HelloRequest {
+        HelloRequest::new()
     }
 
     fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
@@ -139,13 +146,13 @@ impl ::protobuf::Message for SubmitSampleRequest {
         unsafe {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
-                    "value",
-                    |m: &SubmitSampleRequest| { &m.value },
-                    |m: &mut SubmitSampleRequest| { &mut m.value },
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                    "greeting",
+                    |m: &HelloRequest| { &m.greeting },
+                    |m: &mut HelloRequest| { &mut m.greeting },
                 ));
-                ::protobuf::reflect::MessageDescriptor::new::<SubmitSampleRequest>(
-                    "SubmitSampleRequest",
+                ::protobuf::reflect::MessageDescriptor::new::<HelloRequest>(
+                    "HelloRequest",
                     fields,
                     file_descriptor_proto()
                 )
@@ -153,73 +160,84 @@ impl ::protobuf::Message for SubmitSampleRequest {
         }
     }
 
-    fn default_instance() -> &'static SubmitSampleRequest {
-        static mut instance: ::protobuf::lazy::Lazy<SubmitSampleRequest> = ::protobuf::lazy::Lazy {
+    fn default_instance() -> &'static HelloRequest {
+        static mut instance: ::protobuf::lazy::Lazy<HelloRequest> = ::protobuf::lazy::Lazy {
             lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const SubmitSampleRequest,
+            ptr: 0 as *const HelloRequest,
         };
         unsafe {
-            instance.get(SubmitSampleRequest::new)
+            instance.get(HelloRequest::new)
         }
     }
 }
 
-impl ::protobuf::Clear for SubmitSampleRequest {
+impl ::protobuf::Clear for HelloRequest {
     fn clear(&mut self) {
-        self.value = 0;
+        self.greeting.clear();
         self.unknown_fields.clear();
     }
 }
 
-impl ::std::fmt::Debug for SubmitSampleRequest {
+impl ::std::fmt::Debug for HelloRequest {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         ::protobuf::text_format::fmt(self, f)
     }
 }
 
-impl ::protobuf::reflect::ProtobufValue for SubmitSampleRequest {
+impl ::protobuf::reflect::ProtobufValue for HelloRequest {
     fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
         ::protobuf::reflect::ProtobufValueRef::Message(self)
     }
 }
 
 #[derive(PartialEq,Clone,Default)]
-pub struct GetAverageResponse {
+pub struct HelloResponse {
     // message fields
-    pub average: u64,
+    pub reply: ::std::string::String,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
 }
 
-impl<'a> ::std::default::Default for &'a GetAverageResponse {
-    fn default() -> &'a GetAverageResponse {
-        <GetAverageResponse as ::protobuf::Message>::default_instance()
+impl<'a> ::std::default::Default for &'a HelloResponse {
+    fn default() -> &'a HelloResponse {
+        <HelloResponse as ::protobuf::Message>::default_instance()
     }
 }
 
-impl GetAverageResponse {
-    pub fn new() -> GetAverageResponse {
+impl HelloResponse {
+    pub fn new() -> HelloResponse {
         ::std::default::Default::default()
     }
 
-    // uint64 average = 1;
+    // string reply = 1;
 
 
-    pub fn get_average(&self) -> u64 {
-        self.average
+    pub fn get_reply(&self) -> &str {
+        &self.reply
     }
-    pub fn clear_average(&mut self) {
-        self.average = 0;
+    pub fn clear_reply(&mut self) {
+        self.reply.clear();
     }
 
     // Param is passed by value, moved
-    pub fn set_average(&mut self, v: u64) {
-        self.average = v;
+    pub fn set_reply(&mut self, v: ::std::string::String) {
+        self.reply = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_reply(&mut self) -> &mut ::std::string::String {
+        &mut self.reply
+    }
+
+    // Take field
+    pub fn take_reply(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.reply, ::std::string::String::new())
     }
 }
 
-impl ::protobuf::Message for GetAverageResponse {
+impl ::protobuf::Message for HelloResponse {
     fn is_initialized(&self) -> bool {
         true
     }
@@ -229,11 +247,7 @@ impl ::protobuf::Message for GetAverageResponse {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    let tmp = is.read_uint64()?;
-                    self.average = tmp;
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.reply)?;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -247,8 +261,8 @@ impl ::protobuf::Message for GetAverageResponse {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        if self.average != 0 {
-            my_size += ::protobuf::rt::value_size(1, self.average, ::protobuf::wire_format::WireTypeVarint);
+        if !self.reply.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.reply);
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
@@ -256,8 +270,8 @@ impl ::protobuf::Message for GetAverageResponse {
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
-        if self.average != 0 {
-            os.write_uint64(1, self.average)?;
+        if !self.reply.is_empty() {
+            os.write_string(1, &self.reply)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -289,8 +303,8 @@ impl ::protobuf::Message for GetAverageResponse {
         Self::descriptor_static()
     }
 
-    fn new() -> GetAverageResponse {
-        GetAverageResponse::new()
+    fn new() -> HelloResponse {
+        HelloResponse::new()
     }
 
     fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
@@ -301,13 +315,13 @@ impl ::protobuf::Message for GetAverageResponse {
         unsafe {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
-                    "average",
-                    |m: &GetAverageResponse| { &m.average },
-                    |m: &mut GetAverageResponse| { &mut m.average },
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                    "reply",
+                    |m: &HelloResponse| { &m.reply },
+                    |m: &mut HelloResponse| { &mut m.reply },
                 ));
-                ::protobuf::reflect::MessageDescriptor::new::<GetAverageResponse>(
-                    "GetAverageResponse",
+                ::protobuf::reflect::MessageDescriptor::new::<HelloResponse>(
+                    "HelloResponse",
                     fields,
                     file_descriptor_proto()
                 )
@@ -315,45 +329,47 @@ impl ::protobuf::Message for GetAverageResponse {
         }
     }
 
-    fn default_instance() -> &'static GetAverageResponse {
-        static mut instance: ::protobuf::lazy::Lazy<GetAverageResponse> = ::protobuf::lazy::Lazy {
+    fn default_instance() -> &'static HelloResponse {
+        static mut instance: ::protobuf::lazy::Lazy<HelloResponse> = ::protobuf::lazy::Lazy {
             lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const GetAverageResponse,
+            ptr: 0 as *const HelloResponse,
         };
         unsafe {
-            instance.get(GetAverageResponse::new)
+            instance.get(HelloResponse::new)
         }
     }
 }
 
-impl ::protobuf::Clear for GetAverageResponse {
+impl ::protobuf::Clear for HelloResponse {
     fn clear(&mut self) {
-        self.average = 0;
+        self.reply.clear();
         self.unknown_fields.clear();
     }
 }
 
-impl ::std::fmt::Debug for GetAverageResponse {
+impl ::std::fmt::Debug for HelloResponse {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         ::protobuf::text_format::fmt(self, f)
     }
 }
 
-impl ::protobuf::reflect::ProtobufValue for GetAverageResponse {
+impl ::protobuf::reflect::ProtobufValue for HelloResponse {
     fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
         ::protobuf::reflect::ProtobufValueRef::Message(self)
     }
 }
 
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\x15running_average.proto\x12\x1coak.examples.running_average\x1a\x1bg\
-    oogle/protobuf/empty.proto\"+\n\x13SubmitSampleRequest\x12\x14\n\x05valu\
-    e\x18\x01\x20\x01(\x04R\x05value\".\n\x12GetAverageResponse\x12\x18\n\
-    \x07average\x18\x01\x20\x01(\x04R\x07average2\xc3\x01\n\x0eRunningAverag\
-    e\x12Y\n\x0cSubmitSample\x121.oak.examples.running_average.SubmitSampleR\
-    equest\x1a\x16.google.protobuf.Empty\x12V\n\nGetAverage\x12\x16.google.p\
-    rotobuf.Empty\x1a0.oak.examples.running_average.GetAverageResponseb\x06p\
-    roto3\
+    \n\x17proto/hello_world.proto\x12\x18oak.examples.hello_world\"*\n\x0cHe\
+    lloRequest\x12\x1a\n\x08greeting\x18\x01\x20\x01(\tR\x08greeting\"%\n\rH\
+    elloResponse\x12\x14\n\x05reply\x18\x01\x20\x01(\tR\x05reply2\x95\x03\n\
+    \nHelloWorld\x12[\n\x08SayHello\x12&.oak.examples.hello_world.HelloReque\
+    st\x1a'.oak.examples.hello_world.HelloResponse\x12b\n\rLotsOfReplies\x12\
+    &.oak.examples.hello_world.HelloRequest\x1a'.oak.examples.hello_world.He\
+    lloResponse0\x01\x12d\n\x0fLotsOfGreetings\x12&.oak.examples.hello_world\
+    .HelloRequest\x1a'.oak.examples.hello_world.HelloResponse(\x01\x12`\n\tB\
+    idiHello\x12&.oak.examples.hello_world.HelloRequest\x1a'.oak.examples.he\
+    llo_world.HelloResponse(\x010\x01b\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {
