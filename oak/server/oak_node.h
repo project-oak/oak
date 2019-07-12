@@ -51,7 +51,7 @@ class OakNode final : public Application::Service {
  private:
   // Clients should construct OakNode instances with Create() (which
   // can fail).
-  OakNode(const std::string& module);
+  OakNode();
 
   grpc::Status GetAttestation(grpc::ServerContext* context, const GetAttestationRequest* request,
                               GetAttestationResponse* response) override;

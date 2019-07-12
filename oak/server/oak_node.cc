@@ -85,14 +85,8 @@ static wabt::Result ReadModule(const std::string module_bytes, wabt::interp::Env
   wabt::ReadBinaryOptions options(s_features, log_stream, kReadDebugNames, kStopOnFirstError,
                                   kFailOnCustomSectionError);
 
-  result = wabt::ReadBinaryInterp(env, module_bytes.data(), module_bytes.size(), options, errors,
-                                  out_module);
-
-  if (Succeeded(result)) {
-    // env->DisassembleModule(s_stdout_stream.get(), *out_module);
-  }
-
-  return result;
+  return wabt::ReadBinaryInterp(env, module_bytes.data(), module_bytes.size(), options, errors,
+                                out_module);
 }
 
 // Describes an expected export from an Oak module.
@@ -170,12 +164,12 @@ static bool CheckModuleExports(wabt::interp::Environment* env,
   return rc;
 }
 
-OakNode::OakNode(const std::string& module) : Service() {}
+OakNode::OakNode() : Service() {}
 
 std::unique_ptr<OakNode> OakNode::Create(const std::string& module) {
   LOG(INFO) << "Creating Oak Node";
 
-  std::unique_ptr<OakNode> node = absl::WrapUnique(new OakNode(module));
+  std::unique_ptr<OakNode> node = absl::WrapUnique(new OakNode());
   node->InitEnvironment(&node->env_);
   LOG(INFO) << "Host func count: " << node->env_.GetFuncCount();
 
