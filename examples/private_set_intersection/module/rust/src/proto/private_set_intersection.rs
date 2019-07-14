@@ -358,14 +358,14 @@ impl ::protobuf::reflect::ProtobufValue for GetIntersectionResponse {
 }
 
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n$proto/private_set_intersection.proto\x12%oak.examples.private_set_int\
-    ersection\x1a\x1bgoogle/protobuf/empty.proto\"*\n\x10SubmitSetRequest\
-    \x12\x16\n\x06values\x18\x01\x20\x03(\tR\x06values\"1\n\x17GetIntersecti\
-    onResponse\x12\x16\n\x06values\x18\x01\x20\x03(\tR\x06values2\xe1\x01\n\
-    \x16PrivateSetIntersection\x12\\\n\tSubmitSet\x127.oak.examples.private_\
-    set_intersection.SubmitSetRequest\x1a\x16.google.protobuf.Empty\x12i\n\
-    \x0fGetIntersection\x12\x16.google.protobuf.Empty\x1a>.oak.examples.priv\
-    ate_set_intersection.GetIntersectionResponseb\x06proto3\
+    \n\x1eprivate_set_intersection.proto\x12%oak.examples.private_set_inters\
+    ection\x1a\x1bgoogle/protobuf/empty.proto\"*\n\x10SubmitSetRequest\x12\
+    \x16\n\x06values\x18\x01\x20\x03(\tR\x06values\"1\n\x17GetIntersectionRe\
+    sponse\x12\x16\n\x06values\x18\x01\x20\x03(\tR\x06values2\xe1\x01\n\x16P\
+    rivateSetIntersection\x12\\\n\tSubmitSet\x127.oak.examples.private_set_i\
+    ntersection.SubmitSetRequest\x1a\x16.google.protobuf.Empty\x12i\n\x0fGet\
+    Intersection\x12\x16.google.protobuf.Empty\x1a>.oak.examples.private_set\
+    _intersection.GetIntersectionResponseb\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {
