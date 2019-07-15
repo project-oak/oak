@@ -31,4 +31,5 @@ script:
   - |
     if [[ "${EXAMPLES_TEST}" == "true" ]]; then
       ./scripts/run_examples
+      ./scripts/docker_run ./scripts/check_generated
     fi
