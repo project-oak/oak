@@ -22,9 +22,10 @@ RUN curl https://sh.rustup.rs -sSf > /tmp/rustup
 RUN sh /tmp/rustup -y --default-toolchain=none
 ENV PATH "$RUSTUP_DIR/bin:$PATH"
 RUN rustup --version
+RUN chmod a+rwx $RUSTUP_DIR
 
 # Install Rust toolchain.
-ARG RUST_VERSION=1.35.0
+ARG RUST_VERSION=1.36.0
 RUN rustup toolchain install $RUST_VERSION
 RUN rustup default $RUST_VERSION
 
