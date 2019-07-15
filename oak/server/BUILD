@@ -76,12 +76,23 @@ cc_library(
 cc_test(
     name = "oak_node_test",
     srcs = [
+        "oak_node_test.cc",
         "wabt_output_test.cc",
+    ],
+    data = [
+        ":testdata_wasm",
     ],
     deps = [
         ":oak_node",
         "@gtest//:gtest_main",
     ],
+)
+
+# Each file is generated from the corresponding %.wat file with:
+#  wat2wasm %.wat > %.wasm
+filegroup(
+    name = "testdata_wasm",
+    srcs = glob(["testdata/*.wasm"]),
 )
 
 cc_library(
