@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o xtrace
+
+readonly SCRIPTS_DIR="$(dirname "$0")"
+
+# Check that any generated files match those that are checked in.
+git diff --exit-code -- . ':!*.bazelrc'
