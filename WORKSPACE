@@ -85,8 +85,8 @@ http_archive(
 # WebAssembly Binary Toolkit (forked by tiziano88).
 git_repository(
     name = "wabt",
-    commit = "2d31cda394fc67c7969a9bd44066cb8eafa82e23",
-    remote = "https://github.com/tiziano88/wabt",
+    commit = "910d762920ac7575d7e3e04791a9d9c0ae07f8cd",
+    remote = "https://github.com/daviddrysdale/wabt",
 )
 
 load(
