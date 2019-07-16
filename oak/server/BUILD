@@ -24,6 +24,7 @@ load(
     "sim_enclave",
 )
 load("@linux_sgx//:sgx_sdk.bzl", "sgx_enclave_configuration")
+load("//oak/server:wabt.bzl", "wasm_group")
 
 cc_library(
     name = "oak_manager",
@@ -80,7 +81,7 @@ cc_test(
         "wabt_output_test.cc",
     ],
     data = [
-        ":testdata_wasm",
+        ":testdata",
     ],
     deps = [
         ":oak_node",
@@ -88,11 +89,18 @@ cc_test(
     ],
 )
 
-# Each file is generated from the corresponding %.wat file with:
-#  wat2wasm %.wat > %.wasm
-filegroup(
-    name = "testdata_wasm",
-    srcs = glob(["testdata/*.wasm"]),
+wasm_group(
+    name = "testdata",
+    srcs = [
+        "testdata/empty.wat",
+        "testdata/minimal.wat",
+        "testdata/minimal_fini.wat",
+        "testdata/missing_handle.wat",
+        "testdata/missing_init.wat",
+        "testdata/wrong_fini.wat",
+        "testdata/wrong_handle.wat",
+        "testdata/wrong_init.wat",
+    ],
 )
 
 cc_library(
