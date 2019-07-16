@@ -102,3 +102,12 @@ sgx_deps()
 
 load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
 grpc_deps()
+
+
+# clang + llvm 8.0
+http_archive(
+    name = "clang_llvm",
+    build_file = "//toolchain:clang_llvm.BUILD",
+    strip_prefix = "clang+llvm-8.0.0-x86_64-linux-gnu-ubuntu-18.04",
+    url = "http://releases.llvm.org/8.0.0/clang+llvm-8.0.0-x86_64-linux-gnu-ubuntu-18.04.tar.xz",
+)
