@@ -17,6 +17,8 @@
 #ifndef OAK_SERVER_STATUS_H_
 #define OAK_SERVER_STATUS_H_
 
+#include <stdint.h>
+
 namespace oak {
 
 using OakStatus = int32_t;
