@@ -6,6 +6,7 @@ set -o xtrace
 readonly SCRIPTS_DIR="$(dirname "$0")"
 readonly OAK_REMOTE_CACHE_KEY='./.oak_remote_cache_key.json'
 
+(set -x; 
 # Do we have a JSON key for the remote cache.
 # https://docs.bazel.build/versions/master/remote-caching.html#google-cloud-storage
 if [[ ! -f "$OAK_REMOTE_CACHE_KEY" ]]; then
@@ -14,6 +15,7 @@ if [[ ! -f "$OAK_REMOTE_CACHE_KEY" ]]; then
         echo "$BAZEL_GOOGLE_CREDENTIALS" > "$OAK_REMOTE_CACHE_KEY"
     fi
 fi
+)
 
 # If we now have a key file, use it. Otherwise build without remote cache.
 if [[ -f "$OAK_REMOTE_CACHE_KEY" ]]; then
