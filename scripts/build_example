@@ -5,7 +5,7 @@ set -o xtrace
 
 readonly SCRIPTS_DIR="$(dirname "$0")"
 
-COMPILATION_MODE='opt'
+COMPILATION_MODE='fastbuild'
 
 while getopts "hd" opt; do
     case "$opt" in
@@ -15,10 +15,10 @@ while getopts "hd" opt; do
   -h    Print this message"
         exit 0
         ;;
-    d)  
+    d)
         COMPILATION_MODE='dbg'
         ;;
-    *) 
+    *)
         exit 1
         ;;
     esac
