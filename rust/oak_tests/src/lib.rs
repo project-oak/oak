@@ -95,6 +95,9 @@ pub fn set_read_status(status: Option<i32>) {
 pub fn set_write_status(status: Option<i32>) {
     CHANNEL.with(|channel| channel.borrow_mut().write_status = status)
 }
+pub fn reset_channels() {
+    CHANNEL.with(|channel| *channel.borrow_mut() = MockChannel::new())
+}
 
 // Keep in sync with /oak/server/status.h
 pub const STATUS_OK: i32 = 0;

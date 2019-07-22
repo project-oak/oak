@@ -281,3 +281,10 @@ pub extern "C" fn oak_handle_grpc_call() {
 pub fn have_node() -> bool {
     NODE.with(|node| (*node.borrow()).is_some())
 }
+
+#[test]
+fn reset_node() {
+    NODE.with(|node| {
+        *node.borrow_mut() = None;
+    })
+}
