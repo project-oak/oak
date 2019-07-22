@@ -13,7 +13,6 @@ readonly OAK_MANAGER_ADDRESS="${OAK_MANAGER_ADDRESS:-127.0.0.1:8888}"
 readonly SCRIPTS_DIR="$(dirname "$0")"
 
 "$SCRIPTS_DIR/build_example" "$NAME"
-bazel run "//examples/${NAME}/client" \
-  -- \
+"./client-bin/examples/${NAME}/client/client" \
   --manager_address="${OAK_MANAGER_ADDRESS}" \
   --module="$PWD/examples/target/wasm32-unknown-unknown/release/${NAME}.wasm"
