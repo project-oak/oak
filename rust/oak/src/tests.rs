@@ -32,6 +32,7 @@ fn test_result_from_status() {
 
 #[test]
 fn test_write_message() {
+    oak_tests::reset_channels();
     let mut send_channel = SendChannelHalf::new(123);
     let data = [0x44, 0x4d, 0x44];
     assert_matches!(send_channel.write_message(&data), Ok(()));
@@ -40,6 +41,7 @@ fn test_write_message() {
 
 #[test]
 fn test_write_message_failure() {
+    oak_tests::reset_channels();
     let mut send_channel = SendChannelHalf::new(123);
     let data = [0x44, 0x4d, 0x44];
     oak_tests::set_write_status(Some(99));
@@ -48,6 +50,7 @@ fn test_write_message_failure() {
 
 #[test]
 fn test_write() {
+    oak_tests::reset_channels();
     writeln!(logging_channel(), "ABC").unwrap();
     assert_eq!("ABC\n", oak_tests::last_message_as_string());
     assert_matches!(logging_channel().flush(), Ok(()));
@@ -55,6 +58,7 @@ fn test_write() {
 
 #[test]
 fn test_read_message() {
+    oak_tests::reset_channels();
     let mut send = SendChannelHalf::new(123);
     let data = [0x44, 0x4d, 0x44];
     assert_matches!(send.write_message(&data), Ok(()));
@@ -72,6 +76,7 @@ fn test_read_message() {
 
 #[test]
 fn test_read_message_failure() {
+    oak_tests::reset_channels();
     let mut rcv = ReceiveChannelHalf::new(123);
     let mut buf = Vec::with_capacity(100);
     oak_tests::set_read_status(Some(99));
@@ -80,6 +85,7 @@ fn test_read_message_failure() {
 
 #[test]
 fn test_read_message_internal_failure() {
+    oak_tests::reset_channels();
     let mut rcv = ReceiveChannelHalf::new(123);
     let mut buf = Vec::with_capacity(100);
 
@@ -90,6 +96,7 @@ fn test_read_message_internal_failure() {
 
 #[test]
 fn test_channel_pair() {
+    oak_tests::reset_channels();
     let mut pair = ChannelPair::new(1, 2);
     let data = [0x44, 0x44];
     assert_matches!(pair.send.write_message(&data), Ok(()));
@@ -106,6 +113,7 @@ impl Node for TestNode {
 
 #[test]
 fn test_set_node() {
+    reset_node();
     assert_eq!(false, have_node());
     set_node::<TestNode>();
     assert_eq!(true, have_node());
@@ -114,12 +122,14 @@ fn test_set_node() {
 #[test]
 #[should_panic]
 fn test_set_node_twice() {
+    reset_node();
     set_node::<TestNode>();
     set_node::<TestNode>(); // panic!
 }
 
 #[test]
 fn test_handle_grpc_call() {
+    reset_node();
     set_node::<TestNode>();
     assert_eq!(true, have_node());
     oak_handle_grpc_call();
@@ -128,5 +138,6 @@ fn test_handle_grpc_call() {
 #[test]
 #[should_panic]
 fn test_handle_grpc_call_no_node() {
+    reset_node();
     oak_handle_grpc_call(); // no node: panic!
 }
