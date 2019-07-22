@@ -4,6 +4,7 @@ set -o errexit
 set -o xtrace
 
 readonly SCRIPTS_DIR="$(dirname "$0")"
+readonly CACHE_DIR='bazel-cache'
 
 COMPILATION_MODE='fastbuild'
 
@@ -34,11 +35,13 @@ if [[ -z "${NAME}" ]]; then
     select opt in "${options[@]}";
     do
         echo "Building $opt"
-        cargo build --release --target=wasm32-unknown-unknown --manifest-path="examples/$opt/module/rust/Cargo.toml"
-        bazel build --compilation_mode="$COMPILATION_MODE" "//examples/$opt/client"
+        TARGET="$opt"
         break
     done
 else
-    cargo build --release --target=wasm32-unknown-unknown --manifest-path="examples/$NAME/module/rust/Cargo.toml"
-    bazel build --compilation_mode="$COMPILATION_MODE" "//examples/$NAME/client"
+    echo "Building $NAME"
+    TARGET="$NAME"
 fi
+
+cargo build --release --target=wasm32-unknown-unknown --manifest-path="examples/$TARGET/module/rust/Cargo.toml"
+bazel --output_base="$CACHE_DIR/client" build --symlink_prefix='client-' --compilation_mode="$COMPILATION_MODE" "//examples/$TARGET/client"
