@@ -20,13 +20,13 @@
 #include "oak/common/handles.h"
 #include "oak/module/defines.h"  // for imports and exports
 
-import_from_module("oak") int channel_read(uint64_t handle, uint8_t* buff, size_t usize,
-                                           uint32_t* actual_size);
-import_from_module("oak") int channel_write(uint64_t handle, uint8_t* buff, size_t usize);
+WASM_IMPORT("oak")
+int channel_read(uint64_t handle, uint8_t* buff, size_t usize, uint32_t* actual_size);
+WASM_IMPORT("oak") int channel_write(uint64_t handle, uint8_t* buff, size_t usize);
 
-export_to_wasm void oak_initialize() {}
+WASM_EXPORT void oak_initialize() {}
 
-export_to_wasm void oak_handle_grpc_call() {
+WASM_EXPORT void oak_handle_grpc_call() {
   uint8_t _buf[256];
   uint32_t actual_size;
   channel_read(oak::GRPC_IN_CHANNEL_HANDLE, _buf, sizeof(_buf), &actual_size);

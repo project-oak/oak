@@ -110,4 +110,5 @@ http_archive(
     build_file = "//toolchain:clang_llvm.BUILD",
     strip_prefix = "clang+llvm-8.0.0-x86_64-linux-gnu-ubuntu-18.04",
     url = "http://releases.llvm.org/8.0.0/clang+llvm-8.0.0-x86_64-linux-gnu-ubuntu-18.04.tar.xz",
+    sha256 = "0f5c314f375ebd5c35b8c1d5e5b161d9efaeff0523bac287f8b4e5b751272f51"
 )

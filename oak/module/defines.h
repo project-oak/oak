@@ -17,7 +17,7 @@
 #ifndef OAK_MODULE_DEFINES_H_
 #define OAK_MODULE_DEFINES_H_
 
-#define export_to_wasm extern "C" __attribute__((visibility("default")))
-#define import_from_module(name) extern "C" __attribute__((import_module(name)))
+#define WASM_EXPORT extern "C" __attribute__((visibility("default")))
+#define WASM_IMPORT(module_name) extern "C" __attribute__((import_module(module_name)))
 
 #endif  // OAK_MODULE_DEFINES_H_
