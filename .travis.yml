@@ -6,9 +6,10 @@ services:
 cache:
   timeout: 600
   directories:
-    - bazel-cache  # explicit cache directory for Docker builds (scripts/docker_run)
-    - cargo-cache  # default cache directory for Rust builds, shared with Docker builds
+    - bazel-cache  # explicit cache directory for Docker Bazel builds (scripts/docker_run)
     - .cache/bazel  # default cache directory for local Bazel builds
+    - rust/target  # cached objects for Rust library code
+    - examples/target  # cached objects for Rust example code
 
 env:
   - FORMAT_CHECKS=true
