@@ -1,11 +1,29 @@
 #!/usr/bin/env bash
-set -e
-set -x
+set -o errexit
+set -o xtrace
 
-readonly NAME="${1}"
+IS_CPP=false
 
+while getopts "hc" opt; do
+    case "$opt" in
+    h)
+        echo -e "Usage: $0 [-c] example_name
+  -c    Build the cc version of the example
+  -h    Print this message"
+        exit 0
+        ;;
+    c)  
+        IS_CPP=true
+        ;;
+    *) 
+        exit 1
+        ;;
+    esac
+done
+
+readonly NAME="${*:$OPTIND:1}"
 if [[ -z "${NAME}" ]]; then
-  echo "Missing example name, usage: run_example <name>"
+  echo "Missing example name, use -h for help"
   exit 1
 fi
 
@@ -13,6 +31,13 @@ readonly OAK_MANAGER_ADDRESS="${OAK_MANAGER_ADDRESS:-127.0.0.1:8888}"
 readonly SCRIPTS_DIR="$(dirname "$0")"
 
 "$SCRIPTS_DIR/build_example" "$NAME"
+
+if [ "$IS_CPP" = true ]; then
+  readonly MODULE_PATH="$PWD/module-bin/examples/${NAME}/module/cpp/${NAME}.wasm"
+else
+  readonly MODULE_PATH="$PWD/examples/target/wasm32-unknown-unknown/release/${NAME}.wasm"
+fi
+
 "./client-bin/examples/${NAME}/client/client" \
   --manager_address="${OAK_MANAGER_ADDRESS}" \
-  --module="$PWD/examples/target/wasm32-unknown-unknown/release/${NAME}.wasm"
+  --module="${MODULE_PATH}"

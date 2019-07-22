@@ -20,6 +20,11 @@ build:sgx-sim --define=SGX_SIM=1
 # make assumptions about it being related to SGX.
 build:enc-sim --config=sgx-sim
 
+# Toolchain for compiling C++ code to wasm32
+build:wasm32 --crosstool_top=//toolchain:clang_llvm
+build:wasm32 --host_crosstool_top=@bazel_tools//tools/cpp:toolchain
+build:wasm32 --cpu=wasm32
+
 # Bazel 0.27.0 deprecates features that our dependencies (gRPC, protobuf) rely on, so disable
 # the checks until all dependencies have been updated to cope with a later Bazel.
 # TODO: remove these options when possible

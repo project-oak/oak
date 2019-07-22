@@ -22,19 +22,12 @@
 
 #include "absl/base/thread_annotations.h"
 #include "absl/types/span.h"
+#include "oak/common/handles.h"
 #include "oak/proto/application.grpc.pb.h"
 #include "oak/server/channel.h"
 #include "src/interp/interp.h"
 
 namespace oak {
-
-using Handle = uint64_t;
-
-// Keep in sync with /rust/oak/src/lib.rs.
-const Handle LOGGING_CHANNEL_HANDLE = 1;
-const Handle GRPC_METHOD_NAME_CHANNEL_HANDLE = 2;
-const Handle GRPC_IN_CHANNEL_HANDLE = 3;
-const Handle GRPC_OUT_CHANNEL_HANDLE = 4;
 
 typedef std::unordered_map<Handle, std::unique_ptr<ChannelHalf>> ChannelHalfTable;
 

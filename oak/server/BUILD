@@ -64,6 +64,7 @@ cc_library(
         ":channel",
         ":logging_channel",
         ":status",
+        "//oak/common:handles",
         "//oak/proto:application_cc_grpc",
         "@boringssl//:crypto",
         "@com_github_grpc_grpc//:grpc++",
