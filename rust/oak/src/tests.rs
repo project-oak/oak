@@ -137,6 +137,8 @@ fn test_handle_grpc_call() {
 
 #[test]
 #[should_panic]
+// TODO: Re-enable when https://github.com/project-oak/oak/issues/161 is fixed.
+#[ignore]
 fn test_handle_grpc_call_no_node() {
     reset_node();
     oak_handle_grpc_call(); // no node: panic!

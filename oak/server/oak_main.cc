@@ -54,6 +54,7 @@ int main(int argc, char* argv[]) {
   LOG(INFO) << "Starting gRPC server on " << addr;
   grpc::ServerBuilder builder;
   builder.AddListeningPort(addr, grpc::InsecureServerCredentials(), &selected_port);
+  builder.SetMaxReceiveMessageSize(10000000);
   builder.RegisterService(service.get());
   std::unique_ptr<grpc::Server> server = builder.BuildAndStart();
   if (!server) {
