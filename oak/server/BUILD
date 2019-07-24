@@ -104,7 +104,19 @@ cc_library(
 cc_library(
     name = "channel",
     hdrs = ["channel.h"],
-    deps = [],
+    deps = [
+        "@com_google_absl//absl/types:span",
+    ],
+)
+
+cc_test(
+    name = "channel_test",
+    srcs = ["channel_test.cc"],
+    deps = [
+        ":channel",
+        "@com_google_absl//absl/memory",
+        "@gtest//:gtest_main",
+    ],
 )
 
 cc_library(

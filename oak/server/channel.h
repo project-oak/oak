@@ -17,6 +17,10 @@
 #ifndef OAK_SERVER_CHANNEL_H_
 #define OAK_SERVER_CHANNEL_H_
 
+#include <cstdint>
+
+#include "absl/types/span.h"
+
 namespace oak {
 
 // Abstract interface for Oak communication channels.
@@ -38,8 +42,8 @@ namespace oak {
 class ChannelHalf {
  public:
   // Result of a read operation. If not enough space was provided for the
-  // message, then |msg_size| will be non-zero and indicates the required size.
-  // Otherwise, |msg_size| will be zero and |data| references the data of the
+  // message, then |required_size| will be non-zero and indicates the required size.
+  // Otherwise, |required_size| will be zero and |data| references the data of the
   // message that has been read.
   struct ReadResult {
     uint32_t required_size;
@@ -50,11 +54,13 @@ class ChannelHalf {
 
   // Read a message of up to |size| bytes from the Channel. The actual size of
   // the returned message may be less than |size|.  If the next available
-  // message on the channel is larger than |size|, ???? will be returned.
+  // message on the channel is larger than |size|, no data will be returned
+  // and the required_size field of the result will indicate the required size.
   virtual ReadResult Read(uint32_t size) {
     // Fallback implementation that returns an empty message; attempting to
     // read from the send half of a channel will reach this fallback.
     ReadResult nothing;
+    nothing.required_size = 0;
     return nothing;
   }
 
