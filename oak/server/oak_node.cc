@@ -253,8 +253,8 @@ wabt::interp::HostFunc::Callback OakNode::OakChannelRead(wabt::interp::Environme
       WriteI32(env, size_offset, result.required_size);
       results[0].set_i32(STATUS_ERR_BUFFER_TOO_SMALL);
     } else {
-      WriteI32(env, size_offset, result.data.size());
-      WriteMemory(env, offset, result.data);
+      WriteI32(env, size_offset, result.data->size());
+      WriteMemory(env, offset, absl::Span<char>(result.data->data(), result.data->size()));
       results[0].set_i32(STATUS_OK);
     }
 
@@ -278,8 +278,10 @@ wabt::interp::HostFunc::Callback OakNode::OakChannelWrite(wabt::interp::Environm
     }
     std::unique_ptr<ChannelHalf>& channel = channel_halves_.at(channel_handle);
 
-    absl::Span<const char> data = ReadMemory(env, offset, size);
-    channel->Write(data);
+    // Copy the data from the Wasm linear memory.
+    absl::Span<const char> origin = ReadMemory(env, offset, size);
+    std::unique_ptr<Message> data = absl::make_unique<Message>(origin.begin(), origin.end());
+    channel->Write(std::move(data));
     results[0].set_i32(STATUS_OK);
 
     return wabt::interp::Result::Ok;
@@ -287,24 +289,25 @@ wabt::interp::HostFunc::Callback OakNode::OakChannelWrite(wabt::interp::Environm
 }
 
 grpc::Status OakNode::ProcessModuleInvocation(grpc::GenericServerContext* context,
-                                              const std::vector<char>& request_data,
+                                              std::unique_ptr<Message> request_data,
                                               std::vector<char>* response_data) {
   LOG(INFO) << "Handling gRPC call: " << context->method();
 
   // TODO: Move channel creation up to the application level.
 
-  // Create a receive channel half for reading the gRPC method name, using a local copy
-  // to ensure its lifetime outlives the span reference.
-  std::string grpc_method_name = context->method();
+  // Create a receive channel half for reading the gRPC method name.
+  const std::string& method_name = context->method();
+  std::unique_ptr<Message> method_data =
+      absl::make_unique<Message>(method_name.begin(), method_name.end());
   ChannelMapping with_name_half(&channel_halves_, GRPC_METHOD_NAME_CHANNEL_HANDLE,
-                                absl::make_unique<ReadMessageChannelHalf>(grpc_method_name));
+                                absl::make_unique<ReadMessageChannelHalf>(std::move(method_data)));
   LOG(INFO) << "Created gRPC method name channel " << GRPC_METHOD_NAME_CHANNEL_HANDLE;
 
   // Create the gRPC channel halves, used by the module to perform basic input and output.
   // Read from the serialized request, and allow the response to be written to the
   // passed in response data buffer.
   ChannelMapping with_in_half(&channel_halves_, GRPC_IN_CHANNEL_HANDLE,
-                              absl::make_unique<ReadMessageChannelHalf>(request_data));
+                              absl::make_unique<ReadMessageChannelHalf>(std::move(request_data)));
   ChannelMapping with_out_half(&channel_halves_, GRPC_OUT_CHANNEL_HANDLE,
                                absl::make_unique<WriteBufferChannelHalf>(response_data));
   LOG(INFO) << "Created gRPC channels in:" << GRPC_IN_CHANNEL_HANDLE

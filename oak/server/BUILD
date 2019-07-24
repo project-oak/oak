@@ -112,9 +112,7 @@ cc_library(
 cc_library(
     name = "channel",
     hdrs = ["channel.h"],
-    deps = [
-        "@com_google_absl//absl/types:span",
-    ],
+    deps = [],
 )
 
 cc_test(

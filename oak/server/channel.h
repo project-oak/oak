@@ -18,10 +18,12 @@
 #define OAK_SERVER_CHANNEL_H_
 
 #include <cstdint>
-
-#include "absl/types/span.h"
+#include <memory>
+#include <vector>
 
 namespace oak {
+
+using Message = std::vector<char>;
 
 // Abstract interface for Oak communication channels.
 //
@@ -41,21 +43,23 @@ namespace oak {
 // TODO: add a hard limit for message size
 class ChannelHalf {
  public:
-  // Result of a read operation. If not enough space was provided for the
-  // message, then |required_size| will be non-zero and indicates the required size.
-  // Otherwise, |required_size| will be zero and |data| references the data of the
-  // message that has been read.
+  // Result of a read operation. If the operation would have produced a message
+  // bigger than the requested maximum size, then |required_size| will be
+  // non-zero and indicates the required size for the message.  Otherwise,
+  // |required_size| will be zero and |data| holds the message (transferring
+  // ownership).
   struct ReadResult {
     uint32_t required_size;
-    absl::Span<const char> data;
+    std::unique_ptr<Message> data;
   };
 
   virtual ~ChannelHalf() {}
 
-  // Read a message of up to |size| bytes from the Channel. The actual size of
-  // the returned message may be less than |size|.  If the next available
-  // message on the channel is larger than |size|, no data will be returned
-  // and the required_size field of the result will indicate the required size.
+  // Read a message of up to |size| bytes from the Channel. The caller owns any
+  // returned message, whose actual size of may be less than |size|.  If the
+  // next available message on the channel is larger than |size|, no data will
+  // be returned and the required_size field of the result will indicate the
+  // required size.
   virtual ReadResult Read(uint32_t size) {
     // Fallback implementation that returns an empty message; attempting to
     // read from the send half of a channel will reach this fallback.
@@ -64,13 +68,9 @@ class ChannelHalf {
     return nothing;
   }
 
-  // Write the provided message to the Channel. Return the number of bytes
-  // actually written, which will either be zero or the size of the provided
-  // message.
-  virtual uint32_t Write(absl::Span<const char> data) {
-    // Fallback implementation that indicates nothing was written; attempting to
-    // write to the receive half of a channel will reach this fallback.
-    return 0;
+  // Write the provided message to the Channel.
+  virtual void Write(std::unique_ptr<Message> msg) {
+    // Fallback implementation that just drops the message.
   }
 };
 

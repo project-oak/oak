@@ -16,22 +16,24 @@
 
 #include "oak/server/module_invocation.h"
 
+#include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
+#include "oak/server/channel.h"
 
 namespace oak {
 
 namespace {
 
-// Converts a gRPC ByteBuffer into a vector of bytes.
-std::vector<char> Unwrap(const grpc::ByteBuffer& buffer) {
-  std::vector<char> bytes;
+// Copy the data from a gRPC ByteBuffer into a Message.
+std::unique_ptr<Message> Unwrap(const grpc::ByteBuffer& buffer) {
   std::vector<::grpc::Slice> slices;
   grpc::Status status = buffer.Dump(&slices);
   if (!status.ok()) {
     LOG(QFATAL) << "Could not unwrap buffer";
   }
+  std::unique_ptr<Message> bytes = absl::make_unique<Message>();
   for (const auto& slice : slices) {
-    bytes.insert(bytes.end(), slice.begin(), slice.end());
+    bytes->insert(bytes->end(), slice.begin(), slice.end());
   }
   return bytes;
 }
@@ -66,9 +68,10 @@ void ModuleInvocation::ProcessRequest(bool ok) {
     delete this;
     return;
   }
-  std::vector<char> request_data = Unwrap(request_);
+  std::unique_ptr<Message> request_data = Unwrap(request_);
   std::vector<char> response_data;
-  grpc::Status status = node_->ProcessModuleInvocation(&context_, request_data, &response_data);
+  grpc::Status status =
+      node_->ProcessModuleInvocation(&context_, std::move(request_data), &response_data);
   // Restarts the gRPC flow with a new ModuleInvocation object for the next request
   // after processing this request.  This ensures that processing is serialized.
   auto* request = new ModuleInvocation(service_, queue_, node_);
