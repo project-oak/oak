@@ -4,5 +4,14 @@ members = [
     "hello_world/module/rust",
     "private_set_intersection/module/rust",
     "running_average/module/rust",
+    "rustfmt/module/rust",
     "machine_learning/module/rust",
 ]
+
+[patch.crates-io]
+# TODO: Remove when https://github.com/soc/dirs-rs/pull/24 is merged and published.
+dirs = { git = "https://github.com/tiziano88/dirs-rs", rev = "ca7572730f6c744a16236e342da60f1205ffc6ec" }
+# TODO: Remove when a new version of the term crate is published. The one currently published
+# depends on dirs=1.0.2 which means that it does not pick up the fix above, which is done on
+# dirs=2.0.1.
+term = { git = "https://github.com/Stebalien/term", rev = "11e754980706a53dda998ba5791a203ab3a5f8fa" }
