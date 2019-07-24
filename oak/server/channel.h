@@ -18,8 +18,12 @@
 #define OAK_SERVER_CHANNEL_H_
 
 #include <cstdint>
+#include <deque>
 #include <memory>
 #include <vector>
+
+#include "absl/synchronization/mutex.h"
+#include "absl/types/span.h"
 
 namespace oak {
 
@@ -72,6 +76,26 @@ class ChannelHalf {
   virtual void Write(std::unique_ptr<Message> msg) {
     // Fallback implementation that just drops the message.
   }
+};
+
+// A concrete message channel, which holds an arbitrary number of queued messages.
+// Implements both send and receive ChannelHalf functions.
+class MessageChannel : public ChannelHalf {
+ public:
+  virtual ~MessageChannel() {}
+
+  // Count indicates the number of pending messages.
+  size_t Count() const;
+
+  // Read returns the first message on the channel, subject to |size| checks.
+  ReadResult Read(uint32_t size) override;
+
+  // Write passes ownership of a message to the channel.
+  void Write(std::unique_ptr<Message> data) override;
+
+ private:
+  mutable absl::Mutex mu_;
+  std::deque<std::unique_ptr<Message>> msgs_;
 };
 
 }  // namespace oak
