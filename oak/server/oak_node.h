@@ -36,9 +36,9 @@ class OakNode final : public Application::Service {
   // Creates an Oak node by loading the Wasm module code.
   static std::unique_ptr<OakNode> Create(const std::string& module);
 
-  // Performs an Oak Module invocation.
+  // Performs an Oak Module invocation. Takes ownership of the passed in request data.
   grpc::Status ProcessModuleInvocation(grpc::GenericServerContext* context,
-                                       const std::vector<char>& request_data,
+                                       std::unique_ptr<Message> request_data,
                                        std::vector<char>* response_data);
 
  private:

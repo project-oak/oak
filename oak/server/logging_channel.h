@@ -24,10 +24,9 @@ namespace oak {
 // A channel implementation that only has a send half, which logs to stderr the data written to it.
 class LoggingChannelHalf final : public ChannelHalf {
  public:
-  uint32_t Write(absl::Span<const char> data) override {
-    std::string log_message(data.cbegin(), data.cend());
+  void Write(std::unique_ptr<Message> msg) override {
+    std::string log_message(msg->cbegin(), msg->cend());
     LOG(INFO) << "LOG: " << log_message;
-    return data.size();
   }
 };
 

@@ -25,14 +25,13 @@ TEST(ChannelHalf, EmptyReadFallback) {
   ChannelHalf half;
   ChannelHalf::ReadResult result = half.Read(100000);
   ASSERT_EQ(0, result.required_size);
-  ASSERT_EQ(0, result.data.size());
+  ASSERT_EQ(nullptr, result.data);
 }
 
 TEST(ChannelHalf, NoWriteFallback) {
   ChannelHalf half;
-  const char data[] = {0x01, 0x02, 0x03};
-  uint32_t size = half.Write(data);
-  ASSERT_EQ(0, size);
+  std::unique_ptr<Message> data = absl::WrapUnique(new Message{0x01, 0x02, 0x03});
+  half.Write(std::move(data));
 }
 
 }  // namespace oak
