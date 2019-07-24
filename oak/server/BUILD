@@ -111,8 +111,13 @@ cc_library(
 
 cc_library(
     name = "channel",
+    srcs = ["channel.cc"],
     hdrs = ["channel.h"],
-    deps = [],
+    deps = [
+        "@com_google_absl//absl/synchronization",
+        "@com_google_absl//absl/types:span",
+        "@com_google_asylo//asylo/util:logging",
+    ],
 )
 
 cc_test(
