@@ -23,7 +23,6 @@
 
 #include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
-#include "oak/server/buffer_channel.h"
 #include "oak/server/logging_channel.h"
 #include "oak/server/status.h"
 #include "oak/server/wabt_output.h"
@@ -289,6 +288,7 @@ wabt::interp::HostFunc::Callback OakNode::OakChannelWrite(wabt::interp::Environm
     // Copy the data from the Wasm linear memory.
     absl::Span<const char> origin = ReadMemory(env, offset, size);
     std::unique_ptr<Message> data = absl::make_unique<Message>(origin.begin(), origin.end());
+    LOG(INFO) << "channel_write[" << channel_handle << "]: write message of size " << data->size();
     channel->Write(std::move(data));
     results[0].set_i32(STATUS_OK);
 
@@ -296,9 +296,8 @@ wabt::interp::HostFunc::Callback OakNode::OakChannelWrite(wabt::interp::Environm
   };
 }
 
-grpc::Status OakNode::ProcessModuleInvocation(grpc::GenericServerContext* context,
-                                              std::unique_ptr<Message> request_data,
-                                              std::vector<char>* response_data) {
+OakNode::InvocationResult OakNode::ProcessModuleInvocation(grpc::GenericServerContext* context,
+                                                           std::unique_ptr<Message> request_data) {
   LOG(INFO) << "Handling gRPC call: " << context->method();
 
   // TODO: Move channel creation up to the application level.
@@ -314,23 +313,28 @@ grpc::Status OakNode::ProcessModuleInvocation(grpc::GenericServerContext* contex
       absl::make_unique<MessageChannelReadHalf>(method_name_channel);
   ChannelMapping with_name_half(&channel_halves_, GRPC_METHOD_NAME_CHANNEL_HANDLE,
                                 std::move(method_name_read_half));
-  LOG(INFO) << "Created gRPC method name channel " << GRPC_METHOD_NAME_CHANNEL_HANDLE;
+  LOG(INFO) << "Created gRPC method name channel: " << GRPC_METHOD_NAME_CHANNEL_HANDLE
+            << " with pending message of size " << method_name.size();
 
   // Create a channel to hold the incoming request, and map the read half to the
   // standard channel handle.
   std::shared_ptr<MessageChannel> req_channel = std::make_shared<MessageChannel>();
+  size_t req_size = request_data->size();
   req_channel->Write(std::move(request_data));
   std::unique_ptr<MessageChannelReadHalf> req_read_half =
       absl::make_unique<MessageChannelReadHalf>(req_channel);
   ChannelMapping with_in_half(&channel_halves_, GRPC_IN_CHANNEL_HANDLE, std::move(req_read_half));
+  LOG(INFO) << "Created gRPC input channel: " << GRPC_IN_CHANNEL_HANDLE
+            << " with pending message of size " << req_size;
 
-  // Create the gRPC channel halves, used by the module to perform basic input and output.
-  // Read from the serialized request, and allow the response to be written to the
-  // passed in response data buffer.
+  // Create a channel to hold the output response, and map the write half to the
+  // standard channel handle.
+  std::shared_ptr<MessageChannel> rsp_channel = std::make_shared<MessageChannel>();
+  std::unique_ptr<MessageChannelWriteHalf> rsp_write_half =
+      absl::make_unique<MessageChannelWriteHalf>(rsp_channel);
   ChannelMapping with_out_half(&channel_halves_, GRPC_OUT_CHANNEL_HANDLE,
-                               absl::make_unique<WriteBufferChannelHalf>(response_data));
-  LOG(INFO) << "Created gRPC channels in:" << GRPC_IN_CHANNEL_HANDLE
-            << " out:" << GRPC_OUT_CHANNEL_HANDLE;
+                               std::move(rsp_write_half));
+  LOG(INFO) << "Created gRPC output channel:" << GRPC_OUT_CHANNEL_HANDLE;
 
   // Create the logging channel, used by the module to log statements for debugging.
   std::unique_ptr<ChannelHalf> logging_channel = absl::make_unique<LoggingChannelHalf>();
@@ -345,12 +349,27 @@ grpc::Status OakNode::ProcessModuleInvocation(grpc::GenericServerContext* contex
   wabt::interp::ExecResult exec_result =
       executor.RunExportByName(module_, "oak_handle_grpc_call", args);
 
+  InvocationResult result;
   if (exec_result.result != wabt::interp::Result::Ok) {
     std::string err = wabt::interp::ResultToString(exec_result.result);
     LOG(ERROR) << "Could not handle gRPC call: " << err;
-    return grpc::Status(grpc::StatusCode::INTERNAL, err);
+    result.status = grpc::Status(grpc::StatusCode::INTERNAL, err);
+    return result;
   }
-  return grpc::Status::OK;
+  ReadResult rsp_result = rsp_channel->Read(INT_MAX);
+  if (rsp_result.required_size > 0) {
+    LOG(ERROR) << "Message size too large: " << rsp_result.required_size;
+    result.status = grpc::Status(grpc::StatusCode::INTERNAL, "Message size too large");
+    return result;
+  }
+  if (rsp_result.data != nullptr) {
+    LOG(INFO) << "Read message of size " << rsp_result.data->size() << " from output channel";
+  } else {
+    LOG(INFO) << "No response on output channel";
+  }
+  result.status = grpc::Status::OK;
+  result.data = std::move(rsp_result.data);
+  return result;
 }
 
 grpc::Status OakNode::GetAttestation(grpc::ServerContext* context,
