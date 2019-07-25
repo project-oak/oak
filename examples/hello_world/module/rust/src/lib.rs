@@ -79,7 +79,7 @@ impl HelloWorldNode for Node {
     }
 }
 
-fn recipients(reqs: &Vec<HelloRequest>) -> String {
+fn recipients(reqs: &[HelloRequest]) -> String {
     let mut result = String::new();
     for (i, req) in reqs.iter().enumerate() {
         if i > 0 {
