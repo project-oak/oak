@@ -5,4 +5,4 @@ set -o nounset
 
 cargo test --manifest-path=./rust/Cargo.toml
 cargo test --manifest-path=./examples/Cargo.toml
-bazel test //oak/server:oak_node_test
+bazel test //oak/server:host_tests

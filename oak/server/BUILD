@@ -20,6 +20,13 @@ package(
 
 load("//oak/server:wabt.bzl", "wasm_group")
 
+# Mark tests that can be run on the host system (i.e. with a normal
+# compiler, not the Asylo toolchain) with 'host' tag.
+test_suite(
+    name = "host_tests",
+    tags = ["host"],
+)
+
 cc_library(
     name = "oak_node",
     srcs = [
@@ -55,6 +62,7 @@ cc_test(
     data = [
         ":testdata",
     ],
+    tags = ["host"],
     deps = [
         ":oak_node",
         "@gtest//:gtest_main",
@@ -112,6 +120,7 @@ cc_library(
 cc_test(
     name = "channel_test",
     srcs = ["channel_test.cc"],
+    tags = ["host"],
     deps = [
         ":channel",
         "@com_google_absl//absl/memory",
