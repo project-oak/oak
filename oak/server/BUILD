@@ -43,6 +43,7 @@ cc_library(
         ":status",
         "//oak/common:handles",
         "//oak/proto:application_cc_grpc",
+        "//oak/proto:grpc_encap_cc_proto",
         "@boringssl//:crypto",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/memory",
