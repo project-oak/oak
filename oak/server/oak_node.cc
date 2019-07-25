@@ -194,8 +194,7 @@ std::unique_ptr<OakNode> OakNode::Create(const std::string& module) {
   LOG(INFO) << "Executing module";
 
   // Create a (persistent) logging channel to allow the module to log during initialization.
-  std::unique_ptr<ChannelHalf> logging_channel = absl::make_unique<LoggingChannelHalf>();
-  node->channel_halves_[LOGGING_CHANNEL_HANDLE] = std::move(logging_channel);
+  node->channel_halves_[LOGGING_CHANNEL_HANDLE] = absl::make_unique<LoggingChannelHalf>();
   LOG(INFO) << "Created logging channel " << LOGGING_CHANNEL_HANDLE;
 
   wabt::interp::TypedValues args;
@@ -203,13 +202,42 @@ std::unique_ptr<OakNode> OakNode::Create(const std::string& module) {
       executor.RunExportByName(node->module_, "oak_initialize", args);
 
   if (exec_result.result != wabt::interp::Result::Ok) {
-    LOG(WARNING) << "Could not execute module";
+    LOG(WARNING) << "Could not execute module initialization";
     wabt::interp::WriteResult(s_stdout_stream.get(), "error", exec_result.result);
     // TODO: Print error.
     return nullptr;
   }
+  LOG(INFO) << "Executed module initialization";
 
-  LOG(INFO) << "Executed module";
+  // Now that initialization has completed, create the channels needed for gRPC interactions.
+  {
+    // Method name channel: keep the write half in C++, but map the read half to a
+    // well-known channel handle.
+    std::shared_ptr<MessageChannel> channel = std::make_shared<MessageChannel>();
+    node->channel_halves_[GRPC_METHOD_NAME_CHANNEL_HANDLE] =
+        absl::make_unique<MessageChannelReadHalf>(channel);
+    node->name_half_ = absl::make_unique<MessageChannelWriteHalf>(channel);
+    LOG(INFO) << "Created gRPC method name channel: " << GRPC_METHOD_NAME_CHANNEL_HANDLE;
+  }
+  {
+    // Incoming request channel: keep the write half in C++, but map the read
+    // half to a well-known channel handle.
+    std::shared_ptr<MessageChannel> channel = std::make_shared<MessageChannel>();
+    node->channel_halves_[GRPC_IN_CHANNEL_HANDLE] =
+        absl::make_unique<MessageChannelReadHalf>(channel);
+    node->req_half_ = absl::make_unique<MessageChannelWriteHalf>(channel);
+    LOG(INFO) << "Created gRPC input channel: " << GRPC_IN_CHANNEL_HANDLE;
+  }
+  {
+    // Outgoing response channel: keep the read half in C++, but map the write
+    // half to a well-known channel handle.
+    std::shared_ptr<MessageChannel> channel = std::make_shared<MessageChannel>();
+    node->channel_halves_[GRPC_OUT_CHANNEL_HANDLE] =
+        absl::make_unique<MessageChannelWriteHalf>(channel);
+    node->rsp_half_ = absl::make_unique<MessageChannelReadHalf>(channel);
+    LOG(INFO) << "Created gRPC output channel: " << GRPC_IN_CHANNEL_HANDLE;
+  }
+
   return node;
 }
 
@@ -300,41 +328,17 @@ OakNode::InvocationResult OakNode::ProcessModuleInvocation(grpc::GenericServerCo
                                                            std::unique_ptr<Message> request_data) {
   LOG(INFO) << "Handling gRPC call: " << context->method();
 
-  // TODO: Move channel creation up to the application level.
-
-  // Create a channel to hold the gRPC method name, and map the read half to the
-  // standard channel handle.
+  // Write the method name to the name channel.
   const std::string& method_name = context->method();
-  std::shared_ptr<MessageChannel> method_name_channel = std::make_shared<MessageChannel>();
   std::unique_ptr<Message> method_data =
       absl::make_unique<Message>(method_name.begin(), method_name.end());
-  method_name_channel->Write(std::move(method_data));
-  std::unique_ptr<MessageChannelReadHalf> method_name_read_half =
-      absl::make_unique<MessageChannelReadHalf>(method_name_channel);
-  ChannelMapping with_name_half(&channel_halves_, GRPC_METHOD_NAME_CHANNEL_HANDLE,
-                                std::move(method_name_read_half));
-  LOG(INFO) << "Created gRPC method name channel: " << GRPC_METHOD_NAME_CHANNEL_HANDLE
-            << " with pending message of size " << method_name.size();
+  name_half_->Write(std::move(method_data));
+  LOG(INFO) << "Wrote method name of size " << method_name.size() << " to name channel";
 
-  // Create a channel to hold the incoming request, and map the read half to the
-  // standard channel handle.
-  std::shared_ptr<MessageChannel> req_channel = std::make_shared<MessageChannel>();
+  // Write the incoming request to the input channel.
   size_t req_size = request_data->size();
-  req_channel->Write(std::move(request_data));
-  std::unique_ptr<MessageChannelReadHalf> req_read_half =
-      absl::make_unique<MessageChannelReadHalf>(req_channel);
-  ChannelMapping with_in_half(&channel_halves_, GRPC_IN_CHANNEL_HANDLE, std::move(req_read_half));
-  LOG(INFO) << "Created gRPC input channel: " << GRPC_IN_CHANNEL_HANDLE
-            << " with pending message of size " << req_size;
-
-  // Create a channel to hold the output response, and map the write half to the
-  // standard channel handle.
-  std::shared_ptr<MessageChannel> rsp_channel = std::make_shared<MessageChannel>();
-  std::unique_ptr<MessageChannelWriteHalf> rsp_write_half =
-      absl::make_unique<MessageChannelWriteHalf>(rsp_channel);
-  ChannelMapping with_out_half(&channel_halves_, GRPC_OUT_CHANNEL_HANDLE,
-                               std::move(rsp_write_half));
-  LOG(INFO) << "Created gRPC output channel:" << GRPC_OUT_CHANNEL_HANDLE;
+  req_half_->Write(std::move(request_data));
+  LOG(INFO) << "Wrote request of size " << req_size << " to input channel";
 
   wabt::Stream* trace_stream = nullptr;
   wabt::interp::Thread::Options thread_options;
@@ -351,7 +355,7 @@ OakNode::InvocationResult OakNode::ProcessModuleInvocation(grpc::GenericServerCo
     result.status = grpc::Status(grpc::StatusCode::INTERNAL, err);
     return result;
   }
-  ReadResult rsp_result = rsp_channel->Read(INT_MAX);
+  ReadResult rsp_result = rsp_half_->Read(INT_MAX);
   if (rsp_result.required_size > 0) {
     LOG(ERROR) << "Message size too large: " << rsp_result.required_size;
     result.status = grpc::Status(grpc::StatusCode::INTERNAL, "Message size too large");
