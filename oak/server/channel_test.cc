@@ -23,7 +23,7 @@ namespace oak {
 
 TEST(ChannelHalf, EmptyReadFallback) {
   ChannelHalf half;
-  ChannelHalf::ReadResult result = half.Read(100000);
+  ReadResult result = half.Read(100000);
   ASSERT_EQ(0, result.required_size);
   ASSERT_EQ(nullptr, result.data);
 }

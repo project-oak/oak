@@ -25,6 +25,16 @@ namespace oak {
 
 using Message = std::vector<char>;
 
+// Result of a read operation. If the operation would have produced a message
+// bigger than the requested maximum size, then |required_size| will be
+// non-zero and indicates the required size for the message.  Otherwise,
+// |required_size| will be zero and |data| holds the message (transferring
+// ownership).
+struct ReadResult {
+  uint32_t required_size;
+  std::unique_ptr<Message> data;
+};
+
 // Abstract interface for Oak communication channels.
 //
 // A Channel represents a uni-directional stream of messages. Each Channel has
@@ -43,16 +53,6 @@ using Message = std::vector<char>;
 // TODO: add a hard limit for message size
 class ChannelHalf {
  public:
-  // Result of a read operation. If the operation would have produced a message
-  // bigger than the requested maximum size, then |required_size| will be
-  // non-zero and indicates the required size for the message.  Otherwise,
-  // |required_size| will be zero and |data| holds the message (transferring
-  // ownership).
-  struct ReadResult {
-    uint32_t required_size;
-    std::unique_ptr<Message> data;
-  };
-
   virtual ~ChannelHalf() {}
 
   // Read a message of up to |size| bytes from the Channel. The caller owns any

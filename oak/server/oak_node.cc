@@ -248,7 +248,7 @@ wabt::interp::HostFunc::Callback OakNode::OakChannelRead(wabt::interp::Environme
     }
     std::unique_ptr<ChannelHalf>& channel = channel_halves_.at(channel_handle);
 
-    ChannelHalf::ReadResult result = channel->Read(size);
+    ReadResult result = channel->Read(size);
     if (result.required_size > 0) {
       LOG(INFO) << "channel_read[" << channel_handle << "]: buffer too small: " << size << " < "
                 << result.required_size;
