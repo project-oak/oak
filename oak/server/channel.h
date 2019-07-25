@@ -98,6 +98,28 @@ class MessageChannel : public ChannelHalf {
   std::deque<std::unique_ptr<Message>> msgs_;
 };
 
+// Shared-ownership wrapper for the read half of a MessageChannel.
+class MessageChannelReadHalf : public ChannelHalf {
+ public:
+  MessageChannelReadHalf(std::shared_ptr<MessageChannel> channel) : channel_(channel) {}
+  virtual ~MessageChannelReadHalf() {}
+  virtual ReadResult Read(uint32_t size) { return channel_->Read(size); }
+
+ private:
+  std::shared_ptr<MessageChannel> channel_;
+};
+
+// Shared-ownership wrapper for the write half of a MessageChannel.
+class MessageChannelWriteHalf : public ChannelHalf {
+ public:
+  MessageChannelWriteHalf(std::shared_ptr<MessageChannel> channel) : channel_(channel) {}
+  virtual ~MessageChannelWriteHalf() {}
+  virtual void Write(std::unique_ptr<Message> msg) { channel_->Write(std::move(msg)); }
+
+ private:
+  std::shared_ptr<MessageChannel> channel_;
+};
+
 }  // namespace oak
 
 #endif  // OAK_SERVER_CHANNEL_H_
