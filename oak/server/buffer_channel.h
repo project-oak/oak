@@ -22,32 +22,6 @@
 
 namespace oak {
 
-// A channel implementation that only has a receive half, which reads a single
-// message that is provided at construction. Repeated reads will return the
-// same message.
-class ReadMessageChannelHalf final : public ChannelHalf {
- public:
-  ReadMessageChannelHalf(std::unique_ptr<Message> msg) : msg_(std::move(msg)) {}
-
-  ReadResult Read(uint32_t size) override {
-    ReadResult result{0};
-    if (msg_ == nullptr) {
-      return result;
-    }
-    if (size >= msg_->size()) {
-      LOG(INFO) << "Read message of size " << msg_->size() << " from channel, size limit " << size;
-      result.data = std::move(msg_);
-    } else {
-      LOG(INFO) << "Next message of size " << msg_->size() << ", size limited to " << size;
-      result.required_size = msg_->size();
-    }
-    return result;
-  }
-
- private:
-  std::unique_ptr<Message> msg_;
-};
-
 // A channel implementation that only has a send half, which appends to an output
 // buffer.  The channel does not own the provided buffer, so the caller must ensure
 // its lifetime is longer than that of the channel.

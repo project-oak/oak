@@ -303,19 +303,30 @@ grpc::Status OakNode::ProcessModuleInvocation(grpc::GenericServerContext* contex
 
   // TODO: Move channel creation up to the application level.
 
-  // Create a receive channel half for reading the gRPC method name.
+  // Create a channel to hold the gRPC method name, and map the read half to the
+  // standard channel handle.
   const std::string& method_name = context->method();
+  std::shared_ptr<MessageChannel> method_name_channel = std::make_shared<MessageChannel>();
   std::unique_ptr<Message> method_data =
       absl::make_unique<Message>(method_name.begin(), method_name.end());
+  method_name_channel->Write(std::move(method_data));
+  std::unique_ptr<MessageChannelReadHalf> method_name_read_half =
+      absl::make_unique<MessageChannelReadHalf>(method_name_channel);
   ChannelMapping with_name_half(&channel_halves_, GRPC_METHOD_NAME_CHANNEL_HANDLE,
-                                absl::make_unique<ReadMessageChannelHalf>(std::move(method_data)));
+                                std::move(method_name_read_half));
   LOG(INFO) << "Created gRPC method name channel " << GRPC_METHOD_NAME_CHANNEL_HANDLE;
+
+  // Create a channel to hold the incoming request, and map the read half to the
+  // standard channel handle.
+  std::shared_ptr<MessageChannel> req_channel = std::make_shared<MessageChannel>();
+  req_channel->Write(std::move(request_data));
+  std::unique_ptr<MessageChannelReadHalf> req_read_half =
+      absl::make_unique<MessageChannelReadHalf>(req_channel);
+  ChannelMapping with_in_half(&channel_halves_, GRPC_IN_CHANNEL_HANDLE, std::move(req_read_half));
 
   // Create the gRPC channel halves, used by the module to perform basic input and output.
   // Read from the serialized request, and allow the response to be written to the
   // passed in response data buffer.
-  ChannelMapping with_in_half(&channel_halves_, GRPC_IN_CHANNEL_HANDLE,
-                              absl::make_unique<ReadMessageChannelHalf>(std::move(request_data)));
   ChannelMapping with_out_half(&channel_halves_, GRPC_OUT_CHANNEL_HANDLE,
                                absl::make_unique<WriteBufferChannelHalf>(response_data));
   LOG(INFO) << "Created gRPC channels in:" << GRPC_IN_CHANNEL_HANDLE
