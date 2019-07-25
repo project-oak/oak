@@ -65,21 +65,13 @@ class OakNode final : public Application::Service {
   // TODO: Use smart pointers.
   wabt::interp::DefinedModule* module_;
 
+  // Hold the mapping between per-Node channel handles and channel half instances
   ChannelHalfTable channel_halves_;
-};
 
-// RAII class to add a mapping from a handle to a channel half for the duration of a scope.
-class ChannelMapping {
- public:
-  ChannelMapping(ChannelHalfTable* table, Handle handle, std::unique_ptr<ChannelHalf> half)
-      : table_(table), handle_(handle) {
-    (*table_)[handle_] = std::move(half);
-  }
-  ~ChannelMapping() { table_->erase(handle_); }
-
- private:
-  ChannelHalfTable* table_;
-  Handle handle_;
+  // Hold on to the other halves of channels that the node uses to perform gRPC.
+  std::unique_ptr<MessageChannelWriteHalf> name_half_;
+  std::unique_ptr<MessageChannelWriteHalf> req_half_;
+  std::unique_ptr<MessageChannelReadHalf> rsp_half_;
 };
 
 }  // namespace oak
