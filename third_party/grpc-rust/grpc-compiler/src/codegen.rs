@@ -60,9 +60,9 @@ impl<'a> MethodGen<'a> {
         root_scope: &'a RootScope<'a>,
     ) -> MethodGen<'a> {
         MethodGen {
-            proto: proto,
-            service_path: service_path,
-            root_scope: root_scope,
+            proto,
+            service_path,
+            root_scope,
         }
     }
 
@@ -105,27 +105,28 @@ impl<'a> MethodGen<'a> {
     }
 
     fn server_req_type(&self) -> String {
-        match self.proto.get_client_streaming() {
-            false => format!("{}", self.input_message()),
+        if self.proto.get_client_streaming() {
             // TODO: better streaming
-            true => format!("Vec<{}>", self.input_message()),
+            format!("Vec<{}>", self.input_message())
+        } else {
+            self.input_message().to_string()
         }
     }
 
     fn server_resp_type(&self) -> String {
-        match self.proto.get_server_streaming() {
-            false => format!("GrpcResult<{}>", self.output_message()),
+        if self.proto.get_server_streaming() {
             // TODO: better streaming
-            true => format!("GrpcResult<Vec<{}>>", self.output_message()),
+            format!("GrpcResult<Vec<{}>>", self.output_message())
+        } else {
+            format!("GrpcResult<{}>", self.output_message())
         }
     }
 
     fn server_sig(&self) -> String {
-        let arg;
-        if self.input_empty() {
-            arg = "".to_string();
+        let arg = if self.input_empty() {
+            "".to_string()
         } else {
-            arg = format!(
+            format!(
                 ", {}: {}",
                 if self.proto.get_client_streaming() {
                     "reqs"
@@ -133,8 +134,8 @@ impl<'a> MethodGen<'a> {
                     "req"
                 },
                 self.server_req_type(),
-            );
-        }
+            )
+        };
         let result = format!(" -> {}", self.server_resp_type());
         format!("{}(&mut self{}){}", self.snake_name(), arg, result)
     }
@@ -150,19 +151,10 @@ impl<'a> MethodGen<'a> {
         if self.input_empty() {
             param_in = "";
         } else {
-            match self.proto.get_client_streaming() {
-                false => {
-                    param_in = "req";
-                    w.comment("If the data fits in 256 bytes it will be read immediately.");
-                    w.comment("If not, the vector will be resized and read on second attempt.");
-                    w.write_line("let mut buf = Vec::<u8>::with_capacity(256);");
-                    w.write_line("grpc_pair.receive.read_message(&mut buf).unwrap();");
-                    w.write_line("let req = protobuf::parse_from_bytes(&buf).unwrap();")
-                }
-                true => {
-                    param_in = "reqs";
-                    w.write_line("let mut reqs = vec![];");
-                    w.block("loop {", "}", |w| {
+            if self.proto.get_client_streaming() {
+                param_in = "reqs";
+                w.write_line("let mut reqs = vec![];");
+                w.block("loop {", "}", |w| {
                         w.comment("If the data fits in 256 bytes it will be read immediately.");
                         w.comment("If not, the vector will be resized and read on second attempt.");
                         w.write_line("let mut buf = Vec::<u8>::with_capacity(256);");
@@ -178,7 +170,13 @@ impl<'a> MethodGen<'a> {
                             },
                         );
                     });
-                }
+            } else {
+                param_in = "req";
+                w.comment("If the data fits in 256 bytes it will be read immediately.");
+                w.comment("If not, the vector will be resized and read on second attempt.");
+                w.write_line("let mut buf = Vec::<u8>::with_capacity(256);");
+                w.write_line("grpc_pair.receive.read_message(&mut buf).unwrap();");
+                w.write_line("let req = protobuf::parse_from_bytes(&buf).unwrap();")
             }
         }
         if self.output_empty() {
@@ -189,25 +187,22 @@ impl<'a> MethodGen<'a> {
             ));
         } else {
             // TODO: deal with Err(status)
-            match self.proto.get_server_streaming() {
-                false => {
-                    w.write_line(&format!(
-                        "let rsp = node.{}({}).unwrap();",
-                        self.snake_name(),
-                        param_in
-                    ));
+            if self.proto.get_server_streaming() {
+                w.write_line(&format!(
+                    "let rsps = node.{}({}).unwrap();",
+                    self.snake_name(),
+                    param_in
+                ));
+                w.block("for rsp in rsps {", "}", |w| {
                     w.write_line("rsp.write_to_writer(&mut grpc_pair.send).unwrap();");
-                }
-                true => {
-                    w.write_line(&format!(
-                        "let rsps = node.{}({}).unwrap();",
-                        self.snake_name(),
-                        param_in
-                    ));
-                    w.block("for rsp in rsps {", "}", |w| {
-                        w.write_line("rsp.write_to_writer(&mut grpc_pair.send).unwrap();");
-                    });
-                }
+                });
+            } else {
+                w.write_line(&format!(
+                    "let rsp = node.{}({}).unwrap();",
+                    self.snake_name(),
+                    param_in
+                ));
+                w.write_line("rsp.write_to_writer(&mut grpc_pair.send).unwrap();");
             }
         }
     }
@@ -327,9 +322,7 @@ pub fn gen(
     let files_map: HashMap<&str, &FileDescriptorProto> =
         file_descriptors.iter().map(|f| (f.get_name(), f)).collect();
 
-    let root_scope = RootScope {
-        file_descriptors: file_descriptors,
-    };
+    let root_scope = RootScope { file_descriptors };
 
     let mut results = Vec::new();
 
