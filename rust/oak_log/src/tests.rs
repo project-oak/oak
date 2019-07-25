@@ -54,6 +54,7 @@ fn test_enabled() {
 
 #[test]
 fn test_log() {
+    oak_tests::reset_channels();
     let logger = OakChannelLogger {};
     let trace = Metadata::builder()
         .level(Level::Trace)
