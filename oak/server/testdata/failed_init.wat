@@ -5,7 +5,7 @@
   (import "oak" "channel_write" (func $channel_write (type 1)))
   (import "oak" "channel_read" (func $channel_read (type 2)))
   (func $oak_initialize (type 0)
-    i32.const 0)
+    i32.const 999)
   (func $oak_handle_grpc_call (type 0)
     i32.const 0)
   (memory (;0;) 18)

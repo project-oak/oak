@@ -19,3 +19,9 @@ cc_library(
     hdrs = ["handles.h"],
     visibility = ["//visibility:public"],
 )
+
+cc_library(
+    name = "status",
+    hdrs = ["status.h"],
+    visibility = ["//visibility:public"],
+)

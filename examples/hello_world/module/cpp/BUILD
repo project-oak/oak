@@ -19,6 +19,7 @@ cc_binary(
     srcs = ["hello_world.cc"],
     deps = [
         "//oak/common:handles",
+        "//oak/common:status",
         "//oak/module:defines",
     ],
 )

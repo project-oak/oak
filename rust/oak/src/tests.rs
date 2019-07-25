@@ -31,6 +31,12 @@ fn test_result_from_status() {
 }
 
 #[test]
+fn test_raw_status() {
+    assert_matches!(raw_status(Status::Ok), 0);
+    assert_matches!(raw_status(Status::Unknown(42)), 42);
+}
+
+#[test]
 fn test_write_message() {
     oak_tests::reset_channels();
     let mut send_channel = SendChannelHalf::new(123);
@@ -132,14 +138,11 @@ fn test_handle_grpc_call() {
     reset_node();
     set_node::<TestNode>();
     assert_eq!(true, have_node());
-    oak_handle_grpc_call();
+    assert_eq!(raw_status(Status::Ok), oak_handle_grpc_call());
 }
 
 #[test]
-#[should_panic]
-// TODO: Re-enable when https://github.com/project-oak/oak/issues/161 is fixed.
-#[ignore]
 fn test_handle_grpc_call_no_node() {
     reset_node();
-    oak_handle_grpc_call(); // no node: panic!
+    assert_eq!(raw_status(Status::InternalError), oak_handle_grpc_call());
 }

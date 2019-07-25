@@ -50,6 +50,7 @@ pub enum Status {
     ChannelClosed,
     BufferTooSmall,
     OutOfRange,
+    InternalError,
     Unknown(i32),
 }
 
@@ -62,7 +63,22 @@ fn status_from_i32(raw: i32) -> Status {
         3 => Status::ChannelClosed,
         4 => Status::BufferTooSmall,
         5 => Status::OutOfRange,
+        6 => Status::InternalError,
         _ => Status::Unknown(raw),
+    }
+}
+
+pub fn raw_status(status: Status) -> i32 {
+    // Keep in sync with /oak/server/status.h
+    match status {
+        Status::Ok => 0,
+        Status::BadHandle => 1,
+        Status::InvalidArgs => 2,
+        Status::ChannelClosed => 3,
+        Status::BufferTooSmall => 4,
+        Status::OutOfRange => 5,
+        Status::InternalError => 6,
+        Status::Unknown(x) => x,
     }
 }
 
@@ -84,6 +100,7 @@ fn result_from_status<T>(status: Status, val: T) -> std::io::Result<T> {
             "Buffer too small",
         )),
         Status::OutOfRange => Err(io::Error::new(io::ErrorKind::NotConnected, "Out of range")),
+        Status::InternalError => Err(io::Error::new(io::ErrorKind::Other, "Internal error")),
         Status::Unknown(raw) => Err(io::Error::new(
             io::ErrorKind::Other,
             format!("Unknown Oak status value {}", raw),
@@ -240,8 +257,9 @@ thread_local! {
 /// }
 ///
 /// #[no_mangle]
-/// pub extern "C" fn oak_initialize() {
+/// pub extern "C" fn oak_initialize() -> i32 {
 ///     oak::set_node::<Node>();
+///     oak::raw_status(oak::Status::Ok)
 /// }
 /// ```
 pub fn set_node<T: Node + 'static>() {
@@ -280,7 +298,7 @@ fn set_panic_hook() {
 }
 
 #[no_mangle]
-pub extern "C" fn oak_handle_grpc_call() {
+pub extern "C" fn oak_handle_grpc_call() -> i32 {
     NODE.with(|node| match *node.borrow_mut() {
         Some(ref mut node) => {
             let mut grpc_method_channel = ReceiveChannelHalf::new(GRPC_METHOD_NAME_CHANNEL_HANDLE);
@@ -289,12 +307,13 @@ pub extern "C" fn oak_handle_grpc_call() {
             let grpc_method_name = String::from_utf8_lossy(&buf);
             let mut grpc_pair = ChannelPair::new(GRPC_IN_CHANNEL_HANDLE, GRPC_OUT_CHANNEL_HANDLE);
             node.invoke(&grpc_method_name, &mut grpc_pair);
+            raw_status(Status::Ok)
         }
         None => {
             writeln!(logging_channel(), "gRPC call with no loaded Node").unwrap();
-            panic!("gRPC call with no loaded Node");
+            raw_status(Status::InternalError)
         }
-    });
+    })
 }
 
 /// Return whether an Oak Node is currently available.

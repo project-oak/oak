@@ -62,4 +62,8 @@ TEST(OakNode, WrongSignature) {
   ASSERT_EQ(nullptr, OakNode::Create(DataFrom("oak/server/testdata/wrong_fini.wasm")));
 }
 
+TEST(OakNode, InitializeFailure) {
+  ASSERT_EQ(nullptr, OakNode::Create(DataFrom("oak/server/testdata/failed_init.wasm")));
+}
+
 }  // namespace oak

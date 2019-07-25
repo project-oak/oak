@@ -23,9 +23,9 @@
 
 #include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
+#include "oak/common/status.h"
 #include "oak/server/buffer_channel.h"
 #include "oak/server/logging_channel.h"
-#include "oak/server/status.h"
 #include "oak/server/wabt_output.h"
 #include "src/binary-reader.h"
 #include "src/error-formatter.h"
@@ -70,6 +70,30 @@ static void LogHostFunctionCall(const wabt::interp::HostFunc* func,
             << params.str() << ")";
 }
 
+// Check that the result of invoking an exported function is a single
+// i32 holding STATUS_OK.
+static bool CheckWasmResult(const wabt::interp::ExecResult& result) {
+  if (result.result != wabt::interp::Result::Ok) {
+    std::string err = wabt::interp::ResultToString(result.result);
+    LOG(WARNING) << "Could not execute module: " << err;
+    return false;
+  }
+  if (result.values.size() != 1) {
+    LOG(WARNING) << "Unexpected number of return values: " << result.values.size();
+    return false;
+  }
+  wabt::interp::TypedValue rc = result.values[0];
+  if (rc.type != wabt::Type::I32) {
+    LOG(WARNING) << "Unexpected type of return value: " << rc.type;
+    return false;
+  }
+  if (rc.value.i32 != STATUS_OK) {
+    LOG(WARNING) << "Return value not OK: " << rc.value.i32;
+    return false;
+  }
+  return true;
+}
+
 static wabt::Result ReadModule(const std::string module_bytes, wabt::interp::Environment* env,
                                wabt::Errors* errors, wabt::interp::DefinedModule** out_module) {
   LOG(INFO) << "Reading module";
@@ -106,9 +130,27 @@ std::ostream& operator<<(std::ostream& os, const oak::RequiredExport& r) {
 namespace oak {
 
 const RequiredExport kRequiredExports[] = {
-    {"oak_initialize", true, {}},
-    {"oak_handle_grpc_call", true, {}},
-    {"oak_finalize", false, {}},
+    {"oak_initialize",
+     true,
+     {
+         wabt::interp::FuncSignature(std::vector<wabt::Type>{},
+                                     std::vector<wabt::Type>{wabt::Type::I32}),
+
+     }},
+    {"oak_handle_grpc_call",
+     true,
+     {
+         wabt::interp::FuncSignature(std::vector<wabt::Type>{},
+                                     std::vector<wabt::Type>{wabt::Type::I32}),
+
+     }},
+    {"oak_finalize",
+     false,
+     {
+         wabt::interp::FuncSignature(std::vector<wabt::Type>{},
+                                     std::vector<wabt::Type>{wabt::Type::I32}),
+
+     }},
 };
 
 // Check module exports all required functions with the correct signatures,
@@ -153,6 +195,7 @@ static bool CheckModuleExport(wabt::interp::Environment* env, wabt::interp::Defi
   }
   return true;
 }
+
 static bool CheckModuleExports(wabt::interp::Environment* env,
                                wabt::interp::DefinedModule* module) {
   bool rc = true;
@@ -203,14 +246,12 @@ std::unique_ptr<OakNode> OakNode::Create(const std::string& module) {
   wabt::interp::ExecResult exec_result =
       executor.RunExportByName(node->module_, "oak_initialize", args);
 
-  if (exec_result.result != wabt::interp::Result::Ok) {
-    LOG(WARNING) << "Could not execute module";
-    wabt::interp::WriteResult(s_stdout_stream.get(), "error", exec_result.result);
-    // TODO: Print error.
+  if (!CheckWasmResult(exec_result)) {
+    LOG(ERROR) << "oak_initialize() failed";
     return nullptr;
   }
 
-  LOG(INFO) << "Executed module";
+  LOG(INFO) << "Executed module oak_initialize() entrypoint";
   return node;
 }
 
@@ -323,9 +364,9 @@ grpc::Status OakNode::ProcessModuleInvocation(grpc::GenericServerContext* contex
   wabt::interp::ExecResult exec_result =
       executor.RunExportByName(module_, "oak_handle_grpc_call", args);
 
-  if (exec_result.result != wabt::interp::Result::Ok) {
+  if (!CheckWasmResult(exec_result)) {
     std::string err = wabt::interp::ResultToString(exec_result.result);
-    LOG(ERROR) << "Could not handle gRPC call: " << err;
+    LOG(ERROR) << "Failed to handle gRPC call " << err;
     return grpc::Status(grpc::StatusCode::INTERNAL, err);
   }
   return grpc::Status::OK;

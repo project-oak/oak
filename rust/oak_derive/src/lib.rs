@@ -33,8 +33,9 @@ pub fn derive_oak_node(input: TokenStream) -> TokenStream {
 
     let expanded = quote! {
         #[no_mangle]
-        pub extern "C" fn oak_initialize() {
+        pub extern "C" fn oak_initialize() -> i32{
             oak::set_node::<#name>();
+            oak::raw_status(oak::Status::Ok)
         }
     };
 

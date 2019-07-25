@@ -34,8 +34,8 @@ cc_library(
         ":buffer_channel",
         ":channel",
         ":logging_channel",
-        ":status",
         "//oak/common:handles",
+        "//oak/common:status",
         "//oak/proto:application_cc_grpc",
         "@boringssl//:crypto",
         "@com_github_grpc_grpc//:grpc++",
@@ -121,10 +121,4 @@ cc_library(
     deps = [
         ":channel",
     ],
-)
-
-cc_library(
-    name = "status",
-    hdrs = ["status.h"],
-    deps = [],
 )

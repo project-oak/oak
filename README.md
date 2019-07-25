@@ -106,16 +106,16 @@ others, for example Go.
 Each Oak Module must expose the following **exported functions** as
 [WebAssembly exports](https://webassembly.github.io/spec/core/syntax/modules.html#exports):
 
--   `oak_initialize: () -> nil`: Invoked when the Oak Manager initializes the
+-   `oak_initialize: () -> i32`: Invoked when the Oak Manager initializes the
     Oak Node. The Oak VM guarantees that this is invoked exactly once.
 
--   `oak_finalize: () -> nil`: Invoked when the Oak Manager finalizes the Oak
+-   `oak_finalize: () -> i32`: Invoked when the Oak Manager finalizes the Oak
     Node. Note that this is best effort, and not guaranteed to be invoked before
     the Oak Node is finalized (e.g. in case of sudden shutdown of the host this
     may fail to be invoked). No further interactions with the Oak Node are
     possible after finalization.
 
--   `oak_handle_grpc_call: () -> nil`: Invoked when a client interacts with the
+-   `oak_handle_grpc_call: () -> i32`: Invoked when a client interacts with the
     Oak Node over gRPC. Each client interaction results in a new invocation of
     this function, and the Oak VM guarantees that concurrent invocations only
     invoke it sequentially, therefore from the point of view of the Oak Node
@@ -124,6 +124,8 @@ Each Oak Module must expose the following **exported functions** as
     future we may relax some of these restrictions, when we can reason more
     accurately about the semantics of concurrent invocations, and how they
     relate to the policy system.
+
+Each of these exported functions returns a status code.
 
 Communication from the Oak Module to the Oak VM and to other modules is
 implemented via **channels**. A channel represents a uni-directional stream of

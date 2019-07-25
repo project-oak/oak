@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef OAK_SERVER_STATUS_H_
-#define OAK_SERVER_STATUS_H_
+#ifndef OAK_COMMON_STATUS_H_
+#define OAK_COMMON_STATUS_H_
 
 #include <stdint.h>
 
@@ -38,7 +38,9 @@ const OakStatus STATUS_ERR_CHANNEL_CLOSED = 3;
 const OakStatus STATUS_ERR_BUFFER_TOO_SMALL = 4;
 // Argument out of valid range.
 const OakStatus STATUS_ERR_OUT_OF_RANGE = 5;
+// An internal error occurred.
+const OakStatus STATUS_ERR_INTERNAL_ERROR = 6;
 
 }  // namespace oak
 
-#endif  // OAK_SERVER_STATUS_H_
+#endif  // OAK_COMMON_STATUS_H_
