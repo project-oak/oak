@@ -336,11 +336,6 @@ OakNode::InvocationResult OakNode::ProcessModuleInvocation(grpc::GenericServerCo
                                std::move(rsp_write_half));
   LOG(INFO) << "Created gRPC output channel:" << GRPC_OUT_CHANNEL_HANDLE;
 
-  // Create the logging channel, used by the module to log statements for debugging.
-  std::unique_ptr<ChannelHalf> logging_channel = absl::make_unique<LoggingChannelHalf>();
-  channel_halves_[LOGGING_CHANNEL_HANDLE] = std::move(logging_channel);
-  LOG(INFO) << "Created logging channel";
-
   wabt::Stream* trace_stream = nullptr;
   wabt::interp::Thread::Options thread_options;
   wabt::interp::Executor executor(&env_, trace_stream, thread_options);
