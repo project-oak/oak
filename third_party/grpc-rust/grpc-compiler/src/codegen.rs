@@ -28,6 +28,7 @@ fn snake_name(name: &str) -> String {
         last_char = c;
         // find all continous upper case char and append an underscore before
         // last upper case char if neccessary.
+        #[allow(clippy::while_let_on_iterator)]
         while let Some(c) = chars.next() {
             if !c.is_uppercase() {
                 if can_append_underscore && c != '_' {
@@ -256,7 +257,7 @@ impl<'a> ServiceGen<'a> {
     }
 
     fn write_dispatcher(&self, w: &mut CodeWriter) {
-        w.pub_fn(&format!("dispatch(node: &mut {}, grpc_method_name: &str, grpc_pair: &mut oak::ChannelPair)", self.server_intf_name()), |w| {
+        w.pub_fn(&format!("dispatch(node: &mut dyn {}, grpc_method_name: &str, grpc_pair: &mut oak::ChannelPair)", self.server_intf_name()), |w| {
             w.block("match grpc_method_name {", "};", |w| {
                 for method in &self.methods {
                     let full_path = format!("{}/{}", method.service_path, method.proto.get_name());

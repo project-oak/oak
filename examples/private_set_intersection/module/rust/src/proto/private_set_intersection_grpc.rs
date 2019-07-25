@@ -31,7 +31,7 @@ pub trait PrivateSetIntersectionNode {
 }
 
 // Oak Node gRPC method dispatcher
-pub fn dispatch(node: &mut PrivateSetIntersectionNode, grpc_method_name: &str, grpc_pair: &mut oak::ChannelPair) {
+pub fn dispatch(node: &mut dyn PrivateSetIntersectionNode, grpc_method_name: &str, grpc_pair: &mut oak::ChannelPair) {
     match grpc_method_name {
         "/oak.examples.private_set_intersection.PrivateSetIntersection/SubmitSet" => {
             // If the data fits in 256 bytes it will be read immediately.

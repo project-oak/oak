@@ -67,7 +67,7 @@ pub fn run(args: Args) -> Result<()> {
 
     let mut includes = args.includes;
     if includes.is_empty() {
-        static DOT_SLICE: &'static [&'static str] = &["."];
+        static DOT_SLICE: &[&str] = &["."];
         includes = DOT_SLICE;
     }
 

@@ -82,7 +82,7 @@ impl Distribution<Animal> for Standard {
 
 // FIXME: move data generation to client once we can write clients in Rust.
 fn generate_animal_data(
-    logging_channel: &mut Write,
+    logging_channel: &mut dyn Write,
     training_set_size: usize,
     test_set_size: usize,
 ) -> (Matrix<f64>, Matrix<f64>, Matrix<f64>, Vec<Animal>) {
