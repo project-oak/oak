@@ -23,6 +23,7 @@
 
 #include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
+#include "oak/proto/grpc_encap.pb.h"
 #include "oak/server/logging_channel.h"
 #include "oak/server/status.h"
 #include "oak/server/wabt_output.h"

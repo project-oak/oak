@@ -5,6 +5,7 @@ fn main() {
         out_dir: "src/proto",
         input: &[
             "../../third_party/google/rpc/status.proto",
+            "../../oak/proto/grpc_encap.proto",
             "../../oak/proto/storage.proto",
         ],
         includes: &["../../oak/proto", "../../third_party"],
