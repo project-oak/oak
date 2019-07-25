@@ -47,7 +47,7 @@ cargo build --release --target=wasm32-unknown-unknown --manifest-path="examples/
 bazel --output_base="$CACHE_DIR/client" build --symlink_prefix='client-' --compilation_mode="$COMPILATION_MODE" "//examples/$TARGET/client"
 
 readonly CPP_FOLDER="$(find examples/"$TARGET" -type d -name cpp)"
-if [[ ! -z "$CPP_FOLDER" ]]; then
+if [[ -n "$CPP_FOLDER" ]]; then
     #TODO: support compilation mode wasm.
     bazel --output_base="$CACHE_DIR/module" build --symlink_prefix='module-' --config=wasm32 "//examples/$TARGET/module/cpp:all"
 fi
