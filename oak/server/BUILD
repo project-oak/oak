@@ -38,7 +38,6 @@ cc_library(
         "wabt_output.h",
     ],
     deps = [
-        ":buffer_channel",
         ":channel",
         ":logging_channel",
         ":status",
@@ -128,14 +127,6 @@ cc_test(
         ":channel",
         "@com_google_absl//absl/memory",
         "@gtest//:gtest_main",
-    ],
-)
-
-cc_library(
-    name = "buffer_channel",
-    hdrs = ["buffer_channel.h"],
-    deps = [
-        ":channel",
     ],
 )
 

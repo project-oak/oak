@@ -33,13 +33,17 @@ typedef std::unordered_map<Handle, std::unique_ptr<ChannelHalf>> ChannelHalfTabl
 
 class OakNode final : public Application::Service {
  public:
+  struct InvocationResult {
+    grpc::Status status;
+    std::unique_ptr<Message> data;
+  };
+
   // Creates an Oak node by loading the Wasm module code.
   static std::unique_ptr<OakNode> Create(const std::string& module);
 
   // Performs an Oak Module invocation. Takes ownership of the passed in request data.
-  grpc::Status ProcessModuleInvocation(grpc::GenericServerContext* context,
-                                       std::unique_ptr<Message> request_data,
-                                       std::vector<char>* response_data);
+  InvocationResult ProcessModuleInvocation(grpc::GenericServerContext* context,
+                                           std::unique_ptr<Message> request_data);
 
  private:
   // Clients should construct OakNode instances with Create() (which

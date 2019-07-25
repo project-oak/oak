@@ -38,11 +38,11 @@ std::unique_ptr<Message> Unwrap(const grpc::ByteBuffer& buffer) {
   return bytes;
 }
 
-// Converts a vector of bytes into a gRPC ByteBuffer.
-const grpc::ByteBuffer Wrap(const std::vector<char>& bytes) {
-  grpc::Slice slice(bytes.data(), bytes.size());
-  grpc::ByteBuffer buffer(&slice, /*nslices=*/1);
-  return buffer;
+// Creates a gRPC ByteBuffer that reference the given Message.
+// The lifetime of the message must be longer than that of the ByteBuffer.
+const grpc::ByteBuffer Wrap(const Message& msg) {
+  grpc::Slice slice(msg.data(), msg.size());
+  return grpc::ByteBuffer(&slice, /*nslices=*/1);
 }
 
 }  // namespace
@@ -69,19 +69,22 @@ void ModuleInvocation::ProcessRequest(bool ok) {
     return;
   }
   std::unique_ptr<Message> request_data = Unwrap(request_);
-  std::vector<char> response_data;
-  grpc::Status status =
-      node_->ProcessModuleInvocation(&context_, std::move(request_data), &response_data);
+  OakNode::InvocationResult result =
+      node_->ProcessModuleInvocation(&context_, std::move(request_data));
   // Restarts the gRPC flow with a new ModuleInvocation object for the next request
   // after processing this request.  This ensures that processing is serialized.
   auto* request = new ModuleInvocation(service_, queue_, node_);
   request->Start();
 
-  response_ = Wrap(response_data);
+  if (result.data == nullptr) {
+    response_ = Wrap(Message());
+  } else {
+    response_ = Wrap(*result.data);
+  }
   grpc::WriteOptions options;
   auto* callback = new std::function<void(bool)>(
       std::bind(&ModuleInvocation::Finish, this, std::placeholders::_1));
-  stream_.WriteAndFinish(response_, options, status, callback);
+  stream_.WriteAndFinish(response_, options, result.status, callback);
 }
 
 void ModuleInvocation::Finish(bool ok) { delete this; }
