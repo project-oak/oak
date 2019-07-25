@@ -31,7 +31,7 @@ pub trait RunningAverageNode {
 }
 
 // Oak Node gRPC method dispatcher
-pub fn dispatch(node: &mut RunningAverageNode, grpc_method_name: &str, grpc_pair: &mut oak::ChannelPair) {
+pub fn dispatch(node: &mut dyn RunningAverageNode, grpc_method_name: &str, grpc_pair: &mut oak::ChannelPair) {
     match grpc_method_name {
         "/oak.examples.running_average.RunningAverage/SubmitSample" => {
             // If the data fits in 256 bytes it will be read immediately.

@@ -14,7 +14,6 @@
 // limitations under the License.
 //
 
-#[macro_use]
 extern crate log;
 extern crate oak;
 extern crate oak_derive;

@@ -29,7 +29,7 @@ pub trait FormatServiceNode {
 }
 
 // Oak Node gRPC method dispatcher
-pub fn dispatch(node: &mut FormatServiceNode, grpc_method_name: &str, grpc_pair: &mut oak::ChannelPair) {
+pub fn dispatch(node: &mut dyn FormatServiceNode, grpc_method_name: &str, grpc_pair: &mut oak::ChannelPair) {
     match grpc_method_name {
         "/oak.examples.rustfmt.FormatService/Format" => {
             // If the data fits in 256 bytes it will be read immediately.
