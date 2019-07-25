@@ -132,16 +132,22 @@ or write to respectively. Each half of a channel is identified by a **handle**,
 which is used as a parameter to the corresponding host function calls.
 
 At each invocation, the following channel halves are implicitly available to the Oak
-Node (see [/oak/server/oak_node.h](oak/server/oak_node.h)):
+Node (see [/oak/common/handles.h](oak/common/handles.h)):
 
--   `logging` (handle: 1, send)
--   `grpc_method` (handle: 2, receive)
--   `grpc_in` (handle: 3, receive)
--   `grpc_out` (handle: 4, send)
+-   `logging` (handle: 1, send): Messages sent to this channel will treated as
+    UTF-8 strings to be logged.
+-   `grpc_in` (handle: 2, receive): This channel will be populated with incoming
+    gRPC request messages, for processing by the Oak Node.  Each message is a
+    serialized `GrpcRequest` protocol buffer message (see
+    [/oak/proto/grpc_encap.proto](oak/proto/grpc_encap.proto)).
+-   `grpc_out` (handle: 3, send): This channel can be used to send gRPC response
+    messages.  Each such message should be encoded as a serialized
+    `GrpcResponse` protocol buffer message (see
+    [/oak/proto/grpc_encap.proto](oak/proto/grpc_encap.proto)).
 
 Each Oak Module may also optionally rely on zero or more of the following **host
-functions** as
-[WebAssembly imports](https://webassembly.github.io/spec/core/syntax/modules.html#imports)
+functions** as [WebAssembly
+imports](https://webassembly.github.io/spec/core/syntax/modules.html#imports)
 (all of them defined in the `oak` module):
 
 -   `channel_read: (i64, i32, i32, i32) -> i32`: Reads a single message from the
