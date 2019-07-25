@@ -17,5 +17,5 @@ find scripts -type f -exec shellcheck {} +
 find examples rust -type f -name '*.rs' -exec rustfmt --check {} +
 
 # Run clippy to lint the Rust code.
-cargo clippy --manifest-path="$PWD/examples/Cargo.toml"
-cargo clippy --manifest-path="$PWD/rust/Cargo.toml"
+cargo clippy --manifest-path="$PWD/examples/Cargo.toml" --all-targets -- -D warnings
+cargo clippy --manifest-path="$PWD/rust/Cargo.toml" --all-targets -- -D warnings
