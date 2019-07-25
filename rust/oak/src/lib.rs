@@ -245,6 +245,7 @@ thread_local! {
 /// }
 /// ```
 pub fn set_node<T: Node + 'static>() {
+    set_panic_hook();
     NODE.with(|node| {
         match *node.borrow_mut() {
             Some(_) => {
@@ -257,6 +258,25 @@ pub fn set_node<T: Node + 'static>() {
         }
         *node.borrow_mut() = Some(Box::new(T::new()));
     });
+}
+
+/// Install a panic hook so that panics are logged to the logging channel, if one is set.
+/// See https://doc.rust-lang.org/std/panic/struct.PanicInfo.html.
+fn set_panic_hook() {
+    std::panic::set_hook(Box::new(|panic_info| {
+        let msg = panic_info
+            .payload()
+            .downcast_ref::<&str>()
+            .unwrap_or(&"<UNKWOWN MESSAGE>");
+        let (file, line) = match panic_info.location() {
+            Some(location) => (location.file(), location.line()),
+            None => ("<UNKNOWN FILE>", 0),
+        };
+        error!(
+            "panic occurred in file '{}' at line {}: {}",
+            file, line, msg
+        );
+    }));
 }
 
 #[no_mangle]
