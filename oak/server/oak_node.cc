@@ -250,9 +250,17 @@ wabt::interp::HostFunc::Callback OakNode::OakChannelRead(wabt::interp::Environme
 
     ChannelHalf::ReadResult result = channel->Read(size);
     if (result.required_size > 0) {
+      LOG(INFO) << "channel_read[" << channel_handle << "]: buffer too small: " << size << " < "
+                << result.required_size;
       WriteI32(env, size_offset, result.required_size);
       results[0].set_i32(STATUS_ERR_BUFFER_TOO_SMALL);
+    } else if (result.data == nullptr) {
+      LOG(INFO) << "channel_read[" << channel_handle << "]: no message available";
+      WriteI32(env, size_offset, 0);
+      results[0].set_i32(STATUS_OK);
     } else {
+      LOG(INFO) << "channel_read[" << channel_handle << "]: read message of size "
+                << result.data->size();
       WriteI32(env, size_offset, result.data->size());
       WriteMemory(env, offset, absl::Span<char>(result.data->data(), result.data->size()));
       results[0].set_i32(STATUS_OK);
