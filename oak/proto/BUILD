@@ -80,7 +80,7 @@ proto_library(
     name = "storage_proto",
     srcs = ["storage.proto"],
     deps = [
-        "@com_google_googleapis//google/rpc:status_proto",
+        "//third_party/google/rpc:status_proto",
     ],
 )
 
@@ -93,6 +93,8 @@ cc_grpc_library(
     name = "storage_cc_grpc",
     srcs = [":storage_proto"],
     grpc_only = True,
-    well_known_protos = True,
-    deps = [":storage_cc_proto"],
+    deps = [
+        ":storage_cc_proto",
+        "//third_party/google/rpc:status_cc_proto",
+    ],
 )
