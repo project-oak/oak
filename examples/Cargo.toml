@@ -9,8 +9,8 @@ members = [
 ]
 
 [patch.crates-io]
-# TODO: Remove when https://github.com/soc/dirs-rs/pull/24 is merged and published.
-dirs = { git = "https://github.com/tiziano88/dirs-rs", rev = "ca7572730f6c744a16236e342da60f1205ffc6ec" }
+# TODO: Remove when https://github.com/soc/dirs-rs/pull/24 is published.
+dirs = { git = "https://github.com/soc/dirs-rs", rev = "910b3561557dfa8034d39e1462a6cedadbfb6b6e" }
 # TODO: Remove when a new version of the term crate is published. The one currently published
 # depends on dirs=1.0.2 which means that it does not pick up the fix above, which is done on
 # dirs=2.0.1.
