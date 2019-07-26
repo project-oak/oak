@@ -34,8 +34,15 @@ pub fn derive_oak_node(input: TokenStream) -> TokenStream {
     let expanded = quote! {
         #[no_mangle]
         pub extern "C" fn oak_initialize() -> i32{
-            oak::set_node::<#name>();
-            oak::raw_status(oak::Status::Ok)
+            // A panic in the Rust module code cannot safely pass through the FFI
+            // boundary, so catch any panics here and translate to an error return.
+            // https://doc.rust-lang.org/nomicon/ffi.html#ffi-and-panics
+            match std::panic::catch_unwind(||{
+                oak::set_node::<#name>();
+            }) {
+                Ok(_) => oak::raw_status(oak::Status::Ok),
+                Err(_) => oak::raw_status(oak::Status::InternalError),
+            }
         }
     };
 

@@ -299,21 +299,30 @@ fn set_panic_hook() {
 
 #[no_mangle]
 pub extern "C" fn oak_handle_grpc_call() -> i32 {
-    NODE.with(|node| match *node.borrow_mut() {
-        Some(ref mut node) => {
-            let mut grpc_method_channel = ReceiveChannelHalf::new(GRPC_METHOD_NAME_CHANNEL_HANDLE);
-            let mut buf = Vec::<u8>::with_capacity(256);
-            grpc_method_channel.read_message(&mut buf).unwrap();
-            let grpc_method_name = String::from_utf8_lossy(&buf);
-            let mut grpc_pair = ChannelPair::new(GRPC_IN_CHANNEL_HANDLE, GRPC_OUT_CHANNEL_HANDLE);
-            node.invoke(&grpc_method_name, &mut grpc_pair);
-            raw_status(Status::Ok)
-        }
-        None => {
-            writeln!(logging_channel(), "gRPC call with no loaded Node").unwrap();
-            raw_status(Status::InternalError)
-        }
-    })
+    // A panic in the Rust module code cannot safely pass through the FFI
+    // boundary, so catch any panics here and translate to an error return.
+    // https://doc.rust-lang.org/nomicon/ffi.html#ffi-and-panics
+    match std::panic::catch_unwind(|| {
+        NODE.with(|node| match *node.borrow_mut() {
+            Some(ref mut node) => {
+                let mut grpc_method_channel =
+                    ReceiveChannelHalf::new(GRPC_METHOD_NAME_CHANNEL_HANDLE);
+                let mut buf = Vec::<u8>::with_capacity(256);
+                grpc_method_channel.read_message(&mut buf).unwrap();
+                let grpc_method_name = String::from_utf8_lossy(&buf);
+                let mut grpc_pair =
+                    ChannelPair::new(GRPC_IN_CHANNEL_HANDLE, GRPC_OUT_CHANNEL_HANDLE);
+                node.invoke(&grpc_method_name, &mut grpc_pair);
+            }
+            None => {
+                writeln!(logging_channel(), "gRPC call with no loaded Node").unwrap();
+                panic!("gRPC call with no loaded Node");
+            }
+        })
+    }) {
+        Ok(_) => raw_status(Status::Ok),
+        Err(_) => raw_status(Status::InternalError),
+    }
 }
 
 /// Return whether an Oak Node is currently available.

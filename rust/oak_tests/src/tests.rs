@@ -14,6 +14,12 @@ impl oak::Node for TestNode {
 fn test_initialize() {
     // oak_derive should ensure that oak_initialize() is defined and calls oak::set_node.
     assert_eq!(false, oak::have_node());
-    oak_initialize();
+    assert_eq!(oak::raw_status(oak::Status::Ok), oak_initialize());
     assert_eq!(true, oak::have_node());
+
+    // Second call to oak_initialize should panic and get converted to an error.
+    assert_eq!(
+        oak::raw_status(oak::Status::InternalError),
+        oak_initialize()
+    );
 }
