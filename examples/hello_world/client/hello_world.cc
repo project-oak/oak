@@ -41,8 +41,9 @@ void say_hello(HelloWorld::Stub* stub, std::string name) {
   HelloResponse response;
   grpc::Status status = stub->SayHello(&context, request, &response);
   if (!status.ok()) {
-    LOG(QFATAL) << "Could not call SayHello: " << status.error_code() << ": "
-                << status.error_message();
+    LOG(WARNING) << "Could not call SayHello('" << name << "'): " << status.error_code() << ": "
+                 << status.error_message();
+    return;
   }
   LOG(INFO) << "Response: " << response.reply();
 }
@@ -89,6 +90,8 @@ int main(int argc, char** argv) {
   say_hello(stub.get(), "WORLD");
   say_hello(stub.get(), "MONDO");
   say_hello(stub.get(), "世界");
+  say_hello(stub.get(), "Query-of-Error");
+  say_hello(stub.get(), "MONDE");
 
   // TODO(#97): Uncomment this line when gRPC server streaming is implemented.
   // lots_of_replies(stub.get(), "WORLDS");

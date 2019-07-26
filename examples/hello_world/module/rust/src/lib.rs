@@ -43,6 +43,12 @@ impl oak::Node for Node {
 
 impl HelloWorldNode for Node {
     fn say_hello(&mut self, req: HelloRequest) -> GrpcResult<HelloResponse> {
+        if req.greeting == "Query-of-Error" {
+            let mut status = oak::proto::status::Status::new();
+            status.set_code(3); // INVALID_ARGUMENT
+            status.set_message("Deliberate error (code 3)".to_string());
+            return Err(status);
+        }
         info!("Say hello to {}", req.greeting);
         let mut res = HelloResponse::new();
         res.reply = format!("HELLO {}!", req.greeting);
