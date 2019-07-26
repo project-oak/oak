@@ -38,8 +38,17 @@ pub fn dispatch(node: &mut dyn RunningAverageNode, method: &str, req: &[u8], out
             node.submit_sample(r).unwrap();
         }
         "/oak.examples.running_average.RunningAverage/GetAverage" => {
-            let rsp = node.get_average().unwrap();
-            rsp.write_to_writer(out).unwrap();
+            let mut result = oak::proto::grpc_encap::GrpcResponse::new();
+            match node.get_average() {
+                Ok(rsp) => {
+                    let mut rsp_data = Vec::new();
+                    rsp.write_to_writer(&mut rsp_data).unwrap();
+                    result.set_rsp_msg(rsp_data);
+                }
+                Err(status) => result.set_status(status),
+            }
+            result.set_last(true);
+            result.write_to_writer(out).unwrap();
         }
         _ => {
             writeln!(oak::logging_channel(), "unknown method name: {}", method).unwrap();

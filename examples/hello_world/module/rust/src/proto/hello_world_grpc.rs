@@ -39,26 +39,68 @@ pub fn dispatch(node: &mut dyn HelloWorldNode, method: &str, req: &[u8], out: &m
     match method {
         "/oak.examples.hello_world.HelloWorld/SayHello" => {
             let r = protobuf::parse_from_bytes(&req).unwrap();
-            let rsp = node.say_hello(r).unwrap();
-            rsp.write_to_writer(out).unwrap();
+            let mut result = oak::proto::grpc_encap::GrpcResponse::new();
+            match node.say_hello(r) {
+                Ok(rsp) => {
+                    let mut rsp_data = Vec::new();
+                    rsp.write_to_writer(&mut rsp_data).unwrap();
+                    result.set_rsp_msg(rsp_data);
+                }
+                Err(status) => result.set_status(status),
+            }
+            result.set_last(true);
+            result.write_to_writer(out).unwrap();
         }
         "/oak.examples.hello_world.HelloWorld/LotsOfReplies" => {
             let r = protobuf::parse_from_bytes(&req).unwrap();
-            let rsps = node.lots_of_replies(r).unwrap();
-            for rsp in rsps {
-                rsp.write_to_writer(out).unwrap();
+            match node.lots_of_replies(r) {
+                Ok(rsps) => for (i, rsp) in rsps.iter().enumerate() {
+                    let mut result = oak::proto::grpc_encap::GrpcResponse::new();
+                    let mut rsp_data = Vec::new();
+                    rsp.write_to_writer(&mut rsp_data).unwrap();
+                    result.set_rsp_msg(rsp_data);
+                    result.set_last(i == (rsps.len() - 1));
+                    result.write_to_writer(out).unwrap();
+                },
+                Err(status) => {
+                    let mut result = oak::proto::grpc_encap::GrpcResponse::new();
+                    result.set_status(status);
+                    result.set_last(true);
+                    result.write_to_writer(out).unwrap();
+                },
             }
         }
         "/oak.examples.hello_world.HelloWorld/LotsOfGreetings" => {
             let rr = vec![protobuf::parse_from_bytes(&req).unwrap()];
-            let rsp = node.lots_of_greetings(rr).unwrap();
-            rsp.write_to_writer(out).unwrap();
+            let mut result = oak::proto::grpc_encap::GrpcResponse::new();
+            match node.lots_of_greetings(rr) {
+                Ok(rsp) => {
+                    let mut rsp_data = Vec::new();
+                    rsp.write_to_writer(&mut rsp_data).unwrap();
+                    result.set_rsp_msg(rsp_data);
+                }
+                Err(status) => result.set_status(status),
+            }
+            result.set_last(true);
+            result.write_to_writer(out).unwrap();
         }
         "/oak.examples.hello_world.HelloWorld/BidiHello" => {
             let rr = vec![protobuf::parse_from_bytes(&req).unwrap()];
-            let rsps = node.bidi_hello(rr).unwrap();
-            for rsp in rsps {
-                rsp.write_to_writer(out).unwrap();
+            match node.bidi_hello(rr) {
+                Ok(rsps) => for (i, rsp) in rsps.iter().enumerate() {
+                    let mut result = oak::proto::grpc_encap::GrpcResponse::new();
+                    let mut rsp_data = Vec::new();
+                    rsp.write_to_writer(&mut rsp_data).unwrap();
+                    result.set_rsp_msg(rsp_data);
+                    result.set_last(i == (rsps.len() - 1));
+                    result.write_to_writer(out).unwrap();
+                },
+                Err(status) => {
+                    let mut result = oak::proto::grpc_encap::GrpcResponse::new();
+                    result.set_status(status);
+                    result.set_last(true);
+                    result.write_to_writer(out).unwrap();
+                },
             }
         }
         _ => {
