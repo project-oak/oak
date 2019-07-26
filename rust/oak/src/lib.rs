@@ -23,7 +23,7 @@ use std::cell::RefCell;
 use std::io;
 use std::io::Write;
 
-mod proto;
+pub mod proto;
 #[cfg(test)]
 mod tests;
 

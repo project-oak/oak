@@ -355,13 +355,21 @@ OakNode::InvocationResult OakNode::ProcessModuleInvocation(grpc::GenericServerCo
     result.status = grpc::Status(grpc::StatusCode::INTERNAL, "Message size too large");
     return result;
   }
-  if (rsp_result.data != nullptr) {
-    LOG(INFO) << "Read message of size " << rsp_result.data->size() << " from output channel";
-  } else {
+  if (rsp_result.data == nullptr) {
     LOG(INFO) << "No response on output channel";
+    result.status = grpc::Status::OK;
+    return result;
   }
-  result.status = grpc::Status::OK;
-  result.data = std::move(rsp_result.data);
+
+  // Expect to receive a serialized GrpcResponse message.
+  LOG(INFO) << "Read message of size " << rsp_result.data->size() << " from output channel";
+  oak::GrpcResponse grpc_out;
+  grpc_out.ParseFromString(std::string(rsp_result.data->data(), rsp_result.data->size()));
+  // Assume google::rpc::Status maps directly to grpc::Status.
+  result.status = grpc::Status(static_cast<grpc::StatusCode>(grpc_out.status().code()),
+                               grpc_out.status().message());
+  const ::std::string& data = grpc_out.rsp_msg();
+  result.data = std::move(absl::make_unique<Message>(data.begin(), data.end()));
   return result;
 }
 

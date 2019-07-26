@@ -164,25 +164,51 @@ impl<'a> MethodGen<'a> {
                 self.snake_name(),
                 param_in
             ));
+        } else if self.proto.get_server_streaming() {
+            w.block(
+                &format!("match node.{}({}) {{", self.snake_name(), param_in),
+                "}",
+                |w| {
+                    w.block(
+                        "Ok(rsps) => for (i, rsp) in rsps.iter().enumerate() {",
+                        "},",
+                        |w| {
+                            w.write_line(
+                                "let mut result = oak::proto::grpc_encap::GrpcResponse::new();",
+                            );
+                            w.write_line("let mut rsp_data = Vec::new();");
+                            w.write_line("rsp.write_to_writer(&mut rsp_data).unwrap();");
+                            w.write_line("result.set_rsp_msg(rsp_data);");
+                            w.write_line("result.set_last(i == (rsps.len() - 1));");
+                            w.write_line("result.write_to_writer(out).unwrap();");
+                        },
+                    );
+                    w.block("Err(status) => {", "},", |w| {
+                        w.write_line(
+                            "let mut result = oak::proto::grpc_encap::GrpcResponse::new();",
+                        );
+                        w.write_line("result.set_status(status);");
+                        w.write_line("result.set_last(true);");
+                        w.write_line("result.write_to_writer(out).unwrap();");
+                    });
+                },
+            );
         } else {
-            // TODO: deal with Err(status)
-            if self.proto.get_server_streaming() {
-                w.write_line(&format!(
-                    "let rsps = node.{}({}).unwrap();",
-                    self.snake_name(),
-                    param_in
-                ));
-                w.block("for rsp in rsps {", "}", |w| {
-                    w.write_line("rsp.write_to_writer(out).unwrap();");
-                });
-            } else {
-                w.write_line(&format!(
-                    "let rsp = node.{}({}).unwrap();",
-                    self.snake_name(),
-                    param_in
-                ));
-                w.write_line("rsp.write_to_writer(out).unwrap();");
-            }
+            w.write_line("let mut result = oak::proto::grpc_encap::GrpcResponse::new();");
+            w.block(
+                &format!("match node.{}({}) {{", self.snake_name(), param_in),
+                "}",
+                |w| {
+                    w.block("Ok(rsp) => {", "}", |w| {
+                        w.write_line("let mut rsp_data = Vec::new();");
+                        w.write_line("rsp.write_to_writer(&mut rsp_data).unwrap();");
+                        w.write_line("result.set_rsp_msg(rsp_data);");
+                    });
+                    w.write_line("Err(status) => result.set_status(status),");
+                },
+            );
+            w.write_line("result.set_last(true);");
+            w.write_line("result.write_to_writer(out).unwrap();");
         }
     }
 }
