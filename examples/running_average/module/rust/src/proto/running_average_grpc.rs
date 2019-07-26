@@ -31,22 +31,18 @@ pub trait RunningAverageNode {
 }
 
 // Oak Node gRPC method dispatcher
-pub fn dispatch(node: &mut dyn RunningAverageNode, grpc_method_name: &str, grpc_pair: &mut oak::ChannelPair) {
-    match grpc_method_name {
+pub fn dispatch(node: &mut dyn RunningAverageNode, method: &str, req: &[u8], out: &mut oak::SendChannelHalf) {
+    match method {
         "/oak.examples.running_average.RunningAverage/SubmitSample" => {
-            // If the data fits in 256 bytes it will be read immediately.
-            // If not, the vector will be resized and read on second attempt.
-            let mut buf = Vec::<u8>::with_capacity(256);
-            grpc_pair.receive.read_message(&mut buf).unwrap();
-            let req = protobuf::parse_from_bytes(&buf).unwrap();
-            node.submit_sample(req).unwrap();
+            let r = protobuf::parse_from_bytes(&req).unwrap();
+            node.submit_sample(r).unwrap();
         }
         "/oak.examples.running_average.RunningAverage/GetAverage" => {
             let rsp = node.get_average().unwrap();
-            rsp.write_to_writer(&mut grpc_pair.send).unwrap();
+            rsp.write_to_writer(out).unwrap();
         }
         _ => {
-            writeln!(oak::logging_channel(), "unknown method name: {}", grpc_method_name).unwrap();
+            writeln!(oak::logging_channel(), "unknown method name: {}", method).unwrap();
             panic!("unknown method name");
         }
     };

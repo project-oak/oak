@@ -35,62 +35,34 @@ pub trait HelloWorldNode {
 }
 
 // Oak Node gRPC method dispatcher
-pub fn dispatch(node: &mut dyn HelloWorldNode, grpc_method_name: &str, grpc_pair: &mut oak::ChannelPair) {
-    match grpc_method_name {
+pub fn dispatch(node: &mut dyn HelloWorldNode, method: &str, req: &[u8], out: &mut oak::SendChannelHalf) {
+    match method {
         "/oak.examples.hello_world.HelloWorld/SayHello" => {
-            // If the data fits in 256 bytes it will be read immediately.
-            // If not, the vector will be resized and read on second attempt.
-            let mut buf = Vec::<u8>::with_capacity(256);
-            grpc_pair.receive.read_message(&mut buf).unwrap();
-            let req = protobuf::parse_from_bytes(&buf).unwrap();
-            let rsp = node.say_hello(req).unwrap();
-            rsp.write_to_writer(&mut grpc_pair.send).unwrap();
+            let r = protobuf::parse_from_bytes(&req).unwrap();
+            let rsp = node.say_hello(r).unwrap();
+            rsp.write_to_writer(out).unwrap();
         }
         "/oak.examples.hello_world.HelloWorld/LotsOfReplies" => {
-            // If the data fits in 256 bytes it will be read immediately.
-            // If not, the vector will be resized and read on second attempt.
-            let mut buf = Vec::<u8>::with_capacity(256);
-            grpc_pair.receive.read_message(&mut buf).unwrap();
-            let req = protobuf::parse_from_bytes(&buf).unwrap();
-            let rsps = node.lots_of_replies(req).unwrap();
+            let r = protobuf::parse_from_bytes(&req).unwrap();
+            let rsps = node.lots_of_replies(r).unwrap();
             for rsp in rsps {
-                rsp.write_to_writer(&mut grpc_pair.send).unwrap();
+                rsp.write_to_writer(out).unwrap();
             }
         }
         "/oak.examples.hello_world.HelloWorld/LotsOfGreetings" => {
-            let mut reqs = vec![];
-            loop {
-                // If the data fits in 256 bytes it will be read immediately.
-                // If not, the vector will be resized and read on second attempt.
-                let mut buf = Vec::<u8>::with_capacity(256);
-                match grpc_pair.receive.read_message(&mut buf) {
-                    Err(_) => break,
-                    Ok(0) => break,
-                    Ok(_size) => reqs.push(protobuf::parse_from_bytes(&buf).unwrap()),
-                }
-            }
-            let rsp = node.lots_of_greetings(reqs).unwrap();
-            rsp.write_to_writer(&mut grpc_pair.send).unwrap();
+            let rr = vec![protobuf::parse_from_bytes(&req).unwrap()];
+            let rsp = node.lots_of_greetings(rr).unwrap();
+            rsp.write_to_writer(out).unwrap();
         }
         "/oak.examples.hello_world.HelloWorld/BidiHello" => {
-            let mut reqs = vec![];
-            loop {
-                // If the data fits in 256 bytes it will be read immediately.
-                // If not, the vector will be resized and read on second attempt.
-                let mut buf = Vec::<u8>::with_capacity(256);
-                match grpc_pair.receive.read_message(&mut buf) {
-                    Err(_) => break,
-                    Ok(0) => break,
-                    Ok(_size) => reqs.push(protobuf::parse_from_bytes(&buf).unwrap()),
-                }
-            }
-            let rsps = node.bidi_hello(reqs).unwrap();
+            let rr = vec![protobuf::parse_from_bytes(&req).unwrap()];
+            let rsps = node.bidi_hello(rr).unwrap();
             for rsp in rsps {
-                rsp.write_to_writer(&mut grpc_pair.send).unwrap();
+                rsp.write_to_writer(out).unwrap();
             }
         }
         _ => {
-            writeln!(oak::logging_channel(), "unknown method name: {}", grpc_method_name).unwrap();
+            writeln!(oak::logging_channel(), "unknown method name: {}", method).unwrap();
             panic!("unknown method name");
         }
     };

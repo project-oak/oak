@@ -212,15 +212,6 @@ std::unique_ptr<OakNode> OakNode::Create(const std::string& module) {
 
   // Now that initialization has completed, create the channels needed for gRPC interactions.
   {
-    // Method name channel: keep the write half in C++, but map the read half to a
-    // well-known channel handle.
-    std::shared_ptr<MessageChannel> channel = std::make_shared<MessageChannel>();
-    node->channel_halves_[GRPC_METHOD_NAME_CHANNEL_HANDLE] =
-        absl::make_unique<MessageChannelReadHalf>(channel);
-    node->name_half_ = absl::make_unique<MessageChannelWriteHalf>(channel);
-    LOG(INFO) << "Created gRPC method name channel: " << GRPC_METHOD_NAME_CHANNEL_HANDLE;
-  }
-  {
     // Incoming request channel: keep the write half in C++, but map the read
     // half to a well-known channel handle.
     std::shared_ptr<MessageChannel> channel = std::make_shared<MessageChannel>();
@@ -329,17 +320,19 @@ OakNode::InvocationResult OakNode::ProcessModuleInvocation(grpc::GenericServerCo
                                                            std::unique_ptr<Message> request_data) {
   LOG(INFO) << "Handling gRPC call: " << context->method();
 
-  // Write the method name to the name channel.
-  const std::string& method_name = context->method();
-  std::unique_ptr<Message> method_data =
-      absl::make_unique<Message>(method_name.begin(), method_name.end());
-  name_half_->Write(std::move(method_data));
-  LOG(INFO) << "Wrote method name of size " << method_name.size() << " to name channel";
-
-  // Write the incoming request to the input channel.
-  size_t req_size = request_data->size();
-  req_half_->Write(std::move(request_data));
-  LOG(INFO) << "Wrote request of size " << req_size << " to input channel";
+  // Build an encapsulation of the gRPC request invocation and write its serialized
+  // form to the gRPC input channel.
+  oak::GrpcRequest grpc_in;
+  grpc_in.set_method_name(context->method());
+  grpc_in.set_req_msg(request_data->data(), request_data->size());
+  grpc_in.set_last(true);
+  std::string encap_req;
+  grpc_in.SerializeToString(&encap_req);
+  // TODO: figure out a way to avoid the extra copy (into then out of std::string)
+  std::unique_ptr<Message> encap_data =
+      absl::make_unique<Message>(encap_req.begin(), encap_req.end());
+  req_half_->Write(std::move(encap_data));
+  LOG(INFO) << "Wrote encapsulated request to input channel";
 
   wabt::Stream* trace_stream = nullptr;
   wabt::interp::Thread::Options thread_options;

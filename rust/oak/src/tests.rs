@@ -17,6 +17,7 @@
 extern crate oak_tests;
 
 use crate::*;
+use protobuf::Message;
 
 #[test]
 fn test_status_from_i32() {
@@ -108,7 +109,7 @@ impl Node for TestNode {
     fn new() -> Self {
         TestNode
     }
-    fn invoke(&mut self, _grpc_method_name: &str, _grpc_pair: &mut ChannelPair) {}
+    fn invoke(&mut self, _method: &str, _req: &[u8], _out: &mut SendChannelHalf) {}
 }
 
 #[test]
@@ -130,6 +131,13 @@ fn test_set_node_twice() {
 #[test]
 fn test_handle_grpc_call() {
     reset_node();
+    oak_tests::reset_channels();
+    let mut send = SendChannelHalf::new(GRPC_IN_CHANNEL_HANDLE);
+    let mut req = proto::grpc_encap::GrpcRequest::new();
+    req.set_method_name("/testmethod".to_string());
+    req.set_last(true);
+    req.write_to_writer(&mut send).unwrap();
+
     set_node::<TestNode>();
     assert_eq!(true, have_node());
     oak_handle_grpc_call();

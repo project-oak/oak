@@ -152,31 +152,11 @@ impl<'a> MethodGen<'a> {
         if self.input_empty() {
             param_in = "";
         } else if self.proto.get_client_streaming() {
-            param_in = "reqs";
-            w.write_line("let mut reqs = vec![];");
-            w.block("loop {", "}", |w| {
-                w.comment("If the data fits in 256 bytes it will be read immediately.");
-                w.comment("If not, the vector will be resized and read on second attempt.");
-                w.write_line("let mut buf = Vec::<u8>::with_capacity(256);");
-                w.block(
-                    "match grpc_pair.receive.read_message(&mut buf) {",
-                    "}",
-                    |w| {
-                        w.write_line("Err(_) => break,");
-                        w.write_line("Ok(0) => break,");
-                        w.write_line(
-                            "Ok(_size) => reqs.push(protobuf::parse_from_bytes(&buf).unwrap()),",
-                        );
-                    },
-                );
-            });
+            param_in = "rr";
+            w.write_line("let rr = vec![protobuf::parse_from_bytes(&req).unwrap()];")
         } else {
-            param_in = "req";
-            w.comment("If the data fits in 256 bytes it will be read immediately.");
-            w.comment("If not, the vector will be resized and read on second attempt.");
-            w.write_line("let mut buf = Vec::<u8>::with_capacity(256);");
-            w.write_line("grpc_pair.receive.read_message(&mut buf).unwrap();");
-            w.write_line("let req = protobuf::parse_from_bytes(&buf).unwrap();")
+            param_in = "r";
+            w.write_line("let r = protobuf::parse_from_bytes(&req).unwrap();")
         }
         if self.output_empty() {
             w.write_line(&format!(
@@ -193,7 +173,7 @@ impl<'a> MethodGen<'a> {
                     param_in
                 ));
                 w.block("for rsp in rsps {", "}", |w| {
-                    w.write_line("rsp.write_to_writer(&mut grpc_pair.send).unwrap();");
+                    w.write_line("rsp.write_to_writer(out).unwrap();");
                 });
             } else {
                 w.write_line(&format!(
@@ -201,7 +181,7 @@ impl<'a> MethodGen<'a> {
                     self.snake_name(),
                     param_in
                 ));
-                w.write_line("rsp.write_to_writer(&mut grpc_pair.send).unwrap();");
+                w.write_line("rsp.write_to_writer(out).unwrap();");
             }
         }
     }
@@ -257,8 +237,8 @@ impl<'a> ServiceGen<'a> {
     }
 
     fn write_dispatcher(&self, w: &mut CodeWriter) {
-        w.pub_fn(&format!("dispatch(node: &mut dyn {}, grpc_method_name: &str, grpc_pair: &mut oak::ChannelPair)", self.server_intf_name()), |w| {
-            w.block("match grpc_method_name {", "};", |w| {
+        w.pub_fn(&format!("dispatch(node: &mut dyn {}, method: &str, req: &[u8], out: &mut oak::SendChannelHalf)", self.server_intf_name()), |w| {
+            w.block("match method {", "};", |w| {
                 for method in &self.methods {
                     let full_path = format!("{}/{}", method.service_path, method.proto.get_name());
                     w.block(&format!("\"{}\" => {{", full_path), "}", |w| {
@@ -266,7 +246,7 @@ impl<'a> ServiceGen<'a> {
                     });
                 }
                 w.block("_ => {", "}", |w| {
-                    w.write_line("writeln!(oak::logging_channel(), \"unknown method name: {}\", grpc_method_name).unwrap();");
+                    w.write_line("writeln!(oak::logging_channel(), \"unknown method name: {}\", method).unwrap();");
                     w.write_line("panic!(\"unknown method name\");");
                 });
             });
