@@ -168,9 +168,9 @@ impl oak::Node for Node {
             model: NaiveBayes::new(),
         }
     }
-    fn invoke(&mut self, grpc_method_name: &str, _grpc_pair: &mut oak::ChannelPair) {
+    fn invoke(&mut self, method: &str, _req: &[u8], _out: &mut oak::SendChannelHalf) {
         let mut logging_channel = oak::logging_channel();
-        match grpc_method_name {
+        match method {
             "/oak.examples.machine_learning.MachineLearning/Data" => {
                 writeln!(logging_channel, "Data").unwrap();
                 //(self.training_set_size, self.test_set_size) = (1000, 1000);
@@ -271,7 +271,7 @@ impl oak::Node for Node {
                 .unwrap();
             }
             _ => {
-                writeln!(logging_channel, "unknown method name: {}", grpc_method_name).unwrap();
+                writeln!(logging_channel, "unknown method name: {}", method).unwrap();
                 panic!("unknown method name");
             }
         }

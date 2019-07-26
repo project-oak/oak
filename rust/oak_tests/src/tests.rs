@@ -7,7 +7,7 @@ impl oak::Node for TestNode {
     fn new() -> Self {
         TestNode
     }
-    fn invoke(&mut self, _grpc_method_name: &str, _grpc_pair: &mut oak::ChannelPair) {}
+    fn invoke(&mut self, _method: &str, _req: &[u8], _out: &mut oak::SendChannelHalf) {}
 }
 
 #[test]

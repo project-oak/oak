@@ -37,9 +37,8 @@ type Handle = u64;
 
 // Keep in sync with /oak/server/oak_node.h.
 pub const LOGGING_CHANNEL_HANDLE: Handle = 1;
-pub const GRPC_METHOD_NAME_CHANNEL_HANDLE: Handle = 2;
-pub const GRPC_IN_CHANNEL_HANDLE: Handle = 3;
-pub const GRPC_OUT_CHANNEL_HANDLE: Handle = 4;
+pub const GRPC_IN_CHANNEL_HANDLE: Handle = 2;
+pub const GRPC_OUT_CHANNEL_HANDLE: Handle = 3;
 
 // Status values returned across the host function interface
 #[derive(Debug, PartialEq)]
@@ -220,7 +219,7 @@ pub trait Node {
     fn new() -> Self
     where
         Self: Sized;
-    fn invoke(&mut self, grpc_method_name: &str, grpc_pair: &mut ChannelPair);
+    fn invoke(&mut self, method: &str, req: &[u8], out: &mut SendChannelHalf);
 }
 
 thread_local! {
@@ -236,7 +235,7 @@ thread_local! {
 ///
 /// impl oak::Node for Node {
 ///     fn new() -> Self { Node }
-///     fn invoke(&mut self, grpc_method_name: &str, grpc_pair: &mut oak::ChannelPair) { /* ... */ }
+///     fn invoke(&mut self, method: &str, req: &[u8], out: &mut oak::SendChannelHalf) { /* ... */ }
 /// }
 ///
 /// #[no_mangle]
@@ -283,12 +282,18 @@ fn set_panic_hook() {
 pub extern "C" fn oak_handle_grpc_call() {
     NODE.with(|node| match *node.borrow_mut() {
         Some(ref mut node) => {
-            let mut grpc_method_channel = ReceiveChannelHalf::new(GRPC_METHOD_NAME_CHANNEL_HANDLE);
-            let mut buf = Vec::<u8>::with_capacity(256);
-            grpc_method_channel.read_message(&mut buf).unwrap();
-            let grpc_method_name = String::from_utf8_lossy(&buf);
-            let mut grpc_pair = ChannelPair::new(GRPC_IN_CHANNEL_HANDLE, GRPC_OUT_CHANNEL_HANDLE);
-            node.invoke(&grpc_method_name, &mut grpc_pair);
+            let mut buf = Vec::<u8>::with_capacity(1024);
+            let mut grpc_in_channel = ReceiveChannelHalf::new(GRPC_IN_CHANNEL_HANDLE);
+            grpc_in_channel.read_message(&mut buf).unwrap();
+            let req: proto::grpc_encap::GrpcRequest = protobuf::parse_from_bytes(&buf).unwrap();
+            if !req.last {
+                panic!("Support for streaming requests not yet implemented");
+            }
+            node.invoke(
+                &req.method_name,
+                req.req_msg.as_slice(),
+                &mut SendChannelHalf::new(GRPC_OUT_CHANNEL_HANDLE),
+            );
         }
         None => {
             writeln!(logging_channel(), "gRPC call with no loaded Node").unwrap();
