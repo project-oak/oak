@@ -1,6 +1,6 @@
 FROM gcr.io/asylo-framework/asylo:buildenv-v0.4.0
 
-RUN apt-get -y update && apt-get install -y git curl clang-format shellcheck
+RUN apt-get -y update && apt-get install -y git curl clang-format shellcheck libncurses5 xml2
 
 RUN git --version
 RUN clang-format -version
