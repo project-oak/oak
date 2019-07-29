@@ -27,7 +27,7 @@
 #include "asylo/util/logging.h"
 #include "include/grpcpp/server.h"
 #include "include/grpcpp/server_builder.h"
-#include "oak/server/oak_manager.h"
+#include "oak_manager.h"
 
 ABSL_FLAG(std::string, enclave_path, "", "Path of the enclave to load");
 ABSL_FLAG(int, grpc_port, 8888, "Port to listen on");
