@@ -267,7 +267,7 @@ fn set_panic_hook() {
         let msg = panic_info
             .payload()
             .downcast_ref::<&str>()
-            .unwrap_or(&"<UNKWOWN MESSAGE>");
+            .unwrap_or(&"<UNKNOWN MESSAGE>");
         let (file, line) = match panic_info.location() {
             Some(location) => (location.file(), location.line()),
             None => ("<UNKNOWN FILE>", 0),
