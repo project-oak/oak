@@ -3,9 +3,8 @@
 set -o errexit
 set -o nounset
 
-
 # Check which BUILD and .bzl files need to be reformatted.
-find oak examples toolchain \( -type f -name BUILD -o -name '*bzl' \) -exec buildifier -mode=check {} +
+find oak examples toolchain \( -type f -name BUILD -o -name '*bzl' \) -exec buildifier -lint=warn -mode=check {} +
 
 # Check shell scripts for common mistakes.
 find scripts -type f -exec shellcheck {} +

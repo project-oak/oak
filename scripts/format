@@ -10,7 +10,7 @@ find . \( -type d -name 'bazel-cache' -prune \) -o \( -type f -name '*.md' -exec
 # Run buildifier, clang-format and rustfmt on the entire codebase.
 # Applies all formattings in-place.
 
-find oak examples toolchain \( -type f -name BUILD -o -name '*bzl' \) -exec buildifier -mode=fix {} +
+find oak examples toolchain \( -type f -name BUILD -o -name '*bzl' \) -exec buildifier -lint=fix -mode=fix {} +
 find oak examples \( -type f -name '*.h' -o -name '*.cc' -o -name '*.proto' \) \
     -exec clang-format -i -style=file {} +
 find examples rust -type f -name '*.rs' -exec rustfmt {} +

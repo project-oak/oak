@@ -14,17 +14,16 @@
 # limitations under the License.
 #
 
-# This file is configuring the toolchain to use for wasm32, which is clang and llvm.
-# It overwrites the tool paths to point to clang and sets the needed flags for different
-# types of actions.
+"""This file is configuring the toolchain to use for wasm32, which is clang and llvm.
+It overwrites the tool paths to point to clang and sets the needed flags for different
+types of actions.
+"""
 
 load(
     "@bazel_tools//tools/cpp:cc_toolchain_config_lib.bzl",
-    "action_config",
     "feature",
     "flag_group",
     "flag_set",
-    "tool",
     "tool_path",
 )
 load("@bazel_tools//tools/build_defs/cc:action_names.bzl", "ACTION_NAMES")
