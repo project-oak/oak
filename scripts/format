@@ -7,9 +7,10 @@ set -o nounset
 
 find . \( -type d -name 'bazel-cache' -prune \) -o \( -type f -name '*.md' -exec /google/data/ro/teams/g3doc/mdformat --in_place {} + \) || true
 
-# Run clang-format and rustfmt on the entire codebase.
+# Run buildifier, clang-format and rustfmt on the entire codebase.
 # Applies all formattings in-place.
 
+find oak examples toolchain \( -type f -name BUILD -o -name '*bzl' \) -exec buildifier -mode=fix {} +
 find oak examples \( -type f -name '*.h' -o -name '*.cc' -o -name '*.proto' \) \
     -exec clang-format -i -style=file {} +
 find examples rust -type f -name '*.rs' -exec rustfmt {} +

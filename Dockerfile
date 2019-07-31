@@ -6,6 +6,14 @@ RUN git --version
 RUN clang-format -version
 RUN shellcheck --version
 
+# Install buildifier.
+ARG BAZEL_VERSION=0.28.0
+ARG BUILDIFIER_DIR=/usr/local/buildifier
+RUN mkdir -p $BUILDIFIER_DIR/bin
+RUN curl -L https://github.com/bazelbuild/buildtools/releases/download/${BAZEL_VERSION}/buildifier > $BUILDIFIER_DIR/bin/buildifier
+ENV PATH "$BUILDIFIER_DIR/bin:$PATH"
+RUN chmod +x $BUILDIFIER_DIR/bin/buildifier
+
 # Install Protobuf compiler.
 ARG PROTOBUF_VERSION=3.7.1
 ARG PROTOBUF_DIR=/usr/local/protobuf
