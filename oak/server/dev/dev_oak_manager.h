@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#ifndef DEV_OAK_MANAGER_H
+#define DEV_OAK_MANAGER_H
 
 #include <string>
 
@@ -24,9 +26,9 @@
 
 namespace oak {
 
-class OakManager final : public Manager::Service {
+class DevOakManager final : public Manager::Service {
  public:
-  explicit OakManager(absl::string_view path);
+  DevOakManager();
 
   grpc::Status CreateApplication(grpc::ServerContext* context,
                                  const CreateApplicationRequest* request,
@@ -41,3 +43,4 @@ class OakManager final : public Manager::Service {
 };
 
 }  // namespace oak
+#endif  // DEV_OAK_MANAGER_H

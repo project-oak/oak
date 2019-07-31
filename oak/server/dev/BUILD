@@ -19,12 +19,12 @@ package(
 )
 
 cc_library(
-    name = "oak_manager",
+    name = "dev_oak_manager",
     srcs = [
-        "oak_manager.cc",
+        "dev_oak_manager.cc",
     ],
     hdrs = [
-        "oak_manager.h",
+        "dev_oak_manager.h",
     ],
     deps = [
         "//oak/proto:application_cc_grpc",
@@ -36,6 +36,20 @@ cc_library(
         "@com_google_absl//absl/strings",
         "@com_google_asylo//asylo/grpc/auth:null_credentials_options",
         "@com_google_asylo//asylo/identity:init",
+        "@com_google_asylo//asylo/util:logging",
+    ],
+)
+
+cc_binary(
+    name = "oak",
+    srcs = ["dev_oak_main.cc"],
+    deps = [
+        ":dev_oak_manager",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/flags:parse",
+        "@com_google_absl//absl/synchronization",
+        "@com_google_absl//absl/time",
         "@com_google_asylo//asylo/util:logging",
     ],
 )

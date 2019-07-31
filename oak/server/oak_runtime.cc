@@ -21,7 +21,6 @@
 #include <string>
 #include <thread>
 
-#include "absl/synchronization/mutex.h"
 #include "asylo/util/logging.h"
 #include "asylo/util/status_macros.h"
 #include "include/grpcpp/security/server_credentials.h"
@@ -57,7 +56,6 @@ asylo::Status OakRuntime::InitializeServer(
   }
 
   // Ensure that the server is only created and initialized once.
-  absl::MutexLock lock(&server_mutex_);
   if (server_) {
     return asylo::Status::OkStatus();
   }
@@ -96,7 +94,6 @@ asylo::StatusOr<std::unique_ptr<grpc::Server>> OakRuntime::CreateServer(
 int OakRuntime::GetServerAddress() { return port_; }
 
 void OakRuntime::FinalizeServer() {
-  absl::MutexLock lock(&server_mutex_);
   if (server_) {
     LOG(INFO) << "Shutting down...";
     server_->Shutdown();

@@ -20,16 +20,21 @@
 #include <memory>
 #include <string>
 
-#include "absl/synchronization/mutex.h"
 #include "asylo/util/status.h"
 #include "asylo/util/statusor.h"
-#include "include/grpcpp/impl/codegen/service_type.h"
 #include "include/grpcpp/security/server_credentials.h"
 #include "include/grpcpp/server.h"
 #include "oak/proto/enclave.pb.h"
 #include "oak/server/oak_node.h"
 
 namespace oak {
+// OakRuntime contains the common runtime needed for an Oak System. The Runtime is responsible for
+// Initializing and Running a gRPC server, creating the nodes and channels and keeping track of the
+// connectivity.
+// For now, it only supports one node.
+//
+// It can run in its own enclave, but this is optional. See /asylo/ for how to use it with an
+// enclave
 
 class OakRuntime {
  public:
@@ -39,30 +44,24 @@ class OakRuntime {
 
   // Initializes a gRPC server. If the server is already initialized, does nothing.
   asylo::Status InitializeServer(const ApplicationConfiguration& config,
-                                 const std::shared_ptr<grpc::ServerCredentials> credentials)
-      LOCKS_EXCLUDED(server_mutex_);
-
+                                 const std::shared_ptr<grpc::ServerCredentials> credentials);
   // Gets the address of the hosted gRPC server and writes it to server_output_config
   // extension of |output|.
-  int GetServerAddress() EXCLUSIVE_LOCKS_REQUIRED(server_mutex_);
+  int GetServerAddress();
 
   // Finalizes the gRPC server by calling ::gprc::Server::Shutdown().
-  void FinalizeServer() LOCKS_EXCLUDED(server_mutex_);
+  void FinalizeServer();
 
  private:
   // Creates a gRPC server that hosts node_ on a free port with credentials_.
   asylo::StatusOr<std::unique_ptr<::grpc::Server>> CreateServer(
-      const std::shared_ptr<grpc::ServerCredentials> credentials)
-      EXCLUSIVE_LOCKS_REQUIRED(server_mutex_);
+      const std::shared_ptr<grpc::ServerCredentials> credentials);
 
   // Consumes gRPC events from the completion queue in an infinite loop.
   void CompletionQueueLoop();
 
-  // Guards state related to the gRPC server (|server_| and |port_|).
-  absl::Mutex server_mutex_;
-
   // The gRPC server.
-  std::unique_ptr<::grpc::Server> server_ GUARDED_BY(server_mutex_);
+  std::unique_ptr<::grpc::Server> server_;
 
   // The port on which the server is listening.
   int port_;

@@ -1,5 +1,5 @@
 #
-# Copyright 2018 The Project Oak Authors
+# Copyright 2019 The Project Oak Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ package(
 load(
     "@com_google_asylo//asylo/bazel:asylo.bzl",
     "sim_enclave",
+    "enclave_loader",
 )
 load("@linux_sgx//:sgx_sdk.bzl", "sgx_enclave_configuration")
 
@@ -45,12 +46,12 @@ cc_library(
 )
 
 cc_library(
-    name = "oak_manager",
+    name = "asylo_oak_manager",
     srcs = [
-        "oak_manager.cc",
+        "asylo_oak_manager.cc",
     ],
     hdrs = [
-        "oak_manager.h",
+        "asylo_oak_manager.h",
     ],
     deps = [
         "//oak/proto:application_cc_grpc",
@@ -83,5 +84,21 @@ sim_enclave(
     deps = [
         "//oak/server/asylo:enclave_server",
         "@com_google_asylo//asylo/grpc/util:enclave_server",
+    ],
+)
+
+enclave_loader(
+    name = "oak",
+    srcs = ["asylo_oak_main.cc"],
+    enclaves = {"enclave": "//oak/server/asylo:oak_enclave.so"},
+    loader_args = ["--enclave_path='{enclave}'"],
+    deps = [
+        ":asylo_oak_manager",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/flags:parse",
+        "@com_google_absl//absl/synchronization",
+        "@com_google_absl//absl/time",
+        "@com_google_asylo//asylo/util:logging",
     ],
 )

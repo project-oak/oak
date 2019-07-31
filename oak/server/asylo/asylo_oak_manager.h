@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+#ifndef ASYLO_OAK_MANAGER_H
+#define ASYLO_OAK_MANAGER_H
+
 #include <string>
 
 #include "absl/strings/string_view.h"
@@ -25,9 +28,9 @@
 
 namespace oak {
 
-class OakManager final : public Manager::Service {
+class AsyloOakManager final : public Manager::Service {
  public:
-  explicit OakManager(absl::string_view enclave_path);
+  explicit AsyloOakManager(absl::string_view enclave_path);
 
   grpc::Status CreateApplication(grpc::ServerContext* context,
                                  const CreateApplicationRequest* request,
@@ -53,3 +56,4 @@ class OakManager final : public Manager::Service {
 };
 
 }  // namespace oak
+#endif  // ASYLO_OAK_MANAGER_H

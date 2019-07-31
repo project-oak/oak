@@ -18,10 +18,6 @@ package(
     default_visibility = ["//oak/server:__subpackages__"],
 )
 
-load(
-    "@com_google_asylo//asylo/bazel:asylo.bzl",
-    "enclave_loader",
-)
 load("//oak/server:wabt.bzl", "wasm_group")
 
 cc_library(
@@ -131,36 +127,4 @@ cc_library(
     name = "status",
     hdrs = ["status.h"],
     deps = [],
-)
-
-enclave_loader(
-    name = "oak",
-    srcs = ["oak_main.cc"],
-    enclaves = {"enclave": "//oak/server/asylo:oak_enclave.so"},
-    includes = ["asylo"],
-    loader_args = ["--enclave_path='{enclave}'"],
-    deps = [
-        "//oak/server/asylo:oak_manager",
-        "@com_github_grpc_grpc//:grpc++",
-        "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/flags:parse",
-        "@com_google_absl//absl/synchronization",
-        "@com_google_absl//absl/time",
-        "@com_google_asylo//asylo/util:logging",
-    ],
-)
-
-cc_binary(
-    name = "oak_dev",
-    srcs = ["oak_main.cc"],
-    includes = ["dev"],
-    deps = [
-        "//oak/server/dev:oak_manager",
-        "@com_github_grpc_grpc//:grpc++",
-        "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/flags:parse",
-        "@com_google_absl//absl/synchronization",
-        "@com_google_absl//absl/time",
-        "@com_google_asylo//asylo/util:logging",
-    ],
 )

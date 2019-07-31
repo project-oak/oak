@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "oak_manager.h"
+#include "dev_oak_manager.h"
 
 #include "absl/memory/memory.h"
 #include "asylo/grpc/auth/enclave_channel_credentials.h"
@@ -27,14 +27,14 @@
 
 namespace oak {
 
-OakManager::OakManager(absl::string_view _path)
+DevOakManager::DevOakManager()
     : Service(), application_id_(0), runtime_(absl::make_unique<OakRuntime>()) {
   LOG(INFO) << "Creating OakManager";
 }
 
-grpc::Status OakManager::CreateApplication(grpc::ServerContext* context,
-                                           const oak::CreateApplicationRequest* request,
-                                           oak::CreateApplicationResponse* response) {
+grpc::Status DevOakManager::CreateApplication(grpc::ServerContext* context,
+                                              const oak::CreateApplicationRequest* request,
+                                              oak::CreateApplicationResponse* response) {
   std::string application_id = NewApplicationId();
   LOG(INFO) << "Creating app with with id: " << application_id;
 
@@ -48,7 +48,10 @@ grpc::Status OakManager::CreateApplication(grpc::ServerContext* context,
   return grpc::Status::OK;
 }
 
-void OakManager::InitializeAssertionAuthorities() {
+// Even if we are not running in an enclave, we are still relying on Asylo assertion authorities
+// This allows us to use the same client code to connect to the runtime, and it will potentially
+// allow us to use non-enclave identities in the future
+void DevOakManager::InitializeAssertionAuthorities() {
   LOG(INFO) << "Initializing assertion authorities";
   asylo::EnclaveAssertionAuthorityConfig null_config;
   asylo::SetNullAssertionDescription(null_config.mutable_description());
@@ -65,7 +68,7 @@ void OakManager::InitializeAssertionAuthorities() {
   LOG(INFO) << "Assertion authorities initialized";
 }
 
-std::string OakManager::NewApplicationId() {
+std::string DevOakManager::NewApplicationId() {
   // For dev purposes, just increment a value
   std::stringstream id_str;
   id_str << application_id_;
