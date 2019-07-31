@@ -14,7 +14,15 @@
 # limitations under the License.
 #
 
+"""Utilities for handling WebAssembly files."""
+
 def wasm_group(name, srcs):
+    """Compiles WebAssembly files from textual to binary representation.
+
+    Args:
+      name: Name for build target.
+      srcs: Source WebAssembly text files (.wat extension).
+    """
     outs = []
     for src in srcs:
         out = src.replace(".wat", ".wasm")
