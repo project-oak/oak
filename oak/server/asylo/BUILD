@@ -20,8 +20,8 @@ package(
 
 load(
     "@com_google_asylo//asylo/bazel:asylo.bzl",
-    "sim_enclave",
     "enclave_loader",
+    "sim_enclave",
 )
 load("@linux_sgx//:sgx_sdk.bzl", "sgx_enclave_configuration")
 

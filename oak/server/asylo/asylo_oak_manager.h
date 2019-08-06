@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef ASYLO_OAK_MANAGER_H
-#define ASYLO_OAK_MANAGER_H
+#ifndef OAK_SERVER_ASYLO_ASYLO_OAK_MANAGER_H_
+#define OAK_SERVER_ASYLO_ASYLO_OAK_MANAGER_H_
 
 #include <string>
 
@@ -56,4 +56,4 @@ class AsyloOakManager final : public Manager::Service {
 };
 
 }  // namespace oak
-#endif  // ASYLO_OAK_MANAGER_H
+#endif  // OAK_SERVER_ASYLO_ASYLO_OAK_MANAGER_H_

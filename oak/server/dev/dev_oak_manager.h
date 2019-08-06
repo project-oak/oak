@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef DEV_OAK_MANAGER_H
-#define DEV_OAK_MANAGER_H
+#ifndef OAK_SERVER_DEV_DEV_OAK_MANAGER_H_
+#define OAK_SERVER_DEV_DEV_OAK_MANAGER_H_
 
 #include <string>
 
@@ -43,4 +43,4 @@ class DevOakManager final : public Manager::Service {
 };
 
 }  // namespace oak
-#endif  // DEV_OAK_MANAGER_H
+#endif  // OAK_SERVER_DEV_DEV_OAK_MANAGER_H_
