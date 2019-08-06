@@ -13,43 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#ifndef OAK_SERVER_DEV_DEV_OAK_MANAGER_H_
+#define OAK_SERVER_DEV_DEV_OAK_MANAGER_H_
 
 #include <string>
 
 #include "absl/strings/string_view.h"
-#include "asylo/client.h"
-#include "asylo/grpc/util/enclave_server.pb.h"
 #include "asylo/util/logging.h"
 #include "oak/proto/enclave.pb.h"
 #include "oak/proto/manager.grpc.pb.h"
+#include "oak/server/oak_runtime.h"
 
 namespace oak {
 
-class OakManager final : public Manager::Service {
+class DevOakManager final : public Manager::Service {
  public:
-  explicit OakManager(absl::string_view enclave_path);
+  DevOakManager();
 
   grpc::Status CreateApplication(grpc::ServerContext* context,
                                  const CreateApplicationRequest* request,
                                  CreateApplicationResponse* response) override;
 
  private:
-  void InitializeEnclaveManager();
-
-  grpc::Status CreateEnclave(const std::string& application_id,
-                             const oak::ApplicationConfiguration& application_configuration);
-
-  asylo::StatusOr<InitializeOutput> GetEnclaveOutput(const std::string& application_id);
-
   std::string NewApplicationId();
-
-  void DestroyEnclave(const std::string& node_id);
-
-  asylo::EnclaveManager* enclave_manager_;
-  std::unique_ptr<asylo::SimLoader> enclave_loader_;
-  std::string enclave_path_;
+  void InitializeAssertionAuthorities();
 
   uint64_t application_id_;
+  std::unique_ptr<OakRuntime> runtime_;
 };
 
 }  // namespace oak
+#endif  // OAK_SERVER_DEV_DEV_OAK_MANAGER_H_

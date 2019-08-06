@@ -15,7 +15,7 @@
  */
 
 #include "asylo/trusted_application.h"
-#include "oak/server/enclave_server.h"
+#include "enclave_server.h"
 
 namespace asylo {
 

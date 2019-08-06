@@ -7,4 +7,4 @@ readonly GRPC_PORT="${GRPC_PORT:-8888}"
 readonly SCRIPTS_DIR="$(dirname "$0")"
 
 "$SCRIPTS_DIR/build_server_docker"
-"$SCRIPTS_DIR/docker_run" ./bazel-bin/oak/server/oak --grpc_port="${GRPC_PORT}"
+"$SCRIPTS_DIR/docker_run" ./bazel-bin/oak/server/asylo/oak --grpc_port="${GRPC_PORT}"

@@ -35,6 +35,7 @@
 #include "include/grpcpp/server.h"
 #include "oak/proto/enclave.pb.h"
 #include "oak/server/oak_node.h"
+#include "oak/server/oak_runtime.h"
 
 namespace oak {
 
@@ -61,37 +62,8 @@ class EnclaveServer final : public asylo::TrustedApplication {
 
   asylo::Status Finalize(const asylo::EnclaveFinal& enclave_final) override;
 
-  // Initializes a gRPC server. If the server is already initialized, does nothing.
-  asylo::Status InitializeServer() LOCKS_EXCLUDED(server_mutex_);
-
-  // Creates a gRPC server that hosts node_ on a free port with credentials_.
-  asylo::StatusOr<std::unique_ptr<::grpc::Server>> CreateServer()
-      EXCLUSIVE_LOCKS_REQUIRED(server_mutex_);
-
-  // Gets the address of the hosted gRPC server and writes it to server_output_config
-  // extension of |output|.
-  void GetServerAddress(asylo::EnclaveOutput* output) EXCLUSIVE_LOCKS_REQUIRED(server_mutex_);
-
-  // Finalizes the gRPC server by calling ::gprc::Server::Shutdown().
-  void FinalizeServer() LOCKS_EXCLUDED(server_mutex_);
-
-  // Consumes gRPC events from the completion queue in an infinite loop.
-  void CompletionQueueLoop();
-
-  // Guards state related to the gRPC server (|server_| and |port_|).
-  absl::Mutex server_mutex_;
-
-  // The gRPC server.
-  std::unique_ptr<::grpc::Server> server_ GUARDED_BY(server_mutex_);
-
-  // The port on which the server is listening.
-  int port_;
-
-  std::unique_ptr<OakNode> node_;
-  std::shared_ptr<grpc::ServerCredentials> credentials_;
-
-  grpc::AsyncGenericService module_service_;
-  std::unique_ptr<grpc::ServerCompletionQueue> completion_queue_;
+ private:
+  std::unique_ptr<OakRuntime> runtime_;
 };
 
 }  // namespace oak

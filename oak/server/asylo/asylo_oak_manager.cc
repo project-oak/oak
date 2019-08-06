@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "oak_manager.h"
+#include "asylo_oak_manager.h"
 
 #include "absl/memory/memory.h"
 #include "asylo/identity/descriptions.h"
@@ -24,14 +24,14 @@
 
 namespace oak {
 
-OakManager::OakManager(absl::string_view enclave_path)
+AsyloOakManager::AsyloOakManager(absl::string_view enclave_path)
     : Service(), enclave_path_(enclave_path), application_id_(0) {
   InitializeEnclaveManager();
 }
 
-grpc::Status OakManager::CreateApplication(grpc::ServerContext* context,
-                                           const oak::CreateApplicationRequest* request,
-                                           oak::CreateApplicationResponse* response) {
+grpc::Status AsyloOakManager::CreateApplication(grpc::ServerContext* context,
+                                                const oak::CreateApplicationRequest* request,
+                                                oak::CreateApplicationResponse* response) {
   std::string application_id = NewApplicationId();
   grpc::Status status = CreateEnclave(application_id, request->application_configuration());
   if (!status.ok()) {
@@ -47,7 +47,7 @@ grpc::Status OakManager::CreateApplication(grpc::ServerContext* context,
   return grpc::Status::OK;
 }
 
-void OakManager::InitializeEnclaveManager() {
+void AsyloOakManager::InitializeEnclaveManager() {
   LOG(INFO) << "Initializing enclave manager";
   asylo::EnclaveManager::Configure(asylo::EnclaveManagerOptions());
   auto manager_result = asylo::EnclaveManager::Instance();
@@ -61,7 +61,7 @@ void OakManager::InitializeEnclaveManager() {
                                                         /*debug=*/true);
 }
 
-grpc::Status OakManager::CreateEnclave(
+grpc::Status AsyloOakManager::CreateEnclave(
     const std::string& application_id,
     const oak::ApplicationConfiguration& application_configuration) {
   LOG(INFO) << "Creating application enclave";
@@ -82,7 +82,8 @@ grpc::Status OakManager::CreateEnclave(
   return grpc::Status::OK;
 }
 
-asylo::StatusOr<oak::InitializeOutput> OakManager::GetEnclaveOutput(const std::string& node_id) {
+asylo::StatusOr<oak::InitializeOutput> AsyloOakManager::GetEnclaveOutput(
+    const std::string& node_id) {
   LOG(INFO) << "Initializing enclave";
   asylo::EnclaveClient* client = enclave_manager_->GetClient(node_id);
   asylo::EnclaveInput input;
@@ -96,7 +97,7 @@ asylo::StatusOr<oak::InitializeOutput> OakManager::GetEnclaveOutput(const std::s
   return output.GetExtension(oak::initialize_output);
 }
 
-std::string OakManager::NewApplicationId() {
+std::string AsyloOakManager::NewApplicationId() {
   // TODO: Generate UUID.
   std::stringstream id_str;
   id_str << application_id_;
@@ -104,7 +105,7 @@ std::string OakManager::NewApplicationId() {
   return id_str.str();
 }
 
-void OakManager::DestroyEnclave(const std::string& node_id) {
+void AsyloOakManager::DestroyEnclave(const std::string& node_id) {
   LOG(INFO) << "Destroying enclave";
   asylo::EnclaveClient* client = enclave_manager_->GetClient(node_id);
   asylo::EnclaveFinal final_input;
