@@ -17,18 +17,13 @@
 #include "dev_oak_manager.h"
 
 #include "absl/memory/memory.h"
-#include "asylo/grpc/auth/enclave_channel_credentials.h"
-#include "asylo/grpc/auth/enclave_server_credentials.h"
-#include "asylo/grpc/auth/null_credentials_options.h"
-#include "asylo/identity/descriptions.h"
-#include "asylo/identity/init.h"
 #include "asylo/util/logging.h"
+#include "grpcpp/support/status_code_enum.h"
 #include "include/grpcpp/grpcpp.h"
 
 namespace oak {
 
-DevOakManager::DevOakManager()
-    : Service(), application_id_(0), runtime_(absl::make_unique<OakRuntime>()) {
+DevOakManager::DevOakManager() : Service(), application_id_(0) {
   LOG(INFO) << "Creating OakManager";
 }
 
@@ -37,35 +32,42 @@ grpc::Status DevOakManager::CreateApplication(grpc::ServerContext* context,
                                               oak::CreateApplicationResponse* response) {
   std::string application_id = NewApplicationId();
   LOG(INFO) << "Creating app with with id: " << application_id;
-
-  InitializeAssertionAuthorities();
-  runtime_->InitializeServer(
-      request->application_configuration(),
-      asylo::EnclaveServerCredentials(asylo::BidirectionalNullCredentialsOptions()));
-
-  response->set_application_id(application_id);
-  response->set_grpc_port(runtime_->GetServerAddress());
-  return grpc::Status::OK;
-}
-
-// Even if we are not running in an enclave, we are still relying on Asylo assertion authorities
-// This allows us to use the same client code to connect to the runtime, and it will potentially
-// allow us to use non-enclave identities in the future
-void DevOakManager::InitializeAssertionAuthorities() {
-  LOG(INFO) << "Initializing assertion authorities";
-  asylo::EnclaveAssertionAuthorityConfig null_config;
-  asylo::SetNullAssertionDescription(null_config.mutable_description());
-  std::vector<asylo::EnclaveAssertionAuthorityConfig> configs = {
-      null_config,
-  };
-
-  asylo::Status status =
-      asylo::InitializeEnclaveAssertionAuthorities(configs.begin(), configs.end());
+  auto runtime = absl::make_unique<OakRuntime>();
+  auto status = runtime->Initialize(request->application_configuration());
   if (!status.ok()) {
-    LOG(QFATAL) << "Could not initialize assertion authorities";
+    return status.ToOtherStatus<grpc::Status>();
   }
 
-  LOG(INFO) << "Assertion authorities initialized";
+  grpc::ServerBuilder builder;
+  int port;
+
+  // Uses ":0" notation so that server listens on a free port.
+  builder.AddListeningPort("[::]:0", grpc::InsecureServerCredentials(), &port);
+  builder.RegisterService(runtime->GetGrpcService());
+
+  // Add a completion queue and a generic service, in order to proxy incoming RPCs to the Oak Node.
+  auto completion_queue = builder.AddCompletionQueue();
+
+  // Register an async service
+  auto module_service = absl::make_unique<grpc::AsyncGenericService>();
+  builder.RegisterAsyncGenericService(module_service.get());
+
+  auto server = builder.BuildAndStart();
+  if (!server) {
+    grpc::Status(grpc::INTERNAL, "Failed to start gRPC server");
+  }
+
+  // moves ownership of unique pointers
+  runtime->StartCompletionQueue(std::move(module_service), std::move(completion_queue));
+
+  runtimes[application_id] = std::move(runtime);
+  servers[application_id] = std::move(server);
+
+  LOG(INFO) << "gRPC server is listening on port: " << port;
+
+  response->set_application_id(application_id);
+  response->set_grpc_port(port);
+  return grpc::Status::OK;
 }
 
 std::string DevOakManager::NewApplicationId() {

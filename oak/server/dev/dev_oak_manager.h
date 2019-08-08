@@ -20,7 +20,6 @@
 
 #include "absl/strings/string_view.h"
 #include "asylo/util/logging.h"
-#include "oak/proto/enclave.pb.h"
 #include "oak/proto/manager.grpc.pb.h"
 #include "oak/server/oak_runtime.h"
 
@@ -35,11 +34,15 @@ class DevOakManager final : public Manager::Service {
                                  CreateApplicationResponse* response) override;
 
  private:
+  void CreateServer();
   std::string NewApplicationId();
-  void InitializeAssertionAuthorities();
 
+  // The port is listening on
+  int32_t port_;
+  // The application id
   uint64_t application_id_;
-  std::unique_ptr<OakRuntime> runtime_;
+  std::unordered_map<std::string, std::unique_ptr<OakRuntime>> runtimes;
+  std::unordered_map<std::string, std::unique_ptr<::grpc::Server>> servers;
 };
 
 }  // namespace oak
