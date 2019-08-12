@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "storage_channel.h"
+#include "storage_write_channel.h"
 
 namespace oak {
 
@@ -22,10 +22,14 @@ static std::string GetStorageId(const std::string& storage_name) {
   // TODO: Generate name-based UUID.
   return storage_name;
 }
-StorageChannel::StorageChannel(std::unique_ptr<Storage::Stub> storage_service)
-    : storage_service_(std::move(storage_service)) {}
 
-uint32_t StorageChannel::Write(absl::Span<const char> request_data) {
+StorageWriteChannel::StorageWriteChannel(Storage::Stub* storage_service,
+                                         StorageManager* storage_manager)
+    : storage_service_(oak::Storage::NewStub(
+          grpc::CreateChannel("localhost:7867", grpc::InsecureChannelCredentials()))),
+      storage_manager_(storage_manager) {}
+
+uint32_t StorageWriteChannel::Write(absl::Span<const char> request_data) {
   grpc::Status status;
   grpc::ClientContext context;
   StorageOperationRequest operation_request;
@@ -82,18 +86,12 @@ uint32_t StorageChannel::Write(absl::Span<const char> request_data) {
   }
   operation_response.mutable_status()->set_code(status.error_code());
   operation_response.mutable_status()->set_message(status.error_message());
-  operation_response.SerializeToString(&operation_response_data_);
 
-  operation_response_view_ =
-      absl::Span<const char>(operation_response_data_.data(), operation_response_data_.size());
+  std::string response_data;
+  operation_response.SerializeToString(&response_data);
+  storage_manager_->WriteResponseData(response_data);
 
   return request_data.size();
-}
-
-absl::Span<const char> StorageChannel::Read(uint32_t size) {
-  absl::Span<const char> data = operation_response_view_.subspan(0, size);
-  operation_response_view_.remove_prefix(data.size());
-  return data;
 }
 
 }  // namespace oak
