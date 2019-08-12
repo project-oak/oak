@@ -29,7 +29,7 @@ const _PROTOBUF_VERSION_CHECK: () = ::protobuf::VERSION_2_8_0;
 #[derive(PartialEq,Clone,Default)]
 pub struct ReadRequest {
     // message fields
-    pub data_store_id: ::std::vec::Vec<u8>,
+    pub storage_id: ::std::vec::Vec<u8>,
     pub transaction_id: ::std::vec::Vec<u8>,
     pub name: ::std::vec::Vec<u8>,
     // special fields
@@ -48,30 +48,30 @@ impl ReadRequest {
         ::std::default::Default::default()
     }
 
-    // bytes data_store_id = 1;
+    // bytes storage_id = 1;
 
 
-    pub fn get_data_store_id(&self) -> &[u8] {
-        &self.data_store_id
+    pub fn get_storage_id(&self) -> &[u8] {
+        &self.storage_id
     }
-    pub fn clear_data_store_id(&mut self) {
-        self.data_store_id.clear();
+    pub fn clear_storage_id(&mut self) {
+        self.storage_id.clear();
     }
 
     // Param is passed by value, moved
-    pub fn set_data_store_id(&mut self, v: ::std::vec::Vec<u8>) {
-        self.data_store_id = v;
+    pub fn set_storage_id(&mut self, v: ::std::vec::Vec<u8>) {
+        self.storage_id = v;
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_data_store_id(&mut self) -> &mut ::std::vec::Vec<u8> {
-        &mut self.data_store_id
+    pub fn mut_storage_id(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.storage_id
     }
 
     // Take field
-    pub fn take_data_store_id(&mut self) -> ::std::vec::Vec<u8> {
-        ::std::mem::replace(&mut self.data_store_id, ::std::vec::Vec::new())
+    pub fn take_storage_id(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.storage_id, ::std::vec::Vec::new())
     }
 
     // bytes transaction_id = 2;
@@ -137,7 +137,7 @@ impl ::protobuf::Message for ReadRequest {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
-                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.data_store_id)?;
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.storage_id)?;
                 },
                 2 => {
                     ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.transaction_id)?;
@@ -157,8 +157,8 @@ impl ::protobuf::Message for ReadRequest {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        if !self.data_store_id.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(1, &self.data_store_id);
+        if !self.storage_id.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(1, &self.storage_id);
         }
         if !self.transaction_id.is_empty() {
             my_size += ::protobuf::rt::bytes_size(2, &self.transaction_id);
@@ -172,8 +172,8 @@ impl ::protobuf::Message for ReadRequest {
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
-        if !self.data_store_id.is_empty() {
-            os.write_bytes(1, &self.data_store_id)?;
+        if !self.storage_id.is_empty() {
+            os.write_bytes(1, &self.storage_id)?;
         }
         if !self.transaction_id.is_empty() {
             os.write_bytes(2, &self.transaction_id)?;
@@ -224,9 +224,9 @@ impl ::protobuf::Message for ReadRequest {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
                 fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
-                    "data_store_id",
-                    |m: &ReadRequest| { &m.data_store_id },
-                    |m: &mut ReadRequest| { &mut m.data_store_id },
+                    "storage_id",
+                    |m: &ReadRequest| { &m.storage_id },
+                    |m: &mut ReadRequest| { &mut m.storage_id },
                 ));
                 fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
                     "transaction_id",
@@ -260,7 +260,7 @@ impl ::protobuf::Message for ReadRequest {
 
 impl ::protobuf::Clear for ReadRequest {
     fn clear(&mut self) {
-        self.data_store_id.clear();
+        self.storage_id.clear();
         self.transaction_id.clear();
         self.name.clear();
         self.unknown_fields.clear();
@@ -451,7 +451,7 @@ impl ::protobuf::reflect::ProtobufValue for ReadResponse {
 #[derive(PartialEq,Clone,Default)]
 pub struct WriteRequest {
     // message fields
-    pub data_store_id: ::std::vec::Vec<u8>,
+    pub storage_id: ::std::vec::Vec<u8>,
     pub transaction_id: ::std::vec::Vec<u8>,
     pub name: ::std::vec::Vec<u8>,
     pub value: ::std::vec::Vec<u8>,
@@ -471,30 +471,30 @@ impl WriteRequest {
         ::std::default::Default::default()
     }
 
-    // bytes data_store_id = 1;
+    // bytes storage_id = 1;
 
 
-    pub fn get_data_store_id(&self) -> &[u8] {
-        &self.data_store_id
+    pub fn get_storage_id(&self) -> &[u8] {
+        &self.storage_id
     }
-    pub fn clear_data_store_id(&mut self) {
-        self.data_store_id.clear();
+    pub fn clear_storage_id(&mut self) {
+        self.storage_id.clear();
     }
 
     // Param is passed by value, moved
-    pub fn set_data_store_id(&mut self, v: ::std::vec::Vec<u8>) {
-        self.data_store_id = v;
+    pub fn set_storage_id(&mut self, v: ::std::vec::Vec<u8>) {
+        self.storage_id = v;
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_data_store_id(&mut self) -> &mut ::std::vec::Vec<u8> {
-        &mut self.data_store_id
+    pub fn mut_storage_id(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.storage_id
     }
 
     // Take field
-    pub fn take_data_store_id(&mut self) -> ::std::vec::Vec<u8> {
-        ::std::mem::replace(&mut self.data_store_id, ::std::vec::Vec::new())
+    pub fn take_storage_id(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.storage_id, ::std::vec::Vec::new())
     }
 
     // bytes transaction_id = 2;
@@ -586,7 +586,7 @@ impl ::protobuf::Message for WriteRequest {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
-                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.data_store_id)?;
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.storage_id)?;
                 },
                 2 => {
                     ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.transaction_id)?;
@@ -609,8 +609,8 @@ impl ::protobuf::Message for WriteRequest {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        if !self.data_store_id.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(1, &self.data_store_id);
+        if !self.storage_id.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(1, &self.storage_id);
         }
         if !self.transaction_id.is_empty() {
             my_size += ::protobuf::rt::bytes_size(2, &self.transaction_id);
@@ -627,8 +627,8 @@ impl ::protobuf::Message for WriteRequest {
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
-        if !self.data_store_id.is_empty() {
-            os.write_bytes(1, &self.data_store_id)?;
+        if !self.storage_id.is_empty() {
+            os.write_bytes(1, &self.storage_id)?;
         }
         if !self.transaction_id.is_empty() {
             os.write_bytes(2, &self.transaction_id)?;
@@ -682,9 +682,9 @@ impl ::protobuf::Message for WriteRequest {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
                 fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
-                    "data_store_id",
-                    |m: &WriteRequest| { &m.data_store_id },
-                    |m: &mut WriteRequest| { &mut m.data_store_id },
+                    "storage_id",
+                    |m: &WriteRequest| { &m.storage_id },
+                    |m: &mut WriteRequest| { &mut m.storage_id },
                 ));
                 fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
                     "transaction_id",
@@ -723,7 +723,7 @@ impl ::protobuf::Message for WriteRequest {
 
 impl ::protobuf::Clear for WriteRequest {
     fn clear(&mut self) {
-        self.data_store_id.clear();
+        self.storage_id.clear();
         self.transaction_id.clear();
         self.name.clear();
         self.value.clear();
@@ -872,7 +872,7 @@ impl ::protobuf::reflect::ProtobufValue for WriteResponse {
 #[derive(PartialEq,Clone,Default)]
 pub struct DeleteRequest {
     // message fields
-    pub data_store_id: ::std::vec::Vec<u8>,
+    pub storage_id: ::std::vec::Vec<u8>,
     pub transaction_id: ::std::vec::Vec<u8>,
     pub name: ::std::vec::Vec<u8>,
     // special fields
@@ -891,30 +891,30 @@ impl DeleteRequest {
         ::std::default::Default::default()
     }
 
-    // bytes data_store_id = 1;
+    // bytes storage_id = 1;
 
 
-    pub fn get_data_store_id(&self) -> &[u8] {
-        &self.data_store_id
+    pub fn get_storage_id(&self) -> &[u8] {
+        &self.storage_id
     }
-    pub fn clear_data_store_id(&mut self) {
-        self.data_store_id.clear();
+    pub fn clear_storage_id(&mut self) {
+        self.storage_id.clear();
     }
 
     // Param is passed by value, moved
-    pub fn set_data_store_id(&mut self, v: ::std::vec::Vec<u8>) {
-        self.data_store_id = v;
+    pub fn set_storage_id(&mut self, v: ::std::vec::Vec<u8>) {
+        self.storage_id = v;
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_data_store_id(&mut self) -> &mut ::std::vec::Vec<u8> {
-        &mut self.data_store_id
+    pub fn mut_storage_id(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.storage_id
     }
 
     // Take field
-    pub fn take_data_store_id(&mut self) -> ::std::vec::Vec<u8> {
-        ::std::mem::replace(&mut self.data_store_id, ::std::vec::Vec::new())
+    pub fn take_storage_id(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.storage_id, ::std::vec::Vec::new())
     }
 
     // bytes transaction_id = 2;
@@ -980,7 +980,7 @@ impl ::protobuf::Message for DeleteRequest {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
-                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.data_store_id)?;
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.storage_id)?;
                 },
                 2 => {
                     ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.transaction_id)?;
@@ -1000,8 +1000,8 @@ impl ::protobuf::Message for DeleteRequest {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        if !self.data_store_id.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(1, &self.data_store_id);
+        if !self.storage_id.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(1, &self.storage_id);
         }
         if !self.transaction_id.is_empty() {
             my_size += ::protobuf::rt::bytes_size(2, &self.transaction_id);
@@ -1015,8 +1015,8 @@ impl ::protobuf::Message for DeleteRequest {
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
-        if !self.data_store_id.is_empty() {
-            os.write_bytes(1, &self.data_store_id)?;
+        if !self.storage_id.is_empty() {
+            os.write_bytes(1, &self.storage_id)?;
         }
         if !self.transaction_id.is_empty() {
             os.write_bytes(2, &self.transaction_id)?;
@@ -1067,9 +1067,9 @@ impl ::protobuf::Message for DeleteRequest {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
                 fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
-                    "data_store_id",
-                    |m: &DeleteRequest| { &m.data_store_id },
-                    |m: &mut DeleteRequest| { &mut m.data_store_id },
+                    "storage_id",
+                    |m: &DeleteRequest| { &m.storage_id },
+                    |m: &mut DeleteRequest| { &mut m.storage_id },
                 ));
                 fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
                     "transaction_id",
@@ -1103,7 +1103,7 @@ impl ::protobuf::Message for DeleteRequest {
 
 impl ::protobuf::Clear for DeleteRequest {
     fn clear(&mut self) {
-        self.data_store_id.clear();
+        self.storage_id.clear();
         self.transaction_id.clear();
         self.name.clear();
         self.unknown_fields.clear();
@@ -1251,7 +1251,7 @@ impl ::protobuf::reflect::ProtobufValue for DeleteResponse {
 #[derive(PartialEq,Clone,Default)]
 pub struct BeginRequest {
     // message fields
-    pub data_store_id: ::std::vec::Vec<u8>,
+    pub storage_id: ::std::vec::Vec<u8>,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -1268,30 +1268,30 @@ impl BeginRequest {
         ::std::default::Default::default()
     }
 
-    // bytes data_store_id = 1;
+    // bytes storage_id = 1;
 
 
-    pub fn get_data_store_id(&self) -> &[u8] {
-        &self.data_store_id
+    pub fn get_storage_id(&self) -> &[u8] {
+        &self.storage_id
     }
-    pub fn clear_data_store_id(&mut self) {
-        self.data_store_id.clear();
+    pub fn clear_storage_id(&mut self) {
+        self.storage_id.clear();
     }
 
     // Param is passed by value, moved
-    pub fn set_data_store_id(&mut self, v: ::std::vec::Vec<u8>) {
-        self.data_store_id = v;
+    pub fn set_storage_id(&mut self, v: ::std::vec::Vec<u8>) {
+        self.storage_id = v;
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_data_store_id(&mut self) -> &mut ::std::vec::Vec<u8> {
-        &mut self.data_store_id
+    pub fn mut_storage_id(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.storage_id
     }
 
     // Take field
-    pub fn take_data_store_id(&mut self) -> ::std::vec::Vec<u8> {
-        ::std::mem::replace(&mut self.data_store_id, ::std::vec::Vec::new())
+    pub fn take_storage_id(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.storage_id, ::std::vec::Vec::new())
     }
 }
 
@@ -1305,7 +1305,7 @@ impl ::protobuf::Message for BeginRequest {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
-                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.data_store_id)?;
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.storage_id)?;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -1319,8 +1319,8 @@ impl ::protobuf::Message for BeginRequest {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        if !self.data_store_id.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(1, &self.data_store_id);
+        if !self.storage_id.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(1, &self.storage_id);
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
@@ -1328,8 +1328,8 @@ impl ::protobuf::Message for BeginRequest {
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
-        if !self.data_store_id.is_empty() {
-            os.write_bytes(1, &self.data_store_id)?;
+        if !self.storage_id.is_empty() {
+            os.write_bytes(1, &self.storage_id)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -1374,9 +1374,9 @@ impl ::protobuf::Message for BeginRequest {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
                 fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
-                    "data_store_id",
-                    |m: &BeginRequest| { &m.data_store_id },
-                    |m: &mut BeginRequest| { &mut m.data_store_id },
+                    "storage_id",
+                    |m: &BeginRequest| { &m.storage_id },
+                    |m: &mut BeginRequest| { &mut m.storage_id },
                 ));
                 ::protobuf::reflect::MessageDescriptor::new::<BeginRequest>(
                     "BeginRequest",
@@ -1400,7 +1400,7 @@ impl ::protobuf::Message for BeginRequest {
 
 impl ::protobuf::Clear for BeginRequest {
     fn clear(&mut self) {
-        self.data_store_id.clear();
+        self.storage_id.clear();
         self.unknown_fields.clear();
     }
 }
@@ -1589,6 +1589,7 @@ impl ::protobuf::reflect::ProtobufValue for BeginResponse {
 #[derive(PartialEq,Clone,Default)]
 pub struct CommitRequest {
     // message fields
+    pub storage_id: ::std::vec::Vec<u8>,
     pub transaction_id: ::std::vec::Vec<u8>,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
@@ -1606,7 +1607,33 @@ impl CommitRequest {
         ::std::default::Default::default()
     }
 
-    // bytes transaction_id = 1;
+    // bytes storage_id = 1;
+
+
+    pub fn get_storage_id(&self) -> &[u8] {
+        &self.storage_id
+    }
+    pub fn clear_storage_id(&mut self) {
+        self.storage_id.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_storage_id(&mut self, v: ::std::vec::Vec<u8>) {
+        self.storage_id = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_storage_id(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.storage_id
+    }
+
+    // Take field
+    pub fn take_storage_id(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.storage_id, ::std::vec::Vec::new())
+    }
+
+    // bytes transaction_id = 2;
 
 
     pub fn get_transaction_id(&self) -> &[u8] {
@@ -1643,6 +1670,9 @@ impl ::protobuf::Message for CommitRequest {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.storage_id)?;
+                },
+                2 => {
                     ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.transaction_id)?;
                 },
                 _ => {
@@ -1657,8 +1687,11 @@ impl ::protobuf::Message for CommitRequest {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
+        if !self.storage_id.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(1, &self.storage_id);
+        }
         if !self.transaction_id.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(1, &self.transaction_id);
+            my_size += ::protobuf::rt::bytes_size(2, &self.transaction_id);
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
@@ -1666,8 +1699,11 @@ impl ::protobuf::Message for CommitRequest {
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
+        if !self.storage_id.is_empty() {
+            os.write_bytes(1, &self.storage_id)?;
+        }
         if !self.transaction_id.is_empty() {
-            os.write_bytes(1, &self.transaction_id)?;
+            os.write_bytes(2, &self.transaction_id)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -1712,6 +1748,11 @@ impl ::protobuf::Message for CommitRequest {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
                 fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                    "storage_id",
+                    |m: &CommitRequest| { &m.storage_id },
+                    |m: &mut CommitRequest| { &mut m.storage_id },
+                ));
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
                     "transaction_id",
                     |m: &CommitRequest| { &m.transaction_id },
                     |m: &mut CommitRequest| { &mut m.transaction_id },
@@ -1738,6 +1779,7 @@ impl ::protobuf::Message for CommitRequest {
 
 impl ::protobuf::Clear for CommitRequest {
     fn clear(&mut self) {
+        self.storage_id.clear();
         self.transaction_id.clear();
         self.unknown_fields.clear();
     }
@@ -1884,6 +1926,7 @@ impl ::protobuf::reflect::ProtobufValue for CommitResponse {
 #[derive(PartialEq,Clone,Default)]
 pub struct RollbackRequest {
     // message fields
+    pub storage_id: ::std::vec::Vec<u8>,
     pub transaction_id: ::std::vec::Vec<u8>,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
@@ -1901,7 +1944,33 @@ impl RollbackRequest {
         ::std::default::Default::default()
     }
 
-    // bytes transaction_id = 1;
+    // bytes storage_id = 1;
+
+
+    pub fn get_storage_id(&self) -> &[u8] {
+        &self.storage_id
+    }
+    pub fn clear_storage_id(&mut self) {
+        self.storage_id.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_storage_id(&mut self, v: ::std::vec::Vec<u8>) {
+        self.storage_id = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_storage_id(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.storage_id
+    }
+
+    // Take field
+    pub fn take_storage_id(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.storage_id, ::std::vec::Vec::new())
+    }
+
+    // bytes transaction_id = 2;
 
 
     pub fn get_transaction_id(&self) -> &[u8] {
@@ -1938,6 +2007,9 @@ impl ::protobuf::Message for RollbackRequest {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.storage_id)?;
+                },
+                2 => {
                     ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.transaction_id)?;
                 },
                 _ => {
@@ -1952,8 +2024,11 @@ impl ::protobuf::Message for RollbackRequest {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
+        if !self.storage_id.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(1, &self.storage_id);
+        }
         if !self.transaction_id.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(1, &self.transaction_id);
+            my_size += ::protobuf::rt::bytes_size(2, &self.transaction_id);
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
@@ -1961,8 +2036,11 @@ impl ::protobuf::Message for RollbackRequest {
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
+        if !self.storage_id.is_empty() {
+            os.write_bytes(1, &self.storage_id)?;
+        }
         if !self.transaction_id.is_empty() {
-            os.write_bytes(1, &self.transaction_id)?;
+            os.write_bytes(2, &self.transaction_id)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -2007,6 +2085,11 @@ impl ::protobuf::Message for RollbackRequest {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
                 fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                    "storage_id",
+                    |m: &RollbackRequest| { &m.storage_id },
+                    |m: &mut RollbackRequest| { &mut m.storage_id },
+                ));
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
                     "transaction_id",
                     |m: &RollbackRequest| { &m.transaction_id },
                     |m: &mut RollbackRequest| { &mut m.transaction_id },
@@ -2033,6 +2116,7 @@ impl ::protobuf::Message for RollbackRequest {
 
 impl ::protobuf::Clear for RollbackRequest {
     fn clear(&mut self) {
+        self.storage_id.clear();
         self.transaction_id.clear();
         self.unknown_fields.clear();
     }
@@ -2178,6 +2262,8 @@ impl ::protobuf::reflect::ProtobufValue for RollbackResponse {
 
 #[derive(PartialEq,Clone,Default)]
 pub struct StorageOperationRequest {
+    // message fields
+    pub storage_name: ::std::vec::Vec<u8>,
     // message oneof groups
     pub operation: ::std::option::Option<StorageOperationRequest_oneof_operation>,
     // special fields
@@ -2204,6 +2290,32 @@ pub enum StorageOperationRequest_oneof_operation {
 impl StorageOperationRequest {
     pub fn new() -> StorageOperationRequest {
         ::std::default::Default::default()
+    }
+
+    // bytes storage_name = 1;
+
+
+    pub fn get_storage_name(&self) -> &[u8] {
+        &self.storage_name
+    }
+    pub fn clear_storage_name(&mut self) {
+        self.storage_name.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_storage_name(&mut self, v: ::std::vec::Vec<u8>) {
+        self.storage_name = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_storage_name(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.storage_name
+    }
+
+    // Take field
+    pub fn take_storage_name(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.storage_name, ::std::vec::Vec::new())
     }
 
     // .oak.ReadRequest read_request = 2;
@@ -2540,6 +2652,9 @@ impl ::protobuf::Message for StorageOperationRequest {
         while !is.eof()? {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.storage_name)?;
+                },
                 2 => {
                     if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
@@ -2588,6 +2703,9 @@ impl ::protobuf::Message for StorageOperationRequest {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
+        if !self.storage_name.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(1, &self.storage_name);
+        }
         if let ::std::option::Option::Some(ref v) = self.operation {
             match v {
                 &StorageOperationRequest_oneof_operation::read_request(ref v) => {
@@ -2622,6 +2740,9 @@ impl ::protobuf::Message for StorageOperationRequest {
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
+        if !self.storage_name.is_empty() {
+            os.write_bytes(1, &self.storage_name)?;
+        }
         if let ::std::option::Option::Some(ref v) = self.operation {
             match v {
                 &StorageOperationRequest_oneof_operation::read_request(ref v) => {
@@ -2698,6 +2819,11 @@ impl ::protobuf::Message for StorageOperationRequest {
         unsafe {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                    "storage_name",
+                    |m: &StorageOperationRequest| { &m.storage_name },
+                    |m: &mut StorageOperationRequest| { &mut m.storage_name },
+                ));
                 fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, ReadRequest>(
                     "read_request",
                     StorageOperationRequest::has_read_request,
@@ -2750,6 +2876,7 @@ impl ::protobuf::Message for StorageOperationRequest {
 
 impl ::protobuf::Clear for StorageOperationRequest {
     fn clear(&mut self) {
+        self.storage_name.clear();
         self.operation = ::std::option::Option::None;
         self.operation = ::std::option::Option::None;
         self.operation = ::std::option::Option::None;
@@ -3427,24 +3554,26 @@ impl ::protobuf::reflect::ProtobufValue for StorageOperationResponse {
 }
 
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\rstorage.proto\x12\x03oak\x1a\x17google/rpc/status.proto\"l\n\x0bRead\
-    Request\x12\"\n\rdata_store_id\x18\x01\x20\x01(\x0cR\x0bdataStoreId\x12%\
-    \n\x0etransaction_id\x18\x02\x20\x01(\x0cR\rtransactionId\x12\x12\n\x04n\
-    ame\x18\x03\x20\x01(\x0cR\x04name\"$\n\x0cReadResponse\x12\x14\n\x05valu\
-    e\x18\x01\x20\x01(\x0cR\x05value\"\x83\x01\n\x0cWriteRequest\x12\"\n\rda\
-    ta_store_id\x18\x01\x20\x01(\x0cR\x0bdataStoreId\x12%\n\x0etransaction_i\
-    d\x18\x02\x20\x01(\x0cR\rtransactionId\x12\x12\n\x04name\x18\x03\x20\x01\
-    (\x0cR\x04name\x12\x14\n\x05value\x18\x04\x20\x01(\x0cR\x05value\"\x0f\n\
-    \rWriteResponse\"n\n\rDeleteRequest\x12\"\n\rdata_store_id\x18\x01\x20\
-    \x01(\x0cR\x0bdataStoreId\x12%\n\x0etransaction_id\x18\x02\x20\x01(\x0cR\
-    \rtransactionId\x12\x12\n\x04name\x18\x03\x20\x01(\x0cR\x04name\"\x10\n\
-    \x0eDeleteResponse\"2\n\x0cBeginRequest\x12\"\n\rdata_store_id\x18\x01\
-    \x20\x01(\x0cR\x0bdataStoreId\"6\n\rBeginResponse\x12%\n\x0etransaction_\
-    id\x18\x01\x20\x01(\x0cR\rtransactionId\"6\n\rCommitRequest\x12%\n\x0etr\
-    ansaction_id\x18\x01\x20\x01(\x0cR\rtransactionId\"\x10\n\x0eCommitRespo\
-    nse\"8\n\x0fRollbackRequest\x12%\n\x0etransaction_id\x18\x01\x20\x01(\
-    \x0cR\rtransactionId\"\x12\n\x10RollbackResponse\"\x8e\x03\n\x17StorageO\
-    perationRequest\x125\n\x0cread_request\x18\x02\x20\x01(\x0b2\x10.oak.Rea\
+    \n\rstorage.proto\x12\x03oak\x1a\x17google/rpc/status.proto\"g\n\x0bRead\
+    Request\x12\x1d\n\nstorage_id\x18\x01\x20\x01(\x0cR\tstorageId\x12%\n\
+    \x0etransaction_id\x18\x02\x20\x01(\x0cR\rtransactionId\x12\x12\n\x04nam\
+    e\x18\x03\x20\x01(\x0cR\x04name\"$\n\x0cReadResponse\x12\x14\n\x05value\
+    \x18\x01\x20\x01(\x0cR\x05value\"~\n\x0cWriteRequest\x12\x1d\n\nstorage_\
+    id\x18\x01\x20\x01(\x0cR\tstorageId\x12%\n\x0etransaction_id\x18\x02\x20\
+    \x01(\x0cR\rtransactionId\x12\x12\n\x04name\x18\x03\x20\x01(\x0cR\x04nam\
+    e\x12\x14\n\x05value\x18\x04\x20\x01(\x0cR\x05value\"\x0f\n\rWriteRespon\
+    se\"i\n\rDeleteRequest\x12\x1d\n\nstorage_id\x18\x01\x20\x01(\x0cR\tstor\
+    ageId\x12%\n\x0etransaction_id\x18\x02\x20\x01(\x0cR\rtransactionId\x12\
+    \x12\n\x04name\x18\x03\x20\x01(\x0cR\x04name\"\x10\n\x0eDeleteResponse\"\
+    -\n\x0cBeginRequest\x12\x1d\n\nstorage_id\x18\x01\x20\x01(\x0cR\tstorage\
+    Id\"6\n\rBeginResponse\x12%\n\x0etransaction_id\x18\x01\x20\x01(\x0cR\rt\
+    ransactionId\"U\n\rCommitRequest\x12\x1d\n\nstorage_id\x18\x01\x20\x01(\
+    \x0cR\tstorageId\x12%\n\x0etransaction_id\x18\x02\x20\x01(\x0cR\rtransac\
+    tionId\"\x10\n\x0eCommitResponse\"W\n\x0fRollbackRequest\x12\x1d\n\nstor\
+    age_id\x18\x01\x20\x01(\x0cR\tstorageId\x12%\n\x0etransaction_id\x18\x02\
+    \x20\x01(\x0cR\rtransactionId\"\x12\n\x10RollbackResponse\"\xb1\x03\n\
+    \x17StorageOperationRequest\x12!\n\x0cstorage_name\x18\x01\x20\x01(\x0cR\
+    \x0bstorageName\x125\n\x0cread_request\x18\x02\x20\x01(\x0b2\x10.oak.Rea\
     dRequestH\0R\x0breadRequest\x128\n\rwrite_request\x18\x03\x20\x01(\x0b2\
     \x11.oak.WriteRequestH\0R\x0cwriteRequest\x12;\n\x0edelete_request\x18\
     \x04\x20\x01(\x0b2\x12.oak.DeleteRequestH\0R\rdeleteRequest\x128\n\rbegi\

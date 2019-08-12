@@ -179,6 +179,14 @@ static bool CheckModuleExports(wabt::interp::Environment* env,
 }
 
 OakNode::OakNode() : Service() {}
+  std::unique_ptr<ChannelHalf> storage_read_channel =
+      absl::make_unique<StorageReadChannel>(&storage_manager_);
+  channel_halves_[STORAGE_READ_CHANNEL_HANDLE] = std::move(storage_read_channel);
+  std::unique_ptr<ChannelHalf> storage_write_channel =
+      absl::make_unique<StorageWriteChannel>(storage_service_.get(), &storage_manager_);
+  channel_halves_[STORAGE_WRITE_CHANNEL_HANDLE] = std::move(storage_write_channel);
+  LOG(INFO) << "Created storage channels";
+}
 
 std::unique_ptr<OakNode> OakNode::Create(const std::string& module) {
   LOG(INFO) << "Creating Oak Node";
@@ -353,17 +361,6 @@ wabt::interp::HostFunc::Callback OakNode::OakWaitOnChannels(wabt::interp::Enviro
       LOG(INFO) << "Waiting on no channels";
       return wabt::interp::Result::Ok;
     }
-
-    wabt::Stream* trace_stream = nullptr;
-    wabt::interp::Thread::Options thread_options;
-    wabt::interp::Executor executor(&env_, trace_stream, thread_options);
-
-    // TODO: Move to initialization method.
-    std::unique_ptr<Channel> storage_channel =
-        absl::make_unique<StorageChannel>(oak::Storage::NewStub(
-            grpc::CreateChannel("localhost:7867", grpc::InsecureChannelCredentials())));
-    channels_[STORAGE_CHANNEL_HANDLE] = std::move(storage_channel);
-    LOG(INFO) << "Created Storage method channel";
 
     uint64_t handle0 = ReadU64(env, offset);
     // TODO: Drop hardcoded single channel
