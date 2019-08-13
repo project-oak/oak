@@ -1,2 +1,2 @@
 #!/bin/sh
-$PWD/scripts/run_example private_set_intersection
+$PWD/scripts/run_example "$@" private_set_intersection

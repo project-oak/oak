@@ -1,2 +1,2 @@
 #!/bin/sh
-$PWD/scripts/run_example machine_learning
+$PWD/scripts/run_example "$@" machine_learning

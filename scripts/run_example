@@ -8,14 +8,15 @@ while getopts "hc" opt; do
     case "$opt" in
     h)
         echo -e "Usage: $0 [-c] example_name
-  -c    Build the cc version of the example
+  -c    Run the C++ version of the example
   -h    Print this message"
         exit 0
         ;;
-    c)  
+    c)
+        echo "Running Node in C++ mode"
         IS_CPP=true
         ;;
-    *) 
+    *)
         exit 1
         ;;
     esac
