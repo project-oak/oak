@@ -15,8 +15,10 @@ readonly SERVER_CONTAINER_ID=$("$SCRIPTS_DIR/docker_run" \
   --detach \
   ./bazel-bin/oak/server/oak)
 
-# Run Oak examples.
-find examples -type f -name run -exec "$SCRIPTS_DIR/docker_run" {} \;
+# Run Rust-based Oak examples.
+readonly RUST_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module/rust$' | cut -d'/' -f2)"
+for example in ${RUST_EXAMPLES}; do
+  "${SCRIPTS_DIR}/docker_run" "${SCRIPTS_DIR}/run_example" "${example}"
+done
 
 docker stop "$SERVER_CONTAINER_ID"
-
