@@ -1,2 +1,2 @@
 #!/bin/sh
-$PWD/scripts/run_example running_average
+$PWD/scripts/run_example "$@" running_average
