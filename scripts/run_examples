@@ -20,5 +20,10 @@ readonly RUST_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '
 for example in ${RUST_EXAMPLES}; do
   "${SCRIPTS_DIR}/docker_run" "${SCRIPTS_DIR}/run_example" "${example}"
 done
+# Run C++-based Oak examples.
+readonly CPP_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module/cpp$' | cut -d'/' -f2)"
+for example in ${CPP_EXAMPLES}; do
+  "${SCRIPTS_DIR}/docker_run" "${SCRIPTS_DIR}/run_example" -c "${example}"
+done
 
 docker stop "$SERVER_CONTAINER_ID"
