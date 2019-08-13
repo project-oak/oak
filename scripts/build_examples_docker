@@ -4,5 +4,8 @@ set -o errexit
 set -o xtrace
 
 readonly SCRIPTS_DIR="$(dirname "$0")"
+readonly EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -name module | cut -d'/' -f2)"
 
-"$SCRIPTS_DIR/docker_run" cargo build --release --target=wasm32-unknown-unknown --manifest-path=examples/Cargo.toml
+for example in ${EXAMPLES}; do
+  "${SCRIPTS_DIR}/docker_run" "${SCRIPTS_DIR}/build_example" "${example}"
+done
