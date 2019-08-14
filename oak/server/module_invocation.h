@@ -43,15 +43,23 @@ class ModuleInvocation {
   // Calls ProcessRequest after asynchronously reading the request.
   void ReadRequest(bool ok);
 
-  // Performs the Oak Module invocation synchronously and calls Finish after
-  // asynchronously writing the response.
-  // Restarts the gRPC flow with a new Moduleinvocation object for the next request.
+  // Performs the Oak Module invocation synchronously and calls SendResponse for
+  // responses.  (On invocation failure, calls Finish and re-Start()s the gRPC
+  // flow with a new ModuleInvocation object for the next request.
   void ProcessRequest(bool ok);
+
+  // Sends a single response and queues an invocation of either:
+  //  - SendResponse again if more responses are pending
+  //  - Finish otherwise (and also re-Start()s the gRPC flow with a new
+  //    ModuleInvocation object).
+  void SendResponse(bool ok);
 
   // Cleans up by deleting this object.
   void Finish(bool ok);
 
  private:
+  void FinishAndRestart(const grpc::Status& status);
+
   grpc::AsyncGenericService* const service_;
   grpc::ServerCompletionQueue* const queue_;
   OakNode* const node_;
@@ -59,7 +67,6 @@ class ModuleInvocation {
   grpc::GenericServerContext context_;
   grpc::GenericServerAsyncReaderWriter stream_;
   grpc::ByteBuffer request_;
-  grpc::ByteBuffer response_;
 };
 
 }  // namespace oak

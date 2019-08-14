@@ -23,7 +23,6 @@
 
 #include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
-#include "oak/proto/grpc_encap.pb.h"
 #include "oak/server/logging_channel.h"
 #include "oak/server/status.h"
 #include "oak/server/wabt_output.h"
@@ -316,15 +315,17 @@ wabt::interp::HostFunc::Callback OakNode::OakChannelWrite(wabt::interp::Environm
   };
 }
 
-OakNode::InvocationResult OakNode::ProcessModuleInvocation(grpc::GenericServerContext* context,
-                                                           std::unique_ptr<Message> request_data) {
+grpc::Status OakNode::ProcessModuleInvocation(grpc::GenericServerContext* context,
+                                              std::unique_ptr<Message> request_data) {
   LOG(INFO) << "Handling gRPC call: " << context->method();
 
   // Build an encapsulation of the gRPC request invocation and write its serialized
   // form to the gRPC input channel.
   oak::GrpcRequest grpc_in;
   grpc_in.set_method_name(context->method());
-  grpc_in.set_req_msg(request_data->data(), request_data->size());
+  google::protobuf::Any* any = new google::protobuf::Any();
+  any->set_value(request_data->data(), request_data->size());
+  grpc_in.set_allocated_req_msg(any);
   grpc_in.set_last(true);
   std::string encap_req;
   grpc_in.SerializeToString(&encap_req);
@@ -342,35 +343,42 @@ OakNode::InvocationResult OakNode::ProcessModuleInvocation(grpc::GenericServerCo
   wabt::interp::ExecResult exec_result =
       executor.RunExportByName(module_, "oak_handle_grpc_call", args);
 
-  InvocationResult result;
   if (exec_result.result != wabt::interp::Result::Ok) {
     std::string err = wabt::interp::ResultToString(exec_result.result);
     LOG(ERROR) << "Could not handle gRPC call: " << err;
-    result.status = grpc::Status(grpc::StatusCode::INTERNAL, err);
-    return result;
+    return grpc::Status(grpc::StatusCode::INTERNAL, err);
   }
+
+  return grpc::Status::OK;
+}
+
+oak::GrpcResponse OakNode::NextResponse() {
+  // Read a single queued GrpcResponse message (in serialized form) from the
+  // response channel.
+  oak::GrpcResponse grpc_out;
   ReadResult rsp_result = rsp_half_->Read(INT_MAX);
   if (rsp_result.required_size > 0) {
     LOG(ERROR) << "Message size too large: " << rsp_result.required_size;
-    result.status = grpc::Status(grpc::StatusCode::INTERNAL, "Message size too large");
-    return result;
-  }
-  if (rsp_result.data == nullptr) {
-    LOG(INFO) << "No response on output channel";
-    result.status = grpc::Status::OK;
-    return result;
+    google::rpc::Status* status = new google::rpc::Status();
+    status->set_code(grpc::StatusCode::INTERNAL);
+    status->set_message("Message size too large");
+    grpc_out.set_allocated_status(status);
+    return grpc_out;
   }
 
-  // Expect to receive a serialized GrpcResponse message.
-  LOG(INFO) << "Read message of size " << rsp_result.data->size() << " from output channel";
-  oak::GrpcResponse grpc_out;
+  if (rsp_result.data == nullptr) {
+    LOG(ERROR) << "Encapsulated response missing on gRPC send channel";
+    google::rpc::Status* status = new google::rpc::Status();
+    status->set_code(grpc::StatusCode::INTERNAL);
+    status->set_message("Message missing");
+    grpc_out.set_allocated_status(status);
+    return grpc_out;
+  }
+
+  LOG(INFO) << "Read encapsulated message of size " << rsp_result.data->size()
+            << " from output channel";
   grpc_out.ParseFromString(std::string(rsp_result.data->data(), rsp_result.data->size()));
-  // Assume google::rpc::Status maps directly to grpc::Status.
-  result.status = grpc::Status(static_cast<grpc::StatusCode>(grpc_out.status().code()),
-                               grpc_out.status().message());
-  const ::std::string& data = grpc_out.rsp_msg();
-  result.data = std::move(absl::make_unique<Message>(data.begin(), data.end()));
-  return result;
+  return grpc_out;
 }
 
 grpc::Status OakNode::GetAttestation(grpc::ServerContext* context,

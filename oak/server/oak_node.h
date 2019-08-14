@@ -24,6 +24,7 @@
 #include "absl/types/span.h"
 #include "oak/common/handles.h"
 #include "oak/proto/application.grpc.pb.h"
+#include "oak/proto/grpc_encap.pb.h"
 #include "oak/server/channel.h"
 #include "src/interp/interp.h"
 
@@ -33,17 +34,15 @@ typedef std::unordered_map<Handle, std::unique_ptr<ChannelHalf>> ChannelHalfTabl
 
 class OakNode final : public Application::Service {
  public:
-  struct InvocationResult {
-    grpc::Status status;
-    std::unique_ptr<Message> data;
-  };
-
   // Creates an Oak node by loading the Wasm module code.
   static std::unique_ptr<OakNode> Create(const std::string& module);
 
-  // Performs an Oak Module invocation. Takes ownership of the passed in request data.
-  InvocationResult ProcessModuleInvocation(grpc::GenericServerContext* context,
-                                           std::unique_ptr<Message> request_data);
+  // Performs an Oak Module gRPC invocation. Takes ownership of the passed in request data.
+  grpc::Status ProcessModuleInvocation(grpc::GenericServerContext* context,
+                                       std::unique_ptr<Message> request_data);
+
+  // Returns the next response from a gRPC invocation.
+  oak::GrpcResponse NextResponse();
 
  private:
   // Clients should construct OakNode instances with Create() (which

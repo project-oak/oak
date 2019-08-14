@@ -19,6 +19,7 @@ extern crate fmt;
 extern crate log;
 extern crate protobuf;
 
+use protobuf::Message;
 use std::cell::RefCell;
 use std::io;
 use std::io::Write;
@@ -32,6 +33,33 @@ mod tests;
 extern crate assert_matches;
 
 pub type GrpcResult<T> = Result<T, proto::status::Status>;
+
+/// Trait to allow repeated writing of responses for server-streaming gRPC methods.
+pub trait ResponseWriter<T: protobuf::Message> {
+    fn write(&mut self, rsp: T);
+}
+
+/// Implementation of ResponseWriter that encapsulates response messages into
+/// GrpcResponse wrapper messages and writes serialized versions to a (mutably
+/// borrowed) send channel.
+pub struct ChannelResponseWriter<'a> {
+    pub channel: &'a mut SendChannelHalf,
+}
+
+impl<'a, T> ResponseWriter<T> for ChannelResponseWriter<'a>
+where
+    T: protobuf::Message,
+{
+    fn write(&mut self, rsp: T) {
+        // Put the serialized response into a GrpcResponse message wrapper.
+        let mut grpc_rsp = proto::grpc_encap::GrpcResponse::new();
+        let mut any = protobuf::well_known_types::Any::new();
+        rsp.write_to_writer(&mut any.value).unwrap();
+        grpc_rsp.set_rsp_msg(any);
+        // Serialize the GrpcResponse into the send channel.
+        grpc_rsp.write_to_writer(&mut self.channel).unwrap();
+    }
+}
 
 type Handle = u64;
 
@@ -109,9 +137,7 @@ impl SendChannelHalf {
     pub fn new(handle: Handle) -> SendChannelHalf {
         SendChannelHalf { handle }
     }
-}
 
-impl SendChannelHalf {
     pub fn write_message(&mut self, buf: &[u8]) -> std::io::Result<()> {
         result_from_status(
             status_from_i32(unsafe { wasm::channel_write(self.handle, buf.as_ptr(), buf.len()) }),
@@ -148,9 +174,7 @@ impl ReceiveChannelHalf {
     pub fn new(handle: Handle) -> ReceiveChannelHalf {
         ReceiveChannelHalf { handle }
     }
-}
 
-impl ReceiveChannelHalf {
     pub fn read_message(&mut self, buf: &mut Vec<u8>) -> std::io::Result<usize> {
         // Try reading from the channel twice: first with provided vector,
         // then with a vector that's been resized to meet size requirements.
@@ -291,7 +315,7 @@ pub extern "C" fn oak_handle_grpc_call() {
             }
             node.invoke(
                 &req.method_name,
-                req.req_msg.as_slice(),
+                req.get_req_msg().value.as_slice(),
                 &mut SendChannelHalf::new(GRPC_OUT_CHANNEL_HANDLE),
             );
         }

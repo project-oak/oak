@@ -36,9 +36,9 @@ pub fn dispatch(node: &mut dyn FormatServiceNode, method: &str, req: &[u8], out:
             let mut result = oak::proto::grpc_encap::GrpcResponse::new();
             match node.format(r) {
                 Ok(rsp) => {
-                    let mut rsp_data = Vec::new();
-                    rsp.write_to_writer(&mut rsp_data).unwrap();
-                    result.set_rsp_msg(rsp_data);
+                    let mut any = protobuf::well_known_types::Any::new();
+                    rsp.write_to_writer(&mut any.value).unwrap();
+                    result.set_rsp_msg(any);
                 }
                 Err(status) => result.set_status(status),
             }

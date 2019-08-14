@@ -278,7 +278,7 @@ impl oak::Node for Node {
             }
         }
         let mut result = oak::proto::grpc_encap::GrpcResponse::new();
-        result.set_has_rsp_msg(true);
+        result.set_rsp_msg(protobuf::well_known_types::Any::new());
         result.set_last(true);
         result.write_to_writer(out).unwrap();
     }

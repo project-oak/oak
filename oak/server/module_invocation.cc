@@ -18,6 +18,7 @@
 
 #include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
+#include "oak/proto/grpc_encap.pb.h"
 #include "oak/server/channel.h"
 
 namespace oak {
@@ -36,13 +37,6 @@ std::unique_ptr<Message> Unwrap(const grpc::ByteBuffer& buffer) {
     bytes->insert(bytes->end(), slice.begin(), slice.end());
   }
   return bytes;
-}
-
-// Creates a gRPC ByteBuffer that reference the given Message.
-// The lifetime of the message must be longer than that of the ByteBuffer.
-const grpc::ByteBuffer Wrap(const Message& msg) {
-  grpc::Slice slice(msg.data(), msg.size());
-  return grpc::ByteBuffer(&slice, /*nslices=*/1);
 }
 
 }  // namespace
@@ -69,24 +63,73 @@ void ModuleInvocation::ProcessRequest(bool ok) {
     return;
   }
   std::unique_ptr<Message> request_data = Unwrap(request_);
-  OakNode::InvocationResult result =
-      node_->ProcessModuleInvocation(&context_, std::move(request_data));
-  // Restarts the gRPC flow with a new ModuleInvocation object for the next request
+
+  grpc::Status status = node_->ProcessModuleInvocation(&context_, std::move(request_data));
+  if (!status.ok()) {
+    FinishAndRestart(status);
+    return;
+  }
+
+  // Move straight onto sending first response.
+  SendResponse(true);
+}
+
+void ModuleInvocation::SendResponse(bool ok) {
+  if (!ok) {
+    delete this;
+    return;
+  }
+
+  oak::GrpcResponse grpc_out = node_->NextResponse();
+  if (grpc_out.status().code() != grpc::StatusCode::OK) {
+    LOG(WARNING) << "Encapsulated response has non-OK status: " << grpc_out.status().code();
+    // Assume google::rpc::Status maps directly to grpc::Status.
+    FinishAndRestart(grpc::Status(static_cast<grpc::StatusCode>(grpc_out.status().code()),
+                                  grpc_out.status().message()));
+    return;
+  }
+
+  const grpc::string& inner_msg = grpc_out.rsp_msg().value();
+  grpc::Slice slice(inner_msg.data(), inner_msg.size());
+  grpc::ByteBuffer bb(&slice, /*nslices=*/1);
+
+  grpc::WriteOptions options;
+  if (!grpc_out.last()) {
+    LOG(INFO) << "Non-final inner response of size " << inner_msg.size();
+    auto* callback = new std::function<void(bool)>(
+        std::bind(&ModuleInvocation::SendResponse, this, std::placeholders::_1));
+    stream_.Write(bb, options, callback);
+  } else if (!grpc_out.has_rsp_msg()) {
+    // Final iteration but no response, just Finish.
+    LOG(INFO) << "Final inner response empty";
+    FinishAndRestart(::grpc::Status::OK);
+  } else {
+    // Final response, so WriteAndFinish then kick off the next round.
+    LOG(INFO) << "Final inner response of size " << inner_msg.size();
+    options.set_last_message();
+    auto* callback = new std::function<void(bool)>(
+        std::bind(&ModuleInvocation::Finish, this, std::placeholders::_1));
+    stream_.WriteAndFinish(bb, options, ::grpc::Status::OK, callback);
+
+    // Restart the gRPC flow with a new ModuleInvocation object for the next request
+    // after processing this request.  This ensures that processing is serialized.
+    auto* request = new ModuleInvocation(service_, queue_, node_);
+    request->Start();
+  }
+}
+
+void ModuleInvocation::Finish(bool ok) { delete this; }
+
+void ModuleInvocation::FinishAndRestart(const grpc::Status& status) {
+  // Restart the gRPC flow with a new ModuleInvocation object for the next request
   // after processing this request.  This ensures that processing is serialized.
   auto* request = new ModuleInvocation(service_, queue_, node_);
   request->Start();
 
-  if (result.data == nullptr) {
-    response_ = Wrap(Message());
-  } else {
-    response_ = Wrap(*result.data);
-  }
-  grpc::WriteOptions options;
+  // Finish the current invocation (which triggers self-destruction).
   auto* callback = new std::function<void(bool)>(
       std::bind(&ModuleInvocation::Finish, this, std::placeholders::_1));
-  stream_.WriteAndFinish(response_, options, result.status, callback);
+  stream_.Finish(status, callback);
 }
-
-void ModuleInvocation::Finish(bool ok) { delete this; }
 
 }  // namespace oak

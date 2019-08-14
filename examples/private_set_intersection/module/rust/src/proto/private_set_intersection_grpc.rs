@@ -35,15 +35,21 @@ pub fn dispatch(node: &mut dyn PrivateSetIntersectionNode, method: &str, req: &[
     match method {
         "/oak.examples.private_set_intersection.PrivateSetIntersection/SubmitSet" => {
             let r = protobuf::parse_from_bytes(&req).unwrap();
-            node.submit_set(r).unwrap();
+            let mut result = oak::proto::grpc_encap::GrpcResponse::new();
+            match node.submit_set(r) {
+                Ok(_) => result.set_rsp_msg(protobuf::well_known_types::Any::new()),
+                Err(status) => result.set_status(status),
+            }
+            result.set_last(true);
+            result.write_to_writer(out).unwrap();
         }
         "/oak.examples.private_set_intersection.PrivateSetIntersection/GetIntersection" => {
             let mut result = oak::proto::grpc_encap::GrpcResponse::new();
             match node.get_intersection() {
                 Ok(rsp) => {
-                    let mut rsp_data = Vec::new();
-                    rsp.write_to_writer(&mut rsp_data).unwrap();
-                    result.set_rsp_msg(rsp_data);
+                    let mut any = protobuf::well_known_types::Any::new();
+                    rsp.write_to_writer(&mut any.value).unwrap();
+                    result.set_rsp_msg(any);
                 }
                 Err(status) => result.set_status(status),
             }
