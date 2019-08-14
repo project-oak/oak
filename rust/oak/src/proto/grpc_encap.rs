@@ -31,7 +31,7 @@ pub struct GrpcRequest {
     // message fields
     pub stream_id: i32,
     pub method_name: ::std::string::String,
-    pub req_msg: ::std::vec::Vec<u8>,
+    pub req_msg: ::protobuf::SingularPtrField<::protobuf::well_known_types::Any>,
     pub last: bool,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
@@ -90,30 +90,37 @@ impl GrpcRequest {
         ::std::mem::replace(&mut self.method_name, ::std::string::String::new())
     }
 
-    // bytes req_msg = 3;
+    // .google.protobuf.Any req_msg = 3;
 
 
-    pub fn get_req_msg(&self) -> &[u8] {
-        &self.req_msg
+    pub fn get_req_msg(&self) -> &::protobuf::well_known_types::Any {
+        self.req_msg.as_ref().unwrap_or_else(|| ::protobuf::well_known_types::Any::default_instance())
     }
     pub fn clear_req_msg(&mut self) {
         self.req_msg.clear();
     }
 
+    pub fn has_req_msg(&self) -> bool {
+        self.req_msg.is_some()
+    }
+
     // Param is passed by value, moved
-    pub fn set_req_msg(&mut self, v: ::std::vec::Vec<u8>) {
-        self.req_msg = v;
+    pub fn set_req_msg(&mut self, v: ::protobuf::well_known_types::Any) {
+        self.req_msg = ::protobuf::SingularPtrField::some(v);
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_req_msg(&mut self) -> &mut ::std::vec::Vec<u8> {
-        &mut self.req_msg
+    pub fn mut_req_msg(&mut self) -> &mut ::protobuf::well_known_types::Any {
+        if self.req_msg.is_none() {
+            self.req_msg.set_default();
+        }
+        self.req_msg.as_mut().unwrap()
     }
 
     // Take field
-    pub fn take_req_msg(&mut self) -> ::std::vec::Vec<u8> {
-        ::std::mem::replace(&mut self.req_msg, ::std::vec::Vec::new())
+    pub fn take_req_msg(&mut self) -> ::protobuf::well_known_types::Any {
+        self.req_msg.take().unwrap_or_else(|| ::protobuf::well_known_types::Any::new())
     }
 
     // bool last = 4;
@@ -134,6 +141,11 @@ impl GrpcRequest {
 
 impl ::protobuf::Message for GrpcRequest {
     fn is_initialized(&self) -> bool {
+        for v in &self.req_msg {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
         true
     }
 
@@ -152,7 +164,7 @@ impl ::protobuf::Message for GrpcRequest {
                     ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.method_name)?;
                 },
                 3 => {
-                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.req_msg)?;
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.req_msg)?;
                 },
                 4 => {
                     if wire_type != ::protobuf::wire_format::WireTypeVarint {
@@ -179,8 +191,9 @@ impl ::protobuf::Message for GrpcRequest {
         if !self.method_name.is_empty() {
             my_size += ::protobuf::rt::string_size(2, &self.method_name);
         }
-        if !self.req_msg.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(3, &self.req_msg);
+        if let Some(ref v) = self.req_msg.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
         }
         if self.last != false {
             my_size += 2;
@@ -197,8 +210,10 @@ impl ::protobuf::Message for GrpcRequest {
         if !self.method_name.is_empty() {
             os.write_string(2, &self.method_name)?;
         }
-        if !self.req_msg.is_empty() {
-            os.write_bytes(3, &self.req_msg)?;
+        if let Some(ref v) = self.req_msg.as_ref() {
+            os.write_tag(3, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
         }
         if self.last != false {
             os.write_bool(4, self.last)?;
@@ -255,7 +270,7 @@ impl ::protobuf::Message for GrpcRequest {
                     |m: &GrpcRequest| { &m.method_name },
                     |m: &mut GrpcRequest| { &mut m.method_name },
                 ));
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<::protobuf::well_known_types::Any>>(
                     "req_msg",
                     |m: &GrpcRequest| { &m.req_msg },
                     |m: &mut GrpcRequest| { &mut m.req_msg },
@@ -311,7 +326,7 @@ impl ::protobuf::reflect::ProtobufValue for GrpcRequest {
 pub struct GrpcResponse {
     // message fields
     pub stream_id: i32,
-    pub rsp_msg: ::std::vec::Vec<u8>,
+    pub rsp_msg: ::protobuf::SingularPtrField<::protobuf::well_known_types::Any>,
     pub status: ::protobuf::SingularPtrField<super::status::Status>,
     pub last: bool,
     // special fields
@@ -345,30 +360,37 @@ impl GrpcResponse {
         self.stream_id = v;
     }
 
-    // bytes rsp_msg = 2;
+    // .google.protobuf.Any rsp_msg = 2;
 
 
-    pub fn get_rsp_msg(&self) -> &[u8] {
-        &self.rsp_msg
+    pub fn get_rsp_msg(&self) -> &::protobuf::well_known_types::Any {
+        self.rsp_msg.as_ref().unwrap_or_else(|| ::protobuf::well_known_types::Any::default_instance())
     }
     pub fn clear_rsp_msg(&mut self) {
         self.rsp_msg.clear();
     }
 
+    pub fn has_rsp_msg(&self) -> bool {
+        self.rsp_msg.is_some()
+    }
+
     // Param is passed by value, moved
-    pub fn set_rsp_msg(&mut self, v: ::std::vec::Vec<u8>) {
-        self.rsp_msg = v;
+    pub fn set_rsp_msg(&mut self, v: ::protobuf::well_known_types::Any) {
+        self.rsp_msg = ::protobuf::SingularPtrField::some(v);
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_rsp_msg(&mut self) -> &mut ::std::vec::Vec<u8> {
-        &mut self.rsp_msg
+    pub fn mut_rsp_msg(&mut self) -> &mut ::protobuf::well_known_types::Any {
+        if self.rsp_msg.is_none() {
+            self.rsp_msg.set_default();
+        }
+        self.rsp_msg.as_mut().unwrap()
     }
 
     // Take field
-    pub fn take_rsp_msg(&mut self) -> ::std::vec::Vec<u8> {
-        ::std::mem::replace(&mut self.rsp_msg, ::std::vec::Vec::new())
+    pub fn take_rsp_msg(&mut self) -> ::protobuf::well_known_types::Any {
+        self.rsp_msg.take().unwrap_or_else(|| ::protobuf::well_known_types::Any::new())
     }
 
     // .google.rpc.Status status = 3;
@@ -422,6 +444,11 @@ impl GrpcResponse {
 
 impl ::protobuf::Message for GrpcResponse {
     fn is_initialized(&self) -> bool {
+        for v in &self.rsp_msg {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
         for v in &self.status {
             if !v.is_initialized() {
                 return false;
@@ -442,7 +469,7 @@ impl ::protobuf::Message for GrpcResponse {
                     self.stream_id = tmp;
                 },
                 2 => {
-                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.rsp_msg)?;
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.rsp_msg)?;
                 },
                 3 => {
                     ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.status)?;
@@ -469,8 +496,9 @@ impl ::protobuf::Message for GrpcResponse {
         if self.stream_id != 0 {
             my_size += ::protobuf::rt::value_size(1, self.stream_id, ::protobuf::wire_format::WireTypeVarint);
         }
-        if !self.rsp_msg.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(2, &self.rsp_msg);
+        if let Some(ref v) = self.rsp_msg.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
         }
         if let Some(ref v) = self.status.as_ref() {
             let len = v.compute_size();
@@ -488,8 +516,10 @@ impl ::protobuf::Message for GrpcResponse {
         if self.stream_id != 0 {
             os.write_int32(1, self.stream_id)?;
         }
-        if !self.rsp_msg.is_empty() {
-            os.write_bytes(2, &self.rsp_msg)?;
+        if let Some(ref v) = self.rsp_msg.as_ref() {
+            os.write_tag(2, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
         }
         if let Some(ref v) = self.status.as_ref() {
             os.write_tag(3, ::protobuf::wire_format::WireTypeLengthDelimited)?;
@@ -546,7 +576,7 @@ impl ::protobuf::Message for GrpcResponse {
                     |m: &GrpcResponse| { &m.stream_id },
                     |m: &mut GrpcResponse| { &mut m.stream_id },
                 ));
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<::protobuf::well_known_types::Any>>(
                     "rsp_msg",
                     |m: &GrpcResponse| { &m.rsp_msg },
                     |m: &mut GrpcResponse| { &mut m.rsp_msg },
@@ -604,14 +634,16 @@ impl ::protobuf::reflect::ProtobufValue for GrpcResponse {
 }
 
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\x10grpc_encap.proto\x12\x03oak\x1a\x17google/rpc/status.proto\"x\n\
-    \x0bGrpcRequest\x12\x1b\n\tstream_id\x18\x01\x20\x01(\x05R\x08streamId\
-    \x12\x1f\n\x0bmethod_name\x18\x02\x20\x01(\tR\nmethodName\x12\x17\n\x07r\
-    eq_msg\x18\x03\x20\x01(\x0cR\x06reqMsg\x12\x12\n\x04last\x18\x04\x20\x01\
-    (\x08R\x04last\"\x84\x01\n\x0cGrpcResponse\x12\x1b\n\tstream_id\x18\x01\
-    \x20\x01(\x05R\x08streamId\x12\x17\n\x07rsp_msg\x18\x02\x20\x01(\x0cR\
-    \x06rspMsg\x12*\n\x06status\x18\x03\x20\x01(\x0b2\x12.google.rpc.StatusR\
-    \x06status\x12\x12\n\x04last\x18\x04\x20\x01(\x08R\x04lastb\x06proto3\
+    \n\x10grpc_encap.proto\x12\x03oak\x1a\x19google/protobuf/any.proto\x1a\
+    \x17google/rpc/status.proto\"\x8e\x01\n\x0bGrpcRequest\x12\x1b\n\tstream\
+    _id\x18\x01\x20\x01(\x05R\x08streamId\x12\x1f\n\x0bmethod_name\x18\x02\
+    \x20\x01(\tR\nmethodName\x12-\n\x07req_msg\x18\x03\x20\x01(\x0b2\x14.goo\
+    gle.protobuf.AnyR\x06reqMsg\x12\x12\n\x04last\x18\x04\x20\x01(\x08R\x04l\
+    ast\"\x9a\x01\n\x0cGrpcResponse\x12\x1b\n\tstream_id\x18\x01\x20\x01(\
+    \x05R\x08streamId\x12-\n\x07rsp_msg\x18\x02\x20\x01(\x0b2\x14.google.pro\
+    tobuf.AnyR\x06rspMsg\x12*\n\x06status\x18\x03\x20\x01(\x0b2\x12.google.r\
+    pc.StatusR\x06status\x12\x12\n\x04last\x18\x04\x20\x01(\x08R\x04lastb\
+    \x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {

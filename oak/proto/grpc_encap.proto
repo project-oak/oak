@@ -18,6 +18,7 @@ syntax = "proto3";
 
 package oak;
 
+import "google/protobuf/any.proto";
 import "google/rpc/status.proto";
 
 // Protocol buffer encoding to hold additional metadata that accompanies a gRPC
@@ -29,13 +30,13 @@ import "google/rpc/status.proto";
 message GrpcRequest {
   int32 stream_id = 1;
   string method_name = 2;
-  bytes req_msg = 3;
+  google.protobuf.Any req_msg = 3;
   bool last = 4;
 }
 
 message GrpcResponse {
   int32 stream_id = 1;
-  bytes rsp_msg = 2;
+  google.protobuf.Any rsp_msg = 2;
   google.rpc.Status status = 3;
   bool last = 4;
 }

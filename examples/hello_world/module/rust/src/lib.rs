@@ -23,7 +23,7 @@ extern crate protobuf;
 
 mod proto;
 
-use oak::GrpcResult;
+use oak::{GrpcResult, ResponseWriter};
 use oak_derive::OakNode;
 use proto::hello_world::{HelloRequest, HelloResponse};
 use proto::hello_world_grpc::{dispatch, HelloWorldNode};
@@ -55,13 +55,20 @@ impl HelloWorldNode for Node {
         Ok(res)
     }
 
-    fn lots_of_replies(&mut self, req: HelloRequest) -> GrpcResult<Vec<HelloResponse>> {
+    fn lots_of_replies(
+        &mut self,
+        req: HelloRequest,
+        writer: &mut dyn ResponseWriter<HelloResponse>,
+    ) -> GrpcResult<()> {
         info!("Say hello to {}", req.greeting);
         let mut res1 = HelloResponse::new();
         res1.reply = format!("HELLO {}!", req.greeting);
+        writer.write(res1);
+        info!("Say bonjour to {}", req.greeting);
         let mut res2 = HelloResponse::new();
         res2.reply = format!("BONJOUR {}!", req.greeting);
-        Ok(vec![res1, res2])
+        writer.write(res2);
+        Ok(())
     }
 
     fn lots_of_greetings(&mut self, reqs: Vec<HelloRequest>) -> GrpcResult<HelloResponse> {
@@ -74,14 +81,20 @@ impl HelloWorldNode for Node {
         Ok(res)
     }
 
-    fn bidi_hello(&mut self, reqs: Vec<HelloRequest>) -> GrpcResult<Vec<HelloResponse>> {
+    fn bidi_hello(
+        &mut self,
+        reqs: Vec<HelloRequest>,
+        writer: &mut dyn ResponseWriter<HelloResponse>,
+    ) -> GrpcResult<()> {
         info!("Say hello");
         let msg = recipients(&reqs);
         let mut res1 = HelloResponse::new();
         res1.reply = format!("HELLO {}!", msg);
+        writer.write(res1);
         let mut res2 = HelloResponse::new();
         res2.reply = format!("BONJOUR {}!", msg);
-        Ok(vec![res1, res2])
+        writer.write(res2);
+        Ok(())
     }
 }
 

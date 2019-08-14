@@ -27,11 +27,11 @@ use std::io::Write;
 pub trait HelloWorldNode {
     fn say_hello(&mut self, req: super::hello_world::HelloRequest) -> GrpcResult<super::hello_world::HelloResponse>;
 
-    fn lots_of_replies(&mut self, req: super::hello_world::HelloRequest) -> GrpcResult<Vec<super::hello_world::HelloResponse>>;
+    fn lots_of_replies(&mut self, req: super::hello_world::HelloRequest, writer: &mut dyn oak::ResponseWriter<super::hello_world::HelloResponse>) -> GrpcResult<()>;
 
     fn lots_of_greetings(&mut self, reqs: Vec<super::hello_world::HelloRequest>) -> GrpcResult<super::hello_world::HelloResponse>;
 
-    fn bidi_hello(&mut self, reqs: Vec<super::hello_world::HelloRequest>) -> GrpcResult<Vec<super::hello_world::HelloResponse>>;
+    fn bidi_hello(&mut self, reqs: Vec<super::hello_world::HelloRequest>, writer: &mut dyn oak::ResponseWriter<super::hello_world::HelloResponse>) -> GrpcResult<()>;
 }
 
 // Oak Node gRPC method dispatcher
@@ -42,9 +42,9 @@ pub fn dispatch(node: &mut dyn HelloWorldNode, method: &str, req: &[u8], out: &m
             let mut result = oak::proto::grpc_encap::GrpcResponse::new();
             match node.say_hello(r) {
                 Ok(rsp) => {
-                    let mut rsp_data = Vec::new();
-                    rsp.write_to_writer(&mut rsp_data).unwrap();
-                    result.set_rsp_msg(rsp_data);
+                    let mut any = protobuf::well_known_types::Any::new();
+                    rsp.write_to_writer(&mut any.value).unwrap();
+                    result.set_rsp_msg(any);
                 }
                 Err(status) => result.set_status(status),
             }
@@ -53,31 +53,25 @@ pub fn dispatch(node: &mut dyn HelloWorldNode, method: &str, req: &[u8], out: &m
         }
         "/oak.examples.hello_world.HelloWorld/LotsOfReplies" => {
             let r = protobuf::parse_from_bytes(&req).unwrap();
-            match node.lots_of_replies(r) {
-                Ok(rsps) => for (i, rsp) in rsps.iter().enumerate() {
-                    let mut result = oak::proto::grpc_encap::GrpcResponse::new();
-                    let mut rsp_data = Vec::new();
-                    rsp.write_to_writer(&mut rsp_data).unwrap();
-                    result.set_rsp_msg(rsp_data);
-                    result.set_last(i == (rsps.len() - 1));
-                    result.write_to_writer(out).unwrap();
-                },
-                Err(status) => {
-                    let mut result = oak::proto::grpc_encap::GrpcResponse::new();
-                    result.set_status(status);
-                    result.set_last(true);
-                    result.write_to_writer(out).unwrap();
-                },
+            let mut result = oak::proto::grpc_encap::GrpcResponse::new();
+            {
+                let mut w = oak::ChannelResponseWriter{channel: out};
+                match node.lots_of_replies(r, &mut w) {
+                    Ok(_) => {},
+                    Err(status) => { result.set_status(status); },
+                }
             }
+            result.set_last(true);
+            result.write_to_writer(out).unwrap();
         }
         "/oak.examples.hello_world.HelloWorld/LotsOfGreetings" => {
             let rr = vec![protobuf::parse_from_bytes(&req).unwrap()];
             let mut result = oak::proto::grpc_encap::GrpcResponse::new();
             match node.lots_of_greetings(rr) {
                 Ok(rsp) => {
-                    let mut rsp_data = Vec::new();
-                    rsp.write_to_writer(&mut rsp_data).unwrap();
-                    result.set_rsp_msg(rsp_data);
+                    let mut any = protobuf::well_known_types::Any::new();
+                    rsp.write_to_writer(&mut any.value).unwrap();
+                    result.set_rsp_msg(any);
                 }
                 Err(status) => result.set_status(status),
             }
@@ -86,22 +80,16 @@ pub fn dispatch(node: &mut dyn HelloWorldNode, method: &str, req: &[u8], out: &m
         }
         "/oak.examples.hello_world.HelloWorld/BidiHello" => {
             let rr = vec![protobuf::parse_from_bytes(&req).unwrap()];
-            match node.bidi_hello(rr) {
-                Ok(rsps) => for (i, rsp) in rsps.iter().enumerate() {
-                    let mut result = oak::proto::grpc_encap::GrpcResponse::new();
-                    let mut rsp_data = Vec::new();
-                    rsp.write_to_writer(&mut rsp_data).unwrap();
-                    result.set_rsp_msg(rsp_data);
-                    result.set_last(i == (rsps.len() - 1));
-                    result.write_to_writer(out).unwrap();
-                },
-                Err(status) => {
-                    let mut result = oak::proto::grpc_encap::GrpcResponse::new();
-                    result.set_status(status);
-                    result.set_last(true);
-                    result.write_to_writer(out).unwrap();
-                },
+            let mut result = oak::proto::grpc_encap::GrpcResponse::new();
+            {
+                let mut w = oak::ChannelResponseWriter{channel: out};
+                match node.bidi_hello(rr, &mut w) {
+                    Ok(_) => {},
+                    Err(status) => { result.set_status(status); },
+                }
             }
+            result.set_last(true);
+            result.write_to_writer(out).unwrap();
         }
         _ => {
             writeln!(oak::logging_channel(), "unknown method name: {}", method).unwrap();

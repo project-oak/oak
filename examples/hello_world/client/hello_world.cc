@@ -93,8 +93,7 @@ int main(int argc, char** argv) {
   say_hello(stub.get(), "Query-of-Error");
   say_hello(stub.get(), "MONDE");
 
-  // TODO(#97): Uncomment this line when gRPC server streaming is implemented.
-  // lots_of_replies(stub.get(), "WORLDS");
+  lots_of_replies(stub.get(), "WORLDS");
 
   return 0;
 }
