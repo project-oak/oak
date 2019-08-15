@@ -24,11 +24,11 @@ extern crate protobuf;
 mod proto;
 
 use oak::{GrpcResult, ResponseWriter};
-use oak_derive::OakNode;
+use oak_derive::OakExports;
 use proto::hello_world::{HelloRequest, HelloResponse};
 use proto::hello_world_grpc::{dispatch, HelloWorldNode};
 
-#[derive(OakNode)]
+#[derive(OakExports)]
 struct Node;
 
 impl oak::Node for Node {

@@ -32,12 +32,12 @@ extern crate protobuf;
 mod proto;
 
 use oak::GrpcResult;
-use oak_derive::OakNode;
+use oak_derive::OakExports;
 use proto::private_set_intersection::{GetIntersectionResponse, SubmitSetRequest};
 use proto::private_set_intersection_grpc::{dispatch, PrivateSetIntersectionNode};
 use std::collections::HashSet;
 
-#[derive(Default, OakNode)]
+#[derive(Default, OakExports)]
 struct Node {
     values: Option<HashSet<String>>,
 }

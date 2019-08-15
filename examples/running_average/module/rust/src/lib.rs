@@ -29,11 +29,11 @@ extern crate protobuf;
 mod proto;
 
 use oak::GrpcResult;
-use oak_derive::OakNode;
+use oak_derive::OakExports;
 use proto::running_average::{GetAverageResponse, SubmitSampleRequest};
 use proto::running_average_grpc::{dispatch, RunningAverageNode};
 
-#[derive(Default, OakNode)]
+#[derive(Default, OakExports)]
 struct Node {
     sum: u64,
     count: u64,
