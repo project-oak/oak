@@ -28,7 +28,7 @@ extern crate protobuf;
 
 mod proto;
 
-use oak::GrpcResult;
+use oak::{GrpcResult, OakNode};
 use oak_derive::OakExports;
 use proto::running_average::{GetAverageResponse, SubmitSampleRequest};
 use proto::running_average_grpc::{dispatch, RunningAverageNode};

@@ -90,10 +90,18 @@ class MessageChannel : public ChannelHalf {
   // Read returns the first message on the channel, subject to |size| checks.
   ReadResult Read(uint32_t size) override;
 
+  // BlockingRead behaves like Read but blocks until a message is available.
+  ReadResult BlockingRead(uint32_t size);
+
   // Write passes ownership of a message to the channel.
   void Write(std::unique_ptr<Message> data) override;
 
+  // Await blocks until there is a message on the channel.
+  void Await();
+
  private:
+  ReadResult ReadLocked(uint32_t size);
+
   mutable absl::Mutex mu_;
   std::deque<std::unique_ptr<Message>> msgs_;
 };
@@ -104,6 +112,8 @@ class MessageChannelReadHalf : public ChannelHalf {
   MessageChannelReadHalf(std::shared_ptr<MessageChannel> channel) : channel_(channel) {}
   virtual ~MessageChannelReadHalf() {}
   virtual ReadResult Read(uint32_t size) { return channel_->Read(size); }
+  ReadResult BlockingRead(uint32_t size) { return channel_->BlockingRead(size); }
+  void Await() { return channel_->Await(); }
 
  private:
   std::shared_ptr<MessageChannel> channel_;
@@ -115,6 +125,7 @@ class MessageChannelWriteHalf : public ChannelHalf {
   MessageChannelWriteHalf(std::shared_ptr<MessageChannel> channel) : channel_(channel) {}
   virtual ~MessageChannelWriteHalf() {}
   virtual void Write(std::unique_ptr<Message> msg) { channel_->Write(std::move(msg)); }
+  void Await() { return channel_->Await(); }
 
  private:
   std::shared_ptr<MessageChannel> channel_;

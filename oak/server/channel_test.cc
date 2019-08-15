@@ -16,6 +16,8 @@
 
 #include "oak/server/channel.h"
 
+#include <thread>
+
 #include "absl/memory/memory.h"
 #include "gtest/gtest.h"
 
@@ -57,12 +59,25 @@ TEST(MessageChannel, BasicOperation) {
 
   ASSERT_EQ(0, channel.Count());
 
+  bool await_triggered = false;
+  std::thread t1([&await_triggered, &channel] {
+    channel.Await();
+    await_triggered = true;
+  });
+  ASSERT_EQ(false, await_triggered);
+
   ReadResult result3 = channel.Read(10000);
   ASSERT_EQ(nullptr, result3.data);
   ASSERT_EQ(0, result3.required_size);
+  ASSERT_EQ(false, await_triggered);
 
   std::unique_ptr<Message> msg2 = absl::WrapUnique(new Message{0x11, 0x12, 0x13});
   channel.Write(std::move(msg2));
+
+  // Writing a message should have triggered the Await() call to complete.
+  t1.join();
+  ASSERT_EQ(true, await_triggered);
+
   std::unique_ptr<Message> msg3 = absl::WrapUnique(new Message{0x21, 0x22, 0x23});
   channel.Write(std::move(msg3));
 
@@ -81,6 +96,22 @@ TEST(MessageChannel, BasicOperation) {
   EXPECT_NE(result6.data, nullptr);
   ASSERT_EQ(3, result6.data->size());
   ASSERT_EQ(0x21, (*result6.data)[0]);
+
+  ASSERT_EQ(0, channel.Count());
+
+  bool block_triggered = false;
+  std::thread t2([&block_triggered, &channel] {
+    ReadResult result = channel.BlockingRead(1000);
+    block_triggered = true;
+  });
+  ASSERT_EQ(false, block_triggered);
+
+  std::unique_ptr<Message> msg4 = absl::WrapUnique(new Message{0x21, 0x22, 0x23});
+  channel.Write(std::move(msg4));
+
+  // Writing to the channel unblocks the read.
+  t2.join();
+  ASSERT_EQ(true, block_triggered);
 }
 
 TEST(MessageChannel, BasicOperationByHalves) {

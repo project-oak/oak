@@ -74,12 +74,8 @@ wasm_group(
     srcs = [
         "testdata/empty.wat",
         "testdata/minimal.wat",
-        "testdata/minimal_fini.wat",
-        "testdata/missing_handle.wat",
-        "testdata/missing_init.wat",
-        "testdata/wrong_fini.wat",
-        "testdata/wrong_handle.wat",
-        "testdata/wrong_init.wat",
+        "testdata/missing.wat",
+        "testdata/wrong.wat",
     ],
 )
 

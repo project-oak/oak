@@ -14,11 +14,12 @@ use quote::quote;
 ///
 /// ```rust
 /// extern crate oak;
+/// use oak::OakNode;
 ///
 /// #[derive(oak_derive::OakExports)]
 /// struct Node;
 ///
-/// impl oak::OakNode for Node {
+/// impl OakNode for Node {
 ///     fn new() -> Self { Node }
 ///     fn invoke(&mut self, method: &str, req: &[u8], out: &mut oak::SendChannelHalf) { /* ... */ }
 /// }
@@ -34,8 +35,9 @@ pub fn derive_oak_exports(input: TokenStream) -> TokenStream {
 
     let expanded = quote! {
         #[no_mangle]
-        pub extern "C" fn oak_initialize() {
-            oak::set_node::<#name>();
+        pub extern "C" fn oak_main() {
+            let mut node = <#name>::new();
+            oak::event_loop(node);
         }
     };
 

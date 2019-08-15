@@ -103,27 +103,13 @@ others, for example Go.
 
 ### WebAssembly Interface
 
-Each Oak Module must expose the following **exported functions** as
-[WebAssembly exports](https://webassembly.github.io/spec/core/syntax/modules.html#exports):
+Each Oak Module must expose the following **exported function** as a
+[WebAssembly export](https://webassembly.github.io/spec/core/syntax/modules.html#exports):
 
--   `oak_initialize: () -> nil`: Invoked when the Oak Manager initializes the
-    Oak Node. The Oak VM guarantees that this is invoked exactly once.
-
--   `oak_finalize: () -> nil`: Invoked when the Oak Manager finalizes the Oak
-    Node. Note that this is best effort, and not guaranteed to be invoked before
-    the Oak Node is finalized (e.g. in case of sudden shutdown of the host this
-    may fail to be invoked). No further interactions with the Oak Node are
-    possible after finalization.
-
--   `oak_handle_grpc_call: () -> nil`: Invoked when a client interacts with the
-    Oak Node over gRPC. Each client interaction results in a new invocation of
-    this function, and the Oak VM guarantees that concurrent invocations only
-    invoke it sequentially, therefore from the point of view of the Oak Node
-    these calls will never overlap in time and each execution of this function
-    has full access to the underlying internal state until it completes. In the
-    future we may relax some of these restrictions, when we can reason more
-    accurately about the semantics of concurrent invocations, and how they
-    relate to the policy system.
+-   `oak_main: () -> nil`: Invoked when the Oak Manager executes the Oak Node.
+    This function should perform its own event loop, reading incoming messages
+    that arrive on the read halves of its channels, sending outgoing messages over
+    the write halves of channels.
 
 Communication from the Oak Module to the Oak VM and to other modules is
 implemented via **channels**. A channel represents a uni-directional stream of
@@ -149,6 +135,16 @@ Each Oak Module may also optionally rely on zero or more of the following **host
 functions** as [WebAssembly
 imports](https://webassembly.github.io/spec/core/syntax/modules.html#imports)
 (all of them defined in the `oak` module):
+
+-   `wait_on_channels: (i32, i32) -> i32`: Blocks until data is available for
+    reading from one of the specified channel handles.  The channel handles are
+    encoded in a buffer that holds N contiguous 9-byte chunks, each of which is
+    made up of an 8-byte channel handle value (little-endian u64) followed by a
+    single byte that is set on return if data is available on that channel.
+
+    *   arg0: Address of handle status buffer
+    *   arg1: Count N of handles provided
+    *   return 0: Status of operation
 
 -   `channel_read: (i64, i32, i32, i32) -> i32`: Reads a single message from the
     specified channel, and sets the size of the message in the location provided

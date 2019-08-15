@@ -24,6 +24,7 @@ extern crate rand;
 extern crate rand_distr;
 extern crate rusty_machine;
 
+use oak::OakNode;
 use oak_derive::OakExports;
 use protobuf::Message;
 use rand::prelude::*;
