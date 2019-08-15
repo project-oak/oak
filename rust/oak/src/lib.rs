@@ -239,7 +239,7 @@ impl ChannelPair {
 }
 
 /// Trait encapsulating the operations required for an Oak Node.
-pub trait Node {
+pub trait OakNode {
     fn new() -> Self
     where
         Self: Sized;
@@ -247,7 +247,7 @@ pub trait Node {
 }
 
 thread_local! {
-    static NODE: RefCell<Option<Box<dyn Node>>> = RefCell::new(None);
+    static NODE: RefCell<Option<Box<dyn OakNode>>> = RefCell::new(None);
 }
 
 /// Sets the Oak Node to execute in the current instance.
@@ -257,7 +257,7 @@ thread_local! {
 /// ```rust
 /// struct Node;
 ///
-/// impl oak::Node for Node {
+/// impl oak::OakNode for Node {
 ///     fn new() -> Self { Node }
 ///     fn invoke(&mut self, method: &str, req: &[u8], out: &mut oak::SendChannelHalf) { /* ... */ }
 /// }
@@ -267,7 +267,7 @@ thread_local! {
 ///     oak::set_node::<Node>();
 /// }
 /// ```
-pub fn set_node<T: Node + 'static>() {
+pub fn set_node<T: OakNode + 'static>() {
     set_panic_hook();
     NODE.with(|node| {
         match *node.borrow_mut() {

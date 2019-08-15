@@ -105,7 +105,7 @@ fn test_channel_pair() {
 }
 
 struct TestNode;
-impl Node for TestNode {
+impl OakNode for TestNode {
     fn new() -> Self {
         TestNode
     }

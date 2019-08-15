@@ -31,7 +31,7 @@ use proto::rustfmt_grpc::{dispatch, FormatServiceNode};
 #[derive(OakExports)]
 struct Node;
 
-impl oak::Node for Node {
+impl oak::OakNode for Node {
     fn new() -> Self {
         oak_log::init(log::Level::Debug).unwrap();
         Node
