@@ -18,7 +18,7 @@ use quote::quote;
 /// #[derive(oak_derive::OakExports)]
 /// struct Node;
 ///
-/// impl oak::Node for Node {
+/// impl oak::OakNode for Node {
 ///     fn new() -> Self { Node }
 ///     fn invoke(&mut self, method: &str, req: &[u8], out: &mut oak::SendChannelHalf) { /* ... */ }
 /// }

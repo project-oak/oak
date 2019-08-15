@@ -42,7 +42,7 @@ struct Node {
     values: Option<HashSet<String>>,
 }
 
-impl oak::Node for Node {
+impl oak::OakNode for Node {
     fn new() -> Self {
         Node::default()
     }

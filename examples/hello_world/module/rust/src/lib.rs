@@ -31,7 +31,7 @@ use proto::hello_world_grpc::{dispatch, HelloWorldNode};
 #[derive(OakExports)]
 struct Node;
 
-impl oak::Node for Node {
+impl oak::OakNode for Node {
     fn new() -> Self {
         oak_log::init(log::Level::Debug).unwrap();
         Node

@@ -161,7 +161,7 @@ struct Node {
     model: NaiveBayes<naive_bayes::Gaussian>,
 }
 
-impl oak::Node for Node {
+impl oak::OakNode for Node {
     fn new() -> Self {
         Node {
             training_set_size: 1000,

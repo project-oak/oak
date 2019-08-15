@@ -3,7 +3,7 @@ extern crate oak_derive;
 
 #[derive(oak_derive::OakExports)]
 struct TestNode;
-impl oak::Node for TestNode {
+impl oak::OakNode for TestNode {
     fn new() -> Self {
         TestNode
     }

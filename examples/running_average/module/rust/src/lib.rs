@@ -39,7 +39,7 @@ struct Node {
     count: u64,
 }
 
-impl oak::Node for Node {
+impl oak::OakNode for Node {
     fn new() -> Self {
         Node::default()
     }
