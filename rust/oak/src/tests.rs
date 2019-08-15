@@ -17,7 +17,6 @@
 extern crate oak_tests;
 
 use crate::*;
-use protobuf::Message;
 
 #[test]
 fn test_status_from_i32() {
@@ -104,50 +103,16 @@ fn test_channel_pair() {
     assert_eq!("DD", oak_tests::last_message_as_string());
 }
 
-struct TestNode;
-impl OakNode for TestNode {
-    fn new() -> Self {
-        TestNode
-    }
-    fn invoke(&mut self, _method: &str, _req: &[u8], _out: &mut SendChannelHalf) {}
-}
-
 #[test]
-fn test_set_node() {
-    reset_node();
-    assert_eq!(false, have_node());
-    set_node::<TestNode>();
-    assert_eq!(true, have_node());
-}
-
-#[test]
-#[should_panic]
-fn test_set_node_twice() {
-    reset_node();
-    set_node::<TestNode>();
-    set_node::<TestNode>(); // panic!
-}
-
-#[test]
-fn test_handle_grpc_call() {
-    reset_node();
-    oak_tests::reset_channels();
-    let mut send = SendChannelHalf::new(GRPC_IN_CHANNEL_HANDLE);
-    let mut req = proto::grpc_encap::GrpcRequest::new();
-    req.set_method_name("/testmethod".to_string());
-    req.set_last(true);
-    req.write_to_writer(&mut send).unwrap();
-
-    set_node::<TestNode>();
-    assert_eq!(true, have_node());
-    oak_handle_grpc_call();
-}
-
-#[test]
-#[should_panic]
-// TODO: Re-enable when https://github.com/project-oak/oak/issues/161 is fixed.
-#[ignore]
-fn test_handle_grpc_call_no_node() {
-    reset_node();
-    oak_handle_grpc_call(); // no node: panic!
+fn test_handle_space() {
+    let h = vec![1 as Handle, 2 as Handle];
+    let data = [
+        0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00,
+    ];
+    let mut space = new_handle_space(&h);
+    assert_eq!(data.to_vec(), space);
+    space[8] = 1;
+    prep_handle_space(&mut space);
+    assert_eq!(data.to_vec(), space);
 }

@@ -105,9 +105,7 @@ std::ostream& operator<<(std::ostream& os, const oak::RequiredExport& r) {
 namespace oak {
 
 const RequiredExport kRequiredExports[] = {
-    {"oak_initialize", true, {}},
-    {"oak_handle_grpc_call", true, {}},
-    {"oak_finalize", false, {}},
+    {"oak_main", true, {}},
 };
 
 // Check module exports all required functions with the correct signatures,
@@ -163,6 +161,21 @@ static bool CheckModuleExports(wabt::interp::Environment* env,
   return rc;
 }
 
+static void RunModule(wabt::interp::Environment* env, wabt::interp::DefinedModule* module) {
+  wabt::interp::Thread::Options thread_options;
+  wabt::Stream* trace_stream = nullptr;
+  wabt::interp::Executor executor(env, trace_stream, thread_options);
+
+  LOG(INFO) << "module execution thread: run oak_main";
+  wabt::interp::TypedValues args;
+  wabt::interp::ExecResult exec_result = executor.RunExportByName(module, "oak_main", args);
+
+  LOG(WARNING) << "module execution terminated";
+  if (exec_result.result != wabt::interp::Result::Ok) {
+    LOG(ERROR) << "execution failure: " << wabt::interp::ResultToString(exec_result.result);
+  }
+}
+
 OakNode::OakNode() : Service() {}
 
 std::unique_ptr<OakNode> OakNode::Create(const std::string& module) {
@@ -187,29 +200,11 @@ std::unique_ptr<OakNode> OakNode::Create(const std::string& module) {
     return nullptr;
   }
 
-  wabt::interp::Thread::Options thread_options;
-  // wabt::Stream* trace_stream = s_stdout_stream.get();
-  wabt::Stream* trace_stream = nullptr;
-  wabt::interp::Executor executor(&node->env_, trace_stream, thread_options);
-  LOG(INFO) << "Executing module";
-
-  // Create a (persistent) logging channel to allow the module to log during initialization.
+  // Create a logging channel for the module.
   node->channel_halves_[LOGGING_CHANNEL_HANDLE] = absl::make_unique<LoggingChannelHalf>();
   LOG(INFO) << "Created logging channel " << LOGGING_CHANNEL_HANDLE;
 
-  wabt::interp::TypedValues args;
-  wabt::interp::ExecResult exec_result =
-      executor.RunExportByName(node->module_, "oak_initialize", args);
-
-  if (exec_result.result != wabt::interp::Result::Ok) {
-    LOG(WARNING) << "Could not execute module initialization";
-    wabt::interp::WriteResult(s_stdout_stream.get(), "error", exec_result.result);
-    // TODO: Print error.
-    return nullptr;
-  }
-  LOG(INFO) << "Executed module initialization";
-
-  // Now that initialization has completed, create the channels needed for gRPC interactions.
+  // Create the channels needed for gRPC interactions.
   {
     // Incoming request channel: keep the write half in C++, but map the read
     // half to a well-known channel handle.
@@ -229,6 +224,13 @@ std::unique_ptr<OakNode> OakNode::Create(const std::string& module) {
     LOG(INFO) << "Created gRPC output channel: " << GRPC_IN_CHANNEL_HANDLE;
   }
 
+  // Spin up a per-node Wasm thread to run forever; the Node object must
+  // outlast this thread.
+  LOG(INFO) << "Executing module oak_main";
+  std::thread t([&node] { RunModule(&node->env_, node->module_); });
+  t.detach();
+  LOG(INFO) << "Started module execution thread";
+
   return node;
 }
 
@@ -247,6 +249,12 @@ void OakNode::InitEnvironment(wabt::interp::Environment* env) {
           std::vector<wabt::Type>{wabt::Type::I64, wabt::Type::I32, wabt::Type::I32},
           std::vector<wabt::Type>{wabt::Type::I32}),
       this->OakChannelWrite(env));
+
+  oak_module->AppendFuncExport(
+      "wait_on_channels",
+      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
+                                  std::vector<wabt::Type>{wabt::Type::I32}),
+      this->OakWaitOnChannels(env));
 }
 
 wabt::interp::HostFunc::Callback OakNode::OakChannelRead(wabt::interp::Environment* env) {
@@ -315,8 +323,29 @@ wabt::interp::HostFunc::Callback OakNode::OakChannelWrite(wabt::interp::Environm
   };
 }
 
-grpc::Status OakNode::ProcessModuleInvocation(grpc::GenericServerContext* context,
-                                              std::unique_ptr<Message> request_data) {
+wabt::interp::HostFunc::Callback OakNode::OakWaitOnChannels(wabt::interp::Environment* env) {
+  return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
+                     const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
+    LogHostFunctionCall(func, args);
+
+    uint32_t offset = args[0].get_i32();
+    uint32_t count = args[1].get_i32();
+    results[0].set_i32(STATUS_OK);
+
+    if (count == 0) {
+      LOG(INFO) << "Waiting on no channels";
+      return wabt::interp::Result::Ok;
+    }
+
+    // TODO: mark the relevant channels as ready to read.
+    // TODO: drop hardcoded single channel
+    req_half_->Await();
+    return wabt::interp::Result::Ok;
+  };
+}
+
+void OakNode::ProcessModuleInvocation(grpc::GenericServerContext* context,
+                                      std::unique_ptr<Message> request_data) {
   LOG(INFO) << "Handling gRPC call: " << context->method();
 
   // Build an encapsulation of the gRPC request invocation and write its serialized
@@ -334,43 +363,19 @@ grpc::Status OakNode::ProcessModuleInvocation(grpc::GenericServerContext* contex
       absl::make_unique<Message>(encap_req.begin(), encap_req.end());
   req_half_->Write(std::move(encap_data));
   LOG(INFO) << "Wrote encapsulated request to input channel";
-
-  wabt::Stream* trace_stream = nullptr;
-  wabt::interp::Thread::Options thread_options;
-  wabt::interp::Executor executor(&env_, trace_stream, thread_options);
-
-  wabt::interp::TypedValues args = {};
-  wabt::interp::ExecResult exec_result =
-      executor.RunExportByName(module_, "oak_handle_grpc_call", args);
-
-  if (exec_result.result != wabt::interp::Result::Ok) {
-    std::string err = wabt::interp::ResultToString(exec_result.result);
-    LOG(ERROR) << "Could not handle gRPC call: " << err;
-    return grpc::Status(grpc::StatusCode::INTERNAL, err);
-  }
-
-  return grpc::Status::OK;
 }
 
 oak::GrpcResponse OakNode::NextResponse() {
-  // Read a single queued GrpcResponse message (in serialized form) from the
-  // response channel.
   oak::GrpcResponse grpc_out;
-  ReadResult rsp_result = rsp_half_->Read(INT_MAX);
+  ReadResult rsp_result;
+  // Block until we can read a single queued GrpcResponse message (in serialized form) from the
+  // response channel.
+  rsp_result = rsp_half_->BlockingRead(INT_MAX);
   if (rsp_result.required_size > 0) {
     LOG(ERROR) << "Message size too large: " << rsp_result.required_size;
     google::rpc::Status* status = new google::rpc::Status();
     status->set_code(grpc::StatusCode::INTERNAL);
     status->set_message("Message size too large");
-    grpc_out.set_allocated_status(status);
-    return grpc_out;
-  }
-
-  if (rsp_result.data == nullptr) {
-    LOG(ERROR) << "Encapsulated response missing on gRPC send channel";
-    google::rpc::Status* status = new google::rpc::Status();
-    status->set_code(grpc::StatusCode::INTERNAL);
-    status->set_message("Message missing");
     grpc_out.set_allocated_status(status);
     return grpc_out;
   }

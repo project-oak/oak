@@ -48,18 +48,14 @@ TEST(OakNode, MalformedFailure) {
 
 TEST(OakNode, MinimalSuccess) {
   ASSERT_NE(nullptr, OakNode::Create(DataFrom("oak/server/testdata/minimal.wasm")));
-  ASSERT_NE(nullptr, OakNode::Create(DataFrom("oak/server/testdata/minimal_fini.wasm")));
 }
 
 TEST(OakNode, MissingExports) {
-  ASSERT_EQ(nullptr, OakNode::Create(DataFrom("oak/server/testdata/missing_init.wasm")));
-  ASSERT_EQ(nullptr, OakNode::Create(DataFrom("oak/server/testdata/missing_handle.wasm")));
+  ASSERT_EQ(nullptr, OakNode::Create(DataFrom("oak/server/testdata/missing.wasm")));
 }
 
 TEST(OakNode, WrongSignature) {
-  ASSERT_EQ(nullptr, OakNode::Create(DataFrom("oak/server/testdata/wrong_init.wasm")));
-  ASSERT_EQ(nullptr, OakNode::Create(DataFrom("oak/server/testdata/wrong_handle.wasm")));
-  ASSERT_EQ(nullptr, OakNode::Create(DataFrom("oak/server/testdata/wrong_fini.wasm")));
+  ASSERT_EQ(nullptr, OakNode::Create(DataFrom("oak/server/testdata/wrong.wasm")));
 }
 
 }  // namespace oak

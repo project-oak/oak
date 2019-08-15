@@ -20,7 +20,6 @@ extern crate log;
 extern crate protobuf;
 
 use protobuf::Message;
-use std::cell::RefCell;
 use std::io;
 use std::io::Write;
 
@@ -124,8 +123,37 @@ mod wasm {
     // See https://rustwasm.github.io/book/reference/js-ffi.html
     #[link(wasm_import_module = "oak")]
     extern "C" {
+        pub fn wait_on_channels(buf: *const u8, count: u32) -> i32;
         pub fn channel_read(handle: u64, buf: *mut u8, size: usize, actual_size: *mut u32) -> i32;
         pub fn channel_write(handle: u64, buf: *const u8, size: usize) -> i32;
+    }
+}
+
+const SPACE_BYTES_PER_HANDLE: usize = 9;
+
+// Build a chunk of memory that is suitable for passing to wasm::wait_on_channels,
+// holding the given collection of channel handles.
+fn new_handle_space(handles: &Vec<Handle>) -> Vec<u8> {
+    let mut space = vec![0; SPACE_BYTES_PER_HANDLE * handles.len()];
+    for (i, handle) in handles.iter().enumerate() {
+        space[i * SPACE_BYTES_PER_HANDLE + 0] = (handle & 0xFFu64) as u8;
+        space[i * SPACE_BYTES_PER_HANDLE + 1] = ((handle >> 8) & 0xFFu64) as u8;
+        space[i * SPACE_BYTES_PER_HANDLE + 2] = ((handle >> 16) & 0xFFu64) as u8;
+        space[i * SPACE_BYTES_PER_HANDLE + 3] = ((handle >> 24) & 0xFFu64) as u8;
+        space[i * SPACE_BYTES_PER_HANDLE + 4] = ((handle >> 32) & 0xFFu64) as u8;
+        space[i * SPACE_BYTES_PER_HANDLE + 5] = ((handle >> 40) & 0xFFu64) as u8;
+        space[i * SPACE_BYTES_PER_HANDLE + 6] = ((handle >> 48) & 0xFFu64) as u8;
+        space[i * SPACE_BYTES_PER_HANDLE + 7] = ((handle >> 56) & 0xFFu64) as u8;
+    }
+    space
+}
+
+// Prepare a handle space for polling by clearing all of the message-pending
+// indicator bytes.
+fn prep_handle_space(space: &mut [u8]) {
+    let count = space.len() / 8;
+    for i in 0..count {
+        space[i * SPACE_BYTES_PER_HANDLE + (SPACE_BYTES_PER_HANDLE - 1)] = 0;
     }
 }
 
@@ -246,41 +274,39 @@ pub trait OakNode {
     fn invoke(&mut self, method: &str, req: &[u8], out: &mut SendChannelHalf);
 }
 
-thread_local! {
-    static NODE: RefCell<Option<Box<dyn OakNode>>> = RefCell::new(None);
-}
-
-/// Sets the Oak Node to execute in the current instance.
-///
-/// This function may only be called once, and only from an exported `oak_initialize` function:
-///
-/// ```rust
-/// struct Node;
-///
-/// impl oak::OakNode for Node {
-///     fn new() -> Self { Node }
-///     fn invoke(&mut self, method: &str, req: &[u8], out: &mut oak::SendChannelHalf) { /* ... */ }
-/// }
-///
-/// #[no_mangle]
-/// pub extern "C" fn oak_initialize() {
-///     oak::set_node::<Node>();
-/// }
-/// ```
-pub fn set_node<T: OakNode + 'static>() {
+/// Perform an event loop invoking the given node.
+pub fn event_loop<T: OakNode>(mut node: T) {
+    info!("start event loop for node");
     set_panic_hook();
-    NODE.with(|node| {
-        match *node.borrow_mut() {
-            Some(_) => {
-                writeln!(logging_channel(), "attempt to set_node() when already set!").unwrap();
-                panic!("attempt to set_node when already set");
-            }
-            None => {
-                writeln!(logging_channel(), "setting current node instance").unwrap();
-            }
+
+    let read_handles = vec![GRPC_IN_CHANNEL_HANDLE];
+    let mut space = new_handle_space(&read_handles);
+
+    let mut grpc_in_channel = ReceiveChannelHalf::new(GRPC_IN_CHANNEL_HANDLE);
+    loop {
+        // Block until there is a message to read on an input channel.
+        prep_handle_space(&mut space);
+        unsafe {
+            // TODO: check status of wait
+            wasm::wait_on_channels(space.as_mut_ptr(), read_handles.len() as u32);
         }
-        *node.borrow_mut() = Some(Box::new(T::new()));
-    });
+
+        let mut buf = Vec::<u8>::with_capacity(1024);
+        grpc_in_channel.read_message(&mut buf).unwrap();
+        if buf.is_empty() {
+            info!("no pending message; poll again");
+            continue;
+        }
+        let req: proto::grpc_encap::GrpcRequest = protobuf::parse_from_bytes(&buf).unwrap();
+        if !req.last {
+            panic!("Support for streaming requests not yet implemented");
+        }
+        node.invoke(
+            &req.method_name,
+            req.get_req_msg().value.as_slice(),
+            &mut SendChannelHalf::new(GRPC_OUT_CHANNEL_HANDLE),
+        );
+    }
 }
 
 /// Install a panic hook so that panics are logged to the logging channel, if one is set.
@@ -300,40 +326,4 @@ fn set_panic_hook() {
             file, line, msg
         );
     }));
-}
-
-#[no_mangle]
-pub extern "C" fn oak_handle_grpc_call() {
-    NODE.with(|node| match *node.borrow_mut() {
-        Some(ref mut node) => {
-            let mut buf = Vec::<u8>::with_capacity(1024);
-            let mut grpc_in_channel = ReceiveChannelHalf::new(GRPC_IN_CHANNEL_HANDLE);
-            grpc_in_channel.read_message(&mut buf).unwrap();
-            let req: proto::grpc_encap::GrpcRequest = protobuf::parse_from_bytes(&buf).unwrap();
-            if !req.last {
-                panic!("Support for streaming requests not yet implemented");
-            }
-            node.invoke(
-                &req.method_name,
-                req.get_req_msg().value.as_slice(),
-                &mut SendChannelHalf::new(GRPC_OUT_CHANNEL_HANDLE),
-            );
-        }
-        None => {
-            writeln!(logging_channel(), "gRPC call with no loaded Node").unwrap();
-            panic!("gRPC call with no loaded Node");
-        }
-    });
-}
-
-/// Return whether an Oak Node is currently available.
-pub fn have_node() -> bool {
-    NODE.with(|node| (*node.borrow()).is_some())
-}
-
-#[test]
-fn reset_node() {
-    NODE.with(|node| {
-        *node.borrow_mut() = None;
-    })
 }

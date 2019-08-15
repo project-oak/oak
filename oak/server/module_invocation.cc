@@ -63,12 +63,7 @@ void ModuleInvocation::ProcessRequest(bool ok) {
     return;
   }
   std::unique_ptr<Message> request_data = Unwrap(request_);
-
-  grpc::Status status = node_->ProcessModuleInvocation(&context_, std::move(request_data));
-  if (!status.ok()) {
-    FinishAndRestart(status);
-    return;
-  }
+  node_->ProcessModuleInvocation(&context_, std::move(request_data));
 
   // Move straight onto sending first response.
   SendResponse(true);

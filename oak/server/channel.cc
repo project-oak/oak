@@ -36,11 +36,15 @@ void MessageChannel::Write(std::unique_ptr<Message> data) {
 }
 
 ReadResult MessageChannel::Read(uint32_t size) {
-  ReadResult result = {0};
   absl::MutexLock lock(&mu_);
   if (msgs_.empty()) {
-    return result;
+    return ReadResult{0};
   }
+  return ReadLocked(size);
+}
+
+ReadResult MessageChannel::ReadLocked(uint32_t size) {
+  ReadResult result = {0};
   size_t actual_size = msgs_.front()->size();
   if (actual_size > size) {
     LOG(INFO) << "Next message of size " << actual_size << ", size limited to " << size;
@@ -52,6 +56,19 @@ ReadResult MessageChannel::Read(uint32_t size) {
   LOG(INFO) << "Read message of size " << result.data->size() << " from channel, size limit "
             << size;
   return std::move(result);
+}
+
+ReadResult MessageChannel::BlockingRead(uint32_t size) {
+  absl::MutexLock lock(&mu_);
+  mu_.Await(absl::Condition(
+      +[](std::deque<std::unique_ptr<Message>>* msgs) { return msgs->size() > 0; }, &msgs_));
+  return ReadLocked(size);
+}
+
+void MessageChannel::Await() {
+  absl::MutexLock lock(&mu_);
+  mu_.Await(absl::Condition(
+      +[](std::deque<std::unique_ptr<Message>>* msgs) { return msgs->size() > 0; }, &msgs_));
 }
 
 }  // namespace oak

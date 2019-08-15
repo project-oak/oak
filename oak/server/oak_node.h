@@ -18,6 +18,7 @@
 #define OAK_SERVER_OAK_NODE_H_
 
 #include <memory>
+#include <thread>
 #include <unordered_map>
 
 #include "absl/base/thread_annotations.h"
@@ -38,8 +39,8 @@ class OakNode final : public Application::Service {
   static std::unique_ptr<OakNode> Create(const std::string& module);
 
   // Performs an Oak Module gRPC invocation. Takes ownership of the passed in request data.
-  grpc::Status ProcessModuleInvocation(grpc::GenericServerContext* context,
-                                       std::unique_ptr<Message> request_data);
+  void ProcessModuleInvocation(grpc::GenericServerContext* context,
+                               std::unique_ptr<Message> request_data);
 
   // Returns the next response from a gRPC invocation.
   oak::GrpcResponse NextResponse();
@@ -54,11 +55,14 @@ class OakNode final : public Application::Service {
 
   void InitEnvironment(wabt::interp::Environment* env);
 
-  // Native implementation of the `oak.channel_read` host function.
+  // Native implementation of the `channel_read` host function.
   wabt::interp::HostFunc::Callback OakChannelRead(wabt::interp::Environment* env);
 
-  // Native implementation of the `oak.channel_write` host function.
+  // Native implementation of the `channel_write` host function.
   wabt::interp::HostFunc::Callback OakChannelWrite(wabt::interp::Environment* env);
+
+  // Native implementation of the `wait_on_channels` host function.
+  wabt::interp::HostFunc::Callback OakWaitOnChannels(wabt::interp::Environment* env);
 
   wabt::interp::Environment env_;
   // TODO: Use smart pointers.
