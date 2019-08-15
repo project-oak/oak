@@ -24,11 +24,11 @@ extern crate rustfmt_nightly;
 mod proto;
 
 use oak::GrpcResult;
-use oak_derive::OakNode;
+use oak_derive::OakExports;
 use proto::rustfmt::{FormatRequest, FormatResponse};
 use proto::rustfmt_grpc::{dispatch, FormatServiceNode};
 
-#[derive(OakNode)]
+#[derive(OakExports)]
 struct Node;
 
 impl oak::Node for Node {

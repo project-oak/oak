@@ -4,7 +4,8 @@ extern crate syn;
 use proc_macro::TokenStream;
 use quote::quote;
 
-/// Implements the necessary bindings to make the annotated struct act as an Oak Node.
+/// Implements the necessary bindings to make the annotated struct act as an Oak Node
+/// that provides the necessary global exports.
 ///
 /// May only be used on struct objects.
 ///
@@ -14,7 +15,7 @@ use quote::quote;
 /// ```rust
 /// extern crate oak;
 ///
-/// #[derive(oak_derive::OakNode)]
+/// #[derive(oak_derive::OakExports)]
 /// struct Node;
 ///
 /// impl oak::Node for Node {
@@ -22,13 +23,13 @@ use quote::quote;
 ///     fn invoke(&mut self, method: &str, req: &[u8], out: &mut oak::SendChannelHalf) { /* ... */ }
 /// }
 /// ```
-#[proc_macro_derive(OakNode)]
-pub fn derive_oak_node(input: TokenStream) -> TokenStream {
+#[proc_macro_derive(OakExports)]
+pub fn derive_oak_exports(input: TokenStream) -> TokenStream {
     let input = syn::parse_macro_input!(input as syn::DeriveInput);
     let name = input.ident;
     match input.data {
         syn::Data::Struct(_) => (),
-        _ => panic!("#[derive(OakNode)] is only defined for structs"),
+        _ => panic!("#[derive(OakExports)] is only defined for structs"),
     };
 
     let expanded = quote! {

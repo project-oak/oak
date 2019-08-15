@@ -24,7 +24,7 @@ extern crate rand;
 extern crate rand_distr;
 extern crate rusty_machine;
 
-use oak_derive::OakNode;
+use oak_derive::OakExports;
 use protobuf::Message;
 use rand::prelude::*;
 use rand_distr::Distribution;
@@ -153,7 +153,7 @@ struct Config {
     test_animals: Vec<Animal>,
 }
 
-#[derive(OakNode)]
+#[derive(OakExports)]
 struct Node {
     training_set_size: usize,
     test_set_size: usize,
