@@ -19,11 +19,13 @@
 
 extern crate oak;
 extern crate oak_derive;
+extern crate protobuf;
 extern crate rand;
 extern crate rand_distr;
 extern crate rusty_machine;
 
 use oak_derive::OakNode;
+use protobuf::Message;
 use rand::prelude::*;
 use rand_distr::Distribution;
 use rand_distr::Normal;
@@ -168,7 +170,7 @@ impl oak::Node for Node {
             model: NaiveBayes::new(),
         }
     }
-    fn invoke(&mut self, method: &str, _req: &[u8], _out: &mut oak::SendChannelHalf) {
+    fn invoke(&mut self, method: &str, _req: &[u8], out: &mut oak::SendChannelHalf) {
         let mut logging_channel = oak::logging_channel();
         match method {
             "/oak.examples.machine_learning.MachineLearning/Data" => {
@@ -275,5 +277,9 @@ impl oak::Node for Node {
                 panic!("unknown method name");
             }
         }
+        let mut result = oak::proto::grpc_encap::GrpcResponse::new();
+        result.set_has_rsp_msg(true);
+        result.set_last(true);
+        result.write_to_writer(out).unwrap();
     }
 }
