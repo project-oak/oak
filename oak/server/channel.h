@@ -22,6 +22,7 @@
 #include <memory>
 #include <vector>
 
+#include "absl/base/thread_annotations.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/types/span.h"
 
@@ -85,25 +86,25 @@ class MessageChannel : public ChannelHalf {
   virtual ~MessageChannel() {}
 
   // Count indicates the number of pending messages.
-  size_t Count() const;
+  size_t Count() const LOCKS_EXCLUDED(mu_);
 
   // Read returns the first message on the channel, subject to |size| checks.
-  ReadResult Read(uint32_t size) override;
+  ReadResult Read(uint32_t size) override LOCKS_EXCLUDED(mu_);
 
   // BlockingRead behaves like Read but blocks until a message is available.
-  ReadResult BlockingRead(uint32_t size);
+  ReadResult BlockingRead(uint32_t size) LOCKS_EXCLUDED(mu_);
 
   // Write passes ownership of a message to the channel.
-  void Write(std::unique_ptr<Message> data) override;
+  void Write(std::unique_ptr<Message> data) override LOCKS_EXCLUDED(mu_);
 
   // Await blocks until there is a message on the channel.
-  void Await();
+  void Await() LOCKS_EXCLUDED(mu_);
 
  private:
-  ReadResult ReadLocked(uint32_t size);
+  ReadResult ReadLocked(uint32_t size) EXCLUSIVE_LOCKS_REQUIRED(mu_);
 
-  mutable absl::Mutex mu_;
-  std::deque<std::unique_ptr<Message>> msgs_;
+  mutable absl::Mutex mu_;  // protects msgs_
+  std::deque<std::unique_ptr<Message>> msgs_ GUARDED_BY(mu_);
 };
 
 // Shared-ownership wrapper for the read half of a MessageChannel.
