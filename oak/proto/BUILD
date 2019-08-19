@@ -40,9 +40,7 @@ cc_proto_library(
 proto_library(
     name = "application_proto",
     srcs = ["application.proto"],
-    deps = [
-        ":manager_proto",
-    ],
+    deps = [],
 )
 
 cc_proto_library(
