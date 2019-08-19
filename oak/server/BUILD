@@ -39,7 +39,6 @@ cc_library(
     ],
     deps = [
         ":channel",
-        ":logging_channel",
         ":status",
         "//oak/common:handles",
         "//oak/proto:application_cc_grpc",
@@ -124,14 +123,6 @@ cc_test(
         ":channel",
         "@com_google_absl//absl/memory",
         "@gtest//:gtest_main",
-    ],
-)
-
-cc_library(
-    name = "logging_channel",
-    hdrs = ["logging_channel.h"],
-    deps = [
-        ":channel",
     ],
 )
 

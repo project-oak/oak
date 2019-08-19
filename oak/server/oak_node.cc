@@ -23,7 +23,6 @@
 
 #include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
-#include "oak/server/logging_channel.h"
 #include "oak/server/status.h"
 #include "oak/server/wabt_output.h"
 #include "src/binary-reader.h"
@@ -209,8 +208,28 @@ std::unique_ptr<OakNode> OakNode::Create(const std::string& module) {
   }
 
   // Create a logging channel for the module.
-  node->channel_halves_[LOGGING_CHANNEL_HANDLE] = absl::make_unique<LoggingChannelHalf>();
-  LOG(INFO) << "Created logging channel " << LOGGING_CHANNEL_HANDLE;
+  {
+    std::shared_ptr<MessageChannel> channel = std::make_shared<MessageChannel>();
+    node->channel_halves_[LOGGING_CHANNEL_HANDLE] =
+        absl::make_unique<MessageChannelWriteHalf>(channel);
+    LOG(INFO) << "Created logging channel " << LOGGING_CHANNEL_HANDLE;
+
+    // Spawn a thread that reads and logs messages on this channel forever.
+    std::thread t([channel] {
+      std::unique_ptr<MessageChannelReadHalf> read_chan =
+          absl::make_unique<MessageChannelReadHalf>(channel);
+      while (true) {
+        ReadResult result = read_chan->BlockingRead(INT_MAX);
+        if (result.required_size > 0) {
+          LOG(ERROR) << "Message size too large: " << result.required_size;
+          return;
+        }
+        LOG(INFO) << "LOG: " << std::string(result.data->data(), result.data->size());
+      }
+    });
+    // TODO: join() instead when we have node termination
+    t.detach();
+  }
 
   // Create the channels needed for gRPC interactions.
   {
