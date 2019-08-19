@@ -164,7 +164,7 @@ imports](https://webassembly.github.io/spec/core/syntax/modules.html#imports)
     *   return 0: Status of operation
 
     Similar to
-    [`zx_channel_read`](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/zircon/docs/syscalls/channel_read.md)
+    [`zx_channel_read`](https://fuchsia.dev/fuchsia-src/zircon/syscalls/channel_read)
     in Fuchsia.
 
 -   `channel_write: (i64, i32, i32) -> i32`: Writes a single message to the
@@ -176,7 +176,7 @@ imports](https://webassembly.github.io/spec/core/syntax/modules.html#imports)
     *   return 0: Status of operation
 
     Similar to
-    [`zx_channel_write`](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/zircon/docs/syscalls/channel_write.md)
+    [`zx_channel_write`](https://fuchsia.dev/fuchsia-src/zircon/syscalls/channel_write)
     in Fuchsia.
 
 
