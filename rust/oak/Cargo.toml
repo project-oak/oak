@@ -7,6 +7,7 @@ authors = ["Tiziano Santoro <tzn@google.com>"]
 protobuf = "*"
 fmt = "*"
 log = "*"
+byteorder = "1"
 
 [build-dependencies]
 protoc-rust = "*"

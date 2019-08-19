@@ -57,6 +57,14 @@ static void WriteI32(wabt::interp::Environment* env, const uint32_t offset, cons
   base[3] = (v >> 24) & 0xff;
 }
 
+static uint64_t ReadU64(wabt::interp::Environment* env, const uint32_t offset) {
+  auto base = env->GetMemory(0)->data.begin() + offset;
+  return (static_cast<uint64_t>(base[0]) | (static_cast<uint64_t>(base[1]) << 8) |
+          (static_cast<uint64_t>(base[2]) << 16) | (static_cast<uint64_t>(base[3]) << 24) |
+          (static_cast<uint64_t>(base[4]) << 32) | (static_cast<uint64_t>(base[5]) << 40) |
+          (static_cast<uint64_t>(base[6]) << 48) | (static_cast<uint64_t>(base[7]) << 56));
+}
+
 static void LogHostFunctionCall(const wabt::interp::HostFunc* func,
                                 const wabt::interp::TypedValues& args) {
   std::stringstream params;
@@ -228,6 +236,7 @@ std::unique_ptr<OakNode> OakNode::Create(const std::string& module) {
   // outlast this thread.
   LOG(INFO) << "Executing module oak_main";
   std::thread t([&node] { RunModule(&node->env_, node->module_); });
+  // TODO: join() instead when we have node termination
   t.detach();
   LOG(INFO) << "Started module execution thread";
 
@@ -337,9 +346,17 @@ wabt::interp::HostFunc::Callback OakNode::OakWaitOnChannels(wabt::interp::Enviro
       return wabt::interp::Result::Ok;
     }
 
-    // TODO: mark the relevant channels as ready to read.
-    // TODO: drop hardcoded single channel
+    uint64_t handle0 = ReadU64(env, offset);
+    // TODO: Drop hardcoded single channel
+    if (handle0 != GRPC_IN_CHANNEL_HANDLE) {
+      LOG(ERROR) << "Read of unexpected handle " << handle0;
+      return wabt::interp::Result::Ok;
+    }
+
     req_half_->Await();
+    // TODO: Mark just the relevant channels as ready to read.
+    auto base = env->GetMemory(0)->data.begin() + offset;
+    base[8] = 0x01;
     return wabt::interp::Result::Ok;
   };
 }

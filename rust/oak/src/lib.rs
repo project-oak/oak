@@ -14,11 +14,13 @@
 // limitations under the License.
 //
 
+extern crate byteorder;
 extern crate fmt;
 #[macro_use]
 extern crate log;
 extern crate protobuf;
 
+use byteorder::WriteBytesExt;
 use protobuf::Message;
 use std::io;
 use std::io::Write;
@@ -123,7 +125,7 @@ mod wasm {
     // See https://rustwasm.github.io/book/reference/js-ffi.html
     #[link(wasm_import_module = "oak")]
     extern "C" {
-        pub fn wait_on_channels(buf: *const u8, count: u32) -> i32;
+        pub fn wait_on_channels(buf: *mut u8, count: u32) -> i32;
         pub fn channel_read(handle: u64, buf: *mut u8, size: usize, actual_size: *mut u32) -> i32;
         pub fn channel_write(handle: u64, buf: *const u8, size: usize) -> i32;
     }
@@ -133,17 +135,11 @@ const SPACE_BYTES_PER_HANDLE: usize = 9;
 
 // Build a chunk of memory that is suitable for passing to wasm::wait_on_channels,
 // holding the given collection of channel handles.
-fn new_handle_space(handles: &Vec<Handle>) -> Vec<u8> {
-    let mut space = vec![0; SPACE_BYTES_PER_HANDLE * handles.len()];
-    for (i, handle) in handles.iter().enumerate() {
-        space[i * SPACE_BYTES_PER_HANDLE + 0] = (handle & 0xFFu64) as u8;
-        space[i * SPACE_BYTES_PER_HANDLE + 1] = ((handle >> 8) & 0xFFu64) as u8;
-        space[i * SPACE_BYTES_PER_HANDLE + 2] = ((handle >> 16) & 0xFFu64) as u8;
-        space[i * SPACE_BYTES_PER_HANDLE + 3] = ((handle >> 24) & 0xFFu64) as u8;
-        space[i * SPACE_BYTES_PER_HANDLE + 4] = ((handle >> 32) & 0xFFu64) as u8;
-        space[i * SPACE_BYTES_PER_HANDLE + 5] = ((handle >> 40) & 0xFFu64) as u8;
-        space[i * SPACE_BYTES_PER_HANDLE + 6] = ((handle >> 48) & 0xFFu64) as u8;
-        space[i * SPACE_BYTES_PER_HANDLE + 7] = ((handle >> 56) & 0xFFu64) as u8;
+fn new_handle_space(handles: &[Handle]) -> Vec<u8> {
+    let mut space = Vec::with_capacity(SPACE_BYTES_PER_HANDLE * handles.len());
+    for handle in handles {
+        space.write_u64::<byteorder::LittleEndian>(*handle).unwrap();
+        space.push(0x00);
     }
     space
 }
@@ -275,7 +271,7 @@ pub trait OakNode {
 }
 
 /// Perform an event loop invoking the given node.
-pub fn event_loop<T: OakNode>(mut node: T) {
+pub fn event_loop<T: OakNode>(mut node: T) -> ! {
     info!("start event loop for node");
     set_panic_hook();
 
