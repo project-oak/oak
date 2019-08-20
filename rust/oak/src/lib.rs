@@ -21,7 +21,8 @@ extern crate log;
 extern crate protobuf;
 
 use byteorder::WriteBytesExt;
-use protobuf::Message;
+use proto::oak_api::OakStatus;
+use protobuf::{Message, ProtobufEnum};
 use std::io;
 use std::io::Write;
 
@@ -69,52 +70,35 @@ pub const LOGGING_CHANNEL_HANDLE: Handle = 1;
 pub const GRPC_IN_CHANNEL_HANDLE: Handle = 2;
 pub const GRPC_OUT_CHANNEL_HANDLE: Handle = 3;
 
-// Status values returned across the host function interface
-#[derive(Debug, PartialEq)]
-pub enum Status {
-    Ok,
-    BadHandle,
-    InvalidArgs,
-    ChannelClosed,
-    BufferTooSmall,
-    OutOfRange,
-    Unknown(i32),
-}
-
-fn status_from_i32(raw: i32) -> Status {
-    // Keep in sync with /oak/server/status.h
-    match raw {
-        0 => Status::Ok,
-        1 => Status::BadHandle,
-        2 => Status::InvalidArgs,
-        3 => Status::ChannelClosed,
-        4 => Status::BufferTooSmall,
-        5 => Status::OutOfRange,
-        _ => Status::Unknown(raw),
-    }
-}
-
-/// Map a host function status to the nearest available std::io::Result.
-fn result_from_status<T>(status: Status, val: T) -> std::io::Result<T> {
+/// Map an OakStatus to the nearest available std::io::Result.
+fn result_from_status<T>(status: Option<OakStatus>, val: T) -> std::io::Result<T> {
     match status {
-        Status::Ok => Ok(val),
-        Status::BadHandle => Err(io::Error::new(io::ErrorKind::NotConnected, "Bad handle")),
-        Status::InvalidArgs => Err(io::Error::new(
+        Some(OakStatus::OAK_STATUS_UNSPECIFIED) => Err(io::Error::new(
+            io::ErrorKind::Other,
+            "Unspecified Oak status value",
+        )),
+        Some(OakStatus::OK) => Ok(val),
+        Some(OakStatus::ERR_BAD_HANDLE) => {
+            Err(io::Error::new(io::ErrorKind::NotConnected, "Bad handle"))
+        }
+        Some(OakStatus::ERR_INVALID_ARGS) => Err(io::Error::new(
             io::ErrorKind::InvalidInput,
             "Invalid arguments",
         )),
-        Status::ChannelClosed => Err(io::Error::new(
+        Some(OakStatus::ERR_CHANNEL_CLOSED) => Err(io::Error::new(
             io::ErrorKind::ConnectionReset,
             "Channel closed",
         )),
-        Status::BufferTooSmall => Err(io::Error::new(
+        Some(OakStatus::ERR_BUFFER_TOO_SMALL) => Err(io::Error::new(
             io::ErrorKind::UnexpectedEof,
             "Buffer too small",
         )),
-        Status::OutOfRange => Err(io::Error::new(io::ErrorKind::NotConnected, "Out of range")),
-        Status::Unknown(raw) => Err(io::Error::new(
+        Some(OakStatus::ERR_OUT_OF_RANGE) => {
+            Err(io::Error::new(io::ErrorKind::NotConnected, "Out of range"))
+        }
+        None => Err(io::Error::new(
             io::ErrorKind::Other,
-            format!("Unknown Oak status value {}", raw),
+            "Unknown Oak status value",
         )),
     }
 }
@@ -164,7 +148,9 @@ impl SendChannelHalf {
 
     pub fn write_message(&mut self, buf: &[u8]) -> std::io::Result<()> {
         result_from_status(
-            status_from_i32(unsafe { wasm::channel_write(self.handle, buf.as_ptr(), buf.len()) }),
+            OakStatus::from_i32(unsafe {
+                wasm::channel_write(self.handle, buf.as_ptr(), buf.len())
+            }),
             (),
         )
     }
@@ -204,7 +190,7 @@ impl ReceiveChannelHalf {
         // then with a vector that's been resized to meet size requirements.
         for resized in &[false, true] {
             let mut actual_size: u32 = 0;
-            let status = status_from_i32(unsafe {
+            let status = OakStatus::from_i32(unsafe {
                 wasm::channel_read(
                     self.handle,
                     buf.as_mut_ptr(),
@@ -213,13 +199,13 @@ impl ReceiveChannelHalf {
                 )
             });
             match status {
-                Status::Ok => {
+                Some(OakStatus::OK) => {
                     unsafe {
                         buf.set_len(actual_size as usize);
                     };
                     return Ok(actual_size as usize);
                 }
-                Status::BufferTooSmall => {
+                Some(OakStatus::ERR_BUFFER_TOO_SMALL) => {
                     if *resized {
                         return result_from_status(status, 0);
                     }

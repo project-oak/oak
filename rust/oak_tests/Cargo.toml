@@ -7,3 +7,4 @@ edition = "2018"
 [dependencies]
 oak_derive = { path = "../oak_derive"}
 oak = { path = "../oak"}
+protobuf = "*"

@@ -23,7 +23,7 @@
 
 #include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
-#include "oak/server/status.h"
+#include "oak/proto/oak_api.pb.h"
 #include "oak/server/wabt_output.h"
 #include "src/binary-reader.h"
 #include "src/error-formatter.h"
@@ -297,7 +297,7 @@ wabt::interp::HostFunc::Callback OakNode::OakChannelRead(wabt::interp::Environme
 
     if (channel_halves_.count(channel_handle) == 0) {
       LOG(WARNING) << "Invalid channel handle: " << channel_handle;
-      results[0].set_i32(STATUS_ERR_BAD_HANDLE);
+      results[0].set_i32(OakStatus::ERR_BAD_HANDLE);
       return wabt::interp::Result::Ok;
     }
     std::unique_ptr<ChannelHalf>& channel = channel_halves_.at(channel_handle);
@@ -307,17 +307,17 @@ wabt::interp::HostFunc::Callback OakNode::OakChannelRead(wabt::interp::Environme
       LOG(INFO) << "channel_read[" << channel_handle << "]: buffer too small: " << size << " < "
                 << result.required_size;
       WriteI32(env, size_offset, result.required_size);
-      results[0].set_i32(STATUS_ERR_BUFFER_TOO_SMALL);
+      results[0].set_i32(OakStatus::ERR_BUFFER_TOO_SMALL);
     } else if (result.data == nullptr) {
       LOG(INFO) << "channel_read[" << channel_handle << "]: no message available";
       WriteI32(env, size_offset, 0);
-      results[0].set_i32(STATUS_OK);
+      results[0].set_i32(OakStatus::OK);
     } else {
       LOG(INFO) << "channel_read[" << channel_handle << "]: read message of size "
                 << result.data->size();
       WriteI32(env, size_offset, result.data->size());
       WriteMemory(env, offset, absl::Span<char>(result.data->data(), result.data->size()));
-      results[0].set_i32(STATUS_OK);
+      results[0].set_i32(OakStatus::OK);
     }
 
     return wabt::interp::Result::Ok;
@@ -335,7 +335,7 @@ wabt::interp::HostFunc::Callback OakNode::OakChannelWrite(wabt::interp::Environm
 
     if (channel_halves_.count(channel_handle) == 0) {
       LOG(WARNING) << "Invalid channel handle: " << channel_handle;
-      results[0].set_i32(STATUS_ERR_BAD_HANDLE);
+      results[0].set_i32(OakStatus::ERR_BAD_HANDLE);
       return wabt::interp::Result::Ok;
     }
     std::unique_ptr<ChannelHalf>& channel = channel_halves_.at(channel_handle);
@@ -345,7 +345,7 @@ wabt::interp::HostFunc::Callback OakNode::OakChannelWrite(wabt::interp::Environm
     std::unique_ptr<Message> data = absl::make_unique<Message>(origin.begin(), origin.end());
     LOG(INFO) << "channel_write[" << channel_handle << "]: write message of size " << data->size();
     channel->Write(std::move(data));
-    results[0].set_i32(STATUS_OK);
+    results[0].set_i32(OakStatus::OK);
 
     return wabt::interp::Result::Ok;
   };
@@ -358,7 +358,7 @@ wabt::interp::HostFunc::Callback OakNode::OakWaitOnChannels(wabt::interp::Enviro
 
     uint32_t offset = args[0].get_i32();
     uint32_t count = args[1].get_i32();
-    results[0].set_i32(STATUS_OK);
+    results[0].set_i32(OakStatus::OK);
 
     if (count == 0) {
       LOG(INFO) << "Waiting on no channels";

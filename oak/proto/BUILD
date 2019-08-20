@@ -91,6 +91,18 @@ cc_proto_library(
 )
 
 proto_library(
+    name = "oak_api_proto",
+    srcs = ["oak_api.proto"],
+    deps = [
+    ],
+)
+
+cc_proto_library(
+    name = "oak_api_cc_proto",
+    deps = [":oak_api_proto"],
+)
+
+proto_library(
     name = "storage_proto",
     srcs = ["storage.proto"],
     deps = [

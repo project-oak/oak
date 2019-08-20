@@ -149,8 +149,8 @@ imports](https://webassembly.github.io/spec/core/syntax/modules.html#imports)
 -   `channel_read: (i64, i32, i32, i32) -> i32`: Reads a single message from the
     specified channel, and sets the size of the message in the location provided
     by arg 3. If the destination buffer is not large enough for the entire
-    message, then no data will be read and a `STATUS_ERR_BUFFER_TOO_SMALL`
-    status will be returned.
+    message, then no data will be read and a `BUFFER_TOO_SMALL` status will be
+    returned.
 
     *   arg 0: Handle to channel receive half
     *   arg 1: Destination buffer address

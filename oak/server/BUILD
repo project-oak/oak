@@ -39,10 +39,10 @@ cc_library(
     ],
     deps = [
         ":channel",
-        ":status",
         "//oak/common:handles",
         "//oak/proto:application_cc_grpc",
         "//oak/proto:grpc_encap_cc_proto",
+        "//oak/proto:oak_api_cc_proto",
         "@boringssl//:crypto",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/memory",
@@ -124,10 +124,4 @@ cc_test(
         "@com_google_absl//absl/memory",
         "@gtest//:gtest_main",
     ],
-)
-
-cc_library(
-    name = "status",
-    hdrs = ["status.h"],
-    deps = [],
 )
