@@ -9,21 +9,21 @@ readonly DOCKER_USER="${USER:-root}"
 
 readonly SCRIPTS_DIR="$(dirname "$0")"
 
-# Run Oak server.
+# Build Oak server.
 "$SCRIPTS_DIR/build_server_docker"
-readonly SERVER_CONTAINER_ID=$("$SCRIPTS_DIR/docker_run" \
-  --detach \
-  ./bazel-bin/oak/server/asylo/oak)
 
-# Run Rust-based Oak examples.
+# Run Rust-based Oak examples, each with their own Oak server instance.
 readonly RUST_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module/rust$' | cut -d'/' -f2)"
 for example in ${RUST_EXAMPLES}; do
+  container_id=$("$SCRIPTS_DIR/docker_run" --detach ./bazel-bin/oak/server/asylo/oak)
   "${SCRIPTS_DIR}/docker_run" "${SCRIPTS_DIR}/run_example" "${example}"
+  docker stop "$container_id"
 done
+
 # Run C++-based Oak examples.
 readonly CPP_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module/cpp$' | cut -d'/' -f2)"
 for example in ${CPP_EXAMPLES}; do
+  container_id=$("$SCRIPTS_DIR/docker_run" --detach ./bazel-bin/oak/server/asylo/oak)
   "${SCRIPTS_DIR}/docker_run" "${SCRIPTS_DIR}/run_example" -c "${example}"
+  docker stop "$container_id"
 done
-
-docker stop "$SERVER_CONTAINER_ID"
