@@ -20,5 +20,7 @@ cc_binary(
     deps = [
         "//oak/common:handles",
         "//oak/module:defines",
+        # TODO: Sort out inclusion of protobuf files
+        # "//oak/proto:oak_api_cc_proto",
     ],
 )
