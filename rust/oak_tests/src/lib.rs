@@ -1,3 +1,7 @@
+extern crate protobuf;
+
+use oak::proto::oak_api::OakStatus;
+use protobuf::ProtobufEnum;
 use std::cell::RefCell;
 use std::collections::VecDeque;
 
@@ -32,7 +36,7 @@ impl MockChannel {
             msg.set_len(size);
         }
         self.messages.push_back(msg);
-        STATUS_OK
+        OakStatus::OK.value()
     }
     fn read_message(&mut self, buf: *mut u8, size: usize, actual_size: *mut u32) -> i32 {
         if let Some(status) = self.read_status {
@@ -41,7 +45,7 @@ impl MockChannel {
         let msg = self.messages.pop_front();
         if msg.is_none() {
             unsafe { *actual_size = 0 }
-            return STATUS_OK;
+            return OakStatus::OK.value();
         }
         let msg = msg.unwrap();
 
@@ -49,12 +53,12 @@ impl MockChannel {
         unsafe { *actual_size = len as u32 }
         if len > size {
             self.messages.push_front(msg);
-            return STATUS_ERR_BUFFER_TOO_SMALL;
+            return OakStatus::ERR_BUFFER_TOO_SMALL.value();
         }
         unsafe {
             std::ptr::copy_nonoverlapping(msg.as_ptr(), buf, len);
         }
-        STATUS_OK
+        OakStatus::OK.value()
     }
 }
 
@@ -95,7 +99,3 @@ pub fn set_write_status(status: Option<i32>) {
 pub fn reset_channels() {
     CHANNEL.with(|channel| *channel.borrow_mut() = MockChannel::new())
 }
-
-// Keep in sync with /oak/server/status.h
-pub const STATUS_OK: i32 = 0;
-pub const STATUS_ERR_BUFFER_TOO_SMALL: i32 = 4;
