@@ -13,7 +13,7 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 "$SCRIPTS_DIR/build_server_docker"
 readonly SERVER_CONTAINER_ID=$("$SCRIPTS_DIR/docker_run" \
   --detach \
-  ./bazel-bin/oak/server/oak)
+  ./bazel-bin/oak/server/asylo/oak)
 
 # Run Rust-based Oak examples.
 readonly RUST_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module/rust$' | cut -d'/' -f2)"
