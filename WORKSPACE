@@ -31,9 +31,9 @@ http_archive(
 # Asylo Framework.
 http_archive(
     name = "com_google_asylo",
-    urls = ["https://github.com/google/asylo/archive/v0.4.0.tar.gz"],
-    strip_prefix = "asylo-0.4.0",
-    sha256 = "9dd8063d1a8002f6cc729f0115e2140a2eb1b14a10c111411f6b554e14ee739c",
+    urls = ["https://github.com/google/asylo/archive/dfdc44744e3b18531830deb37c5633f648e6cdbd.tar.gz"],
+    strip_prefix = "asylo-dfdc44744e3b18531830deb37c5633f648e6cdbd",
+    sha256 = "b622044f967da3b8a8e2c76a18afe0014baab3226a902db0b87255f3ffc31c2c",
 )
 
 # Google Test
@@ -47,11 +47,13 @@ git_repository(
 http_archive(
     name = "com_google_protobuf",
     urls = [
-        "https://github.com/protocolbuffers/protobuf/archive/v3.7.1.tar.gz",
+        "https://github.com/protocolbuffers/protobuf/archive/v3.9.1.tar.gz",
     ],
-    strip_prefix = "protobuf-3.7.1",
-    sha256 = "f1748989842b46fa208b2a6e4e2785133cfcc3e4d43c17fecb023733f0f5443f",
+    strip_prefix = "protobuf-3.9.1",
+    sha256 = "98e615d592d237f94db8bf033fba78cd404d979b0b70351a9e5aaff725398357",
 )
+load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
+protobuf_deps()
 
 # Google APIs for Cloud Spanner protos.
 # TODO: Switch from fork after https://github.com/googleapis/googleapis/pull/553 is merged.

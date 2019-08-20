@@ -15,7 +15,7 @@ ENV PATH "$BUILDIFIER_DIR/bin:$PATH"
 RUN chmod +x $BUILDIFIER_DIR/bin/buildifier
 
 # Install Protobuf compiler.
-ARG PROTOBUF_VERSION=3.7.1
+ARG PROTOBUF_VERSION=3.9.1
 ARG PROTOBUF_DIR=/usr/local/protobuf
 RUN curl -L https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOBUF_VERSION}/protoc-${PROTOBUF_VERSION}-linux-x86_64.zip > /tmp/protobuf.zip
 RUN unzip /tmp/protobuf.zip -d $PROTOBUF_DIR

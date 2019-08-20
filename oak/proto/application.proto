@@ -18,8 +18,6 @@ syntax = "proto3";
 
 package oak;
 
-import "oak/proto/manager.proto";
-
 message GetAttestationRequest {
   // TODO: Specify this message.
 }
