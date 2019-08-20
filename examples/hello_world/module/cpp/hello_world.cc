@@ -20,20 +20,35 @@
 #include "oak/common/handles.h"
 #include "oak/module/defines.h"  // for imports and exports
 
+// TODO: Sort out inclusion of protobuf files
+// #include "oak/proto/oak_api.pb.h"
+
+// Local copy of oak_api.pb.h contents for now.
+namespace oak {
+
+enum ChannelHandle {
+  CHANNEL_HANDLE_UNSPECIFIED = 0,
+  LOGGING = 1,
+  GRPC_IN = 2,
+  GRPC_OUT = 3,
+};
+
+}  // namespace oak
+
 WASM_IMPORT("oak") int wait_on_channels(uint8_t* buff, int32_t count);
 WASM_IMPORT("oak")
 int channel_read(uint64_t handle, uint8_t* buff, size_t usize, uint32_t* actual_size);
 WASM_IMPORT("oak") int channel_write(uint64_t handle, uint8_t* buff, size_t usize);
 
 WASM_EXPORT void oak_main() {
-  uint8_t handle_space[9] = {oak::GRPC_IN_CHANNEL_HANDLE, 0, 0, 0, 0, 0, 0, 0, 0};
+  uint8_t handle_space[9] = {oak::ChannelHandle::GRPC_IN, 0, 0, 0, 0, 0, 0, 0, 0};
   uint8_t _buf[256];
   uint32_t actual_size;
 
   while (true) {
     wait_on_channels(handle_space, 1);
 
-    channel_read(oak::GRPC_IN_CHANNEL_HANDLE, _buf, sizeof(_buf), &actual_size);
+    channel_read(oak::ChannelHandle::GRPC_IN, _buf, sizeof(_buf), &actual_size);
 
     // Encapsulated GrpcResponse protobuf.
     //    12                 b00010.010 = tag 2 (GrpcResponse.rsp_msg), length-delimited field
@@ -47,6 +62,6 @@ WASM_EXPORT void oak_main() {
     //    01                 true
     uint8_t buf[] = "\x12\x0b\x12\x09\x0A\x07\x74\x65\x73\x74\x69\x6e\x67\x20\x01";
     // TODO: replace with use of message type and serialization.
-    channel_write(oak::GRPC_OUT_CHANNEL_HANDLE, buf, sizeof(buf) - 1);
+    channel_write(oak::ChannelHandle::GRPC_OUT, buf, sizeof(buf) - 1);
   }
 }

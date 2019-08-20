@@ -34,3 +34,11 @@ enum OakStatus {
   // Argument out of valid range.
   ERR_OUT_OF_RANGE = 6;
 }
+
+// Well-known channel handle values.
+enum ChannelHandle {
+  CHANNEL_HANDLE_UNSPECIFIED = 0;
+  LOGGING = 1;   // Write half of channel
+  GRPC_IN = 2;   // Read half of channel
+  GRPC_OUT = 3;  // Write half of channel
+}

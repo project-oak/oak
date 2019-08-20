@@ -21,7 +21,7 @@ extern crate log;
 extern crate protobuf;
 
 use byteorder::WriteBytesExt;
-use proto::oak_api::OakStatus;
+use proto::oak_api::{ChannelHandle, OakStatus};
 use protobuf::{Message, ProtobufEnum};
 use std::io;
 use std::io::Write;
@@ -64,11 +64,6 @@ where
 }
 
 type Handle = u64;
-
-// Keep in sync with /oak/server/oak_node.h.
-pub const LOGGING_CHANNEL_HANDLE: Handle = 1;
-pub const GRPC_IN_CHANNEL_HANDLE: Handle = 2;
-pub const GRPC_OUT_CHANNEL_HANDLE: Handle = 3;
 
 /// Map an OakStatus to the nearest available std::io::Result.
 fn result_from_status<T>(status: Option<OakStatus>, val: T) -> std::io::Result<T> {
@@ -171,7 +166,7 @@ impl Write for SendChannelHalf {
 }
 
 pub fn logging_channel() -> impl Write {
-    let logging_channel = SendChannelHalf::new(LOGGING_CHANNEL_HANDLE);
+    let logging_channel = SendChannelHalf::new(ChannelHandle::LOGGING as Handle);
     // Only flush logging channel on newlines.
     std::io::LineWriter::new(logging_channel)
 }
@@ -261,10 +256,10 @@ pub fn event_loop<T: OakNode>(mut node: T) -> ! {
     info!("start event loop for node");
     set_panic_hook();
 
-    let read_handles = vec![GRPC_IN_CHANNEL_HANDLE];
+    let read_handles = vec![ChannelHandle::GRPC_IN as Handle];
     let mut space = new_handle_space(&read_handles);
 
-    let mut grpc_in_channel = ReceiveChannelHalf::new(GRPC_IN_CHANNEL_HANDLE);
+    let mut grpc_in_channel = ReceiveChannelHalf::new(ChannelHandle::GRPC_IN as Handle);
     loop {
         // Block until there is a message to read on an input channel.
         prep_handle_space(&mut space);
@@ -286,7 +281,7 @@ pub fn event_loop<T: OakNode>(mut node: T) -> ! {
         node.invoke(
             &req.method_name,
             req.get_req_msg().value.as_slice(),
-            &mut SendChannelHalf::new(GRPC_OUT_CHANNEL_HANDLE),
+            &mut SendChannelHalf::new(ChannelHandle::GRPC_OUT as Handle),
         );
     }
 }

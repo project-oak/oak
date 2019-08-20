@@ -210,9 +210,9 @@ std::unique_ptr<OakNode> OakNode::Create(const std::string& module) {
   // Create a logging channel for the module.
   {
     std::shared_ptr<MessageChannel> channel = std::make_shared<MessageChannel>();
-    node->channel_halves_[LOGGING_CHANNEL_HANDLE] =
+    node->channel_halves_[ChannelHandle::LOGGING] =
         absl::make_unique<MessageChannelWriteHalf>(channel);
-    LOG(INFO) << "Created logging channel " << LOGGING_CHANNEL_HANDLE;
+    LOG(INFO) << "Created logging channel " << ChannelHandle::LOGGING;
 
     // Spawn a thread that reads and logs messages on this channel forever.
     std::thread t([channel] {
@@ -236,19 +236,19 @@ std::unique_ptr<OakNode> OakNode::Create(const std::string& module) {
     // Incoming request channel: keep the write half in C++, but map the read
     // half to a well-known channel handle.
     std::shared_ptr<MessageChannel> channel = std::make_shared<MessageChannel>();
-    node->channel_halves_[GRPC_IN_CHANNEL_HANDLE] =
+    node->channel_halves_[ChannelHandle::GRPC_IN] =
         absl::make_unique<MessageChannelReadHalf>(channel);
     node->req_half_ = absl::make_unique<MessageChannelWriteHalf>(channel);
-    LOG(INFO) << "Created gRPC input channel: " << GRPC_IN_CHANNEL_HANDLE;
+    LOG(INFO) << "Created gRPC input channel: " << ChannelHandle::GRPC_IN;
   }
   {
     // Outgoing response channel: keep the read half in C++, but map the write
     // half to a well-known channel handle.
     std::shared_ptr<MessageChannel> channel = std::make_shared<MessageChannel>();
-    node->channel_halves_[GRPC_OUT_CHANNEL_HANDLE] =
+    node->channel_halves_[ChannelHandle::GRPC_OUT] =
         absl::make_unique<MessageChannelWriteHalf>(channel);
     node->rsp_half_ = absl::make_unique<MessageChannelReadHalf>(channel);
-    LOG(INFO) << "Created gRPC output channel: " << GRPC_IN_CHANNEL_HANDLE;
+    LOG(INFO) << "Created gRPC output channel: " << ChannelHandle::GRPC_IN;
   }
 
   // Spin up a per-node Wasm thread to run forever; the Node object must
@@ -367,7 +367,7 @@ wabt::interp::HostFunc::Callback OakNode::OakWaitOnChannels(wabt::interp::Enviro
 
     uint64_t handle0 = ReadU64(env, offset);
     // TODO: Drop hardcoded single channel
-    if (handle0 != GRPC_IN_CHANNEL_HANDLE) {
+    if (handle0 != ChannelHandle::GRPC_IN) {
       LOG(ERROR) << "Read of unexpected handle " << handle0;
       return wabt::interp::Result::Ok;
     }
