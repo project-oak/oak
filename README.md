@@ -106,10 +106,12 @@ others, for example Go.
 Each Oak Module must expose the following **exported function** as a
 [WebAssembly export](https://webassembly.github.io/spec/core/syntax/modules.html#exports):
 
--   `oak_main: () -> nil`: Invoked when the Oak Manager executes the Oak Node.
+-   `oak_main: () -> i32`: Invoked when the Oak Manager executes the Oak Node.
     This function should perform its own event loop, reading incoming messages
     that arrive on the read halves of its channels, sending outgoing messages over
-    the write halves of channels.
+    the write halves of channels.  This function is generally expected to run
+    forever, but may return a status if the Node choses to terminate (whether
+    expectedly or unexpectedly).
 
 Communication from the Oak Module to the Oak VM and to other modules is
 implemented via **channels**. A channel represents a uni-directional stream of
