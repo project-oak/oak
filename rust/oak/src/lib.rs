@@ -20,16 +20,16 @@ extern crate fmt;
 extern crate log;
 extern crate protobuf;
 
-use byteorder::WriteBytesExt;
-use proto::oak_api::{ChannelHandle, OakStatus};
-use protobuf::{Message, ProtobufEnum};
-use std::cell::RefCell;
-
 mod proto;
 
+use protobuf::Message;
+use std::cell::RefCell;
+use byteorder::WriteBytesExt;
+use protobuf::Message;
 use std::io;
 use std::io::Write;
 
+pub mod proto;
 #[cfg(test)]
 mod tests;
 
@@ -348,34 +348,4 @@ fn set_panic_hook() {
             file, line, msg
         );
     }));
-}
-
-#[no_mangle]
-pub extern "C" fn oak_handle_grpc_call() {
-    NODE.with(|node| match *node.borrow_mut() {
-        Some(ref mut node) => {
-            let mut grpc_method_channel = ReceiveChannelHalf::new(GRPC_METHOD_NAME_CHANNEL_HANDLE);
-            let mut buf = Vec::<u8>::with_capacity(256);
-            grpc_method_channel.read_message(&mut buf).unwrap();
-            let grpc_method_name = String::from_utf8_lossy(&buf);
-            let mut grpc_pair = ChannelPair::new(GRPC_IN_CHANNEL_HANDLE, GRPC_OUT_CHANNEL_HANDLE);
-            node.invoke(&grpc_method_name, &mut grpc_pair);
-        }
-        None => {
-            writeln!(logging_channel(), "gRPC call with no loaded Node").unwrap();
-            panic!("gRPC call with no loaded Node");
-        }
-    });
-}
-
-/// Return whether an Oak Node is currently available.
-pub fn have_node() -> bool {
-    NODE.with(|node| (*node.borrow()).is_some())
-}
-
-#[test]
-fn reset_node() {
-    NODE.with(|node| {
-        *node.borrow_mut() = None;
-    })
 }

@@ -17,7 +17,7 @@
 #![allow(unsafe_code)]
 #![allow(unused_imports)]
 #![allow(unused_results)]
-//! Generated file from `google/rpc/status.proto`
+//! Generated file from `third_party/google/rpc/status.proto`
 
 use protobuf::Message as Message_imported_for_functions;
 use protobuf::ProtobufEnum as ProtobufEnum_imported_for_functions;
@@ -280,12 +280,12 @@ impl ::protobuf::reflect::ProtobufValue for Status {
 }
 
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\x17google/rpc/status.proto\x12\ngoogle.rpc\x1a\x19google/protobuf/any\
-    .proto\"f\n\x06Status\x12\x12\n\x04code\x18\x01\x20\x01(\x05R\x04code\
-    \x12\x18\n\x07message\x18\x02\x20\x01(\tR\x07message\x12.\n\x07details\
-    \x18\x03\x20\x03(\x0b2\x14.google.protobuf.AnyR\x07detailsB^\n\x0ecom.go\
-    ogle.rpcB\x0bStatusProtoP\x01Z7google.golang.org/genproto/googleapis/rpc\
-    /status;status\xa2\x02\x03RPCb\x06proto3\
+    \n#third_party/google/rpc/status.proto\x12\ngoogle.rpc\x1a\x19google/pro\
+    tobuf/any.proto\"f\n\x06Status\x12\x12\n\x04code\x18\x01\x20\x01(\x05R\
+    \x04code\x12\x18\n\x07message\x18\x02\x20\x01(\tR\x07message\x12.\n\x07d\
+    etails\x18\x03\x20\x03(\x0b2\x14.google.protobuf.AnyR\x07detailsB^\n\x0e\
+    com.google.rpcB\x0bStatusProtoP\x01Z7google.golang.org/genproto/googleap\
+    is/rpc/status;status\xa2\x02\x03RPCb\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {
