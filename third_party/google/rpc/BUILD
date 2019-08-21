@@ -21,7 +21,6 @@ package(
 proto_library(
     name = "status_proto",
     srcs = ["status.proto"],
-    strip_import_prefix = "//third_party",
     deps = [
         "@com_google_protobuf//:any_proto",
     ],

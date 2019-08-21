@@ -18,7 +18,7 @@ syntax = "proto3";
 
 package oak;
 
-import "google/rpc/status.proto";
+import "third_party/google/rpc/status.proto";
 
 message ReadRequest {
   bytes storage_id = 1;
