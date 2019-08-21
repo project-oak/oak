@@ -252,7 +252,7 @@ pub trait OakNode {
 }
 
 /// Perform an event loop invoking the given node.
-pub fn event_loop<T: OakNode>(mut node: T) -> ! {
+pub fn event_loop<T: OakNode>(mut node: T) -> i32 {
     info!("start event loop for node");
     set_panic_hook();
 
@@ -264,8 +264,12 @@ pub fn event_loop<T: OakNode>(mut node: T) -> ! {
         // Block until there is a message to read on an input channel.
         prep_handle_space(&mut space);
         unsafe {
-            // TODO: check status of wait
-            wasm::wait_on_channels(space.as_mut_ptr(), read_handles.len() as u32);
+            let status = wasm::wait_on_channels(space.as_mut_ptr(), read_handles.len() as u32);
+            match OakStatus::from_i32(status) {
+                Some(OakStatus::OK) => (),
+                Some(err) => return err as i32,
+                None => return OakStatus::OAK_STATUS_UNSPECIFIED as i32,
+            }
         }
 
         let mut buf = Vec::<u8>::with_capacity(1024);

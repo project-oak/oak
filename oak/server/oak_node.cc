@@ -112,7 +112,12 @@ std::ostream& operator<<(std::ostream& os, const oak::RequiredExport& r) {
 namespace oak {
 
 const RequiredExport kRequiredExports[] = {
-    {"oak_main", true, {}},
+    {
+        "oak_main",
+        true,
+        wabt::interp::FuncSignature(std::vector<wabt::Type>{},
+                                    std::vector<wabt::Type>{wabt::Type::I32}),
+    },
 };
 
 // Check module exports all required functions with the correct signatures,
@@ -177,10 +182,11 @@ static void RunModule(wabt::interp::Environment* env, wabt::interp::DefinedModul
   wabt::interp::TypedValues args;
   wabt::interp::ExecResult exec_result = executor.RunExportByName(module, "oak_main", args);
 
-  LOG(WARNING) << "module execution terminated";
   if (exec_result.result != wabt::interp::Result::Ok) {
     LOG(ERROR) << "execution failure: " << wabt::interp::ResultToString(exec_result.result);
   }
+  uint32_t status = exec_result.values[0].get_i32();
+  LOG(WARNING) << "module execution terminated with status " << status;
 }
 
 OakNode::OakNode() : Service() {}
