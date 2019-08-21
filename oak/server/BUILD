@@ -87,6 +87,7 @@ cc_library(
     hdrs = ["module_invocation.h"],
     deps = [
         ":oak_node",
+        "//oak/server/storage:storage_manager",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_asylo//asylo/util:logging",
     ],

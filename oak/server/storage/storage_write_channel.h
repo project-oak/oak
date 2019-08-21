@@ -32,9 +32,10 @@ class StorageWriteChannel final : public ChannelHalf {
   // Takes a serialized StorageOperationRequest protocol message in
   // request_data.  Parses the request and dispatches it to the corresponding
   // StorageService method.  Must be called before StorageReadChannel::Read.
-  uint32_t Write(absl::Span<const char> request_data) override;
+  void Write(std::unique_ptr<Message>) override;
 
  private:
+  std::unique_ptr<oak::Storage::Stub> storage_service_;
   StorageManager* storage_manager_;
 };
 

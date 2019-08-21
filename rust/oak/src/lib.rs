@@ -27,9 +27,6 @@ use std::cell::RefCell;
 
 mod proto;
 
-use proto::storage::{
-    DeleteRequest, ReadRequest, StorageOperationRequest, StorageOperationResponse, WriteRequest,
-};
 use std::io;
 use std::io::Write;
 
@@ -374,88 +371,4 @@ fn reset_node() {
     NODE.with(|node| {
         *node.borrow_mut() = None;
     })
-}
-
-#[no_mangle]
-pub extern "C" fn oak_handle_grpc_call() {
-    NODE.with(|node| match *node.borrow_mut() {
-        Some(ref mut node) => {
-            let mut grpc_method_channel = ReceiveChannelHalf::new(GRPC_METHOD_NAME_CHANNEL_HANDLE);
-            let mut buf = Vec::<u8>::with_capacity(256);
-            grpc_method_channel.read_message(&mut buf).unwrap();
-            let grpc_method_name = String::from_utf8_lossy(&buf);
-            let mut grpc_pair = ChannelPair::new(GRPC_IN_CHANNEL_HANDLE, GRPC_OUT_CHANNEL_HANDLE);
-            node.invoke(&grpc_method_name, &mut grpc_pair);
-        }
-        None => {
-            writeln!(logging_channel(), "gRPC call with no loaded Node").unwrap();
-            panic!("gRPC call with no loaded Node");
-        }
-    });
-}
-
-pub fn execute_storage_operation(
-    operation_request: &StorageOperationRequest,
-) -> StorageOperationResponse {
-    writeln!(
-        logging_channel(),
-        "StorageOperationRequest: {}",
-        protobuf::text_format::print_to_string(operation_request)
-    )
-    .unwrap();
-
-    let mut storage_write_channel = SendChannelHalf::new(STORAGE_WRITE_CHANNEL_HANDLE);
-    operation_request
-        .write_to_writer(&mut storage_write_channel)
-        .unwrap();
-
-    let mut storage_read_channel = ReceiveChannelHalf::new(STORAGE_READ_CHANNEL_HANDLE);
-    let mut buffer = Vec::<u8>::with_capacity(256);
-    storage_read_channel.read_message(&mut buffer).unwrap();
-    let response: StorageOperationResponse =
-        protobuf::parse_from_reader(&mut &buffer[..]).unwrap();
-    writeln!(
-        logging_channel(),
-        "StorageOperationResponse: {}",
-        protobuf::text_format::print_to_string(&response)
-    )
-    .unwrap();
-
-    return response;
-}
-
-pub fn storage_read(storage_name: &Vec<u8>, name: &Vec<u8>) -> Vec<u8> {
-    let mut read_request = ReadRequest::new();
-    read_request.name = name.clone();
-
-    let mut operation_request = StorageOperationRequest::new();
-    operation_request.storage_name = storage_name.clone();
-    operation_request.set_read_request(read_request);
-
-    let operation_response = execute_storage_operation(&operation_request);
-
-    return operation_response.get_read_response().get_value().to_vec();
-}
-
-pub fn storage_write(storage_name: &Vec<u8>, name: &Vec<u8>, value: &Vec<u8>) {
-    let mut write_request = WriteRequest::new();
-    write_request.name = name.clone();
-    write_request.value = value.clone();
-
-    let mut operation_request = StorageOperationRequest::new();
-    operation_request.storage_name = storage_name.clone();
-    operation_request.set_write_request(write_request);
-
-    execute_storage_operation(&operation_request);
-}
-
-pub fn storage_delete(storage_name: &Vec<u8>, name: &Vec<u8>) {
-    let mut delete_request = DeleteRequest::new();
-    delete_request.name = name.clone();
-
-    let mut operation_request = StorageOperationRequest::new();
-    operation_request.storage_name = storage_name.clone();
-    operation_request.set_delete_request(delete_request);
-
-    execute_storage_operation(&operation_request);
 }

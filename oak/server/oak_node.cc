@@ -25,10 +25,9 @@
 #include "asylo/util/logging.h"
 #include "grpcpp/create_channel.h"
 #include "oak/proto/oak_api.pb.h"
-#include "oak/server/buffer_channel.h"
-#include "oak/server/logging_channel.h"
 #include "oak/server/status.h"
-#include "oak/server/storage/storage_channel.h"
+#include "oak/server/storage/storage_read_channel.h"
+#include "oak/server/storage/storage_write_channel.h"
 #include "oak/server/wabt_output.h"
 #include "src/binary-reader.h"
 #include "src/error-formatter.h"
@@ -193,7 +192,7 @@ OakNode::OakNode() : Service() {
       absl::make_unique<StorageReadChannel>(&storage_manager_);
   channel_halves_[STORAGE_READ_CHANNEL_HANDLE] = std::move(storage_read_channel);
   std::unique_ptr<ChannelHalf> storage_write_channel =
-      absl::make_unique<StorageWriteChannel>(storage_service_.get(), &storage_manager_);
+      absl::make_unique<StorageWriteChannel>(&storage_manager_);
   channel_halves_[STORAGE_WRITE_CHANNEL_HANDLE] = std::move(storage_write_channel);
   LOG(INFO) << "Created storage channels";
 }

@@ -21,17 +21,13 @@ namespace oak {
 StorageReadChannel::StorageReadChannel(StorageManager* storage_manager)
     : storage_manager_(storage_manager) {}
 
-ChannelHalf::ReadResult StorageReadChannel::Read(uint32_t size) {
-  absl::Span<char> response_data = storage_manager->ReadResponseData(size);
+ReadResult StorageReadChannel::Read(uint32_t size) {
+  std::unique_ptr<Message> response_data = std::move(storage_manager_->ReadResponseData(size));
   ReadResult result{0};
-  if (size >= response_data.size()) {
-    LOG(INFO) << "Reading all " << response_data.size() << " bytes from channel into space of size "
-              << size;
-    result.data = response_data;
+  if (size >= response_data->size()) {
+    result.data = std::move(response_data);
   } else {
-    LOG(INFO) << "Need to read " << response_data.size() << " bytes from channel but only " << size
-              << " bytes of space available";
-    result.required_size = response_data.size();
+    result.required_size = response_data->size();
   }
   return result;
 }
