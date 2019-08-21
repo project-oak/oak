@@ -26,6 +26,16 @@
 // Local copy of oak_api.pb.h contents for now.
 namespace oak {
 
+enum OakStatus {
+  OAK_STATUS_UNSPECIFIED = 0,
+  OK = 1,
+  ERR_BAD_HANDLE = 2,
+  ERR_INVALID_ARGS = 3,
+  ERR_CHANNEL_CLOSED = 4,
+  ERR_BUFFER_TOO_SMALL = 5,
+  ERR_OUT_OF_RANGE = 6,
+};
+
 enum ChannelHandle {
   CHANNEL_HANDLE_UNSPECIFIED = 0,
   LOGGING = 1,
@@ -40,7 +50,7 @@ WASM_IMPORT("oak")
 int channel_read(uint64_t handle, uint8_t* buff, size_t usize, uint32_t* actual_size);
 WASM_IMPORT("oak") int channel_write(uint64_t handle, uint8_t* buff, size_t usize);
 
-WASM_EXPORT void oak_main() {
+WASM_EXPORT int32_t oak_main() {
   uint8_t handle_space[9] = {oak::ChannelHandle::GRPC_IN, 0, 0, 0, 0, 0, 0, 0, 0};
   uint8_t _buf[256];
   uint32_t actual_size;
@@ -64,4 +74,5 @@ WASM_EXPORT void oak_main() {
     // TODO: replace with use of message type and serialization.
     channel_write(oak::ChannelHandle::GRPC_OUT, buf, sizeof(buf) - 1);
   }
+  return oak::OakStatus::OK;
 }

@@ -35,9 +35,9 @@ pub fn derive_oak_exports(input: TokenStream) -> TokenStream {
 
     let expanded = quote! {
         #[no_mangle]
-        pub extern "C" fn oak_main() {
+        pub extern "C" fn oak_main() -> i32 {
             let mut node = <#name>::new();
-            oak::event_loop(node);
+            oak::event_loop(node)
         }
     };
 
