@@ -33,7 +33,7 @@ class StorageReadChannel final : public ChannelHalf {
   // Returns size bytes of the serialized StorageOperationResponse protocol
   // message containing the response from the StorageService method.
   // Must be called repeatedly until an empty result is returned.
-  ChannelHalf::Result Read(uint32_t size) override;
+  ReadResult Read(uint32_t size) override;
 
  private:
   StorageManager* storage_manager_;

@@ -17,20 +17,22 @@
 #ifndef OAK_SERVER_STORAGE_MANAGER_H_
 #define OAK_SERVER_STORAGE_MANAGER_H_
 
+#include <memory>
 #include <string>
 
 #include "absl/types/span.h"
+#include "oak/server/channel.h"
 
 namespace oak {
 
 class StorageManager {
  public:
-  StorageManager();
+  StorageManager() {}
 
-  absl::Span<const char> ReadResponseData(uint32_t size) {
-    absl::Span<const char> response_data = operation_response_view_->subspan(0, size);
-    operation_response_view_->remove_prefix(response_data.size());
-    return response_data;
+  std::unique_ptr<Message> ReadResponseData(uint32_t size) {
+    absl::Span<const char> response_data = operation_response_view_.subspan(0, size);
+    operation_response_view_.remove_prefix(response_data.size());
+    return std::unique_ptr<Message>(new Message(*response_data.data()));
   }
 
   void WriteResponseData(std::string& response_data) {

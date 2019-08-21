@@ -16,6 +16,8 @@
 
 #include "storage_write_channel.h"
 
+#include "grpcpp/create_channel.h"
+
 namespace oak {
 
 static std::string GetStorageId(const std::string& storage_name) {
@@ -23,19 +25,19 @@ static std::string GetStorageId(const std::string& storage_name) {
   return storage_name;
 }
 
-StorageWriteChannel::StorageWriteChannel(Storage::Stub* storage_service,
-                                         StorageManager* storage_manager)
+StorageWriteChannel::StorageWriteChannel(StorageManager* storage_manager)
     : storage_service_(oak::Storage::NewStub(
           grpc::CreateChannel("localhost:7867", grpc::InsecureChannelCredentials()))),
       storage_manager_(storage_manager) {}
 
-uint32_t StorageWriteChannel::Write(absl::Span<const char> request_data) {
+void StorageWriteChannel::Write(std::unique_ptr<Message> message) {
   grpc::Status status;
   grpc::ClientContext context;
   StorageOperationRequest operation_request;
   StorageOperationResponse operation_response;
 
-  operation_request.ParseFromString(std::string(request_data.data(), request_data.size()));
+  std::unique_ptr<Message> request_data(std::move(message));
+  operation_request.ParseFromString(std::string(request_data->data(), request_data->size()));
 
   switch (operation_request.operation_case()) {
     case StorageOperationRequest::kReadRequest: {
@@ -90,8 +92,6 @@ uint32_t StorageWriteChannel::Write(absl::Span<const char> request_data) {
   std::string response_data;
   operation_response.SerializeToString(&response_data);
   storage_manager_->WriteResponseData(response_data);
-
-  return request_data.size();
 }
 
 }  // namespace oak

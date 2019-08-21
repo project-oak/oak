@@ -26,7 +26,7 @@
 #include "oak/common/handles.h"
 #include "oak/proto/application.grpc.pb.h"
 #include "oak/server/channel.h"
-#include "oak/storage/storage_manager.h"
+#include "oak/server/storage/storage_manager.h"
 #include "src/interp/interp.h"
 
 namespace oak {
@@ -82,7 +82,6 @@ class OakNode final : public Application::Service {
   std::thread main_;
 
   StorageManager storage_manager_;
-  std::unique_ptr<Storage::Stub> storage_service_;
 };
 
 }  // namespace oak
