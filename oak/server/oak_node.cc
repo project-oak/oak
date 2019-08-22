@@ -173,14 +173,14 @@ static bool CheckModuleExports(wabt::interp::Environment* env,
   return rc;
 }
 
-static void RunModule(wabt::interp::Environment* env, wabt::interp::DefinedModule* module) {
+void OakNode::RunModule() {
   wabt::interp::Thread::Options thread_options;
   wabt::Stream* trace_stream = nullptr;
-  wabt::interp::Executor executor(env, trace_stream, thread_options);
+  wabt::interp::Executor executor(&env_, trace_stream, thread_options);
 
   LOG(INFO) << "module execution thread: run oak_main";
   wabt::interp::TypedValues args;
-  wabt::interp::ExecResult exec_result = executor.RunExportByName(module, "oak_main", args);
+  wabt::interp::ExecResult exec_result = executor.RunExportByName(module_, "oak_main", args);
 
   if (exec_result.result != wabt::interp::Result::Ok) {
     LOG(ERROR) << "execution failure: " << wabt::interp::ResultToString(exec_result.result);
@@ -258,9 +258,12 @@ std::unique_ptr<OakNode> OakNode::Create(const std::string& module) {
   }
 
   // Spin up a per-node Wasm thread to run forever; the Node object must
-  // outlast this thread.
-  LOG(INFO) << "Executing module oak_main";
-  std::thread t([&node] { RunModule(&node->env_, node->module_); });
+  // outlast this thread (which is enforced by ~OakNode).  Also, make sure
+  // we pass the DefinedNode* to the thread by value so it doesn't fall out
+  // of scope once this function exits.
+  LOG(INFO) << "Executing module oak_main on new thread";
+  OakNode* raw_node = node.get();
+  std::thread t([raw_node] { raw_node->RunModule(); });
   // TODO: join() instead when we have node termination
   t.detach();
   LOG(INFO) << "Started module execution thread";
