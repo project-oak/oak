@@ -25,7 +25,6 @@
 #include "asylo/util/logging.h"
 #include "grpcpp/create_channel.h"
 #include "oak/proto/oak_api.pb.h"
-#include "oak/server/status.h"
 #include "oak/server/storage/storage_read_channel.h"
 #include "oak/server/storage/storage_write_channel.h"
 #include "oak/server/wabt_output.h"

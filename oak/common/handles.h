@@ -22,14 +22,6 @@
 namespace oak {
 // Well-known channel handle values are held in oak/proto/oak_api.proto.
 using Handle = uint64_t;
-
-// Keep in sync with /rust/oak/src/lib.rs.
-const Handle LOGGING_CHANNEL_HANDLE = 1;
-const Handle GRPC_IN_CHANNEL_HANDLE = 2;
-const Handle GRPC_OUT_CHANNEL_HANDLE = 3;
-const Handle STORAGE_READ_CHANNEL_HANDLE = 4;
-const Handle STORAGE_WRITE_CHANNEL_HANDLE = 5;
-
 }  // namespace oak
 
 #endif  // OAK_HANDLES_H_
