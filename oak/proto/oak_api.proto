@@ -43,6 +43,6 @@ enum ChannelHandle {
   LOGGING = 1;   // Write half of channel
   GRPC_IN = 2;   // Read half of channel
   GRPC_OUT = 3;  // Write half of channel
-  STORAGE_READ = 4;
-  STORAGE_WRITE = 5;
+  STORAGE_IN = 4;
+  STORAGE_OUT = 5;
 }

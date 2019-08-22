@@ -177,14 +177,6 @@ static bool CheckModuleExports(wabt::interp::Environment* env,
 }
 
 OakNode::OakNode() : Service() {}
-  std::unique_ptr<ChannelHalf> storage_read_channel =
-      absl::make_unique<StorageReadChannel>(&storage_manager_);
-  channel_halves_[ChannelHandle::STORAGE_READ] = std::move(storage_read_channel);
-  std::unique_ptr<ChannelHalf> storage_write_channel =
-      absl::make_unique<StorageWriteChannel>(&storage_manager_);
-  channel_halves_[ChannelHandle::STORAGE_WRITE] = std::move(storage_write_channel);
-  LOG(INFO) << "Created storage channels";
-}
 
 std::unique_ptr<OakNode> OakNode::Create(const std::string& module) {
   LOG(INFO) << "Creating Oak Node";
@@ -213,6 +205,12 @@ std::unique_ptr<OakNode> OakNode::Create(const std::string& module) {
 
 void OakNode::Start() {
   // TODO: Do not run again if already running.
+
+  auto storage_read_channel = absl::make_unique<StorageReadChannel>(&node->storage_manager_);
+  node->channel_halves_[ChannelHandle::STORAGE_IN] = std::move(storage_read_channel);
+  auto storage_write_channel = absl::make_unique<StorageWriteChannel>(&node->storage_manager_);
+  node->channel_halves_[ChannelHandle::STORAGE_OUT] = std::move(storage_write_channel);
+  LOG(INFO) << "Created storage channels";
 
   // Spin up a per-node Wasm thread to run forever; the Node object must
   // outlast this thread (which is enforced by ~OakNode). Also, make sure
