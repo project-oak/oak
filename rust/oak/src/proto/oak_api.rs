@@ -102,6 +102,8 @@ pub enum ChannelHandle {
     LOGGING = 1,
     GRPC_IN = 2,
     GRPC_OUT = 3,
+    STORAGE_READ = 4,
+    STORAGE_WRITE = 5,
 }
 
 impl ::protobuf::ProtobufEnum for ChannelHandle {
@@ -115,6 +117,8 @@ impl ::protobuf::ProtobufEnum for ChannelHandle {
             1 => ::std::option::Option::Some(ChannelHandle::LOGGING),
             2 => ::std::option::Option::Some(ChannelHandle::GRPC_IN),
             3 => ::std::option::Option::Some(ChannelHandle::GRPC_OUT),
+            4 => ::std::option::Option::Some(ChannelHandle::STORAGE_READ),
+            5 => ::std::option::Option::Some(ChannelHandle::STORAGE_WRITE),
             _ => ::std::option::Option::None
         }
     }
@@ -125,6 +129,8 @@ impl ::protobuf::ProtobufEnum for ChannelHandle {
             ChannelHandle::LOGGING,
             ChannelHandle::GRPC_IN,
             ChannelHandle::GRPC_OUT,
+            ChannelHandle::STORAGE_READ,
+            ChannelHandle::STORAGE_WRITE,
         ];
         values
     }
@@ -162,9 +168,10 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     US_UNSPECIFIED\x10\0\x12\x06\n\x02OK\x10\x01\x12\x12\n\x0eERR_BAD_HANDLE\
     \x10\x02\x12\x14\n\x10ERR_INVALID_ARGS\x10\x03\x12\x16\n\x12ERR_CHANNEL_\
     CLOSED\x10\x04\x12\x18\n\x14ERR_BUFFER_TOO_SMALL\x10\x05\x12\x14\n\x10ER\
-    R_OUT_OF_RANGE\x10\x06*W\n\rChannelHandle\x12\x1e\n\x1aCHANNEL_HANDLE_UN\
+    R_OUT_OF_RANGE\x10\x06*|\n\rChannelHandle\x12\x1e\n\x1aCHANNEL_HANDLE_UN\
     SPECIFIED\x10\0\x12\x0b\n\x07LOGGING\x10\x01\x12\x0b\n\x07GRPC_IN\x10\
-    \x02\x12\x0c\n\x08GRPC_OUT\x10\x03b\x06proto3\
+    \x02\x12\x0c\n\x08GRPC_OUT\x10\x03\x12\x10\n\x0cSTORAGE_READ\x10\x04\x12\
+    \x11\n\rSTORAGE_WRITE\x10\x05b\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {

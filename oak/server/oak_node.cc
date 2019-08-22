@@ -189,10 +189,10 @@ static void RunModule(wabt::interp::Environment* env, wabt::interp::DefinedModul
 OakNode::OakNode() : Service() {
   std::unique_ptr<ChannelHalf> storage_read_channel =
       absl::make_unique<StorageReadChannel>(&storage_manager_);
-  channel_halves_[STORAGE_READ_CHANNEL_HANDLE] = std::move(storage_read_channel);
+  channel_halves_[ChannelHandle::STORAGE_READ] = std::move(storage_read_channel);
   std::unique_ptr<ChannelHalf> storage_write_channel =
       absl::make_unique<StorageWriteChannel>(&storage_manager_);
-  channel_halves_[STORAGE_WRITE_CHANNEL_HANDLE] = std::move(storage_write_channel);
+  channel_halves_[ChannelHandle::STORAGE_WRITE] = std::move(storage_write_channel);
   LOG(INFO) << "Created storage channels";
 }
 
