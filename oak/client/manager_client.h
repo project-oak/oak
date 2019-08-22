@@ -45,14 +45,14 @@ class ManagerClient {
     WebAssemblyNode* web_assembly_node = node->mutable_web_assembly_node();
     web_assembly_node->set_module_bytes(module_bytes);
 
-    LOG(INFO) << "Creating Oak Node";
+    LOG(INFO) << "Creating Oak Application";
     grpc::Status status = stub_->CreateApplication(&context, request, &response);
     if (!status.ok()) {
       LOG(QFATAL) << "Failed: " << status.error_code() << '/' << status.error_message() << '/'
                   << status.error_details();
     }
 
-    LOG(INFO) << "Oak Node created: " << response.DebugString();
+    LOG(INFO) << "Oak Application created: " << response.DebugString();
     return response;
   }
 
