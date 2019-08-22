@@ -55,6 +55,8 @@ class OakNode final : public Application::Service {
 
   void InitEnvironment(wabt::interp::Environment* env);
 
+  void RunModule();
+
   // Native implementation of the `oak.channel_read` host function.
   wabt::interp::HostFunc::Callback OakChannelRead(wabt::interp::Environment* env);
 
