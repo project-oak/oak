@@ -49,6 +49,15 @@ grpc::Status AsyloOakManager::CreateApplication(grpc::ServerContext* context,
   return grpc::Status::OK;
 }
 
+grpc::Status AsyloOakManager::TerminateApplication(grpc::ServerContext* context,
+                                                   const oak::TerminateApplicationRequest* request,
+                                                   oak::TerminateApplicationResponse* response) {
+  LOG(INFO) << "Terminating application with ID " << request->application_id();
+
+  DestroyEnclave(request->application_id());
+  return grpc::Status::OK;
+}
+
 void AsyloOakManager::InitializeEnclaveManager() {
   LOG(INFO) << "Initializing enclave manager";
   asylo::EnclaveManager::Configure(asylo::EnclaveManagerOptions());
@@ -86,7 +95,7 @@ grpc::Status AsyloOakManager::CreateEnclave(
 
 asylo::StatusOr<oak::InitializeOutput> AsyloOakManager::GetEnclaveOutput(
     const std::string& node_id) {
-  LOG(INFO) << "Initializing enclave";
+  LOG(INFO) << "Initializing enclave " << node_id;
   asylo::EnclaveClient* client = enclave_manager_->GetClient(node_id);
   asylo::EnclaveInput input;
   asylo::EnclaveOutput output;
@@ -108,7 +117,7 @@ std::string AsyloOakManager::NewApplicationId() {
 }
 
 void AsyloOakManager::DestroyEnclave(const std::string& node_id) {
-  LOG(INFO) << "Destroying enclave";
+  LOG(INFO) << "Destroying enclave " << node_id;
   asylo::EnclaveClient* client = enclave_manager_->GetClient(node_id);
   asylo::EnclaveFinal final_input;
   asylo::Status status = enclave_manager_->DestroyEnclave(client, final_input);

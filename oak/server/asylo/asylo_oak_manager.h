@@ -36,6 +36,10 @@ class AsyloOakManager final : public Manager::Service {
                                  const CreateApplicationRequest* request,
                                  CreateApplicationResponse* response) override;
 
+  grpc::Status TerminateApplication(grpc::ServerContext* context,
+                                    const TerminateApplicationRequest* request,
+                                    TerminateApplicationResponse* response) override;
+
  private:
   void InitializeEnclaveManager();
 
