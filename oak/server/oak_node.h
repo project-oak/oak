@@ -72,7 +72,6 @@ class OakNode final : public Application::Service {
   ChannelHalfTable channel_halves_;
 
   // Hold on to the other halves of channels that the node uses to perform gRPC.
-  std::unique_ptr<MessageChannelWriteHalf> name_half_;
   std::unique_ptr<MessageChannelWriteHalf> req_half_;
   std::unique_ptr<MessageChannelReadHalf> rsp_half_;
 };
