@@ -57,6 +57,22 @@ grpc::Status DevOakManager::CreateApplication(grpc::ServerContext* context,
   return grpc::Status::OK;
 }
 
+grpc::Status DevOakManager::TerminateApplication(grpc::ServerContext* context,
+                                                 const oak::TerminateApplicationRequest* request,
+                                                 oak::TerminateApplicationResponse* response) {
+  LOG(INFO) << "Terminating application with ID " << request->application_id();
+
+  OakRuntime* runtime = runtimes_[request->application_id()].get();
+  if (runtime == nullptr) {
+    LOG(ERROR) << "Unrecognized application ID";
+    return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Unknown application ID");
+  }
+  runtime->Stop();
+  LOG(INFO) << "Application with ID " << request->application_id() << " stopped";
+  runtimes_.erase(request->application_id());
+  return grpc::Status::OK;
+}
+
 // Even if we are not running in an enclave, we are still relying on Asylo assertion authorities
 // This allows us to use the same client code to connect to the runtime, and it will potentially
 // allow us to use non-enclave identities in the future.
