@@ -26,7 +26,7 @@ namespace {
 
 std::string DataFrom(const std::string& filename) {
   std::ifstream ifs(filename.c_str(), std::ios::in | std::ios::binary);
-  EXPECT_TRUE(ifs.is_open());
+  EXPECT_TRUE(ifs.is_open()) << "failed to open " << filename;
   std::stringstream ss;
   ss << ifs.rdbuf();
   ifs.close();
@@ -47,7 +47,9 @@ TEST(OakNode, MalformedFailure) {
 }
 
 TEST(OakNode, MinimalSuccess) {
-  ASSERT_NE(nullptr, OakNode::Create(DataFrom("oak/server/testdata/minimal.wasm")));
+  std::unique_ptr<OakNode> node = OakNode::Create(DataFrom("oak/server/testdata/minimal.wasm"));
+  EXPECT_NE(nullptr, node);
+  // Destruction of the Node will block until its main thread completes.
 }
 
 TEST(OakNode, MissingExports) {

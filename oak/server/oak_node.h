@@ -38,6 +38,10 @@ class OakNode final : public Application::Service {
   // Creates an Oak node by loading the Wasm module code.
   static std::unique_ptr<OakNode> Create(const std::string& module);
 
+  // The destructor for a running OakNode instance will block until the thread
+  // running the instance completes.
+  ~OakNode();
+
   // Performs an Oak Module gRPC invocation. Takes ownership of the passed in request data.
   void ProcessModuleInvocation(grpc::GenericServerContext* context,
                                std::unique_ptr<Message> request_data);
@@ -76,6 +80,9 @@ class OakNode final : public Application::Service {
   // Hold on to the other halves of channels that the node uses to perform gRPC.
   std::unique_ptr<MessageChannelWriteHalf> req_half_;
   std::unique_ptr<MessageChannelReadHalf> rsp_half_;
+
+  // Thread running the oak_main export.
+  std::thread main_;
 };
 
 }  // namespace oak
