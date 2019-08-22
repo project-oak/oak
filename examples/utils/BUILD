@@ -19,6 +19,7 @@ cc_library(
     hdrs = ["utils.h"],
     visibility = ["//visibility:public"],
     deps = [
+        "@com_github_grpc_grpc//:grpc++",
         "@com_google_asylo//asylo/util:logging",
     ],
 )

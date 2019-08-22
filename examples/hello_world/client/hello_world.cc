@@ -28,6 +28,7 @@
 ABSL_FLAG(std::string, manager_address, "127.0.0.1:8888",
           "Address of the Oak Manager to connect to");
 ABSL_FLAG(std::string, module, "", "File containing the compiled WebAssembly module");
+ABSL_FLAG(bool, insecure_channel, false, "Use InsecureChannelCredentials to connect to the node");
 
 using ::oak::examples::hello_world::HelloRequest;
 using ::oak::examples::hello_world::HelloResponse;
@@ -84,8 +85,7 @@ int main(int argc, char** argv) {
 
   // Connect to the newly created Oak Application.
   auto stub = HelloWorld::NewStub(grpc::CreateChannel(
-      addr.str(),
-      ::asylo::EnclaveChannelCredentials(::asylo::BidirectionalNullCredentialsOptions())));
+      addr.str(), oak::utils::get_credentials(absl::GetFlag(FLAGS_insecure_channel))));
 
   // Perform multiple invocations of the same Oak Application, with different parameters.
   say_hello(stub.get(), "WORLD");
