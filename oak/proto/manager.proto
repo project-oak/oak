@@ -145,6 +145,13 @@ message CreateApplicationResponse {
   int32 grpc_port = 2;
 }
 
+message TerminateApplicationRequest {
+  string application_id = 1;
+}
+
+message TerminateApplicationResponse {
+}
+
 // Untrusted service in charge of creating Oak Applications on demand.
 service Manager {
   // Request the creation of a new Oak Application with the specified configuration.
@@ -153,4 +160,7 @@ service Manager {
   // endpoint via gRPC and perform a direct attestation against the Node itself,
   // to verify that its configuration corresponds to what the client expects.
   rpc CreateApplication(CreateApplicationRequest) returns (CreateApplicationResponse);
+
+  // Request that an Oak Application terminate.
+  rpc TerminateApplication(TerminateApplicationRequest) returns (TerminateApplicationResponse);
 }
