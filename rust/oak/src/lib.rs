@@ -20,12 +20,9 @@ extern crate fmt;
 extern crate log;
 extern crate protobuf;
 
-mod proto;
-
-use protobuf::Message;
-use std::cell::RefCell;
 use byteorder::WriteBytesExt;
-use protobuf::Message;
+use proto::oak_api::{ChannelHandle, OakStatus};
+use protobuf::{Message, ProtobufEnum};
 use std::io;
 use std::io::Write;
 
@@ -70,41 +67,6 @@ type Handle = u64;
 
 /// Map an OakStatus to the nearest available std::io::Result.
 fn result_from_status<T>(status: Option<OakStatus>, val: T) -> std::io::Result<T> {
-// Keep in sync with /oak/server/oak_node.h.
-pub const LOGGING_CHANNEL_HANDLE: Handle = 1;
-pub const GRPC_METHOD_NAME_CHANNEL_HANDLE: Handle = 2;
-pub const GRPC_IN_CHANNEL_HANDLE: Handle = 3;
-pub const GRPC_OUT_CHANNEL_HANDLE: Handle = 4;
-pub const STORAGE_READ_CHANNEL_HANDLE: Handle = 5;
-pub const STORAGE_WRITE_CHANNEL_HANDLE: Handle = 6;
-
-// Status values returned across the host function interface
-#[derive(Debug, PartialEq)]
-pub enum Status {
-    Ok,
-    BadHandle,
-    InvalidArgs,
-    ChannelClosed,
-    BufferTooSmall,
-    OutOfRange,
-    Unknown(i32),
-}
-
-fn status_from_i32(raw: i32) -> Status {
-    // Keep in sync with /oak/server/status.h
-    match raw {
-        0 => Status::Ok,
-        1 => Status::BadHandle,
-        2 => Status::InvalidArgs,
-        3 => Status::ChannelClosed,
-        4 => Status::BufferTooSmall,
-        5 => Status::OutOfRange,
-        _ => Status::Unknown(raw),
-    }
-}
-
-/// Map a host function status to the nearest available std::io::Result.
-fn result_from_status<T>(status: Status, val: T) -> std::io::Result<T> {
     match status {
         Some(OakStatus::OAK_STATUS_UNSPECIFIED) => Err(io::Error::new(
             io::ErrorKind::Other,
