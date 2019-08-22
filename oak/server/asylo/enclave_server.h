@@ -63,7 +63,9 @@ class EnclaveServer final : public asylo::TrustedApplication {
   asylo::Status Finalize(const asylo::EnclaveFinal& enclave_final) override;
 
  private:
+  int32_t port_;
   std::unique_ptr<OakRuntime> runtime_;
+  std::unique_ptr<::grpc::Server> server_;
 };
 
 }  // namespace oak
