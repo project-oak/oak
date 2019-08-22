@@ -64,6 +64,23 @@ class ManagerClient {
     return response;
   }
 
+  void TerminateApplication(const std::string& application_id) {
+    grpc::ClientContext context;
+
+    TerminateApplicationRequest request;
+    TerminateApplicationResponse response;
+    request.set_application_id(application_id);
+
+    LOG(INFO) << "Terminating Oak Application";
+    grpc::Status status = stub_->TerminateApplication(&context, request, &response);
+    if (!status.ok()) {
+      LOG(ERROR) << "Failed: " << status.error_code() << '/' << status.error_message() << '/'
+                 << status.error_details();
+    }
+
+    LOG(INFO) << "Termination response: " << response.DebugString();
+  }
+
  private:
   std::unique_ptr<Manager::Stub> stub_;
 };
