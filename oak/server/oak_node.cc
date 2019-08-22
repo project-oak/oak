@@ -264,11 +264,19 @@ std::unique_ptr<OakNode> OakNode::Create(const std::string& module) {
   LOG(INFO) << "Executing module oak_main on new thread";
   OakNode* raw_node = node.get();
   std::thread t([raw_node] { raw_node->RunModule(); });
-  // TODO: join() instead when we have node termination
-  t.detach();
+  node->main_ = std::move(t);
   LOG(INFO) << "Started module execution thread";
 
   return node;
+}
+
+OakNode::~OakNode() {
+  if (main_.joinable()) {
+    // Cannot destroy the OakNode instance until the main thread terminates.
+    LOG(INFO) << "Await main thread termination before destroying OakNode instance";
+    main_.join();
+    LOG(INFO) << "Oak node main thread terminated";
+  }
 }
 
 // Register all available host functions so that they are available to the Oak Module at runtime.
