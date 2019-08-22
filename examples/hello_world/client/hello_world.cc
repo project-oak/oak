@@ -80,7 +80,8 @@ int main(int argc, char** argv) {
 
   std::stringstream addr;
   addr << "127.0.0.1:" << create_application_response.grpc_port();
-  LOG(INFO) << "Connecting to Oak Application: " << addr.str();
+  std::string application_id(create_application_response.application_id());
+  LOG(INFO) << "Connecting to Oak Application id=" << application_id << ": " << addr.str();
 
   oak::ApplicationClient::InitializeAssertionAuthorities();
 
@@ -96,6 +97,10 @@ int main(int argc, char** argv) {
   say_hello(stub.get(), "MONDE");
 
   lots_of_replies(stub.get(), "WORLDS");
+
+  // Request termination of the Oak Application.
+  LOG(INFO) << "Terminating application id=" << application_id;
+  manager_client->TerminateApplication(application_id);
 
   return 0;
 }
