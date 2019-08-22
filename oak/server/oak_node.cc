@@ -173,22 +173,6 @@ static bool CheckModuleExports(wabt::interp::Environment* env,
   return rc;
 }
 
-void OakNode::RunModule() {
-  wabt::interp::Thread::Options thread_options;
-  wabt::Stream* trace_stream = nullptr;
-  wabt::interp::Executor executor(&env_, trace_stream, thread_options);
-
-  LOG(INFO) << "module execution thread: run oak_main";
-  wabt::interp::TypedValues args;
-  wabt::interp::ExecResult exec_result = executor.RunExportByName(module_, "oak_main", args);
-
-  if (exec_result.result != wabt::interp::Result::Ok) {
-    LOG(ERROR) << "execution failure: " << wabt::interp::ResultToString(exec_result.result);
-  }
-  uint32_t status = exec_result.values[0].get_i32();
-  LOG(WARNING) << "module execution terminated with status " << status;
-}
-
 OakNode::OakNode() : Service() {}
 
 std::unique_ptr<OakNode> OakNode::Create(const std::string& module) {
@@ -300,6 +284,22 @@ void OakNode::InitEnvironment(wabt::interp::Environment* env) {
       wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
                                   std::vector<wabt::Type>{wabt::Type::I32}),
       this->OakWaitOnChannels(env));
+}
+
+void OakNode::RunModule() {
+  wabt::interp::Thread::Options thread_options;
+  wabt::Stream* trace_stream = nullptr;
+  wabt::interp::Executor executor(&env_, trace_stream, thread_options);
+
+  LOG(INFO) << "module execution thread: run oak_main";
+  wabt::interp::TypedValues args;
+  wabt::interp::ExecResult exec_result = executor.RunExportByName(module_, "oak_main", args);
+
+  if (exec_result.result != wabt::interp::Result::Ok) {
+    LOG(ERROR) << "execution failure: " << wabt::interp::ResultToString(exec_result.result);
+  }
+  uint32_t status = exec_result.values[0].get_i32();
+  LOG(WARNING) << "module execution terminated with status " << status;
 }
 
 wabt::interp::HostFunc::Callback OakNode::OakChannelRead(wabt::interp::Environment* env) {
