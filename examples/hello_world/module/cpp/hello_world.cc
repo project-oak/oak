@@ -34,6 +34,7 @@ enum OakStatus {
   ERR_CHANNEL_CLOSED = 4,
   ERR_BUFFER_TOO_SMALL = 5,
   ERR_OUT_OF_RANGE = 6,
+  ERR_INTERNAL = 7,
 };
 
 enum ChannelHandle {
