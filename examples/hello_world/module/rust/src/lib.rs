@@ -27,6 +27,7 @@ use oak::{GrpcResult, OakNode, ResponseWriter};
 use oak_derive::OakExports;
 use proto::hello_world::{HelloRequest, HelloResponse};
 use proto::hello_world_grpc::{dispatch, HelloWorldNode};
+use protobuf::ProtobufEnum;
 
 #[derive(OakExports)]
 struct Node;
