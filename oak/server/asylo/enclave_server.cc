@@ -59,7 +59,7 @@ asylo::Status EnclaveServer::Initialize(const asylo::EnclaveConfig& config) {
   // Add a completion queue and a generic service, in order to proxy incoming RPCs to the Oak Node.
   auto completion_queue = builder.AddCompletionQueue();
 
-  // Regsister an async service
+  // Register an async service
   auto module_service = absl::make_unique<grpc::AsyncGenericService>();
   builder.RegisterAsyncGenericService(module_service.get());
 
@@ -67,7 +67,7 @@ asylo::Status EnclaveServer::Initialize(const asylo::EnclaveConfig& config) {
     return asylo::Status::OkStatus();
   }
 
-  // Create a grpc server. This class owns it.
+  // Create a gRPC server. This class owns it.
   server_ = builder.BuildAndStart();
   if (!server_) {
     return asylo::Status(asylo::error::GoogleError::INTERNAL, "Failed to start gRPC server");
