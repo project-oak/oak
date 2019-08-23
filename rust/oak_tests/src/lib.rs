@@ -5,6 +5,9 @@ use protobuf::ProtobufEnum;
 use std::cell::RefCell;
 use std::collections::VecDeque;
 
+#[cfg(test)]
+mod tests;
+
 struct MockChannel {
     /// If read_status is set, this status value will be returned for any read
     /// operations on the mock channel (and |messages| will be left

@@ -14,4 +14,5 @@ protoc-rust = "*"
 
 [dev-dependencies]
 assert_matches = "*"
+oak_derive = { path = "../oak_derive" }
 oak_tests = { path = "../oak_tests" }

@@ -1,4 +1,6 @@
+extern crate oak;
 extern crate proc_macro;
+extern crate protobuf;
 extern crate syn;
 
 use proc_macro::TokenStream;
@@ -14,7 +16,9 @@ use quote::quote;
 ///
 /// ```rust
 /// extern crate oak;
+/// extern crate protobuf;
 /// use oak::OakNode;
+/// use protobuf::ProtobufEnum;
 ///
 /// #[derive(oak_derive::OakExports)]
 /// struct Node;
@@ -36,8 +40,16 @@ pub fn derive_oak_exports(input: TokenStream) -> TokenStream {
     let expanded = quote! {
         #[no_mangle]
         pub extern "C" fn oak_main() -> i32 {
-            let mut node = <#name>::new();
-            oak::event_loop(node)
+            // A panic in the Rust module code cannot safely pass through the FFI
+            // boundary, so catch any panics here and translate to an error return.
+            // https://doc.rust-lang.org/nomicon/ffi.html#ffi-and-panics
+            match std::panic::catch_unwind(||{
+                let mut node = <#name>::new();
+                oak::event_loop(node)
+            }) {
+                Ok(rc) => rc,
+                Err(_) => oak::proto::oak_api::OakStatus::ERR_INTERNAL.value(),
+            }
         }
     };
 

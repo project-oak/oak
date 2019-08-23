@@ -27,6 +27,7 @@ use oak::{GrpcResult, OakNode};
 use oak_derive::OakExports;
 use proto::rustfmt::{FormatRequest, FormatResponse};
 use proto::rustfmt_grpc::{dispatch, FormatServiceNode};
+use protobuf::ProtobufEnum;
 
 #[derive(OakExports)]
 struct Node;

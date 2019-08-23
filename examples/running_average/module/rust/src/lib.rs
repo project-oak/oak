@@ -32,6 +32,7 @@ use oak::{GrpcResult, OakNode};
 use oak_derive::OakExports;
 use proto::running_average::{GetAverageResponse, SubmitSampleRequest};
 use proto::running_average_grpc::{dispatch, RunningAverageNode};
+use protobuf::ProtobufEnum;
 
 #[derive(Default, OakExports)]
 struct Node {
