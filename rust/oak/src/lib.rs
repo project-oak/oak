@@ -91,6 +91,9 @@ fn result_from_status<T>(status: Option<OakStatus>, val: T) -> std::io::Result<T
         Some(OakStatus::ERR_OUT_OF_RANGE) => {
             Err(io::Error::new(io::ErrorKind::NotConnected, "Out of range"))
         }
+        Some(OakStatus::ERR_INTERNAL) => {
+            Err(io::Error::new(io::ErrorKind::Other, "Internal error"))
+        }
         None => Err(io::Error::new(
             io::ErrorKind::Other,
             "Unknown Oak status value",

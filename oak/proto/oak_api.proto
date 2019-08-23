@@ -33,6 +33,8 @@ enum OakStatus {
   ERR_BUFFER_TOO_SMALL = 5;
   // Argument out of valid range.
   ERR_OUT_OF_RANGE = 6;
+  // Internal error.
+  ERR_INTERNAL = 7;
 }
 
 // Well-known channel handle values.
