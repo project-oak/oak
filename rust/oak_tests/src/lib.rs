@@ -68,6 +68,17 @@ thread_local! {
     static CHANNEL: RefCell<MockChannel> = RefCell::new(MockChannel::new());
 }
 
+// Implementations of the Oak API host functions in Rust for testing.
+#[no_mangle]
+pub unsafe extern "C" fn wait_on_channels(buf: *mut u8, count: u32) -> i32 {
+    // Pretend all channels are readable.
+    for i in 0..(count as usize) {
+        let p = buf.add(i * oak::SPACE_BYTES_PER_HANDLE + (oak::SPACE_BYTES_PER_HANDLE - 1));
+        *p = 1;
+    }
+    OakStatus::OK.value()
+}
+
 #[no_mangle]
 pub extern "C" fn channel_write(_handle: u64, buf: *const u8, size: usize) -> i32 {
     CHANNEL.with(|channel| channel.borrow_mut().write_message(buf, size))

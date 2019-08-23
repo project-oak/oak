@@ -113,7 +113,7 @@ mod wasm {
     }
 }
 
-const SPACE_BYTES_PER_HANDLE: usize = 9;
+pub const SPACE_BYTES_PER_HANDLE: usize = 9;
 
 // Build a chunk of memory that is suitable for passing to wasm::wait_on_channels,
 // holding the given collection of channel handles.
