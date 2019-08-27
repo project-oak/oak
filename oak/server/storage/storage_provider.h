@@ -17,6 +17,7 @@
 #ifndef OAK_SERVER_STORAGE_STORAGE_PROVIDER_H_
 #define OAK_SERVER_STORAGE_STORAGE_PROVIDER_H_
 
+#include "include/grpcpp/support/status.h"
 #include "oak/proto/storage.pb.h"
 
 namespace oak {
