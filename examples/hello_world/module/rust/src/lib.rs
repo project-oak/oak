@@ -32,6 +32,9 @@ use protobuf::ProtobufEnum;
 #[derive(OakExports)]
 struct Node;
 
+const STORAGE_NAME: &[u8] = b"HelloWorld";
+const FIELD_NAME: &[u8] = b"last-greeting";
+
 impl oak::OakNode for Node {
     fn new() -> Self {
         oak_log::init(log::Level::Debug).unwrap();
@@ -50,6 +53,8 @@ impl HelloWorldNode for Node {
             status.set_message("Deliberate error (code 3)".to_string());
             return Err(status);
         }
+        // Save the latest greeting to storage.
+        oak::storage::write(STORAGE_NAME, FIELD_NAME, req.greeting.as_bytes());
         info!("Say hello to {}", req.greeting);
         let mut res = HelloResponse::new();
         res.reply = format!("HELLO {}!", req.greeting);
@@ -65,9 +70,13 @@ impl HelloWorldNode for Node {
         let mut res1 = HelloResponse::new();
         res1.reply = format!("HELLO {}!", req.greeting);
         writer.write(res1);
-        info!("Say bonjour to {}", req.greeting);
+
+        // Also generate a response with the last-stored value.
+        let prev_bytes = oak::storage::read(STORAGE_NAME, FIELD_NAME);
+        let previous = std::str::from_utf8(&prev_bytes).unwrap();
+        info!("Say bonjour to {}", previous);
         let mut res2 = HelloResponse::new();
-        res2.reply = format!("BONJOUR {}!", req.greeting);
+        res2.reply = format!("BONJOUR {}!", previous);
         writer.write(res2);
         Ok(())
     }
