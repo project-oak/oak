@@ -260,6 +260,7 @@ void OakNode::RunModule() {
 
   if (exec_result.result != wabt::interp::Result::Ok) {
     LOG(ERROR) << "execution failure: " << wabt::interp::ResultToString(exec_result.result);
+    return;
   }
   uint32_t status = exec_result.values[0].get_i32();
   LOG(WARNING) << "module execution terminated with status " << status;
