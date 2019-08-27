@@ -18,6 +18,13 @@ package(
     default_visibility = ["//oak/server:__pkg__"],
 )
 
+# Mark tests that can be run on the host system (i.e. with a normal
+# compiler, not the Asylo toolchain) with 'host' tag.
+test_suite(
+    name = "host_tests",
+    tags = ["host"],
+)
+
 cc_binary(
     name = "storage_server",
     srcs = ["storage_server.cc"],
@@ -119,5 +126,25 @@ cc_library(
         "@com_google_asylo//asylo/util:logging",
         # TODO: Fix grpc::Status.
         #        "@com_google_googleapis//google/spanner/v1:spanner_cc_grpc",
+    ],
+)
+
+cc_library(
+    name = "memory_provider",
+    srcs = ["memory_provider.cc"],
+    hdrs = ["memory_provider.h"],
+    deps = [
+        ":storage_provider",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_test(
+    name = "memory_provider_test",
+    srcs = ["memory_provider_test.cc"],
+    tags = ["host"],
+    deps = [
+        ":memory_provider",
+        "@gtest//:gtest_main",
     ],
 )
