@@ -85,6 +85,7 @@ cc_library(
     ],
     deps = [
         "//oak/proto:storage_cc_proto",
+        "@com_github_grpc_grpc//:grpc++",
     ],
 )
 
