@@ -318,6 +318,15 @@ TODO: Roughtime
 
 ### Prerequisites
 
+We use Docker to install the base dependencies that need to exist at the system
+level, e.g. the Intel SGX SDK and the Rust compiler; these steps are detailed in
+[`Dockerfile`](/Dockerfile). See
+https://docs.docker.com/engine/reference/builder/ for more information.
+
+Inside Docker, we use Bazel to version, install and build dependencies and our
+own code. Dependencies are listed in [`WORKSPACE`](/WORKSPACE). See
+https://docs.bazel.build/versions/master/external.html for more information.
+
 -   Docker: https://docs.docker.com/install
 -   Bazel: https://docs.bazel.build/versions/master/install.html
 -   Rust: https://rustup.rs/
