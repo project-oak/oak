@@ -21,9 +21,9 @@
 
 namespace oak {
 
-// StorageProvider is an abstract interface for implementations of a
-// persistent data store for StorageService.  This is an opaque name-value
-// store that should handle only encrypted blobs of data.
+// StorageProvider is an abstract interface for Storage::Service implementations
+// of persistent storage.  It is an opaque name-value store that should handle
+// only encrypted blobs of data.
 class StorageProvider {
  public:
   StorageProvider() {}
