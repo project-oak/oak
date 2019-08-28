@@ -29,8 +29,13 @@ class ModuleInvocation {
   // All constructor arguments must outlive this object.  It manages its own
   // lifetime after RequestNext is called.
   ModuleInvocation(grpc::AsyncGenericService* service, grpc::ServerCompletionQueue* queue,
-                   OakNode* node)
-      : service_(service), queue_(queue), node_(node), stream_(&context_) {}
+                   std::shared_ptr<MessageChannel> grpc_in,
+                   std::shared_ptr<MessageChannel> grpc_out)
+      : service_(service),
+        queue_(queue),
+        grpc_in_(grpc_in),
+        grpc_out_(grpc_out),
+        stream_(&context_) {}
 
   // This object deletes itself.
   ~ModuleInvocation() = default;
@@ -62,7 +67,9 @@ class ModuleInvocation {
 
   grpc::AsyncGenericService* const service_;
   grpc::ServerCompletionQueue* const queue_;
-  OakNode* const node_;
+
+  std::shared_ptr<MessageChannel> grpc_in_;
+  std::shared_ptr<MessageChannel> grpc_out_;
 
   grpc::GenericServerContext context_;
   grpc::GenericServerAsyncReaderWriter stream_;

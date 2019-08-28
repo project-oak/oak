@@ -44,13 +44,6 @@ class OakNode final : public Application::Service {
   // running the instance completes.
   virtual ~OakNode();
 
-  // Performs an Oak Module gRPC invocation. Takes ownership of the passed in request data.
-  void ProcessModuleInvocation(grpc::GenericServerContext* context,
-                               std::unique_ptr<Message> request_data);
-
-  // Returns the next response from a gRPC invocation.
-  oak::GrpcResponse NextResponse();
-
  private:
   // Clients should construct OakNode instances with Create() (which
   // can fail).
@@ -78,10 +71,6 @@ class OakNode final : public Application::Service {
 
   // Hold the mapping between per-Node channel handles and channel half instances
   ChannelHalfTable channel_halves_;
-
-  // Hold on to the other halves of channels that the node uses to perform gRPC.
-  std::unique_ptr<MessageChannelWriteHalf> req_half_;
-  std::unique_ptr<MessageChannelReadHalf> rsp_half_;
 
   // Thread running the oak_main export.
   std::thread main_;
