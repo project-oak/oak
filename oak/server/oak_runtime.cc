@@ -55,6 +55,8 @@ asylo::Status OakRuntime::InitializeServer(
     return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT, "Failed to create Oak Node");
   }
 
+  SetUpChannels();
+
   // Ensure that the server is only created and initialized once.
   if (server_) {
     return asylo::Status::OkStatus();
@@ -89,6 +91,34 @@ asylo::StatusOr<std::unique_ptr<grpc::Server>> OakRuntime::CreateServer(
   LOG(INFO) << "gRPC server is listening on port: " << port_;
 
   return std::move(server);
+}
+
+// Create all the necessary channels and pass the appropriate halves to |node_|.
+void OakRuntime::SetUpChannels() {
+  // Create a logging channel for the node.
+  {
+    std::shared_ptr<MessageChannel> channel = std::make_shared<MessageChannel>();
+    node_->SetChannel(ChannelHandle::LOGGING, absl::make_unique<MessageChannelWriteHalf>(channel));
+    LOG(INFO) << "Created logging channel " << ChannelHandle::LOGGING;
+
+    // Spawn a thread that reads and logs messages on this channel forever.
+    std::thread t([channel] {
+      std::unique_ptr<MessageChannelReadHalf> read_chan =
+          absl::make_unique<MessageChannelReadHalf>(channel);
+      while (true) {
+        ReadResult result = read_chan->BlockingRead(INT_MAX);
+        if (result.required_size > 0) {
+          LOG(ERROR) << "Message size too large: " << result.required_size;
+          return;
+        }
+        LOG(INFO) << "LOG: " << std::string(result.data->data(), result.data->size());
+      }
+    });
+    // TODO: join() instead when we have node termination
+    t.detach();
+  }
+
+  // TODO: Set up remaining channels here rather than in OakNode.
 }
 
 int OakRuntime::GetServerAddress() { return port_; }

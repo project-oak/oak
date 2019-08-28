@@ -197,30 +197,6 @@ std::unique_ptr<OakNode> OakNode::Create(const std::string& module) {
     return nullptr;
   }
 
-  // Create a logging channel for the module.
-  {
-    std::shared_ptr<MessageChannel> channel = std::make_shared<MessageChannel>();
-    node->channel_halves_[ChannelHandle::LOGGING] =
-        absl::make_unique<MessageChannelWriteHalf>(channel);
-    LOG(INFO) << "Created logging channel " << ChannelHandle::LOGGING;
-
-    // Spawn a thread that reads and logs messages on this channel forever.
-    std::thread t([channel] {
-      std::unique_ptr<MessageChannelReadHalf> read_chan =
-          absl::make_unique<MessageChannelReadHalf>(channel);
-      while (true) {
-        ReadResult result = read_chan->BlockingRead(INT_MAX);
-        if (result.required_size > 0) {
-          LOG(ERROR) << "Message size too large: " << result.required_size;
-          return;
-        }
-        LOG(INFO) << "LOG: " << std::string(result.data->data(), result.data->size());
-      }
-    });
-    // TODO: join() instead when we have node termination
-    t.detach();
-  }
-
   // Create the channels needed for gRPC interactions.
   {
     // Incoming request channel: keep the write half in C++, but map the read
@@ -252,6 +228,10 @@ std::unique_ptr<OakNode> OakNode::Create(const std::string& module) {
   LOG(INFO) << "Started module execution thread";
 
   return node;
+}
+
+void OakNode::SetChannel(Handle handle, std::unique_ptr<ChannelHalf> channel_half) {
+  channel_halves_[handle] = std::move(channel_half);
 }
 
 OakNode::~OakNode() {
