@@ -28,7 +28,6 @@
 ABSL_FLAG(std::string, manager_address, "127.0.0.1:8888",
           "Address of the Oak Manager to connect to");
 ABSL_FLAG(std::string, module, "", "File containing the compiled WebAssembly module");
-ABSL_FLAG(bool, insecure_channel, false, "Use InsecureChannelCredentials to connect to the node");
 
 using ::oak::examples::private_set_intersection::GetIntersectionResponse;
 using ::oak::examples::private_set_intersection::PrivateSetIntersection;
@@ -85,14 +84,14 @@ int main(int argc, char** argv) {
 
   // Connect to the newly created Oak Application from different clients.
   auto channel_0 = grpc::CreateChannel(
-      addr.str(), oak::utils::get_credentials(absl::GetFlag(FLAGS_insecure_channel)));
+      addr.str(), asylo::EnclaveChannelCredentials(asylo::BidirectionalNullCredentialsOptions()));
   oak::ApplicationClient client_0(channel_0);
   oak::GetAttestationResponse attestation = client_0.GetAttestation();
   LOG(INFO) << "Oak Application attestation: " << attestation.DebugString();
   auto stub_0 = PrivateSetIntersection::NewStub(channel_0);
 
   auto stub_1 = PrivateSetIntersection::NewStub(grpc::CreateChannel(
-      addr.str(), oak::utils::get_credentials(absl::GetFlag(FLAGS_insecure_channel))));
+      addr.str(), asylo::EnclaveChannelCredentials(asylo::BidirectionalNullCredentialsOptions())));
 
   // Submit sets from different clients.
   std::vector<std::string> set_0{"a", "b", "c"};

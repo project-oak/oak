@@ -3,20 +3,14 @@ set -o errexit
 set -o xtrace
 
 IS_CPP=false
-USE_INSECURE_CHANNEL=false
 
-while getopts "hci" opt; do
+while getopts "hc" opt; do
     case "$opt" in
     h)
         echo -e "Usage: $0 [-c] example_name
   -c    Run the C++ version of the example
-  -i    Use a insecure channel to connect to Oak App (useful for development)    
   -h    Print this message"
         exit 0
-        ;;
-    i)
-        echo "Using insecure channel to connect"
-        USE_INSECURE_CHANNEL=true
         ;;
     c)
         echo "Running Node in C++ mode"
@@ -47,5 +41,4 @@ fi
 
 "./client-bin/examples/${NAME}/client/client" \
   --manager_address="${OAK_MANAGER_ADDRESS}" \
-  --module="${MODULE_PATH}" \
-  --insecure_channel="${USE_INSECURE_CHANNEL}"
+  --module="${MODULE_PATH}"

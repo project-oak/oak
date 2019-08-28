@@ -59,8 +59,8 @@ grpc::Service* OakRuntime::GetGrpcService() { return node_.get(); }
 
 asylo::Status OakRuntime::StartCompletionQueue(std::unique_ptr<grpc::AsyncGenericService> service,
                                                std::unique_ptr<grpc::ServerCompletionQueue> queue) {
-  // Use the serive and queue provided
-  // TODO: check to see if we already started this
+  // Use the serivce and queue provided.
+  // TODO: check to see if we already started this.
   module_service_ = std::move(service);
   completion_queue_ = std::move(queue);
 

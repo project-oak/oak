@@ -28,7 +28,6 @@
 ABSL_FLAG(std::string, manager_address, "127.0.0.1:8888",
           "Address of the Oak Manager to connect to");
 ABSL_FLAG(std::string, module, "", "File containing the compiled WebAssembly module");
-ABSL_FLAG(bool, insecure_channel, false, "Use InsecureChannelCredentials to connect to the node");
 
 using ::oak::examples::machine_learning::MachineLearning;
 using ::oak::examples::machine_learning::MLData;
@@ -92,7 +91,7 @@ int main(int argc, char** argv) {
 
   // Connect to the newly created Oak Application.
   auto stub = MachineLearning::NewStub(grpc::CreateChannel(
-      addr.str(), oak::utils::get_credentials(absl::GetFlag(FLAGS_insecure_channel))));
+      addr.str(), asylo::EnclaveChannelCredentials(asylo::BidirectionalNullCredentialsOptions())));
 
   // Perform multiple invocations of the same Oak Application, with different parameters.
   auto message_0 = send_data(stub.get());

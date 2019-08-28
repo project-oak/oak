@@ -20,6 +20,7 @@
 
 #include "absl/strings/string_view.h"
 #include "asylo/util/logging.h"
+#include "oak/proto/enclave.pb.h"
 #include "oak/proto/manager.grpc.pb.h"
 #include "oak/server/oak_runtime.h"
 
@@ -35,6 +36,7 @@ class DevOakManager final : public Manager::Service {
 
  private:
   void CreateServer();
+  void InitializeAssertionAuthorities();
   std::string NewApplicationId();
 
   // The port is listening on

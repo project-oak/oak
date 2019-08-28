@@ -23,7 +23,6 @@
 #include "asylo/util/status.h"
 #include "include/grpcpp/security/server_credentials.h"
 #include "include/grpcpp/server.h"
-#include "oak/proto/enclave.pb.h"
 #include "oak/proto/manager.pb.h"
 #include "oak/proto/oak_api.pb.h"
 #include "oak/server/oak_node.h"
