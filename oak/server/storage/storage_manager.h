@@ -25,6 +25,7 @@
 
 namespace oak {
 
+// TODO: Refactor to use new MessageChannel approach.
 class StorageManager {
  public:
   StorageManager() {}

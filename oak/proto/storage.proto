@@ -77,7 +77,9 @@ message RollbackResponse {
 message StorageOperationRequest {
   // The name of the storage on which to perform the operation.
   // The StorageChannel generates a deterministic name-based (version 5) UUID
-  // from this value and the Oak Module to use as the storage identifier.
+  // from this value and the Oak Module identifier to use for the storage_id
+  // message field.  This prevents name collisions among Oak Modules and
+  // simplifies the interface to the Storage service implementation.
   bytes storage_name = 1;
 
   oneof operation {
