@@ -25,6 +25,7 @@
 #include "include/grpcpp/security/server_credentials.h"
 #include "include/grpcpp/server.h"
 #include "oak/proto/enclave.pb.h"
+#include "oak/proto/oak_api.pb.h"
 #include "oak/server/oak_node.h"
 
 namespace oak {
@@ -56,6 +57,8 @@ class OakRuntime {
   // Creates a gRPC server that hosts node_ on a free port with credentials_.
   asylo::StatusOr<std::unique_ptr<::grpc::Server>> CreateServer(
       const std::shared_ptr<grpc::ServerCredentials> credentials);
+
+  void SetUpChannels();
 
   // Consumes gRPC events from the completion queue in an infinite loop.
   void CompletionQueueLoop();
