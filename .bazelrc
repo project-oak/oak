@@ -25,6 +25,46 @@ build:wasm32 --crosstool_top=//toolchain:clang_llvm
 build:wasm32 --host_crosstool_top=@bazel_tools//tools/cpp:toolchain
 build:wasm32 --cpu=wasm32
 
+# Address sanitizer
+# To use it: bazel build --config asan
+build:asan --compiler clang
+build:asan --strip=never
+build:asan --copt -fsanitize=address
+build:asan --copt -DADDRESS_SANITIZER
+build:asan --copt -O1
+build:asan --copt -g
+build:asan --copt -fno-omit-frame-pointer
+build:asan --linkopt -fsanitize=address
+
+# Thread sanitizer
+# bazel build --config tsan
+build:tsan --strip=never
+build:tsan --copt -fsanitize=thread
+build:tsan --copt -DTHREAD_SANITIZER
+build:tsan --copt -DDYNAMIC_ANNOTATIONS_ENABLED=1
+build:tsan --copt -DDYNAMIC_ANNOTATIONS_EXTERNAL_IMPL=1
+build:tsan --copt -O1
+build:tsan --copt -g
+build:tsan --copt -fno-omit-frame-pointer
+build:tsan --linkopt -fsanitize=thread
+build:tsan --test_env=TSAN_OPTIONS=report_atomic_races=0
+
+# --config msan: Memory sanitizer
+build:msan --strip=never
+build:msan --copt -fsanitize=memory
+build:msan --copt -DADDRESS_SANITIZER
+build:msan --copt -O1
+build:msan --copt -fno-omit-frame-pointer
+build:msan --linkopt -fsanitize=memory
+
+# --config ubsan: Undefined Behavior Sanitizer
+build:ubsan --strip=never
+build:ubsan --copt -fsanitize=undefined
+build:ubsan --copt -O1
+build:ubsan --copt -fno-omit-frame-pointer
+build:ubsan --linkopt -fsanitize=undefined
+build:ubsan --linkopt -lubsan
+
 # Bazel 0.27.0 deprecates features that our dependencies (gRPC, protobuf) rely on, so disable
 # the checks until all dependencies have been updated to cope with a later Bazel.
 # TODO: remove these options when possible
