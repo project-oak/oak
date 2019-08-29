@@ -68,14 +68,14 @@ void ModuleInvocation::ProcessRequest(bool ok) {
 
   // Build an encapsulation of the gRPC request invocation and write its serialized
   // form to the gRPC input channel.
-  oak::GrpcRequest grpc_in;
-  grpc_in.set_method_name(context_.method());
+  oak::GrpcRequest grpc_request;
+  grpc_request.set_method_name(context_.method());
   google::protobuf::Any* any = new google::protobuf::Any();
   any->set_value(request_data->data(), request_data->size());
-  grpc_in.set_allocated_req_msg(any);
-  grpc_in.set_last(true);
+  grpc_request.set_allocated_req_msg(any);
+  grpc_request.set_last(true);
   std::string encap_req;
-  grpc_in.SerializeToString(&encap_req);
+  grpc_request.SerializeToString(&encap_req);
   // TODO: figure out a way to avoid the extra copy (into then out of std::string)
   std::unique_ptr<Message> encap_data =
       absl::make_unique<Message>(encap_req.begin(), encap_req.end());
@@ -94,7 +94,6 @@ void ModuleInvocation::SendResponse(bool ok) {
     return;
   }
 
-  oak::GrpcResponse grpc_out;
   ReadResult rsp_result;
   // Block until we can read a single queued GrpcResponse message (in serialized form) from the
   // gRPC output channel.
@@ -106,21 +105,22 @@ void ModuleInvocation::SendResponse(bool ok) {
   }
 
   LOG(INFO) << "Read encapsulated message of size " << rsp_result.data->size()
-            << " from output channel";
+            << " from gRPC output channel";
+  oak::GrpcResponse grpc_response;
   // TODO: Check errors.
-  grpc_out.ParseFromString(std::string(rsp_result.data->data(), rsp_result.data->size()));
+  grpc_response.ParseFromString(std::string(rsp_result.data->data(), rsp_result.data->size()));
 
-  const grpc::string& inner_msg = grpc_out.rsp_msg().value();
+  const grpc::string& inner_msg = grpc_response.rsp_msg().value();
   grpc::Slice slice(inner_msg.data(), inner_msg.size());
   grpc::ByteBuffer bb(&slice, /*nslices=*/1);
 
   grpc::WriteOptions options;
-  if (!grpc_out.last()) {
+  if (!grpc_response.last()) {
     LOG(INFO) << "Non-final inner response of size " << inner_msg.size();
     auto callback = new std::function<void(bool)>(
         std::bind(&ModuleInvocation::SendResponse, this, std::placeholders::_1));
     stream_.Write(bb, options, callback);
-  } else if (!grpc_out.has_rsp_msg()) {
+  } else if (!grpc_response.has_rsp_msg()) {
     // Final iteration but no response, just Finish.
     LOG(INFO) << "Final inner response empty";
     FinishAndRestart(::grpc::Status::OK);

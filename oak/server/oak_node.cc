@@ -349,6 +349,12 @@ wabt::interp::HostFunc::Callback OakNode::OakWaitOnChannels(wabt::interp::Enviro
       return wabt::interp::Result::Ok;
     }
 
+    if (channel_halves_.count(handle0) == 0) {
+      LOG(WARNING) << "Invalid channel handle: " << handle0;
+      results[0].set_i32(OakStatus::ERR_BAD_HANDLE);
+      return wabt::interp::Result::Ok;
+    }
+
     std::unique_ptr<ChannelHalf>& channel = channel_halves_.at(handle0);
     channel->Await();
     // TODO: Mark just the relevant channels as ready to read.
