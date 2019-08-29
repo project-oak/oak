@@ -68,6 +68,8 @@ asylo::Status OakRuntime::InitializeServer(
   std::thread thread(&OakRuntime::CompletionQueueLoop, this);
   thread.detach();
 
+  node_->Run();
+
   return asylo::Status::OkStatus();
 }
 

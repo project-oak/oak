@@ -102,7 +102,7 @@ class MessageChannel final : public ChannelHalf {
   // Write passes ownership of a message to the channel.
   void Write(std::unique_ptr<Message> data) override LOCKS_EXCLUDED(mu_);
 
-  void Await() LOCKS_EXCLUDED(mu_);
+  void Await() override LOCKS_EXCLUDED(mu_);
 
  private:
   ReadResult ReadLocked(uint32_t size) EXCLUSIVE_LOCKS_REQUIRED(mu_);

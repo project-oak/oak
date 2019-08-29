@@ -197,17 +197,18 @@ std::unique_ptr<OakNode> OakNode::Create(const std::string& module) {
     return nullptr;
   }
 
+  return node;
+}
+
+void OakNode::Run() {
   // Spin up a per-node Wasm thread to run forever; the Node object must
-  // outlast this thread (which is enforced by ~OakNode).  Also, make sure
+  // outlast this thread (which is enforced by ~OakNode). Also, make sure
   // we pass the DefinedNode* to the thread by value so it doesn't fall out
   // of scope once this function exits.
   LOG(INFO) << "Executing module oak_main on new thread";
-  OakNode* raw_node = node.get();
-  std::thread t([raw_node] { raw_node->RunModule(); });
-  node->main_ = std::move(t);
+  std::thread t([this] { this->RunModule(); });
+  main_ = std::move(t);
   LOG(INFO) << "Started module execution thread";
-
-  return node;
 }
 
 void OakNode::SetChannel(Handle handle, std::unique_ptr<ChannelHalf> channel_half) {
