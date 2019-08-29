@@ -41,7 +41,6 @@ cc_library(
         ":channel",
         "//oak/common:handles",
         "//oak/proto:application_cc_grpc",
-        "//oak/proto:grpc_encap_cc_proto",
         "//oak/proto:oak_api_cc_proto",
         "@boringssl//:crypto",
         "@com_github_grpc_grpc//:grpc++",
@@ -84,6 +83,7 @@ cc_library(
     hdrs = ["module_invocation.h"],
     deps = [
         ":oak_node",
+        "//oak/proto:grpc_encap_cc_proto",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_asylo//asylo/util:logging",
     ],

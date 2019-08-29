@@ -25,7 +25,6 @@
 #include "absl/types/span.h"
 #include "oak/common/handles.h"
 #include "oak/proto/application.grpc.pb.h"
-#include "oak/proto/grpc_encap.pb.h"
 #include "oak/server/channel.h"
 #include "src/interp/interp.h"
 
