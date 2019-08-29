@@ -8,6 +8,12 @@
 set -o errexit
 set -o xtrace
 
+readonly COMMIT_ID="${TRAVIS_COMMIT:-$(git rev-parse HEAD)}"
+
+readonly DOCKER_IMAGE_BASE='gcr.io/oak-ci/oak'
+readonly DOCKER_IMAGE_LATEST="$DOCKER_IMAGE_BASE:latest"
+readonly DOCKER_IMAGE_COMMIT="$DOCKER_IMAGE_BASE:$COMMIT_ID"
+
 # The default user for a Docker container has uid 0 (root). To avoid creating
 # root-owned files in the build directory we tell Docker to use the current user
 # ID, if known.
@@ -20,9 +26,25 @@ readonly DOCKER_USER="${USER:-root}"
 mkdir -p './bazel-cache'
 mkdir -p './cargo-cache'
 
+docker pull "$DOCKER_IMAGE_LATEST" || true
+docker pull "$DOCKER_IMAGE_COMMIT" || true
+
 docker build \
-  --tag=oak \
+  --cache-from="$DOCKER_IMAGE_LATEST" \
+  --cache-from="$DOCKER_IMAGE_COMMIT" \
+  --tag="$DOCKER_IMAGE_LATEST" \
+  --tag="$DOCKER_IMAGE_COMMIT" \
   . 1>&2
+
+# Try to push the image to the repository. This only works if the user has write
+# access to the `oak-ci` Google Container Registry (GCR), therefore we ignore
+# any failures.
+# https://pantheon.corp.google.com/gcr/images/oak-ci/GLOBAL/oak
+# In order to authenticate Docker against GCR, run the following commands:
+# gcloud auth login
+# gcloud auth configure-docker
+docker push "$DOCKER_IMAGE_LATEST" || true
+docker push "$DOCKER_IMAGE_COMMIT" || true
 
 docker_run_flags=(
   "--interactive"
@@ -38,8 +60,8 @@ docker_run_flags=(
 
 if [[ "$1" == "--detach" ]]; then
   docker_run_flags+=("--detach")
-  docker run "${docker_run_flags[@]}" oak:latest "${@:2}"
+  docker run "${docker_run_flags[@]}" "$DOCKER_IMAGE_COMMIT" "${@:2}"
 else
-  docker run "${docker_run_flags[@]}" oak:latest "$@"
+  docker run "${docker_run_flags[@]}" "$DOCKER_IMAGE_COMMIT" "$@"
 fi
 
