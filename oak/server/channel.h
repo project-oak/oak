@@ -73,6 +73,9 @@ class ChannelHalf {
     return nothing;
   }
 
+  // Indicate whether a Read operation would return a message.
+  virtual bool CanRead() { return false; }
+
   // Write the provided message to the Channel.
   virtual void Write(std::unique_ptr<Message> msg) {
     // Fallback implementation that just drops the message.
@@ -116,6 +119,7 @@ class MessageChannelReadHalf final : public ChannelHalf {
  public:
   MessageChannelReadHalf(std::shared_ptr<MessageChannel> channel) : channel_(channel) {}
   ReadResult Read(uint32_t size) override { return channel_->Read(size); }
+  bool CanRead() override { return channel_->Count() > 0; }
   ReadResult BlockingRead(uint32_t size) { return channel_->BlockingRead(size); }
   void Await() override { return channel_->Await(); }
 
