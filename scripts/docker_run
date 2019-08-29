@@ -27,6 +27,7 @@ docker build \
 docker_run_flags=(
   "--interactive"
   "--tty"
+  "--rm"
   "--user=$DOCKER_UID:$DOCKER_GID"
   "--env=USER=$DOCKER_USER"
   "--volume=$PWD/bazel-cache:/.cache/bazel"

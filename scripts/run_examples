@@ -2,6 +2,7 @@
 
 set -o errexit
 set -o nounset
+set -o xtrace
 
 readonly DOCKER_UID="${UID:-0}"
 readonly DOCKER_GID="${GID:-0}"
@@ -16,6 +17,7 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 readonly RUST_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module/rust$' | cut -d'/' -f2)"
 for example in ${RUST_EXAMPLES}; do
   container_id=$("$SCRIPTS_DIR/docker_run" --detach ./bazel-bin/oak/server/asylo/oak)
+  docker logs --follow "$container_id" &
   "${SCRIPTS_DIR}/docker_run" "${SCRIPTS_DIR}/run_example" "${example}"
   docker stop "$container_id"
 done
@@ -24,6 +26,7 @@ done
 readonly CPP_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module/cpp$' | cut -d'/' -f2)"
 for example in ${CPP_EXAMPLES}; do
   container_id=$("$SCRIPTS_DIR/docker_run" --detach ./bazel-bin/oak/server/asylo/oak)
+  docker logs --follow "$container_id" &
   "${SCRIPTS_DIR}/docker_run" "${SCRIPTS_DIR}/run_example" -c "${example}"
   docker stop "$container_id"
 done
