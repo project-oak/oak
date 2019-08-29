@@ -22,6 +22,8 @@
 #include <utility>
 
 #include "absl/memory/memory.h"
+#include "absl/time/clock.h"
+#include "absl/time/time.h"
 #include "asylo/util/logging.h"
 #include "grpcpp/create_channel.h"
 #include "oak/proto/oak_api.pb.h"
@@ -342,28 +344,38 @@ wabt::interp::HostFunc::Callback OakNode::OakWaitOnChannels(wabt::interp::Enviro
     results[0].set_i32(OakStatus::OK);
 
     if (count == 0) {
-      LOG(INFO) << "Waiting on no channels";
+      LOG(INFO) << "Waiting on no channels, return immediately";
       return wabt::interp::Result::Ok;
     }
 
-    uint64_t handle0 = ReadU64(env, offset);
-    // TODO: Drop hardcoded single channel
-    if (handle0 != ChannelHandle::GRPC_IN) {
-      LOG(ERROR) << "Read of unexpected handle " << handle0;
-      return wabt::interp::Result::Ok;
+    std::vector<uint64_t> handles;
+    handles.reserve(count);
+    for (uint32_t ii = 0; ii < count; ii++) {
+      uint64_t handle = ReadU64(env, offset + (9 * ii));
+      handles.push_back(handle);
     }
-
-    if (channel_halves_.count(handle0) == 0) {
-      LOG(WARNING) << "Invalid channel handle: " << handle0;
-      results[0].set_i32(OakStatus::ERR_BAD_HANDLE);
-      return wabt::interp::Result::Ok;
+    bool done = false;
+    while (!done) {
+      for (uint32_t ii = 0; ii < count; ii++) {
+        uint64_t handle = handles[ii];
+        ChannelHalfTable::iterator it = channel_halves_.find(handle);
+        if (it == channel_halves_.end()) {
+          LOG(WARNING) << "Waiting on non-existent channel handle " << handle;
+          continue;
+        }
+        ChannelHalf* channel = it->second.get();
+        if (channel->CanRead()) {
+          LOG(INFO) << "Message available on handle " << handle;
+          done = true;
+          auto base = env->GetMemory(0)->data.begin() + offset + (9 * ii);
+          base[8] = 0x01;
+        }
+      }
+      if (!done) {
+        // TODO: get rid of polling wait
+        absl::SleepFor(absl::Milliseconds(100));
+      }
     }
-
-    std::unique_ptr<ChannelHalf>& channel = channel_halves_.at(handle0);
-    channel->Await();
-    // TODO: Mark just the relevant channels as ready to read.
-    auto base = env->GetMemory(0)->data.begin() + offset;
-    base[8] = 0x01;
     return wabt::interp::Result::Ok;
   };
 }
