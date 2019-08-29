@@ -21,33 +21,36 @@ namespace oak {
 StorageService::StorageService(StorageProvider* storage_provider)
     : storage_provider_(storage_provider) {}
 
-grpc::Status StorageService::Read(grpc::ServerContext* context, const ReadRequest* request,
-                                  ReadResponse* response) {
+grpc::Status StorageService::Read(grpc::ServerContext* context, const StorageReadRequest* request,
+                                  StorageReadResponse* response) {
   return storage_provider_->Read(request, response);
 }
 
-grpc::Status StorageService::Write(grpc::ServerContext* context, const WriteRequest* request,
-                                   WriteResponse* response) {
+grpc::Status StorageService::Write(grpc::ServerContext* context, const StorageWriteRequest* request,
+                                   StorageWriteResponse* response) {
   return storage_provider_->Write(request, response);
 }
 
-grpc::Status StorageService::Delete(grpc::ServerContext* context, const DeleteRequest* request,
-                                    DeleteResponse* response) {
+grpc::Status StorageService::Delete(grpc::ServerContext* context,
+                                    const StorageDeleteRequest* request,
+                                    StorageDeleteResponse* response) {
   return storage_provider_->Delete(request, response);
 }
 
-grpc::Status StorageService::Begin(grpc::ServerContext* context, const BeginRequest* request,
-                                   BeginResponse* response) {
+grpc::Status StorageService::Begin(grpc::ServerContext* context, const StorageBeginRequest* request,
+                                   StorageBeginResponse* response) {
   return storage_provider_->Begin(request, response);
 }
 
-grpc::Status StorageService::Commit(grpc::ServerContext* context, const CommitRequest* request,
-                                    CommitResponse* response) {
+grpc::Status StorageService::Commit(grpc::ServerContext* context,
+                                    const StorageCommitRequest* request,
+                                    StorageCommitResponse* response) {
   return storage_provider_->Commit(request, response);
 }
 
-grpc::Status StorageService::Rollback(grpc::ServerContext* context, const RollbackRequest* request,
-                                      RollbackResponse* response) {
+grpc::Status StorageService::Rollback(grpc::ServerContext* context,
+                                      const StorageRollbackRequest* request,
+                                      StorageRollbackResponse* response) {
   return storage_provider_->Rollback(request, response);
 }
 

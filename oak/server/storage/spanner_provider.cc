@@ -23,22 +23,28 @@ using google::spanner::v1::Spanner;
 SpannerProvider::SpannerProvider(std::shared_ptr<grpc::ChannelInterface> channel)
     : spanner_service_(Spanner::NewStub(channel)) {}
 
-grpc::Status SpannerProvider::Read(const ReadRequest* request, ReadResponse* response) {
+grpc::Status SpannerProvider::Read(const StorageReadRequest* request,
+                                   StorageReadResponse* response) {
   return grpc::Status(grpc::StatusCode::UNIMPLEMENTED, "Read method not implemented.");
 }
-grpc::Status SpannerProvider::Write(const WriteRequest* request, WriteResponse* response) {
+grpc::Status SpannerProvider::Write(const StorageWriteRequest* request,
+                                    StorageWriteResponse* response) {
   return grpc::Status(grpc::StatusCode::UNIMPLEMENTED, "Write method not implemented.");
 }
-grpc::Status SpannerProvider::Delete(const DeleteRequest* request, DeleteResponse* response) {
+grpc::Status SpannerProvider::Delete(const StorageDeleteRequest* request,
+                                     StorageDeleteResponse* response) {
   return grpc::Status(grpc::StatusCode::UNIMPLEMENTED, "");
 }
-grpc::Status SpannerProvider::Begin(const BeginRequest* request, BeginResponse* response) {
+grpc::Status SpannerProvider::Begin(const StorageBeginRequest* request,
+                                    StorageBeginResponse* response) {
   return grpc::Status(grpc::StatusCode::UNIMPLEMENTED, "");
 }
-grpc::Status SpannerProvider::Commit(const CommitRequest* request, CommitResponse* response) {
+grpc::Status SpannerProvider::Commit(const StorageCommitRequest* request,
+                                     StorageCommitResponse* response) {
   return grpc::Status(grpc::StatusCode::UNIMPLEMENTED, "");
 }
-grpc::Status SpannerProvider::Rollback(const RollbackRequest* request, RollbackResponse* response) {
+grpc::Status SpannerProvider::Rollback(const StorageRollbackRequest* request,
+                                       StorageRollbackResponse* response) {
   return grpc::Status(grpc::StatusCode::UNIMPLEMENTED, "");
 }
 

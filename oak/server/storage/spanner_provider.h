@@ -17,7 +17,7 @@
 #ifndef OAK_SERVER_STORAGE_SPANNER_PROVIDER_H_
 #define OAK_SERVER_STORAGE_SPANNER_PROVIDER_H_
 
-#include "google/spanner/v1/spanner.grpc.pb.h"
+// #include "google/spanner/v1/spanner.grpc.pb.h"
 #include "storage_provider.h"
 
 namespace oak {
@@ -27,12 +27,15 @@ class SpannerProvider final : public StorageProvider {
  public:
   explicit SpannerProvider(std::shared_ptr<grpc::ChannelInterface> channel);
 
-  grpc::Status Read(const ReadRequest* request, ReadResponse* response) override;
-  grpc::Status Write(const WriteRequest* request, WriteResponse* response) override;
-  grpc::Status Delete(const DeleteRequest* request, DeleteResponse* response) override;
-  grpc::Status Begin(const BeginRequest* request, BeginResponse* response) override;
-  grpc::Status Commit(const CommitRequest* request, CommitResponse* response) override;
-  grpc::Status Rollback(const RollbackRequest* request, RollbackResponse* response) override;
+  grpc::Status Read(const StorageReadRequest* request, StorageReadResponse* response) override;
+  grpc::Status Write(const StorageWriteRequest* request, StorageWriteResponse* response) override;
+  grpc::Status Delete(const StorageDeleteRequest* request,
+                      StorageDeleteResponse* response) override;
+  grpc::Status Begin(const StorageBeginRequest* request, StorageBeginResponse* response) override;
+  grpc::Status Commit(const StorageCommitRequest* request,
+                      StorageCommitResponse* response) override;
+  grpc::Status Rollback(const StorageRollbackRequest* request,
+                        StorageRollbackResponse* response) override;
 
  private:
   std::unique_ptr<google::spanner::v1::Spanner::Stub> spanner_service_;

@@ -105,8 +105,8 @@ pub enum ChannelHandle {
     LOGGING = 1,
     GRPC_IN = 2,
     GRPC_OUT = 3,
-    STORAGE_READ = 4,
-    STORAGE_WRITE = 5,
+    STORAGE_IN = 4,
+    STORAGE_OUT = 5,
 }
 
 impl ::protobuf::ProtobufEnum for ChannelHandle {
@@ -120,8 +120,8 @@ impl ::protobuf::ProtobufEnum for ChannelHandle {
             1 => ::std::option::Option::Some(ChannelHandle::LOGGING),
             2 => ::std::option::Option::Some(ChannelHandle::GRPC_IN),
             3 => ::std::option::Option::Some(ChannelHandle::GRPC_OUT),
-            4 => ::std::option::Option::Some(ChannelHandle::STORAGE_READ),
-            5 => ::std::option::Option::Some(ChannelHandle::STORAGE_WRITE),
+            4 => ::std::option::Option::Some(ChannelHandle::STORAGE_IN),
+            5 => ::std::option::Option::Some(ChannelHandle::STORAGE_OUT),
             _ => ::std::option::Option::None
         }
     }
@@ -132,8 +132,8 @@ impl ::protobuf::ProtobufEnum for ChannelHandle {
             ChannelHandle::LOGGING,
             ChannelHandle::GRPC_IN,
             ChannelHandle::GRPC_OUT,
-            ChannelHandle::STORAGE_READ,
-            ChannelHandle::STORAGE_WRITE,
+            ChannelHandle::STORAGE_IN,
+            ChannelHandle::STORAGE_OUT,
         ];
         values
     }

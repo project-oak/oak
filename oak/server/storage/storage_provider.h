@@ -28,12 +28,17 @@ class StorageProvider {
  public:
   StorageProvider() {}
 
-  virtual grpc::Status Read(const ReadRequest* request, ReadResponse* response) = 0;
-  virtual grpc::Status Write(const WriteRequest* request, WriteResponse* response) = 0;
-  virtual grpc::Status Delete(const DeleteRequest* request, DeleteResponse* response) = 0;
-  virtual grpc::Status Begin(const BeginRequest* request, BeginResponse* response) = 0;
-  virtual grpc::Status Commit(const CommitRequest* request, CommitResponse* response) = 0;
-  virtual grpc::Status Rollback(const RollbackRequest* request, RollbackResponse* response) = 0;
+  virtual grpc::Status Read(const StorageReadRequest* request, StorageReadResponse* response) = 0;
+  virtual grpc::Status Write(const StorageWriteRequest* request,
+                             StorageWriteResponse* response) = 0;
+  virtual grpc::Status Delete(const StorageDeleteRequest* request,
+                              StorageDeleteResponse* response) = 0;
+  virtual grpc::Status Begin(const StorageBeginRequest* request,
+                             StorageBeginResponse* response) = 0;
+  virtual grpc::Status Commit(const StorageCommitRequest* request,
+                              StorageCommitResponse* response) = 0;
+  virtual grpc::Status Rollback(const StorageRollbackRequest* request,
+                                StorageRollbackResponse* response) = 0;
 };
 
 }  // namespace oak

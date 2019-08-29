@@ -1,0 +1,104 @@
+//
+// Copyright 2019 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package oak;
+
+import "third_party/google/rpc/status.proto";
+
+// TODO: Evaluate refactoring with the gRPC encapsulation protocol messages.
+
+// Wrapper message used to serialize requests via the StorageChannel interface.
+message StorageChannelRequest {
+  // The storage name is used to partition data within an Oak Module and is
+  // not exposed to the StorageProvider.  The StorageChannel generates a
+  // unique storage identifier from storage_name and the Oak Module
+  // identifier to prevent name collisions among Oak Modules.
+  bytes storage_name = 1;
+
+  oneof operation {
+    StorageChannelReadRequest read_request = 2;
+    StorageChannelWriteRequest write_request = 3;
+    StorageChannelDeleteRequest delete_request = 4;
+    StorageChannelBeginRequest begin_request = 5;
+    StorageChannelCommitRequest commit_request = 6;
+    StorageChannelRollbackRequest rollback_request = 7;
+  }
+}
+
+// Wrapper message used to serialize responses via the StorageChannel interface.
+message StorageChannelResponse {
+  // The status returned by the wrapped storage operation.
+  google.rpc.Status status = 1;
+
+  oneof operation {
+    StorageChannelReadResponse read_response = 2;
+    StorageChannelWriteResponse write_response = 3;
+    StorageChannelDeleteResponse delete_response = 4;
+    StorageChannelBeginResponse begin_response = 5;
+    StorageChannelCommitResponse commit_response = 6;
+    StorageChannelRollbackResponse rollback_response = 7;
+  }
+}
+
+message StorageChannelReadRequest {
+  bytes transaction_id = 1;
+  bytes datum_name = 2;
+}
+
+message StorageChannelReadResponse {
+  bytes datum_value = 1;
+}
+
+message StorageChannelWriteRequest {
+  bytes transaction_id = 1;
+  bytes datum_name = 2;
+  bytes datum_value = 3;
+}
+
+message StorageChannelWriteResponse {
+}
+
+message StorageChannelDeleteRequest {
+  bytes transaction_id = 1;
+  bytes datum_name = 2;
+}
+
+message StorageChannelDeleteResponse {
+}
+
+message StorageChannelBeginRequest {
+}
+
+message StorageChannelBeginResponse {
+  bytes transaction_id = 1;
+}
+
+message StorageChannelCommitRequest {
+  bytes transaction_id = 1;
+}
+
+message StorageChannelCommitResponse {
+}
+
+message StorageChannelRollbackRequest {
+  bytes storage_id = 1;
+  bytes transaction_id = 2;
+}
+
+message StorageChannelRollbackResponse {
+}
