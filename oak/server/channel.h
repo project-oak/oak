@@ -90,8 +90,6 @@ class ChannelHalf {
 // methods to get access to the read and write halves instead.
 class MessageChannel final : public ChannelHalf {
  public:
-  ~MessageChannel() override {}
-
   // Count indicates the number of pending messages.
   size_t Count() const LOCKS_EXCLUDED(mu_);
 
@@ -117,7 +115,6 @@ class MessageChannel final : public ChannelHalf {
 class MessageChannelReadHalf final : public ChannelHalf {
  public:
   MessageChannelReadHalf(std::shared_ptr<MessageChannel> channel) : channel_(channel) {}
-  ~MessageChannelReadHalf() override {}
   ReadResult Read(uint32_t size) override { return channel_->Read(size); }
   ReadResult BlockingRead(uint32_t size) { return channel_->BlockingRead(size); }
   void Await() override { return channel_->Await(); }
@@ -130,7 +127,6 @@ class MessageChannelReadHalf final : public ChannelHalf {
 class MessageChannelWriteHalf final : public ChannelHalf {
  public:
   MessageChannelWriteHalf(std::shared_ptr<MessageChannel> channel) : channel_(channel) {}
-  ~MessageChannelWriteHalf() override {}
   void Write(std::unique_ptr<Message> msg) override { channel_->Write(std::move(msg)); }
 
  private:

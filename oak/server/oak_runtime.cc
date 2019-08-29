@@ -144,7 +144,7 @@ void OakRuntime::CompletionQueueLoop() {
   LOG(INFO) << "Starting gRPC completion queue loop";
   // The stream object will delete itself when finished with the request,
   // after creating a new stream object for the next request.
-  auto* stream =
+  auto stream =
       new ModuleInvocation(&module_service_, completion_queue_.get(), grpc_in_, grpc_out_);
   stream->Start();
   while (true) {
@@ -154,7 +154,7 @@ void OakRuntime::CompletionQueueLoop() {
       LOG(FATAL) << "Failure reading from completion queue";
       return;
     }
-    auto* callback = static_cast<std::function<void(bool)>*>(tag);
+    auto callback = static_cast<std::function<void(bool)>*>(tag);
     (*callback)(ok);
     delete callback;
   }

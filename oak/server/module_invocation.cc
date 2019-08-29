@@ -42,7 +42,7 @@ std::unique_ptr<Message> Unwrap(const grpc::ByteBuffer& buffer) {
 }  // namespace
 
 void ModuleInvocation::Start() {
-  auto* callback = new std::function<void(bool)>(
+  auto callback = new std::function<void(bool)>(
       std::bind(&ModuleInvocation::ReadRequest, this, std::placeholders::_1));
   service_->RequestCall(&context_, &stream_, queue_, queue_, callback);
 }
@@ -52,7 +52,7 @@ void ModuleInvocation::ReadRequest(bool ok) {
     delete this;
     return;
   }
-  auto* callback = new std::function<void(bool)>(
+  auto callback = new std::function<void(bool)>(
       std::bind(&ModuleInvocation::ProcessRequest, this, std::placeholders::_1));
   stream_.Read(&request_, callback);
 }
@@ -117,7 +117,7 @@ void ModuleInvocation::SendResponse(bool ok) {
   grpc::WriteOptions options;
   if (!grpc_out.last()) {
     LOG(INFO) << "Non-final inner response of size " << inner_msg.size();
-    auto* callback = new std::function<void(bool)>(
+    auto callback = new std::function<void(bool)>(
         std::bind(&ModuleInvocation::SendResponse, this, std::placeholders::_1));
     stream_.Write(bb, options, callback);
   } else if (!grpc_out.has_rsp_msg()) {
@@ -128,13 +128,13 @@ void ModuleInvocation::SendResponse(bool ok) {
     // Final response, so WriteAndFinish then kick off the next round.
     LOG(INFO) << "Final inner response of size " << inner_msg.size();
     options.set_last_message();
-    auto* callback = new std::function<void(bool)>(
+    auto callback = new std::function<void(bool)>(
         std::bind(&ModuleInvocation::Finish, this, std::placeholders::_1));
     stream_.WriteAndFinish(bb, options, ::grpc::Status::OK, callback);
 
     // Restart the gRPC flow with a new ModuleInvocation object for the next request
     // after processing this request.  This ensures that processing is serialized.
-    auto* request = new ModuleInvocation(service_, queue_, grpc_in_, grpc_out_);
+    auto request = new ModuleInvocation(service_, queue_, grpc_in_, grpc_out_);
     request->Start();
   }
 }
@@ -144,11 +144,11 @@ void ModuleInvocation::Finish(bool ok) { delete this; }
 void ModuleInvocation::FinishAndRestart(const grpc::Status& status) {
   // Restart the gRPC flow with a new ModuleInvocation object for the next request
   // after processing this request.  This ensures that processing is serialized.
-  auto* request = new ModuleInvocation(service_, queue_, grpc_in_, grpc_out_);
+  auto request = new ModuleInvocation(service_, queue_, grpc_in_, grpc_out_);
   request->Start();
 
   // Finish the current invocation (which triggers self-destruction).
-  auto* callback = new std::function<void(bool)>(
+  auto callback = new std::function<void(bool)>(
       std::bind(&ModuleInvocation::Finish, this, std::placeholders::_1));
   stream_.Finish(status, callback);
 }
