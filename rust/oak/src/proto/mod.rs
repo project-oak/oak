@@ -3,3 +3,4 @@ pub mod grpc_encap;
 pub mod oak_api;
 pub mod status;
 pub mod storage;
+pub mod storage_channel;

@@ -8,6 +8,7 @@ fn main() {
             "../../oak/proto/grpc_encap.proto",
             "../../oak/proto/oak_api.proto",
             "../../oak/proto/storage.proto",
+            "../../oak/proto/storage_channel.proto",
         ],
         includes: &["../../oak/proto", "../.."],
         customize: protoc_rust::Customize::default(),
