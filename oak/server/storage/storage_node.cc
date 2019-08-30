@@ -31,24 +31,10 @@ static std::string GetStorageId(const std::string& storage_name) {
 
 StorageNode::StorageNode(std::unique_ptr<MessageChannelReadHalf> req_half,
                          std::unique_ptr<MessageChannelWriteHalf> rsp_half)
-    : req_half_(std::move(req_half)), rsp_half_(std::move(rsp_half)) {
+    : NodeThread("storage"), req_half_(std::move(req_half)), rsp_half_(std::move(rsp_half)) {
   // TODO: get a storage service stub from somewhere less hard-coded.
   storage_service_ = oak::Storage::NewStub(
       grpc::CreateChannel("localhost:7867", grpc::InsecureChannelCredentials()));
-}
-
-StorageNode::~StorageNode() {
-  Stop();
-}
-
-void StorageNode::Start() {
-  // Spin up a Wasm thread to run forever, proxying storage requests.
-  std::thread t([this] { this->Run(); });
-  // TODO: move to t.join() in ~StorageNode when termination is sorted out
-  t.detach();
-
-  main_ = std::move(t);
-  LOG(INFO) << "Started storage pseudo-node execution thread";
 }
 
 void StorageNode::Run() {
@@ -143,10 +129,6 @@ void StorageNode::Run() {
     std::unique_ptr<Message> rsp_msg = absl::make_unique<Message>(rsp_data.begin(), rsp_data.end());
     rsp_half_->Write(std::move(rsp_msg));
   }
-}
-
-void StorageNode::Stop() {
-  // TODO: arrange termination of main_ thread.
 }
 
 }  // namespace oak

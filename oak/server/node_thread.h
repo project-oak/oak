@@ -14,31 +14,37 @@
  * limitations under the License.
  */
 
-#ifndef OAK_SERVER_LOGGING_NODE_H_
-#define OAK_SERVER_LOGGING_NODE_H_
+#ifndef OAK_SERVER_NODE_THREAD_H_
+#define OAK_SERVER_NODE_THREAD_H_
 
 #include <memory>
 #include <thread>
 
-#include "oak/server/channel.h"
-#include "oak/server/node_thread.h"
-
 namespace oak {
 
-// Pseudo-node to perform logging.
-class LoggingNode final : public NodeThread {
+// This class represents a node or pseudo-node that executes as a distinct
+// thread.
+class NodeThread {
  public:
-  LoggingNode(std::unique_ptr<MessageChannelReadHalf> half)
-      : NodeThread("logging"), half_(std::move(half)) {}
+  // Construct a thread, identified by the given name in diagnostic messages.
+  NodeThread(const std::string& name) : name_(name) {}
+  virtual ~NodeThread();
+
+  // Start kicks off a separate thread that invokes the Run() method.
+  void Start();
+
+  // Stop terminates the thread associated with the pseudo-node.
+  void Stop();
+
+ protected:
+  virtual void Run() = 0;
+
+  const std::string name_;
 
  private:
-  void Run() override;
-
-  std::unique_ptr<MessageChannelReadHalf> half_;
-
-  std::thread main_;
+  std::thread thread_;
 };
 
 }  // namespace oak
 
-#endif  // OAK_SERVER_LOGGING_NODE_H_
+#endif  // OAK_SERVER_NODE_THREAD_H_

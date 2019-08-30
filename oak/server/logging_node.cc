@@ -20,20 +20,6 @@
 
 namespace oak {
 
-LoggingNode::~LoggingNode() { Stop(); }
-
-void LoggingNode::Start() {
-  LOG(INFO) << "Executing logging pseudo-node on new thread";
-  std::thread t([this] { this->Run(); });
-  main_ = std::move(t);
-  LOG(INFO) << "Started logging execution thread";
-}
-
-void LoggingNode::Stop() {
-  // TODO: Terminate logging thread somehow, then join() rather than detach()
-  main_.detach();
-}
-
 void LoggingNode::Run() {
   while (true) {
     ReadResult result = half_->BlockingRead(INT_MAX);

@@ -14,31 +14,29 @@
  * limitations under the License.
  */
 
-#ifndef OAK_SERVER_LOGGING_NODE_H_
-#define OAK_SERVER_LOGGING_NODE_H_
-
-#include <memory>
-#include <thread>
-
-#include "oak/server/channel.h"
 #include "oak/server/node_thread.h"
+
+#include "asylo/util/logging.h"
 
 namespace oak {
 
-// Pseudo-node to perform logging.
-class LoggingNode final : public NodeThread {
- public:
-  LoggingNode(std::unique_ptr<MessageChannelReadHalf> half)
-      : NodeThread("logging"), half_(std::move(half)) {}
+NodeThread::~NodeThread() { Stop(); }
 
- private:
-  void Run() override;
+void NodeThread::Start() {
+  if (thread_.joinable()) {
+    LOG(ERROR) << "Attempt to Start() an already-running NodeThread";
+    return;
+  }
 
-  std::unique_ptr<MessageChannelReadHalf> half_;
+  LOG(INFO) << "Executing new " << name_ << " node thread";
+  thread_ = std::thread(&oak::NodeThread::Run, this);
+  LOG(INFO) << "Started " << name_ << " node thread";
+}
 
-  std::thread main_;
-};
+void NodeThread::Stop() {
+  // TODO: Terminate pseudo thread somehow, then join() rather than detach()
+  LOG(INFO) << "Abandoning " << name_ << " node thread";
+  thread_.detach();
+}
 
 }  // namespace oak
-
-#endif  // OAK_SERVER_LOGGING_NODE_H_
