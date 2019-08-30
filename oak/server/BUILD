@@ -100,7 +100,7 @@ cc_library(
         ":module_invocation",
         ":oak_node",
         "//oak/proto:enclave_cc_proto",
-        "//oak/proto:manager_cc_grpc",
+        "//oak/server:logging_node",
         "//oak/server/storage:storage_manager",
         "//oak/server/storage:storage_read_channel",
         "//oak/server/storage:storage_write_channel",
@@ -130,5 +130,15 @@ cc_test(
         ":channel",
         "@com_google_absl//absl/memory",
         "@gtest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "logging_node",
+    srcs = ["logging_node.cc"],
+    hdrs = ["logging_node.h"],
+    deps = [
+        ":channel",
+        "@com_google_asylo//asylo/util:logging",
     ],
 )

@@ -25,6 +25,7 @@
 #include "include/grpcpp/server.h"
 #include "oak/proto/manager.pb.h"
 #include "oak/proto/oak_api.pb.h"
+#include "oak/server/logging_node.h"
 #include "oak/server/oak_node.h"
 #include "oak/server/storage/storage_manager.h"
 
@@ -55,6 +56,8 @@ class OakRuntime {
 
   // Consumes gRPC events from the completion queue in an infinite loop.
   void CompletionQueueLoop();
+
+  std::unique_ptr<LoggingNode> logging_node_;
 
   std::unique_ptr<OakNode> node_;
 

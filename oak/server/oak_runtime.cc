@@ -66,6 +66,9 @@ asylo::Status OakRuntime::StartCompletionQueue(std::unique_ptr<grpc::AsyncGeneri
   module_service_ = std::move(service);
   completion_queue_ = std::move(queue);
 
+  // Start the logging pseudo-node thread.
+  logging_node_->Start();
+
   // Start a new thread to process the gRPC completion queue.
   std::thread thread(&OakRuntime::CompletionQueueLoop, this);
   thread.detach();
@@ -76,26 +79,13 @@ asylo::Status OakRuntime::StartCompletionQueue(std::unique_ptr<grpc::AsyncGeneri
 }
 
 void OakRuntime::SetUpChannels() {
-  // Create logging channel.
-  std::shared_ptr<MessageChannel> channel = std::make_shared<MessageChannel>();
-  node_->SetChannel(ChannelHandle::LOGGING, absl::make_unique<MessageChannelWriteHalf>(channel));
-  LOG(INFO) << "Created logging channel " << ChannelHandle::LOGGING;
-
-  // Spawn a thread that reads and logs messages on this channel forever.
-  std::thread t([channel] {
-    std::unique_ptr<MessageChannelReadHalf> read_chan =
-        absl::make_unique<MessageChannelReadHalf>(channel);
-    while (true) {
-      ReadResult result = read_chan->BlockingRead(INT_MAX);
-      if (result.required_size > 0) {
-        LOG(ERROR) << "Message size too large: " << result.required_size;
-        return;
-      }
-      LOG(INFO) << "LOG: " << std::string(result.data->data(), result.data->size());
-    }
-  });
-  // TODO: join() instead when we have node termination
-  t.detach();
+  // Create logging channel and pass the read half to a new logging pseudo-node.
+  std::shared_ptr<MessageChannel> logging_channel = std::make_shared<MessageChannel>();
+  node_->SetChannel(ChannelHandle::LOGGING,
+                    absl::make_unique<MessageChannelWriteHalf>(logging_channel));
+  logging_node_ =
+      absl::make_unique<LoggingNode>(absl::make_unique<MessageChannelReadHalf>(logging_channel));
+  LOG(INFO) << "Created logging channel " << ChannelHandle::LOGGING << " and pseudo-node";
 
   // Create the channels needed for gRPC interactions.
 
