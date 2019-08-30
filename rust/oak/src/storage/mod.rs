@@ -50,12 +50,12 @@ fn execute_operation(operation_request: &StorageChannelRequest) -> StorageChanne
     response
 }
 
-pub fn read(storage_name: &Vec<u8>, name: &Vec<u8>) -> Vec<u8> {
+pub fn read(storage_name: &[u8], name: &[u8]) -> Vec<u8> {
     let mut read_request = StorageChannelReadRequest::new();
-    read_request.datum_name = name.clone();
+    read_request.datum_name = name.to_owned();
 
     let mut operation_request = StorageChannelRequest::new();
-    operation_request.storage_name = storage_name.clone();
+    operation_request.storage_name = storage_name.to_owned();
     operation_request.set_read_request(read_request);
 
     let operation_response = execute_operation(&operation_request);
@@ -66,24 +66,24 @@ pub fn read(storage_name: &Vec<u8>, name: &Vec<u8>) -> Vec<u8> {
         .to_vec()
 }
 
-pub fn write(storage_name: &Vec<u8>, name: &Vec<u8>, value: &Vec<u8>) {
+pub fn write(storage_name: &[u8], name: &[u8], value: &[u8]) {
     let mut write_request = StorageChannelWriteRequest::new();
-    write_request.datum_name = name.clone();
-    write_request.datum_value = value.clone();
+    write_request.datum_name = name.to_owned();
+    write_request.datum_value = value.to_owned();
 
     let mut operation_request = StorageChannelRequest::new();
-    operation_request.storage_name = storage_name.clone();
+    operation_request.storage_name = storage_name.to_owned();
     operation_request.set_write_request(write_request);
 
     execute_operation(&operation_request);
 }
 
-pub fn delete(storage_name: &Vec<u8>, name: &Vec<u8>) {
+pub fn delete(storage_name: &[u8], name: &[u8]) {
     let mut delete_request = StorageChannelDeleteRequest::new();
-    delete_request.datum_name = name.clone();
+    delete_request.datum_name = name.to_owned();
 
     let mut operation_request = StorageChannelRequest::new();
-    operation_request.storage_name = storage_name.clone();
+    operation_request.storage_name = storage_name.to_owned();
     operation_request.set_delete_request(delete_request);
 
     execute_operation(&operation_request);
