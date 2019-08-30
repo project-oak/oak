@@ -27,6 +27,10 @@ void NodeThread::Start() {
     LOG(ERROR) << "Attempt to Start() an already-running NodeThread";
     return;
   }
+  if (termination_pending_.load()) {
+    LOG(ERROR) << "Attempt to Start() an already-terminated NodeThread";
+    return;
+  }
 
   LOG(INFO) << "Executing new " << name_ << " node thread";
   thread_ = std::thread(&oak::NodeThread::Run, this);
@@ -34,9 +38,12 @@ void NodeThread::Start() {
 }
 
 void NodeThread::Stop() {
-  // TODO: Terminate pseudo thread somehow, then join() rather than detach()
-  LOG(INFO) << "Abandoning " << name_ << " node thread";
-  thread_.detach();
+  termination_pending_ = true;
+  if (thread_.joinable()) {
+    LOG(INFO) << "Waiting for completion of " << name_ << " node thread";
+    thread_.join();
+    LOG(INFO) << "Completed " << name_ << " node thread";
+  }
 }
 
 }  // namespace oak

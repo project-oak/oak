@@ -346,7 +346,11 @@ wabt::interp::HostFunc::Callback OakNode::OakWaitOnChannels(wabt::interp::Enviro
           base[8] = 0x01;
         }
       }
-      if (!done) {
+      if (termination_pending_.load()) {
+        LOG(WARNING) << "Node is pending termination";
+        results[0].set_i32(OakStatus::ERR_CHANNEL_CLOSED);
+        done = true;
+      } else if (!done) {
         // TODO: get rid of polling wait
         absl::SleepFor(absl::Milliseconds(100));
       }
