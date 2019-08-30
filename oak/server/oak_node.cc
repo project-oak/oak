@@ -200,7 +200,9 @@ std::unique_ptr<OakNode> OakNode::Create(const std::string& module) {
   return node;
 }
 
-void OakNode::Run() {
+void OakNode::Start() {
+  // TODO: Do not run again if already running.
+
   // Spin up a per-node Wasm thread to run forever; the Node object must
   // outlast this thread (which is enforced by ~OakNode). Also, make sure
   // we pass the DefinedNode* to the thread by value so it doesn't fall out
@@ -211,17 +213,21 @@ void OakNode::Run() {
   LOG(INFO) << "Started module execution thread";
 }
 
+void OakNode::Stop() {
+  if (main_.joinable()) {
+    LOG(INFO) << "Await main thread termination before destroying OakNode instance";
+    main_.join();
+    LOG(INFO) << "Oak node main thread terminated";
+  }
+}
+
 void OakNode::SetChannel(Handle handle, std::unique_ptr<ChannelHalf> channel_half) {
   channel_halves_[handle] = std::move(channel_half);
 }
 
 OakNode::~OakNode() {
-  if (main_.joinable()) {
-    // Cannot destroy the OakNode instance until the main thread terminates.
-    LOG(INFO) << "Await main thread termination before destroying OakNode instance";
-    main_.join();
-    LOG(INFO) << "Oak node main thread terminated";
-  }
+  // Cannot destroy the OakNode instance until the main thread terminates.
+  Stop();
 }
 
 // Register all available host functions so that they are available to the Oak Module at runtime.

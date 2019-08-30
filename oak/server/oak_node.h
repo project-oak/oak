@@ -37,7 +37,11 @@ class OakNode final : public Application::Service {
   // Creates an Oak node by loading the Wasm module code.
   static std::unique_ptr<OakNode> Create(const std::string& module);
 
-  void Run();
+  // Starts running the node in a background thread.
+  void Start();
+
+  // Stops the background thread if one exists.
+  void Stop();
 
   void SetChannel(Handle handle, std::unique_ptr<ChannelHalf> channel_half);
 
