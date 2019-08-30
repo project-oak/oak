@@ -131,11 +131,21 @@ cc_test(
 )
 
 cc_library(
+    name = "node_thread",
+    srcs = ["node_thread.cc"],
+    hdrs = ["node_thread.h"],
+    deps = [
+        "@com_google_asylo//asylo/util:logging",
+    ],
+)
+
+cc_library(
     name = "logging_node",
     srcs = ["logging_node.cc"],
     hdrs = ["logging_node.h"],
     deps = [
         ":channel",
+        ":node_thread",
         "@com_google_asylo//asylo/util:logging",
     ],
 )

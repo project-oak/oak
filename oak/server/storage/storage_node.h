@@ -22,20 +22,17 @@
 
 #include "oak/proto/storage.grpc.pb.h"
 #include "oak/server/channel.h"
+#include "oak/server/node_thread.h"
 
 namespace oak {
 
-class StorageNode {
+class StorageNode final : public NodeThread {
  public:
   StorageNode(std::unique_ptr<MessageChannelReadHalf> req_half,
               std::unique_ptr<MessageChannelWriteHalf> rsp_half);
-  ~StorageNode();
-
-  void Start();
-  void Stop();
 
  private:
-  void Run();
+  void Run() override;
 
   std::unique_ptr<MessageChannelReadHalf> req_half_;
   std::unique_ptr<MessageChannelWriteHalf> rsp_half_;
