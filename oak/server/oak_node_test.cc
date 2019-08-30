@@ -49,7 +49,6 @@ TEST(OakNode, MalformedFailure) {
 TEST(OakNode, MinimalSuccess) {
   std::unique_ptr<OakNode> node = OakNode::Create(DataFrom("oak/server/testdata/minimal.wasm"));
   EXPECT_NE(nullptr, node);
-  // Destruction of the Node will block until its main thread completes.
 }
 
 TEST(OakNode, MissingExports) {
