@@ -47,7 +47,7 @@ fn execute_operation(operation_request: &StorageChannelRequest) -> StorageChanne
     )
     .unwrap();
 
-    response;
+    response
 }
 
 pub fn read(storage_name: &Vec<u8>, name: &Vec<u8>) -> Vec<u8> {
@@ -63,7 +63,7 @@ pub fn read(storage_name: &Vec<u8>, name: &Vec<u8>) -> Vec<u8> {
     operation_response
         .get_read_response()
         .get_datum_value()
-        .to_vec();
+        .to_vec()
 }
 
 pub fn write(storage_name: &Vec<u8>, name: &Vec<u8>, value: &Vec<u8>) {
