@@ -25,6 +25,8 @@
 #include "asylo/util/status_macros.h"
 #include "oak/server/module_invocation.h"
 #include "oak/server/oak_node.h"
+#include "oak/server/storage/storage_read_channel.h"
+#include "oak/server/storage/storage_write_channel.h"
 
 namespace oak {
 
@@ -108,6 +110,12 @@ void OakRuntime::SetUpChannels() {
   grpc_out_ = std::make_shared<MessageChannel>();
   node_->SetChannel(ChannelHandle::GRPC_OUT, absl::make_unique<MessageChannelWriteHalf>(grpc_out_));
   LOG(INFO) << "Created gRPC output channel: " << ChannelHandle::GRPC_IN;
+
+  node_->SetChannel(ChannelHandle::STORAGE_IN,
+                    absl::make_unique<StorageReadChannel>(&storage_manager_));
+  node_->SetChannel(ChannelHandle::STORAGE_OUT,
+                    absl::make_unique<StorageWriteChannel>(&storage_manager_));
+  LOG(INFO) << "Created storage channels";
 }
 
 void OakRuntime::CompletionQueueLoop() {

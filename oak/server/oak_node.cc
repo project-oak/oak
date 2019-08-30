@@ -25,8 +25,6 @@
 #include "asylo/util/logging.h"
 #include "grpcpp/create_channel.h"
 #include "oak/proto/oak_api.pb.h"
-#include "oak/server/storage/storage_read_channel.h"
-#include "oak/server/storage/storage_write_channel.h"
 #include "oak/server/wabt_output.h"
 #include "src/binary-reader.h"
 #include "src/error-formatter.h"
@@ -205,12 +203,6 @@ std::unique_ptr<OakNode> OakNode::Create(const std::string& module) {
 
 void OakNode::Start() {
   // TODO: Do not run again if already running.
-
-  auto storage_read_channel = absl::make_unique<StorageReadChannel>(&node->storage_manager_);
-  node->channel_halves_[ChannelHandle::STORAGE_IN] = std::move(storage_read_channel);
-  auto storage_write_channel = absl::make_unique<StorageWriteChannel>(&node->storage_manager_);
-  node->channel_halves_[ChannelHandle::STORAGE_OUT] = std::move(storage_write_channel);
-  LOG(INFO) << "Created storage channels";
 
   // Spin up a per-node Wasm thread to run forever; the Node object must
   // outlast this thread (which is enforced by ~OakNode). Also, make sure
