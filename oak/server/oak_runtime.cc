@@ -25,8 +25,6 @@
 #include "asylo/util/status_macros.h"
 #include "oak/server/module_invocation.h"
 #include "oak/server/oak_node.h"
-#include "oak/server/storage/storage_read_channel.h"
-#include "oak/server/storage/storage_write_channel.h"
 
 namespace oak {
 
@@ -73,6 +71,10 @@ asylo::Status OakRuntime::StartCompletionQueue(std::unique_ptr<grpc::AsyncGeneri
   std::thread thread(&OakRuntime::CompletionQueueLoop, this);
   thread.detach();
 
+  // Start a new thread to process storage requests.
+  storage_node_->Start();
+
+  // Now all dependencies are running, start the thread for the Node itself.
   node_->Start();
 
   return asylo::Status::OkStatus();
@@ -101,10 +103,28 @@ void OakRuntime::SetUpChannels() {
   node_->SetChannel(ChannelHandle::GRPC_OUT, absl::make_unique<MessageChannelWriteHalf>(grpc_out_));
   LOG(INFO) << "Created gRPC output channel: " << ChannelHandle::GRPC_IN;
 
-  node_->SetChannel(ChannelHandle::STORAGE_IN,
-                    absl::make_unique<StorageReadChannel>(&storage_manager_));
+  // Create the channels needed for interaction with storage.
+
+  // Outgoing storage request channel: keep the read half in C++, but map the write
+  // half to a well-known channel handle.
+  std::shared_ptr<MessageChannel> storage_req_channel = std::make_shared<MessageChannel>();
   node_->SetChannel(ChannelHandle::STORAGE_OUT,
-                    absl::make_unique<StorageWriteChannel>(&storage_manager_));
+                    absl::make_unique<MessageChannelWriteHalf>(storage_req_channel));
+  auto storage_req_half = absl::make_unique<MessageChannelReadHalf>(storage_req_channel);
+  LOG(INFO) << "Created storage output channel: " << ChannelHandle::STORAGE_OUT;
+
+  // Inbound storage response channel: keep the write half in C++, but map the read
+  // half to a well-known channel handle.
+  std::shared_ptr<MessageChannel> storage_rsp_channel = std::make_shared<MessageChannel>();
+  node_->SetChannel(ChannelHandle::STORAGE_IN,
+                    absl::make_unique<MessageChannelReadHalf>(storage_rsp_channel));
+  auto storage_rsp_half = absl::make_unique<MessageChannelWriteHalf>(storage_rsp_channel);
+  LOG(INFO) << "Created storage input channel: " << ChannelHandle::STORAGE_IN;
+
+  // Add in a storage pseudo-node.
+  storage_node_ =
+      absl::make_unique<StorageNode>(std::move(storage_req_half), std::move(storage_rsp_half));
+
   LOG(INFO) << "Created storage channels";
 }
 

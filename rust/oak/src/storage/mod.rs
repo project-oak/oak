@@ -34,6 +34,14 @@ fn execute_operation(operation_request: &StorageChannelRequest) -> StorageChanne
         .write_to_writer(&mut storage_write_channel)
         .unwrap();
 
+    // Block until there is a response available.
+    let read_handles = vec![crate::ChannelHandle::STORAGE_IN as Handle];
+    let mut space = crate::new_handle_space(&read_handles);
+    crate::prep_handle_space(&mut space);
+    unsafe {
+        crate::wasm::wait_on_channels(space.as_mut_ptr(), read_handles.len() as u32);
+    }
+
     let mut storage_read_channel = ReceiveChannelHalf::new(ChannelHandle::STORAGE_IN as Handle);
     let mut buffer = Vec::<u8>::with_capacity(256);
     storage_read_channel.read_message(&mut buffer).unwrap();

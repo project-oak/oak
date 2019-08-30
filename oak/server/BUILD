@@ -86,7 +86,6 @@ cc_library(
     deps = [
         ":oak_node",
         "//oak/proto:grpc_encap_cc_proto",
-        "//oak/server/storage:storage_manager",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_asylo//asylo/util:logging",
     ],
@@ -101,9 +100,7 @@ cc_library(
         ":oak_node",
         "//oak/proto:enclave_cc_proto",
         "//oak/server:logging_node",
-        "//oak/server/storage:storage_manager",
-        "//oak/server/storage:storage_read_channel",
-        "//oak/server/storage:storage_write_channel",
+        "//oak/server/storage:storage_node",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/synchronization",
         "@com_google_asylo//asylo/util:logging",
