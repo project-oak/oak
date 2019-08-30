@@ -17,6 +17,7 @@
 #ifndef OAK_SERVER_NODE_THREAD_H_
 #define OAK_SERVER_NODE_THREAD_H_
 
+#include <atomic>
 #include <memory>
 #include <thread>
 
@@ -27,7 +28,7 @@ namespace oak {
 class NodeThread {
  public:
   // Construct a thread, identified by the given name in diagnostic messages.
-  NodeThread(const std::string& name) : name_(name) {}
+  NodeThread(const std::string& name) : name_(name), termination_pending_(false) {}
   virtual ~NodeThread();
 
   // Start kicks off a separate thread that invokes the Run() method.
@@ -37,9 +38,12 @@ class NodeThread {
   void Stop();
 
  protected:
+  // The Run() method is run on a new thread, and should respond to termination requests
+  // (indicated by termination_pending_.load()) in a timely manner.
   virtual void Run() = 0;
 
   const std::string name_;
+  std::atomic_bool termination_pending_;
 
  private:
   std::thread thread_;
