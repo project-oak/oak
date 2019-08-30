@@ -24,12 +24,10 @@ use proto::storage_channel::{
 };
 
 fn execute_operation(operation_request: &StorageChannelRequest) -> StorageChannelResponse {
-    writeln!(
-        logging_channel(),
+    info!(
         "StorageChannelRequest: {}",
         protobuf::text_format::print_to_string(operation_request)
-    )
-    .unwrap();
+    );
 
     let mut storage_write_channel = SendChannelHalf::new(ChannelHandle::STORAGE_OUT as Handle);
     operation_request
@@ -40,12 +38,10 @@ fn execute_operation(operation_request: &StorageChannelRequest) -> StorageChanne
     let mut buffer = Vec::<u8>::with_capacity(256);
     storage_read_channel.read_message(&mut buffer).unwrap();
     let response: StorageChannelResponse = protobuf::parse_from_reader(&mut &buffer[..]).unwrap();
-    writeln!(
-        logging_channel(),
+    info!(
         "StorageChannelResponse: {}",
         protobuf::text_format::print_to_string(&response)
-    )
-    .unwrap();
+    );
 
     response
 }
