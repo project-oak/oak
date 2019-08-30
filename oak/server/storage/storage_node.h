@@ -14,31 +14,37 @@
  * limitations under the License.
  */
 
-#ifndef OAK_SERVER_STORAGE_WRITE_CHANNEL_H_
-#define OAK_SERVER_STORAGE_WRITE_CHANNEL_H_
+#ifndef OAK_SERVER_STORAGE_NODE_H_
+#define OAK_SERVER_STORAGE_NODE_H_
+
+#include <memory>
+#include <thread>
 
 #include "oak/proto/storage.grpc.pb.h"
 #include "oak/server/channel.h"
-#include "oak/server/storage/storage_manager.h"
 
 namespace oak {
 
-// A channel implementation that writes to a StorageService.
-class StorageWriteChannel final : public ChannelHalf {
+class StorageNode {
  public:
-  // Caller retains ownership of storage_manager.
-  explicit StorageWriteChannel(StorageManager* storage_manager);
+  StorageNode(std::unique_ptr<MessageChannelReadHalf> req_half,
+              std::unique_ptr<MessageChannelWriteHalf> rsp_half);
+  ~StorageNode();
 
-  // Takes a serialized StorageOperationRequest protocol message in
-  // request_data.  Parses the request and dispatches it to the corresponding
-  // StorageService method.  Must be called before StorageReadChannel::Read.
-  void Write(std::unique_ptr<Message>) override;
+  void Start();
+  void Stop();
 
  private:
+  void Run();
+
+  std::unique_ptr<MessageChannelReadHalf> req_half_;
+  std::unique_ptr<MessageChannelWriteHalf> rsp_half_;
+
+  std::thread main_;
+
   std::unique_ptr<oak::Storage::Stub> storage_service_;
-  StorageManager* storage_manager_;
 };
 
 }  // namespace oak
 
-#endif  // OAK_SERVER_STORAGE_WRITE_CHANNEL_H_
+#endif  // OAK_SERVER_STORAGE_NODE_H_
