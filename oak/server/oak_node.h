@@ -26,28 +26,19 @@
 #include "oak/common/handles.h"
 #include "oak/proto/application.grpc.pb.h"
 #include "oak/server/channel.h"
+#include "oak/server/node_thread.h"
 #include "src/interp/interp.h"
 
 namespace oak {
 
 typedef std::unordered_map<Handle, std::unique_ptr<ChannelHalf>> ChannelHalfTable;
 
-class OakNode final : public Application::Service {
+class OakNode final : public Application::Service, public NodeThread {
  public:
   // Creates an Oak node by loading the Wasm module code.
   static std::unique_ptr<OakNode> Create(const std::string& module);
 
-  // Starts running the node in a background thread.
-  void Start();
-
-  // Stops the background thread if one exists.
-  void Stop();
-
   void SetChannel(Handle handle, std::unique_ptr<ChannelHalf> channel_half);
-
-  // The destructor for a running OakNode instance will block until the thread
-  // running the instance completes.
-  virtual ~OakNode();
 
  private:
   // Clients should construct OakNode instances with Create() (which
@@ -59,7 +50,7 @@ class OakNode final : public Application::Service {
 
   void InitEnvironment(wabt::interp::Environment* env);
 
-  void RunModule();
+  void Run() override;
 
   // Native implementation of the `oak.channel_read` host function.
   wabt::interp::HostFunc::Callback OakChannelRead(wabt::interp::Environment* env);
@@ -76,9 +67,6 @@ class OakNode final : public Application::Service {
 
   // Hold the mapping between per-Node channel handles and channel half instances
   ChannelHalfTable channel_halves_;
-
-  // Thread running the oak_main export.
-  std::thread main_thread_;
 };
 
 }  // namespace oak
