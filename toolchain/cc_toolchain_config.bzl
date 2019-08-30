@@ -50,6 +50,19 @@ all_cpp_compile_actions = [
     ACTION_NAMES.clif_match,
 ]
 
+all_compile_actions = [
+    ACTION_NAMES.c_compile,
+    ACTION_NAMES.cpp_compile,
+    ACTION_NAMES.linkstamp_compile,
+    ACTION_NAMES.assemble,
+    ACTION_NAMES.preprocess_assemble,
+    ACTION_NAMES.cpp_header_parsing,
+    ACTION_NAMES.cpp_module_compile,
+    ACTION_NAMES.cpp_module_codegen,
+    ACTION_NAMES.clif_match,
+    ACTION_NAMES.lto_backend,
+]
+
 def _impl(ctx):
     # Overwrite the paths to point to clang.
     # TODO: Bazel has a limitation as these paths can be only relative to the toolchain folder.
@@ -66,7 +79,7 @@ def _impl(ctx):
         ),
         tool_path(
             name = "ar",
-            path = "/bin/false",
+            path = "ar.sh",
         ),
         tool_path(
             name = "cpp",
@@ -90,25 +103,88 @@ def _impl(ctx):
         ),
     ]
 
-    # Setup the correct flags for compile + link + lto
-    wasm_flags = feature(
-        name = "wasm_flags",
+    # System include path we need to setup for the downloaded clang
+    isystem_flags = feature(
+        name = "isystem_flags",
         enabled = True,
         flag_sets = [
             flag_set(
-                actions = all_cpp_compile_actions + all_link_actions + lto_index_actions,
+                actions = all_compile_actions,
                 flag_groups = [
                     flag_group(
                         flags = [
-                            "-ffreestanding",
                             # Bazel require explicit include paths for system headers
                             "-isystem",
-                            "external/clang_llvm/lib/clang/8.0.0/include",
-                            "-isystem",
-                            "external/clang_llvm/include/c++/v1/",
+                            "external/clang/lib/clang/8.0.0/include",
+                            "-no-canonical-prefixes",
+                        ],
+                    ),
+                ],
+            ),
+        ],
+    )
+
+    # Because we use clang to build everything (instead of clang++), we need to remind it to
+    # link the correct stdc++ library
+    k8_link_flags = feature(
+        name = "k8_link_flags",
+        enabled = True,
+        flag_sets = [
+            flag_set(
+                actions = [ACTION_NAMES.cpp_link_executable],
+                flag_groups = [
+                    flag_group(
+                        flags = [
+                            "-lstdc++",
+                        ],
+                    ),
+                ],
+            ),
+        ],
+    )
+
+    k8_compile_flags = feature(
+        name = "k8_compile_flags",
+        enabled = True,
+        flag_sets = [
+            flag_set(
+                actions = all_compile_actions,
+                flag_groups = [
+                    flag_group(
+                        flags = [
+                            "-fstack-protector",
+                            "-Wall",
+                            "-Wthread-safety",
+                            "-Wself-assign",
+                            "-fcolor-diagnostics",
+                            "-fno-omit-frame-pointer",
+                            "-Woverloaded-virtual",
+                            "-Wno-sign-compare",
+                            "-Wno-unused-function",
+                            "-Wno-write-strings",
+                        ],
+                    ),
+                ],
+            ),
+        ],
+    )
+
+    # Setup the correct flags for compile + link + lto
+    wasm_compile_flags = feature(
+        name = "wasm_compile_flags",
+        enabled = True,
+        flag_sets = [
+            flag_set(
+                actions = all_compile_actions,
+                flag_groups = [
+                    flag_group(
+                        flags = [
                             "--target=wasm32-unknown-unknown",
-                            # Make sure we don't link stdlib
-                            "-nostdlib",
+                            # Module is built in freestanding mode.
+                            "-ffreestanding",
+                            # Do not try to use any standard includes for C or C++
+                            "-nostdinc",
+                            "-nostdinc++",
                         ],
                     ),
                 ],
@@ -117,8 +193,8 @@ def _impl(ctx):
     )
 
     # Flags to pass to lld.
-    link_flags = feature(
-        name = "link_flags",
+    wasm_link_flags = feature(
+        name = "wasm_link_flags",
         enabled = True,
         flag_sets = [
             flag_set(
@@ -126,6 +202,9 @@ def _impl(ctx):
                 flag_groups = [
                     flag_group(
                         flags = [
+                            "--target=wasm32-unknown-unknown",
+                            # Make sure we don't link stdlib.
+                            "-nostdlib",
                             # No main file for wasm.
                             "--for-linker",
                             "-no-entry",
@@ -143,26 +222,59 @@ def _impl(ctx):
         ],
     )
 
+    host_system_name = "local"
+    target_libc = "unknown"
+    compiler = "clang"
+
+    if (ctx.attr.cpu == "k8"):
+        target_cpu = "k8"
+        target_system_name = "local"
+        abi_version = "local"
+        abi_libc_version = "local"
+        cxx_builtin_include_directories = [
+            "/usr/include",
+        ]
+        features = [
+            isystem_flags,
+            k8_compile_flags,
+            k8_link_flags,
+        ]
+        toolchain_identifier = "clang-toolchain_k8"
+    elif (ctx.attr.cpu == "wasm32"):
+        target_cpu = "wasm32"
+        target_system_name = "wasm32-unknown-unknown"
+        abi_version = "unknown"
+        abi_libc_version = "unknown"
+        cxx_builtin_include_directories = []
+        features = [
+            isystem_flags,
+            wasm_compile_flags,
+            wasm_link_flags,
+        ]
+        toolchain_identifier = "clang-toolchain_wasm32"
+    else:
+        fail("Unreachable")
+
     # Put everythign together and return a config_info.
     return cc_common.create_cc_toolchain_config_info(
         ctx = ctx,
-        toolchain_identifier = "clang_llvm-toolchain",
-        host_system_name = "i686-unknown-linux-gnu",
-        target_system_name = "wasm32-unknown-unknown",
-        target_cpu = "wasm32",
-        target_libc = "unknown",
-        compiler = "clang",
-        abi_version = "unknown",
-        abi_libc_version = "unknown",
+        cxx_builtin_include_directories = cxx_builtin_include_directories,
+        toolchain_identifier = toolchain_identifier,
+        host_system_name = host_system_name,
+        target_system_name = target_system_name,
+        target_cpu = target_cpu,
+        target_libc = target_libc,
+        compiler = compiler,
+        abi_version = abi_version,
+        abi_libc_version = abi_libc_version,
         tool_paths = tool_paths,
-        features = [
-            wasm_flags,
-            link_flags,
-        ],
+        features = features,
     )
 
 cc_toolchain_config = rule(
     implementation = _impl,
-    attrs = {},
+    attrs = {
+        "cpu": attr.string(mandatory = True, values = ["k8", "wasm32"]),
+    },
     provides = [CcToolchainConfigInfo],
 )
