@@ -37,6 +37,7 @@ cc_library(
         "@com_google_asylo//asylo/grpc/auth:null_credentials_options",
         "@com_google_asylo//asylo/identity:init",
         "@com_google_asylo//asylo/util:logging",
+        "@com_google_asylo//asylo/util:status",
     ],
 )
 

@@ -33,6 +33,8 @@ grpc::Status AsyloOakManager::CreateApplication(grpc::ServerContext* context,
                                                 const oak::CreateApplicationRequest* request,
                                                 oak::CreateApplicationResponse* response) {
   std::string application_id = NewApplicationId();
+  LOG(INFO) << "Creating application " << application_id;
+
   grpc::Status status = CreateEnclave(application_id, request->application_configuration());
   if (!status.ok()) {
     return status;
@@ -64,7 +66,7 @@ void AsyloOakManager::InitializeEnclaveManager() {
 grpc::Status AsyloOakManager::CreateEnclave(
     const std::string& application_id,
     const oak::ApplicationConfiguration& application_configuration) {
-  LOG(INFO) << "Creating application enclave";
+  LOG(INFO) << "Creating enclave";
   asylo::EnclaveConfig config;
   // Explicitly initialize the null assertion authority in the enclave.
   asylo::EnclaveAssertionAuthorityConfig* authority_config =

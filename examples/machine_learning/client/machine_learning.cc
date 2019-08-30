@@ -90,9 +90,8 @@ int main(int argc, char** argv) {
   ::oak::ApplicationClient::InitializeAssertionAuthorities();
 
   // Connect to the newly created Oak Application.
-  auto stub = MachineLearning::NewStub(::grpc::CreateChannel(
-      addr.str(),
-      ::asylo::EnclaveChannelCredentials(::asylo::BidirectionalNullCredentialsOptions())));
+  auto stub = MachineLearning::NewStub(grpc::CreateChannel(
+      addr.str(), asylo::EnclaveChannelCredentials(asylo::BidirectionalNullCredentialsOptions())));
 
   // Perform multiple invocations of the same Oak Application, with different parameters.
   auto message_0 = send_data(stub.get());

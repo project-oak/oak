@@ -43,23 +43,54 @@ namespace oak {
 EnclaveServer::EnclaveServer() : runtime_(absl::make_unique<OakRuntime>()) {}
 
 asylo::Status EnclaveServer::Initialize(const asylo::EnclaveConfig& config) {
-  LOG(INFO) << "Initializing Oak Application";
+  LOG(INFO) << "Initializing Enclave Server";
   const InitializeInput& initialize_input_message = config.GetExtension(initialize_input);
   const ApplicationConfiguration& application_configuration =
       initialize_input_message.application_configuration();
-  return runtime_->InitializeServer(
-      application_configuration,
-      asylo::EnclaveServerCredentials(asylo::BidirectionalNullCredentialsOptions()));
+  runtime_->Initialize(application_configuration);
+
+  grpc::ServerBuilder builder;
+  // Uses ":0" notation so that server listens on a free port.
+  builder.AddListeningPort(
+      "[::]:0", asylo::EnclaveServerCredentials(asylo::BidirectionalNullCredentialsOptions()),
+      &port_);
+  builder.RegisterService(runtime_->GetGrpcService());
+
+  // Add a completion queue and a generic service, in order to proxy incoming RPCs to the Oak Node.
+  auto completion_queue = builder.AddCompletionQueue();
+
+  // Register an async service.
+  auto module_service = absl::make_unique<grpc::AsyncGenericService>();
+  builder.RegisterAsyncGenericService(module_service.get());
+
+  if (server_) {
+    return asylo::Status::OkStatus();
+  }
+
+  // Create a gRPC server. This class owns it.
+  server_ = builder.BuildAndStart();
+  if (!server_) {
+    return asylo::Status(asylo::error::GoogleError::INTERNAL, "Failed to start gRPC server");
+  }
+
+  // Move ownership of unique pointers to the runtime.
+  runtime_->StartCompletionQueue(std::move(module_service), std::move(completion_queue));
+
+  return asylo::Status::OkStatus();
 }
 
 asylo::Status EnclaveServer::Run(const asylo::EnclaveInput& input, asylo::EnclaveOutput* output) {
   oak::InitializeOutput* initialize_output = output->MutableExtension(oak::initialize_output);
-  initialize_output->set_grpc_port(runtime_->GetServerAddress());
+  initialize_output->set_grpc_port(port_);
   return asylo::Status::OkStatus();
 }
 
 asylo::Status EnclaveServer::Finalize(const asylo::EnclaveFinal& enclave_final) {
-  runtime_->FinalizeServer();
+  if (server_) {
+    LOG(INFO) << "Shutting down...";
+    server_->Shutdown();
+    server_ = nullptr;
+  }
   return asylo::Status::OkStatus();
 }
 

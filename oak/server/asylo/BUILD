@@ -34,6 +34,7 @@ cc_library(
         "enclave_server.h",
     ],
     deps = [
+        "//oak/proto:enclave_cc_proto",
         "//oak/server:oak_runtime",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_asylo//asylo:enclave_runtime",

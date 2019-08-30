@@ -15,6 +15,5 @@ std::string read_file(const std::string& module_path) {
   buffer << t.rdbuf();
   return buffer.str();
 }
-
 }  // namespace utils
 }  // namespace oak

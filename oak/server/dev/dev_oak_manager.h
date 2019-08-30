@@ -35,11 +35,16 @@ class DevOakManager final : public Manager::Service {
                                  CreateApplicationResponse* response) override;
 
  private:
-  std::string NewApplicationId();
+  void CreateServer();
   void InitializeAssertionAuthorities();
+  std::string NewApplicationId();
 
+  // The port is listening on
+  int32_t port_;
+  // The application id
   uint64_t application_id_;
-  std::unique_ptr<OakRuntime> runtime_;
+  std::unordered_map<std::string, std::unique_ptr<OakRuntime>> runtimes;
+  std::unordered_map<std::string, std::unique_ptr<::grpc::Server>> servers;
 };
 
 }  // namespace oak

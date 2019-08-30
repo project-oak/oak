@@ -21,10 +21,9 @@
 #include <string>
 
 #include "asylo/util/status.h"
-#include "asylo/util/statusor.h"
 #include "include/grpcpp/security/server_credentials.h"
 #include "include/grpcpp/server.h"
-#include "oak/proto/enclave.pb.h"
+#include "oak/proto/manager.pb.h"
 #include "oak/proto/oak_api.pb.h"
 #include "oak/server/oak_node.h"
 
@@ -44,31 +43,17 @@ class OakRuntime {
   virtual ~OakRuntime() = default;
 
   // Initializes a gRPC server. If the server is already initialized, does nothing.
-  asylo::Status InitializeServer(const ApplicationConfiguration& config,
-                                 const std::shared_ptr<grpc::ServerCredentials> credentials);
-  // Gets the address of the hosted gRPC server and writes it to server_output_config
-  // extension of |output|.
-  int GetServerAddress();
-
-  // Finalizes the gRPC server by calling ::gprc::Server::Shutdown().
-  void FinalizeServer();
+  asylo::Status Initialize(const ApplicationConfiguration& config);
+  asylo::Status StartCompletionQueue(std::unique_ptr<grpc::AsyncGenericService> service,
+                                     std::unique_ptr<grpc::ServerCompletionQueue> queue);
+  grpc::Service* GetGrpcService();
 
  private:
-  // Creates a gRPC server that hosts node_ on a free port with credentials_.
-  asylo::StatusOr<std::unique_ptr<::grpc::Server>> CreateServer(
-      const std::shared_ptr<grpc::ServerCredentials> credentials);
-
   // Creates all the necessary channels and pass the appropriate halves to |node_|.
   void SetUpChannels();
 
   // Consumes gRPC events from the completion queue in an infinite loop.
   void CompletionQueueLoop();
-
-  // The gRPC server.
-  std::unique_ptr<::grpc::Server> server_;
-
-  // The port on which the server is listening.
-  int port_;
 
   std::unique_ptr<OakNode> node_;
 
@@ -76,9 +61,9 @@ class OakRuntime {
   std::shared_ptr<MessageChannel> grpc_in_;
   std::shared_ptr<MessageChannel> grpc_out_;
 
-  grpc::AsyncGenericService module_service_;
+  std::unique_ptr<grpc::AsyncGenericService> module_service_;
   std::unique_ptr<grpc::ServerCompletionQueue> completion_queue_;
-};
+};  // class OakRuntime
 
 }  // namespace oak
 

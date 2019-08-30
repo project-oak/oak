@@ -23,18 +23,13 @@
 
 #include "asylo/util/logging.h"
 #include "asylo/util/status_macros.h"
-#include "include/grpcpp/security/server_credentials.h"
-#include "include/grpcpp/server.h"
-#include "include/grpcpp/server_builder.h"
 #include "oak/server/module_invocation.h"
 #include "oak/server/oak_node.h"
 
 namespace oak {
 
-asylo::Status OakRuntime::InitializeServer(
-    const ApplicationConfiguration& config,
-    const std::shared_ptr<grpc::ServerCredentials> credentials) {
-  LOG(INFO) << "Initializing Oak Application";
+asylo::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
+  LOG(INFO) << "Initializing Oak Runtime";
   if (config.nodes_size() != 1) {
     return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT,
                          "Only application configurations with 1 Node are currently supported");
@@ -48,6 +43,7 @@ asylo::Status OakRuntime::InitializeServer(
     return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT,
                          "Only WebAssembly Nodes are currently supported");
   }
+
   // TODO: Support creating multiple Nodes and Channels connecting them.
   const WebAssemblyNode& web_assembly_node = node_configuration.web_assembly_node();
   node_ = OakNode::Create(web_assembly_node.module_bytes());
@@ -57,12 +53,16 @@ asylo::Status OakRuntime::InitializeServer(
 
   SetUpChannels();
 
-  // Ensure that the server is only created and initialized once.
-  if (server_) {
-    return asylo::Status::OkStatus();
-  }
+  return asylo::Status::OkStatus();
+}
+grpc::Service* OakRuntime::GetGrpcService() { return node_.get(); }
 
-  ASYLO_ASSIGN_OR_RETURN(server_, CreateServer(credentials));
+asylo::Status OakRuntime::StartCompletionQueue(std::unique_ptr<grpc::AsyncGenericService> service,
+                                               std::unique_ptr<grpc::ServerCompletionQueue> queue) {
+  // Use the serivce and queue provided.
+  // TODO: check to see if we already started this.
+  module_service_ = std::move(service);
+  completion_queue_ = std::move(queue);
 
   // Start a new thread to process the gRPC completion queue.
   std::thread thread(&OakRuntime::CompletionQueueLoop, this);
@@ -71,28 +71,6 @@ asylo::Status OakRuntime::InitializeServer(
   node_->Start();
 
   return asylo::Status::OkStatus();
-}
-
-asylo::StatusOr<std::unique_ptr<grpc::Server>> OakRuntime::CreateServer(
-    const std::shared_ptr<grpc::ServerCredentials> credentials) {
-  grpc::ServerBuilder builder;
-  // Uses ":0" notation so that server listens on a free port.
-  builder.AddListeningPort("[::]:0", credentials, &port_);
-  builder.RegisterService(node_.get());
-
-  // Add a completion queue and a generic service, in order to proxy incoming RPCs to the Oak
-  // Node.
-  completion_queue_ = builder.AddCompletionQueue();
-  builder.RegisterAsyncGenericService(&module_service_);
-
-  std::unique_ptr<grpc::Server> server = builder.BuildAndStart();
-  if (!server) {
-    return asylo::Status(asylo::error::GoogleError::INTERNAL, "Failed to start gRPC server");
-  }
-
-  LOG(INFO) << "gRPC server is listening on port: " << port_;
-
-  return std::move(server);
 }
 
 void OakRuntime::SetUpChannels() {
@@ -132,22 +110,12 @@ void OakRuntime::SetUpChannels() {
   LOG(INFO) << "Created gRPC output channel: " << ChannelHandle::GRPC_IN;
 }
 
-int OakRuntime::GetServerAddress() { return port_; }
-
-void OakRuntime::FinalizeServer() {
-  if (server_) {
-    LOG(INFO) << "Shutting down...";
-    server_->Shutdown();
-    server_ = nullptr;
-  }
-}
-
 void OakRuntime::CompletionQueueLoop() {
   LOG(INFO) << "Starting gRPC completion queue loop";
   // The stream object will delete itself when finished with the request,
   // after creating a new stream object for the next request.
   auto stream =
-      new ModuleInvocation(&module_service_, completion_queue_.get(), grpc_in_, grpc_out_);
+      new ModuleInvocation(module_service_.get(), completion_queue_.get(), grpc_in_, grpc_out_);
   stream->Start();
   while (true) {
     bool ok;
