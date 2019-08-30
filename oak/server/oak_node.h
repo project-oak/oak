@@ -25,7 +25,6 @@
 #include "absl/types/span.h"
 #include "oak/common/handles.h"
 #include "oak/proto/application.grpc.pb.h"
-#include "oak/proto/grpc_encap.pb.h"
 #include "oak/server/channel.h"
 #include "src/interp/interp.h"
 
@@ -38,18 +37,17 @@ class OakNode final : public Application::Service {
   // Creates an Oak node by loading the Wasm module code.
   static std::unique_ptr<OakNode> Create(const std::string& module);
 
+  // Starts running the node in a background thread.
+  void Start();
+
+  // Stops the background thread if one exists.
+  void Stop();
+
   void SetChannel(Handle handle, std::unique_ptr<ChannelHalf> channel_half);
 
   // The destructor for a running OakNode instance will block until the thread
   // running the instance completes.
   virtual ~OakNode();
-
-  // Performs an Oak Module gRPC invocation. Takes ownership of the passed in request data.
-  void ProcessModuleInvocation(grpc::GenericServerContext* context,
-                               std::unique_ptr<Message> request_data);
-
-  // Returns the next response from a gRPC invocation.
-  oak::GrpcResponse NextResponse();
 
  private:
   // Clients should construct OakNode instances with Create() (which
@@ -78,10 +76,6 @@ class OakNode final : public Application::Service {
 
   // Hold the mapping between per-Node channel handles and channel half instances
   ChannelHalfTable channel_halves_;
-
-  // Hold on to the other halves of channels that the node uses to perform gRPC.
-  std::unique_ptr<MessageChannelWriteHalf> req_half_;
-  std::unique_ptr<MessageChannelReadHalf> rsp_half_;
 
   // Thread running the oak_main export.
   std::thread main_;

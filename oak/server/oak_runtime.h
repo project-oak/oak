@@ -58,6 +58,7 @@ class OakRuntime {
   asylo::StatusOr<std::unique_ptr<::grpc::Server>> CreateServer(
       const std::shared_ptr<grpc::ServerCredentials> credentials);
 
+  // Creates all the necessary channels and pass the appropriate halves to |node_|.
   void SetUpChannels();
 
   // Consumes gRPC events from the completion queue in an infinite loop.
@@ -70,9 +71,14 @@ class OakRuntime {
   int port_;
 
   std::unique_ptr<OakNode> node_;
+
+  // TODO: Split gRPC logic and channels to a separate gRPC pseudo-node.
+  std::shared_ptr<MessageChannel> grpc_in_;
+  std::shared_ptr<MessageChannel> grpc_out_;
+
   grpc::AsyncGenericService module_service_;
   std::unique_ptr<grpc::ServerCompletionQueue> completion_queue_;
-};  // namespace oak
+};
 
 }  // namespace oak
 

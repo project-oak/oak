@@ -68,6 +68,8 @@ asylo::Status OakRuntime::InitializeServer(
   std::thread thread(&OakRuntime::CompletionQueueLoop, this);
   thread.detach();
 
+  node_->Start();
+
   return asylo::Status::OkStatus();
 }
 
@@ -93,32 +95,41 @@ asylo::StatusOr<std::unique_ptr<grpc::Server>> OakRuntime::CreateServer(
   return std::move(server);
 }
 
-// Create all the necessary channels and pass the appropriate halves to |node_|.
 void OakRuntime::SetUpChannels() {
-  // Create a logging channel for the node.
-  {
-    std::shared_ptr<MessageChannel> channel = std::make_shared<MessageChannel>();
-    node_->SetChannel(ChannelHandle::LOGGING, absl::make_unique<MessageChannelWriteHalf>(channel));
-    LOG(INFO) << "Created logging channel " << ChannelHandle::LOGGING;
+  // Create logging channel.
+  std::shared_ptr<MessageChannel> channel = std::make_shared<MessageChannel>();
+  node_->SetChannel(ChannelHandle::LOGGING, absl::make_unique<MessageChannelWriteHalf>(channel));
+  LOG(INFO) << "Created logging channel " << ChannelHandle::LOGGING;
 
-    // Spawn a thread that reads and logs messages on this channel forever.
-    std::thread t([channel] {
-      std::unique_ptr<MessageChannelReadHalf> read_chan =
-          absl::make_unique<MessageChannelReadHalf>(channel);
-      while (true) {
-        ReadResult result = read_chan->BlockingRead(INT_MAX);
-        if (result.required_size > 0) {
-          LOG(ERROR) << "Message size too large: " << result.required_size;
-          return;
-        }
-        LOG(INFO) << "LOG: " << std::string(result.data->data(), result.data->size());
+  // Spawn a thread that reads and logs messages on this channel forever.
+  std::thread t([channel] {
+    std::unique_ptr<MessageChannelReadHalf> read_chan =
+        absl::make_unique<MessageChannelReadHalf>(channel);
+    while (true) {
+      ReadResult result = read_chan->BlockingRead(INT_MAX);
+      if (result.required_size > 0) {
+        LOG(ERROR) << "Message size too large: " << result.required_size;
+        return;
       }
-    });
-    // TODO: join() instead when we have node termination
-    t.detach();
-  }
+      LOG(INFO) << "LOG: " << std::string(result.data->data(), result.data->size());
+    }
+  });
+  // TODO: join() instead when we have node termination
+  t.detach();
 
-  // TODO: Set up remaining channels here rather than in OakNode.
+  // Create the channels needed for gRPC interactions.
+
+  // Incoming request channel: keep the write half in |OakRuntime|, but map
+  // the read half to a well-known channel handle on |node_|.
+  grpc_in_ = std::make_shared<MessageChannel>();
+  node_->SetChannel(ChannelHandle::GRPC_IN, absl::make_unique<MessageChannelReadHalf>(grpc_in_));
+  LOG(INFO) << "Created gRPC input channel: " << ChannelHandle::GRPC_IN;
+
+  // Outgoing response channel: keep the read half in |OakRuntime|, but map
+  // the write half to a well-known channel handle on |node_|.
+  grpc_out_ = std::make_shared<MessageChannel>();
+  node_->SetChannel(ChannelHandle::GRPC_OUT, absl::make_unique<MessageChannelWriteHalf>(grpc_out_));
+  LOG(INFO) << "Created gRPC output channel: " << ChannelHandle::GRPC_IN;
 }
 
 int OakRuntime::GetServerAddress() { return port_; }
@@ -135,7 +146,8 @@ void OakRuntime::CompletionQueueLoop() {
   LOG(INFO) << "Starting gRPC completion queue loop";
   // The stream object will delete itself when finished with the request,
   // after creating a new stream object for the next request.
-  auto* stream = new ModuleInvocation(&module_service_, completion_queue_.get(), node_.get());
+  auto stream =
+      new ModuleInvocation(&module_service_, completion_queue_.get(), grpc_in_, grpc_out_);
   stream->Start();
   while (true) {
     bool ok;
@@ -144,7 +156,7 @@ void OakRuntime::CompletionQueueLoop() {
       LOG(FATAL) << "Failure reading from completion queue";
       return;
     }
-    auto* callback = static_cast<std::function<void(bool)>*>(tag);
+    auto callback = static_cast<std::function<void(bool)>*>(tag);
     (*callback)(ok);
     delete callback;
   }

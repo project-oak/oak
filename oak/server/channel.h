@@ -77,14 +77,19 @@ class ChannelHalf {
   virtual void Write(std::unique_ptr<Message> msg) {
     // Fallback implementation that just drops the message.
   }
+
+  // Await blocks until there is a message available to read on the channel.
+  virtual void Await() {}
 };
 
 // A concrete message channel, which holds an arbitrary number of queued messages.
-// Implements both send and receive ChannelHalf functions.
-class MessageChannel : public ChannelHalf {
+// Implements both send and receive ChannelHalf functions, though callers should wrap instances of
+// this class into the appropriate ChannelHalf implementation (|MessageChannelReadHalf| or
+// |MessageChannelWriteHalf|) to interact with it.
+// TODO: Clean up this interface, e.g. hide the Read and Write methods on MessageChannel and expose
+// methods to get access to the read and write halves instead.
+class MessageChannel final : public ChannelHalf {
  public:
-  virtual ~MessageChannel() {}
-
   // Count indicates the number of pending messages.
   size_t Count() const LOCKS_EXCLUDED(mu_);
 
@@ -97,8 +102,7 @@ class MessageChannel : public ChannelHalf {
   // Write passes ownership of a message to the channel.
   void Write(std::unique_ptr<Message> data) override LOCKS_EXCLUDED(mu_);
 
-  // Await blocks until there is a message on the channel.
-  void Await() LOCKS_EXCLUDED(mu_);
+  void Await() override LOCKS_EXCLUDED(mu_);
 
  private:
   ReadResult ReadLocked(uint32_t size) EXCLUSIVE_LOCKS_REQUIRED(mu_);
@@ -108,25 +112,22 @@ class MessageChannel : public ChannelHalf {
 };
 
 // Shared-ownership wrapper for the read half of a MessageChannel.
-class MessageChannelReadHalf : public ChannelHalf {
+class MessageChannelReadHalf final : public ChannelHalf {
  public:
   MessageChannelReadHalf(std::shared_ptr<MessageChannel> channel) : channel_(channel) {}
-  virtual ~MessageChannelReadHalf() {}
-  virtual ReadResult Read(uint32_t size) { return channel_->Read(size); }
+  ReadResult Read(uint32_t size) override { return channel_->Read(size); }
   ReadResult BlockingRead(uint32_t size) { return channel_->BlockingRead(size); }
-  void Await() { return channel_->Await(); }
+  void Await() override { return channel_->Await(); }
 
  private:
   std::shared_ptr<MessageChannel> channel_;
 };
 
 // Shared-ownership wrapper for the write half of a MessageChannel.
-class MessageChannelWriteHalf : public ChannelHalf {
+class MessageChannelWriteHalf final : public ChannelHalf {
  public:
   MessageChannelWriteHalf(std::shared_ptr<MessageChannel> channel) : channel_(channel) {}
-  virtual ~MessageChannelWriteHalf() {}
-  virtual void Write(std::unique_ptr<Message> msg) { channel_->Write(std::move(msg)); }
-  void Await() { return channel_->Await(); }
+  void Write(std::unique_ptr<Message> msg) override { channel_->Write(std::move(msg)); }
 
  private:
   std::shared_ptr<MessageChannel> channel_;

@@ -42,7 +42,7 @@ std::unique_ptr<Message> Unwrap(const grpc::ByteBuffer& buffer) {
 }  // namespace
 
 void ModuleInvocation::Start() {
-  auto* callback = new std::function<void(bool)>(
+  auto callback = new std::function<void(bool)>(
       std::bind(&ModuleInvocation::ReadRequest, this, std::placeholders::_1));
   service_->RequestCall(&context_, &stream_, queue_, queue_, callback);
 }
@@ -52,7 +52,7 @@ void ModuleInvocation::ReadRequest(bool ok) {
     delete this;
     return;
   }
-  auto* callback = new std::function<void(bool)>(
+  auto callback = new std::function<void(bool)>(
       std::bind(&ModuleInvocation::ProcessRequest, this, std::placeholders::_1));
   stream_.Read(&request_, callback);
 }
@@ -63,7 +63,26 @@ void ModuleInvocation::ProcessRequest(bool ok) {
     return;
   }
   std::unique_ptr<Message> request_data = Unwrap(request_);
-  node_->ProcessModuleInvocation(&context_, std::move(request_data));
+
+  LOG(INFO) << "Handling gRPC call: " << context_.method();
+
+  // Build an encapsulation of the gRPC request invocation and write its serialized
+  // form to the gRPC input channel.
+  oak::GrpcRequest grpc_request;
+  grpc_request.set_method_name(context_.method());
+  google::protobuf::Any* any = new google::protobuf::Any();
+  any->set_value(request_data->data(), request_data->size());
+  grpc_request.set_allocated_req_msg(any);
+  grpc_request.set_last(true);
+  std::string encap_req;
+  grpc_request.SerializeToString(&encap_req);
+  // TODO: figure out a way to avoid the extra copy (into then out of std::string)
+  std::unique_ptr<Message> encap_data =
+      absl::make_unique<Message>(encap_req.begin(), encap_req.end());
+  // Write data to the gRPC input channel, which the runtime connected to the
+  // Node.
+  grpc_in_->Write(std::move(encap_data));
+  LOG(INFO) << "Wrote encapsulated request to gRPC input channel";
 
   // Move straight onto sending first response.
   SendResponse(true);
@@ -75,26 +94,33 @@ void ModuleInvocation::SendResponse(bool ok) {
     return;
   }
 
-  oak::GrpcResponse grpc_out = node_->NextResponse();
-  if (grpc_out.status().code() != grpc::StatusCode::OK) {
-    LOG(WARNING) << "Encapsulated response has non-OK status: " << grpc_out.status().code();
-    // Assume google::rpc::Status maps directly to grpc::Status.
-    FinishAndRestart(grpc::Status(static_cast<grpc::StatusCode>(grpc_out.status().code()),
-                                  grpc_out.status().message()));
+  ReadResult rsp_result;
+  // Block until we can read a single queued GrpcResponse message (in serialized form) from the
+  // gRPC output channel.
+  rsp_result = grpc_out_->BlockingRead(INT_MAX);
+  if (rsp_result.required_size > 0) {
+    LOG(ERROR) << "Message size too large: " << rsp_result.required_size;
+    FinishAndRestart(grpc::Status(grpc::StatusCode::INTERNAL, "Message size too large"));
     return;
   }
 
-  const grpc::string& inner_msg = grpc_out.rsp_msg().value();
+  LOG(INFO) << "Read encapsulated message of size " << rsp_result.data->size()
+            << " from gRPC output channel";
+  oak::GrpcResponse grpc_response;
+  // TODO: Check errors.
+  grpc_response.ParseFromString(std::string(rsp_result.data->data(), rsp_result.data->size()));
+
+  const grpc::string& inner_msg = grpc_response.rsp_msg().value();
   grpc::Slice slice(inner_msg.data(), inner_msg.size());
   grpc::ByteBuffer bb(&slice, /*nslices=*/1);
 
   grpc::WriteOptions options;
-  if (!grpc_out.last()) {
+  if (!grpc_response.last()) {
     LOG(INFO) << "Non-final inner response of size " << inner_msg.size();
-    auto* callback = new std::function<void(bool)>(
+    auto callback = new std::function<void(bool)>(
         std::bind(&ModuleInvocation::SendResponse, this, std::placeholders::_1));
     stream_.Write(bb, options, callback);
-  } else if (!grpc_out.has_rsp_msg()) {
+  } else if (!grpc_response.has_rsp_msg()) {
     // Final iteration but no response, just Finish.
     LOG(INFO) << "Final inner response empty";
     FinishAndRestart(::grpc::Status::OK);
@@ -102,13 +128,13 @@ void ModuleInvocation::SendResponse(bool ok) {
     // Final response, so WriteAndFinish then kick off the next round.
     LOG(INFO) << "Final inner response of size " << inner_msg.size();
     options.set_last_message();
-    auto* callback = new std::function<void(bool)>(
+    auto callback = new std::function<void(bool)>(
         std::bind(&ModuleInvocation::Finish, this, std::placeholders::_1));
     stream_.WriteAndFinish(bb, options, ::grpc::Status::OK, callback);
 
     // Restart the gRPC flow with a new ModuleInvocation object for the next request
     // after processing this request.  This ensures that processing is serialized.
-    auto* request = new ModuleInvocation(service_, queue_, node_);
+    auto request = new ModuleInvocation(service_, queue_, grpc_in_, grpc_out_);
     request->Start();
   }
 }
@@ -118,11 +144,11 @@ void ModuleInvocation::Finish(bool ok) { delete this; }
 void ModuleInvocation::FinishAndRestart(const grpc::Status& status) {
   // Restart the gRPC flow with a new ModuleInvocation object for the next request
   // after processing this request.  This ensures that processing is serialized.
-  auto* request = new ModuleInvocation(service_, queue_, node_);
+  auto request = new ModuleInvocation(service_, queue_, grpc_in_, grpc_out_);
   request->Start();
 
   // Finish the current invocation (which triggers self-destruction).
-  auto* callback = new std::function<void(bool)>(
+  auto callback = new std::function<void(bool)>(
       std::bind(&ModuleInvocation::Finish, this, std::placeholders::_1));
   stream_.Finish(status, callback);
 }

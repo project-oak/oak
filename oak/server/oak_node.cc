@@ -197,37 +197,28 @@ std::unique_ptr<OakNode> OakNode::Create(const std::string& module) {
     return nullptr;
   }
 
-  // Create the channels needed for gRPC interactions.
-  {
-    // Incoming request channel: keep the write half in C++, but map the read
-    // half to a well-known channel handle.
-    std::shared_ptr<MessageChannel> channel = std::make_shared<MessageChannel>();
-    node->channel_halves_[ChannelHandle::GRPC_IN] =
-        absl::make_unique<MessageChannelReadHalf>(channel);
-    node->req_half_ = absl::make_unique<MessageChannelWriteHalf>(channel);
-    LOG(INFO) << "Created gRPC input channel: " << ChannelHandle::GRPC_IN;
-  }
-  {
-    // Outgoing response channel: keep the read half in C++, but map the write
-    // half to a well-known channel handle.
-    std::shared_ptr<MessageChannel> channel = std::make_shared<MessageChannel>();
-    node->channel_halves_[ChannelHandle::GRPC_OUT] =
-        absl::make_unique<MessageChannelWriteHalf>(channel);
-    node->rsp_half_ = absl::make_unique<MessageChannelReadHalf>(channel);
-    LOG(INFO) << "Created gRPC output channel: " << ChannelHandle::GRPC_IN;
-  }
+  return node;
+}
+
+void OakNode::Start() {
+  // TODO: Do not run again if already running.
 
   // Spin up a per-node Wasm thread to run forever; the Node object must
-  // outlast this thread (which is enforced by ~OakNode).  Also, make sure
+  // outlast this thread (which is enforced by ~OakNode). Also, make sure
   // we pass the DefinedNode* to the thread by value so it doesn't fall out
   // of scope once this function exits.
   LOG(INFO) << "Executing module oak_main on new thread";
-  OakNode* raw_node = node.get();
-  std::thread t([raw_node] { raw_node->RunModule(); });
-  node->main_ = std::move(t);
+  std::thread t([this] { this->RunModule(); });
+  main_ = std::move(t);
   LOG(INFO) << "Started module execution thread";
+}
 
-  return node;
+void OakNode::Stop() {
+  if (main_.joinable()) {
+    LOG(INFO) << "Await main thread termination before destroying OakNode instance";
+    main_.join();
+    LOG(INFO) << "Oak node main thread terminated";
+  }
 }
 
 void OakNode::SetChannel(Handle handle, std::unique_ptr<ChannelHalf> channel_half) {
@@ -235,12 +226,8 @@ void OakNode::SetChannel(Handle handle, std::unique_ptr<ChannelHalf> channel_hal
 }
 
 OakNode::~OakNode() {
-  if (main_.joinable()) {
-    // Cannot destroy the OakNode instance until the main thread terminates.
-    LOG(INFO) << "Await main thread termination before destroying OakNode instance";
-    main_.join();
-    LOG(INFO) << "Oak node main thread terminated";
-  }
+  // Cannot destroy the OakNode instance until the main thread terminates.
+  Stop();
 }
 
 // Register all available host functions so that they are available to the Oak Module at runtime.
@@ -369,54 +356,19 @@ wabt::interp::HostFunc::Callback OakNode::OakWaitOnChannels(wabt::interp::Enviro
       return wabt::interp::Result::Ok;
     }
 
-    req_half_->Await();
+    if (channel_halves_.count(handle0) == 0) {
+      LOG(WARNING) << "Invalid channel handle: " << handle0;
+      results[0].set_i32(OakStatus::ERR_BAD_HANDLE);
+      return wabt::interp::Result::Ok;
+    }
+
+    std::unique_ptr<ChannelHalf>& channel = channel_halves_.at(handle0);
+    channel->Await();
     // TODO: Mark just the relevant channels as ready to read.
     auto base = env->GetMemory(0)->data.begin() + offset;
     base[8] = 0x01;
     return wabt::interp::Result::Ok;
   };
-}
-
-void OakNode::ProcessModuleInvocation(grpc::GenericServerContext* context,
-                                      std::unique_ptr<Message> request_data) {
-  LOG(INFO) << "Handling gRPC call: " << context->method();
-
-  // Build an encapsulation of the gRPC request invocation and write its serialized
-  // form to the gRPC input channel.
-  oak::GrpcRequest grpc_in;
-  grpc_in.set_method_name(context->method());
-  google::protobuf::Any* any = new google::protobuf::Any();
-  any->set_value(request_data->data(), request_data->size());
-  grpc_in.set_allocated_req_msg(any);
-  grpc_in.set_last(true);
-  std::string encap_req;
-  grpc_in.SerializeToString(&encap_req);
-  // TODO: figure out a way to avoid the extra copy (into then out of std::string)
-  std::unique_ptr<Message> encap_data =
-      absl::make_unique<Message>(encap_req.begin(), encap_req.end());
-  req_half_->Write(std::move(encap_data));
-  LOG(INFO) << "Wrote encapsulated request to input channel";
-}
-
-oak::GrpcResponse OakNode::NextResponse() {
-  oak::GrpcResponse grpc_out;
-  ReadResult rsp_result;
-  // Block until we can read a single queued GrpcResponse message (in serialized form) from the
-  // response channel.
-  rsp_result = rsp_half_->BlockingRead(INT_MAX);
-  if (rsp_result.required_size > 0) {
-    LOG(ERROR) << "Message size too large: " << rsp_result.required_size;
-    google::rpc::Status* status = new google::rpc::Status();
-    status->set_code(grpc::StatusCode::INTERNAL);
-    status->set_message("Message size too large");
-    grpc_out.set_allocated_status(status);
-    return grpc_out;
-  }
-
-  LOG(INFO) << "Read encapsulated message of size " << rsp_result.data->size()
-            << " from output channel";
-  grpc_out.ParseFromString(std::string(rsp_result.data->data(), rsp_result.data->size()));
-  return grpc_out;
 }
 
 grpc::Status OakNode::GetAttestation(grpc::ServerContext* context,
