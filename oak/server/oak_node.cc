@@ -172,7 +172,7 @@ static bool CheckModuleExports(wabt::interp::Environment* env,
       [env, module](const RequiredExport& req) { return CheckModuleExport(env, module, req); });
 }
 
-OakNode::OakNode() : Service() {}
+OakNode::OakNode() : Service(), NodeThread("wasm-node") {}
 
 std::unique_ptr<OakNode> OakNode::Create(const std::string& module) {
   LOG(INFO) << "Creating Oak Node";
@@ -199,33 +199,8 @@ std::unique_ptr<OakNode> OakNode::Create(const std::string& module) {
   return node;
 }
 
-void OakNode::Start() {
-  // TODO: Do not run again if already running.
-
-  // Spin up a per-node Wasm thread to run forever; the Node object must
-  // outlast this thread (which is enforced by ~OakNode). Also, make sure
-  // we pass the DefinedNode* to the thread by value so it doesn't fall out
-  // of scope once this function exits.
-  LOG(INFO) << "Executing module oak_main on new thread";
-  main_thread_ = std::thread(&OakNode::RunModule, this);
-  LOG(INFO) << "Started module execution thread";
-}
-
-void OakNode::Stop() {
-  if (main_thread_.joinable()) {
-    LOG(INFO) << "Await main thread termination before destroying OakNode instance";
-    main_thread_.join();
-    LOG(INFO) << "Oak node main thread terminated";
-  }
-}
-
 void OakNode::SetChannel(Handle handle, std::unique_ptr<ChannelHalf> channel_half) {
   channel_halves_[handle] = std::move(channel_half);
-}
-
-OakNode::~OakNode() {
-  // Cannot destroy the OakNode instance until the main thread terminates.
-  Stop();
 }
 
 // Register all available host functions so that they are available to the Oak Module at runtime.
@@ -251,7 +226,7 @@ void OakNode::InitEnvironment(wabt::interp::Environment* env) {
       this->OakWaitOnChannels(env));
 }
 
-void OakNode::RunModule() {
+void OakNode::Run() {
   wabt::interp::Thread::Options thread_options;
   wabt::Stream* trace_stream = nullptr;
   wabt::interp::Executor executor(&env_, trace_stream, thread_options);
