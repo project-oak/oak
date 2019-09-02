@@ -55,7 +55,7 @@ ReadResult MessageChannel::ReadLocked(uint32_t size) {
   msgs_.pop_front();
   LOG(INFO) << "Read message of size " << result.data->size() << " from channel, size limit "
             << size;
-  return std::move(result);
+  return result;
 }
 
 ReadResult MessageChannel::BlockingRead(uint32_t size) {
