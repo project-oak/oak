@@ -347,7 +347,7 @@ This means you might be missing other dependencies like the `protoc` protocol co
 
 The following command builds and runs an Oak Server instance.
 
-`./scripts/run_server_docker`
+`./scripts/docker_run ./scripts/run_server`
 
 ### Run Development Server
 

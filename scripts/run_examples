@@ -11,7 +11,7 @@ readonly DOCKER_USER="${USER:-root}"
 readonly SCRIPTS_DIR="$(dirname "$0")"
 
 # Build Oak server.
-"$SCRIPTS_DIR/build_server_docker"
+"$SCRIPTS_DIR/docker_run" "$SCRIPTS_DIR/build_server"
 
 # Run Rust-based Oak examples, each with their own Oak server instance.
 readonly RUST_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module/rust$' | cut -d'/' -f2)"

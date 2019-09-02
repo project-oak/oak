@@ -7,5 +7,5 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 readonly EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -name module | cut -d'/' -f2)"
 
 for example in ${EXAMPLES}; do
-  "${SCRIPTS_DIR}/docker_run" "${SCRIPTS_DIR}/build_example" "${example}"
+  "${SCRIPTS_DIR}/build_example" "${example}"
 done
