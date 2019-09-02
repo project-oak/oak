@@ -27,11 +27,11 @@ script:
     fi
   - |
     if [[ "${BUILD_SERVER}" == "true" ]]; then
-      ./scripts/build_server_docker
+      ./scripts/docker_run ./scripts/build_server
     fi
   - |
     if [[ "${BUILD_EXAMPLES}" == "true" ]]; then
-      ./scripts/build_examples_docker
+      ./scripts/docker_run ./scripts/build_examples
     fi
   - |
     if [[ "${UNIT_TEST}" == "true" ]]; then
