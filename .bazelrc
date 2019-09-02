@@ -21,13 +21,17 @@ build:sgx-sim --define=SGX_SIM=1
 build:enc-sim --config=sgx-sim
 
 # Toolchain for compiling C++ code to wasm32
-build:wasm32 --crosstool_top=//toolchain:clang_llvm
+build:wasm32 --crosstool_top=//toolchain:clang
 build:wasm32 --host_crosstool_top=@bazel_tools//tools/cpp:toolchain
 build:wasm32 --cpu=wasm32
 
+build:clang --crosstool_top=//toolchain:clang
+build:clang --cpu=k8
+
 # Address sanitizer
 # To use it: bazel build --config asan
-build:asan --compiler clang
+build:asan --crosstool_top=//toolchain:clang
+build:asan --cpu=k8
 build:asan --strip=never
 build:asan --copt -fsanitize=address
 build:asan --copt -DADDRESS_SANITIZER
@@ -38,6 +42,8 @@ build:asan --linkopt -fsanitize=address
 
 # Thread sanitizer
 # bazel build --config tsan
+build:tsan --crosstool_top=//toolchain:clang
+build:tsan --cpu=k8
 build:tsan --strip=never
 build:tsan --copt -fsanitize=thread
 build:tsan --copt -DTHREAD_SANITIZER
@@ -50,6 +56,8 @@ build:tsan --linkopt -fsanitize=thread
 build:tsan --test_env=TSAN_OPTIONS=report_atomic_races=0
 
 # --config msan: Memory sanitizer
+build:msan --crosstool_top=//toolchain:clang
+build:msan --cpu=k8
 build:msan --strip=never
 build:msan --copt -fsanitize=memory
 build:msan --copt -DADDRESS_SANITIZER
@@ -58,6 +66,8 @@ build:msan --copt -fno-omit-frame-pointer
 build:msan --linkopt -fsanitize=memory
 
 # --config ubsan: Undefined Behavior Sanitizer
+build:ubsan --crosstool_top=//toolchain:clang
+build:ubsan --cpu=k8
 build:ubsan --strip=never
 build:ubsan --copt -fsanitize=undefined
 build:ubsan --copt -O1

@@ -21,67 +21,70 @@ load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 http_archive(
     name = "com_google_absl",
-    urls = [
-         # Head commit on 2019-05-23.
-         "https://github.com/abseil/abseil-cpp/archive/27c30ec671cb7b5ba84c4e79feff7fd0b0ac6338.zip"],
-    strip_prefix = "abseil-cpp-27c30ec671cb7b5ba84c4e79feff7fd0b0ac6338",
     sha256 = "cd4dd948bfe3655269656277eb83dbeefcb1368d7c6b329e93cc8ca9a688e5e6",
+    strip_prefix = "abseil-cpp-27c30ec671cb7b5ba84c4e79feff7fd0b0ac6338",
+    urls = [
+        # Head commit on 2019-05-23.
+        "https://github.com/abseil/abseil-cpp/archive/27c30ec671cb7b5ba84c4e79feff7fd0b0ac6338.zip",
+    ],
 )
 
 # Asylo Framework.
 http_archive(
     name = "com_google_asylo",
-    urls = ["https://github.com/google/asylo/archive/dfdc44744e3b18531830deb37c5633f648e6cdbd.tar.gz"],
-    strip_prefix = "asylo-dfdc44744e3b18531830deb37c5633f648e6cdbd",
     sha256 = "b622044f967da3b8a8e2c76a18afe0014baab3226a902db0b87255f3ffc31c2c",
+    strip_prefix = "asylo-dfdc44744e3b18531830deb37c5633f648e6cdbd",
+    urls = ["https://github.com/google/asylo/archive/dfdc44744e3b18531830deb37c5633f648e6cdbd.tar.gz"],
 )
 
 # Google Test
 git_repository(
     name = "gtest",
-    remote = "https://github.com/google/googletest",
     commit = "2fe3bd994b3189899d93f1d5a881e725e046fdc2",
+    remote = "https://github.com/google/googletest",
 )
 
 # Google Protocol Buffers.
 http_archive(
     name = "com_google_protobuf",
+    sha256 = "98e615d592d237f94db8bf033fba78cd404d979b0b70351a9e5aaff725398357",
+    strip_prefix = "protobuf-3.9.1",
     urls = [
         "https://github.com/protocolbuffers/protobuf/archive/v3.9.1.tar.gz",
     ],
-    strip_prefix = "protobuf-3.9.1",
-    sha256 = "98e615d592d237f94db8bf033fba78cd404d979b0b70351a9e5aaff725398357",
 )
+
 load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
+
 protobuf_deps()
 
 # Google APIs for Cloud Spanner protos.
 # TODO: Switch from fork after https://github.com/googleapis/googleapis/pull/553 is merged.
 http_archive(
     name = "com_google_googleapis",
-    urls = [
-        "https://github.com/michael-kernel-sanders/googleapis/archive/66d43496b46c26915d7d37302cddbd81481302d7.zip"
-    ],
-    strip_prefix = "googleapis-66d43496b46c26915d7d37302cddbd81481302d7",
     sha256 = "3a426981242af9c05dbc3cdfc72f6627516232bbccaebaab1711397606184973",
+    strip_prefix = "googleapis-66d43496b46c26915d7d37302cddbd81481302d7",
+    urls = [
+        "https://github.com/michael-kernel-sanders/googleapis/archive/66d43496b46c26915d7d37302cddbd81481302d7.zip",
+    ],
 )
 
 # TODO: Create a deps function for the googleapis repo.
 http_archive(
     name = "io_grpc_grpc_java",
+    sha256 = "9d23d9fec84e24bd3962f5ef9d1fd61ce939d3f649a22bcab0f19e8167fae8ef",
+    strip_prefix = "grpc-java-1.20.0",
     urls = [
         "https://github.com/grpc/grpc-java/archive/v1.20.0.zip",
     ],
-    strip_prefix = "grpc-java-1.20.0",
-    sha256 = "9d23d9fec84e24bd3962f5ef9d1fd61ce939d3f649a22bcab0f19e8167fae8ef",
 )
 
 # TODO: Create a deps function for the googleapis repo.
 http_archive(
     name = "com_google_api_codegen",
-    urls = ["https://github.com/googleapis/gapic-generator/archive/8e930b79e846b9d4876462be9dc4c1dbc04e2903.zip"],
-    strip_prefix = "gapic-generator-8e930b79e846b9d4876462be9dc4c1dbc04e2903",
     sha256 = "ba19948ebc4ea39358ba07fc0253f8927d7a2c9ba3462e8f34faad7ad5ac4142",
+    strip_prefix = "gapic-generator-8e930b79e846b9d4876462be9dc4c1dbc04e2903",
+    urls = ["https://github.com/googleapis/gapic-generator/archive/8e930b79e846b9d4876462be9dc4c1dbc04e2903.zip"],
 )
 
 # WebAssembly Binary Toolkit (forked by tiziano88).
@@ -96,21 +99,24 @@ load(
     "asylo_deps",
     "asylo_go_deps",
 )
+
 asylo_deps()
+
 asylo_go_deps()
 
 load("@com_google_asylo//asylo/bazel:sgx_deps.bzl", "sgx_deps")
+
 sgx_deps()
 
 load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
-grpc_deps()
 
+grpc_deps()
 
 # clang + llvm 8.0
 http_archive(
-    name = "clang_llvm",
-    build_file = "//toolchain:clang_llvm.BUILD",
+    name = "clang",
+    build_file = "//toolchain:clang.BUILD",
+    sha256 = "0f5c314f375ebd5c35b8c1d5e5b161d9efaeff0523bac287f8b4e5b751272f51",
     strip_prefix = "clang+llvm-8.0.0-x86_64-linux-gnu-ubuntu-18.04",
     url = "http://releases.llvm.org/8.0.0/clang+llvm-8.0.0-x86_64-linux-gnu-ubuntu-18.04.tar.xz",
-    sha256 = "0f5c314f375ebd5c35b8c1d5e5b161d9efaeff0523bac287f8b4e5b751272f51"
 )
