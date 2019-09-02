@@ -349,10 +349,33 @@ The following command builds and runs an Oak Server instance.
 
 `./scripts/run_server_docker`
 
+### Run Development Server
+
+In addition to the Oak Server, we provide a "development" version of the server. It shares the same
+runtime as the Docker implementation, but it's built using clang and it's a very lightweight wrapper
+around a simple gRPC client. It doesn't use Docker or any of the Asylo toolchains and it does not
+create an enclave.
+
+As such, it can be used when working on the runtime, the client code or the module code as it can
+help with enabling a faster iteration.
+
+The following command builds and runs an Oak Development Server:
+
+`./scripts/run_server_dev`
+
+As this compiles using clang on your local machine, it can be easily build in debug mode, as well as
+use any of the Sanitizers clang supports (e.g. asan, tsan etc.). Details about available sanitizers
+can be found in the [`.bazelrc`](/.bazelrc) file.
+
+The following command builds and run Oak Local Server with tsan enabled. Replace `tsan` with other
+configurations for different sanitisers.
+
+`bazel build --config=tsan //oak/server/dev:oak`
+
 ### Run Client
 
 The following command (run in a separate terminal) compiles an example module
 from Rust to WebAssembly, and sends it to the Oak Server running on the same
-machine.
+machine. It works with both Servers (Docker and Dev).
 
 `./examples/hello_world/run`

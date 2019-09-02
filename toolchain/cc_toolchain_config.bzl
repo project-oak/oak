@@ -162,6 +162,7 @@ def _impl(ctx):
                             "-Wno-sign-compare",
                             "-Wno-unused-function",
                             "-Wno-write-strings",
+                            "-Werror",
                         ],
                     ),
                 ],
