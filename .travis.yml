@@ -14,6 +14,7 @@ cache:
 env:
   - FORMAT_CHECKS=true
   - BUILD_SERVER=true
+  - BUILD_DEV_SERVER=true
   - BUILD_EXAMPLES=true
   - UNIT_TEST=true
   - EXAMPLES_TEST=true
@@ -29,6 +30,10 @@ script:
     if [[ "${BUILD_SERVER}" == "true" ]]; then
       ./scripts/build_server_docker
     fi
+  - |
+    if [[ "${BUILD_DEV_SERVER}" == "true" ]]; then
+      ./scripts/docker_run ./scripts/build_dev_server
+    fi    
   - |
     if [[ "${BUILD_EXAMPLES}" == "true" ]]; then
       ./scripts/build_examples_docker

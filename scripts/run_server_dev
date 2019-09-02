@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o xtrace
+
+readonly CACHE_DIR='bazel-cache'
+
+bazel --output_base="$CACHE_DIR/dev" run --symlink_prefix='dev-' --config=clang //oak/server/dev:oak
