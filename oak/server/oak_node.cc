@@ -172,7 +172,7 @@ static bool CheckModuleExports(wabt::interp::Environment* env,
       [env, module](const RequiredExport& req) { return CheckModuleExport(env, module, req); });
 }
 
-OakNode::OakNode() : Service(), NodeThread("wasm-node") {}
+OakNode::OakNode() : NodeThread("wasm-node") {}
 
 std::unique_ptr<OakNode> OakNode::Create(const std::string& module) {
   LOG(INFO) << "Creating Oak Node";
@@ -357,13 +357,6 @@ wabt::interp::HostFunc::Callback OakNode::OakWaitOnChannels(wabt::interp::Enviro
     }
     return wabt::interp::Result::Ok;
   };
-}
-
-grpc::Status OakNode::GetAttestation(grpc::ServerContext* context,
-                                     const GetAttestationRequest* request,
-                                     GetAttestationResponse* response) {
-  // TODO: Move this method to the application and implement it there.
-  return ::grpc::Status::OK;
 }
 
 }  // namespace oak

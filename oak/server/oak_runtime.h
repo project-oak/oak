@@ -19,6 +19,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "asylo/util/status.h"
 #include "include/grpcpp/security/server_credentials.h"
@@ -26,47 +27,50 @@
 #include "oak/proto/manager.pb.h"
 #include "oak/proto/oak_api.pb.h"
 #include "oak/server/logging_node.h"
+#include "oak/server/oak_grpc_node.h"
 #include "oak/server/oak_node.h"
 #include "oak/server/storage/storage_node.h"
 
 namespace oak {
 // OakRuntime contains the common runtime needed for an Oak System. The Runtime is responsible for
-// Initializing and Running a gRPC server, creating the nodes and channels and keeping track of the
-// connectivity.
-// For now, it only supports one node.
+// Initializing and Running a gRPC server, creating the nodes and channels and keeping track of
+// the connectivity. For now, it only supports one node.
 //
 // It can run in its own enclave, but this is optional. See /asylo/ for how to use it with an
 // enclave
 
 class OakRuntime {
  public:
-  OakRuntime(){};
-
+  OakRuntime() = default;
   virtual ~OakRuntime() = default;
 
   // Initializes a gRPC server. If the server is already initialized, does nothing.
   asylo::Status Initialize(const ApplicationConfiguration& config);
-  asylo::Status StartCompletionQueue(std::unique_ptr<grpc::AsyncGenericService> service,
-                                     std::unique_ptr<grpc::ServerCompletionQueue> queue);
-  grpc::Service* GetGrpcService();
+  asylo::Status Start();
+  asylo::Status Stop();
+
+  int32_t GetPort();
 
  private:
-  // Creates all the necessary channels and pass the appropriate halves to |node_|.
-  void SetUpChannels();
+  // Creates all the necessary channels and pass the appropriate halves to |node|.
+  void SetUpChannels(OakNode& node);
 
-  // Consumes gRPC events from the completion queue in an infinite loop.
-  void CompletionQueueLoop();
+  // Connects the |node| with the gRPC pseudo-node
+  void SetUpGrpcChannels(OakNode& node);
 
+  std::vector<std::unique_ptr<OakNode> > wasm_nodes_;
+
+  // TODO: These are hardcoded now. Make them generic nodes and channels and use config.
+  // Pseudo-nodes.
+  std::unique_ptr<OakGrpcNode> grpc_node_;
   std::unique_ptr<LoggingNode> logging_node_;
   std::unique_ptr<StorageNode> storage_node_;
-  std::unique_ptr<OakNode> node_;
 
-  // TODO: Split gRPC logic and channels to a separate gRPC pseudo-node.
+  // Channels.
   std::shared_ptr<MessageChannel> grpc_in_;
   std::shared_ptr<MessageChannel> grpc_out_;
 
   std::unique_ptr<grpc::AsyncGenericService> module_service_;
-
   std::unique_ptr<grpc::ServerCompletionQueue> completion_queue_;
 };  // class OakRuntime
 

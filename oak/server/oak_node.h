@@ -33,7 +33,7 @@ namespace oak {
 
 typedef std::unordered_map<Handle, std::unique_ptr<ChannelHalf>> ChannelHalfTable;
 
-class OakNode final : public Application::Service, public NodeThread {
+class OakNode final : public NodeThread {
  public:
   // Creates an Oak node by loading the Wasm module code.
   static std::unique_ptr<OakNode> Create(const std::string& module);
@@ -44,9 +44,6 @@ class OakNode final : public Application::Service, public NodeThread {
   // Clients should construct OakNode instances with Create() (which
   // can fail).
   OakNode();
-
-  grpc::Status GetAttestation(grpc::ServerContext* context, const GetAttestationRequest* request,
-                              GetAttestationResponse* response) override;
 
   void InitEnvironment(wabt::interp::Environment* env);
 
