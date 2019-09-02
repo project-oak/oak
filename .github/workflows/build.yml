@@ -1,0 +1,23 @@
+name: Docker Image CI
+on: [push]
+jobs:
+  build_docker_image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: check formatting
+        run: ./scripts/docker_run true
+  build_server:
+    runs-on: ubuntu-latest
+    needs: build_docker_image
+    steps:
+      - uses: actions/checkout@v1
+      - name: build server
+        run: ./scripts/docker_run ./scripts/build_server
+  run_examples:
+    runs-on: ubuntu-latest
+    needs: build_docker_image
+    steps:
+      - uses: actions/checkout@v1
+      - name: build server
+        run: ./scripts/run_examples
