@@ -11,39 +11,27 @@ cache:
     - rust/target  # cached objects for Rust library code
     - examples/target  # cached objects for Rust example code
 
-env:
-  - FORMAT_CHECKS=true
-  - BUILD_SERVER=true
-  - BUILD_DEV_SERVER=true
-  - BUILD_EXAMPLES=true
-  - UNIT_TEST=true
-  - EXAMPLES_TEST=true
-
-script:
-  - echo "build --show_progress_rate_limit=5.0" >> .bazelrc
-  - set -o errexit
-  - |
-    if [[ "${FORMAT_CHECKS}" == "true" ]]; then
-      ./scripts/docker_run ./scripts/check_formatting
-    fi
-  - |
-    if [[ "${BUILD_SERVER}" == "true" ]]; then
-      ./scripts/docker_run ./scripts/build_server
-    fi
-  - |
-    if [[ "${BUILD_DEV_SERVER}" == "true" ]]; then
-      ./scripts/docker_run ./scripts/build_dev_server
-    fi    
-  - |
-    if [[ "${BUILD_EXAMPLES}" == "true" ]]; then
-      ./scripts/docker_run ./scripts/build_examples
-    fi
-  - |
-    if [[ "${UNIT_TEST}" == "true" ]]; then
-      ./scripts/docker_run ./scripts/run_tests
-    fi
-  - |
-    if [[ "${EXAMPLES_TEST}" == "true" ]]; then
-      ./scripts/run_examples
-      ./scripts/docker_run ./scripts/check_generated
-    fi
+jobs:
+  include:
+    - name: check formatting
+      script:
+      - set -o errexit
+      - ./scripts/docker_run ./scripts/check_formatting
+    - name: build server
+      script:
+      - echo "build --show_progress_rate_limit=5.0" >> .bazelrc
+      - set -o errexit
+      - ./scripts/docker_run ./scripts/build_server
+      - ./scripts/docker_run ./scripts/build_dev_server
+    - name: run examples
+      script:
+      - echo "build --show_progress_rate_limit=5.0" >> .bazelrc
+      - set -o errexit
+      - ./scripts/run_examples
+      - ./scripts/docker_run ./scripts/check_generated
+    - name: run tests
+      script:
+      - echo "build --show_progress_rate_limit=5.0" >> .bazelrc
+      - set -o errexit
+      - ./scripts/docker_run ./scripts/run_tests
+      - ./scripts/docker_run ./scripts/check_generated
