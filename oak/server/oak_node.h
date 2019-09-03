@@ -78,7 +78,7 @@ class OakNode final : public Application::Service {
   ChannelHalfTable channel_halves_;
 
   // Thread running the oak_main export.
-  std::thread main_;
+  std::thread main_thread_;
 };
 
 }  // namespace oak
