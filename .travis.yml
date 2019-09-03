@@ -13,21 +13,13 @@ cache:
 
 jobs:
   include:
-    - name: check formatting
+    - name: build
       script:
       - ./scripts/docker_run ./scripts/check_formatting
-    - name: build server
-      script:
-      - echo "build --show_progress_rate_limit=5.0" >> .bazelrc
-      - ./scripts/docker_run ./scripts/build_server
-      - ./scripts/docker_run ./scripts/build_dev_server
-    - name: run examples
-      script:
-      - echo "build --show_progress_rate_limit=5.0" >> .bazelrc
       - ./scripts/run_examples
       - ./scripts/docker_run ./scripts/check_generated
-    - name: run tests
+    - name: test
       script:
-      - echo "build --show_progress_rate_limit=5.0" >> .bazelrc
+      - ./scripts/docker_run ./scripts/build_server
+      - ./scripts/docker_run ./scripts/build_dev_server
       - ./scripts/docker_run ./scripts/run_tests
-      - ./scripts/docker_run ./scripts/check_generated
