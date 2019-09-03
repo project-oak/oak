@@ -2,6 +2,7 @@
 
 set -o errexit
 set -o nounset
+set -o xtrace
 
 cargo test --manifest-path=./rust/Cargo.toml
 cargo test --manifest-path=./examples/Cargo.toml

@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 
 # Usage: docker_run [OPTIONS] COMMAND
-# 
+#
 # Options:
 #    --detach    Run container in background and print container ID
 
 set -o errexit
+set -o nounset
 set -o xtrace
 
 # The default user for a Docker container has uid 0 (root). To avoid creating
@@ -43,4 +44,3 @@ if [[ "$1" == "--detach" ]]; then
 else
   docker run "${docker_run_flags[@]}" oak:latest "$@"
 fi
-

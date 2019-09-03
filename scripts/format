@@ -2,6 +2,7 @@
 
 set -o errexit
 set -o nounset
+set -o xtrace
 
 # Not everyone has mdformat installed, so we ignore failures for now.
 
