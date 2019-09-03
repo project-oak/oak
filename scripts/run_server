@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 set -o errexit
+set -o nounset
 set -o xtrace
 
 readonly GRPC_PORT="${GRPC_PORT:-8888}"

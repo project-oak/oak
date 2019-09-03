@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
 
 set -o errexit
+set -o nounset
 set -o xtrace
 
 readonly OAK_REMOTE_CACHE_KEY='./.oak_remote_cache_key.json'
 
-(set -x;
+(set -o xtrace;
 # Do we have a JSON key for the remote cache.
 # https://docs.bazel.build/versions/master/remote-caching.html#google-cloud-storage
 if [[ ! -f "$OAK_REMOTE_CACHE_KEY" ]]; then
-    # Check if this exists in the environment.
-    if [[ -n "$BAZEL_GOOGLE_CREDENTIALS" ]]; then
+    # Check if this exists in the environment and it is not empty.
+    if [[ -n "${BAZEL_GOOGLE_CREDENTIALS:-}" ]]; then
         echo "$BAZEL_GOOGLE_CREDENTIALS" > "$OAK_REMOTE_CACHE_KEY"
     fi
 fi

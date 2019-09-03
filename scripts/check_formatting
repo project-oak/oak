@@ -2,6 +2,7 @@
 
 set -o errexit
 set -o nounset
+set -o xtrace
 
 # Check which BUILD and .bzl files need to be reformatted.
 find oak examples toolchain \( -type f -name BUILD -o -name '*bzl' \) -exec buildifier -lint=warn -mode=check {} +
