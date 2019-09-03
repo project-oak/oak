@@ -209,15 +209,14 @@ void OakNode::Start() {
   // we pass the DefinedNode* to the thread by value so it doesn't fall out
   // of scope once this function exits.
   LOG(INFO) << "Executing module oak_main on new thread";
-  std::thread t([this] { this->RunModule(); });
-  main_ = std::move(t);
+  main_thread_ = std::thread(&OakNode::RunModule, this);
   LOG(INFO) << "Started module execution thread";
 }
 
 void OakNode::Stop() {
-  if (main_.joinable()) {
+  if (main_thread_.joinable()) {
     LOG(INFO) << "Await main thread termination before destroying OakNode instance";
-    main_.join();
+    main_thread_.join();
     LOG(INFO) << "Oak node main thread terminated";
   }
 }
