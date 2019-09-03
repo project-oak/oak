@@ -26,6 +26,7 @@
 #include "oak/proto/manager.pb.h"
 #include "oak/proto/oak_api.pb.h"
 #include "oak/server/oak_node.h"
+#include "oak/server/storage/storage_manager.h"
 
 namespace oak {
 // OakRuntime contains the common runtime needed for an Oak System. The Runtime is responsible for
@@ -62,6 +63,8 @@ class OakRuntime {
   std::shared_ptr<MessageChannel> grpc_out_;
 
   std::unique_ptr<grpc::AsyncGenericService> module_service_;
+  StorageManager storage_manager_;
+
   std::unique_ptr<grpc::ServerCompletionQueue> completion_queue_;
 };  // class OakRuntime
 

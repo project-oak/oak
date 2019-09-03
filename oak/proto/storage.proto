@@ -18,91 +18,74 @@ syntax = "proto3";
 
 package oak;
 
-import "google/rpc/status.proto";
+import "third_party/google/rpc/status.proto";
 
-message ReadRequest {
-  bytes data_store_id = 1;
-  bytes transaction_id = 2;
-  bytes name = 3;
-}
+// The Storage service is the interface to a StorageProvider implementation
+// of persistent storage.  Each request message contains a storage_id that
+// uniquely identifies the logical storage instance for the operation and
+// the StorageProvider implementation determines how it is used.
 
-message ReadResponse {
-  bytes value = 1;
-}
-
-message WriteRequest {
-  bytes data_store_id = 1;
-  bytes transaction_id = 2;
-  bytes name = 3;
-  bytes value = 4;
-}
-
-message WriteResponse {
-}
-
-message DeleteRequest {
-  bytes data_store_id = 1;
-  bytes transaction_id = 2;
-  bytes name = 3;
-}
-
-message DeleteResponse {
-}
-
-message BeginRequest {
-  bytes data_store_id = 1;
-}
-
-message BeginResponse {
-  bytes transaction_id = 1;
-}
-
-message CommitRequest {
-  bytes transaction_id = 1;
-}
-
-message CommitResponse {
-}
-
-message RollbackRequest {
-  bytes transaction_id = 1;
-}
-
-message RollbackResponse {
-}
-
-// Wrapper message used to send requests via the StorageChannel interface.
-message StorageOperationRequest {
-  oneof operation {
-    ReadRequest read_request = 2;
-    WriteRequest write_request = 3;
-    DeleteRequest delete_request = 4;
-    BeginRequest begin_request = 5;
-    CommitRequest commit_request = 6;
-    RollbackRequest rollback_request = 7;
-  }
-}
-
-// Wrapper message used to send responses via the StorageChannel interface.
-message StorageOperationResponse {
-  google.rpc.Status status = 1;
-
-  oneof operation {
-    ReadResponse read_response = 2;
-    WriteResponse write_response = 3;
-    DeleteResponse delete_response = 4;
-    BeginResponse begin_response = 5;
-    CommitResponse commit_response = 6;
-    RollbackResponse rollback_response = 7;
-  }
-}
-
+// TODO: Consider merging storage_id into the name field to make the
+// interface truly opaque.
 service Storage {
-  rpc Read(ReadRequest) returns (ReadResponse);
-  rpc Write(WriteRequest) returns (WriteResponse);
-  rpc Delete(DeleteRequest) returns (DeleteResponse);
+  rpc Read(StorageReadRequest) returns (StorageReadResponse);
+  rpc Write(StorageWriteRequest) returns (StorageWriteResponse);
+  rpc Delete(StorageDeleteRequest) returns (StorageDeleteResponse);
 
-  rpc Begin(BeginRequest) returns (BeginResponse);
-  rpc Commit(CommitRequest) returns (CommitResponse);
-  rpc Rollback(RollbackRequest) returns (RollbackResponse);
+  rpc Begin(StorageBeginRequest) returns (StorageBeginResponse);
+  rpc Commit(StorageCommitRequest) returns (StorageCommitResponse);
+  rpc Rollback(StorageRollbackRequest) returns (StorageRollbackResponse);
+}
+
+message StorageReadRequest {
+  bytes storage_id = 1;
+  bytes transaction_id = 2;
+  bytes datum_name = 3;
+}
+
+message StorageReadResponse {
+  bytes datum_value = 1;
+}
+
+message StorageWriteRequest {
+  bytes storage_id = 1;
+  bytes transaction_id = 2;
+  bytes datum_name = 3;
+  bytes datum_value = 4;
+}
+
+message StorageWriteResponse {
+}
+
+message StorageDeleteRequest {
+  bytes storage_id = 1;
+  bytes transaction_id = 2;
+  bytes datum_name = 3;
+}
+
+message StorageDeleteResponse {
+}
+
+message StorageBeginRequest {
+  bytes storage_id = 1;
+}
+
+message StorageBeginResponse {
+  bytes transaction_id = 1;
+}
+
+message StorageCommitRequest {
+  bytes storage_id = 1;
+  bytes transaction_id = 2;
+}
+
+message StorageCommitResponse {
+}
+
+message StorageRollbackRequest {
+  bytes storage_id = 1;
+  bytes transaction_id = 2;
+}
+
+message StorageRollbackResponse {
 }

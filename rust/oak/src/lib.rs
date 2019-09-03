@@ -27,6 +27,7 @@ use std::io;
 use std::io::Write;
 
 pub mod proto;
+pub mod storage;
 #[cfg(test)]
 mod tests;
 

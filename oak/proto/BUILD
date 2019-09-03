@@ -40,7 +40,6 @@ cc_proto_library(
 proto_library(
     name = "application_proto",
     srcs = ["application.proto"],
-    deps = [],
 )
 
 cc_proto_library(
@@ -91,13 +90,24 @@ cc_proto_library(
 proto_library(
     name = "oak_api_proto",
     srcs = ["oak_api.proto"],
-    deps = [
-    ],
 )
 
 cc_proto_library(
     name = "oak_api_cc_proto",
     deps = [":oak_api_proto"],
+)
+
+proto_library(
+    name = "storage_channel_proto",
+    srcs = ["storage_channel.proto"],
+    deps = [
+        "//third_party/google/rpc:status_proto",
+    ],
+)
+
+cc_proto_library(
+    name = "storage_channel_cc_proto",
+    deps = [":storage_channel_proto"],
 )
 
 proto_library(

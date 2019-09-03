@@ -22,7 +22,8 @@ cc_binary(
     name = "storage_server",
     srcs = ["storage_server.cc"],
     deps = [
-        ":spanner_provider",
+        # TODO: Fix grpc::Status.
+        #        ":spanner_provider",
         ":storage_service",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/flags:flag",
@@ -33,17 +34,47 @@ cc_binary(
 )
 
 cc_library(
-    name = "storage_channel",
+    name = "storage_manager",
     srcs = [
-        "storage_channel.cc",
-    ],
-    hdrs = [
-        "storage_channel.h",
+        "storage_manager.h",
     ],
     deps = [
+        "@com_google_absl//absl/types:span",
+    ],
+)
+
+cc_library(
+    name = "storage_read_channel",
+    srcs = [
+        "storage_read_channel.cc",
+    ],
+    hdrs = [
+        "storage_read_channel.h",
+    ],
+    deps = [
+        ":storage_manager",
         "//oak/proto:storage_cc_grpc",
         "//oak/server:channel",
+        "@com_google_asylo//asylo/util:logging",
+    ],
+)
+
+cc_library(
+    name = "storage_write_channel",
+    srcs = [
+        "storage_write_channel.cc",
+    ],
+    hdrs = [
+        "storage_write_channel.h",
+    ],
+    deps = [
+        ":storage_manager",
+        "//oak/proto:storage_cc_grpc",
+        "//oak/proto:storage_channel_cc_proto",
+        "//oak/server:channel",
+        "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/types:span",
+        "@com_google_asylo//asylo/util:logging",
     ],
 )
 
@@ -85,6 +116,7 @@ cc_library(
         ":storage_provider",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_asylo//asylo/util:logging",
-        "@com_google_googleapis//google/spanner/v1:spanner_cc_grpc",
+        # TODO: Fix grpc::Status.
+        #        "@com_google_googleapis//google/spanner/v1:spanner_cc_grpc",
     ],
 )

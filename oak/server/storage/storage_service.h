@@ -29,23 +29,23 @@ class StorageService final : public Storage::Service {
   // Takes ownership of storage_provider.
   explicit StorageService(StorageProvider* storage_provider);
 
-  grpc::Status Read(grpc::ServerContext* context, const ReadRequest* request,
-                    ReadResponse* response) override;
+  grpc::Status Read(grpc::ServerContext* context, const StorageReadRequest* request,
+                    StorageReadResponse* response) override;
 
-  grpc::Status Write(grpc::ServerContext* context, const WriteRequest* request,
-                     WriteResponse* response) override;
+  grpc::Status Write(grpc::ServerContext* context, const StorageWriteRequest* request,
+                     StorageWriteResponse* response) override;
 
-  grpc::Status Delete(grpc::ServerContext* context, const DeleteRequest* request,
-                      DeleteResponse* response) override;
+  grpc::Status Delete(grpc::ServerContext* context, const StorageDeleteRequest* request,
+                      StorageDeleteResponse* response) override;
 
-  grpc::Status Begin(grpc::ServerContext* context, const BeginRequest* request,
-                     BeginResponse* response) override;
+  grpc::Status Begin(grpc::ServerContext* context, const StorageBeginRequest* request,
+                     StorageBeginResponse* response) override;
 
-  grpc::Status Commit(grpc::ServerContext* context, const CommitRequest* request,
-                      CommitResponse* response) override;
+  grpc::Status Commit(grpc::ServerContext* context, const StorageCommitRequest* request,
+                      StorageCommitResponse* response) override;
 
-  grpc::Status Rollback(grpc::ServerContext* context, const RollbackRequest* request,
-                        RollbackResponse* response) override;
+  grpc::Status Rollback(grpc::ServerContext* context, const StorageRollbackRequest* request,
+                        StorageRollbackResponse* response) override;
 
  private:
   std::unique_ptr<StorageProvider> storage_provider_;

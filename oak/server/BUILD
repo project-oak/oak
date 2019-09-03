@@ -43,6 +43,7 @@ cc_library(
         "//oak/proto:application_cc_grpc",
         "//oak/proto:grpc_encap_cc_proto",
         "//oak/proto:oak_api_cc_proto",
+        "@boringssl//:crypto",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/types:span",
@@ -84,6 +85,7 @@ cc_library(
     deps = [
         ":oak_node",
         "//oak/proto:grpc_encap_cc_proto",
+        "//oak/server/storage:storage_manager",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_asylo//asylo/util:logging",
     ],
@@ -96,7 +98,11 @@ cc_library(
     deps = [
         ":module_invocation",
         ":oak_node",
+        "//oak/proto:enclave_cc_proto",
         "//oak/proto:manager_cc_grpc",
+        "//oak/server/storage:storage_manager",
+        "//oak/server/storage:storage_read_channel",
+        "//oak/server/storage:storage_write_channel",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/synchronization",
         "@com_google_asylo//asylo/util:logging",

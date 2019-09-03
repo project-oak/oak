@@ -634,16 +634,16 @@ impl ::protobuf::reflect::ProtobufValue for GrpcResponse {
 }
 
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\x10grpc_encap.proto\x12\x03oak\x1a\x19google/protobuf/any.proto\x1a\
-    \x17google/rpc/status.proto\"\x8e\x01\n\x0bGrpcRequest\x12\x1b\n\tstream\
-    _id\x18\x01\x20\x01(\x05R\x08streamId\x12\x1f\n\x0bmethod_name\x18\x02\
-    \x20\x01(\tR\nmethodName\x12-\n\x07req_msg\x18\x03\x20\x01(\x0b2\x14.goo\
-    gle.protobuf.AnyR\x06reqMsg\x12\x12\n\x04last\x18\x04\x20\x01(\x08R\x04l\
-    ast\"\x9a\x01\n\x0cGrpcResponse\x12\x1b\n\tstream_id\x18\x01\x20\x01(\
-    \x05R\x08streamId\x12-\n\x07rsp_msg\x18\x02\x20\x01(\x0b2\x14.google.pro\
-    tobuf.AnyR\x06rspMsg\x12*\n\x06status\x18\x03\x20\x01(\x0b2\x12.google.r\
-    pc.StatusR\x06status\x12\x12\n\x04last\x18\x04\x20\x01(\x08R\x04lastb\
-    \x06proto3\
+    \n\x10grpc_encap.proto\x12\x03oak\x1a\x19google/protobuf/any.proto\x1a#t\
+    hird_party/google/rpc/status.proto\"\x8e\x01\n\x0bGrpcRequest\x12\x1b\n\
+    \tstream_id\x18\x01\x20\x01(\x05R\x08streamId\x12\x1f\n\x0bmethod_name\
+    \x18\x02\x20\x01(\tR\nmethodName\x12-\n\x07req_msg\x18\x03\x20\x01(\x0b2\
+    \x14.google.protobuf.AnyR\x06reqMsg\x12\x12\n\x04last\x18\x04\x20\x01(\
+    \x08R\x04last\"\x9a\x01\n\x0cGrpcResponse\x12\x1b\n\tstream_id\x18\x01\
+    \x20\x01(\x05R\x08streamId\x12-\n\x07rsp_msg\x18\x02\x20\x01(\x0b2\x14.g\
+    oogle.protobuf.AnyR\x06rspMsg\x12*\n\x06status\x18\x03\x20\x01(\x0b2\x12\
+    .google.rpc.StatusR\x06status\x12\x12\n\x04last\x18\x04\x20\x01(\x08R\
+    \x04lastb\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {

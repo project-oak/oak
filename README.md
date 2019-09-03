@@ -132,6 +132,14 @@ Node (see [/oak/common/handles.h](oak/common/handles.h)):
     messages.  Each such message should be encoded as a serialized
     `GrpcResponse` protocol buffer message (see
     [/oak/proto/grpc_encap.proto](oak/proto/grpc_encap.proto)).
+-   `storage_in` (handle: 4, receive): This channel will be populated with incoming
+    storage response messages, for processing by the Oak Node.  Each message is a
+    serialized `StorageOperationResponse` protocol buffer message (see
+    [/oak/proto/storage.proto](oak/proto/storage.proto)).
+-   `storage_out` (handle: 5, send): This channel can be used to send storage request
+    messages.  Each such message should be encoded as a serialized
+    `StorageOperationRequest` protocol buffer message (see
+    [/oak/proto/storage.proto](oak/proto/storage.proto)).
 
 Each Oak Module may also optionally rely on zero or more of the following **host
 functions** as [WebAssembly

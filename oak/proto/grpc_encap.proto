@@ -19,7 +19,7 @@ syntax = "proto3";
 package oak;
 
 import "google/protobuf/any.proto";
-import "google/rpc/status.proto";
+import "third_party/google/rpc/status.proto";
 
 // Protocol buffer encoding to hold additional metadata that accompanies a gRPC
 // message exchange.  This is normally encoded using various HTTP2 features

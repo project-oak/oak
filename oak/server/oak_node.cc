@@ -23,6 +23,7 @@
 
 #include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
+#include "grpcpp/create_channel.h"
 #include "oak/proto/oak_api.pb.h"
 #include "oak/server/wabt_output.h"
 #include "src/binary-reader.h"
