@@ -22,7 +22,7 @@ StorageReadChannel::StorageReadChannel(StorageManager* storage_manager)
     : storage_manager_(storage_manager) {}
 
 ReadResult StorageReadChannel::Read(uint32_t size) {
-  std::unique_ptr<Message> response_data = std::move(storage_manager_->ReadResponseData(size));
+  std::unique_ptr<Message> response_data = storage_manager_->ReadResponseData(size);
   ReadResult result{0};
   if (size >= response_data->size()) {
     result.data = std::move(response_data);
