@@ -77,7 +77,7 @@ static void LogHostFunctionCall(const wabt::interp::HostFunc* func,
             << params.str() << ")";
 }
 
-static wabt::Result ReadModule(const std::string module_bytes, wabt::interp::Environment* env,
+static wabt::Result ReadModule(const std::string& module_bytes, wabt::interp::Environment* env,
                                wabt::Errors* errors, wabt::interp::DefinedModule** out_module) {
   LOG(INFO) << "Reading module";
   wabt::Result result;
@@ -112,14 +112,14 @@ std::ostream& operator<<(std::ostream& os, const oak::RequiredExport& r) {
 
 namespace oak {
 
-const RequiredExport kRequiredExports[] = {
+const std::vector<RequiredExport> kRequiredExports({
     {
         "oak_main",
         true,
         wabt::interp::FuncSignature(std::vector<wabt::Type>{},
                                     std::vector<wabt::Type>{wabt::Type::I32}),
     },
-};
+});
 
 // Check module exports all required functions with the correct signatures,
 // returning true if so.
@@ -165,13 +165,9 @@ static bool CheckModuleExport(wabt::interp::Environment* env, wabt::interp::Defi
 }
 static bool CheckModuleExports(wabt::interp::Environment* env,
                                wabt::interp::DefinedModule* module) {
-  bool rc = true;
-  for (const RequiredExport& req : kRequiredExports) {
-    if (!CheckModuleExport(env, module, req)) {
-      rc = false;
-    }
-  }
-  return rc;
+  return std::all_of(
+      kRequiredExports.begin(), kRequiredExports.end(),
+      [env, module](const RequiredExport& req) { return CheckModuleExport(env, module, req); });
 }
 
 OakNode::OakNode() : Service() {}
