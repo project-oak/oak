@@ -81,6 +81,21 @@ wasm_group(
 )
 
 cc_library(
+    name = "oak_grpc_node",
+    srcs = ["oak_grpc_node.cc"],
+    hdrs = ["oak_grpc_node.h"],
+    deps = [
+        ":channel",
+        ":module_invocation",
+        "//oak/proto:application_cc_grpc",
+        "//oak/proto:enclave_cc_proto",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_asylo//asylo/grpc/auth:null_credentials_options",
+        "@com_google_asylo//asylo/util:logging",
+    ],
+)
+
+cc_library(
     name = "module_invocation",
     srcs = ["module_invocation.cc"],
     hdrs = ["module_invocation.h"],
@@ -98,6 +113,7 @@ cc_library(
     hdrs = ["oak_runtime.h"],
     deps = [
         ":module_invocation",
+        ":oak_grpc_node",
         ":oak_node",
         "//oak/proto:enclave_cc_proto",
         "//oak/server:logging_node",

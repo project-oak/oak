@@ -44,37 +44,16 @@ grpc::Status DevOakManager::CreateApplication(grpc::ServerContext* context,
     return status.ToOtherStatus<grpc::Status>();
   }
 
-  grpc::ServerBuilder builder;
-  int port;
+  // Start the runtime.
+  runtime->Start();
 
-  // Use ":0" notation so that server listens on a free port.
-  builder.AddListeningPort(
-      "[::]:0", asylo::EnclaveServerCredentials(asylo::BidirectionalNullCredentialsOptions()),
-      &port);
-  builder.RegisterService(runtime->GetGrpcService());
-
-  // Add a completion queue and a generic service, in order to proxy incoming RPCs to the Oak Node.
-  auto completion_queue = builder.AddCompletionQueue();
-
-  // Register an async service.
-  auto module_service = absl::make_unique<grpc::AsyncGenericService>();
-  builder.RegisterAsyncGenericService(module_service.get());
-
-  auto server = builder.BuildAndStart();
-  if (!server) {
-    grpc::Status(grpc::INTERNAL, "Failed to start gRPC server");
-  }
-
-  // Moves ownership of unique pointers.
-  runtime->StartCompletionQueue(std::move(module_service), std::move(completion_queue));
-
-  runtimes[application_id] = std::move(runtime);
-  servers[application_id] = std::move(server);
-
+  int32_t port = runtime->GetPort();
   LOG(INFO) << "gRPC server is listening on port: " << port;
 
   response->set_application_id(application_id);
   response->set_grpc_port(port);
+
+  runtimes_[application_id] = std::move(runtime);
   return grpc::Status::OK;
 }
 
