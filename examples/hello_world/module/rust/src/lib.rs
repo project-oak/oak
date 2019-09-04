@@ -54,7 +54,13 @@ impl HelloWorldNode for Node {
             return Err(status);
         }
         // Save the latest greeting to storage.
-        oak::storage::write(STORAGE_NAME, FIELD_NAME, req.greeting.as_bytes());
+        match oak::storage::write(STORAGE_NAME, FIELD_NAME, req.greeting.as_bytes()) {
+            Ok(_) => {}
+            Err(status) => warn!(
+                "failed to store last greeting: code={} {}",
+                status.code, status.message
+            ),
+        }
         info!("Say hello to {}", req.greeting);
         let mut res = HelloResponse::new();
         res.reply = format!("HELLO {}!", req.greeting);
@@ -72,8 +78,17 @@ impl HelloWorldNode for Node {
         writer.write(res1);
 
         // Also generate a response with the last-stored value.
-        let prev_bytes = oak::storage::read(STORAGE_NAME, FIELD_NAME);
-        let previous = std::str::from_utf8(&prev_bytes).unwrap();
+        let result = oak::storage::read(STORAGE_NAME, FIELD_NAME);
+        let previous = match result {
+            Ok(v) => String::from_utf8(v).unwrap(),
+            Err(status) => {
+                warn!(
+                    "Failed to find previous value: code={} {}",
+                    status.code, status.message
+                );
+                "<default>".to_string()
+            }
+        };
         info!("Say bonjour to {}", previous);
         let mut res2 = HelloResponse::new();
         res2.reply = format!("BONJOUR {}!", previous);

@@ -54,7 +54,7 @@ fn execute_operation(operation_request: &StorageChannelRequest) -> StorageChanne
     response
 }
 
-pub fn read(storage_name: &[u8], name: &[u8]) -> Vec<u8> {
+pub fn read(storage_name: &[u8], name: &[u8]) -> GrpcResult<Vec<u8>> {
     let mut read_request = StorageChannelReadRequest::new();
     read_request.datum_name = name.to_owned();
 
@@ -62,15 +62,20 @@ pub fn read(storage_name: &[u8], name: &[u8]) -> Vec<u8> {
     operation_request.storage_name = storage_name.to_owned();
     operation_request.set_read_request(read_request);
 
-    let operation_response = execute_operation(&operation_request);
+    let mut operation_response = execute_operation(&operation_request);
 
-    operation_response
-        .get_read_response()
-        .get_datum_value()
-        .to_vec()
+    let status = operation_response.take_status();
+    if status.code != 0 {
+        Err(status)
+    } else {
+        Ok(operation_response
+            .get_read_response()
+            .get_datum_value()
+            .to_vec())
+    }
 }
 
-pub fn write(storage_name: &[u8], name: &[u8], value: &[u8]) {
+pub fn write(storage_name: &[u8], name: &[u8], value: &[u8]) -> GrpcResult<()> {
     let mut write_request = StorageChannelWriteRequest::new();
     write_request.datum_name = name.to_owned();
     write_request.datum_value = value.to_owned();
@@ -79,10 +84,16 @@ pub fn write(storage_name: &[u8], name: &[u8], value: &[u8]) {
     operation_request.storage_name = storage_name.to_owned();
     operation_request.set_write_request(write_request);
 
-    execute_operation(&operation_request);
+    let mut operation_response = execute_operation(&operation_request);
+    let status = operation_response.take_status();
+    if status.code != 0 {
+        Err(status)
+    } else {
+        Ok(())
+    }
 }
 
-pub fn delete(storage_name: &[u8], name: &[u8]) {
+pub fn delete(storage_name: &[u8], name: &[u8]) -> GrpcResult<()> {
     let mut delete_request = StorageChannelDeleteRequest::new();
     delete_request.datum_name = name.to_owned();
 
@@ -90,5 +101,11 @@ pub fn delete(storage_name: &[u8], name: &[u8]) {
     operation_request.storage_name = storage_name.to_owned();
     operation_request.set_delete_request(delete_request);
 
-    execute_operation(&operation_request);
+    let mut operation_response = execute_operation(&operation_request);
+    let status = operation_response.take_status();
+    if status.code != 0 {
+        Err(status)
+    } else {
+        Ok(())
+    }
 }
