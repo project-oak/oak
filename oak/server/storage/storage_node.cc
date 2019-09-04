@@ -61,7 +61,9 @@ void StorageNode::Run() {
 
         StorageReadResponse read_response;
         status = storage_service_->Read(&context, read_request, &read_response);
-        channel_response.mutable_read_response()->set_datum_value(read_response.datum_value());
+        if (status.ok()) {
+          channel_response.mutable_read_response()->set_datum_value(read_response.datum_value());
+        }
         break;
       }
       case StorageChannelRequest::kWriteRequest: {
@@ -91,8 +93,10 @@ void StorageNode::Run() {
 
         StorageBeginResponse begin_response;
         status = storage_service_->Begin(&context, begin_request, &begin_response);
-        channel_response.mutable_begin_response()->set_transaction_id(
-            begin_response.transaction_id());
+        if (status.ok()) {
+          channel_response.mutable_begin_response()->set_transaction_id(
+              begin_response.transaction_id());
+        }
         break;
       }
       case StorageChannelRequest::kCommitRequest: {
@@ -111,13 +115,16 @@ void StorageNode::Run() {
 
         StorageRollbackResponse rollback_response;
         status = storage_service_->Rollback(&context, rollback_request, &rollback_response);
-
         break;
       }
       case StorageChannelRequest::OPERATION_NOT_SET: {
+        LOG(ERROR) << "unknown operation";
         status =
             grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Operation request field not set.");
       }
+    }
+    if (!status.ok()) {
+      LOG(ERROR) << "operation failed: " << status.error_code() << " " << status.error_message();
     }
     channel_response.mutable_status()->set_code(status.error_code());
     channel_response.mutable_status()->set_message(status.error_message());
