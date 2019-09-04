@@ -152,17 +152,25 @@ def _impl(ctx):
                 flag_groups = [
                     flag_group(
                         flags = [
-                            "-fstack-protector",
-                            "-Wall",
-                            "-Wthread-safety",
-                            "-Wself-assign",
+                            # Force the usage of stack protectors for all functions.
+                            "-fstack-protector-all",
+                            # Pretty colours.
                             "-fcolor-diagnostics",
+                            # Don't omit the frame pointer, useful for debug.
                             "-fno-omit-frame-pointer",
-                            "-Woverloaded-virtual",
-                            "-Wno-sign-compare",
-                            "-Wno-unused-function",
-                            "-Wno-write-strings",
+                            # Enable all warnings.
+                            "-Wall",
+                            # Enable extra warnings.
+                            "-Wextra",
+                            # Simple but useful static checking to detect potential race conditions.
+                            "-Wthread-safety",
+                            # Treat warnings as errors.
                             "-Werror",
+                            # Disable some warnings:
+                            # protobuf generates unusused parameters, so skip this for now.
+                            "-Wno-unused-parameter",
+                            # https://stackoverflow.com/questions/1538943
+                            "-Wno-missing-field-initializers",
                         ],
                     ),
                 ],
