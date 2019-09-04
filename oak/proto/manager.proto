@@ -39,6 +39,7 @@ message Node {
     LogNode log_node = 2;
     GrpcServerNode grpc_server_node = 3;
     WebAssemblyNode web_assembly_node = 4;
+    StorageNode storage_node = 5;
   }
 }
 
@@ -83,6 +84,18 @@ message WebAssemblyNode {
   // with other Nodes or with the System.
   // They may be of different types and specified in any order.
   repeated Port ports = 2;
+}
+
+// A pseudo-Node that accepts storage requests and forwards them to an
+// external storage provider.
+//
+// This Node defines the following implicit Ports:
+// - `request`: IN port on which outgoing storage requests are received.
+// - `response`: OUT port on which inbound responses to storage requests are
+// sent.
+message StorageNode {
+  // The address of the external storage provider.
+  string address = 1;
 }
 
 // A Port represents an endpoint within a Node that can be connected via a
