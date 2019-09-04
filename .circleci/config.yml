@@ -1,0 +1,57 @@
+version: 2
+jobs:
+
+  check_formatting:
+    machine: true
+    steps:
+      - checkout
+      - run: ./scripts/docker_run ./scripts/check_formatting
+
+  build_server:
+    machine: true
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - bazel-cache-v1-{{ .Branch }}-{{ .Revision }}
+            - bazel-cache-v1-{{ .Branch }}
+            - bazel-cache-v1
+      - run: ./scripts/docker_run ./scripts/build_server
+      - run: ./scripts/docker_run ./scripts/build_dev_server
+      - save_cache:
+          key: bazel-cache-v1-{{ .Branch }}-{{ .Revision }}
+          paths:
+            - bazel-cache
+
+  run_examples:
+    machine: true
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - bazel-cache-v1-{{ .Branch }}-{{ .Revision }}
+            - bazel-cache-v1-{{ .Branch }}
+            - bazel-cache-v1
+      - run: ./scripts/run_examples
+      - run: ./scripts/docker_run ./scripts/check_generated
+
+  run_tests:
+    machine: true
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - bazel-cache-v1-{{ .Branch }}-{{ .Revision }}
+            - bazel-cache-v1-{{ .Branch }}
+            - bazel-cache-v1
+      - run: ./scripts/docker_run ./scripts/run_tests
+      - run: ./scripts/docker_run ./scripts/check_generated
+
+workflows:
+  version: 2
+  build_and_test:
+    jobs:
+      - check_formatting
+      - build_server
+      - run_examples
+      - run_tests
