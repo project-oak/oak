@@ -32,6 +32,7 @@ cc_binary(
         # TODO: Fix grpc::Status.
         #        ":spanner_provider",
         ":storage_service",
+        ":memory_provider",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
