@@ -32,7 +32,7 @@ std::unique_ptr<Message> Unwrap(const grpc::ByteBuffer& buffer) {
   if (!status.ok()) {
     LOG(QFATAL) << "Could not unwrap buffer";
   }
-  std::unique_ptr<Message> bytes = absl::make_unique<Message>();
+  auto bytes = absl::make_unique<Message>();
   for (const auto& slice : slices) {
     bytes->insert(bytes->end(), slice.begin(), slice.end());
   }

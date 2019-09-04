@@ -300,7 +300,7 @@ wabt::interp::HostFunc::Callback OakNode::OakChannelWrite(wabt::interp::Environm
 
     // Copy the data from the Wasm linear memory.
     absl::Span<const char> origin = ReadMemory(env, offset, size);
-    std::unique_ptr<Message> data = absl::make_unique<Message>(origin.begin(), origin.end());
+    auto data = absl::make_unique<Message>(origin.begin(), origin.end());
     LOG(INFO) << "channel_write[" << channel_handle << "]: write message of size " << data->size();
     channel->Write(std::move(data));
     results[0].set_i32(OakStatus::OK);
