@@ -1,0 +1,93 @@
+# proto-file: oak/proto/manager.proto
+# proto-message: oak.ApplicationConfiguration
+
+nodes {
+  node_name: "app"
+  web_assembly_node {
+    module_bytes: "<filled in elsewhere>"
+    ports {
+      name: "grpc_in"
+      type: IN
+    }
+    ports {
+      name: "grpc_out"
+      type: OUT
+    }
+    ports {
+      name: "log"
+      type: OUT
+    }
+    ports {
+      name: "storage_out"
+      type: OUT
+    }
+    ports {
+      name: "storage_in"
+      type: IN
+    }
+  }
+}
+nodes {
+  node_name: "app"  # duplicate
+  grpc_server_node {}
+}
+nodes {
+  node_name: "log"
+  log_node {}
+}
+nodes {
+  node_name: "storage"
+  storage_node {
+    address: "localhost:7867"
+  }
+}
+channels {
+  source_endpoint {
+    node_name: "grpc"
+    port_name: "request"
+  }
+  destination_endpoint {
+    node_name: "app"
+    port_name: "grpc_in"
+  }
+}
+channels {
+  source_endpoint {
+    node_name: "app"
+    port_name: "grpc_out"
+  }
+  destination_endpoint {
+    node_name: "grpc"
+    port_name: "response"
+  }
+}
+channels {
+  source_endpoint {
+    node_name: "app"
+    port_name: "log"
+  }
+  destination_endpoint {
+    node_name: "log"
+    port_name: "in"
+  }
+}
+channels {
+  source_endpoint {
+    node_name: "app"
+    port_name: "storage_out"
+  }
+  destination_endpoint {
+    node_name: "storage"
+    port_name: "request"
+  }
+}
+channels {
+  source_endpoint {
+    node_name: "storage"
+    port_name: "response"
+  }
+  destination_endpoint {
+    node_name: "app"
+    port_name: "storage_in"
+  }
+}

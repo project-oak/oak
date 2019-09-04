@@ -1,0 +1,17 @@
+# proto-file: oak/proto/manager.proto
+# proto-message: oak.ApplicationConfiguration
+
+nodes {
+  node_name: "grpc"
+  grpc_server_node {}
+}
+nodes {
+  node_name: "log"
+  log_node {}
+}
+nodes {
+  node_name: "storage"
+  storage_node {
+    address: "localhost:7867"
+  }
+}

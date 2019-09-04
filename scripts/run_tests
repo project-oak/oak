@@ -6,5 +6,4 @@ set -o xtrace
 
 cargo test --manifest-path=./rust/Cargo.toml
 cargo test --manifest-path=./examples/Cargo.toml
-bazel test --test_output=all //oak/server:host_tests
-bazel test --test_output=all //oak/server/storage:host_tests
+bazel test --test_output=all //oak/server:host_tests //oak/server/storage:host_tests //oak/common:host_tests

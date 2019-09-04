@@ -39,7 +39,7 @@ message Node {
     LogNode log_node = 2;
     GrpcServerNode grpc_server_node = 3;
     WebAssemblyNode web_assembly_node = 4;
-    StorageNode storage_node = 5;
+    StorageProxyNode storage_node = 5;
   }
 }
 
@@ -93,7 +93,7 @@ message WebAssemblyNode {
 // - `request`: IN port on which outgoing storage requests are received.
 // - `response`: OUT port on which inbound responses to storage requests are
 // sent.
-message StorageNode {
+message StorageProxyNode {
   // The address of the external storage provider.
   string address = 1;
 }
