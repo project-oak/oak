@@ -82,7 +82,7 @@ asylo::Status OakRuntime::StartCompletionQueue(std::unique_ptr<grpc::AsyncGeneri
 
 void OakRuntime::SetUpChannels() {
   // Create logging channel and pass the read half to a new logging pseudo-node.
-  std::shared_ptr<MessageChannel> logging_channel = std::make_shared<MessageChannel>();
+  auto logging_channel = std::make_shared<MessageChannel>();
   node_->SetChannel(ChannelHandle::LOGGING,
                     absl::make_unique<MessageChannelWriteHalf>(logging_channel));
   logging_node_ =
@@ -107,7 +107,7 @@ void OakRuntime::SetUpChannels() {
 
   // Outgoing storage request channel: keep the read half in C++, but map the write
   // half to a well-known channel handle.
-  std::shared_ptr<MessageChannel> storage_req_channel = std::make_shared<MessageChannel>();
+  auto storage_req_channel = std::make_shared<MessageChannel>();
   node_->SetChannel(ChannelHandle::STORAGE_OUT,
                     absl::make_unique<MessageChannelWriteHalf>(storage_req_channel));
   auto storage_req_half = absl::make_unique<MessageChannelReadHalf>(storage_req_channel);
@@ -115,7 +115,7 @@ void OakRuntime::SetUpChannels() {
 
   // Inbound storage response channel: keep the write half in C++, but map the read
   // half to a well-known channel handle.
-  std::shared_ptr<MessageChannel> storage_rsp_channel = std::make_shared<MessageChannel>();
+  auto storage_rsp_channel = std::make_shared<MessageChannel>();
   node_->SetChannel(ChannelHandle::STORAGE_IN,
                     absl::make_unique<MessageChannelReadHalf>(storage_rsp_channel));
   auto storage_rsp_half = absl::make_unique<MessageChannelWriteHalf>(storage_rsp_channel);
