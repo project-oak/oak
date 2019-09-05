@@ -34,7 +34,10 @@ class StorageNode final : public NodeThread {
  private:
   void Run() override;
 
+  std::unique_ptr<MessageChannelReadHalf> request_channel_;
+  std::unique_ptr<MessageChannelWriteHalf> response_channel_;
   std::unique_ptr<oak::Storage::Stub> storage_service_;
+  std::thread storage_thread_;
 };
 
 }  // namespace oak

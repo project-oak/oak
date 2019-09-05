@@ -1,4 +1,3 @@
-
 /*
  * Copyright 2019 The Project Oak Authors
  *
@@ -38,22 +37,22 @@ StorageNode::StorageNode(const std::string& name, const std::string& storage_add
 
 void StorageNode::Run() {
   // Borrow pointers to the relevant channel halves.
-  Handle req_handle = FindChannel(kStorageNodeRequestPortName);
-  Handle rsp_handle = FindChannel(kStorageNodeResponsePortName);
-  ChannelHalf* req_half = BorrowChannel(req_handle);
-  ChannelHalf* rsp_half = BorrowChannel(rsp_handle);
-  if (req_half == nullptr || rsp_half == nullptr) {
-    LOG(ERROR) << "Required channel not available; handles: " << req_handle << ", " << rsp_handle;
+  Handle request_handle = FindChannel(kStorageNodeRequestPortName);
+  Handle response_handle = FindChannel(kStorageNodeResponsePortName);
+  ChannelHalf* request_channel = BorrowChannel(request_handle);
+  ChannelHalf* response_channel = BorrowChannel(response_handle);
+  if (request_channel == nullptr || response_channel == nullptr) {
+    LOG(ERROR) << "Required channel not available; handles: " << request_handle << ", " << response_handle;
   }
   std::vector<std::unique_ptr<ChannelStatus>> status;
-  status.push_back(absl::make_unique<ChannelStatus>(req_handle));
+  status.push_back(absl::make_unique<ChannelStatus>(request_handle));
   while (true) {
     if (!WaitOnChannels(&status)) {
       LOG(WARNING) << "Node termination requested";
       return;
     }
 
-    ReadResult result = req_half->Read(INT_MAX);
+    ReadResult result = request_channel_->Read(INT_MAX);
     if (result.required_size > 0) {
       LOG(ERROR) << "Message size too large: " << result.required_size;
       return;
@@ -144,11 +143,12 @@ void StorageNode::Run() {
     channel_response.mutable_status()->set_message(status.error_message());
 
     // Serialize the response and write it back to the Node's STORAGE_IN channel
-    std::string rsp_data;
-    channel_response.SerializeToString(&rsp_data);
+    std::string response_data;
+    channel_response.SerializeToString(&response_data);
     // TODO: figure out a way to avoid the extra copy (into then out of std::string)
-    std::unique_ptr<Message> rsp_msg = absl::make_unique<Message>(rsp_data.begin(), rsp_data.end());
-    rsp_half->Write(std::move(rsp_msg));
+    std::unique_ptr<Message> response_message =
+        absl::make_unique<Message>(response_data.begin(), response_data.end());
+    response_channel->Write(std::move(response_message));
   }
 }
 
