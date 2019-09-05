@@ -115,6 +115,7 @@ cc_library(
         ":module_invocation",
         ":oak_grpc_node",
         ":oak_node",
+        "//oak/common:app_config",
         "//oak/proto:enclave_cc_proto",
         "//oak/server:logging_node",
         "//oak/server/storage:storage_node",

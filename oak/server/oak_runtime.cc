@@ -23,6 +23,7 @@
 
 #include "asylo/util/logging.h"
 #include "asylo/util/status_macros.h"
+#include "oak/common/app_config.h"
 #include "oak/server/module_invocation.h"
 #include "oak/server/oak_node.h"
 
@@ -30,23 +31,21 @@ namespace oak {
 
 asylo::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
   LOG(INFO) << "Initializing Oak Runtime";
-  if (config.nodes_size() != 1) {
-    return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT,
-                         "Only application configurations with 1 Node are currently supported");
-  }
-  if (config.channels_size() != 0) {
-    return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT,
-                         "Only application configurations with 0 Channels are currently supported");
-  }
-  const Node& node_configuration = config.nodes(0);
-  if (!node_configuration.has_web_assembly_node()) {
-    return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT,
-                         "Only WebAssembly Nodes are currently supported");
+  if (!ValidApplicationConfig(config)) {
+    return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT, "Invalid configuration");
   }
 
   // TODO: Support creating multiple Nodes and Channels connecting them.
-  const WebAssemblyNode& web_assembly_node = node_configuration.web_assembly_node();
-  auto node = OakNode::Create(web_assembly_node.module_bytes());
+
+  // Find first (only) Wasm node in the config (which must exist, because of
+  // the validity check above).
+  std::unique_ptr<OakNode> node = nullptr;
+  for (const auto& node_config : config.nodes()) {
+    if (node_config.has_web_assembly_node()) {
+      node = OakNode::Create(node_config.web_assembly_node().module_bytes());
+      break;
+    }
+  }
   if (node == nullptr) {
     return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT, "Failed to create Oak Node");
   }
