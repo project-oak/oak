@@ -68,6 +68,7 @@ class OakNode final : public NodeThread {
   wabt::interp::DefinedModule* module_;
 
   // Map from pre-configured port names to channel handles.
+  Handle next_handle_;
   std::unordered_map<std::string, Handle> named_channels_;
 
   // Map from channel handles to channel half instances.

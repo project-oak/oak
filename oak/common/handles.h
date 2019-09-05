@@ -20,7 +20,6 @@
 #include <stdint.h>
 
 namespace oak {
-// Well-known channel handle values are held in oak/proto/oak_api.proto.
 using Handle = uint64_t;
 }  // namespace oak
 

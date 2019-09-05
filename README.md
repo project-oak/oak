@@ -119,24 +119,30 @@ messages, with a receive half and a send half that an Oak module can read from
 or write to respectively. Each half of a channel is identified by a **handle**,
 which is used as a parameter to the corresponding host function calls.
 
-At each invocation, the following channel halves are implicitly available to the Oak
-Node (see [/oak/common/handles.h](oak/common/handles.h)):
+A collection of pre-configured channel halves are available to the Oak Node,
+as specified in the `ApplicationConfiguration` used to create the Node.
+The handles for these channels can be retrieved by using the `channel_find` host
+function (below) to map a port name to the relevant channel handle.
 
--   `logging` (handle: 1, send): Messages sent to this channel will treated as
+The default port names that are configured by the `oak::DefaultConfig()`
+[helper function](oak/common/app_config.h) and its ancillaries
+(`oak::AddLoggingToConfig()`, `oak::AddStorageToConfig()`) are:
+
+-   `log` (send): Messages sent to this channel will treated as
     UTF-8 strings to be logged.
--   `grpc_in` (handle: 2, receive): This channel will be populated with incoming
+-   `grpc_in` (receive): This channel will be populated with incoming
     gRPC request messages, for processing by the Oak Node.  Each message is a
     serialized `GrpcRequest` protocol buffer message (see
     [/oak/proto/grpc_encap.proto](oak/proto/grpc_encap.proto)).
--   `grpc_out` (handle: 3, send): This channel can be used to send gRPC response
+-   `grpc_out` (send): This channel can be used to send gRPC response
     messages.  Each such message should be encoded as a serialized
     `GrpcResponse` protocol buffer message (see
     [/oak/proto/grpc_encap.proto](oak/proto/grpc_encap.proto)).
--   `storage_in` (handle: 4, receive): This channel will be populated with incoming
+-   `storage_in` (receive): This channel will be populated with incoming
     storage response messages, for processing by the Oak Node.  Each message is a
     serialized `StorageOperationResponse` protocol buffer message (see
     [/oak/proto/storage.proto](oak/proto/storage.proto)).
--   `storage_out` (handle: 5, send): This channel can be used to send storage request
+-   `storage_out` (send): This channel can be used to send storage request
     messages.  Each such message should be encoded as a serialized
     `StorageOperationRequest` protocol buffer message (see
     [/oak/proto/storage.proto](oak/proto/storage.proto)).
