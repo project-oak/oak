@@ -172,7 +172,7 @@ static bool CheckModuleExports(wabt::interp::Environment* env,
       [env, module](const RequiredExport& req) { return CheckModuleExport(env, module, req); });
 }
 
-OakNode::OakNode() : NodeThread("wasm-node") {}
+OakNode::OakNode() : NodeThread("wasm-node"), next_handle_(0) {}
 
 std::unique_ptr<OakNode> OakNode::Create(const std::string& module) {
   LOG(INFO) << "Creating Oak Node";
@@ -201,25 +201,7 @@ std::unique_ptr<OakNode> OakNode::Create(const std::string& module) {
 
 Handle OakNode::AddNamedChannel(const std::string& port_name,
                                 std::unique_ptr<ChannelHalf> channel_half) {
-  // TODO: replace this lookup with dynamic handle allocation for everything
-  Handle handle;
-  if (port_name == "log") {
-    handle = ChannelHandle::LOGGING;
-  } else if (port_name == "grpc_in") {
-    handle = ChannelHandle::GRPC_IN;
-  } else if (port_name == "grpc_out") {
-    handle = ChannelHandle::GRPC_OUT;
-  } else if (port_name == "storage_in") {
-    handle = ChannelHandle::STORAGE_IN;
-  } else if (port_name == "storage_out") {
-    handle = ChannelHandle::STORAGE_OUT;
-  } else {
-    handle = ChannelHandle::STORAGE_OUT + 1;
-    while (channel_halves_.count(handle) > 0) {
-      handle++;
-    }
-  }
-
+  Handle handle = ++next_handle_;
   LOG(INFO) << "port name '" << port_name << "' maps to handle " << handle;
   named_channels_[port_name] = handle;
   channel_halves_[handle] = std::move(channel_half);

@@ -37,13 +37,6 @@ enum OakStatus {
   ERR_INTERNAL = 7,
 };
 
-enum ChannelHandle {
-  CHANNEL_HANDLE_UNSPECIFIED = 0,
-  LOGGING = 1,
-  GRPC_IN = 2,
-  GRPC_OUT = 3,
-};
-
 }  // namespace oak
 
 WASM_IMPORT("oak") int wait_on_channels(uint8_t* buff, int32_t count);
