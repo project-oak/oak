@@ -1,0 +1,42 @@
+# proto-file: oak/proto/manager.proto
+# proto-message: oak.ApplicationConfiguration
+
+nodes {
+  node_name: "grpc"
+  grpc_server_node {
+  }
+}
+nodes {
+  node_name: "app"
+  web_assembly_node {
+    module_bytes: "<bytes>"
+    ports {
+      name: "grpc_in"
+      type: IN
+    }
+    ports {
+      name: "grpc_out"
+      type: OUT
+    }
+  }
+}
+channels {
+  source_endpoint {
+    node_name: "grpc"
+    port_name: "request"
+  }
+  destination_endpoint {
+    node_name: "app"
+    port_name: "grpc_in"
+  }
+}
+channels {
+  source_endpoint {
+    node_name: "app"
+    port_name: "grpc_out"
+  }
+  destination_endpoint {
+    node_name: "grpc"
+    port_name: "response"
+  }
+}

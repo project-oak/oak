@@ -19,9 +19,146 @@
 #include <set>
 #include <utility>
 
+#include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
 
 namespace oak {
+
+namespace {
+
+// Names of ports that are implicitly defined for pseudo-Node instances,
+// as described in //oak/proto/manager.proto.
+constexpr char kGrpcNodeRequestPortName[] = "request";
+constexpr char kGrpcNodeResponsePortName[] = "response";
+constexpr char kLoggingNodePortName[] = "in";
+constexpr char kStorageNodeRequestPortName[] = "request";
+constexpr char kStorageNodeResponsePortName[] = "response";
+
+// Conventional names for pseudo-node instances (not specified in the proto
+// definition).
+constexpr char kGrpcNodeName[] = "grpc";
+constexpr char kLogNodeName[] = "log";
+constexpr char kStorageNodeName[] = "storage";
+
+// Conventional names for the ports that connect to pseudo-node instances (not
+// specified in the proto definition).
+constexpr char kGrpcInPortName[] = "grpc_in";
+constexpr char kGrpcOutPortName[] = "grpc_out";
+constexpr char kStorageInPortName[] = "storage_in";
+constexpr char kStorageOutPortName[] = "storage_out";
+
+}  // namespace
+
+std::unique_ptr<ApplicationConfiguration> DefaultConfig(const std::string& name,
+                                                        const std::string& module_bytes) {
+  auto config = absl::make_unique<ApplicationConfiguration>();
+
+  Node* grpc_node = config->add_nodes();
+  grpc_node->set_node_name(kGrpcNodeName);
+  grpc_node->mutable_grpc_server_node();
+
+  Node* node = config->add_nodes();
+  node->set_node_name(name);
+  WebAssemblyNode* wasm_node = node->mutable_web_assembly_node();
+  wasm_node->set_module_bytes(module_bytes);
+
+  // Add ports for this Wasm node to talk to the gRPC pseudo-Node.
+  Port* in_port = wasm_node->add_ports();
+  in_port->set_name(kGrpcInPortName);
+  in_port->set_type(Port_Type_IN);
+  Port* out_port = wasm_node->add_ports();
+  out_port->set_name(kGrpcOutPortName);
+  out_port->set_type(Port_Type_OUT);
+
+  // Join up channels.
+  Channel* in_channel = config->add_channels();
+  Channel_Endpoint* in_src = in_channel->mutable_source_endpoint();
+  in_src->set_node_name(grpc_node->node_name());
+  in_src->set_port_name(kGrpcNodeRequestPortName);
+  Channel_Endpoint* in_dest = in_channel->mutable_destination_endpoint();
+  in_dest->set_node_name(node->node_name());
+  in_dest->set_port_name(in_port->name());
+
+  Channel* out_channel = config->add_channels();
+  Channel_Endpoint* out_src = out_channel->mutable_source_endpoint();
+  out_src->set_node_name(node->node_name());
+  out_src->set_port_name(out_port->name());
+  Channel_Endpoint* out_dest = out_channel->mutable_destination_endpoint();
+  out_dest->set_node_name(grpc_node->node_name());
+  out_dest->set_port_name(kGrpcNodeResponsePortName);
+
+  return config;
+}
+
+void AddLoggingToConfig(ApplicationConfiguration* config) {
+  // Add the logging pseudo-Node.
+  Node* log_node = config->add_nodes();
+  log_node->set_node_name(kLogNodeName);  // Assume name not already used.
+  log_node->mutable_log_node();
+
+  // Connect all Wasm nodes to it.
+  for (auto& node : *config->mutable_nodes()) {
+    if (!node.has_web_assembly_node()) {
+      continue;
+    }
+    // Add a port for this Wasm node to talk to the logging pseudo-Node.
+    WebAssemblyNode* wasm_node = node.mutable_web_assembly_node();
+    Port* log_port = wasm_node->add_ports();
+    log_port->set_name(kLogNodeName);  // Assume name not already used.
+    log_port->set_type(Port_Type_OUT);
+
+    // Add a channel connecting this port to the logging pseudo-Node.
+    Channel* channel = config->add_channels();
+    Channel_Endpoint* src = channel->mutable_source_endpoint();
+    src->set_node_name(node.node_name());
+    src->set_port_name(log_port->name());
+    Channel_Endpoint* dest = channel->mutable_destination_endpoint();
+    dest->set_node_name(log_node->node_name());
+    dest->set_port_name(kLoggingNodePortName);
+  }
+}
+
+bool AddStorageToConfig(ApplicationConfiguration* config, const std::string& name,
+                        const std::string& storage_address) {
+  for (auto& node : *config->mutable_nodes()) {
+    if (!node.has_web_assembly_node() || node.node_name() != name) {
+      continue;
+    }
+    // Add the storage pseudo-Node.
+    Node* storage_node = config->add_nodes();
+    storage_node->set_node_name(kStorageNodeName);  // Assume name not already used.
+    storage_node->mutable_storage_node()->set_address(storage_address);
+
+    // Add ports for this Wasm node to talk to storage.
+    WebAssemblyNode* wasm_node = node.mutable_web_assembly_node();
+    Port* out_port = wasm_node->add_ports();
+    out_port->set_name(kStorageOutPortName);  // Assume name not already used.
+    out_port->set_type(Port_Type_OUT);
+    Port* in_port = wasm_node->add_ports();
+    in_port->set_name(kStorageInPortName);  // Assume name not already used.
+    in_port->set_type(Port_Type_IN);
+
+    // Add channels connecting these ports to the storage pseudo-Node.
+    Channel* out_channel = config->add_channels();
+    Channel_Endpoint* out_src = out_channel->mutable_source_endpoint();
+    out_src->set_node_name(node.node_name());
+    out_src->set_port_name(out_port->name());
+    Channel_Endpoint* out_dest = out_channel->mutable_destination_endpoint();
+    out_dest->set_node_name(storage_node->node_name());
+    out_dest->set_port_name(kStorageNodeRequestPortName);
+
+    Channel* in_channel = config->add_channels();
+    Channel_Endpoint* in_src = in_channel->mutable_source_endpoint();
+    in_src->set_node_name(storage_node->node_name());
+    in_src->set_port_name(kStorageNodeResponsePortName);
+    Channel_Endpoint* in_dest = in_channel->mutable_destination_endpoint();
+    in_dest->set_node_name(node.node_name());
+    in_dest->set_port_name(in_port->name());
+    return true;
+  }
+  LOG(ERROR) << "Failed to find Wasm node " << name;
+  return false;
+}
 
 bool ValidApplicationConfig(const ApplicationConfiguration& config) {
   // Check name uniqueness and count pseudo-nodes.  Along the way, track the
@@ -61,14 +198,14 @@ bool ValidApplicationConfig(const ApplicationConfiguration& config) {
       }
     } else if (node.has_grpc_server_node()) {
       grpc_count++;
-      in_ports.insert(fqpn(node.node_name(), "response"));
-      out_ports.insert(fqpn(node.node_name(), "request"));
+      in_ports.insert(fqpn(node.node_name(), kGrpcNodeResponsePortName));
+      out_ports.insert(fqpn(node.node_name(), kGrpcNodeRequestPortName));
     } else if (node.has_log_node()) {
-      in_ports.insert(fqpn(node.node_name(), "in"));
+      in_ports.insert(fqpn(node.node_name(), kLoggingNodePortName));
       log_count++;
     } else if (node.has_storage_node()) {
-      in_ports.insert(fqpn(node.node_name(), "request"));
-      out_ports.insert(fqpn(node.node_name(), "response"));
+      in_ports.insert(fqpn(node.node_name(), kStorageNodeRequestPortName));
+      out_ports.insert(fqpn(node.node_name(), kStorageNodeResponsePortName));
     }
   }
 

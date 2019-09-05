@@ -41,6 +41,41 @@ std::unique_ptr<ApplicationConfiguration> ConfigFrom(const std::string& filename
 
 }  // namespace
 
+TEST(ApplicationConfiguration, Default) {
+  std::unique_ptr<ApplicationConfiguration> got = DefaultConfig("app", "<bytes>");
+  std::unique_ptr<ApplicationConfiguration> want =
+      ConfigFrom("oak/common/testdata/barenode.textproto");
+  ASSERT_EQ(want->DebugString(), got->DebugString());
+  ASSERT_EQ(true, ValidApplicationConfig(*got));
+}
+
+TEST(ApplicationConfiguration, DefaultPlusLogging) {
+  std::unique_ptr<ApplicationConfiguration> got = DefaultConfig("app", "<bytes>");
+  AddLoggingToConfig(got.get());
+  std::unique_ptr<ApplicationConfiguration> want =
+      ConfigFrom("oak/common/testdata/lognode.textproto");
+  ASSERT_EQ(want->DebugString(), got->DebugString());
+  ASSERT_EQ(true, ValidApplicationConfig(*got));
+}
+
+TEST(ApplicationConfiguration, DefaultPlusStorage) {
+  std::unique_ptr<ApplicationConfiguration> got = DefaultConfig("app", "<bytes>");
+  EXPECT_EQ(true, AddStorageToConfig(got.get(), "app", "localhost:8888"));
+  std::unique_ptr<ApplicationConfiguration> want =
+      ConfigFrom("oak/common/testdata/storagenode.textproto");
+  ASSERT_EQ(want->DebugString(), got->DebugString());
+  ASSERT_EQ(true, ValidApplicationConfig(*got));
+}
+
+TEST(ApplicationConfiguration, AddStorageToConfigFailure) {
+  std::unique_ptr<ApplicationConfiguration> got = DefaultConfig("app", "<bytes>");
+  EXPECT_EQ(false, AddStorageToConfig(got.get(), "some-other-app", "localhost:8888"));
+  std::unique_ptr<ApplicationConfiguration> want =
+      ConfigFrom("oak/common/testdata/barenode.textproto");
+  ASSERT_EQ(want->DebugString(), got->DebugString());
+  ASSERT_EQ(true, ValidApplicationConfig(*got));
+}
+
 TEST(ApplicationConfiguration, Valid) {
   auto config = ConfigFrom("oak/common/testdata/default.textproto");
   ASSERT_EQ(true, ValidApplicationConfig(*config));

@@ -31,8 +31,10 @@ cc_library(
     name = "app_config",
     srcs = ["app_config.cc"],
     hdrs = ["app_config.h"],
+    visibility = ["//visibility:public"],
     deps = [
         "//oak/proto:manager_cc_proto",
+        "@com_google_absl//absl/memory",
         "@com_google_asylo//asylo/util:logging",
     ],
 )
