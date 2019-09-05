@@ -199,8 +199,31 @@ std::unique_ptr<OakNode> OakNode::Create(const std::string& module) {
   return node;
 }
 
-void OakNode::SetChannel(Handle handle, std::unique_ptr<ChannelHalf> channel_half) {
+Handle OakNode::AddNamedChannel(const std::string& port_name,
+                                std::unique_ptr<ChannelHalf> channel_half) {
+  // TODO: replace this lookup with dynamic handle allocation for everything
+  Handle handle;
+  if (port_name == "log") {
+    handle = ChannelHandle::LOGGING;
+  } else if (port_name == "grpc_in") {
+    handle = ChannelHandle::GRPC_IN;
+  } else if (port_name == "grpc_out") {
+    handle = ChannelHandle::GRPC_OUT;
+  } else if (port_name == "storage_in") {
+    handle = ChannelHandle::STORAGE_IN;
+  } else if (port_name == "storage_out") {
+    handle = ChannelHandle::STORAGE_OUT;
+  } else {
+    handle = ChannelHandle::STORAGE_OUT + 1;
+    while (channel_halves_.count(handle) > 0) {
+      handle++;
+    }
+  }
+
+  LOG(INFO) << "port name '" << port_name << "' maps to handle " << handle;
+  named_channels_[port_name] = handle;
   channel_halves_[handle] = std::move(channel_half);
+  return handle;
 }
 
 // Register all available host functions so that they are available to the Oak Module at runtime.
@@ -224,6 +247,11 @@ void OakNode::InitEnvironment(wabt::interp::Environment* env) {
       wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
                                   std::vector<wabt::Type>{wabt::Type::I32}),
       this->OakWaitOnChannels(env));
+  oak_module->AppendFuncExport(
+      "channel_find",
+      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
+                                  std::vector<wabt::Type>{wabt::Type::I64}),
+      this->OakChannelFind(env));
 }
 
 void OakNode::Run() {
@@ -355,6 +383,27 @@ wabt::interp::HostFunc::Callback OakNode::OakWaitOnChannels(wabt::interp::Enviro
         absl::SleepFor(absl::Milliseconds(100));
       }
     }
+    return wabt::interp::Result::Ok;
+  };
+}
+
+wabt::interp::HostFunc::Callback OakNode::OakChannelFind(wabt::interp::Environment* env) {
+  return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
+                     const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
+    LogHostFunctionCall(func, args);
+
+    uint32_t offset = args[0].get_i32();
+    uint32_t length = args[1].get_i32();
+    results[0].set_i64(0);
+
+    auto base = env->GetMemory(0)->data.begin() + offset;
+    std::string port_name(base, base + length);
+
+    auto it = named_channels_.find(port_name);
+    if (it != named_channels_.end()) {
+      results[0].set_i64(it->second);
+    }
+
     return wabt::interp::Result::Ok;
   };
 }
