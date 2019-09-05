@@ -125,17 +125,17 @@ void OakRuntime::SetUpChannels(OakNode& node) {
 void OakRuntime::SetUpGrpcChannels(OakNode& node) {
   // Incoming request channel: keep the write half in |OakRuntime|, but map
   // the read half to a well-known channel handle on |node_|.
-  grpc_in_ = std::make_shared<MessageChannel>();
-  node.SetChannel(ChannelHandle::GRPC_IN, absl::make_unique<MessageChannelReadHalf>(grpc_in_));
+  auto grpc_in = std::make_shared<MessageChannel>();
+  node.SetChannel(ChannelHandle::GRPC_IN, absl::make_unique<MessageChannelReadHalf>(grpc_in));
   LOG(INFO) << "Created gRPC input channel: " << ChannelHandle::GRPC_IN;
 
   // Outgoing response channel: keep the read half in |OakRuntime|, but map
   // the write half to a well-known channel handle on |node_|.
-  grpc_out_ = std::make_shared<MessageChannel>();
-  node.SetChannel(ChannelHandle::GRPC_OUT, absl::make_unique<MessageChannelWriteHalf>(grpc_out_));
+  auto grpc_out = std::make_shared<MessageChannel>();
+  node.SetChannel(ChannelHandle::GRPC_OUT, absl::make_unique<MessageChannelWriteHalf>(grpc_out));
   LOG(INFO) << "Created gRPC output channel: " << ChannelHandle::GRPC_IN;
 
-  grpc_node_->SetUpGrpcChannels(grpc_in_, grpc_out_);
+  grpc_node_->SetUpGrpcChannels(grpc_in, grpc_out);
 }
 
 int32_t OakRuntime::GetPort() { return grpc_node_->GetPort(); }
