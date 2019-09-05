@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include "oak/common/app_config.h"
 #include "oak/proto/manager.grpc.pb.h"
 
 namespace oak {
@@ -30,20 +31,27 @@ class ManagerClient {
 
   // TODO: Return StatusOr<::oak::CreateApplicationResponse>.
   CreateApplicationResponse CreateApplication(const std::string& module_bytes) {
+    return CreateApplication(module_bytes, true, "");
+  }
+
+  CreateApplicationResponse CreateApplication(const std::string& module_bytes, bool enable_logging,
+                                              const std::string& storage_address) {
     grpc::ClientContext context;
 
     CreateApplicationRequest request;
     CreateApplicationResponse response;
 
     // Build an application configuration with a single WebAssembly node with the provided
-    // WebAssembly module bytes and no channels.
-    // TODO: Replace with explicit gRPC and Log pseudo-Nodes (and associated channels) when
-    // available.
-    ApplicationConfiguration* application_configuration =
-        request.mutable_application_configuration();
-    Node* node = application_configuration->add_nodes();
-    WebAssemblyNode* web_assembly_node = node->mutable_web_assembly_node();
-    web_assembly_node->set_module_bytes(module_bytes);
+    // WebAssembly module bytes.
+    std::unique_ptr<ApplicationConfiguration> application_config =
+        DefaultConfig("app", module_bytes);
+    if (enable_logging) {
+      AddLoggingToConfig(application_config.get());
+    }
+    if (!storage_address.empty()) {
+      AddStorageToConfig(application_config.get(), "app", storage_address);
+    }
+    request.set_allocated_application_configuration(application_config.release());
 
     LOG(INFO) << "Creating Oak Application";
     grpc::Status status = stub_->CreateApplication(&context, request, &response);

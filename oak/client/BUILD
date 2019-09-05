@@ -29,6 +29,7 @@ cc_library(
     hdrs = ["application_client.h"],
     visibility = ["//visibility:public"],
     deps = [
+        "//oak/common:app_config",
         "//oak/proto:application_cc_grpc",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_asylo//asylo/grpc/auth:null_credentials_options",

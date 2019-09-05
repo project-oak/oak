@@ -27,6 +27,8 @@
 
 ABSL_FLAG(std::string, manager_address, "127.0.0.1:8888",
           "Address of the Oak Manager to connect to");
+ABSL_FLAG(std::string, storage_address, "127.0.0.1:7867",
+          "Address ot the storage provider to connect to");
 ABSL_FLAG(std::string, module, "", "File containing the compiled WebAssembly module");
 
 using ::oak::examples::hello_world::HelloRequest;
@@ -73,8 +75,8 @@ int main(int argc, char** argv) {
 
   // Load the Oak Module to execute. This needs to be compiled from Rust to WebAssembly separately.
   std::string module_bytes = oak::utils::read_file(absl::GetFlag(FLAGS_module));
-  oak::CreateApplicationResponse create_application_response =
-      manager_client->CreateApplication(module_bytes);
+  oak::CreateApplicationResponse create_application_response = manager_client->CreateApplication(
+      module_bytes, /* logging= */ true, absl::GetFlag(FLAGS_storage_address));
 
   std::stringstream addr;
   addr << "127.0.0.1:" << create_application_response.grpc_port();
