@@ -21,7 +21,7 @@ extern crate log;
 extern crate protobuf;
 
 use byteorder::WriteBytesExt;
-use proto::oak_api::{ChannelHandle, OakStatus};
+use proto::oak_api::OakStatus;
 use protobuf::{Message, ProtobufEnum};
 use std::io;
 use std::io::Write;
@@ -64,7 +64,7 @@ where
     }
 }
 
-type Handle = u64;
+pub type Handle = u64;
 
 /// Map an OakStatus to the nearest available std::io::Result.
 fn result_from_status<T>(status: Option<OakStatus>, val: T) -> std::io::Result<T> {
@@ -111,7 +111,12 @@ mod wasm {
         pub fn wait_on_channels(buf: *mut u8, count: u32) -> i32;
         pub fn channel_read(handle: u64, buf: *mut u8, size: usize, actual_size: *mut u32) -> i32;
         pub fn channel_write(handle: u64, buf: *const u8, size: usize) -> i32;
+        pub fn channel_find(buf: *const u8, len: usize) -> u64;
     }
+}
+
+pub fn channel_find(port_name: &str) -> Handle {
+    unsafe { wasm::channel_find(port_name.as_ptr(), port_name.len()) }
 }
 
 pub const SPACE_BYTES_PER_HANDLE: usize = 9;
@@ -170,7 +175,7 @@ impl Write for SendChannelHalf {
 }
 
 pub fn logging_channel() -> impl Write {
-    let logging_channel = SendChannelHalf::new(ChannelHandle::LOGGING as Handle);
+    let logging_channel = SendChannelHalf::new(channel_find("log"));
     // Only flush logging channel on newlines.
     std::io::LineWriter::new(logging_channel)
 }
@@ -260,10 +265,13 @@ pub fn event_loop<T: OakNode>(mut node: T) -> i32 {
     info!("start event loop for node");
     set_panic_hook();
 
-    let read_handles = vec![ChannelHandle::GRPC_IN as Handle];
+    let grpc_in_handle = channel_find("grpc_in");
+    let grpc_out_handle = channel_find("grpc_out");
+    let read_handles = vec![grpc_in_handle];
     let mut space = new_handle_space(&read_handles);
 
-    let mut grpc_in_channel = ReceiveChannelHalf::new(ChannelHandle::GRPC_IN as Handle);
+    let mut grpc_in_channel = ReceiveChannelHalf::new(grpc_in_handle);
+    let mut grpc_out_channel = SendChannelHalf::new(grpc_out_handle);
     loop {
         // Block until there is a message to read on an input channel.
         prep_handle_space(&mut space);
@@ -289,7 +297,7 @@ pub fn event_loop<T: OakNode>(mut node: T) -> i32 {
         node.invoke(
             &req.method_name,
             req.get_req_msg().value.as_slice(),
-            &mut SendChannelHalf::new(ChannelHandle::GRPC_OUT as Handle),
+            &mut grpc_out_channel,
         );
     }
 }

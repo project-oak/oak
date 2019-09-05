@@ -22,7 +22,7 @@ use oak_tests::last_message_as_string;
 
 #[test]
 fn test_enabled() {
-    let x = OakChannelLogger {};
+    let x = OakChannelLogger { channel_handle: 1 };
     struct T {
         l: Level,
         max: LevelFilter,
@@ -55,7 +55,7 @@ fn test_enabled() {
 #[test]
 fn test_log() {
     oak_tests::reset_channels();
-    let logger = OakChannelLogger {};
+    let logger = OakChannelLogger { channel_handle: 1 };
     let trace = Metadata::builder()
         .level(Level::Trace)
         .target("test")
@@ -87,6 +87,6 @@ fn test_log() {
 
 #[test]
 fn test_flush() {
-    let x = OakChannelLogger {};
+    let x = OakChannelLogger { channel_handle: 1 };
     x.flush(); // Purely for coverage
 }
