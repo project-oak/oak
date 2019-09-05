@@ -27,7 +27,7 @@
 
 namespace oak {
 
-DevOakManager::DevOakManager() : Service(), application_id_(0) {
+DevOakManager::DevOakManager() : Service(), next_application_id_(0) {
   LOG(INFO) << "Creating OakManager";
   InitializeAssertionAuthorities();
 }
@@ -78,8 +78,9 @@ void DevOakManager::InitializeAssertionAuthorities() {
 std::string DevOakManager::NewApplicationId() {
   // For dev purposes, just increment a value
   std::stringstream id_str;
-  id_str << application_id_;
-  application_id_ += 1;
+  id_str << next_application_id_;
+  next_application_id_ += 1;
   return id_str.str();
 }
+
 }  // namespace oak
