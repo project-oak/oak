@@ -35,8 +35,6 @@ class LoggingNode final : public NodeThread {
   void Run() override;
 
   std::unique_ptr<MessageChannelReadHalf> half_;
-
-  std::thread main_;
 };
 
 }  // namespace oak
