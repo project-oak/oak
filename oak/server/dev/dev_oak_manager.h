@@ -39,9 +39,9 @@ class DevOakManager final : public Manager::Service {
   void InitializeAssertionAuthorities();
   std::string NewApplicationId();
 
-  // The application id.
-  uint64_t application_id_;
-  // For each application, identified by it's id as a string we have a runtime
+  // The next available application ID.
+  uint64_t next_application_id_;
+  // For each application, identified by its id as a string we have a runtime
   std::unordered_map<std::string, std::unique_ptr<OakRuntime>> runtimes_;
 };
 
