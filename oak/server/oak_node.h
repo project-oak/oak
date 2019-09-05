@@ -31,14 +31,16 @@
 
 namespace oak {
 
-typedef std::unordered_map<Handle, std::unique_ptr<ChannelHalf>> ChannelHalfTable;
+using ChannelHalfTable = std::unordered_map<Handle, std::unique_ptr<ChannelHalf>>;
 
 class OakNode final : public NodeThread {
  public:
   // Creates an Oak node by loading the Wasm module code.
   static std::unique_ptr<OakNode> Create(const std::string& module);
 
-  void SetChannel(Handle handle, std::unique_ptr<ChannelHalf> channel_half);
+  // Add channel identified by the given port name to the node.  This should
+  // only be called before the node is started (with Start());
+  Handle AddNamedChannel(const std::string& port_name, std::unique_ptr<ChannelHalf> channel_half);
 
  private:
   // Clients should construct OakNode instances with Create() (which
@@ -58,11 +60,17 @@ class OakNode final : public NodeThread {
   // Native implementation of the `oak.wait_on_channels` host function.
   wabt::interp::HostFunc::Callback OakWaitOnChannels(wabt::interp::Environment* env);
 
+  // Native implementation of the `oak.channel_find` host function.
+  wabt::interp::HostFunc::Callback OakChannelFind(wabt::interp::Environment* env);
+
   wabt::interp::Environment env_;
   // TODO: Use smart pointers.
   wabt::interp::DefinedModule* module_;
 
-  // Hold the mapping between per-Node channel handles and channel half instances
+  // Map from pre-configured port names to channel handles.
+  std::unordered_map<std::string, Handle> named_channels_;
+
+  // Map from channel handles to channel half instances.
   ChannelHalfTable channel_halves_;
 };
 

@@ -185,6 +185,13 @@ imports](https://webassembly.github.io/spec/core/syntax/modules.html#imports)
     [`zx_channel_write`](https://fuchsia.dev/fuchsia-src/zircon/syscalls/channel_write)
     in Fuchsia.
 
+-   `channel_find: (i32, i32) -> i64`: Return the channel handle that
+    corresponds to a provided port name, or zero if not found.
+
+    *   arg 0: Source buffer holding port name
+    *   arg 1: Source buffer size in bytes
+    *   return 0: Channel handle, or zero if not found.
+
 
 ### Rust SDK
 
