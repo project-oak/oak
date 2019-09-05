@@ -65,13 +65,6 @@ class OakRuntime {
   std::unique_ptr<OakGrpcNode> grpc_node_;
   std::unique_ptr<LoggingNode> logging_node_;
   std::unique_ptr<StorageNode> storage_node_;
-
-  // Channels.
-  std::shared_ptr<MessageChannel> grpc_in_;
-  std::shared_ptr<MessageChannel> grpc_out_;
-
-  std::unique_ptr<grpc::AsyncGenericService> module_service_;
-  std::unique_ptr<grpc::ServerCompletionQueue> completion_queue_;
 };  // class OakRuntime
 
 }  // namespace oak
