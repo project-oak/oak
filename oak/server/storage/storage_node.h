@@ -37,8 +37,6 @@ class StorageNode final : public NodeThread {
   std::unique_ptr<MessageChannelReadHalf> req_half_;
   std::unique_ptr<MessageChannelWriteHalf> rsp_half_;
 
-  std::thread main_;
-
   std::unique_ptr<oak::Storage::Stub> storage_service_;
 };
 
