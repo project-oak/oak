@@ -25,7 +25,9 @@ mod tests;
 use log::{Level, Log, Metadata, Record, SetLoggerError};
 use std::io::Write;
 
-struct OakChannelLogger;
+struct OakChannelLogger {
+    channel_handle: oak::Handle,
+}
 
 impl Log for OakChannelLogger {
     fn enabled(&self, metadata: &Metadata) -> bool {
@@ -35,8 +37,10 @@ impl Log for OakChannelLogger {
         if !self.enabled(record.metadata()) {
             return;
         }
+        // Only flush logging channel on newlines.
+        let mut channel = std::io::LineWriter::new(oak::SendChannelHalf::new(self.channel_handle));
         writeln!(
-            oak::logging_channel(),
+            &mut channel,
             "{}  {} : {} : {}",
             record.level(),
             record.file().unwrap_or_default(),
@@ -49,7 +53,9 @@ impl Log for OakChannelLogger {
 }
 
 pub fn init(level: Level) -> Result<(), SetLoggerError> {
-    log::set_boxed_logger(Box::new(OakChannelLogger))?;
+    log::set_boxed_logger(Box::new(OakChannelLogger {
+        channel_handle: oak::channel_find("log"),
+    }))?;
     log::set_max_level(level.to_level_filter());
     Ok(())
 }

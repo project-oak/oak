@@ -97,6 +97,11 @@ pub extern "C" fn channel_read(
     CHANNEL.with(|channel| channel.borrow_mut().read_message(buf, size, actual_size))
 }
 
+#[no_mangle]
+pub extern "C" fn channel_find(_buf: *const u8, _size: usize) -> u64 {
+    1
+}
+
 // Convenience helpers for tests
 pub fn last_message_as_string() -> String {
     CHANNEL.with(|channel| match channel.borrow().messages.front() {

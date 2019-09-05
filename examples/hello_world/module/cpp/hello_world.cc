@@ -50,16 +50,33 @@ WASM_IMPORT("oak") int wait_on_channels(uint8_t* buff, int32_t count);
 WASM_IMPORT("oak")
 int channel_read(uint64_t handle, uint8_t* buff, size_t usize, uint32_t* actual_size);
 WASM_IMPORT("oak") int channel_write(uint64_t handle, uint8_t* buff, size_t usize);
+WASM_IMPORT("oak") uint64_t channel_find(uint8_t* buff, size_t usize);
 
 WASM_EXPORT int32_t oak_main() {
-  uint8_t handle_space[9] = {oak::ChannelHandle::GRPC_IN, 0, 0, 0, 0, 0, 0, 0, 0};
+  char grpc_in_name[] = "grpc_in";
+  char grpc_out_name[] = "grpc_out";
+  uint8_t handle_space[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
   uint8_t _buf[256];
   uint32_t actual_size;
+
+  uint64_t grpc_out_handle = channel_find((uint8_t*)grpc_out_name, sizeof(grpc_out_name) - 1);
+  uint64_t grpc_in_handle = channel_find((uint8_t*)grpc_in_name, sizeof(grpc_in_name) - 1);
+
+  // TODO: Add C++ helpers for dealing with handle notification space.
+  handle_space[0] = grpc_in_handle & 0xff;
+  handle_space[1] = (grpc_in_handle >> 8) & 0xff;
+  handle_space[2] = (grpc_in_handle >> 16) & 0xff;
+  handle_space[3] = (grpc_in_handle >> 24) & 0xff;
+  handle_space[4] = (grpc_in_handle >> 32) & 0xff;
+  handle_space[5] = (grpc_in_handle >> 40) & 0xff;
+  handle_space[6] = (grpc_in_handle >> 48) & 0xff;
+  handle_space[7] = (grpc_in_handle >> 56) & 0xff;
+  handle_space[8] = 0x00;  // read ready?
 
   while (true) {
     wait_on_channels(handle_space, 1);
 
-    channel_read(oak::ChannelHandle::GRPC_IN, _buf, sizeof(_buf), &actual_size);
+    channel_read(grpc_in_handle, _buf, sizeof(_buf), &actual_size);
 
     // Encapsulated GrpcResponse protobuf.
     //    12                 b00010.010 = tag 2 (GrpcResponse.rsp_msg), length-delimited field
@@ -73,7 +90,7 @@ WASM_EXPORT int32_t oak_main() {
     //    01                 true
     uint8_t buf[] = "\x12\x0b\x12\x09\x0A\x07\x74\x65\x73\x74\x69\x6e\x67\x20\x01";
     // TODO: replace with use of message type and serialization.
-    channel_write(oak::ChannelHandle::GRPC_OUT, buf, sizeof(buf) - 1);
+    channel_write(grpc_out_handle, buf, sizeof(buf) - 1);
   }
   return oak::OakStatus::OK;
 }

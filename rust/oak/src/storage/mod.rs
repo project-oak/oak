@@ -16,12 +16,12 @@
 
 extern crate protobuf;
 
-use super::*;
-use proto::oak_api::ChannelHandle;
+use crate::{GrpcResult, ReceiveChannelHalf, SendChannelHalf};
 use proto::storage_channel::{
     StorageChannelDeleteRequest, StorageChannelReadRequest, StorageChannelRequest,
     StorageChannelResponse, StorageChannelWriteRequest,
 };
+use protobuf::Message;
 
 fn execute_operation(operation_request: &StorageChannelRequest) -> StorageChannelResponse {
     info!(
@@ -29,20 +29,22 @@ fn execute_operation(operation_request: &StorageChannelRequest) -> StorageChanne
         protobuf::text_format::print_to_string(operation_request)
     );
 
-    let mut storage_write_channel = SendChannelHalf::new(ChannelHandle::STORAGE_OUT as Handle);
+    // TODO: save channels and re-use them to prevent looking up again
+    let mut storage_write_channel = SendChannelHalf::new(crate::channel_find("storage_out"));
     operation_request
         .write_to_writer(&mut storage_write_channel)
         .unwrap();
 
     // Block until there is a response available.
-    let read_handles = vec![crate::ChannelHandle::STORAGE_IN as Handle];
+    let storage_in_handle = crate::channel_find("storage_in");
+    let read_handles = vec![storage_in_handle];
     let mut space = crate::new_handle_space(&read_handles);
     crate::prep_handle_space(&mut space);
     unsafe {
         crate::wasm::wait_on_channels(space.as_mut_ptr(), read_handles.len() as u32);
     }
 
-    let mut storage_read_channel = ReceiveChannelHalf::new(ChannelHandle::STORAGE_IN as Handle);
+    let mut storage_read_channel = ReceiveChannelHalf::new(storage_in_handle);
     let mut buffer = Vec::<u8>::with_capacity(256);
     storage_read_channel.read_message(&mut buffer).unwrap();
     let response: StorageChannelResponse = protobuf::parse_from_reader(&mut &buffer[..]).unwrap();
