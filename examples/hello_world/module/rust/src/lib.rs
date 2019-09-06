@@ -30,7 +30,9 @@ use proto::hello_world_grpc::{dispatch, HelloWorldNode};
 use protobuf::ProtobufEnum;
 
 #[derive(OakExports)]
-struct Node;
+struct Node {
+    storage: oak::storage::Storage,
+}
 
 const STORAGE_NAME: &[u8] = b"HelloWorld";
 const FIELD_NAME: &[u8] = b"last-greeting";
@@ -38,7 +40,9 @@ const FIELD_NAME: &[u8] = b"last-greeting";
 impl oak::OakNode for Node {
     fn new() -> Self {
         oak_log::init(log::Level::Debug).unwrap();
-        Node
+        Node {
+            storage: oak::storage::Storage::default(),
+        }
     }
     fn invoke(&mut self, method: &str, req: &[u8], out: &mut oak::SendChannelHalf) {
         dispatch(self, method, req, out)
@@ -54,7 +58,10 @@ impl HelloWorldNode for Node {
             return Err(status);
         }
         // Save the latest greeting to storage.
-        match oak::storage::write(STORAGE_NAME, FIELD_NAME, req.greeting.as_bytes()) {
+        match self
+            .storage
+            .write(STORAGE_NAME, FIELD_NAME, req.greeting.as_bytes())
+        {
             Ok(_) => {}
             Err(status) => warn!(
                 "failed to store last greeting: code={} {}",
@@ -78,7 +85,7 @@ impl HelloWorldNode for Node {
         writer.write(res1);
 
         // Also generate a response with the last-stored value.
-        let result = oak::storage::read(STORAGE_NAME, FIELD_NAME);
+        let result = self.storage.read(STORAGE_NAME, FIELD_NAME);
         let previous = match result {
             Ok(v) => String::from_utf8(v).unwrap(),
             Err(status) => {
