@@ -29,12 +29,11 @@ class ModuleInvocation {
   // All constructor arguments must outlive this object.  It manages its own
   // lifetime after RequestNext is called.
   ModuleInvocation(grpc::AsyncGenericService* service, grpc::ServerCompletionQueue* queue,
-                   std::shared_ptr<MessageChannel> grpc_in,
-                   std::shared_ptr<MessageChannel> grpc_out)
+                   MessageChannelWriteHalf* req_half, MessageChannelReadHalf* rsp_half)
       : service_(service),
         queue_(queue),
-        grpc_in_(grpc_in),
-        grpc_out_(grpc_out),
+        req_half_(req_half),
+        rsp_half_(rsp_half),
         stream_(&context_) {}
 
   // This object deletes itself.
@@ -68,8 +67,9 @@ class ModuleInvocation {
   grpc::AsyncGenericService* const service_;
   grpc::ServerCompletionQueue* const queue_;
 
-  std::shared_ptr<MessageChannel> grpc_in_;
-  std::shared_ptr<MessageChannel> grpc_out_;
+  // Borrowed references to the channels used to communication for invocation.
+  MessageChannelWriteHalf* req_half_;
+  MessageChannelReadHalf* rsp_half_;
 
   grpc::GenericServerContext context_;
   grpc::GenericServerAsyncReaderWriter stream_;
