@@ -91,8 +91,8 @@ void OakRuntime::SetUpChannels(OakNode& node) {
   auto logging_channel = std::make_shared<MessageChannel>();
   Handle log_handle =
       node.AddNamedChannel("log", absl::make_unique<MessageChannelWriteHalf>(logging_channel));
-  logging_node_ =
-      absl::make_unique<LoggingNode>(absl::make_unique<MessageChannelReadHalf>(logging_channel));
+  logging_node_ = absl::make_unique<LoggingNode>();
+  logging_node_->AddChannel(absl::make_unique<MessageChannelReadHalf>(logging_channel));
   LOG(INFO) << "Created logging channel " << log_handle << " and pseudo-node";
 
   // Create the channels needed for interaction with storage.
@@ -114,8 +114,9 @@ void OakRuntime::SetUpChannels(OakNode& node) {
   LOG(INFO) << "Created storage input channel: " << storage_in_handle;
 
   // Add in a storage pseudo-node.
-  storage_node_ =
-      absl::make_unique<StorageNode>(std::move(storage_req_half), std::move(storage_rsp_half));
+  storage_node_ = absl::make_unique<StorageNode>("localhost:7867");
+  storage_node_->AddReadChannel(std::move(storage_req_half));
+  storage_node_->AddWriteChannel(std::move(storage_rsp_half));
 
   LOG(INFO) << "Created storage channels";
 }
@@ -136,7 +137,8 @@ void OakRuntime::SetUpGrpcChannels(OakNode& node) {
       node.AddNamedChannel("grpc_out", absl::make_unique<MessageChannelWriteHalf>(grpc_out));
   LOG(INFO) << "Created gRPC output channel: " << grpc_out_handle;
 
-  grpc_node_->SetUpGrpcChannels(grpc_in, grpc_out);
+  grpc_node_->AddReadChannel(grpc_out);
+  grpc_node_->AddWriteChannel(grpc_in);
 }
 
 int32_t OakRuntime::GetPort() { return grpc_node_->GetPort(); }

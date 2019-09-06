@@ -29,12 +29,18 @@ static std::string GetStorageId(const std::string& storage_name) {
   return storage_name;
 }
 
-StorageNode::StorageNode(std::unique_ptr<MessageChannelReadHalf> req_half,
-                         std::unique_ptr<MessageChannelWriteHalf> rsp_half)
-    : NodeThread("storage"), req_half_(std::move(req_half)), rsp_half_(std::move(rsp_half)) {
-  // TODO: get a storage service stub from somewhere less hard-coded.
+StorageNode::StorageNode(const std::string& storage_address)
+    : NodeThread("storage"), req_half_(nullptr), rsp_half_(nullptr) {
   storage_service_ = oak::Storage::NewStub(
-      grpc::CreateChannel("localhost:7867", grpc::InsecureChannelCredentials()));
+      grpc::CreateChannel(storage_address, grpc::InsecureChannelCredentials()));
+}
+
+void StorageNode::AddReadChannel(std::unique_ptr<MessageChannelReadHalf> req_half) {
+  req_half_ = std::move(req_half);
+}
+
+void StorageNode::AddWriteChannel(std::unique_ptr<MessageChannelWriteHalf> rsp_half) {
+  rsp_half_ = std::move(rsp_half);
 }
 
 void StorageNode::Run() {
