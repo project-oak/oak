@@ -178,6 +178,8 @@ cc_library(
     deps = [
         ":channel",
         ":node_thread",
+        "//oak/common:handles",
+        "@com_google_absl//absl/memory",
         "@com_google_asylo//asylo/util:logging",
     ],
 )

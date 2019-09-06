@@ -151,7 +151,14 @@ asylo::Status OakRuntime::Stop() {
     grpc_node_->Stop();
     grpc_node_ = nullptr;
   }
-  // TODO: stop other pseudo-Nodes if present
+  if (logging_node_) {
+    logging_node_->Stop();
+    logging_node_ = nullptr;
+  }
+  if (storage_node_) {
+    storage_node_->Stop();
+    storage_node_ = nullptr;
+  }
 
   return asylo::Status::OkStatus();
 }
