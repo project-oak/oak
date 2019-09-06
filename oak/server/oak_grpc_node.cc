@@ -15,6 +15,7 @@
  */
 
 #include "oak/server/oak_grpc_node.h"
+
 #include "absl/memory/memory.h"
 #include "asylo/grpc/auth/enclave_server_credentials.h"
 #include "asylo/grpc/auth/null_credentials_options.h"
@@ -26,8 +27,6 @@ namespace oak {
 
 std::unique_ptr<OakGrpcNode> OakGrpcNode::Create() {
   std::unique_ptr<OakGrpcNode> node = absl::WrapUnique(new OakGrpcNode());
-  node->grpc_in_ = std::make_shared<MessageChannel>();
-  node->grpc_out_ = std::make_shared<MessageChannel>();
 
   // Build Server
   grpc::ServerBuilder builder;
@@ -66,8 +65,8 @@ void OakGrpcNode::CompletionQueueLoop() {
   LOG(INFO) << "Starting gRPC completion queue loop";
   // The stream object will delete itself when finished with the request,
   // after creating a new stream object for the next request.
-  auto stream =
-      new ModuleInvocation(module_service_.get(), completion_queue_.get(), grpc_in_, grpc_out_);
+  auto stream = new ModuleInvocation(module_service_.get(), completion_queue_.get(),
+                                     req_half_.get(), rsp_half_.get());
   stream->Start();
   while (true) {
     bool ok;
@@ -82,11 +81,12 @@ void OakGrpcNode::CompletionQueueLoop() {
   }
 }
 
-void OakGrpcNode::AddReadChannel(std::shared_ptr<MessageChannel> grpc_out) {
-  grpc_out_ = grpc_out;
+void OakGrpcNode::AddReadChannel(std::unique_ptr<MessageChannelReadHalf> rsp_half) {
+  rsp_half_ = std::move(rsp_half);
 }
-void OakGrpcNode::AddWriteChannel(std::shared_ptr<MessageChannel> grpc_in) {
-  grpc_in_ = grpc_in;
+
+void OakGrpcNode::AddWriteChannel(std::unique_ptr<MessageChannelWriteHalf> req_half) {
+  req_half_ = std::move(req_half);
 }
 
 grpc::Status OakGrpcNode::GetAttestation(grpc::ServerContext* context,

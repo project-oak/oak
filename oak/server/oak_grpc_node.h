@@ -30,10 +30,10 @@ class OakGrpcNode final : public Application::Service {
   grpc::Status Stop();
 
   // Add the inbound channel (with implicit port name "response").
-  void AddReadChannel(std::shared_ptr<MessageChannel> grpc_out);
+  void AddReadChannel(std::unique_ptr<MessageChannelReadHalf> rsp_half);
 
   // Add the outbound channel (with implicit port name "request").
-  void AddWriteChannel(std::shared_ptr<MessageChannel> grpc_in);
+  void AddWriteChannel(std::unique_ptr<MessageChannelWriteHalf> req_half);
 
   int GetPort() { return port_; };
 
@@ -52,8 +52,8 @@ class OakGrpcNode final : public Application::Service {
   // Consumes gRPC events from the completion queue in an infinite loop.
   void CompletionQueueLoop();
 
-  std::shared_ptr<MessageChannel> grpc_in_;
-  std::shared_ptr<MessageChannel> grpc_out_;
+  std::unique_ptr<MessageChannelWriteHalf> req_half_;
+  std::unique_ptr<MessageChannelReadHalf> rsp_half_;
 
   std::unique_ptr<::grpc::Server> server_;
 
