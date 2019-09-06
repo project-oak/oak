@@ -35,32 +35,77 @@ asylo::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
     return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT, "Invalid configuration");
   }
 
-  // TODO: Support creating multiple Nodes and Channels connecting them.
-
-  // Find first (only) Wasm node in the config (which must exist, because of
-  // the validity check above).
-  std::unique_ptr<OakNode> node = nullptr;
+  // Create all of the nodes.  The validity check above will ensure there
+  // is at most one of each pseudo-Node type.
+  std::string grpc_name;
+  std::string logging_name;
+  std::string storage_name;
   for (const auto& node_config : config.nodes()) {
     if (node_config.has_web_assembly_node()) {
-      node =
+      LOG(INFO) << "Create Wasm node named " << node_config.node_name();
+      std::unique_ptr<OakNode> node =
           OakNode::Create(node_config.node_name(), node_config.web_assembly_node().module_bytes());
-      break;
+      if (node == nullptr) {
+        return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT,
+                             "Failed to create Oak Node");
+      }
+      wasm_nodes_[node_config.node_name()] = std::move(node);
+    } else if (node_config.has_grpc_server_node()) {
+      grpc_name = node_config.node_name();
+      LOG(INFO) << "Create gRPC pseudo-Node named " << grpc_name;
+      grpc_node_ = OakGrpcNode::Create();
+    } else if (node_config.has_log_node()) {
+      logging_name = node_config.node_name();
+      LOG(INFO) << "Create logging pseudo-node named " << logging_name;
+      logging_node_ = absl::make_unique<LoggingNode>();
+    } else if (node_config.has_storage_node()) {
+      storage_name = node_config.node_name();
+      LOG(INFO) << "Created storage pseudo-Node named " << storage_name;
+      storage_node_ = absl::make_unique<StorageNode>(node_config.storage_node().address());
     }
   }
-  if (node == nullptr) {
-    return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT, "Failed to create Oak Node");
+
+  // Now create channels.
+  for (const auto& channel_config : config.channels()) {
+    const std::string& src_node = channel_config.source_endpoint().node_name();
+    const std::string& src_port = channel_config.source_endpoint().port_name();
+    const std::string& dest_node = channel_config.destination_endpoint().node_name();
+    const std::string& dest_port = channel_config.destination_endpoint().port_name();
+
+    LOG(INFO) << "Create channel " << src_node << "." << src_port << " -> " << dest_node << "."
+              << dest_port;
+    auto channel = std::make_shared<MessageChannel>();
+    auto write_half = absl::make_unique<MessageChannelWriteHalf>(channel);
+    auto read_half = absl::make_unique<MessageChannelReadHalf>(channel);
+
+    // TODO: Make pseudo-node channel setup less of a special case.
+
+    // Wire up the source endpoint.
+    if (wasm_nodes_.count(src_node) == 1) {
+      wasm_nodes_[src_node]->AddNamedChannel(src_port, std::move(write_half));
+    } else if (src_node == grpc_name) {
+      grpc_node_->AddWriteChannel(std::move(write_half));
+    } else if (src_node == storage_name) {
+      storage_node_->AddWriteChannel(std::move(write_half));
+    } else {
+      return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT,
+                           "Channel with unknown source node");
+    }
+
+    // Wire up the destination endpoint
+    if (wasm_nodes_.count(dest_node) == 1) {
+      wasm_nodes_[dest_node]->AddNamedChannel(dest_port, std::move(read_half));
+    } else if (dest_node == grpc_name) {
+      grpc_node_->AddReadChannel(std::move(read_half));
+    } else if (dest_node == storage_name) {
+      storage_node_->AddReadChannel(std::move(read_half));
+    } else if (dest_node == logging_name) {
+      logging_node_->AddChannel(std::move(read_half));
+    } else {
+      return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT,
+                           "Channel with unknown destination node");
+    }
   }
-
-  // Setup the default channels for the node.
-  SetUpChannels(*node.get());
-
-  // TODO: This needs to be configurable
-  // Create the pseudo node required.
-  grpc_node_ = OakGrpcNode::Create();
-  SetUpGrpcChannels(*node.get());
-
-  // Move ownership to vector.
-  wasm_nodes_.push_back(std::move(node));
 
   return asylo::Status::OkStatus();
 }
@@ -69,87 +114,36 @@ asylo::Status OakRuntime::Start() {
   LOG(INFO) << "Starting runtime";
 
   // Start the gRPC pseudo-node.
-  grpc_node_->Start();
+  if (grpc_node_ != nullptr) {
+    grpc_node_->Start();
+  }
 
   // Start the logging pseudo-node thread.
-  logging_node_->Start();
+  if (logging_node_ != nullptr) {
+    logging_node_->Start();
+  }
 
   // Start a new thread to process storage requests.
-  storage_node_->Start();
+  if (storage_node_ != nullptr) {
+    storage_node_->Start();
+  }
 
-  // Now all dependencies are running, start the thread for the Node itself.
-  for (auto& node : wasm_nodes_) {
-    node->Start();
+  // Now all dependencies are running, start the thread for all the Wasm Nodes.
+  for (auto& named_node : wasm_nodes_) {
+    LOG(INFO) << "Starting Wasm node " << named_node.first;
+    named_node.second->Start();
   }
 
   return asylo::Status::OkStatus();
-}
-
-// Create the default set of channels for given node. For now, this means logging and storage
-// TODO: There probably shouldn't be any default list, as all these should come from the config.
-void OakRuntime::SetUpChannels(OakNode& node) {
-  // Create logging channel and pass the read half to a new logging pseudo-node.
-  auto logging_channel = std::make_shared<MessageChannel>();
-  Handle log_handle =
-      node.AddNamedChannel("log", absl::make_unique<MessageChannelWriteHalf>(logging_channel));
-  logging_node_ = absl::make_unique<LoggingNode>();
-  logging_node_->AddChannel(absl::make_unique<MessageChannelReadHalf>(logging_channel));
-  LOG(INFO) << "Created logging channel " << log_handle << " and pseudo-node";
-
-  // Create the channels needed for interaction with storage.
-
-  // Outgoing storage request channel: keep the read half in C++, but map the write
-  // half to a well-known channel handle.
-  auto storage_req_channel = std::make_shared<MessageChannel>();
-  Handle storage_out_handle = node.AddNamedChannel(
-      "storage_out", absl::make_unique<MessageChannelWriteHalf>(storage_req_channel));
-  auto storage_req_half = absl::make_unique<MessageChannelReadHalf>(storage_req_channel);
-  LOG(INFO) << "Created storage output channel: " << storage_out_handle;
-
-  // Inbound storage response channel: keep the write half in C++, but map the read
-  // half to a well-known channel handle.
-  auto storage_rsp_channel = std::make_shared<MessageChannel>();
-  Handle storage_in_handle = node.AddNamedChannel(
-      "storage_in", absl::make_unique<MessageChannelReadHalf>(storage_rsp_channel));
-  auto storage_rsp_half = absl::make_unique<MessageChannelWriteHalf>(storage_rsp_channel);
-  LOG(INFO) << "Created storage input channel: " << storage_in_handle;
-
-  // Add in a storage pseudo-node.
-  storage_node_ = absl::make_unique<StorageNode>("localhost:7867");
-  storage_node_->AddReadChannel(std::move(storage_req_half));
-  storage_node_->AddWriteChannel(std::move(storage_rsp_half));
-
-  LOG(INFO) << "Created storage channels";
-}
-
-// Create the channels needed for gRPC interactions.
-void OakRuntime::SetUpGrpcChannels(OakNode& node) {
-  // Incoming request channel: keep the write half in |OakRuntime|, but map
-  // the read half to a well-known channel handle on |node_|.
-  auto grpc_in = std::make_shared<MessageChannel>();
-  Handle grpc_in_handle =
-      node.AddNamedChannel("grpc_in", absl::make_unique<MessageChannelReadHalf>(grpc_in));
-  auto grpc_req_half = absl::make_unique<MessageChannelWriteHalf>(grpc_in);
-  LOG(INFO) << "Created gRPC input channel: " << grpc_in_handle;
-
-  // Outgoing response channel: keep the read half in |OakRuntime|, but map
-  // the write half to a well-known channel handle on |node_|.
-  auto grpc_out = std::make_shared<MessageChannel>();
-  Handle grpc_out_handle =
-      node.AddNamedChannel("grpc_out", absl::make_unique<MessageChannelWriteHalf>(grpc_out));
-  auto grpc_rsp_half = absl::make_unique<MessageChannelReadHalf>(grpc_out);
-  LOG(INFO) << "Created gRPC output channel: " << grpc_out_handle;
-
-  grpc_node_->AddReadChannel(std::move(grpc_rsp_half));
-  grpc_node_->AddWriteChannel(std::move(grpc_req_half));
 }
 
 int32_t OakRuntime::GetPort() { return grpc_node_->GetPort(); }
 
 asylo::Status OakRuntime::Stop() {
   LOG(INFO) << "Stopping runtime...";
-  for (auto& node : wasm_nodes_) {
-    node->Stop();
+  for (auto& named_node : wasm_nodes_) {
+    LOG(INFO) << "Stopping Wasm node " << named_node.first;
+    named_node.second->Stop();
   }
   wasm_nodes_.clear();
 
@@ -158,6 +152,7 @@ asylo::Status OakRuntime::Stop() {
     grpc_node_->Stop();
     grpc_node_ = nullptr;
   }
+  // TODO: stop other pseudo-Nodes if present
 
   return asylo::Status::OkStatus();
 }

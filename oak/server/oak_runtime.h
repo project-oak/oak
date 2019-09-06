@@ -52,13 +52,8 @@ class OakRuntime {
   int32_t GetPort();
 
  private:
-  // Creates all the necessary channels and pass the appropriate halves to |node|.
-  void SetUpChannels(OakNode& node);
-
-  // Connects the |node| with the gRPC pseudo-node
-  void SetUpGrpcChannels(OakNode& node);
-
-  std::vector<std::unique_ptr<OakNode> > wasm_nodes_;
+  // Collection of Wasm nodes indexed by node name.
+  std::map<std::string, std::unique_ptr<OakNode> > wasm_nodes_;
 
   // TODO: These are hardcoded now. Make them generic nodes and channels and use config.
   // Pseudo-nodes.
