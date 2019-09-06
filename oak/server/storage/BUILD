@@ -46,6 +46,7 @@ cc_library(
     srcs = ["storage_node.cc"],
     hdrs = ["storage_node.h"],
     deps = [
+        "//oak/common:handles",
         "//oak/proto:storage_cc_grpc",
         "//oak/proto:storage_channel_cc_proto",
         "//oak/server:channel",

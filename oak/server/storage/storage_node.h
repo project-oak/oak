@@ -20,6 +20,7 @@
 #include <memory>
 #include <thread>
 
+#include "oak/common/handles.h"
 #include "oak/proto/storage.grpc.pb.h"
 #include "oak/server/channel.h"
 #include "oak/server/node_thread.h"
@@ -39,8 +40,8 @@ class StorageNode final : public NodeThread {
  private:
   void Run() override;
 
-  std::unique_ptr<MessageChannelReadHalf> req_half_;
-  std::unique_ptr<MessageChannelWriteHalf> rsp_half_;
+  Handle req_handle_;
+  Handle rsp_handle_;
 
   std::unique_ptr<oak::Storage::Stub> storage_service_;
 };

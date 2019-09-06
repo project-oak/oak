@@ -30,22 +30,35 @@ static std::string GetStorageId(const std::string& storage_name) {
 }
 
 StorageNode::StorageNode(const std::string& storage_address)
-    : NodeThread("storage"), req_half_(nullptr), rsp_half_(nullptr) {
+    : NodeThread("storage"), req_handle_(0), rsp_handle_(0) {
   storage_service_ = oak::Storage::NewStub(
       grpc::CreateChannel(storage_address, grpc::InsecureChannelCredentials()));
 }
 
 void StorageNode::AddReadChannel(std::unique_ptr<MessageChannelReadHalf> req_half) {
-  req_half_ = std::move(req_half);
+  req_handle_ = AddChannel(std::move(req_half));
 }
 
 void StorageNode::AddWriteChannel(std::unique_ptr<MessageChannelWriteHalf> rsp_half) {
-  rsp_half_ = std::move(rsp_half);
+  rsp_handle_ = AddChannel(std::move(rsp_half));
 }
 
 void StorageNode::Run() {
+  // Borrow pointers to the relevant channel halves.
+  ChannelHalf* req_half = BorrowChannel(req_handle_);
+  ChannelHalf* rsp_half = BorrowChannel(rsp_handle_);
+  if (req_half == nullptr || rsp_half == nullptr) {
+    LOG(ERROR) << "Required channel not available; handles: " << req_handle_ << ", " << rsp_handle_;
+  }
+  std::vector<std::unique_ptr<ChannelStatus>> status;
+  status.push_back(absl::make_unique<ChannelStatus>(req_handle_));
   while (true) {
-    ReadResult result = req_half_->BlockingRead(INT_MAX);
+    if (!WaitOnChannels(&status)) {
+      LOG(WARNING) << "Node termination requested";
+      return;
+    }
+
+    ReadResult result = req_half->Read(INT_MAX);
     if (result.required_size > 0) {
       LOG(ERROR) << "Message size too large: " << result.required_size;
       return;
@@ -140,7 +153,7 @@ void StorageNode::Run() {
     channel_response.SerializeToString(&rsp_data);
     // TODO: figure out a way to avoid the extra copy (into then out of std::string)
     std::unique_ptr<Message> rsp_msg = absl::make_unique<Message>(rsp_data.begin(), rsp_data.end());
-    rsp_half_->Write(std::move(rsp_msg));
+    rsp_half->Write(std::move(rsp_msg));
   }
 }
 
