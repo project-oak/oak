@@ -29,12 +29,14 @@ class OakGrpcNode final : public Application::Service {
   grpc::Status Start();
   grpc::Status Stop();
 
-  void SetUpGrpcChannels(std::shared_ptr<MessageChannel> grpc_in,
-                         std::shared_ptr<MessageChannel> grpc_out);
+  // Add the inbound channel (with implicit port name "response").
+  void AddReadChannel(std::shared_ptr<MessageChannel> grpc_out);
+
+  // Add the outbound channel (with implicit port name "request").
+  void AddWriteChannel(std::shared_ptr<MessageChannel> grpc_in);
 
   int GetPort() { return port_; };
-  // The destructor for a running OakGrpcNode instance will block until the thread
-  // running the instance completes.
+
   virtual ~OakGrpcNode(){};
 
  private:
@@ -50,13 +52,12 @@ class OakGrpcNode final : public Application::Service {
   // Consumes gRPC events from the completion queue in an infinite loop.
   void CompletionQueueLoop();
 
-  // gRPC async service and completion queue.
-  // TODO: remove this once we have a unify way to pass channels around
   std::shared_ptr<MessageChannel> grpc_in_;
   std::shared_ptr<MessageChannel> grpc_out_;
 
   std::unique_ptr<::grpc::Server> server_;
 
+  // gRPC async service and completion queue.
   std::unique_ptr<grpc::AsyncGenericService> module_service_;
   // The queue expects to deal with void* tag values that are always function pointers to
   // void(bool) functions.

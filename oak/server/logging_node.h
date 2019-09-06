@@ -28,8 +28,10 @@ namespace oak {
 // Pseudo-node to perform logging.
 class LoggingNode final : public NodeThread {
  public:
-  LoggingNode(std::unique_ptr<MessageChannelReadHalf> half)
-      : NodeThread("logging"), half_(std::move(half)) {}
+  LoggingNode() : NodeThread("logging"), half_(nullptr) {}
+
+  // Add the inbound channel (with implicit port name "in").
+  void AddChannel(std::unique_ptr<MessageChannelReadHalf> half) { half_ = std::move(half); }
 
  private:
   void Run() override;

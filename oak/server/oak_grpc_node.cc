@@ -82,10 +82,11 @@ void OakGrpcNode::CompletionQueueLoop() {
   }
 }
 
-void OakGrpcNode::SetUpGrpcChannels(std::shared_ptr<MessageChannel> grpc_in,
-                                    std::shared_ptr<MessageChannel> grpc_out) {
-  grpc_in_ = grpc_in;
+void OakGrpcNode::AddReadChannel(std::shared_ptr<MessageChannel> grpc_out) {
   grpc_out_ = grpc_out;
+}
+void OakGrpcNode::AddWriteChannel(std::shared_ptr<MessageChannel> grpc_in) {
+  grpc_in_ = grpc_in;
 }
 
 grpc::Status OakGrpcNode::GetAttestation(grpc::ServerContext* context,
