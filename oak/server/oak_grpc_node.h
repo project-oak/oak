@@ -17,6 +17,8 @@
 #ifndef OAK_SERVER_OAK_GRPC_NODE_H_
 #define OAK_SERVER_OAK_GRPC_NODE_H_
 
+#include <thread>
+
 #include "include/grpcpp/grpcpp.h"
 #include "oak/proto/application.grpc.pb.h"
 #include "oak/server/channel.h"
@@ -53,6 +55,7 @@ class OakGrpcNode final : public Application::Service, public OakNode {
   std::unique_ptr<grpc::AsyncGenericService> module_service_;
   // The queue expects to deal with void* tag values that are always function pointers to
   // void(bool) functions.
+  std::thread queue_thread_;
   std::unique_ptr<grpc::ServerCompletionQueue> completion_queue_;
 };
 

@@ -102,6 +102,7 @@ int32_t OakRuntime::GetPort() { return grpc_node_->GetPort(); }
 
 asylo::Status OakRuntime::Stop() {
   LOG(INFO) << "Stopping runtime...";
+  grpc_node_ = nullptr;
   for (auto& named_node : nodes_) {
     LOG(INFO) << "Stopping node " << named_node.first;
     named_node.second->Stop();
