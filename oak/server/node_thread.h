@@ -17,33 +17,31 @@
 #ifndef OAK_SERVER_NODE_THREAD_H_
 #define OAK_SERVER_NODE_THREAD_H_
 
-#include <atomic>
 #include <memory>
 #include <thread>
+
+#include "oak/server/oak_node.h"
 
 namespace oak {
 
 // This class represents a node or pseudo-node that executes as a distinct
 // thread.
-class NodeThread {
+class NodeThread : public OakNode {
  public:
   // Construct a thread, identified by the given name in diagnostic messages.
-  NodeThread(const std::string& name) : name_(name), termination_pending_(false) {}
+  NodeThread(const std::string& name) : OakNode(name) {}
   virtual ~NodeThread();
 
   // Start kicks off a separate thread that invokes the Run() method.
-  void Start();
+  void Start() override;
 
   // Stop terminates the thread associated with the pseudo-node.
-  void Stop();
+  void Stop() override;
 
  protected:
   // The Run() method is run on a new thread, and should respond to termination requests
   // (indicated by termination_pending_.load()) in a timely manner.
   virtual void Run() = 0;
-
-  const std::string name_;
-  std::atomic_bool termination_pending_;
 
  private:
   std::thread thread_;

@@ -28,6 +28,16 @@ test_suite(
 )
 
 cc_library(
+    name = "oak_node",
+    hdrs = ["oak_node.h"],
+    deps = [
+        ":channel",
+        "//oak/common:handles",
+        "@com_google_absl//absl/synchronization",
+    ],
+)
+
+cc_library(
     name = "wasm_node",
     srcs = [
         "wabt_output.cc",
@@ -87,6 +97,7 @@ cc_library(
     deps = [
         ":channel",
         ":module_invocation",
+        ":oak_node",
         "//oak/proto:application_cc_grpc",
         "//oak/proto:enclave_cc_proto",
         "@com_github_grpc_grpc//:grpc++",
@@ -153,6 +164,7 @@ cc_library(
     srcs = ["node_thread.cc"],
     hdrs = ["node_thread.h"],
     deps = [
+        ":oak_node",
         "@com_google_asylo//asylo/util:logging",
     ],
 )
