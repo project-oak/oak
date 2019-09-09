@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "oak/server/oak_node.h"
+#include "oak/server/wasm_node.h"
 
 #include <openssl/sha.h>
 
@@ -172,12 +172,12 @@ static bool CheckModuleExports(wabt::interp::Environment* env,
       [env, module](const RequiredExport& req) { return CheckModuleExport(env, module, req); });
 }
 
-OakNode::OakNode(const std::string& name) : NodeThread(name), next_handle_(0) {}
+WasmNode::WasmNode(const std::string& name) : NodeThread(name), next_handle_(0) {}
 
-std::unique_ptr<OakNode> OakNode::Create(const std::string& name, const std::string& module) {
-  LOG(INFO) << "Creating Oak Node";
+std::unique_ptr<WasmNode> WasmNode::Create(const std::string& name, const std::string& module) {
+  LOG(INFO) << "Creating Wasm Node";
 
-  std::unique_ptr<OakNode> node = absl::WrapUnique(new OakNode(name));
+  std::unique_ptr<WasmNode> node = absl::WrapUnique(new WasmNode(name));
   node->InitEnvironment(&node->env_);
   LOG(INFO) << "Host func count: " << node->env_.GetFuncCount();
 
@@ -199,8 +199,8 @@ std::unique_ptr<OakNode> OakNode::Create(const std::string& name, const std::str
   return node;
 }
 
-Handle OakNode::AddNamedChannel(const std::string& port_name,
-                                std::unique_ptr<ChannelHalf> channel_half) {
+Handle WasmNode::AddNamedChannel(const std::string& port_name,
+                                 std::unique_ptr<ChannelHalf> channel_half) {
   Handle handle = ++next_handle_;
   LOG(INFO) << "port name '" << port_name << "' maps to handle " << handle;
   named_channels_[port_name] = handle;
@@ -209,7 +209,7 @@ Handle OakNode::AddNamedChannel(const std::string& port_name,
 }
 
 // Register all available host functions so that they are available to the Oak Module at runtime.
-void OakNode::InitEnvironment(wabt::interp::Environment* env) {
+void WasmNode::InitEnvironment(wabt::interp::Environment* env) {
   wabt::interp::HostModule* oak_module = env->AppendHostModule("oak");
   oak_module->AppendFuncExport(
       "channel_read",
@@ -236,7 +236,7 @@ void OakNode::InitEnvironment(wabt::interp::Environment* env) {
       this->OakChannelFind(env));
 }
 
-void OakNode::Run() {
+void WasmNode::Run() {
   wabt::interp::Thread::Options thread_options;
   wabt::Stream* trace_stream = nullptr;
   wabt::interp::Executor executor(&env_, trace_stream, thread_options);
@@ -253,7 +253,7 @@ void OakNode::Run() {
   LOG(WARNING) << "module execution terminated with status " << status;
 }
 
-wabt::interp::HostFunc::Callback OakNode::OakChannelRead(wabt::interp::Environment* env) {
+wabt::interp::HostFunc::Callback WasmNode::OakChannelRead(wabt::interp::Environment* env) {
   return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
                      const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
     LogHostFunctionCall(func, args);
@@ -292,7 +292,7 @@ wabt::interp::HostFunc::Callback OakNode::OakChannelRead(wabt::interp::Environme
   };
 }
 
-wabt::interp::HostFunc::Callback OakNode::OakChannelWrite(wabt::interp::Environment* env) {
+wabt::interp::HostFunc::Callback WasmNode::OakChannelWrite(wabt::interp::Environment* env) {
   return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
                      const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
     LogHostFunctionCall(func, args);
@@ -319,7 +319,7 @@ wabt::interp::HostFunc::Callback OakNode::OakChannelWrite(wabt::interp::Environm
   };
 }
 
-wabt::interp::HostFunc::Callback OakNode::OakWaitOnChannels(wabt::interp::Environment* env) {
+wabt::interp::HostFunc::Callback WasmNode::OakWaitOnChannels(wabt::interp::Environment* env) {
   return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
                      const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
     LogHostFunctionCall(func, args);
@@ -369,7 +369,7 @@ wabt::interp::HostFunc::Callback OakNode::OakWaitOnChannels(wabt::interp::Enviro
   };
 }
 
-wabt::interp::HostFunc::Callback OakNode::OakChannelFind(wabt::interp::Environment* env) {
+wabt::interp::HostFunc::Callback WasmNode::OakChannelFind(wabt::interp::Environment* env) {
   return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
                      const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
     LogHostFunctionCall(func, args);

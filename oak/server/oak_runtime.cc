@@ -25,7 +25,6 @@
 #include "asylo/util/status_macros.h"
 #include "oak/common/app_config.h"
 #include "oak/server/module_invocation.h"
-#include "oak/server/oak_node.h"
 
 namespace oak {
 
@@ -43,8 +42,8 @@ asylo::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
   for (const auto& node_config : config.nodes()) {
     if (node_config.has_web_assembly_node()) {
       LOG(INFO) << "Create Wasm node named " << node_config.node_name();
-      std::unique_ptr<OakNode> node =
-          OakNode::Create(node_config.node_name(), node_config.web_assembly_node().module_bytes());
+      std::unique_ptr<WasmNode> node =
+          WasmNode::Create(node_config.node_name(), node_config.web_assembly_node().module_bytes());
       if (node == nullptr) {
         return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT,
                              "Failed to create Oak Node");

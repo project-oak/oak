@@ -28,8 +28,8 @@
 #include "oak/proto/oak_api.pb.h"
 #include "oak/server/logging_node.h"
 #include "oak/server/oak_grpc_node.h"
-#include "oak/server/oak_node.h"
 #include "oak/server/storage/storage_node.h"
+#include "oak/server/wasm_node.h"
 
 namespace oak {
 // OakRuntime contains the common runtime needed for an Oak System. The Runtime is responsible for
@@ -53,7 +53,7 @@ class OakRuntime {
 
  private:
   // Collection of Wasm nodes indexed by node name.
-  std::map<std::string, std::unique_ptr<OakNode> > wasm_nodes_;
+  std::map<std::string, std::unique_ptr<WasmNode>> wasm_nodes_;
 
   // TODO: These are hardcoded now. Make them generic nodes and channels and use config.
   // Pseudo-nodes.

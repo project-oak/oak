@@ -28,14 +28,14 @@ test_suite(
 )
 
 cc_library(
-    name = "oak_node",
+    name = "wasm_node",
     srcs = [
-        "oak_node.cc",
         "wabt_output.cc",
+        "wasm_node.cc",
     ],
     hdrs = [
-        "oak_node.h",
         "wabt_output.h",
+        "wasm_node.h",
     ],
     deps = [
         ":channel",
@@ -55,17 +55,17 @@ cc_library(
 )
 
 cc_test(
-    name = "oak_node_test",
+    name = "wasm_node_test",
     srcs = [
-        "oak_node_test.cc",
         "wabt_output_test.cc",
+        "wasm_node_test.cc",
     ],
     data = [
         ":testdata",
     ],
     tags = ["host"],
     deps = [
-        ":oak_node",
+        ":wasm_node",
         "@gtest//:gtest_main",
     ],
 )
@@ -114,7 +114,7 @@ cc_library(
     deps = [
         ":module_invocation",
         ":oak_grpc_node",
-        ":oak_node",
+        ":wasm_node",
         "//oak/common:app_config",
         "//oak/proto:enclave_cc_proto",
         "//oak/server:logging_node",
