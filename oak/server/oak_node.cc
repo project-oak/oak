@@ -172,12 +172,12 @@ static bool CheckModuleExports(wabt::interp::Environment* env,
       [env, module](const RequiredExport& req) { return CheckModuleExport(env, module, req); });
 }
 
-OakNode::OakNode() : NodeThread("wasm-node"), next_handle_(0) {}
+OakNode::OakNode(const std::string& name) : NodeThread(name), next_handle_(0) {}
 
-std::unique_ptr<OakNode> OakNode::Create(const std::string& module) {
+std::unique_ptr<OakNode> OakNode::Create(const std::string& name, const std::string& module) {
   LOG(INFO) << "Creating Oak Node";
 
-  std::unique_ptr<OakNode> node = absl::WrapUnique(new OakNode());
+  std::unique_ptr<OakNode> node = absl::WrapUnique(new OakNode(name));
   node->InitEnvironment(&node->env_);
   LOG(INFO) << "Host func count: " << node->env_.GetFuncCount();
 
