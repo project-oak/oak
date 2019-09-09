@@ -16,8 +16,6 @@
 
 #include "oak/server/oak_grpc_node.h"
 
-#include <thread>
-
 #include "absl/memory/memory.h"
 #include "asylo/grpc/auth/enclave_server_credentials.h"
 #include "asylo/grpc/auth/null_credentials_options.h"
@@ -58,9 +56,7 @@ std::unique_ptr<OakGrpcNode> OakGrpcNode::Create(const std::string& name) {
 
 void OakGrpcNode::Start() {
   // Start a new thread to process the gRPC completion queue.
-  std::thread thread(&OakGrpcNode::CompletionQueueLoop, this);
-  thread.detach();
-  // TODO: This thread will need to be joined once we sort out termination.
+  queue_thread_ = std::thread(&OakGrpcNode::CompletionQueueLoop, this);
 }
 
 void OakGrpcNode::CompletionQueueLoop() {
@@ -80,7 +76,10 @@ void OakGrpcNode::CompletionQueueLoop() {
     bool ok;
     void* tag;
     if (!completion_queue_->Next(&tag, &ok)) {
-      LOG(FATAL) << "Failure reading from completion queue";
+      if (!termination_pending_.load()) {
+        LOG(FATAL) << "Failure reading from completion queue";
+      }
+      LOG(INFO) << "No Next event on completion queue, stopping gRPC completion queue loop";
       return;
     }
     auto callback = static_cast<std::function<void(bool)>*>(tag);
@@ -97,11 +96,23 @@ grpc::Status OakGrpcNode::GetAttestation(grpc::ServerContext* context,
 }
 
 void OakGrpcNode::Stop() {
+  termination_pending_ = true;
   if (server_) {
-    LOG(INFO) << "Shutting down...";
+    LOG(INFO) << "Shutting down gRPC server...";
     server_->Shutdown();
-    server_ = nullptr;
   }
+  if (completion_queue_ != nullptr) {
+    LOG(INFO) << "Shutting down completion queue...";
+    completion_queue_->Shutdown();
+  }
+  if (queue_thread_.joinable()) {
+    LOG(INFO) << "Waiting for completion of completion queue thread";
+    queue_thread_.join();
+    LOG(INFO) << "Completed queue thread";
+  }
+  // Now there is no separate thread running it's safe to drop the gRPC objects.
+  server_ = nullptr;
+  completion_queue_ = nullptr;
 }
 
 }  // namespace oak
