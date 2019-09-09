@@ -16,6 +16,8 @@
 
 #include "oak/server/oak_grpc_node.h"
 
+#include <thread>
+
 #include "absl/memory/memory.h"
 #include "asylo/grpc/auth/enclave_server_credentials.h"
 #include "asylo/grpc/auth/null_credentials_options.h"

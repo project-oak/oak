@@ -100,7 +100,7 @@ cc_library(
     srcs = ["module_invocation.cc"],
     hdrs = ["module_invocation.h"],
     deps = [
-        ":oak_node",
+        ":channel",
         "//oak/proto:grpc_encap_cc_proto",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_asylo//asylo/util:logging",
