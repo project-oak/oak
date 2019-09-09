@@ -34,7 +34,6 @@
 #include "include/grpcpp/security/server_credentials.h"
 #include "include/grpcpp/server.h"
 #include "oak/proto/enclave.pb.h"
-#include "oak/server/oak_node.h"
 #include "oak/server/oak_runtime.h"
 
 namespace oak {

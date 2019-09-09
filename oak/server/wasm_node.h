@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef OAK_SERVER_OAK_NODE_H_
-#define OAK_SERVER_OAK_NODE_H_
+#ifndef OAK_SERVER_WASM_NODE_H_
+#define OAK_SERVER_WASM_NODE_H_
 
 #include <memory>
 #include <thread>
@@ -33,19 +33,18 @@ namespace oak {
 
 using ChannelHalfTable = std::unordered_map<Handle, std::unique_ptr<ChannelHalf>>;
 
-class OakNode final : public NodeThread {
+class WasmNode final : public NodeThread {
  public:
-  // Creates an Oak node by loading the Wasm module code.
-  static std::unique_ptr<OakNode> Create(const std::string& name, const std::string& module);
+  // Creates a Wasm Node by loading the Wasm module code.
+  static std::unique_ptr<WasmNode> Create(const std::string& name, const std::string& module);
 
   // Add channel identified by the given port name to the node.  This should
   // only be called before the node is started (with Start());
   Handle AddNamedChannel(const std::string& port_name, std::unique_ptr<ChannelHalf> channel_half);
 
  private:
-  // Clients should construct OakNode instances with Create() (which
-  // can fail).
-  OakNode(const std::string& name);
+  // Clients should construct WasmNode instances with Create() (which can fail).
+  WasmNode(const std::string& name);
 
   void InitEnvironment(wabt::interp::Environment* env);
 
@@ -77,4 +76,4 @@ class OakNode final : public NodeThread {
 
 }  // namespace oak
 
-#endif  // OAK_SERVER_OAK_NODE_H_
+#endif  // OAK_SERVER_WASM_NODE_H_
