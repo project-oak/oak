@@ -18,7 +18,8 @@
 #define OAK_SERVER_MODULE_INVOCATION_H_
 
 #include "include/grpcpp/generic/async_generic_service.h"
-#include "oak/server/oak_node.h"
+#include "include/grpcpp/grpcpp.h"
+#include "oak/server/channel.h"
 
 namespace oak {
 
