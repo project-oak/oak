@@ -55,12 +55,11 @@ std::unique_ptr<OakGrpcNode> OakGrpcNode::Create() {
   return node;
 }
 
-grpc::Status OakGrpcNode::Start() {
+void OakGrpcNode::Start() {
   // Start a new thread to process the gRPC completion queue.
   std::thread thread(&OakGrpcNode::CompletionQueueLoop, this);
   thread.detach();
   // TODO: This thread will need to be joined once we sort out termination.
-  return grpc::Status::OK;
 }
 
 void OakGrpcNode::CompletionQueueLoop() {
@@ -98,13 +97,12 @@ grpc::Status OakGrpcNode::GetAttestation(grpc::ServerContext* context,
   return ::grpc::Status::OK;
 }
 
-grpc::Status OakGrpcNode::Stop() {
+void OakGrpcNode::Stop() {
   if (server_) {
     LOG(INFO) << "Shutting down...";
     server_->Shutdown();
     server_ = nullptr;
   }
-  return grpc::Status::OK;
 }
 
 }  // namespace oak

@@ -20,14 +20,17 @@
 #include "include/grpcpp/grpcpp.h"
 #include "oak/proto/application.grpc.pb.h"
 #include "oak/server/channel.h"
+#include "oak/server/oak_node.h"
 
 namespace oak {
 
-class OakGrpcNode final : public Application::Service {
+class OakGrpcNode final : public Application::Service, public OakNode {
  public:
   static std::unique_ptr<OakGrpcNode> Create();
-  grpc::Status Start();
-  grpc::Status Stop();
+  virtual ~OakGrpcNode(){};
+
+  void Start() override;
+  void Stop() override;
 
   // Add the inbound channel (with implicit port name "response").
   void AddReadChannel(std::unique_ptr<MessageChannelReadHalf> rsp_half);
@@ -37,20 +40,18 @@ class OakGrpcNode final : public Application::Service {
 
   int GetPort() { return port_; };
 
-  virtual ~OakGrpcNode(){};
-
  private:
-  OakGrpcNode() = default;
+  OakGrpcNode() : OakNode("grpc") {}
   OakGrpcNode(const OakGrpcNode&) = delete;
   OakGrpcNode& operator=(const OakGrpcNode&) = delete;
-
-  int port_;
 
   grpc::Status GetAttestation(grpc::ServerContext* context, const GetAttestationRequest* request,
                               GetAttestationResponse* response) override;
 
   // Consumes gRPC events from the completion queue in an infinite loop.
   void CompletionQueueLoop();
+
+  int port_;
 
   std::unique_ptr<MessageChannelWriteHalf> req_half_;
   std::unique_ptr<MessageChannelReadHalf> rsp_half_;
