@@ -42,7 +42,8 @@ asylo::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
   std::unique_ptr<OakNode> node = nullptr;
   for (const auto& node_config : config.nodes()) {
     if (node_config.has_web_assembly_node()) {
-      node = OakNode::Create(node_config.web_assembly_node().module_bytes());
+      node =
+          OakNode::Create(node_config.node_name(), node_config.web_assembly_node().module_bytes());
       break;
     }
   }

@@ -36,7 +36,7 @@ using ChannelHalfTable = std::unordered_map<Handle, std::unique_ptr<ChannelHalf>
 class OakNode final : public NodeThread {
  public:
   // Creates an Oak node by loading the Wasm module code.
-  static std::unique_ptr<OakNode> Create(const std::string& module);
+  static std::unique_ptr<OakNode> Create(const std::string& name, const std::string& module);
 
   // Add channel identified by the given port name to the node.  This should
   // only be called before the node is started (with Start());
@@ -45,7 +45,7 @@ class OakNode final : public NodeThread {
  private:
   // Clients should construct OakNode instances with Create() (which
   // can fail).
-  OakNode();
+  OakNode(const std::string& name);
 
   void InitEnvironment(wabt::interp::Environment* env);
 
