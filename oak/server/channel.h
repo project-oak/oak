@@ -137,6 +137,13 @@ class MessageChannelWriteHalf final : public ChannelHalf {
   std::shared_ptr<MessageChannel> channel_;
 };
 
+// Current readable status of a channel.
+struct ChannelStatus {
+  explicit ChannelStatus(uint64_t h) : handle(h) {}
+  uint64_t handle;
+  bool ready;
+};
+
 }  // namespace oak
 
 #endif  // OAK_SERVER_CHANNEL_H_

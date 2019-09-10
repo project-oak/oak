@@ -50,4 +50,32 @@ Handle OakNode::FindChannel(const std::string& port_name) {
   return it->second;
 }
 
+bool OakNode::WaitOnChannels(std::vector<std::unique_ptr<ChannelStatus>>* statuses) {
+  bool done = false;
+  while (!done) {
+    for (uint32_t ii = 0; ii < statuses->size(); ii++) {
+      uint64_t handle = (*statuses)[ii]->handle;
+      ChannelHalf* channel = BorrowChannel(handle);
+      if (channel == nullptr) {
+        LOG(WARNING) << "Waiting on non-existent channel handle " << handle;
+        continue;
+      }
+      if (channel->CanRead()) {
+        LOG(INFO) << "Message available on handle " << handle;
+        done = true;
+        (*statuses)[ii]->ready = true;
+      }
+    }
+    if (termination_pending_.load()) {
+      LOG(WARNING) << "Node is pending termination";
+      return false;
+    }
+    if (!done) {
+      // TODO: get rid of polling wait
+      absl::SleepFor(absl::Milliseconds(100));
+    }
+  }
+  return true;
+}
+
 }  // namespace oak
