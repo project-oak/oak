@@ -73,6 +73,9 @@ class ChannelHalf {
     return nothing;
   }
 
+  // BlockingRead behaves like Read but blocks until a message is available.
+  virtual ReadResult BlockingRead(uint32_t size) { return Read(size); }
+
   // Indicate whether a Read operation would return a message.
   virtual bool CanRead() { return false; }
 
@@ -100,7 +103,7 @@ class MessageChannel final : public ChannelHalf {
   ReadResult Read(uint32_t size) override LOCKS_EXCLUDED(mu_);
 
   // BlockingRead behaves like Read but blocks until a message is available.
-  ReadResult BlockingRead(uint32_t size) LOCKS_EXCLUDED(mu_);
+  ReadResult BlockingRead(uint32_t size) override LOCKS_EXCLUDED(mu_);
 
   // Write passes ownership of a message to the channel.
   void Write(std::unique_ptr<Message> data) override LOCKS_EXCLUDED(mu_);
@@ -120,7 +123,7 @@ class MessageChannelReadHalf final : public ChannelHalf {
   MessageChannelReadHalf(std::shared_ptr<MessageChannel> channel) : channel_(channel) {}
   ReadResult Read(uint32_t size) override { return channel_->Read(size); }
   bool CanRead() override { return channel_->Count() > 0; }
-  ReadResult BlockingRead(uint32_t size) { return channel_->BlockingRead(size); }
+  ReadResult BlockingRead(uint32_t size) override { return channel_->BlockingRead(size); }
   void Await() override { return channel_->Await(); }
 
  private:
