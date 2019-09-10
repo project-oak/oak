@@ -23,6 +23,12 @@
 
 namespace oak {
 
+extern const char kGrpcNodeRequestPortName[];
+extern const char kGrpcNodeResponsePortName[];
+extern const char kLoggingNodePortName[];
+extern const char kStorageNodeRequestPortName[];
+extern const char kStorageNodeResponsePortName[];
+
 // Build a default application configuration with a single Wasm node of the given
 // name and contents, accessible via gRPC.
 std::unique_ptr<ApplicationConfiguration> DefaultConfig(const std::string& name,
