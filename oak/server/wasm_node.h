@@ -18,29 +18,16 @@
 #define OAK_SERVER_WASM_NODE_H_
 
 #include <memory>
-#include <thread>
-#include <unordered_map>
 
-#include "absl/base/thread_annotations.h"
-#include "absl/types/span.h"
-#include "oak/common/handles.h"
-#include "oak/proto/application.grpc.pb.h"
-#include "oak/server/channel.h"
 #include "oak/server/node_thread.h"
 #include "src/interp/interp.h"
 
 namespace oak {
 
-using ChannelHalfTable = std::unordered_map<Handle, std::unique_ptr<ChannelHalf>>;
-
 class WasmNode final : public NodeThread {
  public:
   // Creates a Wasm Node by loading the Wasm module code.
   static std::unique_ptr<WasmNode> Create(const std::string& name, const std::string& module);
-
-  // Add channel identified by the given port name to the node.  This should
-  // only be called before the node is started (with Start());
-  Handle AddNamedChannel(const std::string& port_name, std::unique_ptr<ChannelHalf> channel_half);
 
  private:
   // Clients should construct WasmNode instances with Create() (which can fail).
@@ -65,13 +52,6 @@ class WasmNode final : public NodeThread {
   wabt::interp::Environment env_;
   // TODO: Use smart pointers.
   wabt::interp::DefinedModule* module_;
-
-  // Map from pre-configured port names to channel handles.
-  Handle next_handle_;
-  std::unordered_map<std::string, Handle> named_channels_;
-
-  // Map from channel handles to channel half instances.
-  ChannelHalfTable channel_halves_;
 };
 
 }  // namespace oak

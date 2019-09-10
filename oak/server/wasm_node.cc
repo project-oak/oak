@@ -172,7 +172,7 @@ static bool CheckModuleExports(wabt::interp::Environment* env,
       [env, module](const RequiredExport& req) { return CheckModuleExport(env, module, req); });
 }
 
-WasmNode::WasmNode(const std::string& name) : NodeThread(name), next_handle_(0) {}
+WasmNode::WasmNode(const std::string& name) : NodeThread(name) {}
 
 std::unique_ptr<WasmNode> WasmNode::Create(const std::string& name, const std::string& module) {
   LOG(INFO) << "Creating Wasm Node";
@@ -197,15 +197,6 @@ std::unique_ptr<WasmNode> WasmNode::Create(const std::string& name, const std::s
   }
 
   return node;
-}
-
-Handle WasmNode::AddNamedChannel(const std::string& port_name,
-                                 std::unique_ptr<ChannelHalf> channel_half) {
-  Handle handle = ++next_handle_;
-  LOG(INFO) << "port name '" << port_name << "' maps to handle " << handle;
-  named_channels_[port_name] = handle;
-  channel_halves_[handle] = std::move(channel_half);
-  return handle;
 }
 
 // Register all available host functions so that they are available to the Oak Module at runtime.
@@ -263,12 +254,12 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelRead(wabt::interp::Environm
     uint32_t size = args[2].get_i32();
     uint32_t size_offset = args[3].get_i32();
 
-    if (channel_halves_.count(channel_handle) == 0) {
+    ChannelHalf* channel = BorrowChannel(channel_handle);
+    if (channel == nullptr) {
       LOG(WARNING) << "Invalid channel handle: " << channel_handle;
       results[0].set_i32(OakStatus::ERR_BAD_HANDLE);
       return wabt::interp::Result::Ok;
     }
-    std::unique_ptr<ChannelHalf>& channel = channel_halves_.at(channel_handle);
 
     ReadResult result = channel->Read(size);
     if (result.required_size > 0) {
@@ -301,12 +292,12 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelWrite(wabt::interp::Environ
     uint32_t offset = args[1].get_i32();
     uint32_t size = args[2].get_i32();
 
-    if (channel_halves_.count(channel_handle) == 0) {
+    ChannelHalf* channel = BorrowChannel(channel_handle);
+    if (channel == nullptr) {
       LOG(WARNING) << "Invalid channel handle: " << channel_handle;
       results[0].set_i32(OakStatus::ERR_BAD_HANDLE);
       return wabt::interp::Result::Ok;
     }
-    std::unique_ptr<ChannelHalf>& channel = channel_halves_.at(channel_handle);
 
     // Copy the data from the Wasm linear memory.
     absl::Span<const char> origin = ReadMemory(env, offset, size);
@@ -343,12 +334,11 @@ wabt::interp::HostFunc::Callback WasmNode::OakWaitOnChannels(wabt::interp::Envir
     while (!done) {
       for (uint32_t ii = 0; ii < count; ii++) {
         uint64_t handle = handles[ii];
-        ChannelHalfTable::iterator it = channel_halves_.find(handle);
-        if (it == channel_halves_.end()) {
+        ChannelHalf* channel = BorrowChannel(handle);
+        if (channel == nullptr) {
           LOG(WARNING) << "Waiting on non-existent channel handle " << handle;
           continue;
         }
-        ChannelHalf* channel = it->second.get();
         if (channel->CanRead()) {
           LOG(INFO) << "Message available on handle " << handle;
           done = true;
@@ -376,15 +366,12 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelFind(wabt::interp::Environm
 
     uint32_t offset = args[0].get_i32();
     uint32_t length = args[1].get_i32();
-    results[0].set_i64(0);
 
     auto base = env->GetMemory(0)->data.begin() + offset;
     std::string port_name(base, base + length);
 
-    auto it = named_channels_.find(port_name);
-    if (it != named_channels_.end()) {
-      results[0].set_i64(it->second);
-    }
+    Handle handle = FindChannel(port_name);
+    results[0].set_i64(handle);  // zero if not found
 
     return wabt::interp::Result::Ok;
   };
