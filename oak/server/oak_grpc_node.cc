@@ -23,12 +23,13 @@
 #include "asylo/grpc/auth/null_credentials_options.h"
 #include "asylo/util/logging.h"
 #include "include/grpcpp/grpcpp.h"
+#include "oak/common/app_config.h"
 #include "oak/server/module_invocation.h"
 
 namespace oak {
 
-std::unique_ptr<OakGrpcNode> OakGrpcNode::Create() {
-  std::unique_ptr<OakGrpcNode> node = absl::WrapUnique(new OakGrpcNode());
+std::unique_ptr<OakGrpcNode> OakGrpcNode::Create(const std::string& name) {
+  std::unique_ptr<OakGrpcNode> node = absl::WrapUnique(new OakGrpcNode(name));
 
   // Build Server
   grpc::ServerBuilder builder;
@@ -64,10 +65,16 @@ void OakGrpcNode::Start() {
 
 void OakGrpcNode::CompletionQueueLoop() {
   LOG(INFO) << "Starting gRPC completion queue loop";
+
+  Handle req_handle = FindChannel(kGrpcNodeRequestPortName);
+  Handle rsp_handle = FindChannel(kGrpcNodeResponsePortName);
+  ChannelHalf* req_half = BorrowChannel(req_handle);
+  ChannelHalf* rsp_half = BorrowChannel(rsp_handle);
+
   // The stream object will delete itself when finished with the request,
   // after creating a new stream object for the next request.
-  auto stream = new ModuleInvocation(module_service_.get(), completion_queue_.get(),
-                                     req_half_.get(), rsp_half_.get());
+  auto stream =
+      new ModuleInvocation(module_service_.get(), completion_queue_.get(), req_half, rsp_half);
   stream->Start();
   while (true) {
     bool ok;
@@ -80,14 +87,6 @@ void OakGrpcNode::CompletionQueueLoop() {
     (*callback)(ok);
     delete callback;
   }
-}
-
-void OakGrpcNode::AddReadChannel(std::unique_ptr<MessageChannelReadHalf> rsp_half) {
-  rsp_half_ = std::move(rsp_half);
-}
-
-void OakGrpcNode::AddWriteChannel(std::unique_ptr<MessageChannelWriteHalf> req_half) {
-  req_half_ = std::move(req_half);
 }
 
 grpc::Status OakGrpcNode::GetAttestation(grpc::ServerContext* context,

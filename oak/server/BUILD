@@ -100,6 +100,7 @@ cc_library(
         ":channel",
         ":module_invocation",
         ":oak_node",
+        "//oak/common:app_config",
         "//oak/proto:application_cc_grpc",
         "//oak/proto:enclave_cc_proto",
         "@com_github_grpc_grpc//:grpc++",
@@ -178,6 +179,7 @@ cc_library(
     deps = [
         ":channel",
         ":node_thread",
+        "//oak/common:app_config",
         "//oak/common:handles",
         "@com_google_absl//absl/memory",
         "@com_google_asylo//asylo/util:logging",

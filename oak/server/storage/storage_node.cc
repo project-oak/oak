@@ -20,6 +20,7 @@
 #include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
 #include "grpcpp/create_channel.h"
+#include "oak/common/app_config.h"
 #include "oak/proto/storage_channel.pb.h"
 
 namespace oak {
@@ -29,29 +30,23 @@ static std::string GetStorageId(const std::string& storage_name) {
   return storage_name;
 }
 
-StorageNode::StorageNode(const std::string& storage_address)
-    : NodeThread("storage"), req_handle_(0), rsp_handle_(0) {
+StorageNode::StorageNode(const std::string& name, const std::string& storage_address)
+    : NodeThread(name) {
   storage_service_ = oak::Storage::NewStub(
       grpc::CreateChannel(storage_address, grpc::InsecureChannelCredentials()));
 }
 
-void StorageNode::AddReadChannel(std::unique_ptr<MessageChannelReadHalf> req_half) {
-  req_handle_ = AddChannel(std::move(req_half));
-}
-
-void StorageNode::AddWriteChannel(std::unique_ptr<MessageChannelWriteHalf> rsp_half) {
-  rsp_handle_ = AddChannel(std::move(rsp_half));
-}
-
 void StorageNode::Run() {
   // Borrow pointers to the relevant channel halves.
-  ChannelHalf* req_half = BorrowChannel(req_handle_);
-  ChannelHalf* rsp_half = BorrowChannel(rsp_handle_);
+  Handle req_handle = FindChannel(kStorageNodeRequestPortName);
+  Handle rsp_handle = FindChannel(kStorageNodeResponsePortName);
+  ChannelHalf* req_half = BorrowChannel(req_handle);
+  ChannelHalf* rsp_half = BorrowChannel(rsp_handle);
   if (req_half == nullptr || rsp_half == nullptr) {
-    LOG(ERROR) << "Required channel not available; handles: " << req_handle_ << ", " << rsp_handle_;
+    LOG(ERROR) << "Required channel not available; handles: " << req_handle << ", " << rsp_handle;
   }
   std::vector<std::unique_ptr<ChannelStatus>> status;
-  status.push_back(absl::make_unique<ChannelStatus>(req_handle_));
+  status.push_back(absl::make_unique<ChannelStatus>(req_handle));
   while (true) {
     if (!WaitOnChannels(&status)) {
       LOG(WARNING) << "Node termination requested";

@@ -29,15 +29,10 @@ namespace oak {
 // Pseudo-node to perform logging.
 class LoggingNode final : public NodeThread {
  public:
-  LoggingNode() : NodeThread("logging"), handle_(0) {}
-
-  // Add the inbound channel (with implicit port name "in").
-  void AddChannel(std::unique_ptr<MessageChannelReadHalf> half);
+  explicit LoggingNode(const std::string& name) : NodeThread(name) {}
 
  private:
   void Run() override;
-
-  Handle handle_;
 };
 
 }  // namespace oak

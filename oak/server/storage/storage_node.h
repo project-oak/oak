@@ -29,19 +29,10 @@ namespace oak {
 
 class StorageNode final : public NodeThread {
  public:
-  StorageNode(const std::string& storage_address);
-
-  // Add the inbound channel (with implicit port name "request").
-  void AddReadChannel(std::unique_ptr<MessageChannelReadHalf> req_half);
-
-  // Add the outbound channel (with implicit port name "response").
-  void AddWriteChannel(std::unique_ptr<MessageChannelWriteHalf> rsp_half);
+  StorageNode(const std::string& name, const std::string& storage_address);
 
  private:
   void Run() override;
-
-  Handle req_handle_;
-  Handle rsp_handle_;
 
   std::unique_ptr<oak::Storage::Stub> storage_service_;
 };

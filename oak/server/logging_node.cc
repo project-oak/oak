@@ -18,22 +18,20 @@
 
 #include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
+#include "oak/common/app_config.h"
 
 namespace oak {
 
-void LoggingNode::AddChannel(std::unique_ptr<MessageChannelReadHalf> half) {
-  handle_ = OakNode::AddChannel(std::move(half));
-}
-
 void LoggingNode::Run() {
   // Borrow pointer to the channel half.
-  ChannelHalf* channel = BorrowChannel(handle_);
+  Handle handle = FindChannel(kLoggingNodePortName);
+  ChannelHalf* channel = BorrowChannel(handle);
   if (channel == nullptr) {
     LOG(ERROR) << "No channel available!";
     return;
   }
   std::vector<std::unique_ptr<ChannelStatus>> status;
-  status.push_back(absl::make_unique<ChannelStatus>(handle_));
+  status.push_back(absl::make_unique<ChannelStatus>(handle));
   while (true) {
     if (!WaitOnChannels(&status)) {
       LOG(WARNING) << "Node termination requested";

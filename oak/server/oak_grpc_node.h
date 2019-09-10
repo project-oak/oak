@@ -26,22 +26,16 @@ namespace oak {
 
 class OakGrpcNode final : public Application::Service, public OakNode {
  public:
-  static std::unique_ptr<OakGrpcNode> Create();
+  static std::unique_ptr<OakGrpcNode> Create(const std::string& name);
   virtual ~OakGrpcNode(){};
 
   void Start() override;
   void Stop() override;
 
-  // Add the inbound channel (with implicit port name "response").
-  void AddReadChannel(std::unique_ptr<MessageChannelReadHalf> rsp_half);
-
-  // Add the outbound channel (with implicit port name "request").
-  void AddWriteChannel(std::unique_ptr<MessageChannelWriteHalf> req_half);
-
   int GetPort() { return port_; };
 
  private:
-  OakGrpcNode() : OakNode("grpc") {}
+  OakGrpcNode(const std::string& name) : OakNode(name) {}
   OakGrpcNode(const OakGrpcNode&) = delete;
   OakGrpcNode& operator=(const OakGrpcNode&) = delete;
 
@@ -52,9 +46,6 @@ class OakGrpcNode final : public Application::Service, public OakNode {
   void CompletionQueueLoop();
 
   int port_;
-
-  std::unique_ptr<MessageChannelWriteHalf> req_half_;
-  std::unique_ptr<MessageChannelReadHalf> rsp_half_;
 
   std::unique_ptr<::grpc::Server> server_;
 
