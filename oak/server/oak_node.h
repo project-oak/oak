@@ -20,6 +20,7 @@
 #include <atomic>
 #include <memory>
 #include <unordered_map>
+#include <vector>
 
 #include "absl/base/thread_annotations.h"
 #include "absl/synchronization/mutex.h"
@@ -51,6 +52,11 @@ class OakNode {
 
   // Find the channel handle identified by the given port name.
   Handle FindChannel(const std::string& port_name) LOCKS_EXCLUDED(mu_);
+
+  // Wait on the given channel handles, modifying the contents of the passed-in
+  // vector.  Returns a boolean indicating whether the wait finished due to node
+  // termination.
+  bool WaitOnChannels(std::vector<std::unique_ptr<ChannelStatus>>* statuses);
 
  protected:
   const std::string name_;

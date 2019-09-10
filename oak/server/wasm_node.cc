@@ -27,6 +27,7 @@
 #include "asylo/util/logging.h"
 #include "grpcpp/create_channel.h"
 #include "oak/proto/oak_api.pb.h"
+#include "oak/server/channel.h"
 #include "oak/server/wabt_output.h"
 #include "src/binary-reader.h"
 #include "src/error-formatter.h"
@@ -324,36 +325,23 @@ wabt::interp::HostFunc::Callback WasmNode::OakWaitOnChannels(wabt::interp::Envir
       return wabt::interp::Result::Ok;
     }
 
-    std::vector<uint64_t> handles;
-    handles.reserve(count);
+    std::vector<std::unique_ptr<ChannelStatus>> statuses;
+    statuses.reserve(count);
     for (uint32_t ii = 0; ii < count; ii++) {
       uint64_t handle = ReadU64(env, offset + (9 * ii));
-      handles.push_back(handle);
+      statuses.push_back(absl::make_unique<ChannelStatus>(handle));
     }
-    bool done = false;
-    while (!done) {
+    auto space = env->GetMemory(0)->data.begin() + offset;
+    if (WaitOnChannels(&statuses)) {
+      // Transcribe the ready bits into the notification space.
       for (uint32_t ii = 0; ii < count; ii++) {
-        uint64_t handle = handles[ii];
-        ChannelHalf* channel = BorrowChannel(handle);
-        if (channel == nullptr) {
-          LOG(WARNING) << "Waiting on non-existent channel handle " << handle;
-          continue;
-        }
-        if (channel->CanRead()) {
-          LOG(INFO) << "Message available on handle " << handle;
-          done = true;
-          auto base = env->GetMemory(0)->data.begin() + offset + (9 * ii);
+        if (statuses[ii]->ready) {
+          auto base = space + (9 * ii);
           base[8] = 0x01;
         }
       }
-      if (termination_pending_.load()) {
-        LOG(WARNING) << "Node is pending termination";
-        results[0].set_i32(OakStatus::ERR_CHANNEL_CLOSED);
-        done = true;
-      } else if (!done) {
-        // TODO: get rid of polling wait
-        absl::SleepFor(absl::Milliseconds(100));
-      }
+    } else {
+      results[0].set_i32(OakStatus::ERR_CHANNEL_CLOSED);
     }
     return wabt::interp::Result::Ok;
   };
