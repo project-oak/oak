@@ -24,15 +24,15 @@
 
 namespace oak {
 
-namespace {
-
 // Names of ports that are implicitly defined for pseudo-Node instances,
 // as described in //oak/proto/manager.proto.
-constexpr char kGrpcNodeRequestPortName[] = "request";
-constexpr char kGrpcNodeResponsePortName[] = "response";
-constexpr char kLoggingNodePortName[] = "in";
-constexpr char kStorageNodeRequestPortName[] = "request";
-constexpr char kStorageNodeResponsePortName[] = "response";
+const char kGrpcNodeRequestPortName[] = "request";
+const char kGrpcNodeResponsePortName[] = "response";
+const char kLoggingNodePortName[] = "in";
+const char kStorageNodeRequestPortName[] = "request";
+const char kStorageNodeResponsePortName[] = "response";
+
+namespace {
 
 // Conventional names for pseudo-node instances (not specified in the proto
 // definition).
