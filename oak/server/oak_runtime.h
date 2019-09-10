@@ -41,7 +41,7 @@ namespace oak {
 
 class OakRuntime {
  public:
-  OakRuntime() = default;
+  OakRuntime() : grpc_node_(nullptr) {}
   virtual ~OakRuntime() = default;
 
   // Initializes a gRPC server. If the server is already initialized, does nothing.
@@ -52,14 +52,12 @@ class OakRuntime {
   int32_t GetPort();
 
  private:
-  // Collection of Wasm nodes indexed by node name.
-  std::map<std::string, std::unique_ptr<WasmNode>> wasm_nodes_;
+  OakRuntime& operator=(const OakRuntime& other) = delete;
 
-  // TODO: These are hardcoded now. Make them generic nodes and channels and use config.
-  // Pseudo-nodes.
-  std::unique_ptr<OakGrpcNode> grpc_node_;
-  std::unique_ptr<LoggingNode> logging_node_;
-  std::unique_ptr<StorageNode> storage_node_;
+  // Collection of nodes indexed by node name.
+  std::map<std::string, std::unique_ptr<OakNode>> nodes_;
+  // Convenience (non-owning) reference to gRPC pseudo-node
+  OakGrpcNode* grpc_node_;
 };  // class OakRuntime
 
 }  // namespace oak

@@ -34,76 +34,53 @@ asylo::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
     return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT, "Invalid configuration");
   }
 
-  // Create all of the nodes.  The validity check above will ensure there
-  // is at most one of each pseudo-Node type.
-  std::string grpc_name;
-  std::string logging_name;
-  std::string storage_name;
+  // Create all of the nodes.  The validity check above will ensure there is at
+  // most one of each pseudo-Node type.
   for (const auto& node_config : config.nodes()) {
+    const std::string& node_name = node_config.node_name();
+    std::unique_ptr<OakNode> node;
     if (node_config.has_web_assembly_node()) {
-      LOG(INFO) << "Create Wasm node named " << node_config.node_name();
-      std::unique_ptr<WasmNode> node =
+      LOG(INFO) << "Create Wasm node named " << node_name;
+      node =
           WasmNode::Create(node_config.node_name(), node_config.web_assembly_node().module_bytes());
-      if (node == nullptr) {
-        return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT,
-                             "Failed to create Oak Node");
-      }
-      wasm_nodes_[node_config.node_name()] = std::move(node);
     } else if (node_config.has_grpc_server_node()) {
-      grpc_name = node_config.node_name();
-      LOG(INFO) << "Create gRPC pseudo-Node named " << grpc_name;
-      grpc_node_ = OakGrpcNode::Create();
+      LOG(INFO) << "Create gRPC pseudo-Node named " << node_name;
+      std::unique_ptr<OakGrpcNode> grpc_node = OakGrpcNode::Create(node_name);
+      grpc_node_ = grpc_node.get();  // borrowed copy
+      node = std::move(grpc_node);
     } else if (node_config.has_log_node()) {
-      logging_name = node_config.node_name();
-      LOG(INFO) << "Create logging pseudo-node named " << logging_name;
-      logging_node_ = absl::make_unique<LoggingNode>();
+      LOG(INFO) << "Create logging pseudo-node named " << node_name;
+      node = absl::make_unique<LoggingNode>(node_name);
     } else if (node_config.has_storage_node()) {
-      storage_name = node_config.node_name();
-      LOG(INFO) << "Created storage pseudo-Node named " << storage_name;
-      storage_node_ = absl::make_unique<StorageNode>(node_config.storage_node().address());
+      LOG(INFO) << "Created storage pseudo-Node named " << node_name;
+      node = absl::make_unique<StorageNode>(node_name, node_config.storage_node().address());
     }
+    if (node == nullptr) {
+      return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT,
+                           "Failed to create Oak Node");
+    }
+    nodes_[node_name] = std::move(node);
   }
 
   // Now create channels.
   for (const auto& channel_config : config.channels()) {
-    const std::string& src_node = channel_config.source_endpoint().node_name();
+    const std::string& src_name = channel_config.source_endpoint().node_name();
     const std::string& src_port = channel_config.source_endpoint().port_name();
-    const std::string& dest_node = channel_config.destination_endpoint().node_name();
+    const std::string& dest_name = channel_config.destination_endpoint().node_name();
     const std::string& dest_port = channel_config.destination_endpoint().port_name();
+    OakNode* src_node = nodes_[src_name].get();
+    OakNode* dest_node = nodes_[dest_name].get();
+    if (src_node == nullptr || dest_node == nullptr) {
+      return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT,
+                           "Node at end of channel not found");
+    }
 
-    LOG(INFO) << "Create channel " << src_node << "." << src_port << " -> " << dest_node << "."
+    LOG(INFO) << "Create channel " << src_name << "." << src_port << " -> " << dest_name << "."
               << dest_port;
     auto channel = std::make_shared<MessageChannel>();
-    auto write_half = absl::make_unique<MessageChannelWriteHalf>(channel);
-    auto read_half = absl::make_unique<MessageChannelReadHalf>(channel);
 
-    // TODO: Make pseudo-node channel setup less of a special case.
-
-    // Wire up the source endpoint.
-    if (wasm_nodes_.count(src_node) == 1) {
-      wasm_nodes_[src_node]->AddNamedChannel(src_port, std::move(write_half));
-    } else if (src_node == grpc_name) {
-      grpc_node_->AddWriteChannel(std::move(write_half));
-    } else if (src_node == storage_name) {
-      storage_node_->AddWriteChannel(std::move(write_half));
-    } else {
-      return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT,
-                           "Channel with unknown source node");
-    }
-
-    // Wire up the destination endpoint
-    if (wasm_nodes_.count(dest_node) == 1) {
-      wasm_nodes_[dest_node]->AddNamedChannel(dest_port, std::move(read_half));
-    } else if (dest_node == grpc_name) {
-      grpc_node_->AddReadChannel(std::move(read_half));
-    } else if (dest_node == storage_name) {
-      storage_node_->AddReadChannel(std::move(read_half));
-    } else if (dest_node == logging_name) {
-      logging_node_->AddChannel(std::move(read_half));
-    } else {
-      return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT,
-                           "Channel with unknown destination node");
-    }
+    src_node->AddNamedChannel(src_port, absl::make_unique<MessageChannelWriteHalf>(channel));
+    dest_node->AddNamedChannel(dest_port, absl::make_unique<MessageChannelReadHalf>(channel));
   }
 
   return asylo::Status::OkStatus();
@@ -112,24 +89,9 @@ asylo::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
 asylo::Status OakRuntime::Start() {
   LOG(INFO) << "Starting runtime";
 
-  // Start the gRPC pseudo-node.
-  if (grpc_node_ != nullptr) {
-    grpc_node_->Start();
-  }
-
-  // Start the logging pseudo-node thread.
-  if (logging_node_ != nullptr) {
-    logging_node_->Start();
-  }
-
-  // Start a new thread to process storage requests.
-  if (storage_node_ != nullptr) {
-    storage_node_->Start();
-  }
-
   // Now all dependencies are running, start the thread for all the Wasm Nodes.
-  for (auto& named_node : wasm_nodes_) {
-    LOG(INFO) << "Starting Wasm node " << named_node.first;
+  for (auto& named_node : nodes_) {
+    LOG(INFO) << "Starting node " << named_node.first;
     named_node.second->Start();
   }
 
@@ -140,25 +102,11 @@ int32_t OakRuntime::GetPort() { return grpc_node_->GetPort(); }
 
 asylo::Status OakRuntime::Stop() {
   LOG(INFO) << "Stopping runtime...";
-  for (auto& named_node : wasm_nodes_) {
-    LOG(INFO) << "Stopping Wasm node " << named_node.first;
+  for (auto& named_node : nodes_) {
+    LOG(INFO) << "Stopping node " << named_node.first;
     named_node.second->Stop();
   }
-  wasm_nodes_.clear();
-
-  // TODO: make grpc_node_ generic
-  if (grpc_node_) {
-    grpc_node_->Stop();
-    grpc_node_ = nullptr;
-  }
-  if (logging_node_) {
-    logging_node_->Stop();
-    logging_node_ = nullptr;
-  }
-  if (storage_node_) {
-    storage_node_->Stop();
-    storage_node_ = nullptr;
-  }
+  nodes_.clear();
 
   return asylo::Status::OkStatus();
 }
