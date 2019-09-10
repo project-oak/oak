@@ -29,11 +29,13 @@ test_suite(
 
 cc_library(
     name = "oak_node",
+    srcs = ["oak_node.cc"],
     hdrs = ["oak_node.h"],
     deps = [
         ":channel",
         "//oak/common:handles",
         "@com_google_absl//absl/synchronization",
+        "@com_google_asylo//asylo/util:logging",
     ],
 )
 
