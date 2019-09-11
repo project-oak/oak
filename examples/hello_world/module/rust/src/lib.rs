@@ -39,7 +39,7 @@ const FIELD_NAME: &[u8] = b"last-greeting";
 
 impl oak::OakNode for Node {
     fn new() -> Self {
-        oak_log::init(log::Level::Debug).unwrap();
+        oak_log::init_default();
         Node {
             storage: oak::storage::Storage::default(),
         }

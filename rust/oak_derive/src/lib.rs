@@ -6,8 +6,9 @@ extern crate syn;
 use proc_macro::TokenStream;
 use quote::quote;
 
-/// Implements the necessary bindings to make the annotated struct act as an Oak Node
-/// that provides the necessary global exports.
+/// Implements the necessary bindings to make the annotated struct act as an Oak
+/// Node that processes gRPC method invocations, assuming the default port names
+/// are used for gRPC channels.
 ///
 /// May only be used on struct objects.
 ///
@@ -45,7 +46,7 @@ pub fn derive_oak_exports(input: TokenStream) -> TokenStream {
             // https://doc.rust-lang.org/nomicon/ffi.html#ffi-and-panics
             match std::panic::catch_unwind(||{
                 let mut node = <#name>::new();
-                oak::event_loop(node)
+                oak::grpc_event_loop(node, oak::channel_find("grpc_in"), oak::channel_find("grpc_out"))
             }) {
                 Ok(rc) => rc,
                 Err(_) => oak::proto::oak_api::OakStatus::ERR_INTERNAL.value(),
