@@ -34,7 +34,7 @@ struct Node;
 
 impl oak::OakNode for Node {
     fn new() -> Self {
-        oak_log::init(log::Level::Debug).unwrap();
+        oak_log::init_default();
         Node
     }
     fn invoke(&mut self, method: &str, req: &[u8], out: &mut oak::SendChannelHalf) {

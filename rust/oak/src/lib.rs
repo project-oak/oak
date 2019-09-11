@@ -260,13 +260,21 @@ pub trait OakNode {
     fn invoke(&mut self, method: &str, req: &[u8], out: &mut SendChannelHalf);
 }
 
-/// Perform an event loop invoking the given node.
-pub fn event_loop<T: OakNode>(mut node: T) -> i32 {
-    info!("start event loop for node");
+/// Perform a gRPC event loop on the given channels, invoking the given node.
+pub fn grpc_event_loop<T: OakNode>(
+    mut node: T,
+    grpc_in_handle: Handle,
+    grpc_out_handle: Handle,
+) -> i32 {
+    info!(
+        "start event loop for node with handles in:{} out:{}",
+        grpc_in_handle, grpc_out_handle
+    );
+    if grpc_in_handle == 0 || grpc_out_handle == 0 {
+        return OakStatus::ERR_CHANNEL_CLOSED.value();
+    }
     set_panic_hook();
 
-    let grpc_in_handle = channel_find("grpc_in");
-    let grpc_out_handle = channel_find("grpc_out");
     let read_handles = vec![grpc_in_handle];
     let mut space = new_handle_space(&read_handles);
 

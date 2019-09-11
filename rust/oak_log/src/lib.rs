@@ -52,10 +52,12 @@ impl Log for OakChannelLogger {
     fn flush(&self) {}
 }
 
-pub fn init(level: Level) -> Result<(), SetLoggerError> {
-    log::set_boxed_logger(Box::new(OakChannelLogger {
-        channel_handle: oak::channel_find("log"),
-    }))?;
+pub fn init_default() {
+    init(Level::Debug, oak::channel_find("log")).unwrap();
+}
+
+pub fn init(level: Level, channel_handle: oak::Handle) -> Result<(), SetLoggerError> {
+    log::set_boxed_logger(Box::new(OakChannelLogger { channel_handle }))?;
     log::set_max_level(level.to_level_filter());
     Ok(())
 }
