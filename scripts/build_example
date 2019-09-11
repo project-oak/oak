@@ -44,7 +44,7 @@ else
     TARGET="$NAME"
 fi
 
-for module in examples/${TARGET}/module*/rust/Cargo.toml; do
+for module in examples/"${TARGET}"/module*/rust/Cargo.toml; do
   cargo build --release --target=wasm32-unknown-unknown --manifest-path="$module"
 done
 

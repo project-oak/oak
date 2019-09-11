@@ -6,6 +6,8 @@ members = [
     "running_average/module/rust",
     "rustfmt/module/rust",
     "machine_learning/module/rust",
+    "multinode/module/rust",
+    "multinode/module2/rust",
 ]
 
 [patch.crates-io]

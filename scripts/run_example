@@ -41,7 +41,7 @@ else
   readonly MODULE_PATH="$PWD/examples/target/wasm32-unknown-unknown/release"
 fi
 # Accumulate all modules in a comma-separated list, in alphabetical order.
-MODULES=$(ls ${MODULE_PATH}/${NAME}*.wasm | tr '\n' ',')
+MODULES=$(find "${MODULE_PATH}/${NAME}"*.wasm | tr '\n' ',' | sed 's/,$//')
 
 "./client-bin/examples/${NAME}/client/client" \
   --manager_address="${OAK_MANAGER_ADDRESS}" \
