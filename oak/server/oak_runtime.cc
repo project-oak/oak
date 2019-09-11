@@ -36,6 +36,7 @@ asylo::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
 
   // Create all of the nodes.  The validity check above will ensure there is at
   // most one of each pseudo-Node type.
+  OakNode* log_node = nullptr;
   for (const auto& node_config : config.nodes()) {
     const std::string& node_name = node_config.node_name();
     std::unique_ptr<OakNode> node;
@@ -51,6 +52,7 @@ asylo::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
     } else if (node_config.has_log_node()) {
       LOG(INFO) << "Create logging pseudo-node named " << node_name;
       node = absl::make_unique<LoggingNode>(node_name);
+      log_node = node.get();
     } else if (node_config.has_storage_node()) {
       LOG(INFO) << "Created storage pseudo-Node named " << node_name;
       node = absl::make_unique<StorageNode>(node_name, node_config.storage_node().address());
@@ -63,6 +65,7 @@ asylo::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
   }
 
   // Now create channels.
+  std::shared_ptr<MessageChannel> logging_channel;
   for (const auto& channel_config : config.channels()) {
     const std::string& src_name = channel_config.source_endpoint().node_name();
     const std::string& src_port = channel_config.source_endpoint().port_name();
@@ -75,12 +78,26 @@ asylo::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
                            "Node at end of channel not found");
     }
 
-    LOG(INFO) << "Create channel " << src_name << "." << src_port << " -> " << dest_name << "."
-              << dest_port;
-    auto channel = std::make_shared<MessageChannel>();
+    if (dest_node == log_node && logging_channel != nullptr) {
+      // Special case for all configured channels going to the logging
+      // pseudo-Node: share the existing channel and hold an extra reference to
+      // the write half of the channel.
+      LOG(INFO) << "Re-use logging channel for " << src_name << "." << src_port << " -> "
+                << dest_name << "." << dest_port;
+      src_node->AddNamedChannel(src_port,
+                                absl::make_unique<MessageChannelWriteHalf>(logging_channel));
+    } else {
+      LOG(INFO) << "Create channel " << src_name << "." << src_port << " -> " << dest_name << "."
+                << dest_port;
+      auto channel = std::make_shared<MessageChannel>();
+      if (dest_node == log_node) {
+        // Remember the logging channel for future re-use.
+        logging_channel = channel;
+      }
 
-    src_node->AddNamedChannel(src_port, absl::make_unique<MessageChannelWriteHalf>(channel));
-    dest_node->AddNamedChannel(dest_port, absl::make_unique<MessageChannelReadHalf>(channel));
+      src_node->AddNamedChannel(src_port, absl::make_unique<MessageChannelWriteHalf>(channel));
+      dest_node->AddNamedChannel(dest_port, absl::make_unique<MessageChannelReadHalf>(channel));
+    }
   }
 
   return asylo::Status::OkStatus();
