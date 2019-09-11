@@ -67,7 +67,10 @@ WASM_EXPORT int32_t oak_main() {
   handle_space[8] = 0x00;  // read ready?
 
   while (true) {
-    wait_on_channels(handle_space, 1);
+    int32_t result = wait_on_channels(handle_space, 1);
+    if (result != oak::OakStatus::OK) {
+      return result;
+    }
 
     channel_read(grpc_in_handle, _buf, sizeof(_buf), &actual_size);
 
