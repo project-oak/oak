@@ -14,6 +14,10 @@
 # limitations under the License.
 #
 
+package(
+    licenses = ["notice"],
+)
+
 cc_binary(
     name = "client",
     srcs = ["machine_learning.cc"],
