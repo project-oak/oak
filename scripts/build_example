@@ -44,7 +44,9 @@ else
     TARGET="$NAME"
 fi
 
-cargo build --release --target=wasm32-unknown-unknown --manifest-path="examples/$TARGET/module/rust/Cargo.toml"
+for module in examples/${TARGET}/module*/rust/Cargo.toml; do
+  cargo build --release --target=wasm32-unknown-unknown --manifest-path="$module"
+done
 
 bazel_build_flags=(
     '--symlink_prefix=client-'

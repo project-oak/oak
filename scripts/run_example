@@ -36,11 +36,13 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 "$SCRIPTS_DIR/build_example" "$NAME"
 
 if [ "$IS_CPP" = true ]; then
-  readonly MODULE_PATH="$PWD/module-bin/examples/${NAME}/module/cpp/${NAME}.wasm"
+  readonly MODULE_PATH="$PWD/module-bin/examples/${NAME}/module/cpp"
 else
-  readonly MODULE_PATH="$PWD/examples/target/wasm32-unknown-unknown/release/${NAME}.wasm"
+  readonly MODULE_PATH="$PWD/examples/target/wasm32-unknown-unknown/release"
 fi
+# Accumulate all modules in a comma-separated list, in alphabetical order.
+MODULES=$(ls ${MODULE_PATH}/${NAME}*.wasm | tr '\n' ',')
 
 "./client-bin/examples/${NAME}/client/client" \
   --manager_address="${OAK_MANAGER_ADDRESS}" \
-  --module="${MODULE_PATH}"
+  --module="${MODULES}"
