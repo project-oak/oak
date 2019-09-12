@@ -26,20 +26,22 @@ docker build \
   . 1>&2
 
 docker_run_flags=(
-  "--interactive"
-  "--tty"
-  "--rm"
+  '--interactive'
+  '--tty'
+  '--rm'
   "--user=$DOCKER_UID:$DOCKER_GID"
   "--env=USER=$DOCKER_USER"
+  '--env=BAZEL_REMOTE_CACHE_ENABLED'
+  '--env=BAZEL_GOOGLE_CREDENTIALS'
   "--volume=$PWD/bazel-cache:/.cache/bazel"
   "--volume=$PWD/cargo-cache:/usr/local/cargo/registry"
   "--volume=$PWD:/opt/my-project"
-  "--workdir=/opt/my-project"
-  "--network=host"
+  '--workdir=/opt/my-project'
+  '--network=host'
 )
 
-if [[ "$1" == "--detach" ]]; then
-  docker_run_flags+=("--detach")
+if [[ "$1" == '--detach' ]]; then
+  docker_run_flags+=('--detach')
   docker run "${docker_run_flags[@]}" oak:latest "${@:2}"
 else
   docker run "${docker_run_flags[@]}" oak:latest "$@"
