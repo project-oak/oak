@@ -139,6 +139,28 @@ fn prep_handle_space(space: &mut [u8]) {
     }
 }
 
+// Convenience wrapper around wait_on_channels host function. This version is
+// easier to use in Rust but is less efficient (because the notification space
+// is re-created on each invocation).
+pub fn wait_on_channels(handles: &[Handle]) -> Result<Vec<Handle>, OakStatus> {
+    let mut space = new_handle_space(handles);
+    unsafe {
+        let status = wasm::wait_on_channels(space.as_mut_ptr(), handles.len() as u32);
+        match OakStatus::from_i32(status) {
+            Some(OakStatus::OK) => (),
+            Some(err) => return Err(err),
+            None => return Err(OakStatus::OAK_STATUS_UNSPECIFIED),
+        }
+        let mut results = Vec::with_capacity(handles.len());
+        for i in 0..handles.len() {
+            if space[i * SPACE_BYTES_PER_HANDLE + (SPACE_BYTES_PER_HANDLE - 1)] != 0 {
+                results.push(handles[i]);
+            }
+        }
+        Ok(results)
+    }
+}
+
 pub struct SendChannelHalf {
     handle: Handle,
 }
