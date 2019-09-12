@@ -102,8 +102,6 @@ fn result_from_status<T>(status: Option<OakStatus>, val: T) -> std::io::Result<T
     }
 }
 
-// TODO: Implement panic handler.
-
 mod wasm {
     // See https://rustwasm.github.io/book/reference/js-ffi.html
     #[link(wasm_import_module = "oak")]
