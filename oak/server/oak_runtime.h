@@ -21,7 +21,6 @@
 #include <string>
 #include <vector>
 
-#include "asylo/util/status.h"
 #include "include/grpcpp/security/server_credentials.h"
 #include "include/grpcpp/server.h"
 #include "oak/proto/manager.pb.h"
@@ -45,9 +44,9 @@ class OakRuntime {
   virtual ~OakRuntime() = default;
 
   // Initializes a gRPC server. If the server is already initialized, does nothing.
-  asylo::Status Initialize(const ApplicationConfiguration& config);
-  asylo::Status Start();
-  asylo::Status Stop();
+  grpc::Status Initialize(const ApplicationConfiguration& config);
+  grpc::Status Start();
+  grpc::Status Stop();
 
   int32_t GetPort();
 

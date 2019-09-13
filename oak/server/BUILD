@@ -132,9 +132,9 @@ cc_library(
         "//oak/proto:enclave_cc_proto",
         "//oak/server:logging_node",
         "//oak/server/storage:storage_node",
+        "@com_google_absl//absl/memory",
         "@com_google_absl//absl/synchronization",
         "@com_google_asylo//asylo/util:logging",
-        "@com_google_asylo//asylo/util:status",
     ],
 )
 
