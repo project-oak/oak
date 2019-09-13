@@ -21,17 +21,17 @@
 #include <string>
 #include <thread>
 
+#include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
-#include "asylo/util/status_macros.h"
 #include "oak/common/app_config.h"
 #include "oak/server/module_invocation.h"
 
 namespace oak {
 
-asylo::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
+grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
   LOG(INFO) << "Initializing Oak Runtime";
   if (!ValidApplicationConfig(config)) {
-    return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT, "Invalid configuration");
+    return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid configuration");
   }
 
   // Create all of the nodes.  The validity check above will ensure there is at
@@ -58,8 +58,7 @@ asylo::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
       node = absl::make_unique<StorageNode>(node_name, node_config.storage_node().address());
     }
     if (node == nullptr) {
-      return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT,
-                           "Failed to create Oak Node");
+      return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Failed to create Oak Node");
     }
     nodes_[node_name] = std::move(node);
   }
@@ -74,8 +73,7 @@ asylo::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
     OakNode* src_node = nodes_[src_name].get();
     OakNode* dest_node = nodes_[dest_name].get();
     if (src_node == nullptr || dest_node == nullptr) {
-      return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT,
-                           "Node at end of channel not found");
+      return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Node at end of channel not found");
     }
 
     if (dest_node == log_node && logging_channel != nullptr) {
@@ -100,10 +98,10 @@ asylo::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
     }
   }
 
-  return asylo::Status::OkStatus();
+  return grpc::Status::OK;
 }
 
-asylo::Status OakRuntime::Start() {
+grpc::Status OakRuntime::Start() {
   LOG(INFO) << "Starting runtime";
 
   // Now all dependencies are running, start the thread for all the Wasm Nodes.
@@ -112,12 +110,12 @@ asylo::Status OakRuntime::Start() {
     named_node.second->Start();
   }
 
-  return asylo::Status::OkStatus();
+  return grpc::Status::OK;
 }
 
 int32_t OakRuntime::GetPort() { return grpc_node_->GetPort(); }
 
-asylo::Status OakRuntime::Stop() {
+grpc::Status OakRuntime::Stop() {
   LOG(INFO) << "Stopping runtime...";
   grpc_node_ = nullptr;
   for (auto& named_node : nodes_) {
@@ -126,7 +124,7 @@ asylo::Status OakRuntime::Stop() {
   }
   nodes_.clear();
 
-  return asylo::Status::OkStatus();
+  return grpc::Status::OK;
 }
 
 }  // namespace oak

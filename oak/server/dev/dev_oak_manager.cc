@@ -41,7 +41,7 @@ grpc::Status DevOakManager::CreateApplication(grpc::ServerContext* context,
   auto runtime = absl::make_unique<OakRuntime>();
   auto status = runtime->Initialize(request->application_configuration());
   if (!status.ok()) {
-    return status.ToOtherStatus<grpc::Status>();
+    return status;
   }
 
   // Start the runtime.
