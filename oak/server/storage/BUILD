@@ -16,6 +16,7 @@
 
 package(
     default_visibility = ["//oak/server:__pkg__"],
+    licenses = ["notice"],
 )
 
 # Mark tests that can be run on the host system (i.e. with a normal

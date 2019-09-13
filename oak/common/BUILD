@@ -14,6 +14,10 @@
 # limitations under the License.
 #
 
+package(
+    licenses = ["notice"],
+)
+
 # Mark tests that can be run on the host system (i.e. with a normal
 # compiler, not the Asylo toolchain) with 'host' tag.
 test_suite(

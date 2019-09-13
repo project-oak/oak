@@ -14,6 +14,10 @@
 # limitations under the License.
 #
 
+package(
+    licenses = ["notice"],
+)
+
 cc_library(
     name = "defines",
     hdrs = ["defines.h"],

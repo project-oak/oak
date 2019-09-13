@@ -16,6 +16,7 @@
 
 package(
     default_visibility = ["//oak/server:__subpackages__"],
+    licenses = ["notice"],
 )
 
 load(

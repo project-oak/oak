@@ -14,6 +14,10 @@
 # limitations under the License.
 #
 
+package(
+    licenses = ["notice"],
+)
+
 cc_library(
     name = "manager_client",
     hdrs = ["manager_client.h"],
