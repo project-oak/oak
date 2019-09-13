@@ -164,8 +164,8 @@ bool ValidApplicationConfig(const ApplicationConfiguration& config) {
   // Check name uniqueness and count pseudo-nodes.  Along the way, track the
   // configured directions of each "fully-qualified port name" (fqpn).
   using fqpn = std::pair<std::string, std::string>;  // <node name, port name>
-  std::set<fqpn> in_ports;
-  std::set<fqpn> out_ports;
+  std::map<fqpn, int> in_ports;                      // fqpn -> number of channels
+  std::map<fqpn, int> out_ports;
   std::set<std::string> node_names;
   int wasm_count = 0;
   int grpc_count = 0;
@@ -191,21 +191,21 @@ bool ValidApplicationConfig(const ApplicationConfiguration& config) {
 
         // Track which node.port instances are IN/OUT.
         if (port.type() == Port_Type_IN) {
-          in_ports.insert(fqpn(node.node_name(), port.name()));
+          in_ports[fqpn(node.node_name(), port.name())] = 0;
         } else if (port.type() == Port_Type_OUT) {
-          out_ports.insert(fqpn(node.node_name(), port.name()));
+          out_ports[fqpn(node.node_name(), port.name())] = 0;
         }
       }
     } else if (node.has_grpc_server_node()) {
       grpc_count++;
-      in_ports.insert(fqpn(node.node_name(), kGrpcNodeResponsePortName));
-      out_ports.insert(fqpn(node.node_name(), kGrpcNodeRequestPortName));
+      in_ports[fqpn(node.node_name(), kGrpcNodeResponsePortName)] = 0;
+      out_ports[fqpn(node.node_name(), kGrpcNodeRequestPortName)] = 0;
     } else if (node.has_log_node()) {
-      in_ports.insert(fqpn(node.node_name(), kLoggingNodePortName));
+      in_ports[fqpn(node.node_name(), kLoggingNodePortName)] = 0;
       log_count++;
     } else if (node.has_storage_node()) {
-      in_ports.insert(fqpn(node.node_name(), kStorageNodeRequestPortName));
-      out_ports.insert(fqpn(node.node_name(), kStorageNodeResponsePortName));
+      in_ports[fqpn(node.node_name(), kStorageNodeRequestPortName)] = 0;
+      out_ports[fqpn(node.node_name(), kStorageNodeResponsePortName)] = 0;
     }
   }
 
@@ -228,6 +228,7 @@ bool ValidApplicationConfig(const ApplicationConfiguration& config) {
     fqpn source(channel.source_endpoint().node_name(), channel.source_endpoint().port_name());
     fqpn dest(channel.destination_endpoint().node_name(),
               channel.destination_endpoint().port_name());
+
     if (out_ports.count(source) == 0) {
       LOG(ERROR) << "channel refers to unknown source endpoint " << source.first << "."
                  << source.second;
@@ -236,6 +237,24 @@ bool ValidApplicationConfig(const ApplicationConfiguration& config) {
     if (in_ports.count(dest) == 0) {
       LOG(ERROR) << "channel refers to unknown destination endpoint " << dest.first << "."
                  << dest.second;
+      return false;
+    }
+    out_ports[source]++;
+    in_ports[dest]++;
+  }
+  // Check output ports have exactly one connected channel.
+  for (const auto& it : out_ports) {
+    if (it.second != 1) {
+      LOG(ERROR) << "output port " << it.first.first << "." << it.first.second << " has "
+                 << it.second << " channels to it";
+      return false;
+    }
+  }
+  // Check input ports have at least one connected channel.
+  for (const auto& it : in_ports) {
+    if (it.second == 0) {
+      LOG(ERROR) << "input port " << it.first.first << "." << it.first.second
+                 << " has no channels from it";
       return false;
     }
   }

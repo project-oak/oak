@@ -81,6 +81,11 @@ TEST(ApplicationConfiguration, Valid) {
   ASSERT_EQ(true, ValidApplicationConfig(*config));
 }
 
+TEST(ApplicationConfiguration, ValidMultinode) {
+  auto config = ConfigFrom("oak/common/testdata/multinode.textproto");
+  ASSERT_EQ(true, ValidApplicationConfig(*config));
+}
+
 TEST(ApplicationConfiguration, DuplicateNodeName) {
   auto config = ConfigFrom("oak/common/testdata/dup_node_name.textproto");
   ASSERT_EQ(false, ValidApplicationConfig(*config));
@@ -113,6 +118,21 @@ TEST(ApplicationConfiguration, NoChannelSource) {
 
 TEST(ApplicationConfiguration, NoChannelDest) {
   auto config = ConfigFrom("oak/common/testdata/channel_dest_missing.textproto");
+  ASSERT_EQ(false, ValidApplicationConfig(*config));
+}
+
+TEST(ApplicationConfiguration, InputPortNoChannel) {
+  auto config = ConfigFrom("oak/common/testdata/in_port_empty.textproto");
+  ASSERT_EQ(false, ValidApplicationConfig(*config));
+}
+
+TEST(ApplicationConfiguration, OutputPortNoChannel) {
+  auto config = ConfigFrom("oak/common/testdata/out_port_empty.textproto");
+  ASSERT_EQ(false, ValidApplicationConfig(*config));
+}
+
+TEST(ApplicationConfiguration, OutputPortMultipleChannel) {
+  auto config = ConfigFrom("oak/common/testdata/out_port_multi.textproto");
   ASSERT_EQ(false, ValidApplicationConfig(*config));
 }
 
