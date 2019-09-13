@@ -332,12 +332,12 @@ pub fn grpc_event_loop<T: OakNode>(
 
 /// Install a panic hook so that panics are logged to the logging channel, if one is set.
 /// See https://doc.rust-lang.org/std/panic/struct.PanicInfo.html.
-fn set_panic_hook() {
+pub fn set_panic_hook() {
     std::panic::set_hook(Box::new(|panic_info| {
         let msg = panic_info
             .payload()
             .downcast_ref::<&str>()
-            .unwrap_or(&"<UNKWOWN MESSAGE>");
+            .unwrap_or(&"<UNKNOWN MESSAGE>");
         let (file, line) = match panic_info.location() {
             Some(location) => (location.file(), location.line()),
             None => ("<UNKNOWN FILE>", 0),
