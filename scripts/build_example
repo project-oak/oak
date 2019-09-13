@@ -47,11 +47,14 @@ fi
 cargo build --release --target=wasm32-unknown-unknown --manifest-path="examples/$TARGET/module/rust/Cargo.toml"
 
 bazel_build_flags=(
-    "--symlink_prefix=client-"
+    '--symlink_prefix=client-'
     "--compilation_mode=$COMPILATION_MODE"
 )
 
-# Keep this in sync with /scripts/build_server .
+# Keep this in sync with the following:
+# - /scripts/build_example
+# - /scripts/build_server
+# - /scripts/build_dev_server
 
 readonly OAK_REMOTE_CACHE_KEY='./.oak_remote_cache_key.json'
 
