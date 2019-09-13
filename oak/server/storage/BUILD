@@ -45,7 +45,10 @@ cc_binary(
 cc_library(
     name = "storage_node",
     srcs = ["storage_node.cc"],
-    hdrs = ["storage_node.h"],
+    hdrs = [
+        "fixed_nonce_generator.h",
+        "storage_node.h",
+    ],
     deps = [
         "//oak/common:app_config",
         "//oak/common:handles",
@@ -55,6 +58,7 @@ cc_library(
         "//oak/server:node_thread",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/memory",
+        "@com_google_asylo//asylo/crypto:aes_gcm_siv",
         "@com_google_asylo//asylo/util:logging",
     ],
 )

@@ -20,10 +20,14 @@
 #include <memory>
 #include <thread>
 
+#include "absl/strings/string_view.h"
+#include "asylo/crypto/aes_gcm_siv.h"
+#include "asylo/util/statusor.h"
 #include "oak/common/handles.h"
 #include "oak/proto/storage.grpc.pb.h"
 #include "oak/server/channel.h"
 #include "oak/server/node_thread.h"
+#include "oak/server/storage/fixed_nonce_generator.h"
 
 namespace oak {
 
@@ -32,10 +36,19 @@ class StorageNode final : public NodeThread {
   StorageNode(const std::string& name, const std::string& storage_address);
 
  private:
+  const asylo::StatusOr<std::string> Encrypt(asylo::AesGcmSivCryptor* cryptor,
+                                             const absl::string_view& data);
+  const asylo::StatusOr<std::string> EncryptDatumName(const absl::string_view& datum_name);
+  const asylo::StatusOr<std::string> EncryptDatumValue(const absl::string_view& datum_value);
+
+  const asylo::StatusOr<std::string> DecryptDatumValue(const absl::string_view& datum_value);
+
   void Run() override;
 
-  std::unique_ptr<MessageChannelReadHalf> request_channel_;
-  std::unique_ptr<MessageChannelWriteHalf> response_channel_;
+  FixedNonceGenerator* fixed_nonce_generator_;
+  asylo::AesGcmSivCryptor datum_name_cryptor_;
+  asylo::AesGcmSivCryptor datum_value_cryptor_;
+
   std::unique_ptr<oak::Storage::Stub> storage_service_;
   std::thread storage_thread_;
 };
