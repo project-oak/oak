@@ -109,7 +109,7 @@ struct RequiredExport {
 
 std::ostream& operator<<(std::ostream& os, const oak::RequiredExport& r) {
   return os << (r.mandatory_ ? "required" : "optional") << " export '" << r.name_
-            << "' with signature " << &r.sig_;
+            << "' with signature " << r.sig_;
 }
 
 namespace oak {
