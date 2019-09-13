@@ -45,7 +45,49 @@ else
 fi
 
 cargo build --release --target=wasm32-unknown-unknown --manifest-path="examples/$TARGET/module/rust/Cargo.toml"
-bazel --output_base="$CACHE_DIR/client" build --symlink_prefix='client-' --compilation_mode="$COMPILATION_MODE" "//examples/$TARGET/client"
+
+bazel_build_flags=(
+    "--symlink_prefix=client-"
+    "--compilation_mode=$COMPILATION_MODE"
+)
+
+# Keep this in sync with /scripts/build_server .
+
+readonly OAK_REMOTE_CACHE_KEY='./.oak_remote_cache_key.json'
+
+(
+    # Disable xtrace to avoid leaking secrets in logs.
+    set +o xtrace;
+    # Do we have a JSON key for the remote cache.
+    # https://docs.bazel.build/versions/master/remote-caching.html#google-cloud-storage
+    if [[ ! -f "$OAK_REMOTE_CACHE_KEY" ]]; then
+        # Check if this exists in the environment and it is not empty.
+        if [[ -n "${BAZEL_GOOGLE_CREDENTIALS:-}" ]]; then
+            echo "$BAZEL_GOOGLE_CREDENTIALS" > "$OAK_REMOTE_CACHE_KEY"
+        fi
+    fi
+)
+
+# If this variable is set, use the remote cache, assuming it is publicly readable.
+# See https://pantheon.corp.google.com/storage/browser/oak-bazel-cache?project=oak-ci
+if [[ -n "${BAZEL_REMOTE_CACHE_ENABLED:-}" ]]; then
+    bazel_build_flags+=(
+        '--remote_cache=https://storage.googleapis.com/oak-bazel-cache'
+    )
+    # If we now have a key file, use it, otherwise disable uploading artifacts to remote cache.
+    # Note that this is only needed to write to the cache, not to read from it.
+    if [[ -f "$OAK_REMOTE_CACHE_KEY" ]]; then
+        bazel_build_flags+=(
+            "--google_credentials=$OAK_REMOTE_CACHE_KEY"
+        )
+    else
+        bazel_build_flags+=(
+            '--remote_upload_local_results=false'
+        )
+    fi
+fi
+
+bazel --output_base="$CACHE_DIR/client" build "${bazel_build_flags[@]}" "//examples/$TARGET/client"
 
 readonly CPP_FOLDER="$(find examples/"$TARGET" -type d -name cpp)"
 if [[ -n "$CPP_FOLDER" ]]; then
