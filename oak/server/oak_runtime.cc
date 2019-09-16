@@ -63,7 +63,7 @@ grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
   }
 
   // Now create channels.
-  std::shared_ptr<MessageChannel> logging_channel;
+  MessageChannelWriteHalf* logging_channel = nullptr;
   for (const auto& channel_config : config.channels()) {
     const std::string& src_name = channel_config.source_endpoint().node_name();
     const std::string& src_port = channel_config.source_endpoint().port_name();
@@ -81,21 +81,18 @@ grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
       // the write half of the channel.
       LOG(INFO) << "Re-use logging channel for " << src_name << "." << src_port << " -> "
                 << dest_name << "." << dest_port;
-      auto write_half = absl::make_unique<MessageChannelWriteHalf>(logging_channel);
-      src_node->AddNamedChannel(src_port, absl::make_unique<ChannelHalf>(std::move(write_half)));
+      src_node->AddNamedChannel(src_port, absl::make_unique<ChannelHalf>(logging_channel->Clone()));
     } else {
       LOG(INFO) << "Create channel " << src_name << "." << src_port << " -> " << dest_name << "."
                 << dest_port;
-      auto channel = std::make_shared<MessageChannel>();
+      MessageChannel::ChannelHalves halves = MessageChannel::Create();
       if (dest_node == log_node) {
-        // Remember the logging channel for future re-use.
-        logging_channel = channel;
+        // Remember the write half of logging channel for future re-use.
+        logging_channel = halves.write.get();
       }
 
-      auto read_half = absl::make_unique<MessageChannelReadHalf>(channel);
-      auto write_half = absl::make_unique<MessageChannelWriteHalf>(channel);
-      src_node->AddNamedChannel(src_port, absl::make_unique<ChannelHalf>(std::move(write_half)));
-      dest_node->AddNamedChannel(dest_port, absl::make_unique<ChannelHalf>(std::move(read_half)));
+      src_node->AddNamedChannel(src_port, absl::make_unique<ChannelHalf>(std::move(halves.write)));
+      dest_node->AddNamedChannel(dest_port, absl::make_unique<ChannelHalf>(std::move(halves.read)));
     }
   }
 

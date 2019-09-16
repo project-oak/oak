@@ -23,6 +23,7 @@
 #include <vector>
 
 #include "absl/base/thread_annotations.h"
+#include "absl/memory/memory.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/types/variant.h"
 
@@ -48,22 +49,33 @@ struct ReadResult {
 };
 
 // A channel, which holds an arbitrary number of queued messages in a
-// uni-directional stream.
+// uni-directional stream.  Users do not access MessageChannel objects directly;
+// all operations are performed via either a read or write half of the channel.
 //
 // No flow control is implemented at this level; application
 // may decide to build some of these abstractions on top of the Channel
 // interface.
 //
 // Each channel may be connected to a built-in component, or to a local or
-// remote Oak Node.
 // (in future) remote Oak Node.
 //
 // TODO: add a hard limit for message size
-// TODO: Clean up this interface, e.g. hide the Read and Write methods on
-// MessageChannel and expose methods to get access to the read and write halves
-// instead.
 class MessageChannel {
  public:
+  struct ChannelHalves {
+    std::unique_ptr<MessageChannelWriteHalf> write;
+    std::unique_ptr<MessageChannelReadHalf> read;
+  };
+
+  // Create a message channel and return references to both halves of it.
+  static ChannelHalves Create();
+
+ private:
+  friend class MessageChannelReadHalf;
+  friend class MessageChannelWriteHalf;
+
+  MessageChannel() {}
+
   // Count indicates the number of pending messages.
   size_t Count() const LOCKS_EXCLUDED(mu_);
 
@@ -78,7 +90,6 @@ class MessageChannel {
 
   void Await() LOCKS_EXCLUDED(mu_);
 
- private:
   ReadResult ReadLocked(uint32_t size) EXCLUSIVE_LOCKS_REQUIRED(mu_);
 
   mutable absl::Mutex mu_;  // protects msgs_
@@ -90,6 +101,9 @@ class MessageChannelReadHalf {
  public:
   MessageChannelReadHalf(std::shared_ptr<MessageChannel> channel) : channel_(channel) {}
 
+  std::unique_ptr<MessageChannelReadHalf> Clone() {
+    return absl::make_unique<MessageChannelReadHalf>(channel_);
+  }
   // Read a message of up to |size| bytes from the Channel. The caller owns any
   // returned message, whose actual size of may be less than |size|.  If the
   // next available message on the channel is larger than |size|, no data will
@@ -114,6 +128,10 @@ class MessageChannelReadHalf {
 class MessageChannelWriteHalf {
  public:
   MessageChannelWriteHalf(std::shared_ptr<MessageChannel> channel) : channel_(channel) {}
+
+  std::unique_ptr<MessageChannelWriteHalf> Clone() {
+    return absl::make_unique<MessageChannelWriteHalf>(channel_);
+  }
 
   // Write the provided message to the Channel.
   void Write(std::unique_ptr<Message> msg) { channel_->Write(std::move(msg)); }
