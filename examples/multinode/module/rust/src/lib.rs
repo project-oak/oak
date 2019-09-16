@@ -16,6 +16,7 @@
 
 #[macro_use]
 extern crate log;
+extern crate multinode_common;
 extern crate oak;
 extern crate oak_log;
 extern crate protobuf;
@@ -23,11 +24,11 @@ extern crate serde;
 
 mod proto;
 
+use multinode_common::InternalMessage;
 use oak::{GrpcResult, OakNode};
 use proto::multinode::{ExampleRequest, ExampleResponse};
 use proto::multinode_grpc::{dispatch, ExampleServiceNode};
 use protobuf::ProtobufEnum;
-use serde::{Deserialize, Serialize};
 use std::io::Write;
 
 struct FrontendNode {
@@ -66,11 +67,6 @@ impl oak::OakNode for FrontendNode {
     fn invoke(&mut self, method: &str, req: &[u8], out: &mut oak::SendChannelHalf) {
         dispatch(self, method, req, out)
     }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct InternalMessage {
-    msg: String,
 }
 
 impl ExampleServiceNode for FrontendNode {

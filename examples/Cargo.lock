@@ -483,6 +483,7 @@ name = "multinode_backend"
 version = "0.1.0"
 dependencies = [
  "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "multinode_common 0.1.0",
  "oak 0.1.0",
  "oak_log 0.1.0",
  "protobuf 2.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -491,10 +492,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "multinode_common"
+version = "0.1.0"
+dependencies = [
+ "serde 1.0.97 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "multinode_frontend"
 version = "0.1.0"
 dependencies = [
  "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "multinode_common 0.1.0",
  "oak 0.1.0",
  "oak_log 0.1.0",
  "protobuf 2.8.0 (registry+https://github.com/rust-lang/crates.io-index)",

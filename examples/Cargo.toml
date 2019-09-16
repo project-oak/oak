@@ -8,6 +8,7 @@ members = [
     "machine_learning/module/rust",
     "multinode/module/rust",
     "multinode/module2/rust",
+    "multinode/multinode_common",
 ]
 
 [patch.crates-io]
