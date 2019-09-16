@@ -24,7 +24,6 @@
 #include "asylo/util/logging.h"
 #include "asylo/util/status_macros.h"
 #include "oak/common/app_config.h"
-#include "oak/server/module_invocation.h"
 
 namespace oak {
 
