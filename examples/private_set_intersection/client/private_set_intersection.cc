@@ -73,11 +73,14 @@ int main(int argc, char** argv) {
 
   // Load the Oak Module to execute. This needs to be compiled from Rust to WebAssembly separately.
   std::string module_bytes = oak::utils::read_file(absl::GetFlag(FLAGS_module));
-  oak::CreateApplicationResponse create_application_response =
+  std::unique_ptr<oak::CreateApplicationResponse> create_application_response =
       manager_client->CreateApplication(module_bytes);
+  if (create_application_response == nullptr) {
+    LOG(QFATAL) << "Failed to create application";
+  }
 
   std::stringstream addr;
-  addr << "127.0.0.1:" << create_application_response.grpc_port();
+  addr << "127.0.0.1:" << create_application_response->grpc_port();
   LOG(INFO) << "Connecting to Oak Application: " << addr.str();
 
   oak::ApplicationClient::InitializeAssertionAuthorities();
