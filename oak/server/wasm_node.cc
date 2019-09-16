@@ -22,6 +22,7 @@
 #include "absl/memory/memory.h"
 #include "absl/time/clock.h"
 #include "absl/time/time.h"
+#include "absl/types/span.h"
 #include "asylo/util/logging.h"
 #include "oak/proto/oak_api.pb.h"
 #include "oak/server/channel.h"
