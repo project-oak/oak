@@ -20,7 +20,6 @@
 #include <memory>
 #include <thread>
 
-#include "absl/strings/string_view.h"
 #include "asylo/crypto/aes_gcm_siv.h"
 #include "asylo/util/statusor.h"
 #include "oak/common/handles.h"
@@ -36,21 +35,32 @@ class StorageNode final : public NodeThread {
   StorageNode(const std::string& name, const std::string& storage_address);
 
  private:
-  const asylo::StatusOr<std::string> Encrypt(asylo::AesGcmSivCryptor* cryptor,
-                                             const absl::string_view& data);
-  const asylo::StatusOr<std::string> EncryptDatumName(const absl::string_view& datum_name);
-  const asylo::StatusOr<std::string> EncryptDatumValue(const absl::string_view& datum_value);
+  enum class DatumType : int { NAME, VALUE };
 
-  const asylo::StatusOr<std::string> DecryptDatumValue(const absl::string_view& datum_value);
+  // Encrypts `datum` as either the name or value of a name-value pair.
+  // Datum names are encrypted with datum_name_cryptor_, using a fixed nonce for
+  // deterministic mapping of the name-value pair.
+  // Datum values are encrypted with datum_value_cryptor_, using a random nonce.
+  // Returns the concatenation of the kAesGcmSivNonceSize-byte nonce followed by
+  // the encrypted datum.
+  // TODO: Convert this to a serialized protocol message.
+  const asylo::StatusOr<std::string> EncryptDatum(const std::string& datum, DatumType datum_type);
+
+  // Decrypts `input` which must be a kAesGcmSivNonceSize-byte nonce followed by
+  // the encrypted datum.
+  const asylo::StatusOr<std::string> DecryptDatum(const std::string& input, DatumType datum_type);
 
   void Run() override;
 
+  // Fixed nonce generator owned by datum_name_cryptor_.
   FixedNonceGenerator* fixed_nonce_generator_;
+
+  // Cryptor that uses a fixed nonce for deterministic encryption of datum names.
   asylo::AesGcmSivCryptor datum_name_cryptor_;
+  // Cryptor that uses a random nonce for encryption of datum values.
   asylo::AesGcmSivCryptor datum_value_cryptor_;
 
   std::unique_ptr<oak::Storage::Stub> storage_service_;
-  std::thread storage_thread_;
 };
 
 }  // namespace oak

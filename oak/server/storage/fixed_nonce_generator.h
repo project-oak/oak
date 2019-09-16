@@ -32,6 +32,7 @@ class FixedNonceGenerator : public asylo::NonceGenerator<kAesGcmSivNonceSize> {
 
   // Called by asylo::AesGcmSiv::Seal.
   asylo::Status NextNonce(const std::vector<uint8_t>& key_id, AesGcmSivNonce* nonce) override {
+    CHECK(nonce != nullptr);
     std::copy(key_id.begin(), key_id.end(), nonce->begin());
     std::copy(datum_name_.begin(), datum_name_.end(), nonce->begin() + key_id.size());
 
@@ -43,10 +44,10 @@ class FixedNonceGenerator : public asylo::NonceGenerator<kAesGcmSivNonceSize> {
 
   // Sets the datum name used to generate the nonce.  Must be called before
   // each invocation of NextNonce or asylo::AesGcmSiv::Seal.
-  void set_datum_name(const absl::string_view& datum_name) { datum_name_ = datum_name; }
+  void set_datum_name(const std::string& datum_name) { datum_name_ = datum_name; }
 
  private:
-  absl::string_view datum_name_;
+  std::string datum_name_;
 };
 
 }  // namespace oak

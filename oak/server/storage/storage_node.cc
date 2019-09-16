@@ -49,49 +49,62 @@ StorageNode::StorageNode(const std::string& name, const std::string& storage_add
       grpc::CreateChannel(storage_address, grpc::InsecureChannelCredentials()));
 }
 
-const asylo::StatusOr<std::string> StorageNode::EncryptDatumName(
-    const absl::string_view& datum_name) {
-  fixed_nonce_generator_->set_datum_name(datum_name);
-  return Encrypt(&datum_name_cryptor_, datum_name);
-}
-
-const asylo::StatusOr<std::string> StorageNode::EncryptDatumValue(
-    const absl::string_view& datum_value) {
-  return Encrypt(&datum_value_cryptor_, datum_value);
-}
-
-const asylo::StatusOr<std::string> StorageNode::Encrypt(asylo::AesGcmSivCryptor* cryptor,
-                                                        const absl::string_view& data) {
+const asylo::StatusOr<std::string> StorageNode::EncryptDatum(const std::string& datum,
+                                                             DatumType datum_type) {
+  // TODO: Replace "foo" with identifier for the encryption key.
   asylo::CleansingVector<uint8_t> key = GetStorageEncryptionKey("foo");
   asylo::CleansingString additional_authenticated_data;
   asylo::CleansingString nonce;
-  asylo::CleansingString data_encrypted;
+  asylo::CleansingString datum_encrypted;
+  asylo::AesGcmSivCryptor* cryptor;
 
-  cryptor->Seal(key, additional_authenticated_data, data, &nonce, &data_encrypted);
+  switch (datum_type) {
+    case DatumType::NAME: {
+      fixed_nonce_generator_->set_datum_name(datum);
+      cryptor = &datum_name_cryptor_;
+      break;
+    };
+    case DatumType::VALUE: {
+      cryptor = &datum_value_cryptor_;
+      break;
+    };
+  };
+  cryptor->Seal(key, additional_authenticated_data, datum, &nonce, &datum_encrypted);
 
-  return absl::BytesToHexString(absl::StrCat(nonce, data_encrypted));
+  return absl::StrCat(nonce, datum_encrypted);
 }
 
-const asylo::StatusOr<std::string> StorageNode::DecryptDatumValue(const absl::string_view& data) {
-  std::string data_decoded = absl::HexStringToBytes(data);
-  asylo::CleansingString data_clean(data_decoded.data(), data_decoded.size());
+const asylo::StatusOr<std::string> StorageNode::DecryptDatum(const std::string& input,
+                                                             DatumType datum_type) {
+  asylo::CleansingString input_clean(input.data(), input.size());
 
-  if (data_clean.size() < kAesGcmSivNonceSize) {
+  if (input_clean.size() < kAesGcmSivNonceSize) {
     return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT,
                          absl::StrCat("Input too short: expected at least ", kAesGcmSivNonceSize,
-                                      " bytes, got ", data_clean.size()));
+                                      " bytes, got ", input_clean.size()));
   }
 
+  // TODO: Replace "foo" with identifier for the encryption key.
   asylo::CleansingVector<uint8_t> key(GetStorageEncryptionKey("foo"));
   asylo::CleansingString additional_authenticated_data;
-  asylo::CleansingString nonce = data_clean.substr(0, kAesGcmSivNonceSize);
-  asylo::CleansingString data_encrypted = data_clean.substr(kAesGcmSivNonceSize);
-  asylo::CleansingString data_decrypted;
+  asylo::CleansingString nonce = input_clean.substr(0, kAesGcmSivNonceSize);
+  asylo::CleansingString datum_encrypted = input_clean.substr(kAesGcmSivNonceSize);
+  asylo::CleansingString datum_decrypted;
+  asylo::AesGcmSivCryptor* cryptor;
 
-  datum_value_cryptor_.Open(key, additional_authenticated_data, data_encrypted, nonce,
-                            &data_decrypted);
+  switch (datum_type) {
+    case DatumType::NAME: {
+      cryptor = &datum_name_cryptor_;
+      break;
+    };
+    case DatumType::VALUE: {
+      cryptor = &datum_value_cryptor_;
+      break;
+    };
+  };
+  cryptor->Open(key, additional_authenticated_data, datum_encrypted, nonce, &datum_decrypted);
 
-  return std::string(data_decrypted.data(), data_decrypted.size());
+  return std::string(datum_decrypted.data(), datum_decrypted.size());
 }
 
 void StorageNode::Run() {
@@ -133,14 +146,15 @@ void StorageNode::Run() {
 
         // TODO: Propagate error status.
         asylo::StatusOr<std::string> name_or =
-            EncryptDatumName(channel_request.read_request().datum_name());
+            EncryptDatum(channel_request.read_request().datum_name(), DatumType::NAME);
         read_request.set_datum_name(name_or.ValueOrDie());
 
         StorageReadResponse read_response;
         status = storage_service_->Read(&context, read_request, &read_response);
         if (status.ok()) {
           // TODO: Propagate error status.
-          asylo::StatusOr<std::string> value_or = DecryptDatumValue(read_response.datum_value());
+          asylo::StatusOr<std::string> value_or =
+              DecryptDatum(read_response.datum_value(), DatumType::VALUE);
           channel_response.mutable_read_response()->set_datum_value(value_or.ValueOrDie());
         }
         break;
@@ -152,12 +166,12 @@ void StorageNode::Run() {
 
         // TODO: Propagate error status.
         asylo::StatusOr<std::string> name_or =
-            EncryptDatumName(channel_request.write_request().datum_name());
+            EncryptDatum(channel_request.write_request().datum_name(), DatumType::NAME);
         write_request.set_datum_name(name_or.ValueOrDie());
 
         // TODO: Propagate error status.
         asylo::StatusOr<std::string> value_or =
-            Encrypt(&datum_value_cryptor_, channel_request.write_request().datum_value());
+            EncryptDatum(channel_request.write_request().datum_value(), DatumType::VALUE);
         write_request.set_datum_value(value_or.ValueOrDie());
 
         StorageWriteResponse write_response;
@@ -171,7 +185,7 @@ void StorageNode::Run() {
 
         // TODO: Propagate error status.
         asylo::StatusOr<std::string> name_or =
-            EncryptDatumName(channel_request.delete_request().datum_name());
+            EncryptDatum(channel_request.delete_request().datum_name(), DatumType::NAME);
         delete_request.set_datum_name(name_or.ValueOrDie());
 
         StorageDeleteResponse delete_response;
