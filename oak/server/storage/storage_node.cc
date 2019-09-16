@@ -56,7 +56,7 @@ const asylo::StatusOr<std::string> StorageNode::EncryptDatum(const std::string& 
   asylo::CleansingString additional_authenticated_data;
   asylo::CleansingString nonce;
   asylo::CleansingString datum_encrypted;
-  asylo::AesGcmSivCryptor* cryptor;
+  asylo::AesGcmSivCryptor* cryptor = nullptr;
 
   switch (datum_type) {
     case DatumType::NAME: {
@@ -69,7 +69,12 @@ const asylo::StatusOr<std::string> StorageNode::EncryptDatum(const std::string& 
       break;
     };
   };
-  cryptor->Seal(key, additional_authenticated_data, datum, &nonce, &datum_encrypted);
+  // TODO: RETURN_IF_ERROR when one Status rules them all.
+  asylo::Status status =
+      cryptor->Seal(key, additional_authenticated_data, datum, &nonce, &datum_encrypted);
+  if (!status.ok()) {
+    return status;
+  }
 
   return absl::StrCat(nonce, datum_encrypted);
 }
@@ -90,7 +95,7 @@ const asylo::StatusOr<std::string> StorageNode::DecryptDatum(const std::string& 
   asylo::CleansingString nonce = input_clean.substr(0, kAesGcmSivNonceSize);
   asylo::CleansingString datum_encrypted = input_clean.substr(kAesGcmSivNonceSize);
   asylo::CleansingString datum_decrypted;
-  asylo::AesGcmSivCryptor* cryptor;
+  asylo::AesGcmSivCryptor* cryptor = nullptr;
 
   switch (datum_type) {
     case DatumType::NAME: {
@@ -102,7 +107,12 @@ const asylo::StatusOr<std::string> StorageNode::DecryptDatum(const std::string& 
       break;
     };
   };
-  cryptor->Open(key, additional_authenticated_data, datum_encrypted, nonce, &datum_decrypted);
+  // TODO: RETURN_IF_ERROR when one Status rules them all.
+  asylo::Status status =
+      cryptor->Open(key, additional_authenticated_data, datum_encrypted, nonce, &datum_decrypted);
+  if (!status.ok()) {
+    return status;
+  }
 
   return std::string(datum_decrypted.data(), datum_decrypted.size());
 }
