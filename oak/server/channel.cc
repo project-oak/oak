@@ -20,6 +20,13 @@
 
 namespace oak {
 
+MessageChannel::ChannelHalves MessageChannel::Create() {
+  // (MessageChannel constructor is private so std::make_shared is unavailable)
+  std::shared_ptr<MessageChannel> channel(new MessageChannel());
+  return ChannelHalves{absl::make_unique<MessageChannelWriteHalf>(channel),
+                       absl::make_unique<MessageChannelReadHalf>(channel)};
+}
+
 size_t MessageChannel::Count() const {
   absl::ReaderMutexLock lock(&mu_);
   return msgs_.size();

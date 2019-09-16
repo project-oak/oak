@@ -24,126 +24,48 @@
 namespace oak {
 
 TEST(MessageChannel, BasicOperation) {
-  MessageChannel channel;
-  ASSERT_EQ(0, channel.Count());
+  MessageChannel::ChannelHalves halves = MessageChannel::Create();
+  std::unique_ptr<MessageChannelReadHalf> read_half(std::move(halves.read));
+  std::unique_ptr<MessageChannelWriteHalf> write_half(std::move(halves.write));
+  ASSERT_EQ(false, read_half->CanRead());
 
   std::unique_ptr<Message> msg1 = absl::WrapUnique(new Message{0x01, 0x02, 0x03});
-  channel.Write(std::move(msg1));
+  write_half->Write(std::move(msg1));
 
-  ASSERT_EQ(1, channel.Count());
+  ASSERT_EQ(true, read_half->CanRead());
 
-  channel.Write(nullptr);
-  ASSERT_EQ(1, channel.Count());
-
-  ReadResult result1 = channel.Read(1);  // too small
+  ReadResult result1 = read_half->Read(1);  // too small
   ASSERT_EQ(3, result1.required_size);
   ASSERT_EQ(nullptr, result1.data);
 
-  ReadResult result2 = channel.Read(3);  // just right
+  ReadResult result2 = read_half->Read(3);  // just right
   EXPECT_NE(result2.data, nullptr);
   ASSERT_EQ(3, result2.data->size());
   ASSERT_EQ(0x01, (*result2.data)[0]);
 
-  ASSERT_EQ(0, channel.Count());
+  ASSERT_EQ(false, read_half->CanRead());
 
-  bool await_triggered = false;
-  std::thread t1([&await_triggered, &channel] {
-    channel.Await();
-    await_triggered = true;
-  });
-  ASSERT_EQ(false, await_triggered);
-
-  ReadResult result3 = channel.Read(10000);
-  ASSERT_EQ(nullptr, result3.data);
-  ASSERT_EQ(0, result3.required_size);
-  ASSERT_EQ(false, await_triggered);
-
-  std::unique_ptr<Message> msg2 = absl::WrapUnique(new Message{0x11, 0x12, 0x13});
-  channel.Write(std::move(msg2));
-
-  // Writing a message should have triggered the Await() call to complete.
-  t1.join();
-  ASSERT_EQ(true, await_triggered);
-
-  std::unique_ptr<Message> msg3 = absl::WrapUnique(new Message{0x21, 0x22, 0x23});
-  channel.Write(std::move(msg3));
-
-  ASSERT_EQ(2, channel.Count());
-
-  ReadResult result4 = channel.Read(3000);
-  EXPECT_NE(result4.data, nullptr);
-  ASSERT_EQ(3, result4.data->size());
-  ASSERT_EQ(0x11, (*result4.data)[0]);
-
-  ReadResult result5 = channel.Read(0);
-  ASSERT_EQ(3, result5.required_size);
-  ASSERT_EQ(nullptr, result5.data);
-
-  ReadResult result6 = channel.Read(10);
-  EXPECT_NE(result6.data, nullptr);
-  ASSERT_EQ(3, result6.data->size());
-  ASSERT_EQ(0x21, (*result6.data)[0]);
-
-  ASSERT_EQ(0, channel.Count());
-
-  bool block_triggered = false;
-  std::thread t2([&block_triggered, &channel] {
-    ReadResult result = channel.BlockingRead(1000);
-    block_triggered = true;
-  });
-  ASSERT_EQ(false, block_triggered);
-
-  std::unique_ptr<Message> msg4 = absl::WrapUnique(new Message{0x21, 0x22, 0x23});
-  channel.Write(std::move(msg4));
-
-  // Writing to the channel unblocks the read.
-  t2.join();
-  ASSERT_EQ(true, block_triggered);
-}
-
-TEST(MessageChannel, BasicOperationByHalves) {
-  std::shared_ptr<MessageChannel> channel = std::make_shared<MessageChannel>();
-  MessageChannelReadHalf read_half(channel);
-  MessageChannelWriteHalf write_half(channel);
-  ASSERT_EQ(0, channel->Count());
-
-  std::unique_ptr<Message> msg1 = absl::WrapUnique(new Message{0x01, 0x02, 0x03});
-  write_half.Write(std::move(msg1));
-
-  ASSERT_EQ(1, channel->Count());
-
-  ReadResult result1 = read_half.Read(1);  // too small
-  ASSERT_EQ(3, result1.required_size);
-  ASSERT_EQ(nullptr, result1.data);
-
-  ReadResult result2 = read_half.Read(3);  // just right
-  EXPECT_NE(result2.data, nullptr);
-  ASSERT_EQ(3, result2.data->size());
-  ASSERT_EQ(0x01, (*result2.data)[0]);
-
-  ASSERT_EQ(0, channel->Count());
-
-  ReadResult result3 = read_half.Read(10000);
+  ReadResult result3 = read_half->Read(10000);
   ASSERT_EQ(nullptr, result3.data);
   ASSERT_EQ(0, result3.required_size);
 
   std::unique_ptr<Message> msg2 = absl::WrapUnique(new Message{0x11, 0x12, 0x13});
-  write_half.Write(std::move(msg2));
+  write_half->Write(std::move(msg2));
   std::unique_ptr<Message> msg3 = absl::WrapUnique(new Message{0x21, 0x22, 0x23});
-  write_half.Write(std::move(msg3));
+  write_half->Write(std::move(msg3));
 
-  ASSERT_EQ(2, channel->Count());
+  ASSERT_EQ(true, read_half->CanRead());
 
-  ReadResult result4 = read_half.Read(3000);
+  ReadResult result4 = read_half->Read(3000);
   EXPECT_NE(result4.data, nullptr);
   ASSERT_EQ(3, result4.data->size());
   ASSERT_EQ(0x11, (*result4.data)[0]);
 
-  ReadResult result5 = read_half.Read(0);
+  ReadResult result5 = read_half->Read(0);
   ASSERT_EQ(3, result5.required_size);
   ASSERT_EQ(nullptr, result5.data);
 
-  ReadResult result6 = read_half.Read(10);
+  ReadResult result6 = read_half->Read(10);
   EXPECT_NE(result6.data, nullptr);
   ASSERT_EQ(3, result6.data->size());
   ASSERT_EQ(0x21, (*result6.data)[0]);
