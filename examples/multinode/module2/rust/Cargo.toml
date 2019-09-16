@@ -8,6 +8,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 log = "*"
+multinode_common = { path = "../../multinode_common" }
 oak = { path = "../../../../rust/oak" }
 oak_log = { path = "../../../../rust/oak_log" }
 protobuf = "*"

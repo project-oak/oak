@@ -16,20 +16,15 @@
 
 #[macro_use]
 extern crate log;
+extern crate multinode_common;
 extern crate oak;
 extern crate oak_log;
 extern crate protobuf;
 extern crate serde;
 
+use multinode_common::InternalMessage;
 use protobuf::ProtobufEnum;
-use serde::{Deserialize, Serialize};
 use std::io::Write;
-
-// TODO: use common struct definition between modules
-#[derive(Serialize, Deserialize, Debug)]
-struct InternalMessage {
-    msg: String,
-}
 
 #[no_mangle]
 pub extern "C" fn oak_main() -> i32 {
