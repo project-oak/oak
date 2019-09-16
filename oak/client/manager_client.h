@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+#include <memory>
+
+#include "absl/memory/memory.h"
 #include "oak/common/app_config.h"
 #include "oak/proto/manager.grpc.pb.h"
 
@@ -29,17 +32,18 @@ class ManagerClient {
   ManagerClient(const std::shared_ptr<grpc::ChannelInterface>& channel)
       : stub_(Manager::NewStub(channel, grpc::StubOptions())) {}
 
-  // TODO: Return StatusOr<::oak::CreateApplicationResponse>.
-  CreateApplicationResponse CreateApplication(const std::string& module_bytes) {
+  // TODO: Return StatusOr<std::unique_ptr<CreateApplicationResponse>> instead of just nullptr.
+  std::unique_ptr<CreateApplicationResponse> CreateApplication(const std::string& module_bytes) {
     return CreateApplication(module_bytes, true, "");
   }
 
-  CreateApplicationResponse CreateApplication(const std::string& module_bytes, bool enable_logging,
-                                              const std::string& storage_address) {
+  std::unique_ptr<CreateApplicationResponse> CreateApplication(const std::string& module_bytes,
+                                                               bool enable_logging,
+                                                               const std::string& storage_address) {
     grpc::ClientContext context;
 
     CreateApplicationRequest request;
-    CreateApplicationResponse response;
+    auto response = absl::make_unique<CreateApplicationResponse>();
 
     // Build an application configuration with a single WebAssembly node with the provided
     // WebAssembly module bytes.
@@ -54,13 +58,14 @@ class ManagerClient {
     request.set_allocated_application_configuration(application_config.release());
 
     LOG(INFO) << "Creating Oak Application";
-    grpc::Status status = stub_->CreateApplication(&context, request, &response);
+    grpc::Status status = stub_->CreateApplication(&context, request, response.get());
     if (!status.ok()) {
-      LOG(QFATAL) << "Failed: " << status.error_code() << '/' << status.error_message() << '/'
-                  << status.error_details();
+      LOG(ERROR) << "Failed: " << status.error_code() << '/' << status.error_message() << '/'
+                 << status.error_details();
+      return nullptr;
     }
 
-    LOG(INFO) << "Oak Application created: " << response.DebugString();
+    LOG(INFO) << "Oak Application created: " << response->DebugString();
     return response;
   }
 
