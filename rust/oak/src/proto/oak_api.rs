@@ -34,8 +34,9 @@ pub enum OakStatus {
     ERR_INVALID_ARGS = 3,
     ERR_CHANNEL_CLOSED = 4,
     ERR_BUFFER_TOO_SMALL = 5,
-    ERR_OUT_OF_RANGE = 6,
-    ERR_INTERNAL = 7,
+    ERR_HANDLE_SPACE_TOO_SMALL = 6,
+    ERR_OUT_OF_RANGE = 7,
+    ERR_INTERNAL = 8,
 }
 
 impl ::protobuf::ProtobufEnum for OakStatus {
@@ -51,8 +52,9 @@ impl ::protobuf::ProtobufEnum for OakStatus {
             3 => ::std::option::Option::Some(OakStatus::ERR_INVALID_ARGS),
             4 => ::std::option::Option::Some(OakStatus::ERR_CHANNEL_CLOSED),
             5 => ::std::option::Option::Some(OakStatus::ERR_BUFFER_TOO_SMALL),
-            6 => ::std::option::Option::Some(OakStatus::ERR_OUT_OF_RANGE),
-            7 => ::std::option::Option::Some(OakStatus::ERR_INTERNAL),
+            6 => ::std::option::Option::Some(OakStatus::ERR_HANDLE_SPACE_TOO_SMALL),
+            7 => ::std::option::Option::Some(OakStatus::ERR_OUT_OF_RANGE),
+            8 => ::std::option::Option::Some(OakStatus::ERR_INTERNAL),
             _ => ::std::option::Option::None
         }
     }
@@ -65,6 +67,7 @@ impl ::protobuf::ProtobufEnum for OakStatus {
             OakStatus::ERR_INVALID_ARGS,
             OakStatus::ERR_CHANNEL_CLOSED,
             OakStatus::ERR_BUFFER_TOO_SMALL,
+            OakStatus::ERR_HANDLE_SPACE_TOO_SMALL,
             OakStatus::ERR_OUT_OF_RANGE,
             OakStatus::ERR_INTERNAL,
         ];
@@ -100,11 +103,12 @@ impl ::protobuf::reflect::ProtobufValue for OakStatus {
 }
 
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\roak_api.proto\x12\x03oak*\xb3\x01\n\tOakStatus\x12\x1a\n\x16OAK_STAT\
+    \n\roak_api.proto\x12\x03oak*\xd3\x01\n\tOakStatus\x12\x1a\n\x16OAK_STAT\
     US_UNSPECIFIED\x10\0\x12\x06\n\x02OK\x10\x01\x12\x12\n\x0eERR_BAD_HANDLE\
     \x10\x02\x12\x14\n\x10ERR_INVALID_ARGS\x10\x03\x12\x16\n\x12ERR_CHANNEL_\
-    CLOSED\x10\x04\x12\x18\n\x14ERR_BUFFER_TOO_SMALL\x10\x05\x12\x14\n\x10ER\
-    R_OUT_OF_RANGE\x10\x06\x12\x10\n\x0cERR_INTERNAL\x10\x07b\x06proto3\
+    CLOSED\x10\x04\x12\x18\n\x14ERR_BUFFER_TOO_SMALL\x10\x05\x12\x1e\n\x1aER\
+    R_HANDLE_SPACE_TOO_SMALL\x10\x06\x12\x14\n\x10ERR_OUT_OF_RANGE\x10\x07\
+    \x12\x10\n\x0cERR_INTERNAL\x10\x08b\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {

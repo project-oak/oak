@@ -31,8 +31,11 @@ enum OakStatus {
   ERR_CHANNEL_CLOSED = 4;
   // Provided buffer was too small for operation (an output value will indicate required size).
   ERR_BUFFER_TOO_SMALL = 5;
+  // Provided handle space was too small for operation (an output value will
+  // indicate required size).
+  ERR_HANDLE_SPACE_TOO_SMALL = 6;
   // Argument out of valid range.
-  ERR_OUT_OF_RANGE = 6;
+  ERR_OUT_OF_RANGE = 7;
   // Internal error.
-  ERR_INTERNAL = 7;
+  ERR_INTERNAL = 8;
 }

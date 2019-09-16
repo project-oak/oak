@@ -83,7 +83,13 @@ pub unsafe extern "C" fn wait_on_channels(buf: *mut u8, count: u32) -> i32 {
 }
 
 #[no_mangle]
-pub extern "C" fn channel_write(_handle: u64, buf: *const u8, size: usize) -> i32 {
+pub extern "C" fn channel_write(
+    _handle: u64,
+    buf: *const u8,
+    size: usize,
+    _handle_buf: *const u8,
+    _handle_count: usize,
+) -> i32 {
     CHANNEL.with(|channel| channel.borrow_mut().write_message(buf, size))
 }
 
@@ -93,6 +99,9 @@ pub extern "C" fn channel_read(
     buf: *mut u8,
     size: usize,
     actual_size: *mut u32,
+    _handle_buf: *mut u8,
+    _handle_count: usize,
+    _actual_handle_count: *mut u32,
 ) -> i32 {
     CHANNEL.with(|channel| channel.borrow_mut().read_message(buf, size, actual_size))
 }

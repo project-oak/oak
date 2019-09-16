@@ -89,6 +89,10 @@ fn result_from_status<T>(status: Option<OakStatus>, val: T) -> std::io::Result<T
             io::ErrorKind::UnexpectedEof,
             "Buffer too small",
         )),
+        Some(OakStatus::ERR_HANDLE_SPACE_TOO_SMALL) => Err(io::Error::new(
+            io::ErrorKind::UnexpectedEof,
+            "Handle space too small",
+        )),
         Some(OakStatus::ERR_OUT_OF_RANGE) => {
             Err(io::Error::new(io::ErrorKind::NotConnected, "Out of range"))
         }
@@ -107,8 +111,22 @@ mod wasm {
     #[link(wasm_import_module = "oak")]
     extern "C" {
         pub fn wait_on_channels(buf: *mut u8, count: u32) -> i32;
-        pub fn channel_read(handle: u64, buf: *mut u8, size: usize, actual_size: *mut u32) -> i32;
-        pub fn channel_write(handle: u64, buf: *const u8, size: usize) -> i32;
+        pub fn channel_read(
+            handle: u64,
+            buf: *mut u8,
+            size: usize,
+            actual_size: *mut u32,
+            handle_buf: *mut u8,
+            handle_count: usize,
+            actual_handle_count: *mut u32,
+        ) -> i32;
+        pub fn channel_write(
+            handle: u64,
+            buf: *const u8,
+            size: usize,
+            handle_buf: *const u8,
+            handle_count: usize,
+        ) -> i32;
         pub fn channel_find(buf: *const u8, len: usize) -> u64;
     }
 }
@@ -173,7 +191,7 @@ impl SendChannelHalf {
     pub fn write_message(&mut self, buf: &[u8]) -> std::io::Result<()> {
         result_from_status(
             OakStatus::from_i32(unsafe {
-                wasm::channel_write(self.handle, buf.as_ptr(), buf.len())
+                wasm::channel_write(self.handle, buf.as_ptr(), buf.len(), std::ptr::null(), 0)
             }),
             (),
         )
@@ -214,12 +232,16 @@ impl ReceiveChannelHalf {
         // then with a vector that's been resized to meet size requirements.
         for resized in &[false, true] {
             let mut actual_size: u32 = 0;
+            let mut actual_handle_count: u32 = 0;
             let status = OakStatus::from_i32(unsafe {
                 wasm::channel_read(
                     self.handle,
                     buf.as_mut_ptr(),
                     buf.capacity(),
                     &mut actual_size,
+                    std::ptr::null_mut(),
+                    0,
+                    &mut actual_handle_count,
                 )
             });
             match status {
