@@ -203,14 +203,17 @@ void WasmNode::InitEnvironment(wabt::interp::Environment* env) {
   wabt::interp::HostModule* oak_module = env->AppendHostModule("oak");
   oak_module->AppendFuncExport(
       "channel_read",
-      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I64, wabt::Type::I32,
-                                                          wabt::Type::I32, wabt::Type::I32},
-                                  std::vector<wabt::Type>{wabt::Type::I32}),
+      wabt::interp::FuncSignature(
+          std::vector<wabt::Type>{wabt::Type::I64, wabt::Type::I32, wabt::Type::I32,
+                                  wabt::Type::I32, wabt::Type::I32, wabt::Type::I32,
+                                  wabt::Type::I32},
+          std::vector<wabt::Type>{wabt::Type::I32}),
       this->OakChannelRead(env));
   oak_module->AppendFuncExport(
       "channel_write",
       wabt::interp::FuncSignature(
-          std::vector<wabt::Type>{wabt::Type::I64, wabt::Type::I32, wabt::Type::I32},
+          std::vector<wabt::Type>{wabt::Type::I64, wabt::Type::I32, wabt::Type::I32,
+                                  wabt::Type::I32, wabt::Type::I32},
           std::vector<wabt::Type>{wabt::Type::I32}),
       this->OakChannelWrite(env));
 
@@ -252,6 +255,9 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelRead(wabt::interp::Environm
     uint32_t offset = args[1].get_i32();
     uint32_t size = args[2].get_i32();
     uint32_t size_offset = args[3].get_i32();
+    uint32_t handle_space_offset = args[4].get_i32();
+    uint32_t handle_space_count = args[5].get_i32();
+    uint32_t handle_count_offset = args[6].get_i32();
 
     // Borrowing a reference to the channel is safe because the node is single
     // threaded and so cannot invoke channel_close while channel_read is
@@ -293,6 +299,8 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelWrite(wabt::interp::Environ
     Handle channel_handle = args[0].get_i64();
     uint32_t offset = args[1].get_i32();
     uint32_t size = args[2].get_i32();
+    uint32_t handle_offset = args[3].get_i32();
+    uint32_t handle_count = args[4].get_i32();
 
     // Borrowing a reference to the channel is safe because the Node is single
     // threaded and so cannot invoke channel_close while channel_write is

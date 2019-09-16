@@ -39,10 +39,13 @@ enum OakStatus {
 
 }  // namespace oak
 
-WASM_IMPORT("oak") int wait_on_channels(uint8_t* buff, int32_t count);
+WASM_IMPORT("oak") int32_t wait_on_channels(uint8_t* buff, int32_t count);
 WASM_IMPORT("oak")
-int channel_read(uint64_t handle, uint8_t* buff, size_t usize, uint32_t* actual_size);
-WASM_IMPORT("oak") int channel_write(uint64_t handle, uint8_t* buff, size_t usize);
+int32_t channel_read(uint64_t handle, uint8_t* buff, size_t usize, uint32_t* actual_size,
+                     uint8_t* handle_buff, size_t handle_count, uint32_t* actual_handle_count);
+WASM_IMPORT("oak")
+int32_t channel_write(uint64_t handle, uint8_t* buff, size_t usize, uint8_t* handle_buff,
+                      size_t handle_count);
 WASM_IMPORT("oak") uint64_t channel_find(uint8_t* buff, size_t usize);
 
 WASM_EXPORT int32_t oak_main() {
@@ -51,6 +54,7 @@ WASM_EXPORT int32_t oak_main() {
   uint8_t handle_space[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
   uint8_t _buf[256];
   uint32_t actual_size;
+  uint32_t handle_count;
 
   uint64_t grpc_out_handle = channel_find((uint8_t*)grpc_out_name, sizeof(grpc_out_name) - 1);
   uint64_t grpc_in_handle = channel_find((uint8_t*)grpc_in_name, sizeof(grpc_in_name) - 1);
@@ -72,7 +76,7 @@ WASM_EXPORT int32_t oak_main() {
       return result;
     }
 
-    channel_read(grpc_in_handle, _buf, sizeof(_buf), &actual_size);
+    channel_read(grpc_in_handle, _buf, sizeof(_buf), &actual_size, nullptr, 0, &handle_count);
 
     // Encapsulated GrpcResponse protobuf.
     //    12                 b00010.010 = tag 2 (GrpcResponse.rsp_msg), length-delimited field
@@ -86,7 +90,7 @@ WASM_EXPORT int32_t oak_main() {
     //    01                 true
     uint8_t buf[] = "\x12\x0b\x12\x09\x0A\x07\x74\x65\x73\x74\x69\x6e\x67\x20\x01";
     // TODO: replace with use of message type and serialization.
-    channel_write(grpc_out_handle, buf, sizeof(buf) - 1);
+    channel_write(grpc_out_handle, buf, sizeof(buf) - 1, nullptr, 0);
   }
   return oak::OakStatus::OK;
 }

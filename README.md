@@ -162,29 +162,40 @@ imports](https://webassembly.github.io/spec/core/syntax/modules.html#imports)
     *   arg1: Count N of handles provided
     *   return 0: Status of operation
 
--   `channel_read: (i64, i32, i32, i32) -> i32`: Reads a single message from the
-    specified channel, and sets the size of the message in the location provided
-    by arg 3. If the destination buffer is not large enough for the entire
-    message, then no data will be read and a `BUFFER_TOO_SMALL` status will be
-    returned.
+-   `channel_read: (i64, i32, i32, i32, i32, i32, i32) -> i32`: Reads a single
+    message and associated channel handles from the specified channel, setting
+    the size of the data in the location provided by arg 3, and the count of
+    returned handles in the location provided by arg 6.  If the provided spaces
+    for data (args 1 and 2) or handles (args 4 and 5) are not large enough for
+    the read operation, then no data will be returned and either
+    `BUFFER_TOO_SMALL` or `HANDLE_SPACE_TOO_SMALL` will be returned; in either
+    case, the required sizes will be returned in the spaces provided by args
+    3 and 6.
 
     *   arg 0: Handle to channel receive half
     *   arg 1: Destination buffer address
     *   arg 2: Destination buffer size in bytes
     *   arg 3: Address of a 4-byte location that will receive the number of
                bytes in the message (as a little-endian u32).
+    *   arg 4: Destination handle array buffer (to receive little-endian i64
+               values)
+    *   arg 5: Destination handle array count
+    *   arg 6: Address of a 4-byte location that will receive the number of
+               handles retrieved with the message (as a little-endian u32)
     *   return 0: Status of operation
 
     Similar to
     [`zx_channel_read`](https://fuchsia.dev/fuchsia-src/zircon/syscalls/channel_read)
     in Fuchsia.
 
--   `channel_write: (i64, i32, i32) -> i32`: Writes a single message to the
-    specified channel.
+-   `channel_write: (i64, i32, i32, i32, i32) -> i32`: Writes a single message
+    to the specified channel, together with any associated handles.
 
     *   arg 0: Handle to channel send half
     *   arg 1: Source buffer address holding message
     *   arg 2: Source buffer size in bytes
+    *   arg 3: Source handle array (of little-endian i64 values)
+    *   arg 4: Source handle array count
     *   return 0: Status of operation
 
     Similar to
