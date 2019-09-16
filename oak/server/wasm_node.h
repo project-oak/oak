@@ -50,7 +50,9 @@ class WasmNode final : public NodeThread {
   wabt::interp::HostFunc::Callback OakChannelFind(wabt::interp::Environment* env);
 
   wabt::interp::Environment env_;
-  // TODO: Use smart pointers.
+  // Non-owning reference to (sole) Wasm module for convenience (the owning
+  // reference is held in env_); basically equivalent to:
+  //   dynamic_cast<DefinedModule>(env_->GetLastModule()).
   wabt::interp::DefinedModule* module_;
 };
 
