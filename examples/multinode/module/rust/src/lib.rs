@@ -97,9 +97,22 @@ impl ExampleServiceNode for FrontendNode {
         self.backend_in
             .read_message(&mut buffer, &mut handles)
             .unwrap();
+
+        // Expect to receive a channel read handle.
+        // Read the actual response from the new channel.
+        let mut new_in_channel = oak::ReceiveChannelHalf::new(handles[0]);
+        new_in_channel
+            .read_message(&mut buffer, &mut vec![])
+            .unwrap();
         let serialized_rsp = String::from_utf8(buffer).unwrap();
         let internal_rsp: InternalMessage = serde_json::from_str(&serialized_rsp).unwrap();
-        info!("received backend response: {:?}", internal_rsp);
+        info!(
+            "received backend response via {}: {:?}",
+            handles[0], internal_rsp
+        );
+
+        // Drop the new read channel now we have got the response.
+        oak::channel_close(handles[0]);
 
         let mut res = ExampleResponse::new();
         res.reply = format!("HELLO {}!", internal_rsp.msg);
