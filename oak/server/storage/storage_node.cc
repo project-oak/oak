@@ -135,14 +135,15 @@ void StorageNode::Run() {
       return;
     }
 
-    ReadResult result = request_channel->Read(INT_MAX);
+    ReadResult result = request_channel->Read(INT_MAX, INT_MAX);
     if (result.required_size > 0) {
       LOG(ERROR) << "Message size too large: " << result.required_size;
       return;
     }
 
     StorageChannelRequest channel_request;
-    channel_request.ParseFromString(std::string(result.data->data(), result.data->size()));
+    channel_request.ParseFromString(std::string(result.msg->data.data(), result.msg->data.size()));
+    // Any channel references included with the message will be dropped.
 
     // Forward the request to the storage service.
     grpc::Status status;
@@ -249,8 +250,9 @@ void StorageNode::Run() {
     channel_response.SerializeToString(&response_data);
     // TODO: figure out a way to avoid the extra copy (into then out of
     // std::string)
-    std::unique_ptr<Message> response_message =
-        absl::make_unique<Message>(response_data.begin(), response_data.end());
+    std::unique_ptr<Message> response_message = absl::make_unique<Message>();
+    response_message->data.insert(response_message->data.end(), response_data.begin(),
+                                  response_data.end());
     response_channel->Write(std::move(response_message));
   }
 }

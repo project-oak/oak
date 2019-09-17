@@ -37,12 +37,13 @@ void LoggingNode::Run() {
       LOG(WARNING) << "Node termination requested";
       return;
     }
-    ReadResult result = channel->Read(INT_MAX);
+    ReadResult result = channel->Read(INT_MAX, INT_MAX);
     if (result.required_size > 0) {
       LOG(ERROR) << "Message size too large: " << result.required_size;
       return;
     }
-    LOG(INFO) << "LOG: " << std::string(result.data->data(), result.data->size());
+    LOG(INFO) << "LOG: " << std::string(result.msg->data.data(), result.msg->data.size());
+    // Any channel references included with the message will be dropped.
   }
 }
 
