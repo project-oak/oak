@@ -44,7 +44,8 @@ pub extern "C" fn oak_main() -> i32 {
                 Err(err) => return err.value(),
             }
             let mut buf = Vec::<u8>::with_capacity(1024);
-            in_channel.read_message(&mut buf).unwrap();
+            let mut handles = Vec::with_capacity(1);
+            in_channel.read_message(&mut buf, &mut handles).unwrap();
             if buf.is_empty() {
                 info!("no pending message; poll again");
                 continue;

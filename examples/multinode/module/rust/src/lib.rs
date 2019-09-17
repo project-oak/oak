@@ -93,7 +93,10 @@ impl ExampleServiceNode for FrontendNode {
         }
 
         let mut buffer = Vec::<u8>::with_capacity(256);
-        self.backend_in.read_message(&mut buffer).unwrap();
+        let mut handles = Vec::with_capacity(1);
+        self.backend_in
+            .read_message(&mut buffer, &mut handles)
+            .unwrap();
         let serialized_rsp = String::from_utf8(buffer).unwrap();
         let internal_rsp: InternalMessage = serde_json::from_str(&serialized_rsp).unwrap();
         info!("received backend response: {:?}", internal_rsp);
