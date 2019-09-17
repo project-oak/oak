@@ -136,6 +136,7 @@ cc_library(
     srcs = ["channel.cc"],
     hdrs = ["channel.h"],
     deps = [
+        "@com_google_absl//absl/memory",
         "@com_google_absl//absl/synchronization",
         "@com_google_absl//absl/types:variant",
         "@com_google_asylo//asylo/util:logging",
