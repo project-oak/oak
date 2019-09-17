@@ -55,13 +55,27 @@ pub extern "C" fn oak_main() -> i32 {
             let internal_req: InternalMessage = serde_json::from_str(&serialized_req).unwrap();
             info!("received frontend request: {:?}", internal_req);
 
+            // Create a new channel and write the response into it.
+            let (new_write, new_read) = oak::channel_create().unwrap();
+            let mut new_out_channel = oak::SendChannelHalf::new(new_write);
             let internal_rsp = InternalMessage {
                 msg: internal_req.msg + "xxx",
             };
-
             let serialized_rsp = serde_json::to_string(&internal_rsp).unwrap();
-            info!("send serialized message to frontend: {}", serialized_rsp);
-            out_channel.write_all(&serialized_rsp.into_bytes()).unwrap();
+            info!(
+                "send serialized message to new channel {}: {}",
+                new_write, serialized_rsp
+            );
+            new_out_channel
+                .write_all(&serialized_rsp.into_bytes())
+                .unwrap();
+            // Drop the write half now it has been written to.
+            oak::channel_close(new_write);
+
+            // Send a copy of the read half of the new channel back to the frontend,
+            // then close our handle to the read half.
+            out_channel.write_message(&[], &[new_read]).unwrap();
+            oak::channel_close(new_read);
         }
     }) {
         Ok(rc) => rc,
