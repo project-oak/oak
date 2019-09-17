@@ -29,7 +29,7 @@ fn test_write_message() {
     oak_tests::reset_channels();
     let mut send_channel = SendChannelHalf::new(123);
     let data = [0x44, 0x4d, 0x44];
-    assert_matches!(send_channel.write_message(&data), Ok(()));
+    assert_matches!(send_channel.write_message(&data, &[]), Ok(()));
     assert_eq!("DMD", oak_tests::last_message_as_string());
 }
 
@@ -39,7 +39,7 @@ fn test_write_message_failure() {
     let mut send_channel = SendChannelHalf::new(123);
     let data = [0x44, 0x4d, 0x44];
     oak_tests::set_write_status(Some(OakStatus::ERR_INVALID_ARGS.value()));
-    assert_matches!(send_channel.write_message(&data), Err(_));
+    assert_matches!(send_channel.write_message(&data, &[]), Err(_));
 }
 
 #[test]
@@ -55,16 +55,17 @@ fn test_read_message() {
     oak_tests::reset_channels();
     let mut send = SendChannelHalf::new(123);
     let data = [0x44, 0x4d, 0x44];
-    assert_matches!(send.write_message(&data), Ok(()));
-    assert_matches!(send.write_message(&data), Ok(()));
+    assert_matches!(send.write_message(&data, &[]), Ok(()));
+    assert_matches!(send.write_message(&data, &[]), Ok(()));
 
     let mut rcv = ReceiveChannelHalf::new(123);
     let mut buf = Vec::with_capacity(1);
-    assert_matches!(rcv.read_message(&mut buf), Ok(3));
+    let mut handles = Vec::with_capacity(1);
+    assert_matches!(rcv.read_message(&mut buf, &mut handles), Ok(()));
     assert_eq!(data.to_vec(), buf);
 
     let mut big_buf = Vec::with_capacity(100);
-    assert_matches!(rcv.read_message(&mut big_buf), Ok(3));
+    assert_matches!(rcv.read_message(&mut big_buf, &mut handles), Ok(()));
     assert_eq!(data.to_vec(), big_buf);
 }
 
@@ -73,8 +74,9 @@ fn test_read_message_failure() {
     oak_tests::reset_channels();
     let mut rcv = ReceiveChannelHalf::new(123);
     let mut buf = Vec::with_capacity(100);
+    let mut handles = Vec::with_capacity(1);
     oak_tests::set_read_status(Some(OakStatus::ERR_INVALID_ARGS.value()));
-    assert_matches!(rcv.read_message(&mut buf), Err(_));
+    assert_matches!(rcv.read_message(&mut buf, &mut handles), Err(_));
 }
 
 #[test]
@@ -82,10 +84,11 @@ fn test_read_message_internal_failure() {
     oak_tests::reset_channels();
     let mut rcv = ReceiveChannelHalf::new(123);
     let mut buf = Vec::with_capacity(100);
+    let mut handles = Vec::with_capacity(1);
 
     // Set buffer too small but don't set actual size, so the retry gets confused.
     oak_tests::set_read_status(Some(OakStatus::ERR_BUFFER_TOO_SMALL.value()));
-    assert_matches!(rcv.read_message(&mut buf), Err(_));
+    assert_matches!(rcv.read_message(&mut buf, &mut handles), Err(_));
 }
 
 #[test]
@@ -93,7 +96,7 @@ fn test_channel_pair() {
     oak_tests::reset_channels();
     let mut pair = ChannelPair::new(1, 2);
     let data = [0x44, 0x44];
-    assert_matches!(pair.send.write_message(&data), Ok(()));
+    assert_matches!(pair.send.write_message(&data, &[]), Ok(()));
     assert_eq!("DD", oak_tests::last_message_as_string());
 }
 

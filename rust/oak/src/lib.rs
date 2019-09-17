@@ -196,10 +196,16 @@ impl SendChannelHalf {
         SendChannelHalf { handle }
     }
 
-    pub fn write_message(&mut self, buf: &[u8]) -> std::io::Result<()> {
+    pub fn write_message(&mut self, buf: &[u8], handles: &[Handle]) -> std::io::Result<()> {
         result_from_status(
             OakStatus::from_i32(unsafe {
-                wasm::channel_write(self.handle, buf.as_ptr(), buf.len(), std::ptr::null(), 0)
+                wasm::channel_write(
+                    self.handle,
+                    buf.as_ptr(),
+                    buf.len(),
+                    handles.as_ptr() as *const u8, // Wasm spec defines this as little-endian
+                    handles.len(),
+                )
             }),
             (),
         )
@@ -210,7 +216,7 @@ impl SendChannelHalf {
 // the logging channel.
 impl Write for SendChannelHalf {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        match self.write_message(buf) {
+        match self.write_message(buf, &[]) {
             Ok(_) => Ok(buf.len()),
             Err(e) => Err(e),
         }
@@ -235,9 +241,13 @@ impl ReceiveChannelHalf {
         ReceiveChannelHalf { handle }
     }
 
-    pub fn read_message(&mut self, buf: &mut Vec<u8>) -> std::io::Result<usize> {
-        // Try reading from the channel twice: first with provided vector,
-        // then with a vector that's been resized to meet size requirements.
+    pub fn read_message(
+        &mut self,
+        buf: &mut Vec<u8>,
+        handles: &mut Vec<Handle>,
+    ) -> std::io::Result<()> {
+        // Try reading from the channel twice: first with provided vectors, then
+        // with vectors that have been resized to meet size requirements.
         for resized in &[false, true] {
             let mut actual_size: u32 = 0;
             let mut actual_handle_count: u32 = 0;
@@ -247,8 +257,8 @@ impl ReceiveChannelHalf {
                     buf.as_mut_ptr(),
                     buf.capacity(),
                     &mut actual_size,
-                    std::ptr::null_mut(),
-                    0,
+                    handles.as_mut_ptr() as *mut u8,
+                    handles.capacity(),
                     &mut actual_handle_count,
                 )
             });
@@ -256,16 +266,18 @@ impl ReceiveChannelHalf {
                 Some(OakStatus::OK) => {
                     unsafe {
                         buf.set_len(actual_size as usize);
+                        // Handles are written in little-endian order, which matches Wasm spec
+                        handles.set_len(actual_handle_count as usize);
                     };
-                    return Ok(actual_size as usize);
+                    return Ok(());
                 }
                 Some(OakStatus::ERR_BUFFER_TOO_SMALL) => {
                     if *resized {
-                        return result_from_status(status, 0);
+                        return result_from_status(status, ());
                     }
                     // Can escape the match if buffer is too small and !resized.
                 }
-                _ => return result_from_status(status, 0),
+                _ => return result_from_status(status, ()),
             }
 
             // Extend the vector to be large enough for the message
@@ -343,10 +355,16 @@ pub fn grpc_event_loop<T: OakNode>(
         }
 
         let mut buf = Vec::<u8>::with_capacity(1024);
-        grpc_in_channel.read_message(&mut buf).unwrap();
+        let mut handles = Vec::<Handle>::with_capacity(1);
+        grpc_in_channel
+            .read_message(&mut buf, &mut handles)
+            .unwrap();
         if buf.is_empty() {
             info!("no pending message; poll again");
             continue;
+        }
+        if !handles.is_empty() {
+            panic!("unexpected handles received alongside gRPC response")
         }
         let req: proto::grpc_encap::GrpcRequest = protobuf::parse_from_bytes(&buf).unwrap();
         if !req.last {

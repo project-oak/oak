@@ -65,7 +65,13 @@ impl Storage {
         }
 
         let mut buffer = Vec::<u8>::with_capacity(256);
-        self.read_channel.read_message(&mut buffer).unwrap();
+        let mut handles = Vec::<crate::Handle>::with_capacity(1);
+        self.read_channel
+            .read_message(&mut buffer, &mut handles)
+            .unwrap();
+        if !handles.is_empty() {
+            panic!("unexpected handles received alongside storage request")
+        }
         let response: StorageChannelResponse =
             protobuf::parse_from_reader(&mut &buffer[..]).unwrap();
         info!(
