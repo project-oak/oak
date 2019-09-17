@@ -64,8 +64,8 @@ void OakGrpcNode::CompletionQueueLoop() {
 
   Handle req_handle = FindChannel(kGrpcNodeRequestPortName);
   Handle rsp_handle = FindChannel(kGrpcNodeResponsePortName);
-  ChannelHalf* req_half = BorrowChannel(req_handle);
-  ChannelHalf* rsp_half = BorrowChannel(rsp_handle);
+  MessageChannelWriteHalf* req_half = BorrowWriteChannel(req_handle);
+  MessageChannelReadHalf* rsp_half = BorrowReadChannel(rsp_handle);
 
   // The stream object will delete itself when finished with the request,
   // after creating a new stream object for the next request.

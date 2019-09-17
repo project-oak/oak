@@ -49,6 +49,8 @@ class OakNode {
   // Return a borrowed reference to the channel half identified by the given
   // handle (or nullptr if the handle is not recognized).
   ChannelHalf* BorrowChannel(Handle handle) LOCKS_EXCLUDED(mu_);
+  MessageChannelReadHalf* BorrowReadChannel(Handle handle) LOCKS_EXCLUDED(mu_);
+  MessageChannelWriteHalf* BorrowWriteChannel(Handle handle) LOCKS_EXCLUDED(mu_);
 
   // Find the channel handle identified by the given port name.
   Handle FindChannel(const std::string& port_name) LOCKS_EXCLUDED(mu_);

@@ -30,7 +30,7 @@ class ModuleInvocation {
   // All constructor arguments must outlive this object.  It manages its own
   // lifetime after RequestNext is called.
   ModuleInvocation(grpc::AsyncGenericService* service, grpc::ServerCompletionQueue* queue,
-                   ChannelHalf* req_half, ChannelHalf* rsp_half)
+                   MessageChannelWriteHalf* req_half, MessageChannelReadHalf* rsp_half)
       : service_(service),
         queue_(queue),
         req_half_(req_half),
@@ -69,8 +69,8 @@ class ModuleInvocation {
   grpc::ServerCompletionQueue* const queue_;
 
   // Borrowed references to the channels used to communication for invocation.
-  ChannelHalf* req_half_;
-  ChannelHalf* rsp_half_;
+  MessageChannelWriteHalf* req_half_;
+  MessageChannelReadHalf* rsp_half_;
 
   grpc::GenericServerContext context_;
   grpc::GenericServerAsyncReaderWriter stream_;

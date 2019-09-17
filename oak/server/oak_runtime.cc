@@ -81,8 +81,8 @@ grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
       // the write half of the channel.
       LOG(INFO) << "Re-use logging channel for " << src_name << "." << src_port << " -> "
                 << dest_name << "." << dest_port;
-      src_node->AddNamedChannel(src_port,
-                                absl::make_unique<MessageChannelWriteHalf>(logging_channel));
+      auto write_half = absl::make_unique<MessageChannelWriteHalf>(logging_channel);
+      src_node->AddNamedChannel(src_port, absl::make_unique<ChannelHalf>(std::move(write_half)));
     } else {
       LOG(INFO) << "Create channel " << src_name << "." << src_port << " -> " << dest_name << "."
                 << dest_port;
@@ -92,8 +92,10 @@ grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
         logging_channel = channel;
       }
 
-      src_node->AddNamedChannel(src_port, absl::make_unique<MessageChannelWriteHalf>(channel));
-      dest_node->AddNamedChannel(dest_port, absl::make_unique<MessageChannelReadHalf>(channel));
+      auto read_half = absl::make_unique<MessageChannelReadHalf>(channel);
+      auto write_half = absl::make_unique<MessageChannelWriteHalf>(channel);
+      src_node->AddNamedChannel(src_port, absl::make_unique<ChannelHalf>(std::move(write_half)));
+      dest_node->AddNamedChannel(dest_port, absl::make_unique<ChannelHalf>(std::move(read_half)));
     }
   }
 

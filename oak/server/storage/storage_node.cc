@@ -121,8 +121,8 @@ void StorageNode::Run() {
   // Borrow pointers to the relevant channel halves.
   Handle request_handle = FindChannel(kStorageNodeRequestPortName);
   Handle response_handle = FindChannel(kStorageNodeResponsePortName);
-  ChannelHalf* request_channel = BorrowChannel(request_handle);
-  ChannelHalf* response_channel = BorrowChannel(response_handle);
+  MessageChannelReadHalf* request_channel = BorrowReadChannel(request_handle);
+  MessageChannelWriteHalf* response_channel = BorrowWriteChannel(response_handle);
   if (request_channel == nullptr || response_channel == nullptr) {
     LOG(ERROR) << "Required channel not available; handles: " << request_handle << ", "
                << response_handle;
