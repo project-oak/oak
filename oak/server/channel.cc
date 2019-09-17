@@ -16,6 +16,7 @@
 
 #include "oak/server/channel.h"
 
+#include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
 
 namespace oak {
@@ -82,6 +83,21 @@ void MessageChannel::Await() {
   absl::MutexLock lock(&mu_);
   mu_.Await(absl::Condition(
       +[](std::deque<std::unique_ptr<Message>>* msgs) { return msgs->size() > 0; }, &msgs_));
+}
+
+namespace {
+// At namespace scope because local classes may not have member templates.
+struct CloneVariant {
+  template <typename T>
+  std::unique_ptr<ChannelHalf> operator()(const T& h) const {
+    return absl::make_unique<ChannelHalf>(h->Clone());
+  }
+};
+}  // namespace
+
+std::unique_ptr<ChannelHalf> CloneChannelHalf(ChannelHalf* half) {
+  CloneVariant visitor;
+  return absl::visit(visitor, *half);
 }
 
 }  // namespace oak

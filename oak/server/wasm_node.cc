@@ -58,6 +58,18 @@ static void WriteI32(wabt::interp::Environment* env, const uint32_t offset, cons
   base[3] = (v >> 24) & 0xff;
 }
 
+static void WriteU64(wabt::interp::Environment* env, const uint32_t offset, const uint64_t v) {
+  auto base = env->GetMemory(0)->data.begin() + offset;
+  base[0] = v & 0xff;
+  base[1] = (v >> 8) & 0xff;
+  base[2] = (v >> 16) & 0xff;
+  base[3] = (v >> 24) & 0xff;
+  base[4] = (v >> 32) & 0xff;
+  base[5] = (v >> 40) & 0xff;
+  base[6] = (v >> 48) & 0xff;
+  base[7] = (v >> 56) & 0xff;
+}
+
 static uint64_t ReadU64(wabt::interp::Environment* env, const uint32_t offset) {
   auto base = env->GetMemory(0)->data.begin() + offset;
   return (static_cast<uint64_t>(base[0]) | (static_cast<uint64_t>(base[1]) << 8) |
@@ -274,23 +286,43 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelRead(wabt::interp::Environm
       return wabt::interp::Result::Ok;
     }
 
-    ReadResult result = channel->Read(size, 0);
+    ReadResult result = channel->Read(size, handle_space_count);
     if (result.required_size > 0) {
       LOG(INFO) << "channel_read[" << channel_handle << "]: buffer too small: " << size << " < "
                 << result.required_size;
       WriteI32(env, size_offset, result.required_size);
+      WriteI32(env, handle_count_offset, result.required_channels);
       results[0].set_i32(OakStatus::ERR_BUFFER_TOO_SMALL);
+      return wabt::interp::Result::Ok;
+    } else if (result.required_channels > 0) {
+      LOG(INFO) << "channel_read[" << channel_handle
+                << "]: handle space too small: " << handle_space_count << " < "
+                << result.required_channels;
+      WriteI32(env, size_offset, result.required_size);
+      WriteI32(env, handle_count_offset, result.required_channels);
+      results[0].set_i32(OakStatus::ERR_HANDLE_SPACE_TOO_SMALL);
+      return wabt::interp::Result::Ok;
     } else if (result.msg == nullptr) {
       LOG(INFO) << "channel_read[" << channel_handle << "]: no message available";
       WriteI32(env, size_offset, 0);
       results[0].set_i32(OakStatus::OK);
-    } else {
-      LOG(INFO) << "channel_read[" << channel_handle << "]: read message of size "
-                << result.msg->data.size();
-      WriteI32(env, size_offset, result.msg->data.size());
-      WriteMemory(env, offset, absl::Span<char>(result.msg->data.data(), result.msg->data.size()));
-      results[0].set_i32(OakStatus::OK);
+      return wabt::interp::Result::Ok;
     }
+
+    LOG(INFO) << "channel_read[" << channel_handle << "]: read message of size "
+              << result.msg->data.size() << " with " << result.msg->channels.size()
+              << " attached channels";
+    WriteI32(env, size_offset, result.msg->data.size());
+    WriteMemory(env, offset, absl::Span<char>(result.msg->data.data(), result.msg->data.size()));
+    WriteI32(env, handle_count_offset, result.msg->channels.size());
+
+    // Convert any accompanying channels into handles relative to the receiving node.
+    for (size_t ii = 0; ii < result.msg->channels.size(); ii++) {
+      Handle handle = AddChannel(std::move(result.msg->channels[ii]));
+      LOG(INFO) << "Transferred channel has new handle " << handle;
+      WriteU64(env, handle_space_offset + 8 * ii, handle);
+    }
+    results[0].set_i32(OakStatus::OK);
 
     return wabt::interp::Result::Ok;
   };
@@ -322,6 +354,22 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelWrite(wabt::interp::Environ
     auto msg = absl::make_unique<Message>();
     msg->data.insert(msg->data.end(), origin.begin(), origin.end());
     LOG(INFO) << "channel_write[" << channel_handle << "]: write message of size " << size;
+
+    // Find any handles and clone the corresponding write channels.
+    std::vector<Handle> handles;
+    handles.reserve(handle_count);
+    for (uint32_t ii = 0; ii < handle_count; ii++) {
+      Handle handle = ReadU64(env, handle_offset + (8 * ii));
+      LOG(INFO) << "Transfer channel handle " << handle;
+      ChannelHalf* half = BorrowChannel(handle);
+      if (half == nullptr) {
+        LOG(WARNING) << "Invalid transferred channel handle: " << handle;
+        results[0].set_i32(OakStatus::ERR_BAD_HANDLE);
+        return wabt::interp::Result::Ok;
+      }
+      msg->channels.push_back(CloneChannelHalf(half));
+    }
+
     channel->Write(std::move(msg));
     results[0].set_i32(OakStatus::OK);
 

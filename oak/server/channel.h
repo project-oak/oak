@@ -159,6 +159,10 @@ class MessageChannelWriteHalf {
   std::shared_ptr<MessageChannel> channel_;
 };
 
+// Create a new channel half (of the same read/write end) that shares a
+// reference to the same underlying MessageChannel.
+std::unique_ptr<ChannelHalf> CloneChannelHalf(ChannelHalf* half);
+
 // Current readable status of a channel.
 struct ChannelStatus {
   explicit ChannelStatus(uint64_t h) : handle(h) {}
