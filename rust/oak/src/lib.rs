@@ -127,8 +127,21 @@ mod wasm {
             handle_buf: *const u8,
             handle_count: usize,
         ) -> i32;
+        pub fn channel_create(write: *mut u64, read: *mut u64) -> i32;
         pub fn channel_close(handle: u64) -> i32;
         pub fn channel_find(buf: *const u8, len: usize) -> u64;
+    }
+}
+
+pub fn channel_create() -> Result<(Handle, Handle), OakStatus> {
+    let mut write: Handle = 0;
+    let mut read: Handle = 0;
+    match OakStatus::from_i32(unsafe {
+        wasm::channel_create(&mut write as *mut u64, &mut read as *mut u64) // @@@ check endianness
+    }) {
+        Some(OakStatus::OK) => Ok((write, read)),
+        Some(err) => Err(err),
+        None => Err(OakStatus::OAK_STATUS_UNSPECIFIED),
     }
 }
 
