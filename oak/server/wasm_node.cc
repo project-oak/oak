@@ -253,7 +253,7 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelRead(wabt::interp::Environm
     uint32_t size = args[2].get_i32();
     uint32_t size_offset = args[3].get_i32();
 
-    ChannelHalf* channel = BorrowChannel(channel_handle);
+    MessageChannelReadHalf* channel = BorrowReadChannel(channel_handle);
     if (channel == nullptr) {
       LOG(WARNING) << "Invalid channel handle: " << channel_handle;
       results[0].set_i32(OakStatus::ERR_BAD_HANDLE);
@@ -291,7 +291,7 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelWrite(wabt::interp::Environ
     uint32_t offset = args[1].get_i32();
     uint32_t size = args[2].get_i32();
 
-    ChannelHalf* channel = BorrowChannel(channel_handle);
+    MessageChannelWriteHalf* channel = BorrowWriteChannel(channel_handle);
     if (channel == nullptr) {
       LOG(WARNING) << "Invalid channel handle: " << channel_handle;
       results[0].set_i32(OakStatus::ERR_BAD_HANDLE);

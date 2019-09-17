@@ -23,19 +23,6 @@
 
 namespace oak {
 
-TEST(ChannelHalf, EmptyReadFallback) {
-  ChannelHalf half;
-  ReadResult result = half.Read(100000);
-  ASSERT_EQ(0, result.required_size);
-  ASSERT_EQ(nullptr, result.data);
-}
-
-TEST(ChannelHalf, NoWriteFallback) {
-  ChannelHalf half;
-  std::unique_ptr<Message> data = absl::WrapUnique(new Message{0x01, 0x02, 0x03});
-  half.Write(std::move(data));
-}
-
 TEST(MessageChannel, BasicOperation) {
   MessageChannel channel;
   ASSERT_EQ(0, channel.Count());

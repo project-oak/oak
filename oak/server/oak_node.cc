@@ -41,6 +41,32 @@ ChannelHalf* OakNode::BorrowChannel(Handle handle) {
   return channel_halves_[handle].get();
 }
 
+MessageChannelReadHalf* OakNode::BorrowReadChannel(Handle handle) {
+  absl::ReaderMutexLock lock(&mu_);
+  ChannelHalf* half = channel_halves_[handle].get();
+  if (half == nullptr) {
+    return nullptr;
+  }
+  auto value = absl::get_if<std::unique_ptr<MessageChannelReadHalf>>(half);
+  if (value == nullptr) {
+    return nullptr;
+  }
+  return value->get();
+}
+
+MessageChannelWriteHalf* OakNode::BorrowWriteChannel(Handle handle) {
+  absl::ReaderMutexLock lock(&mu_);
+  ChannelHalf* half = channel_halves_[handle].get();
+  if (half == nullptr) {
+    return nullptr;
+  }
+  auto value = absl::get_if<std::unique_ptr<MessageChannelWriteHalf>>(half);
+  if (value == nullptr) {
+    return nullptr;
+  }
+  return value->get();
+}
+
 Handle OakNode::FindChannel(const std::string& port_name) {
   absl::ReaderMutexLock lock(&mu_);
   auto it = named_channels_.find(port_name);
@@ -55,9 +81,9 @@ bool OakNode::WaitOnChannels(std::vector<std::unique_ptr<ChannelStatus>>* status
   while (!done) {
     for (uint32_t ii = 0; ii < statuses->size(); ii++) {
       uint64_t handle = (*statuses)[ii]->handle;
-      ChannelHalf* channel = BorrowChannel(handle);
+      MessageChannelReadHalf* channel = BorrowReadChannel(handle);
       if (channel == nullptr) {
-        LOG(WARNING) << "Waiting on non-existent channel handle " << handle;
+        LOG(WARNING) << "Waiting on non-existent read channel handle " << handle;
         continue;
       }
       if (channel->CanRead()) {
