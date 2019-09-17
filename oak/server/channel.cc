@@ -32,44 +32,50 @@ size_t MessageChannel::Count() const {
   return msgs_.size();
 }
 
-void MessageChannel::Write(std::unique_ptr<Message> data) {
-  if (data == nullptr) {
+void MessageChannel::Write(std::unique_ptr<Message> msg) {
+  if (msg == nullptr) {
     LOG(WARNING) << "Ignoring attempt to write null message";
     return;
   }
   absl::MutexLock lock(&mu_);
-  LOG(INFO) << "Add message of size " << data->size();
-  msgs_.push_back(std::move(data));
+  LOG(INFO) << "Add message with data size " << msg->data.size() << " and " << msg->channels.size()
+            << " channels";
+  msgs_.push_back(std::move(msg));
 }
 
-ReadResult MessageChannel::Read(uint32_t size) {
+ReadResult MessageChannel::Read(uint32_t max_size, uint32_t max_channels) {
   absl::MutexLock lock(&mu_);
   if (msgs_.empty()) {
     return ReadResult{0};
   }
-  return ReadLocked(size);
+  return ReadLocked(max_size, max_channels);
 }
 
-ReadResult MessageChannel::ReadLocked(uint32_t size) {
+ReadResult MessageChannel::ReadLocked(uint32_t max_size, uint32_t max_channels) {
   ReadResult result = {0};
-  size_t actual_size = msgs_.front()->size();
-  if (actual_size > size) {
-    LOG(INFO) << "Next message of size " << actual_size << ", size limited to " << size;
+  Message* next_msg = msgs_.front().get();
+  size_t actual_size = next_msg->data.size();
+  size_t actual_count = next_msg->channels.size();
+  if (actual_size > max_size || actual_count > max_channels) {
+    LOG(INFO) << "Next message of size " << actual_size << " with " << actual_count
+              << " channels, read limited to size " << max_size << " and " << max_channels
+              << " channels";
     result.required_size = actual_size;
+    result.required_channels = actual_count;
     return result;
   }
-  result.data = std::move(msgs_.front());
+  result.msg = std::move(msgs_.front());
   msgs_.pop_front();
-  LOG(INFO) << "Read message of size " << result.data->size() << " from channel, size limit "
-            << size;
+  LOG(INFO) << "Read message of size " << result.msg->data.size() << " with " << actual_count
+            << " channels from channel";
   return result;
 }
 
-ReadResult MessageChannel::BlockingRead(uint32_t size) {
+ReadResult MessageChannel::BlockingRead(uint32_t max_size, uint32_t max_channels) {
   absl::MutexLock lock(&mu_);
   mu_.Await(absl::Condition(
       +[](std::deque<std::unique_ptr<Message>>* msgs) { return msgs->size() > 0; }, &msgs_));
-  return ReadLocked(size);
+  return ReadLocked(max_size, max_channels);
 }
 
 void MessageChannel::Await() {

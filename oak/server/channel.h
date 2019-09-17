@@ -29,8 +29,6 @@
 
 namespace oak {
 
-using Message = std::vector<char>;
-
 class MessageChannelWriteHalf;  // forward declaration
 class MessageChannelReadHalf;   // forward declaration
 
@@ -38,14 +36,24 @@ class MessageChannelReadHalf;   // forward declaration
 using ChannelHalf = absl::variant<std::unique_ptr<MessageChannelReadHalf>,
                                   std::unique_ptr<MessageChannelWriteHalf>>;
 
+// Each message transferred over a channel includes data and potentially
+// also references to halves of channels.
+struct Message {
+  std::vector<char> data;
+  std::vector<std::unique_ptr<ChannelHalf>> channels;
+};
+
 // Result of a read operation. If the operation would have produced a message
-// bigger than the requested maximum size, then |required_size| will be
-// non-zero and indicates the required size for the message.  Otherwise,
-// |required_size| will be zero and |data| holds the message (transferring
-// ownership).
+// bigger than the requested maximum size, then |required_size| will be non-zero
+// and indicates the required size for the message.  If the operation would have
+// been accompanied by more than the requested maximum channel count, then
+// |required_channels| will be non-zero and indicates the required channel count
+// for the message. Otherwise, |required_size| and |required_channels| will be
+// zero and |data| holds the message (transferring ownership).
 struct ReadResult {
   uint32_t required_size;
-  std::unique_ptr<Message> data;
+  uint32_t required_channels;
+  std::unique_ptr<Message> msg;
 };
 
 // A channel, which holds an arbitrary number of queued messages in a
@@ -79,18 +87,18 @@ class MessageChannel {
   // Count indicates the number of pending messages.
   size_t Count() const LOCKS_EXCLUDED(mu_);
 
-  // Read returns the first message on the channel, subject to |size| checks.
-  ReadResult Read(uint32_t size) LOCKS_EXCLUDED(mu_);
+  // Read returns the first message on the channel, subject to |max_size| checks.
+  ReadResult Read(uint32_t max_size, uint32_t max_channels) LOCKS_EXCLUDED(mu_);
 
   // BlockingRead behaves like Read but blocks until a message is available.
-  ReadResult BlockingRead(uint32_t size) LOCKS_EXCLUDED(mu_);
+  ReadResult BlockingRead(uint32_t max_size, uint32_t max_channels) LOCKS_EXCLUDED(mu_);
 
   // Write passes ownership of a message to the channel.
-  void Write(std::unique_ptr<Message> data) LOCKS_EXCLUDED(mu_);
+  void Write(std::unique_ptr<Message> msg) LOCKS_EXCLUDED(mu_);
 
   void Await() LOCKS_EXCLUDED(mu_);
 
-  ReadResult ReadLocked(uint32_t size) EXCLUSIVE_LOCKS_REQUIRED(mu_);
+  ReadResult ReadLocked(uint32_t max_size, uint32_t max_channels) EXCLUSIVE_LOCKS_REQUIRED(mu_);
 
   mutable absl::Mutex mu_;  // protects msgs_
   std::deque<std::unique_ptr<Message>> msgs_ GUARDED_BY(mu_);
@@ -104,15 +112,26 @@ class MessageChannelReadHalf {
   std::unique_ptr<MessageChannelReadHalf> Clone() {
     return absl::make_unique<MessageChannelReadHalf>(channel_);
   }
-  // Read a message of up to |size| bytes from the Channel. The caller owns any
-  // returned message, whose actual size of may be less than |size|.  If the
-  // next available message on the channel is larger than |size|, no data will
-  // be returned and the required_size field of the result will indicate the
-  // required size.
-  ReadResult Read(uint32_t size) { return channel_->Read(size); }
+
+  // Read a message from the channel, as long as the amount of data and handles
+  // associated with the message fits within the specified limits.  The caller
+  // owns any returned message, whose actual size / handle count will be less
+  // than or equal to the specified limits.
+  //
+  // If the next available message on the channel does not fit in the specified
+  // data/handle count limits, then no data will be returned and the ReadResult
+  // will indicate the required sizes.
+  //
+  // Note that (pure) C++ users of this method can typically pass INT_MAX for
+  // the limit parameters, as they receive ownership of the Message.
+  ReadResult Read(uint32_t max_size, uint32_t max_channels) {
+    return channel_->Read(max_size, max_channels);
+  }
 
   // BlockingRead behaves like Read but blocks until a message is available.
-  ReadResult BlockingRead(uint32_t size) { return channel_->BlockingRead(size); }
+  ReadResult BlockingRead(uint32_t max_size, uint32_t max_channels) {
+    return channel_->BlockingRead(max_size, max_channels);
+  }
 
   // Indicate whether a Read operation would return a message.
   bool CanRead() { return channel_->Count() > 0; }

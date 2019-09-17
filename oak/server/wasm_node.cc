@@ -263,21 +263,21 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelRead(wabt::interp::Environm
       return wabt::interp::Result::Ok;
     }
 
-    ReadResult result = channel->Read(size);
+    ReadResult result = channel->Read(size, 0);
     if (result.required_size > 0) {
       LOG(INFO) << "channel_read[" << channel_handle << "]: buffer too small: " << size << " < "
                 << result.required_size;
       WriteI32(env, size_offset, result.required_size);
       results[0].set_i32(OakStatus::ERR_BUFFER_TOO_SMALL);
-    } else if (result.data == nullptr) {
+    } else if (result.msg == nullptr) {
       LOG(INFO) << "channel_read[" << channel_handle << "]: no message available";
       WriteI32(env, size_offset, 0);
       results[0].set_i32(OakStatus::OK);
     } else {
       LOG(INFO) << "channel_read[" << channel_handle << "]: read message of size "
-                << result.data->size();
-      WriteI32(env, size_offset, result.data->size());
-      WriteMemory(env, offset, absl::Span<char>(result.data->data(), result.data->size()));
+                << result.msg->data.size();
+      WriteI32(env, size_offset, result.msg->data.size());
+      WriteMemory(env, offset, absl::Span<char>(result.msg->data.data(), result.msg->data.size()));
       results[0].set_i32(OakStatus::OK);
     }
 
@@ -306,9 +306,10 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelWrite(wabt::interp::Environ
 
     // Copy the data from the Wasm linear memory.
     absl::Span<const char> origin = ReadMemory(env, offset, size);
-    auto data = absl::make_unique<Message>(origin.begin(), origin.end());
-    LOG(INFO) << "channel_write[" << channel_handle << "]: write message of size " << data->size();
-    channel->Write(std::move(data));
+    auto msg = absl::make_unique<Message>();
+    msg->data.insert(msg->data.end(), origin.begin(), origin.end());
+    LOG(INFO) << "channel_write[" << channel_handle << "]: write message of size " << size;
+    channel->Write(std::move(msg));
     results[0].set_i32(OakStatus::OK);
 
     return wabt::interp::Result::Ok;

@@ -32,11 +32,11 @@ std::unique_ptr<Message> Unwrap(const grpc::ByteBuffer& buffer) {
   if (!status.ok()) {
     LOG(QFATAL) << "Could not unwrap buffer";
   }
-  auto bytes = absl::make_unique<Message>();
+  auto msg = absl::make_unique<Message>();
   for (const auto& slice : slices) {
-    bytes->insert(bytes->end(), slice.begin(), slice.end());
+    msg->data.insert(msg->data.end(), slice.begin(), slice.end());
   }
-  return bytes;
+  return msg;
 }
 
 }  // namespace
@@ -62,7 +62,7 @@ void ModuleInvocation::ProcessRequest(bool ok) {
     delete this;
     return;
   }
-  std::unique_ptr<Message> request_data = Unwrap(request_);
+  std::unique_ptr<Message> request_msg = Unwrap(request_);
 
   LOG(INFO) << "Handling gRPC call: " << context_.method();
 
@@ -71,17 +71,17 @@ void ModuleInvocation::ProcessRequest(bool ok) {
   oak::GrpcRequest grpc_request;
   grpc_request.set_method_name(context_.method());
   google::protobuf::Any* any = new google::protobuf::Any();
-  any->set_value(request_data->data(), request_data->size());
+  any->set_value(request_msg->data.data(), request_msg->data.size());
   grpc_request.set_allocated_req_msg(any);
   grpc_request.set_last(true);
   std::string encap_req;
   grpc_request.SerializeToString(&encap_req);
   // TODO: figure out a way to avoid the extra copy (into then out of std::string)
-  std::unique_ptr<Message> encap_data =
-      absl::make_unique<Message>(encap_req.begin(), encap_req.end());
+  std::unique_ptr<Message> rsp_msg = absl::make_unique<Message>();
+  rsp_msg->data.insert(rsp_msg->data.end(), encap_req.begin(), encap_req.end());
   // Write data to the gRPC input channel, which the runtime connected to the
   // Node.
-  req_half_->Write(std::move(encap_data));
+  req_half_->Write(std::move(rsp_msg));
   LOG(INFO) << "Wrote encapsulated request to gRPC input channel";
 
   // Move straight onto sending first response.
@@ -97,18 +97,20 @@ void ModuleInvocation::SendResponse(bool ok) {
   ReadResult rsp_result;
   // Block until we can read a single queued GrpcResponse message (in serialized form) from the
   // gRPC output channel.
-  rsp_result = rsp_half_->BlockingRead(INT_MAX);
+  rsp_result = rsp_half_->BlockingRead(INT_MAX, INT_MAX);
   if (rsp_result.required_size > 0) {
     LOG(ERROR) << "Message size too large: " << rsp_result.required_size;
     FinishAndRestart(grpc::Status(grpc::StatusCode::INTERNAL, "Message size too large"));
     return;
   }
 
-  LOG(INFO) << "Read encapsulated message of size " << rsp_result.data->size()
+  LOG(INFO) << "Read encapsulated message of size " << rsp_result.msg->data.size()
             << " from gRPC output channel";
   oak::GrpcResponse grpc_response;
   // TODO: Check errors.
-  grpc_response.ParseFromString(std::string(rsp_result.data->data(), rsp_result.data->size()));
+  grpc_response.ParseFromString(
+      std::string(rsp_result.msg->data.data(), rsp_result.msg->data.size()));
+  // Any channel references included with the message will be dropped.
 
   const grpc::string& inner_msg = grpc_response.rsp_msg().value();
   grpc::Slice slice(inner_msg.data(), inner_msg.size());
