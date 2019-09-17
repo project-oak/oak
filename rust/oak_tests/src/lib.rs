@@ -107,6 +107,11 @@ pub extern "C" fn channel_read(
 }
 
 #[no_mangle]
+pub extern "C" fn channel_create(_write: *mut u64, _read: *mut u64) -> i32 {
+    OakStatus::ERR_INTERNAL.value()
+}
+
+#[no_mangle]
 pub extern "C" fn channel_close(_handle: u64) -> i32 {
     OakStatus::OK.value()
 }

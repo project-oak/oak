@@ -202,6 +202,15 @@ imports](https://webassembly.github.io/spec/core/syntax/modules.html#imports)
     [`zx_channel_write`](https://fuchsia.dev/fuchsia-src/zircon/syscalls/channel_write)
     in Fuchsia.
 
+-   `channel_create: (i32, i32) -> i64`: Create a new unidirectional channel and
+    return the channel handles for its read and write halves.
+
+    *   arg 0: Address of an 8-byte location that will receive the handle for
+               the write half of the channel (as a little-endian u64).
+    *   arg 1: Address of an 8-byte location that will receive the handle for
+               the read half of the channel (as a little-endian u64).
+    *   return 0: Status of operation
+
 -   `channel_close: (i64) -> i32`: Closes the channel identified by arg 0.
 
     *   arg 0: Handle to channel

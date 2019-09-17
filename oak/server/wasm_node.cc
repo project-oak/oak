@@ -235,6 +235,11 @@ void WasmNode::InitEnvironment(wabt::interp::Environment* env) {
                                   std::vector<wabt::Type>{wabt::Type::I32}),
       this->OakWaitOnChannels(env));
   oak_module->AppendFuncExport(
+      "channel_create",
+      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
+                                  std::vector<wabt::Type>{wabt::Type::I32}),
+      this->OakChannelCreate(env));
+  oak_module->AppendFuncExport(
       "channel_close",
       wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I64},
                                   std::vector<wabt::Type>{wabt::Type::I32}),
@@ -409,6 +414,28 @@ wabt::interp::HostFunc::Callback WasmNode::OakWaitOnChannels(wabt::interp::Envir
     } else {
       results[0].set_i32(OakStatus::ERR_CHANNEL_CLOSED);
     }
+    return wabt::interp::Result::Ok;
+  };
+}
+
+wabt::interp::HostFunc::Callback WasmNode::OakChannelCreate(wabt::interp::Environment* env) {
+  return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
+                     const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
+    LogHostFunctionCall(func, args);
+
+    uint32_t write_half_offset = args[0].get_i32();
+    uint32_t read_half_offset = args[1].get_i32();
+    results[0].set_i32(OakStatus::OK);
+
+    MessageChannel::ChannelHalves halves = MessageChannel::Create();
+    Handle write_handle = AddChannel(absl::make_unique<ChannelHalf>(std::move(halves.write)));
+    Handle read_handle = AddChannel(absl::make_unique<ChannelHalf>(std::move(halves.read)));
+    LOG(INFO) << "Created new channel with handles write=" << write_handle
+              << ", read=" << read_handle;
+
+    WriteU64(env, write_half_offset, write_handle);
+    WriteU64(env, read_half_offset, read_handle);
+
     return wabt::interp::Result::Ok;
   };
 }
