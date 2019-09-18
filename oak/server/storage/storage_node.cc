@@ -127,10 +127,10 @@ void StorageNode::Run() {
     LOG(ERROR) << "Required channel not available; handles: " << request_handle << ", "
                << response_handle;
   }
-  std::vector<std::unique_ptr<ChannelStatus>> status;
-  status.push_back(absl::make_unique<ChannelStatus>(request_handle));
+  std::vector<std::unique_ptr<ChannelStatus>> channel_status;
+  channel_status.push_back(absl::make_unique<ChannelStatus>(request_handle));
   while (true) {
-    if (!WaitOnChannels(&status)) {
+    if (!WaitOnChannels(&channel_status)) {
       LOG(WARNING) << "Node termination requested";
       return;
     }
