@@ -16,8 +16,6 @@
 
 #include "oak/server/wasm_node.h"
 
-#include <openssl/sha.h>
-
 #include <iostream>
 #include <utility>
 
