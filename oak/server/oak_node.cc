@@ -36,6 +36,25 @@ Handle OakNode::AddChannel(std::unique_ptr<ChannelHalf> half) {
   return handle;
 }
 
+bool OakNode::CloseChannel(Handle handle) {
+  absl::MutexLock lock(&mu_);
+  auto it = channel_halves_.find(handle);
+  if (it == channel_halves_.end()) {
+    return false;
+  }
+  channel_halves_.erase(it);
+
+  // Loop over named channels (under the assumption that there won't be too
+  // many) to remove any named reference to this channel handle.
+  for (const auto& name_it : named_channels_) {
+    if (name_it.second == handle) {
+      named_channels_.erase(name_it.first);
+      break;
+    }
+  }
+  return true;
+}
+
 ChannelHalf* OakNode::BorrowChannel(Handle handle) {
   absl::ReaderMutexLock lock(&mu_);
   return channel_halves_[handle].get();

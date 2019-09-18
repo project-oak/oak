@@ -107,6 +107,11 @@ pub extern "C" fn channel_read(
 }
 
 #[no_mangle]
+pub extern "C" fn channel_close(_handle: u64) -> i32 {
+    OakStatus::OK.value()
+}
+
+#[no_mangle]
 pub extern "C" fn channel_find(_buf: *const u8, _size: usize) -> u64 {
     1
 }
