@@ -202,6 +202,11 @@ imports](https://webassembly.github.io/spec/core/syntax/modules.html#imports)
     [`zx_channel_write`](https://fuchsia.dev/fuchsia-src/zircon/syscalls/channel_write)
     in Fuchsia.
 
+-   `channel_close: (i64) -> i32`: Closes the channel identified by arg 0.
+
+    *   arg 0: Handle to channel
+    *   return 0: Status of operation
+
 -   `channel_find: (i32, i32) -> i64`: Return the channel handle that
     corresponds to a provided port name, or zero if not found.
 

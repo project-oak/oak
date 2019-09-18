@@ -46,6 +46,10 @@ class OakNode {
   // the node can use to refer to it in future.
   Handle AddChannel(std::unique_ptr<ChannelHalf> half) LOCKS_EXCLUDED(mu_);
 
+  // Close the given channel half.  Returns true if the channel was found and closed,
+  // false if the channel was not found.
+  bool CloseChannel(Handle handle) LOCKS_EXCLUDED(mu_);
+
   // Return a borrowed reference to the channel half identified by the given
   // handle (or nullptr if the handle is not recognized).  Caller is responsible
   // for ensuring that the borrowed reference does not out-live the owned

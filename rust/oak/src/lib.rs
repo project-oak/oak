@@ -127,7 +127,15 @@ mod wasm {
             handle_buf: *const u8,
             handle_count: usize,
         ) -> i32;
+        pub fn channel_close(handle: u64) -> i32;
         pub fn channel_find(buf: *const u8, len: usize) -> u64;
+    }
+}
+
+pub fn channel_close(handle: Handle) -> OakStatus {
+    match OakStatus::from_i32(unsafe { wasm::channel_close(handle) }) {
+        Some(s) => s,
+        None => OakStatus::OAK_STATUS_UNSPECIFIED,
     }
 }
 

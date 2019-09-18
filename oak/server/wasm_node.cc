@@ -223,6 +223,11 @@ void WasmNode::InitEnvironment(wabt::interp::Environment* env) {
                                   std::vector<wabt::Type>{wabt::Type::I32}),
       this->OakWaitOnChannels(env));
   oak_module->AppendFuncExport(
+      "channel_close",
+      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I64},
+                                  std::vector<wabt::Type>{wabt::Type::I32}),
+      this->OakChannelClose(env));
+  oak_module->AppendFuncExport(
       "channel_find",
       wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
                                   std::vector<wabt::Type>{wabt::Type::I64}),
@@ -355,6 +360,24 @@ wabt::interp::HostFunc::Callback WasmNode::OakWaitOnChannels(wabt::interp::Envir
       }
     } else {
       results[0].set_i32(OakStatus::ERR_CHANNEL_CLOSED);
+    }
+    return wabt::interp::Result::Ok;
+  };
+}
+
+wabt::interp::HostFunc::Callback WasmNode::OakChannelClose(wabt::interp::Environment* env) {
+  return [this](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
+                const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
+    LogHostFunctionCall(func, args);
+
+    Handle channel_handle = args[0].get_i64();
+
+    if (CloseChannel(channel_handle)) {
+      LOG(INFO) << "Closed channel handle: " << channel_handle;
+      results[0].set_i32(OakStatus::OK);
+    } else {
+      LOG(WARNING) << "Invalid channel handle: " << channel_handle;
+      results[0].set_i32(OakStatus::ERR_BAD_HANDLE);
     }
     return wabt::interp::Result::Ok;
   };
