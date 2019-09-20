@@ -17,6 +17,8 @@
 #[macro_use]
 extern crate log;
 extern crate abitest_common;
+#[macro_use]
+extern crate expect;
 extern crate oak;
 extern crate oak_log;
 extern crate protobuf;
@@ -137,10 +139,7 @@ impl FrontendNode {
         new_in_channel.read_message(&mut buffer, &mut vec![])?;
         let serialized_rsp = String::from_utf8(buffer).unwrap();
         let internal_rsp: InternalMessage = serde_json::from_str(&serialized_rsp)?;
-        info!(
-            "received backend response via {}: {:?}",
-            handles[0], internal_rsp
-        );
+        expect_eq!("aaaxxx", internal_rsp.msg);
 
         // Drop the new read channel now we have got the response.
         oak::channel_close(handles[0]);

@@ -25,6 +25,7 @@ name = "abitest_frontend"
 version = "0.1.0"
 dependencies = [
  "abitest_common 0.1.0",
+ "expect 0.1.0",
  "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "oak 0.1.0",
  "oak_log 0.1.0",
@@ -307,6 +308,10 @@ dependencies = [
  "regex 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "termcolor 1.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "expect"
+version = "0.1.0"
 
 [[package]]
 name = "failure"

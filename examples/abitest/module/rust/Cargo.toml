@@ -9,6 +9,7 @@ crate-type = ["cdylib"]
 [dependencies]
 log = "*"
 abitest_common = { path = "../../abitest_common" }
+expect = { path = "../../../../third_party/expect" }
 oak = { path = "../../../../rust/oak" }
 oak_log = { path = "../../../../rust/oak_log" }
 protobuf = "*"
