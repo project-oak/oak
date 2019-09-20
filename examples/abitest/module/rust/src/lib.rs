@@ -26,8 +26,8 @@ mod proto;
 
 use abitest_common::InternalMessage;
 use oak::{GrpcResult, OakNode};
-use proto::abitest::{ExampleRequest, ExampleResponse};
-use proto::abitest_grpc::{dispatch, ExampleServiceNode};
+use proto::abitest::{ABITestRequest, ABITestResponse, ABITestResponse_TestResult};
+use proto::abitest_grpc::{dispatch, OakABITestServiceNode};
 use protobuf::ProtobufEnum;
 use std::io::Write;
 
@@ -69,12 +69,37 @@ impl oak::OakNode for FrontendNode {
     }
 }
 
-impl ExampleServiceNode for FrontendNode {
-    fn example_method(&mut self, req: ExampleRequest) -> GrpcResult<ExampleResponse> {
-        info!("Say hello to {}", req.greeting);
+impl OakABITestServiceNode for FrontendNode {
+    fn run_tests(&mut self, req: ABITestRequest) -> GrpcResult<ABITestResponse> {
+        info!("Run tests matching {}", req.filter);
+        let mut results = protobuf::RepeatedField::<ABITestResponse_TestResult>::new();
 
-        // Ask the backend to transmute the greeting.
-        let internal_req = InternalMessage { msg: req.greeting };
+        let mut result = ABITestResponse_TestResult::new();
+        result.set_name("BackendRoundTrip".to_string());
+        match self.test_backend_roundtrip() {
+            Ok(()) => result.set_success(true),
+            Err(status) => {
+                result.set_success(false);
+                result.set_details(format!(
+                    "Error code: {} message: {}",
+                    status.code, status.message
+                ));
+            }
+        }
+        results.push(result);
+
+        let mut res = ABITestResponse::new();
+        res.set_results(results);
+        Ok(res)
+    }
+}
+
+impl FrontendNode {
+    fn test_backend_roundtrip(&mut self) -> GrpcResult<()> {
+        // Ask the backend node to transmute something.
+        let internal_req = InternalMessage {
+            msg: "aaa".to_string(),
+        };
         let serialized_req = serde_json::to_string(&internal_req).unwrap();
         info!("send serialized message to backend: {}", serialized_req);
         self.backend_out
@@ -113,9 +138,6 @@ impl ExampleServiceNode for FrontendNode {
 
         // Drop the new read channel now we have got the response.
         oak::channel_close(handles[0]);
-
-        let mut res = ExampleResponse::new();
-        res.reply = format!("HELLO {}!", internal_rsp.msg);
-        Ok(res)
+        Ok(())
     }
 }

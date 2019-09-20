@@ -18,14 +18,19 @@ syntax = "proto3";
 
 package oak.examples.abitest;
 
-message ExampleRequest {
-  string greeting = 1;
+message ABITestRequest {
+  string filter = 1;
 }
 
-message ExampleResponse {
-  string reply = 1;
+message ABITestResponse {
+  message TestResult {
+    string name = 1;
+    bool success = 2;
+    string details = 3;
+  }
+  repeated TestResult results = 1;
 }
 
-service ExampleService {
-  rpc ExampleMethod(ExampleRequest) returns (ExampleResponse);
+service OakABITestService {
+  rpc RunTests(ABITestRequest) returns (ABITestResponse);
 }

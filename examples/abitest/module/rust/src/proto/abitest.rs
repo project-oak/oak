@@ -27,53 +27,53 @@ use protobuf::ProtobufEnum as ProtobufEnum_imported_for_functions;
 const _PROTOBUF_VERSION_CHECK: () = ::protobuf::VERSION_2_8_0;
 
 #[derive(PartialEq,Clone,Default)]
-pub struct ExampleRequest {
+pub struct ABITestRequest {
     // message fields
-    pub greeting: ::std::string::String,
+    pub filter: ::std::string::String,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
 }
 
-impl<'a> ::std::default::Default for &'a ExampleRequest {
-    fn default() -> &'a ExampleRequest {
-        <ExampleRequest as ::protobuf::Message>::default_instance()
+impl<'a> ::std::default::Default for &'a ABITestRequest {
+    fn default() -> &'a ABITestRequest {
+        <ABITestRequest as ::protobuf::Message>::default_instance()
     }
 }
 
-impl ExampleRequest {
-    pub fn new() -> ExampleRequest {
+impl ABITestRequest {
+    pub fn new() -> ABITestRequest {
         ::std::default::Default::default()
     }
 
-    // string greeting = 1;
+    // string filter = 1;
 
 
-    pub fn get_greeting(&self) -> &str {
-        &self.greeting
+    pub fn get_filter(&self) -> &str {
+        &self.filter
     }
-    pub fn clear_greeting(&mut self) {
-        self.greeting.clear();
+    pub fn clear_filter(&mut self) {
+        self.filter.clear();
     }
 
     // Param is passed by value, moved
-    pub fn set_greeting(&mut self, v: ::std::string::String) {
-        self.greeting = v;
+    pub fn set_filter(&mut self, v: ::std::string::String) {
+        self.filter = v;
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_greeting(&mut self) -> &mut ::std::string::String {
-        &mut self.greeting
+    pub fn mut_filter(&mut self) -> &mut ::std::string::String {
+        &mut self.filter
     }
 
     // Take field
-    pub fn take_greeting(&mut self) -> ::std::string::String {
-        ::std::mem::replace(&mut self.greeting, ::std::string::String::new())
+    pub fn take_filter(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.filter, ::std::string::String::new())
     }
 }
 
-impl ::protobuf::Message for ExampleRequest {
+impl ::protobuf::Message for ABITestRequest {
     fn is_initialized(&self) -> bool {
         true
     }
@@ -83,7 +83,7 @@ impl ::protobuf::Message for ExampleRequest {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
-                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.greeting)?;
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.filter)?;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -97,8 +97,8 @@ impl ::protobuf::Message for ExampleRequest {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        if !self.greeting.is_empty() {
-            my_size += ::protobuf::rt::string_size(1, &self.greeting);
+        if !self.filter.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.filter);
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
@@ -106,8 +106,8 @@ impl ::protobuf::Message for ExampleRequest {
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
-        if !self.greeting.is_empty() {
-            os.write_string(1, &self.greeting)?;
+        if !self.filter.is_empty() {
+            os.write_string(1, &self.filter)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -139,8 +139,8 @@ impl ::protobuf::Message for ExampleRequest {
         Self::descriptor_static()
     }
 
-    fn new() -> ExampleRequest {
-        ExampleRequest::new()
+    fn new() -> ABITestRequest {
+        ABITestRequest::new()
     }
 
     fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
@@ -152,12 +152,12 @@ impl ::protobuf::Message for ExampleRequest {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
                 fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
-                    "greeting",
-                    |m: &ExampleRequest| { &m.greeting },
-                    |m: &mut ExampleRequest| { &mut m.greeting },
+                    "filter",
+                    |m: &ABITestRequest| { &m.filter },
+                    |m: &mut ABITestRequest| { &mut m.filter },
                 ));
-                ::protobuf::reflect::MessageDescriptor::new::<ExampleRequest>(
-                    "ExampleRequest",
+                ::protobuf::reflect::MessageDescriptor::new::<ABITestRequest>(
+                    "ABITestRequest",
                     fields,
                     file_descriptor_proto()
                 )
@@ -165,85 +165,89 @@ impl ::protobuf::Message for ExampleRequest {
         }
     }
 
-    fn default_instance() -> &'static ExampleRequest {
-        static mut instance: ::protobuf::lazy::Lazy<ExampleRequest> = ::protobuf::lazy::Lazy {
+    fn default_instance() -> &'static ABITestRequest {
+        static mut instance: ::protobuf::lazy::Lazy<ABITestRequest> = ::protobuf::lazy::Lazy {
             lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const ExampleRequest,
+            ptr: 0 as *const ABITestRequest,
         };
         unsafe {
-            instance.get(ExampleRequest::new)
+            instance.get(ABITestRequest::new)
         }
     }
 }
 
-impl ::protobuf::Clear for ExampleRequest {
+impl ::protobuf::Clear for ABITestRequest {
     fn clear(&mut self) {
-        self.greeting.clear();
+        self.filter.clear();
         self.unknown_fields.clear();
     }
 }
 
-impl ::std::fmt::Debug for ExampleRequest {
+impl ::std::fmt::Debug for ABITestRequest {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         ::protobuf::text_format::fmt(self, f)
     }
 }
 
-impl ::protobuf::reflect::ProtobufValue for ExampleRequest {
+impl ::protobuf::reflect::ProtobufValue for ABITestRequest {
     fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
         ::protobuf::reflect::ProtobufValueRef::Message(self)
     }
 }
 
 #[derive(PartialEq,Clone,Default)]
-pub struct ExampleResponse {
+pub struct ABITestResponse {
     // message fields
-    pub reply: ::std::string::String,
+    pub results: ::protobuf::RepeatedField<ABITestResponse_TestResult>,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
 }
 
-impl<'a> ::std::default::Default for &'a ExampleResponse {
-    fn default() -> &'a ExampleResponse {
-        <ExampleResponse as ::protobuf::Message>::default_instance()
+impl<'a> ::std::default::Default for &'a ABITestResponse {
+    fn default() -> &'a ABITestResponse {
+        <ABITestResponse as ::protobuf::Message>::default_instance()
     }
 }
 
-impl ExampleResponse {
-    pub fn new() -> ExampleResponse {
+impl ABITestResponse {
+    pub fn new() -> ABITestResponse {
         ::std::default::Default::default()
     }
 
-    // string reply = 1;
+    // repeated .oak.examples.abitest.ABITestResponse.TestResult results = 1;
 
 
-    pub fn get_reply(&self) -> &str {
-        &self.reply
+    pub fn get_results(&self) -> &[ABITestResponse_TestResult] {
+        &self.results
     }
-    pub fn clear_reply(&mut self) {
-        self.reply.clear();
+    pub fn clear_results(&mut self) {
+        self.results.clear();
     }
 
     // Param is passed by value, moved
-    pub fn set_reply(&mut self, v: ::std::string::String) {
-        self.reply = v;
+    pub fn set_results(&mut self, v: ::protobuf::RepeatedField<ABITestResponse_TestResult>) {
+        self.results = v;
     }
 
     // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_reply(&mut self) -> &mut ::std::string::String {
-        &mut self.reply
+    pub fn mut_results(&mut self) -> &mut ::protobuf::RepeatedField<ABITestResponse_TestResult> {
+        &mut self.results
     }
 
     // Take field
-    pub fn take_reply(&mut self) -> ::std::string::String {
-        ::std::mem::replace(&mut self.reply, ::std::string::String::new())
+    pub fn take_results(&mut self) -> ::protobuf::RepeatedField<ABITestResponse_TestResult> {
+        ::std::mem::replace(&mut self.results, ::protobuf::RepeatedField::new())
     }
 }
 
-impl ::protobuf::Message for ExampleResponse {
+impl ::protobuf::Message for ABITestResponse {
     fn is_initialized(&self) -> bool {
+        for v in &self.results {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
         true
     }
 
@@ -252,7 +256,7 @@ impl ::protobuf::Message for ExampleResponse {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
-                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.reply)?;
+                    ::protobuf::rt::read_repeated_message_into(wire_type, is, &mut self.results)?;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -266,8 +270,239 @@ impl ::protobuf::Message for ExampleResponse {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        if !self.reply.is_empty() {
-            my_size += ::protobuf::rt::string_size(1, &self.reply);
+        for value in &self.results {
+            let len = value.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        };
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
+        for v in &self.results {
+            os.write_tag(1, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        };
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> ABITestResponse {
+        ABITestResponse::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
+        };
+        unsafe {
+            descriptor.get(|| {
+                let mut fields = ::std::vec::Vec::new();
+                fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<ABITestResponse_TestResult>>(
+                    "results",
+                    |m: &ABITestResponse| { &m.results },
+                    |m: &mut ABITestResponse| { &mut m.results },
+                ));
+                ::protobuf::reflect::MessageDescriptor::new::<ABITestResponse>(
+                    "ABITestResponse",
+                    fields,
+                    file_descriptor_proto()
+                )
+            })
+        }
+    }
+
+    fn default_instance() -> &'static ABITestResponse {
+        static mut instance: ::protobuf::lazy::Lazy<ABITestResponse> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const ABITestResponse,
+        };
+        unsafe {
+            instance.get(ABITestResponse::new)
+        }
+    }
+}
+
+impl ::protobuf::Clear for ABITestResponse {
+    fn clear(&mut self) {
+        self.results.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for ABITestResponse {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for ABITestResponse {
+    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
+        ::protobuf::reflect::ProtobufValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct ABITestResponse_TestResult {
+    // message fields
+    pub name: ::std::string::String,
+    pub success: bool,
+    pub details: ::std::string::String,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a ABITestResponse_TestResult {
+    fn default() -> &'a ABITestResponse_TestResult {
+        <ABITestResponse_TestResult as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl ABITestResponse_TestResult {
+    pub fn new() -> ABITestResponse_TestResult {
+        ::std::default::Default::default()
+    }
+
+    // string name = 1;
+
+
+    pub fn get_name(&self) -> &str {
+        &self.name
+    }
+    pub fn clear_name(&mut self) {
+        self.name.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_name(&mut self, v: ::std::string::String) {
+        self.name = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_name(&mut self) -> &mut ::std::string::String {
+        &mut self.name
+    }
+
+    // Take field
+    pub fn take_name(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.name, ::std::string::String::new())
+    }
+
+    // bool success = 2;
+
+
+    pub fn get_success(&self) -> bool {
+        self.success
+    }
+    pub fn clear_success(&mut self) {
+        self.success = false;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_success(&mut self, v: bool) {
+        self.success = v;
+    }
+
+    // string details = 3;
+
+
+    pub fn get_details(&self) -> &str {
+        &self.details
+    }
+    pub fn clear_details(&mut self) {
+        self.details.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_details(&mut self, v: ::std::string::String) {
+        self.details = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_details(&mut self) -> &mut ::std::string::String {
+        &mut self.details
+    }
+
+    // Take field
+    pub fn take_details(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.details, ::std::string::String::new())
+    }
+}
+
+impl ::protobuf::Message for ABITestResponse_TestResult {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.name)?;
+                },
+                2 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_bool()?;
+                    self.success = tmp;
+                },
+                3 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.details)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if !self.name.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.name);
+        }
+        if self.success != false {
+            my_size += 2;
+        }
+        if !self.details.is_empty() {
+            my_size += ::protobuf::rt::string_size(3, &self.details);
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
@@ -275,8 +510,14 @@ impl ::protobuf::Message for ExampleResponse {
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
-        if !self.reply.is_empty() {
-            os.write_string(1, &self.reply)?;
+        if !self.name.is_empty() {
+            os.write_string(1, &self.name)?;
+        }
+        if self.success != false {
+            os.write_bool(2, self.success)?;
+        }
+        if !self.details.is_empty() {
+            os.write_string(3, &self.details)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -308,8 +549,8 @@ impl ::protobuf::Message for ExampleResponse {
         Self::descriptor_static()
     }
 
-    fn new() -> ExampleResponse {
-        ExampleResponse::new()
+    fn new() -> ABITestResponse_TestResult {
+        ABITestResponse_TestResult::new()
     }
 
     fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
@@ -321,12 +562,22 @@ impl ::protobuf::Message for ExampleResponse {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
                 fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
-                    "reply",
-                    |m: &ExampleResponse| { &m.reply },
-                    |m: &mut ExampleResponse| { &mut m.reply },
+                    "name",
+                    |m: &ABITestResponse_TestResult| { &m.name },
+                    |m: &mut ABITestResponse_TestResult| { &mut m.name },
                 ));
-                ::protobuf::reflect::MessageDescriptor::new::<ExampleResponse>(
-                    "ExampleResponse",
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBool>(
+                    "success",
+                    |m: &ABITestResponse_TestResult| { &m.success },
+                    |m: &mut ABITestResponse_TestResult| { &mut m.success },
+                ));
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                    "details",
+                    |m: &ABITestResponse_TestResult| { &m.details },
+                    |m: &mut ABITestResponse_TestResult| { &mut m.details },
+                ));
+                ::protobuf::reflect::MessageDescriptor::new::<ABITestResponse_TestResult>(
+                    "ABITestResponse_TestResult",
                     fields,
                     file_descriptor_proto()
                 )
@@ -334,42 +585,47 @@ impl ::protobuf::Message for ExampleResponse {
         }
     }
 
-    fn default_instance() -> &'static ExampleResponse {
-        static mut instance: ::protobuf::lazy::Lazy<ExampleResponse> = ::protobuf::lazy::Lazy {
+    fn default_instance() -> &'static ABITestResponse_TestResult {
+        static mut instance: ::protobuf::lazy::Lazy<ABITestResponse_TestResult> = ::protobuf::lazy::Lazy {
             lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const ExampleResponse,
+            ptr: 0 as *const ABITestResponse_TestResult,
         };
         unsafe {
-            instance.get(ExampleResponse::new)
+            instance.get(ABITestResponse_TestResult::new)
         }
     }
 }
 
-impl ::protobuf::Clear for ExampleResponse {
+impl ::protobuf::Clear for ABITestResponse_TestResult {
     fn clear(&mut self) {
-        self.reply.clear();
+        self.name.clear();
+        self.success = false;
+        self.details.clear();
         self.unknown_fields.clear();
     }
 }
 
-impl ::std::fmt::Debug for ExampleResponse {
+impl ::std::fmt::Debug for ABITestResponse_TestResult {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         ::protobuf::text_format::fmt(self, f)
     }
 }
 
-impl ::protobuf::reflect::ProtobufValue for ExampleResponse {
+impl ::protobuf::reflect::ProtobufValue for ABITestResponse_TestResult {
     fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
         ::protobuf::reflect::ProtobufValueRef::Message(self)
     }
 }
 
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\rabitest.proto\x12\x14oak.examples.abitest\",\n\x0eExampleRequest\x12\
-    \x1a\n\x08greeting\x18\x01\x20\x01(\tR\x08greeting\"'\n\x0fExampleRespon\
-    se\x12\x14\n\x05reply\x18\x01\x20\x01(\tR\x05reply2n\n\x0eExampleService\
-    \x12\\\n\rExampleMethod\x12$.oak.examples.abitest.ExampleRequest\x1a%.oa\
-    k.examples.abitest.ExampleResponseb\x06proto3\
+    \n\rabitest.proto\x12\x14oak.examples.abitest\"(\n\x0eABITestRequest\x12\
+    \x16\n\x06filter\x18\x01\x20\x01(\tR\x06filter\"\xb3\x01\n\x0fABITestRes\
+    ponse\x12J\n\x07results\x18\x01\x20\x03(\x0b20.oak.examples.abitest.ABIT\
+    estResponse.TestResultR\x07results\x1aT\n\nTestResult\x12\x12\n\x04name\
+    \x18\x01\x20\x01(\tR\x04name\x12\x18\n\x07success\x18\x02\x20\x01(\x08R\
+    \x07success\x12\x18\n\x07details\x18\x03\x20\x01(\tR\x07details2l\n\x11O\
+    akABITestService\x12W\n\x08RunTests\x12$.oak.examples.abitest.ABITestReq\
+    uest\x1a%.oak.examples.abitest.ABITestResponseb\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {
