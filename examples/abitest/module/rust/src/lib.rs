@@ -79,7 +79,7 @@ impl OakABITestServiceNode for FrontendNode {
 
         // Manual registry of all tests.
         // TODO: Add some macro wizardry for registering test methods based on an attribute
-        type TestFn = fn(&mut FrontendNode) -> GrpcResult<()>;
+        type TestFn = fn(&mut FrontendNode) -> std::io::Result<()>;
         let mut tests: HashMap<&str, TestFn> = HashMap::new();
         tests.insert("BackendRoundtrip", FrontendNode::test_backend_roundtrip);
 
@@ -92,12 +92,9 @@ impl OakABITestServiceNode for FrontendNode {
             result.set_name(name.to_string());
             match testfn(self) {
                 Ok(()) => result.set_success(true),
-                Err(status) => {
+                Err(err) => {
                     result.set_success(false);
-                    result.set_details(format!(
-                        "Error code: {} message: {}",
-                        status.code, status.message
-                    ));
+                    result.set_details(format!("Error: {}", err));
                 }
             }
             results.push(result);
@@ -110,42 +107,36 @@ impl OakABITestServiceNode for FrontendNode {
 }
 
 impl FrontendNode {
-    fn test_backend_roundtrip(&mut self) -> GrpcResult<()> {
+    fn test_backend_roundtrip(&mut self) -> std::io::Result<()> {
         // Ask the backend node to transmute something.
         let internal_req = InternalMessage {
             msg: "aaa".to_string(),
         };
-        let serialized_req = serde_json::to_string(&internal_req).unwrap();
+        let serialized_req = serde_json::to_string(&internal_req)?;
         info!("send serialized message to backend: {}", serialized_req);
-        self.backend_out
-            .write_all(&serialized_req.into_bytes())
-            .unwrap();
+        self.backend_out.write_all(&serialized_req.into_bytes())?;
 
         // Block until there is a response from the backend available.
         match oak::wait_on_channels(&self.read_handles) {
             Ok(_ready_handles) => (),
-            Err(err) => {
-                let mut status = oak::proto::status::Status::new();
-                status.set_code(13); // INTERNAL
-                status.set_message(format!("Wait failure {}", err.value()));
-                return Err(status);
+            Err(status) => {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Wait failure {:?}", status),
+                ));
             }
         }
 
         let mut buffer = Vec::<u8>::with_capacity(256);
         let mut handles = Vec::with_capacity(1);
-        self.backend_in
-            .read_message(&mut buffer, &mut handles)
-            .unwrap();
+        self.backend_in.read_message(&mut buffer, &mut handles)?;
 
         // Expect to receive a channel read handle.
         // Read the actual response from the new channel.
         let mut new_in_channel = oak::ReceiveChannelHalf::new(handles[0]);
-        new_in_channel
-            .read_message(&mut buffer, &mut vec![])
-            .unwrap();
+        new_in_channel.read_message(&mut buffer, &mut vec![])?;
         let serialized_rsp = String::from_utf8(buffer).unwrap();
-        let internal_rsp: InternalMessage = serde_json::from_str(&serialized_rsp).unwrap();
+        let internal_rsp: InternalMessage = serde_json::from_str(&serialized_rsp)?;
         info!(
             "received backend response via {}: {:?}",
             handles[0], internal_rsp
