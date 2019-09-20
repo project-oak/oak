@@ -31,10 +31,11 @@ ABSL_FLAG(std::string, manager_address, "127.0.0.1:8888",
           "Address of the Oak Manager to connect to");
 ABSL_FLAG(std::vector<std::string>, module, std::vector<std::string>{},
           "Files containing the compiled WebAssembly modules (as 'backend,frontend')");
+ABSL_FLAG(std::string, test_filter, "", "Filter indicating which tests to run");
 
-using ::oak::examples::abitest::ExampleRequest;
-using ::oak::examples::abitest::ExampleResponse;
-using ::oak::examples::abitest::ExampleService;
+using ::oak::examples::abitest::ABITestRequest;
+using ::oak::examples::abitest::ABITestResponse;
+using ::oak::examples::abitest::OakABITestService;
 
 // Application config as text proto. Deliberately use non-default names for
 // nodes and ports to confirm that nothing has been accidentally hard-coded.
@@ -152,22 +153,32 @@ channels {
 }
 )raw";
 
-static void example_method(ExampleService::Stub* stub, const std::string& name) {
+static bool run_tests(OakABITestService::Stub* stub, const std::string& filter) {
   grpc::ClientContext context;
-  ExampleRequest request;
-  request.set_greeting(name);
-  LOG(INFO) << "Request: " << request.greeting();
-  ExampleResponse response;
-  grpc::Status status = stub->ExampleMethod(&context, request, &response);
+  ABITestRequest request;
+  request.set_filter(filter);
+  LOG(INFO) << "Run tests matching: '" << filter << "'";
+  ABITestResponse response;
+  grpc::Status status = stub->RunTests(&context, request, &response);
   if (!status.ok()) {
-    LOG(WARNING) << "Could not call ExampleMethod('" << name << "'): " << status.error_code()
-                 << ": " << status.error_message();
-    return;
+    LOG(WARNING) << "Could not call RunTests('" << filter << "'): " << status.error_code() << ": "
+                 << status.error_message();
+    return false;
   }
-  LOG(INFO) << "Response: " << response.reply();
+
+  bool success = true;
+  for (const auto& result : response.results()) {
+    LOG(INFO) << "[ " << (result.success() ? " OK " : "FAIL") << " ] " << result.name();
+    if (!result.success()) {
+      success = false;
+      LOG(INFO) << "    Details: " << result.details();
+    }
+  }
+  return success;
 }
 
 int main(int argc, char** argv) {
+  int rc = 0;
   absl::ParseCommandLine(argc, argv);
 
   std::vector<std::string> modules = absl::GetFlag(FLAGS_module);
@@ -223,11 +234,13 @@ int main(int argc, char** argv) {
   oak::ApplicationClient::InitializeAssertionAuthorities();
 
   // Connect to the newly created Oak Application.
-  auto stub = ExampleService::NewStub(grpc::CreateChannel(
+  auto stub = OakABITestService::NewStub(grpc::CreateChannel(
       addr.str(), asylo::EnclaveChannelCredentials(asylo::BidirectionalNullCredentialsOptions())));
 
   // Invoke the application.
-  example_method(stub.get(), "WORLD");
+  if (!run_tests(stub.get(), absl::GetFlag(FLAGS_test_filter))) {
+    rc = 1;
+  }
 
   // Request termination of the Oak Application.
   LOG(INFO) << "Terminating application id=" << application_id;
@@ -239,9 +252,10 @@ int main(int argc, char** argv) {
   LOG(INFO) << "Terminating Oak Application";
   status = manager_stub->TerminateApplication(&term_ctx, term_req, &term_rsp);
   if (!status.ok()) {
-    LOG(ERROR) << "Failed: " << status.error_code() << '/' << status.error_message() << '/'
-               << status.error_details();
+    LOG(ERROR) << "Termination failed: " << status.error_code() << '/' << status.error_message()
+               << '/' << status.error_details();
+    rc = 1;
   }
 
-  return 0;
+  return rc;
 }
