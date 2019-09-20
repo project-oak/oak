@@ -20,6 +20,7 @@ extern crate abitest_common;
 extern crate oak;
 extern crate oak_log;
 extern crate protobuf;
+extern crate regex;
 extern crate serde;
 
 mod proto;
@@ -29,6 +30,7 @@ use oak::{GrpcResult, OakNode};
 use proto::abitest::{ABITestRequest, ABITestResponse, ABITestResponse_TestResult};
 use proto::abitest_grpc::{dispatch, OakABITestServiceNode};
 use protobuf::ProtobufEnum;
+use std::collections::HashMap;
 use std::io::Write;
 
 struct FrontendNode {
@@ -72,21 +74,34 @@ impl oak::OakNode for FrontendNode {
 impl OakABITestServiceNode for FrontendNode {
     fn run_tests(&mut self, req: ABITestRequest) -> GrpcResult<ABITestResponse> {
         info!("Run tests matching {}", req.filter);
+        let filter = regex::Regex::new(&req.filter).unwrap();
         let mut results = protobuf::RepeatedField::<ABITestResponse_TestResult>::new();
 
-        let mut result = ABITestResponse_TestResult::new();
-        result.set_name("BackendRoundTrip".to_string());
-        match self.test_backend_roundtrip() {
-            Ok(()) => result.set_success(true),
-            Err(status) => {
-                result.set_success(false);
-                result.set_details(format!(
-                    "Error code: {} message: {}",
-                    status.code, status.message
-                ));
+        // Manual registry of all tests.
+        // TODO: Add some macro wizardry for registering test methods based on an attribute
+        type TestFn = fn(&mut FrontendNode) -> GrpcResult<()>;
+        let mut tests: HashMap<&str, TestFn> = HashMap::new();
+        tests.insert("BackendRoundtrip", FrontendNode::test_backend_roundtrip);
+
+        for (&name, &testfn) in &tests {
+            if !filter.is_match(name) {
+                continue;
             }
+            info!("running test {}", name);
+            let mut result = ABITestResponse_TestResult::new();
+            result.set_name(name.to_string());
+            match testfn(self) {
+                Ok(()) => result.set_success(true),
+                Err(status) => {
+                    result.set_success(false);
+                    result.set_details(format!(
+                        "Error code: {} message: {}",
+                        status.code, status.message
+                    ));
+                }
+            }
+            results.push(result);
         }
-        results.push(result);
 
         let mut res = ABITestResponse::new();
         res.set_results(results);
