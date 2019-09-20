@@ -25,22 +25,22 @@ load(
 )
 
 proto_library(
-    name = "multinode_proto",
-    srcs = ["multinode.proto"],
+    name = "abitest_proto",
+    srcs = ["abitest.proto"],
     deps = [
         "@com_google_protobuf//:empty_proto",
     ],
 )
 
 cc_proto_library(
-    name = "multinode_cc_proto",
-    deps = [":multinode_proto"],
+    name = "abitest_cc_proto",
+    deps = [":abitest_proto"],
 )
 
 cc_grpc_library(
-    name = "multinode_cc_grpc",
-    srcs = ["multinode_proto"],
+    name = "abitest_cc_grpc",
+    srcs = ["abitest_proto"],
     grpc_only = True,
     well_known_protos = True,
-    deps = ["multinode_cc_proto"],
+    deps = ["abitest_cc_proto"],
 )

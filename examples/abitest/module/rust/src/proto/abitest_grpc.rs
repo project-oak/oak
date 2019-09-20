@@ -25,13 +25,13 @@ use std::io::Write;
 
 // Oak Node server interface
 pub trait ExampleServiceNode {
-    fn example_method(&mut self, req: super::multinode::ExampleRequest) -> GrpcResult<super::multinode::ExampleResponse>;
+    fn example_method(&mut self, req: super::abitest::ExampleRequest) -> GrpcResult<super::abitest::ExampleResponse>;
 }
 
 // Oak Node gRPC method dispatcher
 pub fn dispatch(node: &mut dyn ExampleServiceNode, method: &str, req: &[u8], out: &mut oak::SendChannelHalf) {
     match method {
-        "/oak.examples.multinode.ExampleService/ExampleMethod" => {
+        "/oak.examples.abitest.ExampleService/ExampleMethod" => {
             let r = protobuf::parse_from_bytes(&req).unwrap();
             let mut result = oak::proto::grpc_encap::GrpcResponse::new();
             match node.example_method(r) {

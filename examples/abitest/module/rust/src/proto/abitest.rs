@@ -17,7 +17,7 @@
 #![allow(unsafe_code)]
 #![allow(unused_imports)]
 #![allow(unused_results)]
-//! Generated file from `multinode.proto`
+//! Generated file from `abitest.proto`
 
 use protobuf::Message as Message_imported_for_functions;
 use protobuf::ProtobufEnum as ProtobufEnum_imported_for_functions;
@@ -365,11 +365,11 @@ impl ::protobuf::reflect::ProtobufValue for ExampleResponse {
 }
 
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\x0fmultinode.proto\x12\x16oak.examples.multinode\",\n\x0eExampleReque\
-    st\x12\x1a\n\x08greeting\x18\x01\x20\x01(\tR\x08greeting\"'\n\x0fExample\
-    Response\x12\x14\n\x05reply\x18\x01\x20\x01(\tR\x05reply2r\n\x0eExampleS\
-    ervice\x12`\n\rExampleMethod\x12&.oak.examples.multinode.ExampleRequest\
-    \x1a'.oak.examples.multinode.ExampleResponseb\x06proto3\
+    \n\rabitest.proto\x12\x14oak.examples.abitest\",\n\x0eExampleRequest\x12\
+    \x1a\n\x08greeting\x18\x01\x20\x01(\tR\x08greeting\"'\n\x0fExampleRespon\
+    se\x12\x14\n\x05reply\x18\x01\x20\x01(\tR\x05reply2n\n\x0eExampleService\
+    \x12\\\n\rExampleMethod\x12$.oak.examples.abitest.ExampleRequest\x1a%.oa\
+    k.examples.abitest.ExampleResponseb\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {

@@ -18,8 +18,8 @@
 #include "absl/flags/parse.h"
 #include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
-#include "examples/multinode/proto/multinode.grpc.pb.h"
-#include "examples/multinode/proto/multinode.pb.h"
+#include "examples/abitest/proto/abitest.grpc.pb.h"
+#include "examples/abitest/proto/abitest.pb.h"
 #include "examples/utils/utils.h"
 #include "google/protobuf/text_format.h"
 #include "include/grpcpp/grpcpp.h"
@@ -32,9 +32,9 @@ ABSL_FLAG(std::string, manager_address, "127.0.0.1:8888",
 ABSL_FLAG(std::vector<std::string>, module, std::vector<std::string>{},
           "Files containing the compiled WebAssembly modules (as 'backend,frontend')");
 
-using ::oak::examples::multinode::ExampleRequest;
-using ::oak::examples::multinode::ExampleResponse;
-using ::oak::examples::multinode::ExampleService;
+using ::oak::examples::abitest::ExampleRequest;
+using ::oak::examples::abitest::ExampleResponse;
+using ::oak::examples::abitest::ExampleService;
 
 // Application config as text proto. Deliberately use non-default names for
 // nodes and ports to confirm that nothing has been accidentally hard-coded.

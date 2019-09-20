@@ -16,7 +16,7 @@
 
 syntax = "proto3";
 
-package oak.examples.multinode;
+package oak.examples.abitest;
 
 message ExampleRequest {
   string greeting = 1;
