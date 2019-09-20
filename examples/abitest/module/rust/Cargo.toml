@@ -1,5 +1,5 @@
 [package]
-name = "multinode_backend"
+name = "abitest_frontend"
 version = "0.1.0"
 authors = ["David Drysdale <drysdale@google.com>"]
 
@@ -8,9 +8,12 @@ crate-type = ["cdylib"]
 
 [dependencies]
 log = "*"
-multinode_common = { path = "../../multinode_common" }
+abitest_common = { path = "../../abitest_common" }
 oak = { path = "../../../../rust/oak" }
 oak_log = { path = "../../../../rust/oak_log" }
 protobuf = "*"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+
+[build-dependencies]
+protoc-rust-grpc = { path = "../../../../third_party/grpc-rust/protoc-rust-grpc" }

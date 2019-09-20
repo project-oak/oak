@@ -20,9 +20,9 @@ package(
 
 cc_binary(
     name = "client",
-    srcs = ["multinode.cc"],
+    srcs = ["abitest.cc"],
     deps = [
-        "//examples/multinode/proto:multinode_cc_grpc",
+        "//examples/abitest/proto:abitest_cc_grpc",
         "//examples/utils",
         "//oak/client:application_client",
         "//oak/common:app_config",

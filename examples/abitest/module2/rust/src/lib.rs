@@ -16,13 +16,13 @@
 
 #[macro_use]
 extern crate log;
-extern crate multinode_common;
+extern crate abitest_common;
 extern crate oak;
 extern crate oak_log;
 extern crate protobuf;
 extern crate serde;
 
-use multinode_common::InternalMessage;
+use abitest_common::InternalMessage;
 use protobuf::ProtobufEnum;
 use std::io::Write;
 
