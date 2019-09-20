@@ -28,6 +28,7 @@ extern crate serde;
 mod proto;
 
 use abitest_common::InternalMessage;
+use oak::proto::oak_api::OakStatus;
 use oak::{GrpcResult, OakNode};
 use proto::abitest::{ABITestRequest, ABITestResponse, ABITestResponse_TestResult};
 use proto::abitest_grpc::{dispatch, OakABITestServiceNode};
@@ -80,9 +81,15 @@ impl OakABITestServiceNode for FrontendNode {
         let mut results = protobuf::RepeatedField::<ABITestResponse_TestResult>::new();
 
         // Manual registry of all tests.
-        // TODO: Add some macro wizardry for registering test methods based on an attribute
+        // TODO(#237): Add some macro wizardry for registering test methods based on an attribute
         type TestFn = fn(&mut FrontendNode) -> std::io::Result<()>;
         let mut tests: HashMap<&str, TestFn> = HashMap::new();
+        tests.insert("ChannelFind", FrontendNode::test_channel_find);
+        tests.insert("ChannelCreate", FrontendNode::test_channel_create);
+        tests.insert("ChannelClose", FrontendNode::test_channel_close);
+        tests.insert("ChannelRead", FrontendNode::test_channel_read);
+        tests.insert("ChannelWrite", FrontendNode::test_channel_write);
+        tests.insert("WaitOnChannels", FrontendNode::test_channel_wait);
         tests.insert("BackendRoundtrip", FrontendNode::test_backend_roundtrip);
 
         for (&name, &testfn) in &tests {
@@ -108,7 +115,189 @@ impl OakABITestServiceNode for FrontendNode {
     }
 }
 
+// Helper for status conversion
+fn status_convert<T>(result: Result<T, OakStatus>) -> std::io::Result<T> {
+    match result {
+        Ok(t) => Ok(t),
+        Err(status) => Err(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            format!("failure {:?}", status),
+        )),
+    }
+}
+
 impl FrontendNode {
+    fn test_channel_find(&mut self) -> std::io::Result<()> {
+        // Idempotent result.
+        expect_eq!(self.grpc_in, oak::channel_find("gRPC_input"));
+        expect_eq!(self.grpc_out, oak::channel_find("gRPC_output"));
+        // Whitespace is significant.
+        expect_eq!(0, oak::channel_find(" gRPC_input"));
+        expect_eq!(0, oak::channel_find(" gRPC_input "));
+        expect_eq!(0, oak::channel_find("bogus"));
+        expect_eq!(0, oak::channel_find(""));
+        Ok(())
+    }
+
+    fn test_channel_create(&mut self) -> std::io::Result<()> {
+        let mut handles = Vec::<(oak::Handle, oak::Handle)>::new();
+        for _i in 0..500 {
+            match oak::channel_create() {
+                Ok(pair) => handles.push(pair),
+                Err(status) => {
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        format!("channel_create failure {:?}", status),
+                    ));
+                }
+            }
+        }
+        for (w, r) in handles {
+            expect_eq!(OakStatus::OK, oak::channel_close(r));
+            expect_eq!(OakStatus::OK, oak::channel_close(w));
+        }
+        Ok(())
+    }
+
+    fn test_channel_close(&mut self) -> std::io::Result<()> {
+        let (w, r) = oak::channel_create().unwrap();
+        expect_eq!(OakStatus::OK, oak::channel_close(w));
+        expect_eq!(OakStatus::OK, oak::channel_close(r));
+        expect_eq!(OakStatus::ERR_BAD_HANDLE, oak::channel_close(w));
+        expect_eq!(OakStatus::ERR_BAD_HANDLE, oak::channel_close(99999));
+
+        // Can close ends in either order.
+        let (w, r) = oak::channel_create().unwrap();
+        expect_eq!(OakStatus::OK, oak::channel_close(r));
+        expect_eq!(OakStatus::OK, oak::channel_close(w));
+        Ok(())
+    }
+
+    fn test_channel_read(&mut self) -> std::io::Result<()> {
+        let (w, r) = oak::channel_create().unwrap();
+        let mut out_channel = oak::SendChannelHalf::new(w);
+        let mut in_channel = oak::ReceiveChannelHalf::new(r);
+
+        let mut buffer = Vec::<u8>::with_capacity(5);
+        let mut handles = Vec::with_capacity(5);
+        in_channel.read_message(&mut buffer, &mut handles)?;
+        expect_eq!(0, buffer.len());
+        expect_eq!(0, handles.len());
+
+        // Single message.
+        let data = vec![0x01, 0x02, 0x03];
+        expect_eq!(3, out_channel.write(&data)?);
+        in_channel.read_message(&mut buffer, &mut handles)?;
+        expect_eq!(3, buffer.len());
+        expect_eq!(0, handles.len());
+
+        // Reading again zeroes the vector length.
+        in_channel.read_message(&mut buffer, &mut handles)?;
+        expect_eq!(0, buffer.len());
+        expect_eq!(0, handles.len());
+        expect_eq!(5, buffer.capacity());
+
+        // Now send and receive a bigger message.
+        let data = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
+        expect_eq!(8, out_channel.write(&data)?);
+        in_channel.read_message(&mut buffer, &mut handles)?;
+        expect_eq!(8, buffer.len());
+        expect_eq!(0, handles.len());
+        expect!(buffer.capacity() >= 8);
+
+        // Reading from an invalid handle gives an error.
+        let mut bogus_channel = oak::ReceiveChannelHalf::new(99999);
+        expect_matches!(
+            bogus_channel.read_message(&mut buffer, &mut handles),
+            Err(_)
+        );
+
+        expect_eq!(OakStatus::OK, oak::channel_close(w));
+        expect_eq!(OakStatus::OK, oak::channel_close(r));
+        Ok(())
+    }
+
+    fn test_channel_write(&mut self) -> std::io::Result<()> {
+        let (w, r) = oak::channel_create().unwrap();
+        let mut out_channel = oak::SendChannelHalf::new(w);
+
+        // Empty message.
+        let empty = vec![];
+        expect_eq!(0, out_channel.write(&empty)?);
+
+        // Single message.
+        let data = vec![0x01, 0x02, 0x03];
+        expect_eq!(3, out_channel.write(&data)?);
+
+        // Now send a bigger message.
+        let data = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
+        expect_eq!(8, out_channel.write(&data)?);
+
+        // Writing to an invalid handle gives an error.
+        let mut bogus_channel = oak::SendChannelHalf::new(99999);
+        expect_matches!(bogus_channel.write(&data), Err(_));
+
+        // Close the only read handle for the channel.
+        expect_eq!(OakStatus::OK, oak::channel_close(r));
+
+        // Can still write to the channel, even though it's not possible to get
+        // the message back.
+        expect_eq!(8, out_channel.write(&data)?);
+
+        expect_eq!(OakStatus::OK, oak::channel_close(w));
+        Ok(())
+    }
+
+    fn test_channel_wait(&mut self) -> std::io::Result<()> {
+        // Consume a lot of channel handles before we start, to ensure we're
+        // working with handles that don't fit in a single byte.
+        self.test_channel_create()?;
+
+        let (w1, r1) = oak::channel_create().unwrap();
+        let (w2, r2) = oak::channel_create().unwrap();
+        let mut out1 = oak::SendChannelHalf::new(w1);
+        let mut out2 = oak::SendChannelHalf::new(w2);
+        let mut in1 = oak::ReceiveChannelHalf::new(r1);
+
+        // Set up first channel with a pending message.
+        let data = vec![0x01, 0x02, 0x03];
+        expect_eq!(3, out1.write(&data)?);
+
+        expect_eq!(vec![r1], status_convert(oak::wait_on_channels(&[r1, r2]))?);
+        // No read so still ready (level triggered not edge triggered).
+        expect_eq!(vec![r1], status_convert(oak::wait_on_channels(&[r1, r2]))?);
+
+        expect_eq!(3, out2.write(&data)?);
+        expect_eq!(
+            vec![r1, r2],
+            status_convert(oak::wait_on_channels(&[r1, r2]))?
+        );
+
+        let mut buffer = Vec::<u8>::with_capacity(5);
+        let mut handles = Vec::with_capacity(5);
+        in1.read_message(&mut buffer, &mut handles)?;
+        expect_eq!(3, buffer.len());
+        expect_eq!(0, handles.len());
+
+        expect_eq!(vec![r2], status_convert(oak::wait_on_channels(&[r1, r2]))?);
+
+        // Read channels and nonsense handles are ignored.
+        expect_eq!(
+            vec![r2],
+            status_convert(oak::wait_on_channels(&[r1, r2, w1, w2]))?
+        );
+        expect_eq!(
+            vec![r2],
+            status_convert(oak::wait_on_channels(&[r1, r2, 9_999_999]))?
+        );
+
+        expect_eq!(OakStatus::OK, oak::channel_close(w1));
+        expect_eq!(OakStatus::OK, oak::channel_close(r1));
+        expect_eq!(OakStatus::OK, oak::channel_close(w2));
+        expect_eq!(OakStatus::OK, oak::channel_close(r2));
+        Ok(())
+    }
+
     fn test_backend_roundtrip(&mut self) -> std::io::Result<()> {
         // Ask the backend node to transmute something.
         let internal_req = InternalMessage {
