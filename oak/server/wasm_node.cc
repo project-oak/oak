@@ -19,6 +19,7 @@
 #include <iostream>
 #include <utility>
 
+#include "absl/base/internal/endian.h"
 #include "absl/memory/memory.h"
 #include "absl/time/clock.h"
 #include "absl/time/time.h"
@@ -55,32 +56,15 @@ static void WriteMemory(wabt::interp::Environment* env, const uint32_t offset,
 }
 
 static void WriteI32(wabt::interp::Environment* env, const uint32_t offset, const int32_t value) {
-  uint32_t v = static_cast<uint32_t>(value);
-  auto base = env->GetMemory(0)->data.begin() + offset;
-  base[0] = v & 0xff;
-  base[1] = (v >> 8) & 0xff;
-  base[2] = (v >> 16) & 0xff;
-  base[3] = (v >> 24) & 0xff;
+  return absl::little_endian::Store32(env->GetMemory(0)->data.data() + offset, value);
 }
 
 static void WriteU64(wabt::interp::Environment* env, const uint32_t offset, const uint64_t v) {
-  auto base = env->GetMemory(0)->data.begin() + offset;
-  base[0] = v & 0xff;
-  base[1] = (v >> 8) & 0xff;
-  base[2] = (v >> 16) & 0xff;
-  base[3] = (v >> 24) & 0xff;
-  base[4] = (v >> 32) & 0xff;
-  base[5] = (v >> 40) & 0xff;
-  base[6] = (v >> 48) & 0xff;
-  base[7] = (v >> 56) & 0xff;
+  return absl::little_endian::Store64(env->GetMemory(0)->data.data() + offset, v);
 }
 
 static uint64_t ReadU64(wabt::interp::Environment* env, const uint32_t offset) {
-  auto base = env->GetMemory(0)->data.begin() + offset;
-  return (static_cast<uint64_t>(base[0]) | (static_cast<uint64_t>(base[1]) << 8) |
-          (static_cast<uint64_t>(base[2]) << 16) | (static_cast<uint64_t>(base[3]) << 24) |
-          (static_cast<uint64_t>(base[4]) << 32) | (static_cast<uint64_t>(base[5]) << 40) |
-          (static_cast<uint64_t>(base[6]) << 48) | (static_cast<uint64_t>(base[7]) << 56));
+  return absl::little_endian::Load64(env->GetMemory(0)->data.data() + offset);
 }
 
 static void LogHostFunctionCall(const wabt::interp::HostFunc* func,
