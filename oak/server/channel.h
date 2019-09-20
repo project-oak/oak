@@ -165,7 +165,7 @@ std::unique_ptr<ChannelHalf> CloneChannelHalf(ChannelHalf* half);
 
 // Current readable status of a channel.
 struct ChannelStatus {
-  explicit ChannelStatus(uint64_t h) : handle(h) {}
+  explicit ChannelStatus(uint64_t h) : handle(h), ready(false) {}
   uint64_t handle;
   bool ready;
 };

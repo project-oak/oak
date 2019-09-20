@@ -432,10 +432,8 @@ wabt::interp::HostFunc::Callback WasmNode::OakWaitOnChannels(wabt::interp::Envir
     if (WaitOnChannels(&statuses)) {
       // Transcribe the ready bits into the notification space.
       for (uint32_t ii = 0; ii < count; ii++) {
-        if (statuses[ii]->ready) {
-          auto base = space + (9 * ii);
-          base[8] = 0x01;
-        }
+        auto base = space + (9 * ii);
+        base[8] = (statuses[ii]->ready ? 0x01 : 0x00);
       }
       results[0].set_i32(OakStatus::OK);
     } else {
