@@ -56,6 +56,7 @@ cc_library(
         "//oak/proto:grpc_encap_cc_proto",
         "//oak/proto:oak_api_cc_proto",
         "//oak/server:node_thread",
+        "@com_google_absl//absl/base:endian",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/time",
         "@com_google_absl//absl/types:span",
