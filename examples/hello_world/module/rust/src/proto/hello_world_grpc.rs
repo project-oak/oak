@@ -35,7 +35,8 @@ pub trait HelloWorldNode {
 }
 
 // Oak Node gRPC method dispatcher
-pub fn dispatch(node: &mut dyn HelloWorldNode, method: &str, req: &[u8], out: &mut oak::WriteHandle) {
+pub fn dispatch(node: &mut dyn HelloWorldNode, method: &str, req: &[u8], out_handle: oak::WriteHandle) {
+    let mut out = oak::io::Channel::new(out_handle);
     match method {
         "/oak.examples.hello_world.HelloWorld/SayHello" => {
             let r = protobuf::parse_from_bytes(&req).unwrap();
@@ -49,20 +50,20 @@ pub fn dispatch(node: &mut dyn HelloWorldNode, method: &str, req: &[u8], out: &m
                 Err(status) => result.set_status(status),
             }
             result.set_last(true);
-            result.write_to_writer(out).unwrap();
+            result.write_to_writer(&mut out).unwrap();
         }
         "/oak.examples.hello_world.HelloWorld/LotsOfReplies" => {
             let r = protobuf::parse_from_bytes(&req).unwrap();
             let mut result = oak::proto::grpc_encap::GrpcResponse::new();
             {
-                let mut w = grpc::ChannelResponseWriter{channel: out};
+                let mut w = grpc::ChannelResponseWriter{channel: &mut out};
                 match node.lots_of_replies(r, &mut w) {
                     Ok(_) => {},
                     Err(status) => { result.set_status(status); },
                 }
             }
             result.set_last(true);
-            result.write_to_writer(out).unwrap();
+            result.write_to_writer(&mut out).unwrap();
         }
         "/oak.examples.hello_world.HelloWorld/LotsOfGreetings" => {
             let rr = vec![protobuf::parse_from_bytes(&req).unwrap()];
@@ -76,20 +77,20 @@ pub fn dispatch(node: &mut dyn HelloWorldNode, method: &str, req: &[u8], out: &m
                 Err(status) => result.set_status(status),
             }
             result.set_last(true);
-            result.write_to_writer(out).unwrap();
+            result.write_to_writer(&mut out).unwrap();
         }
         "/oak.examples.hello_world.HelloWorld/BidiHello" => {
             let rr = vec![protobuf::parse_from_bytes(&req).unwrap()];
             let mut result = oak::proto::grpc_encap::GrpcResponse::new();
             {
-                let mut w = grpc::ChannelResponseWriter{channel: out};
+                let mut w = grpc::ChannelResponseWriter{channel: &mut out};
                 match node.bidi_hello(rr, &mut w) {
                     Ok(_) => {},
                     Err(status) => { result.set_status(status); },
                 }
             }
             result.set_last(true);
-            result.write_to_writer(out).unwrap();
+            result.write_to_writer(&mut out).unwrap();
         }
         _ => {
             writeln!(oak::logging_channel(), "unknown method name: {}", method).unwrap();

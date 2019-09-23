@@ -24,7 +24,6 @@ extern crate serde;
 
 use abitest_common::InternalMessage;
 use protobuf::ProtobufEnum;
-use std::io::Write;
 
 #[no_mangle]
 pub extern "C" fn oak_main() -> i32 {
@@ -41,9 +40,9 @@ pub extern "C" fn oak_main() -> i32 {
         let out_handle = oak::channel_find("to_frontend");
         info!("backend node: in={}, out={}", in_handle, out_handle);
 
-        let handles = vec![in_handle];
         let in_channel = oak::ReadHandle { handle: in_handle };
         let out_channel = oak::WriteHandle { handle: out_handle };
+        let handles = vec![in_channel];
         loop {
             match oak::wait_on_channels(&handles) {
                 Ok(_ready_handles) => (),
@@ -63,25 +62,22 @@ pub extern "C" fn oak_main() -> i32 {
 
             // Create a new channel and write the response into it.
             let (new_write, new_read) = oak::channel_create().unwrap();
-            let mut new_out_channel = oak::WriteHandle { handle: new_write };
             let internal_rsp = InternalMessage {
                 msg: internal_req.msg + "xxx",
             };
             let serialized_rsp = serde_json::to_string(&internal_rsp).unwrap();
             info!(
-                "send serialized message to new channel {}: {}",
+                "send serialized message to new channel {:?}: {}",
                 new_write, serialized_rsp
             );
-            new_out_channel
-                .write_all(&serialized_rsp.into_bytes())
-                .unwrap();
+            oak::channel_write(new_write, &serialized_rsp.into_bytes(), &[]);
             // Drop the write half now it has been written to.
-            oak::channel_close(new_write);
+            oak::channel_close(new_write.handle);
 
             // Send a copy of the read half of the new channel back to the frontend,
             // then close our handle to the read half.
-            oak::channel_write(out_channel, &[], &[new_read]);
-            oak::channel_close(new_read);
+            oak::channel_write(out_channel, &[], &[new_read.handle]);
+            oak::channel_close(new_read.handle);
         }
     }) {
         Ok(rc) => rc,

@@ -23,10 +23,9 @@ extern crate protobuf;
 use byteorder::WriteBytesExt;
 use proto::oak_api::OakStatus;
 use protobuf::ProtobufEnum;
-use std::io;
-use std::io::Write;
 
 pub mod grpc;
+pub mod io;
 pub mod proto;
 pub mod storage;
 #[cfg(test)]
@@ -53,17 +52,19 @@ pub struct ReadHandle {
 /// Wrapper for a handle to the send half of a channel.
 ///
 /// For use when the underlying [`Handle`] is known to be for a send half.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct WriteHandle {
     pub handle: Handle,
 }
 
 // Build a chunk of memory that is suitable for passing to wasm::wait_on_channels,
 // holding the given collection of channel handles.
-fn new_handle_space(handles: &[Handle]) -> Vec<u8> {
+fn new_handle_space(handles: &[ReadHandle]) -> Vec<u8> {
     let mut space = Vec::with_capacity(wasm::SPACE_BYTES_PER_HANDLE * handles.len());
     for handle in handles {
-        space.write_u64::<byteorder::LittleEndian>(*handle).unwrap();
+        space
+            .write_u64::<byteorder::LittleEndian>(handle.handle)
+            .unwrap();
         space.push(0x00);
     }
     space
@@ -84,7 +85,7 @@ fn prep_handle_space(space: &mut [u8]) {
 /// This is a convenience wrapper around the [`wasm::wait_on_channels`] host
 /// function. This version is easier to use in Rust but is less efficient
 /// (because the notification space is re-created on each invocation).
-pub fn wait_on_channels(handles: &[Handle]) -> Result<Vec<Handle>, OakStatus> {
+pub fn wait_on_channels(handles: &[ReadHandle]) -> Result<Vec<ReadHandle>, OakStatus> {
     let mut space = new_handle_space(handles);
     unsafe {
         let status = wasm::wait_on_channels(space.as_mut_ptr(), handles.len() as u32);
@@ -182,13 +183,13 @@ pub fn channel_write(half: WriteHandle, buf: &[u8], handles: &[Handle]) -> OakSt
 
 /// Create a new unidirectional channel.
 ///
-/// On success, returns [`Handle`] values for the write and read halves
-/// (respectively).
-pub fn channel_create() -> Result<(Handle, Handle), OakStatus> {
-    let mut write: Handle = 0;
-    let mut read: Handle = 0;
+/// On success, returns [`WriteHandle`] and a [`ReadHandle`] values for the
+/// write and read halves (respectively).
+pub fn channel_create() -> Result<(WriteHandle, ReadHandle), OakStatus> {
+    let mut write = WriteHandle { handle: 0 };
+    let mut read = ReadHandle { handle: 0 };
     match OakStatus::from_i32(unsafe {
-        wasm::channel_create(&mut write as *mut u64, &mut read as *mut u64) // @@@ check endianness
+        wasm::channel_create(&mut write.handle as *mut u64, &mut read.handle as *mut u64)
     }) {
         Some(OakStatus::OK) => Ok((write, read)),
         Some(err) => Err(err),
@@ -210,67 +211,16 @@ pub fn channel_find(port_name: &str) -> Handle {
     unsafe { wasm::channel_find(port_name.as_ptr(), port_name.len()) }
 }
 
-/// Map an [`OakStatus`] value to the nearest available [`std::io::Result`].
-fn result_from_status<T>(status: Option<OakStatus>, val: T) -> std::io::Result<T> {
-    match status {
-        Some(OakStatus::OAK_STATUS_UNSPECIFIED) => Err(io::Error::new(
-            io::ErrorKind::Other,
-            "Unspecified Oak status value",
-        )),
-        Some(OakStatus::OK) => Ok(val),
-        Some(OakStatus::ERR_BAD_HANDLE) => {
-            Err(io::Error::new(io::ErrorKind::NotConnected, "Bad handle"))
-        }
-        Some(OakStatus::ERR_INVALID_ARGS) => Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "Invalid arguments",
-        )),
-        Some(OakStatus::ERR_CHANNEL_CLOSED) => Err(io::Error::new(
-            io::ErrorKind::ConnectionReset,
-            "Channel closed",
-        )),
-        Some(OakStatus::ERR_BUFFER_TOO_SMALL) => Err(io::Error::new(
-            io::ErrorKind::UnexpectedEof,
-            "Buffer too small",
-        )),
-        Some(OakStatus::ERR_HANDLE_SPACE_TOO_SMALL) => Err(io::Error::new(
-            io::ErrorKind::UnexpectedEof,
-            "Handle space too small",
-        )),
-        Some(OakStatus::ERR_OUT_OF_RANGE) => {
-            Err(io::Error::new(io::ErrorKind::NotConnected, "Out of range"))
-        }
-        Some(OakStatus::ERR_INTERNAL) => {
-            Err(io::Error::new(io::ErrorKind::Other, "Internal error"))
-        }
-        None => Err(io::Error::new(
-            io::ErrorKind::Other,
-            "Unknown Oak status value",
-        )),
-    }
-}
-
-/// Implement the [`Write`] trait for [`WriteHandle`]s, to allow logging and use
-/// of protobuf serialization methods.
-impl Write for WriteHandle {
-    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        let status = channel_write(*self, buf, &[]);
-        result_from_status(Some(status), buf.len())
-    }
-    fn flush(&mut self) -> std::io::Result<()> {
-        Ok(())
-    }
-}
-
 /// Return an instance of the [`std::io::Write`] trait that emits messages to
 /// the Node's logging channel.
 ///
 /// Assumes that the Node has a pre-configured channel to the logging
 /// pseudo-Node that is identified by the default port name (`"log"`).
-pub fn logging_channel() -> impl Write {
-    let logging_channel = WriteHandle {
+pub fn logging_channel() -> impl std::io::Write {
+    let logging_handle = WriteHandle {
         handle: channel_find("log"),
     };
+    let logging_channel = io::Channel::new(logging_handle);
     // Only flush logging channel on newlines.
     std::io::LineWriter::new(logging_channel)
 }

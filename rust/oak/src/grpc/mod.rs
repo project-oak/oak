@@ -32,7 +32,7 @@ pub trait ResponseWriter<T: protobuf::Message> {
 /// into `GrpcResponse` wrapper messages and writes serialized versions to a
 /// (mutably borrowed) send channel.
 pub struct ChannelResponseWriter<'a> {
-    pub channel: &'a mut WriteHandle,
+    pub channel: &'a mut crate::io::Channel,
 }
 
 impl<'a, T> ResponseWriter<T> for ChannelResponseWriter<'a>
@@ -73,7 +73,7 @@ pub trait OakNode {
     /// response.
     ///
     /// [`GrpcResponse`]: crate::proto::grpc_encap::GrpcResponse
-    fn invoke(&mut self, method: &str, req: &[u8], out: &mut WriteHandle);
+    fn invoke(&mut self, method: &str, req: &[u8], out: WriteHandle);
 }
 
 /// Perform a gRPC event loop for a Node.
@@ -85,25 +85,22 @@ pub trait OakNode {
 ///
 /// [`invoke`]: OakNode::invoke
 /// [`GrpcRequest`]: crate::proto::grpc_encap::GrpcRequest
-pub fn event_loop<T: OakNode>(mut node: T, grpc_in_handle: Handle, grpc_out_handle: Handle) -> i32 {
+pub fn event_loop<T: OakNode>(
+    mut node: T,
+    grpc_in_handle: ReadHandle,
+    grpc_out_handle: WriteHandle,
+) -> i32 {
     info!(
-        "start event loop for node with handles in:{} out:{}",
+        "start event loop for node with handles in:{:?} out:{:?}",
         grpc_in_handle, grpc_out_handle
     );
-    if grpc_in_handle == 0 || grpc_out_handle == 0 {
+    if grpc_in_handle.handle == 0 || grpc_out_handle.handle == 0 {
         return OakStatus::ERR_CHANNEL_CLOSED.value();
     }
     crate::set_panic_hook();
 
     let read_handles = vec![grpc_in_handle];
     let mut space = crate::new_handle_space(&read_handles);
-
-    let grpc_in_channel = ReadHandle {
-        handle: grpc_in_handle,
-    };
-    let mut grpc_out_channel = WriteHandle {
-        handle: grpc_out_handle,
-    };
 
     loop {
         // Block until there is a message to read on an input channel.
@@ -119,7 +116,7 @@ pub fn event_loop<T: OakNode>(mut node: T, grpc_in_handle: Handle, grpc_out_hand
 
         let mut buf = Vec::<u8>::with_capacity(1024);
         let mut handles = Vec::<Handle>::with_capacity(1);
-        crate::channel_read(grpc_in_channel, &mut buf, &mut handles);
+        crate::channel_read(grpc_in_handle, &mut buf, &mut handles);
         if buf.is_empty() {
             info!("no pending message; poll again");
             continue;
@@ -134,7 +131,7 @@ pub fn event_loop<T: OakNode>(mut node: T, grpc_in_handle: Handle, grpc_out_hand
         node.invoke(
             &req.method_name,
             req.get_req_msg().value.as_slice(),
-            &mut grpc_out_channel,
+            grpc_out_handle,
         );
     }
 }

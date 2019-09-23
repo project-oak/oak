@@ -179,7 +179,7 @@ impl<'a> MethodGen<'a> {
             );
         } else if self.proto.get_server_streaming() {
             w.block("{", "}", |w| {
-                w.write_line("let mut w = grpc::ChannelResponseWriter{channel: out};");
+                w.write_line("let mut w = grpc::ChannelResponseWriter{channel: &mut out};");
                 w.block(
                     &format!("match node.{}({}, &mut w) {{", self.snake_name(), param_in),
                     "}",
@@ -204,7 +204,7 @@ impl<'a> MethodGen<'a> {
             );
         }
         w.write_line("result.set_last(true);");
-        w.write_line("result.write_to_writer(out).unwrap();");
+        w.write_line("result.write_to_writer(&mut out).unwrap();");
     }
 }
 
@@ -258,7 +258,8 @@ impl<'a> ServiceGen<'a> {
     }
 
     fn write_dispatcher(&self, w: &mut CodeWriter) {
-        w.pub_fn(&format!("dispatch(node: &mut dyn {}, method: &str, req: &[u8], out: &mut oak::WriteHandle)", self.server_intf_name()), |w| {
+        w.pub_fn(&format!("dispatch(node: &mut dyn {}, method: &str, req: &[u8], out_handle: oak::WriteHandle)", self.server_intf_name()), |w| {
+            w.write_line("let mut out = oak::io::Channel::new(out_handle);");
             w.block("match method {", "};", |w| {
                 for method in &self.methods {
                     let full_path = format!("{}/{}", method.service_path, method.proto.get_name());
