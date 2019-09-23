@@ -47,7 +47,9 @@ class OakNode {
   Handle AddChannel(std::unique_ptr<ChannelHalf> half) LOCKS_EXCLUDED(mu_);
 
   // Return a borrowed reference to the channel half identified by the given
-  // handle (or nullptr if the handle is not recognized).
+  // handle (or nullptr if the handle is not recognized).  Caller is responsible
+  // for ensuring that the borrowed reference does not out-live the owned
+  // channel.
   ChannelHalf* BorrowChannel(Handle handle) LOCKS_EXCLUDED(mu_);
   MessageChannelReadHalf* BorrowReadChannel(Handle handle) LOCKS_EXCLUDED(mu_);
   MessageChannelWriteHalf* BorrowWriteChannel(Handle handle) LOCKS_EXCLUDED(mu_);
@@ -57,7 +59,8 @@ class OakNode {
 
   // Wait on the given channel handles, modifying the contents of the passed-in
   // vector.  Returns a boolean indicating whether the wait finished due to node
-  // termination.
+  // termination.  Caller is responsible for ensuring that none of the waited-on
+  // channels are closed during the wait operation.
   bool WaitOnChannels(std::vector<std::unique_ptr<ChannelStatus>>* statuses);
 
  protected:
