@@ -30,6 +30,7 @@ pub mod proto;
 pub mod storage;
 #[cfg(test)]
 mod tests;
+pub mod wasm;
 
 #[cfg(test)]
 #[macro_use]
@@ -110,33 +111,6 @@ fn result_from_status<T>(status: Option<OakStatus>, val: T) -> std::io::Result<T
     }
 }
 
-mod wasm {
-    // See https://rustwasm.github.io/book/reference/js-ffi.html
-    #[link(wasm_import_module = "oak")]
-    extern "C" {
-        pub fn wait_on_channels(buf: *mut u8, count: u32) -> i32;
-        pub fn channel_read(
-            handle: u64,
-            buf: *mut u8,
-            size: usize,
-            actual_size: *mut u32,
-            handle_buf: *mut u8,
-            handle_count: usize,
-            actual_handle_count: *mut u32,
-        ) -> i32;
-        pub fn channel_write(
-            handle: u64,
-            buf: *const u8,
-            size: usize,
-            handle_buf: *const u8,
-            handle_count: usize,
-        ) -> i32;
-        pub fn channel_create(write: *mut u64, read: *mut u64) -> i32;
-        pub fn channel_close(handle: u64) -> i32;
-        pub fn channel_find(buf: *const u8, len: usize) -> u64;
-    }
-}
-
 /// Create a new unidirectional channel.
 ///
 /// On success, returns [`Handle`] values for the write and read halves
@@ -167,16 +141,10 @@ pub fn channel_find(port_name: &str) -> Handle {
     unsafe { wasm::channel_find(port_name.as_ptr(), port_name.len()) }
 }
 
-/// Number of bytes needed per-handle for channel readiness notifications.
-///
-/// The notification space consists of the channel handle (as a little-endian
-/// u64) followed by a single byte indicating the channel readiness.
-pub const SPACE_BYTES_PER_HANDLE: usize = 9;
-
 // Build a chunk of memory that is suitable for passing to wasm::wait_on_channels,
 // holding the given collection of channel handles.
 fn new_handle_space(handles: &[Handle]) -> Vec<u8> {
-    let mut space = Vec::with_capacity(SPACE_BYTES_PER_HANDLE * handles.len());
+    let mut space = Vec::with_capacity(wasm::SPACE_BYTES_PER_HANDLE * handles.len());
     for handle in handles {
         space.write_u64::<byteorder::LittleEndian>(*handle).unwrap();
         space.push(0x00);
@@ -189,7 +157,7 @@ fn new_handle_space(handles: &[Handle]) -> Vec<u8> {
 fn prep_handle_space(space: &mut [u8]) {
     let count = space.len() / 8;
     for i in 0..count {
-        space[i * SPACE_BYTES_PER_HANDLE + (SPACE_BYTES_PER_HANDLE - 1)] = 0;
+        space[i * wasm::SPACE_BYTES_PER_HANDLE + (wasm::SPACE_BYTES_PER_HANDLE - 1)] = 0;
     }
 }
 
@@ -210,7 +178,7 @@ pub fn wait_on_channels(handles: &[Handle]) -> Result<Vec<Handle>, OakStatus> {
         }
         let mut results = Vec::with_capacity(handles.len());
         for i in 0..handles.len() {
-            if space[i * SPACE_BYTES_PER_HANDLE + (SPACE_BYTES_PER_HANDLE - 1)] != 0 {
+            if space[i * wasm::SPACE_BYTES_PER_HANDLE + (wasm::SPACE_BYTES_PER_HANDLE - 1)] != 0 {
                 results.push(handles[i]);
             }
         }
