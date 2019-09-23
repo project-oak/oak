@@ -253,6 +253,9 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelRead(wabt::interp::Environm
     uint32_t size = args[2].get_i32();
     uint32_t size_offset = args[3].get_i32();
 
+    // Borrowing a reference to the channel is safe because the node is single
+    // threaded and so cannot invoke channel_close while channel_read is
+    // ongoing.
     MessageChannelReadHalf* channel = BorrowReadChannel(channel_handle);
     if (channel == nullptr) {
       LOG(WARNING) << "Invalid channel handle: " << channel_handle;
@@ -291,6 +294,9 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelWrite(wabt::interp::Environ
     uint32_t offset = args[1].get_i32();
     uint32_t size = args[2].get_i32();
 
+    // Borrowing a reference to the channel is safe because the Node is single
+    // threaded and so cannot invoke channel_close while channel_write is
+    // ongoing.
     MessageChannelWriteHalf* channel = BorrowWriteChannel(channel_handle);
     if (channel == nullptr) {
       LOG(WARNING) << "Invalid channel handle: " << channel_handle;
