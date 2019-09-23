@@ -148,6 +148,22 @@ pub fn channel_read(handle: Handle, buf: &mut Vec<u8>, handles: &mut Vec<Handle>
     OakStatus::ERR_INTERNAL
 }
 
+/// Write a message to a channel.
+pub fn channel_write(handle: Handle, buf: &[u8], handles: &[Handle]) -> OakStatus {
+    match OakStatus::from_i32(unsafe {
+        wasm::channel_write(
+            handle,
+            buf.as_ptr(),
+            buf.len(),
+            handles.as_ptr() as *const u8, // Wasm spec defines this as little-endian
+            handles.len(),
+        )
+    }) {
+        Some(s) => s,
+        None => OakStatus::ERR_INTERNAL,
+    }
+}
+
 /// Create a new unidirectional channel.
 ///
 /// On success, returns [`Handle`] values for the write and read halves
@@ -229,18 +245,7 @@ impl SendChannelHalf {
     }
 
     pub fn write_message(&mut self, buf: &[u8], handles: &[Handle]) -> std::io::Result<()> {
-        result_from_status(
-            OakStatus::from_i32(unsafe {
-                wasm::channel_write(
-                    self.handle,
-                    buf.as_ptr(),
-                    buf.len(),
-                    handles.as_ptr() as *const u8, // Wasm spec defines this as little-endian
-                    handles.len(),
-                )
-            }),
-            (),
-        )
+        result_from_status(Some(channel_write(self.handle, buf, handles)), ())
     }
 }
 
