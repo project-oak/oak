@@ -14,7 +14,10 @@
 // limitations under the License.
 //
 
-//! A logger that send output to an Oak logging channel.
+//! A logger that sends output to an Oak logging channel, for use with
+//! the [log facade].
+//!
+//! [log facade]: https://crates.io/crates/log
 
 extern crate log;
 extern crate oak;
@@ -52,10 +55,26 @@ impl Log for OakChannelLogger {
     fn flush(&self) {}
 }
 
+/// Initialize Node-wide default logging.
+///
+/// Uses the default level (`Debug`) and the default pre-defined port name
+/// (`"log"`) for the logging channel from the current Node.
+///
+/// # Panics
+///
+/// Panics if a logger has already been set.
 pub fn init_default() {
     init(Level::Debug, oak::channel_find("log")).unwrap();
 }
 
+/// Initialize Node-wide logging via a channel.
+///
+/// Initialize logging at the given level, using the send channel half
+/// identified by the given port name.
+///
+/// # Errors
+///
+/// An error is returned if a logger has already been set.
 pub fn init(level: Level, channel_handle: oak::Handle) -> Result<(), SetLoggerError> {
     log::set_boxed_logger(Box::new(OakChannelLogger { channel_handle }))?;
     log::set_max_level(level.to_level_filter());
