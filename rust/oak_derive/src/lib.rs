@@ -45,7 +45,7 @@ use quote::quote;
 ///
 /// impl OakNode for Node {
 ///     fn new() -> Self { Node }
-///     fn invoke(&mut self, method: &str, req: &[u8], out: &mut oak::WriteHandle) { /* ... */ }
+///     fn invoke(&mut self, method: &str, req: &[u8], out: oak::WriteHandle) { /* ... */ }
 /// }
 /// ```
 #[proc_macro_derive(OakExports)]
@@ -65,7 +65,9 @@ pub fn derive_oak_exports(input: TokenStream) -> TokenStream {
             // https://doc.rust-lang.org/nomicon/ffi.html#ffi-and-panics
             match std::panic::catch_unwind(||{
                 let mut node = <#name>::new();
-                oak::grpc::event_loop(node, oak::channel_find("grpc_in"), oak::channel_find("grpc_out"))
+                oak::grpc::event_loop(node,
+                                      oak::ReadHandle{ handle:oak::channel_find("grpc_in")},
+                                      oak::WriteHandle{ handle:oak::channel_find("grpc_out")})
             }) {
                 Ok(rc) => rc,
                 Err(_) => oak::proto::oak_api::OakStatus::ERR_INTERNAL.value(),

@@ -27,7 +27,7 @@ impl oak::grpc::OakNode for PanicNode {
     fn new() -> Self {
         PanicNode
     }
-    fn invoke(&mut self, _method: &str, _req: &[u8], _out: &mut oak::WriteHandle) {
+    fn invoke(&mut self, _method: &str, _req: &[u8], _out: oak::WriteHandle) {
         println!("PanicNode invoked, about to panic");
         panic!("PanicNode invoked!");
     }
@@ -44,7 +44,7 @@ fn test_panic_catch() {
     grpc_req.set_last(true);
 
     // Serialize the request into a channel.
-    let mut channel = oak::WriteHandle { handle: 2 };
+    let mut channel = oak::io::Channel::new(oak::WriteHandle { handle: 2 });
     grpc_req.write_to_writer(&mut channel).unwrap();
 
     assert_eq!(

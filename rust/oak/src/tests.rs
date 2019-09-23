@@ -17,12 +17,7 @@
 extern crate oak_tests;
 
 use crate::*;
-
-#[test]
-fn test_result_from_status() {
-    assert_matches!(result_from_status(Some(OakStatus::OK), 12), Ok(12));
-    assert_matches!(result_from_status(None, 12), Err(_));
-}
+use std::io::Write;
 
 #[test]
 fn test_write_message() {
@@ -102,7 +97,7 @@ fn test_read_message_internal_failure() {
 
 #[test]
 fn test_handle_space() {
-    let h = vec![1 as Handle, 2 as Handle];
+    let h = vec![ReadHandle { handle: 1 }, ReadHandle { handle: 2 }];
     let data = [
         0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00,

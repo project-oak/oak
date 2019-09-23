@@ -28,7 +28,7 @@ use protobuf::Message;
 
 /// Local representation of the connection to an external storage service.
 pub struct Storage {
-    write_channel: crate::WriteHandle,
+    write_channel: crate::io::Channel,
     wait_space: Vec<u8>,
     read_channel: crate::ReadHandle,
 }
@@ -46,14 +46,17 @@ impl Storage {
     /// Create a `Storage` instance using the given port names for pre-defined
     /// channels for storage communication.
     pub fn new(in_port_name: &str, out_port_name: &str) -> Storage {
-        let handle = crate::channel_find(in_port_name);
-        let handles = vec![handle];
+        let read_handle = ReadHandle {
+            handle: crate::channel_find(in_port_name),
+        };
+        let write_handle = WriteHandle {
+            handle: crate::channel_find(out_port_name),
+        };
+        let handles = vec![read_handle];
         Storage {
-            write_channel: WriteHandle {
-                handle: crate::channel_find(out_port_name),
-            },
+            write_channel: crate::io::Channel::new(write_handle),
             wait_space: crate::new_handle_space(&handles),
-            read_channel: ReadHandle { handle },
+            read_channel: read_handle,
         }
     }
 
