@@ -92,15 +92,6 @@ fn test_read_message_internal_failure() {
 }
 
 #[test]
-fn test_channel_pair() {
-    oak_tests::reset_channels();
-    let mut pair = ChannelPair::new(1, 2);
-    let data = [0x44, 0x44];
-    assert_matches!(pair.send.write_message(&data, &[]), Ok(()));
-    assert_eq!("DD", oak_tests::last_message_as_string());
-}
-
-#[test]
 fn test_handle_space() {
     let h = vec![1 as Handle, 2 as Handle];
     let data = [

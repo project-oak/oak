@@ -312,21 +312,6 @@ impl ReceiveChannelHalf {
     }
 }
 
-/// Convenience wrapper for a send/receive pair of channels.
-pub struct ChannelPair {
-    pub receive: ReceiveChannelHalf,
-    pub send: SendChannelHalf,
-}
-
-impl ChannelPair {
-    pub fn new(in_handle: Handle, out_handle: Handle) -> ChannelPair {
-        ChannelPair {
-            receive: ReceiveChannelHalf::new(in_handle),
-            send: SendChannelHalf::new(out_handle),
-        }
-    }
-}
-
 /// Trait encapsulating the operations required for an Oak Node.
 pub trait OakNode {
     fn new() -> Self
