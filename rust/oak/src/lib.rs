@@ -42,76 +42,6 @@ extern crate assert_matches;
 /// These handles are used for all host function calls.
 pub type Handle = u64;
 
-/// Map an [`OakStatus`] value to the nearest available [`std::io::Result`].
-fn result_from_status<T>(status: Option<OakStatus>, val: T) -> std::io::Result<T> {
-    match status {
-        Some(OakStatus::OAK_STATUS_UNSPECIFIED) => Err(io::Error::new(
-            io::ErrorKind::Other,
-            "Unspecified Oak status value",
-        )),
-        Some(OakStatus::OK) => Ok(val),
-        Some(OakStatus::ERR_BAD_HANDLE) => {
-            Err(io::Error::new(io::ErrorKind::NotConnected, "Bad handle"))
-        }
-        Some(OakStatus::ERR_INVALID_ARGS) => Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "Invalid arguments",
-        )),
-        Some(OakStatus::ERR_CHANNEL_CLOSED) => Err(io::Error::new(
-            io::ErrorKind::ConnectionReset,
-            "Channel closed",
-        )),
-        Some(OakStatus::ERR_BUFFER_TOO_SMALL) => Err(io::Error::new(
-            io::ErrorKind::UnexpectedEof,
-            "Buffer too small",
-        )),
-        Some(OakStatus::ERR_HANDLE_SPACE_TOO_SMALL) => Err(io::Error::new(
-            io::ErrorKind::UnexpectedEof,
-            "Handle space too small",
-        )),
-        Some(OakStatus::ERR_OUT_OF_RANGE) => {
-            Err(io::Error::new(io::ErrorKind::NotConnected, "Out of range"))
-        }
-        Some(OakStatus::ERR_INTERNAL) => {
-            Err(io::Error::new(io::ErrorKind::Other, "Internal error"))
-        }
-        None => Err(io::Error::new(
-            io::ErrorKind::Other,
-            "Unknown Oak status value",
-        )),
-    }
-}
-
-/// Create a new unidirectional channel.
-///
-/// On success, returns [`Handle`] values for the write and read halves
-/// (respectively).
-pub fn channel_create() -> Result<(Handle, Handle), OakStatus> {
-    let mut write: Handle = 0;
-    let mut read: Handle = 0;
-    match OakStatus::from_i32(unsafe {
-        wasm::channel_create(&mut write as *mut u64, &mut read as *mut u64) // @@@ check endianness
-    }) {
-        Some(OakStatus::OK) => Ok((write, read)),
-        Some(err) => Err(err),
-        None => Err(OakStatus::OAK_STATUS_UNSPECIFIED),
-    }
-}
-
-/// Close the specified channel [`Handle`].
-pub fn channel_close(handle: Handle) -> OakStatus {
-    match OakStatus::from_i32(unsafe { wasm::channel_close(handle) }) {
-        Some(s) => s,
-        None => OakStatus::OAK_STATUS_UNSPECIFIED,
-    }
-}
-
-/// Determine the [`Handle`] for a pre-defined channel, identified by its
-/// `port_name`.
-pub fn channel_find(port_name: &str) -> Handle {
-    unsafe { wasm::channel_find(port_name.as_ptr(), port_name.len()) }
-}
-
 // Build a chunk of memory that is suitable for passing to wasm::wait_on_channels,
 // holding the given collection of channel handles.
 fn new_handle_space(handles: &[Handle]) -> Vec<u8> {
@@ -157,6 +87,75 @@ pub fn wait_on_channels(handles: &[Handle]) -> Result<Vec<Handle>, OakStatus> {
     }
 }
 
+/// Create a new unidirectional channel.
+///
+/// On success, returns [`Handle`] values for the write and read halves
+/// (respectively).
+pub fn channel_create() -> Result<(Handle, Handle), OakStatus> {
+    let mut write: Handle = 0;
+    let mut read: Handle = 0;
+    match OakStatus::from_i32(unsafe {
+        wasm::channel_create(&mut write as *mut u64, &mut read as *mut u64) // @@@ check endianness
+    }) {
+        Some(OakStatus::OK) => Ok((write, read)),
+        Some(err) => Err(err),
+        None => Err(OakStatus::OAK_STATUS_UNSPECIFIED),
+    }
+}
+
+/// Close the specified channel [`Handle`].
+pub fn channel_close(handle: Handle) -> OakStatus {
+    match OakStatus::from_i32(unsafe { wasm::channel_close(handle) }) {
+        Some(s) => s,
+        None => OakStatus::OAK_STATUS_UNSPECIFIED,
+    }
+}
+
+/// Determine the [`Handle`] for a pre-defined channel, identified by its
+/// `port_name`.
+pub fn channel_find(port_name: &str) -> Handle {
+    unsafe { wasm::channel_find(port_name.as_ptr(), port_name.len()) }
+}
+
+/// Map an [`OakStatus`] value to the nearest available [`std::io::Result`].
+fn result_from_status<T>(status: Option<OakStatus>, val: T) -> std::io::Result<T> {
+    match status {
+        Some(OakStatus::OAK_STATUS_UNSPECIFIED) => Err(io::Error::new(
+            io::ErrorKind::Other,
+            "Unspecified Oak status value",
+        )),
+        Some(OakStatus::OK) => Ok(val),
+        Some(OakStatus::ERR_BAD_HANDLE) => {
+            Err(io::Error::new(io::ErrorKind::NotConnected, "Bad handle"))
+        }
+        Some(OakStatus::ERR_INVALID_ARGS) => Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "Invalid arguments",
+        )),
+        Some(OakStatus::ERR_CHANNEL_CLOSED) => Err(io::Error::new(
+            io::ErrorKind::ConnectionReset,
+            "Channel closed",
+        )),
+        Some(OakStatus::ERR_BUFFER_TOO_SMALL) => Err(io::Error::new(
+            io::ErrorKind::UnexpectedEof,
+            "Buffer too small",
+        )),
+        Some(OakStatus::ERR_HANDLE_SPACE_TOO_SMALL) => Err(io::Error::new(
+            io::ErrorKind::UnexpectedEof,
+            "Handle space too small",
+        )),
+        Some(OakStatus::ERR_OUT_OF_RANGE) => {
+            Err(io::Error::new(io::ErrorKind::NotConnected, "Out of range"))
+        }
+        Some(OakStatus::ERR_INTERNAL) => {
+            Err(io::Error::new(io::ErrorKind::Other, "Internal error"))
+        }
+        None => Err(io::Error::new(
+            io::ErrorKind::Other,
+            "Unknown Oak status value",
+        )),
+    }
+}
 /// Convenience wrapper for the send half of a channel, to allow use of the
 /// [`std::io::Write`] trait.
 pub struct SendChannelHalf {
