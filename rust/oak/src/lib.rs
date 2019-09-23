@@ -87,6 +87,67 @@ pub fn wait_on_channels(handles: &[Handle]) -> Result<Vec<Handle>, OakStatus> {
     }
 }
 
+/// Read a message from a channel.
+///
+/// The provided vectors for received data and associated handles will be
+/// resized to accomodate the information in the message.
+pub fn channel_read(handle: Handle, buf: &mut Vec<u8>, handles: &mut Vec<Handle>) -> OakStatus {
+    // Try reading from the channel twice: first with provided vectors, then
+    // with vectors that have been resized to meet size requirements.
+    for resized in &[false, true] {
+        let mut actual_size: u32 = 0;
+        let mut actual_handle_count: u32 = 0;
+        let status = OakStatus::from_i32(unsafe {
+            wasm::channel_read(
+                handle,
+                buf.as_mut_ptr(),
+                buf.capacity(),
+                &mut actual_size,
+                handles.as_mut_ptr() as *mut u8,
+                handles.capacity(),
+                &mut actual_handle_count,
+            )
+        });
+        match status {
+            Some(OakStatus::OK) => {
+                unsafe {
+                    buf.set_len(actual_size as usize);
+                    // Handles are written in little-endian order, which matches Wasm spec.
+                    handles.set_len(actual_handle_count as usize);
+                };
+                return OakStatus::OK;
+            }
+            Some(OakStatus::ERR_BUFFER_TOO_SMALL) => {
+                if *resized {
+                    return OakStatus::ERR_BUFFER_TOO_SMALL;
+                }
+                // Can escape the match if buffer is too small and !resized.
+            }
+            Some(s) => {
+                return s;
+            }
+            None => {
+                return OakStatus::ERR_INTERNAL;
+            }
+        }
+
+        // Extend the vector to be large enough for the message
+        debug!("Got {}, need {}", buf.capacity(), actual_size);
+        if (actual_size as usize) < buf.len() {
+            error!(
+                "Internal error: provided {} bytes for receive, asked for {}",
+                buf.len(),
+                actual_size
+            );
+            return OakStatus::ERR_INTERNAL;
+        }
+        let extra = (actual_size as usize) - buf.len();
+        buf.reserve(extra);
+    }
+    error!("unreachable code reached");
+    OakStatus::ERR_INTERNAL
+}
+
 /// Create a new unidirectional channel.
 ///
 /// On success, returns [`Handle`] values for the write and read halves
@@ -223,56 +284,7 @@ impl ReceiveChannelHalf {
         buf: &mut Vec<u8>,
         handles: &mut Vec<Handle>,
     ) -> std::io::Result<()> {
-        // Try reading from the channel twice: first with provided vectors, then
-        // with vectors that have been resized to meet size requirements.
-        for resized in &[false, true] {
-            let mut actual_size: u32 = 0;
-            let mut actual_handle_count: u32 = 0;
-            let status = OakStatus::from_i32(unsafe {
-                wasm::channel_read(
-                    self.handle,
-                    buf.as_mut_ptr(),
-                    buf.capacity(),
-                    &mut actual_size,
-                    handles.as_mut_ptr() as *mut u8,
-                    handles.capacity(),
-                    &mut actual_handle_count,
-                )
-            });
-            match status {
-                Some(OakStatus::OK) => {
-                    unsafe {
-                        buf.set_len(actual_size as usize);
-                        // Handles are written in little-endian order, which matches Wasm spec
-                        handles.set_len(actual_handle_count as usize);
-                    };
-                    return Ok(());
-                }
-                Some(OakStatus::ERR_BUFFER_TOO_SMALL) => {
-                    if *resized {
-                        return result_from_status(status, ());
-                    }
-                    // Can escape the match if buffer is too small and !resized.
-                }
-                _ => return result_from_status(status, ()),
-            }
-
-            // Extend the vector to be large enough for the message
-            debug!("Got {}, need {}", buf.capacity(), actual_size);
-            if (actual_size as usize) < buf.len() {
-                return Err(io::Error::new(
-                    io::ErrorKind::Other,
-                    format!(
-                        "Internal error: provided {} bytes for receive, asked for {}",
-                        buf.len(),
-                        actual_size
-                    ),
-                ));
-            }
-            let extra = (actual_size as usize) - buf.len();
-            buf.reserve(extra);
-        }
-        Err(io::Error::new(io::ErrorKind::Other, "Unreachable reached!"))
+        result_from_status(Some(channel_read(self.handle, buf, handles)), ())
     }
 }
 
