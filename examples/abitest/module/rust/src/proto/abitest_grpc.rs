@@ -19,13 +19,13 @@
 #![allow(unused_results)]
 
 
-use oak::GrpcResult;
+use oak::grpc;
 use protobuf::Message;
 use std::io::Write;
 
 // Oak Node server interface
 pub trait OakABITestServiceNode {
-    fn run_tests(&mut self, req: super::abitest::ABITestRequest) -> GrpcResult<super::abitest::ABITestResponse>;
+    fn run_tests(&mut self, req: super::abitest::ABITestRequest) -> grpc::Result<super::abitest::ABITestResponse>;
 }
 
 // Oak Node gRPC method dispatcher

@@ -23,7 +23,8 @@ extern crate protobuf;
 
 mod proto;
 
-use oak::{GrpcResult, OakNode, ResponseWriter};
+use oak::grpc;
+use oak::grpc::{OakNode, ResponseWriter};
 use oak_derive::OakExports;
 use proto::hello_world::{HelloRequest, HelloResponse};
 use proto::hello_world_grpc::{dispatch, HelloWorldNode};
@@ -37,7 +38,7 @@ struct Node {
 const STORAGE_NAME: &[u8] = b"HelloWorld";
 const FIELD_NAME: &[u8] = b"last-greeting";
 
-impl oak::OakNode for Node {
+impl oak::grpc::OakNode for Node {
     fn new() -> Self {
         oak_log::init_default();
         Node {
@@ -50,7 +51,7 @@ impl oak::OakNode for Node {
 }
 
 impl HelloWorldNode for Node {
-    fn say_hello(&mut self, req: HelloRequest) -> GrpcResult<HelloResponse> {
+    fn say_hello(&mut self, req: HelloRequest) -> grpc::Result<HelloResponse> {
         if req.greeting == "Query-of-Error" {
             let mut status = oak::proto::status::Status::new();
             status.set_code(3); // INVALID_ARGUMENT
@@ -78,7 +79,7 @@ impl HelloWorldNode for Node {
         &mut self,
         req: HelloRequest,
         writer: &mut dyn ResponseWriter<HelloResponse>,
-    ) -> GrpcResult<()> {
+    ) -> grpc::Result<()> {
         info!("Say hello to {}", req.greeting);
         let mut res1 = HelloResponse::new();
         res1.reply = format!("HELLO {}!", req.greeting);
@@ -103,7 +104,7 @@ impl HelloWorldNode for Node {
         Ok(())
     }
 
-    fn lots_of_greetings(&mut self, reqs: Vec<HelloRequest>) -> GrpcResult<HelloResponse> {
+    fn lots_of_greetings(&mut self, reqs: Vec<HelloRequest>) -> grpc::Result<HelloResponse> {
         info!("Say hello");
         let mut msg = String::new();
         msg.push_str("Hello ");
@@ -117,7 +118,7 @@ impl HelloWorldNode for Node {
         &mut self,
         reqs: Vec<HelloRequest>,
         writer: &mut dyn ResponseWriter<HelloResponse>,
-    ) -> GrpcResult<()> {
+    ) -> grpc::Result<()> {
         info!("Say hello");
         let msg = recipients(&reqs);
         let mut res1 = HelloResponse::new();

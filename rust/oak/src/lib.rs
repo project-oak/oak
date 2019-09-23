@@ -22,10 +22,11 @@ extern crate protobuf;
 
 use byteorder::WriteBytesExt;
 use proto::oak_api::OakStatus;
-use protobuf::{Message, ProtobufEnum};
+use protobuf::ProtobufEnum;
 use std::io;
 use std::io::Write;
 
+pub mod grpc;
 pub mod proto;
 pub mod storage;
 #[cfg(test)]
@@ -35,36 +36,6 @@ pub mod wasm;
 #[cfg(test)]
 #[macro_use]
 extern crate assert_matches;
-
-/// Result type that uses a [`proto::status::Status`] type for error values.
-pub type GrpcResult<T> = Result<T, proto::status::Status>;
-
-/// Trait to allow repeated writing of responses for server-streaming gRPC methods.
-pub trait ResponseWriter<T: protobuf::Message> {
-    fn write(&mut self, rsp: T);
-}
-
-/// Implementation of ResponseWriter that encapsulates response messages into
-/// GrpcResponse wrapper messages and writes serialized versions to a (mutably
-/// borrowed) send channel.
-pub struct ChannelResponseWriter<'a> {
-    pub channel: &'a mut SendChannelHalf,
-}
-
-impl<'a, T> ResponseWriter<T> for ChannelResponseWriter<'a>
-where
-    T: protobuf::Message,
-{
-    fn write(&mut self, rsp: T) {
-        // Put the serialized response into a GrpcResponse message wrapper.
-        let mut grpc_rsp = proto::grpc_encap::GrpcResponse::new();
-        let mut any = protobuf::well_known_types::Any::new();
-        rsp.write_to_writer(&mut any.value).unwrap();
-        grpc_rsp.set_rsp_msg(any);
-        // Serialize the GrpcResponse into the send channel.
-        grpc_rsp.write_to_writer(&mut self.channel).unwrap();
-    }
-}
 
 /// Handle used to identify read or write channel halves.
 ///
@@ -303,96 +274,6 @@ impl ReceiveChannelHalf {
             buf.reserve(extra);
         }
         Err(io::Error::new(io::ErrorKind::Other, "Unreachable reached!"))
-    }
-}
-
-/// Trait for Oak Nodes that act as a gRPC services.
-///
-/// An `OakNode` instance is normally passed to [`grpc_event_loop`], to allow
-/// repeated invocation of its `invoke()` method.
-pub trait OakNode {
-    /// Construct the (single) instance of the node.
-    ///
-    /// This method may choose to initialize logging by invoking
-    /// [`oak_log::init()`].
-    ///
-    /// [`oak_log::init()`]: ../oak_log/fn.init.html
-    fn new() -> Self
-    where
-        Self: Sized;
-
-    /// Process a single gRPC method invocation.
-    ///
-    /// The method name is provided by `method` and the incoming serialized gRPC
-    /// request is held in `req`.  Response messages should be written to `out`,
-    /// as serialized [`GrpcResponse`] messages encapsulating the service
-    /// response.
-    ///
-    /// [`GrpcResponse`]: proto::grpc_encap::GrpcResponse
-    fn invoke(&mut self, method: &str, req: &[u8], out: &mut SendChannelHalf);
-}
-
-/// Perform a gRPC event loop for a Node.
-///
-/// Invoking the given `node`'s [`invoke`] method for each incoming request that
-/// arrives on the inbound channel as a serialized [`GrpcRequest`] message,
-/// giving the [`invoke`] method the outbound channel for encapsulated responses
-/// to be written to.
-///
-/// [`invoke`]: OakNode::invoke
-/// [`GrpcRequest`]: proto::grpc_encap::GrpcRequest
-pub fn grpc_event_loop<T: OakNode>(
-    mut node: T,
-    grpc_in_handle: Handle,
-    grpc_out_handle: Handle,
-) -> i32 {
-    info!(
-        "start event loop for node with handles in:{} out:{}",
-        grpc_in_handle, grpc_out_handle
-    );
-    if grpc_in_handle == 0 || grpc_out_handle == 0 {
-        return OakStatus::ERR_CHANNEL_CLOSED.value();
-    }
-    set_panic_hook();
-
-    let read_handles = vec![grpc_in_handle];
-    let mut space = new_handle_space(&read_handles);
-
-    let mut grpc_in_channel = ReceiveChannelHalf::new(grpc_in_handle);
-    let mut grpc_out_channel = SendChannelHalf::new(grpc_out_handle);
-    loop {
-        // Block until there is a message to read on an input channel.
-        prep_handle_space(&mut space);
-        unsafe {
-            let status = wasm::wait_on_channels(space.as_mut_ptr(), read_handles.len() as u32);
-            match OakStatus::from_i32(status) {
-                Some(OakStatus::OK) => (),
-                Some(err) => return err as i32,
-                None => return OakStatus::OAK_STATUS_UNSPECIFIED.value(),
-            }
-        }
-
-        let mut buf = Vec::<u8>::with_capacity(1024);
-        let mut handles = Vec::<Handle>::with_capacity(1);
-        grpc_in_channel
-            .read_message(&mut buf, &mut handles)
-            .unwrap();
-        if buf.is_empty() {
-            info!("no pending message; poll again");
-            continue;
-        }
-        if !handles.is_empty() {
-            panic!("unexpected handles received alongside gRPC response")
-        }
-        let req: proto::grpc_encap::GrpcRequest = protobuf::parse_from_bytes(&buf).unwrap();
-        if !req.last {
-            panic!("Support for streaming requests not yet implemented");
-        }
-        node.invoke(
-            &req.method_name,
-            req.get_req_msg().value.as_slice(),
-            &mut grpc_out_channel,
-        );
     }
 }
 

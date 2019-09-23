@@ -24,7 +24,7 @@ extern crate rand;
 extern crate rand_distr;
 extern crate rusty_machine;
 
-use oak::OakNode;
+use oak::grpc::OakNode;
 use oak_derive::OakExports;
 use protobuf::{Message, ProtobufEnum};
 use rand::prelude::*;
@@ -162,7 +162,7 @@ struct Node {
     model: NaiveBayes<naive_bayes::Gaussian>,
 }
 
-impl oak::OakNode for Node {
+impl oak::grpc::OakNode for Node {
     fn new() -> Self {
         Node {
             training_set_size: 1000,

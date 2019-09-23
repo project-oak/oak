@@ -17,13 +17,13 @@
 extern crate oak;
 extern crate oak_derive;
 
-use oak::OakNode;
+use oak::grpc::OakNode;
 use protobuf::{Message, ProtobufEnum};
 
 #[derive(oak_derive::OakExports)]
 struct PanicNode;
 
-impl oak::OakNode for PanicNode {
+impl oak::grpc::OakNode for PanicNode {
     fn new() -> Self {
         PanicNode
     }

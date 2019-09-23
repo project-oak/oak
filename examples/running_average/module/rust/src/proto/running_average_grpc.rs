@@ -19,15 +19,15 @@
 #![allow(unused_results)]
 
 
-use oak::GrpcResult;
+use oak::grpc;
 use protobuf::Message;
 use std::io::Write;
 
 // Oak Node server interface
 pub trait RunningAverageNode {
-    fn submit_sample(&mut self, req: super::running_average::SubmitSampleRequest) -> GrpcResult<()>;
+    fn submit_sample(&mut self, req: super::running_average::SubmitSampleRequest) -> grpc::Result<()>;
 
-    fn get_average(&mut self) -> GrpcResult<super::running_average::GetAverageResponse>;
+    fn get_average(&mut self) -> grpc::Result<super::running_average::GetAverageResponse>;
 }
 
 // Oak Node gRPC method dispatcher

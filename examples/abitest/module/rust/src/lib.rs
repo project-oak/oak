@@ -28,8 +28,9 @@ extern crate serde;
 mod proto;
 
 use abitest_common::InternalMessage;
+use oak::grpc;
+use oak::grpc::OakNode;
 use oak::proto::oak_api::OakStatus;
-use oak::{GrpcResult, OakNode};
 use proto::abitest::{ABITestRequest, ABITestResponse, ABITestResponse_TestResult};
 use proto::abitest_grpc::{dispatch, OakABITestServiceNode};
 use protobuf::ProtobufEnum;
@@ -50,14 +51,14 @@ pub extern "C" fn oak_main() -> i32 {
         let node = FrontendNode::new();
         let grpc_in = node.grpc_in;
         let grpc_out = node.grpc_out;
-        oak::grpc_event_loop(node, grpc_in, grpc_out)
+        oak::grpc::event_loop(node, grpc_in, grpc_out)
     }) {
         Ok(rc) => rc,
         Err(_) => oak::proto::oak_api::OakStatus::ERR_INTERNAL.value(),
     }
 }
 
-impl oak::OakNode for FrontendNode {
+impl oak::grpc::OakNode for FrontendNode {
     fn new() -> Self {
         oak_log::init(log::Level::Debug, oak::channel_find("logging_port")).unwrap();
         let backend_in = oak::channel_find("from_backend");
@@ -75,7 +76,7 @@ impl oak::OakNode for FrontendNode {
 }
 
 impl OakABITestServiceNode for FrontendNode {
-    fn run_tests(&mut self, req: ABITestRequest) -> GrpcResult<ABITestResponse> {
+    fn run_tests(&mut self, req: ABITestRequest) -> grpc::Result<ABITestResponse> {
         info!("Run tests matching {}", req.filter);
         let filter = regex::Regex::new(&req.filter).unwrap();
         let mut results = protobuf::RepeatedField::<ABITestResponse_TestResult>::new();
