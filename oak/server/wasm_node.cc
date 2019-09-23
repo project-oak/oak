@@ -189,7 +189,7 @@ std::unique_ptr<WasmNode> WasmNode::Create(const std::string& name, const std::s
   }
 
   LOG(INFO) << "Reading module done";
-  if (!CheckModuleExports(&node->env_, node->env_.GetLastModule())) {
+  if (!CheckModuleExports(&node->env_, node->Module())) {
     LOG(WARNING) << "Failed to validate module";
     return nullptr;
   }
@@ -232,8 +232,7 @@ void WasmNode::Run() {
 
   LOG(INFO) << "module execution thread: run oak_main";
   wabt::interp::TypedValues args;
-  wabt::interp::ExecResult exec_result =
-      executor.RunExportByName(env_.GetLastModule(), "oak_main", args);
+  wabt::interp::ExecResult exec_result = executor.RunExportByName(Module(), "oak_main", args);
 
   if (exec_result.result != wabt::interp::Result::Ok) {
     LOG(ERROR) << "execution failure: " << wabt::interp::ResultToString(exec_result.result);
