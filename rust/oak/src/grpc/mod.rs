@@ -17,7 +17,7 @@
 //! Functionality to help Oak Nodes interact with gRPC.
 
 use crate::proto::oak_api::OakStatus;
-use crate::{proto, wasm, Handle, ReceiveChannelHalf, SendChannelHalf};
+use crate::{proto, wasm, Handle, ReadHandle, SendChannelHalf};
 use protobuf::{Message, ProtobufEnum};
 
 /// Result type that uses a [`proto::status::Status`] type for error values.
@@ -98,7 +98,9 @@ pub fn event_loop<T: OakNode>(mut node: T, grpc_in_handle: Handle, grpc_out_hand
     let read_handles = vec![grpc_in_handle];
     let mut space = crate::new_handle_space(&read_handles);
 
-    let mut grpc_in_channel = ReceiveChannelHalf::new(grpc_in_handle);
+    let grpc_in_channel = ReadHandle {
+        handle: grpc_in_handle,
+    };
     let mut grpc_out_channel = SendChannelHalf::new(grpc_out_handle);
     loop {
         // Block until there is a message to read on an input channel.
@@ -114,9 +116,7 @@ pub fn event_loop<T: OakNode>(mut node: T, grpc_in_handle: Handle, grpc_out_hand
 
         let mut buf = Vec::<u8>::with_capacity(1024);
         let mut handles = Vec::<Handle>::with_capacity(1);
-        grpc_in_channel
-            .read_message(&mut buf, &mut handles)
-            .unwrap();
+        crate::channel_read(grpc_in_channel, &mut buf, &mut handles);
         if buf.is_empty() {
             info!("no pending message; poll again");
             continue;

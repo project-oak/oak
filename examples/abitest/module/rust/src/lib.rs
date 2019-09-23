@@ -42,7 +42,7 @@ struct FrontendNode {
     grpc_out: oak::Handle,
     backend_out: oak::SendChannelHalf,
     read_handles: Vec<oak::Handle>,
-    backend_in: oak::ReceiveChannelHalf,
+    backend_in: oak::ReadHandle,
 }
 
 #[no_mangle]
@@ -67,7 +67,7 @@ impl oak::grpc::OakNode for FrontendNode {
             grpc_out: oak::channel_find("gRPC_output"),
             backend_out: oak::SendChannelHalf::new(oak::channel_find("to_backend")),
             read_handles: vec![backend_in],
-            backend_in: oak::ReceiveChannelHalf::new(backend_in),
+            backend_in: oak::ReadHandle { handle: backend_in },
         }
     }
     fn invoke(&mut self, method: &str, req: &[u8], out: &mut oak::SendChannelHalf) {
@@ -177,23 +177,32 @@ impl FrontendNode {
     fn test_channel_read(&mut self) -> std::io::Result<()> {
         let (w, r) = oak::channel_create().unwrap();
         let mut out_channel = oak::SendChannelHalf::new(w);
-        let mut in_channel = oak::ReceiveChannelHalf::new(r);
+        let in_channel = oak::ReadHandle { handle: r };
 
         let mut buffer = Vec::<u8>::with_capacity(5);
         let mut handles = Vec::with_capacity(5);
-        in_channel.read_message(&mut buffer, &mut handles)?;
+        expect_eq!(
+            OakStatus::OK,
+            oak::channel_read(in_channel, &mut buffer, &mut handles)
+        );
         expect_eq!(0, buffer.len());
         expect_eq!(0, handles.len());
 
         // Single message.
         let data = vec![0x01, 0x02, 0x03];
         expect_eq!(3, out_channel.write(&data)?);
-        in_channel.read_message(&mut buffer, &mut handles)?;
+        expect_eq!(
+            OakStatus::OK,
+            oak::channel_read(in_channel, &mut buffer, &mut handles)
+        );
         expect_eq!(3, buffer.len());
         expect_eq!(0, handles.len());
 
         // Reading again zeroes the vector length.
-        in_channel.read_message(&mut buffer, &mut handles)?;
+        expect_eq!(
+            OakStatus::OK,
+            oak::channel_read(in_channel, &mut buffer, &mut handles)
+        );
         expect_eq!(0, buffer.len());
         expect_eq!(0, handles.len());
         expect_eq!(5, buffer.capacity());
@@ -201,16 +210,19 @@ impl FrontendNode {
         // Now send and receive a bigger message.
         let data = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
         expect_eq!(8, out_channel.write(&data)?);
-        in_channel.read_message(&mut buffer, &mut handles)?;
+        expect_eq!(
+            OakStatus::OK,
+            oak::channel_read(in_channel, &mut buffer, &mut handles)
+        );
         expect_eq!(8, buffer.len());
         expect_eq!(0, handles.len());
         expect!(buffer.capacity() >= 8);
 
         // Reading from an invalid handle gives an error.
-        let mut bogus_channel = oak::ReceiveChannelHalf::new(99999);
-        expect_matches!(
-            bogus_channel.read_message(&mut buffer, &mut handles),
-            Err(_)
+        let bogus_channel = oak::ReadHandle { handle: 99999 };
+        expect_eq!(
+            OakStatus::ERR_BAD_HANDLE,
+            oak::channel_read(bogus_channel, &mut buffer, &mut handles)
         );
 
         expect_eq!(OakStatus::OK, oak::channel_close(w));
@@ -258,7 +270,7 @@ impl FrontendNode {
         let (w2, r2) = oak::channel_create().unwrap();
         let mut out1 = oak::SendChannelHalf::new(w1);
         let mut out2 = oak::SendChannelHalf::new(w2);
-        let mut in1 = oak::ReceiveChannelHalf::new(r1);
+        let in1 = oak::ReadHandle { handle: r1 };
 
         // Set up first channel with a pending message.
         let data = vec![0x01, 0x02, 0x03];
@@ -276,7 +288,10 @@ impl FrontendNode {
 
         let mut buffer = Vec::<u8>::with_capacity(5);
         let mut handles = Vec::with_capacity(5);
-        in1.read_message(&mut buffer, &mut handles)?;
+        expect_eq!(
+            OakStatus::OK,
+            oak::channel_read(in1, &mut buffer, &mut handles)
+        );
         expect_eq!(3, buffer.len());
         expect_eq!(0, handles.len());
 
@@ -321,12 +336,18 @@ impl FrontendNode {
 
         let mut buffer = Vec::<u8>::with_capacity(256);
         let mut handles = Vec::with_capacity(1);
-        self.backend_in.read_message(&mut buffer, &mut handles)?;
+        expect_eq!(
+            OakStatus::OK,
+            oak::channel_read(self.backend_in, &mut buffer, &mut handles)
+        );
 
         // Expect to receive a channel read handle.
         // Read the actual response from the new channel.
-        let mut new_in_channel = oak::ReceiveChannelHalf::new(handles[0]);
-        new_in_channel.read_message(&mut buffer, &mut vec![])?;
+        let new_in_channel = oak::ReadHandle { handle: handles[0] };
+        expect_eq!(
+            OakStatus::OK,
+            oak::channel_read(new_in_channel, &mut buffer, &mut vec![])
+        );
         let serialized_rsp = String::from_utf8(buffer).unwrap();
         let internal_rsp: InternalMessage = serde_json::from_str(&serialized_rsp)?;
         expect_eq!("aaaxxx", internal_rsp.msg);
