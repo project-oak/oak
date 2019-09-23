@@ -97,7 +97,8 @@ thread_local! {
 pub unsafe extern "C" fn wait_on_channels(buf: *mut u8, count: u32) -> i32 {
     // Pretend all channels are readable.
     for i in 0..(count as usize) {
-        let p = buf.add(i * oak::SPACE_BYTES_PER_HANDLE + (oak::SPACE_BYTES_PER_HANDLE - 1));
+        let p = buf
+            .add(i * oak::wasm::SPACE_BYTES_PER_HANDLE + (oak::wasm::SPACE_BYTES_PER_HANDLE - 1));
         *p = 1;
     }
     OakStatus::OK.value()
