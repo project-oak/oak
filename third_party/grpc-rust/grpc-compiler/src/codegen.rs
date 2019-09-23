@@ -258,7 +258,7 @@ impl<'a> ServiceGen<'a> {
     }
 
     fn write_dispatcher(&self, w: &mut CodeWriter) {
-        w.pub_fn(&format!("dispatch(node: &mut dyn {}, method: &str, req: &[u8], out: &mut oak::SendChannelHalf)", self.server_intf_name()), |w| {
+        w.pub_fn(&format!("dispatch(node: &mut dyn {}, method: &str, req: &[u8], out: &mut oak::WriteHandle)", self.server_intf_name()), |w| {
             w.block("match method {", "};", |w| {
                 for method in &self.methods {
                     let full_path = format!("{}/{}", method.service_path, method.proto.get_name());

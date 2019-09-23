@@ -45,7 +45,7 @@ impl oak::grpc::OakNode for Node {
     fn new() -> Self {
         Node::default()
     }
-    fn invoke(&mut self, method: &str, req: &[u8], out: &mut oak::SendChannelHalf) {
+    fn invoke(&mut self, method: &str, req: &[u8], out: &mut oak::WriteHandle) {
         dispatch(self, method, req, out)
     }
 }

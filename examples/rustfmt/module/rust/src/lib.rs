@@ -38,7 +38,7 @@ impl oak::grpc::OakNode for Node {
         oak_log::init_default();
         Node
     }
-    fn invoke(&mut self, method: &str, req: &[u8], out: &mut oak::SendChannelHalf) {
+    fn invoke(&mut self, method: &str, req: &[u8], out: &mut oak::WriteHandle) {
         dispatch(self, method, req, out)
     }
 }

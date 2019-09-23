@@ -29,7 +29,7 @@ use log::{Level, Log, Metadata, Record, SetLoggerError};
 use std::io::Write;
 
 struct OakChannelLogger {
-    channel_handle: oak::Handle,
+    channel_handle: oak::WriteHandle,
 }
 
 impl Log for OakChannelLogger {
@@ -41,7 +41,7 @@ impl Log for OakChannelLogger {
             return;
         }
         // Only flush logging channel on newlines.
-        let mut channel = std::io::LineWriter::new(oak::SendChannelHalf::new(self.channel_handle));
+        let mut channel = std::io::LineWriter::new(self.channel_handle);
         writeln!(
             &mut channel,
             "{}  {} : {} : {}",
@@ -64,7 +64,13 @@ impl Log for OakChannelLogger {
 ///
 /// Panics if a logger has already been set.
 pub fn init_default() {
-    init(Level::Debug, oak::channel_find("log")).unwrap();
+    init(
+        Level::Debug,
+        oak::WriteHandle {
+            handle: oak::channel_find("log"),
+        },
+    )
+    .unwrap();
 }
 
 /// Initialize Node-wide logging via a channel.
@@ -75,7 +81,7 @@ pub fn init_default() {
 /// # Errors
 ///
 /// An error is returned if a logger has already been set.
-pub fn init(level: Level, channel_handle: oak::Handle) -> Result<(), SetLoggerError> {
+pub fn init(level: Level, channel_handle: oak::WriteHandle) -> Result<(), SetLoggerError> {
     log::set_boxed_logger(Box::new(OakChannelLogger { channel_handle }))?;
     log::set_max_level(level.to_level_filter());
     Ok(())

@@ -19,7 +19,7 @@
 extern crate protobuf;
 
 use crate::grpc;
-use crate::{ReadHandle, SendChannelHalf};
+use crate::{ReadHandle, WriteHandle};
 use proto::storage_channel::{
     StorageChannelDeleteRequest, StorageChannelReadRequest, StorageChannelRequest,
     StorageChannelResponse, StorageChannelWriteRequest,
@@ -28,7 +28,7 @@ use protobuf::Message;
 
 /// Local representation of the connection to an external storage service.
 pub struct Storage {
-    write_channel: crate::SendChannelHalf,
+    write_channel: crate::WriteHandle,
     wait_space: Vec<u8>,
     read_channel: crate::ReadHandle,
 }
@@ -49,7 +49,9 @@ impl Storage {
         let handle = crate::channel_find(in_port_name);
         let handles = vec![handle];
         Storage {
-            write_channel: SendChannelHalf::new(crate::channel_find(out_port_name)),
+            write_channel: WriteHandle {
+                handle: crate::channel_find(out_port_name),
+            },
             wait_space: crate::new_handle_space(&handles),
             read_channel: ReadHandle { handle },
         }

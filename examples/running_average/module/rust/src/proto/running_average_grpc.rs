@@ -31,7 +31,7 @@ pub trait RunningAverageNode {
 }
 
 // Oak Node gRPC method dispatcher
-pub fn dispatch(node: &mut dyn RunningAverageNode, method: &str, req: &[u8], out: &mut oak::SendChannelHalf) {
+pub fn dispatch(node: &mut dyn RunningAverageNode, method: &str, req: &[u8], out: &mut oak::WriteHandle) {
     match method {
         "/oak.examples.running_average.RunningAverage/SubmitSample" => {
             let r = protobuf::parse_from_bytes(&req).unwrap();

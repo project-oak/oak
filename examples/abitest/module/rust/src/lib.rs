@@ -40,7 +40,7 @@ use std::io::Write;
 struct FrontendNode {
     grpc_in: oak::Handle,
     grpc_out: oak::Handle,
-    backend_out: oak::SendChannelHalf,
+    backend_out: oak::WriteHandle,
     read_handles: Vec<oak::Handle>,
     backend_in: oak::ReadHandle,
 }
@@ -60,17 +60,25 @@ pub extern "C" fn oak_main() -> i32 {
 
 impl oak::grpc::OakNode for FrontendNode {
     fn new() -> Self {
-        oak_log::init(log::Level::Debug, oak::channel_find("logging_port")).unwrap();
+        oak_log::init(
+            log::Level::Debug,
+            oak::WriteHandle {
+                handle: oak::channel_find("logging_port"),
+            },
+        )
+        .unwrap();
         let backend_in = oak::channel_find("from_backend");
         FrontendNode {
             grpc_in: oak::channel_find("gRPC_input"),
             grpc_out: oak::channel_find("gRPC_output"),
-            backend_out: oak::SendChannelHalf::new(oak::channel_find("to_backend")),
+            backend_out: oak::WriteHandle {
+                handle: oak::channel_find("to_backend"),
+            },
             read_handles: vec![backend_in],
             backend_in: oak::ReadHandle { handle: backend_in },
         }
     }
-    fn invoke(&mut self, method: &str, req: &[u8], out: &mut oak::SendChannelHalf) {
+    fn invoke(&mut self, method: &str, req: &[u8], out: &mut oak::WriteHandle) {
         dispatch(self, method, req, out)
     }
 }
@@ -176,7 +184,7 @@ impl FrontendNode {
 
     fn test_channel_read(&mut self) -> std::io::Result<()> {
         let (w, r) = oak::channel_create().unwrap();
-        let mut out_channel = oak::SendChannelHalf::new(w);
+        let mut out_channel = oak::WriteHandle { handle: w };
         let in_channel = oak::ReadHandle { handle: r };
 
         let mut buffer = Vec::<u8>::with_capacity(5);
@@ -232,7 +240,7 @@ impl FrontendNode {
 
     fn test_channel_write(&mut self) -> std::io::Result<()> {
         let (w, r) = oak::channel_create().unwrap();
-        let mut out_channel = oak::SendChannelHalf::new(w);
+        let mut out_channel = oak::WriteHandle { handle: w };
 
         // Empty message.
         let empty = vec![];
@@ -247,7 +255,7 @@ impl FrontendNode {
         expect_eq!(8, out_channel.write(&data)?);
 
         // Writing to an invalid handle gives an error.
-        let mut bogus_channel = oak::SendChannelHalf::new(99999);
+        let mut bogus_channel = oak::WriteHandle { handle: 99999 };
         expect_matches!(bogus_channel.write(&data), Err(_));
 
         // Close the only read handle for the channel.
@@ -268,8 +276,8 @@ impl FrontendNode {
 
         let (w1, r1) = oak::channel_create().unwrap();
         let (w2, r2) = oak::channel_create().unwrap();
-        let mut out1 = oak::SendChannelHalf::new(w1);
-        let mut out2 = oak::SendChannelHalf::new(w2);
+        let mut out1 = oak::WriteHandle { handle: w1 };
+        let mut out2 = oak::WriteHandle { handle: w2 };
         let in1 = oak::ReadHandle { handle: r1 };
 
         // Set up first channel with a pending message.
