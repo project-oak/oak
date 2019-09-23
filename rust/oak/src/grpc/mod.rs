@@ -17,7 +17,7 @@
 //! Functionality to help Oak Nodes interact with gRPC.
 
 use crate::proto::oak_api::OakStatus;
-use crate::{proto, wasm, Handle, ReadHandle, SendChannelHalf};
+use crate::{proto, wasm, Handle, ReadHandle, WriteHandle};
 use protobuf::{Message, ProtobufEnum};
 
 /// Result type that uses a [`proto::status::Status`] type for error values.
@@ -32,7 +32,7 @@ pub trait ResponseWriter<T: protobuf::Message> {
 /// into `GrpcResponse` wrapper messages and writes serialized versions to a
 /// (mutably borrowed) send channel.
 pub struct ChannelResponseWriter<'a> {
-    pub channel: &'a mut SendChannelHalf,
+    pub channel: &'a mut WriteHandle,
 }
 
 impl<'a, T> ResponseWriter<T> for ChannelResponseWriter<'a>
@@ -73,7 +73,7 @@ pub trait OakNode {
     /// response.
     ///
     /// [`GrpcResponse`]: crate::proto::grpc_encap::GrpcResponse
-    fn invoke(&mut self, method: &str, req: &[u8], out: &mut SendChannelHalf);
+    fn invoke(&mut self, method: &str, req: &[u8], out: &mut WriteHandle);
 }
 
 /// Perform a gRPC event loop for a Node.
@@ -101,7 +101,10 @@ pub fn event_loop<T: OakNode>(mut node: T, grpc_in_handle: Handle, grpc_out_hand
     let grpc_in_channel = ReadHandle {
         handle: grpc_in_handle,
     };
-    let mut grpc_out_channel = SendChannelHalf::new(grpc_out_handle);
+    let mut grpc_out_channel = WriteHandle {
+        handle: grpc_out_handle,
+    };
+
     loop {
         // Block until there is a message to read on an input channel.
         crate::prep_handle_space(&mut space);

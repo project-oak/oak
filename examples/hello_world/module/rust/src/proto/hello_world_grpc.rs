@@ -35,7 +35,7 @@ pub trait HelloWorldNode {
 }
 
 // Oak Node gRPC method dispatcher
-pub fn dispatch(node: &mut dyn HelloWorldNode, method: &str, req: &[u8], out: &mut oak::SendChannelHalf) {
+pub fn dispatch(node: &mut dyn HelloWorldNode, method: &str, req: &[u8], out: &mut oak::WriteHandle) {
     match method {
         "/oak.examples.hello_world.HelloWorld/SayHello" => {
             let r = protobuf::parse_from_bytes(&req).unwrap();

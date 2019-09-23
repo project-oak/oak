@@ -29,7 +29,7 @@ pub trait FormatServiceNode {
 }
 
 // Oak Node gRPC method dispatcher
-pub fn dispatch(node: &mut dyn FormatServiceNode, method: &str, req: &[u8], out: &mut oak::SendChannelHalf) {
+pub fn dispatch(node: &mut dyn FormatServiceNode, method: &str, req: &[u8], out: &mut oak::WriteHandle) {
     match method {
         "/oak.examples.rustfmt.FormatService/Format" => {
             let r = protobuf::parse_from_bytes(&req).unwrap();

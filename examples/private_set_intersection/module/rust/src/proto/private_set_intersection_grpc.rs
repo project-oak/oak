@@ -31,7 +31,7 @@ pub trait PrivateSetIntersectionNode {
 }
 
 // Oak Node gRPC method dispatcher
-pub fn dispatch(node: &mut dyn PrivateSetIntersectionNode, method: &str, req: &[u8], out: &mut oak::SendChannelHalf) {
+pub fn dispatch(node: &mut dyn PrivateSetIntersectionNode, method: &str, req: &[u8], out: &mut oak::WriteHandle) {
     match method {
         "/oak.examples.private_set_intersection.PrivateSetIntersection/SubmitSet" => {
             let r = protobuf::parse_from_bytes(&req).unwrap();

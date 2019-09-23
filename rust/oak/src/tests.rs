@@ -27,19 +27,22 @@ fn test_result_from_status() {
 #[test]
 fn test_write_message() {
     oak_tests::reset_channels();
-    let mut send_channel = SendChannelHalf::new(123);
+    let send_channel = WriteHandle { handle: 123 };
     let data = [0x44, 0x4d, 0x44];
-    assert_matches!(send_channel.write_message(&data, &[]), Ok(()));
+    assert_eq!(OakStatus::OK, channel_write(send_channel, &data, &[]));
     assert_eq!("DMD", oak_tests::last_message_as_string());
 }
 
 #[test]
 fn test_write_message_failure() {
     oak_tests::reset_channels();
-    let mut send_channel = SendChannelHalf::new(123);
+    let send_channel = WriteHandle { handle: 123 };
     let data = [0x44, 0x4d, 0x44];
     oak_tests::set_write_status(Some(OakStatus::ERR_INVALID_ARGS.value()));
-    assert_matches!(send_channel.write_message(&data, &[]), Err(_));
+    assert_eq!(
+        OakStatus::ERR_INVALID_ARGS,
+        channel_write(send_channel, &data, &[])
+    );
 }
 
 #[test]
@@ -53,10 +56,10 @@ fn test_write() {
 #[test]
 fn test_read_message() {
     oak_tests::reset_channels();
-    let mut send = SendChannelHalf::new(123);
+    let send = WriteHandle { handle: 123 };
     let data = [0x44, 0x4d, 0x44];
-    assert_matches!(send.write_message(&data, &[]), Ok(()));
-    assert_matches!(send.write_message(&data, &[]), Ok(()));
+    assert_eq!(OakStatus::OK, channel_write(send, &data, &[]));
+    assert_eq!(OakStatus::OK, channel_write(send, &data, &[]));
 
     let rcv = ReadHandle { handle: 123 };
     let mut buf = Vec::with_capacity(1);

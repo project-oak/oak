@@ -29,7 +29,13 @@ use std::io::Write;
 #[no_mangle]
 pub extern "C" fn oak_main() -> i32 {
     match std::panic::catch_unwind(|| {
-        oak_log::init(log::Level::Debug, oak::channel_find("be_logging_port")).unwrap();
+        oak_log::init(
+            log::Level::Debug,
+            oak::WriteHandle {
+                handle: oak::channel_find("be_logging_port"),
+            },
+        )
+        .unwrap();
         oak::set_panic_hook();
         let in_handle = oak::channel_find("from_frontend");
         let out_handle = oak::channel_find("to_frontend");
@@ -37,7 +43,7 @@ pub extern "C" fn oak_main() -> i32 {
 
         let handles = vec![in_handle];
         let in_channel = oak::ReadHandle { handle: in_handle };
-        let mut out_channel = oak::SendChannelHalf::new(out_handle);
+        let out_channel = oak::WriteHandle { handle: out_handle };
         loop {
             match oak::wait_on_channels(&handles) {
                 Ok(_ready_handles) => (),
@@ -57,7 +63,7 @@ pub extern "C" fn oak_main() -> i32 {
 
             // Create a new channel and write the response into it.
             let (new_write, new_read) = oak::channel_create().unwrap();
-            let mut new_out_channel = oak::SendChannelHalf::new(new_write);
+            let mut new_out_channel = oak::WriteHandle { handle: new_write };
             let internal_rsp = InternalMessage {
                 msg: internal_req.msg + "xxx",
             };
@@ -74,7 +80,7 @@ pub extern "C" fn oak_main() -> i32 {
 
             // Send a copy of the read half of the new channel back to the frontend,
             // then close our handle to the read half.
-            out_channel.write_message(&[], &[new_read]).unwrap();
+            oak::channel_write(out_channel, &[], &[new_read]);
             oak::channel_close(new_read);
         }
     }) {

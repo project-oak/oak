@@ -171,7 +171,7 @@ impl oak::grpc::OakNode for Node {
             model: NaiveBayes::new(),
         }
     }
-    fn invoke(&mut self, method: &str, _req: &[u8], out: &mut oak::SendChannelHalf) {
+    fn invoke(&mut self, method: &str, _req: &[u8], out: &mut oak::WriteHandle) {
         let mut logging_channel = oak::logging_channel();
         match method {
             "/oak.examples.machine_learning.MachineLearning/Data" => {

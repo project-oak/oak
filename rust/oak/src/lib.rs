@@ -50,6 +50,14 @@ pub struct ReadHandle {
     pub handle: Handle,
 }
 
+/// Wrapper for a handle to the send half of a channel.
+///
+/// For use when the underlying [`Handle`] is known to be for a send half.
+#[derive(Debug, Copy, Clone)]
+pub struct WriteHandle {
+    pub handle: Handle,
+}
+
 // Build a chunk of memory that is suitable for passing to wasm::wait_on_channels,
 // holding the given collection of channel handles.
 fn new_handle_space(handles: &[Handle]) -> Vec<u8> {
@@ -157,10 +165,10 @@ pub fn channel_read(half: ReadHandle, buf: &mut Vec<u8>, handles: &mut Vec<Handl
 }
 
 /// Write a message to a channel.
-pub fn channel_write(handle: Handle, buf: &[u8], handles: &[Handle]) -> OakStatus {
+pub fn channel_write(half: WriteHandle, buf: &[u8], handles: &[Handle]) -> OakStatus {
     match OakStatus::from_i32(unsafe {
         wasm::channel_write(
-            handle,
+            half.handle,
             buf.as_ptr(),
             buf.len(),
             handles.as_ptr() as *const u8, // Wasm spec defines this as little-endian
@@ -241,28 +249,13 @@ fn result_from_status<T>(status: Option<OakStatus>, val: T) -> std::io::Result<T
         )),
     }
 }
-/// Convenience wrapper for the send half of a channel, to allow use of the
-/// [`std::io::Write`] trait.
-pub struct SendChannelHalf {
-    handle: Handle,
-}
 
-impl SendChannelHalf {
-    pub fn new(handle: Handle) -> SendChannelHalf {
-        SendChannelHalf { handle }
-    }
-
-    pub fn write_message(&mut self, buf: &[u8], handles: &[Handle]) -> std::io::Result<()> {
-        result_from_status(Some(channel_write(self.handle, buf, handles)), ())
-    }
-}
-
-impl Write for SendChannelHalf {
+/// Implement the [`Write`] trait for [`WriteHandle`]s, to allow logging and use
+/// of protobuf serialization methods.
+impl Write for WriteHandle {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        match self.write_message(buf, &[]) {
-            Ok(_) => Ok(buf.len()),
-            Err(e) => Err(e),
-        }
+        let status = channel_write(*self, buf, &[]);
+        result_from_status(Some(status), buf.len())
     }
     fn flush(&mut self) -> std::io::Result<()> {
         Ok(())
@@ -275,7 +268,9 @@ impl Write for SendChannelHalf {
 /// Assumes that the Node has a pre-configured channel to the logging
 /// pseudo-Node that is identified by the default port name (`"log"`).
 pub fn logging_channel() -> impl Write {
-    let logging_channel = SendChannelHalf::new(channel_find("log"));
+    let logging_channel = WriteHandle {
+        handle: channel_find("log"),
+    };
     // Only flush logging channel on newlines.
     std::io::LineWriter::new(logging_channel)
 }
