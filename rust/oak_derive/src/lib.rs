@@ -1,3 +1,21 @@
+//
+// Copyright 2019 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+//! Macro to derive standard boilerplate code for an Oak Node.
+
 extern crate oak;
 extern crate proc_macro;
 extern crate protobuf;
@@ -6,14 +24,15 @@ extern crate syn;
 use proc_macro::TokenStream;
 use quote::quote;
 
-/// Implements the necessary bindings to make the annotated struct act as an Oak
-/// Node that processes gRPC method invocations, assuming the default port names
-/// are used for gRPC channels.
+/// Implements the necessary bindings to make the annotated struct act as a
+/// gRPC-processing Oak Node.
 ///
-/// May only be used on struct objects.
+/// May only be used on struct objects.  Assumes that the default pre-defined
+/// port names (`"grpc_in"`, `"grpc_out"`) are used to identify the gRPC
+/// channels.
 ///
-/// At most one struct may be annotated with this, as it produces global symbols that would
-/// otherwise conflict if implemented multiple times.
+/// At most one struct may be annotated with this, as it produces global symbols
+/// that would otherwise conflict if implemented multiple times.
 ///
 /// ```rust
 /// extern crate oak;

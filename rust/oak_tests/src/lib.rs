@@ -1,3 +1,21 @@
+//
+// Copyright 2019 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+//! Test utilities to help with unit testing of Oak SDK code.
+
 extern crate protobuf;
 
 use oak::proto::oak_api::OakStatus;
@@ -72,6 +90,9 @@ thread_local! {
 }
 
 // Implementations of the Oak API host functions in Rust for testing.
+
+/// Test-only implementation of channel wait functionality, which always
+/// indicates that all provided channels are ready for reading.
 #[no_mangle]
 pub unsafe extern "C" fn wait_on_channels(buf: *mut u8, count: u32) -> i32 {
     // Pretend all channels are readable.
@@ -82,6 +103,8 @@ pub unsafe extern "C" fn wait_on_channels(buf: *mut u8, count: u32) -> i32 {
     OakStatus::OK.value()
 }
 
+/// Test-only implementation of channel write functionality, which writes (only) the data
+/// of the provided message to a (global) test channel.
 #[no_mangle]
 pub extern "C" fn channel_write(
     _handle: u64,
@@ -93,6 +116,8 @@ pub extern "C" fn channel_write(
     CHANNEL.with(|channel| channel.borrow_mut().write_message(buf, size))
 }
 
+/// Test-only implementation fo channel read functionality, which reads a
+/// message from the (global) test channel.
 #[no_mangle]
 pub extern "C" fn channel_read(
     _handle: u64,
@@ -106,34 +131,46 @@ pub extern "C" fn channel_read(
     CHANNEL.with(|channel| channel.borrow_mut().read_message(buf, size, actual_size))
 }
 
+/// Test-only placeholder for channel creation, which always fails.
 #[no_mangle]
 pub extern "C" fn channel_create(_write: *mut u64, _read: *mut u64) -> i32 {
     OakStatus::ERR_INTERNAL.value()
 }
 
+/// Test-only placeholder for channel creation, which always appears to succeed
+/// (but does nothing).
 #[no_mangle]
 pub extern "C" fn channel_close(_handle: u64) -> i32 {
     OakStatus::OK.value()
 }
 
+/// Test-only placeholder for finding a channel by preconfigured port name, which
+/// always returns a hard coded value.
 #[no_mangle]
 pub extern "C" fn channel_find(_buf: *const u8, _size: usize) -> u64 {
     1
 }
 
-// Convenience helpers for tests
+/// Convenience test helper which returns the last message on the global test
+/// channel as a string.
 pub fn last_message_as_string() -> String {
     CHANNEL.with(|channel| match channel.borrow().messages.front() {
         Some(msg) => unsafe { std::str::from_utf8_unchecked(msg).to_string() },
         None => "".to_string(),
     })
 }
+
+/// Test helper that injects a failure for future channel read operations.
 pub fn set_read_status(status: Option<i32>) {
     CHANNEL.with(|channel| channel.borrow_mut().read_status = status)
 }
+
+/// Test helper that injects a failure for future channel write operations.
 pub fn set_write_status(status: Option<i32>) {
     CHANNEL.with(|channel| channel.borrow_mut().write_status = status)
 }
+
+/// Test helper that sets up a new global test channel.
 pub fn reset_channels() {
     CHANNEL.with(|channel| *channel.borrow_mut() = MockChannel::new())
 }

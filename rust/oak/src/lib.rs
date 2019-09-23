@@ -35,6 +35,7 @@ mod tests;
 #[macro_use]
 extern crate assert_matches;
 
+/// Result type that uses a [`proto::status::Status`] type for error values.
 pub type GrpcResult<T> = Result<T, proto::status::Status>;
 
 /// Trait to allow repeated writing of responses for server-streaming gRPC methods.
@@ -64,9 +65,12 @@ where
     }
 }
 
+/// Handle used to identify read or write channel halves.
+///
+/// These handles are used for all host function calls.
 pub type Handle = u64;
 
-/// Map an OakStatus to the nearest available std::io::Result.
+/// Map an [`OakStatus`] value to the nearest available [`std::io::Result`].
 fn result_from_status<T>(status: Option<OakStatus>, val: T) -> std::io::Result<T> {
     match status {
         Some(OakStatus::OAK_STATUS_UNSPECIFIED) => Err(io::Error::new(
@@ -133,6 +137,10 @@ mod wasm {
     }
 }
 
+/// Create a new unidirectional channel.
+///
+/// On success, returns [`Handle`] values for the write and read halves
+/// (respectively).
 pub fn channel_create() -> Result<(Handle, Handle), OakStatus> {
     let mut write: Handle = 0;
     let mut read: Handle = 0;
@@ -145,6 +153,7 @@ pub fn channel_create() -> Result<(Handle, Handle), OakStatus> {
     }
 }
 
+/// Close the specified channel [`Handle`].
 pub fn channel_close(handle: Handle) -> OakStatus {
     match OakStatus::from_i32(unsafe { wasm::channel_close(handle) }) {
         Some(s) => s,
@@ -152,10 +161,16 @@ pub fn channel_close(handle: Handle) -> OakStatus {
     }
 }
 
+/// Determine the [`Handle`] for a pre-defined channel, identified by its
+/// `port_name`.
 pub fn channel_find(port_name: &str) -> Handle {
     unsafe { wasm::channel_find(port_name.as_ptr(), port_name.len()) }
 }
 
+/// Number of bytes needed per-handle for channel readiness notifications.
+///
+/// The notification space consists of the channel handle (as a little-endian
+/// u64) followed by a single byte indicating the channel readiness.
 pub const SPACE_BYTES_PER_HANDLE: usize = 9;
 
 // Build a chunk of memory that is suitable for passing to wasm::wait_on_channels,
@@ -178,9 +193,12 @@ fn prep_handle_space(space: &mut [u8]) {
     }
 }
 
-// Convenience wrapper around wait_on_channels host function. This version is
-// easier to use in Rust but is less efficient (because the notification space
-// is re-created on each invocation).
+/// Wait for one or more of the provided handles to become ready for reading
+/// from.
+///
+/// This is a convenience wrapper around the [`wasm::wait_on_channels`] host
+/// function. This version is easier to use in Rust but is less efficient
+/// (because the notification space is re-created on each invocation).
 pub fn wait_on_channels(handles: &[Handle]) -> Result<Vec<Handle>, OakStatus> {
     let mut space = new_handle_space(handles);
     unsafe {
@@ -200,6 +218,8 @@ pub fn wait_on_channels(handles: &[Handle]) -> Result<Vec<Handle>, OakStatus> {
     }
 }
 
+/// Convenience wrapper for the send half of a channel, to allow use of the
+/// [`std::io::Write`] trait.
 pub struct SendChannelHalf {
     handle: Handle,
 }
@@ -225,8 +245,6 @@ impl SendChannelHalf {
     }
 }
 
-// Implement the Write trait on a send channel for convenience, particularly for
-// the logging channel.
 impl Write for SendChannelHalf {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         match self.write_message(buf, &[]) {
@@ -239,12 +257,20 @@ impl Write for SendChannelHalf {
     }
 }
 
+/// Return an instance of the [`std::io::Write`] trait that emits messages to
+/// the Node's logging channel.
+///
+/// Assumes that the Node has a pre-configured channel to the logging
+/// pseudo-Node that is identified by the default port name (`"log"`).
 pub fn logging_channel() -> impl Write {
     let logging_channel = SendChannelHalf::new(channel_find("log"));
     // Only flush logging channel on newlines.
     std::io::LineWriter::new(logging_channel)
 }
 
+/// Convenience wrapper for the receive half of a channel.
+///
+/// This helps when the underlying [`Handle`] is known to be for a receive half.
 pub struct ReceiveChannelHalf {
     handle: Handle,
 }
@@ -312,15 +338,41 @@ impl ReceiveChannelHalf {
     }
 }
 
-/// Trait encapsulating the operations required for an Oak Node.
+/// Trait for Oak Nodes that act as a gRPC services.
+///
+/// An `OakNode` instance is normally passed to [`grpc_event_loop`], to allow
+/// repeated invocation of its `invoke()` method.
 pub trait OakNode {
+    /// Construct the (single) instance of the node.
+    ///
+    /// This method may choose to initialize logging by invoking
+    /// [`oak_log::init()`].
+    ///
+    /// [`oak_log::init()`]: ../oak_log/fn.init.html
     fn new() -> Self
     where
         Self: Sized;
+
+    /// Process a single gRPC method invocation.
+    ///
+    /// The method name is provided by `method` and the incoming serialized gRPC
+    /// request is held in `req`.  Response messages should be written to `out`,
+    /// as serialized [`GrpcResponse`] messages encapsulating the service
+    /// response.
+    ///
+    /// [`GrpcResponse`]: proto::grpc_encap::GrpcResponse
     fn invoke(&mut self, method: &str, req: &[u8], out: &mut SendChannelHalf);
 }
 
-/// Perform a gRPC event loop on the given channels, invoking the given node.
+/// Perform a gRPC event loop for a Node.
+///
+/// Invoking the given `node`'s [`invoke`] method for each incoming request that
+/// arrives on the inbound channel as a serialized [`GrpcRequest`] message,
+/// giving the [`invoke`] method the outbound channel for encapsulated responses
+/// to be written to.
+///
+/// [`invoke`]: OakNode::invoke
+/// [`GrpcRequest`]: proto::grpc_encap::GrpcRequest
 pub fn grpc_event_loop<T: OakNode>(
     mut node: T,
     grpc_in_handle: Handle,
@@ -376,8 +428,11 @@ pub fn grpc_event_loop<T: OakNode>(
     }
 }
 
-/// Install a panic hook so that panics are logged to the logging channel, if one is set.
-/// See https://doc.rust-lang.org/std/panic/struct.PanicInfo.html.
+/// Install a panic hook that logs [panic information].
+///
+/// Logs panic infomation to the logging channel, if one is set.
+///
+/// [panic information]: std::panic::PanicInfo
 pub fn set_panic_hook() {
     std::panic::set_hook(Box::new(|panic_info| {
         let msg = panic_info

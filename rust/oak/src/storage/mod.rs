@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+//! Helper library for accessing Oak storage services.
+
 extern crate protobuf;
 
 use crate::{GrpcResult, ReceiveChannelHalf, SendChannelHalf};
@@ -23,6 +25,7 @@ use proto::storage_channel::{
 };
 use protobuf::Message;
 
+/// Local representation of the connection to an external storage service.
 pub struct Storage {
     write_channel: crate::SendChannelHalf,
     wait_space: Vec<u8>,
@@ -30,12 +33,17 @@ pub struct Storage {
 }
 
 impl Default for Storage {
+    /// Create a default `Storage` instance assuming the standard port names
+    /// (`"storage_in"`, `"storage_out"`) for pre-defined channels for storage
+    /// communication.
     fn default() -> Storage {
         Storage::new("storage_in", "storage_out")
     }
 }
 
 impl Storage {
+    /// Create a `Storage` instance using the given port names for pre-defined
+    /// channels for storage communication.
     pub fn new(in_port_name: &str, out_port_name: &str) -> Storage {
         let handle = crate::channel_find(in_port_name);
         let handles = vec![handle];
@@ -82,6 +90,8 @@ impl Storage {
         response
     }
 
+    /// Read the value associated with the given `name` from the storage
+    /// instance identified by `name`.
     pub fn read(&mut self, storage_name: &[u8], name: &[u8]) -> GrpcResult<Vec<u8>> {
         let mut read_request = StorageChannelReadRequest::new();
         read_request.datum_name = name.to_owned();
@@ -103,6 +113,8 @@ impl Storage {
         }
     }
 
+    /// Set the value associated with the given `name` from the storage instance
+    /// identified by `name`.
     pub fn write(&mut self, storage_name: &[u8], name: &[u8], value: &[u8]) -> GrpcResult<()> {
         let mut write_request = StorageChannelWriteRequest::new();
         write_request.datum_name = name.to_owned();
@@ -121,6 +133,8 @@ impl Storage {
         }
     }
 
+    /// Delete the value associated with the given `name` from the storage
+    /// instance identified by `name`.
     pub fn delete(&mut self, storage_name: &[u8], name: &[u8]) -> GrpcResult<()> {
         let mut delete_request = StorageChannelDeleteRequest::new();
         delete_request.datum_name = name.to_owned();
