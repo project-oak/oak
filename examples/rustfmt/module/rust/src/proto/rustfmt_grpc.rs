@@ -19,13 +19,13 @@
 #![allow(unused_results)]
 
 
-use oak::GrpcResult;
+use oak::grpc;
 use protobuf::Message;
 use std::io::Write;
 
 // Oak Node server interface
 pub trait FormatServiceNode {
-    fn format(&mut self, req: super::rustfmt::FormatRequest) -> GrpcResult<super::rustfmt::FormatResponse>;
+    fn format(&mut self, req: super::rustfmt::FormatRequest) -> grpc::Result<super::rustfmt::FormatResponse>;
 }
 
 // Oak Node gRPC method dispatcher

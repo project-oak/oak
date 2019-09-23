@@ -37,7 +37,7 @@ use quote::quote;
 /// ```rust
 /// extern crate oak;
 /// extern crate protobuf;
-/// use oak::OakNode;
+/// use oak::grpc::OakNode;
 /// use protobuf::ProtobufEnum;
 ///
 /// #[derive(oak_derive::OakExports)]
@@ -65,7 +65,7 @@ pub fn derive_oak_exports(input: TokenStream) -> TokenStream {
             // https://doc.rust-lang.org/nomicon/ffi.html#ffi-and-panics
             match std::panic::catch_unwind(||{
                 let mut node = <#name>::new();
-                oak::grpc_event_loop(node, oak::channel_find("grpc_in"), oak::channel_find("grpc_out"))
+                oak::grpc::event_loop(node, oak::channel_find("grpc_in"), oak::channel_find("grpc_out"))
             }) {
                 Ok(rc) => rc,
                 Err(_) => oak::proto::oak_api::OakStatus::ERR_INTERNAL.value(),

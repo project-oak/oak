@@ -116,9 +116,9 @@ impl<'a> MethodGen<'a> {
 
     fn server_resp_type(&self) -> String {
         if self.proto.get_server_streaming() {
-            "GrpcResult<()>".to_string()
+            "grpc::Result<()>".to_string()
         } else {
-            format!("GrpcResult<{}>", self.output_message())
+            format!("grpc::Result<{}>", self.output_message())
         }
     }
 
@@ -138,7 +138,7 @@ impl<'a> MethodGen<'a> {
         };
         let arg2 = if self.proto.get_server_streaming() {
             format!(
-                ", writer: &mut dyn oak::ResponseWriter<{}>",
+                ", writer: &mut dyn grpc::ResponseWriter<{}>",
                 self.output_message()
             )
         } else {
@@ -179,7 +179,7 @@ impl<'a> MethodGen<'a> {
             );
         } else if self.proto.get_server_streaming() {
             w.block("{", "}", |w| {
-                w.write_line("let mut w = oak::ChannelResponseWriter{channel: out};");
+                w.write_line("let mut w = grpc::ChannelResponseWriter{channel: out};");
                 w.block(
                     &format!("match node.{}({}, &mut w) {{", self.snake_name(), param_in),
                     "}",
@@ -275,7 +275,7 @@ impl<'a> ServiceGen<'a> {
     }
 
     fn write(&self, w: &mut CodeWriter) {
-        w.write_line("use oak::GrpcResult;");
+        w.write_line("use oak::grpc;");
         w.write_line("use protobuf::Message;");
         w.write_line("use std::io::Write;");
         w.write_line("");

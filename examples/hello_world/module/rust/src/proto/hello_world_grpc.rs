@@ -19,19 +19,19 @@
 #![allow(unused_results)]
 
 
-use oak::GrpcResult;
+use oak::grpc;
 use protobuf::Message;
 use std::io::Write;
 
 // Oak Node server interface
 pub trait HelloWorldNode {
-    fn say_hello(&mut self, req: super::hello_world::HelloRequest) -> GrpcResult<super::hello_world::HelloResponse>;
+    fn say_hello(&mut self, req: super::hello_world::HelloRequest) -> grpc::Result<super::hello_world::HelloResponse>;
 
-    fn lots_of_replies(&mut self, req: super::hello_world::HelloRequest, writer: &mut dyn oak::ResponseWriter<super::hello_world::HelloResponse>) -> GrpcResult<()>;
+    fn lots_of_replies(&mut self, req: super::hello_world::HelloRequest, writer: &mut dyn grpc::ResponseWriter<super::hello_world::HelloResponse>) -> grpc::Result<()>;
 
-    fn lots_of_greetings(&mut self, reqs: Vec<super::hello_world::HelloRequest>) -> GrpcResult<super::hello_world::HelloResponse>;
+    fn lots_of_greetings(&mut self, reqs: Vec<super::hello_world::HelloRequest>) -> grpc::Result<super::hello_world::HelloResponse>;
 
-    fn bidi_hello(&mut self, reqs: Vec<super::hello_world::HelloRequest>, writer: &mut dyn oak::ResponseWriter<super::hello_world::HelloResponse>) -> GrpcResult<()>;
+    fn bidi_hello(&mut self, reqs: Vec<super::hello_world::HelloRequest>, writer: &mut dyn grpc::ResponseWriter<super::hello_world::HelloResponse>) -> grpc::Result<()>;
 }
 
 // Oak Node gRPC method dispatcher
@@ -55,7 +55,7 @@ pub fn dispatch(node: &mut dyn HelloWorldNode, method: &str, req: &[u8], out: &m
             let r = protobuf::parse_from_bytes(&req).unwrap();
             let mut result = oak::proto::grpc_encap::GrpcResponse::new();
             {
-                let mut w = oak::ChannelResponseWriter{channel: out};
+                let mut w = grpc::ChannelResponseWriter{channel: out};
                 match node.lots_of_replies(r, &mut w) {
                     Ok(_) => {},
                     Err(status) => { result.set_status(status); },
@@ -82,7 +82,7 @@ pub fn dispatch(node: &mut dyn HelloWorldNode, method: &str, req: &[u8], out: &m
             let rr = vec![protobuf::parse_from_bytes(&req).unwrap()];
             let mut result = oak::proto::grpc_encap::GrpcResponse::new();
             {
-                let mut w = oak::ChannelResponseWriter{channel: out};
+                let mut w = grpc::ChannelResponseWriter{channel: out};
                 match node.bidi_hello(rr, &mut w) {
                     Ok(_) => {},
                     Err(status) => { result.set_status(status); },

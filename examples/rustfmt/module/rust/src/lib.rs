@@ -23,7 +23,8 @@ extern crate rustfmt_nightly;
 
 mod proto;
 
-use oak::{GrpcResult, OakNode};
+use oak::grpc;
+use oak::grpc::OakNode;
 use oak_derive::OakExports;
 use proto::rustfmt::{FormatRequest, FormatResponse};
 use proto::rustfmt_grpc::{dispatch, FormatServiceNode};
@@ -32,7 +33,7 @@ use protobuf::ProtobufEnum;
 #[derive(OakExports)]
 struct Node;
 
-impl oak::OakNode for Node {
+impl oak::grpc::OakNode for Node {
     fn new() -> Self {
         oak_log::init_default();
         Node
@@ -43,7 +44,7 @@ impl oak::OakNode for Node {
 }
 
 impl FormatServiceNode for Node {
-    fn format(&mut self, req: FormatRequest) -> GrpcResult<FormatResponse> {
+    fn format(&mut self, req: FormatRequest) -> grpc::Result<FormatResponse> {
         let mut output = Vec::new();
         {
             let mut config = rustfmt_nightly::Config::default();

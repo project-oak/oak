@@ -18,7 +18,8 @@
 
 extern crate protobuf;
 
-use crate::{GrpcResult, ReceiveChannelHalf, SendChannelHalf};
+use crate::grpc;
+use crate::{ReceiveChannelHalf, SendChannelHalf};
 use proto::storage_channel::{
     StorageChannelDeleteRequest, StorageChannelReadRequest, StorageChannelRequest,
     StorageChannelResponse, StorageChannelWriteRequest,
@@ -92,7 +93,7 @@ impl Storage {
 
     /// Read the value associated with the given `name` from the storage
     /// instance identified by `name`.
-    pub fn read(&mut self, storage_name: &[u8], name: &[u8]) -> GrpcResult<Vec<u8>> {
+    pub fn read(&mut self, storage_name: &[u8], name: &[u8]) -> grpc::Result<Vec<u8>> {
         let mut read_request = StorageChannelReadRequest::new();
         read_request.datum_name = name.to_owned();
 
@@ -115,7 +116,7 @@ impl Storage {
 
     /// Set the value associated with the given `name` from the storage instance
     /// identified by `name`.
-    pub fn write(&mut self, storage_name: &[u8], name: &[u8], value: &[u8]) -> GrpcResult<()> {
+    pub fn write(&mut self, storage_name: &[u8], name: &[u8], value: &[u8]) -> grpc::Result<()> {
         let mut write_request = StorageChannelWriteRequest::new();
         write_request.datum_name = name.to_owned();
         write_request.datum_value = value.to_owned();
@@ -135,7 +136,7 @@ impl Storage {
 
     /// Delete the value associated with the given `name` from the storage
     /// instance identified by `name`.
-    pub fn delete(&mut self, storage_name: &[u8], name: &[u8]) -> GrpcResult<()> {
+    pub fn delete(&mut self, storage_name: &[u8], name: &[u8]) -> grpc::Result<()> {
         let mut delete_request = StorageChannelDeleteRequest::new();
         delete_request.datum_name = name.to_owned();
 

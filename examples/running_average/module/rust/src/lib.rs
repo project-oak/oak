@@ -28,7 +28,8 @@ extern crate protobuf;
 
 mod proto;
 
-use oak::{GrpcResult, OakNode};
+use oak::grpc;
+use oak::grpc::OakNode;
 use oak_derive::OakExports;
 use proto::running_average::{GetAverageResponse, SubmitSampleRequest};
 use proto::running_average_grpc::{dispatch, RunningAverageNode};
@@ -40,7 +41,7 @@ struct Node {
     count: u64,
 }
 
-impl oak::OakNode for Node {
+impl oak::grpc::OakNode for Node {
     fn new() -> Self {
         Node::default()
     }
@@ -50,13 +51,13 @@ impl oak::OakNode for Node {
 }
 
 impl RunningAverageNode for Node {
-    fn submit_sample(&mut self, req: SubmitSampleRequest) -> GrpcResult<()> {
+    fn submit_sample(&mut self, req: SubmitSampleRequest) -> grpc::Result<()> {
         self.sum += req.value;
         self.count += 1;
         Ok(())
     }
 
-    fn get_average(&mut self) -> GrpcResult<GetAverageResponse> {
+    fn get_average(&mut self) -> grpc::Result<GetAverageResponse> {
         let mut res = GetAverageResponse::new();
         res.average = self.sum / self.count;
         Ok(res)
