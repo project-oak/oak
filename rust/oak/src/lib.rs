@@ -42,6 +42,14 @@ extern crate assert_matches;
 /// These handles are used for all host function calls.
 pub type Handle = u64;
 
+/// Wrapper for a handle to the read half of a channel.
+///
+/// For use when the underlying [`Handle`] is known to be for a receive half.
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct ReadHandle {
+    pub handle: Handle,
+}
+
 // Build a chunk of memory that is suitable for passing to wasm::wait_on_channels,
 // holding the given collection of channel handles.
 fn new_handle_space(handles: &[Handle]) -> Vec<u8> {
@@ -91,7 +99,7 @@ pub fn wait_on_channels(handles: &[Handle]) -> Result<Vec<Handle>, OakStatus> {
 ///
 /// The provided vectors for received data and associated handles will be
 /// resized to accomodate the information in the message.
-pub fn channel_read(handle: Handle, buf: &mut Vec<u8>, handles: &mut Vec<Handle>) -> OakStatus {
+pub fn channel_read(half: ReadHandle, buf: &mut Vec<u8>, handles: &mut Vec<Handle>) -> OakStatus {
     // Try reading from the channel twice: first with provided vectors, then
     // with vectors that have been resized to meet size requirements.
     for resized in &[false, true] {
@@ -99,7 +107,7 @@ pub fn channel_read(handle: Handle, buf: &mut Vec<u8>, handles: &mut Vec<Handle>
         let mut actual_handle_count: u32 = 0;
         let status = OakStatus::from_i32(unsafe {
             wasm::channel_read(
-                handle,
+                half.handle,
                 buf.as_mut_ptr(),
                 buf.capacity(),
                 &mut actual_size,
@@ -270,27 +278,6 @@ pub fn logging_channel() -> impl Write {
     let logging_channel = SendChannelHalf::new(channel_find("log"));
     // Only flush logging channel on newlines.
     std::io::LineWriter::new(logging_channel)
-}
-
-/// Convenience wrapper for the receive half of a channel.
-///
-/// This helps when the underlying [`Handle`] is known to be for a receive half.
-pub struct ReceiveChannelHalf {
-    handle: Handle,
-}
-
-impl ReceiveChannelHalf {
-    pub fn new(handle: Handle) -> ReceiveChannelHalf {
-        ReceiveChannelHalf { handle }
-    }
-
-    pub fn read_message(
-        &mut self,
-        buf: &mut Vec<u8>,
-        handles: &mut Vec<Handle>,
-    ) -> std::io::Result<()> {
-        result_from_status(Some(channel_read(self.handle, buf, handles)), ())
-    }
 }
 
 /// Install a panic hook that logs [panic information].

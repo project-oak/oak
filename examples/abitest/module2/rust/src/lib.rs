@@ -36,7 +36,7 @@ pub extern "C" fn oak_main() -> i32 {
         info!("backend node: in={}, out={}", in_handle, out_handle);
 
         let handles = vec![in_handle];
-        let mut in_channel = oak::ReceiveChannelHalf::new(in_handle);
+        let in_channel = oak::ReadHandle { handle: in_handle };
         let mut out_channel = oak::SendChannelHalf::new(out_handle);
         loop {
             match oak::wait_on_channels(&handles) {
@@ -45,7 +45,7 @@ pub extern "C" fn oak_main() -> i32 {
             }
             let mut buf = Vec::<u8>::with_capacity(1024);
             let mut handles = Vec::with_capacity(1);
-            in_channel.read_message(&mut buf, &mut handles).unwrap();
+            oak::channel_read(in_channel, &mut buf, &mut handles);
             if buf.is_empty() {
                 info!("no pending message; poll again");
                 continue;

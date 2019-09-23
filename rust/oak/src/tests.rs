@@ -58,37 +58,43 @@ fn test_read_message() {
     assert_matches!(send.write_message(&data, &[]), Ok(()));
     assert_matches!(send.write_message(&data, &[]), Ok(()));
 
-    let mut rcv = ReceiveChannelHalf::new(123);
+    let rcv = ReadHandle { handle: 123 };
     let mut buf = Vec::with_capacity(1);
     let mut handles = Vec::with_capacity(1);
-    assert_matches!(rcv.read_message(&mut buf, &mut handles), Ok(()));
+    assert_matches!(channel_read(rcv, &mut buf, &mut handles), OakStatus::OK);
     assert_eq!(data.to_vec(), buf);
 
     let mut big_buf = Vec::with_capacity(100);
-    assert_matches!(rcv.read_message(&mut big_buf, &mut handles), Ok(()));
+    assert_matches!(channel_read(rcv, &mut big_buf, &mut handles), OakStatus::OK);
     assert_eq!(data.to_vec(), big_buf);
 }
 
 #[test]
 fn test_read_message_failure() {
     oak_tests::reset_channels();
-    let mut rcv = ReceiveChannelHalf::new(123);
+    let rcv = ReadHandle { handle: 123 };
     let mut buf = Vec::with_capacity(100);
     let mut handles = Vec::with_capacity(1);
     oak_tests::set_read_status(Some(OakStatus::ERR_INVALID_ARGS.value()));
-    assert_matches!(rcv.read_message(&mut buf, &mut handles), Err(_));
+    assert_eq!(
+        channel_read(rcv, &mut buf, &mut handles),
+        OakStatus::ERR_INVALID_ARGS
+    );
 }
 
 #[test]
 fn test_read_message_internal_failure() {
     oak_tests::reset_channels();
-    let mut rcv = ReceiveChannelHalf::new(123);
+    let rcv = ReadHandle { handle: 123 };
     let mut buf = Vec::with_capacity(100);
     let mut handles = Vec::with_capacity(1);
 
     // Set buffer too small but don't set actual size, so the retry gets confused.
     oak_tests::set_read_status(Some(OakStatus::ERR_BUFFER_TOO_SMALL.value()));
-    assert_matches!(rcv.read_message(&mut buf, &mut handles), Err(_));
+    assert_matches!(
+        channel_read(rcv, &mut buf, &mut handles),
+        OakStatus::ERR_BUFFER_TOO_SMALL
+    );
 }
 
 #[test]

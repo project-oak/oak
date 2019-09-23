@@ -19,7 +19,7 @@
 extern crate protobuf;
 
 use crate::grpc;
-use crate::{ReceiveChannelHalf, SendChannelHalf};
+use crate::{ReadHandle, SendChannelHalf};
 use proto::storage_channel::{
     StorageChannelDeleteRequest, StorageChannelReadRequest, StorageChannelRequest,
     StorageChannelResponse, StorageChannelWriteRequest,
@@ -30,7 +30,7 @@ use protobuf::Message;
 pub struct Storage {
     write_channel: crate::SendChannelHalf,
     wait_space: Vec<u8>,
-    read_channel: crate::ReceiveChannelHalf,
+    read_channel: crate::ReadHandle,
 }
 
 impl Default for Storage {
@@ -51,7 +51,7 @@ impl Storage {
         Storage {
             write_channel: SendChannelHalf::new(crate::channel_find(out_port_name)),
             wait_space: crate::new_handle_space(&handles),
-            read_channel: ReceiveChannelHalf::new(handle),
+            read_channel: ReadHandle { handle },
         }
     }
 
@@ -75,9 +75,7 @@ impl Storage {
 
         let mut buffer = Vec::<u8>::with_capacity(256);
         let mut handles = Vec::<crate::Handle>::with_capacity(1);
-        self.read_channel
-            .read_message(&mut buffer, &mut handles)
-            .unwrap();
+        crate::channel_read(self.read_channel, &mut buffer, &mut handles);
         if !handles.is_empty() {
             panic!("unexpected handles received alongside storage request")
         }
