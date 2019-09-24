@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+load("//third_party/bazel_rules/rules_proto/proto:defs.bzl", "proto_library", "cc_proto_library")
+
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],
