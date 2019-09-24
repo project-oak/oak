@@ -70,7 +70,7 @@ pub fn derive_oak_exports(input: TokenStream) -> TokenStream {
                                       oak::WriteHandle{ handle:oak::channel_find("grpc_out")})
             }) {
                 Ok(rc) => rc,
-                Err(_) => oak::proto::oak_api::OakStatus::ERR_INTERNAL.value(),
+                Err(_) => oak::OakStatus::ERR_INTERNAL.value(),
             }
         }
     };

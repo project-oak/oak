@@ -16,8 +16,7 @@
 
 //! Functionality to help Oak Nodes interact with gRPC.
 
-use crate::proto::oak_api::OakStatus;
-use crate::{proto, wasm, Handle, ReadHandle, WriteHandle};
+use crate::{proto, wasm, Handle, OakStatus, ReadHandle, WriteHandle};
 use protobuf::{Message, ProtobufEnum};
 
 /// Result type that uses a [`proto::status::Status`] type for error values.

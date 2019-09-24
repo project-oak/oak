@@ -28,9 +28,8 @@ extern crate serde;
 mod proto;
 
 use abitest_common::InternalMessage;
-use oak::grpc;
 use oak::grpc::OakNode;
-use oak::proto::oak_api::OakStatus;
+use oak::{grpc, OakStatus};
 use proto::abitest::{ABITestRequest, ABITestResponse, ABITestResponse_TestResult};
 use proto::abitest_grpc::{dispatch, OakABITestServiceNode};
 use protobuf::ProtobufEnum;
@@ -54,7 +53,7 @@ pub extern "C" fn oak_main() -> i32 {
         oak::grpc::event_loop(node, grpc_in, grpc_out)
     }) {
         Ok(rc) => rc,
-        Err(_) => oak::proto::oak_api::OakStatus::ERR_INTERNAL.value(),
+        Err(_) => OakStatus::ERR_INTERNAL.value(),
     }
 }
 
