@@ -21,7 +21,7 @@ extern crate log;
 extern crate protobuf;
 
 use byteorder::WriteBytesExt;
-use proto::oak_api::OakStatus;
+pub use proto::oak_api::OakStatus;
 use protobuf::ProtobufEnum;
 
 pub mod grpc;

@@ -18,7 +18,7 @@
 
 extern crate protobuf;
 
-use oak::proto::oak_api::OakStatus;
+use oak::OakStatus;
 use protobuf::ProtobufEnum;
 use std::cell::RefCell;
 use std::collections::VecDeque;

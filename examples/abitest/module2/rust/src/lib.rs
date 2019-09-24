@@ -81,6 +81,6 @@ pub extern "C" fn oak_main() -> i32 {
         }
     }) {
         Ok(rc) => rc,
-        Err(_) => oak::proto::oak_api::OakStatus::ERR_INTERNAL.value(),
+        Err(_) => oak::OakStatus::ERR_INTERNAL.value(),
     }
 }

@@ -47,8 +47,5 @@ fn test_panic_catch() {
     let mut channel = oak::io::Channel::new(oak::WriteHandle { handle: 2 });
     grpc_req.write_to_writer(&mut channel).unwrap();
 
-    assert_eq!(
-        oak::proto::oak_api::OakStatus::ERR_INTERNAL.value(),
-        oak_main()
-    );
+    assert_eq!(oak::OakStatus::ERR_INTERNAL.value(), oak_main());
 }
