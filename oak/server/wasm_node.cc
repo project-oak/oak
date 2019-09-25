@@ -39,8 +39,9 @@ namespace oak {
 static std::unique_ptr<wabt::FileStream> s_log_stream = wabt::FileStream::CreateStdout();
 static std::unique_ptr<wabt::FileStream> s_stdout_stream = wabt::FileStream::CreateStdout();
 
-static bool MemoryAvailable(wabt::interp::Environment* env, const uint32_t offset, const uint32_t size) {
-  return ((offset + size) <=  env->GetMemory(0)->data.size());
+static bool MemoryAvailable(wabt::interp::Environment* env, const uint32_t offset,
+                            const uint32_t size) {
+  return ((offset + size) <= env->GetMemory(0)->data.size());
 }
 
 static absl::Span<const char> ReadMemory(wabt::interp::Environment* env, const uint32_t offset,
