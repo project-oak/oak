@@ -1,6 +1,27 @@
 # Oak ABI
 
-### WebAssembly Interface
+Oak [Nodes](concepts.md#oak-node) are implemented as WebAssembly modules, and
+so can only interact with things outside of the WebAssembly environment through
+specific entrypoints which form the **Oak ABI**:
+
+ - The [Oak VM](concepts.md#oak-vm) invokes the Oak Node via a single [exported
+   function](#exported-function).
+ - The Oak Node can make use of functionality provided by the Oak TCB by
+   invoking [host functions](#host-functions), available as WebAssembly imports.
+
+These host functions provided by the Oak TCB revolve around the use of
+[channels](concepts.md#channels) for inter-node communication.  To communicate
+with the outside world beyond the Oak system, the Oak TCB may also include
+[pre-defined channels](#pre-defined-channels) that are connected to
+[pseudo-Nodes](concepts.md#pseudo-nodes).
+
+Note also that the Oak ABI interactions are quite low-level; for example, they
+involve manual management of linear memory.  Oak Applications will typically use
+the higher-level [Oak SDK](sdk.md) which provides more convenient (and safer)
+wrappers around this functionality.
+
+
+## Exported Function
 
 Each Oak Module must expose the following **exported function** as a
 [WebAssembly export](https://webassembly.github.io/spec/core/syntax/modules.html#exports):
@@ -12,39 +33,8 @@ Each Oak Module must expose the following **exported function** as a
     forever, but may return a status if the Node choses to terminate (whether
     expectedly or unexpectedly).
 
-Communication from the Oak Module to the Oak VM and to other modules is
-implemented via **channels**. A channel represents a uni-directional stream of
-messages, with a receive half and a send half that an Oak module can read from
-or write to respectively. Each half of a channel is identified by a **handle**,
-which is used as a parameter to the corresponding host function calls.
 
-A collection of pre-configured channel halves are available to the Oak Node,
-as specified in the `ApplicationConfiguration` used to create the Node.
-The handles for these channels can be retrieved by using the `channel_find` host
-function (below) to map a port name to the relevant channel handle.
-
-The default port names that are configured by the `oak::DefaultConfig()`
-[helper function](oak/common/app_config.h) and its ancillaries
-(`oak::AddLoggingToConfig()`, `oak::AddStorageToConfig()`) are:
-
--   `log` (send): Messages sent to this channel will treated as
-    UTF-8 strings to be logged.
--   `grpc_in` (receive): This channel will be populated with incoming
-    gRPC request messages, for processing by the Oak Node.  Each message is a
-    serialized `GrpcRequest` protocol buffer message (see
-    [/oak/proto/grpc_encap.proto](oak/proto/grpc_encap.proto)).
--   `grpc_out` (send): This channel can be used to send gRPC response
-    messages.  Each such message should be encoded as a serialized
-    `GrpcResponse` protocol buffer message (see
-    [/oak/proto/grpc_encap.proto](oak/proto/grpc_encap.proto)).
--   `storage_in` (receive): This channel will be populated with incoming
-    storage response messages, for processing by the Oak Node.  Each message is a
-    serialized `StorageOperationResponse` protocol buffer message (see
-    [/oak/proto/storage.proto](oak/proto/storage.proto)).
--   `storage_out` (send): This channel can be used to send storage request
-    messages.  Each such message should be encoded as a serialized
-    `StorageOperationRequest` protocol buffer message (see
-    [/oak/proto/storage.proto](oak/proto/storage.proto)).
+## Host Functions
 
 Each Oak Module may also optionally rely on zero or more of the following **host
 functions** as [WebAssembly
@@ -121,3 +111,30 @@ imports](https://webassembly.github.io/spec/core/syntax/modules.html#imports)
     *   arg 0: Source buffer holding port name
     *   arg 1: Source buffer size in bytes
     *   return 0: Channel handle, or zero if not found.
+
+
+## Pre-Defined Channels
+
+The default [port names](concepts.md#pre-defined-channels-and-port-names) that
+are configured by the `oak::DefaultConfig()` [helper
+function](oak/common/app_config.h) and its ancillaries
+(`oak::AddLoggingToConfig()`, `oak::AddStorageToConfig()`) are:
+
+-   `log` (send): Messages sent to this channel will treated as
+    UTF-8 strings to be logged.
+-   `grpc_in` (receive): This channel will be populated with incoming
+    gRPC request messages, for processing by the Oak Node.  Each message is a
+    serialized `GrpcRequest` protocol buffer message (see
+    [/oak/proto/grpc_encap.proto](oak/proto/grpc_encap.proto)).
+-   `grpc_out` (send): This channel can be used to send gRPC response
+    messages.  Each such message should be encoded as a serialized
+    `GrpcResponse` protocol buffer message (see
+    [/oak/proto/grpc_encap.proto](oak/proto/grpc_encap.proto)).
+-   `storage_in` (receive): This channel will be populated with incoming
+    storage response messages, for processing by the Oak Node.  Each message is a
+    serialized `StorageOperationResponse` protocol buffer message (see
+    [/oak/proto/storage.proto](oak/proto/storage.proto)).
+-   `storage_out` (send): This channel can be used to send storage request
+    messages.  Each such message should be encoded as a serialized
+    `StorageOperationRequest` protocol buffer message (see
+    [/oak/proto/storage.proto](oak/proto/storage.proto)).
