@@ -3,34 +3,40 @@ participant Oak Manager\n(untrusted) as Mgr [fillcolor="orange"]
 participant Oak VM\n(in Enclave) as OVM [fillcolor="palegreen"]
 participant Oak Module\n(in Enclave) as Node [fillcolor="palegreen"]
 
-Client --> Mgr: CreateNodeReq(.wasm data)
+Client --> Mgr: CreateApplicationReq(.wasm data)
 Note over Mgr: load engine and\n.wasm into enclave [fillcolor="orange"]
 Mgr -->> OVM: create
-OVM -> Node: oak_initialize()
-Mgr --> Client: CreateNodeRsp(port)
-OVM --> Client: GetAttestationReq()
-Client --> OVM: GetAttestationRsp(key exchange)
+OVM -> Node: invoke oak_main()
+Node -> OVM: oak.channel_find("grpc_in")
+OVM -> Node: "grpc_in" => 1
+Node -> OVM: oak.channel_find("grpc_out")
+OVM -> Node: "grpc_out" => 2
+Node -> OVM: oak.wait_on_channels(1)
 
-Note over Client: [color="white"]
+Mgr --> Client: CreateApplicationRsp(port)
+Client --> OVM: GetAttestationReq()
+OVM --> Client: GetAttestationRsp(key exchange)
+
+Note over Client:  [color="white"]
 
 Client --> OVM: gRPC: DoSomethingRequest
-Note over OVM: store (encrypted)\ngRPC request [fillcolor="palegreen"]
-OVM -> Node: oak_handle_grpc_call()
-Note over Node: (prepare linear memory\narea for receives) [fillcolor="palegreen"]
-Node -> OVM: channel_read(GRPC_METHOD=3, &name)
-OVM -> Node: "DoSomethingRequest"
-Node -> OVM: channel_read(GRPC=2, &req)
+Note over OVM: decrypt & write\ngRPC req to channel [fillcolor="palegreen"]
+OVM -> Node: channel 1 ready
+Note over Node: (prepare linear memory\narea for receive) [fillcolor="palegreen"]
+Node -> OVM: oak.channel_read(1, &buf)
 OVM -> Node: encrypted, serialized\ngRPC request
 Note over Node: decrypt &\nunmarshal request [fillcolor="palegreen"]
 Note over Node: do something [fillcolor="palegreen"]
-Node -> OVM: channel_write(LOG=1, "doing something")
 Note over Node: serialize &\nencrypt response [fillcolor="palegreen"]
-Node -> OVM: channel_write(GRPC=2, &rsp)
-Note over OVM: send (encrypted)\ngRPC response [fillcolor="palegreen"]
+Node -> OVM: oak.channel_write(2, &rsp)
+Note over OVM: encrypt & send\ngRPC response [fillcolor="palegreen"]
 OVM -> Client: gRPC: DoSomethingResponse
+Node -> OVM: oak.wait_on_channels(1)
+
 
 Note over Client: [color="white"]
 
-Client --> Mgr: destroy Node
-OVM -> Node: oak_finalize()
-Mgr -->> Node: destroy
+Client --> Mgr: TerminateApplication
+Mgr --> OVM: destroy
+OVM -> Node: status=CHANNEL_CLOSED
+Note over Node: oak_main exits [fillcolor="palegreen"]
