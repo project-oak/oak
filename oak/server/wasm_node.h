@@ -35,6 +35,9 @@ class WasmNode final : public NodeThread {
 
   void InitEnvironment(wabt::interp::Environment* env);
 
+  // Return a (borrowed) pointer to the Web Assembly module for the Node.
+  wabt::interp::Module* Module() { return env_.GetLastModule(); }
+
   void Run() override;
 
   // Native implementation of the `oak.channel_read` host function.
@@ -56,8 +59,6 @@ class WasmNode final : public NodeThread {
   wabt::interp::HostFunc::Callback OakChannelFind(wabt::interp::Environment* env);
 
   wabt::interp::Environment env_;
-  // TODO: Use smart pointers.
-  wabt::interp::DefinedModule* module_;
 };
 
 }  // namespace oak

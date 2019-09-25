@@ -91,11 +91,9 @@ static void LogHostFunctionCall(const wabt::interp::HostFunc* func,
 }
 
 static wabt::Result ReadModule(const std::string& module_bytes, wabt::interp::Environment* env,
-                               wabt::Errors* errors, wabt::interp::DefinedModule** out_module) {
+                               wabt::Errors* errors) {
   LOG(INFO) << "Reading module";
   wabt::Result result;
-
-  *out_module = nullptr;
 
   wabt::Features s_features;
   const bool kReadDebugNames = true;
@@ -105,8 +103,9 @@ static wabt::Result ReadModule(const std::string& module_bytes, wabt::interp::En
   wabt::ReadBinaryOptions options(s_features, log_stream, kReadDebugNames, kStopOnFirstError,
                                   kFailOnCustomSectionError);
 
+  wabt::interp::DefinedModule* module = nullptr;
   return wabt::ReadBinaryInterp(env, module_bytes.data(), module_bytes.size(), options, errors,
-                                out_module);
+                                &module);
 }
 
 // Describes an expected export from an Oak module.
@@ -136,7 +135,7 @@ const std::vector<RequiredExport> kRequiredExports({
 
 // Check module exports all required functions with the correct signatures,
 // returning true if so.
-static bool CheckModuleExport(wabt::interp::Environment* env, wabt::interp::DefinedModule* module,
+static bool CheckModuleExport(wabt::interp::Environment* env, wabt::interp::Module* module,
                               const RequiredExport& req) {
   LOG(INFO) << "check for " << req;
   wabt::interp::Export* exp = module->GetExport(req.name_);
@@ -176,8 +175,7 @@ static bool CheckModuleExport(wabt::interp::Environment* env, wabt::interp::Defi
   }
   return true;
 }
-static bool CheckModuleExports(wabt::interp::Environment* env,
-                               wabt::interp::DefinedModule* module) {
+static bool CheckModuleExports(wabt::interp::Environment* env, wabt::interp::Module* module) {
   return std::all_of(
       kRequiredExports.begin(), kRequiredExports.end(),
       [env, module](const RequiredExport& req) { return CheckModuleExport(env, module, req); });
@@ -194,7 +192,7 @@ std::unique_ptr<WasmNode> WasmNode::Create(const std::string& name, const std::s
 
   wabt::Errors errors;
   LOG(INFO) << "Reading module";
-  wabt::Result result = ReadModule(module, &node->env_, &errors, &node->module_);
+  wabt::Result result = ReadModule(module, &node->env_, &errors);
   if (!wabt::Succeeded(result)) {
     LOG(WARNING) << "Could not read module: " << result;
     LOG(WARNING) << "Errors: " << wabt::FormatErrorsToString(errors, wabt::Location::Type::Binary);
@@ -202,7 +200,7 @@ std::unique_ptr<WasmNode> WasmNode::Create(const std::string& name, const std::s
   }
 
   LOG(INFO) << "Reading module done";
-  if (!CheckModuleExports(&node->env_, node->module_)) {
+  if (!CheckModuleExports(&node->env_, node->Module())) {
     LOG(WARNING) << "Failed to validate module";
     return nullptr;
   }
@@ -258,7 +256,7 @@ void WasmNode::Run() {
 
   LOG(INFO) << "module execution thread: run oak_main";
   wabt::interp::TypedValues args;
-  wabt::interp::ExecResult exec_result = executor.RunExportByName(module_, "oak_main", args);
+  wabt::interp::ExecResult exec_result = executor.RunExportByName(Module(), "oak_main", args);
 
   if (exec_result.result != wabt::interp::Result::Ok) {
     LOG(ERROR) << "execution failure: " << wabt::interp::ResultToString(exec_result.result);
