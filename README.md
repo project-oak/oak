@@ -283,14 +283,14 @@ The following sequence diagram shows a basic flow of requests between a client,
 the Oak Manager and an Oak Application.
 
 <!-- From (Google-internal): http://go/sequencediagram/view/5170404486283264 -->
-<img src="docs/BasicFlow.png" width="850">
+<img src="docs/images/BasicFlow.png" width="850">
 
 The particular case where the TEE is provided by Intel SGX is shown in the
 following system diagram.
 
 <!-- From: -->
 <!-- https://docs.google.com/drawings/d/1YJ8Rt-nunZ7NJ9diQswbwjEMAtGfzjGVY9ogwhA7hsI -->
-<img src="docs/SystemDiagram.png" width="850">
+<img src="docs/images/SystemDiagram.png" width="850">
 
 ## Remote Attestation
 
