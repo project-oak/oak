@@ -95,11 +95,17 @@ impl OakABITestServiceNode for FrontendNode {
         // TODO(#237): Add some macro wizardry for registering test methods based on an attribute
         type TestFn = fn(&FrontendNode) -> std::io::Result<()>;
         let mut tests: HashMap<&str, TestFn> = HashMap::new();
+        tests.insert("ChannelFindRaw", FrontendNode::test_channel_find_raw);
         tests.insert("ChannelFind", FrontendNode::test_channel_find);
+        tests.insert("ChannelCreateRaw", FrontendNode::test_channel_create_raw);
         tests.insert("ChannelCreate", FrontendNode::test_channel_create);
+        tests.insert("ChannelCloseRaw", FrontendNode::test_channel_close_raw);
         tests.insert("ChannelClose", FrontendNode::test_channel_close);
+        tests.insert("ChannelReadRaw", FrontendNode::test_channel_read_raw);
         tests.insert("ChannelRead", FrontendNode::test_channel_read);
+        tests.insert("ChannelWriteRaw", FrontendNode::test_channel_write_raw);
         tests.insert("ChannelWrite", FrontendNode::test_channel_write);
+        tests.insert("WaitOnChannelsRaw", FrontendNode::test_channel_wait_raw);
         tests.insert("WaitOnChannels", FrontendNode::test_channel_wait);
         tests.insert(
             "ChannelHandleReuse",
@@ -141,7 +147,24 @@ fn status_convert<T>(result: Result<T, OakStatus>) -> std::io::Result<T> {
     }
 }
 
+// Return an offset value that is beyond the bounds of available linear memory.
+fn invalid_raw_offset() -> *mut u64 {
+    // Currently no way to get at the `memory.size` Wasm instruction from Rust,
+    // so pick a large number instead.
+    0x7fff_fff0 as *mut u64
+}
+
 impl FrontendNode {
+    fn test_channel_find_raw(&self) -> std::io::Result<()> {
+        unsafe {
+            expect_eq!(
+                0,
+                oak::wasm::channel_find(invalid_raw_offset() as *const u8, 2)
+            );
+        }
+        Ok(())
+    }
+
     fn test_channel_find(&self) -> std::io::Result<()> {
         // Idempotent result.
         expect_eq!(self.grpc_in.handle, oak::channel_find("gRPC_input"));
@@ -153,6 +176,28 @@ impl FrontendNode {
         expect_eq!(0, oak::channel_find(" gRPC_input "));
         expect_eq!(0, oak::channel_find("bogus"));
         expect_eq!(0, oak::channel_find(""));
+        Ok(())
+    }
+
+    fn test_channel_create_raw(&self) -> std::io::Result<()> {
+        let mut write = oak::WriteHandle { handle: 0 };
+        let mut read = oak::ReadHandle { handle: 0 };
+        unsafe {
+            expect_eq!(
+                OakStatus::ERR_INVALID_ARGS.value(),
+                oak::wasm::channel_create(
+                    invalid_raw_offset() as *mut u64,
+                    &mut read.handle as *mut u64
+                )
+            );
+            expect_eq!(
+                OakStatus::ERR_INVALID_ARGS.value(),
+                oak::wasm::channel_create(
+                    &mut write.handle as *mut u64,
+                    invalid_raw_offset() as *mut u64
+                )
+            );
+        }
         Ok(())
     }
 
@@ -176,17 +221,96 @@ impl FrontendNode {
         Ok(())
     }
 
+    fn test_channel_close_raw(&self) -> std::io::Result<()> {
+        let (w, r) = oak::channel_create().unwrap();
+        unsafe {
+            expect_eq!(OakStatus::OK.value(), oak::wasm::channel_close(w.handle));
+            expect_eq!(OakStatus::OK.value(), oak::wasm::channel_close(r.handle));
+            expect_eq!(
+                OakStatus::ERR_BAD_HANDLE.value(),
+                oak::wasm::channel_close(w.handle)
+            );
+            expect_eq!(
+                OakStatus::ERR_BAD_HANDLE.value(),
+                oak::wasm::channel_close(9_999_999)
+            );
+        }
+        Ok(())
+    }
+
     fn test_channel_close(&self) -> std::io::Result<()> {
         let (w, r) = oak::channel_create().unwrap();
         expect_eq!(OakStatus::OK, oak::channel_close(w.handle));
         expect_eq!(OakStatus::OK, oak::channel_close(r.handle));
         expect_eq!(OakStatus::ERR_BAD_HANDLE, oak::channel_close(w.handle));
-        expect_eq!(OakStatus::ERR_BAD_HANDLE, oak::channel_close(99999));
+        expect_eq!(OakStatus::ERR_BAD_HANDLE, oak::channel_close(9_999_999));
 
         // Can close ends in either order.
         let (w, r) = oak::channel_create().unwrap();
         expect_eq!(OakStatus::OK, oak::channel_close(r.handle));
         expect_eq!(OakStatus::OK, oak::channel_close(w.handle));
+        Ok(())
+    }
+
+    fn test_channel_read_raw(&self) -> std::io::Result<()> {
+        let (out_channel, in_channel) = oak::channel_create().unwrap();
+        let mut buf = Vec::<u8>::with_capacity(5);
+        let mut handles = Vec::with_capacity(5);
+        let mut actual_size: u32 = 0;
+        let mut actual_handle_count: u32 = 0;
+        unsafe {
+            // Try invalid values for the 4 linear memory offset arguments.
+            expect_eq!(
+                OakStatus::ERR_INVALID_ARGS.value(),
+                oak::wasm::channel_read(
+                    in_channel.handle,
+                    invalid_raw_offset() as *mut u8,
+                    1,
+                    &mut actual_size,
+                    handles.as_mut_ptr() as *mut u8,
+                    handles.capacity(),
+                    &mut actual_handle_count
+                )
+            );
+            expect_eq!(
+                OakStatus::ERR_INVALID_ARGS.value(),
+                oak::wasm::channel_read(
+                    in_channel.handle,
+                    buf.as_mut_ptr(),
+                    buf.capacity(),
+                    invalid_raw_offset() as *mut u32,
+                    handles.as_mut_ptr() as *mut u8,
+                    handles.capacity(),
+                    &mut actual_handle_count
+                )
+            );
+            expect_eq!(
+                OakStatus::ERR_INVALID_ARGS.value(),
+                oak::wasm::channel_read(
+                    in_channel.handle,
+                    buf.as_mut_ptr(),
+                    buf.capacity(),
+                    &mut actual_size,
+                    invalid_raw_offset() as *mut u8,
+                    1,
+                    &mut actual_handle_count
+                )
+            );
+            expect_eq!(
+                OakStatus::ERR_INVALID_ARGS.value(),
+                oak::wasm::channel_read(
+                    in_channel.handle,
+                    buf.as_mut_ptr(),
+                    buf.capacity(),
+                    &mut actual_size,
+                    handles.as_mut_ptr() as *mut u8,
+                    handles.capacity(),
+                    invalid_raw_offset() as *mut u32
+                )
+            );
+        }
+        expect_eq!(OakStatus::OK, oak::channel_close(out_channel.handle));
+        expect_eq!(OakStatus::OK, oak::channel_close(in_channel.handle));
         Ok(())
     }
 
@@ -244,6 +368,38 @@ impl FrontendNode {
         Ok(())
     }
 
+    fn test_channel_write_raw(&self) -> std::io::Result<()> {
+        let (out_channel, in_channel) = oak::channel_create().unwrap();
+
+        let buf = vec![0x01];
+        let handles = vec![in_channel.handle];
+        unsafe {
+            expect_eq!(
+                OakStatus::ERR_INVALID_ARGS.value(),
+                oak::wasm::channel_write(
+                    out_channel.handle,
+                    invalid_raw_offset() as *const u8,
+                    1,
+                    handles.as_ptr() as *const u8,
+                    handles.len(),
+                )
+            );
+            expect_eq!(
+                OakStatus::ERR_INVALID_ARGS.value(),
+                oak::wasm::channel_write(
+                    out_channel.handle,
+                    buf.as_ptr(),
+                    buf.len(),
+                    invalid_raw_offset() as *const u8,
+                    1,
+                )
+            );
+        }
+        expect_eq!(OakStatus::OK, oak::channel_close(in_channel.handle));
+        expect_eq!(OakStatus::OK, oak::channel_close(out_channel.handle));
+        Ok(())
+    }
+
     fn test_channel_write(&self) -> std::io::Result<()> {
         let (out_channel, in_channel) = oak::channel_create().unwrap();
 
@@ -273,6 +429,20 @@ impl FrontendNode {
         // the message back.
         expect_eq!(OakStatus::OK, oak::channel_write(out_channel, &data, &[]));
 
+        expect_eq!(OakStatus::OK, oak::channel_close(out_channel.handle));
+        Ok(())
+    }
+
+    fn test_channel_wait_raw(&self) -> std::io::Result<()> {
+        let (out_channel, in_channel) = oak::channel_create().unwrap();
+        unsafe {
+            expect_eq!(
+                OakStatus::ERR_INVALID_ARGS.value(),
+                oak::wasm::wait_on_channels(invalid_raw_offset() as *mut u8, 1)
+            );
+        }
+
+        expect_eq!(OakStatus::OK, oak::channel_close(in_channel.handle));
         expect_eq!(OakStatus::OK, oak::channel_close(out_channel.handle));
         Ok(())
     }
