@@ -105,6 +105,10 @@ impl OakABITestServiceNode for FrontendNode {
         tests.insert("ChannelRead", FrontendNode::test_channel_read);
         tests.insert("ChannelWrite", FrontendNode::test_channel_write);
         tests.insert("WaitOnChannels", FrontendNode::test_channel_wait);
+        tests.insert(
+            "ChannelHandleReuse",
+            FrontendNode::test_channel_handle_reuse,
+        );
         tests.insert("BackendRoundtrip", FrontendNode::test_backend_roundtrip);
 
         for (&name, &testfn) in &tests {
@@ -343,6 +347,39 @@ impl FrontendNode {
         expect_eq!(OakStatus::OK, oak::channel_close(in1.handle));
         expect_eq!(OakStatus::OK, oak::channel_close(out2.handle));
         expect_eq!(OakStatus::OK, oak::channel_close(in2.handle));
+        Ok(())
+    }
+
+    fn test_channel_handle_reuse(&mut self) -> std::io::Result<()> {
+        // Set up a fresh channel with a pending message so wait_on_channels
+        // doesn't block.
+        let (out_handle, in_handle) = oak::channel_create().unwrap();
+        let data = vec![0x01, 0x02, 0x03];
+        expect_eq!(OakStatus::OK, oak::channel_write(out_handle, &data, &[]));
+
+        // Read from an invalid handle.
+        let mut buffer = Vec::<u8>::with_capacity(5);
+        let mut handles = Vec::with_capacity(5);
+        expect_eq!(
+            OakStatus::ERR_BAD_HANDLE,
+            oak::channel_read(
+                oak::ReadHandle { handle: 9_987_123 },
+                &mut buffer,
+                &mut handles
+            )
+        );
+        // Wait on an invalid handle.
+        expect_eq!(
+            Ok(vec![in_handle]),
+            oak::wait_on_channels(&[in_handle, oak::ReadHandle { handle: 9_987_321 }])
+        );
+
+        // Close both of the previously mentioned invalid handles.
+        expect_eq!(OakStatus::ERR_BAD_HANDLE, oak::channel_close(9_987_123));
+        expect_eq!(OakStatus::ERR_BAD_HANDLE, oak::channel_close(9_987_321));
+
+        expect_eq!(OakStatus::OK, oak::channel_close(out_handle.handle));
+        expect_eq!(OakStatus::OK, oak::channel_close(in_handle.handle));
         Ok(())
     }
 
