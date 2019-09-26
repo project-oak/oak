@@ -454,7 +454,7 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelCreate(wabt::interp::Enviro
 
     uint32_t write_half_offset = args[0].get_i32();
     uint32_t read_half_offset = args[1].get_i32();
-    if (!MemoryAvailable(env, write_half_offset, 4) || !MemoryAvailable(env, read_half_offset, 4)) {
+    if (!MemoryAvailable(env, write_half_offset, 8) || !MemoryAvailable(env, read_half_offset, 8)) {
       LOG(WARNING) << "Node provided invalid memory offset+size";
       results[0].set_i32(OakStatus::ERR_INVALID_ARGS);
       return wabt::interp::Result::Ok;
