@@ -57,15 +57,20 @@ bool OakNode::CloseChannel(Handle handle) {
 
 ChannelHalf* OakNode::BorrowChannel(Handle handle) {
   absl::ReaderMutexLock lock(&mu_);
-  return channel_halves_[handle].get();
+  auto it = channel_halves_.find(handle);
+  if (it == channel_halves_.end()) {
+    return nullptr;
+  }
+  return it->second.get();
 }
 
 MessageChannelReadHalf* OakNode::BorrowReadChannel(Handle handle) {
   absl::ReaderMutexLock lock(&mu_);
-  ChannelHalf* half = channel_halves_[handle].get();
-  if (half == nullptr) {
+  auto it = channel_halves_.find(handle);
+  if (it == channel_halves_.end()) {
     return nullptr;
   }
+  ChannelHalf* half = it->second.get();
   auto value = absl::get_if<std::unique_ptr<MessageChannelReadHalf>>(half);
   if (value == nullptr) {
     return nullptr;
@@ -75,10 +80,11 @@ MessageChannelReadHalf* OakNode::BorrowReadChannel(Handle handle) {
 
 MessageChannelWriteHalf* OakNode::BorrowWriteChannel(Handle handle) {
   absl::ReaderMutexLock lock(&mu_);
-  ChannelHalf* half = channel_halves_[handle].get();
-  if (half == nullptr) {
+  auto it = channel_halves_.find(handle);
+  if (it == channel_halves_.end()) {
     return nullptr;
   }
+  ChannelHalf* half = it->second.get();
   auto value = absl::get_if<std::unique_ptr<MessageChannelWriteHalf>>(half);
   if (value == nullptr) {
     return nullptr;
