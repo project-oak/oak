@@ -288,7 +288,7 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelRead(wabt::interp::Environm
 
     // Check all provided linear memory is accessible.
     if (!MemoryAvailable(env, offset, size) || !MemoryAvailable(env, size_offset, 4) ||
-        !MemoryAvailable(env, handle_space_offset, 8 * handle_space_count) ||
+        !MemoryAvailable(env, handle_space_offset, handle_space_count * sizeof(Handle)) ||
         !MemoryAvailable(env, handle_count_offset, 4)) {
       LOG(WARNING) << "Node provided invalid memory offset+size";
       results[0].set_i32(OakStatus::ERR_INVALID_ARGS);
@@ -339,7 +339,7 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelRead(wabt::interp::Environm
     for (size_t ii = 0; ii < result.msg->channels.size(); ii++) {
       Handle handle = AddChannel(std::move(result.msg->channels[ii]));
       LOG(INFO) << "Transferred channel has new handle " << handle;
-      WriteU64(env, handle_space_offset + 8 * ii, handle);
+      WriteU64(env, handle_space_offset + ii * sizeof(Handle), handle);
     }
 
     results[0].set_i32(OakStatus::OK);
@@ -360,7 +360,7 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelWrite(wabt::interp::Environ
 
     // Check all provided linear memory is accessible.
     if (!MemoryAvailable(env, offset, size) ||
-        !MemoryAvailable(env, handle_offset, 8 * handle_count)) {
+        !MemoryAvailable(env, handle_offset, handle_count * sizeof(Handle))) {
       LOG(WARNING) << "Node provided invalid memory offset+size";
       results[0].set_i32(OakStatus::ERR_INVALID_ARGS);
       return wabt::interp::Result::Ok;
@@ -386,7 +386,7 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelWrite(wabt::interp::Environ
     std::vector<Handle> handles;
     handles.reserve(handle_count);
     for (uint32_t ii = 0; ii < handle_count; ii++) {
-      Handle handle = ReadU64(env, handle_offset + (8 * ii));
+      Handle handle = ReadU64(env, handle_offset + (ii * sizeof(Handle)));
       LOG(INFO) << "Transfer channel handle " << handle;
       ChannelHalf* half = BorrowChannel(handle);
       if (half == nullptr) {
@@ -454,7 +454,8 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelCreate(wabt::interp::Enviro
 
     uint32_t write_half_offset = args[0].get_i32();
     uint32_t read_half_offset = args[1].get_i32();
-    if (!MemoryAvailable(env, write_half_offset, 8) || !MemoryAvailable(env, read_half_offset, 8)) {
+    if (!MemoryAvailable(env, write_half_offset, sizeof(Handle)) ||
+        !MemoryAvailable(env, read_half_offset, sizeof(Handle))) {
       LOG(WARNING) << "Node provided invalid memory offset+size";
       results[0].set_i32(OakStatus::ERR_INVALID_ARGS);
       return wabt::interp::Result::Ok;
