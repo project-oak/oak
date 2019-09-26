@@ -39,6 +39,11 @@ namespace oak {
 static std::unique_ptr<wabt::FileStream> s_log_stream = wabt::FileStream::CreateStdout();
 static std::unique_ptr<wabt::FileStream> s_stdout_stream = wabt::FileStream::CreateStdout();
 
+static bool MemoryAvailable(wabt::interp::Environment* env, const uint32_t offset,
+                            const uint32_t size) {
+  return ((offset + size) <= env->GetMemory(0)->data.size());
+}
+
 static absl::Span<const char> ReadMemory(wabt::interp::Environment* env, const uint32_t offset,
                                          const uint32_t size) {
   return absl::MakeConstSpan(env->GetMemory(0)->data).subspan(offset, size);
@@ -279,6 +284,15 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelRead(wabt::interp::Environm
     uint32_t handle_space_count = args[5].get_i32();
     uint32_t handle_count_offset = args[6].get_i32();
 
+    // Check all provided linear memory is accessible.
+    if (!MemoryAvailable(env, offset, size) || !MemoryAvailable(env, size_offset, 4) ||
+        !MemoryAvailable(env, handle_space_offset, handle_space_count * sizeof(Handle)) ||
+        !MemoryAvailable(env, handle_count_offset, 4)) {
+      LOG(WARNING) << "Node provided invalid memory offset+size";
+      results[0].set_i32(OakStatus::ERR_INVALID_ARGS);
+      return wabt::interp::Result::Ok;
+    }
+
     // Borrowing a reference to the channel is safe because the node is single
     // threaded and so cannot invoke channel_close while channel_read is
     // ongoing.
@@ -323,10 +337,10 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelRead(wabt::interp::Environm
     for (size_t ii = 0; ii < result.msg->channels.size(); ii++) {
       Handle handle = AddChannel(std::move(result.msg->channels[ii]));
       LOG(INFO) << "Transferred channel has new handle " << handle;
-      WriteU64(env, handle_space_offset + 8 * ii, handle);
+      WriteU64(env, handle_space_offset + ii * sizeof(Handle), handle);
     }
-    results[0].set_i32(OakStatus::OK);
 
+    results[0].set_i32(OakStatus::OK);
     return wabt::interp::Result::Ok;
   };
 }
@@ -341,6 +355,14 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelWrite(wabt::interp::Environ
     uint32_t size = args[2].get_i32();
     uint32_t handle_offset = args[3].get_i32();
     uint32_t handle_count = args[4].get_i32();
+
+    // Check all provided linear memory is accessible.
+    if (!MemoryAvailable(env, offset, size) ||
+        !MemoryAvailable(env, handle_offset, handle_count * sizeof(Handle))) {
+      LOG(WARNING) << "Node provided invalid memory offset+size";
+      results[0].set_i32(OakStatus::ERR_INVALID_ARGS);
+      return wabt::interp::Result::Ok;
+    }
 
     // Borrowing a reference to the channel is safe because the Node is single
     // threaded and so cannot invoke channel_close while channel_write is
@@ -362,7 +384,7 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelWrite(wabt::interp::Environ
     std::vector<Handle> handles;
     handles.reserve(handle_count);
     for (uint32_t ii = 0; ii < handle_count; ii++) {
-      Handle handle = ReadU64(env, handle_offset + (8 * ii));
+      Handle handle = ReadU64(env, handle_offset + (ii * sizeof(Handle)));
       LOG(INFO) << "Transfer channel handle " << handle;
       ChannelHalf* half = BorrowChannel(handle);
       if (half == nullptr) {
@@ -372,10 +394,9 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelWrite(wabt::interp::Environ
       }
       msg->channels.push_back(CloneChannelHalf(half));
     }
-
     channel->Write(std::move(msg));
-    results[0].set_i32(OakStatus::OK);
 
+    results[0].set_i32(OakStatus::OK);
     return wabt::interp::Result::Ok;
   };
 }
@@ -387,10 +408,17 @@ wabt::interp::HostFunc::Callback WasmNode::OakWaitOnChannels(wabt::interp::Envir
 
     uint32_t offset = args[0].get_i32();
     uint32_t count = args[1].get_i32();
-    results[0].set_i32(OakStatus::OK);
+
+    // Check all provided linear memory is accessible.
+    if (!MemoryAvailable(env, offset, count * 9)) {
+      LOG(WARNING) << "Node provided invalid memory offset+size";
+      results[0].set_i32(OakStatus::ERR_INVALID_ARGS);
+      return wabt::interp::Result::Ok;
+    }
 
     if (count == 0) {
       LOG(INFO) << "Waiting on no channels, return immediately";
+      results[0].set_i32(OakStatus::ERR_INVALID_ARGS);
       return wabt::interp::Result::Ok;
     }
 
@@ -409,6 +437,7 @@ wabt::interp::HostFunc::Callback WasmNode::OakWaitOnChannels(wabt::interp::Envir
           base[8] = 0x01;
         }
       }
+      results[0].set_i32(OakStatus::OK);
     } else {
       results[0].set_i32(OakStatus::ERR_CHANNEL_CLOSED);
     }
@@ -423,7 +452,12 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelCreate(wabt::interp::Enviro
 
     uint32_t write_half_offset = args[0].get_i32();
     uint32_t read_half_offset = args[1].get_i32();
-    results[0].set_i32(OakStatus::OK);
+    if (!MemoryAvailable(env, write_half_offset, sizeof(Handle)) ||
+        !MemoryAvailable(env, read_half_offset, sizeof(Handle))) {
+      LOG(WARNING) << "Node provided invalid memory offset+size";
+      results[0].set_i32(OakStatus::ERR_INVALID_ARGS);
+      return wabt::interp::Result::Ok;
+    }
 
     MessageChannel::ChannelHalves halves = MessageChannel::Create();
     Handle write_handle = AddChannel(absl::make_unique<ChannelHalf>(std::move(halves.write)));
@@ -434,6 +468,7 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelCreate(wabt::interp::Enviro
     WriteU64(env, write_half_offset, write_handle);
     WriteU64(env, read_half_offset, read_handle);
 
+    results[0].set_i32(OakStatus::OK);
     return wabt::interp::Result::Ok;
   };
 }
@@ -462,14 +497,18 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelFind(wabt::interp::Environm
     LogHostFunctionCall(func, args);
 
     uint32_t offset = args[0].get_i32();
-    uint32_t length = args[1].get_i32();
+    uint32_t size = args[1].get_i32();
+    if (!MemoryAvailable(env, offset, size)) {
+      LOG(WARNING) << "Node provided invalid memory offset+size";
+      results[0].set_i32(0);
+      return wabt::interp::Result::Ok;
+    }
 
     auto base = env->GetMemory(0)->data.begin() + offset;
-    std::string port_name(base, base + length);
+    std::string port_name(base, base + size);
 
     Handle handle = FindChannel(port_name);
     results[0].set_i64(handle);  // zero if not found
-
     return wabt::interp::Result::Ok;
   };
 }
