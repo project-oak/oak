@@ -40,7 +40,6 @@ struct FrontendNode {
     grpc_in: oak::ReadHandle,
     grpc_out: oak::WriteHandle,
     backend_out: oak::WriteHandle,
-    read_handles: Vec<oak::ReadHandle>,
     backend_in: oak::ReadHandle,
 }
 
@@ -66,22 +65,19 @@ impl oak::grpc::OakNode for FrontendNode {
             },
         )
         .unwrap();
-        let backend_in = oak::ReadHandle {
-            handle: oak::channel_find("from_backend"),
-        };
         FrontendNode {
             grpc_in: oak::ReadHandle {
                 handle: oak::channel_find("gRPC_input"),
             },
-
             grpc_out: oak::WriteHandle {
                 handle: oak::channel_find("gRPC_output"),
             },
             backend_out: oak::WriteHandle {
                 handle: oak::channel_find("to_backend"),
             },
-            read_handles: vec![backend_in],
-            backend_in,
+            backend_in: oak::ReadHandle {
+                handle: oak::channel_find("from_backend"),
+            },
         }
     }
     fn invoke(&mut self, method: &str, req: &[u8], out: oak::WriteHandle) {
@@ -97,7 +93,7 @@ impl OakABITestServiceNode for FrontendNode {
 
         // Manual registry of all tests.
         // TODO(#237): Add some macro wizardry for registering test methods based on an attribute
-        type TestFn = fn(&mut FrontendNode) -> std::io::Result<()>;
+        type TestFn = fn(&FrontendNode) -> std::io::Result<()>;
         let mut tests: HashMap<&str, TestFn> = HashMap::new();
         tests.insert("ChannelFind", FrontendNode::test_channel_find);
         tests.insert("ChannelCreate", FrontendNode::test_channel_create);
@@ -146,7 +142,7 @@ fn status_convert<T>(result: Result<T, OakStatus>) -> std::io::Result<T> {
 }
 
 impl FrontendNode {
-    fn test_channel_find(&mut self) -> std::io::Result<()> {
+    fn test_channel_find(&self) -> std::io::Result<()> {
         // Idempotent result.
         expect_eq!(self.grpc_in.handle, oak::channel_find("gRPC_input"));
         expect_eq!(self.grpc_out.handle, oak::channel_find("gRPC_output"));
@@ -160,7 +156,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_channel_create(&mut self) -> std::io::Result<()> {
+    fn test_channel_create(&self) -> std::io::Result<()> {
         let mut handles = Vec::<(oak::WriteHandle, oak::ReadHandle)>::new();
         for _i in 0..500 {
             match oak::channel_create() {
@@ -180,7 +176,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_channel_close(&mut self) -> std::io::Result<()> {
+    fn test_channel_close(&self) -> std::io::Result<()> {
         let (w, r) = oak::channel_create().unwrap();
         expect_eq!(OakStatus::OK, oak::channel_close(w.handle));
         expect_eq!(OakStatus::OK, oak::channel_close(r.handle));
@@ -194,7 +190,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_channel_read(&mut self) -> std::io::Result<()> {
+    fn test_channel_read(&self) -> std::io::Result<()> {
         let (out_channel, in_channel) = oak::channel_create().unwrap();
 
         let mut buffer = Vec::<u8>::with_capacity(5);
@@ -248,7 +244,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_channel_write(&mut self) -> std::io::Result<()> {
+    fn test_channel_write(&self) -> std::io::Result<()> {
         let (out_channel, in_channel) = oak::channel_create().unwrap();
 
         // Empty message.
@@ -281,7 +277,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_channel_wait(&mut self) -> std::io::Result<()> {
+    fn test_channel_wait(&self) -> std::io::Result<()> {
         // Consume a lot of channel handles before we start, to ensure we're
         // working with handles that don't fit in a single byte.
         self.test_channel_create()?;
@@ -350,7 +346,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_channel_handle_reuse(&mut self) -> std::io::Result<()> {
+    fn test_channel_handle_reuse(&self) -> std::io::Result<()> {
         // Set up a fresh channel with a pending message so wait_on_channels
         // doesn't block.
         let (out_handle, in_handle) = oak::channel_create().unwrap();
@@ -383,7 +379,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_backend_roundtrip(&mut self) -> std::io::Result<()> {
+    fn test_backend_roundtrip(&self) -> std::io::Result<()> {
         // Ask the backend node to transmute something.
         let internal_req = InternalMessage {
             msg: "aaa".to_string(),
@@ -394,7 +390,8 @@ impl FrontendNode {
         backend_channel.write_all(&serialized_req.into_bytes())?;
 
         // Block until there is a response from the backend available.
-        match oak::wait_on_channels(&self.read_handles) {
+        let read_handles = vec![self.backend_in];
+        match oak::wait_on_channels(&read_handles) {
             Ok(_ready_handles) => (),
             Err(status) => {
                 return Err(std::io::Error::new(
