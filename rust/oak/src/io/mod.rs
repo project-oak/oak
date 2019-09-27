@@ -53,36 +53,36 @@ impl std::io::Write for Channel {
 /// Map an [`OakStatus`] value to the nearest available [`std::io::Result`].
 fn result_from_status<T>(status: Option<OakStatus>, val: T) -> std::io::Result<T> {
     match status {
-        Some(OakStatus::OAK_STATUS_UNSPECIFIED) => Err(io::Error::new(
-            io::ErrorKind::Other,
-            "Unspecified Oak status value",
-        )),
-        Some(OakStatus::OK) => Ok(val),
-        Some(OakStatus::ERR_BAD_HANDLE) => {
-            Err(io::Error::new(io::ErrorKind::NotConnected, "Bad handle"))
-        }
-        Some(OakStatus::ERR_INVALID_ARGS) => Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "Invalid arguments",
-        )),
-        Some(OakStatus::ERR_CHANNEL_CLOSED) => Err(io::Error::new(
-            io::ErrorKind::ConnectionReset,
-            "Channel closed",
-        )),
-        Some(OakStatus::ERR_BUFFER_TOO_SMALL) => Err(io::Error::new(
-            io::ErrorKind::UnexpectedEof,
-            "Buffer too small",
-        )),
-        Some(OakStatus::ERR_HANDLE_SPACE_TOO_SMALL) => Err(io::Error::new(
-            io::ErrorKind::UnexpectedEof,
-            "Handle space too small",
-        )),
-        Some(OakStatus::ERR_OUT_OF_RANGE) => {
-            Err(io::Error::new(io::ErrorKind::NotConnected, "Out of range"))
-        }
-        Some(OakStatus::ERR_INTERNAL) => {
-            Err(io::Error::new(io::ErrorKind::Other, "Internal error"))
-        }
+        Some(status) => match status {
+            OakStatus::OAK_STATUS_UNSPECIFIED => Err(io::Error::new(
+                io::ErrorKind::Other,
+                "Unspecified Oak status value",
+            )),
+            OakStatus::OK => Ok(val),
+            OakStatus::ERR_BAD_HANDLE => {
+                Err(io::Error::new(io::ErrorKind::NotConnected, "Bad handle"))
+            }
+            OakStatus::ERR_INVALID_ARGS => Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Invalid arguments",
+            )),
+            OakStatus::ERR_CHANNEL_CLOSED => Err(io::Error::new(
+                io::ErrorKind::ConnectionReset,
+                "Channel closed",
+            )),
+            OakStatus::ERR_BUFFER_TOO_SMALL => Err(io::Error::new(
+                io::ErrorKind::UnexpectedEof,
+                "Buffer too small",
+            )),
+            OakStatus::ERR_HANDLE_SPACE_TOO_SMALL => Err(io::Error::new(
+                io::ErrorKind::UnexpectedEof,
+                "Handle space too small",
+            )),
+            OakStatus::ERR_OUT_OF_RANGE => {
+                Err(io::Error::new(io::ErrorKind::NotConnected, "Out of range"))
+            }
+            OakStatus::ERR_INTERNAL => Err(io::Error::new(io::ErrorKind::Other, "Internal error")),
+        },
         None => Err(io::Error::new(
             io::ErrorKind::Other,
             "Unknown Oak status value",
