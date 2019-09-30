@@ -7,9 +7,10 @@ authors = ["David Drysdale <drysdale@google.com>"]
 crate-type = ["cdylib"]
 
 [dependencies]
-log = "*"
 abitest_common = { path = "../../abitest_common" }
+byteorder = "1"
 expect = { path = "../../../../third_party/expect" }
+log = "*"
 oak = { path = "../../../../rust/oak" }
 oak_log = { path = "../../../../rust/oak_log" }
 protobuf = "*"

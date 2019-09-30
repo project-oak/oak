@@ -26,6 +26,7 @@
 #include "absl/memory/memory.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/types/variant.h"
+#include "oak/proto/oak_api.pb.h"
 
 namespace oak {
 
@@ -165,9 +166,9 @@ std::unique_ptr<ChannelHalf> CloneChannelHalf(ChannelHalf* half);
 
 // Current readable status of a channel.
 struct ChannelStatus {
-  explicit ChannelStatus(uint64_t h) : handle(h), ready(false) {}
+  explicit ChannelStatus(uint64_t h) : handle(h), status(ChannelReadStatus::NOT_READY) {}
   uint64_t handle;
-  bool ready;
+  ChannelReadStatus status;
 };
 
 }  // namespace oak
