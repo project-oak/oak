@@ -82,6 +82,9 @@ fn result_from_status<T>(status: Option<OakStatus>, val: T) -> std::io::Result<T
                 Err(io::Error::new(io::ErrorKind::NotConnected, "Out of range"))
             }
             OakStatus::ERR_INTERNAL => Err(io::Error::new(io::ErrorKind::Other, "Internal error")),
+            OakStatus::ERR_TERMINATED => {
+                Err(io::Error::new(io::ErrorKind::Other, "Node terminated"))
+            }
         },
         None => Err(io::Error::new(
             io::ErrorKind::Other,
