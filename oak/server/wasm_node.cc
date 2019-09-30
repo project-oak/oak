@@ -414,13 +414,14 @@ wabt::interp::HostFunc::Callback WasmNode::OakWaitOnChannels(wabt::interp::Envir
     }
     auto space = env->GetMemory(0)->data.begin() + offset;
     if (WaitOnChannels(&statuses)) {
-      // Transcribe the ready bits into the notification space.
+      // Transcribe the status byte into the notification space.
       for (uint32_t ii = 0; ii < count; ii++) {
         auto base = space + (9 * ii);
-        base[8] = (statuses[ii]->ready ? 0x01 : 0x00);
+        base[8] = statuses[ii]->status;
       }
       results[0].set_i32(OakStatus::OK);
     } else {
+      // Node is pending termination.
       results[0].set_i32(OakStatus::ERR_CHANNEL_CLOSED);
     }
     return wabt::interp::Result::Ok;

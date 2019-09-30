@@ -14,11 +14,12 @@
 // limitations under the License.
 //
 
-#[macro_use]
-extern crate log;
 extern crate abitest_common;
+extern crate byteorder;
 #[macro_use]
 extern crate expect;
+#[macro_use]
+extern crate log;
 extern crate oak;
 extern crate oak_log;
 extern crate protobuf;
@@ -28,6 +29,7 @@ extern crate serde;
 mod proto;
 
 use abitest_common::InternalMessage;
+use byteorder::WriteBytesExt;
 use oak::grpc::OakNode;
 use oak::{grpc, OakStatus};
 use proto::abitest::{ABITestRequest, ABITestResponse, ABITestResponse_TestResult};
@@ -435,10 +437,75 @@ impl FrontendNode {
 
     fn test_channel_wait_raw(&self) -> std::io::Result<()> {
         let (out_channel, in_channel) = oak::channel_create().unwrap();
+
+        // Write a message to the channel so wait operations don't block.
+        let data = vec![0x01, 0x02, 0x03];
+        expect_eq!(OakStatus::OK, oak::channel_write(out_channel, &data, &[]));
+
         unsafe {
             expect_eq!(
                 OakStatus::ERR_INVALID_ARGS.value(),
                 oak::wasm::wait_on_channels(invalid_raw_offset() as *mut u8, 1)
+            );
+        }
+
+        unsafe {
+            // Wait on [write handle, ready read handle, empty read handle].
+            const COUNT: usize = 3;
+            let mut space = Vec::with_capacity(COUNT * oak::wasm::SPACE_BYTES_PER_HANDLE);
+            space
+                .write_u64::<byteorder::LittleEndian>(out_channel.handle)
+                .unwrap();
+            space.push(0x00);
+            space
+                .write_u64::<byteorder::LittleEndian>(in_channel.handle)
+                .unwrap();
+            space.push(0x00);
+            space
+                .write_u64::<byteorder::LittleEndian>(self.backend_in.handle)
+                .unwrap();
+            space.push(0x99); // deliberate nonsense status value
+            expect_eq!(
+                OakStatus::OK.value(),
+                oak::wasm::wait_on_channels(space.as_mut_ptr(), COUNT as u32)
+            );
+            expect_eq!(
+                oak::proto::oak_api::ChannelReadStatus::INVALID_CHANNEL.value(),
+                i32::from(space[8])
+            );
+            expect_eq!(
+                oak::proto::oak_api::ChannelReadStatus::READ_READY.value(),
+                i32::from(space[9 + 8])
+            );
+            expect_eq!(
+                oak::proto::oak_api::ChannelReadStatus::NOT_READY.value(),
+                i32::from(space[9 + 9 + 8])
+            );
+        }
+
+        unsafe {
+            // Wait on [nonsense handle, read handle].
+            const COUNT: usize = 2;
+            let mut space = Vec::with_capacity(COUNT * oak::wasm::SPACE_BYTES_PER_HANDLE);
+            space
+                .write_u64::<byteorder::LittleEndian>(9_123_456)
+                .unwrap();
+            space.push(0x00);
+            space
+                .write_u64::<byteorder::LittleEndian>(in_channel.handle)
+                .unwrap();
+            space.push(0x00);
+            expect_eq!(
+                OakStatus::OK.value(),
+                oak::wasm::wait_on_channels(space.as_mut_ptr(), COUNT as u32)
+            );
+            expect_eq!(
+                oak::proto::oak_api::ChannelReadStatus::INVALID_CHANNEL.value(),
+                i32::from(space[8])
+            );
+            expect_eq!(
+                oak::proto::oak_api::ChannelReadStatus::READ_READY.value(),
+                i32::from(space[9 + 8])
             );
         }
 

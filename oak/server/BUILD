@@ -137,6 +137,7 @@ cc_library(
     srcs = ["channel.cc"],
     hdrs = ["channel.h"],
     deps = [
+        "//oak/proto:oak_api_cc_proto",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/synchronization",
         "@com_google_absl//absl/types:variant",

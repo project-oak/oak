@@ -109,12 +109,15 @@ bool OakNode::WaitOnChannels(std::vector<std::unique_ptr<ChannelStatus>>* status
       MessageChannelReadHalf* channel = BorrowReadChannel(handle);
       if (channel == nullptr) {
         LOG(WARNING) << "Waiting on non-existent read channel handle " << handle;
+        (*statuses)[ii]->status = ChannelReadStatus::INVALID_CHANNEL;
         continue;
       }
       if (channel->CanRead()) {
         LOG(INFO) << "Message available on handle " << handle;
         done = true;
-        (*statuses)[ii]->ready = true;
+        (*statuses)[ii]->status = ChannelReadStatus::READ_READY;
+      } else {
+        (*statuses)[ii]->status = ChannelReadStatus::NOT_READY;
       }
     }
     if (termination_pending_.load()) {

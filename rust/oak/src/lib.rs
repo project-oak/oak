@@ -21,6 +21,7 @@ extern crate log;
 extern crate protobuf;
 
 use byteorder::WriteBytesExt;
+use proto::oak_api::ChannelReadStatus;
 pub use proto::oak_api::OakStatus;
 use protobuf::ProtobufEnum;
 
@@ -95,9 +96,15 @@ pub fn wait_on_channels(handles: &[ReadHandle]) -> Result<Vec<ReadHandle>, OakSt
             None => return Err(OakStatus::OAK_STATUS_UNSPECIFIED),
         }
         let mut results = Vec::with_capacity(handles.len());
+        let mut _invalid = Vec::new();
         for i in 0..handles.len() {
-            if space[i * wasm::SPACE_BYTES_PER_HANDLE + (wasm::SPACE_BYTES_PER_HANDLE - 1)] != 0 {
-                results.push(handles[i]);
+            let raw_status =
+                space[i * wasm::SPACE_BYTES_PER_HANDLE + (wasm::SPACE_BYTES_PER_HANDLE - 1)];
+            match ChannelReadStatus::from_i32(i32::from(raw_status)) {
+                Some(ChannelReadStatus::NOT_READY) => {}
+                Some(ChannelReadStatus::READ_READY) => results.push(handles[i]),
+                Some(ChannelReadStatus::INVALID_CHANNEL) => _invalid.push(handles[i]),
+                None => return Err(OakStatus::OAK_STATUS_UNSPECIFIED),
             }
         }
         Ok(results)

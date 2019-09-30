@@ -39,3 +39,14 @@ enum OakStatus {
   // Internal error.
   ERR_INTERNAL = 8;
 }
+
+// Single byte values used to indicate the read status of a channel on the
+// `oak.wait_on_channels` host function.
+enum ChannelReadStatus {
+  // No pending messages available on channel.
+  NOT_READY = 0;
+  // Pending message available on channel.
+  READ_READY = 1;
+  // Channel handle does not identify the read half of a current channel.
+  INVALID_CHANNEL = 2;
+}
