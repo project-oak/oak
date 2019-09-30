@@ -110,6 +110,7 @@ pub enum ChannelReadStatus {
     NOT_READY = 0,
     READ_READY = 1,
     INVALID_CHANNEL = 2,
+    ORPHANED = 3,
 }
 
 impl ::protobuf::ProtobufEnum for ChannelReadStatus {
@@ -122,6 +123,7 @@ impl ::protobuf::ProtobufEnum for ChannelReadStatus {
             0 => ::std::option::Option::Some(ChannelReadStatus::NOT_READY),
             1 => ::std::option::Option::Some(ChannelReadStatus::READ_READY),
             2 => ::std::option::Option::Some(ChannelReadStatus::INVALID_CHANNEL),
+            3 => ::std::option::Option::Some(ChannelReadStatus::ORPHANED),
             _ => ::std::option::Option::None
         }
     }
@@ -131,6 +133,7 @@ impl ::protobuf::ProtobufEnum for ChannelReadStatus {
             ChannelReadStatus::NOT_READY,
             ChannelReadStatus::READ_READY,
             ChannelReadStatus::INVALID_CHANNEL,
+            ChannelReadStatus::ORPHANED,
         ];
         values
     }
@@ -169,9 +172,10 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     \x10\x02\x12\x14\n\x10ERR_INVALID_ARGS\x10\x03\x12\x16\n\x12ERR_CHANNEL_\
     CLOSED\x10\x04\x12\x18\n\x14ERR_BUFFER_TOO_SMALL\x10\x05\x12\x1e\n\x1aER\
     R_HANDLE_SPACE_TOO_SMALL\x10\x06\x12\x14\n\x10ERR_OUT_OF_RANGE\x10\x07\
-    \x12\x10\n\x0cERR_INTERNAL\x10\x08\x12\x12\n\x0eERR_TERMINATED\x10\t*G\n\
+    \x12\x10\n\x0cERR_INTERNAL\x10\x08\x12\x12\n\x0eERR_TERMINATED\x10\t*U\n\
     \x11ChannelReadStatus\x12\r\n\tNOT_READY\x10\0\x12\x0e\n\nREAD_READY\x10\
-    \x01\x12\x13\n\x0fINVALID_CHANNEL\x10\x02b\x06proto3\
+    \x01\x12\x13\n\x0fINVALID_CHANNEL\x10\x02\x12\x0c\n\x08ORPHANED\x10\x03b\
+    \x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {

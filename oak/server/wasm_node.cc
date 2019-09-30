@@ -307,7 +307,13 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelRead(wabt::interp::Environm
       LOG(INFO) << "channel_read[" << channel_handle << "]: no message available";
       WriteI32(env, size_offset, 0);
       WriteI32(env, handle_count_offset, 0);
-      results[0].set_i32(OakStatus::OK);
+
+      if (channel->Orphaned()) {
+        LOG(INFO) << "channel_read[" << channel_handle << "]: no writers left";
+        results[0].set_i32(OakStatus::ERR_CHANNEL_CLOSED);
+      } else {
+        results[0].set_i32(OakStatus::OK);
+      }
       return wabt::interp::Result::Ok;
     }
 
@@ -356,6 +362,12 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelWrite(wabt::interp::Environ
     if (channel == nullptr) {
       LOG(WARNING) << "Invalid channel handle: " << channel_handle;
       results[0].set_i32(OakStatus::ERR_BAD_HANDLE);
+      return wabt::interp::Result::Ok;
+    }
+
+    if (channel->Orphaned()) {
+      LOG(INFO) << "channel_write[" << channel_handle << "]: no readers left";
+      results[0].set_i32(OakStatus::ERR_CHANNEL_CLOSED);
       return wabt::interp::Result::Ok;
     }
 
@@ -414,12 +426,14 @@ wabt::interp::HostFunc::Callback WasmNode::OakWaitOnChannels(wabt::interp::Envir
       statuses.push_back(absl::make_unique<ChannelStatus>(handle));
     }
     auto space = env->GetMemory(0)->data.begin() + offset;
-    if (WaitOnChannels(&statuses)) {
-      // Transcribe the status byte into the notification space.
-      for (uint32_t ii = 0; ii < count; ii++) {
-        auto base = space + (9 * ii);
-        base[8] = statuses[ii]->status;
-      }
+    bool wait_success = WaitOnChannels(&statuses);
+    // Transcribe the status byte into the notification space regardless of
+    // result.
+    for (uint32_t ii = 0; ii < count; ii++) {
+      auto base = space + (9 * ii);
+      base[8] = statuses[ii]->status;
+    }
+    if (wait_success) {
       results[0].set_i32(OakStatus::OK);
     } else if (termination_pending_.load()) {
       results[0].set_i32(OakStatus::ERR_TERMINATED);

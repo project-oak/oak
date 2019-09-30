@@ -51,4 +51,6 @@ enum ChannelReadStatus {
   READ_READY = 1;
   // Channel handle does not identify the read half of a current channel.
   INVALID_CHANNEL = 2;
+  // Channel has no extant write halves (and is empty).
+  ORPHANED = 3;
 }
