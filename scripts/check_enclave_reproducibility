@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+set -o xtrace
+
+# This script builds the Asylo server twice from scratch (cleaning the Bazel cache before each
+# compilation), saves the hash of the trusted enclave code to a temporary file, and compares the
+# hashes of the two artifacts.
+# It prints nothing if the hashes match, or a diff in case they don't match.
+# TODO: Perform variations of the build context to verify that the artifacts are unaffected.
+# See http://manpages.ubuntu.com/manpages/cosmic/man1/reprotest.1.html#variations
+
+bazel clean
+rm -rf ./bazel-cache/*
+./scripts/build_server
+./scripts/print_enclave_hash > /tmp/hash_0
+
+bazel clean
+rm -rf ./bazel-cache/*
+./scripts/build_server
+./scripts/print_enclave_hash > /tmp/hash_1
+
+diff /tmp/hash_0 /tmp/hash_1
