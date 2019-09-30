@@ -9,6 +9,9 @@
 /module-*
 /dev-*
 
+# Directory used to compare artifacts for reproducibility.
+/diff/
+
 # Cargo cache.
 /cargo-cache/
 

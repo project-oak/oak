@@ -86,6 +86,10 @@ sgx_enclave(
         "oak_enclave.cc",
     ],
     config = "grpc_enclave_config",
+    # Explicitly disable stamping in order to achieve reproducible builds.
+    # TODO: Remove when we depend on a version of Asylo past
+    # https://github.com/google/asylo/commit/9c557c22f84b1d27ee7a9d1791af8dd2faabe7cc.
+    stamp = 0,
     deps = [
         "//oak/server/asylo:enclave_server",
         "@com_google_asylo//asylo/grpc/util:enclave_server",

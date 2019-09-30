@@ -5,20 +5,25 @@ set -o nounset
 set -o xtrace
 
 # This script builds the Asylo server twice from scratch (cleaning the Bazel cache before each
-# compilation), saves the hash of the trusted enclave code to a temporary file, and compares the
-# hashes of the two artifacts.
-# It prints nothing if the hashes match, or a diff in case they don't match.
+# compilation), and stores the artifacts under an output directory, appending the current time to
+# the file name. It then prints the SHA1 hash of all the artifacts in the output directory, which is
+# useful as a quick comparison of whether they are identical.
+# The artifacts can then be further compared via external tools (e.v. diff or diffoscope).
 # TODO: Perform variations of the build context to verify that the artifacts are unaffected.
 # See http://manpages.ubuntu.com/manpages/cosmic/man1/reprotest.1.html#variations
 
-bazel clean
-rm -rf ./bazel-cache/*
-./scripts/build_server
-./scripts/print_enclave_hash > /tmp/hash_0
+readonly DIFF_DIR='./diff'
 
-bazel clean
-rm -rf ./bazel-cache/*
-./scripts/build_server
-./scripts/print_enclave_hash > /tmp/hash_1
+mkdir -p "$DIFF_DIR"
 
-diff /tmp/hash_0 /tmp/hash_1
+readonly IN='./bazel-bin/oak/server/asylo/oak_enclave_unsigned.so'
+
+for _ in 0 1
+do
+    out="$DIFF_DIR/oak_enclave_unsigned_$(git rev-parse HEAD)_$(date --iso-8601=seconds).so"
+    bazel clean
+    bazel build --subcommands --config=enc-sim //oak/server/asylo:oak
+    cp -f "$IN" "$out"
+done
+
+sha1sum $DIFF_DIR/*
