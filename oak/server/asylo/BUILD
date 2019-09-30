@@ -22,9 +22,12 @@ package(
 load(
     "@com_google_asylo//asylo/bazel:asylo.bzl",
     "enclave_loader",
-    "sim_enclave",
 )
-load("@linux_sgx//:sgx_sdk.bzl", "sgx_enclave_configuration")
+load(
+    "@linux_sgx//:sgx_sdk.bzl",
+    "sgx_enclave",
+    "sgx_enclave_configuration",
+)
 
 cc_library(
     name = "enclave_server",
@@ -77,7 +80,7 @@ sgx_enclave_configuration(
     tcs_num = "200",
 )
 
-sim_enclave(
+sgx_enclave(
     name = "oak_enclave.so",
     srcs = [
         "oak_enclave.cc",
