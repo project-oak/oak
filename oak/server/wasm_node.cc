@@ -306,6 +306,7 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelRead(wabt::interp::Environm
     } else if (result.msg == nullptr) {
       LOG(INFO) << "channel_read[" << channel_handle << "]: no message available";
       WriteI32(env, size_offset, 0);
+      WriteI32(env, handle_count_offset, 0);
       results[0].set_i32(OakStatus::OK);
       return wabt::interp::Result::Ok;
     }

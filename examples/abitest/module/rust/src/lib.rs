@@ -258,8 +258,8 @@ impl FrontendNode {
         let (out_channel, in_channel) = oak::channel_create().unwrap();
         let mut buf = Vec::<u8>::with_capacity(5);
         let mut handles = Vec::with_capacity(5);
-        let mut actual_size: u32 = 0;
-        let mut actual_handle_count: u32 = 0;
+        let mut actual_size: u32 = 99;
+        let mut actual_handle_count: u32 = 99;
         unsafe {
             // Try invalid values for the 4 linear memory offset arguments.
             expect_eq!(
@@ -310,6 +310,22 @@ impl FrontendNode {
                     invalid_raw_offset() as *mut u32
                 )
             );
+
+            // Valid case.
+            expect_eq!(
+                OakStatus::OK.value(),
+                oak::wasm::channel_read(
+                    in_channel.handle,
+                    buf.as_mut_ptr(),
+                    buf.capacity(),
+                    &mut actual_size,
+                    handles.as_mut_ptr() as *mut u8,
+                    handles.capacity(),
+                    &mut actual_handle_count
+                )
+            );
+            expect_eq!(0, actual_size);
+            expect_eq!(0, actual_handle_count);
         }
         expect_eq!(OakStatus::OK, oak::channel_close(out_channel.handle));
         expect_eq!(OakStatus::OK, oak::channel_close(in_channel.handle));
