@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+set -o xtrace
+
+# Prints the SHA1 hash of the trusted enclave code.
+
+sha1sum ./bazel-bin/oak/server/asylo/{oak_enclave_unsigned.so,oak_enclave.so}
