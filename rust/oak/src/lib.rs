@@ -21,7 +21,7 @@ extern crate log;
 extern crate protobuf;
 
 use byteorder::WriteBytesExt;
-use proto::oak_api::ChannelReadStatus;
+pub use proto::oak_api::ChannelReadStatus;
 pub use proto::oak_api::OakStatus;
 use protobuf::ProtobufEnum;
 
@@ -81,12 +81,13 @@ fn prep_handle_space(space: &mut [u8]) {
 }
 
 /// Wait for one or more of the provided handles to become ready for reading
-/// from.
+/// from.  On success, the returned vector of [`ChannelReadStatus`] values
+/// will be in 1-1 correspondence with the passed-in vector of [`Handle`]s.
 ///
 /// This is a convenience wrapper around the [`wasm::wait_on_channels`] host
 /// function. This version is easier to use in Rust but is less efficient
 /// (because the notification space is re-created on each invocation).
-pub fn wait_on_channels(handles: &[ReadHandle]) -> Result<Vec<ReadHandle>, OakStatus> {
+pub fn wait_on_channels(handles: &[ReadHandle]) -> Result<Vec<ChannelReadStatus>, OakStatus> {
     let mut space = new_handle_space(handles);
     unsafe {
         let status = wasm::wait_on_channels(space.as_mut_ptr(), handles.len() as u32);
@@ -96,16 +97,14 @@ pub fn wait_on_channels(handles: &[ReadHandle]) -> Result<Vec<ReadHandle>, OakSt
             None => return Err(OakStatus::OAK_STATUS_UNSPECIFIED),
         }
         let mut results = Vec::with_capacity(handles.len());
-        let mut _invalid = Vec::new();
-        let mut _orphaned = Vec::new();
         for i in 0..handles.len() {
-            let raw_status =
-                space[i * wasm::SPACE_BYTES_PER_HANDLE + (wasm::SPACE_BYTES_PER_HANDLE - 1)];
-            match ChannelReadStatus::from_i32(i32::from(raw_status)) {
-                Some(ChannelReadStatus::NOT_READY) => {}
-                Some(ChannelReadStatus::READ_READY) => results.push(handles[i]),
-                Some(ChannelReadStatus::INVALID_CHANNEL) => _invalid.push(handles[i]),
-                Some(ChannelReadStatus::ORPHANED) => _orphaned.push(handles[i]),
+            match space
+                .get(i * wasm::SPACE_BYTES_PER_HANDLE + (wasm::SPACE_BYTES_PER_HANDLE - 1))
+                .cloned()
+                .map(i32::from)
+                .and_then(ChannelReadStatus::from_i32)
+            {
+                Some(status) => results.push(status),
                 None => return Err(OakStatus::OAK_STATUS_UNSPECIFIED),
             }
         }
