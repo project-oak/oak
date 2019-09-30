@@ -31,7 +31,7 @@ mod proto;
 use abitest_common::InternalMessage;
 use byteorder::WriteBytesExt;
 use oak::grpc::OakNode;
-use oak::{grpc, OakStatus};
+use oak::{grpc, ChannelReadStatus, OakStatus};
 use proto::abitest::{ABITestRequest, ABITestResponse, ABITestResponse_TestResult};
 use proto::abitest_grpc::{dispatch, OakABITestServiceNode};
 use protobuf::ProtobufEnum;
@@ -604,18 +604,18 @@ impl FrontendNode {
         expect_eq!(OakStatus::OK, oak::channel_write(out1, &data, &[]));
 
         expect_eq!(
-            vec![in1],
+            vec![ChannelReadStatus::READ_READY, ChannelReadStatus::NOT_READY],
             status_convert(oak::wait_on_channels(&[in1, in2]))?
         );
         // No read so still ready (level triggered not edge triggered).
         expect_eq!(
-            vec![in1],
+            vec![ChannelReadStatus::READ_READY, ChannelReadStatus::NOT_READY],
             status_convert(oak::wait_on_channels(&[in1, in2]))?
         );
 
         expect_eq!(OakStatus::OK, oak::channel_write(out2, &data, &[]));
         expect_eq!(
-            vec![in1, in2],
+            vec![ChannelReadStatus::READ_READY, ChannelReadStatus::READ_READY],
             status_convert(oak::wait_on_channels(&[in1, in2]))?
         );
 
@@ -629,13 +629,17 @@ impl FrontendNode {
         expect_eq!(0, handles.len());
 
         expect_eq!(
-            vec![in2],
+            vec![ChannelReadStatus::NOT_READY, ChannelReadStatus::READ_READY],
             status_convert(oak::wait_on_channels(&[in1, in2]))?
         );
 
         // Write channels and nonsense handles are ignored.
         expect_eq!(
-            vec![in2],
+            vec![
+                ChannelReadStatus::NOT_READY,
+                ChannelReadStatus::READ_READY,
+                ChannelReadStatus::INVALID_CHANNEL
+            ],
             status_convert(oak::wait_on_channels(&[
                 in1,
                 in2,
@@ -645,7 +649,11 @@ impl FrontendNode {
             ]))?
         );
         expect_eq!(
-            vec![in2],
+            vec![
+                ChannelReadStatus::NOT_READY,
+                ChannelReadStatus::READ_READY,
+                ChannelReadStatus::INVALID_CHANNEL
+            ],
             status_convert(oak::wait_on_channels(&[
                 in1,
                 in2,
@@ -658,7 +666,10 @@ impl FrontendNode {
 
         // Still a pending message on in2 even though the only write half for
         // the channel is closed.
-        expect_eq!(vec![in2], status_convert(oak::wait_on_channels(&[in2]))?);
+        expect_eq!(
+            vec![ChannelReadStatus::READ_READY],
+            status_convert(oak::wait_on_channels(&[in2]))?
+        );
 
         expect_eq!(OakStatus::OK, oak::channel_close(in1.handle));
         expect_eq!(OakStatus::OK, oak::channel_close(in2.handle));
@@ -685,7 +696,10 @@ impl FrontendNode {
         );
         // Wait on an invalid handle.
         expect_eq!(
-            Ok(vec![in_handle]),
+            Ok(vec![
+                ChannelReadStatus::READ_READY,
+                ChannelReadStatus::INVALID_CHANNEL
+            ]),
             oak::wait_on_channels(&[in_handle, oak::ReadHandle { handle: 9_987_321 }])
         );
 
