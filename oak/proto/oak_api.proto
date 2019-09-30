@@ -38,6 +38,8 @@ enum OakStatus {
   ERR_OUT_OF_RANGE = 7;
   // Internal error.
   ERR_INTERNAL = 8;
+  // Node terminated.
+  ERR_TERMINATED = 9;
 }
 
 // Single byte values used to indicate the read status of a channel on the

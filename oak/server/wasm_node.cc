@@ -422,7 +422,7 @@ wabt::interp::HostFunc::Callback WasmNode::OakWaitOnChannels(wabt::interp::Envir
       results[0].set_i32(OakStatus::OK);
     } else {
       // Node is pending termination.
-      results[0].set_i32(OakStatus::ERR_CHANNEL_CLOSED);
+      results[0].set_i32(OakStatus::ERR_TERMINATED);
     }
     return wabt::interp::Result::Ok;
   };
