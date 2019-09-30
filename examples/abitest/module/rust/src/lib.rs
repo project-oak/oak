@@ -445,7 +445,10 @@ impl FrontendNode {
 
         // Can still write to the channel, even though it's not possible to get
         // the message back.
-        expect_eq!(OakStatus::OK, oak::channel_write(out_channel, &data, &[]));
+        expect_eq!(
+            OakStatus::ERR_CHANNEL_CLOSED,
+            oak::channel_write(out_channel, &data, &[])
+        );
 
         expect_eq!(OakStatus::OK, oak::channel_close(out_channel.handle));
         Ok(())
@@ -525,8 +528,55 @@ impl FrontendNode {
             );
         }
 
-        expect_eq!(OakStatus::OK, oak::channel_close(in_channel.handle));
         expect_eq!(OakStatus::OK, oak::channel_close(out_channel.handle));
+
+        // Still a pending message on in_channel even though the only write half for
+        // the channel is closed.
+        unsafe {
+            const COUNT: usize = 1;
+            let mut space = Vec::with_capacity(COUNT * oak::wasm::SPACE_BYTES_PER_HANDLE);
+            space
+                .write_u64::<byteorder::LittleEndian>(in_channel.handle)
+                .unwrap();
+            space.push(0x00);
+            expect_eq!(
+                OakStatus::OK.value(),
+                oak::wasm::wait_on_channels(space.as_mut_ptr(), COUNT as u32)
+            );
+            expect_eq!(
+                oak::proto::oak_api::ChannelReadStatus::READ_READY.value(),
+                i32::from(space[8])
+            );
+        }
+        // Consume the pending message.
+        let mut buffer = Vec::<u8>::with_capacity(5);
+        let mut handles = Vec::with_capacity(5);
+        expect_eq!(
+            OakStatus::OK,
+            oak::channel_read(in_channel, &mut buffer, &mut handles)
+        );
+        expect_eq!(3, buffer.len());
+        expect_eq!(0, handles.len());
+
+        // Read half is now orphaned (no pending message, no possible writers).
+        unsafe {
+            const COUNT: usize = 1;
+            let mut space = Vec::with_capacity(COUNT * oak::wasm::SPACE_BYTES_PER_HANDLE);
+            space
+                .write_u64::<byteorder::LittleEndian>(in_channel.handle)
+                .unwrap();
+            space.push(0x00);
+            expect_eq!(
+                OakStatus::ERR_BAD_HANDLE.value(),
+                oak::wasm::wait_on_channels(space.as_mut_ptr(), COUNT as u32)
+            );
+            expect_eq!(
+                oak::proto::oak_api::ChannelReadStatus::ORPHANED.value(),
+                i32::from(space[8])
+            );
+        }
+
+        expect_eq!(OakStatus::OK, oak::channel_close(in_channel.handle));
         Ok(())
     }
 
@@ -604,8 +654,13 @@ impl FrontendNode {
         );
 
         expect_eq!(OakStatus::OK, oak::channel_close(out1.handle));
-        expect_eq!(OakStatus::OK, oak::channel_close(in1.handle));
         expect_eq!(OakStatus::OK, oak::channel_close(out2.handle));
+
+        // Still a pending message on in2 even though the only write half for
+        // the channel is closed.
+        expect_eq!(vec![in2], status_convert(oak::wait_on_channels(&[in2]))?);
+
+        expect_eq!(OakStatus::OK, oak::channel_close(in1.handle));
         expect_eq!(OakStatus::OK, oak::channel_close(in2.handle));
         Ok(())
     }

@@ -83,7 +83,7 @@ class MessageChannel {
   friend class MessageChannelReadHalf;
   friend class MessageChannelWriteHalf;
 
-  MessageChannel() {}
+  MessageChannel() : reader_count_(0), writer_count_(0) {}
 
   // Count indicates the number of pending messages.
   size_t Count() const LOCKS_EXCLUDED(mu_);
@@ -103,12 +103,26 @@ class MessageChannel {
 
   mutable absl::Mutex mu_;  // protects msgs_
   std::deque<std::unique_ptr<Message>> msgs_ GUARDED_BY(mu_);
+
+  // Keep track of the number of current read and write halves that refer to
+  // this channel, to allow detection of orphaned channels.
+  mutable absl::Mutex count_mu_;  // protects reader_count_, writer_count_
+  int reader_count_ GUARDED_BY(count_mu_);
+  int writer_count_ GUARDED_BY(count_mu_);
 };
 
 // Shared-ownership wrapper for the read half of a MessageChannel.
 class MessageChannelReadHalf {
  public:
-  MessageChannelReadHalf(std::shared_ptr<MessageChannel> channel) : channel_(channel) {}
+  MessageChannelReadHalf(std::shared_ptr<MessageChannel> channel) : channel_(channel) {
+    absl::MutexLock lock(&channel_->count_mu_);
+    channel_->reader_count_++;
+  }
+
+  ~MessageChannelReadHalf() {
+    absl::MutexLock lock(&channel_->count_mu_);
+    channel_->reader_count_--;
+  }
 
   std::unique_ptr<MessageChannelReadHalf> Clone() {
     return absl::make_unique<MessageChannelReadHalf>(channel_);
@@ -140,6 +154,12 @@ class MessageChannelReadHalf {
   // Await blocks until there is a message available to read on the channel.
   void Await() { return channel_->Await(); }
 
+  // Indicates whether the underlying channel has no associated write halves.
+  bool Orphaned() const {
+    absl::ReaderMutexLock lock(&channel_->count_mu_);
+    return (channel_->writer_count_ == 0);
+  }
+
  private:
   std::shared_ptr<MessageChannel> channel_;
 };
@@ -147,7 +167,15 @@ class MessageChannelReadHalf {
 // Shared-ownership wrapper for the write half of a MessageChannel.
 class MessageChannelWriteHalf {
  public:
-  MessageChannelWriteHalf(std::shared_ptr<MessageChannel> channel) : channel_(channel) {}
+  MessageChannelWriteHalf(std::shared_ptr<MessageChannel> channel) : channel_(channel) {
+    absl::MutexLock lock(&channel_->count_mu_);
+    channel_->writer_count_++;
+  }
+
+  ~MessageChannelWriteHalf() {
+    absl::MutexLock lock(&channel_->count_mu_);
+    channel_->writer_count_--;
+  }
 
   std::unique_ptr<MessageChannelWriteHalf> Clone() {
     return absl::make_unique<MessageChannelWriteHalf>(channel_);
@@ -155,6 +183,12 @@ class MessageChannelWriteHalf {
 
   // Write the provided message to the Channel.
   void Write(std::unique_ptr<Message> msg) { channel_->Write(std::move(msg)); }
+
+  // Indicates whether the underlying channel has no associated read halves.
+  bool Orphaned() const {
+    absl::ReaderMutexLock lock(&channel_->count_mu_);
+    return (channel_->reader_count_ == 0);
+  }
 
  private:
   std::shared_ptr<MessageChannel> channel_;

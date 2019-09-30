@@ -97,6 +97,7 @@ pub fn wait_on_channels(handles: &[ReadHandle]) -> Result<Vec<ReadHandle>, OakSt
         }
         let mut results = Vec::with_capacity(handles.len());
         let mut _invalid = Vec::new();
+        let mut _orphaned = Vec::new();
         for i in 0..handles.len() {
             let raw_status =
                 space[i * wasm::SPACE_BYTES_PER_HANDLE + (wasm::SPACE_BYTES_PER_HANDLE - 1)];
@@ -104,6 +105,7 @@ pub fn wait_on_channels(handles: &[ReadHandle]) -> Result<Vec<ReadHandle>, OakSt
                 Some(ChannelReadStatus::NOT_READY) => {}
                 Some(ChannelReadStatus::READ_READY) => results.push(handles[i]),
                 Some(ChannelReadStatus::INVALID_CHANNEL) => _invalid.push(handles[i]),
+                Some(ChannelReadStatus::ORPHANED) => _orphaned.push(handles[i]),
                 None => return Err(OakStatus::OAK_STATUS_UNSPECIFIED),
             }
         }
