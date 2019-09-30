@@ -45,6 +45,18 @@ MessageChannel::~MessageChannel() {
   LOG(INFO) << "Channel destroyed, extant count now " << channel_count;
 }
 
+ChannelReadStatus MessageChannel::ReadStatus(std::weak_ptr<Notification> notify) {
+  absl::MutexLock lock(&mu_);
+  if (msgs_.size() > 0) {
+    return ChannelReadStatus::READ_READY;
+  } else if (writer_count_ == 0) {
+    return ChannelReadStatus::ORPHANED;
+  } else {
+    notifies_.push_back(notify);
+    return ChannelReadStatus::NOT_READY;
+  }
+}
+
 size_t MessageChannel::Count() const {
   absl::ReaderMutexLock lock(&mu_);
   return msgs_.size();
@@ -55,10 +67,13 @@ void MessageChannel::Write(std::unique_ptr<Message> msg) {
     LOG(WARNING) << "Ignoring attempt to write null message";
     return;
   }
-  absl::MutexLock lock(&mu_);
-  LOG(INFO) << "Add message with data size " << msg->data.size() << " and " << msg->channels.size()
-            << " channels";
-  msgs_.push_back(std::move(msg));
+  {
+    absl::MutexLock lock(&mu_);
+    LOG(INFO) << "Add message with data size " << msg->data.size() << " and "
+              << msg->channels.size() << " channels";
+    msgs_.push_back(std::move(msg));
+  }
+  TriggerNotifications();
 }
 
 ReadResult MessageChannel::Read(uint32_t max_size, uint32_t max_channels) {
@@ -100,6 +115,23 @@ void MessageChannel::Await() {
   absl::MutexLock lock(&mu_);
   mu_.Await(absl::Condition(
       +[](std::deque<std::unique_ptr<Message>>* msgs) { return msgs->size() > 0; }, &msgs_));
+}
+
+void MessageChannel::TriggerNotifications() {
+  // Trigger any notifications waiting on this channel, but not while holding
+  // the lock.
+  std::vector<std::weak_ptr<Notification>> notifies;
+  {
+    absl::MutexLock lock(&mu_);
+    std::swap(notifies, notifies_);
+  }
+
+  for (auto& possible_notify : notifies) {
+    std::shared_ptr<Notification> notify = possible_notify.lock();
+    if (notify != nullptr) {
+      notify->Notify();
+    }
+  }
 }
 
 namespace {

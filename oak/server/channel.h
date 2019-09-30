@@ -28,6 +28,7 @@
 #include "absl/types/variant.h"
 #include "oak/proto/oak_api.pb.h"
 #include "oak/proto/policy.pb.h"
+#include "oak/server/notification.h"
 
 namespace oak {
 
@@ -92,6 +93,10 @@ class MessageChannel {
 
   MessageChannel();
 
+  // Return the current readable status of the channel, and if NOT_READY add the
+  // provided Notification to pending notifies for the channel.
+  ChannelReadStatus ReadStatus(std::weak_ptr<Notification> notify) LOCKS_EXCLUDED(mu_);
+
   // Count indicates the number of pending messages.
   size_t Count() const LOCKS_EXCLUDED(mu_);
 
@@ -108,26 +113,32 @@ class MessageChannel {
 
   ReadResult ReadLocked(uint32_t max_size, uint32_t max_channels) EXCLUSIVE_LOCKS_REQUIRED(mu_);
 
-  mutable absl::Mutex mu_;  // protects msgs_
+  void TriggerNotifications() LOCKS_EXCLUDED(mu_);
+
+  // Use a single Mutex to serialize acccess to all per-channel state for safety
+  // and simplicity; in particular, ReadStatus() needs synchronized access to
+  // all of the state.
+  mutable absl::Mutex mu_;  // protects msgs_, notifies_, reader_count_, writer_count_
+
   std::deque<std::unique_ptr<Message>> msgs_ GUARDED_BY(mu_);
+  std::vector<std::weak_ptr<Notification>> notifies_ GUARDED_BY(mu_);
 
   // Keep track of the number of current read and write halves that refer to
   // this channel, to allow detection of orphaned channels.
-  mutable absl::Mutex count_mu_;  // protects reader_count_, writer_count_
-  int reader_count_ GUARDED_BY(count_mu_);
-  int writer_count_ GUARDED_BY(count_mu_);
+  int reader_count_ GUARDED_BY(mu_);
+  int writer_count_ GUARDED_BY(mu_);
 };
 
 // Shared-ownership wrapper for the read half of a MessageChannel.
 class MessageChannelReadHalf {
  public:
   MessageChannelReadHalf(std::shared_ptr<MessageChannel> channel) : channel_(channel) {
-    absl::MutexLock lock(&channel_->count_mu_);
+    absl::MutexLock lock(&channel_->mu_);
     channel_->reader_count_++;
   }
 
   ~MessageChannelReadHalf() {
-    absl::MutexLock lock(&channel_->count_mu_);
+    absl::MutexLock lock(&channel_->mu_);
     channel_->reader_count_--;
   }
 
@@ -155,6 +166,12 @@ class MessageChannelReadHalf {
     return channel_->BlockingRead(max_size, max_channels);
   }
 
+  // Return the current readable status of the channel, and if NOT_READY add the
+  // provided Notification to pending notifies for the channel.
+  ChannelReadStatus ReadStatus(std::weak_ptr<Notification> notify) {
+    return channel_->ReadStatus(notify);
+  }
+
   // Indicate whether a Read operation would return a message.
   bool CanRead() { return channel_->Count() > 0; }
 
@@ -166,7 +183,7 @@ class MessageChannelReadHalf {
 
   // Indicates whether the underlying channel has no associated write halves.
   bool Orphaned() const {
-    absl::ReaderMutexLock lock(&channel_->count_mu_);
+    absl::ReaderMutexLock lock(&channel_->mu_);
     return (channel_->writer_count_ == 0);
   }
 
@@ -178,12 +195,12 @@ class MessageChannelReadHalf {
 class MessageChannelWriteHalf {
  public:
   MessageChannelWriteHalf(std::shared_ptr<MessageChannel> channel) : channel_(channel) {
-    absl::MutexLock lock(&channel_->count_mu_);
+    absl::MutexLock lock(&channel_->mu_);
     channel_->writer_count_++;
   }
 
   ~MessageChannelWriteHalf() {
-    absl::MutexLock lock(&channel_->count_mu_);
+    absl::MutexLock lock(&channel_->mu_);
     channel_->writer_count_--;
   }
 
@@ -196,7 +213,7 @@ class MessageChannelWriteHalf {
 
   // Indicates whether the underlying channel has no associated read halves.
   bool Orphaned() const {
-    absl::ReaderMutexLock lock(&channel_->count_mu_);
+    absl::ReaderMutexLock lock(&channel_->mu_);
     return (channel_->reader_count_ == 0);
   }
 
