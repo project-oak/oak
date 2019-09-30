@@ -522,6 +522,17 @@ impl FrontendNode {
         let (out1, in1) = oak::channel_create().unwrap();
         let (out2, in2) = oak::channel_create().unwrap();
 
+        // Waiting on (just) non-read channel handles should fail immediately.
+        expect_eq!(
+            Err(OakStatus::ERR_BAD_HANDLE),
+            oak::wait_on_channels(&[
+                oak::ReadHandle {
+                    handle: out1.handle
+                },
+                oak::ReadHandle { handle: 9_999_999 }
+            ])
+        );
+
         // Set up first channel with a pending message.
         let data = vec![0x01, 0x02, 0x03];
         expect_eq!(OakStatus::OK, oak::channel_write(out1, &data, &[]));

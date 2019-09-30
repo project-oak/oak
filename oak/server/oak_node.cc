@@ -102,8 +102,9 @@ Handle OakNode::FindChannel(const std::string& port_name) {
 }
 
 bool OakNode::WaitOnChannels(std::vector<std::unique_ptr<ChannelStatus>>* statuses) {
-  bool done = false;
-  while (!done) {
+  while (true) {
+    bool done = false;
+    bool found = false;
     for (uint32_t ii = 0; ii < statuses->size(); ii++) {
       uint64_t handle = (*statuses)[ii]->handle;
       MessageChannelReadHalf* channel = BorrowReadChannel(handle);
@@ -112,6 +113,7 @@ bool OakNode::WaitOnChannels(std::vector<std::unique_ptr<ChannelStatus>>* status
         (*statuses)[ii]->status = ChannelReadStatus::INVALID_CHANNEL;
         continue;
       }
+      found = true;
       if (channel->CanRead()) {
         LOG(INFO) << "Message available on handle " << handle;
         done = true;
@@ -120,16 +122,21 @@ bool OakNode::WaitOnChannels(std::vector<std::unique_ptr<ChannelStatus>>* status
         (*statuses)[ii]->status = ChannelReadStatus::NOT_READY;
       }
     }
+
+    if (!found) {
+      LOG(WARNING) << "No read-capable channels found";
+      return false;
+    }
     if (termination_pending_.load()) {
       LOG(WARNING) << "Node is pending termination";
       return false;
     }
-    if (!done) {
-      // TODO: get rid of polling wait
-      absl::SleepFor(absl::Milliseconds(100));
+    if (done) {
+      return true;
     }
+    // TODO: get rid of polling wait
+    absl::SleepFor(absl::Milliseconds(100));
   }
-  return true;
 }
 
 }  // namespace oak

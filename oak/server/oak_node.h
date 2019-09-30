@@ -62,9 +62,11 @@ class OakNode {
   Handle FindChannel(const std::string& port_name) LOCKS_EXCLUDED(mu_);
 
   // Wait on the given channel handles, modifying the contents of the passed-in
-  // vector.  Returns a boolean indicating whether the wait finished due to node
-  // termination.  Caller is responsible for ensuring that none of the waited-on
-  // channels are closed during the wait operation.
+  // vector.  Returns a boolean indicating whether the wait finished due to a
+  // channel being ready (true), or a failure (false, indicating either node
+  // termination or no readable channels found).  Caller is responsible for
+  // ensuring that none of the waited-on channels are closed during the wait
+  // operation.
   bool WaitOnChannels(std::vector<std::unique_ptr<ChannelStatus>>* statuses);
 
  protected:
