@@ -24,9 +24,12 @@ load(
     "enclave_loader",
 )
 load(
+    "@com_google_asylo//asylo/bazel:copts.bzl",
+    "ASYLO_DEFAULT_COPTS",
+)
+load(
     "@linux_sgx//:sgx_sdk.bzl",
-    "sgx_enclave",
-    "sgx_enclave_configuration",
+    "sgx",
 )
 
 cc_library(
@@ -73,33 +76,43 @@ cc_library(
     ],
 )
 
-sgx_enclave_configuration(
+sgx.enclave_configuration(
     name = "grpc_enclave_config",
     # gRPC needs more than the default amount of heap to run. ~1.2GB.
     heap_max_size = "0x47000000",
     tcs_num = "200",
 )
 
-sgx_enclave(
-    name = "oak_enclave.so",
+sgx.unsigned_enclave(
+    name = "oak_enclave_unsigned.so",
     srcs = [
         "oak_enclave.cc",
     ],
-    config = "grpc_enclave_config",
-    # Explicitly disable stamping in order to achieve reproducible builds.
-    # TODO: Remove when we depend on a version of Asylo past
-    # https://github.com/google/asylo/commit/9c557c22f84b1d27ee7a9d1791af8dd2faabe7cc.
-    stamp = 0,
+    copts = ASYLO_DEFAULT_COPTS,
     deps = [
         "//oak/server/asylo:enclave_server",
         "@com_google_asylo//asylo/grpc/util:enclave_server",
     ],
 )
 
+sgx.debug_enclave(
+    name = "oak_enclave_debug.so",
+    unsigned = ":oak_enclave_unsigned.so",
+    config = ":grpc_enclave_config",
+)
+
+# Produces oak_enclave_sigstruct.dat file, which is used to generate the remote attestation of the
+# enclave code. See https://software.intel.com/en-us/node/703003.
+sgx.generate_sigstruct(
+    name = "oak_enclave_sigstruct",
+    unsigned = ":oak_enclave_unsigned.so",
+    config = ":grpc_enclave_config",
+)
+
 enclave_loader(
     name = "oak",
     srcs = ["asylo_oak_main.cc"],
-    enclaves = {"enclave": "//oak/server/asylo:oak_enclave.so"},
+    enclaves = {"enclave": "//oak/server/asylo:oak_enclave_debug.so"},
     loader_args = ["--enclave_path='{enclave}'"],
     deps = [
         ":asylo_oak_manager",

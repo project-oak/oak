@@ -21,20 +21,20 @@ load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 http_archive(
     name = "com_google_absl",
-    sha256 = "cd4dd948bfe3655269656277eb83dbeefcb1368d7c6b329e93cc8ca9a688e5e6",
-    strip_prefix = "abseil-cpp-27c30ec671cb7b5ba84c4e79feff7fd0b0ac6338",
+    sha256 = "27184e97131edb9a289b1c2cd404c234afa5ceaae44c5eb6713138cb674535aa",
+    strip_prefix = "abseil-cpp-ac78ffc3bc0a8b295cab9a03817760fd460df2a1",
     urls = [
-        # Head commit on 2019-05-23.
-        "https://github.com/abseil/abseil-cpp/archive/27c30ec671cb7b5ba84c4e79feff7fd0b0ac6338.zip",
+        # Head commit on 2019-09-12.
+        "https://github.com/abseil/abseil-cpp/archive/ac78ffc3bc0a8b295cab9a03817760fd460df2a1.zip",
     ],
 )
 
 # Asylo Framework.
 http_archive(
     name = "com_google_asylo",
-    sha256 = "b622044f967da3b8a8e2c76a18afe0014baab3226a902db0b87255f3ffc31c2c",
-    strip_prefix = "asylo-dfdc44744e3b18531830deb37c5633f648e6cdbd",
-    urls = ["https://github.com/google/asylo/archive/dfdc44744e3b18531830deb37c5633f648e6cdbd.tar.gz"],
+    sha256 = "c3ff01a7b974ea8c0713fccf16027756d2c75aca2e2af73a73ffcedd3b4b3e2a",
+    strip_prefix = "asylo-5ab253e2db786a9cccbc397aac2338531d4aa119",
+    urls = ["https://github.com/google/asylo/archive/5ab253e2db786a9cccbc397aac2338531d4aa119.tar.gz"],
 )
 
 # Google Test

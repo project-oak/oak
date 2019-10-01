@@ -124,6 +124,7 @@ cc_library(
         ":wasm_node",
         "//oak/common:app_config",
         "//oak/proto:enclave_cc_proto",
+        "//oak/proto:oak_api_cc_proto",
         "//oak/server:logging_node",
         "//oak/server/storage:storage_node",
         "@com_google_absl//absl/memory",
