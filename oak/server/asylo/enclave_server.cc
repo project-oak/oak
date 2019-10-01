@@ -34,7 +34,6 @@
 #include "include/grpcpp/server.h"
 #include "include/grpcpp/server_builder.h"
 #include "oak/proto/enclave.pb.h"
-#include "oak/server/module_invocation.h"
 #include "oak/server/oak_runtime.h"
 
 namespace oak {
