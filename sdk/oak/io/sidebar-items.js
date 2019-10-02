@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Channel","Wrapper for a WriteHandle to implement the [`std::io::Write`] trait."]]});
