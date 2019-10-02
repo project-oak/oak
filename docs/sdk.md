@@ -54,6 +54,13 @@ wrapper for an
 to allow outbound channel use in situations where an implementation of the Rust
 `std::io::Write` trait is required.
 
+### `oak::rand` Module
+
+The `oak::rand` module provides an implementation of the
+[`rand::RngCore`](https://rust-random.github.io/rand/rand/trait.RngCore.html)
+trait, to allow use of the
+[`rand`](https://rust-random.github.io/rand/rand/index.html) crate in Oak code.
+
 ### `oak::grpc` Module
 
 The [`oak::grpc`](https://project-oak.github.io/oak/sdk/oak/grpc/index.html)

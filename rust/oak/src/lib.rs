@@ -19,6 +19,7 @@ extern crate fmt;
 #[macro_use]
 extern crate log;
 extern crate protobuf;
+extern crate rand_core;
 
 use byteorder::WriteBytesExt;
 pub use proto::oak_api::ChannelReadStatus;
@@ -28,6 +29,7 @@ use protobuf::ProtobufEnum;
 pub mod grpc;
 pub mod io;
 pub mod proto;
+pub mod rand;
 pub mod storage;
 #[cfg(test)]
 mod tests;
