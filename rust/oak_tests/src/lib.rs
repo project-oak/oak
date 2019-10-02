@@ -152,6 +152,15 @@ pub extern "C" fn channel_find(_buf: *const u8, _size: usize) -> u64 {
     1
 }
 
+/// Test-only placeholder for random data generation.
+#[no_mangle]
+pub unsafe extern "C" fn random_get(buf: *mut u8, size: usize) -> i32 {
+    for i in 0..size as isize {
+        *(buf.offset(i)) = 4; // chosen by fair dice roll
+    }
+    OakStatus::OK.value()
+}
+
 /// Convenience test helper which returns the last message on the global test
 /// channel as a string.
 pub fn last_message_as_string() -> String {
