@@ -219,6 +219,14 @@ pub fn channel_find(port_name: &str) -> Handle {
     unsafe { wasm::channel_find(port_name.as_ptr(), port_name.len()) }
 }
 
+/// Fill a buffer with random data.
+pub fn random_get(buf: &mut [u8]) -> OakStatus {
+    match OakStatus::from_i32(unsafe { wasm::random_get(buf.as_mut_ptr(), buf.len()) }) {
+        Some(s) => s,
+        None => OakStatus::OAK_STATUS_UNSPECIFIED,
+    }
+}
+
 /// Return an instance of the [`std::io::Write`] trait that emits messages to
 /// the Node's logging channel.
 ///
