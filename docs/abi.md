@@ -108,6 +108,12 @@ functions** as
   - arg 1: Source buffer size in bytes
   - return 0: Channel handle, or zero if not found.
 
+- `random_get: (i32, i32) -> i32`: Fill a buffer with random bytes.
+
+  - arg 0: Destination buffer
+  - arg 1: Destination buffer size in bytes
+  - return 0: Status of operation
+
 ## Pre-Defined Channels
 
 The default [port names](concepts.md#pre-defined-channels-and-port-names) that

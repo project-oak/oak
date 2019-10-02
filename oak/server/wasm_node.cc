@@ -17,6 +17,7 @@
 #include "oak/server/wasm_node.h"
 
 #include <iostream>
+#include <random>
 #include <utility>
 
 #include "absl/base/internal/endian.h"
@@ -170,7 +171,7 @@ static bool CheckModuleExports(wabt::interp::Environment* env, wabt::interp::Mod
       [env, module](const RequiredExport& req) { return CheckModuleExport(env, module, req); });
 }
 
-WasmNode::WasmNode(const std::string& name) : NodeThread(name) {}
+WasmNode::WasmNode(const std::string& name) : NodeThread(name), prng_engine_() {}
 
 std::unique_ptr<WasmNode> WasmNode::Create(const std::string& name, const std::string& module) {
   LOG(INFO) << "Creating Wasm Node";
@@ -236,6 +237,11 @@ void WasmNode::InitEnvironment(wabt::interp::Environment* env) {
       wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
                                   std::vector<wabt::Type>{wabt::Type::I64}),
       this->OakChannelFind(env));
+  oak_module->AppendFuncExport(
+      "random_get",
+      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
+                                  std::vector<wabt::Type>{wabt::Type::I32}),
+      this->OakRandomGet(env));
 }
 
 void WasmNode::Run() {
@@ -510,6 +516,30 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelFind(wabt::interp::Environm
 
     Handle handle = FindChannel(port_name);
     results[0].set_i64(handle);  // zero if not found
+    return wabt::interp::Result::Ok;
+  };
+}
+
+wabt::interp::HostFunc::Callback WasmNode::OakRandomGet(wabt::interp::Environment* env) {
+  return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
+                     const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
+    LogHostFunctionCall(name_, func, args);
+
+    uint32_t offset = args[0].get_i32();
+    uint32_t size = args[1].get_i32();
+    if (!MemoryAvailable(env, offset, size)) {
+      LOG(WARNING) << "Node provided invalid memory offset+size";
+      results[0].set_i32(OakStatus::ERR_INVALID_ARGS);
+      return wabt::interp::Result::Ok;
+    }
+
+    std::uniform_int_distribution<uint8_t> distribution;
+    auto base = env->GetMemory(0)->data.begin() + offset;
+    for (uint32_t i = 0; i < size; i++) {
+      base[i] = distribution(prng_engine_);
+    }
+
+    results[0].set_i32(OakStatus::OK);
     return wabt::interp::Result::Ok;
   };
 }
