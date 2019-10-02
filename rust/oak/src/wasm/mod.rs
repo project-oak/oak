@@ -100,6 +100,13 @@ extern "C" {
     ///
     /// Returns the handle value if found, or a zero (invalid) handle if not.
     pub fn channel_find(buf: *const u8, len: usize) -> u64;
+
+    /// Fill a buffer with random data.
+    ///
+    /// Returns the status of the operation, as an [`OakStatus`] value.
+    ///
+    /// [`OakStatus`]: crate::OakStatus
+    pub fn random_get(buf: *mut u8, len: usize) -> i32;
 }
 
 /// Number of bytes needed per-handle for channel readiness notifications.
