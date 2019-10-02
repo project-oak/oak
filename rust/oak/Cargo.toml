@@ -8,6 +8,7 @@ protobuf = "*"
 fmt = "*"
 log = "*"
 byteorder = "1"
+rand_core = { version = "0.5", features = ["std"] }
 
 [build-dependencies]
 protoc-rust = "*"
