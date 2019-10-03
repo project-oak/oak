@@ -126,6 +126,8 @@ impl OakABITestServiceNode for FrontendNode {
         tests.insert("ChannelWrite", FrontendNode::test_channel_write);
         tests.insert("WaitOnChannelsRaw", FrontendNode::test_channel_wait_raw);
         tests.insert("WaitOnChannels", FrontendNode::test_channel_wait);
+        tests.insert("RandomGetRaw", FrontendNode::test_random_get_raw);
+        tests.insert("RandomGet", FrontendNode::test_random_get);
         tests.insert(
             "ChannelHandleReuse",
             FrontendNode::test_channel_handle_reuse,
@@ -696,6 +698,25 @@ impl FrontendNode {
 
         expect_eq!(OakStatus::OK, oak::channel_close(in1.handle));
         expect_eq!(OakStatus::OK, oak::channel_close(in2.handle));
+        Ok(())
+    }
+
+    fn test_random_get_raw(&self) -> std::io::Result<()> {
+        unsafe {
+            expect_eq!(
+                OakStatus::ERR_INVALID_ARGS.value(),
+                oak::wasm::random_get(invalid_raw_offset() as *mut u8, 1)
+            );
+        }
+        Ok(())
+    }
+
+    fn test_random_get(&self) -> std::io::Result<()> {
+        let original = vec![0x01, 0x02, 0x03, 0x04];
+        let mut data = original.clone();
+        expect_eq!(OakStatus::OK, oak::random_get(&mut data));
+        // 1 in 2^32 chance of getting back original value
+        expect!(data != original);
         Ok(())
     }
 
