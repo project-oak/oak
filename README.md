@@ -32,6 +32,8 @@ Further information is included in the following documents:
    ABI, to allow more convenient development of Oak applications.
 -  [Oak Development](docs/development.md) covers practical steps for getting a
    development Oak system up and running.
+-  [Programming Oak](docs/programming-oak.md) discusses programming for the Oak
+   system.
 
 ## Terminology
 

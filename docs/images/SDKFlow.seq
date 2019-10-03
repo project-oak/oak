@@ -1,0 +1,29 @@
+participant Client [fillcolor="green"]
+participant Oak VM\n(C++) as OVM [fillcolor="palegreen"]
+participant Oak SDK\n(Wasm) as SDK [fillcolor="palegreen"]
+participant Oak Node\n(Wasm) as Node [fillcolor="palegreen"]
+
+OVM -> SDK: oak_main()
+SDK -> OVM: oak.wait_on_channels(1)
+
+
+Note over Client:  [color="white"]
+
+Client --> OVM: gRPC: DoSomethingRequest
+Note over OVM: encapsulate\ngRPC req [fillcolor="palegreen"]
+Note over OVM: serialize\nto channel [fillcolor="palegreen"]
+OVM -> SDK: channel 1 ready
+Note over SDK: (prepare linear memory\narea for receive) [fillcolor="palegreen"]
+SDK -> OVM: oak.channel_read(1, &buf)
+OVM -> SDK: serialized\ngRPC request
+Note over SDK: de-serialize\nrequest [fillcolor="palegreen"]
+SDK -> Node: OakNode::\ninvoke()
+Node -> SDK: dispatch()
+SDK -> Node: node.\ndo_something(req)
+Note over Node: do something [fillcolor="palegreen"]
+Node -> SDK: return response
+Note over SDK: encapsulate\ngRPC rsp [fillcolor="palegreen"]
+SDK -> OVM: oak.channel_write(2, &rsp)
+Note over OVM: de-serialize\nresponse [fillcolor="palegreen"]
+OVM --> Client: gRPC: DoSomethingResponse
+SDK -> OVM: oak.wait_on_channels(1)
