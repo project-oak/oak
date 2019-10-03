@@ -23,6 +23,7 @@ extern crate log;
 extern crate oak;
 extern crate oak_log;
 extern crate protobuf;
+extern crate rand;
 extern crate regex;
 extern crate serde;
 
@@ -35,6 +36,7 @@ use oak::{grpc, ChannelReadStatus, OakStatus};
 use proto::abitest::{ABITestRequest, ABITestResponse, ABITestResponse_TestResult};
 use proto::abitest_grpc::{dispatch, OakABITestServiceNode};
 use protobuf::ProtobufEnum;
+use rand::Rng;
 use std::collections::HashMap;
 use std::io::Write;
 
@@ -128,6 +130,7 @@ impl OakABITestServiceNode for FrontendNode {
         tests.insert("WaitOnChannels", FrontendNode::test_channel_wait);
         tests.insert("RandomGetRaw", FrontendNode::test_random_get_raw);
         tests.insert("RandomGet", FrontendNode::test_random_get);
+        tests.insert("RandomRng", FrontendNode::test_random_rng);
         tests.insert(
             "ChannelHandleReuse",
             FrontendNode::test_channel_handle_reuse,
@@ -717,6 +720,14 @@ impl FrontendNode {
         expect_eq!(OakStatus::OK, oak::random_get(&mut data));
         // 1 in 2^32 chance of getting back original value
         expect!(data != original);
+        Ok(())
+    }
+
+    fn test_random_rng(&self) -> std::io::Result<()> {
+        let mut rng = oak::rand::OakRng {};
+        let x1 = rng.gen::<u64>();
+        let x2 = rng.gen::<u64>();
+        expect!(x1 != x2);
         Ok(())
     }
 
