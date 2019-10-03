@@ -58,3 +58,12 @@ RUN rustup component add \
   rls \
   rust-analysis \
   rust-src
+
+# Install embedmd (via Go)
+ARG GOLANG_VERSION=1.13.1
+ENV GOROOT /usr/local/go
+ENV GOPATH $HOME/go
+ENV PATH $GOROOT/bin:$GOPATH/bin:$PATH
+RUN mkdir -p $GOROOT
+RUN curl https://dl.google.com/go/go${GOLANG_VERSION}.linux-amd64.tar.gz | tar xzf - -C ${GOROOT} --strip-components=1
+RUN go get github.com/campoy/embedmd

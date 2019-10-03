@@ -21,3 +21,8 @@ find . \
     -not \( -path ./third_party -prune \) \
     \( -type f -name '*.md' \) \
   \) -exec prettier --write {} +
+
+# Update embedded code snippets
+grep --recursive --files-with-matches embedmd docs | while IFS= read -r file; do
+  embedmd -w "$file"
+done
