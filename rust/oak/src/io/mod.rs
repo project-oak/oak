@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-//! Wrappers for Oak SDK types to allow their use with std::io.
+//! Wrappers for Oak SDK types to allow their use with [`std::io`].
 
 use crate::{channel_write, OakStatus};
 use std::io;
