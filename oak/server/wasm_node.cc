@@ -67,7 +67,7 @@ static uint64_t ReadU64(wabt::interp::Environment* env, const uint32_t offset) {
   return absl::little_endian::Load64(env->GetMemory(0)->data.data() + offset);
 }
 
-static void LogHostFunctionCall(const wabt::interp::HostFunc* func,
+static void LogHostFunctionCall(const std::string& node_name, const wabt::interp::HostFunc* func,
                                 const wabt::interp::TypedValues& args) {
   std::stringstream params;
   bool first = true;
@@ -75,8 +75,8 @@ static void LogHostFunctionCall(const wabt::interp::HostFunc* func,
     params << std::string(first ? "" : ", ") << wabt::interp::TypedValueToString(arg);
     first = false;
   }
-  LOG(INFO) << "Called host function: " << func->module_name << "." << func->field_name << "("
-            << params.str() << ")";
+  LOG(INFO) << "{" << node_name << "} Called host function: " << func->module_name << "."
+            << func->field_name << "(" << params.str() << ")";
 }
 
 static wabt::Result ReadModule(const std::string& module_bytes, wabt::interp::Environment* env,
@@ -243,22 +243,23 @@ void WasmNode::Run() {
   wabt::Stream* trace_stream = nullptr;
   wabt::interp::Executor executor(&env_, trace_stream, thread_options);
 
-  LOG(INFO) << "module execution thread: run oak_main";
+  LOG(INFO) << "{" << name_ << "} module execution thread: run oak_main";
   wabt::interp::TypedValues args;
   wabt::interp::ExecResult exec_result = executor.RunExportByName(Module(), "oak_main", args);
 
   if (exec_result.result != wabt::interp::Result::Ok) {
-    LOG(ERROR) << "execution failure: " << wabt::interp::ResultToString(exec_result.result);
+    LOG(ERROR) << "{" << name_
+               << "} execution failure: " << wabt::interp::ResultToString(exec_result.result);
     return;
   }
   uint32_t status = exec_result.values[0].get_i32();
-  LOG(WARNING) << "module execution terminated with status " << status;
+  LOG(WARNING) << "{" << name_ << "} module execution terminated with status " << status;
 }
 
 wabt::interp::HostFunc::Callback WasmNode::OakChannelRead(wabt::interp::Environment* env) {
   return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
                      const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
-    LogHostFunctionCall(func, args);
+    LogHostFunctionCall(name_, func, args);
 
     Handle channel_handle = args[0].get_i64();
     uint32_t offset = args[1].get_i32();
@@ -272,7 +273,7 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelRead(wabt::interp::Environm
     if (!MemoryAvailable(env, offset, size) || !MemoryAvailable(env, size_offset, 4) ||
         !MemoryAvailable(env, handle_space_offset, handle_space_count * sizeof(Handle)) ||
         !MemoryAvailable(env, handle_count_offset, 4)) {
-      LOG(WARNING) << "Node provided invalid memory offset+size";
+      LOG(WARNING) << "{" << name_ << "} Node provided invalid memory offset+size";
       results[0].set_i32(OakStatus::ERR_INVALID_ARGS);
       return wabt::interp::Result::Ok;
     }
@@ -282,21 +283,21 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelRead(wabt::interp::Environm
     // ongoing.
     MessageChannelReadHalf* channel = BorrowReadChannel(channel_handle);
     if (channel == nullptr) {
-      LOG(WARNING) << "Invalid channel handle: " << channel_handle;
+      LOG(WARNING) << "{" << name_ << "} Invalid channel handle: " << channel_handle;
       results[0].set_i32(OakStatus::ERR_BAD_HANDLE);
       return wabt::interp::Result::Ok;
     }
 
     ReadResult result = channel->Read(size, handle_space_count);
     if (result.required_size > 0) {
-      LOG(INFO) << "channel_read[" << channel_handle << "]: buffer too small: " << size << " < "
-                << result.required_size;
+      LOG(INFO) << "{" << name_ << "} channel_read[" << channel_handle
+                << "]: buffer too small: " << size << " < " << result.required_size;
       WriteI32(env, size_offset, result.required_size);
       WriteI32(env, handle_count_offset, result.required_channels);
       results[0].set_i32(OakStatus::ERR_BUFFER_TOO_SMALL);
       return wabt::interp::Result::Ok;
     } else if (result.required_channels > 0) {
-      LOG(INFO) << "channel_read[" << channel_handle
+      LOG(INFO) << "{" << name_ << "} channel_read[" << channel_handle
                 << "]: handle space too small: " << handle_space_count << " < "
                 << result.required_channels;
       WriteI32(env, size_offset, result.required_size);
@@ -304,12 +305,12 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelRead(wabt::interp::Environm
       results[0].set_i32(OakStatus::ERR_HANDLE_SPACE_TOO_SMALL);
       return wabt::interp::Result::Ok;
     } else if (result.msg == nullptr) {
-      LOG(INFO) << "channel_read[" << channel_handle << "]: no message available";
+      LOG(INFO) << "{" << name_ << "} channel_read[" << channel_handle << "]: no message available";
       WriteI32(env, size_offset, 0);
       WriteI32(env, handle_count_offset, 0);
 
       if (channel->Orphaned()) {
-        LOG(INFO) << "channel_read[" << channel_handle << "]: no writers left";
+        LOG(INFO) << "{" << name_ << "} channel_read[" << channel_handle << "]: no writers left";
         results[0].set_i32(OakStatus::ERR_CHANNEL_CLOSED);
       } else {
         results[0].set_i32(OakStatus::OK);
@@ -317,7 +318,7 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelRead(wabt::interp::Environm
       return wabt::interp::Result::Ok;
     }
 
-    LOG(INFO) << "channel_read[" << channel_handle << "]: read message of size "
+    LOG(INFO) << "{" << name_ << "} channel_read[" << channel_handle << "]: read message of size "
               << result.msg->data.size() << " with " << result.msg->channels.size()
               << " attached channels";
     WriteI32(env, size_offset, result.msg->data.size());
@@ -327,7 +328,7 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelRead(wabt::interp::Environm
     // Convert any accompanying channels into handles relative to the receiving node.
     for (size_t ii = 0; ii < result.msg->channels.size(); ii++) {
       Handle handle = AddChannel(std::move(result.msg->channels[ii]));
-      LOG(INFO) << "Transferred channel has new handle " << handle;
+      LOG(INFO) << "{" << name_ << "} Transferred channel has new handle " << handle;
       WriteU64(env, handle_space_offset + ii * sizeof(Handle), handle);
     }
 
@@ -339,7 +340,7 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelRead(wabt::interp::Environm
 wabt::interp::HostFunc::Callback WasmNode::OakChannelWrite(wabt::interp::Environment* env) {
   return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
                      const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
-    LogHostFunctionCall(func, args);
+    LogHostFunctionCall(name_, func, args);
 
     Handle channel_handle = args[0].get_i64();
     uint32_t offset = args[1].get_i32();
@@ -350,7 +351,7 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelWrite(wabt::interp::Environ
     // Check all provided linear memory is accessible.
     if (!MemoryAvailable(env, offset, size) ||
         !MemoryAvailable(env, handle_offset, handle_count * sizeof(Handle))) {
-      LOG(WARNING) << "Node provided invalid memory offset+size";
+      LOG(WARNING) << "{" << name_ << "} Node provided invalid memory offset+size";
       results[0].set_i32(OakStatus::ERR_INVALID_ARGS);
       return wabt::interp::Result::Ok;
     }
@@ -360,13 +361,13 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelWrite(wabt::interp::Environ
     // ongoing.
     MessageChannelWriteHalf* channel = BorrowWriteChannel(channel_handle);
     if (channel == nullptr) {
-      LOG(WARNING) << "Invalid channel handle: " << channel_handle;
+      LOG(WARNING) << "{" << name_ << "} Invalid channel handle: " << channel_handle;
       results[0].set_i32(OakStatus::ERR_BAD_HANDLE);
       return wabt::interp::Result::Ok;
     }
 
     if (channel->Orphaned()) {
-      LOG(INFO) << "channel_write[" << channel_handle << "]: no readers left";
+      LOG(INFO) << "{" << name_ << "} channel_write[" << channel_handle << "]: no readers left";
       results[0].set_i32(OakStatus::ERR_CHANNEL_CLOSED);
       return wabt::interp::Result::Ok;
     }
@@ -375,17 +376,18 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelWrite(wabt::interp::Environ
     absl::Span<const char> origin = ReadMemory(env, offset, size);
     auto msg = absl::make_unique<Message>();
     msg->data.insert(msg->data.end(), origin.begin(), origin.end());
-    LOG(INFO) << "channel_write[" << channel_handle << "]: write message of size " << size;
+    LOG(INFO) << "{" << name_ << "} channel_write[" << channel_handle << "]: write message of size "
+              << size;
 
     // Find any handles and clone the corresponding write channels.
     std::vector<Handle> handles;
     handles.reserve(handle_count);
     for (uint32_t ii = 0; ii < handle_count; ii++) {
       Handle handle = ReadU64(env, handle_offset + (ii * sizeof(Handle)));
-      LOG(INFO) << "Transfer channel handle " << handle;
+      LOG(INFO) << "{" << name_ << "} Transfer channel handle " << handle;
       ChannelHalf* half = BorrowChannel(handle);
       if (half == nullptr) {
-        LOG(WARNING) << "Invalid transferred channel handle: " << handle;
+        LOG(WARNING) << "{" << name_ << "} Invalid transferred channel handle: " << handle;
         results[0].set_i32(OakStatus::ERR_BAD_HANDLE);
         return wabt::interp::Result::Ok;
       }
@@ -401,20 +403,20 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelWrite(wabt::interp::Environ
 wabt::interp::HostFunc::Callback WasmNode::OakWaitOnChannels(wabt::interp::Environment* env) {
   return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
                      const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
-    LogHostFunctionCall(func, args);
+    LogHostFunctionCall(name_, func, args);
 
     uint32_t offset = args[0].get_i32();
     uint32_t count = args[1].get_i32();
 
     // Check all provided linear memory is accessible.
     if (!MemoryAvailable(env, offset, count * 9)) {
-      LOG(WARNING) << "Node provided invalid memory offset+size";
+      LOG(WARNING) << "{" << name_ << "} Node provided invalid memory offset+size";
       results[0].set_i32(OakStatus::ERR_INVALID_ARGS);
       return wabt::interp::Result::Ok;
     }
 
     if (count == 0) {
-      LOG(INFO) << "Waiting on no channels, return immediately";
+      LOG(INFO) << "{" << name_ << "} Waiting on no channels, return immediately";
       results[0].set_i32(OakStatus::ERR_INVALID_ARGS);
       return wabt::interp::Result::Ok;
     }
@@ -447,13 +449,13 @@ wabt::interp::HostFunc::Callback WasmNode::OakWaitOnChannels(wabt::interp::Envir
 wabt::interp::HostFunc::Callback WasmNode::OakChannelCreate(wabt::interp::Environment* env) {
   return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
                      const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
-    LogHostFunctionCall(func, args);
+    LogHostFunctionCall(name_, func, args);
 
     uint32_t write_half_offset = args[0].get_i32();
     uint32_t read_half_offset = args[1].get_i32();
     if (!MemoryAvailable(env, write_half_offset, sizeof(Handle)) ||
         !MemoryAvailable(env, read_half_offset, sizeof(Handle))) {
-      LOG(WARNING) << "Node provided invalid memory offset+size";
+      LOG(WARNING) << "{" << name_ << "} Node provided invalid memory offset+size";
       results[0].set_i32(OakStatus::ERR_INVALID_ARGS);
       return wabt::interp::Result::Ok;
     }
@@ -461,7 +463,7 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelCreate(wabt::interp::Enviro
     MessageChannel::ChannelHalves halves = MessageChannel::Create();
     Handle write_handle = AddChannel(absl::make_unique<ChannelHalf>(std::move(halves.write)));
     Handle read_handle = AddChannel(absl::make_unique<ChannelHalf>(std::move(halves.read)));
-    LOG(INFO) << "Created new channel with handles write=" << write_handle
+    LOG(INFO) << "{" << name_ << "} Created new channel with handles write=" << write_handle
               << ", read=" << read_handle;
 
     WriteU64(env, write_half_offset, write_handle);
@@ -475,15 +477,15 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelCreate(wabt::interp::Enviro
 wabt::interp::HostFunc::Callback WasmNode::OakChannelClose(wabt::interp::Environment* env) {
   return [this](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
                 const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
-    LogHostFunctionCall(func, args);
+    LogHostFunctionCall(name_, func, args);
 
     Handle channel_handle = args[0].get_i64();
 
     if (CloseChannel(channel_handle)) {
-      LOG(INFO) << "Closed channel handle: " << channel_handle;
+      LOG(INFO) << "{" << name_ << "} Closed channel handle: " << channel_handle;
       results[0].set_i32(OakStatus::OK);
     } else {
-      LOG(WARNING) << "Invalid channel handle: " << channel_handle;
+      LOG(WARNING) << "{" << name_ << "} Invalid channel handle: " << channel_handle;
       results[0].set_i32(OakStatus::ERR_BAD_HANDLE);
     }
     return wabt::interp::Result::Ok;
@@ -493,12 +495,12 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelClose(wabt::interp::Environ
 wabt::interp::HostFunc::Callback WasmNode::OakChannelFind(wabt::interp::Environment* env) {
   return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
                      const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
-    LogHostFunctionCall(func, args);
+    LogHostFunctionCall(name_, func, args);
 
     uint32_t offset = args[0].get_i32();
     uint32_t size = args[1].get_i32();
     if (!MemoryAvailable(env, offset, size)) {
-      LOG(WARNING) << "Node provided invalid memory offset+size";
+      LOG(WARNING) << "{" << name_ << "} Node provided invalid memory offset+size";
       results[0].set_i32(0);
       return wabt::interp::Result::Ok;
     }

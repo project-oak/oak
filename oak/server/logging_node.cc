@@ -27,19 +27,20 @@ void LoggingNode::Run() {
   Handle handle = FindChannel(kLoggingNodePortName);
   MessageChannelReadHalf* channel = BorrowReadChannel(handle);
   if (channel == nullptr) {
-    LOG(ERROR) << "No channel available!";
+    LOG(ERROR) << "{" << name_ << "} No channel available!";
     return;
   }
   std::vector<std::unique_ptr<ChannelStatus>> status;
   status.push_back(absl::make_unique<ChannelStatus>(handle));
   while (true) {
     if (!WaitOnChannels(&status)) {
-      LOG(WARNING) << "Node termination requested, " << channel->Count() << " log messages pending";
+      LOG(WARNING) << "{" << name_ << "} Node termination requested, " << channel->Count()
+                   << " log messages pending";
       return;
     }
     ReadResult result = channel->Read(INT_MAX, INT_MAX);
     if (result.required_size > 0) {
-      LOG(ERROR) << "Message size too large: " << result.required_size;
+      LOG(ERROR) << "{" << name_ << "} Message size too large: " << result.required_size;
       return;
     }
     LOG(INFO) << "LOG: " << std::string(result.msg->data.data(), result.msg->data.size());

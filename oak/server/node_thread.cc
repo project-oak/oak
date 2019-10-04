@@ -32,17 +32,17 @@ void NodeThread::Start() {
     return;
   }
 
-  LOG(INFO) << "Executing new " << name_ << " node thread";
+  LOG(INFO) << "Executing new {" << name_ << "} node thread";
   thread_ = std::thread(&oak::NodeThread::Run, this);
-  LOG(INFO) << "Started " << name_ << " node thread";
+  LOG(INFO) << "Started {" << name_ << "} node thread";
 }
 
 void NodeThread::Stop() {
   termination_pending_ = true;
   if (thread_.joinable()) {
-    LOG(INFO) << "Waiting for completion of " << name_ << " node thread";
+    LOG(INFO) << "Waiting for completion of {" << name_ << "} node thread";
     thread_.join();
-    LOG(INFO) << "Completed " << name_ << " node thread";
+    LOG(INFO) << "Completed {" << name_ << "} node thread";
   }
 }
 

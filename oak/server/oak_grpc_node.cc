@@ -60,7 +60,7 @@ void OakGrpcNode::Start() {
 }
 
 void OakGrpcNode::CompletionQueueLoop() {
-  LOG(INFO) << "Starting gRPC completion queue loop";
+  LOG(INFO) << "{" << name_ << "} Starting gRPC completion queue loop";
 
   Handle req_handle = FindChannel(kGrpcNodeRequestPortName);
   Handle rsp_handle = FindChannel(kGrpcNodeResponsePortName);
@@ -77,9 +77,10 @@ void OakGrpcNode::CompletionQueueLoop() {
     void* tag;
     if (!completion_queue_->Next(&tag, &ok)) {
       if (!termination_pending_.load()) {
-        LOG(FATAL) << "Failure reading from completion queue";
+        LOG(FATAL) << "{" << name_ << "} Failure reading from completion queue";
       }
-      LOG(INFO) << "No Next event on completion queue, stopping gRPC completion queue loop";
+      LOG(INFO) << "{" << name_
+                << "} No Next event on completion queue, stopping gRPC completion queue loop";
       return;
     }
     auto callback = static_cast<std::function<void(bool)>*>(tag);
@@ -98,17 +99,17 @@ grpc::Status OakGrpcNode::GetAttestation(grpc::ServerContext* context,
 void OakGrpcNode::Stop() {
   termination_pending_ = true;
   if (server_) {
-    LOG(INFO) << "Shutting down gRPC server...";
+    LOG(INFO) << "{" << name_ << "} Shutting down gRPC server...";
     server_->Shutdown();
   }
   if (completion_queue_ != nullptr) {
-    LOG(INFO) << "Shutting down completion queue...";
+    LOG(INFO) << "{" << name_ << "} Shutting down completion queue...";
     completion_queue_->Shutdown();
   }
   if (queue_thread_.joinable()) {
-    LOG(INFO) << "Waiting for completion of completion queue thread";
+    LOG(INFO) << "{" << name_ << "} Waiting for completion of completion queue thread";
     queue_thread_.join();
-    LOG(INFO) << "Completed queue thread";
+    LOG(INFO) << "{" << name_ << "} Completed queue thread";
   }
   // Now there is no separate thread running it's safe to drop the gRPC objects.
   server_ = nullptr;

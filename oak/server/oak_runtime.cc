@@ -40,20 +40,20 @@ grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
     const std::string& node_name = node_config.node_name();
     std::unique_ptr<OakNode> node;
     if (node_config.has_web_assembly_node()) {
-      LOG(INFO) << "Create Wasm node named " << node_name;
+      LOG(INFO) << "Create Wasm node named {" << node_name << "}";
       node =
           WasmNode::Create(node_config.node_name(), node_config.web_assembly_node().module_bytes());
     } else if (node_config.has_grpc_server_node()) {
-      LOG(INFO) << "Create gRPC pseudo-Node named " << node_name;
+      LOG(INFO) << "Create gRPC pseudo-Node named {" << node_name << "}";
       std::unique_ptr<OakGrpcNode> grpc_node = OakGrpcNode::Create(node_name);
       grpc_node_ = grpc_node.get();  // borrowed copy
       node = std::move(grpc_node);
     } else if (node_config.has_log_node()) {
-      LOG(INFO) << "Create logging pseudo-node named " << node_name;
+      LOG(INFO) << "Create logging pseudo-node named {" << node_name << "}";
       node = absl::make_unique<LoggingNode>(node_name);
       log_node = node.get();
     } else if (node_config.has_storage_node()) {
-      LOG(INFO) << "Created storage pseudo-Node named " << node_name;
+      LOG(INFO) << "Created storage pseudo-Node named {" << node_name << "}";
       node = absl::make_unique<StorageNode>(node_name, node_config.storage_node().address());
     }
     if (node == nullptr) {
@@ -79,12 +79,12 @@ grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
       // Special case for all configured channels going to the logging
       // pseudo-Node: share the existing channel and hold an extra reference to
       // the write half of the channel.
-      LOG(INFO) << "Re-use logging channel for " << src_name << "." << src_port << " -> "
-                << dest_name << "." << dest_port;
+      LOG(INFO) << "Re-use logging channel for {" << src_name << "}." << src_port << " -> {"
+                << dest_name << "}." << dest_port;
       src_node->AddNamedChannel(src_port, absl::make_unique<ChannelHalf>(logging_channel->Clone()));
     } else {
-      LOG(INFO) << "Create channel " << src_name << "." << src_port << " -> " << dest_name << "."
-                << dest_port;
+      LOG(INFO) << "Create channel {" << src_name << "}." << src_port << " -> {" << dest_name
+                << "}." << dest_port;
       MessageChannel::ChannelHalves halves = MessageChannel::Create();
       if (dest_node == log_node) {
         // Remember the write half of logging channel for future re-use.
