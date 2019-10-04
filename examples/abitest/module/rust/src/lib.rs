@@ -713,14 +713,28 @@ impl FrontendNode {
     }
 
     fn test_backend_roundtrip(&self) -> std::io::Result<()> {
-        // Ask the backend node to transmute something.
+        // Make a new channel for the backend node to read from, and send it the
+        // read handle.
+        let (new_write, new_read) = oak::channel_create().unwrap();
+        expect_eq!(
+            OakStatus::OK,
+            oak::channel_write(self.backend_out, &[], &[new_read.handle])
+        );
+        oak::channel_close(new_read.handle);
+
+        // Ask the backend node to transmute something by writing a serialized
+        // request to the new channel it just received the read handle for.
         let internal_req = InternalMessage {
             msg: "aaa".to_string(),
         };
         let serialized_req = serde_json::to_string(&internal_req)?;
-        info!("send serialized message to backend: {}", serialized_req);
-        let mut backend_channel = oak::io::Channel::new(self.backend_out);
-        backend_channel.write_all(&serialized_req.into_bytes())?;
+        info!(
+            "send serialized message to new channel {}: {}",
+            new_write.handle, serialized_req
+        );
+        let mut new_channel = oak::io::Channel::new(new_write);
+        new_channel.write_all(&serialized_req.into_bytes())?;
+        oak::channel_close(new_write.handle);
 
         // Block until there is a response from the backend available.
         let read_handles = vec![self.backend_in];
