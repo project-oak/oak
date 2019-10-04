@@ -23,7 +23,7 @@ namespace oak {
 Handle OakNode::AddNamedChannel(const std::string& port_name, std::unique_ptr<ChannelHalf> half) {
   absl::MutexLock lock(&mu_);
   Handle handle = ++next_handle_;
-  LOG(INFO) << "port name '" << port_name << "' maps to handle " << handle;
+  LOG(INFO) << "{" << name_ << "} port name '" << port_name << "' maps to handle " << handle;
   named_channels_[port_name] = handle;
   channel_halves_[handle] = std::move(half);
   return handle;
@@ -109,16 +109,16 @@ bool OakNode::WaitOnChannels(std::vector<std::unique_ptr<ChannelStatus>>* status
       uint64_t handle = (*statuses)[ii]->handle;
       MessageChannelReadHalf* channel = BorrowReadChannel(handle);
       if (channel == nullptr) {
-        LOG(WARNING) << "Waiting on non-existent read channel handle " << handle;
+        LOG(WARNING) << "{" << name_ << "} Waiting on non-existent read channel handle " << handle;
         (*statuses)[ii]->status = ChannelReadStatus::INVALID_CHANNEL;
         continue;
       }
       if (channel->CanRead()) {
-        LOG(INFO) << "Message available on handle " << handle;
+        LOG(INFO) << "{" << name_ << "} Message available on handle " << handle;
         found_ready = true;
         (*statuses)[ii]->status = ChannelReadStatus::READ_READY;
       } else if (channel->Orphaned()) {
-        LOG(INFO) << "Handle " << handle << " is orphaned (no extant writers)";
+        LOG(INFO) << "{" << name_ << "} Handle " << handle << " is orphaned (no extant writers)";
         (*statuses)[ii]->status = ChannelReadStatus::ORPHANED;
       } else {
         found_readable = true;
@@ -127,14 +127,14 @@ bool OakNode::WaitOnChannels(std::vector<std::unique_ptr<ChannelStatus>>* status
     }
 
     if (termination_pending_.load()) {
-      LOG(WARNING) << "Node is pending termination";
+      LOG(WARNING) << "{" << name_ << "} Node is pending termination";
       return false;
     }
     if (found_ready) {
       return true;
     }
     if (!found_readable) {
-      LOG(WARNING) << "No read-capable channels found";
+      LOG(WARNING) << "{" << name_ << "} No read-capable channels found";
       return false;
     }
 
