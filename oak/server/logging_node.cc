@@ -34,7 +34,7 @@ void LoggingNode::Run() {
   status.push_back(absl::make_unique<ChannelStatus>(handle));
   while (true) {
     if (!WaitOnChannels(&status)) {
-      LOG(WARNING) << "Node termination requested";
+      LOG(WARNING) << "Node termination requested, " << channel->Count() << " log messages pending";
       return;
     }
     ReadResult result = channel->Read(INT_MAX, INT_MAX);
