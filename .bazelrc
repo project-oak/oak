@@ -53,6 +53,9 @@ build:tsan --copt -O1
 build:tsan --copt -g
 build:tsan --copt -fno-omit-frame-pointer
 build:tsan --linkopt -fsanitize=thread
+# Turn off TSAN checking of atomics in `bazel test`, due to false positive on absl::MutexLock:
+#    https://github.com/google/sanitizers/issues/953
+# Note this does not affect `bazel run`: use `export TSAN_OPTIONS=report_atomic_races=0`
 build:tsan --test_env=TSAN_OPTIONS=report_atomic_races=0
 
 # --config msan: Memory sanitizer
