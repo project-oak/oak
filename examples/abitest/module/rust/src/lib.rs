@@ -713,61 +713,74 @@ impl FrontendNode {
     }
 
     fn test_backend_roundtrip(&self) -> std::io::Result<()> {
-        // Make a new channel for the backend node to read from, and send it the
-        // read handle.
-        let (new_write, new_read) = oak::channel_create().unwrap();
+        // Make a collection of new channels for the backend node to read from,
+        // and send the read handles to the backend node.
+        const COUNT: usize = 3;
+        let mut read_handles = Vec::with_capacity(COUNT);
+        let mut write_handles = Vec::with_capacity(COUNT);
+        for _i in 0..COUNT {
+            let (new_write, new_read) = oak::channel_create().unwrap();
+            write_handles.push(new_write);
+            read_handles.push(new_read.handle);
+        }
         expect_eq!(
             OakStatus::OK,
-            oak::channel_write(self.backend_out, &[], &[new_read.handle])
+            oak::channel_write(self.backend_out, &[], &read_handles)
         );
-        oak::channel_close(new_read.handle);
-
-        // Ask the backend node to transmute something by writing a serialized
-        // request to the new channel it just received the read handle for.
-        let internal_req = InternalMessage {
-            msg: "aaa".to_string(),
-        };
-        let serialized_req = serde_json::to_string(&internal_req)?;
-        info!(
-            "send serialized message to new channel {}: {}",
-            new_write.handle, serialized_req
-        );
-        let mut new_channel = oak::io::Channel::new(new_write);
-        new_channel.write_all(&serialized_req.into_bytes())?;
-        oak::channel_close(new_write.handle);
-
-        // Block until there is a response from the backend available.
-        let read_handles = vec![self.backend_in];
-        match oak::wait_on_channels(&read_handles) {
-            Ok(_ready_handles) => (),
-            Err(status) => {
-                return Err(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    format!("Wait failure {:?}", status),
-                ));
-            }
+        for new_read in read_handles.iter() {
+            oak::channel_close(*new_read);
         }
 
-        let mut buffer = Vec::<u8>::with_capacity(256);
-        let mut handles = Vec::with_capacity(1);
-        expect_eq!(
-            OakStatus::OK,
-            oak::channel_read(self.backend_in, &mut buffer, &mut handles)
-        );
+        // Ask the backend node to transmute something by writing a serialized
+        // request to one of the new channels that the backend just received the
+        // read handles for.
+        for new_write in write_handles.iter() {
+            let internal_req = InternalMessage {
+                msg: "aaa".to_string(),
+            };
+            let serialized_req = serde_json::to_string(&internal_req)?;
 
-        // Expect to receive a channel read handle.
-        // Read the actual response from the new channel.
-        let new_in_channel = oak::ReadHandle { handle: handles[0] };
-        expect_eq!(
-            OakStatus::OK,
-            oak::channel_read(new_in_channel, &mut buffer, &mut vec![])
-        );
-        let serialized_rsp = String::from_utf8(buffer).unwrap();
-        let internal_rsp: InternalMessage = serde_json::from_str(&serialized_rsp)?;
-        expect_eq!("aaaxxx", internal_rsp.msg);
+            info!(
+                "send serialized message to new channel {}: {}",
+                new_write.handle, serialized_req
+            );
+            let mut new_channel = oak::io::Channel::new(*new_write);
+            new_channel.write_all(&serialized_req.into_bytes())?;
+            oak::channel_close(new_write.handle);
 
-        // Drop the new read channel now we have got the response.
-        oak::channel_close(handles[0]);
+            // Block until there is a response from the backend available.
+            let read_handles = vec![self.backend_in];
+            match oak::wait_on_channels(&read_handles) {
+                Ok(_ready_handles) => (),
+                Err(status) => {
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        format!("Wait failure {:?}", status),
+                    ));
+                }
+            }
+
+            let mut buffer = Vec::<u8>::with_capacity(256);
+            let mut handles = Vec::with_capacity(1);
+            expect_eq!(
+                OakStatus::OK,
+                oak::channel_read(self.backend_in, &mut buffer, &mut handles)
+            );
+
+            // Expect the response to hold a channel read handle.
+            // Read the actual transmuted message from this new channel.
+            let new_in_channel = oak::ReadHandle { handle: handles[0] };
+            expect_eq!(
+                OakStatus::OK,
+                oak::channel_read(new_in_channel, &mut buffer, &mut vec![])
+            );
+            let serialized_rsp = String::from_utf8(buffer).unwrap();
+            let internal_rsp: InternalMessage = serde_json::from_str(&serialized_rsp)?;
+            expect_eq!("aaaxxx", internal_rsp.msg);
+
+            // Drop the new read channel now we have got the response.
+            expect_eq!(OakStatus::OK, oak::channel_close(handles[0]));
+        }
         Ok(())
     }
 }
