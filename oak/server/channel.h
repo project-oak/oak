@@ -151,6 +151,9 @@ class MessageChannelReadHalf {
   // Indicate whether a Read operation would return a message.
   bool CanRead() { return channel_->Count() > 0; }
 
+  // Indicate the number of pending messages available to read.
+  size_t Count() { return channel_->Count(); }
+
   // Await blocks until there is a message available to read on the channel.
   void Await() { return channel_->Await(); }
 
