@@ -17,6 +17,7 @@
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 #include "absl/memory/memory.h"
+#include "absl/strings/match.h"
 #include "asylo/util/logging.h"
 #include "examples/abitest/proto/abitest.grpc.pb.h"
 #include "examples/abitest/proto/abitest.pb.h"
@@ -56,17 +57,69 @@ static const char* app_config_textproto = R"raw(nodes {
       type: OUT
     }
     ports {
-      name: "to_backend"
+      name: "to_backend_0"
       type: OUT
     }
     ports {
-      name: "from_backend"
+      name: "from_backend_0"
+      type: IN
+    }
+    ports {
+      name: "to_backend_1"
+      type: OUT
+    }
+    ports {
+      name: "from_backend_1"
+      type: IN
+    }
+    ports {
+      name: "to_backend_2"
+      type: OUT
+    }
+    ports {
+      name: "from_backend_2"
       type: IN
     }
   }
 }
 nodes {
-  node_name: "backend"
+  node_name: "backend_0"
+  web_assembly_node {
+    module_bytes: "<filled in later>"
+    ports {
+      name: "be_logging_port"
+      type: OUT
+    }
+    ports {
+      name: "from_frontend"
+      type: IN
+    }
+    ports {
+      name: "to_frontend"
+      type: OUT
+    }
+  }
+}
+nodes {
+  node_name: "backend_1"
+  web_assembly_node {
+    module_bytes: "<filled in later>"
+    ports {
+      name: "be_logging_port"
+      type: OUT
+    }
+    ports {
+      name: "from_frontend"
+      type: IN
+    }
+    ports {
+      name: "to_frontend"
+      type: OUT
+    }
+  }
+}
+nodes {
+  node_name: "backend_2"
   web_assembly_node {
     module_bytes: "<filled in later>"
     ports {
@@ -123,7 +176,27 @@ channels {
 }
 channels {
   source_endpoint {
-    node_name: "backend"
+    node_name: "backend_0"
+    port_name: "be_logging_port"
+  }
+  destination_endpoint {
+    node_name: "logging_node"
+    port_name: "in"
+  }
+}
+channels {
+  source_endpoint {
+    node_name: "backend_1"
+    port_name: "be_logging_port"
+  }
+  destination_endpoint {
+    node_name: "logging_node"
+    port_name: "in"
+  }
+}
+channels {
+  source_endpoint {
+    node_name: "backend_2"
     port_name: "be_logging_port"
   }
   destination_endpoint {
@@ -134,21 +207,61 @@ channels {
 channels {
   source_endpoint {
     node_name: "frontend"
-    port_name: "to_backend"
+    port_name: "to_backend_0"
   }
   destination_endpoint {
-    node_name: "backend"
+    node_name: "backend_0"
     port_name: "from_frontend"
   }
 }
 channels {
   source_endpoint {
-    node_name: "backend"
+    node_name: "backend_0"
     port_name: "to_frontend"
   }
   destination_endpoint {
     node_name: "frontend"
-    port_name: "from_backend"
+    port_name: "from_backend_0"
+  }
+}
+channels {
+  source_endpoint {
+    node_name: "frontend"
+    port_name: "to_backend_1"
+  }
+  destination_endpoint {
+    node_name: "backend_1"
+    port_name: "from_frontend"
+  }
+}
+channels {
+  source_endpoint {
+    node_name: "backend_1"
+    port_name: "to_frontend"
+  }
+  destination_endpoint {
+    node_name: "frontend"
+    port_name: "from_backend_1"
+  }
+}
+channels {
+  source_endpoint {
+    node_name: "frontend"
+    port_name: "to_backend_2"
+  }
+  destination_endpoint {
+    node_name: "backend_2"
+    port_name: "from_frontend"
+  }
+}
+channels {
+  source_endpoint {
+    node_name: "backend_2"
+    port_name: "to_frontend"
+  }
+  destination_endpoint {
+    node_name: "frontend"
+    port_name: "from_backend_2"
   }
 }
 )raw";
@@ -206,7 +319,8 @@ int main(int argc, char** argv) {
     }
     if (node.node_name() == "frontend") {
       node.mutable_web_assembly_node()->set_module_bytes(frontend_module_bytes);
-    } else if (node.node_name() == "backend") {
+    } else if (absl::StartsWith(node.node_name(), "backend")) {
+      // All backend nodes share the same code.
       node.mutable_web_assembly_node()->set_module_bytes(backend_module_bytes);
     }
   }

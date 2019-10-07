@@ -38,11 +38,12 @@ use protobuf::ProtobufEnum;
 use std::collections::HashMap;
 use std::io::Write;
 
+const BACKEND_COUNT: usize = 3;
 struct FrontendNode {
     grpc_in: oak::ReadHandle,
     grpc_out: oak::WriteHandle,
-    backend_out: oak::WriteHandle,
-    backend_in: oak::ReadHandle,
+    backend_out: [oak::WriteHandle; BACKEND_COUNT],
+    backend_in: [oak::ReadHandle; BACKEND_COUNT],
 }
 
 #[no_mangle]
@@ -74,12 +75,28 @@ impl oak::grpc::OakNode for FrontendNode {
             grpc_out: oak::WriteHandle {
                 handle: oak::channel_find("gRPC_output"),
             },
-            backend_out: oak::WriteHandle {
-                handle: oak::channel_find("to_backend"),
-            },
-            backend_in: oak::ReadHandle {
-                handle: oak::channel_find("from_backend"),
-            },
+            backend_out: [
+                oak::WriteHandle {
+                    handle: oak::channel_find("to_backend_0"),
+                },
+                oak::WriteHandle {
+                    handle: oak::channel_find("to_backend_1"),
+                },
+                oak::WriteHandle {
+                    handle: oak::channel_find("to_backend_2"),
+                },
+            ],
+            backend_in: [
+                oak::ReadHandle {
+                    handle: oak::channel_find("from_backend_0"),
+                },
+                oak::ReadHandle {
+                    handle: oak::channel_find("from_backend_1"),
+                },
+                oak::ReadHandle {
+                    handle: oak::channel_find("from_backend_2"),
+                },
+            ],
         }
     }
     fn invoke(&mut self, method: &str, req: &[u8], out: oak::WriteHandle) {
@@ -171,8 +188,14 @@ impl FrontendNode {
         // Idempotent result.
         expect_eq!(self.grpc_in.handle, oak::channel_find("gRPC_input"));
         expect_eq!(self.grpc_out.handle, oak::channel_find("gRPC_output"));
-        expect_eq!(self.backend_out.handle, oak::channel_find("to_backend"));
-        expect_eq!(self.backend_in.handle, oak::channel_find("from_backend"));
+        expect_eq!(
+            self.backend_out[0].handle,
+            oak::channel_find("to_backend_0")
+        );
+        expect_eq!(
+            self.backend_in[0].handle,
+            oak::channel_find("from_backend_0")
+        );
         // Whitespace is significant.
         expect_eq!(0, oak::channel_find(" gRPC_input"));
         expect_eq!(0, oak::channel_find(" gRPC_input "));
@@ -481,7 +504,7 @@ impl FrontendNode {
                 .unwrap();
             space.push(0x00);
             space
-                .write_u64::<byteorder::LittleEndian>(self.backend_in.handle)
+                .write_u64::<byteorder::LittleEndian>(self.backend_in[0].handle)
                 .unwrap();
             space.push(0x99); // deliberate nonsense status value
             expect_eq!(
@@ -725,7 +748,7 @@ impl FrontendNode {
         }
         expect_eq!(
             OakStatus::OK,
-            oak::channel_write(self.backend_out, &[], &read_handles)
+            oak::channel_write(self.backend_out[0], &[], &read_handles)
         );
         for new_read in read_handles.iter() {
             oak::channel_close(*new_read);
@@ -749,7 +772,7 @@ impl FrontendNode {
             oak::channel_close(new_write.handle);
 
             // Block until there is a response from the backend available.
-            let read_handles = vec![self.backend_in];
+            let read_handles = vec![self.backend_in[0]];
             match oak::wait_on_channels(&read_handles) {
                 Ok(_ready_handles) => (),
                 Err(status) => {
@@ -764,7 +787,7 @@ impl FrontendNode {
             let mut handles = Vec::with_capacity(1);
             expect_eq!(
                 OakStatus::OK,
-                oak::channel_read(self.backend_in, &mut buffer, &mut handles)
+                oak::channel_read(self.backend_in[0], &mut buffer, &mut handles)
             );
 
             // Expect the response to hold a channel read handle.
