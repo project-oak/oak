@@ -736,8 +736,8 @@ impl FrontendNode {
     }
 
     fn test_backend_roundtrip(&self) -> std::io::Result<()> {
-        // Make a collection of new channels for the backend node to read from,
-        // and send the read handles to the backend node.
+        // Make a collection of new channels for the backend nodes to read from,
+        // and send the read handles to each backend node.
         const COUNT: usize = 3;
         let mut read_handles = Vec::with_capacity(COUNT);
         let mut write_handles = Vec::with_capacity(COUNT);
@@ -746,17 +746,19 @@ impl FrontendNode {
             write_handles.push(new_write);
             read_handles.push(new_read.handle);
         }
-        expect_eq!(
-            OakStatus::OK,
-            oak::channel_write(self.backend_out[0], &[], &read_handles)
-        );
+        for j in 0..BACKEND_COUNT {
+            expect_eq!(
+                OakStatus::OK,
+                oak::channel_write(self.backend_out[j], &[], &read_handles)
+            );
+        }
         for new_read in read_handles.iter() {
             oak::channel_close(*new_read);
         }
 
         // Ask the backend node to transmute something by writing a serialized
-        // request to one of the new channels that the backend just received the
-        // read handles for.
+        // request to one of the new channels that the backends just received
+        // the read handles for.
         for new_write in write_handles.iter() {
             let internal_req = InternalMessage {
                 msg: "aaa".to_string(),
@@ -771,28 +773,34 @@ impl FrontendNode {
             new_channel.write_all(&serialized_req.into_bytes())?;
             oak::channel_close(new_write.handle);
 
-            // Block until there is a response from the backend available.
-            let read_handles = vec![self.backend_in[0]];
-            match oak::wait_on_channels(&read_handles) {
-                Ok(_ready_handles) => (),
-                Err(status) => {
-                    return Err(std::io::Error::new(
-                        std::io::ErrorKind::Other,
-                        format!("Wait failure {:?}", status),
-                    ));
+            // Block until there is a response from one of the backends
+            // available.
+            let readies = oak::wait_on_channels(&self.backend_in).map_err(|status| {
+                std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Wait failure {:?}", status),
+                )
+            })?;
+
+            // Expect exactly one of the backends to have received
+            // the message.
+            let mut buffer = Vec::<u8>::with_capacity(256);
+            let mut new_in_channel = oak::ReadHandle { handle: 0 };
+            for (j, ready) in readies.iter().enumerate() {
+                if *ready == ChannelReadStatus::READ_READY {
+                    info!("got response from backend[{}]", j);
+                    expect_eq!(0, new_in_channel.handle);
+                    let mut handles = Vec::with_capacity(1);
+                    expect_eq!(
+                        OakStatus::OK,
+                        oak::channel_read(self.backend_in[j], &mut buffer, &mut handles)
+                    );
+                    new_in_channel.handle = handles[0];
                 }
             }
 
-            let mut buffer = Vec::<u8>::with_capacity(256);
-            let mut handles = Vec::with_capacity(1);
-            expect_eq!(
-                OakStatus::OK,
-                oak::channel_read(self.backend_in[0], &mut buffer, &mut handles)
-            );
-
             // Expect the response to hold a channel read handle.
             // Read the actual transmuted message from this new channel.
-            let new_in_channel = oak::ReadHandle { handle: handles[0] };
             expect_eq!(
                 OakStatus::OK,
                 oak::channel_read(new_in_channel, &mut buffer, &mut vec![])
@@ -802,7 +810,7 @@ impl FrontendNode {
             expect_eq!("aaaxxx", internal_rsp.msg);
 
             // Drop the new read channel now we have got the response.
-            expect_eq!(OakStatus::OK, oak::channel_close(handles[0]));
+            expect_eq!(OakStatus::OK, oak::channel_close(new_in_channel.handle));
         }
         Ok(())
     }
