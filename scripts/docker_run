@@ -18,11 +18,15 @@ readonly DOCKER_UID="${UID:-0}"
 readonly DOCKER_GID="${GID:-0}"
 readonly DOCKER_USER="${USER:-root}"
 
+# See https://pantheon.corp.google.com/gcr/images/oak-ci/GLOBAL/oak
+readonly DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak'
+
 mkdir -p './bazel-cache'
 mkdir -p './cargo-cache'
 
 docker build \
-  --tag=oak \
+  --cache-from="$DOCKER_IMAGE_NAME:latest" \
+  --tag="$DOCKER_IMAGE_NAME:latest" \
   . 1>&2
 
 docker_run_flags=(
@@ -42,7 +46,7 @@ docker_run_flags=(
 
 if [[ "$1" == '--detach' ]]; then
   docker_run_flags+=('--detach')
-  docker run "${docker_run_flags[@]}" oak:latest "${@:2}"
+  docker run "${docker_run_flags[@]}" "$DOCKER_IMAGE_NAME:latest" "${@:2}"
 else
-  docker run "${docker_run_flags[@]}" oak:latest "$@"
+  docker run "${docker_run_flags[@]}" "$DOCKER_IMAGE_NAME:latest" "$@"
 fi

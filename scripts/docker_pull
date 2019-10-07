@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+# This script can be used by anyone, including CI, to pull a version of the image from Google
+# Container Registry, which should allow download public downloads.
+# See https://pantheon.corp.google.com/gcr/settings?project=oak-ci&folder&organizationId=433637338589
+
+set -o errexit
+set -o nounset
+set -o xtrace
+
+# See https://pantheon.corp.google.com/gcr/images/oak-ci/GLOBAL/oak
+readonly DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak'
+
+docker pull "$DOCKER_IMAGE_NAME:latest"

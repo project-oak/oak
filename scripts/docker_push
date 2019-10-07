@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+# This script should be used by logged-in users with write access to the Google Container Registry
+# to push a new version of the image.
+
+set -o errexit
+set -o nounset
+set -o xtrace
+
+# See https://pantheon.corp.google.com/gcr/images/oak-ci/GLOBAL/oak
+readonly DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak'
+
+docker push "$DOCKER_IMAGE_NAME:latest"
