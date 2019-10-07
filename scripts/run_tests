@@ -4,6 +4,13 @@ set -o errexit
 set -o nounset
 set -o xtrace
 
-cargo test --manifest-path=./rust/Cargo.toml
-cargo test --manifest-path=./examples/Cargo.toml
+# For each Rust workspace, first run tests, then run clippy, turning warnings into errors.
+# See https://github.com/rust-lang/rust-clippy.
+
+cargo test --all-targets --manifest-path=./rust/Cargo.toml
+cargo clippy --all-targets --manifest-path=./rust/Cargo.toml -- --deny=warnings
+
+cargo test --all-targets --manifest-path=./examples/Cargo.toml
+cargo clippy --all-targets --manifest-path=./examples/Cargo.toml -- --deny=warnings
+
 bazel test --test_output=all //oak/server:host_tests //oak/server/storage:host_tests //oak/common:host_tests
