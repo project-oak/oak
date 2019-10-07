@@ -489,15 +489,15 @@ impl FrontendNode {
                 oak::wasm::wait_on_channels(space.as_mut_ptr(), COUNT as u32)
             );
             expect_eq!(
-                oak::proto::oak_api::ChannelReadStatus::INVALID_CHANNEL.value(),
+                ChannelReadStatus::INVALID_CHANNEL.value(),
                 i32::from(space[8])
             );
             expect_eq!(
-                oak::proto::oak_api::ChannelReadStatus::READ_READY.value(),
+                ChannelReadStatus::READ_READY.value(),
                 i32::from(space[9 + 8])
             );
             expect_eq!(
-                oak::proto::oak_api::ChannelReadStatus::NOT_READY.value(),
+                ChannelReadStatus::NOT_READY.value(),
                 i32::from(space[9 + 9 + 8])
             );
         }
