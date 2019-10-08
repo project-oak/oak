@@ -84,12 +84,13 @@ class MessageChannel {
 
   // Create a message channel and return references to both halves of it.
   static ChannelHalves Create();
+  ~MessageChannel();
 
  private:
   friend class MessageChannelReadHalf;
   friend class MessageChannelWriteHalf;
 
-  MessageChannel() : reader_count_(0), writer_count_(0) {}
+  MessageChannel();
 
   // Count indicates the number of pending messages.
   size_t Count() const LOCKS_EXCLUDED(mu_);
