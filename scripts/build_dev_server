@@ -13,6 +13,7 @@ bazel_build_flags=(
 # - /scripts/build_example
 # - /scripts/build_server
 # - /scripts/build_dev_server
+# - /scripts/fuzz
 
 readonly OAK_REMOTE_CACHE_KEY='./.oak_remote_cache_key.json'
 

@@ -78,6 +78,16 @@ build:ubsan --copt -fno-omit-frame-pointer
 build:ubsan --linkopt -fsanitize=undefined
 build:ubsan --linkopt -lubsan
 
+# --config fuzzer: Fuzzer
+build:fuzzer --crosstool_top=//toolchain:clang
+build:fuzzer --cpu=k8
+build:fuzzer --strip=never
+build:fuzzer --copt -fsanitize=fuzzer,address
+build:fuzzer --copt -O1
+build:fuzzer --copt -g
+build:fuzzer --copt -fno-omit-frame-pointer
+build:fuzzer --linkopt -fsanitize=fuzzer,address
+
 # Bazel 0.27.0 deprecates features that our dependencies (gRPC, protobuf) rely on, so disable
 # the checks until all dependencies have been updated to cope with a later Bazel.
 # TODO: remove these options when possible

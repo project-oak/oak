@@ -65,6 +65,16 @@ cc_library(
     ],
 )
 
+cc_binary(
+    name = "wasm_node_fuzz",
+    srcs = [
+        "wasm_node_fuzzer.cc",
+    ],
+    deps = [
+        ":wasm_node",
+    ],
+)
+
 cc_test(
     name = "wasm_node_test",
     srcs = [
