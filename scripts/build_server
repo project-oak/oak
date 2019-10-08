@@ -28,23 +28,21 @@ readonly OAK_REMOTE_CACHE_KEY='./.oak_remote_cache_key.json'
     fi
 )
 
-# If this variable is set, use the remote cache, assuming it is publicly readable.
+# Use the remote cache, assuming it is publicly readable.
 # See https://pantheon.corp.google.com/storage/browser/oak-bazel-cache?project=oak-ci
-if [[ -n "${BAZEL_REMOTE_CACHE_ENABLED:-}" ]]; then
+bazel_build_flags+=(
+    '--remote_cache=https://storage.googleapis.com/oak-bazel-cache'
+)
+# If we now have a key file, use it, otherwise disable uploading artifacts to remote cache.
+# Note that this is only needed to write to the cache, not to read from it.
+if [[ -f "$OAK_REMOTE_CACHE_KEY" ]]; then
     bazel_build_flags+=(
-        '--remote_cache=https://storage.googleapis.com/oak-bazel-cache'
+        "--google_credentials=$OAK_REMOTE_CACHE_KEY"
     )
-    # If we now have a key file, use it, otherwise disable uploading artifacts to remote cache.
-    # Note that this is only needed to write to the cache, not to read from it.
-    if [[ -f "$OAK_REMOTE_CACHE_KEY" ]]; then
-        bazel_build_flags+=(
-            "--google_credentials=$OAK_REMOTE_CACHE_KEY"
-        )
-    else
-        bazel_build_flags+=(
-            '--remote_upload_local_results=false'
-        )
-    fi
+else
+    bazel_build_flags+=(
+        '--remote_upload_local_results=false'
+    )
 fi
 
 bazel build "${bazel_build_flags[@]}" //oak/server/asylo:oak

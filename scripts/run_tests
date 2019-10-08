@@ -13,4 +13,14 @@ cargo clippy --all-targets --manifest-path=./rust/Cargo.toml -- --deny=warnings
 cargo test --all-targets --manifest-path=./examples/Cargo.toml
 cargo clippy --all-targets --manifest-path=./examples/Cargo.toml -- --deny=warnings
 
-bazel test --test_output=all //oak/server:host_tests //oak/server/storage:host_tests //oak/common:host_tests
+# Use the remote cache, assuming it is publicly readable.
+# See https://pantheon.corp.google.com/storage/browser/oak-bazel-cache?project=oak-ci
+bazel_test_flags=(
+    '--remote_cache=https://storage.googleapis.com/oak-bazel-cache'
+    '--test_output=all'
+)
+
+bazel test "${bazel_test_flags[@]}" \
+  //oak/server:host_tests \
+  //oak/server/storage:host_tests \
+  //oak/common:host_tests
