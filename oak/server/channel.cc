@@ -28,6 +28,23 @@ MessageChannel::ChannelHalves MessageChannel::Create() {
                        absl::make_unique<MessageChannelReadHalf>(channel)};
 }
 
+namespace {
+ABSL_CONST_INIT absl::Mutex channel_count_mu(absl::kConstInit);
+int channel_count;
+}  // namespace
+
+MessageChannel::MessageChannel() : reader_count_(0), writer_count_(0) {
+  absl::MutexLock lock(&channel_count_mu);
+  channel_count++;
+  LOG(INFO) << "Channel created, extant count now " << channel_count;
+}
+
+MessageChannel::~MessageChannel() {
+  absl::MutexLock lock(&channel_count_mu);
+  channel_count--;
+  LOG(INFO) << "Channel destroyed, extant count now " << channel_count;
+}
+
 size_t MessageChannel::Count() const {
   absl::ReaderMutexLock lock(&mu_);
   return msgs_.size();
