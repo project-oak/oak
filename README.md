@@ -25,51 +25,50 @@ policies are enforced and propagated as data move from enclave to enclave.
 
 Further information is included in the following documents:
 
--  [Oak Concepts](docs/concepts.md) describes the key concepts involved in Oak
-   applications.
--  [Oak ABI](docs/abi.md) documents the core Oak ABI.
--  [Oak SDK](docs/sdk.md) describes the SDK that is provided on top of the Oak
-   ABI, to allow more convenient development of Oak applications.
--  [Oak Development](docs/development.md) covers practical steps for getting a
-   development Oak system up and running.
--  [Programming Oak](docs/programming-oak.md) discusses programming for the Oak
-   system.
+- [Oak Concepts](docs/concepts.md) describes the key concepts involved in Oak
+  applications.
+- [Oak ABI](docs/abi.md) documents the core Oak ABI.
+- [Oak SDK](docs/sdk.md) describes the SDK that is provided on top of the Oak
+  ABI, to allow more convenient development of Oak applications.
+- [Oak Development](docs/development.md) covers practical steps for getting a
+  development Oak system up and running.
+- [Programming Oak](docs/programming-oak.md) discusses programming for the Oak
+  system.
 
 ## Terminology
 
--   **Enclave**: A secure CPU compartment that can be created on-demand,
-    containing code and data; it enforces isolation from the host and other
-    enclave instances running on the same system. It guarantees
-    _confidentiality_ and _integrity_ of both data and code running within it,
-    and it is capable of creating hardware-backed _remote attestations_ to prove
-    to other parties a measurement (i.e. hash) of the code and data within the
-    enclave itself. Also known as Trusted Execution Environment (TEE).
--   **Enclave Manufacturer**: The entity in charge of manufacturing the CPU or
-    System on a Chip (SoC) supporting enclaves.
--   **Platform Provider**: The entity in charge of maintaining and running the
-    combined hardware and software stack surrounding the TEE, for instance in a
-    cloud context.
--   **Trusted Computing Base (TCB)**: The set of hardware, firmware, software
-    components critical to the security of the system; bugs or vulnerabilities
-    inside the TCB may jeopardise the security properties of the entire system.
--   **Independent Software Vendor (ISV)**: The entity or person providing the
-    code for the service running on top of the Project Oak; in the most common
-    case this may be a third party developer.
+- **Enclave**: A secure CPU compartment that can be created on-demand,
+  containing code and data; it enforces isolation from the host and other
+  enclave instances running on the same system. It guarantees _confidentiality_
+  and _integrity_ of both data and code running within it, and it is capable of
+  creating hardware-backed _remote attestations_ to prove to other parties a
+  measurement (i.e. hash) of the code and data within the enclave itself. Also
+  known as Trusted Execution Environment (TEE).
+- **Enclave Manufacturer**: The entity in charge of manufacturing the CPU or
+  System on a Chip (SoC) supporting enclaves.
+- **Platform Provider**: The entity in charge of maintaining and running the
+  combined hardware and software stack surrounding the TEE, for instance in a
+  cloud context.
+- **Trusted Computing Base (TCB)**: The set of hardware, firmware, software
+  components critical to the security of the system; bugs or vulnerabilities
+  inside the TCB may jeopardise the security properties of the entire system.
+- **Independent Software Vendor (ISV)**: The entity or person providing the code
+  for the service running on top of the Project Oak; in the most common case
+  this may be a third party developer.
 
 ## Threat Model
 
--   **untrusted**:
-    *   most hardware (memory, disk, motherboard, network card, external
-        devices)
-    *   Operating System (kernel, drivers, libraries, applications)
-    *   platform provider (hardware, software, employees)
-    *   third-party developers
--   **trusted-but-verifiable**:
-    *   Project Oak codebase (and its transitive dependencies)
--   **trusted**:
-    *   enclave manufacturer (and therefore at least some hardware / software)
--   **partly or conditionally trusted**:
-    *   end users
+- **untrusted**:
+  - most hardware (memory, disk, motherboard, network card, external devices)
+  - Operating System (kernel, drivers, libraries, applications)
+  - platform provider (hardware, software, employees)
+  - third-party developers
+- **trusted-but-verifiable**:
+  - Project Oak codebase (and its transitive dependencies)
+- **trusted**:
+  - enclave manufacturer (and therefore at least some hardware / software)
+- **partly or conditionally trusted**:
+  - end users
 
 Side channels are out of scope for Project Oak software implementation. While we
 acknowledge that most existing enclaves have compromises and may be vulnerable

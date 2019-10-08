@@ -1,17 +1,23 @@
 #!/usr/bin/env bash
 
+# Keep this in sync with /scripts/check_formatting.
+
 set -o errexit
 set -o nounset
 set -o xtrace
 
-# Not everyone has mdformat installed, so we ignore failures for now.
-
-find . \( -type d -name 'bazel-cache' -prune \) -o \( -type f -name '*.md' -exec /google/data/ro/teams/g3doc/mdformat --in_place {} + \) || true
-
 # Run buildifier, clang-format and rustfmt on the entire codebase.
 # Applies all formattings in-place.
 
-find oak examples toolchain \( -type f -name BUILD -o -name '*bzl' \) -exec buildifier -lint=fix -mode=fix {} +
-find oak examples \( -type f -name '*.h' -o -name '*.cc' -o -name '*.proto' \) \
+find oak examples toolchain \( -type f -name BUILD -or -name '*bzl' \) -exec buildifier -lint=fix -mode=fix {} +
+find oak examples \( -type f -name '*.h' -or -name '*.cc' -or -name '*.proto' \) \
     -exec clang-format -i -style=file {} +
 find examples rust -type f -name '*.rs' -exec rustfmt {} +
+
+find . \
+  \(  \
+    -not \( -path ./bazel-cache -prune \) -and \
+    -not \( -path ./cargo-cache -prune \) -and \
+    -not \( -path ./third_party -prune \) \
+    \( -type f -name '*.md' \) \
+  \) -exec prettier --write {} +
