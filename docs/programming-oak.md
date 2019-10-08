@@ -33,7 +33,8 @@ the Oak SDK that make this easier.
 
 To use these helpers, an Oak Node should implement a `struct` of some kind to
 represent the Node itself, and then add the `derive(OakExports)` attribute (from
-the [`oak_derive`](sdk.md#oak_derive-crate) crate):
+the [`oak_derive`](https://project-oak.github.io/oak/sdk/oak_derive/index.html)
+crate):
 
 [embedmd]:# (../examples/rustfmt/module/rust/src/lib.rs Rust
 /._derive\(OakExports\)._]/ /;\$/)
@@ -58,29 +59,33 @@ struct Node {
 }
 ```
 
-Under the covers the `derive(OakExports)` macro implements `oak_main` for you,
-with the following default behaviour:
+Under the covers the
+[`derive(OakExports)`](https://project-oak.github.io/oak/sdk/oak_derive/derive.OakExports.html)
+macro implements `oak_main` for you, with the following default behaviour:
 
 - Create an instance of your Node `struct` (using the `new()` method from the
-  `OakNode` trait described below).
+  [`OakNode`](https://project-oak.github.io/oak/sdk/oak/grpc/trait.OakNode.html)
+  trait described below).
 - Look for channel handles corresponding to the
   [default port names](abi.md#pre-defined-channels) for gRPC input and output
   channel halves.
-- Pass the Node `struct` and the channel handles to the `event_loop()` function
-  from the [`oak::grpc` module](sdk.md#oakgrpc-module).
+- Pass the Node `struct` and the channel handles to the
+  [`event_loop()`](https://project-oak.github.io/oak/sdk/oak/grpc/fn.event_loop.html)
+  function from the [`oak::grpc` module](sdk.md#oakgrpc-module).
 
-To make this work, the Node `struct` must implement the `oak::grpc::OakNode`
+To make this work, the Node `struct` must implement the
+[`oak::grpc::OakNode`](https://project-oak.github.io/oak/sdk/oak/grpc/trait.OakNode.html)
 trait. This has two methods:
 
-- A `new()` method to create an instance of the Node, and perform any one-off
+- A
+  [`new()`](https://project-oak.github.io/oak/sdk/oak/grpc/trait.OakNode.html#tymethod.new)
+  method to create an instance of the Node, and perform any one-off
   initialization. (A common initialization action is to enable logging for the
   Node, via the [`oak_log` crate](sdk.md#oak_log-crate).)
-- An `invoke()` method that is called for each newly-arriving gRPC request from
-  the outside world.
-
-[embedmd]:
-  #
-  "../examples/rustfmt/module/rust/src/lib.rs Rust /impl oak::grpc::OakNode/ /^}/"
+- An
+  [`invoke()`](https://project-oak.github.io/oak/sdk/oak/grpc/trait.OakNode.html#tymethod.invoke)
+  method that is called for each newly-arriving gRPC request from the outside
+  world.
 
 ```Rust
 impl oak::grpc::OakNode for Node {
