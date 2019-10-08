@@ -111,6 +111,16 @@ TEST(ApplicationConfiguration, NoWasmNode) {
   ASSERT_EQ(false, ValidApplicationConfig(*config));
 }
 
+TEST(ApplicationConfiguration, NoWasmCode) {
+  auto config = ConfigFrom("oak/common/testdata/missing_wasm.textproto");
+  ASSERT_EQ(false, ValidApplicationConfig(*config));
+}
+
+TEST(ApplicationConfiguration, DuplicateWasmName) {
+  auto config = ConfigFrom("oak/common/testdata/dup_wasm.textproto");
+  ASSERT_EQ(false, ValidApplicationConfig(*config));
+}
+
 TEST(ApplicationConfiguration, NoChannelSource) {
   auto config = ConfigFrom("oak/common/testdata/channel_source_missing.textproto");
   ASSERT_EQ(false, ValidApplicationConfig(*config));

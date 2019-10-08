@@ -4,7 +4,7 @@
 nodes {
   node_name: "app"
   web_assembly_node {
-    module_bytes: "<filled in elsewhere>"
+    wasm_contents_name: "app-code"
     ports {
       name: "grpc_in"
       type: IN
@@ -40,6 +40,10 @@ nodes {
   storage_node {
     address: "localhost:7867"
   }
+}
+wasm_contents {
+  name: "app-code"
+  module_bytes: "<filled in elsewhere>"
 }
 channels {
   destination_endpoint {

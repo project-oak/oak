@@ -9,7 +9,7 @@ nodes {
 nodes {
   node_name: "app"
   web_assembly_node {
-    module_bytes: "<bytes>"
+    wasm_contents_name: "app-code"
     ports {
       name: "grpc_in"
       type: IN
@@ -19,6 +19,10 @@ nodes {
       type: OUT
     }
   }
+}
+wasm_contents {
+  name: "app-code"
+  module_bytes: "<bytes>"
 }
 channels {
   source_endpoint {

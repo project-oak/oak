@@ -43,7 +43,7 @@ using ::oak::examples::abitest::OakABITestService;
 static const char* app_config_textproto = R"raw(nodes {
   node_name: "frontend"
   web_assembly_node {
-    module_bytes: "<filled in later>"
+    wasm_contents_name: "frontend-code"
     ports {
       name: "gRPC_input"
       type: IN
@@ -85,7 +85,7 @@ static const char* app_config_textproto = R"raw(nodes {
 nodes {
   node_name: "backend_0"
   web_assembly_node {
-    module_bytes: "<filled in later>"
+    wasm_contents_name: "backend-code"
     ports {
       name: "be_logging_port"
       type: OUT
@@ -103,7 +103,7 @@ nodes {
 nodes {
   node_name: "backend_1"
   web_assembly_node {
-    module_bytes: "<filled in later>"
+    wasm_contents_name: "backend-code"
     ports {
       name: "be_logging_port"
       type: OUT
@@ -121,7 +121,7 @@ nodes {
 nodes {
   node_name: "backend_2"
   web_assembly_node {
-    module_bytes: "<filled in later>"
+    wasm_contents_name: "backend-code"
     ports {
       name: "be_logging_port"
       type: OUT
@@ -143,6 +143,14 @@ nodes {
 nodes {
   node_name: "logging_node"
   log_node {}
+}
+wasm_contents {
+  name: "frontend-code"
+  module_bytes: "<filled in later>"
+}
+wasm_contents {
+  name: "backend-code"
+  module_bytes: "<filled in later>"
 }
 channels {
   source_endpoint {
@@ -313,15 +321,11 @@ int main(int argc, char** argv) {
   google::protobuf::TextFormat::MergeFromString(app_config_textproto, config.get());
 
   // Add the Wasm module bytes to the config.
-  for (auto& node : *config->mutable_nodes()) {
-    if (!node.has_web_assembly_node()) {
-      continue;
-    }
-    if (node.node_name() == "frontend") {
-      node.mutable_web_assembly_node()->set_module_bytes(frontend_module_bytes);
-    } else if (absl::StartsWith(node.node_name(), "backend")) {
-      // All backend nodes share the same code.
-      node.mutable_web_assembly_node()->set_module_bytes(backend_module_bytes);
+  for (auto& contents : *config->mutable_wasm_contents()) {
+    if (contents.name() == "frontend-code") {
+      contents.set_module_bytes(frontend_module_bytes);
+    } else if (contents.name() == "backend-code") {
+      contents.set_module_bytes(backend_module_bytes);
     }
   }
   if (!ValidApplicationConfig(*config)) {
