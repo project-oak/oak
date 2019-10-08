@@ -2,9 +2,19 @@ FROM gcr.io/asylo-framework/asylo:buildenv-v0.4.1
 
 RUN apt-get -y update && apt-get install -y git curl clang-format shellcheck libncurses5 xml2
 
+RUN curl -sL https://deb.nodesource.com/setup_12.x  | bash -
+RUN apt-get install -y nodejs
+
 RUN git --version
 RUN clang-format -version
 RUN shellcheck --version
+RUN node --version
+RUN npm --version
+
+# Install prettier.
+# https://prettier.io/
+RUN npm install --global prettier
+RUN prettier --version
 
 # Install buildifier.
 ARG BAZEL_VERSION=0.28.0

@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 
+# Keep this in sync with /scripts/format.
+
 set -o errexit
 set -o nounset
 set -o xtrace
 
 # Check which BUILD and .bzl files need to be reformatted.
-find oak examples toolchain \( -type f -name BUILD -o -name '*bzl' \) -exec buildifier -lint=warn -mode=check {} +
+find oak examples toolchain \( -type f -name BUILD -or -name '*bzl' \) -exec buildifier -lint=warn -mode=check {} +
 find oak examples toolchain \( -type f -name BUILD \) -exec grep --files-without-match '^    licenses = \["notice"\],$' {} + && (echo 'missing license directive in BUILD file'; exit 1)
 
 # Check shell scripts for common mistakes.
@@ -20,3 +22,11 @@ find scripts -type f -exec shellcheck {} +
 # Fortunately, rustfmt has the --check option that will make it exit with 1
 # if formatting has to be applied.
 find examples rust -type f -name '*.rs' -exec rustfmt --check {} +
+
+find . \
+  \(  \
+    -not \( -path ./bazel-cache -prune \) -and \
+    -not \( -path ./cargo-cache -prune \) -and \
+    -not \( -path ./third_party -prune \) \
+    \( -type f -name '*.md' \) \
+  \) -exec prettier --check {} +

@@ -1,0 +1,4 @@
+# See https://prettier.io/docs/en/options.html
+
+printWidth: 80
+proseWrap: always

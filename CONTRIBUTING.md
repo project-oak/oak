@@ -38,34 +38,34 @@ description should follow
 
 ### C++
 
--   Follow https://google.github.io/styleguide/cppguide.html
--   Follow https://abseil.io/tips/
--   Use [`clang-format`](https://clang.llvm.org/docs/ClangFormat.html) to keep
-    C++ code formatted consistently.
--   Use fully qualified names (leading `::`) for `using` declarations and
-    namespace aliases, and avoid fully qualified names for everything else,
-    unless it is necessary to make the code compile.
+- Follow https://google.github.io/styleguide/cppguide.html
+- Follow https://abseil.io/tips/
+- Use [`clang-format`](https://clang.llvm.org/docs/ClangFormat.html) to keep C++
+  code formatted consistently.
+- Use fully qualified names (leading `::`) for `using` declarations and
+  namespace aliases, and avoid fully qualified names for everything else, unless
+  it is necessary to make the code compile.
 
-    ```C++
-    namespace oak {
-      ...
-      Node n;
-      grpc::Status s;
-      ...
-    }
-    ```
+  ```C++
+  namespace oak {
+    ...
+    Node n;
+    grpc::Status s;
+    ...
+  }
+  ```
 
-    or
+  or
 
-    ```C++
-    namespace oak {
-      using ::grpc::Status;
-      ...
-      Node n;
-      Status s;
-      ...
-    }
-    ```
+  ```C++
+  namespace oak {
+    using ::grpc::Status;
+    ...
+    Node n;
+    Status s;
+    ...
+  }
+  ```
 
 ## Community Guidelines
 

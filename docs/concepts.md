@@ -1,18 +1,18 @@
 # Oak Concepts
 
- - [Oak VM](#oak-vm)
- - [Oak Module](#oak-module)
-   - [WebAssembly](#webassembly)
- - [Oak Node](#oak-node)
- - [Channels](#channels)
-   - [Pre-Defined Channels and Port Names](#pre-defined-channels-and-port-names)
- - [Pseudo-Nodes](#pseudo-nodes)
- - [Oak Application](#oak-application)
- - [Oak Manager](#oak-manager)
-    - [Workflow](#workflow)
- - [Remote Attestation](#remote-attestation)
- - [Oak VM Updates](#oak-vm-updates)
- - [Time](#time)
+- [Oak VM](#oak-vm)
+- [Oak Module](#oak-module)
+  - [WebAssembly](#webassembly)
+- [Oak Node](#oak-node)
+- [Channels](#channels)
+  - [Pre-Defined Channels and Port Names](#pre-defined-channels-and-port-names)
+- [Pseudo-Nodes](#pseudo-nodes)
+- [Oak Application](#oak-application)
+- [Oak Manager](#oak-manager)
+  - [Workflow](#workflow)
+- [Remote Attestation](#remote-attestation)
+- [Oak VM Updates](#oak-vm-updates)
+- [Time](#time)
 
 ## Oak VM
 
@@ -74,10 +74,10 @@ calls.
 
 ### Pre-Defined Channels and Port Names
 
-A collection of pre-configured channel halves are available to the Oak Node,
-as specified in the `ApplicationConfiguration` used to create the Node.
-The handles for these channels can be retrieved by using the `channel_find` host
-function (below) to map a *port name* to the relevant channel handle.
+A collection of pre-configured channel halves are available to the Oak Node, as
+specified in the `ApplicationConfiguration` used to create the Node. The handles
+for these channels can be retrieved by using the `channel_find` host function
+(below) to map a _port name_ to the relevant channel handle.
 
 ## Pseudo-Nodes
 
@@ -87,43 +87,43 @@ of **pseudo-Nodes**.
 
 These pseudo-Nodes present as normal Nodes to the 'normal' Nodes in an Oak
 Application: the normal Nodes exchange messages with the pseudo-Nodes over
-channels.  However, the pseudo-Nodes are implemented as part of the Oak Manager
+channels. However, the pseudo-Nodes are implemented as part of the Oak Manager
 (executing as native C++ code, rather than Wasm code) so that they can interact
 with the outside world.
 
 The available pseudo-Nodes are:
 
- - **gRPC pseudo-node**: Provides a 'front door' for external interaction with
-   an Oak Application, by implementing a gRPC service.  External requests to the
-   gRPC service are written to an outbound channel from the pseudo-Node, which
-   then expects to receive response messages on a corresponding inbound channel.
- - **Logging pseudo-node**: Provides a logging mechanism for Nodes under
-   development by including a single inbound channel; anything received on the
-   channel will be logged.  This node should only be enabled during application
-   development and debugging (due to the potential for information leakage).
- - **Storage pseudo-node**: Provides a proxy mechanism for access to a
-   persistent storage mechanism.  Nodes that require storage functionality write
-   storage requests to a channel that reaches the storage pseudo-Node, then read
-   the associated responses from a corresponding outbound channel from the
-   storage pseudo-Node.
+- **gRPC pseudo-node**: Provides a 'front door' for external interaction with an
+  Oak Application, by implementing a gRPC service. External requests to the gRPC
+  service are written to an outbound channel from the pseudo-Node, which then
+  expects to receive response messages on a corresponding inbound channel.
+- **Logging pseudo-node**: Provides a logging mechanism for Nodes under
+  development by including a single inbound channel; anything received on the
+  channel will be logged. This node should only be enabled during application
+  development and debugging (due to the potential for information leakage).
+- **Storage pseudo-node**: Provides a proxy mechanism for access to a persistent
+  storage mechanism. Nodes that require storage functionality write storage
+  requests to a channel that reaches the storage pseudo-Node, then read the
+  associated responses from a corresponding outbound channel from the storage
+  pseudo-Node.
 
 An Oak Application which intends to use any of these pseudo-Nodes must include
-them (and channels to/from them) in its [Application
-Configuration](/oak/proto/manager.proto).  An example configuration that includes
-all pseudo-Nodes is depicted below.
+them (and channels to/from them) in its
+[Application Configuration](/oak/proto/manager.proto). An example configuration
+that includes all pseudo-Nodes is depicted below.
 
 <!-- From: -->
 <!-- https://docs.google.com/drawings/d/1gRCOzXWCEhp1-GF6Rnd9N6be8hs1sENfleCzXdQMOsc-->
 <img src="images/PseudoNodes.png" width="450">
 
-
 ## Oak Application
 
 An **Oak Application** is a set of Oak Nodes running within the same enclave,
 and connected by unidirectional channels. The initial connectivity graph is
-specified by an [Application Configuration](/oak/proto/manager.proto).  Once the
+specified by an [Application Configuration](/oak/proto/manager.proto). Once the
 Application is running, new channels may be created and handles to either half
-of the channel may be passed between Nodes, but no new Nodes can be instantiated.
+of the channel may be passed between Nodes, but no new Nodes can be
+instantiated.
 
 An Oak Application may have one or more entry points from which it can be
 invoked by clients over a gRPC connection; this is specified in the connectivity
@@ -153,7 +153,6 @@ following system diagram.
 <!-- https://docs.google.com/drawings/d/1YJ8Rt-nunZ7NJ9diQswbwjEMAtGfzjGVY9ogwhA7hsI -->
 <img src="images/SystemDiagram.png" width="850">
 
-
 ### Workflow
 
 In response to an application creation request, the Oak Manager sends back to
@@ -162,30 +161,30 @@ initialized with the application configuration specified in the request.
 
 Sample flow:
 
--   ISV writes an Oak Module for the Oak VM using a high-level language and
-    compiles it to WebAssembly.
--   The client connects to the Oak Manager, and requests the creation of an Oak
-    Node running the compiled Oak Module.
-    +   The module code itself is passed as part of the creation request.
--   The Oak Manager creates a new enclave and initializes it with a fresh Oak
-    Node, and then seals the enclave. The Oak Node exposes a gRPC endpoint at a
-    newly allocated endpoint (host:port). The endpoint gets forwarded to the
-    client as part of the creation response.
-    +   Note up to this point no sensitive data has been exchanged.
-    +   The client still has no guarantees that the endpoint is in fact running
-        an Oak VM, as the Oak Manager is itself untrusted.
--   The client connects to the Oak Node endpoint, and exchanges keys using the
-    [Asylo assertion framework](https://asylo.dev/docs/reference/proto/identity/asylo.identity.v1.html).
-    +   This allows the client to verify the integrity of the Oak Node and the
-        fact that it is indeed running an actual Oak VM, and optionally also
-        asserting further properties about the remote system (e.g. possession of
-        additional secret keys, etc.).
-    +   If the client is satisfied with the attestation, it continues with the
-        rest of the exchange, otherwise it aborts immediately.
--   The client sends its (potentially sensitive) data to the Oak Node, alongside
-    one or more policies that it requires the Oak Node to enforce on the data.
--   The Oak Node receives the data and performs the desired (and pre-determined)
-    computation on top of them, and sends the results back to the client.
+- ISV writes an Oak Module for the Oak VM using a high-level language and
+  compiles it to WebAssembly.
+- The client connects to the Oak Manager, and requests the creation of an Oak
+  Node running the compiled Oak Module.
+  - The module code itself is passed as part of the creation request.
+- The Oak Manager creates a new enclave and initializes it with a fresh Oak
+  Node, and then seals the enclave. The Oak Node exposes a gRPC endpoint at a
+  newly allocated endpoint (host:port). The endpoint gets forwarded to the
+  client as part of the creation response.
+  - Note up to this point no sensitive data has been exchanged.
+  - The client still has no guarantees that the endpoint is in fact running an
+    Oak VM, as the Oak Manager is itself untrusted.
+- The client connects to the Oak Node endpoint, and exchanges keys using the
+  [Asylo assertion framework](https://asylo.dev/docs/reference/proto/identity/asylo.identity.v1.html).
+  - This allows the client to verify the integrity of the Oak Node and the fact
+    that it is indeed running an actual Oak VM, and optionally also asserting
+    further properties about the remote system (e.g. possession of additional
+    secret keys, etc.).
+  - If the client is satisfied with the attestation, it continues with the rest
+    of the exchange, otherwise it aborts immediately.
+- The client sends its (potentially sensitive) data to the Oak Node, alongside
+  one or more policies that it requires the Oak Node to enforce on the data.
+- The Oak Node receives the data and performs the desired (and pre-determined)
+  computation on top of them, and sends the results back to the client.
 
 The following sequence diagram shows a basic flow of requests between a client,
 the Oak Manager and an Oak Application.
