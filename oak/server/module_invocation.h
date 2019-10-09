@@ -20,6 +20,7 @@
 #include "include/grpcpp/generic/async_generic_service.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/server/channel.h"
+#include "oak/server/oak_grpc_node.h"
 
 namespace oak {
 
@@ -30,12 +31,8 @@ class ModuleInvocation {
   // All constructor arguments must outlive this object.  It manages its own
   // lifetime after RequestNext is called.
   ModuleInvocation(grpc::AsyncGenericService* service, grpc::ServerCompletionQueue* queue,
-                   MessageChannelWriteHalf* req_half, MessageChannelReadHalf* rsp_half)
-      : service_(service),
-        queue_(queue),
-        req_half_(req_half),
-        rsp_half_(rsp_half),
-        stream_(&context_) {}
+                   OakGrpcNode* grpc_node)
+      : service_(service), queue_(queue), grpc_node_(grpc_node), stream_(&context_) {}
 
   // This object deletes itself.
   ~ModuleInvocation() = default;
@@ -68,9 +65,8 @@ class ModuleInvocation {
   grpc::AsyncGenericService* const service_;
   grpc::ServerCompletionQueue* const queue_;
 
-  // Borrowed references to the channels used to communication for invocation.
-  MessageChannelWriteHalf* req_half_;
-  MessageChannelReadHalf* rsp_half_;
+  // Borrowed references to gRPC Node that this invocation is on behalf of.
+  OakGrpcNode* grpc_node_;
 
   grpc::GenericServerContext context_;
   grpc::GenericServerAsyncReaderWriter stream_;

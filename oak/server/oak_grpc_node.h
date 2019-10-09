@@ -20,6 +20,7 @@
 #include <thread>
 
 #include "include/grpcpp/grpcpp.h"
+#include "oak/common/app_config.h"
 #include "oak/proto/application.grpc.pb.h"
 #include "oak/server/channel.h"
 #include "oak/server/oak_node.h"
@@ -37,12 +38,21 @@ class OakGrpcNode final : public Application::Service, public OakNode {
   int GetPort() { return port_; };
 
  private:
+  friend class ModuleInvocation;
+
   OakGrpcNode(const std::string& name) : OakNode(name) {}
   OakGrpcNode(const OakGrpcNode&) = delete;
   OakGrpcNode& operator=(const OakGrpcNode&) = delete;
 
   grpc::Status GetAttestation(grpc::ServerContext* context, const GetAttestationRequest* request,
                               GetAttestationResponse* response) override;
+
+  MessageChannelWriteHalf* BorrowWriteChannel() const {
+    return OakNode::BorrowWriteChannel(FindChannel(kGrpcNodeRequestPortName));
+  }
+  MessageChannelReadHalf* BorrowReadChannel() const {
+    return OakNode::BorrowReadChannel(FindChannel(kGrpcNodeResponsePortName));
+  }
 
   // Consumes gRPC events from the completion queue in an infinite loop.
   void CompletionQueueLoop();

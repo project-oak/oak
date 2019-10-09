@@ -93,7 +93,8 @@ void ModuleInvocation::ProcessRequest(bool ok) {
   }
   // Write data to the gRPC input channel, which the runtime connected to the
   // Node.
-  req_half_->Write(std::move(req_msg));
+  MessageChannelWriteHalf* req_half = grpc_node_->BorrowWriteChannel();
+  req_half->Write(std::move(req_msg));
   LOG(INFO) << "Wrote encapsulated request to gRPC input channel";
 
   // Move straight onto sending first response.
@@ -109,7 +110,8 @@ void ModuleInvocation::SendResponse(bool ok) {
   ReadResult rsp_result;
   // Block until we can read a single queued GrpcResponse message (in serialized form) from the
   // gRPC output channel.
-  rsp_result = rsp_half_->BlockingRead(INT_MAX, INT_MAX);
+  MessageChannelReadHalf* rsp_half = grpc_node_->BorrowReadChannel();
+  rsp_result = rsp_half->BlockingRead(INT_MAX, INT_MAX);
   if (rsp_result.required_size > 0) {
     LOG(ERROR) << "Message size too large: " << rsp_result.required_size;
     FinishAndRestart(grpc::Status(grpc::StatusCode::INTERNAL, "Message size too large"));
@@ -148,7 +150,7 @@ void ModuleInvocation::SendResponse(bool ok) {
 
     // Restart the gRPC flow with a new ModuleInvocation object for the next request
     // after processing this request.  This ensures that processing is serialized.
-    auto request = new ModuleInvocation(service_, queue_, req_half_, rsp_half_);
+    auto request = new ModuleInvocation(service_, queue_, grpc_node_);
     request->Start();
   }
 }
@@ -158,7 +160,7 @@ void ModuleInvocation::Finish(bool ok) { delete this; }
 void ModuleInvocation::FinishAndRestart(const grpc::Status& status) {
   // Restart the gRPC flow with a new ModuleInvocation object for the next request
   // after processing this request.  This ensures that processing is serialized.
-  auto request = new ModuleInvocation(service_, queue_, req_half_, rsp_half_);
+  auto request = new ModuleInvocation(service_, queue_, grpc_node_);
   request->Start();
 
   // Finish the current invocation (which triggers self-destruction).
