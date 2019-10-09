@@ -54,12 +54,12 @@ class OakNode {
   // handle (or nullptr if the handle is not recognized).  Caller is responsible
   // for ensuring that the borrowed reference does not out-live the owned
   // channel.
-  ChannelHalf* BorrowChannel(Handle handle) LOCKS_EXCLUDED(mu_);
-  MessageChannelReadHalf* BorrowReadChannel(Handle handle) LOCKS_EXCLUDED(mu_);
-  MessageChannelWriteHalf* BorrowWriteChannel(Handle handle) LOCKS_EXCLUDED(mu_);
+  ChannelHalf* BorrowChannel(Handle handle) const LOCKS_EXCLUDED(mu_);
+  MessageChannelReadHalf* BorrowReadChannel(Handle handle) const LOCKS_EXCLUDED(mu_);
+  MessageChannelWriteHalf* BorrowWriteChannel(Handle handle) const LOCKS_EXCLUDED(mu_);
 
   // Find the channel handle identified by the given port name.
-  Handle FindChannel(const std::string& port_name) LOCKS_EXCLUDED(mu_);
+  Handle FindChannel(const std::string& port_name) const LOCKS_EXCLUDED(mu_);
 
   // Wait on the given channel handles, modifying the contents of the passed-in
   // vector.  Returns a boolean indicating whether the wait finished due to a
@@ -67,7 +67,7 @@ class OakNode {
   // termination or no readable channels found).  Caller is responsible for
   // ensuring that none of the waited-on channels are closed during the wait
   // operation.
-  bool WaitOnChannels(std::vector<std::unique_ptr<ChannelStatus>>* statuses);
+  bool WaitOnChannels(std::vector<std::unique_ptr<ChannelStatus>>* statuses) const;
 
  protected:
   const std::string name_;

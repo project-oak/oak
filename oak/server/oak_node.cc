@@ -55,7 +55,7 @@ bool OakNode::CloseChannel(Handle handle) {
   return true;
 }
 
-ChannelHalf* OakNode::BorrowChannel(Handle handle) {
+ChannelHalf* OakNode::BorrowChannel(Handle handle) const {
   absl::ReaderMutexLock lock(&mu_);
   auto it = channel_halves_.find(handle);
   if (it == channel_halves_.end()) {
@@ -64,7 +64,7 @@ ChannelHalf* OakNode::BorrowChannel(Handle handle) {
   return it->second.get();
 }
 
-MessageChannelReadHalf* OakNode::BorrowReadChannel(Handle handle) {
+MessageChannelReadHalf* OakNode::BorrowReadChannel(Handle handle) const {
   absl::ReaderMutexLock lock(&mu_);
   auto it = channel_halves_.find(handle);
   if (it == channel_halves_.end()) {
@@ -78,7 +78,7 @@ MessageChannelReadHalf* OakNode::BorrowReadChannel(Handle handle) {
   return value->get();
 }
 
-MessageChannelWriteHalf* OakNode::BorrowWriteChannel(Handle handle) {
+MessageChannelWriteHalf* OakNode::BorrowWriteChannel(Handle handle) const {
   absl::ReaderMutexLock lock(&mu_);
   auto it = channel_halves_.find(handle);
   if (it == channel_halves_.end()) {
@@ -92,7 +92,7 @@ MessageChannelWriteHalf* OakNode::BorrowWriteChannel(Handle handle) {
   return value->get();
 }
 
-Handle OakNode::FindChannel(const std::string& port_name) {
+Handle OakNode::FindChannel(const std::string& port_name) const {
   absl::ReaderMutexLock lock(&mu_);
   auto it = named_channels_.find(port_name);
   if (it == named_channels_.end()) {
@@ -101,7 +101,7 @@ Handle OakNode::FindChannel(const std::string& port_name) {
   return it->second;
 }
 
-bool OakNode::WaitOnChannels(std::vector<std::unique_ptr<ChannelStatus>>* statuses) {
+bool OakNode::WaitOnChannels(std::vector<std::unique_ptr<ChannelStatus>>* statuses) const {
   while (true) {
     bool found_ready = false;
     bool found_readable = false;
