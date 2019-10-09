@@ -34,64 +34,64 @@ build:clang --cpu=k8
 # Use a different symlink prefix for clang-based artifacts.
 build:clang --symlink_prefix=bazel-clang-
 
-# Address sanitizer
-# To use it: bazel build --config asan
-build:asan --crosstool_top=//toolchain:clang
-build:asan --cpu=k8
+# Address Sanitizer.
+# bazel build --config=asan
+build:asan --config=clang
 build:asan --strip=never
-build:asan --copt -fsanitize=address
-build:asan --copt -DADDRESS_SANITIZER
-build:asan --copt -O1
-build:asan --copt -g
-build:asan --copt -fno-omit-frame-pointer
-build:asan --linkopt -fsanitize=address
+build:asan --copt=-fsanitize=address
+build:asan --copt=-DADDRESS_SANITIZER
+build:asan --copt=-O1
+build:asan --copt=-g
+build:asan --copt=-fno-omit-frame-pointer
+build:asan --linkopt=-fsanitize=address
 
-# Thread sanitizer
-# bazel build --config tsan
-build:tsan --crosstool_top=//toolchain:clang
-build:tsan --cpu=k8
+# Thread Sanitizer.
+# bazel build --config=tsan
+build:tsan --config=clang
 build:tsan --strip=never
-build:tsan --copt -fsanitize=thread
-build:tsan --copt -DTHREAD_SANITIZER
-build:tsan --copt -DDYNAMIC_ANNOTATIONS_ENABLED=1
-build:tsan --copt -DDYNAMIC_ANNOTATIONS_EXTERNAL_IMPL=1
-build:tsan --copt -O1
-build:tsan --copt -g
-build:tsan --copt -fno-omit-frame-pointer
-build:tsan --linkopt -fsanitize=thread
+build:tsan --copt=-fsanitize=thread
+build:tsan --copt=-DTHREAD_SANITIZER
+build:tsan --copt=-DDYNAMIC_ANNOTATIONS_ENABLED=1
+build:tsan --copt=-DDYNAMIC_ANNOTATIONS_EXTERNAL_IMPL=1
+build:tsan --copt=-O1
+build:tsan --copt=-g
+build:tsan --copt=-fno-omit-frame-pointer
+build:tsan --linkopt=-fsanitize=thread
 # Turn off TSAN checking of atomics in `bazel test`, due to false positive on absl::MutexLock:
 #    https://github.com/google/sanitizers/issues/953
 # Note this does not affect `bazel run`: use `export TSAN_OPTIONS=report_atomic_races=0`
 build:tsan --test_env=TSAN_OPTIONS=report_atomic_races=0
 
-# --config msan: Memory sanitizer
-build:msan --crosstool_top=//toolchain:clang
-build:msan --cpu=k8
+# Memory Sanitizer.
+# bazel build --config=msan
+build:msan --config=clang
 build:msan --strip=never
-build:msan --copt -fsanitize=memory
-build:msan --copt -DADDRESS_SANITIZER
-build:msan --copt -O1
-build:msan --copt -fno-omit-frame-pointer
-build:msan --linkopt -fsanitize=memory
+build:msan --copt=-fsanitize=memory
+build:msan --copt=-DADDRESS_SANITIZER
+build:msan --copt=-O1
+build:msan --copt=-fno-omit-frame-pointer
+build:msan --link=pt=-fsanitize=memory
 
-# --config ubsan: Undefined Behavior Sanitizer
-build:ubsan --crosstool_top=//toolchain:clang
-build:ubsan --cpu=k8
+# Undefined Behavior Sanitizer.
+# bazel build --config=ubsan
+build:ubsan --config=clang
 build:ubsan --strip=never
-build:ubsan --copt -fsanitize=undefined
-build:ubsan --copt -O1
-build:ubsan --copt -fno-omit-frame-pointer
-build:ubsan --linkopt -fsanitize=undefined
-build:ubsan --linkopt -lubsan
+build:ubsan --copt=-fsanitize=undefined
+build:ubsan --copt=-O1
+build:ubsan --copt=-fno-omit-frame-pointer
+build:ubsan --linkopt=-fsanitize=undefined
+build:ubsan --linkopt=-lubsan
 
-# --config fuzzer: Fuzzer
-build:fuzzer --crosstool_top=//toolchain:clang
-build:fuzzer --cpu=k8
-build:fuzzer --strip=never
-build:fuzzer --copt -fsanitize=fuzzer,address
-build:fuzzer --copt -O1
-build:fuzzer --copt -g
-build:fuzzer --copt -fno-omit-frame-pointer
-build:fuzzer --linkopt -fsanitize=fuzzer,address
+# Fuzzer.
+# See https://llvm.org/docs/LibFuzzer.html.
+# bazel build --config=fuzz
+build:fuzz --config=clang
+build:fuzz --strip=never
+build:fuzz --copt=-fsanitize=fuzzer,address
+build:fuzz --copt=-O1
+build:fuzz --copt=-g
+build:fuzz --copt=-fno-omit-frame-pointer
+build:fuzz --compilation_mode=dbg
+build:fuzz --linkopt=-fsanitize=fuzzer,address
 
 test --test_output=all
