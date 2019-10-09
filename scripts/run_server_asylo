@@ -6,7 +6,5 @@ source "$SCRIPTS_DIR/common"
 
 readonly GRPC_PORT="${GRPC_PORT:-8888}"
 
-"$SCRIPTS_DIR/build_server_dev"
-
-# We use a different symlink prefix for clang-based artifacts.
-./bazel-clang-bin/oak/server/dev/oak --grpc_port="${GRPC_PORT}"
+"$SCRIPTS_DIR/build_server_asylo"
+./bazel-bin/oak/server/asylo/oak --grpc_port="${GRPC_PORT}"

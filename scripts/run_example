@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-set -o errexit
-set -o nounset
-set -o xtrace
+readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
+# shellcheck source=scripts/common
+source "$SCRIPTS_DIR/common"
 
 IS_CPP=false
 
@@ -25,24 +25,23 @@ while getopts "hc" opt; do
 done
 
 readonly NAME="${*:$OPTIND:1}"
-if [[ -z "${NAME}" ]]; then
+if [[ -z "$NAME" ]]; then
   echo "Missing example name, use -h for help"
   exit 1
 fi
 
 readonly OAK_MANAGER_ADDRESS="${OAK_MANAGER_ADDRESS:-127.0.0.1:8888}"
-readonly SCRIPTS_DIR="$(dirname "$0")"
 
 "$SCRIPTS_DIR/build_example" "$NAME"
 
 if [ "$IS_CPP" = true ]; then
-  readonly MODULE_PATH="$PWD/module-bin/examples/${NAME}/module/cpp"
+  readonly MODULE_PATH="./bazel-wasm-bin/examples/$NAME/module/cpp"
 else
-  readonly MODULE_PATH="$PWD/examples/target/wasm32-unknown-unknown/release"
+  readonly MODULE_PATH="./examples/target/wasm32-unknown-unknown/release"
 fi
 # Accumulate all modules in a comma-separated list, in alphabetical order.
-MODULES=$(find "${MODULE_PATH}/${NAME}"*.wasm | tr '\n' ',' | sed 's/,$//')
+readonly MODULES=$(find "$MODULE_PATH/$NAME"*.wasm | tr '\n' ',' | sed 's/,$//')
 
-"./client-bin/examples/${NAME}/client/client" \
-  --manager_address="${OAK_MANAGER_ADDRESS}" \
-  --module="${MODULES}"
+"./bazel-client-bin/examples/$NAME/client/client" \
+  --manager_address="$OAK_MANAGER_ADDRESS" \
+  --module="$MODULES"
