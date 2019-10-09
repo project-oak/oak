@@ -36,9 +36,7 @@ represent the Node itself, and then add the `derive(OakExports)` attribute (from
 the [`oak_derive`](https://project-oak.github.io/oak/sdk/oak_derive/index.html)
 crate):
 
-[embedmd]:# (../examples/rustfmt/module/rust/src/lib.rs Rust
-/._derive\(OakExports\)._]/ /;\$/)
-
+[embedmd]:# (../examples/rustfmt/module/rust/src/lib.rs Rust /.*derive\(OakExports\).*]/ /;$/)
 ```Rust
 #[derive(OakExports)]
 struct Node;
@@ -48,9 +46,7 @@ If the Node needs per-instance state, this Node `struct` is an ideal place to
 store it. For example, the running average example has a `Node` `struct` with a
 running sum and count of samples:
 
-[embedmd]:# (../examples/running*average/module/rust/src/lib.rs Rust
-/.\_derive\(Default, OakExports\).*]/ /^}/)
-
+[embedmd]:# (../examples/running_average/module/rust/src/lib.rs Rust /.*derive\(Default, OakExports\).*]/ /^}/)
 ```Rust
 #[derive(Default, OakExports)]
 struct Node {
@@ -87,6 +83,7 @@ trait. This has two methods:
   method that is called for each newly-arriving gRPC request from the outside
   world.
 
+[embedmd]:# (../examples/rustfmt/module/rust/src/lib.rs Rust /impl oak::grpc::OakNode/ /^}/)
 ```Rust
 impl oak::grpc::OakNode for Node {
     fn new() -> Self {
@@ -114,8 +111,7 @@ service.
 Adding a `build.rs` file to the Node that invokes this tool results in a
 generated file appearing in `src/proto/<service>_grpc.rs`.
 
-[embedmd]: # "../examples/hello_world/module/rust/build.rs Rust /fn main/ /^}/"
-
+[embedmd]:# (../examples/hello_world/module/rust/build.rs Rust /fn main/ /^}/)
 ```Rust
 fn main() {
     protoc_rust_grpc::run(protoc_rust_grpc::Args {
@@ -135,10 +131,7 @@ The first is a trait definition that includes a method for each of the methods
 in the gRPC service, taking the relevant (auto-generated) request and response
 types. The Oak Node implements the gRPC service by implementing this trait.
 
-[embedmd]:
-  #
-  "../examples/rustfmt/module/rust/src/proto/rustfmt_grpc.rs Rust /pub trait FormatServiceNode/ /^}/"
-
+[embedmd]:# (../examples/rustfmt/module/rust/src/proto/rustfmt_grpc.rs Rust /pub trait FormatServiceNode/ /^}/)
 ```Rust
 pub trait FormatServiceNode {
     fn format(&mut self, req: super::rustfmt::FormatRequest) -> grpc::Result<super::rustfmt::FormatResponse>;
@@ -176,10 +169,7 @@ in this section.
 Oak client code (in C++) first needs to connect to the
 [Oak Manager](concepts.md#oak-manager), as a normal gRPC client:
 
-[embedmd]:
-  #
-  "../examples/abitest/client/abitest.cc C++ /.*Connect to the Oak Manager/ /NewStub.*;/"
-
+[embedmd]:# (../examples/abitest/client/abitest.cc C++ /.*Connect to the Oak Manager/ /NewStub.*;/)
 ```C++
   // Connect to the Oak Manager.
   auto channel =
@@ -190,8 +180,7 @@ Oak client code (in C++) first needs to connect to the
 This sets up a client for the `oak.Manager` service; this service allows the
 creation and termination of Oak Applications:
 
-[embedmd]: # "../oak/proto/manager.proto protobuf /^service Manager/ /^}/"
-
+[embedmd]:# (../oak/proto/manager.proto protobuf /^service Manager/ /^}/)
 ```protobuf
 service Manager {
   // Request the creation of a new Oak Application with the specified configuration.
@@ -210,10 +199,7 @@ Alternatively, the manager client can also be wrapped up in a
 [helper library](../oak/client/manager_client.h), which will make application
 configuration (described in the next section) easier:
 
-[embedmd]:
-  #
-  "../examples/rustfmt/client/rustfmt.cc C++ /.*Connect to the Oak Manager/ /FLAGS_manager_address.*;/"
-
+[embedmd]:# (../examples/rustfmt/client/rustfmt.cc C++ /.*Connect to the Oak Manager/ /FLAGS_manager_address.*;/)
 ```C++
   // Connect to the Oak Manager.
   std::unique_ptr<oak::ManagerClient> manager_client =
@@ -229,8 +215,7 @@ application, and their connectivity. However, for the simple case of a one-Node
 application the `oak::ManagerClient` helper takes care of this; the client just
 need to provide the code that is going to be run in the Node, as a Wasm module:
 
-[embedmd]: # "../examples/rustfmt/client/rustfmt.cc C++ /.*FLAGS_module/ /}/"
-
+[embedmd]:# (../examples/rustfmt/client/rustfmt.cc C++ /.*FLAGS_module/ /}/)
 ```C++
   std::string module_bytes = oak::utils::read_file(absl::GetFlag(FLAGS_module));
   std::unique_ptr<oak::CreateApplicationResponse> create_application_response =
@@ -244,10 +229,7 @@ There's also a variant of `CreateApplication` that allows the client code to
 specify a storage provider to connect to, and to control whether logging is
 enabled:
 
-[embedmd]:
-  #
-  "../examples/hello_world/client/hello_world.cc C++ /.*FLAGS_module/ /}/"
-
+[embedmd]:# (../examples/hello_world/client/hello_world.cc C++ /.*FLAGS_module/ /}/)
 ```C++
   std::string module_bytes = oak::utils::read_file(absl::GetFlag(FLAGS_module));
   std::unique_ptr<oak::CreateApplicationResponse> create_application_response =
@@ -269,10 +251,7 @@ The client can now connect to this separate gRPC service, and send
 (Node-specific) gRPC requests to it, over a channel that has end-to-end
 encryption into the enclave:
 
-[embedmd]:
-  #
-  "../examples/rustfmt/client/rustfmt.cc C++ /.*InitializeAssertionAuthorities/ /CredentialsOption/"
-
+[embedmd]:# (../examples/rustfmt/client/rustfmt.cc C++ /.*InitializeAssertionAuthorities/ /CredentialsOption/)
 ```C++
   oak::ApplicationClient::InitializeAssertionAuthorities();
 
