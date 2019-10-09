@@ -20,6 +20,10 @@
 
 namespace oak {
 
+OakNode::~OakNode() {
+  LOG(INFO) << "At destruction, node {" << name_ << "} has labels " << labels_;
+}
+
 Handle OakNode::AddNamedChannel(const std::string& port_name, std::unique_ptr<ChannelHalf> half) {
   absl::MutexLock lock(&mu_);
   Handle handle = ++next_handle_;
@@ -141,6 +145,45 @@ bool OakNode::WaitOnChannels(std::vector<std::unique_ptr<ChannelStatus>>* status
     // TODO: get rid of polling wait
     absl::SleepFor(absl::Milliseconds(100));
   }
+}
+
+void OakNode::Write(Handle handle, std::unique_ptr<Message> message) const {
+  {
+    absl::ReaderMutexLock lock(&labels_mu_);
+    message->labels.secrecy_tags.insert(labels_.secrecy_tags.begin(), labels_.secrecy_tags.end());
+    message->labels.integrity_tags.insert(labels_.integrity_tags.begin(),
+                                          labels_.integrity_tags.end());
+  }
+  MessageChannelWriteHalf* half = BorrowWriteChannel(handle);
+  if (half == nullptr) {
+    LOG(ERROR) << "{" << name_ << "} Failed to find channel for handle " << handle;
+    return;
+  }
+  half->Write(std::move(message));
+}
+
+ReadResult OakNode::Read(Handle handle, uint32_t max_size, uint32_t max_channels) {
+  MessageChannelReadHalf* half = BorrowReadChannel(handle);
+  ReadResult result = half->Read(max_size, max_channels);
+
+  // Update the Node's labels according to the incoming message.
+  if (result.msg != nullptr) {
+    absl::MutexLock lock(&labels_mu_);
+    labels_.Merge(result.msg->labels);
+  }
+  return result;
+}
+
+ReadResult OakNode::BlockingRead(Handle handle) {
+  MessageChannelReadHalf* half = BorrowReadChannel(handle);
+  ReadResult result = half->BlockingRead(INT_MAX, INT_MAX);
+
+  // Update the Node's labels according to the incoming message.
+  if (result.msg != nullptr) {
+    absl::MutexLock lock(&labels_mu_);
+    labels_.Merge(result.msg->labels);
+  }
+  return result;
 }
 
 }  // namespace oak

@@ -27,6 +27,7 @@
 #include "absl/synchronization/mutex.h"
 #include "absl/types/variant.h"
 #include "oak/proto/oak_api.pb.h"
+#include "oak/server/labels.h"
 
 namespace oak {
 
@@ -37,13 +38,13 @@ class MessageChannelReadHalf;   // forward declaration
 using ChannelHalf = absl::variant<std::unique_ptr<MessageChannelReadHalf>,
                                   std::unique_ptr<MessageChannelWriteHalf>>;
 
-// Each message transferred over a channel includes data and potentially
-// also references to halves of channels.
-// It also has a set of labels attached to it, which are used for information flow.
+// Each message transferred over a channel includes data and potentially also
+// references to halves of channels.  It also has a set of labels attached to
+// it, which are used for information flow tracking.
 struct Message {
   std::vector<char> data;
   std::vector<std::unique_ptr<ChannelHalf>> channels;
-  std::vector<std::string> labels;
+  OakLabels labels;
 };
 
 // Result of a read operation. If the operation would have produced a message

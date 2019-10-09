@@ -22,9 +22,8 @@
 namespace oak {
 
 // This class injects a pre-determined Oak Policy to each outgoing gRPC call.
-// In real-world use cases it should be combined to channel credentials, providing enclave
-// attestation.
-// See https://grpc.io/docs/guides/auth/.
+// In real-world use cases it should be combined with channel credentials,
+// providing enclave attestation.  See https://grpc.io/docs/guides/auth/.
 class PolicyMetadata : public grpc::MetadataCredentialsPlugin {
  public:
   PolicyMetadata();

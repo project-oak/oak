@@ -14,29 +14,25 @@
  * limitations under the License.
  */
 
-#ifndef OAK_SERVER_LOGGING_NODE_H_
-#define OAK_SERVER_LOGGING_NODE_H_
+#ifndef OAK_SERVER_LABELS_H_
+#define OAK_SERVER_LABELS_H_
 
-#include <memory>
-#include <thread>
-
-#include "oak/common/handles.h"
-#include "oak/server/channel.h"
-#include "oak/server/labels.h"
-#include "oak/server/node_thread.h"
+#include <iostream>
+#include <set>
 
 namespace oak {
 
-// Pseudo-node to perform logging.
-class LoggingNode final : public NodeThread {
- public:
-  explicit LoggingNode(const std::string& name, const OakLabels& labels)
-      : NodeThread(name, labels) {}
+struct OakLabels {
+  // Merge updates the labels with another instance. Secrecy tags are combined
+  // with union, integrity tags are combined with intersection.
+  void Merge(const OakLabels& other);
 
- private:
-  void Run() override;
+  std::set<std::string> secrecy_tags;
+  std::set<std::string> integrity_tags;
 };
 
 }  // namespace oak
 
-#endif  // OAK_SERVER_LOGGING_NODE_H_
+std::ostream& operator<<(std::ostream& os, const oak::OakLabels& labels);
+
+#endif  // OAK_SERVER_LABELS_H_

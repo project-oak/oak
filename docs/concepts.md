@@ -8,6 +8,7 @@
   - [Pre-Defined Channels and Port Names](#pre-defined-channels-and-port-names)
 - [Pseudo-Nodes](#pseudo-nodes)
 - [Oak Application](#oak-application)
+- [Information Flow Control: Labels and Tags](#information-flow-control-labels-and-tags)
 - [Oak Manager](#oak-manager)
   - [Workflow](#workflow)
 - [Remote Attestation](#remote-attestation)
@@ -137,6 +138,27 @@ remote enclave is indeed running a genuine Oak VM and will therefore obey the
 policies set on the Oak Node; the Oak VM itself may then optionally prove
 additional details about the Oak Module and its properties, which may require
 reasoning about its internal structure.
+
+## Information Flow Control: Labels and Tags
+
+The Oak system allows analysis and policing of the information flowing through
+an application [1](https://pdos.csail.mit.edu/papers/flume-sosp07.pdf). This is
+done by tracking two **labels**, which are sets of **tags** as messages flow
+between Nodes in the Application.
+
+The first set of tags forms the **secrecy label**, with the intent that a
+secrecy tag `X` means that a Node has had access to some class of secret data
+identified by `X`. Secrecy labels are propagated with messages (cf.
+[taint checking](https://en.wikipedia.org/wiki/Taint_checking); if Node A has
+label `X` and sends a message to Node B, then B also adds `B` to its current
+secrecy label when it read that message.
+
+The second set of tags forms the **integrity label**, with the intent that a
+integrity tag `Y` means that all inputs to a Node (so far) have complied with an
+integrity or provenance check identified by `Y`. Integrity labels are also
+propagated with messages, but as a subtractive operation: if node B receives a
+message that is _missing_ one of the integrity tags that the node currently has,
+then the node's integrity label is updated to _remove_ that tag.
 
 ## Oak Manager
 

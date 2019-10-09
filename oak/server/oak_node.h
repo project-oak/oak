@@ -19,6 +19,7 @@
 
 #include <atomic>
 #include <memory>
+#include <set>
 #include <unordered_map>
 #include <vector>
 
@@ -26,13 +27,15 @@
 #include "absl/synchronization/mutex.h"
 #include "oak/common/handles.h"
 #include "oak/server/channel.h"
+#include "oak/server/labels.h"
 
 namespace oak {
 
 class OakNode {
  public:
-  OakNode(const std::string& name) : name_(name), termination_pending_(false), next_handle_(0) {}
-  virtual ~OakNode() {}
+  OakNode(const std::string& name, const OakLabels& labels)
+      : name_(name), termination_pending_(false), next_handle_(0), labels_(labels) {}
+  virtual ~OakNode();
 
   virtual void Start() = 0;
   virtual void Stop() = 0;
@@ -69,6 +72,19 @@ class OakNode {
   // operation.
   bool WaitOnChannels(std::vector<std::unique_ptr<ChannelStatus>>* statuses) const;
 
+  // Write the message to the (write) channel half identified by the handle,
+  // attaching the Node's current labels to the message along the way.
+  void Write(Handle handle, std::unique_ptr<Message> msg) const LOCKS_EXCLUDED(labels_mu_);
+
+  // Perform a read on the (read) channel half identified by the handle.  Modify
+  // this Node's labels according to any read message.
+  ReadResult Read(Handle handle, uint32_t max_size, uint32_t max_channels)
+      LOCKS_EXCLUDED(labels_mu_);
+
+  // Perform a blocking read on the (read) channel half identified by the handle.
+  // Modify this Node's labels according to any read message.
+  ReadResult BlockingRead(Handle handle) LOCKS_EXCLUDED(labels_mu_);
+
  protected:
   const std::string name_;
   std::atomic_bool termination_pending_;
@@ -76,7 +92,8 @@ class OakNode {
  private:
   using ChannelHalfTable = std::unordered_map<Handle, std::unique_ptr<ChannelHalf>>;
 
-  mutable absl::Mutex mu_;  // protects next_handle_, named_channels_, channel_halves_
+  mutable absl::Mutex mu_;  // protects next_handle_, named_channels_, channel_halves_,
+                            // secrecy_labels_, integrity_labels_
 
   // Map from pre-configured port names to channel handles.
   Handle next_handle_ GUARDED_BY(mu_);
@@ -84,6 +101,10 @@ class OakNode {
 
   // Map from channel handles to channel half instances.
   ChannelHalfTable channel_halves_ GUARDED_BY(mu_);
+
+  // Current set of secrecy and integrity labels for the Node.
+  mutable absl::Mutex labels_mu_;
+  OakLabels labels_ GUARDED_BY(labels_mu_);
 };
 
 }  // namespace oak

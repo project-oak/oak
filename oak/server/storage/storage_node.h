@@ -25,6 +25,7 @@
 #include "oak/common/handles.h"
 #include "oak/proto/storage.grpc.pb.h"
 #include "oak/server/channel.h"
+#include "oak/server/labels.h"
 #include "oak/server/node_thread.h"
 #include "oak/server/storage/fixed_nonce_generator.h"
 
@@ -32,7 +33,7 @@ namespace oak {
 
 class StorageNode final : public NodeThread {
  public:
-  StorageNode(const std::string& name, const std::string& storage_address);
+  StorageNode(const std::string& name, const OakLabels& labels, const std::string& storage_address);
 
  private:
   enum class DatumType : int { NAME, VALUE };

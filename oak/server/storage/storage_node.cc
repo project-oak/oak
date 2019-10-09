@@ -40,8 +40,9 @@ static asylo::CleansingVector<uint8_t> GetStorageEncryptionKey(const std::string
   return asylo::CleansingVector<uint8_t>(encryption_key.begin(), encryption_key.end());
 }
 
-StorageNode::StorageNode(const std::string& name, const std::string& storage_address)
-    : NodeThread(name),
+StorageNode::StorageNode(const std::string& name, const OakLabels& labels,
+                         const std::string& storage_address)
+    : NodeThread(name, labels),
       fixed_nonce_generator_(new oak::FixedNonceGenerator()),
       datum_name_cryptor_(kMaxMessageSize, fixed_nonce_generator_),
       datum_value_cryptor_(kMaxMessageSize, new asylo::AesGcmSivNonceGenerator()) {
@@ -122,8 +123,7 @@ void StorageNode::Run() {
   Handle request_handle = FindChannel(kStorageNodeRequestPortName);
   Handle response_handle = FindChannel(kStorageNodeResponsePortName);
   MessageChannelReadHalf* request_channel = BorrowReadChannel(request_handle);
-  MessageChannelWriteHalf* response_channel = BorrowWriteChannel(response_handle);
-  if (request_channel == nullptr || response_channel == nullptr) {
+  if (request_channel == nullptr || BorrowWriteChannel(response_handle) == nullptr) {
     LOG(ERROR) << "Required channel not available; handles: " << request_handle << ", "
                << response_handle;
   }
@@ -135,7 +135,7 @@ void StorageNode::Run() {
       return;
     }
 
-    ReadResult result = request_channel->Read(INT_MAX, INT_MAX);
+    ReadResult result = Read(request_handle, INT_MAX, INT_MAX);
     if (result.required_size > 0) {
       LOG(ERROR) << "Message size too large: " << result.required_size;
       return;
@@ -253,7 +253,7 @@ void StorageNode::Run() {
     std::unique_ptr<Message> response_message = absl::make_unique<Message>();
     response_message->data.insert(response_message->data.end(), response_data.begin(),
                                   response_data.end());
-    response_channel->Write(std::move(response_message));
+    Write(response_handle, std::move(response_message));
   }
 }
 

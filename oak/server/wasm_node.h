@@ -20,6 +20,7 @@
 #include <memory>
 #include <random>
 
+#include "oak/server/labels.h"
 #include "oak/server/node_thread.h"
 #include "src/interp/interp.h"
 
@@ -28,11 +29,12 @@ namespace oak {
 class WasmNode final : public NodeThread {
  public:
   // Creates a Wasm Node by loading the Wasm module code.
-  static std::unique_ptr<WasmNode> Create(const std::string& name, const std::string& module);
+  static std::unique_ptr<WasmNode> Create(const std::string& name, const OakLabels& labels,
+                                          const std::string& module);
 
  private:
   // Clients should construct WasmNode instances with Create() (which can fail).
-  WasmNode(const std::string& name);
+  WasmNode(const std::string& name, const OakLabels& labels);
 
   void InitEnvironment(wabt::interp::Environment* env);
 

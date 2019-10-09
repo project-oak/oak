@@ -42,6 +42,28 @@ message Node {
     WebAssemblyNode web_assembly_node = 4;
     StorageProxyNode storage_node = 5;
   }
+
+  // Node's initial secrecy and integrity labels.
+  // TODO: investigate whether dynamic labels cover required functionality, and
+  // if so remove these static/pre-configured labels.
+  Labels labels = 6;
+}
+
+// Labels holds a secrecy label and an integrity label, each of which is
+// a collection of tags.
+//
+// When a Node sends a message over a channel, the Node's current secrecy
+// and integrity labels are associated with the message.  When a Node
+// receives a message:
+//  - Any secrecy tags that are present in the message, but which are
+//    not in the Node's current secrecy label, are added to the Node's
+//    secrecy label.
+//  - Any integrity tags that are absent in the message, but which are
+//    present in the Node's current integrity label, are removed from the
+//    Node's integrity label.
+message Labels {
+  repeated string secrecy_tags = 1;
+  repeated string integrity_tags = 2;
 }
 
 // A pseudo-Node that corresponds to an external-facing gRPC server interface

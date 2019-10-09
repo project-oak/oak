@@ -35,6 +35,7 @@ cc_library(
     hdrs = ["oak_node.h"],
     deps = [
         ":channel",
+        ":labels",
         "//oak/common:handles",
         "@com_google_absl//absl/synchronization",
         "@com_google_asylo//asylo/util:logging",
@@ -53,6 +54,7 @@ cc_library(
     ],
     deps = [
         ":channel",
+        ":labels",
         "//oak/common:handles",
         "//oak/proto:grpc_encap_cc_proto",
         "//oak/proto:oak_api_cc_proto",
@@ -146,10 +148,27 @@ cc_library(
 )
 
 cc_library(
+    name = "labels",
+    srcs = ["labels.cc"],
+    hdrs = ["labels.h"],
+)
+
+cc_test(
+    name = "labels_test",
+    srcs = ["labels_test.cc"],
+    tags = ["host"],
+    deps = [
+        ":labels",
+        "@gtest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "channel",
     srcs = ["channel.cc"],
     hdrs = ["channel.h"],
     deps = [
+        ":labels",
         "//oak/proto:oak_api_cc_proto",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/synchronization",
@@ -174,6 +193,7 @@ cc_library(
     srcs = ["node_thread.cc"],
     hdrs = ["node_thread.h"],
     deps = [
+        ":labels",
         ":oak_node",
         "@com_google_asylo//asylo/util:logging",
     ],
@@ -185,6 +205,7 @@ cc_library(
     hdrs = ["logging_node.h"],
     deps = [
         ":channel",
+        ":labels",
         ":node_thread",
         "//oak/common:app_config",
         "//oak/common:handles",

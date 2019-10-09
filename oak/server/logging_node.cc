@@ -38,7 +38,7 @@ void LoggingNode::Run() {
                    << " log messages pending";
       return;
     }
-    ReadResult result = channel->Read(INT_MAX, INT_MAX);
+    ReadResult result = Read(handle, INT_MAX, INT_MAX);
     if (result.required_size > 0) {
       LOG(ERROR) << "{" << name_ << "} Message size too large: " << result.required_size;
       return;

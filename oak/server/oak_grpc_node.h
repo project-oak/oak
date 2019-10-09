@@ -23,13 +23,14 @@
 #include "oak/common/app_config.h"
 #include "oak/proto/application.grpc.pb.h"
 #include "oak/server/channel.h"
+#include "oak/server/labels.h"
 #include "oak/server/oak_node.h"
 
 namespace oak {
 
 class OakGrpcNode final : public Application::Service, public OakNode {
  public:
-  static std::unique_ptr<OakGrpcNode> Create(const std::string& name);
+  static std::unique_ptr<OakGrpcNode> Create(const std::string& name, const OakLabels& labels);
   virtual ~OakGrpcNode(){};
 
   void Start() override;
@@ -40,19 +41,15 @@ class OakGrpcNode final : public Application::Service, public OakNode {
  private:
   friend class ModuleInvocation;
 
-  OakGrpcNode(const std::string& name) : OakNode(name) {}
+  OakGrpcNode(const std::string& name, const OakLabels& labels) : OakNode(name, labels) {}
   OakGrpcNode(const OakGrpcNode&) = delete;
   OakGrpcNode& operator=(const OakGrpcNode&) = delete;
 
   grpc::Status GetAttestation(grpc::ServerContext* context, const GetAttestationRequest* request,
                               GetAttestationResponse* response) override;
 
-  MessageChannelWriteHalf* BorrowWriteChannel() const {
-    return OakNode::BorrowWriteChannel(FindChannel(kGrpcNodeRequestPortName));
-  }
-  MessageChannelReadHalf* BorrowReadChannel() const {
-    return OakNode::BorrowReadChannel(FindChannel(kGrpcNodeResponsePortName));
-  }
+  Handle WriteChannelHandle() const { return FindChannel(kGrpcNodeRequestPortName); }
+  Handle ReadChannelHandle() const { return FindChannel(kGrpcNodeResponsePortName); }
 
   // Consumes gRPC events from the completion queue in an infinite loop.
   void CompletionQueueLoop();

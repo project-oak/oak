@@ -20,6 +20,7 @@
 #include <memory>
 #include <thread>
 
+#include "oak/server/labels.h"
 #include "oak/server/oak_node.h"
 
 namespace oak {
@@ -29,7 +30,7 @@ namespace oak {
 class NodeThread : public OakNode {
  public:
   // Construct a thread, identified by the given name in diagnostic messages.
-  NodeThread(const std::string& name) : OakNode(name) {}
+  NodeThread(const std::string& name, const OakLabels& labels) : OakNode(name, labels) {}
   virtual ~NodeThread();
 
   // Start kicks off a separate thread that invokes the Run() method.

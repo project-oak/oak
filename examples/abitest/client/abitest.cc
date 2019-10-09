@@ -81,6 +81,13 @@ static const char* app_config_textproto = R"raw(nodes {
       type: IN
     }
   }
+  labels {
+    secrecy_tags: "W"
+    secrecy_tags: "X"
+    integrity_tags: "A"
+    integrity_tags: "D"
+    integrity_tags: "E"
+  }
 }
 nodes {
   node_name: "backend_0"
@@ -98,6 +105,13 @@ nodes {
       name: "to_frontend"
       type: OUT
     }
+  }
+  labels {
+    secrecy_tags: "W"
+    secrecy_tags: "X"
+    integrity_tags: "A"
+    integrity_tags: "D"
+    integrity_tags: "E"
   }
 }
 nodes {
@@ -117,6 +131,13 @@ nodes {
       type: OUT
     }
   }
+  labels {
+    secrecy_tags: "W"
+    secrecy_tags: "X"
+    integrity_tags: "A"
+    integrity_tags: "D"
+    integrity_tags: "E"
+  }
 }
 nodes {
   node_name: "backend_2"
@@ -135,10 +156,25 @@ nodes {
       type: OUT
     }
   }
+  labels {
+    secrecy_tags: "W"
+    secrecy_tags: "X"
+    integrity_tags: "A"
+    integrity_tags: "D"
+    integrity_tags: "E"
+  }
 }
 nodes {
   node_name: "grpc_server"
   grpc_server_node {}
+  labels {
+    secrecy_tags: "X"
+    secrecy_tags: "Y"
+    secrecy_tags: "Z"
+    integrity_tags: "A"
+    integrity_tags: "B"
+    integrity_tags: "C"
+  }
 }
 nodes {
   node_name: "logging_node"

@@ -44,24 +44,30 @@ grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
   OakNode* log_node = nullptr;
   for (const auto& node_config : config.nodes()) {
     const std::string& node_name = node_config.node_name();
+    OakLabels labels;
+    labels.secrecy_tags.insert(node_config.labels().secrecy_tags().begin(),
+                               node_config.labels().secrecy_tags().end());
+    labels.integrity_tags.insert(node_config.labels().integrity_tags().begin(),
+                                 node_config.labels().integrity_tags().end());
     std::unique_ptr<OakNode> node;
     if (node_config.has_web_assembly_node()) {
       const auto& wasm_node = node_config.web_assembly_node();
-      LOG(INFO) << "Create Wasm node named {" << node_name << "}";
+      LOG(INFO) << "Create Wasm node named {" << node_name << "} with labels " << labels;
       const std::string* module_bytes = wasm_contents[wasm_node.wasm_contents_name()];
-      node = WasmNode::Create(node_config.node_name(), *module_bytes);
+      node = WasmNode::Create(node_config.node_name(), labels, *module_bytes);
     } else if (node_config.has_grpc_server_node()) {
-      LOG(INFO) << "Create gRPC pseudo-Node named {" << node_name << "}";
-      std::unique_ptr<OakGrpcNode> grpc_node = OakGrpcNode::Create(node_name);
+      LOG(INFO) << "Create gRPC pseudo-Node named {" << node_name << "} with labels " << labels;
+      std::unique_ptr<OakGrpcNode> grpc_node = OakGrpcNode::Create(node_name, labels);
       grpc_node_ = grpc_node.get();  // borrowed copy
       node = std::move(grpc_node);
     } else if (node_config.has_log_node()) {
-      LOG(INFO) << "Create logging pseudo-node named {" << node_name << "}";
-      node = absl::make_unique<LoggingNode>(node_name);
+      LOG(INFO) << "Create logging pseudo-node named {" << node_name << "} with labels " << labels;
+      node = absl::make_unique<LoggingNode>(node_name, labels);
       log_node = node.get();
     } else if (node_config.has_storage_node()) {
-      LOG(INFO) << "Created storage pseudo-Node named {" << node_name << "}";
-      node = absl::make_unique<StorageNode>(node_name, node_config.storage_node().address());
+      LOG(INFO) << "Created storage pseudo-Node named {" << node_name << "} with labels " << labels;
+      node =
+          absl::make_unique<StorageNode>(node_name, labels, node_config.storage_node().address());
     }
     if (node == nullptr) {
       return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Failed to create Oak Node");

@@ -14,29 +14,16 @@
  * limitations under the License.
  */
 
-#ifndef OAK_SERVER_LOGGING_NODE_H_
-#define OAK_SERVER_LOGGING_NODE_H_
-
-#include <memory>
-#include <thread>
-
-#include "oak/common/handles.h"
-#include "oak/server/channel.h"
 #include "oak/server/labels.h"
-#include "oak/server/node_thread.h"
 
-namespace oak {
+#include "gtest/gtest.h"
 
-// Pseudo-node to perform logging.
-class LoggingNode final : public NodeThread {
- public:
-  explicit LoggingNode(const std::string& name, const OakLabels& labels)
-      : NodeThread(name, labels) {}
+TEST(OakLabels, Combine) {
+  oak::OakLabels got = {{"A", "B", "C"}, {"W", "X", "Y"}};
+  oak::OakLabels other = {{"B", "C", "D"}, {"X", "Y", "Z"}};
 
- private:
-  void Run() override;
-};
-
-}  // namespace oak
-
-#endif  // OAK_SERVER_LOGGING_NODE_H_
+  got.Merge(other);
+  oak::OakLabels want = {{"A", "B", "C", "D"}, {"X", "Y"}};
+  EXPECT_EQ(got.secrecy_tags, want.secrecy_tags);
+  EXPECT_EQ(got.integrity_tags, want.integrity_tags);
+}

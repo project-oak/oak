@@ -83,18 +83,22 @@ void ModuleInvocation::ProcessRequest(bool ok) {
   // TODO: figure out a way to avoid the extra copy (into then out of std::string)
   std::unique_ptr<Message> req_msg = absl::make_unique<Message>();
   req_msg->data.insert(req_msg->data.end(), encap_req.begin(), encap_req.end());
+
+  // Transcribe any secrecy label from the gRPC context to the inbound request.
+  // The request gets an empty integrity label because it's coming from an
+  // external source.
   {
     auto range = context_.client_metadata().equal_range(kOakLabelGrpcMetadataKey);
     for (auto entry = range.first; entry != range.second; ++entry) {
       std::string label(entry->second.data(), entry->second.size());
-      LOG(INFO) << "Oak label: " << label;
-      req_msg->labels.push_back(label);
+      LOG(INFO) << "transcribe label '" << label << "' for gRPC request";
+      req_msg->labels.secrecy_tags.insert(label);
     }
   }
+
   // Write data to the gRPC input channel, which the runtime connected to the
   // Node.
-  MessageChannelWriteHalf* req_half = grpc_node_->BorrowWriteChannel();
-  req_half->Write(std::move(req_msg));
+  grpc_node_->Write(grpc_node_->WriteChannelHandle(), std::move(req_msg));
   LOG(INFO) << "Wrote encapsulated request to gRPC input channel";
 
   // Move straight onto sending first response.
@@ -107,11 +111,9 @@ void ModuleInvocation::SendResponse(bool ok) {
     return;
   }
 
-  ReadResult rsp_result;
-  // Block until we can read a single queued GrpcResponse message (in serialized form) from the
-  // gRPC output channel.
-  MessageChannelReadHalf* rsp_half = grpc_node_->BorrowReadChannel();
-  rsp_result = rsp_half->BlockingRead(INT_MAX, INT_MAX);
+  // Block until we can read a single queued GrpcResponse message (in serialized
+  // form) from the gRPC output channel.
+  ReadResult rsp_result = grpc_node_->BlockingRead(grpc_node_->ReadChannelHandle());
   if (rsp_result.required_size > 0) {
     LOG(ERROR) << "Message size too large: " << rsp_result.required_size;
     FinishAndRestart(grpc::Status(grpc::StatusCode::INTERNAL, "Message size too large"));
