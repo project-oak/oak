@@ -4,16 +4,10 @@ set -o errexit
 set -o nounset
 set -o xtrace
 
-bazel_build_flags=(
-    '--symlink_prefix=dev-'
-    '--config=clang'
-)
+# See https://pantheon.corp.google.com/gcr/images/oak-ci/GLOBAL/oak
+readonly DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak'
 
-# Keep this in sync with the following:
-# - /scripts/build_example
-# - /scripts/build_server
-# - /scripts/build_dev_server
-# - /scripts/fuzz
+readonly CACHE_DIR='bazel-cache'
 
 readonly OAK_REMOTE_CACHE_KEY='./.oak_remote_cache_key.json'
 
@@ -30,11 +24,14 @@ readonly OAK_REMOTE_CACHE_KEY='./.oak_remote_cache_key.json'
     fi
 )
 
+declare -a bazel_build_flags
+
 # Use the remote cache, assuming it is publicly readable.
 # See https://pantheon.corp.google.com/storage/browser/oak-bazel-cache?project=oak-ci
 bazel_build_flags+=(
     '--remote_cache=https://storage.googleapis.com/oak-bazel-cache'
 )
+
 # If we now have a key file, use it, otherwise disable uploading artifacts to remote cache.
 # Note that this is only needed to write to the cache, not to read from it.
 if [[ -f "$OAK_REMOTE_CACHE_KEY" ]]; then
@@ -46,5 +43,3 @@ else
         '--remote_upload_local_results=false'
     )
 fi
-
-bazel build "${bazel_build_flags[@]}" //oak/server/dev:oak

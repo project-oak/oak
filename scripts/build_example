@@ -1,11 +1,8 @@
 #!/usr/bin/env bash
 
-set -o errexit
-set -o nounset
-set -o xtrace
-
-readonly SCRIPTS_DIR="$(dirname "$0")"
-readonly CACHE_DIR='bazel-cache'
+readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
+# shellcheck source=scripts/common
+source "$SCRIPTS_DIR/common"
 
 COMPILATION_MODE='fastbuild'
 
@@ -44,57 +41,19 @@ else
     TARGET="$NAME"
 fi
 
-for module in examples/"${TARGET}"/module*/rust/Cargo.toml; do
+for module in examples/"$TARGET"/module*/rust/Cargo.toml; do
   cargo build --release --target=wasm32-unknown-unknown --manifest-path="$module"
 done
 
-bazel_build_flags=(
-    '--symlink_prefix=client-'
+bazel_build_flags+=(
+    '--symlink_prefix=bazel-client-'
     "--compilation_mode=$COMPILATION_MODE"
 )
 
-# Keep this in sync with the following:
-# - /scripts/build_example
-# - /scripts/build_server
-# - /scripts/build_dev_server
-# - /scripts/fuzz
-
-readonly OAK_REMOTE_CACHE_KEY='./.oak_remote_cache_key.json'
-
-(
-    # Disable xtrace to avoid leaking secrets in logs.
-    set +o xtrace;
-    # Do we have a JSON key for the remote cache.
-    # https://docs.bazel.build/versions/master/remote-caching.html#google-cloud-storage
-    if [[ ! -f "$OAK_REMOTE_CACHE_KEY" ]]; then
-        # Check if this exists in the environment and it is not empty.
-        if [[ -n "${BAZEL_GOOGLE_CREDENTIALS:-}" ]]; then
-            echo "$BAZEL_GOOGLE_CREDENTIALS" > "$OAK_REMOTE_CACHE_KEY"
-        fi
-    fi
-)
-
-# Use the remote cache, assuming it is publicly readable.
-# See https://pantheon.corp.google.com/storage/browser/oak-bazel-cache?project=oak-ci
-bazel_build_flags+=(
-    '--remote_cache=https://storage.googleapis.com/oak-bazel-cache'
-)
-# If we now have a key file, use it, otherwise disable uploading artifacts to remote cache.
-# Note that this is only needed to write to the cache, not to read from it.
-if [[ -f "$OAK_REMOTE_CACHE_KEY" ]]; then
-    bazel_build_flags+=(
-        "--google_credentials=$OAK_REMOTE_CACHE_KEY"
-    )
-else
-    bazel_build_flags+=(
-        '--remote_upload_local_results=false'
-    )
-fi
-
-bazel --output_base="$CACHE_DIR/client" build "${bazel_build_flags[@]}" "//examples/$TARGET/client"
+bazel build "${bazel_build_flags[@]}" "//examples/$TARGET/client"
 
 readonly CPP_FOLDER="$(find examples/"$TARGET" -type d -name cpp)"
 if [[ -n "$CPP_FOLDER" ]]; then
-    #TODO: support compilation mode wasm.
-    bazel --output_base="$CACHE_DIR/module" build --symlink_prefix='module-' --config=wasm32 "//examples/$TARGET/module/cpp:all"
+    # TODO: support compilation mode wasm.
+    bazel build --config=wasm32 "//examples/$TARGET/module/cpp:all"
 fi

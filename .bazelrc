@@ -20,13 +20,19 @@ build:sgx-sim --define=SGX_SIM=1
 # make assumptions about it being related to SGX.
 build:enc-sim --config=sgx-sim
 
-# Toolchain for compiling C++ code to wasm32
+# Toolchain for compiling C++ code to wasm32.
 build:wasm32 --crosstool_top=//toolchain:clang
 build:wasm32 --host_crosstool_top=@bazel_tools//tools/cpp:toolchain
 build:wasm32 --cpu=wasm32
 
+# Use a different symlink prefix for wasm-based artifacts.
+build:wasm32 --symlink_prefix=bazel-wasm-
+
 build:clang --crosstool_top=//toolchain:clang
 build:clang --cpu=k8
+
+# Use a different symlink prefix for clang-based artifacts.
+build:clang --symlink_prefix=bazel-clang-
 
 # Address sanitizer
 # To use it: bazel build --config asan
@@ -88,10 +94,4 @@ build:fuzzer --copt -g
 build:fuzzer --copt -fno-omit-frame-pointer
 build:fuzzer --linkopt -fsanitize=fuzzer,address
 
-# Bazel 0.27.0 deprecates features that our dependencies (gRPC, protobuf) rely on, so disable
-# the checks until all dependencies have been updated to cope with a later Bazel.
-# TODO: remove these options when possible
-build --incompatible_disable_deprecated_attr_params=false
-build --incompatible_depset_is_not_iterable=false
-build --incompatible_new_actions_api=false
-build --incompatible_no_support_tools_in_action_inputs=false
+test --test_output=all

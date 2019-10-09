@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 
-set -o errexit
-set -o nounset
-set -o xtrace
+readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
+# shellcheck source=scripts/common
+source "$SCRIPTS_DIR/common"
 
-readonly SCRIPTS_DIR="$(dirname "$0")"
 readonly EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -name module | cut -d'/' -f2)"
 
-for example in ${EXAMPLES}; do
-  "${SCRIPTS_DIR}/build_example" "${example}"
+for example in $EXAMPLES; do
+  "$SCRIPTS_DIR/build_example" "$example"
 done
