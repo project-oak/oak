@@ -10,21 +10,41 @@ steps:
   # Build Docker image based on current Dockerfile, if necessary.
   - name: 'gcr.io/cloud-builders/docker'
     id: build_image
-    waitFor: ['pull_image']
     timeout: 10m
     args: ['build', '--pull', '--cache-from=gcr.io/oak-ci/oak:latest', '--tag=gcr.io/oak-ci/oak:latest', '.']
-  # Run build step inside the newly created Docker image.
+  # Run next build steps inside the newly created Docker image.
   # See: https://cloud.google.com/cloud-build/docs/create-custom-build-steps
   - name: 'gcr.io/oak-ci/oak:latest'
-    id: build_code
+    id: check_formatting
+    waitFor: ['build_image']
+    timeout: 30m
+    entrypoint: 'bash'
+    args: ['./scripts/check_formatting']
+  - name: 'gcr.io/oak-ci/oak:latest'
+    id: build_server
     waitFor: ['build_image']
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/build_server']
+  - name: 'gcr.io/oak-ci/oak:latest'
+    id: build_dev_server
+    timeout: 30m
+    entrypoint: 'bash'
+    args: ['./scripts/build_dev_server']
+  - name: 'gcr.io/oak-ci/oak:latest'
+    id: run_tests
+    timeout: 30m
+    entrypoint: 'bash'
+    args: ['./scripts/run_tests']
+  - name: 'gcr.io/oak-ci/oak:latest'
+    id: run_examples
+    timeout: 30m
+    entrypoint: 'bash'
+    args: ['./scripts/run_examples']
   # Copy compiled enclave binary to workspace so that it can be uploaded as artifact.
   - name: 'gcr.io/oak-ci/oak:latest'
     id: copy_artifacts
-    waitFor: ['build_code']
+    waitFor: ['build_server']
     timeout: 5m
     entrypoint: 'cp'
     args: ['./bazel-bin/oak/server/asylo/oak_enclave_unsigned.so', './oak_enclave_unsigned.so']
@@ -43,6 +63,7 @@ artifacts:
 timeout: 2h
 
 options:
-  machineType: 'N1_HIGHCPU_8'
+  # See: https://cloud.google.com/cloud-build/docs/api/reference/rest/Shared.Types/MachineType
+  machineType: 'N1_HIGHCPU_32'
   requestedVerifyOption: 'VERIFIED'
   sourceProvenanceHash: [ 'SHA256' ]

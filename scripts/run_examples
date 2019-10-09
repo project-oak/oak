@@ -11,22 +11,23 @@ readonly DOCKER_USER="${USER:-root}"
 readonly SCRIPTS_DIR="$(dirname "$0")"
 
 # Build Oak server.
-"$SCRIPTS_DIR/docker_run" "$SCRIPTS_DIR/build_server"
+"$SCRIPTS_DIR/build_server"
 
 # Run Rust-based Oak examples, each with their own Oak server instance.
 readonly RUST_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module/rust$' | cut -d'/' -f2)"
 for example in ${RUST_EXAMPLES}; do
-  container_id=$("$SCRIPTS_DIR/docker_run" --detach ./bazel-bin/oak/server/asylo/oak)
-  docker logs --follow "$container_id" &
-  "${SCRIPTS_DIR}/docker_run" "${SCRIPTS_DIR}/run_example" "${example}"
-  docker stop "$container_id"
+  ./bazel-bin/oak/server/asylo/oak &
+  SERVER_PID=$!
+  "${SCRIPTS_DIR}/run_example" "${example}"
+  # TODO: Ensure that background processes are killed with something like `trap cleanup_fn EXIT`.
+  kill -s SIGTERM "$SERVER_PID"
 done
 
 # Run C++-based Oak examples.
 readonly CPP_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module/cpp$' | cut -d'/' -f2)"
 for example in ${CPP_EXAMPLES}; do
-  container_id=$("$SCRIPTS_DIR/docker_run" --detach ./bazel-bin/oak/server/asylo/oak)
-  docker logs --follow "$container_id" &
-  "${SCRIPTS_DIR}/docker_run" "${SCRIPTS_DIR}/run_example" -c "${example}"
-  docker stop "$container_id"
+  ./bazel-bin/oak/server/asylo/oak &
+  SERVER_PID=$!
+  "${SCRIPTS_DIR}/run_example" -c "${example}"
+  kill -s SIGTERM "$SERVER_PID"
 done
