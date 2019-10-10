@@ -27,34 +27,24 @@ use protobuf::ProtobufEnum as ProtobufEnum_imported_for_functions;
 const _PROTOBUF_VERSION_CHECK: () = ::protobuf::VERSION_2_8_0;
 
 #[derive(PartialEq,Clone,Default)]
-pub struct StorageChannelRequest {
+pub struct StorageChannelReadRequest {
     // message fields
     pub storage_name: ::std::vec::Vec<u8>,
-    // message oneof groups
-    pub operation: ::std::option::Option<StorageChannelRequest_oneof_operation>,
+    pub transaction_id: ::std::vec::Vec<u8>,
+    pub datum_name: ::std::vec::Vec<u8>,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
 }
 
-impl<'a> ::std::default::Default for &'a StorageChannelRequest {
-    fn default() -> &'a StorageChannelRequest {
-        <StorageChannelRequest as ::protobuf::Message>::default_instance()
+impl<'a> ::std::default::Default for &'a StorageChannelReadRequest {
+    fn default() -> &'a StorageChannelReadRequest {
+        <StorageChannelReadRequest as ::protobuf::Message>::default_instance()
     }
 }
 
-#[derive(Clone,PartialEq,Debug)]
-pub enum StorageChannelRequest_oneof_operation {
-    read_request(StorageChannelReadRequest),
-    write_request(StorageChannelWriteRequest),
-    delete_request(StorageChannelDeleteRequest),
-    begin_request(StorageChannelBeginRequest),
-    commit_request(StorageChannelCommitRequest),
-    rollback_request(StorageChannelRollbackRequest),
-}
-
-impl StorageChannelRequest {
-    pub fn new() -> StorageChannelRequest {
+impl StorageChannelReadRequest {
+    pub fn new() -> StorageChannelReadRequest {
         ::std::default::Default::default()
     }
 
@@ -84,1263 +74,7 @@ impl StorageChannelRequest {
         ::std::mem::replace(&mut self.storage_name, ::std::vec::Vec::new())
     }
 
-    // .oak.StorageChannelReadRequest read_request = 2;
-
-
-    pub fn get_read_request(&self) -> &StorageChannelReadRequest {
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelRequest_oneof_operation::read_request(ref v)) => v,
-            _ => StorageChannelReadRequest::default_instance(),
-        }
-    }
-    pub fn clear_read_request(&mut self) {
-        self.operation = ::std::option::Option::None;
-    }
-
-    pub fn has_read_request(&self) -> bool {
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelRequest_oneof_operation::read_request(..)) => true,
-            _ => false,
-        }
-    }
-
-    // Param is passed by value, moved
-    pub fn set_read_request(&mut self, v: StorageChannelReadRequest) {
-        self.operation = ::std::option::Option::Some(StorageChannelRequest_oneof_operation::read_request(v))
-    }
-
-    // Mutable pointer to the field.
-    pub fn mut_read_request(&mut self) -> &mut StorageChannelReadRequest {
-        if let ::std::option::Option::Some(StorageChannelRequest_oneof_operation::read_request(_)) = self.operation {
-        } else {
-            self.operation = ::std::option::Option::Some(StorageChannelRequest_oneof_operation::read_request(StorageChannelReadRequest::new()));
-        }
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelRequest_oneof_operation::read_request(ref mut v)) => v,
-            _ => panic!(),
-        }
-    }
-
-    // Take field
-    pub fn take_read_request(&mut self) -> StorageChannelReadRequest {
-        if self.has_read_request() {
-            match self.operation.take() {
-                ::std::option::Option::Some(StorageChannelRequest_oneof_operation::read_request(v)) => v,
-                _ => panic!(),
-            }
-        } else {
-            StorageChannelReadRequest::new()
-        }
-    }
-
-    // .oak.StorageChannelWriteRequest write_request = 3;
-
-
-    pub fn get_write_request(&self) -> &StorageChannelWriteRequest {
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelRequest_oneof_operation::write_request(ref v)) => v,
-            _ => StorageChannelWriteRequest::default_instance(),
-        }
-    }
-    pub fn clear_write_request(&mut self) {
-        self.operation = ::std::option::Option::None;
-    }
-
-    pub fn has_write_request(&self) -> bool {
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelRequest_oneof_operation::write_request(..)) => true,
-            _ => false,
-        }
-    }
-
-    // Param is passed by value, moved
-    pub fn set_write_request(&mut self, v: StorageChannelWriteRequest) {
-        self.operation = ::std::option::Option::Some(StorageChannelRequest_oneof_operation::write_request(v))
-    }
-
-    // Mutable pointer to the field.
-    pub fn mut_write_request(&mut self) -> &mut StorageChannelWriteRequest {
-        if let ::std::option::Option::Some(StorageChannelRequest_oneof_operation::write_request(_)) = self.operation {
-        } else {
-            self.operation = ::std::option::Option::Some(StorageChannelRequest_oneof_operation::write_request(StorageChannelWriteRequest::new()));
-        }
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelRequest_oneof_operation::write_request(ref mut v)) => v,
-            _ => panic!(),
-        }
-    }
-
-    // Take field
-    pub fn take_write_request(&mut self) -> StorageChannelWriteRequest {
-        if self.has_write_request() {
-            match self.operation.take() {
-                ::std::option::Option::Some(StorageChannelRequest_oneof_operation::write_request(v)) => v,
-                _ => panic!(),
-            }
-        } else {
-            StorageChannelWriteRequest::new()
-        }
-    }
-
-    // .oak.StorageChannelDeleteRequest delete_request = 4;
-
-
-    pub fn get_delete_request(&self) -> &StorageChannelDeleteRequest {
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelRequest_oneof_operation::delete_request(ref v)) => v,
-            _ => StorageChannelDeleteRequest::default_instance(),
-        }
-    }
-    pub fn clear_delete_request(&mut self) {
-        self.operation = ::std::option::Option::None;
-    }
-
-    pub fn has_delete_request(&self) -> bool {
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelRequest_oneof_operation::delete_request(..)) => true,
-            _ => false,
-        }
-    }
-
-    // Param is passed by value, moved
-    pub fn set_delete_request(&mut self, v: StorageChannelDeleteRequest) {
-        self.operation = ::std::option::Option::Some(StorageChannelRequest_oneof_operation::delete_request(v))
-    }
-
-    // Mutable pointer to the field.
-    pub fn mut_delete_request(&mut self) -> &mut StorageChannelDeleteRequest {
-        if let ::std::option::Option::Some(StorageChannelRequest_oneof_operation::delete_request(_)) = self.operation {
-        } else {
-            self.operation = ::std::option::Option::Some(StorageChannelRequest_oneof_operation::delete_request(StorageChannelDeleteRequest::new()));
-        }
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelRequest_oneof_operation::delete_request(ref mut v)) => v,
-            _ => panic!(),
-        }
-    }
-
-    // Take field
-    pub fn take_delete_request(&mut self) -> StorageChannelDeleteRequest {
-        if self.has_delete_request() {
-            match self.operation.take() {
-                ::std::option::Option::Some(StorageChannelRequest_oneof_operation::delete_request(v)) => v,
-                _ => panic!(),
-            }
-        } else {
-            StorageChannelDeleteRequest::new()
-        }
-    }
-
-    // .oak.StorageChannelBeginRequest begin_request = 5;
-
-
-    pub fn get_begin_request(&self) -> &StorageChannelBeginRequest {
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelRequest_oneof_operation::begin_request(ref v)) => v,
-            _ => StorageChannelBeginRequest::default_instance(),
-        }
-    }
-    pub fn clear_begin_request(&mut self) {
-        self.operation = ::std::option::Option::None;
-    }
-
-    pub fn has_begin_request(&self) -> bool {
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelRequest_oneof_operation::begin_request(..)) => true,
-            _ => false,
-        }
-    }
-
-    // Param is passed by value, moved
-    pub fn set_begin_request(&mut self, v: StorageChannelBeginRequest) {
-        self.operation = ::std::option::Option::Some(StorageChannelRequest_oneof_operation::begin_request(v))
-    }
-
-    // Mutable pointer to the field.
-    pub fn mut_begin_request(&mut self) -> &mut StorageChannelBeginRequest {
-        if let ::std::option::Option::Some(StorageChannelRequest_oneof_operation::begin_request(_)) = self.operation {
-        } else {
-            self.operation = ::std::option::Option::Some(StorageChannelRequest_oneof_operation::begin_request(StorageChannelBeginRequest::new()));
-        }
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelRequest_oneof_operation::begin_request(ref mut v)) => v,
-            _ => panic!(),
-        }
-    }
-
-    // Take field
-    pub fn take_begin_request(&mut self) -> StorageChannelBeginRequest {
-        if self.has_begin_request() {
-            match self.operation.take() {
-                ::std::option::Option::Some(StorageChannelRequest_oneof_operation::begin_request(v)) => v,
-                _ => panic!(),
-            }
-        } else {
-            StorageChannelBeginRequest::new()
-        }
-    }
-
-    // .oak.StorageChannelCommitRequest commit_request = 6;
-
-
-    pub fn get_commit_request(&self) -> &StorageChannelCommitRequest {
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelRequest_oneof_operation::commit_request(ref v)) => v,
-            _ => StorageChannelCommitRequest::default_instance(),
-        }
-    }
-    pub fn clear_commit_request(&mut self) {
-        self.operation = ::std::option::Option::None;
-    }
-
-    pub fn has_commit_request(&self) -> bool {
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelRequest_oneof_operation::commit_request(..)) => true,
-            _ => false,
-        }
-    }
-
-    // Param is passed by value, moved
-    pub fn set_commit_request(&mut self, v: StorageChannelCommitRequest) {
-        self.operation = ::std::option::Option::Some(StorageChannelRequest_oneof_operation::commit_request(v))
-    }
-
-    // Mutable pointer to the field.
-    pub fn mut_commit_request(&mut self) -> &mut StorageChannelCommitRequest {
-        if let ::std::option::Option::Some(StorageChannelRequest_oneof_operation::commit_request(_)) = self.operation {
-        } else {
-            self.operation = ::std::option::Option::Some(StorageChannelRequest_oneof_operation::commit_request(StorageChannelCommitRequest::new()));
-        }
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelRequest_oneof_operation::commit_request(ref mut v)) => v,
-            _ => panic!(),
-        }
-    }
-
-    // Take field
-    pub fn take_commit_request(&mut self) -> StorageChannelCommitRequest {
-        if self.has_commit_request() {
-            match self.operation.take() {
-                ::std::option::Option::Some(StorageChannelRequest_oneof_operation::commit_request(v)) => v,
-                _ => panic!(),
-            }
-        } else {
-            StorageChannelCommitRequest::new()
-        }
-    }
-
-    // .oak.StorageChannelRollbackRequest rollback_request = 7;
-
-
-    pub fn get_rollback_request(&self) -> &StorageChannelRollbackRequest {
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelRequest_oneof_operation::rollback_request(ref v)) => v,
-            _ => StorageChannelRollbackRequest::default_instance(),
-        }
-    }
-    pub fn clear_rollback_request(&mut self) {
-        self.operation = ::std::option::Option::None;
-    }
-
-    pub fn has_rollback_request(&self) -> bool {
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelRequest_oneof_operation::rollback_request(..)) => true,
-            _ => false,
-        }
-    }
-
-    // Param is passed by value, moved
-    pub fn set_rollback_request(&mut self, v: StorageChannelRollbackRequest) {
-        self.operation = ::std::option::Option::Some(StorageChannelRequest_oneof_operation::rollback_request(v))
-    }
-
-    // Mutable pointer to the field.
-    pub fn mut_rollback_request(&mut self) -> &mut StorageChannelRollbackRequest {
-        if let ::std::option::Option::Some(StorageChannelRequest_oneof_operation::rollback_request(_)) = self.operation {
-        } else {
-            self.operation = ::std::option::Option::Some(StorageChannelRequest_oneof_operation::rollback_request(StorageChannelRollbackRequest::new()));
-        }
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelRequest_oneof_operation::rollback_request(ref mut v)) => v,
-            _ => panic!(),
-        }
-    }
-
-    // Take field
-    pub fn take_rollback_request(&mut self) -> StorageChannelRollbackRequest {
-        if self.has_rollback_request() {
-            match self.operation.take() {
-                ::std::option::Option::Some(StorageChannelRequest_oneof_operation::rollback_request(v)) => v,
-                _ => panic!(),
-            }
-        } else {
-            StorageChannelRollbackRequest::new()
-        }
-    }
-}
-
-impl ::protobuf::Message for StorageChannelRequest {
-    fn is_initialized(&self) -> bool {
-        if let Some(StorageChannelRequest_oneof_operation::read_request(ref v)) = self.operation {
-            if !v.is_initialized() {
-                return false;
-            }
-        }
-        if let Some(StorageChannelRequest_oneof_operation::write_request(ref v)) = self.operation {
-            if !v.is_initialized() {
-                return false;
-            }
-        }
-        if let Some(StorageChannelRequest_oneof_operation::delete_request(ref v)) = self.operation {
-            if !v.is_initialized() {
-                return false;
-            }
-        }
-        if let Some(StorageChannelRequest_oneof_operation::begin_request(ref v)) = self.operation {
-            if !v.is_initialized() {
-                return false;
-            }
-        }
-        if let Some(StorageChannelRequest_oneof_operation::commit_request(ref v)) = self.operation {
-            if !v.is_initialized() {
-                return false;
-            }
-        }
-        if let Some(StorageChannelRequest_oneof_operation::rollback_request(ref v)) = self.operation {
-            if !v.is_initialized() {
-                return false;
-            }
-        }
-        true
-    }
-
-    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream) -> ::protobuf::ProtobufResult<()> {
-        while !is.eof()? {
-            let (field_number, wire_type) = is.read_tag_unpack()?;
-            match field_number {
-                1 => {
-                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.storage_name)?;
-                },
-                2 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    self.operation = ::std::option::Option::Some(StorageChannelRequest_oneof_operation::read_request(is.read_message()?));
-                },
-                3 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    self.operation = ::std::option::Option::Some(StorageChannelRequest_oneof_operation::write_request(is.read_message()?));
-                },
-                4 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    self.operation = ::std::option::Option::Some(StorageChannelRequest_oneof_operation::delete_request(is.read_message()?));
-                },
-                5 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    self.operation = ::std::option::Option::Some(StorageChannelRequest_oneof_operation::begin_request(is.read_message()?));
-                },
-                6 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    self.operation = ::std::option::Option::Some(StorageChannelRequest_oneof_operation::commit_request(is.read_message()?));
-                },
-                7 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    self.operation = ::std::option::Option::Some(StorageChannelRequest_oneof_operation::rollback_request(is.read_message()?));
-                },
-                _ => {
-                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
-                },
-            };
-        }
-        ::std::result::Result::Ok(())
-    }
-
-    // Compute sizes of nested messages
-    #[allow(unused_variables)]
-    fn compute_size(&self) -> u32 {
-        let mut my_size = 0;
-        if !self.storage_name.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(1, &self.storage_name);
-        }
-        if let ::std::option::Option::Some(ref v) = self.operation {
-            match v {
-                &StorageChannelRequest_oneof_operation::read_request(ref v) => {
-                    let len = v.compute_size();
-                    my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
-                },
-                &StorageChannelRequest_oneof_operation::write_request(ref v) => {
-                    let len = v.compute_size();
-                    my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
-                },
-                &StorageChannelRequest_oneof_operation::delete_request(ref v) => {
-                    let len = v.compute_size();
-                    my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
-                },
-                &StorageChannelRequest_oneof_operation::begin_request(ref v) => {
-                    let len = v.compute_size();
-                    my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
-                },
-                &StorageChannelRequest_oneof_operation::commit_request(ref v) => {
-                    let len = v.compute_size();
-                    my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
-                },
-                &StorageChannelRequest_oneof_operation::rollback_request(ref v) => {
-                    let len = v.compute_size();
-                    my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
-                },
-            };
-        }
-        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
-        self.cached_size.set(my_size);
-        my_size
-    }
-
-    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
-        if !self.storage_name.is_empty() {
-            os.write_bytes(1, &self.storage_name)?;
-        }
-        if let ::std::option::Option::Some(ref v) = self.operation {
-            match v {
-                &StorageChannelRequest_oneof_operation::read_request(ref v) => {
-                    os.write_tag(2, ::protobuf::wire_format::WireTypeLengthDelimited)?;
-                    os.write_raw_varint32(v.get_cached_size())?;
-                    v.write_to_with_cached_sizes(os)?;
-                },
-                &StorageChannelRequest_oneof_operation::write_request(ref v) => {
-                    os.write_tag(3, ::protobuf::wire_format::WireTypeLengthDelimited)?;
-                    os.write_raw_varint32(v.get_cached_size())?;
-                    v.write_to_with_cached_sizes(os)?;
-                },
-                &StorageChannelRequest_oneof_operation::delete_request(ref v) => {
-                    os.write_tag(4, ::protobuf::wire_format::WireTypeLengthDelimited)?;
-                    os.write_raw_varint32(v.get_cached_size())?;
-                    v.write_to_with_cached_sizes(os)?;
-                },
-                &StorageChannelRequest_oneof_operation::begin_request(ref v) => {
-                    os.write_tag(5, ::protobuf::wire_format::WireTypeLengthDelimited)?;
-                    os.write_raw_varint32(v.get_cached_size())?;
-                    v.write_to_with_cached_sizes(os)?;
-                },
-                &StorageChannelRequest_oneof_operation::commit_request(ref v) => {
-                    os.write_tag(6, ::protobuf::wire_format::WireTypeLengthDelimited)?;
-                    os.write_raw_varint32(v.get_cached_size())?;
-                    v.write_to_with_cached_sizes(os)?;
-                },
-                &StorageChannelRequest_oneof_operation::rollback_request(ref v) => {
-                    os.write_tag(7, ::protobuf::wire_format::WireTypeLengthDelimited)?;
-                    os.write_raw_varint32(v.get_cached_size())?;
-                    v.write_to_with_cached_sizes(os)?;
-                },
-            };
-        }
-        os.write_unknown_fields(self.get_unknown_fields())?;
-        ::std::result::Result::Ok(())
-    }
-
-    fn get_cached_size(&self) -> u32 {
-        self.cached_size.get()
-    }
-
-    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
-        &self.unknown_fields
-    }
-
-    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
-        &mut self.unknown_fields
-    }
-
-    fn as_any(&self) -> &dyn (::std::any::Any) {
-        self as &dyn (::std::any::Any)
-    }
-    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
-        self as &mut dyn (::std::any::Any)
-    }
-    fn into_any(self: Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
-        self
-    }
-
-    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
-        Self::descriptor_static()
-    }
-
-    fn new() -> StorageChannelRequest {
-        StorageChannelRequest::new()
-    }
-
-    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
-        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
-        };
-        unsafe {
-            descriptor.get(|| {
-                let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
-                    "storage_name",
-                    |m: &StorageChannelRequest| { &m.storage_name },
-                    |m: &mut StorageChannelRequest| { &mut m.storage_name },
-                ));
-                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, StorageChannelReadRequest>(
-                    "read_request",
-                    StorageChannelRequest::has_read_request,
-                    StorageChannelRequest::get_read_request,
-                ));
-                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, StorageChannelWriteRequest>(
-                    "write_request",
-                    StorageChannelRequest::has_write_request,
-                    StorageChannelRequest::get_write_request,
-                ));
-                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, StorageChannelDeleteRequest>(
-                    "delete_request",
-                    StorageChannelRequest::has_delete_request,
-                    StorageChannelRequest::get_delete_request,
-                ));
-                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, StorageChannelBeginRequest>(
-                    "begin_request",
-                    StorageChannelRequest::has_begin_request,
-                    StorageChannelRequest::get_begin_request,
-                ));
-                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, StorageChannelCommitRequest>(
-                    "commit_request",
-                    StorageChannelRequest::has_commit_request,
-                    StorageChannelRequest::get_commit_request,
-                ));
-                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, StorageChannelRollbackRequest>(
-                    "rollback_request",
-                    StorageChannelRequest::has_rollback_request,
-                    StorageChannelRequest::get_rollback_request,
-                ));
-                ::protobuf::reflect::MessageDescriptor::new::<StorageChannelRequest>(
-                    "StorageChannelRequest",
-                    fields,
-                    file_descriptor_proto()
-                )
-            })
-        }
-    }
-
-    fn default_instance() -> &'static StorageChannelRequest {
-        static mut instance: ::protobuf::lazy::Lazy<StorageChannelRequest> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const StorageChannelRequest,
-        };
-        unsafe {
-            instance.get(StorageChannelRequest::new)
-        }
-    }
-}
-
-impl ::protobuf::Clear for StorageChannelRequest {
-    fn clear(&mut self) {
-        self.storage_name.clear();
-        self.operation = ::std::option::Option::None;
-        self.operation = ::std::option::Option::None;
-        self.operation = ::std::option::Option::None;
-        self.operation = ::std::option::Option::None;
-        self.operation = ::std::option::Option::None;
-        self.operation = ::std::option::Option::None;
-        self.unknown_fields.clear();
-    }
-}
-
-impl ::std::fmt::Debug for StorageChannelRequest {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        ::protobuf::text_format::fmt(self, f)
-    }
-}
-
-impl ::protobuf::reflect::ProtobufValue for StorageChannelRequest {
-    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
-        ::protobuf::reflect::ProtobufValueRef::Message(self)
-    }
-}
-
-#[derive(PartialEq,Clone,Default)]
-pub struct StorageChannelResponse {
-    // message fields
-    pub status: ::protobuf::SingularPtrField<super::status::Status>,
-    // message oneof groups
-    pub operation: ::std::option::Option<StorageChannelResponse_oneof_operation>,
-    // special fields
-    pub unknown_fields: ::protobuf::UnknownFields,
-    pub cached_size: ::protobuf::CachedSize,
-}
-
-impl<'a> ::std::default::Default for &'a StorageChannelResponse {
-    fn default() -> &'a StorageChannelResponse {
-        <StorageChannelResponse as ::protobuf::Message>::default_instance()
-    }
-}
-
-#[derive(Clone,PartialEq,Debug)]
-pub enum StorageChannelResponse_oneof_operation {
-    read_response(StorageChannelReadResponse),
-    write_response(StorageChannelWriteResponse),
-    delete_response(StorageChannelDeleteResponse),
-    begin_response(StorageChannelBeginResponse),
-    commit_response(StorageChannelCommitResponse),
-    rollback_response(StorageChannelRollbackResponse),
-}
-
-impl StorageChannelResponse {
-    pub fn new() -> StorageChannelResponse {
-        ::std::default::Default::default()
-    }
-
-    // .google.rpc.Status status = 1;
-
-
-    pub fn get_status(&self) -> &super::status::Status {
-        self.status.as_ref().unwrap_or_else(|| super::status::Status::default_instance())
-    }
-    pub fn clear_status(&mut self) {
-        self.status.clear();
-    }
-
-    pub fn has_status(&self) -> bool {
-        self.status.is_some()
-    }
-
-    // Param is passed by value, moved
-    pub fn set_status(&mut self, v: super::status::Status) {
-        self.status = ::protobuf::SingularPtrField::some(v);
-    }
-
-    // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_status(&mut self) -> &mut super::status::Status {
-        if self.status.is_none() {
-            self.status.set_default();
-        }
-        self.status.as_mut().unwrap()
-    }
-
-    // Take field
-    pub fn take_status(&mut self) -> super::status::Status {
-        self.status.take().unwrap_or_else(|| super::status::Status::new())
-    }
-
-    // .oak.StorageChannelReadResponse read_response = 2;
-
-
-    pub fn get_read_response(&self) -> &StorageChannelReadResponse {
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelResponse_oneof_operation::read_response(ref v)) => v,
-            _ => StorageChannelReadResponse::default_instance(),
-        }
-    }
-    pub fn clear_read_response(&mut self) {
-        self.operation = ::std::option::Option::None;
-    }
-
-    pub fn has_read_response(&self) -> bool {
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelResponse_oneof_operation::read_response(..)) => true,
-            _ => false,
-        }
-    }
-
-    // Param is passed by value, moved
-    pub fn set_read_response(&mut self, v: StorageChannelReadResponse) {
-        self.operation = ::std::option::Option::Some(StorageChannelResponse_oneof_operation::read_response(v))
-    }
-
-    // Mutable pointer to the field.
-    pub fn mut_read_response(&mut self) -> &mut StorageChannelReadResponse {
-        if let ::std::option::Option::Some(StorageChannelResponse_oneof_operation::read_response(_)) = self.operation {
-        } else {
-            self.operation = ::std::option::Option::Some(StorageChannelResponse_oneof_operation::read_response(StorageChannelReadResponse::new()));
-        }
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelResponse_oneof_operation::read_response(ref mut v)) => v,
-            _ => panic!(),
-        }
-    }
-
-    // Take field
-    pub fn take_read_response(&mut self) -> StorageChannelReadResponse {
-        if self.has_read_response() {
-            match self.operation.take() {
-                ::std::option::Option::Some(StorageChannelResponse_oneof_operation::read_response(v)) => v,
-                _ => panic!(),
-            }
-        } else {
-            StorageChannelReadResponse::new()
-        }
-    }
-
-    // .oak.StorageChannelWriteResponse write_response = 3;
-
-
-    pub fn get_write_response(&self) -> &StorageChannelWriteResponse {
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelResponse_oneof_operation::write_response(ref v)) => v,
-            _ => StorageChannelWriteResponse::default_instance(),
-        }
-    }
-    pub fn clear_write_response(&mut self) {
-        self.operation = ::std::option::Option::None;
-    }
-
-    pub fn has_write_response(&self) -> bool {
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelResponse_oneof_operation::write_response(..)) => true,
-            _ => false,
-        }
-    }
-
-    // Param is passed by value, moved
-    pub fn set_write_response(&mut self, v: StorageChannelWriteResponse) {
-        self.operation = ::std::option::Option::Some(StorageChannelResponse_oneof_operation::write_response(v))
-    }
-
-    // Mutable pointer to the field.
-    pub fn mut_write_response(&mut self) -> &mut StorageChannelWriteResponse {
-        if let ::std::option::Option::Some(StorageChannelResponse_oneof_operation::write_response(_)) = self.operation {
-        } else {
-            self.operation = ::std::option::Option::Some(StorageChannelResponse_oneof_operation::write_response(StorageChannelWriteResponse::new()));
-        }
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelResponse_oneof_operation::write_response(ref mut v)) => v,
-            _ => panic!(),
-        }
-    }
-
-    // Take field
-    pub fn take_write_response(&mut self) -> StorageChannelWriteResponse {
-        if self.has_write_response() {
-            match self.operation.take() {
-                ::std::option::Option::Some(StorageChannelResponse_oneof_operation::write_response(v)) => v,
-                _ => panic!(),
-            }
-        } else {
-            StorageChannelWriteResponse::new()
-        }
-    }
-
-    // .oak.StorageChannelDeleteResponse delete_response = 4;
-
-
-    pub fn get_delete_response(&self) -> &StorageChannelDeleteResponse {
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelResponse_oneof_operation::delete_response(ref v)) => v,
-            _ => StorageChannelDeleteResponse::default_instance(),
-        }
-    }
-    pub fn clear_delete_response(&mut self) {
-        self.operation = ::std::option::Option::None;
-    }
-
-    pub fn has_delete_response(&self) -> bool {
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelResponse_oneof_operation::delete_response(..)) => true,
-            _ => false,
-        }
-    }
-
-    // Param is passed by value, moved
-    pub fn set_delete_response(&mut self, v: StorageChannelDeleteResponse) {
-        self.operation = ::std::option::Option::Some(StorageChannelResponse_oneof_operation::delete_response(v))
-    }
-
-    // Mutable pointer to the field.
-    pub fn mut_delete_response(&mut self) -> &mut StorageChannelDeleteResponse {
-        if let ::std::option::Option::Some(StorageChannelResponse_oneof_operation::delete_response(_)) = self.operation {
-        } else {
-            self.operation = ::std::option::Option::Some(StorageChannelResponse_oneof_operation::delete_response(StorageChannelDeleteResponse::new()));
-        }
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelResponse_oneof_operation::delete_response(ref mut v)) => v,
-            _ => panic!(),
-        }
-    }
-
-    // Take field
-    pub fn take_delete_response(&mut self) -> StorageChannelDeleteResponse {
-        if self.has_delete_response() {
-            match self.operation.take() {
-                ::std::option::Option::Some(StorageChannelResponse_oneof_operation::delete_response(v)) => v,
-                _ => panic!(),
-            }
-        } else {
-            StorageChannelDeleteResponse::new()
-        }
-    }
-
-    // .oak.StorageChannelBeginResponse begin_response = 5;
-
-
-    pub fn get_begin_response(&self) -> &StorageChannelBeginResponse {
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelResponse_oneof_operation::begin_response(ref v)) => v,
-            _ => StorageChannelBeginResponse::default_instance(),
-        }
-    }
-    pub fn clear_begin_response(&mut self) {
-        self.operation = ::std::option::Option::None;
-    }
-
-    pub fn has_begin_response(&self) -> bool {
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelResponse_oneof_operation::begin_response(..)) => true,
-            _ => false,
-        }
-    }
-
-    // Param is passed by value, moved
-    pub fn set_begin_response(&mut self, v: StorageChannelBeginResponse) {
-        self.operation = ::std::option::Option::Some(StorageChannelResponse_oneof_operation::begin_response(v))
-    }
-
-    // Mutable pointer to the field.
-    pub fn mut_begin_response(&mut self) -> &mut StorageChannelBeginResponse {
-        if let ::std::option::Option::Some(StorageChannelResponse_oneof_operation::begin_response(_)) = self.operation {
-        } else {
-            self.operation = ::std::option::Option::Some(StorageChannelResponse_oneof_operation::begin_response(StorageChannelBeginResponse::new()));
-        }
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelResponse_oneof_operation::begin_response(ref mut v)) => v,
-            _ => panic!(),
-        }
-    }
-
-    // Take field
-    pub fn take_begin_response(&mut self) -> StorageChannelBeginResponse {
-        if self.has_begin_response() {
-            match self.operation.take() {
-                ::std::option::Option::Some(StorageChannelResponse_oneof_operation::begin_response(v)) => v,
-                _ => panic!(),
-            }
-        } else {
-            StorageChannelBeginResponse::new()
-        }
-    }
-
-    // .oak.StorageChannelCommitResponse commit_response = 6;
-
-
-    pub fn get_commit_response(&self) -> &StorageChannelCommitResponse {
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelResponse_oneof_operation::commit_response(ref v)) => v,
-            _ => StorageChannelCommitResponse::default_instance(),
-        }
-    }
-    pub fn clear_commit_response(&mut self) {
-        self.operation = ::std::option::Option::None;
-    }
-
-    pub fn has_commit_response(&self) -> bool {
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelResponse_oneof_operation::commit_response(..)) => true,
-            _ => false,
-        }
-    }
-
-    // Param is passed by value, moved
-    pub fn set_commit_response(&mut self, v: StorageChannelCommitResponse) {
-        self.operation = ::std::option::Option::Some(StorageChannelResponse_oneof_operation::commit_response(v))
-    }
-
-    // Mutable pointer to the field.
-    pub fn mut_commit_response(&mut self) -> &mut StorageChannelCommitResponse {
-        if let ::std::option::Option::Some(StorageChannelResponse_oneof_operation::commit_response(_)) = self.operation {
-        } else {
-            self.operation = ::std::option::Option::Some(StorageChannelResponse_oneof_operation::commit_response(StorageChannelCommitResponse::new()));
-        }
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelResponse_oneof_operation::commit_response(ref mut v)) => v,
-            _ => panic!(),
-        }
-    }
-
-    // Take field
-    pub fn take_commit_response(&mut self) -> StorageChannelCommitResponse {
-        if self.has_commit_response() {
-            match self.operation.take() {
-                ::std::option::Option::Some(StorageChannelResponse_oneof_operation::commit_response(v)) => v,
-                _ => panic!(),
-            }
-        } else {
-            StorageChannelCommitResponse::new()
-        }
-    }
-
-    // .oak.StorageChannelRollbackResponse rollback_response = 7;
-
-
-    pub fn get_rollback_response(&self) -> &StorageChannelRollbackResponse {
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelResponse_oneof_operation::rollback_response(ref v)) => v,
-            _ => StorageChannelRollbackResponse::default_instance(),
-        }
-    }
-    pub fn clear_rollback_response(&mut self) {
-        self.operation = ::std::option::Option::None;
-    }
-
-    pub fn has_rollback_response(&self) -> bool {
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelResponse_oneof_operation::rollback_response(..)) => true,
-            _ => false,
-        }
-    }
-
-    // Param is passed by value, moved
-    pub fn set_rollback_response(&mut self, v: StorageChannelRollbackResponse) {
-        self.operation = ::std::option::Option::Some(StorageChannelResponse_oneof_operation::rollback_response(v))
-    }
-
-    // Mutable pointer to the field.
-    pub fn mut_rollback_response(&mut self) -> &mut StorageChannelRollbackResponse {
-        if let ::std::option::Option::Some(StorageChannelResponse_oneof_operation::rollback_response(_)) = self.operation {
-        } else {
-            self.operation = ::std::option::Option::Some(StorageChannelResponse_oneof_operation::rollback_response(StorageChannelRollbackResponse::new()));
-        }
-        match self.operation {
-            ::std::option::Option::Some(StorageChannelResponse_oneof_operation::rollback_response(ref mut v)) => v,
-            _ => panic!(),
-        }
-    }
-
-    // Take field
-    pub fn take_rollback_response(&mut self) -> StorageChannelRollbackResponse {
-        if self.has_rollback_response() {
-            match self.operation.take() {
-                ::std::option::Option::Some(StorageChannelResponse_oneof_operation::rollback_response(v)) => v,
-                _ => panic!(),
-            }
-        } else {
-            StorageChannelRollbackResponse::new()
-        }
-    }
-}
-
-impl ::protobuf::Message for StorageChannelResponse {
-    fn is_initialized(&self) -> bool {
-        for v in &self.status {
-            if !v.is_initialized() {
-                return false;
-            }
-        };
-        if let Some(StorageChannelResponse_oneof_operation::read_response(ref v)) = self.operation {
-            if !v.is_initialized() {
-                return false;
-            }
-        }
-        if let Some(StorageChannelResponse_oneof_operation::write_response(ref v)) = self.operation {
-            if !v.is_initialized() {
-                return false;
-            }
-        }
-        if let Some(StorageChannelResponse_oneof_operation::delete_response(ref v)) = self.operation {
-            if !v.is_initialized() {
-                return false;
-            }
-        }
-        if let Some(StorageChannelResponse_oneof_operation::begin_response(ref v)) = self.operation {
-            if !v.is_initialized() {
-                return false;
-            }
-        }
-        if let Some(StorageChannelResponse_oneof_operation::commit_response(ref v)) = self.operation {
-            if !v.is_initialized() {
-                return false;
-            }
-        }
-        if let Some(StorageChannelResponse_oneof_operation::rollback_response(ref v)) = self.operation {
-            if !v.is_initialized() {
-                return false;
-            }
-        }
-        true
-    }
-
-    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream) -> ::protobuf::ProtobufResult<()> {
-        while !is.eof()? {
-            let (field_number, wire_type) = is.read_tag_unpack()?;
-            match field_number {
-                1 => {
-                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.status)?;
-                },
-                2 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    self.operation = ::std::option::Option::Some(StorageChannelResponse_oneof_operation::read_response(is.read_message()?));
-                },
-                3 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    self.operation = ::std::option::Option::Some(StorageChannelResponse_oneof_operation::write_response(is.read_message()?));
-                },
-                4 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    self.operation = ::std::option::Option::Some(StorageChannelResponse_oneof_operation::delete_response(is.read_message()?));
-                },
-                5 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    self.operation = ::std::option::Option::Some(StorageChannelResponse_oneof_operation::begin_response(is.read_message()?));
-                },
-                6 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    self.operation = ::std::option::Option::Some(StorageChannelResponse_oneof_operation::commit_response(is.read_message()?));
-                },
-                7 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    self.operation = ::std::option::Option::Some(StorageChannelResponse_oneof_operation::rollback_response(is.read_message()?));
-                },
-                _ => {
-                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
-                },
-            };
-        }
-        ::std::result::Result::Ok(())
-    }
-
-    // Compute sizes of nested messages
-    #[allow(unused_variables)]
-    fn compute_size(&self) -> u32 {
-        let mut my_size = 0;
-        if let Some(ref v) = self.status.as_ref() {
-            let len = v.compute_size();
-            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
-        }
-        if let ::std::option::Option::Some(ref v) = self.operation {
-            match v {
-                &StorageChannelResponse_oneof_operation::read_response(ref v) => {
-                    let len = v.compute_size();
-                    my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
-                },
-                &StorageChannelResponse_oneof_operation::write_response(ref v) => {
-                    let len = v.compute_size();
-                    my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
-                },
-                &StorageChannelResponse_oneof_operation::delete_response(ref v) => {
-                    let len = v.compute_size();
-                    my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
-                },
-                &StorageChannelResponse_oneof_operation::begin_response(ref v) => {
-                    let len = v.compute_size();
-                    my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
-                },
-                &StorageChannelResponse_oneof_operation::commit_response(ref v) => {
-                    let len = v.compute_size();
-                    my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
-                },
-                &StorageChannelResponse_oneof_operation::rollback_response(ref v) => {
-                    let len = v.compute_size();
-                    my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
-                },
-            };
-        }
-        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
-        self.cached_size.set(my_size);
-        my_size
-    }
-
-    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
-        if let Some(ref v) = self.status.as_ref() {
-            os.write_tag(1, ::protobuf::wire_format::WireTypeLengthDelimited)?;
-            os.write_raw_varint32(v.get_cached_size())?;
-            v.write_to_with_cached_sizes(os)?;
-        }
-        if let ::std::option::Option::Some(ref v) = self.operation {
-            match v {
-                &StorageChannelResponse_oneof_operation::read_response(ref v) => {
-                    os.write_tag(2, ::protobuf::wire_format::WireTypeLengthDelimited)?;
-                    os.write_raw_varint32(v.get_cached_size())?;
-                    v.write_to_with_cached_sizes(os)?;
-                },
-                &StorageChannelResponse_oneof_operation::write_response(ref v) => {
-                    os.write_tag(3, ::protobuf::wire_format::WireTypeLengthDelimited)?;
-                    os.write_raw_varint32(v.get_cached_size())?;
-                    v.write_to_with_cached_sizes(os)?;
-                },
-                &StorageChannelResponse_oneof_operation::delete_response(ref v) => {
-                    os.write_tag(4, ::protobuf::wire_format::WireTypeLengthDelimited)?;
-                    os.write_raw_varint32(v.get_cached_size())?;
-                    v.write_to_with_cached_sizes(os)?;
-                },
-                &StorageChannelResponse_oneof_operation::begin_response(ref v) => {
-                    os.write_tag(5, ::protobuf::wire_format::WireTypeLengthDelimited)?;
-                    os.write_raw_varint32(v.get_cached_size())?;
-                    v.write_to_with_cached_sizes(os)?;
-                },
-                &StorageChannelResponse_oneof_operation::commit_response(ref v) => {
-                    os.write_tag(6, ::protobuf::wire_format::WireTypeLengthDelimited)?;
-                    os.write_raw_varint32(v.get_cached_size())?;
-                    v.write_to_with_cached_sizes(os)?;
-                },
-                &StorageChannelResponse_oneof_operation::rollback_response(ref v) => {
-                    os.write_tag(7, ::protobuf::wire_format::WireTypeLengthDelimited)?;
-                    os.write_raw_varint32(v.get_cached_size())?;
-                    v.write_to_with_cached_sizes(os)?;
-                },
-            };
-        }
-        os.write_unknown_fields(self.get_unknown_fields())?;
-        ::std::result::Result::Ok(())
-    }
-
-    fn get_cached_size(&self) -> u32 {
-        self.cached_size.get()
-    }
-
-    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
-        &self.unknown_fields
-    }
-
-    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
-        &mut self.unknown_fields
-    }
-
-    fn as_any(&self) -> &dyn (::std::any::Any) {
-        self as &dyn (::std::any::Any)
-    }
-    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
-        self as &mut dyn (::std::any::Any)
-    }
-    fn into_any(self: Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
-        self
-    }
-
-    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
-        Self::descriptor_static()
-    }
-
-    fn new() -> StorageChannelResponse {
-        StorageChannelResponse::new()
-    }
-
-    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
-        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
-        };
-        unsafe {
-            descriptor.get(|| {
-                let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::status::Status>>(
-                    "status",
-                    |m: &StorageChannelResponse| { &m.status },
-                    |m: &mut StorageChannelResponse| { &mut m.status },
-                ));
-                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, StorageChannelReadResponse>(
-                    "read_response",
-                    StorageChannelResponse::has_read_response,
-                    StorageChannelResponse::get_read_response,
-                ));
-                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, StorageChannelWriteResponse>(
-                    "write_response",
-                    StorageChannelResponse::has_write_response,
-                    StorageChannelResponse::get_write_response,
-                ));
-                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, StorageChannelDeleteResponse>(
-                    "delete_response",
-                    StorageChannelResponse::has_delete_response,
-                    StorageChannelResponse::get_delete_response,
-                ));
-                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, StorageChannelBeginResponse>(
-                    "begin_response",
-                    StorageChannelResponse::has_begin_response,
-                    StorageChannelResponse::get_begin_response,
-                ));
-                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, StorageChannelCommitResponse>(
-                    "commit_response",
-                    StorageChannelResponse::has_commit_response,
-                    StorageChannelResponse::get_commit_response,
-                ));
-                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, StorageChannelRollbackResponse>(
-                    "rollback_response",
-                    StorageChannelResponse::has_rollback_response,
-                    StorageChannelResponse::get_rollback_response,
-                ));
-                ::protobuf::reflect::MessageDescriptor::new::<StorageChannelResponse>(
-                    "StorageChannelResponse",
-                    fields,
-                    file_descriptor_proto()
-                )
-            })
-        }
-    }
-
-    fn default_instance() -> &'static StorageChannelResponse {
-        static mut instance: ::protobuf::lazy::Lazy<StorageChannelResponse> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const StorageChannelResponse,
-        };
-        unsafe {
-            instance.get(StorageChannelResponse::new)
-        }
-    }
-}
-
-impl ::protobuf::Clear for StorageChannelResponse {
-    fn clear(&mut self) {
-        self.status.clear();
-        self.operation = ::std::option::Option::None;
-        self.operation = ::std::option::Option::None;
-        self.operation = ::std::option::Option::None;
-        self.operation = ::std::option::Option::None;
-        self.operation = ::std::option::Option::None;
-        self.operation = ::std::option::Option::None;
-        self.unknown_fields.clear();
-    }
-}
-
-impl ::std::fmt::Debug for StorageChannelResponse {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        ::protobuf::text_format::fmt(self, f)
-    }
-}
-
-impl ::protobuf::reflect::ProtobufValue for StorageChannelResponse {
-    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
-        ::protobuf::reflect::ProtobufValueRef::Message(self)
-    }
-}
-
-#[derive(PartialEq,Clone,Default)]
-pub struct StorageChannelReadRequest {
-    // message fields
-    pub transaction_id: ::std::vec::Vec<u8>,
-    pub datum_name: ::std::vec::Vec<u8>,
-    // special fields
-    pub unknown_fields: ::protobuf::UnknownFields,
-    pub cached_size: ::protobuf::CachedSize,
-}
-
-impl<'a> ::std::default::Default for &'a StorageChannelReadRequest {
-    fn default() -> &'a StorageChannelReadRequest {
-        <StorageChannelReadRequest as ::protobuf::Message>::default_instance()
-    }
-}
-
-impl StorageChannelReadRequest {
-    pub fn new() -> StorageChannelReadRequest {
-        ::std::default::Default::default()
-    }
-
-    // bytes transaction_id = 1;
+    // bytes transaction_id = 2;
 
 
     pub fn get_transaction_id(&self) -> &[u8] {
@@ -1366,7 +100,7 @@ impl StorageChannelReadRequest {
         ::std::mem::replace(&mut self.transaction_id, ::std::vec::Vec::new())
     }
 
-    // bytes datum_name = 2;
+    // bytes datum_name = 3;
 
 
     pub fn get_datum_name(&self) -> &[u8] {
@@ -1403,9 +137,12 @@ impl ::protobuf::Message for StorageChannelReadRequest {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
-                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.transaction_id)?;
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.storage_name)?;
                 },
                 2 => {
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.transaction_id)?;
+                },
+                3 => {
                     ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.datum_name)?;
                 },
                 _ => {
@@ -1420,11 +157,14 @@ impl ::protobuf::Message for StorageChannelReadRequest {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
+        if !self.storage_name.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(1, &self.storage_name);
+        }
         if !self.transaction_id.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(1, &self.transaction_id);
+            my_size += ::protobuf::rt::bytes_size(2, &self.transaction_id);
         }
         if !self.datum_name.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(2, &self.datum_name);
+            my_size += ::protobuf::rt::bytes_size(3, &self.datum_name);
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
@@ -1432,11 +172,14 @@ impl ::protobuf::Message for StorageChannelReadRequest {
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
+        if !self.storage_name.is_empty() {
+            os.write_bytes(1, &self.storage_name)?;
+        }
         if !self.transaction_id.is_empty() {
-            os.write_bytes(1, &self.transaction_id)?;
+            os.write_bytes(2, &self.transaction_id)?;
         }
         if !self.datum_name.is_empty() {
-            os.write_bytes(2, &self.datum_name)?;
+            os.write_bytes(3, &self.datum_name)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -1481,6 +224,11 @@ impl ::protobuf::Message for StorageChannelReadRequest {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
                 fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                    "storage_name",
+                    |m: &StorageChannelReadRequest| { &m.storage_name },
+                    |m: &mut StorageChannelReadRequest| { &mut m.storage_name },
+                ));
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
                     "transaction_id",
                     |m: &StorageChannelReadRequest| { &m.transaction_id },
                     |m: &mut StorageChannelReadRequest| { &mut m.transaction_id },
@@ -1512,6 +260,7 @@ impl ::protobuf::Message for StorageChannelReadRequest {
 
 impl ::protobuf::Clear for StorageChannelReadRequest {
     fn clear(&mut self) {
+        self.storage_name.clear();
         self.transaction_id.clear();
         self.datum_name.clear();
         self.unknown_fields.clear();
@@ -1702,6 +451,7 @@ impl ::protobuf::reflect::ProtobufValue for StorageChannelReadResponse {
 #[derive(PartialEq,Clone,Default)]
 pub struct StorageChannelWriteRequest {
     // message fields
+    pub storage_name: ::std::vec::Vec<u8>,
     pub transaction_id: ::std::vec::Vec<u8>,
     pub datum_name: ::std::vec::Vec<u8>,
     pub datum_value: ::std::vec::Vec<u8>,
@@ -1721,7 +471,33 @@ impl StorageChannelWriteRequest {
         ::std::default::Default::default()
     }
 
-    // bytes transaction_id = 1;
+    // bytes storage_name = 1;
+
+
+    pub fn get_storage_name(&self) -> &[u8] {
+        &self.storage_name
+    }
+    pub fn clear_storage_name(&mut self) {
+        self.storage_name.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_storage_name(&mut self, v: ::std::vec::Vec<u8>) {
+        self.storage_name = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_storage_name(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.storage_name
+    }
+
+    // Take field
+    pub fn take_storage_name(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.storage_name, ::std::vec::Vec::new())
+    }
+
+    // bytes transaction_id = 2;
 
 
     pub fn get_transaction_id(&self) -> &[u8] {
@@ -1747,7 +523,7 @@ impl StorageChannelWriteRequest {
         ::std::mem::replace(&mut self.transaction_id, ::std::vec::Vec::new())
     }
 
-    // bytes datum_name = 2;
+    // bytes datum_name = 3;
 
 
     pub fn get_datum_name(&self) -> &[u8] {
@@ -1773,7 +549,7 @@ impl StorageChannelWriteRequest {
         ::std::mem::replace(&mut self.datum_name, ::std::vec::Vec::new())
     }
 
-    // bytes datum_value = 3;
+    // bytes datum_value = 4;
 
 
     pub fn get_datum_value(&self) -> &[u8] {
@@ -1810,12 +586,15 @@ impl ::protobuf::Message for StorageChannelWriteRequest {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
-                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.transaction_id)?;
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.storage_name)?;
                 },
                 2 => {
-                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.datum_name)?;
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.transaction_id)?;
                 },
                 3 => {
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.datum_name)?;
+                },
+                4 => {
                     ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.datum_value)?;
                 },
                 _ => {
@@ -1830,14 +609,17 @@ impl ::protobuf::Message for StorageChannelWriteRequest {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
+        if !self.storage_name.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(1, &self.storage_name);
+        }
         if !self.transaction_id.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(1, &self.transaction_id);
+            my_size += ::protobuf::rt::bytes_size(2, &self.transaction_id);
         }
         if !self.datum_name.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(2, &self.datum_name);
+            my_size += ::protobuf::rt::bytes_size(3, &self.datum_name);
         }
         if !self.datum_value.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(3, &self.datum_value);
+            my_size += ::protobuf::rt::bytes_size(4, &self.datum_value);
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
@@ -1845,14 +627,17 @@ impl ::protobuf::Message for StorageChannelWriteRequest {
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
+        if !self.storage_name.is_empty() {
+            os.write_bytes(1, &self.storage_name)?;
+        }
         if !self.transaction_id.is_empty() {
-            os.write_bytes(1, &self.transaction_id)?;
+            os.write_bytes(2, &self.transaction_id)?;
         }
         if !self.datum_name.is_empty() {
-            os.write_bytes(2, &self.datum_name)?;
+            os.write_bytes(3, &self.datum_name)?;
         }
         if !self.datum_value.is_empty() {
-            os.write_bytes(3, &self.datum_value)?;
+            os.write_bytes(4, &self.datum_value)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -1897,6 +682,11 @@ impl ::protobuf::Message for StorageChannelWriteRequest {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
                 fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                    "storage_name",
+                    |m: &StorageChannelWriteRequest| { &m.storage_name },
+                    |m: &mut StorageChannelWriteRequest| { &mut m.storage_name },
+                ));
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
                     "transaction_id",
                     |m: &StorageChannelWriteRequest| { &m.transaction_id },
                     |m: &mut StorageChannelWriteRequest| { &mut m.transaction_id },
@@ -1933,6 +723,7 @@ impl ::protobuf::Message for StorageChannelWriteRequest {
 
 impl ::protobuf::Clear for StorageChannelWriteRequest {
     fn clear(&mut self) {
+        self.storage_name.clear();
         self.transaction_id.clear();
         self.datum_name.clear();
         self.datum_value.clear();
@@ -2081,6 +872,7 @@ impl ::protobuf::reflect::ProtobufValue for StorageChannelWriteResponse {
 #[derive(PartialEq,Clone,Default)]
 pub struct StorageChannelDeleteRequest {
     // message fields
+    pub storage_name: ::std::vec::Vec<u8>,
     pub transaction_id: ::std::vec::Vec<u8>,
     pub datum_name: ::std::vec::Vec<u8>,
     // special fields
@@ -2099,7 +891,33 @@ impl StorageChannelDeleteRequest {
         ::std::default::Default::default()
     }
 
-    // bytes transaction_id = 1;
+    // bytes storage_name = 1;
+
+
+    pub fn get_storage_name(&self) -> &[u8] {
+        &self.storage_name
+    }
+    pub fn clear_storage_name(&mut self) {
+        self.storage_name.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_storage_name(&mut self, v: ::std::vec::Vec<u8>) {
+        self.storage_name = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_storage_name(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.storage_name
+    }
+
+    // Take field
+    pub fn take_storage_name(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.storage_name, ::std::vec::Vec::new())
+    }
+
+    // bytes transaction_id = 2;
 
 
     pub fn get_transaction_id(&self) -> &[u8] {
@@ -2125,7 +943,7 @@ impl StorageChannelDeleteRequest {
         ::std::mem::replace(&mut self.transaction_id, ::std::vec::Vec::new())
     }
 
-    // bytes datum_name = 2;
+    // bytes datum_name = 3;
 
 
     pub fn get_datum_name(&self) -> &[u8] {
@@ -2162,9 +980,12 @@ impl ::protobuf::Message for StorageChannelDeleteRequest {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
-                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.transaction_id)?;
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.storage_name)?;
                 },
                 2 => {
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.transaction_id)?;
+                },
+                3 => {
                     ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.datum_name)?;
                 },
                 _ => {
@@ -2179,11 +1000,14 @@ impl ::protobuf::Message for StorageChannelDeleteRequest {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
+        if !self.storage_name.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(1, &self.storage_name);
+        }
         if !self.transaction_id.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(1, &self.transaction_id);
+            my_size += ::protobuf::rt::bytes_size(2, &self.transaction_id);
         }
         if !self.datum_name.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(2, &self.datum_name);
+            my_size += ::protobuf::rt::bytes_size(3, &self.datum_name);
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
@@ -2191,11 +1015,14 @@ impl ::protobuf::Message for StorageChannelDeleteRequest {
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
+        if !self.storage_name.is_empty() {
+            os.write_bytes(1, &self.storage_name)?;
+        }
         if !self.transaction_id.is_empty() {
-            os.write_bytes(1, &self.transaction_id)?;
+            os.write_bytes(2, &self.transaction_id)?;
         }
         if !self.datum_name.is_empty() {
-            os.write_bytes(2, &self.datum_name)?;
+            os.write_bytes(3, &self.datum_name)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -2240,6 +1067,11 @@ impl ::protobuf::Message for StorageChannelDeleteRequest {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
                 fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                    "storage_name",
+                    |m: &StorageChannelDeleteRequest| { &m.storage_name },
+                    |m: &mut StorageChannelDeleteRequest| { &mut m.storage_name },
+                ));
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
                     "transaction_id",
                     |m: &StorageChannelDeleteRequest| { &m.transaction_id },
                     |m: &mut StorageChannelDeleteRequest| { &mut m.transaction_id },
@@ -2271,6 +1103,7 @@ impl ::protobuf::Message for StorageChannelDeleteRequest {
 
 impl ::protobuf::Clear for StorageChannelDeleteRequest {
     fn clear(&mut self) {
+        self.storage_name.clear();
         self.transaction_id.clear();
         self.datum_name.clear();
         self.unknown_fields.clear();
@@ -2417,6 +1250,8 @@ impl ::protobuf::reflect::ProtobufValue for StorageChannelDeleteResponse {
 
 #[derive(PartialEq,Clone,Default)]
 pub struct StorageChannelBeginRequest {
+    // message fields
+    pub storage_name: ::std::vec::Vec<u8>,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -2432,6 +1267,32 @@ impl StorageChannelBeginRequest {
     pub fn new() -> StorageChannelBeginRequest {
         ::std::default::Default::default()
     }
+
+    // bytes storage_name = 1;
+
+
+    pub fn get_storage_name(&self) -> &[u8] {
+        &self.storage_name
+    }
+    pub fn clear_storage_name(&mut self) {
+        self.storage_name.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_storage_name(&mut self, v: ::std::vec::Vec<u8>) {
+        self.storage_name = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_storage_name(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.storage_name
+    }
+
+    // Take field
+    pub fn take_storage_name(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.storage_name, ::std::vec::Vec::new())
+    }
 }
 
 impl ::protobuf::Message for StorageChannelBeginRequest {
@@ -2443,6 +1304,9 @@ impl ::protobuf::Message for StorageChannelBeginRequest {
         while !is.eof()? {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.storage_name)?;
+                },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
                 },
@@ -2455,12 +1319,18 @@ impl ::protobuf::Message for StorageChannelBeginRequest {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
+        if !self.storage_name.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(1, &self.storage_name);
+        }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
+        if !self.storage_name.is_empty() {
+            os.write_bytes(1, &self.storage_name)?;
+        }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
     }
@@ -2502,7 +1372,12 @@ impl ::protobuf::Message for StorageChannelBeginRequest {
         };
         unsafe {
             descriptor.get(|| {
-                let fields = ::std::vec::Vec::new();
+                let mut fields = ::std::vec::Vec::new();
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                    "storage_name",
+                    |m: &StorageChannelBeginRequest| { &m.storage_name },
+                    |m: &mut StorageChannelBeginRequest| { &mut m.storage_name },
+                ));
                 ::protobuf::reflect::MessageDescriptor::new::<StorageChannelBeginRequest>(
                     "StorageChannelBeginRequest",
                     fields,
@@ -2525,6 +1400,7 @@ impl ::protobuf::Message for StorageChannelBeginRequest {
 
 impl ::protobuf::Clear for StorageChannelBeginRequest {
     fn clear(&mut self) {
+        self.storage_name.clear();
         self.unknown_fields.clear();
     }
 }
@@ -2713,6 +1589,7 @@ impl ::protobuf::reflect::ProtobufValue for StorageChannelBeginResponse {
 #[derive(PartialEq,Clone,Default)]
 pub struct StorageChannelCommitRequest {
     // message fields
+    pub storage_name: ::std::vec::Vec<u8>,
     pub transaction_id: ::std::vec::Vec<u8>,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
@@ -2730,7 +1607,33 @@ impl StorageChannelCommitRequest {
         ::std::default::Default::default()
     }
 
-    // bytes transaction_id = 1;
+    // bytes storage_name = 1;
+
+
+    pub fn get_storage_name(&self) -> &[u8] {
+        &self.storage_name
+    }
+    pub fn clear_storage_name(&mut self) {
+        self.storage_name.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_storage_name(&mut self, v: ::std::vec::Vec<u8>) {
+        self.storage_name = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_storage_name(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.storage_name
+    }
+
+    // Take field
+    pub fn take_storage_name(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.storage_name, ::std::vec::Vec::new())
+    }
+
+    // bytes transaction_id = 2;
 
 
     pub fn get_transaction_id(&self) -> &[u8] {
@@ -2767,6 +1670,9 @@ impl ::protobuf::Message for StorageChannelCommitRequest {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.storage_name)?;
+                },
+                2 => {
                     ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.transaction_id)?;
                 },
                 _ => {
@@ -2781,8 +1687,11 @@ impl ::protobuf::Message for StorageChannelCommitRequest {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
+        if !self.storage_name.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(1, &self.storage_name);
+        }
         if !self.transaction_id.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(1, &self.transaction_id);
+            my_size += ::protobuf::rt::bytes_size(2, &self.transaction_id);
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
@@ -2790,8 +1699,11 @@ impl ::protobuf::Message for StorageChannelCommitRequest {
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
+        if !self.storage_name.is_empty() {
+            os.write_bytes(1, &self.storage_name)?;
+        }
         if !self.transaction_id.is_empty() {
-            os.write_bytes(1, &self.transaction_id)?;
+            os.write_bytes(2, &self.transaction_id)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -2836,6 +1748,11 @@ impl ::protobuf::Message for StorageChannelCommitRequest {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
                 fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                    "storage_name",
+                    |m: &StorageChannelCommitRequest| { &m.storage_name },
+                    |m: &mut StorageChannelCommitRequest| { &mut m.storage_name },
+                ));
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
                     "transaction_id",
                     |m: &StorageChannelCommitRequest| { &m.transaction_id },
                     |m: &mut StorageChannelCommitRequest| { &mut m.transaction_id },
@@ -2862,6 +1779,7 @@ impl ::protobuf::Message for StorageChannelCommitRequest {
 
 impl ::protobuf::Clear for StorageChannelCommitRequest {
     fn clear(&mut self) {
+        self.storage_name.clear();
         self.transaction_id.clear();
         self.unknown_fields.clear();
     }
@@ -3008,6 +1926,7 @@ impl ::protobuf::reflect::ProtobufValue for StorageChannelCommitResponse {
 #[derive(PartialEq,Clone,Default)]
 pub struct StorageChannelRollbackRequest {
     // message fields
+    pub storage_name: ::std::vec::Vec<u8>,
     pub storage_id: ::std::vec::Vec<u8>,
     pub transaction_id: ::std::vec::Vec<u8>,
     // special fields
@@ -3026,7 +1945,33 @@ impl StorageChannelRollbackRequest {
         ::std::default::Default::default()
     }
 
-    // bytes storage_id = 1;
+    // bytes storage_name = 1;
+
+
+    pub fn get_storage_name(&self) -> &[u8] {
+        &self.storage_name
+    }
+    pub fn clear_storage_name(&mut self) {
+        self.storage_name.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_storage_name(&mut self, v: ::std::vec::Vec<u8>) {
+        self.storage_name = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_storage_name(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.storage_name
+    }
+
+    // Take field
+    pub fn take_storage_name(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.storage_name, ::std::vec::Vec::new())
+    }
+
+    // bytes storage_id = 2;
 
 
     pub fn get_storage_id(&self) -> &[u8] {
@@ -3052,7 +1997,7 @@ impl StorageChannelRollbackRequest {
         ::std::mem::replace(&mut self.storage_id, ::std::vec::Vec::new())
     }
 
-    // bytes transaction_id = 2;
+    // bytes transaction_id = 3;
 
 
     pub fn get_transaction_id(&self) -> &[u8] {
@@ -3089,9 +2034,12 @@ impl ::protobuf::Message for StorageChannelRollbackRequest {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
-                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.storage_id)?;
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.storage_name)?;
                 },
                 2 => {
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.storage_id)?;
+                },
+                3 => {
                     ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.transaction_id)?;
                 },
                 _ => {
@@ -3106,11 +2054,14 @@ impl ::protobuf::Message for StorageChannelRollbackRequest {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
+        if !self.storage_name.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(1, &self.storage_name);
+        }
         if !self.storage_id.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(1, &self.storage_id);
+            my_size += ::protobuf::rt::bytes_size(2, &self.storage_id);
         }
         if !self.transaction_id.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(2, &self.transaction_id);
+            my_size += ::protobuf::rt::bytes_size(3, &self.transaction_id);
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
@@ -3118,11 +2069,14 @@ impl ::protobuf::Message for StorageChannelRollbackRequest {
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
+        if !self.storage_name.is_empty() {
+            os.write_bytes(1, &self.storage_name)?;
+        }
         if !self.storage_id.is_empty() {
-            os.write_bytes(1, &self.storage_id)?;
+            os.write_bytes(2, &self.storage_id)?;
         }
         if !self.transaction_id.is_empty() {
-            os.write_bytes(2, &self.transaction_id)?;
+            os.write_bytes(3, &self.transaction_id)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -3167,6 +2121,11 @@ impl ::protobuf::Message for StorageChannelRollbackRequest {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
                 fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                    "storage_name",
+                    |m: &StorageChannelRollbackRequest| { &m.storage_name },
+                    |m: &mut StorageChannelRollbackRequest| { &mut m.storage_name },
+                ));
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
                     "storage_id",
                     |m: &StorageChannelRollbackRequest| { &m.storage_id },
                     |m: &mut StorageChannelRollbackRequest| { &mut m.storage_id },
@@ -3198,6 +2157,7 @@ impl ::protobuf::Message for StorageChannelRollbackRequest {
 
 impl ::protobuf::Clear for StorageChannelRollbackRequest {
     fn clear(&mut self) {
+        self.storage_name.clear();
         self.storage_id.clear();
         self.transaction_id.clear();
         self.unknown_fields.clear();
@@ -3343,45 +2303,37 @@ impl ::protobuf::reflect::ProtobufValue for StorageChannelRollbackResponse {
 }
 
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\x15storage_channel.proto\x12\x03oak\x1a#third_party/google/rpc/status\
-    .proto\"\x83\x04\n\x15StorageChannelRequest\x12!\n\x0cstorage_name\x18\
-    \x01\x20\x01(\x0cR\x0bstorageName\x12C\n\x0cread_request\x18\x02\x20\x01\
-    (\x0b2\x1e.oak.StorageChannelReadRequestH\0R\x0breadRequest\x12F\n\rwrit\
-    e_request\x18\x03\x20\x01(\x0b2\x1f.oak.StorageChannelWriteRequestH\0R\
-    \x0cwriteRequest\x12I\n\x0edelete_request\x18\x04\x20\x01(\x0b2\x20.oak.\
-    StorageChannelDeleteRequestH\0R\rdeleteRequest\x12F\n\rbegin_request\x18\
-    \x05\x20\x01(\x0b2\x1f.oak.StorageChannelBeginRequestH\0R\x0cbeginReques\
-    t\x12I\n\x0ecommit_request\x18\x06\x20\x01(\x0b2\x20.oak.StorageChannelC\
-    ommitRequestH\0R\rcommitRequest\x12O\n\x10rollback_request\x18\x07\x20\
-    \x01(\x0b2\".oak.StorageChannelRollbackRequestH\0R\x0frollbackRequestB\
-    \x0b\n\toperation\"\x9f\x04\n\x16StorageChannelResponse\x12*\n\x06status\
-    \x18\x01\x20\x01(\x0b2\x12.google.rpc.StatusR\x06status\x12F\n\rread_res\
-    ponse\x18\x02\x20\x01(\x0b2\x1f.oak.StorageChannelReadResponseH\0R\x0cre\
-    adResponse\x12I\n\x0ewrite_response\x18\x03\x20\x01(\x0b2\x20.oak.Storag\
-    eChannelWriteResponseH\0R\rwriteResponse\x12L\n\x0fdelete_response\x18\
-    \x04\x20\x01(\x0b2!.oak.StorageChannelDeleteResponseH\0R\x0edeleteRespon\
-    se\x12I\n\x0ebegin_response\x18\x05\x20\x01(\x0b2\x20.oak.StorageChannel\
-    BeginResponseH\0R\rbeginResponse\x12L\n\x0fcommit_response\x18\x06\x20\
-    \x01(\x0b2!.oak.StorageChannelCommitResponseH\0R\x0ecommitResponse\x12R\
-    \n\x11rollback_response\x18\x07\x20\x01(\x0b2#.oak.StorageChannelRollbac\
-    kResponseH\0R\x10rollbackResponseB\x0b\n\toperation\"a\n\x19StorageChann\
-    elReadRequest\x12%\n\x0etransaction_id\x18\x01\x20\x01(\x0cR\rtransactio\
-    nId\x12\x1d\n\ndatum_name\x18\x02\x20\x01(\x0cR\tdatumName\"=\n\x1aStora\
-    geChannelReadResponse\x12\x1f\n\x0bdatum_value\x18\x01\x20\x01(\x0cR\nda\
-    tumValue\"\x83\x01\n\x1aStorageChannelWriteRequest\x12%\n\x0etransaction\
-    _id\x18\x01\x20\x01(\x0cR\rtransactionId\x12\x1d\n\ndatum_name\x18\x02\
-    \x20\x01(\x0cR\tdatumName\x12\x1f\n\x0bdatum_value\x18\x03\x20\x01(\x0cR\
-    \ndatumValue\"\x1d\n\x1bStorageChannelWriteResponse\"c\n\x1bStorageChann\
-    elDeleteRequest\x12%\n\x0etransaction_id\x18\x01\x20\x01(\x0cR\rtransact\
-    ionId\x12\x1d\n\ndatum_name\x18\x02\x20\x01(\x0cR\tdatumName\"\x1e\n\x1c\
-    StorageChannelDeleteResponse\"\x1c\n\x1aStorageChannelBeginRequest\"D\n\
-    \x1bStorageChannelBeginResponse\x12%\n\x0etransaction_id\x18\x01\x20\x01\
-    (\x0cR\rtransactionId\"D\n\x1bStorageChannelCommitRequest\x12%\n\x0etran\
-    saction_id\x18\x01\x20\x01(\x0cR\rtransactionId\"\x1e\n\x1cStorageChanne\
-    lCommitResponse\"e\n\x1dStorageChannelRollbackRequest\x12\x1d\n\nstorage\
-    _id\x18\x01\x20\x01(\x0cR\tstorageId\x12%\n\x0etransaction_id\x18\x02\
-    \x20\x01(\x0cR\rtransactionId\"\x20\n\x1eStorageChannelRollbackResponseb\
-    \x06proto3\
+    \n\x15storage_channel.proto\x12\x03oak\"\x84\x01\n\x19StorageChannelRead\
+    Request\x12!\n\x0cstorage_name\x18\x01\x20\x01(\x0cR\x0bstorageName\x12%\
+    \n\x0etransaction_id\x18\x02\x20\x01(\x0cR\rtransactionId\x12\x1d\n\ndat\
+    um_name\x18\x03\x20\x01(\x0cR\tdatumName\"=\n\x1aStorageChannelReadRespo\
+    nse\x12\x1f\n\x0bdatum_value\x18\x01\x20\x01(\x0cR\ndatumValue\"\xa6\x01\
+    \n\x1aStorageChannelWriteRequest\x12!\n\x0cstorage_name\x18\x01\x20\x01(\
+    \x0cR\x0bstorageName\x12%\n\x0etransaction_id\x18\x02\x20\x01(\x0cR\rtra\
+    nsactionId\x12\x1d\n\ndatum_name\x18\x03\x20\x01(\x0cR\tdatumName\x12\
+    \x1f\n\x0bdatum_value\x18\x04\x20\x01(\x0cR\ndatumValue\"\x1d\n\x1bStora\
+    geChannelWriteResponse\"\x86\x01\n\x1bStorageChannelDeleteRequest\x12!\n\
+    \x0cstorage_name\x18\x01\x20\x01(\x0cR\x0bstorageName\x12%\n\x0etransact\
+    ion_id\x18\x02\x20\x01(\x0cR\rtransactionId\x12\x1d\n\ndatum_name\x18\
+    \x03\x20\x01(\x0cR\tdatumName\"\x1e\n\x1cStorageChannelDeleteResponse\"?\
+    \n\x1aStorageChannelBeginRequest\x12!\n\x0cstorage_name\x18\x01\x20\x01(\
+    \x0cR\x0bstorageName\"D\n\x1bStorageChannelBeginResponse\x12%\n\x0etrans\
+    action_id\x18\x01\x20\x01(\x0cR\rtransactionId\"g\n\x1bStorageChannelCom\
+    mitRequest\x12!\n\x0cstorage_name\x18\x01\x20\x01(\x0cR\x0bstorageName\
+    \x12%\n\x0etransaction_id\x18\x02\x20\x01(\x0cR\rtransactionId\"\x1e\n\
+    \x1cStorageChannelCommitResponse\"\x88\x01\n\x1dStorageChannelRollbackRe\
+    quest\x12!\n\x0cstorage_name\x18\x01\x20\x01(\x0cR\x0bstorageName\x12\
+    \x1d\n\nstorage_id\x18\x02\x20\x01(\x0cR\tstorageId\x12%\n\x0etransactio\
+    n_id\x18\x03\x20\x01(\x0cR\rtransactionId\"\x20\n\x1eStorageChannelRollb\
+    ackResponse2\xe0\x03\n\x0bStorageNode\x12G\n\x04Read\x12\x1e.oak.Storage\
+    ChannelReadRequest\x1a\x1f.oak.StorageChannelReadResponse\x12J\n\x05Writ\
+    e\x12\x1f.oak.StorageChannelWriteRequest\x1a\x20.oak.StorageChannelWrite\
+    Response\x12M\n\x06Delete\x12\x20.oak.StorageChannelDeleteRequest\x1a!.o\
+    ak.StorageChannelDeleteResponse\x12J\n\x05Begin\x12\x1f.oak.StorageChann\
+    elBeginRequest\x1a\x20.oak.StorageChannelBeginResponse\x12L\n\x06Commit\
+    \x12\x1f.oak.StorageChannelBeginRequest\x1a!.oak.StorageChannelCommitRes\
+    ponse\x12S\n\x08Rollback\x12\".oak.StorageChannelRollbackRequest\x1a#.oa\
+    k.StorageChannelRollbackResponseb\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {
