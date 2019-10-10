@@ -27,6 +27,7 @@ fn test_logger() -> OakChannelLogger {
 }
 
 #[test]
+#[serial(set_level)]
 fn test_enabled() {
     let x = test_logger();
     struct T {
@@ -59,9 +60,12 @@ fn test_enabled() {
 }
 
 #[test]
+#[serial(set_level)]
 fn test_log() {
     oak_tests::reset_channels();
     let logger = test_logger();
+    log::set_max_level(log::LevelFilter::Info);
+
     let trace = Metadata::builder()
         .level(Level::Trace)
         .target("test")

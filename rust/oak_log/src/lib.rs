@@ -21,6 +21,11 @@
 
 extern crate log;
 extern crate oak;
+#[cfg(test)]
+extern crate serial_test;
+#[cfg(test)]
+#[macro_use]
+extern crate serial_test_derive;
 
 #[cfg(test)]
 mod tests;

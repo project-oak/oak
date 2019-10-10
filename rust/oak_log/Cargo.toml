@@ -10,3 +10,5 @@ log = { version = "^0.4.0", features = ["std"] }
 
 [dev-dependencies]
 oak_tests = { path = "../oak_tests" }
+serial_test = "0.2"
+serial_test_derive = "0.2"
