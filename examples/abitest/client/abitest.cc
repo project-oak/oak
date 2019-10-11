@@ -348,8 +348,7 @@ int main(int argc, char** argv) {
   oak::ApplicationClient::InitializeAssertionAuthorities();
 
   // Connect to the newly created Oak Application.
-  auto stub = OakABITestService::NewStub(grpc::CreateChannel(
-      addr.str(), asylo::EnclaveChannelCredentials(asylo::BidirectionalNullCredentialsOptions())));
+  auto stub = OakABITestService::NewStub(oak::ApplicationClient::CreateChannel(addr.str()));
 
   // Invoke the application.
   if (!run_tests(stub.get(), absl::GetFlag(FLAGS_test_filter))) {

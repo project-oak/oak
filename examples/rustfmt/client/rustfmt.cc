@@ -70,8 +70,7 @@ int main(int argc, char** argv) {
   oak::ApplicationClient::InitializeAssertionAuthorities();
 
   // Connect to the newly created Oak Application.
-  auto stub = FormatService::NewStub(grpc::CreateChannel(
-      addr.str(), asylo::EnclaveChannelCredentials(asylo::BidirectionalNullCredentialsOptions())));
+  auto stub = FormatService::NewStub(oak::ApplicationClient::CreateChannel(addr.str()));
 
   // Perform multiple invocations of the same Oak Application, with different parameters.
   format(stub.get(), "fn     main    ()     {     }");

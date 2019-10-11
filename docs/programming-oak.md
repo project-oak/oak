@@ -272,13 +272,12 @@ The client can now connect to this separate gRPC service, and send
 encryption into the enclave:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/rustfmt/client/rustfmt.cc C++ /.*InitializeAssertionAuthorities/ /CredentialsOption/)
+[embedmd]:# (../examples/rustfmt/client/rustfmt.cc C++ /.*InitializeAssertionAuthorities/ /CreateChannel.*/)
 ```C++
   oak::ApplicationClient::InitializeAssertionAuthorities();
 
   // Connect to the newly created Oak Application.
-  auto stub = FormatService::NewStub(grpc::CreateChannel(
-      addr.str(), asylo::EnclaveChannelCredentials(asylo::BidirectionalNullCredentialsOption
+  auto stub = FormatService::NewStub(oak::ApplicationClient::CreateChannel(addr.str()));
 ```
 <!-- prettier-ignore-end -->
 

@@ -34,11 +34,24 @@ cc_library(
     hdrs = ["application_client.h"],
     visibility = ["//visibility:public"],
     deps = [
+        ":policy_metadata",
         "//oak/common:app_config",
         "//oak/proto:application_cc_grpc",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_asylo//asylo/grpc/auth:null_credentials_options",
         "@com_google_asylo//asylo/identity:init",
         "@com_google_asylo//asylo/util:logging",
+    ],
+)
+
+cc_library(
+    name = "policy_metadata",
+    srcs = ["policy_metadata.cc"],
+    hdrs = ["policy_metadata.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/base",
+        "@com_google_absl//absl/strings",
     ],
 )
