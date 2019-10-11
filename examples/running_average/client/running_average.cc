@@ -80,11 +80,9 @@ int main(int argc, char** argv) {
   oak::ApplicationClient::InitializeAssertionAuthorities();
 
   // Connect to the newly created Oak Application from different clients.
-  auto stub_0 = RunningAverage::NewStub(grpc::CreateChannel(
-      addr.str(), asylo::EnclaveChannelCredentials(asylo::BidirectionalNullCredentialsOptions())));
+  auto stub_0 = RunningAverage::NewStub(oak::ApplicationClient::CreateChannel(addr.str()));
 
-  auto stub_1 = RunningAverage::NewStub(grpc::CreateChannel(
-      addr.str(), asylo::EnclaveChannelCredentials(asylo::BidirectionalNullCredentialsOptions())));
+  auto stub_1 = RunningAverage::NewStub(oak::ApplicationClient::CreateChannel(addr.str()));
 
   // Submit samples from different clients.
   submit_sample(stub_0.get(), 100);

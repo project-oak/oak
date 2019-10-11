@@ -86,15 +86,13 @@ int main(int argc, char** argv) {
   oak::ApplicationClient::InitializeAssertionAuthorities();
 
   // Connect to the newly created Oak Application from different clients.
-  auto channel_0 = grpc::CreateChannel(
-      addr.str(), asylo::EnclaveChannelCredentials(asylo::BidirectionalNullCredentialsOptions()));
+  auto channel_0 = oak::ApplicationClient::CreateChannel(addr.str());
   oak::ApplicationClient client_0(channel_0);
   oak::GetAttestationResponse attestation = client_0.GetAttestation();
   LOG(INFO) << "Oak Application attestation: " << attestation.DebugString();
   auto stub_0 = PrivateSetIntersection::NewStub(channel_0);
 
-  auto stub_1 = PrivateSetIntersection::NewStub(grpc::CreateChannel(
-      addr.str(), asylo::EnclaveChannelCredentials(asylo::BidirectionalNullCredentialsOptions())));
+  auto stub_1 = PrivateSetIntersection::NewStub(oak::ApplicationClient::CreateChannel(addr.str()));
 
   // Submit sets from different clients.
   std::vector<std::string> set_0{"a", "b", "c"};

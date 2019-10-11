@@ -14,9 +14,13 @@
  * limitations under the License.
  */
 
+#ifndef OAK_CLIENT_MANAGER_CLIENT_H_
+#define OAK_CLIENT_MANAGER_CLIENT_H_
+
 #include <memory>
 
 #include "absl/memory/memory.h"
+#include "include/grpcpp/grpcpp.h"
 #include "oak/common/app_config.h"
 #include "oak/proto/manager.grpc.pb.h"
 
@@ -91,3 +95,5 @@ class ManagerClient {
 };
 
 }  // namespace oak
+
+#endif  // OAK_CLIENT_MANAGER_CLIENT_H_

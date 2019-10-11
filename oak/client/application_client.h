@@ -14,11 +14,16 @@
  * limitations under the License.
  */
 
+#ifndef OAK_CLIENT_APPLICATION_CLIENT_H_
+#define OAK_CLIENT_APPLICATION_CLIENT_H_
+
 #include "asylo/grpc/auth/enclave_channel_credentials.h"
 #include "asylo/grpc/auth/null_credentials_options.h"
 #include "asylo/identity/descriptions.h"
 #include "asylo/identity/init.h"
 #include "asylo/util/logging.h"
+#include "include/grpcpp/grpcpp.h"
+#include "oak/client/policy_metadata.h"
 #include "oak/proto/application.grpc.pb.h"
 
 namespace oak {
@@ -50,6 +55,20 @@ class ApplicationClient {
     return response;
   }
 
+  // Returns a grpc Channel connecting to the specified address, initialised with:
+  // - Asylo channel credentials, possibly attesting the entire channel to the remote enclave
+  // - Oak Policy call credentials, possibly attaching a specific Oak Policy to each call
+  // See https://grpc.io/docs/guides/auth/.
+  static std::shared_ptr<grpc::Channel> CreateChannel(std::string addr) {
+    auto channel_credentials =
+        asylo::EnclaveChannelCredentials(asylo::BidirectionalNullCredentialsOptions());
+    auto call_credentials =
+        grpc::MetadataCredentialsFromPlugin(absl::make_unique<PolicyMetadata>());
+    auto composite_credentials =
+        grpc::CompositeChannelCredentials(channel_credentials, call_credentials);
+    return grpc::CreateChannel(addr, composite_credentials);
+  }
+
   static asylo::EnclaveAssertionAuthorityConfig GetNullAssertionAuthorityConfig() {
     asylo::EnclaveAssertionAuthorityConfig test_config;
     asylo::SetNullAssertionDescription(test_config.mutable_description());
@@ -79,3 +98,5 @@ class ApplicationClient {
 };
 
 }  // namespace oak
+
+#endif  // OAK_CLIENT_APPLICATION_CLIENT_H_
