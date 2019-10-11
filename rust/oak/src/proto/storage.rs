@@ -2261,34 +2261,33 @@ impl ::protobuf::reflect::ProtobufValue for StorageRollbackResponse {
 }
 
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\rstorage.proto\x12\x03oak\x1a#third_party/google/rpc/status.proto\"y\
-    \n\x12StorageReadRequest\x12\x1d\n\nstorage_id\x18\x01\x20\x01(\x0cR\tst\
-    orageId\x12%\n\x0etransaction_id\x18\x02\x20\x01(\x0cR\rtransactionId\
-    \x12\x1d\n\ndatum_name\x18\x03\x20\x01(\x0cR\tdatumName\"6\n\x13StorageR\
-    eadResponse\x12\x1f\n\x0bdatum_value\x18\x01\x20\x01(\x0cR\ndatumValue\"\
-    \x9b\x01\n\x13StorageWriteRequest\x12\x1d\n\nstorage_id\x18\x01\x20\x01(\
-    \x0cR\tstorageId\x12%\n\x0etransaction_id\x18\x02\x20\x01(\x0cR\rtransac\
-    tionId\x12\x1d\n\ndatum_name\x18\x03\x20\x01(\x0cR\tdatumName\x12\x1f\n\
-    \x0bdatum_value\x18\x04\x20\x01(\x0cR\ndatumValue\"\x16\n\x14StorageWrit\
-    eResponse\"{\n\x14StorageDeleteRequest\x12\x1d\n\nstorage_id\x18\x01\x20\
-    \x01(\x0cR\tstorageId\x12%\n\x0etransaction_id\x18\x02\x20\x01(\x0cR\rtr\
-    ansactionId\x12\x1d\n\ndatum_name\x18\x03\x20\x01(\x0cR\tdatumName\"\x17\
-    \n\x15StorageDeleteResponse\"4\n\x13StorageBeginRequest\x12\x1d\n\nstora\
-    ge_id\x18\x01\x20\x01(\x0cR\tstorageId\"=\n\x14StorageBeginResponse\x12%\
-    \n\x0etransaction_id\x18\x01\x20\x01(\x0cR\rtransactionId\"\\\n\x14Stora\
-    geCommitRequest\x12\x1d\n\nstorage_id\x18\x01\x20\x01(\x0cR\tstorageId\
-    \x12%\n\x0etransaction_id\x18\x02\x20\x01(\x0cR\rtransactionId\"\x17\n\
-    \x15StorageCommitResponse\"^\n\x16StorageRollbackRequest\x12\x1d\n\nstor\
-    age_id\x18\x01\x20\x01(\x0cR\tstorageId\x12%\n\x0etransaction_id\x18\x02\
-    \x20\x01(\x0cR\rtransactionId\"\x19\n\x17StorageRollbackResponse2\x89\
-    \x03\n\x07Storage\x129\n\x04Read\x12\x17.oak.StorageReadRequest\x1a\x18.\
-    oak.StorageReadResponse\x12<\n\x05Write\x12\x18.oak.StorageWriteRequest\
-    \x1a\x19.oak.StorageWriteResponse\x12?\n\x06Delete\x12\x19.oak.StorageDe\
-    leteRequest\x1a\x1a.oak.StorageDeleteResponse\x12<\n\x05Begin\x12\x18.oa\
-    k.StorageBeginRequest\x1a\x19.oak.StorageBeginResponse\x12?\n\x06Commit\
-    \x12\x19.oak.StorageCommitRequest\x1a\x1a.oak.StorageCommitResponse\x12E\
-    \n\x08Rollback\x12\x1b.oak.StorageRollbackRequest\x1a\x1c.oak.StorageRol\
-    lbackResponseb\x06proto3\
+    \n\rstorage.proto\x12\x03oak\"y\n\x12StorageReadRequest\x12\x1d\n\nstora\
+    ge_id\x18\x01\x20\x01(\x0cR\tstorageId\x12%\n\x0etransaction_id\x18\x02\
+    \x20\x01(\x0cR\rtransactionId\x12\x1d\n\ndatum_name\x18\x03\x20\x01(\x0c\
+    R\tdatumName\"6\n\x13StorageReadResponse\x12\x1f\n\x0bdatum_value\x18\
+    \x01\x20\x01(\x0cR\ndatumValue\"\x9b\x01\n\x13StorageWriteRequest\x12\
+    \x1d\n\nstorage_id\x18\x01\x20\x01(\x0cR\tstorageId\x12%\n\x0etransactio\
+    n_id\x18\x02\x20\x01(\x0cR\rtransactionId\x12\x1d\n\ndatum_name\x18\x03\
+    \x20\x01(\x0cR\tdatumName\x12\x1f\n\x0bdatum_value\x18\x04\x20\x01(\x0cR\
+    \ndatumValue\"\x16\n\x14StorageWriteResponse\"{\n\x14StorageDeleteReques\
+    t\x12\x1d\n\nstorage_id\x18\x01\x20\x01(\x0cR\tstorageId\x12%\n\x0etrans\
+    action_id\x18\x02\x20\x01(\x0cR\rtransactionId\x12\x1d\n\ndatum_name\x18\
+    \x03\x20\x01(\x0cR\tdatumName\"\x17\n\x15StorageDeleteResponse\"4\n\x13S\
+    torageBeginRequest\x12\x1d\n\nstorage_id\x18\x01\x20\x01(\x0cR\tstorageI\
+    d\"=\n\x14StorageBeginResponse\x12%\n\x0etransaction_id\x18\x01\x20\x01(\
+    \x0cR\rtransactionId\"\\\n\x14StorageCommitRequest\x12\x1d\n\nstorage_id\
+    \x18\x01\x20\x01(\x0cR\tstorageId\x12%\n\x0etransaction_id\x18\x02\x20\
+    \x01(\x0cR\rtransactionId\"\x17\n\x15StorageCommitResponse\"^\n\x16Stora\
+    geRollbackRequest\x12\x1d\n\nstorage_id\x18\x01\x20\x01(\x0cR\tstorageId\
+    \x12%\n\x0etransaction_id\x18\x02\x20\x01(\x0cR\rtransactionId\"\x19\n\
+    \x17StorageRollbackResponse2\x89\x03\n\x07Storage\x129\n\x04Read\x12\x17\
+    .oak.StorageReadRequest\x1a\x18.oak.StorageReadResponse\x12<\n\x05Write\
+    \x12\x18.oak.StorageWriteRequest\x1a\x19.oak.StorageWriteResponse\x12?\n\
+    \x06Delete\x12\x19.oak.StorageDeleteRequest\x1a\x1a.oak.StorageDeleteRes\
+    ponse\x12<\n\x05Begin\x12\x18.oak.StorageBeginRequest\x1a\x19.oak.Storag\
+    eBeginResponse\x12?\n\x06Commit\x12\x19.oak.StorageCommitRequest\x1a\x1a\
+    .oak.StorageCommitResponse\x12E\n\x08Rollback\x12\x1b.oak.StorageRollbac\
+    kRequest\x1a\x1c.oak.StorageRollbackResponseb\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {

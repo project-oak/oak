@@ -18,8 +18,6 @@ syntax = "proto3";
 
 package oak;
 
-import "third_party/google/rpc/status.proto";
-
 // The Storage service is the interface to a StorageProvider implementation
 // of persistent storage.  Each request message contains a storage_id that
 // uniquely identifies the logical storage instance for the operation and

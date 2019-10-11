@@ -114,9 +114,6 @@ cc_proto_library(
 proto_library(
     name = "storage_proto",
     srcs = ["storage.proto"],
-    deps = [
-        "//third_party/google/rpc:status_proto",
-    ],
 )
 
 cc_proto_library(
