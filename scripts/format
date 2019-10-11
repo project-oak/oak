@@ -18,6 +18,7 @@ find . \
   \(  \
     -not \( -path ./bazel-cache -prune \) -and \
     -not \( -path ./cargo-cache -prune \) -and \
+    -not \( -path ./rust/target -prune \) -and \
     -not \( -path ./third_party -prune \) \
     \( -type f -name '*.md' \) \
   \) -exec prettier --write {} +
