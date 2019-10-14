@@ -25,7 +25,7 @@ namespace oak {
 
 // Metadata key used to refer to Oak Policies associated with the gRPC request. This is effectively
 // treated as the name of a custom HTTP header.
-ABSL_CONST_INIT extern const absl::string_view kOakPolicyMetadataKey;
+ABSL_CONST_INIT extern const char kOakLabelMetadataKey[];
 
 // This class injects a pre-determined Oak Policy to each outgoing gRPC call.
 // In real-world use cases it should be combined to channel credentials, providing enclave

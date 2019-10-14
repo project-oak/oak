@@ -21,7 +21,7 @@
 
 namespace oak {
 
-const absl::string_view kOakPolicyMetadataKey = "x-oak-policy";
+const char kOakLabelMetadataKey[] = "x-oak-label";
 
 PolicyMetadata::PolicyMetadata() {}
 
@@ -30,7 +30,7 @@ grpc::Status PolicyMetadata::GetMetadata(grpc::string_ref service_url, grpc::str
                                          std::multimap<grpc::string, grpc::string>* metadata) {
   // TODO: Make actual policy configurable. For now we are injecting a nonsense policy, which the
   // server is not even checking yet.
-  metadata->insert(std::make_pair(kOakPolicyMetadataKey, "test-oak-policy"));
+  metadata->insert(std::make_pair(kOakLabelMetadataKey, "test-oak-label"));
   return grpc::Status::OK;
 }
 
