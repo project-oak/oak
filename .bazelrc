@@ -29,6 +29,7 @@ build:wasm32 --cpu=wasm32
 build:wasm32 --symlink_prefix=bazel-wasm-
 
 build:clang --crosstool_top=//toolchain:clang
+build:clang --host_crosstool_top=@bazel_tools//tools/cpp:toolchain
 build:clang --cpu=k8
 
 # Use a different symlink prefix for clang-based artifacts.
