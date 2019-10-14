@@ -77,11 +77,11 @@ void ModuleInvocation::ProcessRequest(bool ok) {
   std::string encap_req;
   grpc_request.SerializeToString(&encap_req);
   // TODO: figure out a way to avoid the extra copy (into then out of std::string)
-  std::unique_ptr<Message> rsp_msg = absl::make_unique<Message>();
-  rsp_msg->data.insert(rsp_msg->data.end(), encap_req.begin(), encap_req.end());
+  std::unique_ptr<Message> req_msg = absl::make_unique<Message>();
+  req_msg->data.insert(req_msg->data.end(), encap_req.begin(), encap_req.end());
   // Write data to the gRPC input channel, which the runtime connected to the
   // Node.
-  req_half_->Write(std::move(rsp_msg));
+  req_half_->Write(std::move(req_msg));
   LOG(INFO) << "Wrote encapsulated request to gRPC input channel";
 
   // Move straight onto sending first response.
