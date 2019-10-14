@@ -5,6 +5,9 @@ RUN apt-get -y update && apt-get install -y git curl clang-format shellcheck lib
 RUN curl -sL https://deb.nodesource.com/setup_12.x  | bash -
 RUN apt-get install -y nodejs
 
+RUN apt-get install -y gdb
+RUN apt-get install -y procps
+
 RUN git --version
 RUN clang-format -version
 RUN shellcheck --version
@@ -66,3 +69,4 @@ ENV GOPATH $HOME/go
 RUN mkdir -p $GOROOT
 RUN curl https://dl.google.com/go/go${GOLANG_VERSION}.linux-amd64.tar.gz | tar xzf - -C ${GOROOT} --strip-components=1
 RUN $GOROOT/bin/go get github.com/campoy/embedmd
+

@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 
-# Usage: docker_run [OPTIONS] COMMAND
+# Usage: docker_run_privileged COMMAND
 #
-# Options:
-#    --detach    Run container in background and print container ID
 
 readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
 # shellcheck source=scripts/common
@@ -28,11 +26,11 @@ docker build \
 
 docker_run_flags=(
   '--interactive'
+  '--privileged'
   '--tty'
   '--rm'
-  '--ulimit=core=-1'
-  "--user=$DOCKER_UID:$DOCKER_GID"
-  "--env=USER=$DOCKER_USER"
+  '--security-opt=seccomp=unconfined'
+  "--user=root:root"
   '--env=BAZEL_REMOTE_CACHE_ENABLED'
   '--env=BAZEL_GOOGLE_CREDENTIALS'
   "--volume=$PWD/bazel-cache:/.cache/bazel"
@@ -42,9 +40,4 @@ docker_run_flags=(
   '--network=host'
 )
 
-if [[ "$1" == '--detach' ]]; then
-  docker_run_flags+=('--detach')
-  docker run "${docker_run_flags[@]}" "$DOCKER_IMAGE_NAME:latest" "${@:2}"
-else
-  docker run "${docker_run_flags[@]}" "$DOCKER_IMAGE_NAME:latest" "$@"
-fi
+docker run "${docker_run_flags[@]}" "$DOCKER_IMAGE_NAME:latest" "$@"

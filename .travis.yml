@@ -22,9 +22,12 @@ jobs:
       - ./scripts/docker_run ./scripts/build_server_asylo
       - ./scripts/docker_run ./scripts/build_server_dev
     - name: run examples
+      after_failure:
+        - ./scripts/docker_run_privileged ./scripts/analyse_coredump
       script:
       - echo "build --show_progress_rate_limit=5.0" >> .bazelrc
       - ./scripts/docker_pull
+      - ./scripts/docker_run_privileged ./scripts/prepare_coredump
       - ./scripts/docker_run ./scripts/run_examples
       - ./scripts/docker_run ./scripts/check_generated
     - name: run tests
