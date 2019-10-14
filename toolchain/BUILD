@@ -51,6 +51,7 @@ filegroup(
 cc_toolchain(
     name = "clang_toolchain_wasm32",
     all_files = ":all_files",
+    ar_files = ":all_files",
     compiler_files = ":all_files",
     dwp_files = ":empty",
     linker_files = ":all_files",
@@ -64,6 +65,7 @@ cc_toolchain(
 cc_toolchain(
     name = "clang_toolchain_k8",
     all_files = ":all_files",
+    ar_files = ":all_files",
     compiler_files = ":all_files",
     dwp_files = ":empty",
     linker_files = ":all_files",
