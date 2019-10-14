@@ -39,9 +39,11 @@ using ChannelHalf = absl::variant<std::unique_ptr<MessageChannelReadHalf>,
 
 // Each message transferred over a channel includes data and potentially
 // also references to halves of channels.
+// It also has a set of labels attached to it, which are used for information flow.
 struct Message {
   std::vector<char> data;
   std::vector<std::unique_ptr<ChannelHalf>> channels;
+  std::vector<std::string> labels;
 };
 
 // Result of a read operation. If the operation would have produced a message

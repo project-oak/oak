@@ -116,6 +116,7 @@ cc_library(
         ":channel",
         ":oak_node",
         "//oak/common:app_config",
+        "//oak/common:policy",
         "//oak/proto:application_cc_grpc",
         "//oak/proto:enclave_cc_proto",
         "//oak/proto:grpc_encap_cc_proto",
