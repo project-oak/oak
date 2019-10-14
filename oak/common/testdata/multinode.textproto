@@ -4,7 +4,7 @@
 nodes {
   node_name: "frontend"
   web_assembly_node {
-    module_bytes: "<filled in later>"
+    wasm_contents_name: "frontend-code"
     ports {
       name: "gRPC_input"
       type: IN
@@ -30,7 +30,7 @@ nodes {
 nodes {
   node_name: "backend"
   web_assembly_node {
-    module_bytes: "<filled in later>"
+    wasm_contents_name: "backend-code"
     ports {
       name: "be_logging_port"
       type: OUT
@@ -52,6 +52,14 @@ nodes {
 nodes {
   node_name: "logging_node"
   log_node {}
+}
+wasm_contents {
+  name: "frontend-code"
+  module_bytes: "<filled in later>"
+}
+wasm_contents {
+  name: "backend-code"
+  module_bytes: "<filled in later>"
 }
 channels {
   source_endpoint {

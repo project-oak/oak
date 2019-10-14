@@ -59,8 +59,14 @@ std::unique_ptr<ApplicationConfiguration> DefaultConfig(const std::string& name,
 
   Node* node = config->add_nodes();
   node->set_node_name(name);
+
   WebAssemblyNode* wasm_node = node->mutable_web_assembly_node();
-  wasm_node->set_module_bytes(module_bytes);
+  std::string contents_name = name + "-code";
+  wasm_node->set_wasm_contents_name(contents_name);
+
+  WasmContents* wasm_contents = config->add_wasm_contents();
+  wasm_contents->set_name(contents_name);
+  wasm_contents->set_module_bytes(module_bytes);
 
   // Add ports for this Wasm node to talk to the gRPC pseudo-Node.
   Port* in_port = wasm_node->add_ports();
@@ -161,6 +167,16 @@ bool AddStorageToConfig(ApplicationConfiguration* config, const std::string& nam
 }
 
 bool ValidApplicationConfig(const ApplicationConfiguration& config) {
+  // Check name uniqueness for WasmContents.
+  std::set<std::string> contents_names;
+  for (const auto& contents : config.wasm_contents()) {
+    if (contents_names.count(contents.name()) > 0) {
+      LOG(ERROR) << "duplicate Wasm contents name " << contents.name();
+      return false;
+    }
+    contents_names.insert(contents.name());
+  }
+
   // Check name uniqueness and count pseudo-nodes.  Along the way, track the
   // configured directions of each "fully-qualified port name" (fqpn).
   using fqpn = std::pair<std::string, std::string>;  // <node name, port name>
@@ -179,8 +195,16 @@ bool ValidApplicationConfig(const ApplicationConfiguration& config) {
 
     if (node.has_web_assembly_node()) {
       wasm_count++;
-      // Check that port names are unique across the Node.
       const auto& wasm_node = node.web_assembly_node();
+
+      // Check that the Wasm code is available.
+      if (contents_names.count(wasm_node.wasm_contents_name()) == 0) {
+        LOG(ERROR) << "node " << node.node_name() << " refers to undefined Wasm code "
+                   << wasm_node.wasm_contents_name();
+        return false;
+      }
+
+      // Check that port names are unique across the Node.
       std::set<std::string> port_names;
       for (const auto& port : wasm_node.ports()) {
         if (port_names.count(port.name()) > 0) {

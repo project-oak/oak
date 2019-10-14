@@ -28,6 +28,7 @@ package oak;
 message ApplicationConfiguration {
   repeated Node nodes = 1;
   repeated Channel channels = 2;
+  repeated WasmContents wasm_contents = 3;
 }
 
 // A Node represents a unit of computation in Oak.
@@ -73,17 +74,28 @@ message LogNode {
 
 // A Node that runs the provided WebAssembly code.
 message WebAssemblyNode {
-  // The compiled code of the Oak Module to instantiate, in WebAssembly binary
-  // format.
-  // See https://webassembly.org/docs/binary-encoding/ .
-  // TODO: Replace this with just a hash of the bytecode to instantiate, and
-  // pass the actual bytecode to the Oak Manager in some other way.
-  bytes module_bytes = 1;
+  // Name of a WasmContents object in the Application configuration that
+  // holds the Wasm code for this Node.
+  string wasm_contents_name = 1;
 
   // The set of Ports available to the Node, which it can use to communicate
   // with other Nodes or with the System.
   // They may be of different types and specified in any order.
   repeated Port ports = 2;
+}
+
+// A mapping from an arbitrary name to a corresponding Wasm binary.
+//
+// The name field must be unique in an Application definition.
+message WasmContents {
+  string name = 1;
+
+  // The compiled code of the Oak Module to instantiate, in WebAssembly binary
+  // format.
+  // See https://webassembly.org/docs/binary-encoding/ .
+  // TODO: Replace this with just a hash of the bytecode to instantiate, and
+  // pass the actual bytecode to the Oak Manager in some other way.
+  bytes module_bytes = 2;
 }
 
 // A pseudo-Node that accepts storage requests and forwards them to an
