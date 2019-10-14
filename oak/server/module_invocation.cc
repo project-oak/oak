@@ -18,6 +18,7 @@
 
 #include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
+#include "oak/common/policy.h"
 #include "oak/proto/grpc_encap.pb.h"
 #include "oak/server/channel.h"
 
@@ -65,6 +66,9 @@ void ModuleInvocation::ProcessRequest(bool ok) {
   std::unique_ptr<Message> request_msg = Unwrap(request_);
 
   LOG(INFO) << "Handling gRPC call: " << context_.method();
+  for (auto entry : context_.client_metadata()) {
+    LOG(INFO) << "gRPC client metadata: [" << entry.first << "] -> [" << entry.second << "]";
+  }
 
   // Build an encapsulation of the gRPC request invocation and write its serialized
   // form to the gRPC input channel.
@@ -79,6 +83,14 @@ void ModuleInvocation::ProcessRequest(bool ok) {
   // TODO: figure out a way to avoid the extra copy (into then out of std::string)
   std::unique_ptr<Message> req_msg = absl::make_unique<Message>();
   req_msg->data.insert(req_msg->data.end(), encap_req.begin(), encap_req.end());
+  {
+    auto range = context_.client_metadata().equal_range(kOakLabelGrpcMetadataKey);
+    for (auto entry = range.first; entry != range.second; ++entry) {
+      std::string label(entry->second.data(), entry->second.size());
+      LOG(INFO) << "Oak label: " << label;
+      req_msg->labels.push_back(label);
+    }
+  }
   // Write data to the gRPC input channel, which the runtime connected to the
   // Node.
   req_half_->Write(std::move(req_msg));

@@ -61,3 +61,13 @@ filegroup(
         "testdata/*.textproto",
     ]),
 )
+
+cc_library(
+    name = "policy",
+    srcs = ["policy.cc"],
+    hdrs = ["policy.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_google_absl//absl/base",
+    ],
+)

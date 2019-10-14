@@ -50,8 +50,8 @@ cc_library(
     hdrs = ["policy_metadata.h"],
     visibility = ["//visibility:public"],
     deps = [
+        "//oak/common:policy",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/base",
-        "@com_google_absl//absl/strings",
     ],
 )
