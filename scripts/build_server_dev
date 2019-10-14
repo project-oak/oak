@@ -8,5 +8,6 @@ bazel_build_flags+=(
     '--config=clang'
 )
 
-# We set a different output_base so that caches do not interfere with each other.
+# Use a different output_base so that we don't lose incremental state.
+# See https://docs.bazel.build/versions/master/command-line-reference.html#flag--output_base.
 bazel --output_base="$CACHE_DIR/clang" build "${bazel_build_flags[@]}" //oak/server/dev:oak
