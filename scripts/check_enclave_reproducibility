@@ -22,7 +22,7 @@ for _ in 0 1
 do
     out="$DIFF_DIR/oak_enclave_unsigned_$(git rev-parse HEAD)_$(date --iso-8601=seconds).so"
     bazel clean
-    bazel build --subcommands --config=enc-sim //oak/server/asylo:oak
+    bazel build --config=enc-sim //oak/server/asylo:oak
     cp -f "$IN" "$out"
 done
 
