@@ -19,6 +19,7 @@ package(
     licenses = ["notice"],
 )
 
+load("//oak/common:fuzzer.bzl", "oak_fuzzer")
 load("//oak/server:wabt.bzl", "wasm_group")
 
 # Mark tests that can be run on the host system (i.e. with a normal
@@ -65,7 +66,7 @@ cc_library(
     ],
 )
 
-cc_binary(
+oak_fuzzer(
     name = "wasm_node_fuzz",
     srcs = [
         "wasm_node_fuzzer.cc",
