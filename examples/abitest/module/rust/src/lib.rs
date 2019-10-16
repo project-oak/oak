@@ -214,14 +214,14 @@ impl FrontendNode {
         let mut read = oak::ReadHandle { handle: 0 };
         unsafe {
             expect_eq!(
-                OakStatus::ERR_INVALID_ARGS.value(),
+                OakStatus::ERR_INVALID_ARGS.value() as u32,
                 oak::wasm::channel_create(
                     invalid_raw_offset() as *mut u64,
                     &mut read.handle as *mut u64
                 )
             );
             expect_eq!(
-                OakStatus::ERR_INVALID_ARGS.value(),
+                OakStatus::ERR_INVALID_ARGS.value() as u32,
                 oak::wasm::channel_create(
                     &mut write.handle as *mut u64,
                     invalid_raw_offset() as *mut u64
@@ -254,14 +254,20 @@ impl FrontendNode {
     fn test_channel_close_raw(&self) -> std::io::Result<()> {
         let (w, r) = oak::channel_create().unwrap();
         unsafe {
-            expect_eq!(OakStatus::OK.value(), oak::wasm::channel_close(w.handle));
-            expect_eq!(OakStatus::OK.value(), oak::wasm::channel_close(r.handle));
             expect_eq!(
-                OakStatus::ERR_BAD_HANDLE.value(),
+                OakStatus::OK.value() as u32,
                 oak::wasm::channel_close(w.handle)
             );
             expect_eq!(
-                OakStatus::ERR_BAD_HANDLE.value(),
+                OakStatus::OK.value() as u32,
+                oak::wasm::channel_close(r.handle)
+            );
+            expect_eq!(
+                OakStatus::ERR_BAD_HANDLE.value() as u32,
+                oak::wasm::channel_close(w.handle)
+            );
+            expect_eq!(
+                OakStatus::ERR_BAD_HANDLE.value() as u32,
                 oak::wasm::channel_close(9_999_999)
             );
         }
@@ -291,31 +297,31 @@ impl FrontendNode {
         unsafe {
             // Try invalid values for the 4 linear memory offset arguments.
             expect_eq!(
-                OakStatus::ERR_INVALID_ARGS.value(),
+                OakStatus::ERR_INVALID_ARGS.value() as u32,
                 oak::wasm::channel_read(
                     in_channel.handle,
                     invalid_raw_offset() as *mut u8,
                     1,
                     &mut actual_size,
                     handles.as_mut_ptr() as *mut u8,
-                    handles.capacity(),
+                    handles.capacity() as u32,
                     &mut actual_handle_count
                 )
             );
             expect_eq!(
-                OakStatus::ERR_INVALID_ARGS.value(),
+                OakStatus::ERR_INVALID_ARGS.value() as u32,
                 oak::wasm::channel_read(
                     in_channel.handle,
                     buf.as_mut_ptr(),
                     buf.capacity(),
                     invalid_raw_offset() as *mut u32,
                     handles.as_mut_ptr() as *mut u8,
-                    handles.capacity(),
+                    handles.capacity() as u32,
                     &mut actual_handle_count
                 )
             );
             expect_eq!(
-                OakStatus::ERR_INVALID_ARGS.value(),
+                OakStatus::ERR_INVALID_ARGS.value() as u32,
                 oak::wasm::channel_read(
                     in_channel.handle,
                     buf.as_mut_ptr(),
@@ -327,28 +333,28 @@ impl FrontendNode {
                 )
             );
             expect_eq!(
-                OakStatus::ERR_INVALID_ARGS.value(),
+                OakStatus::ERR_INVALID_ARGS.value() as u32,
                 oak::wasm::channel_read(
                     in_channel.handle,
                     buf.as_mut_ptr(),
                     buf.capacity(),
                     &mut actual_size,
                     handles.as_mut_ptr() as *mut u8,
-                    handles.capacity(),
+                    handles.capacity() as u32,
                     invalid_raw_offset() as *mut u32
                 )
             );
 
             // Valid case.
             expect_eq!(
-                OakStatus::OK.value(),
+                OakStatus::OK.value() as u32,
                 oak::wasm::channel_read(
                     in_channel.handle,
                     buf.as_mut_ptr(),
                     buf.capacity(),
                     &mut actual_size,
                     handles.as_mut_ptr() as *mut u8,
-                    handles.capacity(),
+                    handles.capacity() as u32,
                     &mut actual_handle_count
                 )
             );
@@ -421,17 +427,17 @@ impl FrontendNode {
         let handles = vec![in_channel.handle];
         unsafe {
             expect_eq!(
-                OakStatus::ERR_INVALID_ARGS.value(),
+                OakStatus::ERR_INVALID_ARGS.value() as u32,
                 oak::wasm::channel_write(
                     out_channel.handle,
                     invalid_raw_offset() as *const u8,
                     1,
                     handles.as_ptr() as *const u8,
-                    handles.len(),
+                    handles.len() as u32,
                 )
             );
             expect_eq!(
-                OakStatus::ERR_INVALID_ARGS.value(),
+                OakStatus::ERR_INVALID_ARGS.value() as u32,
                 oak::wasm::channel_write(
                     out_channel.handle,
                     buf.as_ptr(),
@@ -491,7 +497,7 @@ impl FrontendNode {
 
         unsafe {
             expect_eq!(
-                OakStatus::ERR_INVALID_ARGS.value(),
+                OakStatus::ERR_INVALID_ARGS.value() as u32,
                 oak::wasm::wait_on_channels(invalid_raw_offset() as *mut u8, 1)
             );
         }
@@ -513,7 +519,7 @@ impl FrontendNode {
                 .unwrap();
             space.push(0x99); // deliberate nonsense status value
             expect_eq!(
-                OakStatus::OK.value(),
+                OakStatus::OK.value() as u32,
                 oak::wasm::wait_on_channels(space.as_mut_ptr(), COUNT as u32)
             );
             expect_eq!(
@@ -543,7 +549,7 @@ impl FrontendNode {
                 .unwrap();
             space.push(0x00);
             expect_eq!(
-                OakStatus::OK.value(),
+                OakStatus::OK.value() as u32,
                 oak::wasm::wait_on_channels(space.as_mut_ptr(), COUNT as u32)
             );
             expect_eq!(
@@ -568,7 +574,7 @@ impl FrontendNode {
                 .unwrap();
             space.push(0x00);
             expect_eq!(
-                OakStatus::OK.value(),
+                OakStatus::OK.value() as u32,
                 oak::wasm::wait_on_channels(space.as_mut_ptr(), COUNT as u32)
             );
             expect_eq!(
@@ -595,7 +601,7 @@ impl FrontendNode {
                 .unwrap();
             space.push(0x00);
             expect_eq!(
-                OakStatus::ERR_BAD_HANDLE.value(),
+                OakStatus::ERR_BAD_HANDLE.value() as u32,
                 oak::wasm::wait_on_channels(space.as_mut_ptr(), COUNT as u32)
             );
             expect_eq!(
@@ -707,7 +713,7 @@ impl FrontendNode {
     fn test_random_get_raw(&self) -> std::io::Result<()> {
         unsafe {
             expect_eq!(
-                OakStatus::ERR_INVALID_ARGS.value(),
+                OakStatus::ERR_INVALID_ARGS.value() as u32,
                 oak::wasm::random_get(invalid_raw_offset() as *mut u8, 1)
             );
         }

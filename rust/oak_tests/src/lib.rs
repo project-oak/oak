@@ -30,11 +30,11 @@ struct MockChannel {
     /// If read_status is set, this status value will be returned for any read
     /// operations on the mock channel (and |messages| will be left
     /// undisturbed).
-    pub read_status: Option<i32>,
+    pub read_status: Option<u32>,
     /// If write_status is set, this status value will be returned for any write
     /// operations on the mock channel (and |messages| will be left
     /// undisturbed).
-    pub write_status: Option<i32>,
+    pub write_status: Option<u32>,
     /// Pending messages on the channel
     pub messages: VecDeque<Vec<u8>>,
 }
@@ -47,7 +47,7 @@ impl MockChannel {
             messages: VecDeque::new(),
         }
     }
-    fn write_message(&mut self, buf: *const u8, size: usize) -> i32 {
+    fn write_message(&mut self, buf: *const u8, size: usize) -> u32 {
         if let Some(status) = self.write_status {
             return status;
         }
@@ -57,16 +57,16 @@ impl MockChannel {
             msg.set_len(size);
         }
         self.messages.push_back(msg);
-        OakStatus::OK.value()
+        OakStatus::OK.value() as u32
     }
-    fn read_message(&mut self, buf: *mut u8, size: usize, actual_size: *mut u32) -> i32 {
+    fn read_message(&mut self, buf: *mut u8, size: usize, actual_size: *mut u32) -> u32 {
         if let Some(status) = self.read_status {
             return status;
         }
         let msg = self.messages.pop_front();
         if msg.is_none() {
             unsafe { *actual_size = 0 }
-            return OakStatus::OK.value();
+            return OakStatus::OK.value() as u32;
         }
         let msg = msg.unwrap();
 
@@ -74,12 +74,12 @@ impl MockChannel {
         unsafe { *actual_size = len as u32 }
         if len > size {
             self.messages.push_front(msg);
-            return OakStatus::ERR_BUFFER_TOO_SMALL.value();
+            return OakStatus::ERR_BUFFER_TOO_SMALL.value() as u32;
         }
         unsafe {
             std::ptr::copy_nonoverlapping(msg.as_ptr(), buf, len);
         }
-        OakStatus::OK.value()
+        OakStatus::OK.value() as u32
     }
 }
 
@@ -94,14 +94,14 @@ thread_local! {
 /// Test-only implementation of channel wait functionality, which always
 /// indicates that all provided channels are ready for reading.
 #[no_mangle]
-pub unsafe extern "C" fn wait_on_channels(buf: *mut u8, count: u32) -> i32 {
+pub unsafe extern "C" fn wait_on_channels(buf: *mut u8, count: u32) -> u32 {
     // Pretend all channels are readable.
     for i in 0..(count as usize) {
         let p = buf
             .add(i * oak::wasm::SPACE_BYTES_PER_HANDLE + (oak::wasm::SPACE_BYTES_PER_HANDLE - 1));
         *p = 1;
     }
-    OakStatus::OK.value()
+    OakStatus::OK.value() as u32
 }
 
 /// Test-only implementation of channel write functionality, which writes (only) the data
@@ -112,8 +112,8 @@ pub extern "C" fn channel_write(
     buf: *const u8,
     size: usize,
     _handle_buf: *const u8,
-    _handle_count: usize,
-) -> i32 {
+    _handle_count: u32,
+) -> u32 {
     CHANNEL.with(|channel| channel.borrow_mut().write_message(buf, size))
 }
 
@@ -126,23 +126,23 @@ pub extern "C" fn channel_read(
     size: usize,
     actual_size: *mut u32,
     _handle_buf: *mut u8,
-    _handle_count: usize,
+    _handle_count: u32,
     _actual_handle_count: *mut u32,
-) -> i32 {
+) -> u32 {
     CHANNEL.with(|channel| channel.borrow_mut().read_message(buf, size, actual_size))
 }
 
 /// Test-only placeholder for channel creation, which always fails.
 #[no_mangle]
-pub extern "C" fn channel_create(_write: *mut u64, _read: *mut u64) -> i32 {
-    OakStatus::ERR_INTERNAL.value()
+pub extern "C" fn channel_create(_write: *mut u64, _read: *mut u64) -> u32 {
+    OakStatus::ERR_INTERNAL.value() as u32
 }
 
 /// Test-only placeholder for channel creation, which always appears to succeed
 /// (but does nothing).
 #[no_mangle]
-pub extern "C" fn channel_close(_handle: u64) -> i32 {
-    OakStatus::OK.value()
+pub extern "C" fn channel_close(_handle: u64) -> u32 {
+    OakStatus::OK.value() as u32
 }
 
 /// Test-only placeholder for finding a channel by preconfigured port name, which
@@ -154,11 +154,11 @@ pub extern "C" fn channel_find(_buf: *const u8, _size: usize) -> u64 {
 
 /// Test-only placeholder for random data generation.
 #[no_mangle]
-pub unsafe extern "C" fn random_get(buf: *mut u8, size: usize) -> i32 {
+pub unsafe extern "C" fn random_get(buf: *mut u8, size: usize) -> u32 {
     for i in 0..size as isize {
         *(buf.offset(i)) = 4; // chosen by fair dice roll
     }
-    OakStatus::OK.value()
+    OakStatus::OK.value() as u32
 }
 
 /// Convenience test helper which returns the last message on the global test
@@ -171,12 +171,12 @@ pub fn last_message_as_string() -> String {
 }
 
 /// Test helper that injects a failure for future channel read operations.
-pub fn set_read_status(status: Option<i32>) {
+pub fn set_read_status(status: Option<u32>) {
     CHANNEL.with(|channel| channel.borrow_mut().read_status = status)
 }
 
 /// Test helper that injects a failure for future channel write operations.
-pub fn set_write_status(status: Option<i32>) {
+pub fn set_write_status(status: Option<u32>) {
     CHANNEL.with(|channel| channel.borrow_mut().write_status = status)
 }
 

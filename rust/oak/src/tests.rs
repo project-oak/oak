@@ -33,7 +33,7 @@ fn test_write_message_failure() {
     oak_tests::reset_channels();
     let send_channel = WriteHandle { handle: 123 };
     let data = [0x44, 0x4d, 0x44];
-    oak_tests::set_write_status(Some(OakStatus::ERR_INVALID_ARGS.value()));
+    oak_tests::set_write_status(Some(OakStatus::ERR_INVALID_ARGS.value() as u32));
     assert_eq!(
         OakStatus::ERR_INVALID_ARGS,
         channel_write(send_channel, &data, &[])
@@ -73,7 +73,7 @@ fn test_read_message_failure() {
     let rcv = ReadHandle { handle: 123 };
     let mut buf = Vec::with_capacity(100);
     let mut handles = Vec::with_capacity(1);
-    oak_tests::set_read_status(Some(OakStatus::ERR_INVALID_ARGS.value()));
+    oak_tests::set_read_status(Some(OakStatus::ERR_INVALID_ARGS.value() as u32));
     assert_eq!(
         channel_read(rcv, &mut buf, &mut handles),
         OakStatus::ERR_INVALID_ARGS
@@ -88,7 +88,7 @@ fn test_read_message_internal_failure() {
     let mut handles = Vec::with_capacity(1);
 
     // Set buffer too small but don't set actual size, so the retry gets confused.
-    oak_tests::set_read_status(Some(OakStatus::ERR_BUFFER_TOO_SMALL.value()));
+    oak_tests::set_read_status(Some(OakStatus::ERR_BUFFER_TOO_SMALL.value() as u32));
     assert_matches!(
         channel_read(rcv, &mut buf, &mut handles),
         OakStatus::ERR_BUFFER_TOO_SMALL
