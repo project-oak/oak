@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["Channel","Wrapper for a WriteHandle to implement the [`std::io::Write`] trait."]]});
+initSidebarItems({"fn":[["error_from_nonok_status","Map a non-OK [`OakStatus`] value to the nearest available [`std::io::Error`]."]],"struct":[["Channel","Wrapper for a WriteHandle to implement the [`std::io::Write`] trait."]]});

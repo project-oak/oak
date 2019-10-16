@@ -175,6 +175,15 @@
 <span id="175">175</span>
 <span id="176">176</span>
 <span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -328,6 +337,15 @@
 <span class="attribute">#[<span class="ident">no_mangle</span>]</span>
 <span class="kw">pub</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span> <span class="ident">channel_find</span>(<span class="ident">_buf</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">u8</span>, <span class="ident">_size</span>: <span class="ident">usize</span>) <span class="op">-&gt;</span> <span class="ident">u64</span> {
     <span class="number">1</span>
+}
+
+<span class="doccomment">/// Test-only placeholder for random data generation.</span>
+<span class="attribute">#[<span class="ident">no_mangle</span>]</span>
+<span class="kw">pub</span> <span class="kw">unsafe</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span> <span class="ident">random_get</span>(<span class="ident">buf</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u8</span>, <span class="ident">size</span>: <span class="ident">usize</span>) <span class="op">-&gt;</span> <span class="ident">i32</span> {
+    <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">size</span> <span class="kw">as</span> <span class="ident">isize</span> {
+        <span class="kw-2">*</span>(<span class="ident">buf</span>.<span class="ident">offset</span>(<span class="ident">i</span>)) <span class="op">=</span> <span class="number">4</span>; <span class="comment">// chosen by fair dice roll</span>
+    }
+    <span class="ident">OakStatus</span>::<span class="ident">OK</span>.<span class="ident">value</span>()
 }
 
 <span class="doccomment">/// Convenience test helper which returns the last message on the global test</span>

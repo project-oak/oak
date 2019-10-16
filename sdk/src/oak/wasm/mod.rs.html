@@ -108,6 +108,13 @@
 <span id="108">108</span>
 <span id="109">109</span>
 <span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -211,6 +218,13 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// Returns the handle value if found, or a zero (invalid) handle if not.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_find</span>(<span class="ident">buf</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">u8</span>, <span class="ident">len</span>: <span class="ident">usize</span>) <span class="op">-&gt;</span> <span class="ident">u64</span>;
+
+    <span class="doccomment">/// Fill a buffer with random data.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Returns the status of the operation, as an [`OakStatus`] value.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// [`OakStatus`]: crate::OakStatus</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">random_get</span>(<span class="ident">buf</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u8</span>, <span class="ident">len</span>: <span class="ident">usize</span>) <span class="op">-&gt;</span> <span class="ident">i32</span>;
 }
 
 <span class="doccomment">/// Number of bytes needed per-handle for channel readiness notifications.</span>
