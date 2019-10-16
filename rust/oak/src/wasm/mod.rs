@@ -28,7 +28,7 @@ extern "C" {
     /// Returns the status of the operation, as an [`OakStatus`] value.
     ///
     /// [`OakStatus`]: crate::OakStatus
-    pub fn wait_on_channels(buf: *mut u8, count: u32) -> i32;
+    pub fn wait_on_channels(buf: *mut u8, count: i32) -> i32;
 
     /// Read a message from a channel.
     ///
@@ -50,13 +50,13 @@ extern "C" {
     /// [`ERR_HANDLE_SPACE_TOO_SMALL`]: crate::OakStatus::ERR_HANDLE_SPACE_TOO_SMALL
     /// [`OakStatus`]: crate::OakStatus
     pub fn channel_read(
-        handle: u64,
+        handle: i64,
         buf: *mut u8,
-        size: usize,
-        actual_size: *mut u32,
+        size: i32,
+        actual_size: *mut i32,
         handle_buf: *mut u8,
-        handle_count: usize,
-        actual_handle_count: *mut u32,
+        handle_count: i32,
+        actual_handle_count: *mut i32,
     ) -> i32;
 
     /// Write a message to a channel.
@@ -68,11 +68,11 @@ extern "C" {
     ///
     /// [`OakStatus`]: crate::OakStatus
     pub fn channel_write(
-        handle: u64,
+        handle: i64,
         buf: *const u8,
-        size: usize,
+        size: i32,
         handle_buf: *const u8,
-        handle_count: usize,
+        handle_count: i32,
     ) -> i32;
 
     /// Create a new unidirectional channel.
@@ -83,7 +83,7 @@ extern "C" {
     /// Returns the status of the operation, as an [`OakStatus`] value.
     ///
     /// [`OakStatus`]: crate::OakStatus
-    pub fn channel_create(write: *mut u64, read: *mut u64) -> i32;
+    pub fn channel_create(write: *mut i64, read: *mut i64) -> i32;
 
     /// Close a channel.
     ///
@@ -92,26 +92,26 @@ extern "C" {
     /// Returns the status of the operation, as an [`OakStatus`] value.
     ///
     /// [`OakStatus`]: crate::OakStatus
-    pub fn channel_close(handle: u64) -> i32;
+    pub fn channel_close(handle: i64) -> i32;
 
     /// Find a pre-defined channel identified by port name.
     ///
     /// The port name is provided in the memory area given by `buf` and `len`.
     ///
     /// Returns the handle value if found, or a zero (invalid) handle if not.
-    pub fn channel_find(buf: *const u8, len: usize) -> u64;
+    pub fn channel_find(buf: *const u8, len: i32) -> i64;
 
     /// Fill a buffer with random data.
     ///
     /// Returns the status of the operation, as an [`OakStatus`] value.
     ///
     /// [`OakStatus`]: crate::OakStatus
-    pub fn random_get(buf: *mut u8, len: usize) -> i32;
+    pub fn random_get(buf: *mut u8, len: i32) -> i32;
 }
 
 /// Number of bytes needed per-handle for channel readiness notifications.
 ///
 /// The notification space consists of the channel handle (as a little-endian
-/// u64) followed by a single byte indicating the channel readiness, as
+/// i64) followed by a single byte indicating the channel readiness, as
 /// a `ChannelReadStatus` value.
 pub const SPACE_BYTES_PER_HANDLE: usize = 9;

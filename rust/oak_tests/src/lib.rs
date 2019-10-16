@@ -47,19 +47,19 @@ impl MockChannel {
             messages: VecDeque::new(),
         }
     }
-    fn write_message(&mut self, buf: *const u8, size: usize) -> i32 {
+    fn write_message(&mut self, buf: *const u8, size: i32) -> i32 {
         if let Some(status) = self.write_status {
             return status;
         }
-        let mut msg = Vec::with_capacity(size);
+        let mut msg = Vec::with_capacity(size as usize);
         unsafe {
-            std::ptr::copy_nonoverlapping(buf, msg.as_mut_ptr(), size);
-            msg.set_len(size);
+            std::ptr::copy_nonoverlapping(buf, msg.as_mut_ptr(), size as usize);
+            msg.set_len(size as usize);
         }
         self.messages.push_back(msg);
         OakStatus::OK.value()
     }
-    fn read_message(&mut self, buf: *mut u8, size: usize, actual_size: *mut u32) -> i32 {
+    fn read_message(&mut self, buf: *mut u8, size: i32, actual_size: *mut i32) -> i32 {
         if let Some(status) = self.read_status {
             return status;
         }
@@ -70,14 +70,14 @@ impl MockChannel {
         }
         let msg = msg.unwrap();
 
-        let len = msg.len();
-        unsafe { *actual_size = len as u32 }
+        let len = msg.len() as i32;
+        unsafe { *actual_size = len as i32 }
         if len > size {
             self.messages.push_front(msg);
             return OakStatus::ERR_BUFFER_TOO_SMALL.value();
         }
         unsafe {
-            std::ptr::copy_nonoverlapping(msg.as_ptr(), buf, len);
+            std::ptr::copy_nonoverlapping(msg.as_ptr(), buf, len as usize);
         }
         OakStatus::OK.value()
     }
@@ -108,11 +108,11 @@ pub unsafe extern "C" fn wait_on_channels(buf: *mut u8, count: u32) -> i32 {
 /// of the provided message to a (global) test channel.
 #[no_mangle]
 pub extern "C" fn channel_write(
-    _handle: u64,
+    _handle: i64,
     buf: *const u8,
-    size: usize,
+    size: i32,
     _handle_buf: *const u8,
-    _handle_count: usize,
+    _handle_count: i32,
 ) -> i32 {
     CHANNEL.with(|channel| channel.borrow_mut().write_message(buf, size))
 }
@@ -121,40 +121,40 @@ pub extern "C" fn channel_write(
 /// message from the (global) test channel.
 #[no_mangle]
 pub extern "C" fn channel_read(
-    _handle: u64,
+    _handle: i64,
     buf: *mut u8,
-    size: usize,
-    actual_size: *mut u32,
+    size: i32,
+    actual_size: *mut i32,
     _handle_buf: *mut u8,
-    _handle_count: usize,
-    _actual_handle_count: *mut u32,
+    _handle_count: i32,
+    _actual_handle_count: *mut i32,
 ) -> i32 {
     CHANNEL.with(|channel| channel.borrow_mut().read_message(buf, size, actual_size))
 }
 
 /// Test-only placeholder for channel creation, which always fails.
 #[no_mangle]
-pub extern "C" fn channel_create(_write: *mut u64, _read: *mut u64) -> i32 {
+pub extern "C" fn channel_create(_write: *mut i64, _read: *mut i64) -> i32 {
     OakStatus::ERR_INTERNAL.value()
 }
 
 /// Test-only placeholder for channel creation, which always appears to succeed
 /// (but does nothing).
 #[no_mangle]
-pub extern "C" fn channel_close(_handle: u64) -> i32 {
+pub extern "C" fn channel_close(_handle: i64) -> i32 {
     OakStatus::OK.value()
 }
 
 /// Test-only placeholder for finding a channel by preconfigured port name, which
 /// always returns a hard coded value.
 #[no_mangle]
-pub extern "C" fn channel_find(_buf: *const u8, _size: usize) -> u64 {
+pub extern "C" fn channel_find(_buf: *const u8, _size: i32) -> i64 {
     1
 }
 
 /// Test-only placeholder for random data generation.
 #[no_mangle]
-pub unsafe extern "C" fn random_get(buf: *mut u8, size: usize) -> i32 {
+pub unsafe extern "C" fn random_get(buf: *mut u8, size: i32) -> i32 {
     for i in 0..size as isize {
         *(buf.offset(i)) = 4; // chosen by fair dice roll
     }

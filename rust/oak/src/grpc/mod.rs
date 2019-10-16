@@ -105,7 +105,7 @@ pub fn event_loop<T: OakNode>(
         // Block until there is a message to read on an input channel.
         crate::prep_handle_space(&mut space);
         unsafe {
-            let status = wasm::wait_on_channels(space.as_mut_ptr(), read_handles.len() as u32);
+            let status = wasm::wait_on_channels(space.as_mut_ptr(), read_handles.len() as i32);
             match OakStatus::from_i32(status) {
                 Some(OakStatus::OK) => (),
                 Some(err) => return err as i32,

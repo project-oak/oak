@@ -87,7 +87,7 @@ functions** as
   [`zx_channel_write`](https://fuchsia.dev/fuchsia-src/zircon/syscalls/channel_write)
   in Fuchsia.
 
-- `channel_create: (i32, i32) -> i64`: Create a new unidirectional channel and
+- `channel_create: (i32, i32) -> i32`: Create a new unidirectional channel and
   return the channel handles for its read and write halves.
 
   - arg 0: Address of an 8-byte location that will receive the handle for the

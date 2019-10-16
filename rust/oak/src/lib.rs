@@ -42,7 +42,7 @@ extern crate assert_matches;
 /// Handle used to identify read or write channel halves.
 ///
 /// These handles are used for all host function calls.
-pub type Handle = u64;
+pub type Handle = i64;
 
 /// Wrapper for a handle to the read half of a channel.
 ///
@@ -66,7 +66,7 @@ fn new_handle_space(handles: &[ReadHandle]) -> Vec<u8> {
     let mut space = Vec::with_capacity(wasm::SPACE_BYTES_PER_HANDLE * handles.len());
     for handle in handles {
         space
-            .write_u64::<byteorder::LittleEndian>(handle.handle)
+            .write_i64::<byteorder::LittleEndian>(handle.handle)
             .unwrap();
         space.push(0x00);
     }
@@ -92,7 +92,7 @@ fn prep_handle_space(space: &mut [u8]) {
 pub fn wait_on_channels(handles: &[ReadHandle]) -> Result<Vec<ChannelReadStatus>, OakStatus> {
     let mut space = new_handle_space(handles);
     unsafe {
-        let status = wasm::wait_on_channels(space.as_mut_ptr(), handles.len() as u32);
+        let status = wasm::wait_on_channels(space.as_mut_ptr(), handles.len() as i32);
         match OakStatus::from_i32(status) {
             Some(OakStatus::OK) => (),
             Some(err) => return Err(err),
@@ -122,16 +122,16 @@ pub fn channel_read(half: ReadHandle, buf: &mut Vec<u8>, handles: &mut Vec<Handl
     // Try reading from the channel twice: first with provided vectors, then
     // with vectors that have been resized to meet size requirements.
     for resized in &[false, true] {
-        let mut actual_size: u32 = 0;
-        let mut actual_handle_count: u32 = 0;
+        let mut actual_size: i32 = 0;
+        let mut actual_handle_count: i32 = 0;
         let status = OakStatus::from_i32(unsafe {
             wasm::channel_read(
                 half.handle,
                 buf.as_mut_ptr(),
-                buf.capacity(),
+                buf.capacity() as i32,
                 &mut actual_size,
                 handles.as_mut_ptr() as *mut u8,
-                handles.capacity(),
+                handles.capacity() as i32,
                 &mut actual_handle_count,
             )
         });
@@ -181,9 +181,9 @@ pub fn channel_write(half: WriteHandle, buf: &[u8], handles: &[Handle]) -> OakSt
         wasm::channel_write(
             half.handle,
             buf.as_ptr(),
-            buf.len(),
+            buf.len() as i32,
             handles.as_ptr() as *const u8, // Wasm spec defines this as little-endian
-            handles.len(),
+            handles.len() as i32,
         )
     }) {
         Some(s) => s,
@@ -199,7 +199,7 @@ pub fn channel_create() -> Result<(WriteHandle, ReadHandle), OakStatus> {
     let mut write = WriteHandle { handle: 0 };
     let mut read = ReadHandle { handle: 0 };
     match OakStatus::from_i32(unsafe {
-        wasm::channel_create(&mut write.handle as *mut u64, &mut read.handle as *mut u64)
+        wasm::channel_create(&mut write.handle as *mut i64, &mut read.handle as *mut i64)
     }) {
         Some(OakStatus::OK) => Ok((write, read)),
         Some(err) => Err(err),
@@ -218,12 +218,12 @@ pub fn channel_close(handle: Handle) -> OakStatus {
 /// Determine the [`Handle`] for a pre-defined channel, identified by its
 /// `port_name`.
 pub fn channel_find(port_name: &str) -> Handle {
-    unsafe { wasm::channel_find(port_name.as_ptr(), port_name.len()) }
+    unsafe { wasm::channel_find(port_name.as_ptr(), port_name.len() as i32) }
 }
 
 /// Fill a buffer with random data.
 pub fn random_get(buf: &mut [u8]) -> OakStatus {
-    match OakStatus::from_i32(unsafe { wasm::random_get(buf.as_mut_ptr(), buf.len()) }) {
+    match OakStatus::from_i32(unsafe { wasm::random_get(buf.as_mut_ptr(), buf.len() as i32) }) {
         Some(s) => s,
         None => OakStatus::OAK_STATUS_UNSPECIFIED,
     }
