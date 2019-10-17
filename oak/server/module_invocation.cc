@@ -45,34 +45,42 @@ std::unique_ptr<Message> Unwrap(const grpc::ByteBuffer& buffer) {
 void ModuleInvocation::Start() {
   auto callback = new std::function<void(bool)>(
       std::bind(&ModuleInvocation::ReadRequest, this, std::placeholders::_1));
+  LOG(INFO) << "invocation#" << stream_id_ << " Start: request service->RequestCall => ReadRequest";
   service_->RequestCall(&context_, &stream_, queue_, queue_, callback);
 }
 
 void ModuleInvocation::ReadRequest(bool ok) {
   if (!ok) {
+    LOG(INFO) << "invocation#" << stream_id_ << " ReadRequest: not OK, terminating";
     delete this;
     return;
   }
+  LOG(INFO) << "invocation#" << stream_id_
+            << " ReadRequest: request stream->Read => ProcessRequest";
   auto callback = new std::function<void(bool)>(
       std::bind(&ModuleInvocation::ProcessRequest, this, std::placeholders::_1));
   stream_.Read(&request_, callback);
 
   // Now that processing of this request has started, start watching out for the
   // next request.
+  LOG(INFO) << "invocation#" << stream_id_ << " start next invocation";
   auto next_invocation = new ModuleInvocation(service_, queue_, grpc_node_);
   next_invocation->Start();
 }
 
 void ModuleInvocation::ProcessRequest(bool ok) {
   if (!ok) {
+    LOG(INFO) << "invocation#" << stream_id_ << " ProcessRequest: not OK, terminating";
     delete this;
     return;
   }
   std::unique_ptr<Message> request_msg = Unwrap(request_);
 
-  LOG(INFO) << "Handling gRPC call: " << context_.method();
+  LOG(INFO) << "invocation#" << stream_id_
+            << " ProcessRequest: handling gRPC call: " << context_.method();
   for (auto entry : context_.client_metadata()) {
-    LOG(INFO) << "gRPC client metadata: [" << entry.first << "] -> [" << entry.second << "]";
+    LOG(INFO) << "invocation#" << stream_id_ << "   gRPC client metadata: [" << entry.first
+              << "] -> [" << entry.second << "]";
   }
 
   // Build an encapsulation of the gRPC request invocation and write its serialized
@@ -93,7 +101,7 @@ void ModuleInvocation::ProcessRequest(bool ok) {
     auto range = context_.client_metadata().equal_range(kOakLabelGrpcMetadataKey);
     for (auto entry = range.first; entry != range.second; ++entry) {
       std::string label(entry->second.data(), entry->second.size());
-      LOG(INFO) << "Oak label: " << label;
+      LOG(INFO) << "invocation#" << stream_id_ << "   Oak label: " << label;
       req_msg->labels.push_back(label);
     }
   }
@@ -101,7 +109,8 @@ void ModuleInvocation::ProcessRequest(bool ok) {
   // Node.
   MessageChannelWriteHalf* req_half = grpc_node_->BorrowWriteChannel();
   req_half->Write(std::move(req_msg));
-  LOG(INFO) << "Wrote encapsulated request to gRPC input channel";
+  LOG(INFO) << "invocation#" << stream_id_
+            << " ProcessRequest: Wrote encapsulated request to gRPC input channel";
 
   // Move straight onto sending first response.
   SendResponse(true);
@@ -109,6 +118,7 @@ void ModuleInvocation::ProcessRequest(bool ok) {
 
 void ModuleInvocation::SendResponse(bool ok) {
   if (!ok) {
+    LOG(INFO) << "invocation#" << stream_id_ << " SendResponse: not OK, terminating";
     delete this;
     return;
   }
@@ -124,16 +134,18 @@ void ModuleInvocation::BlockingSendResponse() {
   ReadResult rsp_result;
   // Block until we can read a single queued GrpcResponse message (in serialized form) from the
   // gRPC output channel.
+  LOG(INFO) << "invocation#" << stream_id_ << " SendResponse: do blocking-read on grpc channel";
   MessageChannelReadHalf* rsp_half = grpc_node_->BorrowReadChannel();
   rsp_result = rsp_half->BlockingRead(INT_MAX, INT_MAX);
   if (rsp_result.required_size > 0) {
-    LOG(ERROR) << "Message size too large: " << rsp_result.required_size;
+    LOG(ERROR) << "invocation#" << stream_id_
+               << " SendResponse: Message size too large: " << rsp_result.required_size;
     FinishAndRestart(grpc::Status(grpc::StatusCode::INTERNAL, "Message size too large"));
     return;
   }
 
-  LOG(INFO) << "Read encapsulated message of size " << rsp_result.msg->data.size()
-            << " from gRPC output channel";
+  LOG(INFO) << "invocation#" << stream_id_ << " SendResponse: Read encapsulated message of size "
+            << rsp_result.msg->data.size() << " from gRPC output channel";
   oak::GrpcResponse grpc_response;
   // TODO: Check errors.
   grpc_response.ParseFromString(
@@ -146,17 +158,19 @@ void ModuleInvocation::BlockingSendResponse() {
 
   grpc::WriteOptions options;
   if (!grpc_response.last()) {
-    LOG(INFO) << "Non-final inner response of size " << inner_msg.size();
+    LOG(INFO) << "invocation#" << stream_id_ << " SendResponse: Non-final inner response of size "
+              << inner_msg.size() << ", request stream->Write => SendResponse";
     auto callback = new std::function<void(bool)>(
         std::bind(&ModuleInvocation::SendResponse, this, std::placeholders::_1));
     stream_.Write(bb, options, callback);
   } else if (!grpc_response.has_rsp_msg()) {
     // Final iteration but no response, just Finish.
-    LOG(INFO) << "Final inner response empty";
+    LOG(INFO) << "invocation#" << stream_id_ << " SendResponse: Final inner response empty";
     FinishAndRestart(::grpc::Status::OK);
   } else {
     // Final response, so WriteAndFinish then kick off the next round.
-    LOG(INFO) << "Final inner response of size " << inner_msg.size();
+    LOG(INFO) << "invocation#" << stream_id_ << " SendResponse: Final inner response of size "
+              << inner_msg.size() << ", request stream->WriteAndFinish => Finish";
     options.set_last_message();
     auto callback = new std::function<void(bool)>(
         std::bind(&ModuleInvocation::Finish, this, std::placeholders::_1));
@@ -164,10 +178,15 @@ void ModuleInvocation::BlockingSendResponse() {
   }
 }
 
-void ModuleInvocation::Finish(bool ok) { delete this; }
+void ModuleInvocation::Finish(bool ok) {
+  LOG(INFO) << "invocation#" << stream_id_ << " Finish: delete self";
+  delete this;
+}
 
 void ModuleInvocation::FinishAndRestart(const grpc::Status& status) {
   // Finish the current invocation (which triggers self-destruction).
+  LOG(INFO) << "invocation#" << stream_id_
+            << "  FinishAndRestart: request stream->Finish => Finish";
   auto callback = new std::function<void(bool)>(
       std::bind(&ModuleInvocation::Finish, this, std::placeholders::_1));
   stream_.Finish(status, callback);
