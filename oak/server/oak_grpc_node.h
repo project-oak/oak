@@ -19,6 +19,7 @@
 
 #include <thread>
 
+#include "absl/synchronization/mutex.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/common/app_config.h"
 #include "oak/proto/application.grpc.pb.h"
@@ -37,10 +38,15 @@ class OakGrpcNode final : public Application::Service, public OakNode {
 
   int GetPort() { return port_; };
 
+  int32_t NextStreamID() LOCKS_EXCLUDED(id_mu_) {
+    absl::MutexLock lock(&id_mu_);
+    return next_stream_id_++;
+  }
+
  private:
   friend class ModuleInvocation;
 
-  OakGrpcNode(const std::string& name) : OakNode(name) {}
+  OakGrpcNode(const std::string& name) : OakNode(name), next_stream_id_(1) {}
   OakGrpcNode(const OakGrpcNode&) = delete;
   OakGrpcNode& operator=(const OakGrpcNode&) = delete;
 
@@ -67,6 +73,9 @@ class OakGrpcNode final : public Application::Service, public OakNode {
   // void(bool) functions.
   std::thread queue_thread_;
   std::unique_ptr<grpc::ServerCompletionQueue> completion_queue_;
+
+  absl::Mutex id_mu_;  // protects next_stream_id_
+  int32_t next_stream_id_ GUARDED_BY(id_mu_);
 };
 
 }  // namespace oak

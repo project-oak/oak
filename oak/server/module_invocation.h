@@ -32,7 +32,11 @@ class ModuleInvocation {
   // lifetime after RequestNext is called.
   ModuleInvocation(grpc::AsyncGenericService* service, grpc::ServerCompletionQueue* queue,
                    OakGrpcNode* grpc_node)
-      : service_(service), queue_(queue), grpc_node_(grpc_node), stream_(&context_) {}
+      : service_(service),
+        queue_(queue),
+        grpc_node_(grpc_node),
+        stream_(&context_),
+        stream_id_(grpc_node_->NextStreamID()) {}
 
   // This object deletes itself.
   ~ModuleInvocation() = default;
@@ -71,6 +75,8 @@ class ModuleInvocation {
   grpc::GenericServerContext context_;
   grpc::GenericServerAsyncReaderWriter stream_;
   grpc::ByteBuffer request_;
+
+  const int32_t stream_id_;
 };
 
 }  // namespace oak
