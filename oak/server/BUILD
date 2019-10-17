@@ -122,6 +122,7 @@ cc_library(
         "//oak/proto:enclave_cc_proto",
         "//oak/proto:grpc_encap_cc_proto",
         "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/synchronization",
         "@com_google_asylo//asylo/grpc/auth:null_credentials_options",
         "@com_google_asylo//asylo/util:logging",
     ],

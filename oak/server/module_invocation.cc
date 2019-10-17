@@ -56,6 +56,11 @@ void ModuleInvocation::ReadRequest(bool ok) {
   auto callback = new std::function<void(bool)>(
       std::bind(&ModuleInvocation::ProcessRequest, this, std::placeholders::_1));
   stream_.Read(&request_, callback);
+
+  // Now that processing of this request has started, start watching out for the
+  // next request.
+  auto next_invocation = new ModuleInvocation(service_, queue_, grpc_node_);
+  next_invocation->Start();
 }
 
 void ModuleInvocation::ProcessRequest(bool ok) {
@@ -74,6 +79,7 @@ void ModuleInvocation::ProcessRequest(bool ok) {
   // form to the gRPC input channel.
   oak::GrpcRequest grpc_request;
   grpc_request.set_method_name(context_.method());
+  grpc_request.set_stream_id(stream_id_);
   google::protobuf::Any* any = new google::protobuf::Any();
   any->set_value(request_msg->data.data(), request_msg->data.size());
   grpc_request.set_allocated_req_msg(any);
@@ -147,22 +153,12 @@ void ModuleInvocation::SendResponse(bool ok) {
     auto callback = new std::function<void(bool)>(
         std::bind(&ModuleInvocation::Finish, this, std::placeholders::_1));
     stream_.WriteAndFinish(bb, options, ::grpc::Status::OK, callback);
-
-    // Restart the gRPC flow with a new ModuleInvocation object for the next request
-    // after processing this request.  This ensures that processing is serialized.
-    auto request = new ModuleInvocation(service_, queue_, grpc_node_);
-    request->Start();
   }
 }
 
 void ModuleInvocation::Finish(bool ok) { delete this; }
 
 void ModuleInvocation::FinishAndRestart(const grpc::Status& status) {
-  // Restart the gRPC flow with a new ModuleInvocation object for the next request
-  // after processing this request.  This ensures that processing is serialized.
-  auto request = new ModuleInvocation(service_, queue_, grpc_node_);
-  request->Start();
-
   // Finish the current invocation (which triggers self-destruction).
   auto callback = new std::function<void(bool)>(
       std::bind(&ModuleInvocation::Finish, this, std::placeholders::_1));
