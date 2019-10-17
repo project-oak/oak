@@ -27,9 +27,6 @@ load(
 proto_library(
     name = "hello_world_proto",
     srcs = ["hello_world.proto"],
-    deps = [
-        "@com_google_protobuf//:empty_proto",
-    ],
 )
 
 cc_proto_library(
