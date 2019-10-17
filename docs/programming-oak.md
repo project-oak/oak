@@ -13,6 +13,8 @@ This document walks through the basics of programming in Oak.
 - [Persistent Storage](#persistent-storage)
 - [Channels and Handles](#channels-and-handles)
 
+## Writing an Oak Node
+
 Oak Applications are built from a collection of inter-connected Oak **Nodes**,
 so the first step is to understand how to build a single Oak Node.
 
