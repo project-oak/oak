@@ -1,0 +1,67 @@
+//
+// Copyright 2019 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package oak.examples.chat;
+
+import "google/protobuf/empty.proto";
+
+message CreateRoomRequest {
+  // Name of the room; this is only used for UI purposes (and so does not need
+  // to be unique).
+  string name = 1;
+  // ID used to identify the room; knowledge of this value allows entry to the
+  // room.  The client should create a random bearer token of sufficient
+  // entropy to use as the ID.
+  bytes room_id = 2;
+  // ID used to administer the room; knowledge of this value allows control over
+  // the room (including the ability to destroy the room). The client should
+  // create a random bearer token of sufficient entropy to use as the ID.)
+  bytes admin_id = 3;
+}
+
+message DestroyRoomRequest {
+  bytes admin_id = 1;
+}
+
+message JoinRoomRequest {
+  bytes room_id = 1;
+  // Handle for the user; this is only used for UI purposes (and so does not
+  // need to be unique nor persistent).
+  string user_handle = 2;
+}
+
+message ReceivedMessage {
+  string room_name = 1;
+  string user_handle = 2;
+  string text = 3;
+}
+
+message SentMessage {
+  bytes room_id = 1;
+  // Handle for the user; this is only used for UI purposes (and so does not
+  // need to be unique nor persistent).
+  string user_handle = 2;
+  string text = 3;
+}
+
+service Chat {
+  rpc CreateRoom(CreateRoomRequest) returns (google.protobuf.Empty);
+  rpc DestroyRoom(DestroyRoomRequest) returns (google.protobuf.Empty);
+  rpc JoinRoom(JoinRoomRequest) returns (stream ReceivedMessage);
+  rpc SendMessage(SentMessage) returns (google.protobuf.Empty);
+}
