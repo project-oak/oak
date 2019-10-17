@@ -1,0 +1,19 @@
+[package]
+name = "chat"
+version = "0.1.0"
+authors = ["David Drysdale <drysdale@google.com>"]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+log = "*"
+oak = { path = "../../../../rust/oak" }
+oak_derive = { path = "../../../../rust/oak_derive" }
+oak_log = { path = "../../../../rust/oak_log" }
+protobuf = "*"
+rand_core = "0.5"
+rand = "0.7"
+
+[build-dependencies]
+protoc-rust-grpc = { path = "../../../../third_party/grpc-rust/protoc-rust-grpc" }

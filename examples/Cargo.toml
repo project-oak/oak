@@ -1,6 +1,7 @@
 [workspace]
 
 members = [
+    "chat/module/rust",
     "hello_world/module/rust",
     "private_set_intersection/module/rust",
     "running_average/module/rust",
