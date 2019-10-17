@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef OAK_COMMON_POLICIES_H_
-#define OAK_COMMON_POLICIES_H_
+#ifndef OAK_COMMON_POLICY_H_
+#define OAK_COMMON_POLICY_H_
 
 #include "absl/base/attributes.h"
 
@@ -27,4 +27,4 @@ ABSL_CONST_INIT extern const char kOakLabelGrpcMetadataKey[];
 
 }  // namespace oak
 
-#endif
+#endif  // OAK_COMMON_POLICY_H_
