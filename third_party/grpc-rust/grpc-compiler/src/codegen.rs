@@ -116,9 +116,9 @@ impl<'a> MethodGen<'a> {
 
     fn server_resp_type(&self) -> String {
         if self.proto.get_server_streaming() {
-            "grpc::Result<()>".to_string()
+            "".to_string()
         } else {
-            format!("grpc::Result<{}>", self.output_message())
+            format!(" -> grpc::Result<{}>", self.output_message())
         }
     }
 
@@ -137,15 +137,17 @@ impl<'a> MethodGen<'a> {
             )
         };
         let arg2 = if self.proto.get_server_streaming() {
-            format!(
-                ", writer: &mut dyn grpc::ResponseWriter<{}>",
-                self.output_message()
-            )
+            ", writer: grpc::ChannelResponseWriter".to_string()
         } else {
             "".to_string()
         };
-        let result = format!(" -> {}", self.server_resp_type());
-        format!("{}(&mut self{}{}){}", self.snake_name(), arg, arg2, result)
+        format!(
+            "{}(&mut self{}{}){}",
+            self.snake_name(),
+            arg,
+            arg2,
+            self.server_resp_type()
+        )
     }
 
     fn write_server_intf(&self, w: &mut CodeWriter) {
@@ -165,46 +167,27 @@ impl<'a> MethodGen<'a> {
             param_in = "r";
             w.write_line("let r = protobuf::parse_from_bytes(&req).unwrap();")
         }
-        w.write_line("let mut result = oak::proto::grpc_encap::GrpcResponse::new();");
         if self.output_empty() {
             w.block(
                 &format!("match node.{}({}) {{", self.snake_name(), param_in),
                 "}",
                 |w| {
-                    w.write_line(
-                        "Ok(_) => result.set_rsp_msg(protobuf::well_known_types::Any::new()),",
-                    );
-                    w.write_line("Err(status) => result.set_status(status),");
+                    w.write_line("Ok(_) => writer.write_empty(grpc::WriteMode::Close),");
+                    w.write_line("Err(status) => writer.close(Err(status)),");
                 },
             );
         } else if self.proto.get_server_streaming() {
-            w.block("{", "}", |w| {
-                w.write_line("let mut w = grpc::ChannelResponseWriter{channel: &mut out};");
-                w.block(
-                    &format!("match node.{}({}, &mut w) {{", self.snake_name(), param_in),
-                    "}",
-                    |w| {
-                        w.write_line("Ok(_) => {},");
-                        w.write_line("Err(status) => { result.set_status(status); },");
-                    },
-                );
-            });
+            w.write_line(format!("node.{}({}, writer)", self.snake_name(), param_in));
         } else {
             w.block(
                 &format!("match node.{}({}) {{", self.snake_name(), param_in),
                 "}",
                 |w| {
-                    w.block("Ok(rsp) => {", "}", |w| {
-                        w.write_line("let mut any = protobuf::well_known_types::Any::new();");
-                        w.write_line("rsp.write_to_writer(&mut any.value).unwrap();");
-                        w.write_line("result.set_rsp_msg(any);");
-                    });
-                    w.write_line("Err(status) => result.set_status(status),");
+                    w.write_line("Ok(rsp) => writer.write(rsp, grpc::WriteMode::Close),");
+                    w.write_line("Err(status) => writer.close(Err(status)),");
                 },
             );
         }
-        w.write_line("result.set_last(true);");
-        w.write_line("result.write_to_writer(&mut out).unwrap();");
     }
 }
 
@@ -258,8 +241,7 @@ impl<'a> ServiceGen<'a> {
     }
 
     fn write_dispatcher(&self, w: &mut CodeWriter) {
-        w.pub_fn(&format!("dispatch(node: &mut dyn {}, method: &str, req: &[u8], out_handle: oak::WriteHandle)", self.server_intf_name()), |w| {
-            w.write_line("let mut out = oak::io::Channel::new(out_handle);");
+        w.pub_fn(&format!("dispatch(node: &mut dyn {}, method: &str, req: &[u8], mut writer: grpc::ChannelResponseWriter)", self.server_intf_name()), |w| {
             w.block("match method {", "};", |w| {
                 for method in &self.methods {
                     let full_path = format!("{}/{}", method.service_path, method.proto.get_name());

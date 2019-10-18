@@ -45,7 +45,7 @@ use quote::quote;
 ///
 /// impl OakNode for Node {
 ///     fn new() -> Self { Node }
-///     fn invoke(&mut self, method: &str, req: &[u8], out: oak::WriteHandle) { /* ... */ }
+///     fn invoke(&mut self, method: &str, req: &[u8], writer: oak::grpc::ChannelResponseWriter) { /* ... */ }
 /// }
 /// ```
 #[proc_macro_derive(OakExports)]

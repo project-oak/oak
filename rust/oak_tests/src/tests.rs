@@ -27,7 +27,7 @@ impl oak::grpc::OakNode for PanicNode {
     fn new() -> Self {
         PanicNode
     }
-    fn invoke(&mut self, _method: &str, _req: &[u8], _out: oak::WriteHandle) {
+    fn invoke(&mut self, _method: &str, _req: &[u8], _writer: oak::grpc::ChannelResponseWriter) {
         println!("PanicNode invoked, about to panic");
         panic!("PanicNode invoked!");
     }

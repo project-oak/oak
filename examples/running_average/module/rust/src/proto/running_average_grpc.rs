@@ -31,31 +31,20 @@ pub trait RunningAverageNode {
 }
 
 // Oak Node gRPC method dispatcher
-pub fn dispatch(node: &mut dyn RunningAverageNode, method: &str, req: &[u8], out_handle: oak::WriteHandle) {
-    let mut out = oak::io::Channel::new(out_handle);
+pub fn dispatch(node: &mut dyn RunningAverageNode, method: &str, req: &[u8], mut writer: grpc::ChannelResponseWriter) {
     match method {
         "/oak.examples.running_average.RunningAverage/SubmitSample" => {
             let r = protobuf::parse_from_bytes(&req).unwrap();
-            let mut result = oak::proto::grpc_encap::GrpcResponse::new();
             match node.submit_sample(r) {
-                Ok(_) => result.set_rsp_msg(protobuf::well_known_types::Any::new()),
-                Err(status) => result.set_status(status),
+                Ok(_) => writer.write_empty(grpc::WriteMode::Close),
+                Err(status) => writer.close(Err(status)),
             }
-            result.set_last(true);
-            result.write_to_writer(&mut out).unwrap();
         }
         "/oak.examples.running_average.RunningAverage/GetAverage" => {
-            let mut result = oak::proto::grpc_encap::GrpcResponse::new();
             match node.get_average() {
-                Ok(rsp) => {
-                    let mut any = protobuf::well_known_types::Any::new();
-                    rsp.write_to_writer(&mut any.value).unwrap();
-                    result.set_rsp_msg(any);
-                }
-                Err(status) => result.set_status(status),
+                Ok(rsp) => writer.write(rsp, grpc::WriteMode::Close),
+                Err(status) => writer.close(Err(status)),
             }
-            result.set_last(true);
-            result.write_to_writer(&mut out).unwrap();
         }
         _ => {
             writeln!(oak::logging_channel(), "unknown method name: {}", method).unwrap();

@@ -24,9 +24,10 @@ extern crate rand;
 extern crate rand_distr;
 extern crate rusty_machine;
 
+use oak::grpc;
 use oak::grpc::OakNode;
 use oak_derive::OakExports;
-use protobuf::{Message, ProtobufEnum};
+use protobuf::ProtobufEnum;
 use rand::prelude::*;
 use rand_distr::Distribution;
 use rand_distr::Normal;
@@ -171,8 +172,7 @@ impl oak::grpc::OakNode for Node {
             model: NaiveBayes::new(),
         }
     }
-    fn invoke(&mut self, method: &str, _req: &[u8], out_handle: oak::WriteHandle) {
-        let mut out = oak::io::Channel::new(out_handle);
+    fn invoke(&mut self, method: &str, _req: &[u8], mut writer: grpc::ChannelResponseWriter) {
         let mut logging_channel = oak::logging_channel();
         match method {
             "/oak.examples.machine_learning.MachineLearning/Data" => {
@@ -279,9 +279,6 @@ impl oak::grpc::OakNode for Node {
                 panic!("unknown method name");
             }
         }
-        let mut result = oak::proto::grpc_encap::GrpcResponse::new();
-        result.set_rsp_msg(protobuf::well_known_types::Any::new());
-        result.set_last(true);
-        result.write_to_writer(&mut out).unwrap();
+        writer.write_empty(grpc::WriteMode::Close);
     }
 }
