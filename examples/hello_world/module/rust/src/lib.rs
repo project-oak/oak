@@ -24,7 +24,7 @@ extern crate protobuf;
 mod proto;
 
 use oak::grpc;
-use oak::grpc::{OakNode, ResponseWriter};
+use oak::grpc::OakNode;
 use oak_derive::OakExports;
 use proto::hello_world::{HelloRequest, HelloResponse};
 use proto::hello_world_grpc::{dispatch, HelloWorldNode};
@@ -38,15 +38,15 @@ struct Node {
 const STORAGE_NAME: &[u8] = b"HelloWorld";
 const FIELD_NAME: &[u8] = b"last-greeting";
 
-impl oak::grpc::OakNode for Node {
+impl OakNode for Node {
     fn new() -> Self {
         oak_log::init_default();
         Node {
             storage: oak::storage::Storage::default(),
         }
     }
-    fn invoke(&mut self, method: &str, req: &[u8], out: oak::WriteHandle) {
-        dispatch(self, method, req, out)
+    fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
+        dispatch(self, method, req, writer)
     }
 }
 
@@ -75,15 +75,11 @@ impl HelloWorldNode for Node {
         Ok(res)
     }
 
-    fn lots_of_replies(
-        &mut self,
-        req: HelloRequest,
-        writer: &mut dyn ResponseWriter<HelloResponse>,
-    ) -> grpc::Result<()> {
+    fn lots_of_replies(&mut self, req: HelloRequest, mut writer: grpc::ChannelResponseWriter) {
         info!("Say hello to {}", req.greeting);
         let mut res1 = HelloResponse::new();
         res1.reply = format!("HELLO {}!", req.greeting);
-        writer.write(res1);
+        writer.write(res1, grpc::WriteMode::KeepOpen);
 
         // Also generate a response with the last-stored value.
         let result = self.storage.read(STORAGE_NAME, FIELD_NAME);
@@ -100,8 +96,7 @@ impl HelloWorldNode for Node {
         info!("Say bonjour to {}", previous);
         let mut res2 = HelloResponse::new();
         res2.reply = format!("BONJOUR {}!", previous);
-        writer.write(res2);
-        Ok(())
+        writer.write(res2, grpc::WriteMode::Close);
     }
 
     fn lots_of_greetings(&mut self, reqs: Vec<HelloRequest>) -> grpc::Result<HelloResponse> {
@@ -114,20 +109,15 @@ impl HelloWorldNode for Node {
         Ok(res)
     }
 
-    fn bidi_hello(
-        &mut self,
-        reqs: Vec<HelloRequest>,
-        writer: &mut dyn ResponseWriter<HelloResponse>,
-    ) -> grpc::Result<()> {
+    fn bidi_hello(&mut self, reqs: Vec<HelloRequest>, mut writer: grpc::ChannelResponseWriter) {
         info!("Say hello");
         let msg = recipients(&reqs);
         let mut res1 = HelloResponse::new();
         res1.reply = format!("HELLO {}!", msg);
-        writer.write(res1);
+        writer.write(res1, grpc::WriteMode::KeepOpen);
         let mut res2 = HelloResponse::new();
         res2.reply = format!("BONJOUR {}!", msg);
-        writer.write(res2);
-        Ok(())
+        writer.write(res2, grpc::WriteMode::Close);
     }
 }
 

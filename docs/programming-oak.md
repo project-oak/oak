@@ -97,8 +97,8 @@ impl oak::grpc::OakNode for Node {
         oak_log::init_default();
         Node
     }
-    fn invoke(&mut self, method: &str, req: &[u8], out: oak::WriteHandle) {
-        dispatch(self, method, req, out)
+    fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
+        dispatch(self, method, req, writer)
     }
 }
 ```

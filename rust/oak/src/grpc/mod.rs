@@ -22,29 +22,69 @@ use protobuf::{Message, ProtobufEnum};
 /// Result type that uses a [`proto::status::Status`] type for error values.
 pub type Result<T> = std::result::Result<T, proto::status::Status>;
 
-/// Trait to allow repeated writing of responses for server-streaming gRPC methods.
-pub trait ResponseWriter<T: protobuf::Message> {
-    fn write(&mut self, rsp: T);
+/// Channel-holding object that encapsulates response messages into
+/// `GrpcResponse` wrapper messages and writes serialized versions to a send
+///  channel.
+pub struct ChannelResponseWriter {
+    channel: crate::io::Channel,
+    stream_id: i32,
 }
 
-/// Implementation of [`ResponseWriter`] that encapsulates response messages
-/// into `GrpcResponse` wrapper messages and writes serialized versions to a
-/// (mutably borrowed) send channel.
-pub struct ChannelResponseWriter<'a> {
-    pub channel: &'a mut crate::io::Channel,
+/// Indicate whether a write method should leave the current gRPC method
+/// invocation open or close it.
+pub enum WriteMode {
+    KeepOpen,
+    Close,
 }
 
-impl<'a, T> ResponseWriter<T> for ChannelResponseWriter<'a>
-where
-    T: protobuf::Message,
-{
-    fn write(&mut self, rsp: T) {
-        // Put the serialized response into a GrpcResponse message wrapper.
+impl ChannelResponseWriter {
+    pub fn new(out_handle: crate::WriteHandle, stream_id: i32) -> Self {
+        ChannelResponseWriter {
+            channel: crate::io::Channel::new(out_handle),
+            stream_id,
+        }
+    }
+
+    /// Write out a gRPC response and optionally close out the method
+    /// invocation.
+    pub fn write<T: protobuf::Message>(&mut self, rsp: T, mode: WriteMode) {
+        // Put the serialized response into a GrpcResponse message wrapper and
+        // serialize it into the channel.
         let mut grpc_rsp = proto::grpc_encap::GrpcResponse::new();
+        grpc_rsp.set_stream_id(self.stream_id);
         let mut any = protobuf::well_known_types::Any::new();
         rsp.write_to_writer(&mut any.value).unwrap();
         grpc_rsp.set_rsp_msg(any);
-        // Serialize the GrpcResponse into the send channel.
+        grpc_rsp.set_last(match mode {
+            WriteMode::KeepOpen => false,
+            WriteMode::Close => true,
+        });
+        grpc_rsp.write_to_writer(&mut self.channel).unwrap();
+    }
+
+    /// Write an empty gRPC response and optionally close out the method
+    /// invocation.
+    pub fn write_empty(&mut self, mode: WriteMode) {
+        let mut grpc_rsp = proto::grpc_encap::GrpcResponse::new();
+        grpc_rsp.set_stream_id(self.stream_id);
+        grpc_rsp.set_rsp_msg(protobuf::well_known_types::Any::new());
+        grpc_rsp.set_last(match mode {
+            WriteMode::KeepOpen => false,
+            WriteMode::Close => true,
+        });
+        grpc_rsp.write_to_writer(&mut self.channel).unwrap();
+    }
+
+    /// Close out the gRPC method invocation with the given final result.
+    pub fn close(&mut self, result: Result<()>) {
+        // Build a final GrpcResponse message wrapper and serialize it into the
+        // channel.
+        let mut grpc_rsp = proto::grpc_encap::GrpcResponse::new();
+        grpc_rsp.set_stream_id(self.stream_id);
+        grpc_rsp.set_last(true);
+        if let Err(status) = result {
+            grpc_rsp.set_status(status);
+        }
         grpc_rsp.write_to_writer(&mut self.channel).unwrap();
     }
 }
@@ -67,12 +107,9 @@ pub trait OakNode {
     /// Process a single gRPC method invocation.
     ///
     /// The method name is provided by `method` and the incoming serialized gRPC
-    /// request is held in `req`.  Response messages should be written to `out`,
-    /// as serialized [`GrpcResponse`] messages encapsulating the service
-    /// response.
-    ///
-    /// [`GrpcResponse`]: crate::proto::grpc_encap::GrpcResponse
-    fn invoke(&mut self, method: &str, req: &[u8], out: WriteHandle);
+    /// request is held in `req`.  Response messages should be written using
+    /// `writer.write`, followed by `writer.close`.
+    fn invoke(&mut self, method: &str, req: &[u8], writer: ChannelResponseWriter);
 }
 
 /// Perform a gRPC event loop for a Node.
@@ -130,7 +167,7 @@ pub fn event_loop<T: OakNode>(
         node.invoke(
             &req.method_name,
             req.get_req_msg().value.as_slice(),
-            grpc_out_handle,
+            ChannelResponseWriter::new(grpc_out_handle, req.stream_id),
         );
     }
 }
