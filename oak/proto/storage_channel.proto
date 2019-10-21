@@ -18,46 +18,15 @@ syntax = "proto3";
 
 package oak;
 
-import "third_party/google/rpc/status.proto";
-
-// TODO: Evaluate refactoring with the gRPC encapsulation protocol messages.
-
-// Wrapper message used to serialize requests via the StorageChannel interface.
-message StorageChannelRequest {
-  // The storage name is used to partition data within an Oak Module and is
-  // not exposed to the StorageProvider.  The StorageChannel generates a
-  // unique storage identifier from storage_name and the Oak Module
-  // identifier to prevent name collisions among Oak Modules.
-  bytes storage_name = 1;
-
-  oneof operation {
-    StorageChannelReadRequest read_request = 2;
-    StorageChannelWriteRequest write_request = 3;
-    StorageChannelDeleteRequest delete_request = 4;
-    StorageChannelBeginRequest begin_request = 5;
-    StorageChannelCommitRequest commit_request = 6;
-    StorageChannelRollbackRequest rollback_request = 7;
-  }
-}
-
-// Wrapper message used to serialize responses via the StorageChannel interface.
-message StorageChannelResponse {
-  // The status returned by the wrapped storage operation.
-  google.rpc.Status status = 1;
-
-  oneof operation {
-    StorageChannelReadResponse read_response = 2;
-    StorageChannelWriteResponse write_response = 3;
-    StorageChannelDeleteResponse delete_response = 4;
-    StorageChannelBeginResponse begin_response = 5;
-    StorageChannelCommitResponse commit_response = 6;
-    StorageChannelRollbackResponse rollback_response = 7;
-  }
-}
+// In all the request messages below, the storage_name field is used to partition data within an Oak
+// Module and is not exposed to the StorageProvider. The StorageChannel generates a unique storage
+// identifier from storage_name and the Oak Module identifier to prevent name collisions among Oak
+// Modules.
 
 message StorageChannelReadRequest {
-  bytes transaction_id = 1;
-  bytes datum_name = 2;
+  bytes storage_name = 1;
+  bytes transaction_id = 2;
+  bytes datum_name = 3;
 }
 
 message StorageChannelReadResponse {
@@ -65,23 +34,26 @@ message StorageChannelReadResponse {
 }
 
 message StorageChannelWriteRequest {
-  bytes transaction_id = 1;
-  bytes datum_name = 2;
-  bytes datum_value = 3;
+  bytes storage_name = 1;
+  bytes transaction_id = 2;
+  bytes datum_name = 3;
+  bytes datum_value = 4;
 }
 
 message StorageChannelWriteResponse {
 }
 
 message StorageChannelDeleteRequest {
-  bytes transaction_id = 1;
-  bytes datum_name = 2;
+  bytes storage_name = 1;
+  bytes transaction_id = 2;
+  bytes datum_name = 3;
 }
 
 message StorageChannelDeleteResponse {
 }
 
 message StorageChannelBeginRequest {
+  bytes storage_name = 1;
 }
 
 message StorageChannelBeginResponse {
@@ -89,16 +61,29 @@ message StorageChannelBeginResponse {
 }
 
 message StorageChannelCommitRequest {
-  bytes transaction_id = 1;
+  bytes storage_name = 1;
+  bytes transaction_id = 2;
 }
 
 message StorageChannelCommitResponse {
 }
 
 message StorageChannelRollbackRequest {
-  bytes storage_id = 1;
-  bytes transaction_id = 2;
+  bytes storage_name = 1;
+  bytes storage_id = 2;
+  bytes transaction_id = 3;
 }
 
 message StorageChannelRollbackResponse {
+}
+
+// Interface exposed by the Storage Node to other nodes over a pair of Oak Channels.
+// Methods in this interface map 1:1 with those in storage.proto.
+service StorageNode {
+  rpc Read(StorageChannelReadRequest) returns (StorageChannelReadResponse);
+  rpc Write(StorageChannelWriteRequest) returns (StorageChannelWriteResponse);
+  rpc Delete(StorageChannelDeleteRequest) returns (StorageChannelDeleteResponse);
+  rpc Begin(StorageChannelBeginRequest) returns (StorageChannelBeginResponse);
+  rpc Commit(StorageChannelBeginRequest) returns (StorageChannelCommitResponse);
+  rpc Rollback(StorageChannelRollbackRequest) returns (StorageChannelRollbackResponse);
 }
