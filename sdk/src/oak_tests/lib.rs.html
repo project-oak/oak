@@ -217,11 +217,11 @@
     <span class="doccomment">/// If read_status is set, this status value will be returned for any read</span>
     <span class="doccomment">/// operations on the mock channel (and |messages| will be left</span>
     <span class="doccomment">/// undisturbed).</span>
-    <span class="kw">pub</span> <span class="ident">read_status</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">read_status</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
     <span class="doccomment">/// If write_status is set, this status value will be returned for any write</span>
     <span class="doccomment">/// operations on the mock channel (and |messages| will be left</span>
     <span class="doccomment">/// undisturbed).</span>
-    <span class="kw">pub</span> <span class="ident">write_status</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">write_status</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Pending messages on the channel</span>
     <span class="kw">pub</span> <span class="ident">messages</span>: <span class="ident">VecDeque</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;&gt;</span>,
 }
@@ -234,7 +234,7 @@
             <span class="ident">messages</span>: <span class="ident">VecDeque</span>::<span class="ident">new</span>(),
         }
     }
-    <span class="kw">fn</span> <span class="ident">write_message</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">buf</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">u8</span>, <span class="ident">size</span>: <span class="ident">usize</span>) <span class="op">-&gt;</span> <span class="ident">i32</span> {
+    <span class="kw">fn</span> <span class="ident">write_message</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">buf</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">u8</span>, <span class="ident">size</span>: <span class="ident">usize</span>) <span class="op">-&gt;</span> <span class="ident">u32</span> {
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">status</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">write_status</span> {
             <span class="kw">return</span> <span class="ident">status</span>;
         }
@@ -244,16 +244,16 @@
             <span class="ident">msg</span>.<span class="ident">set_len</span>(<span class="ident">size</span>);
         }
         <span class="self">self</span>.<span class="ident">messages</span>.<span class="ident">push_back</span>(<span class="ident">msg</span>);
-        <span class="ident">OakStatus</span>::<span class="ident">OK</span>.<span class="ident">value</span>()
+        <span class="ident">OakStatus</span>::<span class="ident">OK</span>.<span class="ident">value</span>() <span class="kw">as</span> <span class="ident">u32</span>
     }
-    <span class="kw">fn</span> <span class="ident">read_message</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">buf</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u8</span>, <span class="ident">size</span>: <span class="ident">usize</span>, <span class="ident">actual_size</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u32</span>) <span class="op">-&gt;</span> <span class="ident">i32</span> {
+    <span class="kw">fn</span> <span class="ident">read_message</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">buf</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u8</span>, <span class="ident">size</span>: <span class="ident">usize</span>, <span class="ident">actual_size</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u32</span>) <span class="op">-&gt;</span> <span class="ident">u32</span> {
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">status</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">read_status</span> {
             <span class="kw">return</span> <span class="ident">status</span>;
         }
         <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">messages</span>.<span class="ident">pop_front</span>();
         <span class="kw">if</span> <span class="ident">msg</span>.<span class="ident">is_none</span>() {
             <span class="kw">unsafe</span> { <span class="kw-2">*</span><span class="ident">actual_size</span> <span class="op">=</span> <span class="number">0</span> }
-            <span class="kw">return</span> <span class="ident">OakStatus</span>::<span class="ident">OK</span>.<span class="ident">value</span>();
+            <span class="kw">return</span> <span class="ident">OakStatus</span>::<span class="ident">OK</span>.<span class="ident">value</span>() <span class="kw">as</span> <span class="ident">u32</span>;
         }
         <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="ident">msg</span>.<span class="ident">unwrap</span>();
 
@@ -261,12 +261,12 @@
         <span class="kw">unsafe</span> { <span class="kw-2">*</span><span class="ident">actual_size</span> <span class="op">=</span> <span class="ident">len</span> <span class="kw">as</span> <span class="ident">u32</span> }
         <span class="kw">if</span> <span class="ident">len</span> <span class="op">&gt;</span> <span class="ident">size</span> {
             <span class="self">self</span>.<span class="ident">messages</span>.<span class="ident">push_front</span>(<span class="ident">msg</span>);
-            <span class="kw">return</span> <span class="ident">OakStatus</span>::<span class="ident">ERR_BUFFER_TOO_SMALL</span>.<span class="ident">value</span>();
+            <span class="kw">return</span> <span class="ident">OakStatus</span>::<span class="ident">ERR_BUFFER_TOO_SMALL</span>.<span class="ident">value</span>() <span class="kw">as</span> <span class="ident">u32</span>;
         }
         <span class="kw">unsafe</span> {
             <span class="ident">std</span>::<span class="ident">ptr</span>::<span class="ident">copy_nonoverlapping</span>(<span class="ident">msg</span>.<span class="ident">as_ptr</span>(), <span class="ident">buf</span>, <span class="ident">len</span>);
         }
-        <span class="ident">OakStatus</span>::<span class="ident">OK</span>.<span class="ident">value</span>()
+        <span class="ident">OakStatus</span>::<span class="ident">OK</span>.<span class="ident">value</span>() <span class="kw">as</span> <span class="ident">u32</span>
     }
 }
 
@@ -281,14 +281,14 @@
 <span class="doccomment">/// Test-only implementation of channel wait functionality, which always</span>
 <span class="doccomment">/// indicates that all provided channels are ready for reading.</span>
 <span class="attribute">#[<span class="ident">no_mangle</span>]</span>
-<span class="kw">pub</span> <span class="kw">unsafe</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span> <span class="ident">wait_on_channels</span>(<span class="ident">buf</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u8</span>, <span class="ident">count</span>: <span class="ident">u32</span>) <span class="op">-&gt;</span> <span class="ident">i32</span> {
+<span class="kw">pub</span> <span class="kw">unsafe</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span> <span class="ident">wait_on_channels</span>(<span class="ident">buf</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u8</span>, <span class="ident">count</span>: <span class="ident">u32</span>) <span class="op">-&gt;</span> <span class="ident">u32</span> {
     <span class="comment">// Pretend all channels are readable.</span>
     <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..(<span class="ident">count</span> <span class="kw">as</span> <span class="ident">usize</span>) {
         <span class="kw">let</span> <span class="ident">p</span> <span class="op">=</span> <span class="ident">buf</span>
             .<span class="ident">add</span>(<span class="ident">i</span> <span class="op">*</span> <span class="ident">oak</span>::<span class="ident">wasm</span>::<span class="ident">SPACE_BYTES_PER_HANDLE</span> <span class="op">+</span> (<span class="ident">oak</span>::<span class="ident">wasm</span>::<span class="ident">SPACE_BYTES_PER_HANDLE</span> <span class="op">-</span> <span class="number">1</span>));
         <span class="kw-2">*</span><span class="ident">p</span> <span class="op">=</span> <span class="number">1</span>;
     }
-    <span class="ident">OakStatus</span>::<span class="ident">OK</span>.<span class="ident">value</span>()
+    <span class="ident">OakStatus</span>::<span class="ident">OK</span>.<span class="ident">value</span>() <span class="kw">as</span> <span class="ident">u32</span>
 }
 
 <span class="doccomment">/// Test-only implementation of channel write functionality, which writes (only) the data</span>
@@ -299,8 +299,8 @@
     <span class="ident">buf</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">u8</span>,
     <span class="ident">size</span>: <span class="ident">usize</span>,
     <span class="ident">_handle_buf</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">u8</span>,
-    <span class="ident">_handle_count</span>: <span class="ident">usize</span>,
-) <span class="op">-&gt;</span> <span class="ident">i32</span> {
+    <span class="ident">_handle_count</span>: <span class="ident">u32</span>,
+) <span class="op">-&gt;</span> <span class="ident">u32</span> {
     <span class="ident">CHANNEL</span>.<span class="ident">with</span>(<span class="op">|</span><span class="ident">channel</span><span class="op">|</span> <span class="ident">channel</span>.<span class="ident">borrow_mut</span>().<span class="ident">write_message</span>(<span class="ident">buf</span>, <span class="ident">size</span>))
 }
 
@@ -313,23 +313,23 @@
     <span class="ident">size</span>: <span class="ident">usize</span>,
     <span class="ident">actual_size</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u32</span>,
     <span class="ident">_handle_buf</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u8</span>,
-    <span class="ident">_handle_count</span>: <span class="ident">usize</span>,
+    <span class="ident">_handle_count</span>: <span class="ident">u32</span>,
     <span class="ident">_actual_handle_count</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u32</span>,
-) <span class="op">-&gt;</span> <span class="ident">i32</span> {
+) <span class="op">-&gt;</span> <span class="ident">u32</span> {
     <span class="ident">CHANNEL</span>.<span class="ident">with</span>(<span class="op">|</span><span class="ident">channel</span><span class="op">|</span> <span class="ident">channel</span>.<span class="ident">borrow_mut</span>().<span class="ident">read_message</span>(<span class="ident">buf</span>, <span class="ident">size</span>, <span class="ident">actual_size</span>))
 }
 
 <span class="doccomment">/// Test-only placeholder for channel creation, which always fails.</span>
 <span class="attribute">#[<span class="ident">no_mangle</span>]</span>
-<span class="kw">pub</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span> <span class="ident">channel_create</span>(<span class="ident">_write</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u64</span>, <span class="ident">_read</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u64</span>) <span class="op">-&gt;</span> <span class="ident">i32</span> {
-    <span class="ident">OakStatus</span>::<span class="ident">ERR_INTERNAL</span>.<span class="ident">value</span>()
+<span class="kw">pub</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span> <span class="ident">channel_create</span>(<span class="ident">_write</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u64</span>, <span class="ident">_read</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u64</span>) <span class="op">-&gt;</span> <span class="ident">u32</span> {
+    <span class="ident">OakStatus</span>::<span class="ident">ERR_INTERNAL</span>.<span class="ident">value</span>() <span class="kw">as</span> <span class="ident">u32</span>
 }
 
 <span class="doccomment">/// Test-only placeholder for channel creation, which always appears to succeed</span>
 <span class="doccomment">/// (but does nothing).</span>
 <span class="attribute">#[<span class="ident">no_mangle</span>]</span>
-<span class="kw">pub</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span> <span class="ident">channel_close</span>(<span class="ident">_handle</span>: <span class="ident">u64</span>) <span class="op">-&gt;</span> <span class="ident">i32</span> {
-    <span class="ident">OakStatus</span>::<span class="ident">OK</span>.<span class="ident">value</span>()
+<span class="kw">pub</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span> <span class="ident">channel_close</span>(<span class="ident">_handle</span>: <span class="ident">u64</span>) <span class="op">-&gt;</span> <span class="ident">u32</span> {
+    <span class="ident">OakStatus</span>::<span class="ident">OK</span>.<span class="ident">value</span>() <span class="kw">as</span> <span class="ident">u32</span>
 }
 
 <span class="doccomment">/// Test-only placeholder for finding a channel by preconfigured port name, which</span>
@@ -341,11 +341,11 @@
 
 <span class="doccomment">/// Test-only placeholder for random data generation.</span>
 <span class="attribute">#[<span class="ident">no_mangle</span>]</span>
-<span class="kw">pub</span> <span class="kw">unsafe</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span> <span class="ident">random_get</span>(<span class="ident">buf</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u8</span>, <span class="ident">size</span>: <span class="ident">usize</span>) <span class="op">-&gt;</span> <span class="ident">i32</span> {
+<span class="kw">pub</span> <span class="kw">unsafe</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span> <span class="ident">random_get</span>(<span class="ident">buf</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u8</span>, <span class="ident">size</span>: <span class="ident">usize</span>) <span class="op">-&gt;</span> <span class="ident">u32</span> {
     <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">size</span> <span class="kw">as</span> <span class="ident">isize</span> {
         <span class="kw-2">*</span>(<span class="ident">buf</span>.<span class="ident">offset</span>(<span class="ident">i</span>)) <span class="op">=</span> <span class="number">4</span>; <span class="comment">// chosen by fair dice roll</span>
     }
-    <span class="ident">OakStatus</span>::<span class="ident">OK</span>.<span class="ident">value</span>()
+    <span class="ident">OakStatus</span>::<span class="ident">OK</span>.<span class="ident">value</span>() <span class="kw">as</span> <span class="ident">u32</span>
 }
 
 <span class="doccomment">/// Convenience test helper which returns the last message on the global test</span>
@@ -358,12 +358,12 @@
 }
 
 <span class="doccomment">/// Test helper that injects a failure for future channel read operations.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_read_status</span>(<span class="ident">status</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span>) {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_read_status</span>(<span class="ident">status</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>) {
     <span class="ident">CHANNEL</span>.<span class="ident">with</span>(<span class="op">|</span><span class="ident">channel</span><span class="op">|</span> <span class="ident">channel</span>.<span class="ident">borrow_mut</span>().<span class="ident">read_status</span> <span class="op">=</span> <span class="ident">status</span>)
 }
 
 <span class="doccomment">/// Test helper that injects a failure for future channel write operations.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_write_status</span>(<span class="ident">status</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span>) {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_write_status</span>(<span class="ident">status</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>) {
     <span class="ident">CHANNEL</span>.<span class="ident">with</span>(<span class="op">|</span><span class="ident">channel</span><span class="op">|</span> <span class="ident">channel</span>.<span class="ident">borrow_mut</span>().<span class="ident">write_status</span> <span class="op">=</span> <span class="ident">status</span>)
 }
 

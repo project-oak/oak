@@ -243,7 +243,7 @@
         <span class="kw">crate</span>::<span class="ident">prep_handle_space</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">space</span>);
         <span class="kw">unsafe</span> {
             <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="ident">wasm</span>::<span class="ident">wait_on_channels</span>(<span class="ident">space</span>.<span class="ident">as_mut_ptr</span>(), <span class="ident">read_handles</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>);
-            <span class="kw">match</span> <span class="ident">OakStatus</span>::<span class="ident">from_i32</span>(<span class="ident">status</span>) {
+            <span class="kw">match</span> <span class="ident">OakStatus</span>::<span class="ident">from_i32</span>(<span class="ident">status</span> <span class="kw">as</span> <span class="ident">i32</span>) {
                 <span class="prelude-val">Some</span>(<span class="ident">OakStatus</span>::<span class="ident">OK</span>) <span class="op">=&gt;</span> (),
                 <span class="prelude-val">Some</span>(<span class="ident">err</span>) <span class="op">=&gt;</span> <span class="kw">return</span> <span class="ident">err</span> <span class="kw">as</span> <span class="ident">i32</span>,
                 <span class="prelude-val">None</span> <span class="op">=&gt;</span> <span class="kw">return</span> <span class="ident">OakStatus</span>::<span class="ident">OAK_STATUS_UNSPECIFIED</span>.<span class="ident">value</span>(),

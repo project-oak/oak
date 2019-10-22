@@ -146,7 +146,7 @@
     <span class="doccomment">/// Returns the status of the operation, as an [`OakStatus`] value.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`OakStatus`]: crate::OakStatus</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">wait_on_channels</span>(<span class="ident">buf</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u8</span>, <span class="ident">count</span>: <span class="ident">u32</span>) <span class="op">-&gt;</span> <span class="ident">i32</span>;
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">wait_on_channels</span>(<span class="ident">buf</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u8</span>, <span class="ident">count</span>: <span class="ident">u32</span>) <span class="op">-&gt;</span> <span class="ident">u32</span>;
 
     <span class="doccomment">/// Read a message from a channel.</span>
     <span class="doccomment">///</span>
@@ -173,9 +173,9 @@
         <span class="ident">size</span>: <span class="ident">usize</span>,
         <span class="ident">actual_size</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u32</span>,
         <span class="ident">handle_buf</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u8</span>,
-        <span class="ident">handle_count</span>: <span class="ident">usize</span>,
+        <span class="ident">handle_count</span>: <span class="ident">u32</span>,
         <span class="ident">actual_handle_count</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u32</span>,
-    ) <span class="op">-&gt;</span> <span class="ident">i32</span>;
+    ) <span class="op">-&gt;</span> <span class="ident">u32</span>;
 
     <span class="doccomment">/// Write a message to a channel.</span>
     <span class="doccomment">///</span>
@@ -190,8 +190,8 @@
         <span class="ident">buf</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">u8</span>,
         <span class="ident">size</span>: <span class="ident">usize</span>,
         <span class="ident">handle_buf</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">u8</span>,
-        <span class="ident">handle_count</span>: <span class="ident">usize</span>,
-    ) <span class="op">-&gt;</span> <span class="ident">i32</span>;
+        <span class="ident">handle_count</span>: <span class="ident">u32</span>,
+    ) <span class="op">-&gt;</span> <span class="ident">u32</span>;
 
     <span class="doccomment">/// Create a new unidirectional channel.</span>
     <span class="doccomment">///</span>
@@ -201,7 +201,7 @@
     <span class="doccomment">/// Returns the status of the operation, as an [`OakStatus`] value.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`OakStatus`]: crate::OakStatus</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_create</span>(<span class="ident">write</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u64</span>, <span class="ident">read</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u64</span>) <span class="op">-&gt;</span> <span class="ident">i32</span>;
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_create</span>(<span class="ident">write</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u64</span>, <span class="ident">read</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u64</span>) <span class="op">-&gt;</span> <span class="ident">u32</span>;
 
     <span class="doccomment">/// Close a channel.</span>
     <span class="doccomment">///</span>
@@ -210,7 +210,7 @@
     <span class="doccomment">/// Returns the status of the operation, as an [`OakStatus`] value.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`OakStatus`]: crate::OakStatus</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_close</span>(<span class="ident">handle</span>: <span class="ident">u64</span>) <span class="op">-&gt;</span> <span class="ident">i32</span>;
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_close</span>(<span class="ident">handle</span>: <span class="ident">u64</span>) <span class="op">-&gt;</span> <span class="ident">u32</span>;
 
     <span class="doccomment">/// Find a pre-defined channel identified by port name.</span>
     <span class="doccomment">///</span>
@@ -224,7 +224,7 @@
     <span class="doccomment">/// Returns the status of the operation, as an [`OakStatus`] value.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`OakStatus`]: crate::OakStatus</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">random_get</span>(<span class="ident">buf</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u8</span>, <span class="ident">len</span>: <span class="ident">usize</span>) <span class="op">-&gt;</span> <span class="ident">i32</span>;
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">random_get</span>(<span class="ident">buf</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u8</span>, <span class="ident">len</span>: <span class="ident">usize</span>) <span class="op">-&gt;</span> <span class="ident">u32</span>;
 }
 
 <span class="doccomment">/// Number of bytes needed per-handle for channel readiness notifications.</span>

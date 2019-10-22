@@ -360,7 +360,7 @@
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">space</span> <span class="op">=</span> <span class="ident">new_handle_space</span>(<span class="ident">handles</span>);
     <span class="kw">unsafe</span> {
         <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="ident">wasm</span>::<span class="ident">wait_on_channels</span>(<span class="ident">space</span>.<span class="ident">as_mut_ptr</span>(), <span class="ident">handles</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>);
-        <span class="kw">match</span> <span class="ident">OakStatus</span>::<span class="ident">from_i32</span>(<span class="ident">status</span>) {
+        <span class="kw">match</span> <span class="ident">OakStatus</span>::<span class="ident">from_i32</span>(<span class="ident">status</span> <span class="kw">as</span> <span class="ident">i32</span>) {
             <span class="prelude-val">Some</span>(<span class="ident">OakStatus</span>::<span class="ident">OK</span>) <span class="op">=&gt;</span> (),
             <span class="prelude-val">Some</span>(<span class="ident">err</span>) <span class="op">=&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>),
             <span class="prelude-val">None</span> <span class="op">=&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">OAK_STATUS_UNSPECIFIED</span>),
@@ -398,9 +398,9 @@
                 <span class="ident">buf</span>.<span class="ident">capacity</span>(),
                 <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">actual_size</span>,
                 <span class="ident">handles</span>.<span class="ident">as_mut_ptr</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u8</span>,
-                <span class="ident">handles</span>.<span class="ident">capacity</span>(),
+                <span class="ident">handles</span>.<span class="ident">capacity</span>() <span class="kw">as</span> <span class="ident">u32</span>,
                 <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">actual_handle_count</span>,
-            )
+            ) <span class="kw">as</span> <span class="ident">i32</span>
         });
         <span class="kw">match</span> <span class="ident">status</span> {
             <span class="prelude-val">Some</span>(<span class="ident">OakStatus</span>::<span class="ident">OK</span>) <span class="op">=&gt;</span> {
@@ -450,8 +450,8 @@
             <span class="ident">buf</span>.<span class="ident">as_ptr</span>(),
             <span class="ident">buf</span>.<span class="ident">len</span>(),
             <span class="ident">handles</span>.<span class="ident">as_ptr</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">u8</span>, <span class="comment">// Wasm spec defines this as little-endian</span>
-            <span class="ident">handles</span>.<span class="ident">len</span>(),
-        )
+            <span class="ident">handles</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>,
+        ) <span class="kw">as</span> <span class="ident">i32</span>
     }) {
         <span class="prelude-val">Some</span>(<span class="ident">s</span>) <span class="op">=&gt;</span> <span class="ident">s</span>,
         <span class="prelude-val">None</span> <span class="op">=&gt;</span> <span class="ident">OakStatus</span>::<span class="ident">ERR_INTERNAL</span>,
@@ -466,7 +466,7 @@
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">write</span> <span class="op">=</span> <span class="ident">WriteHandle</span> { <span class="ident">handle</span>: <span class="number">0</span> };
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">read</span> <span class="op">=</span> <span class="ident">ReadHandle</span> { <span class="ident">handle</span>: <span class="number">0</span> };
     <span class="kw">match</span> <span class="ident">OakStatus</span>::<span class="ident">from_i32</span>(<span class="kw">unsafe</span> {
-        <span class="ident">wasm</span>::<span class="ident">channel_create</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">write</span>.<span class="ident">handle</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u64</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">read</span>.<span class="ident">handle</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u64</span>)
+        <span class="ident">wasm</span>::<span class="ident">channel_create</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">write</span>.<span class="ident">handle</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u64</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">read</span>.<span class="ident">handle</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u64</span>) <span class="kw">as</span> <span class="ident">i32</span>
     }) {
         <span class="prelude-val">Some</span>(<span class="ident">OakStatus</span>::<span class="ident">OK</span>) <span class="op">=&gt;</span> <span class="prelude-val">Ok</span>((<span class="ident">write</span>, <span class="ident">read</span>)),
         <span class="prelude-val">Some</span>(<span class="ident">err</span>) <span class="op">=&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>),
@@ -476,7 +476,7 @@
 
 <span class="doccomment">/// Close the specified channel [`Handle`].</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_close</span>(<span class="ident">handle</span>: <span class="ident">Handle</span>) <span class="op">-&gt;</span> <span class="ident">OakStatus</span> {
-    <span class="kw">match</span> <span class="ident">OakStatus</span>::<span class="ident">from_i32</span>(<span class="kw">unsafe</span> { <span class="ident">wasm</span>::<span class="ident">channel_close</span>(<span class="ident">handle</span>) }) {
+    <span class="kw">match</span> <span class="ident">OakStatus</span>::<span class="ident">from_i32</span>(<span class="kw">unsafe</span> { <span class="ident">wasm</span>::<span class="ident">channel_close</span>(<span class="ident">handle</span>) <span class="kw">as</span> <span class="ident">i32</span> }) {
         <span class="prelude-val">Some</span>(<span class="ident">s</span>) <span class="op">=&gt;</span> <span class="ident">s</span>,
         <span class="prelude-val">None</span> <span class="op">=&gt;</span> <span class="ident">OakStatus</span>::<span class="ident">OAK_STATUS_UNSPECIFIED</span>,
     }
@@ -490,7 +490,7 @@
 
 <span class="doccomment">/// Fill a buffer with random data.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">random_get</span>(<span class="ident">buf</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> [<span class="ident">u8</span>]) <span class="op">-&gt;</span> <span class="ident">OakStatus</span> {
-    <span class="kw">match</span> <span class="ident">OakStatus</span>::<span class="ident">from_i32</span>(<span class="kw">unsafe</span> { <span class="ident">wasm</span>::<span class="ident">random_get</span>(<span class="ident">buf</span>.<span class="ident">as_mut_ptr</span>(), <span class="ident">buf</span>.<span class="ident">len</span>()) }) {
+    <span class="kw">match</span> <span class="ident">OakStatus</span>::<span class="ident">from_i32</span>(<span class="kw">unsafe</span> { <span class="ident">wasm</span>::<span class="ident">random_get</span>(<span class="ident">buf</span>.<span class="ident">as_mut_ptr</span>(), <span class="ident">buf</span>.<span class="ident">len</span>()) <span class="kw">as</span> <span class="ident">i32</span> }) {
         <span class="prelude-val">Some</span>(<span class="ident">s</span>) <span class="op">=&gt;</span> <span class="ident">s</span>,
         <span class="prelude-val">None</span> <span class="op">=&gt;</span> <span class="ident">OakStatus</span>::<span class="ident">OAK_STATUS_UNSPECIFIED</span>,
     }
