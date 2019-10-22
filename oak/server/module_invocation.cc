@@ -113,6 +113,14 @@ void ModuleInvocation::SendResponse(bool ok) {
     return;
   }
 
+  // Do the work of sending a response in a separate thread, because we may
+  // need to block (to wait for a streaming server response) and don't want
+  // to hold up the main completion queue thread.
+  std::thread other([this] { BlockingSendResponse(); });
+  other.detach();
+}
+
+void ModuleInvocation::BlockingSendResponse() {
   ReadResult rsp_result;
   // Block until we can read a single queued GrpcResponse message (in serialized form) from the
   // gRPC output channel.
