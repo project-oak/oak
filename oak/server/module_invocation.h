@@ -59,6 +59,7 @@ class ModuleInvocation {
   //  - Finish otherwise (and also re-Start()s the gRPC flow with a new
   //    ModuleInvocation object).
   void SendResponse(bool ok);
+  void BlockingSendResponse();
 
   // Cleans up by deleting this object.
   void Finish(bool ok);
