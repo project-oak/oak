@@ -44,6 +44,10 @@ The lowest level of access to the [Oak ABI](abi.md) is provided by the
 This module simply provides the Rust `extern "C"` declarations of the
 [host functions](abi.md#host-functions) provided by the ABI.
 
+The `u32`, `u64` and `usize` integer types described in the
+[Oak ABI](abi.md#integer-types) definition are mapped to the Rust integer types
+with the same names.
+
 ### `oak::io` Module
 
 The [`oak::io`](https://project-oak.github.io/oak/sdk/oak/io/index.html) module

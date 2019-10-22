@@ -106,7 +106,7 @@ pub fn event_loop<T: OakNode>(
         crate::prep_handle_space(&mut space);
         unsafe {
             let status = wasm::wait_on_channels(space.as_mut_ptr(), read_handles.len() as u32);
-            match OakStatus::from_i32(status) {
+            match OakStatus::from_i32(status as i32) {
                 Some(OakStatus::OK) => (),
                 Some(err) => return err as i32,
                 None => return OakStatus::OAK_STATUS_UNSPECIFIED.value(),

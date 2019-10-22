@@ -36,6 +36,10 @@
 
 namespace oak {
 
+// Alias for types used for linear memory addressing.  This should be the only
+// thing that needs changing for any future 64-bit version of Wasm.
+static wabt::Type wabtUsizeType = wabt::Type::I32;
+
 // From https://github.com/WebAssembly/wabt/blob/master/src/tools/wasm-interp.cc .
 
 static std::unique_ptr<wabt::FileStream> s_log_stream = wabt::FileStream::CreateStdout();
@@ -204,27 +208,26 @@ void WasmNode::InitEnvironment(wabt::interp::Environment* env) {
   oak_module->AppendFuncExport(
       "channel_read",
       wabt::interp::FuncSignature(
-          std::vector<wabt::Type>{wabt::Type::I64, wabt::Type::I32, wabt::Type::I32,
-                                  wabt::Type::I32, wabt::Type::I32, wabt::Type::I32,
-                                  wabt::Type::I32},
+          std::vector<wabt::Type>{wabt::Type::I64, wabtUsizeType, wabtUsizeType, wabtUsizeType,
+                                  wabtUsizeType, wabt::Type::I32, wabtUsizeType},
           std::vector<wabt::Type>{wabt::Type::I32}),
       this->OakChannelRead(env));
   oak_module->AppendFuncExport(
       "channel_write",
       wabt::interp::FuncSignature(
-          std::vector<wabt::Type>{wabt::Type::I64, wabt::Type::I32, wabt::Type::I32,
-                                  wabt::Type::I32, wabt::Type::I32},
+          std::vector<wabt::Type>{wabt::Type::I64, wabtUsizeType, wabtUsizeType, wabtUsizeType,
+                                  wabt::Type::I32},
           std::vector<wabt::Type>{wabt::Type::I32}),
       this->OakChannelWrite(env));
 
   oak_module->AppendFuncExport(
       "wait_on_channels",
-      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
+      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabtUsizeType, wabt::Type::I32},
                                   std::vector<wabt::Type>{wabt::Type::I32}),
       this->OakWaitOnChannels(env));
   oak_module->AppendFuncExport(
       "channel_create",
-      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
+      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabtUsizeType, wabtUsizeType},
                                   std::vector<wabt::Type>{wabt::Type::I32}),
       this->OakChannelCreate(env));
   oak_module->AppendFuncExport(
@@ -234,12 +237,12 @@ void WasmNode::InitEnvironment(wabt::interp::Environment* env) {
       this->OakChannelClose(env));
   oak_module->AppendFuncExport(
       "channel_find",
-      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
+      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabtUsizeType, wabtUsizeType},
                                   std::vector<wabt::Type>{wabt::Type::I64}),
       this->OakChannelFind(env));
   oak_module->AppendFuncExport(
       "random_get",
-      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
+      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabtUsizeType, wabtUsizeType},
                                   std::vector<wabt::Type>{wabt::Type::I32}),
       this->OakRandomGet(env));
 }

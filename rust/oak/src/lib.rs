@@ -93,7 +93,7 @@ pub fn wait_on_channels(handles: &[ReadHandle]) -> Result<Vec<ChannelReadStatus>
     let mut space = new_handle_space(handles);
     unsafe {
         let status = wasm::wait_on_channels(space.as_mut_ptr(), handles.len() as u32);
-        match OakStatus::from_i32(status) {
+        match OakStatus::from_i32(status as i32) {
             Some(OakStatus::OK) => (),
             Some(err) => return Err(err),
             None => return Err(OakStatus::OAK_STATUS_UNSPECIFIED),
@@ -131,9 +131,9 @@ pub fn channel_read(half: ReadHandle, buf: &mut Vec<u8>, handles: &mut Vec<Handl
                 buf.capacity(),
                 &mut actual_size,
                 handles.as_mut_ptr() as *mut u8,
-                handles.capacity(),
+                handles.capacity() as u32,
                 &mut actual_handle_count,
-            )
+            ) as i32
         });
         match status {
             Some(OakStatus::OK) => {
@@ -183,8 +183,8 @@ pub fn channel_write(half: WriteHandle, buf: &[u8], handles: &[Handle]) -> OakSt
             buf.as_ptr(),
             buf.len(),
             handles.as_ptr() as *const u8, // Wasm spec defines this as little-endian
-            handles.len(),
-        )
+            handles.len() as u32,
+        ) as i32
     }) {
         Some(s) => s,
         None => OakStatus::ERR_INTERNAL,
@@ -199,7 +199,7 @@ pub fn channel_create() -> Result<(WriteHandle, ReadHandle), OakStatus> {
     let mut write = WriteHandle { handle: 0 };
     let mut read = ReadHandle { handle: 0 };
     match OakStatus::from_i32(unsafe {
-        wasm::channel_create(&mut write.handle as *mut u64, &mut read.handle as *mut u64)
+        wasm::channel_create(&mut write.handle as *mut u64, &mut read.handle as *mut u64) as i32
     }) {
         Some(OakStatus::OK) => Ok((write, read)),
         Some(err) => Err(err),
@@ -209,7 +209,7 @@ pub fn channel_create() -> Result<(WriteHandle, ReadHandle), OakStatus> {
 
 /// Close the specified channel [`Handle`].
 pub fn channel_close(handle: Handle) -> OakStatus {
-    match OakStatus::from_i32(unsafe { wasm::channel_close(handle) }) {
+    match OakStatus::from_i32(unsafe { wasm::channel_close(handle) as i32 }) {
         Some(s) => s,
         None => OakStatus::OAK_STATUS_UNSPECIFIED,
     }
@@ -223,7 +223,7 @@ pub fn channel_find(port_name: &str) -> Handle {
 
 /// Fill a buffer with random data.
 pub fn random_get(buf: &mut [u8]) -> OakStatus {
-    match OakStatus::from_i32(unsafe { wasm::random_get(buf.as_mut_ptr(), buf.len()) }) {
+    match OakStatus::from_i32(unsafe { wasm::random_get(buf.as_mut_ptr(), buf.len()) as i32 }) {
         Some(s) => s,
         None => OakStatus::OAK_STATUS_UNSPECIFIED,
     }

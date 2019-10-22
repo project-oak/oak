@@ -28,7 +28,7 @@ extern "C" {
     /// Returns the status of the operation, as an [`OakStatus`] value.
     ///
     /// [`OakStatus`]: crate::OakStatus
-    pub fn wait_on_channels(buf: *mut u8, count: u32) -> i32;
+    pub fn wait_on_channels(buf: *mut u8, count: u32) -> u32;
 
     /// Read a message from a channel.
     ///
@@ -55,9 +55,9 @@ extern "C" {
         size: usize,
         actual_size: *mut u32,
         handle_buf: *mut u8,
-        handle_count: usize,
+        handle_count: u32,
         actual_handle_count: *mut u32,
-    ) -> i32;
+    ) -> u32;
 
     /// Write a message to a channel.
     ///
@@ -72,8 +72,8 @@ extern "C" {
         buf: *const u8,
         size: usize,
         handle_buf: *const u8,
-        handle_count: usize,
-    ) -> i32;
+        handle_count: u32,
+    ) -> u32;
 
     /// Create a new unidirectional channel.
     ///
@@ -83,7 +83,7 @@ extern "C" {
     /// Returns the status of the operation, as an [`OakStatus`] value.
     ///
     /// [`OakStatus`]: crate::OakStatus
-    pub fn channel_create(write: *mut u64, read: *mut u64) -> i32;
+    pub fn channel_create(write: *mut u64, read: *mut u64) -> u32;
 
     /// Close a channel.
     ///
@@ -92,7 +92,7 @@ extern "C" {
     /// Returns the status of the operation, as an [`OakStatus`] value.
     ///
     /// [`OakStatus`]: crate::OakStatus
-    pub fn channel_close(handle: u64) -> i32;
+    pub fn channel_close(handle: u64) -> u32;
 
     /// Find a pre-defined channel identified by port name.
     ///
@@ -106,7 +106,7 @@ extern "C" {
     /// Returns the status of the operation, as an [`OakStatus`] value.
     ///
     /// [`OakStatus`]: crate::OakStatus
-    pub fn random_get(buf: *mut u8, len: usize) -> i32;
+    pub fn random_get(buf: *mut u8, len: usize) -> u32;
 }
 
 /// Number of bytes needed per-handle for channel readiness notifications.
