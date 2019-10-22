@@ -34,6 +34,7 @@ cc_library(
     hdrs = ["application_client.h"],
     visibility = ["//visibility:public"],
     deps = [
+        ":per_call_policy",
         ":policy_metadata",
         "//oak/common:app_config",
         "//oak/proto:application_cc_grpc",
@@ -53,5 +54,19 @@ cc_library(
         "//oak/common:policy",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/base",
+    ],
+)
+
+cc_library(
+    name = "per_call_policy",
+    srcs = ["per_call_policy.cc"],
+    hdrs = ["per_call_policy.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//oak/common:nonce_generator",
+        "//oak/common:policy",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/base",
+        "@com_google_asylo//asylo/util:logging",
     ],
 )

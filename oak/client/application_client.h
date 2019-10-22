@@ -23,6 +23,7 @@
 #include "asylo/identity/init.h"
 #include "asylo/util/logging.h"
 #include "include/grpcpp/grpcpp.h"
+#include "oak/client/per_call_policy.h"
 #include "oak/client/policy_metadata.h"
 #include "oak/proto/application.grpc.pb.h"
 
@@ -62,8 +63,9 @@ class ApplicationClient {
   static std::shared_ptr<grpc::Channel> CreateChannel(std::string addr) {
     auto channel_credentials =
         asylo::EnclaveChannelCredentials(asylo::BidirectionalNullCredentialsOptions());
-    auto call_credentials =
-        grpc::MetadataCredentialsFromPlugin(absl::make_unique<PolicyMetadata>());
+    auto call_credentials = grpc::CompositeCallCredentials(
+        grpc::MetadataCredentialsFromPlugin(absl::make_unique<PolicyMetadata>()),
+        grpc::MetadataCredentialsFromPlugin(absl::make_unique<PerCallPolicy>()));
     auto composite_credentials =
         grpc::CompositeChannelCredentials(channel_credentials, call_credentials);
     return grpc::CreateChannel(addr, composite_credentials);
