@@ -28,15 +28,13 @@ import "third_party/google/rpc/status.proto";
 // simplified envelope format that includes the relevant details.
 
 message GrpcRequest {
-  int32 stream_id = 1;
-  string method_name = 2;
-  google.protobuf.Any req_msg = 3;
-  bool last = 4;
+  string method_name = 1;
+  google.protobuf.Any req_msg = 2;
+  bool last = 3;
 }
 
 message GrpcResponse {
-  int32 stream_id = 1;
-  google.protobuf.Any rsp_msg = 2;
-  google.rpc.Status status = 3;
-  bool last = 4;
+  google.protobuf.Any rsp_msg = 1;
+  google.rpc.Status status = 2;
+  bool last = 3;
 }

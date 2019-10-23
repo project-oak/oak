@@ -27,7 +27,6 @@ namespace oak {
 // Names of ports that are implicitly defined for pseudo-Node instances,
 // as described in //oak/proto/manager.proto.
 const char kGrpcNodeRequestPortName[] = "request";
-const char kGrpcNodeResponsePortName[] = "response";
 const char kLoggingNodePortName[] = "in";
 const char kStorageNodeRequestPortName[] = "request";
 const char kStorageNodeResponsePortName[] = "response";
@@ -43,7 +42,6 @@ constexpr char kStorageNodeName[] = "storage";
 // Conventional names for the ports that connect to pseudo-node instances (not
 // specified in the proto definition).
 constexpr char kGrpcInPortName[] = "grpc_in";
-constexpr char kGrpcOutPortName[] = "grpc_out";
 constexpr char kStorageInPortName[] = "storage_in";
 constexpr char kStorageOutPortName[] = "storage_out";
 
@@ -68,13 +66,10 @@ std::unique_ptr<ApplicationConfiguration> DefaultConfig(const std::string& name,
   wasm_contents->set_name(contents_name);
   wasm_contents->set_module_bytes(module_bytes);
 
-  // Add ports for this Wasm node to talk to the gRPC pseudo-Node.
+  // Add port for this Wasm node to receive from the gRPC pseudo-Node.
   Port* in_port = wasm_node->add_ports();
   in_port->set_name(kGrpcInPortName);
   in_port->set_type(Port_Type_IN);
-  Port* out_port = wasm_node->add_ports();
-  out_port->set_name(kGrpcOutPortName);
-  out_port->set_type(Port_Type_OUT);
 
   // Join up channels.
   Channel* in_channel = config->add_channels();
@@ -84,14 +79,6 @@ std::unique_ptr<ApplicationConfiguration> DefaultConfig(const std::string& name,
   Channel_Endpoint* in_dest = in_channel->mutable_destination_endpoint();
   in_dest->set_node_name(node->node_name());
   in_dest->set_port_name(in_port->name());
-
-  Channel* out_channel = config->add_channels();
-  Channel_Endpoint* out_src = out_channel->mutable_source_endpoint();
-  out_src->set_node_name(node->node_name());
-  out_src->set_port_name(out_port->name());
-  Channel_Endpoint* out_dest = out_channel->mutable_destination_endpoint();
-  out_dest->set_node_name(grpc_node->node_name());
-  out_dest->set_port_name(kGrpcNodeResponsePortName);
 
   return config;
 }
@@ -222,7 +209,6 @@ bool ValidApplicationConfig(const ApplicationConfiguration& config) {
       }
     } else if (node.has_grpc_server_node()) {
       grpc_count++;
-      in_ports[fqpn(node.node_name(), kGrpcNodeResponsePortName)] = 0;
       out_ports[fqpn(node.node_name(), kGrpcNodeRequestPortName)] = 0;
     } else if (node.has_log_node()) {
       in_ports[fqpn(node.node_name(), kLoggingNodePortName)] = 0;
@@ -270,7 +256,7 @@ bool ValidApplicationConfig(const ApplicationConfiguration& config) {
   for (const auto& it : out_ports) {
     if (it.second != 1) {
       LOG(ERROR) << "output port " << it.first.first << "." << it.first.second << " has "
-                 << it.second << " channels to it";
+                 << it.second << " channels from it";
       return false;
     }
   }
@@ -278,7 +264,7 @@ bool ValidApplicationConfig(const ApplicationConfiguration& config) {
   for (const auto& it : in_ports) {
     if (it.second == 0) {
       LOG(ERROR) << "input port " << it.first.first << "." << it.first.second
-                 << " has no channels from it";
+                 << " has no channels to it";
       return false;
     }
   }

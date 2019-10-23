@@ -15,10 +15,6 @@ nodes {
       type: IN
     }
     ports {
-      name: "grpc_out"
-      type: OUT
-    }
-    ports {
       name: "storage_out"
       type: OUT
     }
@@ -46,16 +42,6 @@ channels {
   destination_endpoint {
     node_name: "app"
     port_name: "grpc_in"
-  }
-}
-channels {
-  source_endpoint {
-    node_name: "app"
-    port_name: "grpc_out"
-  }
-  destination_endpoint {
-    node_name: "grpc"
-    port_name: "response"
   }
 }
 channels {

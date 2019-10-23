@@ -56,9 +56,6 @@ class OakGrpcNode final : public Application::Service, public OakNode {
   MessageChannelWriteHalf* BorrowWriteChannel() const {
     return OakNode::BorrowWriteChannel(FindChannel(kGrpcNodeRequestPortName));
   }
-  MessageChannelReadHalf* BorrowReadChannel() const {
-    return OakNode::BorrowReadChannel(FindChannel(kGrpcNodeResponsePortName));
-  }
 
   // Consumes gRPC events from the completion queue in an infinite loop.
   void CompletionQueueLoop();

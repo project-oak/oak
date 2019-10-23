@@ -152,13 +152,12 @@ are configured by the `oak::DefaultConfig()`
 - `log` (send): Messages sent to this channel will treated as UTF-8 strings to
   be logged.
 - `grpc_in` (receive): This channel will be populated with incoming gRPC request
-  messages, for processing by the Oak Node. Each message is a serialized
-  `GrpcRequest` protocol buffer message (see
-  [/oak/proto/grpc_encap.proto](oak/proto/grpc_encap.proto)).
-- `grpc_out` (send): This channel can be used to send gRPC response messages.
-  Each such message should be encoded as a serialized `GrpcResponse` protocol
-  buffer message (see
-  [/oak/proto/grpc_encap.proto](oak/proto/grpc_encap.proto)).
+  messages, for processing by the Oak Node. Each incoming message is a
+  serialized `GrpcRequest` protocol buffer message (see
+  [/oak/proto/grpc_encap.proto](oak/proto/grpc_encap.proto)), and is accompanied
+  by a handle for the write half of a channel which should be used for sending
+  the associated gRPC response messages (as serialized `GrpcResponse` protocol
+  buffer messages).
 - `storage_in` (receive): This channel will be populated with incoming storage
   response messages, for processing by the Oak Node. Each message is a
   serialized `StorageOperationResponse` protocol buffer message (see

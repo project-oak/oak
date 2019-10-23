@@ -17,6 +17,8 @@
 #ifndef OAK_SERVER_MODULE_INVOCATION_H_
 #define OAK_SERVER_MODULE_INVOCATION_H_
 
+#include <memory>
+
 #include "include/grpcpp/generic/async_generic_service.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/server/channel.h"
@@ -72,6 +74,8 @@ class ModuleInvocation {
 
   // Borrowed references to gRPC Node that this invocation is on behalf of.
   OakGrpcNode* grpc_node_;
+
+  std::unique_ptr<MessageChannelReadHalf> rsp_half_;
 
   grpc::GenericServerContext context_;
   grpc::GenericServerAsyncReaderWriter stream_;

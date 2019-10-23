@@ -15,7 +15,7 @@ nodes {
       type: IN
     }
     ports {
-      name: "grpc_out"
+      name: "backend_out"
       type: OUT
     }
   }
@@ -24,6 +24,10 @@ nodes {
   node_name: "backend"
   web_assembly_node {
     wasm_contents_name: "backend-code"
+    ports {
+      name: "main"
+      type: IN
+    }
     ports {
       name: "extra"
       type: IN
@@ -51,17 +55,17 @@ channels {
 channels {
   source_endpoint {
     node_name: "app"
-    port_name: "grpc_out"
+    port_name: "backend_out"
   }
   destination_endpoint {
-    node_name: "grpc"
-    port_name: "response"
+    node_name: "backend"
+    port_name: "main"
   }
 }
 channels {
   source_endpoint {
     node_name: "app"
-    port_name: "grpc_out"
+    port_name: "backend_out"
   }
   destination_endpoint {
     node_name: "backend"
