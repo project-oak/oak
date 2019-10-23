@@ -76,6 +76,9 @@ impl Storage {
         );
 
         let mut request_any = protobuf::well_known_types::Any::new();
+        request_any.set_type_url(
+            String::from("type.googleapis.com/") + operation_request.descriptor().full_name(),
+        );
         operation_request
             .write_to_writer(&mut request_any.value)
             .unwrap();
