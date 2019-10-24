@@ -43,7 +43,6 @@ use std::io::Write;
 const BACKEND_COUNT: usize = 3;
 struct FrontendNode {
     grpc_in: oak::ReadHandle,
-    grpc_out: oak::WriteHandle,
     backend_out: [oak::WriteHandle; BACKEND_COUNT],
     backend_in: [oak::ReadHandle; BACKEND_COUNT],
 }
@@ -53,8 +52,7 @@ pub extern "C" fn oak_main() -> i32 {
     match std::panic::catch_unwind(|| {
         let node = FrontendNode::new();
         let grpc_in = node.grpc_in;
-        let grpc_out = node.grpc_out;
-        oak::grpc::event_loop(node, grpc_in, grpc_out)
+        oak::grpc::event_loop(node, grpc_in)
     }) {
         Ok(rc) => rc,
         Err(_) => OakStatus::ERR_INTERNAL.value(),
@@ -73,9 +71,6 @@ impl oak::grpc::OakNode for FrontendNode {
         FrontendNode {
             grpc_in: oak::ReadHandle {
                 handle: oak::channel_find("gRPC_input"),
-            },
-            grpc_out: oak::WriteHandle {
-                handle: oak::channel_find("gRPC_output"),
             },
             backend_out: [
                 oak::WriteHandle {
@@ -192,7 +187,6 @@ impl FrontendNode {
     fn test_channel_find(&self) -> std::io::Result<()> {
         // Idempotent result.
         expect_eq!(self.grpc_in.handle, oak::channel_find("gRPC_input"));
-        expect_eq!(self.grpc_out.handle, oak::channel_find("gRPC_output"));
         expect_eq!(
             self.backend_out[0].handle,
             oak::channel_find("to_backend_0")

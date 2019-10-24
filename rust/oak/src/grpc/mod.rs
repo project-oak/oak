@@ -27,31 +27,29 @@ pub type Result<T> = std::result::Result<T, proto::status::Status>;
 ///  channel.
 pub struct ChannelResponseWriter {
     channel: crate::io::Channel,
-    stream_id: i32,
 }
 
 /// Indicate whether a write method should leave the current gRPC method
 /// invocation open or close it.
+#[derive(PartialEq, Clone, Debug)]
 pub enum WriteMode {
     KeepOpen,
     Close,
 }
 
 impl ChannelResponseWriter {
-    pub fn new(out_handle: crate::WriteHandle, stream_id: i32) -> Self {
+    pub fn new(out_handle: crate::WriteHandle) -> Self {
         ChannelResponseWriter {
             channel: crate::io::Channel::new(out_handle),
-            stream_id,
         }
     }
 
     /// Write out a gRPC response and optionally close out the method
-    /// invocation.
+    /// invocation.  Any errors from the channel are silently dropped.
     pub fn write<T: protobuf::Message>(&mut self, rsp: T, mode: WriteMode) {
         // Put the serialized response into a GrpcResponse message wrapper and
         // serialize it into the channel.
         let mut grpc_rsp = proto::grpc_encap::GrpcResponse::new();
-        grpc_rsp.set_stream_id(self.stream_id);
         let mut any = protobuf::well_known_types::Any::new();
         rsp.write_to_writer(&mut any.value).unwrap();
         grpc_rsp.set_rsp_msg(any);
@@ -59,20 +57,25 @@ impl ChannelResponseWriter {
             WriteMode::KeepOpen => false,
             WriteMode::Close => true,
         });
-        grpc_rsp.write_to_writer(&mut self.channel).unwrap();
+        let _ = grpc_rsp.write_to_writer(&mut self.channel);
+        if mode == WriteMode::Close {
+            let _ = self.channel.close();
+        }
     }
 
     /// Write an empty gRPC response and optionally close out the method
-    /// invocation.
+    /// invocation. Any errors from the channel are silently dropped.
     pub fn write_empty(&mut self, mode: WriteMode) {
         let mut grpc_rsp = proto::grpc_encap::GrpcResponse::new();
-        grpc_rsp.set_stream_id(self.stream_id);
         grpc_rsp.set_rsp_msg(protobuf::well_known_types::Any::new());
         grpc_rsp.set_last(match mode {
             WriteMode::KeepOpen => false,
             WriteMode::Close => true,
         });
-        grpc_rsp.write_to_writer(&mut self.channel).unwrap();
+        let _ = grpc_rsp.write_to_writer(&mut self.channel);
+        if mode == WriteMode::Close {
+            let _ = self.channel.close();
+        }
     }
 
     /// Close out the gRPC method invocation with the given final result.
@@ -80,12 +83,12 @@ impl ChannelResponseWriter {
         // Build a final GrpcResponse message wrapper and serialize it into the
         // channel.
         let mut grpc_rsp = proto::grpc_encap::GrpcResponse::new();
-        grpc_rsp.set_stream_id(self.stream_id);
         grpc_rsp.set_last(true);
         if let Err(status) = result {
             grpc_rsp.set_status(status);
         }
-        grpc_rsp.write_to_writer(&mut self.channel).unwrap();
+        let _ = grpc_rsp.write_to_writer(&mut self.channel);
+        let _ = self.channel.close();
     }
 }
 
@@ -121,16 +124,9 @@ pub trait OakNode {
 ///
 /// [`invoke`]: OakNode::invoke
 /// [`GrpcRequest`]: crate::proto::grpc_encap::GrpcRequest
-pub fn event_loop<T: OakNode>(
-    mut node: T,
-    grpc_in_handle: ReadHandle,
-    grpc_out_handle: WriteHandle,
-) -> i32 {
-    info!(
-        "start event loop for node with handles in:{:?} out:{:?}",
-        grpc_in_handle, grpc_out_handle
-    );
-    if grpc_in_handle.handle == 0 || grpc_out_handle.handle == 0 {
+pub fn event_loop<T: OakNode>(mut node: T, grpc_in_handle: ReadHandle) -> i32 {
+    info!("start event loop for node with handle {:?}", grpc_in_handle);
+    if grpc_in_handle.handle == 0 {
         return OakStatus::ERR_CHANNEL_CLOSED.value();
     }
     crate::set_panic_hook();
@@ -157,8 +153,8 @@ pub fn event_loop<T: OakNode>(
             info!("no pending message; poll again");
             continue;
         }
-        if !handles.is_empty() {
-            panic!("unexpected handles received alongside gRPC response")
+        if handles.is_empty() {
+            panic!("no response handle received alongside gRPC request")
         }
         let req: proto::grpc_encap::GrpcRequest = protobuf::parse_from_bytes(&buf).unwrap();
         if !req.last {
@@ -167,7 +163,7 @@ pub fn event_loop<T: OakNode>(
         node.invoke(
             &req.method_name,
             req.get_req_msg().value.as_slice(),
-            ChannelResponseWriter::new(grpc_out_handle, req.stream_id),
+            ChannelResponseWriter::new(WriteHandle { handle: handles[0] }),
         );
     }
 }

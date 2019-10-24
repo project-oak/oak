@@ -49,10 +49,6 @@ static const char* app_config_textproto = R"raw(nodes {
       type: IN
     }
     ports {
-      name: "gRPC_output"
-      type: OUT
-    }
-    ports {
       name: "logging_port"
       type: OUT
     }
@@ -160,16 +156,6 @@ channels {
   destination_endpoint {
     node_name: "frontend"
     port_name: "gRPC_input"
-  }
-}
-channels {
-  source_endpoint {
-    node_name: "frontend"
-    port_name: "gRPC_output"
-  }
-  destination_endpoint {
-    node_name: "grpc_server"
-    port_name: "response"
   }
 }
 channels {

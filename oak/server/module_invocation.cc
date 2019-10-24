@@ -87,7 +87,6 @@ void ModuleInvocation::ProcessRequest(bool ok) {
   // form to the gRPC input channel.
   oak::GrpcRequest grpc_request;
   grpc_request.set_method_name(context_.method());
-  grpc_request.set_stream_id(stream_id_);
   google::protobuf::Any* any = new google::protobuf::Any();
   any->set_value(request_msg->data.data(), request_msg->data.size());
   grpc_request.set_allocated_req_msg(any);
@@ -105,6 +104,14 @@ void ModuleInvocation::ProcessRequest(bool ok) {
       req_msg->labels.push_back(label);
     }
   }
+
+  // Create a channel for responses to this particular method invocation, and
+  // attach the write half to the message.
+  MessageChannel::ChannelHalves halves = MessageChannel::Create();
+  rsp_half_ = std::move(halves.read);
+  auto bare_half = absl::make_unique<ChannelHalf>(std::move(halves.write));
+  req_msg->channels.push_back(std::move(bare_half));
+
   // Write data to the gRPC input channel, which the runtime connected to the
   // Node.
   MessageChannelWriteHalf* req_half = grpc_node_->BorrowWriteChannel();
@@ -135,8 +142,7 @@ void ModuleInvocation::BlockingSendResponse() {
   // Block until we can read a single queued GrpcResponse message (in serialized form) from the
   // gRPC output channel.
   LOG(INFO) << "invocation#" << stream_id_ << " SendResponse: do blocking-read on grpc channel";
-  MessageChannelReadHalf* rsp_half = grpc_node_->BorrowReadChannel();
-  rsp_result = rsp_half->BlockingRead(INT_MAX, INT_MAX);
+  rsp_result = rsp_half_->BlockingRead(INT_MAX, INT_MAX);
   if (rsp_result.required_size > 0) {
     LOG(ERROR) << "invocation#" << stream_id_
                << " SendResponse: Message size too large: " << rsp_result.required_size;

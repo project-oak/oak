@@ -49,15 +49,12 @@ message Node {
 // interact with the Application over gRPC.
 //
 // An Application that exposes an external gRPC server interface should
-// therefore include a single GrpcServerNode, and should configure a pair of
-// Channels (send + receive) between that Node and a WebAssemblyNode that
-// handles the gRPC requests.
+// therefore include a single GrpcServerNode, and should configure a channel
+// from that node to the WebAssemblyNode that handles the gRPC requests.
 //
 // This Node defines the following implicit Ports:
 // - `request`: OUT port on which incoming requests are sent to a WebAssembly
 //   processing Node
-// - `response`: IN port on which outgoing responses are sent back by the
-//   WebAssembly processing Node
 message GrpcServerNode {
 }
 

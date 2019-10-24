@@ -24,7 +24,6 @@
 namespace oak {
 
 extern const char kGrpcNodeRequestPortName[];
-extern const char kGrpcNodeResponsePortName[];
 extern const char kLoggingNodePortName[];
 extern const char kStorageNodeRequestPortName[];
 extern const char kStorageNodeResponsePortName[];

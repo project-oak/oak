@@ -16,7 +16,7 @@
 
 //! Wrappers for Oak SDK types to allow their use with [`std::io`].
 
-use crate::{channel_write, OakStatus};
+use crate::{channel_close, channel_write, OakStatus};
 use std::io;
 
 /// Wrapper for a WriteHandle to implement the [`std::io::Write`] trait.
@@ -35,6 +35,10 @@ impl Channel {
     /// Create a new `io::Channel` that uses the given channel handle.
     pub fn new(handle: crate::WriteHandle) -> Self {
         Channel { handle }
+    }
+    /// Close the underlying channel handle.
+    pub fn close(self) -> std::io::Result<()> {
+        result_from_status(Some(channel_close(self.handle.handle)), ())
     }
 }
 
