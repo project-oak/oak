@@ -39,14 +39,15 @@ enum OakStatus {
 
 }  // namespace oak
 
-WASM_IMPORT("oak") int32_t wait_on_channels(uint8_t* buff, int32_t count);
+WASM_IMPORT("oak") uint32_t wait_on_channels(uint8_t* buff, int32_t count);
 WASM_IMPORT("oak")
-int32_t channel_read(uint64_t handle, uint8_t* buff, size_t usize, uint32_t* actual_size,
-                     uint8_t* handle_buff, size_t handle_count, uint32_t* actual_handle_count);
+uint32_t channel_read(uint64_t handle, uint8_t* buff, size_t usize, uint32_t* actual_size,
+                      uint64_t* handle_buff, size_t handle_count, uint32_t* actual_handle_count);
 WASM_IMPORT("oak")
-int32_t channel_write(uint64_t handle, uint8_t* buff, size_t usize, uint8_t* handle_buff,
-                      size_t handle_count);
+uint32_t channel_write(uint64_t handle, uint8_t* buff, size_t usize, uint8_t* handle_buff,
+                       size_t handle_count);
 WASM_IMPORT("oak") uint64_t channel_find(uint8_t* buff, size_t usize);
+WASM_IMPORT("oak") uint32_t channel_close(uint64_t handle);
 
 WASM_EXPORT int32_t oak_main() {
   char grpc_in_name[] = "grpc_in";
@@ -56,7 +57,6 @@ WASM_EXPORT int32_t oak_main() {
   uint32_t actual_size;
   uint32_t handle_count;
 
-  uint64_t grpc_out_handle = channel_find((uint8_t*)grpc_out_name, sizeof(grpc_out_name) - 1);
   uint64_t grpc_in_handle = channel_find((uint8_t*)grpc_in_name, sizeof(grpc_in_name) - 1);
 
   // TODO: Add C++ helpers for dealing with handle notification space.
@@ -76,21 +76,23 @@ WASM_EXPORT int32_t oak_main() {
       return result;
     }
 
-    channel_read(grpc_in_handle, _buf, sizeof(_buf), &actual_size, nullptr, 0, &handle_count);
+    uint64_t rsp_handle;
+    channel_read(grpc_in_handle, _buf, sizeof(_buf), &actual_size, &rsp_handle, 1, &handle_count);
 
     // Encapsulated GrpcResponse protobuf.
-    //    12                 b00010.010 = tag 2 (GrpcResponse.rsp_msg), length-delimited field
+    //    0a                 b00001.010 = tag 1 (GrpcResponse.rsp_msg), length-delimited field
     //    0b                 length=11
     //      12                 b00010.010 = tag 2 (Any.value), length-delimited field
     //      09                 length=9
     //        0A                 b00001.010 = tag 1 (HelloResponse.reply), length-delimited field
     //        07                 length=7
     //          74657374696e67   "testing"
-    //    20                 b00100.000 = tag 4 (GrpcResponse.last), varint
+    //    18                 b00011.000 = tag 3 (GrpcResponse.last), varint
     //    01                 true
-    uint8_t buf[] = "\x12\x0b\x12\x09\x0A\x07\x74\x65\x73\x74\x69\x6e\x67\x20\x01";
+    uint8_t buf[] = "\x0a\x0b\x12\x09\x0A\x07\x74\x65\x73\x74\x69\x6e\x67\x18\x01";
     // TODO: replace with use of message type and serialization.
-    channel_write(grpc_out_handle, buf, sizeof(buf) - 1, nullptr, 0);
+    channel_write(rsp_handle, buf, sizeof(buf) - 1, nullptr, 0);
+    channel_close(rsp_handle);
   }
   return oak::OakStatus::OK;
 }
