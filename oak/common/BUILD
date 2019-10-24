@@ -71,3 +71,14 @@ cc_library(
         "@com_google_absl//absl/base",
     ],
 )
+
+cc_library(
+    name = "nonce_generator",
+    srcs = [],
+    hdrs = ["nonce_generator.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_google_absl//absl/base",
+        "@com_google_absl//absl/strings",
+    ],
+)

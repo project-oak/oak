@@ -19,4 +19,6 @@
 namespace oak {
 
 const char kOakLabelGrpcMetadataKey[] = "x-oak-label";
-}
+
+const char kOakCallNonceGrpcMetadataKey[] = "x-oak-call-nonce";
+}  // namespace oak
