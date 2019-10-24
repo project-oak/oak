@@ -48,31 +48,36 @@ cc_library(
     name = "storage_node",
     srcs = ["storage_node.cc"],
     hdrs = [
-        "fixed_nonce_generator.h",
         "storage_node.h",
     ],
     deps = [
+        ":storage_processor",
         "//oak/common:app_config",
         "//oak/common:handles",
         "//oak/proto:grpc_encap_cc_proto",
-        "//oak/proto:storage_cc_grpc",
         "//oak/proto:storage_channel_cc_proto",
         "//oak/server:channel",
         "//oak/server:node_thread",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/memory",
-        "@com_google_asylo//asylo/crypto:aes_gcm_siv",
         "@com_google_asylo//asylo/util:logging",
     ],
 )
 
 cc_library(
-    name = "storage_manager",
-    srcs = [
-        "storage_manager.h",
+    name = "storage_processor",
+    srcs = ["storage_processor.cc"],
+    hdrs = [
+        "fixed_nonce_generator.h",
+        "storage_processor.h",
     ],
     deps = [
-        "@com_google_absl//absl/types:span",
+        "//oak/proto:storage_cc_grpc",
+        "//oak/proto:storage_channel_cc_proto",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/memory",
+        "@com_google_asylo//asylo/crypto:aes_gcm_siv",
+        "@com_google_asylo//asylo/util:logging",
     ],
 )
 

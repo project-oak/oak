@@ -27,96 +27,8 @@
 
 namespace oak {
 
-constexpr size_t kMaxMessageSize = 1 << 16;
-
-static std::string GetStorageId(const std::string& storage_name) {
-  // TODO: Generate name-based UUID.
-  return storage_name;
-}
-
-static asylo::CleansingVector<uint8_t> GetStorageEncryptionKey(const std::string& storage_name) {
-  // TODO: Request encryption key from escrow service.
-  std::string encryption_key =
-      absl::HexStringToBytes("c0dedeadc0dedeadc0dedeadc0dedeadc0dedeadc0dedeadc0dedeadc0dedead");
-  return asylo::CleansingVector<uint8_t>(encryption_key.begin(), encryption_key.end());
-}
-
 StorageNode::StorageNode(const std::string& name, const std::string& storage_address)
-    : NodeThread(name),
-      fixed_nonce_generator_(new oak::FixedNonceGenerator()),
-      datum_name_cryptor_(kMaxMessageSize, fixed_nonce_generator_),
-      datum_value_cryptor_(kMaxMessageSize, new asylo::AesGcmSivNonceGenerator()) {
-  storage_service_ = oak::Storage::NewStub(
-      grpc::CreateChannel(storage_address, grpc::InsecureChannelCredentials()));
-}
-
-const asylo::StatusOr<std::string> StorageNode::EncryptDatum(const std::string& datum,
-                                                             DatumType datum_type) {
-  // TODO: Replace "foo" with identifier for the encryption key.
-  asylo::CleansingVector<uint8_t> key = GetStorageEncryptionKey("foo");
-  asylo::CleansingString additional_authenticated_data;
-  asylo::CleansingString nonce;
-  asylo::CleansingString datum_encrypted;
-  asylo::AesGcmSivCryptor* cryptor = nullptr;
-
-  switch (datum_type) {
-    case DatumType::NAME: {
-      fixed_nonce_generator_->set_datum_name(datum);
-      cryptor = &datum_name_cryptor_;
-      break;
-    };
-    case DatumType::VALUE: {
-      cryptor = &datum_value_cryptor_;
-      break;
-    };
-  };
-  // TODO: RETURN_IF_ERROR when one Status rules them all.
-  asylo::Status status =
-      cryptor->Seal(key, additional_authenticated_data, datum, &nonce, &datum_encrypted);
-  if (!status.ok()) {
-    return status;
-  }
-
-  return absl::StrCat(nonce, datum_encrypted);
-}
-
-const asylo::StatusOr<std::string> StorageNode::DecryptDatum(const std::string& input,
-                                                             DatumType datum_type) {
-  asylo::CleansingString input_clean(input.data(), input.size());
-
-  if (input_clean.size() < kAesGcmSivNonceSize) {
-    return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT,
-                         absl::StrCat("Input too short: expected at least ", kAesGcmSivNonceSize,
-                                      " bytes, got ", input_clean.size()));
-  }
-
-  // TODO: Replace "foo" with identifier for the encryption key.
-  asylo::CleansingVector<uint8_t> key(GetStorageEncryptionKey("foo"));
-  asylo::CleansingString additional_authenticated_data;
-  asylo::CleansingString nonce = input_clean.substr(0, kAesGcmSivNonceSize);
-  asylo::CleansingString datum_encrypted = input_clean.substr(kAesGcmSivNonceSize);
-  asylo::CleansingString datum_decrypted;
-  asylo::AesGcmSivCryptor* cryptor = nullptr;
-
-  switch (datum_type) {
-    case DatumType::NAME: {
-      cryptor = &datum_name_cryptor_;
-      break;
-    };
-    case DatumType::VALUE: {
-      cryptor = &datum_value_cryptor_;
-      break;
-    };
-  };
-  // TODO: RETURN_IF_ERROR when one Status rules them all.
-  asylo::Status status =
-      cryptor->Open(key, additional_authenticated_data, datum_encrypted, nonce, &datum_decrypted);
-  if (!status.ok()) {
-    return status;
-  }
-
-  return std::string(datum_decrypted.data(), datum_decrypted.size());
-}
+    : NodeThread(name), storage_processor_(storage_address) {}
 
 void StorageNode::Run() {
   // Borrow pointers to the relevant channel halves.
@@ -144,121 +56,61 @@ void StorageNode::Run() {
 
     GrpcRequest channel_request;
     channel_request.ParseFromString(std::string(result.msg->data.data(), result.msg->data.size()));
-    // Any channel references included with the message will be dropped.
-
-    // Forward the request to the storage service.
-    grpc::Status status;
-    grpc::ClientContext context;
     GrpcResponse channel_response;
+    grpc::Status status;
     std::string method_name = channel_request.method_name();
-    // TODO: Automatically generate boilerplate from the proto definition.
+
     if (method_name == "/oak.StorageNode/Read") {
       StorageChannelReadRequest channel_read_request;
       if (!channel_request.req_msg().UnpackTo(&channel_read_request)) {
         // TODO: Handle errors.
       }
+      StorageChannelReadResponse channel_read_response;
+      storage_processor_.Read(
+          channel_read_request.storage_name(), channel_read_request.datum_name(),
+          channel_read_request.transaction_id(), channel_read_response.mutable_datum_value());
 
-      StorageReadRequest server_read_request;
-      server_read_request.set_storage_id(GetStorageId(channel_read_request.storage_name()));
-      server_read_request.set_transaction_id(channel_read_request.transaction_id());
-
-      // TODO: Propagate error status.
-      asylo::StatusOr<std::string> name_or =
-          EncryptDatum(channel_read_request.datum_name(), DatumType::NAME);
-      server_read_request.set_datum_name(name_or.ValueOrDie());
-
-      StorageReadResponse server_read_response;
-      status = storage_service_->Read(&context, server_read_request, &server_read_response);
-      if (status.ok()) {
-        // TODO: Propagate error status.
-        asylo::StatusOr<std::string> value_or =
-            DecryptDatum(server_read_response.datum_value(), DatumType::VALUE);
-        StorageChannelReadResponse channel_read_response;
-        channel_read_response.set_datum_value(value_or.ValueOrDie());
-        channel_response.mutable_rsp_msg()->PackFrom(channel_read_response);
-      }
+      channel_response.mutable_rsp_msg()->PackFrom(channel_read_response);
     } else if (method_name == "/oak.StorageNode/Write") {
       StorageChannelWriteRequest channel_write_request;
       if (!channel_request.req_msg().UnpackTo(&channel_write_request)) {
         // TODO: Handle errors.
       }
-
-      StorageWriteRequest server_write_request;
-      server_write_request.set_storage_id(GetStorageId(channel_write_request.storage_name()));
-      server_write_request.set_transaction_id(channel_write_request.transaction_id());
-
-      // TODO: Propagate error status.
-      asylo::StatusOr<std::string> name_or =
-          EncryptDatum(channel_write_request.datum_name(), DatumType::NAME);
-      server_write_request.set_datum_name(name_or.ValueOrDie());
-
-      // TODO: Propagate error status.
-      asylo::StatusOr<std::string> value_or =
-          EncryptDatum(channel_write_request.datum_value(), DatumType::VALUE);
-      server_write_request.set_datum_value(value_or.ValueOrDie());
-
-      StorageWriteResponse server_write_response;
-      status = storage_service_->Write(&context, server_write_request, &server_write_response);
+      storage_processor_.Write(
+          channel_write_request.storage_name(), channel_write_request.datum_name(),
+          channel_write_request.datum_value(), channel_write_request.transaction_id());
     } else if (method_name == "/oak.StorageNode/Delete") {
       StorageChannelDeleteRequest channel_delete_request;
       if (!channel_request.req_msg().UnpackTo(&channel_delete_request)) {
         // TODO: Handle errors.
       }
-
-      StorageDeleteRequest server_delete_request;
-      server_delete_request.set_storage_id(GetStorageId(channel_delete_request.storage_name()));
-      server_delete_request.set_transaction_id(channel_delete_request.transaction_id());
-
-      // TODO: Propagate error status.
-      asylo::StatusOr<std::string> name_or =
-          EncryptDatum(channel_delete_request.datum_name(), DatumType::NAME);
-      server_delete_request.set_datum_name(name_or.ValueOrDie());
-
-      StorageDeleteResponse server_delete_response;
-      status = storage_service_->Delete(&context, server_delete_request, &server_delete_response);
+      storage_processor_.Delete(channel_delete_request.storage_name(),
+                                channel_delete_request.datum_name(),
+                                channel_delete_request.transaction_id());
     } else if (method_name == "/oak.StorageNode/Begin") {
       StorageChannelBeginRequest channel_begin_request;
       if (!channel_request.req_msg().UnpackTo(&channel_begin_request)) {
         // TODO: Handle errors.
       }
+      StorageChannelBeginResponse channel_begin_response;
+      storage_processor_.Begin(channel_begin_request.storage_name(),
+                               channel_begin_response.mutable_transaction_id());
 
-      StorageBeginRequest server_begin_request;
-      server_begin_request.set_storage_id(GetStorageId(channel_begin_request.storage_name()));
-
-      StorageBeginResponse server_begin_response;
-      status = storage_service_->Begin(&context, server_begin_request, &server_begin_response);
-      if (status.ok()) {
-        StorageChannelBeginResponse channel_begin_response;
-        channel_begin_response.set_transaction_id(server_begin_response.transaction_id());
-        channel_response.mutable_rsp_msg()->PackFrom(channel_begin_response);
-      }
+      channel_response.mutable_rsp_msg()->PackFrom(channel_begin_response);
     } else if (method_name == "/oak.StorageNode/Commit") {
       StorageChannelCommitRequest channel_commit_request;
       if (!channel_request.req_msg().UnpackTo(&channel_commit_request)) {
         // TODO: Handle errors.
       }
-
-      StorageCommitRequest server_commit_request;
-      server_commit_request.set_storage_id(GetStorageId(channel_commit_request.storage_name()));
-      server_commit_request.set_transaction_id(channel_commit_request.transaction_id());
-
-      StorageCommitResponse server_commit_response;
-      status = storage_service_->Commit(&context, server_commit_request, &server_commit_response);
-      break;
+      storage_processor_.Commit(channel_commit_request.storage_name(),
+                                channel_commit_request.transaction_id());
     } else if (method_name == "/oak.StorageNode/Rollback") {
       StorageChannelRollbackRequest channel_rollback_request;
       if (!channel_request.req_msg().UnpackTo(&channel_rollback_request)) {
         // TODO: Handle errors.
       }
-
-      StorageRollbackRequest server_rollback_request;
-      server_rollback_request.set_storage_id(GetStorageId(channel_rollback_request.storage_name()));
-      server_rollback_request.set_transaction_id(channel_rollback_request.transaction_id());
-
-      StorageRollbackResponse server_rollback_response;
-      status =
-          storage_service_->Rollback(&context, server_rollback_request, &server_rollback_response);
-      break;
+      storage_processor_.Rollback(channel_rollback_request.storage_name(),
+                                  channel_rollback_request.transaction_id());
     } else {
       LOG(ERROR) << "unknown operation";
       status =
@@ -270,7 +122,6 @@ void StorageNode::Run() {
     channel_response.mutable_status()->set_code(status.error_code());
     channel_response.mutable_status()->set_message(status.error_message());
 
-    // Serialize the response and write it back to the Node's STORAGE_IN channel
     std::string response_data;
     channel_response.SerializeToString(&response_data);
     // TODO: figure out a way to avoid the extra copy (into then out of
