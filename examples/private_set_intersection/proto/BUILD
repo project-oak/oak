@@ -40,5 +40,6 @@ cc_grpc_library(
     srcs = [":private_set_intersection_proto"],
     grpc_only = True,
     use_external = False,
+    well_known_protos = True,
     deps = [":private_set_intersection_cc_proto"],
 )
