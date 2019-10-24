@@ -6,29 +6,38 @@ source "$SCRIPTS_DIR/common"
 
 IS_CPP=false
 
-while getopts "hc" opt; do
+while getopts ":hcC" opt; do
     case "$opt" in
     h)
-        echo -e "Usage: $0 [-c] example_name
+        echo -e "Usage: $0 [-c] [-h] [-C opts] example_name
   -c    Run the C++ version of the example
-  -h    Print this message"
+  -h    Print this message
+  -C    Pass subsequent options to example client"
         exit 0
         ;;
     c)
         echo "Running Node in C++ mode"
         IS_CPP=true
         ;;
-    *)
+    C)
+        echo "Passing remaining arguments to client"
+        break
+        ;;
+    \?)
+        echo "Invalid option -${OPTARG}"
         exit 1
         ;;
     esac
 done
+shift $((OPTIND -1))
 
-readonly NAME="${*:$OPTIND:1}"
+readonly NAME="${*: -1}"
 if [[ -z "$NAME" ]]; then
   echo "Missing example name, use -h for help"
   exit 1
 fi
+
+readonly CLIENT_ARGS=("${@:1:$((${#@}-1))}")
 
 readonly OAK_MANAGER_ADDRESS="${OAK_MANAGER_ADDRESS:-127.0.0.1:8888}"
 
@@ -44,4 +53,5 @@ readonly MODULES=$(find "$MODULE_PATH/$NAME"*.wasm | tr '\n' ',' | sed 's/,$//')
 
 "./bazel-client-bin/examples/$NAME/client/client" \
   --manager_address="$OAK_MANAGER_ADDRESS" \
-  --module="$MODULES"
+  --module="$MODULES" \
+  "${CLIENT_ARGS[@]}"
