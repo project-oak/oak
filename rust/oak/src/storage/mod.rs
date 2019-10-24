@@ -76,6 +76,8 @@ impl Storage {
         );
 
         let mut request_any = protobuf::well_known_types::Any::new();
+        // TODO: rust-protobuf does not provide pack_from/unpack_to functions.
+        // https://github.com/stepancheg/rust-protobuf/issues/455
         request_any.set_type_url(
             String::from("type.googleapis.com/") + operation_request.descriptor().full_name(),
         );
