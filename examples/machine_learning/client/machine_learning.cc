@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include <cstdlib>
+
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 #include "absl/memory/memory.h"
@@ -105,5 +107,5 @@ int main(int argc, char** argv) {
   auto message_2 = predict(stub.get());
   LOG(INFO) << "predict response: " << message_2;
 
-  return 0;
+  return EXIT_SUCCESS;
 }

@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include <cstdlib>
+
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 #include "absl/memory/memory.h"
@@ -285,7 +287,7 @@ static bool run_tests(OakABITestService::Stub* stub, const std::string& filter) 
 }
 
 int main(int argc, char** argv) {
-  int rc = 0;
+  int rc = EXIT_SUCCESS;
   absl::ParseCommandLine(argc, argv);
 
   std::vector<std::string> modules = absl::GetFlag(FLAGS_module);
@@ -342,7 +344,7 @@ int main(int argc, char** argv) {
 
   // Invoke the application.
   if (!run_tests(stub.get(), absl::GetFlag(FLAGS_test_filter))) {
-    rc = 1;
+    rc = EXIT_FAILURE;
   }
 
   // Request termination of the Oak Application.
@@ -357,7 +359,7 @@ int main(int argc, char** argv) {
   if (!status.ok()) {
     LOG(ERROR) << "Termination failed: " << status.error_code() << '/' << status.error_message()
                << '/' << status.error_details();
-    rc = 1;
+    rc = EXIT_FAILURE;
   }
 
   return rc;
