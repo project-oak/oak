@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include <cstdlib>
+
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 #include "absl/memory/memory.h"
@@ -114,5 +116,5 @@ int main(int argc, char** argv) {
     LOG(INFO) << "- " << item;
   }
 
-  return 0;
+  return EXIT_SUCCESS;
 }

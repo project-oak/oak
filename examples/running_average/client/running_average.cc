@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include <cstdlib>
+
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 #include "absl/memory/memory.h"
@@ -97,5 +99,5 @@ int main(int argc, char** argv) {
   int average_1 = retrieve_average(stub_1.get());
   LOG(INFO) << "client 1 average: " << average_1;
 
-  return 0;
+  return EXIT_SUCCESS;
 }

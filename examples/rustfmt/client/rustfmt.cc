@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include <cstdlib>
+
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 #include "absl/memory/memory.h"
@@ -76,5 +78,5 @@ int main(int argc, char** argv) {
   format(stub.get(), "fn     main    ()     {     }");
   format(stub.get(), "enum Foo{A,B}");
 
-  return 0;
+  return EXIT_SUCCESS;
 }
