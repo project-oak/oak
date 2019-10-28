@@ -58,17 +58,17 @@ impl OakNode for Node {
 }
 
 fn unknown_id_err(which: &str) -> grpc::Result<()> {
-    let mut status = oak::proto::status::Status::new();
-    status.set_code(3); // INVALID_ARGUMENT
-    status.set_message(format!("{} ID unrecognized", which));
-    Err(status)
+    Err(grpc::build_status(
+        grpc::Code::INVALID_ARGUMENT,
+        &format!("{} ID unrecognized", which),
+    ))
 }
 
 fn duplicate_id_err(which: &str) -> grpc::Result<()> {
-    let mut status = oak::proto::status::Status::new();
-    status.set_code(6); // ALREADY_EXISTS
-    status.set_message(format!("{} ID already exists", which));
-    Err(status)
+    Err(grpc::build_status(
+        grpc::Code::ALREADY_EXISTS,
+        &format!("{} ID already exists", which),
+    ))
 }
 
 impl ChatNode for Node {
