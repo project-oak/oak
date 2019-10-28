@@ -16,11 +16,20 @@
 
 //! Functionality to help Oak Nodes interact with gRPC.
 
+pub use crate::proto::code::Code;
 use crate::{proto, wasm, Handle, OakStatus, ReadHandle, WriteHandle};
 use protobuf::{Message, ProtobufEnum};
 
 /// Result type that uses a [`proto::status::Status`] type for error values.
 pub type Result<T> = std::result::Result<T, proto::status::Status>;
+
+/// Helper to create a gRPC status object.
+pub fn build_status(code: Code, msg: &str) -> proto::status::Status {
+    let mut status = proto::status::Status::new();
+    status.set_code(code.value());
+    status.set_message(msg.to_string());
+    status
+}
 
 /// Channel-holding object that encapsulates response messages into
 /// `GrpcResponse` wrapper messages and writes serialized versions to a send
