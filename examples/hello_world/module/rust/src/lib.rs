@@ -53,10 +53,10 @@ impl OakNode for Node {
 impl HelloWorldNode for Node {
     fn say_hello(&mut self, req: HelloRequest) -> grpc::Result<HelloResponse> {
         if req.greeting == "Query-of-Error" {
-            let mut status = oak::proto::status::Status::new();
-            status.set_code(3); // INVALID_ARGUMENT
-            status.set_message("Deliberate error (code 3)".to_string());
-            return Err(status);
+            return Err(grpc::build_status(
+                grpc::Code::INVALID_ARGUMENT,
+                "Deliberate error",
+            ));
         }
         // Save the latest greeting to storage.
         match self
