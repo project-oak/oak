@@ -176,3 +176,49 @@ pub fn event_loop<T: OakNode>(mut node: T, grpc_in_handle: ReadHandle) -> i32 {
         );
     }
 }
+
+pub fn handle_req_rsp<C, R, Q>(mut node_fn: C, req: &[u8], mut writer: ChannelResponseWriter)
+where
+    C: FnMut(R) -> Result<Q>,
+    R: protobuf::Message,
+    Q: protobuf::Message,
+{
+    let r: R = protobuf::parse_from_bytes(&req).unwrap();
+    match node_fn(r) {
+        Ok(rsp) => writer.write(rsp, WriteMode::Close),
+        Err(status) => writer.close(Err(status)),
+    }
+}
+
+pub fn handle_req_stream<C, R>(mut node_fn: C, req: &[u8], writer: ChannelResponseWriter)
+where
+    C: FnMut(R, ChannelResponseWriter),
+    R: protobuf::Message,
+{
+    let r: R = protobuf::parse_from_bytes(&req).unwrap();
+    node_fn(r, writer)
+}
+
+pub fn handle_stream_rsp<C, R, Q>(mut node_fn: C, req: &[u8], mut writer: ChannelResponseWriter)
+where
+    C: FnMut(Vec<R>) -> Result<Q>,
+    R: protobuf::Message,
+    Q: protobuf::Message,
+{
+    // TODO(#97): better client-side streaming
+    let rr: Vec<R> = vec![protobuf::parse_from_bytes(&req).unwrap()];
+    match node_fn(rr) {
+        Ok(rsp) => writer.write(rsp, WriteMode::Close),
+        Err(status) => writer.close(Err(status)),
+    }
+}
+
+pub fn handle_stream_stream<C, R>(mut node_fn: C, req: &[u8], writer: ChannelResponseWriter)
+where
+    C: FnMut(Vec<R>, ChannelResponseWriter),
+    R: protobuf::Message,
+{
+    // TODO(#97): better client-side streaming
+    let rr: Vec<R> = vec![protobuf::parse_from_bytes(&req).unwrap()];
+    node_fn(rr, writer)
+}
