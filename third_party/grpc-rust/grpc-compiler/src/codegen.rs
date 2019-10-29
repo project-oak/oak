@@ -71,25 +71,11 @@ impl<'a> MethodGen<'a> {
         snake_name(self.proto.get_name())
     }
 
-    fn input_empty(&self) -> bool {
-        self.root_scope
-            .find_message(self.proto.get_input_type())
-            .message
-            == protobuf::well_known_types::Empty::descriptor_static().get_proto()
-    }
-
-    fn output_empty(&self) -> bool {
-        self.root_scope
-            .find_message(self.proto.get_output_type())
-            .message
-            == protobuf::well_known_types::Empty::descriptor_static().get_proto()
-    }
-
     fn input_message(&self) -> String {
         let msg = self.root_scope.find_message(self.proto.get_input_type());
         let empty = protobuf::well_known_types::Empty::descriptor_static();
         if msg.message == empty.get_proto() {
-            "()".to_string()
+            "protobuf::well_known_types::Empty".to_string()
         } else {
             format!("super::{}", msg.rust_fq_name())
         }
@@ -99,7 +85,7 @@ impl<'a> MethodGen<'a> {
         let msg = self.root_scope.find_message(self.proto.get_output_type());
         let empty = protobuf::well_known_types::Empty::descriptor_static();
         if msg.message == empty.get_proto() {
-            "()".to_string()
+            "protobuf::well_known_types::Empty".to_string()
         } else {
             format!("super::{}", msg.rust_fq_name())
         }
@@ -107,7 +93,7 @@ impl<'a> MethodGen<'a> {
 
     fn server_req_type(&self) -> String {
         if self.proto.get_client_streaming() {
-            // TODO: better streaming
+            // TODO(#97): better client-side streaming
             format!("Vec<{}>", self.input_message())
         } else {
             self.input_message().to_string()
@@ -123,19 +109,15 @@ impl<'a> MethodGen<'a> {
     }
 
     fn server_sig(&self) -> String {
-        let arg = if self.input_empty() {
-            "".to_string()
-        } else {
-            format!(
-                ", {}: {}",
-                if self.proto.get_client_streaming() {
-                    "reqs"
-                } else {
-                    "req"
-                },
-                self.server_req_type(),
-            )
-        };
+        let arg = format!(
+            ", {}: {}",
+            if self.proto.get_client_streaming() {
+                "reqs"
+            } else {
+                "req"
+            },
+            self.server_req_type(),
+        );
         let arg2 = if self.proto.get_server_streaming() {
             ", writer: grpc::ChannelResponseWriter".to_string()
         } else {
@@ -154,40 +136,26 @@ impl<'a> MethodGen<'a> {
         w.fn_def(&self.server_sig())
     }
 
-    fn write_dispatch(&self, w: &mut CodeWriter) {
-        // TODO: rather than explicitly generating dispatch() boilerplate, instead
-        // invoke a generic method that accepts the relevant request/response types.
-        let param_in;
-        if self.input_empty() {
-            param_in = "";
-        } else if self.proto.get_client_streaming() {
-            param_in = "rr";
-            w.write_line("let rr = vec![protobuf::parse_from_bytes(&req).unwrap()];")
-        } else {
-            param_in = "r";
-            w.write_line("let r = protobuf::parse_from_bytes(&req).unwrap();")
-        }
-        if self.output_empty() {
-            w.block(
-                &format!("match node.{}({}) {{", self.snake_name(), param_in),
-                "}",
-                |w| {
-                    w.write_line("Ok(_) => writer.write_empty(grpc::WriteMode::Close),");
-                    w.write_line("Err(status) => writer.close(Err(status)),");
-                },
-            );
+    fn dispatch_method(&self) -> String {
+        // Figure out which generic function applies
+        let (gen_fn, lambda_params) = if self.proto.get_client_streaming() {
+            if self.proto.get_server_streaming() {
+                ("grpc::handle_stream_stream", "rr, w")
+            } else {
+                ("grpc::handle_stream_rsp", "rr")
+            }
         } else if self.proto.get_server_streaming() {
-            w.write_line(format!("node.{}({}, writer)", self.snake_name(), param_in));
+            ("grpc::handle_req_stream", "r, w")
         } else {
-            w.block(
-                &format!("match node.{}({}) {{", self.snake_name(), param_in),
-                "}",
-                |w| {
-                    w.write_line("Ok(rsp) => writer.write(rsp, grpc::WriteMode::Close),");
-                    w.write_line("Err(status) => writer.close(Err(status)),");
-                },
-            );
-        }
+            ("grpc::handle_req_rsp", "r")
+        };
+        format!(
+            "{}(|{}| node.{}({}), req, writer)",
+            gen_fn,
+            lambda_params,
+            self.snake_name(),
+            lambda_params
+        )
     }
 }
 
@@ -230,24 +198,18 @@ impl<'a> ServiceGen<'a> {
 
     fn write_server_intf(&self, w: &mut CodeWriter) {
         w.pub_trait(&self.server_intf_name(), |w| {
-            for (i, method) in self.methods.iter().enumerate() {
-                if i != 0 {
-                    w.write_line("");
-                }
-
+            for method in &self.methods {
                 method.write_server_intf(w);
             }
         });
     }
 
     fn write_dispatcher(&self, w: &mut CodeWriter) {
-        w.pub_fn(&format!("dispatch(node: &mut dyn {}, method: &str, req: &[u8], mut writer: grpc::ChannelResponseWriter)", self.server_intf_name()), |w| {
+        w.pub_fn(&format!("dispatch(node: &mut dyn {}, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter)", self.server_intf_name()), |w| {
             w.block("match method {", "};", |w| {
                 for method in &self.methods {
                     let full_path = format!("{}/{}", method.service_path, method.proto.get_name());
-                    w.block(&format!("\"{}\" => {{", full_path), "}", |w| {
-                        method.write_dispatch(w);
-                    });
+                    w.write_line(format!("\"{}\" => {},", full_path, method.dispatch_method()));
                 }
                 w.block("_ => {", "}", |w| {
                     w.write_line("writeln!(oak::logging_channel(), \"unknown method name: {}\", method).unwrap();");
@@ -304,18 +266,14 @@ pub fn gen(
 ) -> Vec<compiler_plugin::GenResult> {
     let files_map: HashMap<&str, &FileDescriptorProto> =
         file_descriptors.iter().map(|f| (f.get_name(), f)).collect();
-
     let root_scope = RootScope { file_descriptors };
-
     let mut results = Vec::new();
 
     for file_name in files_to_generate {
         let file = files_map[&file_name[..]];
-
         if file.get_service().is_empty() {
             continue;
         }
-
         results.extend(gen_file(file, &root_scope).into_iter());
     }
 
