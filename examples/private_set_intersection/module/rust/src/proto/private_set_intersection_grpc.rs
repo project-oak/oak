@@ -25,27 +25,15 @@ use std::io::Write;
 
 // Oak Node server interface
 pub trait PrivateSetIntersectionNode {
-    fn submit_set(&mut self, req: super::private_set_intersection::SubmitSetRequest) -> grpc::Result<()>;
-
-    fn get_intersection(&mut self) -> grpc::Result<super::private_set_intersection::GetIntersectionResponse>;
+    fn submit_set(&mut self, req: super::private_set_intersection::SubmitSetRequest) -> grpc::Result<protobuf::well_known_types::Empty>;
+    fn get_intersection(&mut self, req: protobuf::well_known_types::Empty) -> grpc::Result<super::private_set_intersection::GetIntersectionResponse>;
 }
 
 // Oak Node gRPC method dispatcher
-pub fn dispatch(node: &mut dyn PrivateSetIntersectionNode, method: &str, req: &[u8], mut writer: grpc::ChannelResponseWriter) {
+pub fn dispatch(node: &mut dyn PrivateSetIntersectionNode, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
     match method {
-        "/oak.examples.private_set_intersection.PrivateSetIntersection/SubmitSet" => {
-            let r = protobuf::parse_from_bytes(&req).unwrap();
-            match node.submit_set(r) {
-                Ok(_) => writer.write_empty(grpc::WriteMode::Close),
-                Err(status) => writer.close(Err(status)),
-            }
-        }
-        "/oak.examples.private_set_intersection.PrivateSetIntersection/GetIntersection" => {
-            match node.get_intersection() {
-                Ok(rsp) => writer.write(rsp, grpc::WriteMode::Close),
-                Err(status) => writer.close(Err(status)),
-            }
-        }
+        "/oak.examples.private_set_intersection.PrivateSetIntersection/SubmitSet" => grpc::handle_req_rsp(|r| node.submit_set(r), req, writer),
+        "/oak.examples.private_set_intersection.PrivateSetIntersection/GetIntersection" => grpc::handle_req_rsp(|r| node.get_intersection(r), req, writer),
         _ => {
             writeln!(oak::logging_channel(), "unknown method name: {}", method).unwrap();
             panic!("unknown method name");

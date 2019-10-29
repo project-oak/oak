@@ -26,39 +26,18 @@ use std::io::Write;
 // Oak Node server interface
 pub trait HelloWorldNode {
     fn say_hello(&mut self, req: super::hello_world::HelloRequest) -> grpc::Result<super::hello_world::HelloResponse>;
-
     fn lots_of_replies(&mut self, req: super::hello_world::HelloRequest, writer: grpc::ChannelResponseWriter);
-
     fn lots_of_greetings(&mut self, reqs: Vec<super::hello_world::HelloRequest>) -> grpc::Result<super::hello_world::HelloResponse>;
-
     fn bidi_hello(&mut self, reqs: Vec<super::hello_world::HelloRequest>, writer: grpc::ChannelResponseWriter);
 }
 
 // Oak Node gRPC method dispatcher
-pub fn dispatch(node: &mut dyn HelloWorldNode, method: &str, req: &[u8], mut writer: grpc::ChannelResponseWriter) {
+pub fn dispatch(node: &mut dyn HelloWorldNode, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
     match method {
-        "/oak.examples.hello_world.HelloWorld/SayHello" => {
-            let r = protobuf::parse_from_bytes(&req).unwrap();
-            match node.say_hello(r) {
-                Ok(rsp) => writer.write(rsp, grpc::WriteMode::Close),
-                Err(status) => writer.close(Err(status)),
-            }
-        }
-        "/oak.examples.hello_world.HelloWorld/LotsOfReplies" => {
-            let r = protobuf::parse_from_bytes(&req).unwrap();
-            node.lots_of_replies(r, writer)
-        }
-        "/oak.examples.hello_world.HelloWorld/LotsOfGreetings" => {
-            let rr = vec![protobuf::parse_from_bytes(&req).unwrap()];
-            match node.lots_of_greetings(rr) {
-                Ok(rsp) => writer.write(rsp, grpc::WriteMode::Close),
-                Err(status) => writer.close(Err(status)),
-            }
-        }
-        "/oak.examples.hello_world.HelloWorld/BidiHello" => {
-            let rr = vec![protobuf::parse_from_bytes(&req).unwrap()];
-            node.bidi_hello(rr, writer)
-        }
+        "/oak.examples.hello_world.HelloWorld/SayHello" => grpc::handle_req_rsp(|r| node.say_hello(r), req, writer),
+        "/oak.examples.hello_world.HelloWorld/LotsOfReplies" => grpc::handle_req_stream(|r, w| node.lots_of_replies(r, w), req, writer),
+        "/oak.examples.hello_world.HelloWorld/LotsOfGreetings" => grpc::handle_stream_rsp(|rr| node.lots_of_greetings(rr), req, writer),
+        "/oak.examples.hello_world.HelloWorld/BidiHello" => grpc::handle_stream_stream(|rr, w| node.bidi_hello(rr, w), req, writer),
         _ => {
             writeln!(oak::logging_channel(), "unknown method name: {}", method).unwrap();
             panic!("unknown method name");
