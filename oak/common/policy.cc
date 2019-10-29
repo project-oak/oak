@@ -16,9 +16,37 @@
 
 #include "oak/common/policy.h"
 
+#include "absl/strings/escaping.h"
+
 namespace oak {
 
-const char kOakLabelGrpcMetadataKey[] = "x-oak-label";
+// The `-bin` suffix allows sending binary data for this metadata key.
+//
+// See https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md.
+const char kOakPolicyGrpcMetadataKey[] = "x-oak-policy-bin";
 
-const char kOakAuthorizationBearerTokenGrpcMetadataKey[] = "x-oak-authorization-bearer-token";
+// The `-bin` suffix allows sending binary data for this metadata key.
+//
+// See https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md.
+const char kOakAuthorizationBearerTokenGrpcMetadataKey[] = "x-oak-authorization-bearer-token-bin";
+
+std::string SerializePolicy(const oak::policy::Labels& policy_proto) {
+  return policy_proto.SerializeAsString();
+}
+
+oak::policy::Labels DeserializePolicy(const std::string& policy_bytes) {
+  oak::policy::Labels policy_proto;
+  // TODO: Check errors.
+  policy_proto.ParseFromString(policy_bytes);
+  return policy_proto;
+}
+
+oak::policy::Labels AuthorizationBearerTokenPolicy(const std::string& authorization_token) {
+  oak::policy::Labels labels;
+  auto secrecy_tags = labels.add_secrecy_tags();
+  auto grpc_tag = secrecy_tags->mutable_grpc_tag();
+  grpc_tag->set_authorization_bearer_token(authorization_token);
+  return labels;
+}
+
 }  // namespace oak

@@ -99,6 +99,17 @@ cc_proto_library(
 )
 
 proto_library(
+    name = "policy_proto",
+    srcs = ["policy.proto"],
+    deps = [],
+)
+
+cc_proto_library(
+    name = "policy_cc_proto",
+    deps = [":policy_proto"],
+)
+
+proto_library(
     name = "storage_channel_proto",
     srcs = ["storage_channel.proto"],
     deps = [

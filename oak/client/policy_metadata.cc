@@ -19,18 +19,18 @@
 #include <map>
 #include <utility>
 
+#include "absl/strings/escaping.h"
 #include "oak/common/policy.h"
 
 namespace oak {
 
-PolicyMetadata::PolicyMetadata() {}
+PolicyMetadata::PolicyMetadata(const oak::policy::Labels& labels)
+    : serialized_policy_(SerializePolicy(labels)) {}
 
 grpc::Status PolicyMetadata::GetMetadata(grpc::string_ref service_url, grpc::string_ref method_name,
                                          const grpc::AuthContext& channel_auth_context,
                                          std::multimap<grpc::string, grpc::string>* metadata) {
-  // TODO: Make actual policy configurable. For now we are injecting a nonsense policy, which the
-  // server is not even checking yet.
-  metadata->insert(std::make_pair(kOakLabelGrpcMetadataKey, "test-oak-label"));
+  metadata->insert(std::make_pair(kOakPolicyGrpcMetadataKey, serialized_policy_));
   return grpc::Status::OK;
 }
 

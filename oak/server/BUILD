@@ -121,6 +121,7 @@ cc_library(
         "//oak/proto:application_cc_grpc",
         "//oak/proto:enclave_cc_proto",
         "//oak/proto:grpc_encap_cc_proto",
+        "//oak/proto:policy_cc_proto",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/synchronization",
         "@com_google_asylo//asylo/grpc/auth:null_credentials_options",
@@ -152,6 +153,7 @@ cc_library(
     hdrs = ["channel.h"],
     deps = [
         "//oak/proto:oak_api_cc_proto",
+        "//oak/proto:policy_cc_proto",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/synchronization",
         "@com_google_absl//absl/types:variant",

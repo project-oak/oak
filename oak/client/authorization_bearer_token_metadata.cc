@@ -14,25 +14,24 @@
  * limitations under the License.
  */
 
-#include "oak/client/per_call_policy.h"
+#include "oak/client/authorization_bearer_token_metadata.h"
 
 #include <map>
 
-#include "oak/common/nonce_generator.h"
 #include "oak/common/policy.h"
 
 namespace oak {
 
-PerCallPolicy::PerCallPolicy() {}
+AuthorizationBearerTokenMetadata::AuthorizationBearerTokenMetadata(
+    const std::string& authorization_bearer_token)
+    : authorization_bearer_token_(authorization_bearer_token) {}
 
-grpc::Status PerCallPolicy::GetMetadata(grpc::string_ref service_url, grpc::string_ref method_name,
-                                        const grpc::AuthContext& channel_auth_context,
-                                        std::multimap<grpc::string, grpc::string>* metadata) {
-  auto nonce = nonce_generator_.NextNonce();
+grpc::Status AuthorizationBearerTokenMetadata::GetMetadata(
+    grpc::string_ref service_url, grpc::string_ref method_name,
+    const grpc::AuthContext& channel_auth_context,
+    std::multimap<grpc::string, grpc::string>* metadata) {
   metadata->insert(
-      std::make_pair(kOakAuthorizationBearerTokenGrpcMetadataKey, NonceToBase64(nonce)));
-  // TODO: Also attach a policy restricting information flow to the freshly generated nonce, in
-  // order to emulate a "pure computation" policy.
+      std::make_pair(kOakAuthorizationBearerTokenGrpcMetadataKey, authorization_bearer_token_));
   return grpc::Status::OK;
 }
 

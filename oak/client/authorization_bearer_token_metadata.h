@@ -14,34 +14,29 @@
  * limitations under the License.
  */
 
-#ifndef OAK_CLIENT_PER_CALL_POLICY_H_
-#define OAK_CLIENT_PER_CALL_POLICY_H_
+#ifndef OAK_CLIENT_AUTHORIZATION_BEARER_TOKEN_METADATA_H_
+#define OAK_CLIENT_AUTHORIZATION_BEARER_TOKEN_METADATA_H_
 
 #include "include/grpcpp/grpcpp.h"
-#include "oak/common/nonce_generator.h"
 
 namespace oak {
 
-namespace {
-constexpr size_t kPerCallNonceSizeBytes = 32;
-}  // namespace
-
-// This class generates a fresh per-call nonce and injects it to the gRPC metadata of each call as
-// an authorization bearer token.
+// This class injects the provided authorization bearer token to the gRPC metadata of each outgoing
+// call.
 //
 // See https://grpc.io/docs/guides/auth/.
-class PerCallPolicy : public grpc::MetadataCredentialsPlugin {
+class AuthorizationBearerTokenMetadata : public grpc::MetadataCredentialsPlugin {
  public:
-  PerCallPolicy();
+  AuthorizationBearerTokenMetadata(const std::string& authorization_bearer_token);
 
   grpc::Status GetMetadata(grpc::string_ref service_url, grpc::string_ref method_name,
                            const grpc::AuthContext& channel_auth_context,
                            std::multimap<grpc::string, grpc::string>* metadata) override;
 
  private:
-  NonceGenerator<kPerCallNonceSizeBytes> nonce_generator_;
+  const std::string authorization_bearer_token_;
 };
 
 }  // namespace oak
 
-#endif  // OAK_CLIENT_PER_CALL_POLICY_H_
+#endif  // OAK_CLIENT_AUTHORIZATION_BEARER_TOKEN_METADATA_H_
