@@ -26,7 +26,9 @@ namespace {
 constexpr size_t kPerCallNonceSizeBytes = 32;
 }  // namespace
 
-// This class generates a fresh per-call nonce and injects it to the gRPC metadata of each call.
+// This class generates a fresh per-call nonce and injects it to the gRPC metadata of each call as
+// an authorization bearer token.
+//
 // See https://grpc.io/docs/guides/auth/.
 class PerCallPolicy : public grpc::MetadataCredentialsPlugin {
  public:

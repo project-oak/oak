@@ -29,7 +29,8 @@ grpc::Status PerCallPolicy::GetMetadata(grpc::string_ref service_url, grpc::stri
                                         const grpc::AuthContext& channel_auth_context,
                                         std::multimap<grpc::string, grpc::string>* metadata) {
   auto nonce = nonce_generator_.NextNonce();
-  metadata->insert(std::make_pair(kOakCallNonceGrpcMetadataKey, NonceToBase64(nonce)));
+  metadata->insert(
+      std::make_pair(kOakAuthorizationBearerTokenGrpcMetadataKey, NonceToBase64(nonce)));
   // TODO: Also attach a policy restricting information flow to the freshly generated nonce, in
   // order to emulate a "pure computation" policy.
   return grpc::Status::OK;

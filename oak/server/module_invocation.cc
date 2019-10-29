@@ -79,8 +79,14 @@ void ModuleInvocation::ProcessRequest(bool ok) {
   LOG(INFO) << "invocation#" << stream_id_
             << " ProcessRequest: handling gRPC call: " << context_.method();
   for (auto entry : context_.client_metadata()) {
-    LOG(INFO) << "invocation#" << stream_id_ << "   gRPC client metadata: [" << entry.first
-              << "] -> [" << entry.second << "]";
+    auto key = entry.first;
+    auto value = entry.second;
+    // Redact authorization bearer tokens.
+    if (key == kOakAuthorizationBearerTokenGrpcMetadataKey) {
+      value = "<redacted>";
+    }
+    LOG(INFO) << "invocation#" << stream_id_ << " gRPC client metadata: [" << key << "] -> ["
+              << value << "]";
   }
 
   // Build an encapsulation of the gRPC request invocation and write its serialized
@@ -100,8 +106,17 @@ void ModuleInvocation::ProcessRequest(bool ok) {
     auto range = context_.client_metadata().equal_range(kOakLabelGrpcMetadataKey);
     for (auto entry = range.first; entry != range.second; ++entry) {
       std::string label(entry->second.data(), entry->second.size());
-      LOG(INFO) << "invocation#" << stream_id_ << "   Oak label: " << label;
+      LOG(INFO) << "invocation#" << stream_id_ << " Oak policy label: " << label;
       req_msg->labels.push_back(label);
+    }
+  }
+  {
+    // TODO: Provide capability to declassify data for any authorization token provided.
+    auto range =
+        context_.client_metadata().equal_range(kOakAuthorizationBearerTokenGrpcMetadataKey);
+    for (auto entry = range.first; entry != range.second; ++entry) {
+      // Redact authorization bearer tokens.
+      LOG(INFO) << "invocation#" << stream_id_ << " Oak Authorization Token: <redacted>";
     }
   }
 
