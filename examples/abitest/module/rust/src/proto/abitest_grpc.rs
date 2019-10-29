@@ -29,15 +29,9 @@ pub trait OakABITestServiceNode {
 }
 
 // Oak Node gRPC method dispatcher
-pub fn dispatch(node: &mut dyn OakABITestServiceNode, method: &str, req: &[u8], mut writer: grpc::ChannelResponseWriter) {
+pub fn dispatch(node: &mut dyn OakABITestServiceNode, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
     match method {
-        "/oak.examples.abitest.OakABITestService/RunTests" => {
-            let r = protobuf::parse_from_bytes(&req).unwrap();
-            match node.run_tests(r) {
-                Ok(rsp) => writer.write(rsp, grpc::WriteMode::Close),
-                Err(status) => writer.close(Err(status)),
-            }
-        }
+        "/oak.examples.abitest.OakABITestService/RunTests" => grpc::handle_req_rsp(|r| node.run_tests(r), req, writer),
         _ => {
             writeln!(oak::logging_channel(), "unknown method name: {}", method).unwrap();
             panic!("unknown method name");

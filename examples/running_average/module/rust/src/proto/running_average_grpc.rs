@@ -25,27 +25,15 @@ use std::io::Write;
 
 // Oak Node server interface
 pub trait RunningAverageNode {
-    fn submit_sample(&mut self, req: super::running_average::SubmitSampleRequest) -> grpc::Result<()>;
-
-    fn get_average(&mut self) -> grpc::Result<super::running_average::GetAverageResponse>;
+    fn submit_sample(&mut self, req: super::running_average::SubmitSampleRequest) -> grpc::Result<protobuf::well_known_types::Empty>;
+    fn get_average(&mut self, req: protobuf::well_known_types::Empty) -> grpc::Result<super::running_average::GetAverageResponse>;
 }
 
 // Oak Node gRPC method dispatcher
-pub fn dispatch(node: &mut dyn RunningAverageNode, method: &str, req: &[u8], mut writer: grpc::ChannelResponseWriter) {
+pub fn dispatch(node: &mut dyn RunningAverageNode, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
     match method {
-        "/oak.examples.running_average.RunningAverage/SubmitSample" => {
-            let r = protobuf::parse_from_bytes(&req).unwrap();
-            match node.submit_sample(r) {
-                Ok(_) => writer.write_empty(grpc::WriteMode::Close),
-                Err(status) => writer.close(Err(status)),
-            }
-        }
-        "/oak.examples.running_average.RunningAverage/GetAverage" => {
-            match node.get_average() {
-                Ok(rsp) => writer.write(rsp, grpc::WriteMode::Close),
-                Err(status) => writer.close(Err(status)),
-            }
-        }
+        "/oak.examples.running_average.RunningAverage/SubmitSample" => grpc::handle_req_rsp(|r| node.submit_sample(r), req, writer),
+        "/oak.examples.running_average.RunningAverage/GetAverage" => grpc::handle_req_rsp(|r| node.get_average(r), req, writer),
         _ => {
             writeln!(oak::logging_channel(), "unknown method name: {}", method).unwrap();
             panic!("unknown method name");

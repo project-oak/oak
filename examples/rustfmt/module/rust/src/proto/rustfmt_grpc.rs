@@ -29,15 +29,9 @@ pub trait FormatServiceNode {
 }
 
 // Oak Node gRPC method dispatcher
-pub fn dispatch(node: &mut dyn FormatServiceNode, method: &str, req: &[u8], mut writer: grpc::ChannelResponseWriter) {
+pub fn dispatch(node: &mut dyn FormatServiceNode, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
     match method {
-        "/oak.examples.rustfmt.FormatService/Format" => {
-            let r = protobuf::parse_from_bytes(&req).unwrap();
-            match node.format(r) {
-                Ok(rsp) => writer.write(rsp, grpc::WriteMode::Close),
-                Err(status) => writer.close(Err(status)),
-            }
-        }
+        "/oak.examples.rustfmt.FormatService/Format" => grpc::handle_req_rsp(|r| node.format(r), req, writer),
         _ => {
             writeln!(oak::logging_channel(), "unknown method name: {}", method).unwrap();
             panic!("unknown method name");

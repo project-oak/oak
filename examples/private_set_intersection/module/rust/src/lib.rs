@@ -36,6 +36,7 @@ use oak::grpc::OakNode;
 use oak_derive::OakExports;
 use proto::private_set_intersection::{GetIntersectionResponse, SubmitSetRequest};
 use proto::private_set_intersection_grpc::{dispatch, PrivateSetIntersectionNode};
+use protobuf::well_known_types::Empty;
 use protobuf::ProtobufEnum;
 use std::collections::HashSet;
 
@@ -54,17 +55,17 @@ impl oak::grpc::OakNode for Node {
 }
 
 impl PrivateSetIntersectionNode for Node {
-    fn submit_set(&mut self, req: SubmitSetRequest) -> grpc::Result<()> {
+    fn submit_set(&mut self, req: SubmitSetRequest) -> grpc::Result<Empty> {
         let set = req.values.iter().cloned().collect::<HashSet<_>>();
         let next = match self.values {
             Some(ref previous) => previous.intersection(&set).cloned().collect(),
             None => set,
         };
         self.values = Some(next);
-        Ok(())
+        Ok(Empty::new())
     }
 
-    fn get_intersection(&mut self) -> grpc::Result<GetIntersectionResponse> {
+    fn get_intersection(&mut self, _req: Empty) -> grpc::Result<GetIntersectionResponse> {
         let mut res = GetIntersectionResponse::new();
         if let Some(ref set) = self.values {
             res.values = set.iter().cloned().collect();
