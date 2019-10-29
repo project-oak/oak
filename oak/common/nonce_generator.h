@@ -31,7 +31,7 @@ using Nonce = std::array<uint8_t, N>;
 template <size_t N>
 class NonceGenerator {
  public:
-  NonceGenerator(){};
+  NonceGenerator() {}
 
   Nonce<N> NextNonce() {
     Nonce<N> nonce;
