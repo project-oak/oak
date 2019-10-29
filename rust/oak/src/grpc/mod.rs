@@ -165,7 +165,8 @@ pub fn event_loop<T: OakNode>(mut node: T, grpc_in_handle: ReadHandle) -> i32 {
         if handles.is_empty() {
             panic!("no response handle received alongside gRPC request")
         }
-        let req: proto::grpc_encap::GrpcRequest = protobuf::parse_from_bytes(&buf).unwrap();
+        let req: proto::grpc_encap::GrpcRequest =
+            protobuf::parse_from_bytes(&buf).expect("failed to parse GrpcRequest message");
         if !req.last {
             panic!("Support for streaming requests not yet implemented");
         }
@@ -183,7 +184,7 @@ where
     R: protobuf::Message,
     Q: protobuf::Message,
 {
-    let r: R = protobuf::parse_from_bytes(&req).unwrap();
+    let r: R = protobuf::parse_from_bytes(&req).expect("Failed to parse request protobuf message");
     match node_fn(r) {
         Ok(rsp) => writer.write(rsp, WriteMode::Close),
         Err(status) => writer.close(Err(status)),
@@ -195,7 +196,7 @@ where
     C: FnMut(R, ChannelResponseWriter),
     R: protobuf::Message,
 {
-    let r: R = protobuf::parse_from_bytes(&req).unwrap();
+    let r: R = protobuf::parse_from_bytes(&req).expect("Failed to parse request protobuf message");
     node_fn(r, writer)
 }
 
@@ -206,7 +207,8 @@ where
     Q: protobuf::Message,
 {
     // TODO(#97): better client-side streaming
-    let rr: Vec<R> = vec![protobuf::parse_from_bytes(&req).unwrap()];
+    let rr: Vec<R> =
+        vec![protobuf::parse_from_bytes(&req).expect("Failed to parse request protobuf message")];
     match node_fn(rr) {
         Ok(rsp) => writer.write(rsp, WriteMode::Close),
         Err(status) => writer.close(Err(status)),
@@ -219,6 +221,7 @@ where
     R: protobuf::Message,
 {
     // TODO(#97): better client-side streaming
-    let rr: Vec<R> = vec![protobuf::parse_from_bytes(&req).unwrap()];
+    let rr: Vec<R> =
+        vec![protobuf::parse_from_bytes(&req).expect("Failed to parse request protobuf message")];
     node_fn(rr, writer)
 }
