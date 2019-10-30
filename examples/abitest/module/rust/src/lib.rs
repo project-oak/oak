@@ -108,7 +108,6 @@ impl OakABITestServiceNode for FrontendNode {
         let mut results = protobuf::RepeatedField::<ABITestResponse_TestResult>::new();
 
         // Manual registry of all tests.
-        // TODO(#237): Add some macro wizardry for registering test methods based on an attribute
         type TestFn = fn(&FrontendNode) -> std::io::Result<()>;
         let mut tests: HashMap<&str, TestFn> = HashMap::new();
         tests.insert("ChannelFindRaw", FrontendNode::test_channel_find_raw);
