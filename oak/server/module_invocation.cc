@@ -168,9 +168,13 @@ void ModuleInvocation::BlockingSendResponse() {
   LOG(INFO) << "invocation#" << stream_id_ << " SendResponse: Read encapsulated message of size "
             << rsp_result.msg->data.size() << " from gRPC output channel";
   oak::GrpcResponse grpc_response;
-  // TODO: Check errors.
-  grpc_response.ParseFromString(
-      std::string(rsp_result.msg->data.data(), rsp_result.msg->data.size()));
+  if (!grpc_response.ParseFromString(
+          std::string(rsp_result.msg->data.data(), rsp_result.msg->data.size()))) {
+    LOG(ERROR) << "invocation#" << stream_id_
+               << " SendResponse: failed to parse encapsulated message";
+    FinishAndRestart(grpc::Status(grpc::StatusCode::INTERNAL, "Message failed to parse"));
+    return;
+  }
   // Any channel references included with the message will be dropped.
 
   const grpc::string& inner_msg = grpc_response.rsp_msg().value();
