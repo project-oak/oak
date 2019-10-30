@@ -97,11 +97,11 @@ void ModuleInvocation::ProcessRequest(bool ok) {
   any->set_value(request_msg->data.data(), request_msg->data.size());
   grpc_request.set_allocated_req_msg(any);
   grpc_request.set_last(true);
-  std::string encap_req;
-  grpc_request.SerializeToString(&encap_req);
-  // TODO: figure out a way to avoid the extra copy (into then out of std::string)
+
   std::unique_ptr<Message> req_msg = absl::make_unique<Message>();
-  req_msg->data.insert(req_msg->data.end(), encap_req.begin(), encap_req.end());
+  size_t serialized_size = grpc_request.ByteSizeLong();
+  req_msg->data.resize(serialized_size);
+  grpc_request.SerializeToArray(req_msg->data.data(), req_msg->data.size());
   {
     auto range = context_.client_metadata().equal_range(kOakLabelGrpcMetadataKey);
     for (auto entry = range.first; entry != range.second; ++entry) {
