@@ -102,6 +102,7 @@ dependencies = [
  "oak 0.1.0",
  "oak_derive 0.1.0",
  "protobuf 2.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "protoc-rust 2.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
