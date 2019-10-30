@@ -8,3 +8,6 @@ edition = "2018"
 oak_derive = { path = "../oak_derive"}
 oak = { path = "../oak"}
 protobuf = "*"
+
+[build-dependencies]
+protoc-rust = "*"

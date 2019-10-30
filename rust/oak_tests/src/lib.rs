@@ -23,6 +23,7 @@ use protobuf::ProtobufEnum;
 use std::cell::RefCell;
 use std::collections::VecDeque;
 
+pub mod proto;
 #[cfg(test)]
 mod tests;
 
