@@ -5,9 +5,11 @@ authors = ["David Drysdale <drysdale@google.com>"]
 edition = "2018"
 
 [dependencies]
+log = { version = "^0.4.0", features = ["std"] }
 oak_derive = { path = "../oak_derive"}
 oak = { path = "../oak"}
 protobuf = "*"
+simple_logger = "1"
 
 [build-dependencies]
 protoc-rust = "*"
