@@ -16,12 +16,16 @@
 
 //! Test utilities to help with unit testing of Oak SDK code.
 
+#[macro_use]
+extern crate log;
 extern crate protobuf;
 
 use oak::OakStatus;
 use protobuf::ProtobufEnum;
 use std::cell::RefCell;
 use std::collections::VecDeque;
+use std::convert::TryInto;
+use std::sync::Once;
 
 pub mod proto;
 #[cfg(test)]
@@ -184,4 +188,14 @@ pub fn set_write_status(status: Option<u32>) {
 /// Test helper that sets up a new global test channel.
 pub fn reset_channels() {
     CHANNEL.with(|channel| *channel.borrow_mut() = MockChannel::new())
+}
+
+static LOG_INIT: Once = Once::new();
+
+/// Test helper to initialize logging via simple_logger.
+pub fn init_logging() {
+    LOG_INIT.call_once(|| {
+        simple_logger::init().unwrap();
+        info!("Logging via simple_logger initialized");
+    });
 }
