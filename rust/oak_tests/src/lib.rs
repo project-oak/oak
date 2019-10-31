@@ -28,15 +28,19 @@ use byteorder::{ReadBytesExt, WriteBytesExt};
 use oak::OakStatus;
 use protobuf::ProtobufEnum;
 use rand::Rng;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::convert::TryInto;
 use std::io::Cursor;
 use std::sync::{Once, RwLock};
+use std::thread::spawn;
 
 pub mod proto;
 #[cfg(test)]
 mod tests;
+
+pub static DEFAULT_NODE_NAME: &str = "app";
 
 struct OakMessage {
     data: Vec<u8>,
@@ -124,25 +128,34 @@ struct OakNode {
     next_handle: oak::Handle,
     halves: HashMap<oak::Handle, ChannelHalf>,
     ports: HashMap<String, oak::Handle>,
+    thread_handle: Option<std::thread::JoinHandle<i32>>,
 }
 
 impl OakRuntime {
     fn new() -> OakRuntime {
         let mut nodes = HashMap::new();
         // TODO: cope with multi-Node applications
-        nodes.insert(
-            "app".to_string(),
-            OakNode {
-                next_handle: 1 as oak::Handle,
-                halves: HashMap::new(),
-                ports: HashMap::new(),
-            },
-        );
+        nodes.insert(DEFAULT_NODE_NAME.to_string(), OakNode::new());
         OakRuntime {
             termination_pending: false,
             channels: Vec::new(),
             nodes,
         }
+    }
+    fn started(&mut self, node_name: &str, join_handle: std::thread::JoinHandle<i32>) {
+        self.nodes
+            .get_mut(node_name)
+            .unwrap_or_else(|| panic!("node {{{}}} not found", node_name))
+            .thread_handle
+            .replace(join_handle);
+    }
+    fn stop_next(&mut self) -> Option<(String, std::thread::JoinHandle<i32>)> {
+        for (name, node) in &mut self.nodes {
+            if node.thread_handle.is_some() {
+                return Some((name.to_string(), node.thread_handle.take().unwrap()));
+            }
+        }
+        None
     }
     fn reset(&mut self) {
         let names: Vec<String> = self.nodes.keys().cloned().collect();
@@ -238,6 +251,14 @@ impl OakRuntime {
 }
 
 impl OakNode {
+    fn new() -> OakNode {
+        OakNode {
+            next_handle: 1 as oak::Handle,
+            halves: HashMap::new(),
+            ports: HashMap::new(),
+            thread_handle: None,
+        }
+    }
     fn add_half(&mut self, half: ChannelHalf) -> oak::Handle {
         let handle = self.next_handle;
         self.next_handle += 1;
@@ -261,22 +282,43 @@ lazy_static! {
     static ref RUNTIME: RwLock<OakRuntime> = RwLock::new(OakRuntime::new());
 }
 
+// Per-thread Node name.
+thread_local! {
+    static NODE_NAME: RefCell<String> = RefCell::new(DEFAULT_NODE_NAME.to_string());
+}
+
+// Return a copy of the node name associated with the current thread.
+fn node_name() -> String {
+    NODE_NAME.with(|node_name| node_name.borrow().clone())
+}
+
+// Set the node name for the current thread.
+fn set_node_name(name: String) {
+    NODE_NAME.with(|node_name| node_name.replace(name));
+}
+
 // Implementations of the Oak API host functions in Rust for testing.
 // These implementations generally handle the unsafe raw memory manipulation
 // then forward on to the equivalent method on the current OakRuntime instance.
+
+/// Declaration for the Node's main function.
+extern "C" {
+    pub fn oak_main() -> i32;
+}
 
 /// Test-only implementation of channel wait functionality, which always
 /// indicates that all provided channels are ready for reading.
 #[no_mangle]
 pub unsafe extern "C" fn wait_on_channels(buf: *mut u8, count: u32) -> u32 {
-    debug!("wait_on_channels({:?}, {})", buf, count);
+    let name = node_name();
+    debug!("{{{}}}: wait_on_channels({:?}, {})", name, buf, count);
     if count == 0 {
-        debug!("wait_on_channels() -> ERR_INVALID_ARGS");
+        debug!("{{{}}}: wait_on_channels() -> ERR_INVALID_ARGS", name);
         return OakStatus::ERR_INVALID_ARGS.value() as u32;
     }
     let termination_pending = RUNTIME.read().unwrap().termination_pending;
     if termination_pending {
-        debug!("wait_on_channels() -> ERR_TERMINATED");
+        debug!("{{{}}}: wait_on_channels() -> ERR_TERMINATED", name);
         return OakStatus::ERR_TERMINATED.value() as u32;
     }
 
@@ -293,7 +335,7 @@ pub unsafe extern "C" fn wait_on_channels(buf: *mut u8, count: u32) -> u32 {
         let channel_status = RUNTIME
             .read()
             .unwrap()
-            .channel_status_for_node("app", handle);
+            .channel_status_for_node(&name, handle);
         if channel_status != oak::ChannelReadStatus::INVALID_CHANNEL {
             found_valid_handle = true;
         }
@@ -309,7 +351,7 @@ pub unsafe extern "C" fn wait_on_channels(buf: *mut u8, count: u32) -> u32 {
     } else {
         OakStatus::ERR_BAD_HANDLE.value() as u32
     };
-    debug!("wait_on_channels() -> {}", result);
+    debug!("{{{}}}: wait_on_channels() -> {}", name, result);
     result
 }
 
@@ -322,9 +364,10 @@ pub unsafe extern "C" fn channel_write(
     handle_buf: *const u8,
     handle_count: u32,
 ) -> u32 {
+    let name = node_name();
     debug!(
-        "channel_write({}, {:?}, {}, {:?}, {})",
-        handle, buf, size, handle_buf, handle_count
+        "{{{}}}: channel_write({}, {:?}, {}, {:?}, {})",
+        name, handle, buf, size, handle_buf, handle_count
     );
     let mut msg = OakMessage {
         data: Vec::with_capacity(size),
@@ -341,7 +384,7 @@ pub unsafe extern "C" fn channel_write(
     let mut mem_reader = Cursor::new(handle_data);
     for _i in 0..handle_count as isize {
         let handle = mem_reader.read_u64::<byteorder::LittleEndian>().unwrap();
-        let half = RUNTIME.read().unwrap().node_half_for_handle("app", handle);
+        let half = RUNTIME.read().unwrap().node_half_for_handle(&name, handle);
         match half {
             Some(half) => msg.channels.push(half),
             None => return OakStatus::ERR_BAD_HANDLE.value() as u32,
@@ -351,8 +394,8 @@ pub unsafe extern "C" fn channel_write(
     let result = RUNTIME
         .write()
         .unwrap()
-        .node_channel_write("app", handle, msg);
-    debug!("channel_write() -> {}", result);
+        .node_channel_write(&name, handle, msg);
+    debug!("{{{}}}: channel_write() -> {}", name, result);
     result
 }
 
@@ -368,14 +411,15 @@ pub unsafe extern "C" fn channel_read(
     handle_count: u32,
     actual_handle_count: *mut u32,
 ) -> u32 {
+    let name = node_name();
     debug!(
-        "channel_read({}, {:?}, {}, {:?}, {:?}, {}, {:?})",
-        handle, buf, size, actual_size, handle_buf, handle_count, actual_handle_count
+        "{{{}}}: channel_read({}, {:?}, {}, {:?}, {:?}, {}, {:?})",
+        name, handle, buf, size, actual_size, handle_buf, handle_count, actual_handle_count
     );
     let mut asize = 0u32;
     let mut acount = 0u32;
     let result = RUNTIME.write().unwrap().node_channel_read(
-        "app",
+        &name,
         handle,
         size,
         &mut asize,
@@ -385,36 +429,37 @@ pub unsafe extern "C" fn channel_read(
     *actual_size = asize;
     *actual_handle_count = acount;
     if let Err(status) = result {
-        debug!("channel_read() -> Err {}", status);
+        debug!("{{{}}}: channel_read() -> Err {}", name, status);
         return status;
     }
     let msg = result.unwrap();
     std::ptr::copy_nonoverlapping(msg.data.as_ptr(), buf, asize as usize);
     let mut handle_data = Vec::with_capacity(8 * msg.channels.len());
     for half in msg.channels {
-        let handle = RUNTIME.write().unwrap().node_add_half("app", half);
-        debug!("channel_read() added handle {}", handle);
+        let handle = RUNTIME.write().unwrap().node_add_half(&name, half);
+        debug!("{{{}}}: channel_read() added handle {}", name, handle);
         handle_data
             .write_u64::<byteorder::LittleEndian>(handle)
             .unwrap();
     }
     std::ptr::copy_nonoverlapping(handle_data.as_ptr(), handle_buf, handle_data.len());
 
-    debug!("channel_read() -> OK");
+    debug!("{{{}}}: channel_read() -> OK", name);
     oak::OakStatus::OK as u32
 }
 
 /// Test-only version of channel creation.
 #[no_mangle]
 pub unsafe extern "C" fn channel_create(write: *mut u64, read: *mut u64) -> u32 {
-    debug!("channel_create({:?}, {:?})", write, read);
-    let (write_handle, read_handle) = RUNTIME.write().unwrap().node_channel_create("app");
+    let name = node_name();
+    debug!("{{{}}}: channel_create({:?}, {:?})", name, write, read);
+    let (write_handle, read_handle) = RUNTIME.write().unwrap().node_channel_create(&name);
 
     *write = write_handle;
     *read = read_handle;
     debug!(
-        "channel_create(*w={}, *r={}) -> OK",
-        write_handle, read_handle
+        "{{{}}}: channel_create(*w={}, *r={}) -> OK",
+        name, write_handle, read_handle
     );
     OakStatus::OK.value() as u32
 }
@@ -422,43 +467,46 @@ pub unsafe extern "C" fn channel_create(write: *mut u64, read: *mut u64) -> u32 
 /// Test-only version of channel closure.
 #[no_mangle]
 pub extern "C" fn channel_close(handle: u64) -> u32 {
-    debug!("channel_close({})", handle);
+    let name = node_name();
+    debug!("{{{}}}: channel_close({})", name, handle);
     let result = RUNTIME
         .write()
         .unwrap()
         .nodes
-        .get_mut("app")
+        .get_mut(&name)
         .unwrap()
         .close_channel(handle);
-    debug!("channel_close({}) -> {}", handle, result);
+    debug!("{{{}}}: channel_close({}) -> {}", name, handle, result);
     result
 }
 
 /// Test-only placeholder for finding a channel by preconfigured port name.
 #[no_mangle]
 pub unsafe extern "C" fn channel_find(buf: *const u8, size: usize) -> u64 {
-    debug!("channel_find({:?}, {})", buf, size);
+    let name = node_name();
+    debug!("{{{}}}: channel_find({:?}, {})", name, buf, size);
     let mut data = Vec::with_capacity(size as usize);
     std::ptr::copy_nonoverlapping(buf, data.as_mut_ptr(), size as usize);
     data.set_len(size as usize);
     let port_name = String::from_utf8(data).unwrap();
-    let handle = *RUNTIME.read().unwrap().nodes["app"]
+    let handle = *RUNTIME.read().unwrap().nodes[&name]
         .ports
         .get(&port_name)
         .unwrap_or(&0);
-    debug!("channel_find('{}') -> {}", port_name, handle);
+    debug!("{{{}}}: channel_find('{}') -> {}", name, port_name, handle);
     handle
 }
 
 /// Test-only placeholder for random data generation.
 #[no_mangle]
 pub unsafe extern "C" fn random_get(buf: *mut u8, size: usize) -> u32 {
-    debug!("random_get({:?}, {})", buf, size);
+    let name = node_name();
+    debug!("{{{}}}: random_get({:?}, {})", name, buf, size);
     let mut rng = rand::thread_rng();
     for i in 0..size as isize {
         *(buf.offset(i)) = rng.gen::<u8>();
     }
-    debug!("random_get() -> OK");
+    debug!("{{{}}}: random_get() -> OK", name);
     OakStatus::OK.value() as u32
 }
 
@@ -472,7 +520,7 @@ pub fn add_port_name(name: &str, handle: oak::Handle) {
         .write()
         .unwrap()
         .nodes
-        .get_mut("app")
+        .get_mut(DEFAULT_NODE_NAME)
         .unwrap()
         .ports
         .insert(name.to_string(), handle);
@@ -480,14 +528,20 @@ pub fn add_port_name(name: &str, handle: oak::Handle) {
 
 /// Convenience test helper to get a new write channel handle.
 pub fn write_handle() -> oak::Handle {
-    let (write_handle, read_handle) = RUNTIME.write().unwrap().node_channel_create("app");
+    let (write_handle, read_handle) = RUNTIME
+        .write()
+        .unwrap()
+        .node_channel_create(DEFAULT_NODE_NAME);
     channel_close(read_handle);
     write_handle
 }
 
 /// Convenience test helper to get a new read channel handle.
 pub fn read_handle() -> oak::Handle {
-    let (write_handle, read_handle) = RUNTIME.write().unwrap().node_channel_create("app");
+    let (write_handle, read_handle) = RUNTIME
+        .write()
+        .unwrap()
+        .node_channel_create(DEFAULT_NODE_NAME);
     channel_close(write_handle);
     read_handle
 }
@@ -495,7 +549,7 @@ pub fn read_handle() -> oak::Handle {
 /// Convenience test helper which returns the last message on a channel as a
 /// string (without removing it from the channel).
 pub fn last_message_as_string(handle: oak::Handle) -> String {
-    let half = *RUNTIME.read().unwrap().nodes["app"]
+    let half = *RUNTIME.read().unwrap().nodes[DEFAULT_NODE_NAME]
         .halves
         .get(&handle)
         .unwrap();
@@ -509,8 +563,8 @@ pub fn last_message_as_string(handle: oak::Handle) -> String {
 }
 
 /// Test helper that injects a failure for future channel read operations.
-pub fn set_read_status(handle: oak::Handle, status: Option<u32>) {
-    let half = *RUNTIME.read().unwrap().nodes["app"]
+pub fn set_read_status(node_name: &str, handle: oak::Handle, status: Option<u32>) {
+    let half = *RUNTIME.read().unwrap().nodes[node_name]
         .halves
         .get(&handle)
         .unwrap();
@@ -518,8 +572,8 @@ pub fn set_read_status(handle: oak::Handle, status: Option<u32>) {
 }
 
 /// Test helper that injects a failure for future channel write operations.
-pub fn set_write_status(handle: oak::Handle, status: Option<u32>) {
-    let half = *RUNTIME.read().unwrap().nodes["app"]
+pub fn set_write_status(node_name: &str, handle: oak::Handle, status: Option<u32>) {
+    let half = *RUNTIME.read().unwrap().nodes[node_name]
         .halves
         .get(&handle)
         .unwrap();
@@ -544,4 +598,42 @@ pub fn init_logging() {
 /// Test helper to mark the Application under test as pending termination.
 pub fn set_termination_pending(val: bool) {
     RUNTIME.write().unwrap().termination_pending = val;
+}
+
+/// Start running a single Node of the Application under test.
+pub fn start_node(name: &str) {
+    RUNTIME.write().unwrap().termination_pending = false;
+    // TODO: cope with multi-Node applications (this currently assumes a single
+    // Node with a global "oak_main" function is linked in).
+    let node_name = name.to_string();
+    let main_handle = spawn(|| unsafe {
+        set_node_name(node_name);
+        oak_main()
+    });
+    RUNTIME.write().unwrap().started(name, main_handle)
+}
+
+/// Stop the running Application under test.
+pub fn stop() -> OakStatus {
+    set_termination_pending(true);
+
+    let mut overall_result = OakStatus::OK;
+    loop {
+        let next = RUNTIME.write().unwrap().stop_next();
+        if next.is_none() {
+            break;
+        }
+        let (name, thread_handle) = next.unwrap();
+        debug!("{{{}}}: await thread join", name);
+        let result = match OakStatus::from_i32(thread_handle.join().unwrap() as i32) {
+            Some(status) => status,
+            None => OakStatus::OAK_STATUS_UNSPECIFIED,
+        };
+        debug!("{{{}}}: thread result {}", name, result.value());
+        if overall_result == OakStatus::OK {
+            overall_result = result;
+        }
+    }
+    reset();
+    overall_result
 }
