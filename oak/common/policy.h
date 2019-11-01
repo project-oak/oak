@@ -18,12 +18,13 @@
 #define OAK_COMMON_POLICY_H_
 
 #include "absl/base/attributes.h"
+#include "oak/proto/policy.pb.h"
 
 namespace oak {
 
-// Metadata key used to refer to Oak Policies associated with the gRPC request. This is effectively
-// treated as the name of a custom HTTP header.
-ABSL_CONST_INIT extern const char kOakLabelGrpcMetadataKey[];
+// Metadata key used to refer to the Oak Policy associated with the gRPC request. This is
+// effectively treated as the name of a custom HTTP header.
+ABSL_CONST_INIT extern const char kOakPolicyGrpcMetadataKey[];
 
 // Metadata key used to refer to per-call authorization tokens.
 //
@@ -35,6 +36,16 @@ ABSL_CONST_INIT extern const char kOakLabelGrpcMetadataKey[];
 //
 // See https://tools.ietf.org/html/rfc6750
 ABSL_CONST_INIT extern const char kOakAuthorizationBearerTokenGrpcMetadataKey[];
+
+// Serialized the provided policy so that it can be sent as a binary gRPC metadata value.
+std::string SerializePolicy(const oak::policy::Labels& policy);
+
+// Deserializes the provided binary gRPC metadata value into a policy.
+oak::policy::Labels DeserializePolicy(const std::string& serialized_policy);
+
+// Creates a policy that only allows declassifying data for gRPC clients that can present the
+// provided authorization bearer token.
+oak::policy::Labels AuthorizationBearerTokenPolicy(const std::string& authorization_token);
 
 }  // namespace oak
 

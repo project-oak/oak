@@ -23,11 +23,18 @@
 #include "asylo/identity/init.h"
 #include "asylo/util/logging.h"
 #include "include/grpcpp/grpcpp.h"
-#include "oak/client/per_call_policy.h"
+#include "oak/client/authorization_bearer_token_metadata.h"
 #include "oak/client/policy_metadata.h"
+#include "oak/common/nonce_generator.h"
+#include "oak/common/policy.h"
 #include "oak/proto/application.grpc.pb.h"
+#include "oak/proto/policy.pb.h"
 
 namespace oak {
+
+namespace {
+constexpr size_t kPerChannelNonceSizeBytes = 32;
+}  // namespace
 
 // A client connected to a previously created Oak Application.
 //
@@ -56,18 +63,46 @@ class ApplicationClient {
     return response;
   }
 
-  // Returns a grpc Channel connecting to the specified address, initialised with:
+  // Returns a grpc Channel connecting to the specified address initialised with the following
+  // composite channel credentials:
   // - Asylo channel credentials, possibly attesting the entire channel to the remote enclave
   // - Oak Policy call credentials, possibly attaching a specific Oak Policy to each call
+  //
+  // Note that composite channel credentials are really channel credentials, plus a generator object
+  // that modifies metadata for each call, and in this case it happens to always attach the same
+  // metadata to each outgoing call.
+  //
+  // A fresh nonce is created for each newly created channel, and it is attached as an authorization
+  // bearer token to each outgoing call. Also a corresponding policy allowing access to the newly
+  // created token is attached to each outgoing call. Both of these are performed by instances of
+  // `grpc::MetadataPlugin` via their `GetMetadata` method. The combined effect is that any
+  // interactions over this channel are private to the channel itself.
+  //
+  // For instance, a client may interact with a server and send some data, and then later on
+  // retrieve the data via a different call over the same channel. If the channel is closed (either
+  // intentionally or accidentally) then the previously sent data will not be accessible any more,
+  // since a new channel will be required, which will be associated with a different token.
+  //
+  // TODO: Consider introducing a server-side garbage collection mechanism so that inaccessible data
+  // may be deleted. If this is not feasible, perhaps it may be based on access time only, or based
+  // on additional metadata or specific time-related policies.
+  //
   // See https://grpc.io/docs/guides/auth/.
   static std::shared_ptr<grpc::Channel> CreateChannel(std::string addr) {
     auto channel_credentials =
         asylo::EnclaveChannelCredentials(asylo::BidirectionalNullCredentialsOptions());
+
+    NonceGenerator<kPerChannelNonceSizeBytes> nonce_generator;
+    auto channel_authorization_token_bytes = NonceToBytes(nonce_generator.NextNonce());
     auto call_credentials = grpc::CompositeCallCredentials(
-        grpc::MetadataCredentialsFromPlugin(absl::make_unique<PolicyMetadata>()),
-        grpc::MetadataCredentialsFromPlugin(absl::make_unique<PerCallPolicy>()));
+        grpc::MetadataCredentialsFromPlugin(
+            absl::make_unique<AuthorizationBearerTokenMetadata>(channel_authorization_token_bytes)),
+        grpc::MetadataCredentialsFromPlugin(absl::make_unique<PolicyMetadata>(
+            AuthorizationBearerTokenPolicy(channel_authorization_token_bytes))));
+
     auto composite_credentials =
         grpc::CompositeChannelCredentials(channel_credentials, call_credentials);
+
     return grpc::CreateChannel(addr, composite_credentials);
   }
 

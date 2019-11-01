@@ -20,6 +20,7 @@
 #include "asylo/util/logging.h"
 #include "oak/common/policy.h"
 #include "oak/proto/grpc_encap.pb.h"
+#include "oak/proto/policy.pb.h"
 #include "oak/server/channel.h"
 
 namespace oak {
@@ -103,11 +104,17 @@ void ModuleInvocation::ProcessRequest(bool ok) {
   req_msg->data.resize(serialized_size);
   grpc_request.SerializeToArray(req_msg->data.data(), req_msg->data.size());
   {
-    auto range = context_.client_metadata().equal_range(kOakLabelGrpcMetadataKey);
+    auto range = context_.client_metadata().equal_range(kOakPolicyGrpcMetadataKey);
     for (auto entry = range.first; entry != range.second; ++entry) {
-      std::string label(entry->second.data(), entry->second.size());
-      LOG(INFO) << "invocation#" << stream_id_ << " Oak policy label: " << label;
-      req_msg->labels.push_back(label);
+      std::string policy_base64(entry->second.data(), entry->second.size());
+      oak::policy::Labels policy = DeserializePolicy(policy_base64);
+      // TODO(https://github.com/project-oak/oak/issues/306): Note that at the moment policies may
+      // refer to authentication bearer tokens, which if logged in this way may be reused by
+      // unauthorized parties. For now we are fine with this, eventually bearer tokens will be
+      // removed and replaced by public key assertions, in which case it will always be safe to log
+      // policies.
+      LOG(INFO) << "invocation#" << stream_id_ << " Oak policy: " << policy.DebugString();
+      req_msg->labels = policy;
     }
   }
   {

@@ -27,6 +27,7 @@
 #include "absl/synchronization/mutex.h"
 #include "absl/types/variant.h"
 #include "oak/proto/oak_api.pb.h"
+#include "oak/proto/policy.pb.h"
 
 namespace oak {
 
@@ -43,7 +44,8 @@ using ChannelHalf = absl::variant<std::unique_ptr<MessageChannelReadHalf>,
 struct Message {
   std::vector<char> data;
   std::vector<std::unique_ptr<ChannelHalf>> channels;
-  std::vector<std::string> labels;
+  // TODO: Consider using a native struct here instead of the proto representation.
+  oak::policy::Labels labels;
 };
 
 // Result of a read operation. If the operation would have produced a message

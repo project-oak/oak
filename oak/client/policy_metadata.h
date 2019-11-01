@@ -18,20 +18,27 @@
 #define OAK_CLIENT_POLICY_METADATA_H_
 
 #include "include/grpcpp/grpcpp.h"
+#include "oak/proto/policy.pb.h"
 
 namespace oak {
 
-// This class injects a pre-determined Oak Policy to each outgoing gRPC call.
+// This class injects the provided Oak Policy to each outgoing gRPC call, passed over gRPC binary
+// metadata.
+//
 // In real-world use cases it should be combined to channel credentials, providing enclave
 // attestation.
+//
 // See https://grpc.io/docs/guides/auth/.
 class PolicyMetadata : public grpc::MetadataCredentialsPlugin {
  public:
-  PolicyMetadata();
+  PolicyMetadata(const oak::policy::Labels& labels);
 
   grpc::Status GetMetadata(grpc::string_ref service_url, grpc::string_ref method_name,
                            const grpc::AuthContext& channel_auth_context,
                            std::multimap<grpc::string, grpc::string>* metadata) override;
+
+ private:
+  const std::string serialized_policy_;
 };
 
 }  // namespace oak

@@ -46,11 +46,10 @@ class NonceGenerator {
   std::random_device prng_engine_;
 };
 
-// Converts the given nonce to its base64 representation.
+// Converts the given nonce to its binary string representation.
 template <size_t N>
-std::string NonceToBase64(const Nonce<N>& nonce) {
-  absl::string_view nonce_string_view(reinterpret_cast<const char*>(nonce.data()), nonce.size());
-  return absl::Base64Escape(nonce_string_view);
+std::string NonceToBytes(const Nonce<N>& nonce) {
+  return std::string(reinterpret_cast<const char*>(nonce.data()), nonce.size());
 }
 
 }  // namespace oak

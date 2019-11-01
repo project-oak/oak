@@ -1,0 +1,49 @@
+//
+// Copyright 2019 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package oak.policy;
+
+// Labels represents a policy associated with a message or a Node.
+//
+// See https://pdos.csail.mit.edu/papers/flume-sosp07.pdf section 3.1.
+message Labels {
+  repeated Tag secrecy_tags = 1;
+  // TODO: Support integrity tags.
+}
+
+// Tag represents a category of secrecy or integrity that is associated with data within Oak, and
+// refers to a Node or family of Nodes which are able to declassify data with that tag.
+//
+// For instance, a tag may refer to a user connected over gRPC, or to the functionality implemented
+// by a WebAssembly Node, and this would require that data with those tags are declassified by the
+// respective node before they can leave Oak.
+//
+// See https://pdos.csail.mit.edu/papers/flume-sosp07.pdf section 3.1.
+message Tag {
+  oneof tag {
+    GrpcTag grpc_tag = 1;
+  }
+}
+
+// Policies related to gRPC communication, referring to the native gRPC node within the TCB.
+message GrpcTag {
+  // TODO: Replace this with identity assertions based on public keys when Asylo supports it.
+  // See
+  // https://github.com/google/asylo/blob/3158887cb768112516424b3e65046f3946eb4465/asylo/identity/identity.proto#L40.
+  bytes authorization_bearer_token = 1;
+}
