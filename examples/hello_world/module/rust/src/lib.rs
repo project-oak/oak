@@ -32,7 +32,7 @@ use protobuf::ProtobufEnum;
 
 #[derive(OakExports)]
 struct Node {
-    storage: oak::storage::Storage,
+    storage: Option<oak::storage::Storage>,
 }
 
 const STORAGE_NAME: &[u8] = b"HelloWorld";
@@ -59,15 +59,14 @@ impl HelloWorldNode for Node {
             ));
         }
         // Save the latest greeting to storage.
-        match self
-            .storage
-            .write(STORAGE_NAME, FIELD_NAME, req.greeting.as_bytes())
-        {
-            Ok(_) => {}
-            Err(status) => warn!(
-                "failed to store last greeting: code={} {}",
-                status.code, status.message
-            ),
+        if let Some(storage) = &mut self.storage {
+            match storage.write(STORAGE_NAME, FIELD_NAME, req.greeting.as_bytes()) {
+                Ok(_) => {}
+                Err(status) => warn!(
+                    "failed to store last greeting: code={} {}",
+                    status.code, status.message
+                ),
+            }
         }
         info!("Say hello to {}", req.greeting);
         let mut res = HelloResponse::new();
@@ -82,16 +81,20 @@ impl HelloWorldNode for Node {
         writer.write(res1, grpc::WriteMode::KeepOpen);
 
         // Also generate a response with the last-stored value.
-        let result = self.storage.read(STORAGE_NAME, FIELD_NAME);
-        let previous = match result {
-            Ok(v) => String::from_utf8(v).unwrap(),
-            Err(status) => {
-                warn!(
-                    "Failed to find previous value: code={} {}",
-                    status.code, status.message
-                );
-                "<default>".to_string()
+        let previous = if let Some(storage) = &mut self.storage {
+            let result = storage.read(STORAGE_NAME, FIELD_NAME);
+            match result {
+                Ok(v) => String::from_utf8(v).unwrap(),
+                Err(status) => {
+                    warn!(
+                        "Failed to find previous value: code={} {}",
+                        status.code, status.message
+                    );
+                    "<default>".to_string()
+                }
             }
+        } else {
+            "<default>".to_string()
         };
         info!("Say bonjour to {}", previous);
         let mut res2 = HelloResponse::new();
