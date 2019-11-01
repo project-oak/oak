@@ -35,7 +35,10 @@ impl oak::grpc::OakNode for PanicNode {
 
 #[test]
 fn test_panic_catch() {
-    crate::reset_channels();
+    crate::reset();
+    crate::init_logging();
+    let (write_handle, read_handle) = oak::channel_create().unwrap();
+    crate::add_port_name("grpc_in", read_handle.handle);
 
     // Mock up a GrpcRequest to trigger invoke()
     let mut grpc_req = oak::proto::grpc_encap::GrpcRequest::new();
@@ -43,9 +46,10 @@ fn test_panic_catch() {
     grpc_req.set_req_msg(protobuf::well_known_types::Any::new());
     grpc_req.set_last(true);
 
-    // Serialize the request into a channel.
-    let mut channel = oak::io::Channel::new(oak::WriteHandle { handle: 2 });
-    grpc_req.write_to_writer(&mut channel).unwrap();
+    // Serialize the request and send it with a handle.
+    let mut req_data = Vec::new();
+    grpc_req.write_to_writer(&mut req_data).unwrap();
+    oak::channel_write(write_handle, &req_data, &[write_handle.handle]);
 
     assert_eq!(oak::OakStatus::ERR_INTERNAL.value(), oak_main());
 }

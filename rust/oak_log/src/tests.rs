@@ -20,16 +20,22 @@ use crate::OakChannelLogger;
 use log::{Level, LevelFilter, Log, Metadata, Record};
 use oak_tests::last_message_as_string;
 
-fn test_logger() -> OakChannelLogger {
-    OakChannelLogger {
-        channel: oak::io::Channel::new(oak::WriteHandle { handle: 1 }),
-    }
+fn test_logger() -> (oak::Handle, OakChannelLogger) {
+    let write_handle = oak_tests::write_handle();
+    (
+        write_handle,
+        OakChannelLogger {
+            channel: oak::io::Channel::new(oak::WriteHandle {
+                handle: write_handle,
+            }),
+        },
+    )
 }
 
 #[test]
 #[serial(set_level)]
 fn test_enabled() {
-    let x = test_logger();
+    let (_h, x) = test_logger();
     struct T {
         l: Level,
         max: LevelFilter,
@@ -62,8 +68,8 @@ fn test_enabled() {
 #[test]
 #[serial(set_level)]
 fn test_log() {
-    oak_tests::reset_channels();
-    let logger = test_logger();
+    oak_tests::reset();
+    let (handle, logger) = test_logger();
     log::set_max_level(log::LevelFilter::Info);
 
     let trace = Metadata::builder()
@@ -78,7 +84,7 @@ fn test_log() {
         .module_path(Some("server"))
         .build();
     logger.log(&r1);
-    assert_eq!("", last_message_as_string());
+    assert_eq!("", last_message_as_string(handle));
 
     let error = Metadata::builder()
         .level(Level::Error)
@@ -92,11 +98,14 @@ fn test_log() {
         .module_path(Some("server"))
         .build();
     logger.log(&r2);
-    assert_eq!("ERROR  app.rs : 433 : Error!\n", last_message_as_string());
+    assert_eq!(
+        "ERROR  app.rs : 433 : Error!\n",
+        last_message_as_string(handle)
+    );
 }
 
 #[test]
 fn test_flush() {
-    let x = test_logger();
+    let (_h, x) = test_logger();
     x.flush(); // Purely for coverage
 }
