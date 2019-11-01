@@ -19,9 +19,11 @@
 #[macro_use]
 extern crate log;
 extern crate protobuf;
+extern crate rand;
 
 use oak::OakStatus;
 use protobuf::ProtobufEnum;
+use rand::Rng;
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::convert::TryInto;
@@ -160,8 +162,9 @@ pub extern "C" fn channel_find(_buf: *const u8, _size: usize) -> u64 {
 /// Test-only placeholder for random data generation.
 #[no_mangle]
 pub unsafe extern "C" fn random_get(buf: *mut u8, size: usize) -> u32 {
+    let mut rng = rand::thread_rng();
     for i in 0..size as isize {
-        *(buf.offset(i)) = 4; // chosen by fair dice roll
+        *(buf.offset(i)) = rng.gen::<u8>();
     }
     OakStatus::OK.value() as u32
 }
