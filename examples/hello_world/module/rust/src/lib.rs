@@ -21,7 +21,20 @@ extern crate oak_derive;
 extern crate oak_log;
 extern crate protobuf;
 
+#[cfg(test)]
+#[macro_use]
+extern crate assert_matches;
+#[cfg(test)]
+extern crate oak_tests;
+#[cfg(test)]
+extern crate serial_test;
+#[cfg(test)]
+#[macro_use]
+extern crate serial_test_derive;
+
 mod proto;
+#[cfg(test)]
+mod tests;
 
 use oak::grpc;
 use oak::grpc::OakNode;
@@ -38,9 +51,18 @@ struct Node {
 const STORAGE_NAME: &[u8] = b"HelloWorld";
 const FIELD_NAME: &[u8] = b"last-greeting";
 
+#[cfg(test)]
+fn init_logging() {
+    oak_tests::init_logging();
+}
+#[cfg(not(test))]
+fn init_logging() {
+    oak_log::init_default();
+}
+
 impl OakNode for Node {
     fn new() -> Self {
-        oak_log::init_default();
+        init_logging();
         Node {
             storage: oak::storage::Storage::default(),
         }
