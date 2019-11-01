@@ -26,7 +26,7 @@ extern crate lazy_static;
 
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use oak::OakStatus;
-use protobuf::ProtobufEnum;
+use protobuf::{Message, ProtobufEnum};
 use rand::Rng;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -120,6 +120,7 @@ struct ChannelHalf {
 
 struct OakRuntime {
     termination_pending: bool,
+    grpc_channel_idx: Option<usize>,
     channels: Vec<MockChannel>,
     nodes: HashMap<String, OakNode>,
 }
@@ -138,6 +139,7 @@ impl OakRuntime {
         nodes.insert(DEFAULT_NODE_NAME.to_string(), OakNode::new());
         OakRuntime {
             termination_pending: false,
+            grpc_channel_idx: None,
             channels: Vec::new(),
             nodes,
         }
@@ -178,6 +180,18 @@ impl OakRuntime {
         let half = node.halves.get(&handle).unwrap();
         Some(*half)
     }
+    fn node_half_for_handle_dir(
+        &self,
+        node_name: &str,
+        handle: oak::Handle,
+        dir: Direction,
+    ) -> Option<ChannelHalf> {
+        let half = self.node_half_for_handle(node_name, handle)?;
+        if half.direction != dir {
+            return None;
+        }
+        Some(half)
+    }
     fn node_add_half(&mut self, node_name: &str, half: ChannelHalf) -> oak::Handle {
         self.nodes.get_mut(node_name).unwrap().add_half(half)
     }
@@ -195,15 +209,16 @@ impl OakRuntime {
         (write_handle, read_handle)
     }
     fn node_channel_write(&mut self, node_name: &str, handle: oak::Handle, msg: OakMessage) -> u32 {
-        let node = self.nodes.get(node_name).unwrap();
-        if !node.halves.contains_key(&handle) {
+        let half = self.node_half_for_handle_dir(node_name, handle, Direction::Write);
+        if half == None {
             return oak::OakStatus::ERR_BAD_HANDLE.value() as u32;
         }
-        let half = node.halves.get(&handle).unwrap();
-        if half.direction == Direction::Read {
-            return oak::OakStatus::ERR_BAD_HANDLE.value() as u32;
-        }
-        self.channels[half.channel_idx].write_message(msg)
+        self.channel_write_internal(half.unwrap().channel_idx, msg)
+    }
+    // Internal variant that takes a global channel index rather than a per-Node
+    // handle.
+    fn channel_write_internal(&mut self, channel_idx: usize, msg: OakMessage) -> u32 {
+        self.channels[channel_idx].write_message(msg)
     }
     fn node_channel_read(
         &mut self,
@@ -214,15 +229,29 @@ impl OakRuntime {
         handle_count: u32,
         actual_handle_count: &mut u32,
     ) -> Result<OakMessage, u32> {
-        let node = self.nodes.get(node_name).unwrap();
-        if !node.halves.contains_key(&handle) {
+        let half = self.node_half_for_handle_dir(node_name, handle, Direction::Read);
+        if half == None {
             return Err(oak::OakStatus::ERR_BAD_HANDLE.value() as u32);
         }
-        let half = node.halves.get(&handle).unwrap();
-        if half.direction == Direction::Write {
-            return Err(oak::OakStatus::ERR_BAD_HANDLE.value() as u32);
-        }
-        self.channels[half.channel_idx].read_message(
+        self.channel_read_internal(
+            half.unwrap().channel_idx,
+            size,
+            actual_size,
+            handle_count,
+            actual_handle_count,
+        )
+    }
+    // Internal variant that takes a global channel index rather than a per-Node
+    // handle.
+    fn channel_read_internal(
+        &mut self,
+        channel_idx: usize,
+        size: usize,
+        actual_size: &mut u32,
+        handle_count: u32,
+        actual_handle_count: &mut u32,
+    ) -> Result<OakMessage, u32> {
+        self.channels[channel_idx].read_message(
             size,
             actual_size,
             handle_count,
@@ -234,19 +263,28 @@ impl OakRuntime {
         node_name: &str,
         handle: oak::Handle,
     ) -> oak::ChannelReadStatus {
-        let node = self.nodes.get(node_name).unwrap();
-        if !node.halves.contains_key(&handle) {
-            return oak::ChannelReadStatus::INVALID_CHANNEL;
-        }
-        let half = node.halves.get(&handle).unwrap();
-        if half.direction != Direction::Read {
-            return oak::ChannelReadStatus::INVALID_CHANNEL;
-        }
-        if self.channels[half.channel_idx].messages.is_empty() {
+        let half = self.node_half_for_handle_dir(node_name, handle, Direction::Read);
+        if half.is_none() {
+            oak::ChannelReadStatus::INVALID_CHANNEL
+        } else if self.channels[half.unwrap().channel_idx].messages.is_empty() {
             oak::ChannelReadStatus::NOT_READY
         } else {
             oak::ChannelReadStatus::READ_READY
         }
+    }
+    fn grpc_channel_setup(&mut self, node_name: &str, port_name: &str) {
+        let channel_idx = self.new_channel();
+        let node = self.nodes.get_mut(node_name).unwrap();
+        let read_handle = node.add_half(ChannelHalf {
+            direction: Direction::Read,
+            channel_idx,
+        });
+        debug!(
+            "set up '{}' channel#{} to node {} with handle {}",
+            port_name, channel_idx, node_name, read_handle
+        );
+        node.ports.insert(port_name.to_string(), read_handle);
+        self.grpc_channel_idx = Some(channel_idx);
     }
 }
 
@@ -636,4 +674,100 @@ pub fn stop() -> OakStatus {
     }
     reset();
     overall_result
+}
+
+/// Test helper to set up a channel into the Node under for injected gRPC
+/// requests, using default parameters (node "app" port "grpc_in").
+pub fn grpc_channel_setup_default() {
+    grpc_channel_setup(DEFAULT_NODE_NAME, "grpc_in")
+}
+
+/// Test helper to set up a channel into a Node under for injected gRPC
+/// requests.
+pub fn grpc_channel_setup(node_name: &str, port_name: &str) {
+    RUNTIME
+        .write()
+        .unwrap()
+        .grpc_channel_setup(node_name, port_name)
+}
+
+/// Test helper to inject a (single) gRPC request message to the Node
+/// under test, and collect a (single) response.
+pub fn inject_grpc_request<R, Q>(method_name: &str, req: R) -> oak::grpc::Result<Q>
+where
+    R: protobuf::Message,
+    Q: protobuf::Message,
+{
+    // Put the request in a GrpcRequest wrapper and serialize into a message.
+    let mut grpc_req = oak::proto::grpc_encap::GrpcRequest::new();
+    grpc_req.set_method_name(method_name.to_string());
+    let mut any = protobuf::well_known_types::Any::new();
+    req.write_to_writer(&mut any.value).unwrap();
+    grpc_req.set_req_msg(any);
+    grpc_req.set_last(true);
+    let mut msg = OakMessage {
+        data: Vec::new(),
+        channels: Vec::new(),
+    };
+    grpc_req
+        .write_to_writer(&mut msg.data)
+        .expect("failed to serialize GrpcRequest message");
+
+    // Create a new channel for the response to arrive on and attach to the message.
+    let channel_idx = RUNTIME.write().unwrap().new_channel();
+    msg.channels.push(ChannelHalf {
+        direction: Direction::Write,
+        channel_idx,
+    });
+
+    // Send the message (with attached write handle) into the Node under test.
+    let grpc_idx = RUNTIME
+        .read()
+        .unwrap()
+        .grpc_channel_idx
+        .expect("no gRPC channel setup");
+    RUNTIME
+        .write()
+        .unwrap()
+        .channel_write_internal(grpc_idx, msg);
+
+    // Read the serialized, encapsulated response.
+    loop {
+        let mut size = 0u32;
+        let mut count = 0u32;
+        let result = RUNTIME.write().unwrap().channel_read_internal(
+            channel_idx,
+            std::usize::MAX,
+            &mut size,
+            std::u32::MAX,
+            &mut count,
+        );
+        if let Err(e) = result {
+            if e == OakStatus::OK.value() as u32 {
+                info!("no pending message; poll again soon");
+                std::thread::sleep(std::time::Duration::from_millis(100));
+                continue;
+            } else {
+                panic!(format!("failed to read from response channel: {}", e));
+            }
+        }
+        let rsp = result.unwrap();
+        if rsp.data.is_empty() {
+            info!("no pending message; poll again soon");
+            std::thread::sleep(std::time::Duration::from_millis(100));
+            continue;
+        }
+        let mut rsp: oak::proto::grpc_encap::GrpcResponse =
+            protobuf::parse_from_bytes(&rsp.data).expect("failed to parse GrpcResponse message");
+        if !rsp.last {
+            panic!("Expected single final response");
+        }
+
+        if rsp.get_status().code != oak::grpc::Code::OK.value() {
+            return Err(rsp.take_status());
+        }
+        let rsp: Q = protobuf::parse_from_bytes(&rsp.get_rsp_msg().value)
+            .expect("Failed to parse response protobuf message");
+        return Ok(rsp);
+    }
 }
