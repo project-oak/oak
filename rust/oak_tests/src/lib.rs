@@ -265,11 +265,14 @@ thread_local! {
 /// indicates that all provided channels are ready for reading.
 #[no_mangle]
 pub unsafe extern "C" fn wait_on_channels(buf: *mut u8, count: u32) -> u32 {
+    debug!("wait_on_channels({:?}, {})", buf, count);
     if count == 0 {
+        debug!("wait_on_channels() -> ERR_INVALID_ARGS");
         return OakStatus::ERR_INVALID_ARGS.value() as u32;
     }
     let termination_pending = RUNTIME.with(|runtime| runtime.borrow().termination_pending);
     if termination_pending {
+        debug!("wait_on_channels() -> ERR_TERMINATED");
         return OakStatus::ERR_TERMINATED.value() as u32;
     }
 
@@ -295,11 +298,13 @@ pub unsafe extern "C" fn wait_on_channels(buf: *mut u8, count: u32) -> u32 {
         *p = channel_status.value().try_into().unwrap();
     }
     // TODO: block if there's nothing pending
-    if found_valid_handle {
+    let result = if found_valid_handle {
         OakStatus::OK.value() as u32
     } else {
         OakStatus::ERR_BAD_HANDLE.value() as u32
-    }
+    };
+    debug!("wait_on_channels() -> {}", result);
+    result
 }
 
 /// Test-only implementation of channel write functionality.
@@ -311,6 +316,10 @@ pub unsafe extern "C" fn channel_write(
     handle_buf: *const u8,
     handle_count: u32,
 ) -> u32 {
+    debug!(
+        "channel_write({}, {:?}, {}, {:?}, {})",
+        handle, buf, size, handle_buf, handle_count
+    );
     let mut msg = OakMessage {
         data: Vec::with_capacity(size),
         channels: Vec::with_capacity(handle_count as usize),
@@ -333,7 +342,10 @@ pub unsafe extern "C" fn channel_write(
         }
     }
 
-    RUNTIME.with(|runtime| runtime.borrow_mut().node_channel_write("app", handle, msg))
+    let result =
+        RUNTIME.with(|runtime| runtime.borrow_mut().node_channel_write("app", handle, msg));
+    debug!("channel_write() -> {}", result);
+    result
 }
 
 /// Test-only implementation of channel read functionality, which reads a
@@ -348,6 +360,10 @@ pub unsafe extern "C" fn channel_read(
     handle_count: u32,
     actual_handle_count: *mut u32,
 ) -> u32 {
+    debug!(
+        "channel_read({}, {:?}, {}, {:?}, {:?}, {}, {:?})",
+        handle, buf, size, actual_size, handle_buf, handle_count, actual_handle_count
+    );
     let mut asize = 0u32;
     let mut acount = 0u32;
     let result = RUNTIME.with(|runtime| {
@@ -363,6 +379,7 @@ pub unsafe extern "C" fn channel_read(
     *actual_size = asize;
     *actual_handle_count = acount;
     if let Err(status) = result {
+        debug!("channel_read() -> Err {}", status);
         return status;
     }
     let msg = result.unwrap();
@@ -376,55 +393,69 @@ pub unsafe extern "C" fn channel_read(
     }
     std::ptr::copy_nonoverlapping(handle_data.as_ptr(), handle_buf, handle_data.len());
 
+    debug!("channel_read() -> OK");
     oak::OakStatus::OK as u32
 }
 
 /// Test-only version of channel creation.
 #[no_mangle]
 pub unsafe extern "C" fn channel_create(write: *mut u64, read: *mut u64) -> u32 {
+    debug!("channel_create({:?}, {:?})", write, read);
     let (write_handle, read_handle) =
         RUNTIME.with(|runtime| runtime.borrow_mut().node_channel_create("app"));
 
     *write = write_handle;
     *read = read_handle;
+    debug!(
+        "channel_create(*w={}, *r={}) -> OK",
+        write_handle, read_handle
+    );
     OakStatus::OK.value() as u32
 }
 
 /// Test-only version of channel closure.
 #[no_mangle]
 pub extern "C" fn channel_close(handle: u64) -> u32 {
-    RUNTIME.with(|runtime| {
+    debug!("channel_close({})", handle);
+    let result = RUNTIME.with(|runtime| {
         runtime
             .borrow_mut()
             .nodes
             .get_mut("app")
             .unwrap()
             .close_channel(handle)
-    })
+    });
+    debug!("channel_close({}) -> {}", handle, result);
+    result
 }
 
 /// Test-only placeholder for finding a channel by preconfigured port name.
 #[no_mangle]
 pub unsafe extern "C" fn channel_find(buf: *const u8, size: usize) -> u64 {
+    debug!("channel_find({:?}, {})", buf, size);
     let mut data = Vec::with_capacity(size as usize);
     std::ptr::copy_nonoverlapping(buf, data.as_mut_ptr(), size as usize);
     data.set_len(size as usize);
     let port_name = String::from_utf8(data).unwrap();
-    RUNTIME.with(|runtime| {
+    let handle = RUNTIME.with(|runtime| {
         *runtime.borrow().nodes["app"]
             .ports
             .get(&port_name)
             .unwrap_or(&0)
-    })
+    });
+    debug!("channel_find('{}') -> {}", port_name, handle);
+    handle
 }
 
 /// Test-only placeholder for random data generation.
 #[no_mangle]
 pub unsafe extern "C" fn random_get(buf: *mut u8, size: usize) -> u32 {
+    debug!("random_get({:?}, {})", buf, size);
     let mut rng = rand::thread_rng();
     for i in 0..size as isize {
         *(buf.offset(i)) = rng.gen::<u8>();
     }
+    debug!("random_get() -> OK");
     OakStatus::OK.value() as u32
 }
 
