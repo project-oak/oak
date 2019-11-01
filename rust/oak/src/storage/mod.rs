@@ -19,6 +19,7 @@
 extern crate protobuf;
 
 use crate::grpc;
+use crate::wasm::INVALID_HANDLE;
 use crate::{ReadHandle, WriteHandle};
 use proto::grpc_encap::{GrpcRequest, GrpcResponse};
 use proto::storage_channel::{
@@ -34,31 +35,32 @@ pub struct Storage {
     read_channel: crate::ReadHandle,
 }
 
-impl Default for Storage {
+impl Storage {
     /// Create a default `Storage` instance assuming the standard port names
     /// (`"storage_in"`, `"storage_out"`) for pre-defined channels for storage
     /// communication.
-    fn default() -> Storage {
+    pub fn default() -> Option<Storage> {
         Storage::new("storage_in", "storage_out")
     }
-}
 
-impl Storage {
     /// Create a `Storage` instance using the given port names for pre-defined
     /// channels for storage communication.
-    pub fn new(in_port_name: &str, out_port_name: &str) -> Storage {
+    pub fn new(in_port_name: &str, out_port_name: &str) -> Option<Storage> {
         let read_handle = ReadHandle {
             handle: crate::channel_find(in_port_name),
         };
         let write_handle = WriteHandle {
             handle: crate::channel_find(out_port_name),
         };
+        if read_handle.handle == INVALID_HANDLE || write_handle.handle == INVALID_HANDLE {
+            return None;
+        }
         let handles = vec![read_handle];
-        Storage {
+        Some(Storage {
             write_channel: crate::io::Channel::new(write_handle),
             wait_space: crate::new_handle_space(&handles),
             read_channel: read_handle,
-        }
+        })
     }
 
     fn execute_operation<Req, Res>(
