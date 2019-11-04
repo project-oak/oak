@@ -14,13 +14,14 @@
 # limitations under the License.
 #
 
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+load("//oak/common:fuzzer.bzl", "oak_fuzzer")
+load("//oak/server:wabt.bzl", "wasm_group")
+
 package(
     default_visibility = ["//oak/server:__subpackages__"],
     licenses = ["notice"],
 )
-
-load("//oak/common:fuzzer.bzl", "oak_fuzzer")
-load("//oak/server:wabt.bzl", "wasm_group")
 
 # Mark tests that can be run on the host system (i.e. with a normal
 # compiler, not the Asylo toolchain) with 'host' tag.

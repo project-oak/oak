@@ -14,22 +14,14 @@
 # limitations under the License.
 #
 
+load("@com_google_asylo//asylo/bazel:asylo.bzl", "enclave_loader")
+load("@com_google_asylo//asylo/bazel:copts.bzl", "ASYLO_DEFAULT_COPTS")
+load("@linux_sgx//:sgx_sdk.bzl", "sgx")
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
 package(
     default_visibility = ["//oak/server:__subpackages__"],
     licenses = ["notice"],
-)
-
-load(
-    "@com_google_asylo//asylo/bazel:asylo.bzl",
-    "enclave_loader",
-)
-load(
-    "@com_google_asylo//asylo/bazel:copts.bzl",
-    "ASYLO_DEFAULT_COPTS",
-)
-load(
-    "@linux_sgx//:sgx_sdk.bzl",
-    "sgx",
 )
 
 cc_library(
