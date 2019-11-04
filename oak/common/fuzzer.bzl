@@ -16,9 +16,11 @@
 
 """Fuzz-related definitions for Oak testing."""
 
+load("@rules_cc//cc:defs.bzl", "cc_binary")
+
 # Inspired by https://github.com/grpc/grpc/blob/618a3f561d4a93f263cca23abad086ed8f4d5e86/test/core/util/grpc_fuzzer.bzl.
 def oak_fuzzer(name, srcs = [], deps = [], **kwargs):
-    native.cc_binary(
+    cc_binary(
         name = name,
         srcs = srcs,
         deps = deps,

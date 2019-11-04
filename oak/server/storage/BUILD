@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
+
 package(
     default_visibility = ["//oak/server:__pkg__"],
     licenses = ["notice"],

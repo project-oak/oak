@@ -9,9 +9,10 @@ source "$SCRIPTS_DIR/common"
 # Run buildifier, clang-format and rustfmt on the entire codebase.
 # Applies all formattings in-place.
 
-find oak examples toolchain \( -type f -name BUILD -or -name '*bzl' \) -exec buildifier -lint=fix -mode=fix {} +
+find oak examples toolchain \( -type f -name BUILD -or -name WORKSPACE -or -name '*bzl' \) \
+  -exec buildifier -lint=fix -mode=fix {} +
 find oak examples \( -type f -name '*.h' -or -name '*.cc' -or -name '*.proto' \) \
-    -exec clang-format -i -style=file {} +
+  -exec clang-format -i -style=file {} +
 find examples rust -type f -name '*.rs' -exec rustfmt {} +
 
 find . \

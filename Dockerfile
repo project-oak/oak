@@ -11,13 +11,13 @@ RUN shellcheck --version
 RUN node --version
 RUN npm --version
 
-# Install prettier.
+# Install prettier (via Node.js).
 # https://prettier.io/
 RUN npm install --global prettier
 RUN prettier --version
 
 # Install buildifier.
-ARG BAZEL_TOOLS_VERSION=0.28.0
+ARG BAZEL_TOOLS_VERSION=0.29.0
 ARG BUILDIFIER_DIR=/usr/local/buildifier
 RUN mkdir -p $BUILDIFIER_DIR/bin
 RUN curl -L https://github.com/bazelbuild/buildtools/releases/download/${BAZEL_TOOLS_VERSION}/buildifier > $BUILDIFIER_DIR/bin/buildifier
@@ -59,7 +59,7 @@ RUN rustup component add \
   rust-analysis \
   rust-src
 
-# Install embedmd (via Go)
+# Install embedmd (via Go).
 ARG GOLANG_VERSION=1.13.1
 ENV GOROOT /usr/local/go
 ENV GOPATH $HOME/go
