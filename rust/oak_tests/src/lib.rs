@@ -18,9 +18,11 @@
 
 #[macro_use]
 extern crate log;
+extern crate byteorder;
 extern crate protobuf;
 extern crate rand;
 
+use byteorder::{ReadBytesExt, WriteBytesExt};
 use oak::OakStatus;
 use protobuf::ProtobufEnum;
 use rand::Rng;
@@ -28,6 +30,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::convert::TryInto;
+use std::io::Cursor;
 use std::sync::Once;
 
 pub mod proto;
@@ -36,6 +39,7 @@ mod tests;
 
 struct OakMessage {
     data: Vec<u8>,
+    channels: Vec<ChannelHalf>,
 }
 
 struct MockChannel {
@@ -66,21 +70,32 @@ impl MockChannel {
         self.messages.push_back(msg);
         OakStatus::OK.value() as u32
     }
-    fn read_message(&mut self, size: usize, actual_size: &mut u32) -> Result<OakMessage, u32> {
+    fn read_message(
+        &mut self,
+        size: usize,
+        actual_size: &mut u32,
+        handle_count: u32,
+        actual_handle_count: &mut u32,
+    ) -> Result<OakMessage, u32> {
         if let Some(status) = self.read_status {
             return Err(status);
         }
         let msg = self.messages.pop_front();
         if msg.is_none() {
             *actual_size = 0;
+            *actual_handle_count = 0;
             return Err(OakStatus::OK.value() as u32);
         }
         let msg = msg.unwrap();
-        let len = msg.data.len();
-        *actual_size = len as u32;
-        if len > size {
+        *actual_size = msg.data.len() as u32;
+        *actual_handle_count = msg.channels.len() as u32;
+        if *actual_size > size as u32 {
             self.messages.push_front(msg);
             return Err(OakStatus::ERR_BUFFER_TOO_SMALL.value() as u32);
+        }
+        if *actual_handle_count > handle_count {
+            self.messages.push_front(msg);
+            return Err(OakStatus::ERR_HANDLE_SPACE_TOO_SMALL.value() as u32);
         }
         Ok(msg)
     }
@@ -141,6 +156,17 @@ impl OakRuntime {
         self.channels.push(MockChannel::new());
         channel_idx
     }
+    fn node_half_for_handle(&self, node_name: &str, handle: oak::Handle) -> Option<ChannelHalf> {
+        let node = self.nodes.get(node_name).unwrap();
+        if !node.halves.contains_key(&handle) {
+            return None;
+        }
+        let half = node.halves.get(&handle).unwrap();
+        Some(*half)
+    }
+    fn node_add_half(&mut self, node_name: &str, half: ChannelHalf) -> oak::Handle {
+        self.nodes.get_mut(node_name).unwrap().add_half(half)
+    }
     fn node_channel_create(&mut self, node_name: &str) -> (oak::Handle, oak::Handle) {
         let channel_idx = self.new_channel();
         let node = self.nodes.get_mut(node_name).unwrap();
@@ -171,6 +197,8 @@ impl OakRuntime {
         handle: oak::Handle,
         size: usize,
         actual_size: &mut u32,
+        handle_count: u32,
+        actual_handle_count: &mut u32,
     ) -> Result<OakMessage, u32> {
         let node = self.nodes.get(node_name).unwrap();
         if !node.halves.contains_key(&handle) {
@@ -180,7 +208,31 @@ impl OakRuntime {
         if half.direction == Direction::Write {
             return Err(oak::OakStatus::ERR_BAD_HANDLE.value() as u32);
         }
-        self.channels[half.channel_idx].read_message(size, actual_size)
+        self.channels[half.channel_idx].read_message(
+            size,
+            actual_size,
+            handle_count,
+            actual_handle_count,
+        )
+    }
+    fn channel_status_for_node(
+        &self,
+        node_name: &str,
+        handle: oak::Handle,
+    ) -> oak::ChannelReadStatus {
+        let node = self.nodes.get(node_name).unwrap();
+        if !node.halves.contains_key(&handle) {
+            return oak::ChannelReadStatus::INVALID_CHANNEL;
+        }
+        let half = node.halves.get(&handle).unwrap();
+        if half.direction != Direction::Read {
+            return oak::ChannelReadStatus::INVALID_CHANNEL;
+        }
+        if self.channels[half.channel_idx].messages.is_empty() {
+            oak::ChannelReadStatus::NOT_READY
+        } else {
+            oak::ChannelReadStatus::READ_READY
+        }
     }
 }
 
@@ -213,36 +265,73 @@ thread_local! {
 /// indicates that all provided channels are ready for reading.
 #[no_mangle]
 pub unsafe extern "C" fn wait_on_channels(buf: *mut u8, count: u32) -> u32 {
+    if count == 0 {
+        return OakStatus::ERR_INVALID_ARGS.value() as u32;
+    }
     let termination_pending = RUNTIME.with(|runtime| runtime.borrow().termination_pending);
     if termination_pending {
         return OakStatus::ERR_TERMINATED.value() as u32;
     }
+
+    // Make a copy of the handle space.
+    let size = oak::wasm::SPACE_BYTES_PER_HANDLE * count as usize;
+    let mut handle_data = Vec::<u8>::with_capacity(size);
+    std::ptr::copy_nonoverlapping(buf, handle_data.as_mut_ptr(), size);
+    handle_data.set_len(size);
+    let mut mem_reader = Cursor::new(handle_data);
+    let mut found_valid_handle = false;
     for i in 0..(count as usize) {
+        let handle = mem_reader.read_u64::<byteorder::LittleEndian>().unwrap();
+        let _b = mem_reader.read_u8().unwrap();
+        let channel_status =
+            RUNTIME.with(|runtime| runtime.borrow().channel_status_for_node("app", handle));
+        if channel_status != oak::ChannelReadStatus::INVALID_CHANNEL {
+            found_valid_handle = true;
+        }
+
+        // Write channel status back to the raw pointer.
         let p = buf
             .add(i * oak::wasm::SPACE_BYTES_PER_HANDLE + (oak::wasm::SPACE_BYTES_PER_HANDLE - 1));
-        *p = oak::ChannelReadStatus::READ_READY
-            .value()
-            .try_into()
-            .unwrap();
+        *p = channel_status.value().try_into().unwrap();
     }
-    OakStatus::OK.value() as u32
+    // TODO: block if there's nothing pending
+    if found_valid_handle {
+        OakStatus::OK.value() as u32
+    } else {
+        OakStatus::ERR_BAD_HANDLE.value() as u32
+    }
 }
 
-/// Test-only implementation of channel write functionality, which writes (only) the data
-/// of the provided message to a test channel.
+/// Test-only implementation of channel write functionality.
 #[no_mangle]
 pub unsafe extern "C" fn channel_write(
     handle: u64,
     buf: *const u8,
     size: usize,
-    _handle_buf: *const u8,
-    _handle_count: u32,
+    handle_buf: *const u8,
+    handle_count: u32,
 ) -> u32 {
     let mut msg = OakMessage {
         data: Vec::with_capacity(size),
+        channels: Vec::with_capacity(handle_count as usize),
     };
     std::ptr::copy_nonoverlapping(buf, msg.data.as_mut_ptr(), size);
     msg.data.set_len(size);
+
+    let handle_size = 8 * handle_count as usize;
+    let mut handle_data = Vec::<u8>::with_capacity(handle_size);
+    std::ptr::copy_nonoverlapping(handle_buf, handle_data.as_mut_ptr(), handle_size);
+    handle_data.set_len(handle_size);
+
+    let mut mem_reader = Cursor::new(handle_data);
+    for _i in 0..handle_count as isize {
+        let handle = mem_reader.read_u64::<byteorder::LittleEndian>().unwrap();
+        let half = RUNTIME.with(|runtime| runtime.borrow().node_half_for_handle("app", handle));
+        match half {
+            Some(half) => msg.channels.push(half),
+            None => return OakStatus::ERR_BAD_HANDLE.value() as u32,
+        }
+    }
 
     RUNTIME.with(|runtime| runtime.borrow_mut().node_channel_write("app", handle, msg))
 }
@@ -255,24 +344,39 @@ pub unsafe extern "C" fn channel_read(
     buf: *mut u8,
     size: usize,
     actual_size: *mut u32,
-    _handle_buf: *mut u8,
-    _handle_count: u32,
-    _actual_handle_count: *mut u32,
+    handle_buf: *mut u8,
+    handle_count: u32,
+    actual_handle_count: *mut u32,
 ) -> u32 {
     let mut asize = 0u32;
+    let mut acount = 0u32;
     let result = RUNTIME.with(|runtime| {
-        runtime
-            .borrow_mut()
-            .node_channel_read("app", handle, size, &mut asize)
+        runtime.borrow_mut().node_channel_read(
+            "app",
+            handle,
+            size,
+            &mut asize,
+            handle_count,
+            &mut acount,
+        )
     });
     *actual_size = asize;
-    match result {
-        Ok(msg) => {
-            std::ptr::copy_nonoverlapping(msg.data.as_ptr(), buf, asize as usize);
-            oak::OakStatus::OK as u32
-        }
-        Err(status) => status,
+    *actual_handle_count = acount;
+    if let Err(status) = result {
+        return status;
     }
+    let msg = result.unwrap();
+    std::ptr::copy_nonoverlapping(msg.data.as_ptr(), buf, asize as usize);
+    let mut handle_data = Vec::with_capacity(8 * msg.channels.len());
+    for half in msg.channels {
+        let handle = RUNTIME.with(|runtime| runtime.borrow_mut().node_add_half("app", half));
+        handle_data
+            .write_u64::<byteorder::LittleEndian>(handle)
+            .unwrap();
+    }
+    std::ptr::copy_nonoverlapping(handle_data.as_ptr(), handle_buf, handle_data.len());
+
+    oak::OakStatus::OK as u32
 }
 
 /// Test-only version of channel creation.
