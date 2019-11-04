@@ -21,17 +21,18 @@ extern crate log;
 extern crate byteorder;
 extern crate protobuf;
 extern crate rand;
+#[macro_use]
+extern crate lazy_static;
 
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use oak::OakStatus;
 use protobuf::ProtobufEnum;
 use rand::Rng;
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::convert::TryInto;
 use std::io::Cursor;
-use std::sync::Once;
+use std::sync::{Once, RwLock};
 
 pub mod proto;
 #[cfg(test)]
@@ -253,8 +254,11 @@ impl OakNode {
 }
 
 // Test-only mock runtime which is used to service any calls to TCB functionality.
-thread_local! {
-    static RUNTIME: RefCell<OakRuntime> = RefCell::new(OakRuntime::new());
+// This is a mutable global (!) because the code under test expects to find
+// global entrypoints corresponding to the Oak TCB, and there's no other way to
+// get at the relevant associated state.
+lazy_static! {
+    static ref RUNTIME: RwLock<OakRuntime> = RwLock::new(OakRuntime::new());
 }
 
 // Implementations of the Oak API host functions in Rust for testing.
@@ -270,7 +274,7 @@ pub unsafe extern "C" fn wait_on_channels(buf: *mut u8, count: u32) -> u32 {
         debug!("wait_on_channels() -> ERR_INVALID_ARGS");
         return OakStatus::ERR_INVALID_ARGS.value() as u32;
     }
-    let termination_pending = RUNTIME.with(|runtime| runtime.borrow().termination_pending);
+    let termination_pending = RUNTIME.read().unwrap().termination_pending;
     if termination_pending {
         debug!("wait_on_channels() -> ERR_TERMINATED");
         return OakStatus::ERR_TERMINATED.value() as u32;
@@ -286,8 +290,10 @@ pub unsafe extern "C" fn wait_on_channels(buf: *mut u8, count: u32) -> u32 {
     for i in 0..(count as usize) {
         let handle = mem_reader.read_u64::<byteorder::LittleEndian>().unwrap();
         let _b = mem_reader.read_u8().unwrap();
-        let channel_status =
-            RUNTIME.with(|runtime| runtime.borrow().channel_status_for_node("app", handle));
+        let channel_status = RUNTIME
+            .read()
+            .unwrap()
+            .channel_status_for_node("app", handle);
         if channel_status != oak::ChannelReadStatus::INVALID_CHANNEL {
             found_valid_handle = true;
         }
@@ -335,15 +341,17 @@ pub unsafe extern "C" fn channel_write(
     let mut mem_reader = Cursor::new(handle_data);
     for _i in 0..handle_count as isize {
         let handle = mem_reader.read_u64::<byteorder::LittleEndian>().unwrap();
-        let half = RUNTIME.with(|runtime| runtime.borrow().node_half_for_handle("app", handle));
+        let half = RUNTIME.read().unwrap().node_half_for_handle("app", handle);
         match half {
             Some(half) => msg.channels.push(half),
             None => return OakStatus::ERR_BAD_HANDLE.value() as u32,
         }
     }
 
-    let result =
-        RUNTIME.with(|runtime| runtime.borrow_mut().node_channel_write("app", handle, msg));
+    let result = RUNTIME
+        .write()
+        .unwrap()
+        .node_channel_write("app", handle, msg);
     debug!("channel_write() -> {}", result);
     result
 }
@@ -366,16 +374,14 @@ pub unsafe extern "C" fn channel_read(
     );
     let mut asize = 0u32;
     let mut acount = 0u32;
-    let result = RUNTIME.with(|runtime| {
-        runtime.borrow_mut().node_channel_read(
-            "app",
-            handle,
-            size,
-            &mut asize,
-            handle_count,
-            &mut acount,
-        )
-    });
+    let result = RUNTIME.write().unwrap().node_channel_read(
+        "app",
+        handle,
+        size,
+        &mut asize,
+        handle_count,
+        &mut acount,
+    );
     *actual_size = asize;
     *actual_handle_count = acount;
     if let Err(status) = result {
@@ -386,7 +392,8 @@ pub unsafe extern "C" fn channel_read(
     std::ptr::copy_nonoverlapping(msg.data.as_ptr(), buf, asize as usize);
     let mut handle_data = Vec::with_capacity(8 * msg.channels.len());
     for half in msg.channels {
-        let handle = RUNTIME.with(|runtime| runtime.borrow_mut().node_add_half("app", half));
+        let handle = RUNTIME.write().unwrap().node_add_half("app", half);
+        debug!("channel_read() added handle {}", handle);
         handle_data
             .write_u64::<byteorder::LittleEndian>(handle)
             .unwrap();
@@ -401,8 +408,7 @@ pub unsafe extern "C" fn channel_read(
 #[no_mangle]
 pub unsafe extern "C" fn channel_create(write: *mut u64, read: *mut u64) -> u32 {
     debug!("channel_create({:?}, {:?})", write, read);
-    let (write_handle, read_handle) =
-        RUNTIME.with(|runtime| runtime.borrow_mut().node_channel_create("app"));
+    let (write_handle, read_handle) = RUNTIME.write().unwrap().node_channel_create("app");
 
     *write = write_handle;
     *read = read_handle;
@@ -417,14 +423,13 @@ pub unsafe extern "C" fn channel_create(write: *mut u64, read: *mut u64) -> u32 
 #[no_mangle]
 pub extern "C" fn channel_close(handle: u64) -> u32 {
     debug!("channel_close({})", handle);
-    let result = RUNTIME.with(|runtime| {
-        runtime
-            .borrow_mut()
-            .nodes
-            .get_mut("app")
-            .unwrap()
-            .close_channel(handle)
-    });
+    let result = RUNTIME
+        .write()
+        .unwrap()
+        .nodes
+        .get_mut("app")
+        .unwrap()
+        .close_channel(handle);
     debug!("channel_close({}) -> {}", handle, result);
     result
 }
@@ -437,12 +442,10 @@ pub unsafe extern "C" fn channel_find(buf: *const u8, size: usize) -> u64 {
     std::ptr::copy_nonoverlapping(buf, data.as_mut_ptr(), size as usize);
     data.set_len(size as usize);
     let port_name = String::from_utf8(data).unwrap();
-    let handle = RUNTIME.with(|runtime| {
-        *runtime.borrow().nodes["app"]
-            .ports
-            .get(&port_name)
-            .unwrap_or(&0)
-    });
+    let handle = *RUNTIME.read().unwrap().nodes["app"]
+        .ports
+        .get(&port_name)
+        .unwrap_or(&0);
     debug!("channel_find('{}') -> {}", port_name, handle);
     handle
 }
@@ -464,66 +467,68 @@ pub unsafe extern "C" fn random_get(buf: *mut u8, size: usize) -> u32 {
 
 /// Test helper to add a port name referring to a handle.
 pub fn add_port_name(name: &str, handle: oak::Handle) {
-    RUNTIME.with(|runtime| {
-        runtime
-            .borrow_mut()
-            .nodes
-            .get_mut("app")
-            .unwrap()
-            .ports
-            .insert(name.to_string(), handle);
-    })
+    debug!("registered port '{}' -> handle {}", name, handle);
+    RUNTIME
+        .write()
+        .unwrap()
+        .nodes
+        .get_mut("app")
+        .unwrap()
+        .ports
+        .insert(name.to_string(), handle);
 }
 
 /// Convenience test helper to get a new write channel handle.
 pub fn write_handle() -> oak::Handle {
-    RUNTIME.with(|runtime| {
-        let (write_handle, read_handle) = runtime.borrow_mut().node_channel_create("app");
-        channel_close(read_handle);
-        write_handle
-    })
+    let (write_handle, read_handle) = RUNTIME.write().unwrap().node_channel_create("app");
+    channel_close(read_handle);
+    write_handle
 }
 
 /// Convenience test helper to get a new read channel handle.
 pub fn read_handle() -> oak::Handle {
-    RUNTIME.with(|runtime| {
-        let (write_handle, read_handle) = runtime.borrow_mut().node_channel_create("app");
-        channel_close(write_handle);
-        read_handle
-    })
+    let (write_handle, read_handle) = RUNTIME.write().unwrap().node_channel_create("app");
+    channel_close(write_handle);
+    read_handle
 }
 
 /// Convenience test helper which returns the last message on a channel as a
 /// string (without removing it from the channel).
 pub fn last_message_as_string(handle: oak::Handle) -> String {
-    RUNTIME.with(|runtime| {
-        let half = *runtime.borrow().nodes["app"].halves.get(&handle).unwrap();
-        match runtime.borrow().channels[half.channel_idx].messages.front() {
-            Some(msg) => unsafe { std::str::from_utf8_unchecked(&msg.data).to_string() },
-            None => "".to_string(),
-        }
-    })
+    let half = *RUNTIME.read().unwrap().nodes["app"]
+        .halves
+        .get(&handle)
+        .unwrap();
+    match RUNTIME.read().unwrap().channels[half.channel_idx]
+        .messages
+        .front()
+    {
+        Some(msg) => unsafe { std::str::from_utf8_unchecked(&msg.data).to_string() },
+        None => "".to_string(),
+    }
 }
 
 /// Test helper that injects a failure for future channel read operations.
 pub fn set_read_status(handle: oak::Handle, status: Option<u32>) {
-    RUNTIME.with(|runtime| {
-        let half = *runtime.borrow().nodes["app"].halves.get(&handle).unwrap();
-        runtime.borrow_mut().channels[half.channel_idx].read_status = status;
-    })
+    let half = *RUNTIME.read().unwrap().nodes["app"]
+        .halves
+        .get(&handle)
+        .unwrap();
+    RUNTIME.write().unwrap().channels[half.channel_idx].read_status = status;
 }
 
 /// Test helper that injects a failure for future channel write operations.
 pub fn set_write_status(handle: oak::Handle, status: Option<u32>) {
-    RUNTIME.with(|runtime| {
-        let half = *runtime.borrow().nodes["app"].halves.get(&handle).unwrap();
-        runtime.borrow_mut().channels[half.channel_idx].write_status = status;
-    })
+    let half = *RUNTIME.read().unwrap().nodes["app"]
+        .halves
+        .get(&handle)
+        .unwrap();
+    RUNTIME.write().unwrap().channels[half.channel_idx].write_status = status;
 }
 
 /// Test helper that clears any handle to channel half mappings.
 pub fn reset() {
-    RUNTIME.with(|runtime| runtime.borrow_mut().reset())
+    RUNTIME.write().unwrap().reset()
 }
 
 static LOG_INIT: Once = Once::new();
@@ -538,7 +543,5 @@ pub fn init_logging() {
 
 /// Test helper to mark the Application under test as pending termination.
 pub fn set_termination_pending(val: bool) {
-    RUNTIME.with(|runtime| {
-        runtime.borrow_mut().termination_pending = val;
-    });
+    RUNTIME.write().unwrap().termination_pending = val;
 }

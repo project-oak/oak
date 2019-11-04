@@ -38,6 +38,11 @@ pub mod wasm;
 #[cfg(test)]
 #[macro_use]
 extern crate assert_matches;
+#[cfg(test)]
+extern crate serial_test;
+#[cfg(test)]
+#[macro_use]
+extern crate serial_test_derive;
 
 /// Handle used to identify read or write channel halves.
 ///

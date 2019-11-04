@@ -17,3 +17,5 @@ protoc-rust = "*"
 assert_matches = "*"
 oak_derive = { path = "../oak_derive" }
 oak_tests = { path = "../oak_tests" }
+serial_test = "0.2"
+serial_test_derive = "0.2"
