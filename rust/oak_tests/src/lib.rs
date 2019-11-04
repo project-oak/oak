@@ -354,43 +354,59 @@ pub unsafe extern "C" fn wait_on_channels(buf: *mut u8, count: u32) -> u32 {
         debug!("{{{}}}: wait_on_channels() -> ERR_INVALID_ARGS", name);
         return OakStatus::ERR_INVALID_ARGS.value() as u32;
     }
-    let termination_pending = RUNTIME.read().unwrap().termination_pending;
-    if termination_pending {
-        debug!("{{{}}}: wait_on_channels() -> ERR_TERMINATED", name);
-        return OakStatus::ERR_TERMINATED.value() as u32;
-    }
 
-    // Make a copy of the handle space.
+    // Accumulate the handles we're interested in.
     let size = oak::wasm::SPACE_BYTES_PER_HANDLE * count as usize;
     let mut handle_data = Vec::<u8>::with_capacity(size);
     std::ptr::copy_nonoverlapping(buf, handle_data.as_mut_ptr(), size);
     handle_data.set_len(size);
+    let mut handles = Vec::with_capacity(count as usize);
     let mut mem_reader = Cursor::new(handle_data);
-    let mut found_valid_handle = false;
-    for i in 0..(count as usize) {
+    for _ in 0..count {
         let handle = mem_reader.read_u64::<byteorder::LittleEndian>().unwrap();
         let _b = mem_reader.read_u8().unwrap();
-        let channel_status = RUNTIME
-            .read()
-            .unwrap()
-            .channel_status_for_node(&name, handle);
-        if channel_status != oak::ChannelReadStatus::INVALID_CHANNEL {
-            found_valid_handle = true;
-        }
-
-        // Write channel status back to the raw pointer.
-        let p = buf
-            .add(i * oak::wasm::SPACE_BYTES_PER_HANDLE + (oak::wasm::SPACE_BYTES_PER_HANDLE - 1));
-        *p = channel_status.value().try_into().unwrap();
+        handles.push(handle);
     }
-    // TODO: block if there's nothing pending
-    let result = if found_valid_handle {
-        OakStatus::OK.value() as u32
-    } else {
-        OakStatus::ERR_BAD_HANDLE.value() as u32
-    };
-    debug!("{{{}}}: wait_on_channels() -> {}", name, result);
-    result
+
+    loop {
+        // Check current handle status.
+        let mut found_valid_handle = false;
+        let mut found_ready_handle = false;
+        for (i, handle) in handles.iter().enumerate() {
+            let channel_status = RUNTIME
+                .read()
+                .unwrap()
+                .channel_status_for_node(&name, *handle);
+            if channel_status != oak::ChannelReadStatus::INVALID_CHANNEL {
+                found_valid_handle = true;
+            }
+            if channel_status == oak::ChannelReadStatus::READ_READY {
+                found_ready_handle = true;
+            }
+
+            // Write channel status back to the raw pointer.
+            let p = buf.add(
+                i * oak::wasm::SPACE_BYTES_PER_HANDLE + (oak::wasm::SPACE_BYTES_PER_HANDLE - 1),
+            );
+            *p = channel_status.value().try_into().unwrap();
+        }
+        if RUNTIME.read().unwrap().termination_pending {
+            debug!("{{{}}}: wait_on_channels() -> ERR_TERMINATED", name);
+            return OakStatus::ERR_TERMINATED.value() as u32;
+        }
+        if found_ready_handle {
+            break;
+        }
+        if !found_valid_handle {
+            debug!("{{{}}}: wait_on_channels() -> ERR_BAD_HANDLE", name);
+            return OakStatus::ERR_BAD_HANDLE.value() as u32;
+        }
+        // We have at least one valid handle but no pending data, so wait and try again.
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
+
+    debug!("{{{}}}: wait_on_channels() -> OK", name);
+    OakStatus::OK.value() as u32
 }
 
 /// Test-only implementation of channel write functionality.
