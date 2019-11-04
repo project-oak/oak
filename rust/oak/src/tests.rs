@@ -20,6 +20,7 @@ use crate::*;
 use std::io::Write;
 
 #[test]
+#[serial(channels)]
 fn test_write_message() {
     oak_tests::reset();
     let handle = oak_tests::write_handle();
@@ -32,6 +33,7 @@ fn test_write_message() {
 }
 
 #[test]
+#[serial(channels)]
 fn test_write_message_failure() {
     oak_tests::reset();
     let handle = oak_tests::write_handle();
@@ -44,6 +46,7 @@ fn test_write_message_failure() {
 }
 
 #[test]
+#[serial(channels)]
 fn test_write() {
     oak_tests::reset();
     let handle = oak_tests::write_handle();
@@ -55,6 +58,7 @@ fn test_write() {
 }
 
 #[test]
+#[serial(channels)]
 fn test_read_message() {
     oak_tests::reset();
 
@@ -74,6 +78,7 @@ fn test_read_message() {
 }
 
 #[test]
+#[serial(channels)]
 fn test_read_message_failure() {
     oak_tests::reset();
     let handle = oak_tests::read_handle();
@@ -88,6 +93,7 @@ fn test_read_message_failure() {
 }
 
 #[test]
+#[serial(channels)]
 fn test_read_message_internal_failure() {
     oak_tests::reset();
     let handle = oak_tests::read_handle();
