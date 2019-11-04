@@ -5,6 +5,7 @@ authors = ["David Drysdale <drysdale@google.com>"]
 edition = "2018"
 
 [dependencies]
+byteorder = "1"
 log = { version = "^0.4.0", features = ["std"] }
 oak_derive = { path = "../oak_derive"}
 oak = { path = "../oak"}
