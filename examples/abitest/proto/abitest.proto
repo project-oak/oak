@@ -19,7 +19,12 @@ syntax = "proto3";
 package oak.examples.abitest;
 
 message ABITestRequest {
-  string filter = 1;
+  // Regular expression of test names to include in the test run.
+  string include = 1;
+  // If non-empty, holds a regular expression of test names to exclude from the
+  // test run.  Tests are only run if they match include and do not match
+  // exclude.
+  string exclude = 2;
 }
 
 message ABITestResponse {

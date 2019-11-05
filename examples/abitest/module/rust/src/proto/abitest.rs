@@ -29,7 +29,8 @@ const _PROTOBUF_VERSION_CHECK: () = ::protobuf::VERSION_2_8_0;
 #[derive(PartialEq,Clone,Default)]
 pub struct ABITestRequest {
     // message fields
-    pub filter: ::std::string::String,
+    pub include: ::std::string::String,
+    pub exclude: ::std::string::String,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -46,30 +47,56 @@ impl ABITestRequest {
         ::std::default::Default::default()
     }
 
-    // string filter = 1;
+    // string include = 1;
 
 
-    pub fn get_filter(&self) -> &str {
-        &self.filter
+    pub fn get_include(&self) -> &str {
+        &self.include
     }
-    pub fn clear_filter(&mut self) {
-        self.filter.clear();
+    pub fn clear_include(&mut self) {
+        self.include.clear();
     }
 
     // Param is passed by value, moved
-    pub fn set_filter(&mut self, v: ::std::string::String) {
-        self.filter = v;
+    pub fn set_include(&mut self, v: ::std::string::String) {
+        self.include = v;
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_filter(&mut self) -> &mut ::std::string::String {
-        &mut self.filter
+    pub fn mut_include(&mut self) -> &mut ::std::string::String {
+        &mut self.include
     }
 
     // Take field
-    pub fn take_filter(&mut self) -> ::std::string::String {
-        ::std::mem::replace(&mut self.filter, ::std::string::String::new())
+    pub fn take_include(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.include, ::std::string::String::new())
+    }
+
+    // string exclude = 2;
+
+
+    pub fn get_exclude(&self) -> &str {
+        &self.exclude
+    }
+    pub fn clear_exclude(&mut self) {
+        self.exclude.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_exclude(&mut self, v: ::std::string::String) {
+        self.exclude = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_exclude(&mut self) -> &mut ::std::string::String {
+        &mut self.exclude
+    }
+
+    // Take field
+    pub fn take_exclude(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.exclude, ::std::string::String::new())
     }
 }
 
@@ -83,7 +110,10 @@ impl ::protobuf::Message for ABITestRequest {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
-                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.filter)?;
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.include)?;
+                },
+                2 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.exclude)?;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -97,8 +127,11 @@ impl ::protobuf::Message for ABITestRequest {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        if !self.filter.is_empty() {
-            my_size += ::protobuf::rt::string_size(1, &self.filter);
+        if !self.include.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.include);
+        }
+        if !self.exclude.is_empty() {
+            my_size += ::protobuf::rt::string_size(2, &self.exclude);
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
@@ -106,8 +139,11 @@ impl ::protobuf::Message for ABITestRequest {
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
-        if !self.filter.is_empty() {
-            os.write_string(1, &self.filter)?;
+        if !self.include.is_empty() {
+            os.write_string(1, &self.include)?;
+        }
+        if !self.exclude.is_empty() {
+            os.write_string(2, &self.exclude)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -152,9 +188,14 @@ impl ::protobuf::Message for ABITestRequest {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
                 fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
-                    "filter",
-                    |m: &ABITestRequest| { &m.filter },
-                    |m: &mut ABITestRequest| { &mut m.filter },
+                    "include",
+                    |m: &ABITestRequest| { &m.include },
+                    |m: &mut ABITestRequest| { &mut m.include },
+                ));
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                    "exclude",
+                    |m: &ABITestRequest| { &m.exclude },
+                    |m: &mut ABITestRequest| { &mut m.exclude },
                 ));
                 ::protobuf::reflect::MessageDescriptor::new::<ABITestRequest>(
                     "ABITestRequest",
@@ -178,7 +219,8 @@ impl ::protobuf::Message for ABITestRequest {
 
 impl ::protobuf::Clear for ABITestRequest {
     fn clear(&mut self) {
-        self.filter.clear();
+        self.include.clear();
+        self.exclude.clear();
         self.unknown_fields.clear();
     }
 }
@@ -618,14 +660,15 @@ impl ::protobuf::reflect::ProtobufValue for ABITestResponse_TestResult {
 }
 
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\rabitest.proto\x12\x14oak.examples.abitest\"(\n\x0eABITestRequest\x12\
-    \x16\n\x06filter\x18\x01\x20\x01(\tR\x06filter\"\xb3\x01\n\x0fABITestRes\
-    ponse\x12J\n\x07results\x18\x01\x20\x03(\x0b20.oak.examples.abitest.ABIT\
-    estResponse.TestResultR\x07results\x1aT\n\nTestResult\x12\x12\n\x04name\
-    \x18\x01\x20\x01(\tR\x04name\x12\x18\n\x07success\x18\x02\x20\x01(\x08R\
-    \x07success\x12\x18\n\x07details\x18\x03\x20\x01(\tR\x07details2l\n\x11O\
-    akABITestService\x12W\n\x08RunTests\x12$.oak.examples.abitest.ABITestReq\
-    uest\x1a%.oak.examples.abitest.ABITestResponseb\x06proto3\
+    \n\rabitest.proto\x12\x14oak.examples.abitest\"D\n\x0eABITestRequest\x12\
+    \x18\n\x07include\x18\x01\x20\x01(\tR\x07include\x12\x18\n\x07exclude\
+    \x18\x02\x20\x01(\tR\x07exclude\"\xb3\x01\n\x0fABITestResponse\x12J\n\
+    \x07results\x18\x01\x20\x03(\x0b20.oak.examples.abitest.ABITestResponse.\
+    TestResultR\x07results\x1aT\n\nTestResult\x12\x12\n\x04name\x18\x01\x20\
+    \x01(\tR\x04name\x12\x18\n\x07success\x18\x02\x20\x01(\x08R\x07success\
+    \x12\x18\n\x07details\x18\x03\x20\x01(\tR\x07details2l\n\x11OakABITestSe\
+    rvice\x12W\n\x08RunTests\x12$.oak.examples.abitest.ABITestRequest\x1a%.o\
+    ak.examples.abitest.ABITestResponseb\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {

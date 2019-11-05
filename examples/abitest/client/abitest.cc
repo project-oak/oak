@@ -34,7 +34,8 @@ ABSL_FLAG(std::string, manager_address, "127.0.0.1:8888",
           "Address of the Oak Manager to connect to");
 ABSL_FLAG(std::vector<std::string>, module, std::vector<std::string>{},
           "Files containing the compiled WebAssembly modules (as 'backend,frontend')");
-ABSL_FLAG(std::string, test_filter, "", "Filter indicating which tests to run");
+ABSL_FLAG(std::string, test_include, "", "Filter indicating which tests to include");
+ABSL_FLAG(std::string, test_exclude, "", "Filter indicating tests to exclude (if nonempty)");
 
 using ::oak::examples::abitest::ABITestRequest;
 using ::oak::examples::abitest::ABITestResponse;
@@ -262,15 +263,17 @@ channels {
 }
 )raw";
 
-static bool run_tests(OakABITestService::Stub* stub, const std::string& filter) {
+static bool run_tests(OakABITestService::Stub* stub, const std::string& include,
+                      const std::string& exclude) {
   grpc::ClientContext context;
   ABITestRequest request;
-  request.set_filter(filter);
-  LOG(INFO) << "Run tests matching: '" << filter << "'";
+  request.set_include(include);
+  request.set_exclude(exclude);
+  LOG(INFO) << "Run tests matching: '" << include << "'";
   ABITestResponse response;
   grpc::Status status = stub->RunTests(&context, request, &response);
   if (!status.ok()) {
-    LOG(WARNING) << "Could not call RunTests('" << filter << "'): " << status.error_code() << ": "
+    LOG(WARNING) << "Could not call RunTests('" << include << "'): " << status.error_code() << ": "
                  << status.error_message();
     return false;
   }
@@ -343,7 +346,8 @@ int main(int argc, char** argv) {
   auto stub = OakABITestService::NewStub(oak::ApplicationClient::CreateChannel(addr.str()));
 
   // Invoke the application.
-  if (!run_tests(stub.get(), absl::GetFlag(FLAGS_test_filter))) {
+  if (!run_tests(stub.get(), absl::GetFlag(FLAGS_test_include),
+                 absl::GetFlag(FLAGS_test_exclude))) {
     rc = EXIT_FAILURE;
   }
 
