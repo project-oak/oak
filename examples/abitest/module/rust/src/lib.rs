@@ -103,8 +103,12 @@ impl oak::grpc::OakNode for FrontendNode {
 
 impl OakABITestServiceNode for FrontendNode {
     fn run_tests(&mut self, req: ABITestRequest) -> grpc::Result<ABITestResponse> {
-        info!("Run tests matching {}", req.filter);
-        let filter = regex::Regex::new(&req.filter).unwrap();
+        info!(
+            "Run tests matching {} except those matching {}",
+            req.include, req.exclude
+        );
+        let include = regex::Regex::new(&req.include).unwrap();
+        let exclude = regex::Regex::new(&req.exclude).unwrap();
         let mut results = protobuf::RepeatedField::<ABITestResponse_TestResult>::new();
 
         // Manual registry of all tests.
@@ -132,7 +136,10 @@ impl OakABITestServiceNode for FrontendNode {
         tests.insert("BackendRoundtrip", FrontendNode::test_backend_roundtrip);
 
         for (&name, &testfn) in &tests {
-            if !filter.is_match(name) {
+            if !include.is_match(name) {
+                continue;
+            }
+            if !req.exclude.is_empty() && exclude.is_match(name) {
                 continue;
             }
             info!("running test {}", name);
