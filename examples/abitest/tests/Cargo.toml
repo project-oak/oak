@@ -1,0 +1,20 @@
+[package]
+name = "abitest_tests"
+version = "0.1.0"
+authors = ["David Drysdale <drysdale@google.com>"]
+
+[lib]
+crate-type = ["dylib"]
+
+[dependencies]
+abitest_frontend = { path = "../module/rust" }
+abitest_backend = { path = "../module2/rust" }
+log = "*"
+oak = { path = "../../../rust/oak" }
+protobuf = "*"
+
+[dev-dependencies]
+assert_matches = "*"
+oak_tests = { path = "../../../rust/oak_tests" }
+serial_test = "0.2"
+serial_test_derive = "0.2"
