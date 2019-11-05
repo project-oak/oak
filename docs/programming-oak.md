@@ -10,8 +10,10 @@ This document walks through the basics of programming in Oak.
   - [Starting the Oak Application](#starting-the-oak-application)
 - [gRPC Request Processing Path](#grpc-request-processing-path)
 - [Node Termination](#node-termination)
-- [Persistent Storage](#persistent-storage)
 - [Channels and Handles](#channels-and-handles)
+- [Persistent Storage](#persistent-storage)
+- [Testing](#testing)
+  - [Testing Multi-Node Applications](#testing-multi-node-applications)
 
 ## Writing an Oak Node
 
@@ -326,10 +328,87 @@ passes this on to the Oak VM, which will then notify the running Nodes that
 termination has been requested (by returning `ERR_TERMINATED` on any current or
 future `oak.wait_on_channels()` invocations).
 
+## Channels and Handles
+
+TODO: explore the primitives available here
+
 ## Persistent Storage
 
 TODO: describe use of storage
 
-## Channels and Handles
+## Testing
 
-TODO: explore the primitives available here
+> "Beware of bugs in the above code; I have only proved it correct, not tried
+> it." - [Donald Knuth](https://www-cs-faculty.stanford.edu/~knuth/faq.html)
+
+Regardless of how the code for an Oak Application is produced, it's always a
+good idea to write tests for any software. For an Oak Node that
+[implements a gRPC service](#generated-grpc-service-code) purely internally,
+it's straightforward to test the methods of the service just by calling them:
+
+<!-- prettier-ignore-start -->
+[embedmd]:# (../examples/hello_world/module/rust/src/tests.rs Rust /^.*Test invoking a Node service method directly.*/ /^}$/)
+```Rust
+// Test invoking a Node service method directly.
+#[test]
+fn test_direct_hello_request() {
+    let mut node = crate::Node::new();
+    let mut req = HelloRequest::new();
+    req.set_greeting("world".to_string());
+    let result = node.say_hello(req);
+    assert_matches!(result, Ok(_));
+    assert_eq!("HELLO world!", result.unwrap().reply);
+}
+```
+<!-- prettier-ignore-end -->
+
+The [oak_tests](https://project-oak.github.io/oak/sdk/oak_tests/index.html)
+crate also allows the gRPC service methods to be tested via the
+[Oak SDK](sdk.md) framework:
+
+<!-- prettier-ignore-start -->
+[embedmd]:# (../examples/hello_world/module/rust/src/tests.rs Rust /^.*Test invoking a Node service method via the Oak.*/ /^}$/)
+```Rust
+// Test invoking a Node service method via the Oak entrypoints.
+#[test]
+#[serial(node_test)]
+fn test_hello_request() {
+    oak_tests::grpc_channel_setup_default();
+    oak_tests::start_node(oak_tests::DEFAULT_NODE_NAME);
+
+    let mut req = HelloRequest::new();
+    req.set_greeting("world".to_string());
+    let result: grpc::Result<HelloResponse> =
+        oak_tests::inject_grpc_request("/oak.examples.hello_world.HelloWorld/SayHello", req);
+    assert_matches!(result, Ok(_));
+    assert_eq!("HELLO world!", result.unwrap().reply);
+
+    assert_eq!(OakStatus::ERR_TERMINATED, oak_tests::stop());
+}
+```
+<!-- prettier-ignore-end -->
+
+This has a little bit more boilerplate than testing a method directly:
+
+- The inbound gRPC channel that requests are delivered over has to be explicitly
+  set up (`oak_tests::grpc_channel_setup`)
+- A separate thread running the Node's `oak_main` entrypoint is started
+  (`oak_tests::start`).
+- The injection of the gRPC request has to specify the method name (in
+  `oak_tests::inject_grpc_request`).
+- The per-Node thread needs to be stopped at the end of the test
+  (`oak_tests::stop`).
+- Because the Node's `oak_main` entrypoint should only be running in a single
+  thread, we use the [serial_test](https://crates.io/crates/serial_test) crate
+  to mark that the test should be serialized with any other tests that involve
+  the node (`#[serial(node_test)]`).
+
+However, this extra complication does allow the Node to be tested in a way that
+is closer to real execution, and (more importantly) allows testing of a Node
+that makes use of the functionality of the Oak TCB.
+
+### Testing Multi-Node Applications
+
+TODO: describe how to set up multi-Node tests, and work around the
+complication/technicality of duplicate definitions of the required `oak_main`
+entrypoint.
