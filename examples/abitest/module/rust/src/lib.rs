@@ -27,7 +27,7 @@ extern crate rand;
 extern crate regex;
 extern crate serde;
 
-mod proto;
+pub mod proto;
 
 use abitest_common::InternalMessage;
 use byteorder::WriteBytesExt;
@@ -47,27 +47,29 @@ struct FrontendNode {
     backend_in: [oak::ReadHandle; BACKEND_COUNT],
 }
 
+#[cfg(target_arch = "wasm32")]
 #[no_mangle]
 pub extern "C" fn oak_main() -> i32 {
-    match std::panic::catch_unwind(|| {
-        let node = FrontendNode::new();
-        let grpc_in = node.grpc_in;
-        oak::grpc::event_loop(node, grpc_in)
-    }) {
+    match std::panic::catch_unwind(|| main()) {
         Ok(rc) => rc,
         Err(_) => OakStatus::ERR_INTERNAL.value(),
     }
 }
+pub fn main() -> i32 {
+    let node = FrontendNode::new();
+    let grpc_in = node.grpc_in;
+    oak::grpc::event_loop(node, grpc_in)
+}
 
 impl oak::grpc::OakNode for FrontendNode {
     fn new() -> Self {
-        oak_log::init(
+        // Carry on even if the the Oak logging infrastructure is unavailable.
+        let _ = oak_log::init(
             log::Level::Debug,
             oak::WriteHandle {
                 handle: oak::channel_find("logging_port"),
             },
-        )
-        .unwrap();
+        );
         FrontendNode {
             grpc_in: oak::ReadHandle {
                 handle: oak::channel_find("gRPC_input"),

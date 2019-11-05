@@ -10,6 +10,7 @@ members = [
     "abitest/module/rust",
     "abitest/module2/rust",
     "abitest/abitest_common",
+    "abitest/tests",
 ]
 
 [patch.crates-io]
