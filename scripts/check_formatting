@@ -23,7 +23,12 @@ find scripts -type f -exec shellcheck {} +
 
 # Fortunately, rustfmt has the --check option that will make it exit with 1
 # if formatting has to be applied.
-find examples rust -type f -name '*.rs' -exec rustfmt --check {} +
+find examples rust \
+  \(  \
+    -not \( -path examples/target -prune \) -and \
+    -not \( -path rust/target -prune \) \
+    \( -type f -name '*.rs' \) \
+  \) -exec rustfmt --check {} +
 
 find . \
   \(  \
