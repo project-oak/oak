@@ -470,8 +470,7 @@ impl FrontendNode {
         // Close the only read handle for the channel.
         expect_eq!(OakStatus::OK, oak::channel_close(in_channel.handle));
 
-        // Can still write to the channel, even though it's not possible to get
-        // the message back.
+        // There's no way to read from the channel, so writing fails.
         expect_eq!(
             OakStatus::ERR_CHANNEL_CLOSED,
             oak::channel_write(out_channel, &data, &[])
