@@ -124,6 +124,10 @@ impl OakABITestServiceNode for FrontendNode {
         tests.insert("ChannelRead", FrontendNode::test_channel_read);
         tests.insert("ChannelWriteRaw", FrontendNode::test_channel_write_raw);
         tests.insert("ChannelWrite", FrontendNode::test_channel_write);
+        tests.insert(
+            "ChannelWriteOrphan",
+            FrontendNode::test_channel_write_orphan,
+        );
         tests.insert("WaitOnChannelsRaw", FrontendNode::test_channel_wait_raw);
         tests.insert("WaitOnChannels", FrontendNode::test_channel_wait);
         tests.insert("RandomGetRaw", FrontendNode::test_random_get_raw);
@@ -474,10 +478,19 @@ impl FrontendNode {
             oak::channel_write(bogus_channel, &data, &[])
         );
 
+        expect_eq!(OakStatus::OK, oak::channel_close(in_channel.handle));
+        expect_eq!(OakStatus::OK, oak::channel_close(out_channel.handle));
+        Ok(())
+    }
+
+    fn test_channel_write_orphan(&self) -> std::io::Result<()> {
+        let (out_channel, in_channel) = oak::channel_create().unwrap();
+
         // Close the only read handle for the channel.
         expect_eq!(OakStatus::OK, oak::channel_close(in_channel.handle));
 
         // There's no way to read from the channel, so writing fails.
+        let data = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
         expect_eq!(
             OakStatus::ERR_CHANNEL_CLOSED,
             oak::channel_write(out_channel, &data, &[])
