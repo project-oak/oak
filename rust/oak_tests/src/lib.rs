@@ -26,6 +26,7 @@ extern crate lazy_static;
 
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use oak::OakStatus;
+use proto::manager::Node_oneof_node_type;
 use protobuf::{Message, ProtobufEnum};
 use rand::Rng;
 use std::cell::RefCell;
@@ -127,6 +128,7 @@ struct OakRuntime {
 
 struct OakNode {
     next_handle: oak::Handle,
+    contents_name: String,
     halves: HashMap<oak::Handle, ChannelHalf>,
     ports: HashMap<String, oak::Handle>,
     thread_handle: Option<std::thread::JoinHandle<i32>>,
@@ -135,7 +137,8 @@ struct OakNode {
 impl OakRuntime {
     fn new() -> OakRuntime {
         let mut nodes = HashMap::new();
-        // TODO: cope with multi-Node applications
+        // For convenience, assume a single-Node application with the default
+        // name for that Node.
         nodes.insert(DEFAULT_NODE_NAME.to_string(), OakNode::new());
         OakRuntime {
             termination_pending: false,
@@ -143,6 +146,69 @@ impl OakRuntime {
             channels: Vec::new(),
             nodes,
         }
+    }
+    fn configure(
+        &mut self,
+        config: proto::manager::ApplicationConfiguration,
+    ) -> Vec<(String, String)> {
+        // TODO: validate the config
+        let mut required_nodes = Vec::new();
+        self.termination_pending = false;
+        self.nodes.clear();
+        let mut grpc_node_name: Option<&str> = None;
+        for node_cfg in config.get_nodes() {
+            if let Some(Node_oneof_node_type::web_assembly_node(wasm_cfg)) = &node_cfg.node_type {
+                let mut node = OakNode::new();
+                node.contents_name = wasm_cfg.wasm_contents_name.clone();
+                debug!(
+                    "{{{}}}: add Wasm node running content '{}'",
+                    node_cfg.node_name, wasm_cfg.wasm_contents_name
+                );
+                self.nodes.insert(node_cfg.node_name.to_string(), node);
+                required_nodes.push((
+                    node_cfg.node_name.clone(),
+                    wasm_cfg.wasm_contents_name.clone(),
+                ));
+            } else if let Some(Node_oneof_node_type::grpc_server_node(_)) = node_cfg.node_type {
+                grpc_node_name = Some(&node_cfg.node_name);
+            }
+            // TODO: add storage support
+        }
+        for channel_cfg in config.get_channels() {
+            let channel_idx = self.new_channel();
+            let src = channel_cfg.get_source_endpoint();
+            let dest = channel_cfg.get_destination_endpoint();
+            debug!(
+                "add channel {{{}}}:{} -> {{{}}}:{}",
+                src.node_name, src.port_name, dest.node_name, dest.port_name
+            );
+            if grpc_node_name.is_some()
+                && src.node_name == grpc_node_name.unwrap()
+                && src.port_name == oak::grpc::OUT_PORT_NAME
+            {
+                debug!("channel {} is gRPC input channel", channel_idx);
+                self.grpc_channel_idx = Some(channel_idx);
+            }
+            if self.nodes.contains_key(&src.node_name) {
+                self.nodes.get_mut(&src.node_name).unwrap().add_named_half(
+                    ChannelHalf {
+                        direction: Direction::Write,
+                        channel_idx,
+                    },
+                    &src.port_name,
+                );
+            }
+            if self.nodes.contains_key(&dest.node_name) {
+                self.nodes.get_mut(&dest.node_name).unwrap().add_named_half(
+                    ChannelHalf {
+                        direction: Direction::Read,
+                        channel_idx,
+                    },
+                    &dest.port_name,
+                );
+            }
+        }
+        required_nodes
     }
     fn started(&mut self, node_name: &str, join_handle: std::thread::JoinHandle<i32>) {
         self.nodes
@@ -166,6 +232,7 @@ impl OakRuntime {
             node.halves.clear();
             node.ports.clear();
         }
+        self.grpc_channel_idx = None;
     }
     fn new_channel(&mut self) -> usize {
         let channel_idx = self.channels.len();
@@ -275,15 +342,17 @@ impl OakRuntime {
     fn grpc_channel_setup(&mut self, node_name: &str, port_name: &str) {
         let channel_idx = self.new_channel();
         let node = self.nodes.get_mut(node_name).unwrap();
-        let read_handle = node.add_half(ChannelHalf {
-            direction: Direction::Read,
-            channel_idx,
-        });
+        let read_handle = node.add_named_half(
+            ChannelHalf {
+                direction: Direction::Read,
+                channel_idx,
+            },
+            port_name,
+        );
         debug!(
             "set up '{}' channel#{} to node {} with handle {}",
             port_name, channel_idx, node_name, read_handle
         );
-        node.ports.insert(port_name.to_string(), read_handle);
         self.grpc_channel_idx = Some(channel_idx);
     }
 }
@@ -292,6 +361,7 @@ impl OakNode {
     fn new() -> OakNode {
         OakNode {
             next_handle: 1 as oak::Handle,
+            contents_name: "<default>".to_string(),
             halves: HashMap::new(),
             ports: HashMap::new(),
             thread_handle: None,
@@ -301,6 +371,11 @@ impl OakNode {
         let handle = self.next_handle;
         self.next_handle += 1;
         self.halves.insert(handle, half);
+        handle
+    }
+    fn add_named_half(&mut self, half: ChannelHalf, port_name: &str) -> oak::Handle {
+        let handle = self.add_half(half);
+        self.ports.insert(port_name.to_string(), handle);
         handle
     }
     fn close_channel(&mut self, handle: oak::Handle) -> u32 {
@@ -654,11 +729,38 @@ pub fn set_termination_pending(val: bool) {
     RUNTIME.write().unwrap().termination_pending = val;
 }
 
+/// Expected type for the main entrypoint to a Node under test.
+pub type NodeMain = fn() -> i32;
+
+/// Start running the Application under test, with the given initial Node
+/// and channel configuration.  The entrypoints map should provide a function
+/// pointer for each WasmContents entry in the configuration.
+pub fn start<S: ::std::hash::BuildHasher>(
+    config: proto::manager::ApplicationConfiguration,
+    entrypoints: HashMap<String, NodeMain, S>,
+) {
+    let required_nodes = RUNTIME.write().unwrap().configure(config);
+    for (name, contents_name) in required_nodes {
+        debug!(
+            "{{{}}}: start per-Node thread with contents '{}'",
+            name, contents_name
+        );
+        let node_name = name.clone();
+        let entrypoint = *entrypoints
+            .get(&contents_name)
+            .unwrap_or_else(|| panic!("failed to find {} entrypoint", contents_name));
+        let thread_handle = spawn(move || {
+            set_node_name(node_name);
+            entrypoint()
+        });
+        RUNTIME.write().unwrap().started(&name, thread_handle);
+    }
+}
+
 /// Start running a single Node of the Application under test.
 pub fn start_node(name: &str) {
     RUNTIME.write().unwrap().termination_pending = false;
-    // TODO: cope with multi-Node applications (this currently assumes a single
-    // Node with a global "oak_main" function is linked in).
+    debug!("{{{}}}: start per-Node thread", name);
     let node_name = name.to_string();
     let main_handle = spawn(|| unsafe {
         set_node_name(node_name);
@@ -695,7 +797,7 @@ pub fn stop() -> OakStatus {
 /// Test helper to set up a channel into the Node under for injected gRPC
 /// requests, using default parameters (node "app" port "grpc_in").
 pub fn grpc_channel_setup_default() {
-    grpc_channel_setup(DEFAULT_NODE_NAME, "grpc_in")
+    grpc_channel_setup(DEFAULT_NODE_NAME, oak::grpc::DEFAULT_IN_PORT_NAME)
 }
 
 /// Test helper to set up a channel into a Node under for injected gRPC
