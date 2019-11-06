@@ -20,23 +20,28 @@
 #include "absl/strings/escaping.h"
 #include "asylo/util/cleansing_types.h"
 #include "asylo/util/logging.h"
+#include "asylo/util/status_macros.h"
 #include "grpcpp/create_channel.h"
 
 namespace oak {
 
+namespace {
+
 constexpr size_t kMaxMessageSize = 1 << 16;
 
-static std::string GetStorageId(const std::string& storage_name) {
+std::string GetStorageId(const std::string& storage_name) {
   // TODO: Generate name-based UUID.
   return storage_name;
 }
 
-static asylo::CleansingVector<uint8_t> GetStorageEncryptionKey(const std::string& storage_name) {
+asylo::CleansingVector<uint8_t> GetStorageEncryptionKey(const std::string& storage_name) {
   // TODO: Request encryption key from escrow service.
   std::string encryption_key =
       absl::HexStringToBytes("c0dedeadc0dedeadc0dedeadc0dedeadc0dedeadc0dedeadc0dedeadc0dedead");
   return asylo::CleansingVector<uint8_t>(encryption_key.begin(), encryption_key.end());
 }
+
+}  // namespace
 
 StorageProcessor::StorageProcessor(const std::string& storage_address)
     : fixed_nonce_generator_(new oak::FixedNonceGenerator()),
@@ -65,12 +70,8 @@ const asylo::StatusOr<std::string> StorageProcessor::EncryptDatum(const std::str
       break;
     };
   };
-  // TODO: RETURN_IF_ERROR when one Status rules them all.
-  asylo::Status status =
-      cryptor->Seal(key, additional_authenticated_data, datum, &nonce, &datum_encrypted);
-  if (!status.ok()) {
-    return status;
-  }
+  ASYLO_RETURN_IF_ERROR(
+      cryptor->Seal(key, additional_authenticated_data, datum, &nonce, &datum_encrypted));
 
   return absl::StrCat(nonce, datum_encrypted);
 }
@@ -103,12 +104,8 @@ const asylo::StatusOr<std::string> StorageProcessor::DecryptDatum(const std::str
       break;
     };
   };
-  // TODO: RETURN_IF_ERROR when one Status rules them all.
-  asylo::Status status =
-      cryptor->Open(key, additional_authenticated_data, datum_encrypted, nonce, &datum_decrypted);
-  if (!status.ok()) {
-    return status;
-  }
+  ASYLO_RETURN_IF_ERROR(
+      cryptor->Open(key, additional_authenticated_data, datum_encrypted, nonce, &datum_decrypted));
 
   return std::string(datum_decrypted.data(), datum_decrypted.size());
 }
@@ -170,6 +167,7 @@ void StorageProcessor::Delete(const std::string& storage_name, const std::string
 
   grpc::ClientContext context;
   StorageDeleteResponse delete_response;
+  // TODO: Propagate error status.
   grpc::Status status = storage_service_->Delete(&context, delete_request, &delete_response);
 }
 
@@ -181,6 +179,7 @@ void StorageProcessor::Begin(const std::string& storage_name, std::string* trans
 
   grpc::ClientContext context;
   StorageBeginResponse begin_response;
+  // TODO: Propagate error status.
   grpc::Status status = storage_service_->Begin(&context, begin_request, &begin_response);
   if (status.ok()) {
     *transaction_id = begin_response.transaction_id();
@@ -194,6 +193,7 @@ void StorageProcessor::Commit(const std::string& storage_name, const std::string
 
   grpc::ClientContext context;
   StorageCommitResponse commit_response;
+  // TODO: Propagate error status.
   grpc::Status status = storage_service_->Commit(&context, commit_request, &commit_response);
 }
 
@@ -205,6 +205,7 @@ void StorageProcessor::Rollback(const std::string& storage_name,
 
   grpc::ClientContext context;
   StorageRollbackResponse rollback_response;
+  // TODO: Propagate error status.
   grpc::Status status = storage_service_->Rollback(&context, rollback_request, &rollback_response);
 }
 
