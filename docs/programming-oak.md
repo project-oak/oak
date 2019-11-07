@@ -409,6 +409,70 @@ that makes use of the functionality of the Oak TCB.
 
 ### Testing Multi-Node Applications
 
-TODO: describe how to set up multi-Node tests, and work around the
-complication/technicality of duplicate definitions of the required `oak_main`
-entrypoint.
+It's also possible to test an Oak Application that's built from multiple Nodes,
+using the `oak_tests::start()` entrypoint. The first argument to this entrypoint
+is an `ApplicationConfiguration` protobuf message, the same as is needed for
+normally [starting the Oak Application](#starting-the-oak-application) (except
+now in Rust rather than C++).
+
+However, the fields in the application configuration that hold the Wasm bytecode
+for the various Nodes are ignored; instead, the second argument to
+`oak_tests::start()` is a map from the relevant `WasmContents.name` to a
+`fn() -> i32` function pointer (aliased as `oak_tests::NodeMain`) for the main
+entrypoint for each Node.
+
+<!-- prettier-ignore-start -->
+[embedmd]:# (../examples/abitest/tests/src/tests.rs Rust /^#\[test\]/ /oak_tests::start().*/)
+```Rust
+#[test]
+#[serial(node_test)]
+fn test_abi() {
+    // Initialize the test logger first, so logging gets redirected to simple_logger.
+    // (A subsequent attempt to use the oak_log crate will fail.)
+    oak_tests::init_logging();
+    let mut entrypoints = HashMap::new();
+    let fe: oak_tests::NodeMain = abitest_frontend::main;
+    let be: oak_tests::NodeMain = abitest_backend::main;
+    entrypoints.insert("frontend-code".to_string(), fe);
+    entrypoints.insert("backend-code".to_string(), be);
+    oak_tests::start(test_config(), entrypoints);
+```
+<!-- prettier-ignore-end -->
+
+Because there are multiple Nodes linked into the whole Application under test,
+this means that this main entrypoint for the node can't be the (global)
+`extern "C" fn oak_main` function [described previously](#per-node-boilerplate).
+Instead, we need a little bit of boilerplate in the source code for each of the
+Nodes to allow testability:
+
+<!-- prettier-ignore-start -->
+[embedmd]:# (../examples/abitest/module/rust/src/lib.rs Rust /^#.*wasm32.*/ /pub fn main().*/)
+```Rust
+#[cfg(target_arch = "wasm32")]
+#[no_mangle]
+pub extern "C" fn oak_main() -> i32 {
+    match std::panic::catch_unwind(|| main()) {
+        Ok(rc) => rc,
+        Err(_) => OakStatus::ERR_INTERNAL.value(),
+    }
+}
+pub fn main() -> i32 {
+```
+<!-- prettier-ignore-end -->
+
+Breaking this down in detail:
+
+- The `extern "C" fn oak_main` function is only defined if the build target is
+  `wasm32`; this avoids there being duplicate copies of this function at link
+  time.
+- The [`catch_unwind`](https://doc.rust-lang.org/std/panic/fn.catch_unwind.html)
+  protection belongs in this Wasm-specific function, as it's particularly needed
+  to prevent panics crossing the Wasm FFI boundary. Also, it's useful when
+  testing for panics to be fully propagated.
+- The core functionality of the node is implemented in a `main()` function, but
+  as this function is _not_ `extern "C"` it's namespaced to the Node crate. This
+  function is also `pub` so that it's available to the overall test.
+
+The overall test then lives in a crate of its own, which imports the individual
+crates for the different Oak Nodes, and uses `oak_tests::start` to assemble
+different threads running the per-Node entrypoints.
