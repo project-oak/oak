@@ -13,12 +13,9 @@ find oak examples toolchain \( -type f -name BUILD -or -name WORKSPACE -or -name
   -exec buildifier -lint=fix -mode=fix {} +
 find oak examples \( -type f -name '*.h' -or -name '*.cc' -or -name '*.proto' \) \
   -exec clang-format -i -style=file {} +
-find examples rust \
-  \(  \
-    -not \( -path examples/target -prune \) -and \
-    -not \( -path rust/target -prune \) \
-    \( -type f -name '*.rs' \) \
-  \) -exec rustfmt --check {} +
+
+cargo fmt --all --manifest-path examples/Cargo.toml
+cargo fmt --all --manifest-path rust/Cargo.toml
 
 find . \
   \(  \
