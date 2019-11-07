@@ -21,12 +21,12 @@ use log::{Level, LevelFilter, Log, Metadata, Record};
 use oak_tests::last_message_as_string;
 
 fn test_logger() -> (oak::Handle, OakChannelLogger) {
-    let write_handle = oak_tests::write_handle();
+    let (write_handle, _read_handle) = oak::channel_create().unwrap();
     (
-        write_handle,
+        write_handle.handle,
         OakChannelLogger {
             channel: oak::io::Channel::new(oak::WriteHandle {
-                handle: write_handle,
+                handle: write_handle.handle,
             }),
         },
     )
