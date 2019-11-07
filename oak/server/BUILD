@@ -142,6 +142,7 @@ cc_library(
         "//oak/proto:oak_api_cc_proto",
         "//oak/server:logging_node",
         "//oak/server/storage:storage_node",
+        "//rust/oak_runtime:wrapper",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/synchronization",
         "@com_google_asylo//asylo/util:logging",
