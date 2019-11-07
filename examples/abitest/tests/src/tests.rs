@@ -114,8 +114,7 @@ fn test_abi() {
 
     let mut req = ABITestRequest::new();
     // Skip raw tests (which use invalid memory addresses etc.).
-    // TODO: reinstate Orphan tests when oak_tests tracks halves.
-    req.exclude = "(Raw|Orphan)".to_string();
+    req.exclude = "Raw".to_string();
     let result: grpc::Result<ABITestResponse> =
         oak_tests::inject_grpc_request("/oak.examples.abitest.OakABITestService/RunTests", req);
     assert_matches!(result, Ok(_));
