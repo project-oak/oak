@@ -122,6 +122,7 @@ impl OakABITestServiceNode for FrontendNode {
         tests.insert("ChannelClose", FrontendNode::test_channel_close);
         tests.insert("ChannelReadRaw", FrontendNode::test_channel_read_raw);
         tests.insert("ChannelRead", FrontendNode::test_channel_read);
+        tests.insert("ChannelReadOrphan", FrontendNode::test_channel_read_orphan);
         tests.insert("ChannelWriteRaw", FrontendNode::test_channel_write_raw);
         tests.insert("ChannelWrite", FrontendNode::test_channel_write);
         tests.insert(
@@ -130,6 +131,10 @@ impl OakABITestServiceNode for FrontendNode {
         );
         tests.insert("WaitOnChannelsRaw", FrontendNode::test_channel_wait_raw);
         tests.insert("WaitOnChannels", FrontendNode::test_channel_wait);
+        tests.insert(
+            "WaitOnChannelsOrphan",
+            FrontendNode::test_channel_wait_orphan,
+        );
         tests.insert("RandomGetRaw", FrontendNode::test_random_get_raw);
         tests.insert("RandomGet", FrontendNode::test_random_get);
         tests.insert("RandomRng", FrontendNode::test_random_rng);
@@ -420,6 +425,24 @@ impl FrontendNode {
         );
 
         expect_eq!(OakStatus::OK, oak::channel_close(out_channel.handle));
+        expect_eq!(OakStatus::OK, oak::channel_close(in_channel.handle));
+        Ok(())
+    }
+
+    fn test_channel_read_orphan(&self) -> std::io::Result<()> {
+        let (out_channel, in_channel) = oak::channel_create().unwrap();
+
+        // Drop the only write handle for this channel.
+        expect_eq!(OakStatus::OK, oak::channel_close(out_channel.handle));
+
+        // An attempt to read now fails.
+        let mut buffer = Vec::<u8>::with_capacity(5);
+        let mut handles = Vec::with_capacity(5);
+        expect_eq!(
+            OakStatus::ERR_CHANNEL_CLOSED,
+            oak::channel_read(in_channel, &mut buffer, &mut handles)
+        );
+
         expect_eq!(OakStatus::OK, oak::channel_close(in_channel.handle));
         Ok(())
     }
@@ -719,6 +742,52 @@ impl FrontendNode {
 
         expect_eq!(OakStatus::OK, oak::channel_close(in1.handle));
         expect_eq!(OakStatus::OK, oak::channel_close(in2.handle));
+        Ok(())
+    }
+
+    fn test_channel_wait_orphan(&self) -> std::io::Result<()> {
+        // Use 2 channels so there's always a ready channel to prevent
+        // wait_on_channels blocking.
+        let (out1, in1) = oak::channel_create().unwrap();
+        let (out2, in2) = oak::channel_create().unwrap();
+
+        // Set up pending messages so each channel is read-ready.
+        let data = vec![0x01, 0x02, 0x03];
+        expect_eq!(OakStatus::OK, oak::channel_write(out1, &data, &[]));
+        expect_eq!(OakStatus::OK, oak::channel_write(out2, &data, &[]));
+        expect_eq!(
+            vec![ChannelReadStatus::READ_READY, ChannelReadStatus::READ_READY],
+            status_convert(oak::wait_on_channels(&[in1, in2]))?
+        );
+
+        // Close the only write handle to channel 1.
+        expect_eq!(OakStatus::OK, oak::channel_close(out1.handle));
+
+        // Channel is still read-ready because there's a queued message.
+        expect_eq!(
+            vec![ChannelReadStatus::READ_READY],
+            status_convert(oak::wait_on_channels(&[in1]))?
+        );
+
+        // Consume the only message on channel 1.
+        let mut buffer = Vec::<u8>::with_capacity(5);
+        let mut handles = Vec::with_capacity(5);
+        expect_eq!(
+            OakStatus::OK,
+            oak::channel_read(in1, &mut buffer, &mut handles)
+        );
+        expect_eq!(3, buffer.len());
+        expect_eq!(0, handles.len());
+
+        // Now expect the channel status to be orphaned.
+        expect_eq!(
+            vec![ChannelReadStatus::ORPHANED, ChannelReadStatus::READ_READY],
+            status_convert(oak::wait_on_channels(&[in1, in2]))?
+        );
+
+        expect_eq!(OakStatus::OK, oak::channel_close(in1.handle));
+        expect_eq!(OakStatus::OK, oak::channel_close(in2.handle));
+        expect_eq!(OakStatus::OK, oak::channel_close(out2.handle));
         Ok(())
     }
 
