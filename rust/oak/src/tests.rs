@@ -23,29 +23,26 @@ use std::io::Write;
 #[serial(channels)]
 fn test_write_message() {
     oak_tests::reset();
-    let handle = oak_tests::write_handle();
+    let (write_handle, read_handle) = channel_create().unwrap();
     let data = [0x44, 0x4d, 0x44];
-    assert_eq!(
-        OakStatus::OK,
-        channel_write(WriteHandle { handle }, &data, &[])
-    );
-    assert_eq!("DMD", oak_tests::last_message_as_string(handle));
+    assert_eq!(OakStatus::OK, channel_write(write_handle, &data, &[]));
+    assert_eq!("DMD", oak_tests::last_message_as_string(read_handle.handle));
 }
 
 #[test]
 #[serial(channels)]
 fn test_write_message_failure() {
     oak_tests::reset();
-    let handle = oak_tests::write_handle();
+    let (write_handle, _read_handle) = channel_create().unwrap();
     let data = [0x44, 0x4d, 0x44];
     oak_tests::set_write_status(
         oak_tests::DEFAULT_NODE_NAME,
-        handle,
+        write_handle.handle,
         Some(OakStatus::ERR_INVALID_ARGS.value() as u32),
     );
     assert_eq!(
         OakStatus::ERR_INVALID_ARGS,
-        channel_write(WriteHandle { handle }, &data, &[])
+        channel_write(write_handle, &data, &[])
     );
 }
 
@@ -53,11 +50,14 @@ fn test_write_message_failure() {
 #[serial(channels)]
 fn test_write() {
     oak_tests::reset();
-    let handle = oak_tests::write_handle();
-    oak_tests::add_port_name("log", handle);
+    let (write_handle, read_handle) = channel_create().unwrap();
+    oak_tests::add_port_name("log", write_handle.handle);
 
     writeln!(logging_channel(), "ABC").unwrap();
-    assert_eq!("ABC\n", oak_tests::last_message_as_string(handle));
+    assert_eq!(
+        "ABC\n",
+        oak_tests::last_message_as_string(read_handle.handle)
+    );
     assert_matches!(logging_channel().flush(), Ok(()));
 }
 
@@ -85,17 +85,17 @@ fn test_read_message() {
 #[serial(channels)]
 fn test_read_message_failure() {
     oak_tests::reset();
-    let handle = oak_tests::read_handle();
+    let (_write_handle, read_handle) = channel_create().unwrap();
     oak_tests::set_read_status(
         oak_tests::DEFAULT_NODE_NAME,
-        handle,
+        read_handle.handle,
         Some(OakStatus::ERR_INVALID_ARGS.value() as u32),
     );
 
     let mut buf = Vec::with_capacity(100);
     let mut handles = Vec::with_capacity(1);
     assert_eq!(
-        channel_read(ReadHandle { handle }, &mut buf, &mut handles),
+        channel_read(read_handle, &mut buf, &mut handles),
         OakStatus::ERR_INVALID_ARGS
     );
 }
@@ -104,18 +104,18 @@ fn test_read_message_failure() {
 #[serial(channels)]
 fn test_read_message_internal_failure() {
     oak_tests::reset();
-    let handle = oak_tests::read_handle();
+    let (_write_handle, read_handle) = channel_create().unwrap();
     // Set buffer too small but don't set actual size, so the retry gets confused.
     oak_tests::set_read_status(
         oak_tests::DEFAULT_NODE_NAME,
-        handle,
+        read_handle.handle,
         Some(OakStatus::ERR_BUFFER_TOO_SMALL.value() as u32),
     );
 
     let mut buf = Vec::with_capacity(100);
     let mut handles = Vec::with_capacity(1);
     assert_matches!(
-        channel_read(ReadHandle { handle }, &mut buf, &mut handles),
+        channel_read(read_handle, &mut buf, &mut handles),
         OakStatus::ERR_BUFFER_TOO_SMALL
     );
 }

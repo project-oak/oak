@@ -34,7 +34,7 @@ use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::convert::TryInto;
 use std::io::Cursor;
-use std::sync::{Once, RwLock};
+use std::sync::{Arc, Once, RwLock};
 use std::thread::spawn;
 
 pub mod proto;
@@ -48,6 +48,12 @@ struct OakMessage {
     channels: Vec<ChannelHalf>,
 }
 
+#[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
+enum Direction {
+    Read,
+    Write,
+}
+
 struct MockChannel {
     /// If read_status is set, this status value will be returned for any read
     /// operations on the mock channel (and |messages| will be left
@@ -57,6 +63,8 @@ struct MockChannel {
     /// operations on the mock channel (and |messages| will be left
     /// undisturbed).
     write_status: Option<u32>,
+    /// Track extant halves referring to this channel.
+    half_count: HashMap<Direction, isize>,
     /// Pending messages on the channel
     messages: VecDeque<OakMessage>,
 }
@@ -67,11 +75,19 @@ impl MockChannel {
             read_status: None,
             write_status: None,
             messages: VecDeque::new(),
+            half_count: [(Direction::Read, 0), (Direction::Write, 0)]
+                .iter()
+                .cloned()
+                .collect(),
         }
     }
     fn write_message(&mut self, msg: OakMessage) -> u32 {
         if let Some(status) = self.write_status {
             return status;
+        }
+        if self.half_count[&Direction::Read] == 0 {
+            // No-one can ever read this message.
+            return OakStatus::ERR_CHANNEL_CLOSED.value() as u32;
         }
         self.messages.push_back(msg);
         OakStatus::OK.value() as u32
@@ -90,7 +106,13 @@ impl MockChannel {
         if msg.is_none() {
             *actual_size = 0;
             *actual_handle_count = 0;
-            return Err(OakStatus::OK.value() as u32);
+            if self.half_count[&Direction::Write] == 0 {
+                // There can be no future writers, so indicate that the channel
+                // is closed.
+                return Err(OakStatus::ERR_CHANNEL_CLOSED.value() as u32);
+            } else {
+                return Err(OakStatus::OK.value() as u32);
+            }
         }
         let msg = msg.unwrap();
         *actual_size = msg.data.len() as u32;
@@ -107,31 +129,47 @@ impl MockChannel {
     }
 }
 
-#[derive(PartialEq, Copy, Clone)]
-enum Direction {
-    Read,
-    Write,
-}
+type ChannelRef = Arc<RwLock<MockChannel>>;
 
-#[derive(PartialEq, Copy, Clone)]
 struct ChannelHalf {
     direction: Direction,
-    channel_idx: usize, // index into OakRuntime.channels
+    channel: ChannelRef,
 }
 
 impl ChannelHalf {
-    fn new(direction: Direction, channel_idx: usize) -> ChannelHalf {
-        ChannelHalf {
-            direction,
-            channel_idx,
-        }
+    fn new(direction: Direction, channel: ChannelRef) -> ChannelHalf {
+        *channel
+            .write()
+            .unwrap()
+            .half_count
+            .get_mut(&direction)
+            .unwrap() += 1;
+        ChannelHalf { direction, channel }
+    }
+}
+
+impl Clone for ChannelHalf {
+    fn clone(&self) -> ChannelHalf {
+        ChannelHalf::new(self.direction, self.channel.clone())
+    }
+}
+
+impl Drop for ChannelHalf {
+    fn drop(&mut self) {
+        *self
+            .channel
+            .write()
+            .unwrap()
+            .half_count
+            .get_mut(&self.direction)
+            .unwrap() -= 1;
+        assert!(self.channel.read().unwrap().half_count[&self.direction] >= 0);
     }
 }
 
 struct OakRuntime {
     termination_pending: bool,
-    grpc_channel_idx: Option<usize>,
-    channels: Vec<MockChannel>,
+    grpc_in_half: Option<ChannelHalf>,
     nodes: HashMap<String, OakNode>,
 }
 
@@ -151,8 +189,7 @@ impl OakRuntime {
         nodes.insert(DEFAULT_NODE_NAME.to_string(), OakNode::new());
         OakRuntime {
             termination_pending: false,
-            grpc_channel_idx: None,
-            channels: Vec::new(),
+            grpc_in_half: None,
             nodes,
         }
     }
@@ -184,7 +221,7 @@ impl OakRuntime {
             // TODO: add storage support
         }
         for channel_cfg in config.get_channels() {
-            let channel_idx = self.new_channel();
+            let channel = self.new_channel();
             let src = channel_cfg.get_source_endpoint();
             let dest = channel_cfg.get_destination_endpoint();
             debug!(
@@ -195,18 +232,18 @@ impl OakRuntime {
                 && src.node_name == grpc_node_name.unwrap()
                 && src.port_name == oak::grpc::OUT_PORT_NAME
             {
-                debug!("channel {} is gRPC input channel", channel_idx);
-                self.grpc_channel_idx = Some(channel_idx);
+                debug!("channel is gRPC input channel");
+                self.grpc_in_half = Some(ChannelHalf::new(Direction::Write, channel.clone()));
             }
             if self.nodes.contains_key(&src.node_name) {
-                let half = ChannelHalf::new(Direction::Write, channel_idx);
+                let half = ChannelHalf::new(Direction::Write, channel.clone());
                 self.nodes
                     .get_mut(&src.node_name)
                     .unwrap()
                     .add_named_half(half, &src.port_name);
             }
             if self.nodes.contains_key(&dest.node_name) {
-                let half = ChannelHalf::new(Direction::Read, channel_idx);
+                let half = ChannelHalf::new(Direction::Read, channel.clone());
                 self.nodes
                     .get_mut(&dest.node_name)
                     .unwrap()
@@ -237,12 +274,10 @@ impl OakRuntime {
             node.halves.clear();
             node.ports.clear();
         }
-        self.grpc_channel_idx = None;
+        self.grpc_in_half = None;
     }
-    fn new_channel(&mut self) -> usize {
-        let channel_idx = self.channels.len();
-        self.channels.push(MockChannel::new());
-        channel_idx
+    fn new_channel(&mut self) -> ChannelRef {
+        Arc::new(RwLock::new(MockChannel::new()))
     }
     fn node_half_for_handle(&self, node_name: &str, handle: oak::Handle) -> Option<ChannelHalf> {
         let node = self.nodes.get(node_name).unwrap();
@@ -250,7 +285,7 @@ impl OakRuntime {
             return None;
         }
         let half = node.halves.get(&handle).unwrap();
-        Some(*half)
+        Some(half.clone())
     }
     fn node_half_for_handle_dir(
         &self,
@@ -268,23 +303,18 @@ impl OakRuntime {
         self.nodes.get_mut(node_name).unwrap().add_half(half)
     }
     fn node_channel_create(&mut self, node_name: &str) -> (oak::Handle, oak::Handle) {
-        let channel_idx = self.new_channel();
-        let write_half = ChannelHalf::new(Direction::Write, channel_idx);
-        let read_half = ChannelHalf::new(Direction::Read, channel_idx);
+        let channel = self.new_channel();
+        let write_half = ChannelHalf::new(Direction::Write, channel.clone());
+        let read_half = ChannelHalf::new(Direction::Read, channel.clone());
         let node = self.nodes.get_mut(node_name).unwrap();
         (node.add_half(write_half), node.add_half(read_half))
     }
     fn node_channel_write(&mut self, node_name: &str, handle: oak::Handle, msg: OakMessage) -> u32 {
         let half = self.node_half_for_handle_dir(node_name, handle, Direction::Write);
-        if half == None {
+        if half.is_none() {
             return oak::OakStatus::ERR_BAD_HANDLE.value() as u32;
         }
-        self.channel_write_internal(half.unwrap().channel_idx, msg)
-    }
-    // Internal variant that takes a global channel index rather than a per-Node
-    // handle.
-    fn channel_write_internal(&mut self, channel_idx: usize, msg: OakMessage) -> u32 {
-        self.channels[channel_idx].write_message(msg)
+        half.unwrap().channel.write().unwrap().write_message(msg)
     }
     fn node_channel_read(
         &mut self,
@@ -296,28 +326,10 @@ impl OakRuntime {
         actual_handle_count: &mut u32,
     ) -> Result<OakMessage, u32> {
         let half = self.node_half_for_handle_dir(node_name, handle, Direction::Read);
-        if half == None {
+        if half.is_none() {
             return Err(oak::OakStatus::ERR_BAD_HANDLE.value() as u32);
         }
-        self.channel_read_internal(
-            half.unwrap().channel_idx,
-            size,
-            actual_size,
-            handle_count,
-            actual_handle_count,
-        )
-    }
-    // Internal variant that takes a global channel index rather than a per-Node
-    // handle.
-    fn channel_read_internal(
-        &mut self,
-        channel_idx: usize,
-        size: usize,
-        actual_size: &mut u32,
-        handle_count: u32,
-        actual_handle_count: &mut u32,
-    ) -> Result<OakMessage, u32> {
-        self.channels[channel_idx].read_message(
+        half.unwrap().channel.write().unwrap().read_message(
             size,
             actual_size,
             handle_count,
@@ -332,22 +344,31 @@ impl OakRuntime {
         let half = self.node_half_for_handle_dir(node_name, handle, Direction::Read);
         if half.is_none() {
             oak::ChannelReadStatus::INVALID_CHANNEL
-        } else if self.channels[half.unwrap().channel_idx].messages.is_empty() {
-            oak::ChannelReadStatus::NOT_READY
         } else {
-            oak::ChannelReadStatus::READ_READY
+            let channel = half.as_ref().unwrap().channel.read().unwrap();
+            if !channel.messages.is_empty() {
+                oak::ChannelReadStatus::READ_READY
+            } else if channel.half_count[&Direction::Write] == 0 {
+                oak::ChannelReadStatus::ORPHANED
+            } else {
+                oak::ChannelReadStatus::NOT_READY
+            }
         }
     }
     fn grpc_channel_setup(&mut self, node_name: &str, port_name: &str) {
-        let channel_idx = self.new_channel();
-        let half = ChannelHalf::new(Direction::Read, channel_idx);
+        let channel = self.new_channel();
+        let half = ChannelHalf::new(Direction::Read, channel.clone());
         let node = self.nodes.get_mut(node_name).unwrap();
         let read_handle = node.add_named_half(half, port_name);
         debug!(
-            "set up '{}' channel#{} to node {} with handle {}",
-            port_name, channel_idx, node_name, read_handle
+            "set up '{}' channel to node {} with handle {}",
+            port_name, node_name, read_handle
         );
-        self.grpc_channel_idx = Some(channel_idx);
+        self.grpc_in_half = Some(ChannelHalf::new(Direction::Write, channel));
+    }
+    fn grpc_channel(&self) -> Option<ChannelRef> {
+        let half = self.grpc_in_half.as_ref()?;
+        Some(half.channel.clone())
     }
 }
 
@@ -649,58 +670,40 @@ pub fn add_port_name(name: &str, handle: oak::Handle) {
         .insert(name.to_string(), handle);
 }
 
-/// Convenience test helper to get a new write channel handle.
-pub fn write_handle() -> oak::Handle {
-    let (write_handle, read_handle) = RUNTIME
-        .write()
-        .unwrap()
-        .node_channel_create(DEFAULT_NODE_NAME);
-    channel_close(read_handle);
-    write_handle
-}
-
-/// Convenience test helper to get a new read channel handle.
-pub fn read_handle() -> oak::Handle {
-    let (write_handle, read_handle) = RUNTIME
-        .write()
-        .unwrap()
-        .node_channel_create(DEFAULT_NODE_NAME);
-    channel_close(write_handle);
-    read_handle
-}
-
 /// Convenience test helper which returns the last message on a channel as a
 /// string (without removing it from the channel).
 pub fn last_message_as_string(handle: oak::Handle) -> String {
-    let half = *RUNTIME.read().unwrap().nodes[DEFAULT_NODE_NAME]
+    let half = RUNTIME.read().unwrap().nodes[DEFAULT_NODE_NAME]
         .halves
         .get(&handle)
-        .unwrap();
-    match RUNTIME.read().unwrap().channels[half.channel_idx]
-        .messages
-        .front()
-    {
+        .unwrap()
+        .clone();
+    let result = match half.channel.read().unwrap().messages.front() {
         Some(msg) => unsafe { std::str::from_utf8_unchecked(&msg.data).to_string() },
         None => "".to_string(),
-    }
+    };
+    debug!("last message '{}'", result);
+    result
 }
 
 /// Test helper that injects a failure for future channel read operations.
 pub fn set_read_status(node_name: &str, handle: oak::Handle, status: Option<u32>) {
-    let half = *RUNTIME.read().unwrap().nodes[node_name]
+    let half = RUNTIME.read().unwrap().nodes[node_name]
         .halves
         .get(&handle)
-        .unwrap();
-    RUNTIME.write().unwrap().channels[half.channel_idx].read_status = status;
+        .unwrap()
+        .clone();
+    half.channel.write().unwrap().read_status = status;
 }
 
 /// Test helper that injects a failure for future channel write operations.
 pub fn set_write_status(node_name: &str, handle: oak::Handle, status: Option<u32>) {
-    let half = *RUNTIME.read().unwrap().nodes[node_name]
+    let half = RUNTIME.read().unwrap().nodes[node_name]
         .halves
         .get(&handle)
-        .unwrap();
-    RUNTIME.write().unwrap().channels[half.channel_idx].write_status = status;
+        .unwrap()
+        .clone();
+    half.channel.write().unwrap().write_status = status;
 }
 
 /// Test helper that clears any handle to channel half mappings.
@@ -826,27 +829,24 @@ where
         .expect("failed to serialize GrpcRequest message");
 
     // Create a new channel for the response to arrive on and attach to the message.
-    let channel_idx = RUNTIME.write().unwrap().new_channel();
+    let channel = RUNTIME.write().unwrap().new_channel();
     msg.channels
-        .push(ChannelHalf::new(Direction::Write, channel_idx));
+        .push(ChannelHalf::new(Direction::Write, channel.clone()));
+    let read_half = ChannelHalf::new(Direction::Read, channel);
 
     // Send the message (with attached write handle) into the Node under test.
-    let grpc_idx = RUNTIME
+    let grpc_channel = RUNTIME
         .read()
         .unwrap()
-        .grpc_channel_idx
+        .grpc_channel()
         .expect("no gRPC channel setup");
-    RUNTIME
-        .write()
-        .unwrap()
-        .channel_write_internal(grpc_idx, msg);
+    grpc_channel.write().unwrap().write_message(msg);
 
     // Read the serialized, encapsulated response.
     loop {
         let mut size = 0u32;
         let mut count = 0u32;
-        let result = RUNTIME.write().unwrap().channel_read_internal(
-            channel_idx,
+        let result = read_half.channel.write().unwrap().read_message(
             std::usize::MAX,
             &mut size,
             std::u32::MAX,
