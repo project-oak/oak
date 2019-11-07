@@ -119,6 +119,15 @@ struct ChannelHalf {
     channel_idx: usize, // index into OakRuntime.channels
 }
 
+impl ChannelHalf {
+    fn new(direction: Direction, channel_idx: usize) -> ChannelHalf {
+        ChannelHalf {
+            direction,
+            channel_idx,
+        }
+    }
+}
+
 struct OakRuntime {
     termination_pending: bool,
     grpc_channel_idx: Option<usize>,
@@ -190,22 +199,18 @@ impl OakRuntime {
                 self.grpc_channel_idx = Some(channel_idx);
             }
             if self.nodes.contains_key(&src.node_name) {
-                self.nodes.get_mut(&src.node_name).unwrap().add_named_half(
-                    ChannelHalf {
-                        direction: Direction::Write,
-                        channel_idx,
-                    },
-                    &src.port_name,
-                );
+                let half = ChannelHalf::new(Direction::Write, channel_idx);
+                self.nodes
+                    .get_mut(&src.node_name)
+                    .unwrap()
+                    .add_named_half(half, &src.port_name);
             }
             if self.nodes.contains_key(&dest.node_name) {
-                self.nodes.get_mut(&dest.node_name).unwrap().add_named_half(
-                    ChannelHalf {
-                        direction: Direction::Read,
-                        channel_idx,
-                    },
-                    &dest.port_name,
-                );
+                let half = ChannelHalf::new(Direction::Read, channel_idx);
+                self.nodes
+                    .get_mut(&dest.node_name)
+                    .unwrap()
+                    .add_named_half(half, &dest.port_name);
             }
         }
         required_nodes
@@ -264,16 +269,10 @@ impl OakRuntime {
     }
     fn node_channel_create(&mut self, node_name: &str) -> (oak::Handle, oak::Handle) {
         let channel_idx = self.new_channel();
+        let write_half = ChannelHalf::new(Direction::Write, channel_idx);
+        let read_half = ChannelHalf::new(Direction::Read, channel_idx);
         let node = self.nodes.get_mut(node_name).unwrap();
-        let write_handle = node.add_half(ChannelHalf {
-            direction: Direction::Write,
-            channel_idx,
-        });
-        let read_handle = node.add_half(ChannelHalf {
-            direction: Direction::Read,
-            channel_idx,
-        });
-        (write_handle, read_handle)
+        (node.add_half(write_half), node.add_half(read_half))
     }
     fn node_channel_write(&mut self, node_name: &str, handle: oak::Handle, msg: OakMessage) -> u32 {
         let half = self.node_half_for_handle_dir(node_name, handle, Direction::Write);
@@ -341,14 +340,9 @@ impl OakRuntime {
     }
     fn grpc_channel_setup(&mut self, node_name: &str, port_name: &str) {
         let channel_idx = self.new_channel();
+        let half = ChannelHalf::new(Direction::Read, channel_idx);
         let node = self.nodes.get_mut(node_name).unwrap();
-        let read_handle = node.add_named_half(
-            ChannelHalf {
-                direction: Direction::Read,
-                channel_idx,
-            },
-            port_name,
-        );
+        let read_handle = node.add_named_half(half, port_name);
         debug!(
             "set up '{}' channel#{} to node {} with handle {}",
             port_name, channel_idx, node_name, read_handle
@@ -833,10 +827,8 @@ where
 
     // Create a new channel for the response to arrive on and attach to the message.
     let channel_idx = RUNTIME.write().unwrap().new_channel();
-    msg.channels.push(ChannelHalf {
-        direction: Direction::Write,
-        channel_idx,
-    });
+    msg.channels
+        .push(ChannelHalf::new(Direction::Write, channel_idx));
 
     // Send the message (with attached write handle) into the Node under test.
     let grpc_idx = RUNTIME
