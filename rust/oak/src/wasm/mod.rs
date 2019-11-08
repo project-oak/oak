@@ -115,3 +115,6 @@ extern "C" {
 /// u64) followed by a single byte indicating the channel readiness, as
 /// a `ChannelReadStatus` value.
 pub const SPACE_BYTES_PER_HANDLE: usize = 9;
+
+/// Invalid handle value.
+pub const INVALID_HANDLE: u64 = 0;
