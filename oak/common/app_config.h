@@ -27,6 +27,11 @@ extern const char kGrpcNodeRequestPortName[];
 extern const char kLoggingNodePortName[];
 extern const char kStorageNodeRequestPortName[];
 extern const char kStorageNodeResponsePortName[];
+extern const char kEscrowNodeRequestPortName[];
+extern const char kEscrowNodeResponsePortName[];
+
+constexpr char kEscrowInPortName[] = "escrow_in";
+constexpr char kEscrowOutPortName[] = "escrow_out";
 
 // Build a default application configuration with a single Wasm node of the given
 // name and contents, accessible via gRPC.
@@ -40,6 +45,11 @@ void AddLoggingToConfig(ApplicationConfiguration* config);
 // Return value indicates whether given Wasm node was found.
 bool AddStorageToConfig(ApplicationConfiguration* config, const std::string& name,
                         const std::string& storage_address);
+
+// Modify application configuration to wire up escrow for the given node.
+// Return value indicates whether given storage node was found.
+bool AddEscrowToConfig(ApplicationConfiguration* config, const std::string& name,
+                       const std::string& storage_address);
 
 // Checks whether the given ApplicationConfiguration is valid.
 bool ValidApplicationConfig(const ApplicationConfiguration& config);

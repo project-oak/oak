@@ -17,18 +17,25 @@
 #ifndef OAK_SERVER_STORAGE_PROCESSOR_H_
 #define OAK_SERVER_STORAGE_PROCESSOR_H_
 
+#include <functional>
 #include <memory>
 
 #include "asylo/crypto/aes_gcm_siv.h"
 #include "asylo/util/statusor.h"
+#include "oak/proto/manager.pb.h"
 #include "oak/proto/storage.grpc.pb.h"
+#include "oak/server/channel.h"
 #include "oak/server/storage/fixed_nonce_generator.h"
 
 namespace oak {
 
+using StorageEncryptionKeyFunction =
+    std::function<asylo::StatusOr<asylo::CleansingVector<uint8_t>>(const std::string& storage_id)>;
+
 class StorageProcessor {
  public:
-  explicit StorageProcessor(const std::string& storage_address);
+  StorageProcessor(const std::string& storage_address,
+                   StorageEncryptionKeyFunction storage_encryption_key_function);
 
   void Read(const std::string& storage_name, const std::string& datum_name,
             const std::string& transaction_id, std::string* datum_value);
@@ -70,6 +77,8 @@ class StorageProcessor {
   asylo::AesGcmSivCryptor datum_value_cryptor_;
 
   std::unique_ptr<oak::Storage::Stub> storage_service_;
+
+  StorageEncryptionKeyFunction storage_encryption_key_function_;
 };
 
 }  // namespace oak

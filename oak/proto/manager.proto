@@ -41,6 +41,7 @@ message Node {
     GrpcServerNode grpc_server_node = 3;
     WebAssemblyNode web_assembly_node = 4;
     StorageProxyNode storage_node = 5;
+    EscrowProxyNode escrow_node = 6;
   }
 }
 
@@ -105,6 +106,19 @@ message WasmContents {
 message StorageProxyNode {
   // The address of the external storage provider.
   string address = 1;
+  repeated Port ports = 2;
+}
+
+// A pseudo-Node that accepts escrow requests.
+//
+// This Node defines the following implicit Ports:
+// - `request`: IN port on which outgoing escrow requests are received.
+// - `response`: OUT port on which inbound responses to escrow requests are
+// sent.
+message EscrowProxyNode {
+  string address = 1;
+  string storage_address = 2;
+  repeated Port ports = 3;
 }
 
 // A Port represents an endpoint within a Node that can be connected via a

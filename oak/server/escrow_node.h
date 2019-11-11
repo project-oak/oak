@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef OAK_SERVER_STORAGE_NODE_H_
-#define OAK_SERVER_STORAGE_NODE_H_
+#ifndef OAK_SERVER_ESCROW_NODE_H_
+#define OAK_SERVER_ESCROW_NODE_H_
 
 #include <memory>
 #include <string>
@@ -26,9 +26,9 @@
 
 namespace oak {
 
-class StorageNode final : public NodeThread {
+class EscrowNode final : public NodeThread {
  public:
-  StorageNode(const std::string& name, const std::string& storage_address);
+  EscrowNode(const std::string& node_name, const std::string& storage_address);
 
  private:
   asylo::StatusOr<asylo::CleansingVector<uint8_t>> GetStorageEncryptionKey(
@@ -41,4 +41,4 @@ class StorageNode final : public NodeThread {
 
 }  // namespace oak
 
-#endif  // OAK_SERVER_STORAGE_NODE_H_
+#endif  // OAK_SERVER_ESCROW_NODE_H_

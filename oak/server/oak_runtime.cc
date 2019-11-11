@@ -24,6 +24,7 @@
 #include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
 #include "oak/common/app_config.h"
+#include "oak/server/escrow_node.h"
 
 namespace oak {
 
@@ -62,6 +63,9 @@ grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
     } else if (node_config.has_storage_node()) {
       LOG(INFO) << "Created storage pseudo-Node named {" << node_name << "}";
       node = absl::make_unique<StorageNode>(node_name, node_config.storage_node().address());
+    } else if (node_config.has_escrow_node()) {
+      LOG(INFO) << "Created escrow pseudo-Node named {" << node_name << "}";
+      node = absl::make_unique<EscrowNode>(node_name, node_config.storage_node().address());
     }
     if (node == nullptr) {
       return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Failed to create Oak Node");

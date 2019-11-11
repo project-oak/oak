@@ -58,6 +58,7 @@ class ManagerClient {
     }
     if (!storage_address.empty()) {
       AddStorageToConfig(application_config.get(), "app", storage_address);
+      AddEscrowToConfig(application_config.get(), "storage", storage_address);
     }
     request.set_allocated_application_configuration(application_config.release());
 

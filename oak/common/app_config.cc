@@ -30,6 +30,8 @@ const char kGrpcNodeRequestPortName[] = "request";
 const char kLoggingNodePortName[] = "in";
 const char kStorageNodeRequestPortName[] = "request";
 const char kStorageNodeResponsePortName[] = "response";
+const char kEscrowNodeRequestPortName[] = "request";
+const char kEscrowNodeResponsePortName[] = "response";
 
 namespace {
 
@@ -38,6 +40,7 @@ namespace {
 constexpr char kGrpcNodeName[] = "grpc";
 constexpr char kLogNodeName[] = "log";
 constexpr char kStorageNodeName[] = "storage";
+constexpr char kEscrowNodeName[] = "escrow";
 
 // Conventional names for the ports that connect to pseudo-node instances (not
 // specified in the proto definition).
@@ -153,6 +156,45 @@ bool AddStorageToConfig(ApplicationConfiguration* config, const std::string& nam
   return false;
 }
 
+bool AddEscrowToConfig(ApplicationConfiguration* config, const std::string& name,
+                        const std::string& storage_address) {
+  for (auto& node : *config->mutable_nodes()) {
+    if (!node.has_storage_node() || node.node_name() != name) {
+      continue;
+    }
+    Node* escrow_node = config->add_nodes();
+    escrow_node->set_node_name(kEscrowNodeName);
+    escrow_node->mutable_escrow_node()->set_address(storage_address);
+
+    StorageProxyNode* storage_node = node.mutable_storage_node();
+    Port* out_port = storage_node->add_ports();
+    out_port->set_name(kEscrowOutPortName);
+    out_port->set_type(Port_Type_OUT);
+    Port* in_port = storage_node->add_ports();
+    in_port->set_name(kEscrowInPortName);
+    in_port->set_type(Port_Type_IN);
+
+    Channel* out_channel = config->add_channels();
+    Channel_Endpoint* out_src = out_channel->mutable_source_endpoint();
+    out_src->set_node_name(node.node_name());
+    out_src->set_port_name(out_port->name());
+    Channel_Endpoint* out_dest = out_channel->mutable_destination_endpoint();
+    out_dest->set_node_name(escrow_node->node_name());
+    out_dest->set_port_name(kEscrowNodeRequestPortName);
+
+    Channel* in_channel = config->add_channels();
+    Channel_Endpoint* in_src = in_channel->mutable_source_endpoint();
+    in_src->set_node_name(escrow_node->node_name());
+    in_src->set_port_name(kEscrowNodeResponsePortName);
+    Channel_Endpoint* in_dest = in_channel->mutable_destination_endpoint();
+    in_dest->set_node_name(node.node_name());
+    in_dest->set_port_name(in_port->name());
+    return true;
+  }
+  LOG(ERROR) << "Failed to find Storage node " << name;
+  return false;
+}
+
 bool ValidApplicationConfig(const ApplicationConfiguration& config) {
   // Check name uniqueness for WasmContents.
   std::set<std::string> contents_names;
@@ -216,6 +258,11 @@ bool ValidApplicationConfig(const ApplicationConfiguration& config) {
     } else if (node.has_storage_node()) {
       in_ports[fqpn(node.node_name(), kStorageNodeRequestPortName)] = 0;
       out_ports[fqpn(node.node_name(), kStorageNodeResponsePortName)] = 0;
+      in_ports[fqpn(node.node_name(), kEscrowInPortName)] = 0;
+      out_ports[fqpn(node.node_name(), kEscrowOutPortName)] = 0;
+    } else if (node.has_escrow_node()) {
+      in_ports[fqpn(node.node_name(), kEscrowNodeRequestPortName)] = 0;
+      out_ports[fqpn(node.node_name(), kEscrowNodeResponsePortName)] = 0;
     }
   }
 

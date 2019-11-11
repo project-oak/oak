@@ -22,6 +22,8 @@
 #include "asylo/util/logging.h"
 #include "asylo/util/status_macros.h"
 #include "grpcpp/create_channel.h"
+#include "oak/proto/escrow_channel.pb.h"
+#include "oak/proto/grpc_encap.pb.h"
 
 namespace oak {
 
@@ -34,26 +36,23 @@ std::string GetStorageId(const std::string& storage_name) {
   return storage_name;
 }
 
-asylo::CleansingVector<uint8_t> GetStorageEncryptionKey(const std::string& storage_name) {
-  // TODO: Request encryption key from escrow service.
-  std::string encryption_key =
-      absl::HexStringToBytes("c0dedeadc0dedeadc0dedeadc0dedeadc0dedeadc0dedeadc0dedeadc0dedead");
-  return asylo::CleansingVector<uint8_t>(encryption_key.begin(), encryption_key.end());
-}
-
 }  // namespace
 
-StorageProcessor::StorageProcessor(const std::string& storage_address)
+StorageProcessor::StorageProcessor(const std::string& storage_address,
+                                   StorageEncryptionKeyFunction storage_encryption_key_function)
     : fixed_nonce_generator_(new oak::FixedNonceGenerator()),
       datum_name_cryptor_(kMaxMessageSize, fixed_nonce_generator_),
       datum_value_cryptor_(kMaxMessageSize, new asylo::AesGcmSivNonceGenerator()),
       storage_service_(oak::Storage::NewStub(
-          grpc::CreateChannel(storage_address, grpc::InsecureChannelCredentials()))) {}
+          grpc::CreateChannel(storage_address, grpc::InsecureChannelCredentials()))),
+      storage_encryption_key_function_(storage_encryption_key_function) {}
 
 const asylo::StatusOr<std::string> StorageProcessor::EncryptDatum(const std::string& datum,
                                                                   DatumType datum_type) {
   // TODO: Replace "foo" with identifier for the encryption key.
-  asylo::CleansingVector<uint8_t> key = GetStorageEncryptionKey("foo");
+  asylo::CleansingVector<uint8_t> key;
+  ASYLO_ASSIGN_OR_RETURN(key, storage_encryption_key_function_("foo"));
+
   asylo::CleansingString additional_authenticated_data;
   asylo::CleansingString nonce;
   asylo::CleansingString datum_encrypted;
@@ -80,6 +79,7 @@ const asylo::StatusOr<std::string> StorageProcessor::DecryptDatum(const std::str
                                                                   DatumType datum_type) {
   asylo::CleansingString input_clean(input.data(), input.size());
 
+
   if (input_clean.size() < kAesGcmSivNonceSize) {
     return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT,
                          absl::StrCat("Input too short: expected at least ", kAesGcmSivNonceSize,
@@ -87,7 +87,9 @@ const asylo::StatusOr<std::string> StorageProcessor::DecryptDatum(const std::str
   }
 
   // TODO: Replace "foo" with identifier for the encryption key.
-  asylo::CleansingVector<uint8_t> key(GetStorageEncryptionKey("foo"));
+  asylo::CleansingVector<uint8_t> key;
+  ASYLO_ASSIGN_OR_RETURN(key, storage_encryption_key_function_("foo"));
+
   asylo::CleansingString additional_authenticated_data;
   asylo::CleansingString nonce = input_clean.substr(0, kAesGcmSivNonceSize);
   asylo::CleansingString datum_encrypted = input_clean.substr(kAesGcmSivNonceSize);
@@ -121,6 +123,9 @@ void StorageProcessor::Read(const std::string& storage_name, const std::string& 
   }
   // TODO: Propagate error status.
   asylo::StatusOr<std::string> name_or = EncryptDatum(datum_name, DatumType::NAME);
+  if (!name_or.ok()) {
+    LOG(ERROR) << name_or.status();
+  }
   read_request.set_datum_name(name_or.ValueOrDie());
 
   grpc::ClientContext context;
@@ -143,10 +148,16 @@ void StorageProcessor::Write(const std::string& storage_name, const std::string&
   }
   // TODO: Propagate error status.
   asylo::StatusOr<std::string> name_or = EncryptDatum(datum_name, DatumType::NAME);
+  if (!name_or.ok()) {
+    LOG(ERROR) << name_or.status();
+  }
   write_request.set_datum_name(name_or.ValueOrDie());
 
   // TODO: Propagate error status.
   asylo::StatusOr<std::string> value_or = EncryptDatum(datum_value, DatumType::VALUE);
+  if (!value_or.ok()) {
+    LOG(ERROR) << value_or.status();
+  }
   write_request.set_datum_value(value_or.ValueOrDie());
 
   grpc::ClientContext context;

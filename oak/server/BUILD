@@ -135,6 +135,7 @@ cc_library(
     srcs = ["oak_runtime.cc"],
     hdrs = ["oak_runtime.h"],
     deps = [
+        ":escrow_node",
         ":oak_grpc_node",
         ":wasm_node",
         "//oak/common:app_config",
@@ -192,6 +193,25 @@ cc_library(
         ":node_thread",
         "//oak/common:app_config",
         "//oak/common:handles",
+        "@com_google_absl//absl/memory",
+        "@com_google_asylo//asylo/util:logging",
+    ],
+)
+
+cc_library(
+    name = "escrow_node",
+    srcs = ["escrow_node.cc"],
+    hdrs = [
+        "escrow_node.h",
+    ],
+    deps = [
+        "//oak/common:app_config",
+        "//oak/common:handles",
+        "//oak/proto:escrow_channel_cc_proto",
+        "//oak/proto:grpc_encap_cc_proto",
+        "//oak/server:channel",
+        "//oak/server:node_thread",
+        "//oak/server/storage:storage_processor",
         "@com_google_absl//absl/memory",
         "@com_google_asylo//asylo/util:logging",
     ],

@@ -122,6 +122,19 @@ cc_proto_library(
 )
 
 proto_library(
+    name = "escrow_channel_proto",
+    srcs = ["escrow_channel.proto"],
+    deps = [
+        "//third_party/google/rpc:status_proto",
+    ],
+)
+
+cc_proto_library(
+    name = "escrow_channel_cc_proto",
+    deps = [":escrow_channel_proto"],
+)
+
+proto_library(
     name = "storage_proto",
     srcs = ["storage.proto"],
 )
