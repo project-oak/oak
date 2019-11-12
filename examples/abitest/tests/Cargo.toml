@@ -12,6 +12,7 @@ abitest_frontend = { path = "../module/rust" }
 abitest_backend = { path = "../module2/rust" }
 log = "*"
 oak = { path = "../../../rust/oak" }
+oak_log = { path = "../../../rust/oak_log" }
 protobuf = "*"
 
 [dev-dependencies]
