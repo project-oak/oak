@@ -20,7 +20,8 @@ use log::{error, info};
 use oak::grpc;
 use oak::OakStatus;
 use oak_tests::proto::manager::{
-    ApplicationConfiguration, Channel, Channel_Endpoint, GrpcServerNode, Node, WebAssemblyNode,
+    ApplicationConfiguration, Channel, Channel_Endpoint, GrpcServerNode, LogNode, Node,
+    WebAssemblyNode,
 };
 use serial_test_derive::serial;
 use std::collections::HashMap;
@@ -32,11 +33,14 @@ const FRONTEND_NODE_NAME: &str = "frontend";
 const FRONTEND_CODE_NAME: &str = "frontend-code";
 const BACKEND_NODE_NAME_PATTERN: &str = "backend_";
 const BACKEND_CODE_NAME: &str = "backend-code";
+const LOG_NODE_NAME: &str = "logging_node";
 const GRPC_PORT_NAME: &str = "gRPC_input"; // deliberately non-default value
+const FE_LOG_PORT: &str = "logging_port";
 const FE_TO_BE_PORT_NAME_PATTERN: &str = "to_backend_";
 const FE_FROM_BE_PORT_NAME_PATTERN: &str = "from_backend_";
 const BE_FROM_FE_PORT_NAME: &str = "from_frontend";
 const BE_TO_FE_PORT_NAME: &str = "to_frontend";
+const BE_LOG_PORT: &str = "be_logging_port";
 
 fn test_config() -> ApplicationConfiguration {
     let mut grpc = Node::new();
@@ -47,6 +51,10 @@ fn test_config() -> ApplicationConfiguration {
     let mut wasm_node = WebAssemblyNode::new();
     wasm_node.set_wasm_contents_name(FRONTEND_CODE_NAME.to_string());
     frontend.set_web_assembly_node(wasm_node);
+    let mut log = Node::new();
+    log.set_node_name(LOG_NODE_NAME.to_string());
+    log.set_log_node(LogNode::new());
+
     let mut grpc_channel = Channel::new();
     {
         let mut src_endpoint = Channel_Endpoint::new();
@@ -58,9 +66,20 @@ fn test_config() -> ApplicationConfiguration {
         dest_endpoint.set_port_name(GRPC_PORT_NAME.to_string());
         grpc_channel.set_destination_endpoint(dest_endpoint);
     }
+    let mut log_channel = Channel::new();
+    {
+        let mut src_endpoint = Channel_Endpoint::new();
+        src_endpoint.set_node_name(FRONTEND_NODE_NAME.to_string());
+        src_endpoint.set_port_name(FE_LOG_PORT.to_string());
+        log_channel.set_source_endpoint(src_endpoint);
+        let mut dest_endpoint = Channel_Endpoint::new();
+        dest_endpoint.set_node_name(LOG_NODE_NAME.to_string());
+        dest_endpoint.set_port_name(oak_log::IN_PORT_NAME.to_string());
+        log_channel.set_destination_endpoint(dest_endpoint);
+    }
 
-    let mut nodes = vec![grpc, frontend];
-    let mut channels = vec![grpc_channel];
+    let mut nodes = vec![grpc, frontend, log];
+    let mut channels = vec![grpc_channel, log_channel];
     for i in 0..3 {
         let name = format!("{}{}", BACKEND_NODE_NAME_PATTERN, i);
         let mut backend = Node::new();
@@ -93,6 +112,18 @@ fn test_config() -> ApplicationConfiguration {
             dest_endpoint.set_port_name(format!("{}{}", FE_FROM_BE_PORT_NAME_PATTERN, i));
             channel.set_destination_endpoint(dest_endpoint);
             channels.push(channel);
+        }
+        {
+            let mut log_channel = Channel::new();
+            let mut src_endpoint = Channel_Endpoint::new();
+            src_endpoint.set_node_name(name.clone());
+            src_endpoint.set_port_name(BE_LOG_PORT.to_string());
+            log_channel.set_source_endpoint(src_endpoint);
+            let mut dest_endpoint = Channel_Endpoint::new();
+            dest_endpoint.set_node_name(LOG_NODE_NAME.to_string());
+            dest_endpoint.set_port_name(oak_log::IN_PORT_NAME.to_string());
+            log_channel.set_destination_endpoint(dest_endpoint);
+            channels.push(log_channel);
         }
     }
 
