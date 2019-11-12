@@ -60,6 +60,14 @@ impl Log for OakChannelLogger {
     fn flush(&self) {}
 }
 
+/// Default port name for the write half of a channel that connects to the
+/// logging pseudo-Node.
+pub const DEFAULT_PORT_NAME: &str = "log";
+
+/// Implicit port name for the read half of a channel that arrives at the
+/// logging pseudo-Node.
+pub const IN_PORT_NAME: &str = "in";
+
 /// Initialize Node-wide default logging.
 ///
 /// Uses the default level (`Debug`) and the default pre-defined port name
@@ -72,7 +80,7 @@ pub fn init_default() {
     init(
         Level::Debug,
         oak::WriteHandle {
-            handle: oak::channel_find("log"),
+            handle: oak::channel_find(DEFAULT_PORT_NAME),
         },
     )
     .unwrap();
