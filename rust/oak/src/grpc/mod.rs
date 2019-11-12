@@ -20,6 +20,14 @@ pub use crate::proto::code::Code;
 use crate::{proto, wasm, Handle, OakStatus, ReadHandle, WriteHandle};
 use protobuf::{Message, ProtobufEnum};
 
+/// Implicit port name for the write half of a channel that connects out of
+/// the gRPC pseudo-Node (going to an Application Node).
+pub const OUT_PORT_NAME: &str = "request";
+
+/// Default port name for the read half of a channel that connects into an
+/// Application Node (from the gRPC pseudo-Node).
+pub const DEFAULT_IN_PORT_NAME: &str = "grpc_in";
+
 /// Result type that uses a [`proto::status::Status`] type for error values.
 pub type Result<T> = std::result::Result<T, proto::status::Status>;
 

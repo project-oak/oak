@@ -28,8 +28,7 @@ use quote::quote;
 /// gRPC-processing Oak Node.
 ///
 /// May only be used on struct objects.  Assumes that the default pre-defined
-/// port names (`"grpc_in"`, `"grpc_out"`) are used to identify the gRPC
-/// channels.
+/// port names (`"grpc_in"`) is used to identify the gRPC input channel.
 ///
 /// At most one struct may be annotated with this, as it produces global symbols
 /// that would otherwise conflict if implemented multiple times.
@@ -65,7 +64,7 @@ pub fn derive_oak_exports(input: TokenStream) -> TokenStream {
             // https://doc.rust-lang.org/nomicon/ffi.html#ffi-and-panics
             match std::panic::catch_unwind(||{
                 let mut node = <#name>::new();
-                oak::grpc::event_loop(node, oak::ReadHandle{ handle: oak::channel_find("grpc_in") })
+                oak::grpc::event_loop(node, oak::ReadHandle{ handle: oak::channel_find(oak::grpc::DEFAULT_IN_PORT_NAME) })
             }) {
                 Ok(rc) => rc,
                 Err(_) => oak::OakStatus::ERR_INTERNAL.value(),
