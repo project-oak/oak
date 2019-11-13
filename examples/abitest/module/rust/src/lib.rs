@@ -29,6 +29,8 @@ use rand::Rng;
 use std::collections::HashMap;
 use std::io::Write;
 
+const LOG_PORT_NAME: &str = "logging_port";
+
 const BACKEND_COUNT: usize = 3;
 struct FrontendNode {
     grpc_in: oak::ReadHandle,
@@ -56,7 +58,7 @@ impl oak::grpc::OakNode for FrontendNode {
         let _ = oak_log::init(
             log::Level::Debug,
             oak::WriteHandle {
-                handle: oak::channel_find("logging_port"),
+                handle: oak::channel_find(LOG_PORT_NAME),
             },
         );
         FrontendNode {
@@ -133,6 +135,7 @@ impl OakABITestServiceNode for FrontendNode {
             "ChannelHandleReuse",
             FrontendNode::test_channel_handle_reuse,
         );
+        tests.insert("DirectLog", FrontendNode::test_direct_log);
         tests.insert("BackendRoundtrip", FrontendNode::test_backend_roundtrip);
 
         for (&name, &testfn) in &tests {
@@ -839,6 +842,26 @@ impl FrontendNode {
         // Close both of the previously mentioned invalid handles.
         expect_eq!(OakStatus::ERR_BAD_HANDLE, oak::channel_close(9_987_123));
         expect_eq!(OakStatus::ERR_BAD_HANDLE, oak::channel_close(9_987_321));
+
+        expect_eq!(OakStatus::OK, oak::channel_close(out_handle.handle));
+        expect_eq!(OakStatus::OK, oak::channel_close(in_handle.handle));
+        Ok(())
+    }
+
+    fn test_direct_log(&self) -> std::io::Result<()> {
+        // Send a message directly to the logging channel (not via the log facade).
+        // Include some handles which will be ignored.
+        let logging_handle = oak::WriteHandle {
+            handle: oak::channel_find(LOG_PORT_NAME),
+        };
+        expect!(logging_handle.handle != oak::wasm::INVALID_HANDLE);
+        let (out_handle, in_handle) = oak::channel_create().unwrap();
+
+        oak::channel_write(
+            logging_handle,
+            "message sent direct to logging channel".as_bytes(),
+            &[in_handle.handle, out_handle.handle],
+        );
 
         expect_eq!(OakStatus::OK, oak::channel_close(out_handle.handle));
         expect_eq!(OakStatus::OK, oak::channel_close(in_handle.handle));
