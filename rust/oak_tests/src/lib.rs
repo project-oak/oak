@@ -16,13 +16,8 @@
 
 //! Test utilities to help with unit testing of Oak SDK code.
 
-#[macro_use]
-extern crate log;
-extern crate byteorder;
-extern crate protobuf;
-extern crate rand;
-#[macro_use]
-extern crate lazy_static;
+use lazy_static::lazy_static;
+use log::{debug, info};
 
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use oak::OakStatus;

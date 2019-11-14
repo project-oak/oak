@@ -18,6 +18,7 @@
 
 pub use crate::proto::code::Code;
 use crate::{proto, wasm, Handle, OakStatus, ReadHandle, WriteHandle};
+use log::info;
 use protobuf::{Message, ProtobufEnum};
 
 /// Implicit port name for the write half of a channel that connects out of

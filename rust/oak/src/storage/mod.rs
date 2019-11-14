@@ -16,16 +16,15 @@
 
 //! Helper library for accessing Oak storage services.
 
-extern crate protobuf;
-
 use crate::grpc;
-use crate::wasm::INVALID_HANDLE;
-use crate::{ReadHandle, WriteHandle};
-use proto::grpc_encap::{GrpcRequest, GrpcResponse};
-use proto::storage_channel::{
+use crate::proto::grpc_encap::{GrpcRequest, GrpcResponse};
+use crate::proto::storage_channel::{
     StorageChannelDeleteRequest, StorageChannelDeleteResponse, StorageChannelReadRequest,
     StorageChannelReadResponse, StorageChannelWriteRequest, StorageChannelWriteResponse,
 };
+use crate::wasm::INVALID_HANDLE;
+use crate::{ReadHandle, WriteHandle};
+use log::info;
 use protobuf::Message;
 
 /// Local representation of the connection to an external storage service.

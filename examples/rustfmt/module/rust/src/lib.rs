@@ -14,13 +14,6 @@
 // limitations under the License.
 //
 
-extern crate log;
-extern crate oak;
-extern crate oak_derive;
-extern crate oak_log;
-extern crate protobuf;
-extern crate rustfmt_nightly;
-
 mod proto;
 
 use oak::grpc;

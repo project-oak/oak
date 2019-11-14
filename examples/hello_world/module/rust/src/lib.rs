@@ -14,28 +14,11 @@
 // limitations under the License.
 //
 
-#[macro_use]
-extern crate log;
-extern crate oak;
-extern crate oak_derive;
-extern crate oak_log;
-extern crate protobuf;
-
-#[cfg(test)]
-#[macro_use]
-extern crate assert_matches;
-#[cfg(test)]
-extern crate oak_tests;
-#[cfg(test)]
-extern crate serial_test;
-#[cfg(test)]
-#[macro_use]
-extern crate serial_test_derive;
-
 mod proto;
 #[cfg(test)]
 mod tests;
 
+use log::{info, warn};
 use oak::grpc;
 use oak::grpc::OakNode;
 use oak_derive::OakExports;

@@ -14,25 +14,8 @@
 // limitations under the License.
 //
 
-extern crate abitest_backend;
-extern crate abitest_frontend;
-#[macro_use]
-extern crate log;
-extern crate oak;
-extern crate protobuf;
-
+use log::error;
 use protobuf::ProtobufEnum;
-
-#[cfg(test)]
-#[macro_use]
-extern crate assert_matches;
-#[cfg(test)]
-extern crate oak_tests;
-#[cfg(test)]
-extern crate serial_test;
-#[cfg(test)]
-#[macro_use]
-extern crate serial_test_derive;
 
 #[cfg(test)]
 mod tests;

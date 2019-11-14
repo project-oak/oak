@@ -14,11 +14,10 @@
 // limitations under the License.
 //
 
-extern crate oak_tests;
-
 use crate::OakChannelLogger;
 use log::{Level, LevelFilter, Log, Metadata, Record};
 use oak_tests::last_message_as_string;
+use serial_test_derive::serial;
 
 fn test_logger() -> (oak::Handle, OakChannelLogger) {
     let (write_handle, _read_handle) = oak::channel_create().unwrap();

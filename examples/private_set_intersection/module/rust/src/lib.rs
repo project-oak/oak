@@ -25,10 +25,6 @@
 //! TODO: Consider stopping accepting contributions after the first client retrieves the
 //! intersection.
 
-extern crate oak;
-extern crate oak_derive;
-extern crate protobuf;
-
 mod proto;
 
 use oak::grpc;
