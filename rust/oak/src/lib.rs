@@ -14,14 +14,8 @@
 // limitations under the License.
 //
 
-extern crate byteorder;
-extern crate fmt;
-#[macro_use]
-extern crate log;
-extern crate protobuf;
-extern crate rand_core;
-
 use byteorder::WriteBytesExt;
+use log::{debug, error};
 pub use proto::oak_api::ChannelReadStatus;
 pub use proto::oak_api::OakStatus;
 use protobuf::ProtobufEnum;
@@ -36,13 +30,9 @@ mod tests;
 pub mod wasm;
 
 #[cfg(test)]
-#[macro_use]
-extern crate assert_matches;
+use assert_matches::assert_matches;
 #[cfg(test)]
-extern crate serial_test;
-#[cfg(test)]
-#[macro_use]
-extern crate serial_test_derive;
+use serial_test_derive::serial;
 
 /// Handle used to identify read or write channel halves.
 ///

@@ -17,6 +17,8 @@
 //! Wrappers for Oak SDK types to allow their use with [`std::io`].
 
 use crate::{channel_close, channel_write, OakStatus};
+#[cfg(test)]
+use assert_matches::assert_matches;
 use std::io;
 
 /// Wrapper for a WriteHandle to implement the [`std::io::Write`] trait.

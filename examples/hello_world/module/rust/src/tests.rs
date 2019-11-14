@@ -14,11 +14,13 @@
 // limitations under the License.
 //
 
+use crate::proto::hello_world::{HelloRequest, HelloResponse};
+use crate::proto::hello_world_grpc::HelloWorldNode;
+use assert_matches::assert_matches;
 use oak::grpc;
 use oak::grpc::OakNode;
 use oak::OakStatus;
-use proto::hello_world::{HelloRequest, HelloResponse};
-use proto::hello_world_grpc::HelloWorldNode;
+use serial_test_derive::serial;
 
 // Test invoking a Node service method directly.
 #[test]

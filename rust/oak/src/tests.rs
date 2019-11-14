@@ -14,8 +14,6 @@
 // limitations under the License.
 //
 
-extern crate oak_tests;
-
 use crate::*;
 use std::io::Write;
 

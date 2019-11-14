@@ -14,16 +14,9 @@
 // limitations under the License.
 //
 
-#[macro_use]
-extern crate log;
-extern crate oak;
-extern crate oak_derive;
-extern crate oak_log;
-extern crate protobuf;
-extern crate rand;
-
 mod proto;
 
+use log::info;
 use oak::grpc;
 use oak::grpc::OakNode;
 use oak_derive::OakExports;

@@ -17,13 +17,6 @@
 // This model was inspired by
 // https://github.com/AtheMathmo/rusty-machine/blob/master/examples/naive_bayes_dogs.rs .
 
-extern crate oak;
-extern crate oak_derive;
-extern crate protobuf;
-extern crate rand;
-extern crate rand_distr;
-extern crate rusty_machine;
-
 use oak::grpc;
 use oak::grpc::OakNode;
 use oak_derive::OakExports;

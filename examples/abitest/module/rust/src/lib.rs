@@ -14,23 +14,12 @@
 // limitations under the License.
 //
 
-extern crate abitest_common;
-extern crate byteorder;
-#[macro_use]
-extern crate expect;
-#[macro_use]
-extern crate log;
-extern crate oak;
-extern crate oak_log;
-extern crate protobuf;
-extern crate rand;
-extern crate regex;
-extern crate serde;
-
 pub mod proto;
 
 use abitest_common::InternalMessage;
 use byteorder::WriteBytesExt;
+use expect::{expect, expect_eq};
+use log::info;
 use oak::grpc::OakNode;
 use oak::{grpc, ChannelReadStatus, OakStatus};
 use proto::abitest::{ABITestRequest, ABITestResponse, ABITestResponse_TestResult};

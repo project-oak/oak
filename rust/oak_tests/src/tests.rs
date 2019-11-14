@@ -14,9 +14,6 @@
 // limitations under the License.
 //
 
-extern crate oak;
-extern crate oak_derive;
-
 use oak::grpc::OakNode;
 use protobuf::{Message, ProtobufEnum};
 

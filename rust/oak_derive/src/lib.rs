@@ -16,10 +16,7 @@
 
 //! Macro to derive standard boilerplate code for an Oak Node.
 
-extern crate oak;
 extern crate proc_macro;
-extern crate protobuf;
-extern crate syn;
 
 use proc_macro::TokenStream;
 use quote::quote;

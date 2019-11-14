@@ -14,8 +14,6 @@
 // limitations under the License.
 //
 
-extern crate serde;
-
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]

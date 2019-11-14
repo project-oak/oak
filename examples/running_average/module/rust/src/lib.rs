@@ -22,10 +22,6 @@
 //! expressed in base 10, and get back a string representation of the accumulated average value up
 //! to and including the value provided in the request.
 
-extern crate oak;
-extern crate oak_derive;
-extern crate protobuf;
-
 mod proto;
 
 use oak::grpc;

@@ -14,15 +14,8 @@
 // limitations under the License.
 //
 
-#[macro_use]
-extern crate log;
-extern crate abitest_common;
-extern crate oak;
-extern crate oak_log;
-extern crate protobuf;
-extern crate serde;
-
 use abitest_common::InternalMessage;
+use log::info;
 use protobuf::ProtobufEnum;
 
 // Backend node for channel testing.  This node listens for read channel handles
