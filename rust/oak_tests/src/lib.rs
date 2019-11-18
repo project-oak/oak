@@ -49,6 +49,8 @@ enum Direction {
     Write,
 }
 
+/// Unidirectional message-based channel object that also allows fault
+/// injection.
 struct MockChannel {
     /// If read_status is set, this status value will be returned for any read
     /// operations on the mock channel (and |messages| will be left
@@ -58,7 +60,8 @@ struct MockChannel {
     /// operations on the mock channel (and |messages| will be left
     /// undisturbed).
     write_status: Option<u32>,
-    /// Track extant halves referring to this channel.
+    /// Track extant halves referring to this channel, so that it is possible to
+    /// tell when a direction has been orphaned.
     half_count: HashMap<Direction, isize>,
     /// Pending messages on the channel
     messages: VecDeque<OakMessage>,
@@ -81,7 +84,7 @@ impl MockChannel {
             return status;
         }
         if self.half_count[&Direction::Read] == 0 {
-            // No-one can ever read this message.
+            // Channel is orphaned; no-one can ever read this message.
             return OakStatus::ERR_CHANNEL_CLOSED.value() as u32;
         }
         self.messages.push_back(msg);
@@ -102,13 +105,15 @@ impl MockChannel {
             *actual_size = 0;
             *actual_handle_count = 0;
             if self.half_count[&Direction::Write] == 0 {
-                // There can be no future writers, so indicate that the channel
-                // is closed.
+                // Channel is empty and there can be no future writers, so
+                // indicate that the channel is closed.
                 return Err(OakStatus::ERR_CHANNEL_CLOSED.value() as u32);
             } else {
                 return Err(OakStatus::OK.value() as u32);
             }
         }
+        // Check whether the message will fit within caller-specified limits; if
+        // not, put it back on the queue (and return the required limits).
         let msg = msg.unwrap();
         *actual_size = msg.data.len() as u32;
         *actual_handle_count = msg.channels.len() as u32;
@@ -126,6 +131,7 @@ impl MockChannel {
 
 type ChannelRef = Arc<RwLock<MockChannel>>;
 
+// A channel half is a clonable reference to one half of a unidirectional channel.
 struct ChannelHalf {
     direction: Direction,
     channel: ChannelRef,
@@ -133,6 +139,7 @@ struct ChannelHalf {
 
 impl ChannelHalf {
     fn new(direction: Direction, channel: ChannelRef) -> ChannelHalf {
+        // Update the referenced channel's counts of extant halves.
         *channel
             .write()
             .unwrap()
@@ -151,6 +158,7 @@ impl Clone for ChannelHalf {
 
 impl Drop for ChannelHalf {
     fn drop(&mut self) {
+        // Update the referenced channel's counts of extant halves.
         *self
             .channel
             .write()
@@ -164,15 +172,23 @@ impl Drop for ChannelHalf {
 
 struct OakRuntime {
     termination_pending: bool,
+    // Track a reference to the write half of the channel used for sending
+    // gRPC requests in to the Application under test.
     grpc_in_half: Option<ChannelHalf>,
+    // Node instances organized by Node name.
     nodes: HashMap<String, OakNode>,
 }
 
 struct OakNode {
+    // Each Node has its own handle numbering space; track the next available
+    // handle in this space.
     next_handle: oak::Handle,
     contents_name: String,
     halves: HashMap<oak::Handle, ChannelHalf>,
+    // Mapping from port name to channel handle, as induced by the Application
+    // configuration.
     ports: HashMap<String, oak::Handle>,
+    // Handle for a thread running the main loop for this node.
     thread_handle: Option<std::thread::JoinHandle<i32>>,
 }
 
@@ -188,6 +204,9 @@ impl OakRuntime {
             nodes,
         }
     }
+    // Build a runtime that has Node and Channels set up according to the given
+    // Application configuration. Returns a vector of (node-name, contents-name)
+    // pairs indicating which Nodes need to be started, running which code.
     fn configure(
         &mut self,
         config: proto::manager::ApplicationConfiguration,
@@ -247,6 +266,7 @@ impl OakRuntime {
         }
         required_nodes
     }
+    // Record that a Node of the given name has been started in a distinct thread.
     fn started(&mut self, node_name: &str, join_handle: std::thread::JoinHandle<i32>) {
         self.nodes
             .get_mut(node_name)
@@ -724,9 +744,12 @@ pub fn set_termination_pending(val: bool) {
 /// Expected type for the main entrypoint to a Node under test.
 pub type NodeMain = fn() -> i32;
 
-/// Start running the Application under test, with the given initial Node
-/// and channel configuration.  The entrypoints map should provide a function
-/// pointer for each WasmContents entry in the configuration.
+/// Start running the Application under test, with the given initial Node and
+/// channel configuration.  Because multiple Nodes are linked into the same
+/// test, the Nodes should be configured *not* to define the global extern "C"
+/// oak_main(), as this would lead to duplicate symbols.  Instead, the
+/// entrypoints map should provide a function pointer for each WasmContents
+/// entry in the configuration.
 pub fn start<S: ::std::hash::BuildHasher>(
     config: proto::manager::ApplicationConfiguration,
     entrypoints: HashMap<String, NodeMain, S>,
@@ -749,7 +772,9 @@ pub fn start<S: ::std::hash::BuildHasher>(
     }
 }
 
-/// Start running a single Node of the Application under test.
+/// Start running a test of a single-Node Application.  This assumes that the
+/// single Node's main entrypoint is available as a global extern "C"
+/// oak_main(), as for a live version of the Application.
 pub fn start_node(name: &str) {
     RUNTIME.write().unwrap().termination_pending = false;
     debug!("{{{}}}: start per-Node thread", name);
