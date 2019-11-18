@@ -94,11 +94,42 @@ git_repository(
     remote = "https://github.com/daviddrysdale/wabt",
 )
 
-load(
-    "@com_google_asylo//asylo/bazel:asylo_deps.bzl",
-    "asylo_deps",
-    "asylo_go_deps",
+http_archive(
+    name = "bazel_skylib",
+    sha256 = "9a737999532daca978a158f94e77e9af6a6a169709c0cee274f0a4c3359519bd",
+    strip_prefix = "bazel-skylib-1.0.0",
+    url = "https://github.com/bazelbuild/bazel-skylib/archive/1.0.0.tar.gz",
 )
+
+http_archive(
+    name = "io_bazel_rules_rust",
+    repo_mapping = {"@bazel_version": "@bazel_version_rust"},
+    sha256 = "69b67e19532b12da3edccda404772e85a788d16ae739343f5338dd340a0fba2e",
+    strip_prefix = "rules_rust-ec436b5ff2ab1ddeba6f27a7a1a5d263812981a6",
+    urls = [
+        # Master branch as of 2019-11-15.
+        "https://github.com/bazelbuild/rules_rust/archive/ec436b5ff2ab1ddeba6f27a7a1a5d263812981a6.tar.gz",
+    ],
+)
+
+load("@io_bazel_rules_rust//rust:repositories.bzl", "rust_repository_set")
+
+rust_repository_set(
+    name = "rust_linux_x86_64",
+    exec_triple = "x86_64-unknown-linux-gnu",
+    extra_target_triples = [],
+    iso_date = "2019-11-06",
+    version = "nightly",
+)
+
+load("@io_bazel_rules_rust//:workspace.bzl", "bazel_version")
+
+# We need to alias this with a different name so it does not conflict with an existing rule imported
+# from Asylo.
+# See https://github.com/google/asylo/issues/44.
+bazel_version(name = "bazel_version_rust")
+
+load("@com_google_asylo//asylo/bazel:asylo_deps.bzl", "asylo_deps", "asylo_go_deps")
 
 asylo_deps()
 

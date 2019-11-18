@@ -24,6 +24,7 @@
 #include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
 #include "oak/common/app_config.h"
+#include "rust/oak_runtime/oak_runtime.h"
 
 namespace oak {
 
@@ -107,6 +108,14 @@ grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
 }
 
 grpc::Status OakRuntime::Start() {
+  // We call into the Rust runtime to verify that bindings between C++ and Rust are working
+  // correctly.
+  {
+    LOG(INFO) << "Calling Rust runtime";
+    int32_t rust_check = add_magic_number(1000);
+    LOG(INFO) << "Rust runtime called, result: " << rust_check;
+  }
+
   LOG(INFO) << "Starting runtime";
 
   // Now all dependencies are running, start the thread for all the Wasm Nodes.
