@@ -99,6 +99,8 @@
 <span id="99"> 99</span>
 <span id="100">100</span>
 <span id="101">101</span>
+<span id="102">102</span>
+<span id="103">103</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -119,6 +121,8 @@
 <span class="doccomment">//! Wrappers for Oak SDK types to allow their use with [`std::io`].</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">channel_close</span>, <span class="ident">channel_write</span>, <span class="ident">OakStatus</span>};
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
+<span class="kw">use</span> <span class="ident">assert_matches</span>::<span class="ident">assert_matches</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>;
 
 <span class="doccomment">/// Wrapper for a WriteHandle to implement the [`std::io::Write`] trait.</span>

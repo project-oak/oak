@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["init","Initialize Node-wide logging via a channel."],["init_default","Initialize Node-wide default logging."]]});
+initSidebarItems({"constant":[["DEFAULT_PORT_NAME","Default port name for the write half of a channel that connects to the logging pseudo-Node."],["IN_PORT_NAME","Implicit port name for the read half of a channel that arrives at the logging pseudo-Node."]],"fn":[["init","Initialize Node-wide logging via a channel."],["init_default","Initialize Node-wide default logging."]]});

@@ -176,6 +176,64 @@
 <span id="176">176</span>
 <span id="177">177</span>
 <span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
+<span id="218">218</span>
+<span id="219">219</span>
+<span id="220">220</span>
+<span id="221">221</span>
+<span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
+<span id="232">232</span>
+<span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
+<span id="236">236</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -197,7 +255,16 @@
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">code</span>::<span class="ident">Code</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">proto</span>, <span class="ident">wasm</span>, <span class="ident">Handle</span>, <span class="ident">OakStatus</span>, <span class="ident">ReadHandle</span>, <span class="ident">WriteHandle</span>};
+<span class="kw">use</span> <span class="ident">log</span>::<span class="ident">info</span>;
 <span class="kw">use</span> <span class="ident">protobuf</span>::{<span class="ident">Message</span>, <span class="ident">ProtobufEnum</span>};
+
+<span class="doccomment">/// Implicit port name for the write half of a channel that connects out of</span>
+<span class="doccomment">/// the gRPC pseudo-Node (going to an Application Node).</span>
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">OUT_PORT_NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;request&quot;</span>;
+
+<span class="doccomment">/// Default port name for the read half of a channel that connects into an</span>
+<span class="doccomment">/// Application Node (from the gRPC pseudo-Node).</span>
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">DEFAULT_IN_PORT_NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;grpc_in&quot;</span>;
 
 <span class="doccomment">/// Result type that uses a [`proto::status::Status`] type for error values.</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">result</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">proto</span>::<span class="ident">status</span>::<span class="ident">Status</span><span class="op">&gt;</span>;
@@ -314,7 +381,7 @@
 <span class="doccomment">/// [`GrpcRequest`]: crate::proto::grpc_encap::GrpcRequest</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">event_loop</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">OakNode</span><span class="op">&gt;</span>(<span class="kw-2">mut</span> <span class="ident">node</span>: <span class="ident">T</span>, <span class="ident">grpc_in_handle</span>: <span class="ident">ReadHandle</span>) <span class="op">-&gt;</span> <span class="ident">i32</span> {
     <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;start event loop for node with handle {:?}&quot;</span>, <span class="ident">grpc_in_handle</span>);
-    <span class="kw">if</span> <span class="ident">grpc_in_handle</span>.<span class="ident">handle</span> <span class="op">==</span> <span class="number">0</span> {
+    <span class="kw">if</span> <span class="ident">grpc_in_handle</span>.<span class="ident">handle</span> <span class="op">==</span> <span class="ident">wasm</span>::<span class="ident">INVALID_HANDLE</span> {
         <span class="kw">return</span> <span class="ident">OakStatus</span>::<span class="ident">ERR_CHANNEL_CLOSED</span>.<span class="ident">value</span>();
     }
     <span class="kw">crate</span>::<span class="ident">set_panic_hook</span>();
@@ -344,7 +411,8 @@
         <span class="kw">if</span> <span class="ident">handles</span>.<span class="ident">is_empty</span>() {
             <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;no response handle received alongside gRPC request&quot;</span>)
         }
-        <span class="kw">let</span> <span class="ident">req</span>: <span class="ident">proto</span>::<span class="ident">grpc_encap</span>::<span class="ident">GrpcRequest</span> <span class="op">=</span> <span class="ident">protobuf</span>::<span class="ident">parse_from_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">buf</span>).<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">req</span>: <span class="ident">proto</span>::<span class="ident">grpc_encap</span>::<span class="ident">GrpcRequest</span> <span class="op">=</span>
+            <span class="ident">protobuf</span>::<span class="ident">parse_from_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">buf</span>).<span class="ident">expect</span>(<span class="string">&quot;failed to parse GrpcRequest message&quot;</span>);
         <span class="kw">if</span> <span class="op">!</span><span class="ident">req</span>.<span class="ident">last</span> {
             <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Support for streaming requests not yet implemented&quot;</span>);
         }
@@ -354,6 +422,54 @@
             <span class="ident">ChannelResponseWriter</span>::<span class="ident">new</span>(<span class="ident">WriteHandle</span> { <span class="ident">handle</span>: <span class="ident">handles</span>[<span class="number">0</span>] }),
         );
     }
+}
+
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">handle_req_rsp</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">R</span>, <span class="ident">Q</span><span class="op">&gt;</span>(<span class="kw-2">mut</span> <span class="ident">node_fn</span>: <span class="ident">C</span>, <span class="ident">req</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="kw-2">mut</span> <span class="ident">writer</span>: <span class="ident">ChannelResponseWriter</span>)
+<span class="kw">where</span>
+    <span class="ident">C</span>: <span class="ident">FnMut</span>(<span class="ident">R</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Q</span><span class="op">&gt;</span>,
+    <span class="ident">R</span>: <span class="ident">protobuf</span>::<span class="ident">Message</span>,
+    <span class="ident">Q</span>: <span class="ident">protobuf</span>::<span class="ident">Message</span>,
+{
+    <span class="kw">let</span> <span class="ident">r</span>: <span class="ident">R</span> <span class="op">=</span> <span class="ident">protobuf</span>::<span class="ident">parse_from_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">req</span>).<span class="ident">expect</span>(<span class="string">&quot;Failed to parse request protobuf message&quot;</span>);
+    <span class="kw">match</span> <span class="ident">node_fn</span>(<span class="ident">r</span>) {
+        <span class="prelude-val">Ok</span>(<span class="ident">rsp</span>) <span class="op">=&gt;</span> <span class="ident">writer</span>.<span class="ident">write</span>(<span class="ident">rsp</span>, <span class="ident">WriteMode</span>::<span class="ident">Close</span>),
+        <span class="prelude-val">Err</span>(<span class="ident">status</span>) <span class="op">=&gt;</span> <span class="ident">writer</span>.<span class="ident">close</span>(<span class="prelude-val">Err</span>(<span class="ident">status</span>)),
+    }
+}
+
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">handle_req_stream</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">R</span><span class="op">&gt;</span>(<span class="kw-2">mut</span> <span class="ident">node_fn</span>: <span class="ident">C</span>, <span class="ident">req</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">writer</span>: <span class="ident">ChannelResponseWriter</span>)
+<span class="kw">where</span>
+    <span class="ident">C</span>: <span class="ident">FnMut</span>(<span class="ident">R</span>, <span class="ident">ChannelResponseWriter</span>),
+    <span class="ident">R</span>: <span class="ident">protobuf</span>::<span class="ident">Message</span>,
+{
+    <span class="kw">let</span> <span class="ident">r</span>: <span class="ident">R</span> <span class="op">=</span> <span class="ident">protobuf</span>::<span class="ident">parse_from_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">req</span>).<span class="ident">expect</span>(<span class="string">&quot;Failed to parse request protobuf message&quot;</span>);
+    <span class="ident">node_fn</span>(<span class="ident">r</span>, <span class="ident">writer</span>)
+}
+
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">handle_stream_rsp</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">R</span>, <span class="ident">Q</span><span class="op">&gt;</span>(<span class="kw-2">mut</span> <span class="ident">node_fn</span>: <span class="ident">C</span>, <span class="ident">req</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="kw-2">mut</span> <span class="ident">writer</span>: <span class="ident">ChannelResponseWriter</span>)
+<span class="kw">where</span>
+    <span class="ident">C</span>: <span class="ident">FnMut</span>(<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">R</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Q</span><span class="op">&gt;</span>,
+    <span class="ident">R</span>: <span class="ident">protobuf</span>::<span class="ident">Message</span>,
+    <span class="ident">Q</span>: <span class="ident">protobuf</span>::<span class="ident">Message</span>,
+{
+    <span class="comment">// TODO(#97): better client-side streaming</span>
+    <span class="kw">let</span> <span class="ident">rr</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">R</span><span class="op">&gt;</span> <span class="op">=</span>
+        <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">protobuf</span>::<span class="ident">parse_from_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">req</span>).<span class="ident">expect</span>(<span class="string">&quot;Failed to parse request protobuf message&quot;</span>)];
+    <span class="kw">match</span> <span class="ident">node_fn</span>(<span class="ident">rr</span>) {
+        <span class="prelude-val">Ok</span>(<span class="ident">rsp</span>) <span class="op">=&gt;</span> <span class="ident">writer</span>.<span class="ident">write</span>(<span class="ident">rsp</span>, <span class="ident">WriteMode</span>::<span class="ident">Close</span>),
+        <span class="prelude-val">Err</span>(<span class="ident">status</span>) <span class="op">=&gt;</span> <span class="ident">writer</span>.<span class="ident">close</span>(<span class="prelude-val">Err</span>(<span class="ident">status</span>)),
+    }
+}
+
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">handle_stream_stream</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">R</span><span class="op">&gt;</span>(<span class="kw-2">mut</span> <span class="ident">node_fn</span>: <span class="ident">C</span>, <span class="ident">req</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">writer</span>: <span class="ident">ChannelResponseWriter</span>)
+<span class="kw">where</span>
+    <span class="ident">C</span>: <span class="ident">FnMut</span>(<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">R</span><span class="op">&gt;</span>, <span class="ident">ChannelResponseWriter</span>),
+    <span class="ident">R</span>: <span class="ident">protobuf</span>::<span class="ident">Message</span>,
+{
+    <span class="comment">// TODO(#97): better client-side streaming</span>
+    <span class="kw">let</span> <span class="ident">rr</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">R</span><span class="op">&gt;</span> <span class="op">=</span>
+        <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">protobuf</span>::<span class="ident">parse_from_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">req</span>).<span class="ident">expect</span>(<span class="string">&quot;Failed to parse request protobuf message&quot;</span>)];
+    <span class="ident">node_fn</span>(<span class="ident">rr</span>, <span class="ident">writer</span>)
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><aside id="help" class="hidden"><div><h1 class="hidden">Help</h1><div class="shortcuts"><h2>Keyboard Shortcuts</h2><dl><dt><kbd>?</kbd></dt><dd>Show this help dialog</dd><dt><kbd>S</kbd></dt><dd>Focus the search field</dd><dt><kbd>↑</kbd></dt><dd>Move up in search results</dd><dt><kbd>↓</kbd></dt><dd>Move down in search results</dd><dt><kbd>↹</kbd></dt><dd>Switch tab</dd><dt><kbd>&#9166;</kbd></dt><dd>Go to active search result</dd><dt><kbd>+</kbd></dt><dd>Expand all sections</dd><dt><kbd>-</kbd></dt><dd>Collapse all sections</dd></dl></div><div class="infos"><h2>Search Tricks</h2><p>Prefix searches with a type followed by a colon (e.g., <code>fn:</code>) to restrict the search to a given type.</p><p>Accepted types are: <code>fn</code>, <code>mod</code>, <code>struct</code>, <code>enum</code>, <code>trait</code>, <code>type</code>, <code>macro</code>, and <code>const</code>.</p><p>Search functions by type signature (e.g., <code>vec -> usize</code> or <code>* -> vec</code>)</p><p>Search multiple things at once by splitting your query with comma (e.g., <code>str,u8</code> or <code>String,struct:Vec,test</code>)</p></div></div></aside><script>window.rootPath = "../../../";window.currentCrate = "oak";</script><script src="../../../aliases.js"></script><script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script><script defer src="../../../search-index.js"></script></body></html>

@@ -2552,13 +2552,13 @@
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">unknown_fields</span>
     }
 
-    <span class="kw">fn</span> <span class="ident">as_any</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
-        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
+    <span class="kw">fn</span> <span class="ident">as_any</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
+        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
     }
-    <span class="kw">fn</span> <span class="ident">as_any_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
-        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
+    <span class="kw">fn</span> <span class="ident">as_any_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
+        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
     }
-    <span class="kw">fn</span> <span class="ident">into_any</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> ::<span class="ident">std</span>::<span class="ident">boxed</span>::<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_any</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> ::<span class="ident">std</span>::<span class="ident">boxed</span>::<span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)<span class="op">&gt;</span> {
         <span class="self">self</span>
     }
 
@@ -2733,13 +2733,13 @@
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">unknown_fields</span>
     }
 
-    <span class="kw">fn</span> <span class="ident">as_any</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
-        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
+    <span class="kw">fn</span> <span class="ident">as_any</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
+        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
     }
-    <span class="kw">fn</span> <span class="ident">as_any_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
-        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
+    <span class="kw">fn</span> <span class="ident">as_any_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
+        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
     }
-    <span class="kw">fn</span> <span class="ident">into_any</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> ::<span class="ident">std</span>::<span class="ident">boxed</span>::<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_any</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> ::<span class="ident">std</span>::<span class="ident">boxed</span>::<span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)<span class="op">&gt;</span> {
         <span class="self">self</span>
     }
 
@@ -3010,13 +3010,13 @@
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">unknown_fields</span>
     }
 
-    <span class="kw">fn</span> <span class="ident">as_any</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
-        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
+    <span class="kw">fn</span> <span class="ident">as_any</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
+        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
     }
-    <span class="kw">fn</span> <span class="ident">as_any_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
-        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
+    <span class="kw">fn</span> <span class="ident">as_any_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
+        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
     }
-    <span class="kw">fn</span> <span class="ident">into_any</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> ::<span class="ident">std</span>::<span class="ident">boxed</span>::<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_any</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> ::<span class="ident">std</span>::<span class="ident">boxed</span>::<span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)<span class="op">&gt;</span> {
         <span class="self">self</span>
     }
 
@@ -3160,13 +3160,13 @@
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">unknown_fields</span>
     }
 
-    <span class="kw">fn</span> <span class="ident">as_any</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
-        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
+    <span class="kw">fn</span> <span class="ident">as_any</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
+        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
     }
-    <span class="kw">fn</span> <span class="ident">as_any_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
-        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
+    <span class="kw">fn</span> <span class="ident">as_any_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
+        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
     }
-    <span class="kw">fn</span> <span class="ident">into_any</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> ::<span class="ident">std</span>::<span class="ident">boxed</span>::<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_any</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> ::<span class="ident">std</span>::<span class="ident">boxed</span>::<span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)<span class="op">&gt;</span> {
         <span class="self">self</span>
     }
 
@@ -3395,13 +3395,13 @@
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">unknown_fields</span>
     }
 
-    <span class="kw">fn</span> <span class="ident">as_any</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
-        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
+    <span class="kw">fn</span> <span class="ident">as_any</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
+        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
     }
-    <span class="kw">fn</span> <span class="ident">as_any_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
-        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
+    <span class="kw">fn</span> <span class="ident">as_any_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
+        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
     }
-    <span class="kw">fn</span> <span class="ident">into_any</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> ::<span class="ident">std</span>::<span class="ident">boxed</span>::<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_any</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> ::<span class="ident">std</span>::<span class="ident">boxed</span>::<span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)<span class="op">&gt;</span> {
         <span class="self">self</span>
     }
 
@@ -3539,13 +3539,13 @@
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">unknown_fields</span>
     }
 
-    <span class="kw">fn</span> <span class="ident">as_any</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
-        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
+    <span class="kw">fn</span> <span class="ident">as_any</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
+        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
     }
-    <span class="kw">fn</span> <span class="ident">as_any_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
-        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
+    <span class="kw">fn</span> <span class="ident">as_any_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
+        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
     }
-    <span class="kw">fn</span> <span class="ident">into_any</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> ::<span class="ident">std</span>::<span class="ident">boxed</span>::<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_any</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> ::<span class="ident">std</span>::<span class="ident">boxed</span>::<span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)<span class="op">&gt;</span> {
         <span class="self">self</span>
     }
 
@@ -3702,13 +3702,13 @@
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">unknown_fields</span>
     }
 
-    <span class="kw">fn</span> <span class="ident">as_any</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
-        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
+    <span class="kw">fn</span> <span class="ident">as_any</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
+        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
     }
-    <span class="kw">fn</span> <span class="ident">as_any_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
-        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
+    <span class="kw">fn</span> <span class="ident">as_any_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
+        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
     }
-    <span class="kw">fn</span> <span class="ident">into_any</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> ::<span class="ident">std</span>::<span class="ident">boxed</span>::<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_any</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> ::<span class="ident">std</span>::<span class="ident">boxed</span>::<span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)<span class="op">&gt;</span> {
         <span class="self">self</span>
     }
 
@@ -3871,13 +3871,13 @@
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">unknown_fields</span>
     }
 
-    <span class="kw">fn</span> <span class="ident">as_any</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
-        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
+    <span class="kw">fn</span> <span class="ident">as_any</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
+        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
     }
-    <span class="kw">fn</span> <span class="ident">as_any_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
-        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
+    <span class="kw">fn</span> <span class="ident">as_any_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
+        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
     }
-    <span class="kw">fn</span> <span class="ident">into_any</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> ::<span class="ident">std</span>::<span class="ident">boxed</span>::<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_any</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> ::<span class="ident">std</span>::<span class="ident">boxed</span>::<span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)<span class="op">&gt;</span> {
         <span class="self">self</span>
     }
 
@@ -4076,13 +4076,13 @@
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">unknown_fields</span>
     }
 
-    <span class="kw">fn</span> <span class="ident">as_any</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
-        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
+    <span class="kw">fn</span> <span class="ident">as_any</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
+        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
     }
-    <span class="kw">fn</span> <span class="ident">as_any_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
-        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
+    <span class="kw">fn</span> <span class="ident">as_any_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
+        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
     }
-    <span class="kw">fn</span> <span class="ident">into_any</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> ::<span class="ident">std</span>::<span class="ident">boxed</span>::<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_any</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> ::<span class="ident">std</span>::<span class="ident">boxed</span>::<span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)<span class="op">&gt;</span> {
         <span class="self">self</span>
     }
 
@@ -4214,13 +4214,13 @@
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">unknown_fields</span>
     }
 
-    <span class="kw">fn</span> <span class="ident">as_any</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
-        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
+    <span class="kw">fn</span> <span class="ident">as_any</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
+        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
     }
-    <span class="kw">fn</span> <span class="ident">as_any_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
-        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
+    <span class="kw">fn</span> <span class="ident">as_any_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
+        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
     }
-    <span class="kw">fn</span> <span class="ident">into_any</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> ::<span class="ident">std</span>::<span class="ident">boxed</span>::<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_any</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> ::<span class="ident">std</span>::<span class="ident">boxed</span>::<span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)<span class="op">&gt;</span> {
         <span class="self">self</span>
     }
 
@@ -4449,13 +4449,13 @@
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">unknown_fields</span>
     }
 
-    <span class="kw">fn</span> <span class="ident">as_any</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
-        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
+    <span class="kw">fn</span> <span class="ident">as_any</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
+        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
     }
-    <span class="kw">fn</span> <span class="ident">as_any_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
-        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
+    <span class="kw">fn</span> <span class="ident">as_any_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
+        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
     }
-    <span class="kw">fn</span> <span class="ident">into_any</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> ::<span class="ident">std</span>::<span class="ident">boxed</span>::<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_any</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> ::<span class="ident">std</span>::<span class="ident">boxed</span>::<span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)<span class="op">&gt;</span> {
         <span class="self">self</span>
     }
 
@@ -4593,13 +4593,13 @@
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">unknown_fields</span>
     }
 
-    <span class="kw">fn</span> <span class="ident">as_any</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
-        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
+    <span class="kw">fn</span> <span class="ident">as_any</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
+        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
     }
-    <span class="kw">fn</span> <span class="ident">as_any_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
-        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
+    <span class="kw">fn</span> <span class="ident">as_any_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>) {
+        <span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)
     }
-    <span class="kw">fn</span> <span class="ident">into_any</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> ::<span class="ident">std</span>::<span class="ident">boxed</span>::<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_any</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> ::<span class="ident">std</span>::<span class="ident">boxed</span>::<span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> (::<span class="ident">std</span>::<span class="ident">any</span>::<span class="ident">Any</span>)<span class="op">&gt;</span> {
         <span class="self">self</span>
     }
 

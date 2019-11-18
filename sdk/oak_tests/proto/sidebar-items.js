@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["manager","Generated file from `manager.proto`"]]});

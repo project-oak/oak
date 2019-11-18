@@ -259,11 +259,6 @@
 <span id="259">259</span>
 <span id="260">260</span>
 <span id="261">261</span>
-<span id="262">262</span>
-<span id="263">263</span>
-<span id="264">264</span>
-<span id="265">265</span>
-<span id="266">266</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -281,14 +276,8 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
-<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">byteorder</span>;
-<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">fmt</span>;
-<span class="attribute">#[<span class="ident">macro_use</span>]</span>
-<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">log</span>;
-<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">protobuf</span>;
-<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">rand_core</span>;
-
 <span class="kw">use</span> <span class="ident">byteorder</span>::<span class="ident">WriteBytesExt</span>;
+<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">error</span>};
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">proto</span>::<span class="ident">oak_api</span>::<span class="ident">ChannelReadStatus</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">proto</span>::<span class="ident">oak_api</span>::<span class="ident">OakStatus</span>;
 <span class="kw">use</span> <span class="ident">protobuf</span>::<span class="ident">ProtobufEnum</span>;
@@ -303,8 +292,9 @@
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">wasm</span>;
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="attribute">#[<span class="ident">macro_use</span>]</span>
-<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">assert_matches</span>;
+<span class="kw">use</span> <span class="ident">assert_matches</span>::<span class="ident">assert_matches</span>;
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
+<span class="kw">use</span> <span class="ident">serial_test_derive</span>::<span class="ident">serial</span>;
 
 <span class="doccomment">/// Handle used to identify read or write channel halves.</span>
 <span class="doccomment">///</span>

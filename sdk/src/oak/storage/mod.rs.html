@@ -166,6 +166,7 @@
 <span id="166">166</span>
 <span id="167">167</span>
 <span id="168">168</span>
+<span id="169">169</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -185,15 +186,15 @@
 
 <span class="doccomment">//! Helper library for accessing Oak storage services.</span>
 
-<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">protobuf</span>;
-
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">grpc</span>;
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">ReadHandle</span>, <span class="ident">WriteHandle</span>};
-<span class="kw">use</span> <span class="ident">proto</span>::<span class="ident">grpc_encap</span>::{<span class="ident">GrpcRequest</span>, <span class="ident">GrpcResponse</span>};
-<span class="kw">use</span> <span class="ident">proto</span>::<span class="ident">storage_channel</span>::{
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">grpc_encap</span>::{<span class="ident">GrpcRequest</span>, <span class="ident">GrpcResponse</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">storage_channel</span>::{
     <span class="ident">StorageChannelDeleteRequest</span>, <span class="ident">StorageChannelDeleteResponse</span>, <span class="ident">StorageChannelReadRequest</span>,
     <span class="ident">StorageChannelReadResponse</span>, <span class="ident">StorageChannelWriteRequest</span>, <span class="ident">StorageChannelWriteResponse</span>,
 };
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">wasm</span>::<span class="ident">INVALID_HANDLE</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">ReadHandle</span>, <span class="ident">WriteHandle</span>};
+<span class="kw">use</span> <span class="ident">log</span>::<span class="ident">info</span>;
 <span class="kw">use</span> <span class="ident">protobuf</span>::<span class="ident">Message</span>;
 
 <span class="doccomment">/// Local representation of the connection to an external storage service.</span>
@@ -203,31 +204,32 @@
     <span class="ident">read_channel</span>: <span class="kw">crate</span>::<span class="ident">ReadHandle</span>,
 }
 
-<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Storage</span> {
+<span class="kw">impl</span> <span class="ident">Storage</span> {
     <span class="doccomment">/// Create a default `Storage` instance assuming the standard port names</span>
     <span class="doccomment">/// (`&quot;storage_in&quot;`, `&quot;storage_out&quot;`) for pre-defined channels for storage</span>
     <span class="doccomment">/// communication.</span>
-    <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-&gt;</span> <span class="ident">Storage</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Storage</span><span class="op">&gt;</span> {
         <span class="ident">Storage</span>::<span class="ident">new</span>(<span class="string">&quot;storage_in&quot;</span>, <span class="string">&quot;storage_out&quot;</span>)
     }
-}
 
-<span class="kw">impl</span> <span class="ident">Storage</span> {
     <span class="doccomment">/// Create a `Storage` instance using the given port names for pre-defined</span>
     <span class="doccomment">/// channels for storage communication.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">in_port_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">out_port_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-&gt;</span> <span class="ident">Storage</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">in_port_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">out_port_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Storage</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">read_handle</span> <span class="op">=</span> <span class="ident">ReadHandle</span> {
             <span class="ident">handle</span>: <span class="kw">crate</span>::<span class="ident">channel_find</span>(<span class="ident">in_port_name</span>),
         };
         <span class="kw">let</span> <span class="ident">write_handle</span> <span class="op">=</span> <span class="ident">WriteHandle</span> {
             <span class="ident">handle</span>: <span class="kw">crate</span>::<span class="ident">channel_find</span>(<span class="ident">out_port_name</span>),
         };
+        <span class="kw">if</span> <span class="ident">read_handle</span>.<span class="ident">handle</span> <span class="op">==</span> <span class="ident">INVALID_HANDLE</span> <span class="op">||</span> <span class="ident">write_handle</span>.<span class="ident">handle</span> <span class="op">==</span> <span class="ident">INVALID_HANDLE</span> {
+            <span class="kw">return</span> <span class="prelude-val">None</span>;
+        }
         <span class="kw">let</span> <span class="ident">handles</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">read_handle</span>];
-        <span class="ident">Storage</span> {
+        <span class="prelude-val">Some</span>(<span class="ident">Storage</span> {
             <span class="ident">write_channel</span>: <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">Channel</span>::<span class="ident">new</span>(<span class="ident">write_handle</span>),
             <span class="ident">wait_space</span>: <span class="kw">crate</span>::<span class="ident">new_handle_space</span>(<span class="kw-2">&amp;</span><span class="ident">handles</span>),
             <span class="ident">read_channel</span>: <span class="ident">read_handle</span>,
-        }
+        })
     }
 
     <span class="kw">fn</span> <span class="ident">execute_operation</span><span class="op">&lt;</span><span class="ident">Req</span>, <span class="ident">Res</span><span class="op">&gt;</span>(
