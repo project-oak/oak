@@ -7,8 +7,8 @@ source "$SCRIPTS_DIR/common"
 # For each Rust workspace, first run tests, then run clippy, turning warnings into errors.
 # See https://github.com/rust-lang/rust-clippy.
 
-cargo test --all-targets --manifest-path=./rust/Cargo.toml
-cargo clippy --all-targets --manifest-path=./rust/Cargo.toml -- --deny=warnings
+cargo test --all-targets --manifest-path=./sdk/rust/Cargo.toml
+cargo clippy --all-targets --manifest-path=./sdk/rust/Cargo.toml -- --deny=warnings
 
 cargo test --all-targets --manifest-path=./examples/Cargo.toml
 cargo clippy --all-targets --manifest-path=./examples/Cargo.toml -- --deny=warnings

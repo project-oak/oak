@@ -24,7 +24,7 @@
 #include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
 #include "oak/common/app_config.h"
-#include "rust/oak_runtime/oak_runtime.h"
+#include "oak/server/rust/oak_runtime.h"
 
 namespace oak {
 
