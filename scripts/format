@@ -9,19 +9,35 @@ source "$SCRIPTS_DIR/common"
 # Run buildifier, clang-format and rustfmt on the entire codebase.
 # Applies all formattings in-place.
 
-find oak examples toolchain \( -type f -name BUILD -or -name WORKSPACE -or -name '*bzl' \) \
-  -exec buildifier -lint=fix -mode=fix {} +
-find oak examples \( -type f -name '*.h' -or -name '*.cc' -or -name '*.proto' \) \
-  -exec clang-format -i -style=file {} +
-
-cargo fmt --all --manifest-path examples/Cargo.toml
-cargo fmt --all --manifest-path rust/Cargo.toml
+find . \
+  \(  \
+    -not \( -path ./bazel-cache -prune \) -and \
+    -not \( -path ./cargo-cache -prune \) -and \
+    -not \( -path ./examples/target -prune \) -and \
+    -not \( -path ./sdk/rust/target -prune \) -and \
+    -not \( -path ./third_party -prune \) \
+    \( -type f -name BUILD -or -name WORKSPACE -or -name '*bzl' \) \
+  \) -exec buildifier -lint=warn -mode=fix {} +
 
 find . \
   \(  \
     -not \( -path ./bazel-cache -prune \) -and \
     -not \( -path ./cargo-cache -prune \) -and \
-    -not \( -path ./rust/target -prune \) -and \
+    -not \( -path ./examples/target -prune \) -and \
+    -not \( -path ./sdk/rust/target -prune \) -and \
+    -not \( -path ./third_party -prune \) \
+    \( -type f -name '*.h' -or -name '*.cc' -or -name '*.proto' \) \
+  \) -exec clang-format -i -style=file {} +
+
+cargo fmt --all --manifest-path examples/Cargo.toml
+cargo fmt --all --manifest-path sdk/rust/Cargo.toml
+
+find . \
+  \(  \
+    -not \( -path ./bazel-cache -prune \) -and \
+    -not \( -path ./cargo-cache -prune \) -and \
+    -not \( -path ./examples/target -prune \) -and \
+    -not \( -path ./sdk/rust/target -prune \) -and \
     -not \( -path ./third_party -prune \) \
     \( -type f -name '*.md' \) \
   \) -exec prettier --write {} +

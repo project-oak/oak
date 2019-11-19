@@ -7,16 +7,33 @@ readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
 source "$SCRIPTS_DIR/common"
 
 # Check which BUILD and .bzl files need to be reformatted.
-find oak examples toolchain \( -type f -name BUILD -or -name WORKSPACE -or -name '*bzl' \) \
-  -exec buildifier -lint=warn -mode=check {} +
-find oak examples toolchain \( -type f -name BUILD \) \
-  -exec grep --files-without-match '^    licenses = \["notice"\],$' {} + && (echo 'missing license directive in BUILD file'; exit 1)
+# TODO: Refactor the file matching logic into a separate bash function, or use a real programming
+# language for the job.
+find . \
+  \(  \
+    -not \( -path ./bazel-cache -prune \) -and \
+    -not \( -path ./cargo-cache -prune \) -and \
+    -not \( -path ./examples/target -prune \) -and \
+    -not \( -path ./sdk/rust/target -prune \) -and \
+    -not \( -path ./third_party -prune \) \
+    \( -type f -name BUILD -or -name WORKSPACE -or -name '*bzl' \) \
+  \) -exec buildifier -lint=warn -mode=check {} +
+
+find . \
+  \(  \
+    -not \( -path ./bazel-cache -prune \) -and \
+    -not \( -path ./cargo-cache -prune \) -and \
+    -not \( -path ./examples/target -prune \) -and \
+    -not \( -path ./sdk/rust/target -prune \) -and \
+    -not \( -path ./third_party -prune \) \
+    \( -type f -name BUILD \) \
+  \) -exec grep --files-without-match '^    licenses = \["notice"\],$' {} + && (echo 'missing license directive in BUILD file'; exit 1)
 
 # Check shell scripts for common mistakes.
 find scripts -type f -exec shellcheck {} +
 
-# Run clang-format and rustfmt on the entire codebase to check if it's
-# well formatted. Exit codes:
+# Run clang-format on the entire codebase to check if it's well formatted.
+# Exit codes:
 #  - 1 there are files to be formatted.
 #  - 0 everything looks fine.
 ./third_party/run-clang-format/run-clang-format.py -r oak examples
@@ -24,13 +41,14 @@ find scripts -type f -exec shellcheck {} +
 # Fortunately, rustfmt has the --check option that will make it exit with 1
 # if formatting has to be applied.
 cargo fmt --all --manifest-path examples/Cargo.toml -- --check
-cargo fmt --all --manifest-path rust/Cargo.toml -- --check
+cargo fmt --all --manifest-path sdk/rust/Cargo.toml -- --check
 
 find . \
   \(  \
     -not \( -path ./bazel-cache -prune \) -and \
     -not \( -path ./cargo-cache -prune \) -and \
-    -not \( -path ./rust/target -prune \) -and \
+    -not \( -path ./examples/target -prune \) -and \
+    -not \( -path ./sdk/rust/target -prune \) -and \
     -not \( -path ./third_party -prune \) \
     \( -type f -name '*.md' \) \
   \) -exec prettier --check {} +
