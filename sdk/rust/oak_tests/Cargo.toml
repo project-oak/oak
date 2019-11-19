@@ -8,9 +8,9 @@ edition = "2018"
 byteorder = "1"
 lazy_static = "1.4"
 log = { version = "^0.4.0", features = ["std"] }
-oak_derive = { path = "../oak_derive"}
-oak_log = { path = "../oak_log"}
-oak = { path = "../oak"}
+oak_derive = "*"
+oak_log = "*"
+oak = "*"
 protobuf = "*"
 rand = { version = "0.7", features = ["std"] }
 simple_logger = "1"

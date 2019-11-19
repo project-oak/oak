@@ -1,16 +1,16 @@
 [workspace]
 
 members = [
+    "abitest/abitest_common",
+    "abitest/module/rust",
+    "abitest/module2/rust",
+    "abitest/tests",
     "chat/module/rust",
     "hello_world/module/rust",
+    "machine_learning/module/rust",
     "private_set_intersection/module/rust",
     "running_average/module/rust",
     "rustfmt/module/rust",
-    "machine_learning/module/rust",
-    "abitest/module/rust",
-    "abitest/module2/rust",
-    "abitest/abitest_common",
-    "abitest/tests",
 ]
 
 [patch.crates-io]
@@ -20,3 +20,9 @@ dirs = { git = "https://github.com/soc/dirs-rs", rev = "910b3561557dfa8034d39e14
 # depends on dirs=1.0.2 which means that it does not pick up the fix above, which is done on
 # dirs=2.0.1.
 term = { git = "https://github.com/Stebalien/term", rev = "11e754980706a53dda998ba5791a203ab3a5f8fa" }
+
+# Patch dependencies on oak crates so that they refer to the versions within this same repository.
+oak = { path = "../sdk/rust/oak" }
+oak_derive = { path = "../sdk/rust/oak_derive" }
+oak_log = { path = "../sdk/rust/oak_log" }
+oak_tests = { path = "../sdk/rust/oak_tests" }

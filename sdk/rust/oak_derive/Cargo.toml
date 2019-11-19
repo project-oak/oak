@@ -8,7 +8,7 @@ edition = "2018"
 proc-macro = true
 
 [dependencies]
-oak = { path = "../oak" }
+oak = "*"
 protobuf = "*"
 quote = "*"
 syn = { version = "*", features = ["extra-traits"]}

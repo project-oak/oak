@@ -1,8 +1,0 @@
-[workspace]
-
-members = [
-  "oak",
-  "oak_derive",
-  "oak_log",
-  "oak_tests",
-]

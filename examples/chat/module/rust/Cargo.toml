@@ -9,9 +9,9 @@ crate-type = ["cdylib"]
 
 [dependencies]
 log = "*"
-oak = { path = "../../../../rust/oak" }
-oak_derive = { path = "../../../../rust/oak_derive" }
-oak_log = { path = "../../../../rust/oak_log" }
+oak = "*"
+oak_derive = "*"
+oak_log = "*"
 protobuf = "*"
 rand_core = "0.5"
 rand = "0.7"

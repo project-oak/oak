@@ -8,8 +8,8 @@ edition = "2018"
 crate-type = ["cdylib"]
 
 [dependencies]
-oak = { path = "../../../../rust/oak" }
-oak_derive = { path = "../../../../rust/oak_derive" }
+oak = "*"
+oak_derive = "*"
 protobuf = "*"
 
 [build-dependencies]

@@ -9,14 +9,14 @@ crate-type = ["cdylib"]
 
 [dependencies]
 log = "*"
-oak = { path = "../../../../rust/oak" }
-oak_derive = { path = "../../../../rust/oak_derive" }
-oak_log = { path = "../../../../rust/oak_log" }
+oak = "*"
+oak_derive = "*"
+oak_log = "*"
 protobuf = "*"
 
 [dev-dependencies]
 assert_matches = "*"
-oak_tests = { path = "../../../../rust/oak_tests" }
+oak_tests = "*"
 serial_test = "0.2"
 serial_test_derive = "0.2"
 

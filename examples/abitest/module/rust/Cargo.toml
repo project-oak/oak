@@ -12,8 +12,8 @@ abitest_common = { path = "../../abitest_common" }
 byteorder = "1"
 expect = { path = "../../../../third_party/expect" }
 log = "*"
-oak = { path = "../../../../rust/oak" }
-oak_log = { path = "../../../../rust/oak_log" }
+oak = "*"
+oak_log = "*"
 protobuf = "*"
 rand_core = "0.5"
 rand = "0.7"
