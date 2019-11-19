@@ -876,6 +876,78 @@
 <span id="876">876</span>
 <span id="877">877</span>
 <span id="878">878</span>
+<span id="879">879</span>
+<span id="880">880</span>
+<span id="881">881</span>
+<span id="882">882</span>
+<span id="883">883</span>
+<span id="884">884</span>
+<span id="885">885</span>
+<span id="886">886</span>
+<span id="887">887</span>
+<span id="888">888</span>
+<span id="889">889</span>
+<span id="890">890</span>
+<span id="891">891</span>
+<span id="892">892</span>
+<span id="893">893</span>
+<span id="894">894</span>
+<span id="895">895</span>
+<span id="896">896</span>
+<span id="897">897</span>
+<span id="898">898</span>
+<span id="899">899</span>
+<span id="900">900</span>
+<span id="901">901</span>
+<span id="902">902</span>
+<span id="903">903</span>
+<span id="904">904</span>
+<span id="905">905</span>
+<span id="906">906</span>
+<span id="907">907</span>
+<span id="908">908</span>
+<span id="909">909</span>
+<span id="910">910</span>
+<span id="911">911</span>
+<span id="912">912</span>
+<span id="913">913</span>
+<span id="914">914</span>
+<span id="915">915</span>
+<span id="916">916</span>
+<span id="917">917</span>
+<span id="918">918</span>
+<span id="919">919</span>
+<span id="920">920</span>
+<span id="921">921</span>
+<span id="922">922</span>
+<span id="923">923</span>
+<span id="924">924</span>
+<span id="925">925</span>
+<span id="926">926</span>
+<span id="927">927</span>
+<span id="928">928</span>
+<span id="929">929</span>
+<span id="930">930</span>
+<span id="931">931</span>
+<span id="932">932</span>
+<span id="933">933</span>
+<span id="934">934</span>
+<span id="935">935</span>
+<span id="936">936</span>
+<span id="937">937</span>
+<span id="938">938</span>
+<span id="939">939</span>
+<span id="940">940</span>
+<span id="941">941</span>
+<span id="942">942</span>
+<span id="943">943</span>
+<span id="944">944</span>
+<span id="945">945</span>
+<span id="946">946</span>
+<span id="947">947</span>
+<span id="948">948</span>
+<span id="949">949</span>
+<span id="950">950</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -928,6 +1000,8 @@
     <span class="ident">Write</span>,
 }
 
+<span class="doccomment">/// Unidirectional message-based channel object that also allows fault</span>
+<span class="doccomment">/// injection.</span>
 <span class="kw">struct</span> <span class="ident">MockChannel</span> {
     <span class="doccomment">/// If read_status is set, this status value will be returned for any read</span>
     <span class="doccomment">/// operations on the mock channel (and |messages| will be left</span>
@@ -937,7 +1011,8 @@
     <span class="doccomment">/// operations on the mock channel (and |messages| will be left</span>
     <span class="doccomment">/// undisturbed).</span>
     <span class="ident">write_status</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Track extant halves referring to this channel.</span>
+    <span class="doccomment">/// Track extant halves referring to this channel, so that it is possible to</span>
+    <span class="doccomment">/// tell when a direction has been orphaned.</span>
     <span class="ident">half_count</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">Direction</span>, <span class="ident">isize</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Pending messages on the channel</span>
     <span class="ident">messages</span>: <span class="ident">VecDeque</span><span class="op">&lt;</span><span class="ident">OakMessage</span><span class="op">&gt;</span>,
@@ -960,7 +1035,7 @@
             <span class="kw">return</span> <span class="ident">status</span>;
         }
         <span class="kw">if</span> <span class="self">self</span>.<span class="ident">half_count</span>[<span class="kw-2">&amp;</span><span class="ident">Direction</span>::<span class="ident">Read</span>] <span class="op">==</span> <span class="number">0</span> {
-            <span class="comment">// No-one can ever read this message.</span>
+            <span class="comment">// Channel is orphaned; no-one can ever read this message.</span>
             <span class="kw">return</span> <span class="ident">OakStatus</span>::<span class="ident">ERR_CHANNEL_CLOSED</span>.<span class="ident">value</span>() <span class="kw">as</span> <span class="ident">u32</span>;
         }
         <span class="self">self</span>.<span class="ident">messages</span>.<span class="ident">push_back</span>(<span class="ident">msg</span>);
@@ -981,13 +1056,15 @@
             <span class="kw-2">*</span><span class="ident">actual_size</span> <span class="op">=</span> <span class="number">0</span>;
             <span class="kw-2">*</span><span class="ident">actual_handle_count</span> <span class="op">=</span> <span class="number">0</span>;
             <span class="kw">if</span> <span class="self">self</span>.<span class="ident">half_count</span>[<span class="kw-2">&amp;</span><span class="ident">Direction</span>::<span class="ident">Write</span>] <span class="op">==</span> <span class="number">0</span> {
-                <span class="comment">// There can be no future writers, so indicate that the channel</span>
-                <span class="comment">// is closed.</span>
+                <span class="comment">// Channel is empty and there can be no future writers, so</span>
+                <span class="comment">// indicate that the channel is closed.</span>
                 <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ERR_CHANNEL_CLOSED</span>.<span class="ident">value</span>() <span class="kw">as</span> <span class="ident">u32</span>);
             } <span class="kw">else</span> {
                 <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">OK</span>.<span class="ident">value</span>() <span class="kw">as</span> <span class="ident">u32</span>);
             }
         }
+        <span class="comment">// Check whether the message will fit within caller-specified limits; if</span>
+        <span class="comment">// not, put it back on the queue (and return the required limits).</span>
         <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="ident">msg</span>.<span class="ident">unwrap</span>();
         <span class="kw-2">*</span><span class="ident">actual_size</span> <span class="op">=</span> <span class="ident">msg</span>.<span class="ident">data</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>;
         <span class="kw-2">*</span><span class="ident">actual_handle_count</span> <span class="op">=</span> <span class="ident">msg</span>.<span class="ident">channels</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>;
@@ -1005,6 +1082,7 @@
 
 <span class="kw">type</span> <span class="ident">ChannelRef</span> <span class="op">=</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">MockChannel</span><span class="op">&gt;&gt;</span>;
 
+<span class="comment">// A channel half is a clonable reference to one half of a unidirectional channel.</span>
 <span class="kw">struct</span> <span class="ident">ChannelHalf</span> {
     <span class="ident">direction</span>: <span class="ident">Direction</span>,
     <span class="ident">channel</span>: <span class="ident">ChannelRef</span>,
@@ -1012,6 +1090,7 @@
 
 <span class="kw">impl</span> <span class="ident">ChannelHalf</span> {
     <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">direction</span>: <span class="ident">Direction</span>, <span class="ident">channel</span>: <span class="ident">ChannelRef</span>) <span class="op">-&gt;</span> <span class="ident">ChannelHalf</span> {
+        <span class="comment">// Update the referenced channel&#39;s counts of extant halves.</span>
         <span class="kw-2">*</span><span class="ident">channel</span>
             .<span class="ident">write</span>()
             .<span class="ident">unwrap</span>()
@@ -1030,6 +1109,7 @@
 
 <span class="kw">impl</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">ChannelHalf</span> {
     <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
+        <span class="comment">// Update the referenced channel&#39;s counts of extant halves.</span>
         <span class="kw-2">*</span><span class="self">self</span>
             .<span class="ident">channel</span>
             .<span class="ident">write</span>()
@@ -1043,15 +1123,23 @@
 
 <span class="kw">struct</span> <span class="ident">OakRuntime</span> {
     <span class="ident">termination_pending</span>: <span class="ident">bool</span>,
+    <span class="comment">// Track a reference to the write half of the channel used for sending</span>
+    <span class="comment">// gRPC requests in to the Application under test.</span>
     <span class="ident">grpc_in_half</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ChannelHalf</span><span class="op">&gt;</span>,
+    <span class="comment">// Node instances organized by Node name.</span>
     <span class="ident">nodes</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">OakNode</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">struct</span> <span class="ident">OakNode</span> {
+    <span class="comment">// Each Node has its own handle numbering space; track the next available</span>
+    <span class="comment">// handle in this space.</span>
     <span class="ident">next_handle</span>: <span class="ident">oak</span>::<span class="ident">Handle</span>,
     <span class="ident">contents_name</span>: <span class="ident">String</span>,
     <span class="ident">halves</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">oak</span>::<span class="ident">Handle</span>, <span class="ident">ChannelHalf</span><span class="op">&gt;</span>,
+    <span class="comment">// Mapping from port name to channel handle, as induced by the Application</span>
+    <span class="comment">// configuration.</span>
     <span class="ident">ports</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">oak</span>::<span class="ident">Handle</span><span class="op">&gt;</span>,
+    <span class="comment">// Handle for a thread running the main loop for this node.</span>
     <span class="ident">thread_handle</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">std</span>::<span class="ident">thread</span>::<span class="ident">JoinHandle</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;&gt;</span>,
 }
 
@@ -1067,15 +1155,21 @@
             <span class="ident">nodes</span>,
         }
     }
-    <span class="kw">fn</span> <span class="ident">configure</span>(
+    <span class="comment">// Build a runtime that has Node and Channels set up according to the given</span>
+    <span class="comment">// Application configuration. Returns a vector of (node-name, entrypoint)</span>
+    <span class="comment">// pairs indicating which Nodes need to be started, running which code.</span>
+    <span class="kw">fn</span> <span class="ident">configure</span><span class="op">&lt;</span><span class="ident">S</span>: ::<span class="ident">std</span>::<span class="ident">hash</span>::<span class="ident">BuildHasher</span><span class="op">&gt;</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">config</span>: <span class="ident">proto</span>::<span class="ident">manager</span>::<span class="ident">ApplicationConfiguration</span>,
-    ) <span class="op">-&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">String</span>, <span class="ident">String</span>)<span class="op">&gt;</span> {
+        <span class="ident">entrypoints</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">NodeMain</span>, <span class="ident">S</span><span class="op">&gt;</span>,
+    ) <span class="op">-&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">String</span>, <span class="ident">NodeMain</span>)<span class="op">&gt;</span> {
         <span class="comment">// TODO: validate the config</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">required_nodes</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
         <span class="self">self</span>.<span class="ident">termination_pending</span> <span class="op">=</span> <span class="bool-val">false</span>;
         <span class="self">self</span>.<span class="ident">nodes</span>.<span class="ident">clear</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">grpc_node_name</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span> <span class="op">=</span> <span class="prelude-val">None</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">log_node_name</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span> <span class="op">=</span> <span class="prelude-val">None</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">log_channel</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ChannelRef</span><span class="op">&gt;</span> <span class="op">=</span> <span class="prelude-val">None</span>;
         <span class="kw">for</span> <span class="ident">node_cfg</span> <span class="kw">in</span> <span class="ident">config</span>.<span class="ident">get_nodes</span>() {
             <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">Node_oneof_node_type</span>::<span class="ident">web_assembly_node</span>(<span class="ident">wasm_cfg</span>)) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">node_cfg</span>.<span class="ident">node_type</span> {
                 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">node</span> <span class="op">=</span> <span class="ident">OakNode</span>::<span class="ident">new</span>();
@@ -1085,23 +1179,43 @@
                     <span class="ident">node_cfg</span>.<span class="ident">node_name</span>, <span class="ident">wasm_cfg</span>.<span class="ident">wasm_contents_name</span>
                 );
                 <span class="self">self</span>.<span class="ident">nodes</span>.<span class="ident">insert</span>(<span class="ident">node_cfg</span>.<span class="ident">node_name</span>.<span class="ident">to_string</span>(), <span class="ident">node</span>);
-                <span class="ident">required_nodes</span>.<span class="ident">push</span>((
-                    <span class="ident">node_cfg</span>.<span class="ident">node_name</span>.<span class="ident">clone</span>(),
-                    <span class="ident">wasm_cfg</span>.<span class="ident">wasm_contents_name</span>.<span class="ident">clone</span>(),
-                ));
+                <span class="kw">let</span> <span class="ident">entrypoint</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">entrypoints</span>
+                    .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">wasm_cfg</span>.<span class="ident">wasm_contents_name</span>)
+                    .<span class="ident">unwrap_or_else</span>(<span class="op">||</span> {
+                        <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;failed to find {} entrypoint&quot;</span>, <span class="ident">wasm_cfg</span>.<span class="ident">wasm_contents_name</span>)
+                    });
+                <span class="ident">required_nodes</span>.<span class="ident">push</span>((<span class="ident">node_cfg</span>.<span class="ident">node_name</span>.<span class="ident">clone</span>(), <span class="ident">entrypoint</span>));
             } <span class="kw">else</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">Node_oneof_node_type</span>::<span class="ident">grpc_server_node</span>(<span class="kw">_</span>)) <span class="op">=</span> <span class="ident">node_cfg</span>.<span class="ident">node_type</span> {
+                <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{{{}}}: add gRPC pseudo-Node&quot;</span>, <span class="ident">node_cfg</span>.<span class="ident">node_name</span>);
                 <span class="ident">grpc_node_name</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="ident">node_cfg</span>.<span class="ident">node_name</span>);
+            } <span class="kw">else</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">Node_oneof_node_type</span>::<span class="ident">log_node</span>(<span class="kw">_</span>)) <span class="op">=</span> <span class="ident">node_cfg</span>.<span class="ident">node_type</span> {
+                <span class="kw">let</span> <span class="ident">node</span> <span class="op">=</span> <span class="ident">OakNode</span>::<span class="ident">new</span>();
+                <span class="ident">log_node_name</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="ident">node_cfg</span>.<span class="ident">node_name</span>);
+                <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{{{}}}: add log pseudo-Node&quot;</span>, <span class="ident">node_cfg</span>.<span class="ident">node_name</span>);
+                <span class="self">self</span>.<span class="ident">nodes</span>.<span class="ident">insert</span>(<span class="ident">node_cfg</span>.<span class="ident">node_name</span>.<span class="ident">to_string</span>(), <span class="ident">node</span>);
+                <span class="ident">required_nodes</span>.<span class="ident">push</span>((<span class="ident">node_cfg</span>.<span class="ident">node_name</span>.<span class="ident">to_string</span>(), <span class="ident">log_node_main</span>));
             }
             <span class="comment">// TODO: add storage support</span>
         }
         <span class="kw">for</span> <span class="ident">channel_cfg</span> <span class="kw">in</span> <span class="ident">config</span>.<span class="ident">get_channels</span>() {
-            <span class="kw">let</span> <span class="ident">channel</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">new_channel</span>();
             <span class="kw">let</span> <span class="ident">src</span> <span class="op">=</span> <span class="ident">channel_cfg</span>.<span class="ident">get_source_endpoint</span>();
             <span class="kw">let</span> <span class="ident">dest</span> <span class="op">=</span> <span class="ident">channel_cfg</span>.<span class="ident">get_destination_endpoint</span>();
             <span class="macro">debug</span><span class="macro">!</span>(
                 <span class="string">&quot;add channel {{{}}}:{} -&gt; {{{}}}:{}&quot;</span>,
                 <span class="ident">src</span>.<span class="ident">node_name</span>, <span class="ident">src</span>.<span class="ident">port_name</span>, <span class="ident">dest</span>.<span class="ident">node_name</span>, <span class="ident">dest</span>.<span class="ident">port_name</span>
             );
+            <span class="kw">let</span> <span class="ident">channel</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">log_node_name</span>.<span class="ident">is_some</span>()
+                <span class="op">&amp;&amp;</span> <span class="ident">dest</span>.<span class="ident">node_name</span> <span class="op">==</span> <span class="ident">log_node_name</span>.<span class="ident">unwrap</span>()
+                <span class="op">&amp;&amp;</span> <span class="ident">dest</span>.<span class="ident">port_name</span> <span class="op">==</span> <span class="ident">oak_log</span>::<span class="ident">IN_PORT_NAME</span>
+            {
+                <span class="kw">if</span> <span class="ident">log_channel</span>.<span class="ident">is_none</span>() {
+                    <span class="ident">log_channel</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="self">self</span>.<span class="ident">new_channel</span>());
+                }
+                <span class="ident">log_channel</span>.<span class="ident">clone</span>().<span class="ident">unwrap</span>()
+            } <span class="kw">else</span> {
+                <span class="self">self</span>.<span class="ident">new_channel</span>()
+            };
+
             <span class="kw">if</span> <span class="ident">grpc_node_name</span>.<span class="ident">is_some</span>()
                 <span class="op">&amp;&amp;</span> <span class="ident">src</span>.<span class="ident">node_name</span> <span class="op">==</span> <span class="ident">grpc_node_name</span>.<span class="ident">unwrap</span>()
                 <span class="op">&amp;&amp;</span> <span class="ident">src</span>.<span class="ident">port_name</span> <span class="op">==</span> <span class="ident">oak</span>::<span class="ident">grpc</span>::<span class="ident">OUT_PORT_NAME</span>
@@ -1126,6 +1240,7 @@
         }
         <span class="ident">required_nodes</span>
     }
+    <span class="comment">// Record that a Node of the given name has been started in a distinct thread.</span>
     <span class="kw">fn</span> <span class="ident">started</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">node_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">join_handle</span>: <span class="ident">std</span>::<span class="ident">thread</span>::<span class="ident">JoinHandle</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span>) {
         <span class="self">self</span>.<span class="ident">nodes</span>
             .<span class="ident">get_mut</span>(<span class="ident">node_name</span>)
@@ -1603,23 +1718,26 @@
 <span class="doccomment">/// Expected type for the main entrypoint to a Node under test.</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">NodeMain</span> <span class="op">=</span> <span class="kw">fn</span>() <span class="op">-&gt;</span> <span class="ident">i32</span>;
 
-<span class="doccomment">/// Start running the Application under test, with the given initial Node</span>
-<span class="doccomment">/// and channel configuration.  The entrypoints map should provide a function</span>
-<span class="doccomment">/// pointer for each WasmContents entry in the configuration.</span>
+<span class="doccomment">/// Start running the Application under test, with the given initial Node and</span>
+<span class="doccomment">/// channel configuration.  Because multiple Nodes are linked into the same</span>
+<span class="doccomment">/// test, the Nodes should be configured *not* to define the global extern &quot;C&quot;</span>
+<span class="doccomment">/// oak_main(), as this would lead to duplicate symbols.  Instead, the</span>
+<span class="doccomment">/// entrypoints map should provide a function pointer for each WasmContents</span>
+<span class="doccomment">/// entry in the configuration.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// Also, Nodes under test should ensure that the oak_log crate does not end</span>
+<span class="doccomment">/// being used for logging during tests, either by not calling oak_log::init()</span>
+<span class="doccomment">/// at start-of-day (e.g. based on a build configuration), or by calling</span>
+<span class="doccomment">/// oak_tests::init_logging() first, and ignoring the subsequent failure from</span>
+<span class="doccomment">/// oak_log::init().</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start</span><span class="op">&lt;</span><span class="ident">S</span>: ::<span class="ident">std</span>::<span class="ident">hash</span>::<span class="ident">BuildHasher</span><span class="op">&gt;</span>(
     <span class="ident">config</span>: <span class="ident">proto</span>::<span class="ident">manager</span>::<span class="ident">ApplicationConfiguration</span>,
     <span class="ident">entrypoints</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">NodeMain</span>, <span class="ident">S</span><span class="op">&gt;</span>,
 ) {
-    <span class="kw">let</span> <span class="ident">required_nodes</span> <span class="op">=</span> <span class="ident">RUNTIME</span>.<span class="ident">write</span>().<span class="ident">unwrap</span>().<span class="ident">configure</span>(<span class="ident">config</span>);
-    <span class="kw">for</span> (<span class="ident">name</span>, <span class="ident">contents_name</span>) <span class="kw">in</span> <span class="ident">required_nodes</span> {
-        <span class="macro">debug</span><span class="macro">!</span>(
-            <span class="string">&quot;{{{}}}: start per-Node thread with contents &#39;{}&#39;&quot;</span>,
-            <span class="ident">name</span>, <span class="ident">contents_name</span>
-        );
+    <span class="kw">let</span> <span class="ident">required_nodes</span> <span class="op">=</span> <span class="ident">RUNTIME</span>.<span class="ident">write</span>().<span class="ident">unwrap</span>().<span class="ident">configure</span>(<span class="ident">config</span>, <span class="ident">entrypoints</span>);
+    <span class="kw">for</span> (<span class="ident">name</span>, <span class="ident">entrypoint</span>) <span class="kw">in</span> <span class="ident">required_nodes</span> {
+        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{{{}}}: start per-Node thread&quot;</span>, <span class="ident">name</span>);
         <span class="kw">let</span> <span class="ident">node_name</span> <span class="op">=</span> <span class="ident">name</span>.<span class="ident">clone</span>();
-        <span class="kw">let</span> <span class="ident">entrypoint</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">entrypoints</span>
-            .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">contents_name</span>)
-            .<span class="ident">unwrap_or_else</span>(<span class="op">||</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;failed to find {} entrypoint&quot;</span>, <span class="ident">contents_name</span>));
         <span class="kw">let</span> <span class="ident">thread_handle</span> <span class="op">=</span> <span class="ident">spawn</span>(<span class="kw">move</span> <span class="op">||</span> {
             <span class="ident">set_node_name</span>(<span class="ident">node_name</span>);
             <span class="ident">entrypoint</span>()
@@ -1628,7 +1746,9 @@
     }
 }
 
-<span class="doccomment">/// Start running a single Node of the Application under test.</span>
+<span class="doccomment">/// Start running a test of a single-Node Application.  This assumes that the</span>
+<span class="doccomment">/// single Node&#39;s main entrypoint is available as a global extern &quot;C&quot;</span>
+<span class="doccomment">/// oak_main(), as for a live version of the Application.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start_node</span>(<span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) {
     <span class="ident">RUNTIME</span>.<span class="ident">write</span>().<span class="ident">unwrap</span>().<span class="ident">termination_pending</span> <span class="op">=</span> <span class="bool-val">false</span>;
     <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{{{}}}: start per-Node thread&quot;</span>, <span class="ident">name</span>);
@@ -1663,6 +1783,30 @@
     }
     <span class="ident">reset</span>();
     <span class="ident">overall_result</span>
+}
+
+<span class="comment">// Main loop function for a log pseudo-Node.</span>
+<span class="kw">fn</span> <span class="ident">log_node_main</span>() <span class="op">-&gt;</span> <span class="ident">i32</span> {
+    <span class="kw">let</span> <span class="ident">half</span> <span class="op">=</span> <span class="ident">oak</span>::<span class="ident">ReadHandle</span> {
+        <span class="ident">handle</span>: <span class="ident">oak</span>::<span class="ident">channel_find</span>(<span class="ident">oak_log</span>::<span class="ident">IN_PORT_NAME</span>),
+    };
+    <span class="kw">if</span> <span class="ident">half</span>.<span class="ident">handle</span> <span class="op">==</span> <span class="ident">oak</span>::<span class="ident">wasm</span>::<span class="ident">INVALID_HANDLE</span> {
+        <span class="kw">return</span> <span class="ident">OakStatus</span>::<span class="ident">ERR_BAD_HANDLE</span>.<span class="ident">value</span>();
+    }
+    <span class="kw">loop</span> {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">status</span>) <span class="op">=</span> <span class="ident">oak</span>::<span class="ident">wait_on_channels</span>(<span class="kw-2">&amp;</span>[<span class="ident">half</span>]) {
+            <span class="kw">return</span> <span class="ident">status</span>.<span class="ident">value</span>();
+        }
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buf</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>::<span class="ident">with_capacity</span>(<span class="number">1024</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">handles</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">with_capacity</span>(<span class="number">8</span>);
+        <span class="ident">oak</span>::<span class="ident">channel_read</span>(<span class="ident">half</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buf</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">handles</span>);
+        <span class="kw">if</span> <span class="ident">buf</span>.<span class="ident">is_empty</span>() {
+            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;no pending message; poll again&quot;</span>);
+            <span class="kw">continue</span>;
+        }
+        <span class="kw">let</span> <span class="ident">message</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">from_utf8_lossy</span>(<span class="kw-2">&amp;</span><span class="ident">buf</span>);
+        <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;LOG: {}&quot;</span>, <span class="ident">message</span>);
+    }
 }
 
 <span class="doccomment">/// Test helper to set up a channel into the Node under for injected gRPC</span>
