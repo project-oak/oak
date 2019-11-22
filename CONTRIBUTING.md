@@ -30,7 +30,7 @@ newly created branch based on master, then pushes to their own fork, and creates
 a PR from the GitHub UI. The author then selects one or more reviewers.
 
 The commit / PR description should follow
-[standard git commit conventions](https://chris.beams.io/posts/git-commit/).
+[standard Git commit conventions](https://chris.beams.io/posts/git-commit/).
 
 During a review, the author of the change addresses review comments by adding
 new commits to the same branch / PR and then pushing again (note: we discourage
@@ -50,7 +50,7 @@ PR is merged via the
 ["Squash and merge"](https://help.github.com/en/articles/about-pull-request-merges#squash-and-merge-your-pull-request-commits)
 button in the GitHub UI. The UI will suggest a final commit message composed of
 the PR title, and individual commit messages as a bullet point list; the author
-can then reword the final commit message in the UI, usually discarding the
+should then reword the final commit message in the UI, usually discarding the
 message of any additional fixup commit.
 
 In some cases the author intends to keep multiple commits as part of the same
