@@ -22,17 +22,42 @@ use GitHub Pull Requests (PR) for this purpose. Consult
 [GitHub Help](https://help.github.com/articles/about-pull-requests/) for more
 information on using PRs.
 
+For a new review, the author works on a new branch on their own fork of the
+repository (we don't create additional branches on the main repository).
+
+Once the changes are made locally, the author creates a new commit on their
+newly created branch based on master, then pushes to their own fork, and creates
+a PR from the GitHub UI. The author then selects one or more reviewers.
+
+The commit / PR description should follow
+[standard git commit conventions](https://chris.beams.io/posts/git-commit/).
+
 During a review, the author of the change addresses review comments by adding
 new commits to the same branch / PR and then pushing again (note: we discourage
-force-pushing to any branch, even during review).
+force-pushing to any branch, even during review). The message of these
+additional commits is unimportant (it can just be "FIXUP" or similar) as these
+commits will most likely be squashed just before merging, and only the message
+of the original commit will be kept.
 
-Once approved, each PR is merged via the
+It is _not_ recommended to use the
+["Applying suggested changes"](https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/incorporating-feedback-in-your-pull-request#applying-suggested-changes)
+functionality in the GitHub UI, as this may result in the changes being
+associated with the wrong user email address, and it also creates a separate
+commit, which is not necessarily what we want.
+
+In most cases the author expects a single commit out of a PR; once approved, the
+PR is merged via the
 ["Squash and merge"](https://help.github.com/en/articles/about-pull-request-merges#squash-and-merge-your-pull-request-commits)
-button in the GitHub UI. The final commit message is taken from the PR
-description, and individual commit messages are discarded; for this reason, we
-do not expect commits to have meaningful messages during a review; the PR
-description should follow
-[standard git commit conventions](https://chris.beams.io/posts/git-commit/).
+button in the GitHub UI. The UI will suggest a final commit message composed of
+the PR title, and individual commit messages as a bullet point list; the author
+can then reword the final commit message in the UI, usually discarding the
+message of any additional fixup commit.
+
+In some cases the author intends to keep multiple commits as part of the same
+PR, in which case they would use the
+["Rebase and merge"](https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/about-pull-request-merges#rebase-and-merge-your-pull-request-commits)
+button. Note in this case it is up to the author to make sure that any fixups
+are squashed against the correct commit if necessary.
 
 ## Style Guide
 
