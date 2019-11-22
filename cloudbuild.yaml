@@ -47,7 +47,7 @@ steps:
     waitFor: ['build_server_asylo']
     timeout: 5m
     entrypoint: 'cp'
-    args: ['./bazel-bin/oak/server/asylo/oak_enclave_unsigned.so', './oak_enclave_unsigned.so']
+    args: ['./bazel-bin/oak/server/asylo/liboak_enclave_unsigned.so', './liboak_enclave_unsigned.so']
 
 # Copy compiled enclave binary to Google Cloud Storage.
 # See:
@@ -58,7 +58,7 @@ artifacts:
   objects:
     location: gs://artifacts.oak-ci.appspot.com/test
     paths:
-      - ./oak_enclave_unsigned.so
+      - ./liboak_enclave_unsigned.so
 
 timeout: 2h
 
