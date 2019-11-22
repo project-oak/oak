@@ -36,7 +36,7 @@ http_archive(
     strip_prefix = "asylo-088ea3490dd4579655bd5b65b0e31fe18de7f6dd",
     urls = [
         # Head commit on 2019-11-21.
-        "https://github.com/google/asylo/archive/088ea3490dd4579655bd5b65b0e31fe18de7f6dd.tar.gz"
+        "https://github.com/google/asylo/archive/088ea3490dd4579655bd5b65b0e31fe18de7f6dd.tar.gz",
     ],
 )
 
