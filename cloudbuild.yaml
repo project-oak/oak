@@ -29,19 +29,16 @@ steps:
     args: ['./scripts/build_server_asylo']
   - name: 'gcr.io/oak-ci/oak:latest'
     id: build_server_dev
-    waitFor: ['build_image']
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/build_server_dev']
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_tests
-    waitFor: ['build_image']
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/run_tests']
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_examples
-    waitFor: ['build_image']
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/run_examples']
@@ -54,7 +51,7 @@ steps:
   # Copy compiled enclave binary to workspace so that it can be uploaded as artifact.
   - name: 'gcr.io/oak-ci/oak:latest'
     id: copy_artifacts
-    waitFor: ['build_server_asylo']
+    waitFor: ['check_generated']
     timeout: 5m
     entrypoint: 'cp'
     args: ['./bazel-bin/oak/server/asylo/liboak_enclave_unsigned.so', './liboak_enclave_unsigned.so']
