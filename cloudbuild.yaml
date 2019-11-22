@@ -10,6 +10,7 @@ steps:
   # Build Docker image based on current Dockerfile, if necessary.
   - name: 'gcr.io/cloud-builders/docker'
     id: build_image
+    waitFor: ['pull_image']
     timeout: 10m
     args: ['build', '--pull', '--cache-from=gcr.io/oak-ci/oak:latest', '--tag=gcr.io/oak-ci/oak:latest', '.']
   # Run next build steps inside the newly created Docker image.
@@ -28,19 +29,28 @@ steps:
     args: ['./scripts/build_server_asylo']
   - name: 'gcr.io/oak-ci/oak:latest'
     id: build_server_dev
+    waitFor: ['build_image']
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/build_server_dev']
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_tests
+    waitFor: ['build_image']
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/run_tests']
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_examples
+    waitFor: ['build_image'],
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/run_examples']
+  - name: 'gcr.io/oak-ci/oak:latest'
+    id: check_generated
+    waitFor: ['run_examples', 'run_tests']
+    timeout: 30m
+    entrypoint: 'bash'
+    args: ['./scripts/check_generated']
   # Copy compiled enclave binary to workspace so that it can be uploaded as artifact.
   - name: 'gcr.io/oak-ci/oak:latest'
     id: copy_artifacts
