@@ -41,7 +41,7 @@ steps:
     args: ['./scripts/run_tests']
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_examples
-    waitFor: ['build_image'],
+    waitFor: ['build_image']
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/run_examples']
