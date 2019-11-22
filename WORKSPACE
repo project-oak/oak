@@ -32,9 +32,12 @@ http_archive(
 # Asylo Framework.
 http_archive(
     name = "com_google_asylo",
-    sha256 = "a15b5b436d27b3fd426de2f3d8598264f7ccf8a79421b5cfd41b95c832e3e9b0",
-    strip_prefix = "asylo-361737de928acbd01a6ca206292bf79c0484c62b",
-    urls = ["https://github.com/google/asylo/archive/361737de928acbd01a6ca206292bf79c0484c62b.tar.gz"],
+    sha256 = "7f53d61d91a8d6963a5665088b02129d643a4cfbcab883f1076b71bcbe07184d",
+    strip_prefix = "asylo-088ea3490dd4579655bd5b65b0e31fe18de7f6dd",
+    urls = [
+        # Head commit on 2019-11-21
+        "https://github.com/google/asylo/archive/088ea3490dd4579655bd5b65b0e31fe18de7f6dd.tar.gz"
+    ],
 )
 
 # Google Test

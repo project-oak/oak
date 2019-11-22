@@ -93,10 +93,20 @@ sgx.debug_enclave(
     config = ":grpc_enclave_config",
 )
 
+# TODO: Use genrule from asylo, when it will become available
+genrule(
+    name = "oak_mrenclave",
+    srcs = [":oak_enclave_signing_material"],
+    outs = ["oak_mrenclave.txt"],
+    # Gets the enclave hash from the enclave signing material as a hex string
+    # 188 is an offset of the hash, 32 is the size of the hash
+    cmd = "xxd -p -s 188 -l 32 -c 32 $< > $@",
+)
+
 # Produces oak_enclave_sigstruct.dat file, which is used to generate the remote attestation of the
 # enclave code. See https://software.intel.com/en-us/node/703003.
-sgx.generate_sigstruct(
-    name = "oak_enclave_sigstruct",
+sgx.generate_enclave_signing_material(
+    name = "oak_enclave_signing_material",
     unsigned = ":oak_enclave_unsigned.so",
     config = ":grpc_enclave_config",
 )
