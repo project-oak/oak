@@ -15,11 +15,16 @@ steps:
     args: ['build', '--pull', '--cache-from=gcr.io/oak-ci/oak:latest', '--tag=gcr.io/oak-ci/oak:latest', '.']
   # Init .git repository used by check_generated
   # Workaround for https://github.com/GoogleCloudPlatform/cloud-builders/issues/236
-  - name: 'gcr.io/cloud-builders/docker'
-    id: git_init
+  - name: 'gcr.io/cloud-builders/git'
+    id: add_git_directory
+    entrypoint: 'bash'
     waitFor: ['pull_image']
     timeout: 1m
-    args: ['git', 'init', '&&', 'git', 'add', '.']
+    args:
+    - '-c'
+    - |
+        git init
+        git add .
   # Run next build steps inside the newly created Docker image.
   # See: https://cloud.google.com/cloud-build/docs/create-custom-build-steps
   - name: 'gcr.io/oak-ci/oak:latest'
