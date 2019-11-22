@@ -28,7 +28,7 @@ steps:
   # Run next build steps inside the newly created Docker image.
   - name: 'gcr.io/oak-ci/oak:latest'
     id: check_generated
-    waitFor: ['git_init']
+    waitFor: ['add_git_directory']
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/check_generated']
