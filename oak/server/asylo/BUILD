@@ -93,13 +93,19 @@ sgx.debug_enclave(
     config = ":grpc_enclave_config",
 )
 
-# TODO: Use genrule from asylo, when it will become available
+# TODO: Use genrule from asylo, when it will become available.
 genrule(
     name = "oak_mrenclave",
     srcs = [":oak_enclave_signing_material"],
     outs = ["oak_mrenclave.txt"],
-    # Gets the enclave hash from the enclave signing material as a hex string
-    # 188 is an offset of the hash, 32 is the size of the hash
+    # Gets the enclave hash from the enclave signing material as a hex string.
+    # Signing material consists of the header and the body of the SIGSTRUCT
+    # struct (excluding keys), defined here:
+    # https://github.com/intel/linux-sgx/blob/d10cabebb5512878e84f5d21cdf27c39c428ffe2/common/inc/internal/arch.h#L240-L245
+    # Signing material generation is defined here:
+    # https://github.com/intel/linux-sgx/blob/d10cabebb5512878e84f5d21cdf27c39c428ffe2/sdk/sign_tool/SignTool/sign_tool.cpp#L528-L548
+    # 188 is an offset of the hash (instead of the original 960 from the SIGSTRUCT),
+    # 32 is the size of the hash.
     cmd = "xxd -p -s 188 -l 32 -c 32 $< > $@",
 )
 
