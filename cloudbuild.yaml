@@ -19,19 +19,13 @@ steps:
     id: add_git_directory
     entrypoint: 'bash'
     waitFor: ['pull_image']
-    timeout: 1m
+    timeout: 5m
     args:
     - '-c'
     - |
         git init
         git add .
   # Run next build steps inside the newly created Docker image.
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: check_generated
-    waitFor: ['add_git_directory']
-    timeout: 30m
-    entrypoint: 'bash'
-    args: ['./scripts/check_generated']
   # See: https://cloud.google.com/cloud-build/docs/create-custom-build-steps
   - name: 'gcr.io/oak-ci/oak:latest'
     id: check_formatting
@@ -60,7 +54,12 @@ steps:
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/run_examples']
-
+  - name: 'gcr.io/oak-ci/oak:latest'
+    id: check_generated
+    waitFor: ['add_git_directory', 'run_tests', 'run_examples']
+    timeout: 5m
+    entrypoint: 'bash'
+    args: ['./scripts/check_generated']
   # Copy compiled enclave binary to workspace so that it can be uploaded as artifact.
   - name: 'gcr.io/oak-ci/oak:latest'
     id: copy_artifacts
