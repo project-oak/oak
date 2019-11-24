@@ -26,10 +26,10 @@ jobs:
       - echo "build --show_progress_rate_limit=5.0" >> .bazelrc
       - ./scripts/docker_pull
       - ./scripts/docker_run ./scripts/run_examples
-      - ./scripts/docker_run ./scripts/check_generated
+      - ./scripts/docker_run ./scripts/git_check_diff
     - name: run tests
       script:
       - echo "build --show_progress_rate_limit=5.0" >> .bazelrc
       - ./scripts/docker_pull
       - ./scripts/docker_run ./scripts/run_tests
-      - ./scripts/docker_run ./scripts/check_generated
+      - ./scripts/docker_run ./scripts/git_check_diff
