@@ -13,20 +13,16 @@ steps:
     waitFor: ['pull_image']
     timeout: 10m
     args: ['build', '--pull', '--cache-from=gcr.io/oak-ci/oak:latest', '--tag=gcr.io/oak-ci/oak:latest', '.']
+  # Run next build steps inside the newly created Docker image.
+  # See: https://cloud.google.com/cloud-build/docs/create-custom-build-steps
   # Init .git repository used by check_generated
   # Workaround for https://github.com/GoogleCloudPlatform/cloud-builders/issues/236
-  - name: 'gcr.io/cloud-builders/git'
-    id: add_git_directory
+  - name: 'gcr.io/oak-ci/oak:latest'
+    id: git_init
     entrypoint: 'bash'
     waitFor: ['pull_image']
     timeout: 5m
-    args:
-    - '-c'
-    - |
-        git init
-        git add .
-  # Run next build steps inside the newly created Docker image.
-  # See: https://cloud.google.com/cloud-build/docs/create-custom-build-steps
+    args: ['./scripts/git_init']
   - name: 'gcr.io/oak-ci/oak:latest'
     id: check_formatting
     waitFor: ['build_image']
@@ -55,15 +51,15 @@ steps:
     entrypoint: 'bash'
     args: ['./scripts/run_examples']
   - name: 'gcr.io/oak-ci/oak:latest'
-    id: check_generated
-    waitFor: ['add_git_directory', 'run_tests', 'run_examples']
+    id: git_check_diff
+    waitFor: ['git_init', 'run_tests', 'run_examples']
     timeout: 5m
     entrypoint: 'bash'
-    args: ['./scripts/check_generated']
+    args: ['./scripts/git_check_diff']
   # Copy compiled enclave binary to workspace so that it can be uploaded as artifact.
   - name: 'gcr.io/oak-ci/oak:latest'
     id: copy_artifacts
-    waitFor: ['check_generated']
+    waitFor: ['build_server_asylo']
     timeout: 5m
     entrypoint: 'cp'
     args: ['./bazel-bin/oak/server/asylo/liboak_enclave_unsigned.so', './liboak_enclave_unsigned.so']
