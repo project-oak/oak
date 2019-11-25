@@ -138,6 +138,15 @@ functions** as
   - arg 1: Source buffer size in bytes
   - return 0: Channel handle, or zero if not found.
 
+- `node_create: (usize, usize, u64) -> u32`: Create a new Node running the Web
+  Assembly contents identified by args 0 and 1, and pass it an initial handle to
+  the read half of a channel identified by arg 2.
+
+  - arg 0: Source buffer holding Wasm contents name
+  - arg 1: Source buffer size in bytes
+  - arg 2: Handle to channel
+  - return 0: Status of operation
+
 - `random_get: (usize, usize) -> u32`: Fill a buffer with random bytes.
 
   - arg 0: Destination buffer

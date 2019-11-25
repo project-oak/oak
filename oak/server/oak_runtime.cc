@@ -22,6 +22,7 @@
 #include <thread>
 
 #include "absl/memory/memory.h"
+#include "absl/strings/str_cat.h"
 #include "asylo/util/logging.h"
 #include "oak/common/app_config.h"
 #include "oak/server/rust/oak_runtime.h"
@@ -34,6 +35,7 @@ grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
   if (!ValidApplicationConfig(config)) {
     return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid configuration");
   }
+  absl::MutexLock lock(&mu_);
 
   // Accumulate the name => module_bytes map.
   wasm_contents_.clear();
@@ -108,6 +110,39 @@ grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
   return grpc::Status::OK;
 }
 
+std::string OakRuntime::NextNodeName(const std::string& contents) {
+  absl::MutexLock lock(&mu_);
+  int index = next_index_[contents]++;
+  return absl::StrCat(contents, "-", index);
+}
+
+bool OakRuntime::CreateWasmNode(const std::string& contents, std::unique_ptr<ChannelHalf> half,
+                                std::string* node_name) {
+  if (wasm_contents_.count(contents) != 1) {
+    LOG(ERROR) << "failed to find Wasm bytecode Node contents with name " << contents;
+    return false;
+  }
+  std::string name = NextNodeName(contents);
+
+  LOG(INFO) << "Create Wasm node named {" << name << "}";
+
+  const std::string* module_bytes = wasm_contents_[contents].get();
+  std::unique_ptr<OakNode> node = WasmNode::Create(this, name, *module_bytes);
+  if (node == nullptr) {
+    LOG(ERROR) << "failed to create Wasm Node with contents of name " << contents;
+    return false;
+  }
+
+  Handle handle = node->AddChannel(std::move(half));
+
+  absl::MutexLock lock(&mu_);
+  LOG(INFO) << "Start Wasm node named {" << name << "}";
+  node->Start(handle);
+  nodes_[name] = std::move(node);
+  *node_name = name;
+  return true;
+}
+
 grpc::Status OakRuntime::Start() {
   // We call into the Rust runtime to verify that bindings between C++ and Rust are working
   // correctly.
@@ -118,6 +153,7 @@ grpc::Status OakRuntime::Start() {
   }
 
   LOG(INFO) << "Starting runtime";
+  absl::MutexLock lock(&mu_);
 
   // Now all dependencies are running, start the thread for all the Wasm Nodes.
   for (auto& named_node : nodes_) {
@@ -133,12 +169,23 @@ int32_t OakRuntime::GetPort() { return grpc_node_->GetPort(); }
 
 grpc::Status OakRuntime::Stop() {
   LOG(INFO) << "Stopping runtime...";
-  grpc_node_ = nullptr;
-  for (auto& named_node : nodes_) {
+
+  // Take local ownership of all the nodes owned by the runtime.
+  std::map<std::string, std::unique_ptr<OakNode>> nodes;
+  {
+    absl::MutexLock lock(&mu_);
+    grpc_node_ = nullptr;
+    nodes = std::move(nodes_);
+    nodes_.clear();
+  }
+
+  // Now stop all the nodes without holding the runtime lock, just
+  // in case any of the per-Node threads happens to try an operation
+  // (e.g. node_create) that needs the lock.
+  for (auto& named_node : nodes) {
     LOG(INFO) << "Stopping node " << named_node.first;
     named_node.second->Stop();
   }
-  nodes_.clear();
 
   return grpc::Status::OK;
 }

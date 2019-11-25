@@ -27,6 +27,7 @@
 #include "absl/types/span.h"
 #include "asylo/util/logging.h"
 #include "oak/proto/oak_api.pb.h"
+#include "oak/server/base_runtime.h"
 #include "oak/server/channel.h"
 #include "oak/server/wabt_output.h"
 #include "src/binary-reader.h"
@@ -243,6 +244,12 @@ void WasmNode::InitEnvironment(wabt::interp::Environment* env) {
       wabt::interp::FuncSignature(std::vector<wabt::Type>{wabtUsizeType, wabtUsizeType},
                                   std::vector<wabt::Type>{wabt::Type::I64}),
       this->OakChannelFind(env));
+  oak_module->AppendFuncExport(
+      "node_create",
+      wabt::interp::FuncSignature(
+          std::vector<wabt::Type>{wabtUsizeType, wabtUsizeType, wabt::Type::I64},
+          std::vector<wabt::Type>{wabt::Type::I32}),
+      this->OakNodeCreate(env));
   oak_module->AppendFuncExport(
       "random_get",
       wabt::interp::FuncSignature(std::vector<wabt::Type>{wabtUsizeType, wabtUsizeType},
@@ -523,6 +530,48 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelFind(wabt::interp::Environm
 
     Handle handle = FindChannel(port_name);
     results[0].set_i64(handle);  // zero if not found
+    return wabt::interp::Result::Ok;
+  };
+}
+
+wabt::interp::HostFunc::Callback WasmNode::OakNodeCreate(wabt::interp::Environment* env) {
+  return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
+                     const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
+    LogHostFunctionCall(name_, func, args);
+
+    uint64_t offset = args[0].get_i32();
+    uint32_t size = args[1].get_i32();
+    Handle channel_handle = args[2].get_i64();
+    if (!MemoryAvailable(env, offset, size)) {
+      LOG(WARNING) << "Node provided invalid memory offset+size";
+      results[0].set_i32(OakStatus::ERR_INVALID_ARGS);
+      return wabt::interp::Result::Ok;
+    }
+
+    // Check that the handle identifies the read half of a channel.
+    ChannelHalf* borrowed_half = BorrowChannel(channel_handle);
+    if (borrowed_half == nullptr) {
+      LOG(WARNING) << "{" << name_ << "} Invalid channel handle: " << channel_handle;
+      results[0].set_i32(OakStatus::ERR_BAD_HANDLE);
+      return wabt::interp::Result::Ok;
+    }
+    if (!absl::holds_alternative<std::unique_ptr<MessageChannelReadHalf>>(*borrowed_half)) {
+      LOG(WARNING) << "{" << name_ << "} Wrong direction channel handle: " << channel_handle;
+      results[0].set_i32(OakStatus::ERR_BAD_HANDLE);
+      return wabt::interp::Result::Ok;
+    }
+    std::unique_ptr<ChannelHalf> half = CloneChannelHalf(borrowed_half);
+
+    auto base = env->GetMemory(0)->data.begin() + offset;
+    std::string contents_name(base, base + size);
+
+    std::string node_name;
+    if (!runtime_->CreateWasmNode(contents_name, std::move(half), &node_name)) {
+      results[0].set_i32(OakStatus::ERR_INVALID_ARGS);
+    } else {
+      LOG(INFO) << "Created new node named {" << node_name << "}";
+      results[0].set_i32(OakStatus::OK);
+    }
     return wabt::interp::Result::Ok;
   };
 }

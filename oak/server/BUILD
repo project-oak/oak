@@ -147,6 +147,7 @@ cc_library(
         "//oak/server/rust:wrapper",
         "//oak/server/storage:storage_node",
         "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/strings",
         "@com_google_absl//absl/synchronization",
         "@com_google_asylo//asylo/util:logging",
     ],
@@ -155,6 +156,9 @@ cc_library(
 cc_library(
     name = "base_runtime",
     hdrs = ["base_runtime.h"],
+    deps = [
+        ":channel",
+    ],
 )
 
 cc_library(
