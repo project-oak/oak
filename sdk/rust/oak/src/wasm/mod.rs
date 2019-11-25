@@ -101,6 +101,15 @@ extern "C" {
     /// Returns the handle value if found, or a zero (invalid) handle if not.
     pub fn channel_find(buf: *const u8, len: usize) -> u64;
 
+    /// Create a new Node instance running code identified by contents name.
+    ///
+    /// The contents name is provided in the memory area given by `buf` and `len`.
+    ///
+    /// Returns the status of the operation, as an [`OakStatus`] value.
+    ///
+    /// [`OakStatus`]: crate::OakStatus
+    pub fn node_create(buf: *const u8, len: usize, handle: u64) -> u32;
+
     /// Fill a buffer with random data.
     ///
     /// Returns the status of the operation, as an [`OakStatus`] value.
