@@ -216,6 +216,17 @@ pub fn channel_find(port_name: &str) -> Handle {
     unsafe { wasm::channel_find(port_name.as_ptr(), port_name.len()) }
 }
 
+/// Create a new Node running the code identified by `contents_name`, passing
+/// it the given handle.
+pub fn node_create(contents_name: &str, half: ReadHandle) -> OakStatus {
+    match OakStatus::from_i32(unsafe {
+        wasm::node_create(contents_name.as_ptr(), contents_name.len(), half.handle) as i32
+    }) {
+        Some(s) => s,
+        None => OakStatus::OAK_STATUS_UNSPECIFIED,
+    }
+}
+
 /// Fill a buffer with random data.
 pub fn random_get(buf: &mut [u8]) -> OakStatus {
     match OakStatus::from_i32(unsafe { wasm::random_get(buf.as_mut_ptr(), buf.len()) as i32 }) {
