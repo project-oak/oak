@@ -175,13 +175,16 @@ static bool CheckModuleExports(wabt::interp::Environment* env, wabt::interp::Mod
       [env, module](const RequiredExport& req) { return CheckModuleExport(env, module, req); });
 }
 
-WasmNode::WasmNode(const std::string& name) : NodeThread(name), prng_engine_() {}
+WasmNode::WasmNode(BaseRuntime* runtime, const std::string& name)
+    : NodeThread(name), runtime_(runtime), prng_engine_() {}
 
-std::unique_ptr<WasmNode> WasmNode::Create(const std::string& name, const std::string& module) {
+std::unique_ptr<WasmNode> WasmNode::Create(BaseRuntime* runtime, const std::string& name,
+                                           const std::string& module) {
   LOG(INFO) << "Creating Wasm Node";
 
-  std::unique_ptr<WasmNode> node = absl::WrapUnique(new WasmNode(name));
+  std::unique_ptr<WasmNode> node = absl::WrapUnique(new WasmNode(runtime, name));
   node->InitEnvironment(&node->env_);
+  LOG(INFO) << "Runtime at: " << (void*)node->runtime_;
   LOG(INFO) << "Host func count: " << node->env_.GetFuncCount();
 
   wabt::Errors errors;
