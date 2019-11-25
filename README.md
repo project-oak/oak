@@ -1,6 +1,6 @@
 # Project Oak
 
-[![Build Status](https://travis-ci.org/project-oak/oak.svg?branch=master)](https://travis-ci.org/project-oak/oak)
+[![Build Status](https://img.shields.io/badge/build-status-blue)](https://pantheon.corp.google.com/cloud-build/dashboard?project=oak-ci)
 [![Fuzzing Status](https://oss-fuzz-build-logs.storage.googleapis.com/badges/oak.svg)](https://bugs.chromium.org/p/oss-fuzz/issues/list?sort=-opened&can=1&q=proj:oak)
 
 The goal of Project Oak is to create a specification and a reference
