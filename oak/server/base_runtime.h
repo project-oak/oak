@@ -17,6 +17,11 @@
 #ifndef OAK_SERVER_BASE_RUNTIME_H_
 #define OAK_SERVER_BASE_RUNTIME_H_
 
+#include <memory>
+#include <string>
+
+#include "oak/server/channel.h"
+
 namespace oak {
 
 // BaseRuntime is a abstract base class that describes Oak Runtime functionality
@@ -26,6 +31,8 @@ namespace oak {
 class BaseRuntime {
  public:
   virtual ~BaseRuntime() {}
+  virtual bool CreateWasmNode(const std::string& contents, std::unique_ptr<ChannelHalf> half,
+                              std::string* node_name) = 0;
 };  // class BaseRuntime
 
 }  // namespace oak
