@@ -29,7 +29,6 @@
 #include "oak/server/logging_node.h"
 #include "oak/server/oak_grpc_node.h"
 #include "oak/server/storage/storage_node.h"
-#include "oak/server/wasm_node.h"
 
 namespace oak {
 // OakRuntime contains the common runtime needed for an Oak System. The Runtime is responsible for
@@ -54,7 +53,10 @@ class OakRuntime : public BaseRuntime {
  private:
   OakRuntime& operator=(const OakRuntime& other) = delete;
 
-  // Collection of nodes indexed by node name.
+  // Collection of Wasm module bytes indexed by contents name.
+  std::map<std::string, std::unique_ptr<std::string>> wasm_contents_;
+
+  // Collection of running Nodes indexed by Node name.
   std::map<std::string, std::unique_ptr<OakNode>> nodes_;
   // Convenience (non-owning) reference to gRPC pseudo-node
   OakGrpcNode* grpc_node_;

@@ -25,6 +25,7 @@
 #include "asylo/util/logging.h"
 #include "oak/common/app_config.h"
 #include "oak/server/rust/oak_runtime.h"
+#include "oak/server/wasm_node.h"
 
 namespace oak {
 
@@ -35,9 +36,9 @@ grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
   }
 
   // Accumulate the name => module_bytes map.
-  std::map<std::string, const std::string*> wasm_contents;
+  wasm_contents_.clear();
   for (const auto& contents : config.wasm_contents()) {
-    wasm_contents[contents.name()] = &(contents.module_bytes());
+    wasm_contents_[contents.name()] = absl::make_unique<std::string>(contents.module_bytes());
   }
 
   // Create all of the nodes.  The validity check above will ensure there is at
@@ -49,7 +50,7 @@ grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
     if (node_config.has_web_assembly_node()) {
       const auto& wasm_node = node_config.web_assembly_node();
       LOG(INFO) << "Create Wasm node named {" << node_name << "}";
-      const std::string* module_bytes = wasm_contents[wasm_node.wasm_contents_name()];
+      const std::string* module_bytes = wasm_contents_[wasm_node.wasm_contents_name()].get();
       node = WasmNode::Create(this, node_config.node_name(), *module_bytes);
     } else if (node_config.has_grpc_server_node()) {
       LOG(INFO) << "Create gRPC pseudo-Node named {" << node_name << "}";
