@@ -50,7 +50,7 @@ grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
       const auto& wasm_node = node_config.web_assembly_node();
       LOG(INFO) << "Create Wasm node named {" << node_name << "}";
       const std::string* module_bytes = wasm_contents[wasm_node.wasm_contents_name()];
-      node = WasmNode::Create(node_config.node_name(), *module_bytes);
+      node = WasmNode::Create(this, node_config.node_name(), *module_bytes);
     } else if (node_config.has_grpc_server_node()) {
       LOG(INFO) << "Create gRPC pseudo-Node named {" << node_name << "}";
       std::unique_ptr<OakGrpcNode> grpc_node = OakGrpcNode::Create(node_name);

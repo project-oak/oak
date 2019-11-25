@@ -53,6 +53,7 @@ cc_library(
         "wasm_node.h",
     ],
     deps = [
+        ":base_runtime",
         ":channel",
         "//oak/common:handles",
         "//oak/proto:grpc_encap_cc_proto",
@@ -135,6 +136,7 @@ cc_library(
     srcs = ["oak_runtime.cc"],
     hdrs = ["oak_runtime.h"],
     deps = [
+        ":base_runtime",
         ":oak_grpc_node",
         ":wasm_node",
         "//oak/common:app_config",
@@ -147,6 +149,11 @@ cc_library(
         "@com_google_absl//absl/synchronization",
         "@com_google_asylo//asylo/util:logging",
     ],
+)
+
+cc_library(
+    name = "base_runtime",
+    hdrs = ["base_runtime.h"],
 )
 
 cc_library(

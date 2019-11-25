@@ -37,27 +37,30 @@ std::string DataFrom(const std::string& filename) {
 
 TEST(WasmNode, MalformedFailure) {
   // No magic.
-  ASSERT_EQ(nullptr, WasmNode::Create("test", ""));
+  ASSERT_EQ(nullptr, WasmNode::Create(nullptr, "test", ""));
   // Wrong magic.
-  ASSERT_EQ(nullptr, WasmNode::Create("test", std::string("\x00\x61\x73\x6b\x01\x00\x00\x00", 8)));
+  ASSERT_EQ(nullptr,
+            WasmNode::Create(nullptr, "test", std::string("\x00\x61\x73\x6b\x01\x00\x00\x00", 8)));
   // Wrong version.
-  ASSERT_EQ(nullptr, WasmNode::Create("test", std::string("\x00\x61\x73\x6d\x09\x00\x00\x00", 8)));
+  ASSERT_EQ(nullptr,
+            WasmNode::Create(nullptr, "test", std::string("\x00\x61\x73\x6d\x09\x00\x00\x00", 8)));
   // Right magic+version, no contents.
-  ASSERT_EQ(nullptr, WasmNode::Create("test", DataFrom("oak/server/testdata/empty.wasm")));
+  ASSERT_EQ(nullptr, WasmNode::Create(nullptr, "test", DataFrom("oak/server/testdata/empty.wasm")));
 }
 
 TEST(WasmNode, MinimalSuccess) {
   std::unique_ptr<WasmNode> node =
-      WasmNode::Create("test", DataFrom("oak/server/testdata/minimal.wasm"));
+      WasmNode::Create(nullptr, "test", DataFrom("oak/server/testdata/minimal.wasm"));
   EXPECT_NE(nullptr, node);
 }
 
 TEST(WasmNode, MissingExports) {
-  ASSERT_EQ(nullptr, WasmNode::Create("test", DataFrom("oak/server/testdata/missing.wasm")));
+  ASSERT_EQ(nullptr,
+            WasmNode::Create(nullptr, "test", DataFrom("oak/server/testdata/missing.wasm")));
 }
 
 TEST(WasmNode, WrongSignature) {
-  ASSERT_EQ(nullptr, WasmNode::Create("test", DataFrom("oak/server/testdata/wrong.wasm")));
+  ASSERT_EQ(nullptr, WasmNode::Create(nullptr, "test", DataFrom("oak/server/testdata/wrong.wasm")));
 }
 
 }  // namespace oak

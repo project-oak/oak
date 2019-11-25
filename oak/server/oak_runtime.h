@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef OAK_SERVER_RUNTIME_H_
-#define OAK_SERVER_RUNTIME_H_
+#ifndef OAK_SERVER_OAK_RUNTIME_H_
+#define OAK_SERVER_OAK_RUNTIME_H_
 
 #include <memory>
 #include <string>
@@ -25,6 +25,7 @@
 #include "include/grpcpp/server.h"
 #include "oak/proto/manager.pb.h"
 #include "oak/proto/oak_api.pb.h"
+#include "oak/server/base_runtime.h"
 #include "oak/server/logging_node.h"
 #include "oak/server/oak_grpc_node.h"
 #include "oak/server/storage/storage_node.h"
@@ -38,7 +39,7 @@ namespace oak {
 // It can run in its own enclave, but this is optional. See /asylo/ for how to use it with an
 // enclave
 
-class OakRuntime {
+class OakRuntime : public BaseRuntime {
  public:
   OakRuntime() : grpc_node_(nullptr) {}
   virtual ~OakRuntime() = default;
@@ -61,4 +62,4 @@ class OakRuntime {
 
 }  // namespace oak
 
-#endif  // OAK_SERVER_RUNTIME_H_
+#endif  // OAK_SERVER_OAK_RUNTIME_H_
