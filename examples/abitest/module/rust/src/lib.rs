@@ -128,6 +128,8 @@ impl OakABITestServiceNode for FrontendNode {
             "WaitOnChannelsOrphan",
             FrontendNode::test_channel_wait_orphan,
         );
+        tests.insert("NodeCreate", FrontendNode::test_node_create);
+        tests.insert("NodeCreateRaw", FrontendNode::test_node_create_raw);
         tests.insert("RandomGetRaw", FrontendNode::test_random_get_raw);
         tests.insert("RandomGet", FrontendNode::test_random_get);
         tests.insert("RandomRng", FrontendNode::test_random_rng);
@@ -782,6 +784,42 @@ impl FrontendNode {
         expect_eq!(OakStatus::OK, oak::channel_close(in1.handle));
         expect_eq!(OakStatus::OK, oak::channel_close(in2.handle));
         expect_eq!(OakStatus::OK, oak::channel_close(out2.handle));
+        Ok(())
+    }
+
+    fn test_node_create_raw(&self) -> std::io::Result<()> {
+        unsafe {
+            expect_eq!(
+                OakStatus::ERR_INVALID_ARGS.value() as u32,
+                oak::wasm::node_create(
+                    invalid_raw_offset() as *mut u8,
+                    1,
+                    self.backend_in[0].handle
+                )
+            );
+        }
+        Ok(())
+    }
+    fn test_node_create(&self) -> std::io::Result<()> {
+        expect_eq!(
+            OakStatus::ERR_INVALID_ARGS,
+            oak::node_create("no-such-contents", self.backend_in[0])
+        );
+        expect_eq!(
+            OakStatus::ERR_BAD_HANDLE,
+            oak::node_create(
+                "backend-code",
+                oak::ReadHandle {
+                    handle: oak::wasm::INVALID_HANDLE
+                }
+            )
+        );
+        let (out_handle, in_handle) = oak::channel_create().unwrap();
+        expect_eq!(OakStatus::OK, oak::node_create("backend-code", in_handle));
+        expect_eq!(OakStatus::OK, oak::node_create("backend-code", in_handle));
+
+        expect_eq!(OakStatus::OK, oak::channel_close(in_handle.handle));
+        expect_eq!(OakStatus::OK, oak::channel_close(out_handle.handle));
         Ok(())
     }
 
