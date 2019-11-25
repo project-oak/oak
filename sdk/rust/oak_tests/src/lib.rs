@@ -25,6 +25,7 @@ use proto::manager::Node_oneof_node_type;
 use protobuf::{Message, ProtobufEnum};
 use rand::Rng;
 use std::cell::RefCell;
+use std::collections::hash_map::RandomState;
 use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::convert::TryInto;
@@ -172,6 +173,10 @@ impl Drop for ChannelHalf {
 
 struct OakRuntime {
     termination_pending: bool,
+    // Map name of Wasm contents to a test entrypoint function pointer.
+    entrypoints: HashMap<String, NodeMain>,
+    // Map name of Wasm contents to next index.
+    next_index: HashMap<String, u32>,
     // Track a reference to the write half of the channel used for sending
     // gRPC requests in to the Application under test.
     grpc_in_half: Option<ChannelHalf>,
@@ -192,6 +197,13 @@ struct OakNode {
     thread_handle: Option<std::thread::JoinHandle<i32>>,
 }
 
+// Encapsulate the information needed to start a new per-Node thread.
+struct NodeStartInfo {
+    entrypoint: NodeMain,
+    node_name: String,
+    handle: oak::Handle,
+}
+
 impl OakRuntime {
     fn new() -> OakRuntime {
         let mut nodes = HashMap::new();
@@ -200,21 +212,36 @@ impl OakRuntime {
         nodes.insert(DEFAULT_NODE_NAME.to_string(), OakNode::new());
         OakRuntime {
             termination_pending: false,
+            entrypoints: HashMap::new(),
+            next_index: HashMap::new(),
             grpc_in_half: None,
             nodes,
         }
     }
+
+    fn entrypoint(&self, contents: &str) -> Option<NodeMain> {
+        self.entrypoints.get(contents).copied()
+    }
+
+    fn next_node_name(&mut self, contents: &str) -> String {
+        let index = self.next_index.entry(contents.to_string()).or_insert(0);
+        let name = format!("{}-{}", contents, *index);
+        *index += 1;
+        name
+    }
+
     // Build a runtime that has Node and Channels set up according to the given
     // Application configuration. Returns a vector of (node-name, entrypoint)
     // pairs indicating which Nodes need to be started, running which code.
-    fn configure<S: ::std::hash::BuildHasher>(
+    fn configure(
         &mut self,
         config: proto::manager::ApplicationConfiguration,
-        entrypoints: HashMap<String, NodeMain, S>,
+        entrypoints: HashMap<String, NodeMain>,
     ) -> Vec<(String, NodeMain)> {
         // TODO: validate the config
         let mut required_nodes = Vec::new();
         self.termination_pending = false;
+        self.entrypoints = entrypoints;
         self.nodes.clear();
         let mut grpc_node_name: Option<&str> = None;
         let mut log_node_name: Option<&str> = None;
@@ -228,8 +255,8 @@ impl OakRuntime {
                     node_cfg.node_name, wasm_cfg.wasm_contents_name
                 );
                 self.nodes.insert(node_cfg.node_name.to_string(), node);
-                let entrypoint = *entrypoints
-                    .get(&wasm_cfg.wasm_contents_name)
+                let entrypoint = self
+                    .entrypoint(&wasm_cfg.wasm_contents_name)
                     .unwrap_or_else(|| {
                         panic!("failed to find {} entrypoint", wasm_cfg.wasm_contents_name)
                     });
@@ -407,6 +434,57 @@ impl OakRuntime {
     fn grpc_channel(&self) -> Option<ChannelRef> {
         let half = self.grpc_in_half.as_ref()?;
         Some(half.channel.clone())
+    }
+    fn node_create(
+        &mut self,
+        node_name: String,
+        contents: &str,
+        handle: oak::Handle,
+    ) -> Result<NodeStartInfo, OakStatus> {
+        // First, find the code referred to by the contents name.
+        let entrypoint = match self.entrypoint(&contents) {
+            Some(e) => e,
+            None => {
+                debug!(
+                    "{{{}}}: node_create('{}', {}) -> ERR_INVALID_ARGS",
+                    node_name, contents, handle
+                );
+                return Err(OakStatus::ERR_INVALID_ARGS);
+            }
+        };
+
+        // Next, convert the creating Node's handle to a channel reference.
+        let half = match self.node_half_for_handle_dir(&node_name, handle, Direction::Read) {
+            Some(h) => h,
+            None => {
+                debug!(
+                    "{{{}}}: node_create('{}', {}) -> ERR_BAD_HANDLE",
+                    node_name, contents, handle
+                );
+                return Err(OakStatus::ERR_BAD_HANDLE);
+            }
+        };
+
+        // Create the new Node instance.
+        let new_node_name = self.next_node_name(&contents);
+        let mut node = OakNode::new();
+        node.contents_name = contents.to_string();
+        debug!(
+            "{{{}}}: add node running content '{}'",
+            new_node_name, contents
+        );
+        self.nodes.insert(new_node_name.to_string(), node);
+
+        // Map the channel into the new Node's handle space.
+        let new_handle = self.node_add_half(&new_node_name, half);
+
+        // Return enough information to allow the new Node to be started:
+        // entrypoint, name and initial handle value.
+        Ok(NodeStartInfo {
+            entrypoint,
+            node_name: new_node_name,
+            handle: new_handle,
+        })
     }
 }
 
@@ -677,6 +755,43 @@ pub unsafe extern "C" fn channel_find(buf: *const u8, size: usize) -> u64 {
     handle
 }
 
+/// Test framework implementation of dynamic Node creation.
+#[no_mangle]
+pub unsafe fn node_create(buf: *const u8, len: usize, handle: u64) -> u32 {
+    let name = node_name();
+    debug!("{{{}}}: node_create({:?}, {})", name, buf, len);
+    let mut data = Vec::with_capacity(len as usize);
+    std::ptr::copy_nonoverlapping(buf, data.as_mut_ptr(), len as usize);
+    data.set_len(len as usize);
+    let contents = String::from_utf8(data).unwrap();
+    debug!("{{{}}}: node_create('{}', {})", name, contents, handle);
+
+    let start_info = match RUNTIME
+        .write()
+        .unwrap()
+        .node_create(name, &contents, handle)
+    {
+        Err(status) => return status.value() as u32,
+        Ok(result) => result,
+    };
+
+    debug!(
+        "{{{}}}: start per-Node thread with handle {}",
+        start_info.node_name, start_info.handle
+    );
+    let node_name_copy = start_info.node_name.to_string();
+    let thread_handle = spawn(move || {
+        set_node_name(start_info.node_name);
+        (start_info.entrypoint)(start_info.handle)
+    });
+    RUNTIME
+        .write()
+        .unwrap()
+        .started(&node_name_copy, thread_handle);
+
+    OakStatus::OK.value() as u32
+}
+
 /// Test-only placeholder for random data generation.
 #[no_mangle]
 pub unsafe extern "C" fn random_get(buf: *mut u8, size: usize) -> u32 {
@@ -777,9 +892,9 @@ pub type NodeMain = fn(u64) -> i32;
 /// at start-of-day (e.g. based on a build configuration), or by calling
 /// oak_tests::init_logging() first, and ignoring the subsequent failure from
 /// oak_log::init().
-pub fn start<S: ::std::hash::BuildHasher>(
+pub fn start(
     config: proto::manager::ApplicationConfiguration,
-    entrypoints: HashMap<String, NodeMain, S>,
+    entrypoints: HashMap<String, NodeMain, RandomState>,
 ) {
     let required_nodes = RUNTIME.write().unwrap().configure(config, entrypoints);
     for (name, entrypoint) in required_nodes {
@@ -803,7 +918,8 @@ pub fn start_node(name: &str) {
     let node_name = name.to_string();
     let main_handle = spawn(|| unsafe {
         set_node_name(node_name);
-        oak_main(0)
+        // TODO: provide a valid handle.
+        oak_main(oak::wasm::INVALID_HANDLE)
     });
     RUNTIME.write().unwrap().started(name, main_handle)
 }
