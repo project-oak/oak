@@ -523,7 +523,8 @@ pub unsafe extern "C" fn wait_on_channels(buf: *mut u8, count: u32) -> u32 {
             return OakStatus::ERR_TERMINATED.value() as u32;
         }
         if found_ready_handle {
-            break;
+            debug!("{{{}}}: wait_on_channels() -> OK", name);
+            return OakStatus::OK.value() as u32;
         }
         if !found_valid_handle {
             debug!("{{{}}}: wait_on_channels() -> ERR_BAD_HANDLE", name);
@@ -532,9 +533,6 @@ pub unsafe extern "C" fn wait_on_channels(buf: *mut u8, count: u32) -> u32 {
         // We have at least one valid handle but no pending data, so wait and try again.
         std::thread::sleep(std::time::Duration::from_millis(100));
     }
-
-    debug!("{{{}}}: wait_on_channels() -> OK", name);
-    OakStatus::OK.value() as u32
 }
 
 /// Test-only implementation of channel write functionality.
@@ -811,6 +809,7 @@ pub fn start_node(name: &str) {
 
 /// Stop the running Application under test.
 pub fn stop() -> OakStatus {
+    info!("stop all running Node threads");
     set_termination_pending(true);
 
     let mut overall_result = OakStatus::OK;
@@ -826,7 +825,9 @@ pub fn stop() -> OakStatus {
             None => OakStatus::OAK_STATUS_UNSPECIFIED,
         };
         debug!("{{{}}}: thread result {}", name, result.value());
-        if overall_result == OakStatus::OK {
+        if overall_result == OakStatus::OK || result == OakStatus::ERR_TERMINATED {
+            // If any Node was terminated, treat the whole application as terminated.
+            // Otherwise, take the first non-OK result from a Node.
             overall_result = result;
         }
     }
