@@ -31,14 +31,11 @@ StorageNode::StorageNode(const std::string& name, const std::string& storage_add
     : NodeThread(name), storage_processor_(storage_address) {}
 
 void StorageNode::Run() {
-  // Borrow pointers to the relevant channel halves.
+  // Borrow a pointer to the relevant channel half.
   Handle request_handle = FindChannel(kStorageNodeRequestPortName);
-  Handle response_handle = FindChannel(kStorageNodeResponsePortName);
   MessageChannelReadHalf* request_channel = BorrowReadChannel(request_handle);
-  MessageChannelWriteHalf* response_channel = BorrowWriteChannel(response_handle);
-  if (request_channel == nullptr || response_channel == nullptr) {
-    LOG(ERROR) << "Required channel not available; handles: " << request_handle << ", "
-               << response_handle;
+  if (request_channel == nullptr) {
+    LOG(ERROR) << "Required channel not available; handle: " << request_handle;
   }
   std::vector<std::unique_ptr<ChannelStatus>> channel_status;
   channel_status.push_back(absl::make_unique<ChannelStatus>(request_handle));
@@ -54,8 +51,22 @@ void StorageNode::Run() {
       return;
     }
 
+    // Expect to receive a request (as serialized data) and the write half of a
+    // channel to send responses on.
+    if (result.msg->channels.size() == 0) {
+      LOG(ERROR) << "No response channel accompanying storage request";
+      return;
+    }
+    std::unique_ptr<ChannelHalf> half = std::move(result.msg->channels[0]);
+    auto channel = absl::get_if<std::unique_ptr<MessageChannelWriteHalf>>(half.get());
+    if (channel == nullptr) {
+      LOG(ERROR) << "Channel accompanying storage request is read-direction";
+      return;
+    }
+    std::unique_ptr<MessageChannelWriteHalf> response_channel = std::move(*channel);
     GrpcRequest channel_request;
     channel_request.ParseFromString(std::string(result.msg->data.data(), result.msg->data.size()));
+
     GrpcResponse channel_response;
     grpc::Status status;
     std::string method_name = channel_request.method_name();
@@ -131,6 +142,7 @@ void StorageNode::Run() {
                                   response_data.end());
     response_channel->Write(std::move(response_message));
   }
+  // Drop the response channel on exit.
 }
 
 }  // namespace oak

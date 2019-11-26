@@ -29,7 +29,6 @@ namespace oak {
 const char kGrpcNodeRequestPortName[] = "request";
 const char kLoggingNodePortName[] = "in";
 const char kStorageNodeRequestPortName[] = "request";
-const char kStorageNodeResponsePortName[] = "response";
 
 namespace {
 
@@ -42,7 +41,6 @@ constexpr char kStorageNodeName[] = "storage";
 // Conventional names for the ports that connect to pseudo-node instances (not
 // specified in the proto definition).
 constexpr char kGrpcInPortName[] = "grpc_in";
-constexpr char kStorageInPortName[] = "storage_in";
 constexpr char kStorageOutPortName[] = "storage_out";
 
 }  // namespace
@@ -122,16 +120,13 @@ bool AddStorageToConfig(ApplicationConfiguration* config, const std::string& nam
     storage_node->set_node_name(kStorageNodeName);  // Assume name not already used.
     storage_node->mutable_storage_node()->set_address(storage_address);
 
-    // Add ports for this Wasm node to talk to storage.
+    // Add a port for this Wasm node to talk to storage.
     WebAssemblyNode* wasm_node = node.mutable_web_assembly_node();
     Port* out_port = wasm_node->add_ports();
     out_port->set_name(kStorageOutPortName);  // Assume name not already used.
     out_port->set_type(Port_Type_OUT);
-    Port* in_port = wasm_node->add_ports();
-    in_port->set_name(kStorageInPortName);  // Assume name not already used.
-    in_port->set_type(Port_Type_IN);
 
-    // Add channels connecting these ports to the storage pseudo-Node.
+    // Add channel connecting this port to the storage pseudo-Node.
     Channel* out_channel = config->add_channels();
     Channel_Endpoint* out_src = out_channel->mutable_source_endpoint();
     out_src->set_node_name(node.node_name());
@@ -140,13 +135,6 @@ bool AddStorageToConfig(ApplicationConfiguration* config, const std::string& nam
     out_dest->set_node_name(storage_node->node_name());
     out_dest->set_port_name(kStorageNodeRequestPortName);
 
-    Channel* in_channel = config->add_channels();
-    Channel_Endpoint* in_src = in_channel->mutable_source_endpoint();
-    in_src->set_node_name(storage_node->node_name());
-    in_src->set_port_name(kStorageNodeResponsePortName);
-    Channel_Endpoint* in_dest = in_channel->mutable_destination_endpoint();
-    in_dest->set_node_name(node.node_name());
-    in_dest->set_port_name(in_port->name());
     return true;
   }
   LOG(ERROR) << "Failed to find Wasm node " << name;
@@ -215,7 +203,6 @@ bool ValidApplicationConfig(const ApplicationConfiguration& config) {
       log_count++;
     } else if (node.has_storage_node()) {
       in_ports[fqpn(node.node_name(), kStorageNodeRequestPortName)] = 0;
-      out_ports[fqpn(node.node_name(), kStorageNodeResponsePortName)] = 0;
     }
   }
 

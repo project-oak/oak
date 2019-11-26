@@ -158,11 +158,9 @@ are configured by the `oak::DefaultConfig()`
   by a handle for the write half of a channel which should be used for sending
   the associated gRPC response messages (as serialized `GrpcResponse` protocol
   buffer messages).
-- `storage_in` (receive): This channel will be populated with incoming storage
-  response messages, for processing by the Oak Node. Each message is a
-  serialized `StorageOperationResponse` protocol buffer message (see
-  [/oak/proto/storage.proto](oak/proto/storage.proto)).
 - `storage_out` (send): This channel can be used to send storage request
   messages. Each such message should be encoded as a serialized
   `StorageOperationRequest` protocol buffer message (see
-  [/oak/proto/storage.proto](oak/proto/storage.proto)).
+  [/oak/proto/storage.proto](oak/proto/storage.proto)), and should be
+  accompanied by a handle for the write half of a channel for the response to be
+  returned on.

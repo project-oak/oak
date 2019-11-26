@@ -17,10 +17,6 @@ nodes {
       name: "storage_out"
       type: OUT
     }
-    ports {
-      name: "storage_in"
-      type: IN
-    }
   }
 }
 nodes {
@@ -69,15 +65,5 @@ channels {
   destination_endpoint {
     node_name: "storage"
     port_name: "request"
-  }
-}
-channels {
-  source_endpoint {
-    node_name: "storage"
-    port_name: "response"
-  }
-  destination_endpoint {
-    node_name: "app"
-    port_name: "storage_in"
   }
 }
