@@ -45,6 +45,27 @@ cc_library(
         "@com_google_asylo//asylo/grpc/auth:null_credentials_options",
         "@com_google_asylo//asylo/identity:init",
         "@com_google_asylo//asylo/util:logging",
+        # Dependency is added for automated tests
+        # TODO: Merge application_client and secure_application_client
+        ":secure_application_client"
+    ],
+)
+
+cc_library(
+    name = "secure_application_client",
+    srcs = ["secure_application_client.cc"],
+    hdrs = ["secure_application_client.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":authorization_bearer_token_metadata",
+        ":policy_metadata",
+        "//oak/common:app_config",
+        "//oak/common:nonce_generator",
+        "//oak/proto:application_cc_grpc",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_asylo//asylo/grpc/auth:null_credentials_options",
+        "@com_google_asylo//asylo/identity:init",
+        "@com_google_asylo//asylo/util:logging",
     ],
 )
 
