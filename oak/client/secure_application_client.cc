@@ -20,15 +20,16 @@
 #include <string>
 #include <vector>
 
-#include "asylo/grpc/auth/enclave_channel_credentials.cc"
+#include "asylo/grpc/auth/enclave_channel_credentials.h"
+#include "asylo/grpc/auth/enclave_credentials_options.h"
 #include "asylo/grpc/auth/null_credentials_options.h"
-#include "asylo/identity/enclave_assertion_authority_config.pb.h"
+//#include "asylo/grpc/auth/sgx_remote_credentials_options.h"
+#include "asylo/identity/enclave_assertion_authority_configs.h"
 #include "asylo/identity/descriptions.h"
-#include "asylo/identity/identity.pb.h"
-#include "asylo/identity/identity_acl.pb.h"
 #include "asylo/identity/init.h"
 #include "asylo/identity/sgx/sgx_identity_util.h"
-#include "asylo/identity/util/sha256_hash_util.cc"
+#include "asylo/identity/util/sha256_hash_util.h"
+#include "asylo/util/logging.h"
 #include "oak/client/authorization_bearer_token_metadata.h"
 #include "oak/client/policy_metadata.h"
 #include "oak/common/nonce_generator.h"
@@ -154,11 +155,6 @@ SecureApplicationClient::CreateChannelCredentials(
   auto credentials_options = asylo::BidirectionalNullCredentialsOptions();
   // TODO: Use remote attestation when it will become available
   //auto credentials_options = 
-  //    asylo::SelfNullCredentialsOptions().Add(
-  //    asylo::PeerSgxRemoteCredentialsOptions());
-
-  //credentials_options.peer_acl = absl::optional<asylo::IdentityAclPredicate>(
-  //    this->CreateSgxIdentityAcl(mrenclave_strings));
   credentials_options.peer_acl = this->CreateSgxIdentityAcl(mrenclave_strings);
   return asylo::EnclaveChannelCredentials(credentials_opitons);
 }

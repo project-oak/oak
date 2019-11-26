@@ -21,9 +21,8 @@
 #include <string>
 #include <vector>
 
-#include "asylo/identity/enclave_assertion_authority_config.pb.h"
-#include "asylo/identity/identity.pb.h"
-#include "asylo/identity/identity_acl.pb.h"
+#include "asylo/grpc/auth/enclave_credentials_options.h"
+#include "asylo/identity/enclave_assertion_authority_configs.h"
 #include "include/grpcpp/grpcpp.h"
 
 namespace oak {
