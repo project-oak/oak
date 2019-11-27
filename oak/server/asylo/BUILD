@@ -93,6 +93,7 @@ sgx.debug_enclave(
     config = ":grpc_enclave_config",
 )
 
+# Pulls the MRENCLAVE value from an enclave signing material
 # TODO: Use genrule from asylo, when it will become available.
 genrule(
     name = "oak_mrenclave",
@@ -107,6 +108,15 @@ genrule(
     # 188 is an offset of the hash (instead of the original 960 from the SIGSTRUCT),
     # 32 is the size of the hash.
     cmd = "xxd -p -s 188 -l 32 -c 32 $< > $@",
+)
+
+# Generates an enclave dump that contains the MRSIGNER value
+genrule(
+    name = "oak_enclave_debug_metadata",
+    tools = ["@linux_sgx//:sgx_sign_tool"],
+    srcs = [":oak_enclave_debug.so"],
+    outs = ["oak_enclave_debug_metadata.txt"],
+    cmd = "$(location @linux_sgx//:sgx_sign_tool) dump -enclave $< -dumpfile $@", 
 )
 
 # Produces oak_enclave_sigstruct.dat file, which is used to generate the remote attestation of the
