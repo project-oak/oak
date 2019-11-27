@@ -23,23 +23,15 @@
 
 namespace oak {
 
-extern const char kGrpcNodeRequestPortName[];
-extern const char kLoggingNodePortName[];
-extern const char kStorageNodeRequestPortName[];
-extern const char kStorageNodeResponsePortName[];
-
 // Build a default application configuration with a single Wasm node of the given
 // name and contents, accessible via gRPC.
-std::unique_ptr<ApplicationConfiguration> DefaultConfig(const std::string& name,
-                                                        const std::string& module_bytes);
+std::unique_ptr<ApplicationConfiguration> DefaultConfig(const std::string& module_bytes);
 
-// Modify application configuration to wire up logging for all Wasm nodes.
+// Modify application configuration to make logging available.
 void AddLoggingToConfig(ApplicationConfiguration* config);
 
-// Modify application configuration to wire up storage for the given node.
-// Return value indicates whether given Wasm node was found.
-bool AddStorageToConfig(ApplicationConfiguration* config, const std::string& name,
-                        const std::string& storage_address);
+// Modify application configuration to make a storage proxy available.
+void AddStorageToConfig(ApplicationConfiguration* config, const std::string& storage_address);
 
 // Checks whether the given ApplicationConfiguration is valid.
 bool ValidApplicationConfig(const ApplicationConfiguration& config);
