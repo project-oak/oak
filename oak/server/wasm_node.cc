@@ -175,7 +175,8 @@ static bool CheckModuleExports(wabt::interp::Environment* env, wabt::interp::Mod
       [env, module](const RequiredExport& req) { return CheckModuleExport(env, module, req); });
 }
 
-WasmNode::WasmNode(const std::string& name) : NodeThread(name), env_(wabt::Features()), prng_engine_() {}
+WasmNode::WasmNode(const std::string& name)
+    : NodeThread(name), env_(wabt::Features()), prng_engine_() {}
 
 std::unique_ptr<WasmNode> WasmNode::Create(const std::string& name, const std::string& module) {
   LOG(INFO) << "Creating Wasm Node";
