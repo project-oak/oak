@@ -40,7 +40,7 @@ class SgxApplicationClient {
   void InitializeAssertionAuthorities();
 
   asylo::EnclaveIdentityExpectation CreateSgxIdentityExpectation(
-      std::string& mrenclave_string, std::string mrsigner_string="") const;
+      std::string& mrenclave_string) const;
   asylo::IdentityAclPredicate CreateSgxIdentityAcl(
       std::vector<std::string>& mrenclave_strings) const;
 
