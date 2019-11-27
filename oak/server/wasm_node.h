@@ -39,7 +39,7 @@ class WasmNode final : public NodeThread {
   // Return a (borrowed) pointer to the Web Assembly module for the Node.
   wabt::interp::Module* Module() { return env_.GetLastModule(); }
 
-  void Run() override;
+  void Run(Handle handle) override;
 
   // Native implementation of the `oak.channel_read` host function.
   wabt::interp::HostFunc::Callback OakChannelRead(wabt::interp::Environment* env);

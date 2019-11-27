@@ -48,5 +48,5 @@ fn test_panic_catch() {
     grpc_req.write_to_writer(&mut req_data).unwrap();
     oak::channel_write(write_handle, &req_data, &[write_handle.handle]);
 
-    assert_eq!(oak::OakStatus::ERR_INTERNAL.value(), oak_main());
+    assert_eq!(oak::OakStatus::ERR_INTERNAL.value(), oak_main(0));
 }

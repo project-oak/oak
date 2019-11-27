@@ -21,7 +21,7 @@ use protobuf::ProtobufEnum;
 mod tests;
 
 #[no_mangle]
-pub extern "C" fn oak_main() -> i32 {
+pub extern "C" fn oak_main(_handle: u64) -> i32 {
     error!("Dummy oak_main invoked");
     oak::OakStatus::ERR_TERMINATED.value()
 }

@@ -33,7 +33,7 @@ class OakGrpcNode final : public Application::Service, public OakNode {
   static std::unique_ptr<OakGrpcNode> Create(const std::string& name);
   virtual ~OakGrpcNode(){};
 
-  void Start() override;
+  void Start(Handle handle) override;
   void Stop() override;
 
   int GetPort() { return port_; };

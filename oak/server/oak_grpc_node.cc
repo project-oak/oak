@@ -54,7 +54,7 @@ std::unique_ptr<OakGrpcNode> OakGrpcNode::Create(const std::string& name) {
   return node;
 }
 
-void OakGrpcNode::Start() {
+void OakGrpcNode::Start(Handle handle) {
   // Start a new thread to process the gRPC completion queue.
   queue_thread_ = std::thread(&OakGrpcNode::CompletionQueueLoop, this);
 }

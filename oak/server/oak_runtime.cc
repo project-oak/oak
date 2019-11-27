@@ -120,8 +120,9 @@ grpc::Status OakRuntime::Start() {
 
   // Now all dependencies are running, start the thread for all the Wasm Nodes.
   for (auto& named_node : nodes_) {
-    LOG(INFO) << "Starting node " << named_node.first;
-    named_node.second->Start();
+    Handle handle = 0;
+    LOG(INFO) << "Starting node " << named_node.first << " with handle " << handle;
+    named_node.second->Start(handle);
   }
 
   return grpc::Status::OK;

@@ -22,9 +22,9 @@
 
 namespace oak {
 
-void LoggingNode::Run() {
+void LoggingNode::Run(Handle handle) {
   // Borrow pointer to the channel half.
-  Handle handle = FindChannel(kLoggingNodePortName);
+  handle = FindChannel(kLoggingNodePortName);
   MessageChannelReadHalf* channel = BorrowReadChannel(handle);
   if (channel == nullptr) {
     LOG(ERROR) << "{" << name_ << "} No channel available!";

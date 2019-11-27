@@ -30,7 +30,7 @@ namespace oak {
 StorageNode::StorageNode(const std::string& name, const std::string& storage_address)
     : NodeThread(name), storage_processor_(storage_address) {}
 
-void StorageNode::Run() {
+void StorageNode::Run(Handle handle) {
   // Borrow a pointer to the relevant channel half.
   Handle request_handle = FindChannel(kStorageNodeRequestPortName);
   MessageChannelReadHalf* request_channel = BorrowReadChannel(request_handle);

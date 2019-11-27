@@ -32,7 +32,7 @@ class LoggingNode final : public NodeThread {
   explicit LoggingNode(const std::string& name) : NodeThread(name) {}
 
  private:
-  void Run() override;
+  void Run(Handle handle) override;
 };
 
 }  // namespace oak

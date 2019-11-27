@@ -49,7 +49,7 @@ uint32_t channel_write(uint64_t handle, uint8_t* buff, size_t usize, uint8_t* ha
 WASM_IMPORT("oak") uint64_t channel_find(uint8_t* buff, size_t usize);
 WASM_IMPORT("oak") uint32_t channel_close(uint64_t handle);
 
-WASM_EXPORT int32_t oak_main() {
+WASM_EXPORT int32_t oak_main(uint64_t handle) {
   char grpc_in_name[] = "grpc_in";
   char grpc_out_name[] = "grpc_out";
   uint8_t handle_space[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};

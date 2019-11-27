@@ -30,7 +30,7 @@ class StorageNode final : public NodeThread {
   StorageNode(const std::string& name, const std::string& storage_address);
 
  private:
-  void Run() override;
+  void Run(Handle handle) override;
 
   StorageProcessor storage_processor_;
 };
