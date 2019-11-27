@@ -28,7 +28,7 @@
 #include "asylo/identity/descriptions.h"
 #include "asylo/identity/init.h"
 #include "asylo/identity/sgx/sgx_identity_util.h"
-#include "asylo/identity/util/sha256_hash_util.h"
+#include "asylo/identity/util/sha256_hash.pb.h"
 #include "asylo/util/logging.h"
 #include "oak/client/authorization_bearer_token_metadata.h"
 #include "oak/client/policy_metadata.h"
@@ -36,6 +36,20 @@
 #include "oak/common/policy.h"
 
 constexpr size_t kPerChannelNonceSizeBytes = 32;
+
+// TODO: Use same function from asylo, when it will become public
+bool Sha256HashFromHexString(const std::string& hex, asylo::Sha256HashProto* h) {
+  if (hex.size() != 64) {
+    return false;
+  }
+  for (auto ch : hex) {
+    if (std::isxdigit(ch) == 0) {
+      return false;
+    }
+  }
+  h->set_hash(absl::HexStringToBytes(hex).c_str(), hex.size() / 2);
+  return true;
+}
 
 namespace oak {
 
@@ -83,19 +97,19 @@ void SecureApplicationClient::InitializeAssertionAuthorities() {
 // TODO: Add CPUSVN as a parameter.
 asylo::EnclaveIdentityExpectation
 SecureApplicationClient::CreateSgxIdentityExpectation(
-    std::string& mrenclave_string, std::string mrsigner_string="") {
+    std::string& mrenclave_string, std::string mrsigner_string) const {
   asylo::SgxIdentity sgx_identity;
   asylo::SgxIdentityMatchSpec match_spec;
 
   // Assign code identity.
   auto code_identity = sgx_identity.mutable_code_identity();
-  if (!asylo::Sha256HashFromHexString(mrenclave_string, code_identity->mutable_mrenclave())) {
+  if (!Sha256HashFromHexString(mrenclave_string, code_identity->mutable_mrenclave())) {
     LOG(QFATAL) << "Bad MRENCLAVE";
   }
 
   if (!mrsigner_string.empty()) {
     auto signer_assigned_identity = code_identity->mutable_signer_assigned_identity();
-    if (!asylo::Sha256HashFromHexString(
+    if (!Sha256HashFromHexString(
              mrsigner_string, signer_assigned_identity->mutable_mrsigner())) {
       LOG(QFATAL) << "Bad MRSIGNER";
     }
@@ -103,41 +117,26 @@ SecureApplicationClient::CreateSgxIdentityExpectation(
     signer_assigned_identity->set_isvprodid(0);
     signer_assigned_identity->set_isvsvn(0);
   }
-  // Currently asylo only supports EXINFO:
-  // https://github.com/google/asylo/blob/088ea3490dd4579655bd5b65b0e31fe18de7f6dd/asylo/identity/sgx/secs_miscselect.h#L37-L41
-  code_identity->set_miscselect(asylo::sgx::kMiscselectExinfoMask);
-  if (!asylo::sgx::GetMustBeSetSecsAttributes(
-           code_identity->mutable_attributes())) {
-    LOG(QFATAL) << "Could not set attributes";
-  }
+  // TODO: Use asylo misc attributes util when they will become available.
+  code_identity->set_miscselect(0);
+  // TODO: Set code_identity->mutable_attributes() when they will become public
 
   // Assign machine configuration.
   auto machine_configuration = sgx_identity.mutable_machine_configuration();
   machine_configuration->mutable_cpu_svn()->set_value("0000000000000000");
-  // Currently asylo only supports SGX_TYPE_UNKNOWN and STANDARD:
-  // https://github.com/google/asylo/blob/e8bff4742f0a3314ba553897ba00bb6042835ba3/asylo/identity/sgx/machine_configuration.proto#L32-L38
   machine_configuration->set_sgx_type(asylo::sgx::SgxType::STANDARD);
 
-  // Assign code identity check mask
-  auto code_identity_match_spec = match_spec.mutable_code_identity_match_spec();
-  code_identity_match_spec->set_is_mrenclave_match_required(true);
-  code_identity_match_spec->set_is_mrsigner_match_required(false);
-  code_identity_match_spec->set_miscselect_match_mask(asylo::sgx::kMiscselectExinfoMask);
-  auto status = asylo::sgx::SetDefaultSecsAttributesMask(
-      code_identity_match_spec->mutable_attributes_match_mask()).ValueOrDie();
-
-  // Assign machine configuration check mask.
-  auto machine_config_match_spec = match_spec.mutable_machine_configuration_match_spec();
-  machine_config_match_spec->set_is_cpu_svn_match_required(false);
-  machine_config_match_spec->set_is_sgx_type_match_required(false);
-
+  // TODO: Find default MRSIGNER value that appeared in sgx_tool
+  // TODO: Rename this to SgxApplicationClient
   auto sgx_expectation =
-      asylo::CreateSgxIdentityExpectation(sgx_identity, match_spec).ValueOrDie();
+      asylo::CreateSgxIdentityExpectation(
+        sgx_identity, asylo::SgxIdentityMatchSpecOptions::STRICT_REMOTE).ValueOrDie();
   return asylo::SerializeSgxIdentityExpectation(sgx_expectation).ValueOrDie();
 }
 
 asylo::IdentityAclPredicate
-SecureApplicationClient::CreateSgxIdentityAcl(std::vector<std::string>& mrenclave_strings) {
+SecureApplicationClient::CreateSgxIdentityAcl(
+    std::vector<std::string>& mrenclave_strings) const {
   asylo::IdentityAclPredicate acl;
   auto acl_predicates = acl.mutable_acl_group();
   acl_predicates->set_type(asylo::IdentityAclGroup::OR);
@@ -152,11 +151,10 @@ SecureApplicationClient::CreateSgxIdentityAcl(std::vector<std::string>& mrenclav
 std::shared_ptr<grpc::ChannelCredentials>
 SecureApplicationClient::CreateChannelCredentials(
     std::vector<std::string>& mrenclave_strings) const {
-  auto credentials_options = asylo::BidirectionalNullCredentialsOptions();
   // TODO: Use remote attestation when it will become available
-  //auto credentials_options = 
+  auto credentials_options = asylo::BidirectionalNullCredentialsOptions();
   credentials_options.peer_acl = this->CreateSgxIdentityAcl(mrenclave_strings);
-  return asylo::EnclaveChannelCredentials(credentials_opitons);
+  return asylo::EnclaveChannelCredentials(credentials_options);
 }
 
 std::shared_ptr<grpc::CallCredentials>

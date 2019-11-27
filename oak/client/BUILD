@@ -64,7 +64,6 @@ cc_library(
         "//oak/proto:application_cc_grpc",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_asylo//asylo/grpc/auth:grpc++_security_enclave",
-        "@com_google_asylo//asylo/grpc/auth:enclave_credentials_options",
         "@com_google_asylo//asylo/grpc/auth:null_credentials_options",
         # TODO: Uncomment when asylo will release remote attestation
         #"@com_google_asylo//asylo/grpc/auth:sgx_remote_credentials_options",
@@ -72,7 +71,7 @@ cc_library(
         "@com_google_asylo//asylo/identity:descriptions",
         "@com_google_asylo//asylo/identity:init",
         "@com_google_asylo//asylo/identity/sgx:sgx_identity_util",
-        "@com_google_asylo//asylo/identity/util:sha256_hash_util",
+        "@com_google_asylo//asylo/identity/util:sha256_hash_cc_proto",
         "@com_google_asylo//asylo/util:logging",
     ],
 )

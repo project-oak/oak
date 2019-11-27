@@ -40,9 +40,9 @@ class SecureApplicationClient {
   void InitializeAssertionAuthorities();
 
   asylo::EnclaveIdentityExpectation CreateSgxIdentityExpectation(
-      std::string& mrenclave_string, std::string mrsigner_string="");
+      std::string& mrenclave_string, std::string mrsigner_string="") const;
   asylo::IdentityAclPredicate CreateSgxIdentityAcl(
-      std::vector<std::string>& mrenclave_strings);
+      std::vector<std::string>& mrenclave_strings) const;
 
   std::shared_ptr<grpc::ChannelCredentials> CreateChannelCredentials(
       std::vector<std::string>& mrenclave_strings) const;
