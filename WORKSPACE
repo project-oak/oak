@@ -92,16 +92,16 @@ http_archive(
 
 http_archive(
     name = "wabt",
-    urls = ["https://github.com/WebAssembly/wabt/archive/b807819d5501ee7ba22a178d3acfb8fa6d6bcde7.tar.gz"],
-    strip_prefix = "wabt-b807819d5501ee7ba22a178d3acfb8fa6d6bcde7",
-    sha256 = "22e0ca43a2e6c0a7ee49427109854e1ff70936c8ab95a83f4db12f4675ba77fb",
     build_file = "@//third_party/wabt:wabt.BUILD",
     patches = [
-      "@//third_party/wabt:0004-Downgrade-nearbyint-and-trunc-to-their-C-counterpart.patch",
-      "@//third_party/wabt:0005-Include-opcode-code-table.c.patch",
-      "@//third_party/wabt:0008-Use-std-stringstream-to-build-unique-name.patch",
-      "@//third_party/wabt:0009-new-config.h.patch",
-    ]
+        "@//third_party/wabt:0004-Downgrade-nearbyint-and-trunc-to-their-C-counterpart.patch",
+        "@//third_party/wabt:0005-Include-opcode-code-table.c.patch",
+        "@//third_party/wabt:0008-Use-std-stringstream-to-build-unique-name.patch",
+        "@//third_party/wabt:0009-new-config.h.patch",
+    ],
+    sha256 = "22e0ca43a2e6c0a7ee49427109854e1ff70936c8ab95a83f4db12f4675ba77fb",
+    strip_prefix = "wabt-b807819d5501ee7ba22a178d3acfb8fa6d6bcde7",
+    urls = ["https://github.com/WebAssembly/wabt/archive/b807819d5501ee7ba22a178d3acfb8fa6d6bcde7.tar.gz"],
 )
 
 http_archive(
