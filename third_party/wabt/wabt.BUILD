@@ -14,6 +14,8 @@ cc_library(
         exclude = [
             "src/test-*",
             "src/wast-lexer.cc",
+            "src/wast-parser.cc",
+            "src/emscripten-helpers.cc",
 
             "src/prebuilt/lexer-keywords.cc",
         ],
