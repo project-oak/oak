@@ -13,10 +13,6 @@ cc_library(
         ],
         exclude = [
             "src/test-*",
-            "src/wast-lexer.cc",
-            "src/wast-parser.cc",
-            "src/emscripten-helpers.cc",
-
             "src/prebuilt/lexer-keywords.cc",
         ],
     ),
@@ -26,6 +22,7 @@ cc_library(
         "src/*.inl",
         "src/interp/*.h",
         "src/prebuilt/*.h",
+        "src/prebuilt/lexer-keywords.cc",
     ]),
     textual_hdrs = [
         "src/opcode.def",

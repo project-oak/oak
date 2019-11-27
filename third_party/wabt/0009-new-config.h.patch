@@ -1,5 +1,5 @@
 --- /dev/null	2019-11-27 14:06:02.000000000 +0000
-+++ src/config.h	2019-11-27 14:03:08.000000000 +0000
++++ config.h	2019-11-27 14:03:08.000000000 +0000
 @@ -0,0 +1,301 @@
 +/*
 + * Copyright 2016 WebAssembly Community Group participants
