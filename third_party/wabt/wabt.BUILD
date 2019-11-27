@@ -14,11 +14,14 @@ cc_library(
         exclude = [
             "src/test-*",
             "src/wast-lexer.cc",
+
+            "src/prebuilt/lexer-keywords.cc",
         ],
     ),
     hdrs = glob([
         "config.h",
         "src/*.h",
+        "src/*.inl",
         "src/interp/*.h",
         "src/prebuilt/*.h",
     ]),
