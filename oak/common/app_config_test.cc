@@ -42,7 +42,7 @@ std::unique_ptr<ApplicationConfiguration> ConfigFrom(const std::string& filename
 }  // namespace
 
 TEST(ApplicationConfiguration, Default) {
-  std::unique_ptr<ApplicationConfiguration> got = DefaultConfig("app", "<bytes>");
+  std::unique_ptr<ApplicationConfiguration> got = DefaultConfig("<bytes>");
   std::unique_ptr<ApplicationConfiguration> want =
       ConfigFrom("oak/common/testdata/barenode.textproto");
   ASSERT_EQ(want->DebugString(), got->DebugString());
@@ -50,7 +50,7 @@ TEST(ApplicationConfiguration, Default) {
 }
 
 TEST(ApplicationConfiguration, DefaultPlusLogging) {
-  std::unique_ptr<ApplicationConfiguration> got = DefaultConfig("app", "<bytes>");
+  std::unique_ptr<ApplicationConfiguration> got = DefaultConfig("<bytes>");
   AddLoggingToConfig(got.get());
   std::unique_ptr<ApplicationConfiguration> want =
       ConfigFrom("oak/common/testdata/lognode.textproto");
@@ -59,19 +59,10 @@ TEST(ApplicationConfiguration, DefaultPlusLogging) {
 }
 
 TEST(ApplicationConfiguration, DefaultPlusStorage) {
-  std::unique_ptr<ApplicationConfiguration> got = DefaultConfig("app", "<bytes>");
-  EXPECT_EQ(true, AddStorageToConfig(got.get(), "app", "localhost:8888"));
+  std::unique_ptr<ApplicationConfiguration> got = DefaultConfig("<bytes>");
+  AddStorageToConfig(got.get(), "localhost:8888");
   std::unique_ptr<ApplicationConfiguration> want =
       ConfigFrom("oak/common/testdata/storagenode.textproto");
-  ASSERT_EQ(want->DebugString(), got->DebugString());
-  ASSERT_EQ(true, ValidApplicationConfig(*got));
-}
-
-TEST(ApplicationConfiguration, AddStorageToConfigFailure) {
-  std::unique_ptr<ApplicationConfiguration> got = DefaultConfig("app", "<bytes>");
-  EXPECT_EQ(false, AddStorageToConfig(got.get(), "some-other-app", "localhost:8888"));
-  std::unique_ptr<ApplicationConfiguration> want =
-      ConfigFrom("oak/common/testdata/barenode.textproto");
   ASSERT_EQ(want->DebugString(), got->DebugString());
   ASSERT_EQ(true, ValidApplicationConfig(*got));
 }
@@ -81,73 +72,24 @@ TEST(ApplicationConfiguration, Valid) {
   ASSERT_EQ(true, ValidApplicationConfig(*config));
 }
 
-TEST(ApplicationConfiguration, ValidMultinode) {
-  auto config = ConfigFrom("oak/common/testdata/multinode.textproto");
-  ASSERT_EQ(true, ValidApplicationConfig(*config));
-}
-
-TEST(ApplicationConfiguration, DuplicateNodeName) {
-  auto config = ConfigFrom("oak/common/testdata/dup_node_name.textproto");
-  ASSERT_EQ(false, ValidApplicationConfig(*config));
-}
-
-TEST(ApplicationConfiguration, DuplicatePortName) {
-  auto config = ConfigFrom("oak/common/testdata/dup_port.textproto");
-  ASSERT_EQ(false, ValidApplicationConfig(*config));
-}
-
-TEST(ApplicationConfiguration, MultipleGRPCNodes) {
-  auto config = ConfigFrom("oak/common/testdata/two_grpc.textproto");
+TEST(ApplicationConfiguration, DuplicateConfigName) {
+  auto config = ConfigFrom("oak/common/testdata/dup_config_name.textproto");
   ASSERT_EQ(false, ValidApplicationConfig(*config));
 }
 
 TEST(ApplicationConfiguration, MultipleLogNodes) {
+  // Two log configs are OK.
   auto config = ConfigFrom("oak/common/testdata/two_log.textproto");
-  ASSERT_EQ(false, ValidApplicationConfig(*config));
+  ASSERT_EQ(true, ValidApplicationConfig(*config));
 }
 
-TEST(ApplicationConfiguration, NoWasmNode) {
-  auto config = ConfigFrom("oak/common/testdata/no_wasm.textproto");
-  ASSERT_EQ(false, ValidApplicationConfig(*config));
-}
-
-TEST(ApplicationConfiguration, NoWasmCode) {
+TEST(ApplicationConfiguration, NonWasmCode) {
   auto config = ConfigFrom("oak/common/testdata/missing_wasm.textproto");
   ASSERT_EQ(false, ValidApplicationConfig(*config));
 }
 
 TEST(ApplicationConfiguration, DuplicateWasmName) {
   auto config = ConfigFrom("oak/common/testdata/dup_wasm.textproto");
-  ASSERT_EQ(false, ValidApplicationConfig(*config));
-}
-
-TEST(ApplicationConfiguration, NoChannelSource) {
-  auto config = ConfigFrom("oak/common/testdata/channel_source_missing.textproto");
-  ASSERT_EQ(false, ValidApplicationConfig(*config));
-}
-
-TEST(ApplicationConfiguration, NoChannelDest) {
-  auto config = ConfigFrom("oak/common/testdata/channel_dest_missing.textproto");
-  ASSERT_EQ(false, ValidApplicationConfig(*config));
-}
-
-TEST(ApplicationConfiguration, InputPortNoChannel) {
-  auto config = ConfigFrom("oak/common/testdata/in_port_empty.textproto");
-  ASSERT_EQ(false, ValidApplicationConfig(*config));
-}
-
-TEST(ApplicationConfiguration, OutputPortNoChannel) {
-  auto config = ConfigFrom("oak/common/testdata/out_port_empty.textproto");
-  ASSERT_EQ(false, ValidApplicationConfig(*config));
-}
-
-TEST(ApplicationConfiguration, OutputPortMultipleChannel) {
-  auto config = ConfigFrom("oak/common/testdata/out_port_multi.textproto");
-  ASSERT_EQ(false, ValidApplicationConfig(*config));
-}
-
-TEST(ApplicationConfiguration, ChannelInverted) {
-  auto config = ConfigFrom("oak/common/testdata/channel_inverted.textproto");
   ASSERT_EQ(false, ValidApplicationConfig(*config));
 }
 

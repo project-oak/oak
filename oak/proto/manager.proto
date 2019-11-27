@@ -20,126 +20,51 @@ package oak;
 
 // An ApplicationConfiguration represents a unit of deployment in Oak.
 //
-// It defines a connectivity graph using unidirectional Channels between Nodes.
-//
-// The following constraints apply to the Application configuration:
-// - at most one GrpcServerNode
-// - at most one LogNode
+// An Oak Application is built from a collection of interconnected Nodes,
+// each of which is running the code described by an entry in this
+// configuration.  These Nodes are created dynamically at runtime, with
+// the exception of the specified initial Node (which is created by the
+// Oak runtime).
 message ApplicationConfiguration {
-  repeated Node nodes = 1;
-  repeated Channel channels = 2;
-  repeated WasmContents wasm_contents = 3;
+  // Collection of available Node configurations, indexed by name (which must be
+  // unique across the collection).  Each Node in the application will run under
+  // a configuration that is identified by an entry in this collection.
+  repeated NodeConfiguration node_configs = 1;
+  // Indication of what configuration the initial Node should run.  Must identify a
+  // NodeConfiguration entry that holds a WebAssemblyConfiguration object.
+  string initial_node = 2;
 }
 
-// A Node represents a unit of computation in Oak.
-message Node {
-  // The name of the Node. Must be unique within the Application.
-  string node_name = 1;
-
-  oneof node_type {
-    LogNode log_node = 2;
-    GrpcServerNode grpc_server_node = 3;
-    WebAssemblyNode web_assembly_node = 4;
-    StorageProxyNode storage_node = 5;
+// NodeConfiguration indicates the configuration of a created Node.
+message NodeConfiguration {
+  string name = 1;
+  oneof config_type {
+    WebAssemblyConfiguration wasm_config = 2;
+    LogConfiguration log_config = 3;
+    StorageProxyConfiguration storage_config = 4;
   }
 }
 
-// A pseudo-Node that corresponds to an external-facing gRPC server interface
-// exposed by the Application. External clients can connect to the server and
-// interact with the Application over gRPC.
-//
-// An Application that exposes an external gRPC server interface should
-// therefore include a single GrpcServerNode, and should configure a channel
-// from that node to the WebAssemblyNode that handles the gRPC requests.
-//
-// This Node defines the following implicit Ports:
-// - `request`: OUT port on which incoming requests are sent to a WebAssembly
-//   processing Node
-message GrpcServerNode {
-}
-
-// A pseudo-Node that logs anything that is sent to it on the machine on which
-// the Application is running.
-//
-// This Node is unsafe and only to be used for testing, since it leaks all the
-// data that it handles.
-//
-// This Node defines the following implicit Ports:
-// - `in`: IN port on which other Nodes send entries to log
-message LogNode {
-}
-
-// A Node that runs the provided WebAssembly code.
-message WebAssemblyNode {
-  // Name of a WasmContents object in the Application configuration that
-  // holds the Wasm code for this Node.
-  string wasm_contents_name = 1;
-
-  // The set of Ports available to the Node, which it can use to communicate
-  // with other Nodes or with the System.
-  // They may be of different types and specified in any order.
-  repeated Port ports = 2;
-}
-
-// A mapping from an arbitrary name to a corresponding Wasm binary.
-//
-// The name field must be unique in an Application definition.
-message WasmContents {
-  string name = 1;
-
-  // The compiled code of the Oak Module to instantiate, in WebAssembly binary
-  // format.
+// WebAssemblyConfiguration describes the configuration of a Web Assembly based Node.
+message WebAssemblyConfiguration {
+  // The compiled code of the Oak Node, in WebAssembly binary format.
   // See https://webassembly.org/docs/binary-encoding/ .
   // TODO: Replace this with just a hash of the bytecode to instantiate, and
   // pass the actual bytecode to the Oak Manager in some other way.
-  bytes module_bytes = 2;
+  bytes module_bytes = 1;
 }
 
-// A pseudo-Node that accepts storage requests and forwards them to an
-// external storage provider.
-//
-// This Node defines the following implicit Ports:
-// - `request`: IN port on which outgoing storage requests are received,
-//    each accompanied by a handle for a write half of a channel for responses
-//    to be delivered on.
-message StorageProxyNode {
+// LogConfiguration describes the configuration of a logging pseudo-Node (which
+// is provided by the Oak Runtime).
+message LogConfiguration {
+}
+
+// StorageProxyConfiguration describes the configuration of a storage proxy
+// pseudo-Node (which is provided by the Oak Runtime), connected to a specific
+// storage provider.
+message StorageProxyConfiguration {
   // The address of the external storage provider.
   string address = 1;
-}
-
-// A Port represents an endpoint within a Node that can be connected via a
-// Channel to the Port of another Node.
-//
-// Ports are of two types: IN or OUT, based on whether they are used to read or
-// write to the connected Channel, respectively.
-message Port {
-  string name = 1;
-
-  enum Type {
-    TYPE_UNSPECIFIED = 0;
-    IN = 1;
-    OUT = 2;
-  };
-  Type type = 2;
-}
-
-// A Channel represents a unidirectional communication primitive between Nodes.
-//
-// Each Channel connects the OUT Port of a Node to the IN Port of another
-// (potentially the same) Node.
-message Channel {
-  // A unique identifier for a Port on a Node. This does not specify the type
-  // of the Port.
-  message Endpoint {
-    string node_name = 1;
-    string port_name = 2;
-  }
-
-  // The OUT Port of the source Node.
-  Endpoint source_endpoint = 1;
-
-  // The IN Port of the destination Node.
-  Endpoint destination_endpoint = 2;
 }
 
 message CreateApplicationRequest {
