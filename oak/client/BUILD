@@ -46,15 +46,15 @@ cc_library(
         "@com_google_asylo//asylo/identity:init",
         "@com_google_asylo//asylo/util:logging",
         # Dependency is added for automated tests
-        # TODO: Merge application_client and secure_application_client
-        ":secure_application_client"
+        # TODO: Merge application_client and sgx_application_client
+        ":sgx_application_client"
     ],
 )
 
 cc_library(
-    name = "secure_application_client",
-    srcs = ["secure_application_client.cc"],
-    hdrs = ["secure_application_client.h"],
+    name = "sgx_application_client",
+    srcs = ["sgx_application_client.cc"],
+    hdrs = ["sgx_application_client.h"],
     visibility = ["//visibility:public"],
     deps = [
         ":authorization_bearer_token_metadata",

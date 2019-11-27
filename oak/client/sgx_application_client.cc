@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "oak/client/secure_application_client.h"
+#include "oak/client/sgx_application_client.h"
 
 #include <memory>
 #include <string>
@@ -53,7 +53,7 @@ bool Sha256HashFromHexString(const std::string& hex, asylo::Sha256HashProto* h) 
 
 namespace oak {
 
-SecureApplicationClient::SecureApplicationClient(
+SgxApplicationClient::SgxApplicationClient(
     /*intel_public_key,*/
     std::vector<std::string> mrenclave_strings) {
   // Initialize assertion authorities
@@ -67,18 +67,18 @@ SecureApplicationClient::SecureApplicationClient(
 }
 
 std::shared_ptr<grpc::Channel>
-SecureApplicationClient::CreateChannel(std::string address) {
+SgxApplicationClient::CreateChannel(std::string address) {
   return grpc::CreateChannel(address, this->credentials_);
 }  
  
 asylo::EnclaveAssertionAuthorityConfig
-SecureApplicationClient::GetNullAssertionAuthorityConfig() {
+SgxApplicationClient::GetNullAssertionAuthorityConfig() {
   asylo::EnclaveAssertionAuthorityConfig test_config;
   asylo::SetNullAssertionDescription(test_config.mutable_description());
   return test_config;
 }
 
-void SecureApplicationClient::InitializeAssertionAuthorities() {
+void SgxApplicationClient::InitializeAssertionAuthorities() {
   LOG(INFO) << "Initializing assertion authorities";
   std::vector<asylo::EnclaveAssertionAuthorityConfig> configs = {
       GetNullAssertionAuthorityConfig(),
@@ -96,7 +96,7 @@ void SecureApplicationClient::InitializeAssertionAuthorities() {
 
 // TODO: Add CPUSVN as a parameter.
 asylo::EnclaveIdentityExpectation
-SecureApplicationClient::CreateSgxIdentityExpectation(
+SgxApplicationClient::CreateSgxIdentityExpectation(
     std::string& mrenclave_string, std::string mrsigner_string) const {
   asylo::SgxIdentity sgx_identity;
   asylo::SgxIdentityMatchSpec match_spec;
@@ -135,7 +135,7 @@ SecureApplicationClient::CreateSgxIdentityExpectation(
 }
 
 asylo::IdentityAclPredicate
-SecureApplicationClient::CreateSgxIdentityAcl(
+SgxApplicationClient::CreateSgxIdentityAcl(
     std::vector<std::string>& mrenclave_strings) const {
   asylo::IdentityAclPredicate acl;
   auto acl_predicates = acl.mutable_acl_group();
@@ -149,7 +149,7 @@ SecureApplicationClient::CreateSgxIdentityAcl(
 }
 
 std::shared_ptr<grpc::ChannelCredentials>
-SecureApplicationClient::CreateChannelCredentials(
+SgxApplicationClient::CreateChannelCredentials(
     std::vector<std::string>& mrenclave_strings) const {
   // TODO: Use remote attestation when it will become available
   auto credentials_options = asylo::BidirectionalNullCredentialsOptions();
@@ -158,7 +158,7 @@ SecureApplicationClient::CreateChannelCredentials(
 }
 
 std::shared_ptr<grpc::CallCredentials>
-SecureApplicationClient::CreateCallCredentials() const {
+SgxApplicationClient::CreateCallCredentials() const {
   NonceGenerator<kPerChannelNonceSizeBytes> nonce_generator;
   auto channel_authorization_token_bytes = NonceToBytes(nonce_generator.NextNonce());
   auto call_credentials = grpc::CompositeCallCredentials(

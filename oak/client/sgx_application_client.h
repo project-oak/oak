@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef OAK_CLIENT_SECURE_APPLICATION_CLIENT_H_
-#define OAK_CLIENT_SECURE_APPLICATION_CLIENT_H_
+#ifndef OAK_CLIENT_SGX_APPLICATION_CLIENT_H_
+#define OAK_CLIENT_SGX_APPLICATION_CLIENT_H_
 
 #include <memory>
 #include <string>
@@ -27,9 +27,9 @@
 
 namespace oak {
 
-class SecureApplicationClient {
+class SgxApplicationClient {
  public:
-  SecureApplicationClient(
+  SgxApplicationClient(
       /*TODO: intel_public_key,*/ std::vector<std::string> mrenclave_strings);
 
   std::shared_ptr<grpc::Channel> CreateChannel(std::string address);
@@ -53,4 +53,4 @@ class SecureApplicationClient {
 
 }  // namespace oak
 
-#endif  // OAK_CLIENT_SECURE_APPLICATION_CLIENT_H_
+#endif  // OAK_CLIENT_SGX_APPLICATION_CLIENT_H_
