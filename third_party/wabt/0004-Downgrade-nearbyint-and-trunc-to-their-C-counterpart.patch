@@ -1,0 +1,33 @@
+From 002cd695d6274a4b34b931e062dd769db015eebf Mon Sep 17 00:00:00 2001
+From: Tiziano Santoro <tiziano88@gmail.com>
+Date: Wed, 31 Oct 2018 12:11:29 +0000
+Subject: [PATCH 4/8] Downgrade nearbyint and trunc to their C counterparts
+
+They are not supported in Asylo yet
+---
+ src/interp/interp.cc | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/interp/interp.cc b/src/interp/interp.cc
+index 7608b7e5..59523831 100644
+--- src/interp/interp.cc
++++ src/interp/interp.cc
+@@ -1541,13 +1541,13 @@ ValueTypeRep<T> FloatFloor(ValueTypeRep<T> v_rep) {
+ // f{32,64}.trunc
+ template <typename T>
+ ValueTypeRep<T> FloatTrunc(ValueTypeRep<T> v_rep) {
+-  return CanonicalizeNan<T>(ToRep(std::trunc(FromRep<T>(v_rep))));
++  return CanonicalizeNan<T>(ToRep(trunc(FromRep<T>(v_rep))));
+ }
+ 
+ // f{32,64}.nearest
+ template <typename T>
+ ValueTypeRep<T> FloatNearest(ValueTypeRep<T> v_rep) {
+-  return CanonicalizeNan<T>(ToRep(std::nearbyint(FromRep<T>(v_rep))));
++  return CanonicalizeNan<T>(ToRep(nearbyint(FromRep<T>(v_rep))));
+ }
+ 
+ // f{32,64}.sqrt
+-- 
+2.19.0.605.g01d371f741-goog
+

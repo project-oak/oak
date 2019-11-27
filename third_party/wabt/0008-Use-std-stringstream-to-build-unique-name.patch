@@ -1,0 +1,24 @@
+From 1cb7f81e2b2b3afccd43f24a4ae3a6c1be7edeed Mon Sep 17 00:00:00 2001
+From: David Drysdale <drysdale@google.com>
+Date: Wed, 16 Oct 2019 15:29:08 +0100
+Subject: [PATCH 8/8] Use std::stringstream to build unique name
+
+---
+ src/binary-reader-ir.cc | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/binary-reader-ir.cc b/src/binary-reader-ir.cc
+index 8f8526f1..957d218c 100644
+--- src/binary-reader-ir.cc
++++ src/binary-reader-ir.cc
+@@ -21,6 +21,7 @@
+ #include <cstdarg>
+ #include <cstdint>
+ #include <cstdio>
++#include <sstream>
+ #include <vector>
+ 
+ #include "src/binary-reader-nop.h"
+-- 
+2.19.0.605.g01d371f741-goog
+

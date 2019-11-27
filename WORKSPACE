@@ -90,11 +90,19 @@ http_archive(
     urls = ["https://github.com/googleapis/gapic-generator/archive/8e930b79e846b9d4876462be9dc4c1dbc04e2903.zip"],
 )
 
-# WebAssembly Binary Toolkit (forked by tiziano88).
-git_repository(
+http_archive(
     name = "wabt",
-    commit = "30e914b1630db13080cc054b591ab5822b9b4768",
-    remote = "https://github.com/daviddrysdale/wabt",
+    urls = ["https://github.com/WebAssembly/wabt/archive/b807819d5501ee7ba22a178d3acfb8fa6d6bcde7.tar.gz"],
+    strip_prefix = "wabt-b807819d5501ee7ba22a178d3acfb8fa6d6bcde7",
+    sha256 = "22e0ca43a2e6c0a7ee49427109854e1ff70936c8ab95a83f4db12f4675ba77fb",
+    build_file = "@//third_party/wabt:wabt.BUILD",
+    patches = [
+      "@//third_party/wabt:0003-Add-static-config-file.patch",
+      "@//third_party/wabt:0004-Downgrade-nearbyint-and-trunc-to-their-C-counterpart.patch",
+      "@//third_party/wabt:0005-Include-opcode-code-table.c.patch",
+      "@//third_party/wabt:0007-Only-warn-on-NDEBUG-build.patch",
+      "@//third_party/wabt:0008-Use-std-stringstream-to-build-unique-name.patch",
+    ]
 )
 
 http_archive(
