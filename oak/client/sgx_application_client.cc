@@ -132,7 +132,6 @@ SgxApplicationClient::CreateSgxIdentityExpectation(
     LOG(QFATAL) << "Invalid SGX identity";
   }
 
-  // TODO: Find default MRSIGNER value that appeared in sgx_tool.
   auto sgx_expectation =
       asylo::CreateSgxIdentityExpectation(
         sgx_identity, asylo::SgxIdentityMatchSpecOptions::STRICT_REMOTE).ValueOrDie();
