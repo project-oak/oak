@@ -113,10 +113,10 @@ genrule(
 # Generates an enclave dump that contains the MRSIGNER value
 genrule(
     name = "oak_enclave_debug_metadata",
-    tools = ["@linux_sgx//:sgx_sign_tool"],
     srcs = [":oak_enclave_debug.so"],
     outs = ["oak_enclave_debug_metadata.txt"],
-    cmd = "$(location @linux_sgx//:sgx_sign_tool) dump -enclave $< -dumpfile $@", 
+    cmd = "$(location @linux_sgx//:sgx_sign_tool) dump -enclave $< -dumpfile $@",
+    tools = ["@linux_sgx//:sgx_sign_tool"],
 )
 
 # Produces oak_enclave_sigstruct.dat file, which is used to generate the remote attestation of the
