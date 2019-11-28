@@ -58,9 +58,6 @@ class WasmNode final : public NodeThread {
   // Native implementation of the `oak.channel_close` host function.
   wabt::interp::HostFunc::Callback OakChannelClose(wabt::interp::Environment* env);
 
-  // Native implementation of the `oak.channel_find` host function.
-  wabt::interp::HostFunc::Callback OakChannelFind(wabt::interp::Environment* env);
-
   // Native implementation of the `oak.node_create` host function.
   wabt::interp::HostFunc::Callback OakNodeCreate(wabt::interp::Environment* env);
 

@@ -240,11 +240,6 @@ void WasmNode::InitEnvironment(wabt::interp::Environment* env) {
                                   std::vector<wabt::Type>{wabt::Type::I32}),
       this->OakChannelClose(env));
   oak_module->AppendFuncExport(
-      "channel_find",
-      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabtUsizeType, wabtUsizeType},
-                                  std::vector<wabt::Type>{wabt::Type::I64}),
-      this->OakChannelFind(env));
-  oak_module->AppendFuncExport(
       "node_create",
       wabt::interp::FuncSignature(
           std::vector<wabt::Type>{wabtUsizeType, wabtUsizeType, wabt::Type::I64},
@@ -512,28 +507,6 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelClose(wabt::interp::Environ
   };
 }
 
-wabt::interp::HostFunc::Callback WasmNode::OakChannelFind(wabt::interp::Environment* env) {
-  return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
-                     const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
-    LogHostFunctionCall(name_, func, args);
-
-    uint32_t offset = args[0].get_i32();
-    uint32_t size = args[1].get_i32();
-    if (!MemoryAvailable(env, offset, size)) {
-      LOG(WARNING) << "{" << name_ << "} Node provided invalid memory offset+size";
-      results[0].set_i64(kInvalidHandle);
-      return wabt::interp::Result::Ok;
-    }
-
-    auto base = env->GetMemory(0)->data.begin() + offset;
-    std::string port_name(base, base + size);
-
-    Handle handle = FindChannel(port_name);
-    results[0].set_i64(handle);  // zero if not found
-    return wabt::interp::Result::Ok;
-  };
-}
-
 wabt::interp::HostFunc::Callback WasmNode::OakNodeCreate(wabt::interp::Environment* env) {
   return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
                      const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
@@ -563,10 +536,11 @@ wabt::interp::HostFunc::Callback WasmNode::OakNodeCreate(wabt::interp::Environme
     std::unique_ptr<ChannelHalf> half = CloneChannelHalf(borrowed_half);
 
     auto base = env->GetMemory(0)->data.begin() + offset;
-    std::string contents_name(base, base + size);
+    std::string config_name(base, base + size);
+    LOG(INFO) << "Create a new node with config '" << config_name << "'";
 
     std::string node_name;
-    if (!runtime_->CreateWasmNode(contents_name, std::move(half), &node_name)) {
+    if (!runtime_->CreateAndRunNode(config_name, std::move(half), &node_name)) {
       results[0].set_i32(OakStatus::ERR_INVALID_ARGS);
     } else {
       LOG(INFO) << "Created new node named {" << node_name << "}";

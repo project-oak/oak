@@ -35,13 +35,8 @@ class OakNode {
   OakNode(const std::string& name) : name_(name), termination_pending_(false), prng_engine_() {}
   virtual ~OakNode() {}
 
-  virtual void Start(Handle handle) = 0;
+  virtual void Start() = 0;
   virtual void Stop() = 0;
-
-  // Add channel identified by the given port name to the node.  This must
-  // only be called before the node is started (with Start()).
-  Handle AddNamedChannel(const std::string& port_name, std::unique_ptr<ChannelHalf> half)
-      LOCKS_EXCLUDED(mu_);
 
   // Take ownership of the given channel half, returning a channel handle that
   // the node can use to refer to it in future.
@@ -59,9 +54,6 @@ class OakNode {
   MessageChannelReadHalf* BorrowReadChannel(Handle handle) const LOCKS_EXCLUDED(mu_);
   MessageChannelWriteHalf* BorrowWriteChannel(Handle handle) const LOCKS_EXCLUDED(mu_);
 
-  // Find the channel handle identified by the given port name.
-  Handle FindChannel(const std::string& port_name) const LOCKS_EXCLUDED(mu_);
-
   // Wait on the given channel handles, modifying the contents of the passed-in
   // vector.  Returns a boolean indicating whether the wait finished due to a
   // channel being ready (true), or a failure (false, indicating either node
@@ -71,6 +63,13 @@ class OakNode {
   bool WaitOnChannels(std::vector<std::unique_ptr<ChannelStatus>>* statuses) const;
 
  protected:
+  // If the Node has a single registered handle, return it; otherwise, return
+  // kInvalidHandle. This is a convenience method for initial execution of a
+  // Node, which should always start with exactly one handle (for a read half)
+  // registered in its channel_halves_ table; this handle is passed as the
+  // parameter to the Node's oak_main() entrypoint.
+  Handle SingleHandle() const LOCKS_EXCLUDED(mu_);
+
   const std::string name_;
   std::atomic_bool termination_pending_;
 
@@ -79,12 +78,9 @@ class OakNode {
 
   using ChannelHalfTable = std::unordered_map<Handle, std::unique_ptr<ChannelHalf>>;
 
-  mutable absl::Mutex mu_;  // protects next_handle_, prng_engine_, channel_halves_
+  mutable absl::Mutex mu_;  // protects prng_engine_, channel_halves_
 
   std::random_device prng_engine_ GUARDED_BY(mu_);
-
-  // Map from pre-configured port names to channel handles.
-  std::unordered_map<std::string, Handle> named_channels_ GUARDED_BY(mu_);
 
   // Map from channel handles to channel half instances.
   ChannelHalfTable channel_halves_ GUARDED_BY(mu_);

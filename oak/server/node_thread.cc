@@ -22,7 +22,7 @@ namespace oak {
 
 NodeThread::~NodeThread() { StopThread(); }
 
-void NodeThread::Start(Handle handle) {
+void NodeThread::Start() {
   if (thread_.joinable()) {
     LOG(ERROR) << "Attempt to Start() an already-running NodeThread";
     return;
@@ -31,6 +31,10 @@ void NodeThread::Start(Handle handle) {
     LOG(ERROR) << "Attempt to Start() an already-terminated NodeThread";
     return;
   }
+
+  // At Node start-up, there should be a single registered handle, which gets
+  // passed to the Run() method.
+  Handle handle = SingleHandle();
 
   LOG(INFO) << "Executing new {" << name_ << "} node thread with handle " << handle;
   thread_ = std::thread(&oak::NodeThread::Run, this, handle);

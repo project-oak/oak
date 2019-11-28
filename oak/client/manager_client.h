@@ -51,13 +51,12 @@ class ManagerClient {
 
     // Build an application configuration with a single WebAssembly node with the provided
     // WebAssembly module bytes.
-    std::unique_ptr<ApplicationConfiguration> application_config =
-        DefaultConfig("app", module_bytes);
+    std::unique_ptr<ApplicationConfiguration> application_config = DefaultConfig(module_bytes);
     if (enable_logging) {
       AddLoggingToConfig(application_config.get());
     }
     if (!storage_address.empty()) {
-      AddStorageToConfig(application_config.get(), "app", storage_address);
+      AddStorageToConfig(application_config.get(), storage_address);
     }
     request.set_allocated_application_configuration(application_config.release());
 

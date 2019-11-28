@@ -33,7 +33,7 @@ class OakGrpcNode final : public Application::Service, public OakNode {
   static std::unique_ptr<OakGrpcNode> Create(const std::string& name);
   virtual ~OakGrpcNode(){};
 
-  void Start(Handle handle) override;
+  void Start() override;
   void Stop() override;
 
   int GetPort() { return port_; };
@@ -54,7 +54,7 @@ class OakGrpcNode final : public Application::Service, public OakNode {
                               GetAttestationResponse* response) override;
 
   MessageChannelWriteHalf* BorrowWriteChannel() const {
-    return OakNode::BorrowWriteChannel(FindChannel(kGrpcNodeRequestPortName));
+    return OakNode::BorrowWriteChannel(SingleHandle());
   }
 
   // Consumes gRPC events from the completion queue in an infinite loop.
