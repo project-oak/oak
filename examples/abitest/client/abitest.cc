@@ -91,11 +91,11 @@ int main(int argc, char** argv) {
   google::protobuf::TextFormat::MergeFromString(app_config_textproto, config.get());
 
   // Add the Wasm module bytes to the config.
-  for (auto& contents : *config->mutable_wasm_contents()) {
-    if (contents.name() == "frontend-code") {
-      contents.set_module_bytes(frontend_module_bytes);
-    } else if (contents.name() == "backend-code") {
-      contents.set_module_bytes(backend_module_bytes);
+  for (auto& node_config : *config->mutable_node_configs()) {
+    if (node_config.name() == "frontend-config") {
+      node_config.mutable_wasm_config()->set_module_bytes(frontend_module_bytes);
+    } else if (node_config.name() == "backend-config") {
+      node_config.mutable_wasm_config()->set_module_bytes(backend_module_bytes);
     }
   }
   if (!ValidApplicationConfig(*config)) {

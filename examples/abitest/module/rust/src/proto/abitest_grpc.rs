@@ -33,8 +33,7 @@ pub fn dispatch(node: &mut dyn OakABITestServiceNode, method: &str, req: &[u8], 
     match method {
         "/oak.examples.abitest.OakABITestService/RunTests" => grpc::handle_req_rsp(|r| node.run_tests(r), req, writer),
         _ => {
-            writeln!(oak::logging_channel(), "unknown method name: {}", method).unwrap();
-            panic!("unknown method name");
+            panic!("unknown method name: {}", method);
         }
     };
 }

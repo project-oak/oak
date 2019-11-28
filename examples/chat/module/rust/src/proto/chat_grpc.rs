@@ -39,8 +39,7 @@ pub fn dispatch(node: &mut dyn ChatNode, method: &str, req: &[u8], writer: grpc:
         "/oak.examples.chat.Chat/JoinRoom" => grpc::handle_req_stream(|r, w| node.join_room(r, w), req, writer),
         "/oak.examples.chat.Chat/SendMessage" => grpc::handle_req_rsp(|r| node.send_message(r), req, writer),
         _ => {
-            writeln!(oak::logging_channel(), "unknown method name: {}", method).unwrap();
-            panic!("unknown method name");
+            panic!("unknown method name: {}", method);
         }
     };
 }

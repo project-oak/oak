@@ -35,8 +35,7 @@ pub fn dispatch(node: &mut dyn RunningAverageNode, method: &str, req: &[u8], wri
         "/oak.examples.running_average.RunningAverage/SubmitSample" => grpc::handle_req_rsp(|r| node.submit_sample(r), req, writer),
         "/oak.examples.running_average.RunningAverage/GetAverage" => grpc::handle_req_rsp(|r| node.get_average(r), req, writer),
         _ => {
-            writeln!(oak::logging_channel(), "unknown method name: {}", method).unwrap();
-            panic!("unknown method name");
+            panic!("unknown method name: {}", method);
         }
     };
 }

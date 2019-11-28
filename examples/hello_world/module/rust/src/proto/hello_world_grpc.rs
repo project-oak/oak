@@ -39,8 +39,7 @@ pub fn dispatch(node: &mut dyn HelloWorldNode, method: &str, req: &[u8], writer:
         "/oak.examples.hello_world.HelloWorld/LotsOfGreetings" => grpc::handle_stream_rsp(|rr| node.lots_of_greetings(rr), req, writer),
         "/oak.examples.hello_world.HelloWorld/BidiHello" => grpc::handle_stream_stream(|rr, w| node.bidi_hello(rr, w), req, writer),
         _ => {
-            writeln!(oak::logging_channel(), "unknown method name: {}", method).unwrap();
-            panic!("unknown method name");
+            panic!("unknown method name: {}", method);
         }
     };
 }

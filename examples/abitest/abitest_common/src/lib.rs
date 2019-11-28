@@ -20,3 +20,6 @@ use serde::{Deserialize, Serialize};
 pub struct InternalMessage {
     pub msg: String,
 }
+
+// Expected name for log node config.
+pub const LOG_CONFIG_NAME: &str = "logging-config";
