@@ -93,7 +93,7 @@ sgx.debug_enclave(
     config = ":grpc_enclave_config",
 )
 
-# Pulls the MRENCLAVE value from an enclave signing material
+# Pulls the MRENCLAVE value from an enclave signing material.
 # TODO: Use genrule from asylo, when it will become available.
 genrule(
     name = "oak_mrenclave",
@@ -110,7 +110,7 @@ genrule(
     cmd = "xxd -p -s 188 -l 32 -c 32 $< > $@",
 )
 
-# Generates an enclave dump that contains the MRSIGNER value
+# Generates an enclave dump that contains the MRSIGNER value.
 genrule(
     name = "oak_enclave_debug_metadata",
     srcs = [":oak_enclave_debug.so"],

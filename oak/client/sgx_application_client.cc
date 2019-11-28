@@ -23,6 +23,7 @@
 #include "asylo/grpc/auth/enclave_channel_credentials.h"
 #include "asylo/grpc/auth/enclave_credentials_options.h"
 #include "asylo/grpc/auth/null_credentials_options.h"
+// TODO: Uncomment when Asylo will release remote attestation.
 //#include "asylo/grpc/auth/sgx_remote_credentials_options.h"
 #include "asylo/identity/descriptions.h"
 #include "asylo/identity/enclave_assertion_authority_configs.h"
@@ -30,6 +31,7 @@
 #include "asylo/identity/sgx/sgx_identity_util.h"
 #include "asylo/identity/util/sha256_hash.pb.h"
 #include "asylo/util/logging.h"
+#include "asylo/util/status.h"
 #include "oak/client/authorization_bearer_token_metadata.h"
 #include "oak/client/policy_metadata.h"
 #include "oak/common/nonce_generator.h"
@@ -39,26 +41,25 @@ constexpr size_t kPerChannelNonceSizeBytes = 32;
 // Debug MRSIGNER value derived from the SGX test key (will change after changing SVN and PRODID).
 const char* kDebugMrSigner = "83d719e77deaca1470f6baf62a4d774303c899db69020f9c70ee1dfc08c7ce9e";
 
-// TODO: Use same function from asylo, when it will become public.
-bool Sha256HashFromHexString(const std::string& hex, asylo::Sha256HashProto* h) {
+// TODO: Use same function from Asylo, when it becomes public.
+asylo::Status Sha256HashFromHexString(const std::string& hex, asylo::Sha256HashProto* h) {
   if (hex.size() != 64) {
-    return false;
+    return asylo::Status(asylo::error::GoogleError::INTERNAL, "Hash string size is not 64");
   }
   for (auto ch : hex) {
     if (std::isxdigit(ch) == 0) {
-      return false;
+      return asylo::Status(asylo::error::GoogleError::INTERNAL,
+          "Hash contains non-hexademical charachters");
     }
   }
-  h->set_hash(absl::HexStringToBytes(hex).c_str(), hex.size() / 2);
-  return true;
+  h->set_hash(absl::HexStringToBytes(hex));
+  return asylo::Status::OkStatus();
 }
 
 namespace oak {
 
-SgxApplicationClient::SgxApplicationClient(
-    /*intel_public_key,*/
-    std::vector<std::string> mrenclave_strings) {
-  // Initialize assertion authorities
+SgxApplicationClient::SgxApplicationClient(std::vector<std::string> mrenclave_strings) {
+  // Initialize assertion authorities.
   this->InitializeAssertionAuthorities();
 
   // Initialize credentials
@@ -87,7 +88,7 @@ void SgxApplicationClient::InitializeAssertionAuthorities() {
 
   auto status = asylo::InitializeEnclaveAssertionAuthorities(configs.begin(), configs.end());
   if (!status.ok()) {
-    LOG(QFATAL) << "Could not initialize assertion authorities";
+    LOG(QFATAL) << "Could not initialize assertion authorities: " << status;
   }
   LOG(INFO) << "Assertion authorities initialized";
 }
@@ -99,19 +100,21 @@ asylo::EnclaveIdentityExpectation SgxApplicationClient::CreateSgxIdentityExpecta
 
   // Assign code identity.
   auto code_identity = sgx_identity.mutable_code_identity();
-  if (!Sha256HashFromHexString(mrenclave_string, code_identity->mutable_mrenclave())) {
-    LOG(QFATAL) << "Bad MRENCLAVE";
+  auto status = Sha256HashFromHexString(mrenclave_string, code_identity->mutable_mrenclave());
+  if (!status.ok()) {
+    LOG(QFATAL) << "Invalid MRENCLAVE: " << status;
   }
 
   auto signer_assigned_identity = code_identity->mutable_signer_assigned_identity();
-  if (!Sha256HashFromHexString(kDebugMrSigner, signer_assigned_identity->mutable_mrsigner())) {
-    LOG(QFATAL) << "Bad MRSIGNER";
+  status = Sha256HashFromHexString(kDebugMrSigner, signer_assigned_identity->mutable_mrsigner());
+  if (!status.ok()) {
+    LOG(QFATAL) << "Invalid MRSIGNER: " << status;
   }
   // TODO: Consider assigning prodid and svn even without MRSIGNER.
   signer_assigned_identity->set_isvprodid(0);
   signer_assigned_identity->set_isvsvn(0);
 
-  // TODO: Use asylo misc attributes util when they will become available.
+  // TODO: Use Asylo misc attributes util when they become available.
   code_identity->set_miscselect(0);
   auto attributes = code_identity->mutable_attributes();
   attributes->set_flags(0);
@@ -147,7 +150,7 @@ asylo::IdentityAclPredicate SgxApplicationClient::CreateSgxIdentityAcl(
 
 std::shared_ptr<grpc::ChannelCredentials> SgxApplicationClient::CreateChannelCredentials(
     std::vector<std::string>& mrenclave_strings) const {
-  // TODO: Use remote attestation when it will become available.
+  // TODO: Use remote attestation when it becomes available.
   auto credentials_options = asylo::BidirectionalNullCredentialsOptions();
   credentials_options.peer_acl = this->CreateSgxIdentityAcl(mrenclave_strings);
   return asylo::EnclaveChannelCredentials(credentials_options);

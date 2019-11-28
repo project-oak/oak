@@ -29,13 +29,13 @@ namespace oak {
 
 class SgxApplicationClient {
  public:
-  SgxApplicationClient(
-      /*TODO: intel_public_key,*/ std::vector<std::string> mrenclave_strings);
+  // TODO: Add parameter to specify Intel public key to use for verification.
+  SgxApplicationClient(std::vector<std::string> mrenclave_strings);
 
   std::shared_ptr<grpc::Channel> CreateChannel(std::string address);
 
  private:
-  // TODO: Use assertion helper from asylo, when it becomes available.
+  // TODO: Use assertion helper from Asylo, when it becomes available.
   asylo::EnclaveAssertionAuthorityConfig GetNullAssertionAuthorityConfig();
   void InitializeAssertionAuthorities();
 
