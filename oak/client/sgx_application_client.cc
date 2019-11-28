@@ -38,6 +38,9 @@
 #include "oak/common/nonce_generator.h"
 #include "oak/common/policy.h"
 
+using asylo::Status;
+using asylo::StatusOr;
+
 constexpr size_t kPerChannelNonceSizeBytes = 32;
 // Debug MRSIGNER value derived from the SGX test key (will change after changing SVN and PRODID).
 // https://github.com/google/asylo/blob/088ea3490dd4579655bd5b65b0e31fe18de7f6dd/asylo/distrib/sgx_x86_64/linux_sgx_2_6.patch#L5481
@@ -48,20 +51,19 @@ const char* kDebugCpuSvn = "0000000000000000";
 
 // Parses a hexademical hash string from `hash_string` into `Sha256HashProto` in `hash`.
 // TODO: Use same function from Asylo, when it becomes public.
-asylo::Status Sha256HashFromHexString(
-    const std::string& hash_string, asylo::Sha256HashProto* hash) {
+Status Sha256HashFromHexString(const std::string& hash_string, asylo::Sha256HashProto* hash) {
   if (hash_string.size() != 64) {
-    return asylo::Status(asylo::error::GoogleError::INTERNAL,
-        "Hash string size is not 64: " + hash_string);
+    return Status(asylo::error::GoogleError::INTERNAL,
+                         "Hash string size is not 64: " + hash_string);
   }
   for (auto ch : hash_string) {
     if (std::isxdigit(ch) == 0) {
-      return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT,
-          "Hash contains non-hexademical charachters: " + hash_string);
+      return Status(asylo::error::GoogleError::INVALID_ARGUMENT,
+                           "Hash contains non-hexademical charachters: " + hash_string);
     }
   }
   hash->set_hash(absl::HexStringToBytes(hash_string));
-  return asylo::Status::OkStatus();
+  return Status::OkStatus();
 }
 
 namespace oak {
@@ -102,8 +104,7 @@ void SgxApplicationClient::InitializeAssertionAuthorities() {
 }
 
 // TODO: Add CPUSVN as a parameter.
-asylo::StatusOr<asylo::EnclaveIdentityExpectation>
-SgxApplicationClient::CreateSgxIdentityExpectation(
+StatusOr<asylo::EnclaveIdentityExpectation> SgxApplicationClient::CreateSgxIdentityExpectation(
     std::string& mrenclave_string) const {
   asylo::SgxIdentity sgx_identity;
 
@@ -135,7 +136,7 @@ SgxApplicationClient::CreateSgxIdentityExpectation(
   machine_configuration->set_sgx_type(asylo::sgx::SgxType::STANDARD);
 
   if (!asylo::IsValidSgxIdentity(sgx_identity)) {
-    return asylo::Status(asylo::error::GoogleError::INTERNAL, "Invalid SGX identity");
+    return Status(asylo::error::GoogleError::INTERNAL, "Invalid SGX identity");
   }
 
   // Generate expectation based on identity and an option mask.
@@ -148,7 +149,7 @@ SgxApplicationClient::CreateSgxIdentityExpectation(
   return asylo::SerializeSgxIdentityExpectation(sgx_expectation.ValueOrDie());
 }
 
-asylo::StatusOr<asylo::IdentityAclPredicate> SgxApplicationClient::CreateSgxIdentityAcl(
+StatusOr<asylo::IdentityAclPredicate> SgxApplicationClient::CreateSgxIdentityAcl(
     std::vector<std::string>& mrenclave_strings) const {
   asylo::IdentityAclPredicate acl;
   auto acl_predicates = acl.mutable_acl_group();
