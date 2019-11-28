@@ -30,12 +30,9 @@ types for easier use.
 - Channel read operations automatically re-size the outputs to accomodate the
   contents of read messages.
 
-The `oak` crate also provides
-
-- [`oak::logging_channel()`](https://project-oak.github.io/oak/sdk/oak/fn.logging_channel.html)
-  to allow access to logging via the `std::io::Write` trait.
-- [`oak::set_panic_hook()`](https://project-oak.github.io/oak/sdk/oak/fn.set_panic_hook.html)
-  to ensure that Rust `panic`s are logged.
+The `oak` crate also provides the
+[`oak::set_panic_hook()`](https://project-oak.github.io/oak/sdk/oak/fn.set_panic_hook.html)
+helper, to ensure that Rust `panic`s are logged.
 
 ### `oak::wasm` Module
 
@@ -69,7 +66,8 @@ trait, to allow use of the
 
 The [`oak::grpc`](https://project-oak.github.io/oak/sdk/oak/grpc/index.html)
 module holds functionality that is helpful for interacting with the outside
-world over gRPC, via the [gRPC pseudo-Node](concepts.md#pseudo-nodes).
+world over gRPC, via the implicit [gRPC pseudo-Node](concepts.md#pseudo-nodes)
+that has a channel to the Application's initial Node.
 
 An Oak Node that interacts with gRPC typically implements the
 [`oak::grpc::OakNode`](https://project-oak.github.io/oak/sdk/oak/grpc/trait.OakNode.html)
@@ -96,8 +94,8 @@ module holds auto-generated submodules for dealing with protocol buffers.
 
 The [`oak_log`](https://project-oak.github.io/oak/sdk/oak_log/index.html) crate
 is a logging implementation for the Rust
-[log facade](https://crates.io/crates/log), which uses an Oak logging channel
-for the underlying logging mechanism.
+[log facade](https://crates.io/crates/log), which uses an channel to a
+freshly-created logging pseudo-Node as the underlying logging mechanism.
 
 ## `oak_derive` Crate
 

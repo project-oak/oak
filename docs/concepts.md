@@ -64,13 +64,6 @@ write to respectively. Each half of a channel is identified by a **handle**,
 which is used as a parameter to the corresponding
 [host function](abi.md#host-functions) calls.
 
-### Pre-Defined Channels and Port Names
-
-A collection of pre-configured channel halves are available to the Oak Node, as
-specified in the `ApplicationConfiguration` used to create the Node. The handles
-for these channels can be retrieved by using the `channel_find` host function
-(below) to map a _port name_ to the relevant channel handle.
-
 ## Pseudo-Nodes
 
 An Oak node is limited to exchanging messages with other Nodes via channels; to
@@ -78,17 +71,27 @@ allow interactions with the outside world, the Oak system also provides a number
 of **pseudo-Nodes**.
 
 These pseudo-Nodes present as normal Nodes to the 'normal' Nodes in an Oak
-Application: the normal Nodes exchange messages with the pseudo-Nodes over
-channels. However, the pseudo-Nodes are implemented as part of the Oak Manager
-(executing as native C++ code, rather than Wasm code) so that they can interact
-with the outside world.
+Application:
+
+- Pseudo-Node instances are created with `node_create()` as for Wasm Nodes (with
+  the exception of the gRPC pseudo-Node, which is automatically created at
+  Application start-of-day).
+- Nodes exchange messages with the pseudo-Nodes over channels.
+
+However, the pseudo-Nodes are implemented as part of the Oak Runtime (executing
+as native C++ code, rather than Wasm code) so that they can interact with the
+outside world.
 
 The available pseudo-Nodes are:
 
 - **gRPC pseudo-node**: Provides a 'front door' for external interaction with an
   Oak Application, by implementing a gRPC service. External requests to the gRPC
-  service are written to an outbound channel from the pseudo-Node, which then
-  expects to receive response messages on a corresponding inbound channel.
+  service are written to a channel that connects from the pseudo-Node to the
+  initial Node of the Application. Each new request is accompanied by a
+  corresponding inbound channel handle, which the initial Node uses to send
+  response messages. The Oak Runtime automatically creates a gRPC pseudo-Node at
+  Application start-of-day (and so gRPC pseudo-Nodes cannot be created with
+  `node_create()`).
 - **Logging pseudo-node**: Provides a logging mechanism for Nodes under
   development by including a single inbound channel; anything received on the
   channel will be logged. This node should only be enabled during application
@@ -99,10 +102,9 @@ The available pseudo-Nodes are:
   associated responses from a corresponding outbound channel from the storage
   pseudo-Node.
 
-An Oak Application which intends to use any of these pseudo-Nodes must include
-them (and channels to/from them) in its
-[Application Configuration](/oak/proto/manager.proto). An example configuration
-that includes all pseudo-Nodes is depicted below.
+An Oak Application uses any of these pseudo-Nodes (except the first) by
+including an entry for them in its `ApplicationConfiguration`, and creating them
+at runtime (with `node_create()`).
 
 <!-- From: -->
 <!-- https://docs.google.com/drawings/d/1gRCOzXWCEhp1-GF6Rnd9N6be8hs1sENfleCzXdQMOsc-->
@@ -111,16 +113,20 @@ that includes all pseudo-Nodes is depicted below.
 ## Oak Application
 
 An **Oak Application** is a set of Oak Nodes running within the same enclave,
-and connected by unidirectional channels. The initial connectivity graph is
-specified by an [Application Configuration](/oak/proto/manager.proto). Once the
-Application is running, new channels may be created and handles to either half
-of the channel may be passed between Nodes, but no new Nodes can be
-instantiated.
+and connected by unidirectional channels. The initial connectivity graph
+consists of:
 
-An Oak Application may have one or more entry points from which it can be
-invoked by clients over a gRPC connection; this is specified in the connectivity
-graph by including a pair of pre-defined channels to a gRPC
-[pseudo-Node](#pseudo-nodes).
+- A gRPC pseudo-Node.
+- An initial Application Node.
+- A single channel from the gRPC pseudo-Node to the initial Application Node.
+
+Once the Application is running, new Nodes can be created (with
+`node_create()`), new channels can be created (with `channel_create()`) and the
+handles to either half of the channel may be passed between Nodes (over
+channels).
+
+The allowed contents of the Nodes, and the initial Node to run, are specified by
+an [Application Configuration](/oak/proto/manager.proto).
 
 Once a new Oak Application is initialized and its endpoint available, clients
 may connect to it using individually end-to-end encrypted, authenticated and
