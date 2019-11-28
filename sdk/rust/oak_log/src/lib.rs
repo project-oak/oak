@@ -52,43 +52,38 @@ impl Log for OakChannelLogger {
     fn flush(&self) {}
 }
 
-/// Default port name for the write half of a channel that connects to the
-/// logging pseudo-Node.
-pub const DEFAULT_PORT_NAME: &str = "log";
-
-/// Implicit port name for the read half of a channel that arrives at the
-/// logging pseudo-Node.
-pub const IN_PORT_NAME: &str = "in";
+/// Default name for predefined node configuration that corresponds to a logging
+/// pseudo-Node.
+pub const DEFAULT_CONFIG_NAME: &str = "log";
 
 /// Initialize Node-wide default logging.
 ///
-/// Uses the default level (`Debug`) and the default pre-defined port name
-/// (`"log"`) for the logging channel from the current Node.
+/// Uses the default level (`Debug`) and the default pre-defined name
+/// (`"log"`) identifying logging node configuration.
 ///
 /// # Panics
 ///
 /// Panics if a logger has already been set.
 pub fn init_default() {
-    init(
-        Level::Debug,
-        oak::WriteHandle {
-            handle: oak::channel_find(DEFAULT_PORT_NAME),
-        },
-    )
-    .unwrap();
+    init(Level::Debug, DEFAULT_CONFIG_NAME).unwrap();
 }
 
-/// Initialize Node-wide logging via a channel.
+/// Initialize Node-wide logging via a channel to a logging pseudo-Node.
 ///
-/// Initialize logging at the given level, using the send channel half
-/// identified by the given port name.
+/// Initialize logging at the given level, creating a logging pseudo-Node
+/// whose configuration is identified by the given name.
 ///
 /// # Errors
 ///
 /// An error is returned if a logger has already been set.
-pub fn init(level: Level, channel_handle: oak::WriteHandle) -> Result<(), SetLoggerError> {
+pub fn init(level: Level, config: &str) -> Result<(), SetLoggerError> {
+    // Create a channel and pass the read half to a fresh logging Node.
+    let (write_handle, read_handle) = oak::channel_create().unwrap();
+    oak::node_create(config, read_handle);
+    oak::channel_close(read_handle.handle);
+
     log::set_boxed_logger(Box::new(OakChannelLogger {
-        channel: oak::io::Channel::new(channel_handle),
+        channel: oak::io::Channel::new(write_handle),
     }))?;
     log::set_max_level(level.to_level_filter());
     Ok(())
