@@ -61,14 +61,15 @@ StatusOr<std::string> HexStringToBytes(const std::string& hash_string) {
   for (auto ch : hash_string) {
     if (std::isxdigit(ch) == 0) {
       return Status(asylo::error::GoogleError::INVALID_ARGUMENT,
-                    "String contains non-hexademical charachters: " + hash_string);
+                    "String contains non-hexadecimal characters: " + hash_string);
     }
   }
   return absl::HexStringToBytes(hash_string);
 }
 
 // Parses a hexadecimal hash string from `hash_string` into `Sha256HashProto` in `hash`.
-// `hash_bytes` should be a hexadecimal string that represents a Sha256 hash (64 bytes long).
+// `hash_bytes` should be a hexadecimal string that represents a Sha256 hash:
+// 64 characters long, that represent 32 bytes in hex.
 Status SetSha256HashProto(const std::string& hash_string, asylo::Sha256HashProto* hash) {
   auto hash_bytes_status = HexStringToBytes(hash_string);
   if (hash_bytes_status.ok()) {
