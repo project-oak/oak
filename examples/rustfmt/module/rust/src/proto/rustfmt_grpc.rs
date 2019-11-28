@@ -33,8 +33,7 @@ pub fn dispatch(node: &mut dyn FormatServiceNode, method: &str, req: &[u8], writ
     match method {
         "/oak.examples.rustfmt.FormatService/Format" => grpc::handle_req_rsp(|r| node.format(r), req, writer),
         _ => {
-            writeln!(oak::logging_channel(), "unknown method name: {}", method).unwrap();
-            panic!("unknown method name");
+            panic!("unknown method name: {}", method);
         }
     };
 }

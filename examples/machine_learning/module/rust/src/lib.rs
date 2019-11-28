@@ -150,6 +150,7 @@ struct Config {
 
 #[derive(OakExports)]
 struct Node {
+    logging_channel: std::io::LineWriter<oak::io::Channel>,
     training_set_size: usize,
     test_set_size: usize,
     config: Option<Config>,
@@ -158,7 +159,13 @@ struct Node {
 
 impl oak::grpc::OakNode for Node {
     fn new() -> Self {
+        // Create a channel and pass the read half to a fresh logging Node.
+        let (write_handle, read_handle) = oak::channel_create().unwrap();
+        oak::node_create("log", read_handle);
+        oak::channel_close(read_handle.handle);
+        let raw_logging = oak::io::Channel::new(write_handle);
         Node {
+            logging_channel: std::io::LineWriter::new(raw_logging),
             training_set_size: 1000,
             test_set_size: 1000,
             config: None,
@@ -166,15 +173,14 @@ impl oak::grpc::OakNode for Node {
         }
     }
     fn invoke(&mut self, method: &str, _req: &[u8], mut writer: grpc::ChannelResponseWriter) {
-        let mut logging_channel = oak::logging_channel();
         match method {
             "/oak.examples.machine_learning.MachineLearning/Data" => {
-                writeln!(logging_channel, "Data").unwrap();
+                writeln!(self.logging_channel, "Data").unwrap();
                 //(self.training_set_size, self.test_set_size) = (1000, 1000);
                 // Generate all of our train and test data
                 let (training_matrix, target_matrix, test_matrix, test_animals) =
                     generate_animal_data(
-                        &mut logging_channel,
+                        &mut self.logging_channel,
                         self.training_set_size,
                         self.test_set_size,
                     );
@@ -186,7 +192,7 @@ impl oak::grpc::OakNode for Node {
                 });
             }
             "/oak.examples.machine_learning.MachineLearning/Learn" => {
-                writeln!(logging_channel, "Training model").unwrap();
+                writeln!(self.logging_channel, "Training model").unwrap();
                 //self.model = NaiveBayes::<naive_bayes::Gaussian>::new();
                 match self.config {
                     Some(ref c) => self
@@ -194,12 +200,12 @@ impl oak::grpc::OakNode for Node {
                         .train(&c.training_matrix, &c.target_matrix)
                         .expect("failed to train model of dogs"),
                     None => {
-                        writeln!(logging_channel, "config not set").unwrap();
+                        writeln!(self.logging_channel, "config not set").unwrap();
                     }
                 }
             }
             "/oak.examples.machine_learning.MachineLearning/Predict" => {
-                writeln!(logging_channel, "Predicting").unwrap();
+                writeln!(self.logging_channel, "Predicting").unwrap();
                 let mut predictions = None;
                 match self.config {
                     Some(ref c) => {
@@ -210,7 +216,7 @@ impl oak::grpc::OakNode for Node {
                         )
                     }
                     None => {
-                        writeln!(logging_channel, "config not set").unwrap();
+                        writeln!(self.logging_channel, "config not set").unwrap();
                     }
                 }
                 // Score how well we did.
@@ -230,13 +236,13 @@ impl oak::grpc::OakNode for Node {
                         }
                     }
                     None => {
-                        writeln!(logging_channel, "test_animals not set").unwrap();
+                        writeln!(self.logging_channel, "test_animals not set").unwrap();
                         return;
                     }
                 }
 
                 if unprinted_total > 0 {
-                    writeln!(logging_channel, "...").unwrap();
+                    writeln!(self.logging_channel, "...").unwrap();
                 }
 
                 if let Some(ref c) = self.config {
@@ -250,7 +256,7 @@ impl oak::grpc::OakNode for Node {
                             let (actual_type, accurate) =
                                 evaluate_prediction(&mut hits, animal, prediction);
                             writeln!(
-                                logging_channel,
+                                self.logging_channel,
                                 "Predicted: {:?}; Actual: {:?}; Accurate? {:?}",
                                 animal.type_, actual_type, accurate
                             )
@@ -259,7 +265,7 @@ impl oak::grpc::OakNode for Node {
                     }
                 }
                 writeln!(
-                    logging_channel,
+                    self.logging_channel,
                     "Accuracy: {}/{} = {:.1}%",
                     hits,
                     self.test_set_size,
@@ -268,7 +274,7 @@ impl oak::grpc::OakNode for Node {
                 .unwrap();
             }
             _ => {
-                writeln!(logging_channel, "unknown method name: {}", method).unwrap();
+                writeln!(self.logging_channel, "unknown method name: {}", method).unwrap();
                 panic!("unknown method name");
             }
         }

@@ -16,7 +16,7 @@
 
 pub mod proto;
 
-use abitest_common::InternalMessage;
+use abitest_common::{InternalMessage, LOG_CONFIG_NAME};
 use byteorder::WriteBytesExt;
 use expect::{expect, expect_eq};
 use log::info;
@@ -29,14 +29,13 @@ use rand::Rng;
 use std::collections::HashMap;
 use std::io::Write;
 
-const LOG_PORT_NAME: &str = "logging_port";
-
 const BACKEND_COUNT: usize = 3;
 
+const BACKEND_CONFIG_NAME: &str = "backend-config";
+
 struct FrontendNode {
-    grpc_in: oak::ReadHandle,
-    backend_out: [oak::WriteHandle; BACKEND_COUNT],
-    backend_in: [oak::ReadHandle; BACKEND_COUNT],
+    backend_out: Vec<oak::WriteHandle>,
+    backend_in: Vec<oak::ReadHandle>,
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -47,47 +46,36 @@ pub extern "C" fn oak_main(handle: u64) -> i32 {
         Err(_) => OakStatus::ERR_INTERNAL.value(),
     }
 }
-pub fn main(_handle: u64) -> i32 {
+pub fn main(handle: u64) -> i32 {
     let node = FrontendNode::new();
-    let grpc_in = node.grpc_in;
-    oak::grpc::event_loop(node, grpc_in)
+    oak::grpc::event_loop(node, oak::ReadHandle { handle })
 }
 
 impl oak::grpc::OakNode for FrontendNode {
     fn new() -> Self {
         // Carry on even if the the Oak logging infrastructure is unavailable.
-        let _ = oak_log::init(
-            log::Level::Debug,
-            oak::WriteHandle {
-                handle: oak::channel_find(LOG_PORT_NAME),
-            },
-        );
+        let _ = oak_log::init(log::Level::Debug, LOG_CONFIG_NAME);
+
+        // Create backend node instances.
+        let mut backend_out = Vec::with_capacity(BACKEND_COUNT);
+        let mut backend_in = Vec::with_capacity(BACKEND_COUNT);
+        for i in 0..BACKEND_COUNT {
+            let (write_handle, read_handle) = oak::channel_create().unwrap();
+            oak::node_create(BACKEND_CONFIG_NAME, read_handle);
+            oak::channel_close(read_handle.handle);
+            backend_out.push(write_handle);
+
+            // Create a back channel, and pass the write half to the backend
+            // as the first message on the outbound channel.
+            let (write_handle, read_handle) = oak::channel_create().unwrap();
+            oak::channel_write(backend_out[i], &[], &[write_handle.handle]);
+            oak::channel_close(write_handle.handle);
+            backend_in.push(read_handle);
+        }
+
         FrontendNode {
-            grpc_in: oak::ReadHandle {
-                handle: oak::channel_find("gRPC_input"),
-            },
-            backend_out: [
-                oak::WriteHandle {
-                    handle: oak::channel_find("to_backend_0"),
-                },
-                oak::WriteHandle {
-                    handle: oak::channel_find("to_backend_1"),
-                },
-                oak::WriteHandle {
-                    handle: oak::channel_find("to_backend_2"),
-                },
-            ],
-            backend_in: [
-                oak::ReadHandle {
-                    handle: oak::channel_find("from_backend_0"),
-                },
-                oak::ReadHandle {
-                    handle: oak::channel_find("from_backend_1"),
-                },
-                oak::ReadHandle {
-                    handle: oak::channel_find("from_backend_2"),
-                },
-            ],
+            backend_out,
+            backend_in,
         }
     }
     fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
@@ -108,8 +96,6 @@ impl OakABITestServiceNode for FrontendNode {
         // Manual registry of all tests.
         type TestFn = fn(&FrontendNode) -> std::io::Result<()>;
         let mut tests: HashMap<&str, TestFn> = HashMap::new();
-        tests.insert("ChannelFindRaw", FrontendNode::test_channel_find_raw);
-        tests.insert("ChannelFind", FrontendNode::test_channel_find);
         tests.insert("ChannelCreateRaw", FrontendNode::test_channel_create_raw);
         tests.insert("ChannelCreate", FrontendNode::test_channel_create);
         tests.insert("ChannelCloseRaw", FrontendNode::test_channel_close_raw);
@@ -186,35 +172,6 @@ fn invalid_raw_offset() -> *mut u64 {
 }
 
 impl FrontendNode {
-    fn test_channel_find_raw(&self) -> std::io::Result<()> {
-        unsafe {
-            expect_eq!(
-                0,
-                oak::wasm::channel_find(invalid_raw_offset() as *const u8, 2)
-            );
-        }
-        Ok(())
-    }
-
-    fn test_channel_find(&self) -> std::io::Result<()> {
-        // Idempotent result.
-        expect_eq!(self.grpc_in.handle, oak::channel_find("gRPC_input"));
-        expect_eq!(
-            self.backend_out[0].handle,
-            oak::channel_find("to_backend_0")
-        );
-        expect_eq!(
-            self.backend_in[0].handle,
-            oak::channel_find("from_backend_0")
-        );
-        // Whitespace is significant.
-        expect_eq!(0, oak::channel_find(" gRPC_input"));
-        expect_eq!(0, oak::channel_find(" gRPC_input "));
-        expect_eq!(0, oak::channel_find("bogus"));
-        expect_eq!(0, oak::channel_find(""));
-        Ok(())
-    }
-
     fn test_channel_create_raw(&self) -> std::io::Result<()> {
         let mut write = oak::WriteHandle { handle: 0 };
         let mut read = oak::ReadHandle { handle: 0 };
@@ -801,20 +758,26 @@ impl FrontendNode {
     fn test_node_create(&self) -> std::io::Result<()> {
         expect_eq!(
             OakStatus::ERR_INVALID_ARGS,
-            oak::node_create("no-such-contents", self.backend_in[0])
+            oak::node_create("no-such-config", self.backend_in[0])
         );
         expect_eq!(
             OakStatus::ERR_BAD_HANDLE,
             oak::node_create(
-                "backend-code",
+                BACKEND_CONFIG_NAME,
                 oak::ReadHandle {
                     handle: oak::wasm::INVALID_HANDLE
                 }
             )
         );
         let (out_handle, in_handle) = oak::channel_create().unwrap();
-        expect_eq!(OakStatus::OK, oak::node_create("backend-code", in_handle));
-        expect_eq!(OakStatus::OK, oak::node_create("backend-code", in_handle));
+        expect_eq!(
+            OakStatus::OK,
+            oak::node_create(BACKEND_CONFIG_NAME, in_handle)
+        );
+        expect_eq!(
+            OakStatus::OK,
+            oak::node_create(BACKEND_CONFIG_NAME, in_handle)
+        );
 
         expect_eq!(OakStatus::OK, oak::channel_close(in_handle.handle));
         expect_eq!(OakStatus::OK, oak::channel_close(out_handle.handle));
@@ -885,11 +848,12 @@ impl FrontendNode {
     }
 
     fn test_direct_log(&self) -> std::io::Result<()> {
-        // Send a message directly to the logging channel (not via the log facade).
+        // Send a message directly to a fresh logging Node (not via the log facade).
         // Include some handles which will be ignored.
-        let logging_handle = oak::WriteHandle {
-            handle: oak::channel_find(LOG_PORT_NAME),
-        };
+        let (logging_handle, read_handle) = oak::channel_create().unwrap();
+        oak::node_create(LOG_CONFIG_NAME, read_handle);
+        oak::channel_close(read_handle.handle);
+
         expect!(logging_handle.handle != oak::wasm::INVALID_HANDLE);
         let (out_handle, in_handle) = oak::channel_create().unwrap();
 
