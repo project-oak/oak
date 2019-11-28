@@ -4,14 +4,15 @@ Oak [Nodes](concepts.md#oak-node) are implemented as WebAssembly modules, and so
 can only interact with things outside of the WebAssembly environment through
 specific entrypoints which form the **Oak ABI**:
 
-- The [Oak Runtime](concepts.md#oak-runtime) invokes the Oak Node via a single
+- The [Oak Runtime](concepts.md#oak-runtime) invokes each Oak Node via a single
   [exported function](#exported-function).
 - The Oak Node can make use of functionality provided by the Oak TCB by invoking
   [host functions](#host-functions), available as WebAssembly imports.
 
-These host functions provided by the Oak TCB revolve around the use of
-[channels](concepts.md#channels) for inter-node communication. To communicate
-with the outside world beyond the Oak system, the Oak TCB may also include
+These host functions provided by the Oak TCB revolve around the creation of
+other Nodes, and the use of [channels](concepts.md#channels) for inter-node
+communication. To communicate with the outside world beyond the Oak system, a
+Node may also create and communicate with
 [pre-defined channels](#pre-defined-channels) that are connected to
 [pseudo-Nodes](concepts.md#pseudo-nodes).
 
@@ -61,6 +62,10 @@ incoming messages that arrive on the read halves of its channels, sending
 outgoing messages over the write halves of channels. The `oak_main` function is
 generally expected to run forever, but may return a status if the Node choses to
 terminate (whether expectedly or unexpectedly).
+
+Each Oak Application starts with a single initial Oak Node; this Node receives
+as its initial handle the read half of a channel that receives gRPC requests
+from an implicit [gRPC pseudo-Node](concepts.md#pseudo-nodes).
 
 ## Host Functions
 
@@ -131,18 +136,11 @@ functions** as
   - arg 0: Handle to channel
   - return 0: Status of operation
 
-- `channel_find: (usize, usize) -> u64`: Return the channel handle that
-  corresponds to a provided port name, or zero if not found.
+- `node_create: (usize, usize, u64) -> u32`: Create a new Node running the Node
+  contents identified by args 0 and 1, and pass it an initial handle to the read
+  half of a channel identified by arg 2.
 
-  - arg 0: Source buffer holding port name
-  - arg 1: Source buffer size in bytes
-  - return 0: Channel handle, or zero if not found.
-
-- `node_create: (usize, usize, u64) -> u32`: Create a new Node running the Web
-  Assembly contents identified by args 0 and 1, and pass it an initial handle to
-  the read half of a channel identified by arg 2.
-
-  - arg 0: Source buffer holding Wasm contents name
+  - arg 0: Source buffer holding contents name
   - arg 1: Source buffer size in bytes
   - arg 2: Handle to channel
   - return 0: Status of operation
@@ -152,26 +150,3 @@ functions** as
   - arg 0: Destination buffer
   - arg 1: Destination buffer size in bytes
   - return 0: Status of operation
-
-## Pre-Defined Channels
-
-The default [port names](concepts.md#pre-defined-channels-and-port-names) that
-are configured by the `oak::DefaultConfig()`
-[helper function](oak/common/app_config.h) and its ancillaries
-(`oak::AddLoggingToConfig()`, `oak::AddStorageToConfig()`) are:
-
-- `log` (send): Messages sent to this channel will treated as UTF-8 strings to
-  be logged.
-- `grpc_in` (receive): This channel will be populated with incoming gRPC request
-  messages, for processing by the Oak Node. Each incoming message is a
-  serialized `GrpcRequest` protocol buffer message (see
-  [/oak/proto/grpc_encap.proto](oak/proto/grpc_encap.proto)), and is accompanied
-  by a handle for the write half of a channel which should be used for sending
-  the associated gRPC response messages (as serialized `GrpcResponse` protocol
-  buffer messages).
-- `storage_out` (send): This channel can be used to send storage request
-  messages. Each such message should be encoded as a serialized
-  `StorageOperationRequest` protocol buffer message (see
-  [/oak/proto/storage.proto](oak/proto/storage.proto)), and should be
-  accompanied by a handle for the write half of a channel for the response to be
-  returned on.

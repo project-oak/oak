@@ -70,10 +70,8 @@ macro implements `oak_main` for you, with the following default behaviour:
 - Create an instance of your Node `struct` (using the `new()` method from the
   [`OakNode`](https://project-oak.github.io/oak/sdk/oak/grpc/trait.OakNode.html)
   trait described below).
-- Look for channel handles corresponding to the
-  [default port names](abi.md#pre-defined-channels) for gRPC input and output
-  channel halves.
-- Pass the Node `struct` and the channel handles to the
+- Take the channel handle passed to `oak_main()` and use it for gRPC input.
+- Pass the Node `struct` and the channel handle to the
   [`event_loop()`](https://project-oak.github.io/oak/sdk/oak/grpc/fn.event_loop.html)
   function from the [`oak::grpc` module](sdk.md#oakgrpc-module).
 
@@ -231,9 +229,10 @@ configuration (described in the next section) easier:
 
 To use the `CreateApplication` method, the client needs to specify the
 _application configuration_; this describes the Nodes that make up the
-application, and their connectivity. However, for the simple case of a one-Node
-application the `oak::ManagerClient` helper takes care of this; the client just
-need to provide the code that is going to be run in the Node, as a Wasm module:
+application, and the initial Node to start. However, for the simple case of a
+one-Node application the `oak::ManagerClient` helper takes care of this; the
+client just need to provide the code that is going to be run in the Node, as a
+Wasm module:
 
 <!-- prettier-ignore-start -->
 [embedmd]:# (../examples/rustfmt/client/rustfmt.cc C++ /.*FLAGS_module/ /}/)
@@ -302,7 +301,8 @@ sections) would be as follows:
 - The Oak Runtime receives the message and encapsulates it in a `GrpcRequest`
   wrapper message.
 - The Oak Runtime serializes the `GrpcRequest` and writes it to the gRPC-in
-  channel for the node.
+  channel for the node. It also creates a new channel for any responses, and
+  passes a handle for this response channel alongside the request.
 - This unblocks the Node code, and `oak::grpc::event_loop` reads and
   deserializes the incoming gRPC request. It then calls the Node's `invoke()`
   method with the method name and (serialized) gRPC request.
@@ -312,9 +312,9 @@ sections) would be as follows:
   `Node`.
 - The (user-written) code in this method does its work, and returns a response.
 - The auto-generated `dispatch()` code encapsulates the response into a
-  `GrpcResponse` wrapper message, and serializes into the gRPC output channel.
-- The Oak Runtime reads this message from the channel, deserializes it and sends
-  the inner response back to the client.
+  `GrpcResponse` wrapper message, and serializes into the response channel.
+- The Oak Runtime reads this message from the response channel, deserializes it
+  and sends the inner response back to the client.
 - The client C++ code receives the response.
 
 <!-- From (Google-internal): http://go/sequencediagram/view/5741464478810112 -->
@@ -373,8 +373,8 @@ crate also allows the gRPC service methods to be tested via the
 #[test]
 #[serial(node_test)]
 fn test_hello_request() {
-    oak_tests::grpc_channel_setup_default();
-    oak_tests::start_node(oak_tests::DEFAULT_NODE_NAME);
+    let handle = oak_tests::grpc_channel_setup_default();
+    oak_tests::start_node(handle);
 
     let mut req = HelloRequest::new();
     req.set_greeting("world".to_string());
@@ -417,7 +417,7 @@ now in Rust rather than C++).
 
 However, the fields in the application configuration that hold the Wasm bytecode
 for the various Nodes are ignored; instead, the second argument to
-`oak_tests::start()` is a map from the relevant `WasmContents.name` to a
+`oak_tests::start()` is a map from the relevant `NodeContents.name` to a
 `fn() -> i32` function pointer (aliased as `oak_tests::NodeMain`) for the main
 entrypoint for each Node.
 
@@ -433,8 +433,8 @@ fn test_abi() {
     let mut entrypoints = HashMap::new();
     let fe: oak_tests::NodeMain = abitest_frontend::main;
     let be: oak_tests::NodeMain = abitest_backend::main;
-    entrypoints.insert("frontend-code".to_string(), fe);
-    entrypoints.insert("backend-code".to_string(), be);
+    entrypoints.insert(FRONTEND_CONFIG_NAME.to_string(), fe);
+    entrypoints.insert(BACKEND_CONFIG_NAME.to_string(), be);
     oak_tests::start(test_config(), entrypoints);
 ```
 <!-- prettier-ignore-end -->
@@ -456,7 +456,7 @@ pub extern "C" fn oak_main(handle: u64) -> i32 {
         Err(_) => OakStatus::ERR_INTERNAL.value(),
     }
 }
-pub fn main(_handle: u64) -> i32 {
+pub fn main(handle: u64) -> i32 {
 ```
 <!-- prettier-ignore-end -->
 
