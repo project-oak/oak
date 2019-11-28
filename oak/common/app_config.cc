@@ -30,6 +30,8 @@ const char kGrpcNodeRequestPortName[] = "request";
 const char kLoggingNodePortName[] = "in";
 const char kStorageNodeRequestPortName[] = "request";
 const char kStorageNodeResponsePortName[] = "response";
+const char kHttpClientNodeRequestPortName[] = "request";
+const char kHttpClientNodeResponsePortName[] = "response";
 
 namespace {
 

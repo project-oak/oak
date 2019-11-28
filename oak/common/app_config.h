@@ -27,6 +27,8 @@ extern const char kGrpcNodeRequestPortName[];
 extern const char kLoggingNodePortName[];
 extern const char kStorageNodeRequestPortName[];
 extern const char kStorageNodeResponsePortName[];
+extern const char kHttpClientNodeRequestPortName[];
+extern const char kHttpClientNodeResponsePortName[];
 
 // Build a default application configuration with a single Wasm node of the given
 // name and contents, accessible via gRPC.

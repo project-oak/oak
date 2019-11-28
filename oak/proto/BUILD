@@ -140,3 +140,16 @@ cc_grpc_library(
         "//third_party/google/rpc:status_cc_proto",
     ],
 )
+
+proto_library(
+    name = "http_client_proto",
+    srcs = ["http_client.proto"],
+    deps = [
+        # "//third_party/google/rpc:status_proto",
+    ],
+)
+
+cc_proto_library(
+    name = "http_client_cc_proto",
+    deps = [":http_client_proto"],
+)

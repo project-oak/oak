@@ -140,6 +140,7 @@ cc_library(
         "//oak/common:app_config",
         "//oak/proto:enclave_cc_proto",
         "//oak/proto:oak_api_cc_proto",
+        "//oak/server:http_client_node",
         "//oak/server:logging_node",
         "//oak/server/rust:wrapper",
         "//oak/server/storage:storage_node",
@@ -193,6 +194,23 @@ cc_library(
         ":node_thread",
         "//oak/common:app_config",
         "//oak/common:handles",
+        "@com_google_absl//absl/memory",
+        "@com_google_asylo//asylo/util:logging",
+    ],
+)
+
+cc_library(
+    name = "http_client_node",
+    srcs = ["http_client_node.cc"],
+    hdrs = ["http_client_node.h"],
+    deps = [
+        ":channel",
+        ":node_thread",
+        "//oak/common:app_config",
+        "//oak/common:handles",
+        "//oak/proto:grpc_encap_cc_proto",
+        "//oak/proto:http_client_cc_proto",
+        "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/memory",
         "@com_google_asylo//asylo/util:logging",
     ],
