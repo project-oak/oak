@@ -21,7 +21,7 @@ use log::{debug, info};
 
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use oak::OakStatus;
-use proto::manager::Node_oneof_node_type;
+use proto::manager::NodeConfiguration_oneof_config_type;
 use protobuf::{Message, ProtobufEnum};
 use rand::Rng;
 use std::cell::RefCell;
@@ -37,7 +37,8 @@ pub mod proto;
 #[cfg(test)]
 mod tests;
 
-pub static DEFAULT_NODE_NAME: &str = "app";
+// Node name used for single-Node tests.
+pub static DEFAULT_NODE_NAME: &str = "internal-0";
 
 struct OakMessage {
     data: Vec<u8>,
@@ -173,23 +174,19 @@ impl Drop for ChannelHalf {
 
 struct OakRuntime {
     termination_pending: bool,
-    // Map name of Wasm contents to a test entrypoint function pointer.
+    // Map name of Node config names to a test entrypoint function pointer.
     entrypoints: HashMap<String, NodeMain>,
-    // Map name of Wasm contents to next index.
+    // Map name of Node config names to next index.
     next_index: HashMap<String, u32>,
     // Track a reference to the write half of the channel used for sending
     // gRPC requests in to the Application under test.
     grpc_in_half: Option<ChannelHalf>,
-    // Node instances organized by Node name.
+    // Node instances organized by internal Node name.
     nodes: HashMap<String, OakNode>,
 }
 
 struct OakNode {
-    contents_name: String,
     halves: HashMap<oak::Handle, ChannelHalf>,
-    // Mapping from port name to channel handle, as induced by the Application
-    // configuration.
-    ports: HashMap<String, oak::Handle>,
     // Handle for a thread running the main loop for this node.
     thread_handle: Option<std::thread::JoinHandle<i32>>,
 }
@@ -216,102 +213,70 @@ impl OakRuntime {
         }
     }
 
-    fn entrypoint(&self, contents: &str) -> Option<NodeMain> {
-        self.entrypoints.get(contents).copied()
+    fn entrypoint(&self, config: &str) -> Option<NodeMain> {
+        self.entrypoints.get(config).copied()
     }
 
-    fn next_node_name(&mut self, contents: &str) -> String {
-        let index = self.next_index.entry(contents.to_string()).or_insert(0);
-        let name = format!("{}-{}", contents, *index);
+    fn next_node_name(&mut self, config: &str) -> String {
+        let index = self.next_index.entry(config.to_string()).or_insert(0);
+        let name = format!("{}-{}", config, *index);
         *index += 1;
         name
     }
 
     // Build a runtime that has Node and Channels set up according to the given
-    // Application configuration. Returns a vector of (node-name, entrypoint)
-    // pairs indicating which Nodes need to be started, running which code.
+    // Application configuration. Returns a (node-name, entrypoint, handle)
+    // tuple indicating the initial Node that should be started.
     fn configure(
         &mut self,
         config: proto::manager::ApplicationConfiguration,
         entrypoints: HashMap<String, NodeMain>,
-    ) -> Vec<(String, NodeMain)> {
-        // TODO: validate the config
-        let mut required_nodes = Vec::new();
+    ) -> (String, NodeMain, oak::Handle) {
         self.termination_pending = false;
-        self.entrypoints = entrypoints;
         self.nodes.clear();
-        let mut grpc_node_name: Option<&str> = None;
-        let mut log_node_name: Option<&str> = None;
-        let mut log_channel: Option<ChannelRef> = None;
-        for node_cfg in config.get_nodes() {
-            if let Some(Node_oneof_node_type::web_assembly_node(wasm_cfg)) = &node_cfg.node_type {
-                let mut node = OakNode::new();
-                node.contents_name = wasm_cfg.wasm_contents_name.clone();
-                debug!(
-                    "{{{}}}: add Wasm node running content '{}'",
-                    node_cfg.node_name, wasm_cfg.wasm_contents_name
-                );
-                self.nodes.insert(node_cfg.node_name.to_string(), node);
-                let entrypoint = self
-                    .entrypoint(&wasm_cfg.wasm_contents_name)
-                    .unwrap_or_else(|| {
-                        panic!("failed to find {} entrypoint", wasm_cfg.wasm_contents_name)
-                    });
-                required_nodes.push((node_cfg.node_name.clone(), entrypoint));
-            } else if let Some(Node_oneof_node_type::grpc_server_node(_)) = node_cfg.node_type {
-                debug!("{{{}}}: add gRPC pseudo-Node", node_cfg.node_name);
-                grpc_node_name = Some(&node_cfg.node_name);
-            } else if let Some(Node_oneof_node_type::log_node(_)) = node_cfg.node_type {
-                let node = OakNode::new();
-                log_node_name = Some(&node_cfg.node_name);
-                debug!("{{{}}}: add log pseudo-Node", node_cfg.node_name);
-                self.nodes.insert(node_cfg.node_name.to_string(), node);
-                required_nodes.push((node_cfg.node_name.to_string(), log_node_main));
-            }
-            // TODO: add storage support
-        }
-        for channel_cfg in config.get_channels() {
-            let src = channel_cfg.get_source_endpoint();
-            let dest = channel_cfg.get_destination_endpoint();
-            debug!(
-                "add channel {{{}}}:{} -> {{{}}}:{}",
-                src.node_name, src.port_name, dest.node_name, dest.port_name
-            );
-            let channel = if log_node_name.is_some()
-                && dest.node_name == log_node_name.unwrap()
-                && dest.port_name == oak_log::IN_PORT_NAME
-            {
-                if log_channel.is_none() {
-                    log_channel = Some(self.new_channel());
+        self.entrypoints = entrypoints;
+        for node_config in config.get_node_configs() {
+            match &node_config.config_type {
+                None => {
+                    panic!("Node config {} with no type", node_config.name);
                 }
-                log_channel.clone().unwrap()
-            } else {
-                self.new_channel()
-            };
-
-            if grpc_node_name.is_some()
-                && src.node_name == grpc_node_name.unwrap()
-                && src.port_name == oak::grpc::OUT_PORT_NAME
-            {
-                debug!("channel is gRPC input channel");
-                self.grpc_in_half = Some(ChannelHalf::new(Direction::Write, channel.clone()));
-            }
-            if self.nodes.contains_key(&src.node_name) {
-                let half = ChannelHalf::new(Direction::Write, channel.clone());
-                self.nodes
-                    .get_mut(&src.node_name)
-                    .unwrap()
-                    .add_named_half(half, &src.port_name);
-            }
-            if self.nodes.contains_key(&dest.node_name) {
-                let half = ChannelHalf::new(Direction::Read, channel.clone());
-                self.nodes
-                    .get_mut(&dest.node_name)
-                    .unwrap()
-                    .add_named_half(half, &dest.port_name);
+                Some(NodeConfiguration_oneof_config_type::log_config(_)) => {
+                    self.entrypoints
+                        .insert(node_config.name.clone(), log_node_main);
+                }
+                Some(NodeConfiguration_oneof_config_type::wasm_config(_)) => {
+                    // Check that we have an entrypoint corresponding to this.
+                    if !self.entrypoints.contains_key(&node_config.name) {
+                        panic!(
+                            "no entrypoint provided for Node config {}",
+                            node_config.name
+                        )
+                    }
+                }
+                Some(NodeConfiguration_oneof_config_type::storage_config(_storage_config)) => {
+                    // TODO: Implement a storage pseudo-Node
+                }
             }
         }
-        required_nodes
+
+        let node_name = self.next_node_name(&config.initial_node);
+        let node = OakNode::new();
+        debug!(
+            "{{{}}}: add Wasm node running config '{}'",
+            node_name, config.initial_node
+        );
+        self.nodes.insert(node_name.clone(), node);
+        let entrypoint = self
+            .entrypoint(&config.initial_node)
+            .unwrap_or_else(|| panic!("failed to find {} entrypoint", config.initial_node));
+
+        // Setup the initial channel from gRPC pseudo-Node to Node.
+        let channel = self.new_channel();
+        self.grpc_in_half = Some(ChannelHalf::new(Direction::Write, channel.clone()));
+        let half = ChannelHalf::new(Direction::Read, channel.clone());
+        let handle = self.nodes.get_mut(&node_name).unwrap().add_half(half);
+
+        (node_name, entrypoint, handle)
     }
     // Record that a Node of the given name has been started in a distinct thread.
     fn started(&mut self, node_name: &str, join_handle: std::thread::JoinHandle<i32>) {
@@ -334,7 +299,6 @@ impl OakRuntime {
         for name in &names {
             let node = self.nodes.get_mut(name).unwrap();
             node.halves.clear();
-            node.ports.clear();
         }
         self.grpc_in_half = None;
     }
@@ -417,16 +381,19 @@ impl OakRuntime {
             }
         }
     }
-    fn grpc_channel_setup(&mut self, node_name: &str, port_name: &str) {
+    fn grpc_channel_setup(&mut self, node_name: &str) -> oak::Handle {
         let channel = self.new_channel();
         let half = ChannelHalf::new(Direction::Read, channel.clone());
         let node = self.nodes.get_mut(node_name).unwrap();
-        let read_handle = node.add_named_half(half, port_name);
+        let read_handle = node.add_half(half);
         debug!(
-            "set up '{}' channel to node {} with handle {}",
-            port_name, node_name, read_handle
+            "set up gRPC channel to node {} with handle {}",
+            node_name, read_handle
         );
+        // Remember the write half of the channel to allow future test
+        // injection of gRPC requests.
         self.grpc_in_half = Some(ChannelHalf::new(Direction::Write, channel));
+        read_handle
     }
     fn grpc_channel(&self) -> Option<ChannelRef> {
         let half = self.grpc_in_half.as_ref()?;
@@ -435,16 +402,16 @@ impl OakRuntime {
     fn node_create(
         &mut self,
         node_name: String,
-        contents: &str,
+        config: &str,
         handle: oak::Handle,
     ) -> Result<NodeStartInfo, OakStatus> {
-        // First, find the code referred to by the contents name.
-        let entrypoint = match self.entrypoint(&contents) {
+        // First, find the code referred to by the config name.
+        let entrypoint = match self.entrypoint(&config) {
             Some(e) => e,
             None => {
                 debug!(
                     "{{{}}}: node_create('{}', {}) -> ERR_INVALID_ARGS",
-                    node_name, contents, handle
+                    node_name, config, handle
                 );
                 return Err(OakStatus::ERR_INVALID_ARGS);
             }
@@ -456,19 +423,18 @@ impl OakRuntime {
             None => {
                 debug!(
                     "{{{}}}: node_create('{}', {}) -> ERR_BAD_HANDLE",
-                    node_name, contents, handle
+                    node_name, config, handle
                 );
                 return Err(OakStatus::ERR_BAD_HANDLE);
             }
         };
 
         // Create the new Node instance.
-        let new_node_name = self.next_node_name(&contents);
-        let mut node = OakNode::new();
-        node.contents_name = contents.to_string();
+        let new_node_name = self.next_node_name(&config);
+        let node = OakNode::new();
         debug!(
-            "{{{}}}: add node running content '{}'",
-            new_node_name, contents
+            "{{{}}}: add node running config '{}'",
+            new_node_name, config
         );
         self.nodes.insert(new_node_name.to_string(), node);
 
@@ -488,9 +454,7 @@ impl OakRuntime {
 impl OakNode {
     fn new() -> OakNode {
         OakNode {
-            contents_name: "<default>".to_string(),
             halves: HashMap::new(),
-            ports: HashMap::new(),
             thread_handle: None,
         }
     }
@@ -510,11 +474,6 @@ impl OakNode {
     fn add_half(&mut self, half: ChannelHalf) -> oak::Handle {
         let handle = self.next_handle();
         self.halves.insert(handle, half);
-        handle
-    }
-    fn add_named_half(&mut self, half: ChannelHalf, port_name: &str) -> oak::Handle {
-        let handle = self.add_half(half);
-        self.ports.insert(port_name.to_string(), handle);
         handle
     }
     fn close_channel(&mut self, handle: oak::Handle) -> u32 {
@@ -558,8 +517,8 @@ extern "C" {
     pub fn oak_main(handle: u64) -> i32;
 }
 
-/// Test-only implementation of channel wait functionality, which always
-/// indicates that all provided channels are ready for reading.
+/// Test implementation of channel wait functionality, which always indicates
+/// that all provided channels are ready for reading.
 #[no_mangle]
 pub unsafe extern "C" fn wait_on_channels(buf: *mut u8, count: u32) -> u32 {
     let name = node_name();
@@ -665,8 +624,8 @@ pub unsafe extern "C" fn channel_write(
     result
 }
 
-/// Test-only implementation of channel read functionality, which reads a
-/// message from the test channel.
+/// Test implementation of channel read functionality, which reads a message
+/// from the test channel.
 #[no_mangle]
 pub unsafe extern "C" fn channel_read(
     handle: u64,
@@ -714,7 +673,7 @@ pub unsafe extern "C" fn channel_read(
     oak::OakStatus::OK as u32
 }
 
-/// Test-only version of channel creation.
+/// Test version of channel creation.
 #[no_mangle]
 pub unsafe extern "C" fn channel_create(write: *mut u64, read: *mut u64) -> u32 {
     let name = node_name();
@@ -730,7 +689,7 @@ pub unsafe extern "C" fn channel_create(write: *mut u64, read: *mut u64) -> u32 
     OakStatus::OK.value() as u32
 }
 
-/// Test-only version of channel closure.
+/// Test version of channel closure.
 #[no_mangle]
 pub extern "C" fn channel_close(handle: u64) -> u32 {
     let name = node_name();
@@ -746,39 +705,18 @@ pub extern "C" fn channel_close(handle: u64) -> u32 {
     result
 }
 
-/// Test-only placeholder for finding a channel by preconfigured port name.
-#[no_mangle]
-pub unsafe extern "C" fn channel_find(buf: *const u8, size: usize) -> u64 {
-    let name = node_name();
-    debug!("{{{}}}: channel_find({:?}, {})", name, buf, size);
-    let mut data = Vec::with_capacity(size as usize);
-    std::ptr::copy_nonoverlapping(buf, data.as_mut_ptr(), size as usize);
-    data.set_len(size as usize);
-    let port_name = String::from_utf8(data).unwrap();
-    let handle = *RUNTIME.read().unwrap().nodes[&name]
-        .ports
-        .get(&port_name)
-        .unwrap_or(&0);
-    debug!("{{{}}}: channel_find('{}') -> {}", name, port_name, handle);
-    handle
-}
-
-/// Test framework implementation of dynamic Node creation.
+/// Test implementation of dynamic Node creation.
 #[no_mangle]
 pub unsafe fn node_create(buf: *const u8, len: usize, handle: u64) -> u32 {
     let name = node_name();
-    debug!("{{{}}}: node_create({:?}, {})", name, buf, len);
+    debug!("{{{}}}: node_create({:?}, {}, {})", name, buf, len, handle);
     let mut data = Vec::with_capacity(len as usize);
     std::ptr::copy_nonoverlapping(buf, data.as_mut_ptr(), len as usize);
     data.set_len(len as usize);
-    let contents = String::from_utf8(data).unwrap();
-    debug!("{{{}}}: node_create('{}', {})", name, contents, handle);
+    let config = String::from_utf8(data).unwrap();
+    debug!("{{{}}}: node_create('{}', {})", name, config, handle);
 
-    let start_info = match RUNTIME
-        .write()
-        .unwrap()
-        .node_create(name, &contents, handle)
-    {
+    let start_info = match RUNTIME.write().unwrap().node_create(name, &config, handle) {
         Err(status) => return status.value() as u32,
         Ok(result) => result,
     };
@@ -800,7 +738,7 @@ pub unsafe fn node_create(buf: *const u8, len: usize, handle: u64) -> u32 {
     OakStatus::OK.value() as u32
 }
 
-/// Test-only placeholder for random data generation.
+/// Test version of random data generation.
 #[no_mangle]
 pub unsafe extern "C" fn random_get(buf: *mut u8, size: usize) -> u32 {
     let name = node_name();
@@ -815,19 +753,6 @@ pub unsafe extern "C" fn random_get(buf: *mut u8, size: usize) -> u32 {
 
 // Test helper functions that allow Node unit test code to manipulate
 // the mock Oak environment.
-
-/// Test helper to add a port name referring to a handle.
-pub fn add_port_name(name: &str, handle: oak::Handle) {
-    debug!("registered port '{}' -> handle {}", name, handle);
-    RUNTIME
-        .write()
-        .unwrap()
-        .nodes
-        .get_mut(DEFAULT_NODE_NAME)
-        .unwrap()
-        .ports
-        .insert(name.to_string(), handle);
-}
 
 /// Convenience test helper which returns the last message on a channel as a
 /// string (without removing it from the channel).
@@ -892,7 +817,7 @@ pub type NodeMain = fn(u64) -> i32;
 /// channel configuration.  Because multiple Nodes are linked into the same
 /// test, the Nodes should be configured *not* to define the global extern "C"
 /// oak_main(), as this would lead to duplicate symbols.  Instead, the
-/// entrypoints map should provide a function pointer for each WasmContents
+/// entrypoints map should provide a function pointer for each WasmConfiguration
 /// entry in the configuration.
 ///
 /// Also, Nodes under test should ensure that the oak_log crate does not end
@@ -904,32 +829,31 @@ pub fn start(
     config: proto::manager::ApplicationConfiguration,
     entrypoints: HashMap<String, NodeMain, RandomState>,
 ) {
-    let required_nodes = RUNTIME.write().unwrap().configure(config, entrypoints);
-    for (name, entrypoint) in required_nodes {
-        debug!("{{{}}}: start per-Node thread", name);
-        let node_name = name.clone();
-        let thread_handle = spawn(move || {
-            set_node_name(node_name);
-            // TODO: provide a valid handle.
-            entrypoint(oak::wasm::INVALID_HANDLE)
-        });
-        RUNTIME.write().unwrap().started(&name, thread_handle);
-    }
+    let (name, entrypoint, handle) = RUNTIME.write().unwrap().configure(config, entrypoints);
+    debug!("{{{}}}: start per-Node thread", name);
+    let node_name = name.clone();
+    let thread_handle = spawn(move || {
+        set_node_name(node_name);
+        entrypoint(handle)
+    });
+    RUNTIME.write().unwrap().started(&name, thread_handle);
 }
 
 /// Start running a test of a single-Node Application.  This assumes that the
 /// single Node's main entrypoint is available as a global extern "C"
 /// oak_main(), as for a live version of the Application.
-pub fn start_node(name: &str) {
+pub fn start_node(handle: oak::Handle) {
     RUNTIME.write().unwrap().termination_pending = false;
-    debug!("{{{}}}: start per-Node thread", name);
-    let node_name = name.to_string();
-    let main_handle = spawn(|| unsafe {
+    debug!("start per-Node thread with handle {}", handle);
+    let node_name = DEFAULT_NODE_NAME.to_string();
+    let main_handle = spawn(move || unsafe {
         set_node_name(node_name);
-        // TODO: provide a valid handle.
-        oak_main(oak::wasm::INVALID_HANDLE)
+        oak_main(handle)
     });
-    RUNTIME.write().unwrap().started(name, main_handle)
+    RUNTIME
+        .write()
+        .unwrap()
+        .started(DEFAULT_NODE_NAME, main_handle)
 }
 
 /// Stop the running Application under test.
@@ -961,13 +885,11 @@ pub fn stop() -> OakStatus {
 }
 
 // Main loop function for a log pseudo-Node.
-fn log_node_main(_handle: u64) -> i32 {
-    let half = oak::ReadHandle {
-        handle: oak::channel_find(oak_log::IN_PORT_NAME),
-    };
-    if half.handle == oak::wasm::INVALID_HANDLE {
+fn log_node_main(handle: u64) -> i32 {
+    if handle == oak::wasm::INVALID_HANDLE {
         return OakStatus::ERR_BAD_HANDLE.value();
     }
+    let half = oak::ReadHandle { handle };
     loop {
         if let Err(status) = oak::wait_on_channels(&[half]) {
             return status.value();
@@ -984,19 +906,13 @@ fn log_node_main(_handle: u64) -> i32 {
     }
 }
 
-/// Test helper to set up a channel into the Node under for injected gRPC
-/// requests, using default parameters (node "app" port "grpc_in").
-pub fn grpc_channel_setup_default() {
-    grpc_channel_setup(DEFAULT_NODE_NAME, oak::grpc::DEFAULT_IN_PORT_NAME)
-}
-
-/// Test helper to set up a channel into a Node under for injected gRPC
-/// requests.
-pub fn grpc_channel_setup(node_name: &str, port_name: &str) {
+/// Test helper to set up a channel into the (single) Node under test for
+/// injected gRPC requests.
+pub fn grpc_channel_setup_default() -> oak::Handle {
     RUNTIME
         .write()
         .unwrap()
-        .grpc_channel_setup(node_name, port_name)
+        .grpc_channel_setup(DEFAULT_NODE_NAME)
 }
 
 /// Test helper to inject a (single) gRPC request message to the Node
@@ -1047,7 +963,7 @@ where
         );
         if let Err(e) = result {
             if e == OakStatus::OK.value() as u32 {
-                info!("no pending message; poll again soon");
+                info!("no pending gRPC response message; poll again soon");
                 std::thread::sleep(std::time::Duration::from_millis(100));
                 continue;
             } else {
