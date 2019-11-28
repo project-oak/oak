@@ -63,6 +63,7 @@ cc_library(
         "@com_google_asylo//asylo/grpc/auth:grpc++_security_enclave",
         "@com_google_asylo//asylo/grpc/auth:null_credentials_options",
         # TODO: Uncomment when Asylo will release remote attestation.
+        # https://github.com/project-oak/oak/issues/119
         #"@com_google_asylo//asylo/grpc/auth:sgx_remote_credentials_options",
         "@com_google_asylo//asylo/identity:enclave_assertion_authority_configs",
         "@com_google_asylo//asylo/identity:descriptions",

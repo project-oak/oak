@@ -41,7 +41,7 @@ class SgxApplicationClient {
  public:
   // Initializes an SGX application client.
   //
-  // `mrenclave_strings` contains all valid Oak enclave hashes (hexademical strings).
+  // `mrenclave_strings` contains all valid Oak enclave hashes (hexadecimal strings).
   // TODO: Add parameter to specify Intel public key to use for verification.
   SgxApplicationClient(std::vector<std::string> mrenclave_strings);
 

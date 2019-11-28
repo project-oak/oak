@@ -24,6 +24,7 @@
 #include "asylo/grpc/auth/enclave_credentials_options.h"
 #include "asylo/grpc/auth/null_credentials_options.h"
 // TODO: Uncomment when Asylo will release remote attestation.
+// https://github.com/project-oak/oak/issues/119
 //#include "asylo/grpc/auth/sgx_remote_credentials_options.h"
 #include "asylo/identity/descriptions.h"
 #include "asylo/identity/enclave_assertion_authority_configs.h"
@@ -41,6 +42,10 @@
 using asylo::Status;
 using asylo::StatusOr;
 
+namespace oak {
+
+namespace {
+
 constexpr size_t kPerChannelNonceSizeBytes = 32;
 // Debug MRSIGNER value derived from the SGX test key (will change after changing SVN and PRODID).
 // https://github.com/google/asylo/blob/088ea3490dd4579655bd5b65b0e31fe18de7f6dd/asylo/distrib/sgx_x86_64/linux_sgx_2_6.patch#L5481
@@ -49,37 +54,49 @@ const char* kDebugMrSigner = "83d719e77deaca1470f6baf62a4d774303c899db69020f9c70
 // This value should be provided by EREPORT and it reflects the microcode update version.
 const char* kDebugCpuSvn = "0000000000000000";
 
-// Parses a hexademical hash string from `hash_string` into `Sha256HashProto` in `hash`.
+// Converts a hexadecimal string `hash_string` to the string of bytes.
+// This function is a wrapper for an absl::HexStringToBytes with a validity check.
 // TODO: Use same function from Asylo, when it becomes public.
-Status Sha256HashFromHexString(const std::string& hash_string, asylo::Sha256HashProto* hash) {
-  if (hash_string.size() != 64) {
-    return Status(asylo::error::GoogleError::INTERNAL,
-                  "Hash string size is not 64: " + hash_string);
-  }
+StatusOr<std::string> HexStringToBytes(const std::string& hash_string) {
   for (auto ch : hash_string) {
     if (std::isxdigit(ch) == 0) {
       return Status(asylo::error::GoogleError::INVALID_ARGUMENT,
-                    "Hash contains non-hexademical charachters: " + hash_string);
+                    "String contains non-hexademical charachters: " + hash_string);
     }
   }
-  hash->set_hash(absl::HexStringToBytes(hash_string));
-  return Status::OkStatus();
+  return absl::HexStringToBytes(hash_string);
 }
 
-namespace oak {
+// Parses a hexadecimal hash string from `hash_string` into `Sha256HashProto` in `hash`.
+// `hash_bytes` should be a hexadecimal string that represents a Sha256 hash (64 bytes long).
+Status SetSha256HashProto(const std::string& hash_string, asylo::Sha256HashProto* hash) {
+  auto hash_bytes_status = HexStringToBytes(hash_string);
+  if (hash_bytes_status.ok()) {
+    auto hash_bytes = hash_bytes_status.ValueOrDie();
+    if (hash_bytes.size() != 32) {
+      return Status(asylo::error::GoogleError::INTERNAL,
+                    "Wrong Sha256 hash size: " + std::to_string(hash_bytes.size()));
+    }
+    hash->set_hash(hash_bytes);
+  } else {
+    return hash_bytes_status.status();
+  }
+}
+
+}  // namespace
 
 SgxApplicationClient::SgxApplicationClient(std::vector<std::string> mrenclave_strings) {
   // Initialize assertion authorities.
-  this->InitializeAssertionAuthorities();
+  InitializeAssertionAuthorities();
 
   // Initialize credentials.
-  auto channel_credentials = this->CreateChannelCredentials(mrenclave_strings);
-  auto call_credentials = this->CreateCallCredentials();
-  this->credentials_ = grpc::CompositeChannelCredentials(channel_credentials, call_credentials);
+  auto channel_credentials = CreateChannelCredentials(mrenclave_strings);
+  auto call_credentials = CreateCallCredentials();
+  credentials_ = grpc::CompositeChannelCredentials(channel_credentials, call_credentials);
 }
 
 std::shared_ptr<grpc::Channel> SgxApplicationClient::CreateChannel(std::string address) {
-  return grpc::CreateChannel(address, this->credentials_);
+  return grpc::CreateChannel(address, credentials_);
 }
 
 asylo::EnclaveAssertionAuthorityConfig SgxApplicationClient::GetNullAssertionAuthorityConfig() {
@@ -110,13 +127,13 @@ StatusOr<asylo::EnclaveIdentityExpectation> SgxApplicationClient::CreateSgxIdent
 
   // Assign code identity.
   auto code_identity = sgx_identity.mutable_code_identity();
-  auto status = Sha256HashFromHexString(mrenclave_string, code_identity->mutable_mrenclave());
+  auto status = SetSha256HashProto(mrenclave_string, code_identity->mutable_mrenclave());
   if (!status.ok()) {
     return status;
   }
 
   auto signer_assigned_identity = code_identity->mutable_signer_assigned_identity();
-  status = Sha256HashFromHexString(kDebugMrSigner, signer_assigned_identity->mutable_mrsigner());
+  status = SetSha256HashProto(kDebugMrSigner, signer_assigned_identity->mutable_mrsigner());
   if (!status.ok()) {
     return status;
   }
@@ -175,7 +192,7 @@ std::shared_ptr<grpc::ChannelCredentials> SgxApplicationClient::CreateChannelCre
     std::vector<std::string>& mrenclave_strings) const {
   // TODO: Use remote attestation when it becomes available.
   auto credentials_options = asylo::BidirectionalNullCredentialsOptions();
-  auto acl = this->CreateSgxIdentityAcl(mrenclave_strings);
+  auto acl = CreateSgxIdentityAcl(mrenclave_strings);
   if (!acl.ok()) {
     LOG(QFATAL) << "CreateChannelCredentials failed: " << acl.status().error_message();
   }
