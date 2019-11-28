@@ -96,8 +96,6 @@ http_archive(
     build_file = "@//third_party/wabt:wabt.BUILD",
     patches = [
         "//third_party/wabt:0003-Add-static-config-file.patch",
-        "//third_party/wabt:0005-Introduce-static-cast-to-disambiguate-overload.patch",
-        "//third_party/wabt:0006-Try-using-cxx11-version-of-to_string.patch",
         "//third_party/wabt:0007-Include-opcode-code-table.c.patch",
         "//third_party/wabt:0010-Use-std-stringstream-to-build-unique-name.patch",
     ],
