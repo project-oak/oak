@@ -29,7 +29,8 @@ namespace oak {
 // Pseudo-node to perform TODO
 class HttpClientNode final : public NodeThread {
  public:
-  explicit HttpClientNode(const std::string& name, const std::string& url, const std::string& method);
+  explicit HttpClientNode(const std::string& name, const std::string& url,
+                          const std::string& method);
 
  private:
   void Run() override;

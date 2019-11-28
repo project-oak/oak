@@ -25,7 +25,8 @@
 
 namespace oak {
 
-HttpClientNode::HttpClientNode(const std::string& name, const std::string& url, const std::string& method)
+HttpClientNode::HttpClientNode(const std::string& name, const std::string& url,
+                               const std::string& method)
     : NodeThread(name), url_(url), method_(method) {}
 
 void HttpClientNode::Run() {

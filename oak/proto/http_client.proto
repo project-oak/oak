@@ -31,4 +31,3 @@ message HttpClientSendRequest {
 message HttpClientSendResponse {
   bytes data = 1;
 }
-
