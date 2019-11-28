@@ -35,9 +35,8 @@ fn test_direct_hello_request() {
 
 #[test]
 #[serial(node_test)]
-fn test_no_handle_mapping() {
-    // Run the Node without preparing a handle for the "grpc_in" port name.
-    oak_tests::start_node(oak_tests::DEFAULT_NODE_NAME);
+fn test_no_handle() {
+    oak_tests::start_node(oak::wasm::INVALID_HANDLE);
     assert_eq!(OakStatus::ERR_CHANNEL_CLOSED, oak_tests::stop());
 }
 
@@ -45,8 +44,8 @@ fn test_no_handle_mapping() {
 #[test]
 #[serial(node_test)]
 fn test_hello_request() {
-    oak_tests::grpc_channel_setup_default();
-    oak_tests::start_node(oak_tests::DEFAULT_NODE_NAME);
+    let handle = oak_tests::grpc_channel_setup_default();
+    oak_tests::start_node(handle);
 
     let mut req = HelloRequest::new();
     req.set_greeting("world".to_string());

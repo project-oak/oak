@@ -35,7 +35,6 @@ fn test_panic_catch() {
     crate::reset();
     crate::init_logging();
     let (write_handle, read_handle) = oak::channel_create().unwrap();
-    crate::add_port_name("grpc_in", read_handle.handle);
 
     // Mock up a GrpcRequest to trigger invoke()
     let mut grpc_req = oak::proto::grpc_encap::GrpcRequest::new();
@@ -48,5 +47,8 @@ fn test_panic_catch() {
     grpc_req.write_to_writer(&mut req_data).unwrap();
     oak::channel_write(write_handle, &req_data, &[write_handle.handle]);
 
-    assert_eq!(oak::OakStatus::ERR_INTERNAL.value(), oak_main(0));
+    assert_eq!(
+        oak::OakStatus::ERR_INTERNAL.value(),
+        oak_main(read_handle.handle)
+    );
 }

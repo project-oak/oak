@@ -15,7 +15,6 @@
 //
 
 use crate::*;
-use std::io::Write;
 
 #[test]
 #[serial(channels)]
@@ -42,21 +41,6 @@ fn test_write_message_failure() {
         OakStatus::ERR_INVALID_ARGS,
         channel_write(write_handle, &data, &[])
     );
-}
-
-#[test]
-#[serial(channels)]
-fn test_write() {
-    oak_tests::reset();
-    let (write_handle, read_handle) = channel_create().unwrap();
-    oak_tests::add_port_name("log", write_handle.handle);
-
-    writeln!(logging_channel(), "ABC").unwrap();
-    assert_eq!(
-        "ABC\n",
-        oak_tests::last_message_as_string(read_handle.handle)
-    );
-    assert_matches!(logging_channel().flush(), Ok(()));
 }
 
 #[test]

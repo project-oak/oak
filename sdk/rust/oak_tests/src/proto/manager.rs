@@ -29,9 +29,8 @@ const _PROTOBUF_VERSION_CHECK: () = ::protobuf::VERSION_2_8_0;
 #[derive(PartialEq,Clone,Default)]
 pub struct ApplicationConfiguration {
     // message fields
-    pub nodes: ::protobuf::RepeatedField<Node>,
-    pub channels: ::protobuf::RepeatedField<Channel>,
-    pub wasm_contents: ::protobuf::RepeatedField<WasmContents>,
+    pub node_configs: ::protobuf::RepeatedField<NodeConfiguration>,
+    pub initial_node: ::std::string::String,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -48,95 +47,61 @@ impl ApplicationConfiguration {
         ::std::default::Default::default()
     }
 
-    // repeated .oak.Node nodes = 1;
+    // repeated .oak.NodeConfiguration node_configs = 1;
 
 
-    pub fn get_nodes(&self) -> &[Node] {
-        &self.nodes
+    pub fn get_node_configs(&self) -> &[NodeConfiguration] {
+        &self.node_configs
     }
-    pub fn clear_nodes(&mut self) {
-        self.nodes.clear();
-    }
-
-    // Param is passed by value, moved
-    pub fn set_nodes(&mut self, v: ::protobuf::RepeatedField<Node>) {
-        self.nodes = v;
-    }
-
-    // Mutable pointer to the field.
-    pub fn mut_nodes(&mut self) -> &mut ::protobuf::RepeatedField<Node> {
-        &mut self.nodes
-    }
-
-    // Take field
-    pub fn take_nodes(&mut self) -> ::protobuf::RepeatedField<Node> {
-        ::std::mem::replace(&mut self.nodes, ::protobuf::RepeatedField::new())
-    }
-
-    // repeated .oak.Channel channels = 2;
-
-
-    pub fn get_channels(&self) -> &[Channel] {
-        &self.channels
-    }
-    pub fn clear_channels(&mut self) {
-        self.channels.clear();
+    pub fn clear_node_configs(&mut self) {
+        self.node_configs.clear();
     }
 
     // Param is passed by value, moved
-    pub fn set_channels(&mut self, v: ::protobuf::RepeatedField<Channel>) {
-        self.channels = v;
+    pub fn set_node_configs(&mut self, v: ::protobuf::RepeatedField<NodeConfiguration>) {
+        self.node_configs = v;
     }
 
     // Mutable pointer to the field.
-    pub fn mut_channels(&mut self) -> &mut ::protobuf::RepeatedField<Channel> {
-        &mut self.channels
+    pub fn mut_node_configs(&mut self) -> &mut ::protobuf::RepeatedField<NodeConfiguration> {
+        &mut self.node_configs
     }
 
     // Take field
-    pub fn take_channels(&mut self) -> ::protobuf::RepeatedField<Channel> {
-        ::std::mem::replace(&mut self.channels, ::protobuf::RepeatedField::new())
+    pub fn take_node_configs(&mut self) -> ::protobuf::RepeatedField<NodeConfiguration> {
+        ::std::mem::replace(&mut self.node_configs, ::protobuf::RepeatedField::new())
     }
 
-    // repeated .oak.WasmContents wasm_contents = 3;
+    // string initial_node = 2;
 
 
-    pub fn get_wasm_contents(&self) -> &[WasmContents] {
-        &self.wasm_contents
+    pub fn get_initial_node(&self) -> &str {
+        &self.initial_node
     }
-    pub fn clear_wasm_contents(&mut self) {
-        self.wasm_contents.clear();
+    pub fn clear_initial_node(&mut self) {
+        self.initial_node.clear();
     }
 
     // Param is passed by value, moved
-    pub fn set_wasm_contents(&mut self, v: ::protobuf::RepeatedField<WasmContents>) {
-        self.wasm_contents = v;
+    pub fn set_initial_node(&mut self, v: ::std::string::String) {
+        self.initial_node = v;
     }
 
     // Mutable pointer to the field.
-    pub fn mut_wasm_contents(&mut self) -> &mut ::protobuf::RepeatedField<WasmContents> {
-        &mut self.wasm_contents
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_initial_node(&mut self) -> &mut ::std::string::String {
+        &mut self.initial_node
     }
 
     // Take field
-    pub fn take_wasm_contents(&mut self) -> ::protobuf::RepeatedField<WasmContents> {
-        ::std::mem::replace(&mut self.wasm_contents, ::protobuf::RepeatedField::new())
+    pub fn take_initial_node(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.initial_node, ::std::string::String::new())
     }
 }
 
 impl ::protobuf::Message for ApplicationConfiguration {
     fn is_initialized(&self) -> bool {
-        for v in &self.nodes {
-            if !v.is_initialized() {
-                return false;
-            }
-        };
-        for v in &self.channels {
-            if !v.is_initialized() {
-                return false;
-            }
-        };
-        for v in &self.wasm_contents {
+        for v in &self.node_configs {
             if !v.is_initialized() {
                 return false;
             }
@@ -149,13 +114,10 @@ impl ::protobuf::Message for ApplicationConfiguration {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
-                    ::protobuf::rt::read_repeated_message_into(wire_type, is, &mut self.nodes)?;
+                    ::protobuf::rt::read_repeated_message_into(wire_type, is, &mut self.node_configs)?;
                 },
                 2 => {
-                    ::protobuf::rt::read_repeated_message_into(wire_type, is, &mut self.channels)?;
-                },
-                3 => {
-                    ::protobuf::rt::read_repeated_message_into(wire_type, is, &mut self.wasm_contents)?;
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.initial_node)?;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -169,39 +131,27 @@ impl ::protobuf::Message for ApplicationConfiguration {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        for value in &self.nodes {
+        for value in &self.node_configs {
             let len = value.compute_size();
             my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
         };
-        for value in &self.channels {
-            let len = value.compute_size();
-            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
-        };
-        for value in &self.wasm_contents {
-            let len = value.compute_size();
-            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
-        };
+        if !self.initial_node.is_empty() {
+            my_size += ::protobuf::rt::string_size(2, &self.initial_node);
+        }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
-        for v in &self.nodes {
+        for v in &self.node_configs {
             os.write_tag(1, ::protobuf::wire_format::WireTypeLengthDelimited)?;
             os.write_raw_varint32(v.get_cached_size())?;
             v.write_to_with_cached_sizes(os)?;
         };
-        for v in &self.channels {
-            os.write_tag(2, ::protobuf::wire_format::WireTypeLengthDelimited)?;
-            os.write_raw_varint32(v.get_cached_size())?;
-            v.write_to_with_cached_sizes(os)?;
-        };
-        for v in &self.wasm_contents {
-            os.write_tag(3, ::protobuf::wire_format::WireTypeLengthDelimited)?;
-            os.write_raw_varint32(v.get_cached_size())?;
-            v.write_to_with_cached_sizes(os)?;
-        };
+        if !self.initial_node.is_empty() {
+            os.write_string(2, &self.initial_node)?;
+        }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
     }
@@ -244,20 +194,15 @@ impl ::protobuf::Message for ApplicationConfiguration {
         unsafe {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<Node>>(
-                    "nodes",
-                    |m: &ApplicationConfiguration| { &m.nodes },
-                    |m: &mut ApplicationConfiguration| { &mut m.nodes },
+                fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<NodeConfiguration>>(
+                    "node_configs",
+                    |m: &ApplicationConfiguration| { &m.node_configs },
+                    |m: &mut ApplicationConfiguration| { &mut m.node_configs },
                 ));
-                fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<Channel>>(
-                    "channels",
-                    |m: &ApplicationConfiguration| { &m.channels },
-                    |m: &mut ApplicationConfiguration| { &mut m.channels },
-                ));
-                fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<WasmContents>>(
-                    "wasm_contents",
-                    |m: &ApplicationConfiguration| { &m.wasm_contents },
-                    |m: &mut ApplicationConfiguration| { &mut m.wasm_contents },
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                    "initial_node",
+                    |m: &ApplicationConfiguration| { &m.initial_node },
+                    |m: &mut ApplicationConfiguration| { &mut m.initial_node },
                 ));
                 ::protobuf::reflect::MessageDescriptor::new::<ApplicationConfiguration>(
                     "ApplicationConfiguration",
@@ -281,9 +226,8 @@ impl ::protobuf::Message for ApplicationConfiguration {
 
 impl ::protobuf::Clear for ApplicationConfiguration {
     fn clear(&mut self) {
-        self.nodes.clear();
-        self.channels.clear();
-        self.wasm_contents.clear();
+        self.node_configs.clear();
+        self.initial_node.clear();
         self.unknown_fields.clear();
     }
 }
@@ -301,980 +245,31 @@ impl ::protobuf::reflect::ProtobufValue for ApplicationConfiguration {
 }
 
 #[derive(PartialEq,Clone,Default)]
-pub struct Node {
+pub struct NodeConfiguration {
     // message fields
-    pub node_name: ::std::string::String,
+    pub name: ::std::string::String,
     // message oneof groups
-    pub node_type: ::std::option::Option<Node_oneof_node_type>,
+    pub config_type: ::std::option::Option<NodeConfiguration_oneof_config_type>,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
 }
 
-impl<'a> ::std::default::Default for &'a Node {
-    fn default() -> &'a Node {
-        <Node as ::protobuf::Message>::default_instance()
+impl<'a> ::std::default::Default for &'a NodeConfiguration {
+    fn default() -> &'a NodeConfiguration {
+        <NodeConfiguration as ::protobuf::Message>::default_instance()
     }
 }
 
 #[derive(Clone,PartialEq,Debug)]
-pub enum Node_oneof_node_type {
-    log_node(LogNode),
-    grpc_server_node(GrpcServerNode),
-    web_assembly_node(WebAssemblyNode),
-    storage_node(StorageProxyNode),
+pub enum NodeConfiguration_oneof_config_type {
+    wasm_config(WebAssemblyConfiguration),
+    log_config(LogConfiguration),
+    storage_config(StorageProxyConfiguration),
 }
 
-impl Node {
-    pub fn new() -> Node {
-        ::std::default::Default::default()
-    }
-
-    // string node_name = 1;
-
-
-    pub fn get_node_name(&self) -> &str {
-        &self.node_name
-    }
-    pub fn clear_node_name(&mut self) {
-        self.node_name.clear();
-    }
-
-    // Param is passed by value, moved
-    pub fn set_node_name(&mut self, v: ::std::string::String) {
-        self.node_name = v;
-    }
-
-    // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_node_name(&mut self) -> &mut ::std::string::String {
-        &mut self.node_name
-    }
-
-    // Take field
-    pub fn take_node_name(&mut self) -> ::std::string::String {
-        ::std::mem::replace(&mut self.node_name, ::std::string::String::new())
-    }
-
-    // .oak.LogNode log_node = 2;
-
-
-    pub fn get_log_node(&self) -> &LogNode {
-        match self.node_type {
-            ::std::option::Option::Some(Node_oneof_node_type::log_node(ref v)) => v,
-            _ => LogNode::default_instance(),
-        }
-    }
-    pub fn clear_log_node(&mut self) {
-        self.node_type = ::std::option::Option::None;
-    }
-
-    pub fn has_log_node(&self) -> bool {
-        match self.node_type {
-            ::std::option::Option::Some(Node_oneof_node_type::log_node(..)) => true,
-            _ => false,
-        }
-    }
-
-    // Param is passed by value, moved
-    pub fn set_log_node(&mut self, v: LogNode) {
-        self.node_type = ::std::option::Option::Some(Node_oneof_node_type::log_node(v))
-    }
-
-    // Mutable pointer to the field.
-    pub fn mut_log_node(&mut self) -> &mut LogNode {
-        if let ::std::option::Option::Some(Node_oneof_node_type::log_node(_)) = self.node_type {
-        } else {
-            self.node_type = ::std::option::Option::Some(Node_oneof_node_type::log_node(LogNode::new()));
-        }
-        match self.node_type {
-            ::std::option::Option::Some(Node_oneof_node_type::log_node(ref mut v)) => v,
-            _ => panic!(),
-        }
-    }
-
-    // Take field
-    pub fn take_log_node(&mut self) -> LogNode {
-        if self.has_log_node() {
-            match self.node_type.take() {
-                ::std::option::Option::Some(Node_oneof_node_type::log_node(v)) => v,
-                _ => panic!(),
-            }
-        } else {
-            LogNode::new()
-        }
-    }
-
-    // .oak.GrpcServerNode grpc_server_node = 3;
-
-
-    pub fn get_grpc_server_node(&self) -> &GrpcServerNode {
-        match self.node_type {
-            ::std::option::Option::Some(Node_oneof_node_type::grpc_server_node(ref v)) => v,
-            _ => GrpcServerNode::default_instance(),
-        }
-    }
-    pub fn clear_grpc_server_node(&mut self) {
-        self.node_type = ::std::option::Option::None;
-    }
-
-    pub fn has_grpc_server_node(&self) -> bool {
-        match self.node_type {
-            ::std::option::Option::Some(Node_oneof_node_type::grpc_server_node(..)) => true,
-            _ => false,
-        }
-    }
-
-    // Param is passed by value, moved
-    pub fn set_grpc_server_node(&mut self, v: GrpcServerNode) {
-        self.node_type = ::std::option::Option::Some(Node_oneof_node_type::grpc_server_node(v))
-    }
-
-    // Mutable pointer to the field.
-    pub fn mut_grpc_server_node(&mut self) -> &mut GrpcServerNode {
-        if let ::std::option::Option::Some(Node_oneof_node_type::grpc_server_node(_)) = self.node_type {
-        } else {
-            self.node_type = ::std::option::Option::Some(Node_oneof_node_type::grpc_server_node(GrpcServerNode::new()));
-        }
-        match self.node_type {
-            ::std::option::Option::Some(Node_oneof_node_type::grpc_server_node(ref mut v)) => v,
-            _ => panic!(),
-        }
-    }
-
-    // Take field
-    pub fn take_grpc_server_node(&mut self) -> GrpcServerNode {
-        if self.has_grpc_server_node() {
-            match self.node_type.take() {
-                ::std::option::Option::Some(Node_oneof_node_type::grpc_server_node(v)) => v,
-                _ => panic!(),
-            }
-        } else {
-            GrpcServerNode::new()
-        }
-    }
-
-    // .oak.WebAssemblyNode web_assembly_node = 4;
-
-
-    pub fn get_web_assembly_node(&self) -> &WebAssemblyNode {
-        match self.node_type {
-            ::std::option::Option::Some(Node_oneof_node_type::web_assembly_node(ref v)) => v,
-            _ => WebAssemblyNode::default_instance(),
-        }
-    }
-    pub fn clear_web_assembly_node(&mut self) {
-        self.node_type = ::std::option::Option::None;
-    }
-
-    pub fn has_web_assembly_node(&self) -> bool {
-        match self.node_type {
-            ::std::option::Option::Some(Node_oneof_node_type::web_assembly_node(..)) => true,
-            _ => false,
-        }
-    }
-
-    // Param is passed by value, moved
-    pub fn set_web_assembly_node(&mut self, v: WebAssemblyNode) {
-        self.node_type = ::std::option::Option::Some(Node_oneof_node_type::web_assembly_node(v))
-    }
-
-    // Mutable pointer to the field.
-    pub fn mut_web_assembly_node(&mut self) -> &mut WebAssemblyNode {
-        if let ::std::option::Option::Some(Node_oneof_node_type::web_assembly_node(_)) = self.node_type {
-        } else {
-            self.node_type = ::std::option::Option::Some(Node_oneof_node_type::web_assembly_node(WebAssemblyNode::new()));
-        }
-        match self.node_type {
-            ::std::option::Option::Some(Node_oneof_node_type::web_assembly_node(ref mut v)) => v,
-            _ => panic!(),
-        }
-    }
-
-    // Take field
-    pub fn take_web_assembly_node(&mut self) -> WebAssemblyNode {
-        if self.has_web_assembly_node() {
-            match self.node_type.take() {
-                ::std::option::Option::Some(Node_oneof_node_type::web_assembly_node(v)) => v,
-                _ => panic!(),
-            }
-        } else {
-            WebAssemblyNode::new()
-        }
-    }
-
-    // .oak.StorageProxyNode storage_node = 5;
-
-
-    pub fn get_storage_node(&self) -> &StorageProxyNode {
-        match self.node_type {
-            ::std::option::Option::Some(Node_oneof_node_type::storage_node(ref v)) => v,
-            _ => StorageProxyNode::default_instance(),
-        }
-    }
-    pub fn clear_storage_node(&mut self) {
-        self.node_type = ::std::option::Option::None;
-    }
-
-    pub fn has_storage_node(&self) -> bool {
-        match self.node_type {
-            ::std::option::Option::Some(Node_oneof_node_type::storage_node(..)) => true,
-            _ => false,
-        }
-    }
-
-    // Param is passed by value, moved
-    pub fn set_storage_node(&mut self, v: StorageProxyNode) {
-        self.node_type = ::std::option::Option::Some(Node_oneof_node_type::storage_node(v))
-    }
-
-    // Mutable pointer to the field.
-    pub fn mut_storage_node(&mut self) -> &mut StorageProxyNode {
-        if let ::std::option::Option::Some(Node_oneof_node_type::storage_node(_)) = self.node_type {
-        } else {
-            self.node_type = ::std::option::Option::Some(Node_oneof_node_type::storage_node(StorageProxyNode::new()));
-        }
-        match self.node_type {
-            ::std::option::Option::Some(Node_oneof_node_type::storage_node(ref mut v)) => v,
-            _ => panic!(),
-        }
-    }
-
-    // Take field
-    pub fn take_storage_node(&mut self) -> StorageProxyNode {
-        if self.has_storage_node() {
-            match self.node_type.take() {
-                ::std::option::Option::Some(Node_oneof_node_type::storage_node(v)) => v,
-                _ => panic!(),
-            }
-        } else {
-            StorageProxyNode::new()
-        }
-    }
-}
-
-impl ::protobuf::Message for Node {
-    fn is_initialized(&self) -> bool {
-        if let Some(Node_oneof_node_type::log_node(ref v)) = self.node_type {
-            if !v.is_initialized() {
-                return false;
-            }
-        }
-        if let Some(Node_oneof_node_type::grpc_server_node(ref v)) = self.node_type {
-            if !v.is_initialized() {
-                return false;
-            }
-        }
-        if let Some(Node_oneof_node_type::web_assembly_node(ref v)) = self.node_type {
-            if !v.is_initialized() {
-                return false;
-            }
-        }
-        if let Some(Node_oneof_node_type::storage_node(ref v)) = self.node_type {
-            if !v.is_initialized() {
-                return false;
-            }
-        }
-        true
-    }
-
-    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream) -> ::protobuf::ProtobufResult<()> {
-        while !is.eof()? {
-            let (field_number, wire_type) = is.read_tag_unpack()?;
-            match field_number {
-                1 => {
-                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.node_name)?;
-                },
-                2 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    self.node_type = ::std::option::Option::Some(Node_oneof_node_type::log_node(is.read_message()?));
-                },
-                3 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    self.node_type = ::std::option::Option::Some(Node_oneof_node_type::grpc_server_node(is.read_message()?));
-                },
-                4 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    self.node_type = ::std::option::Option::Some(Node_oneof_node_type::web_assembly_node(is.read_message()?));
-                },
-                5 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    self.node_type = ::std::option::Option::Some(Node_oneof_node_type::storage_node(is.read_message()?));
-                },
-                _ => {
-                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
-                },
-            };
-        }
-        ::std::result::Result::Ok(())
-    }
-
-    // Compute sizes of nested messages
-    #[allow(unused_variables)]
-    fn compute_size(&self) -> u32 {
-        let mut my_size = 0;
-        if !self.node_name.is_empty() {
-            my_size += ::protobuf::rt::string_size(1, &self.node_name);
-        }
-        if let ::std::option::Option::Some(ref v) = self.node_type {
-            match v {
-                &Node_oneof_node_type::log_node(ref v) => {
-                    let len = v.compute_size();
-                    my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
-                },
-                &Node_oneof_node_type::grpc_server_node(ref v) => {
-                    let len = v.compute_size();
-                    my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
-                },
-                &Node_oneof_node_type::web_assembly_node(ref v) => {
-                    let len = v.compute_size();
-                    my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
-                },
-                &Node_oneof_node_type::storage_node(ref v) => {
-                    let len = v.compute_size();
-                    my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
-                },
-            };
-        }
-        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
-        self.cached_size.set(my_size);
-        my_size
-    }
-
-    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
-        if !self.node_name.is_empty() {
-            os.write_string(1, &self.node_name)?;
-        }
-        if let ::std::option::Option::Some(ref v) = self.node_type {
-            match v {
-                &Node_oneof_node_type::log_node(ref v) => {
-                    os.write_tag(2, ::protobuf::wire_format::WireTypeLengthDelimited)?;
-                    os.write_raw_varint32(v.get_cached_size())?;
-                    v.write_to_with_cached_sizes(os)?;
-                },
-                &Node_oneof_node_type::grpc_server_node(ref v) => {
-                    os.write_tag(3, ::protobuf::wire_format::WireTypeLengthDelimited)?;
-                    os.write_raw_varint32(v.get_cached_size())?;
-                    v.write_to_with_cached_sizes(os)?;
-                },
-                &Node_oneof_node_type::web_assembly_node(ref v) => {
-                    os.write_tag(4, ::protobuf::wire_format::WireTypeLengthDelimited)?;
-                    os.write_raw_varint32(v.get_cached_size())?;
-                    v.write_to_with_cached_sizes(os)?;
-                },
-                &Node_oneof_node_type::storage_node(ref v) => {
-                    os.write_tag(5, ::protobuf::wire_format::WireTypeLengthDelimited)?;
-                    os.write_raw_varint32(v.get_cached_size())?;
-                    v.write_to_with_cached_sizes(os)?;
-                },
-            };
-        }
-        os.write_unknown_fields(self.get_unknown_fields())?;
-        ::std::result::Result::Ok(())
-    }
-
-    fn get_cached_size(&self) -> u32 {
-        self.cached_size.get()
-    }
-
-    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
-        &self.unknown_fields
-    }
-
-    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
-        &mut self.unknown_fields
-    }
-
-    fn as_any(&self) -> &dyn (::std::any::Any) {
-        self as &dyn (::std::any::Any)
-    }
-    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
-        self as &mut dyn (::std::any::Any)
-    }
-    fn into_any(self: Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
-        self
-    }
-
-    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
-        Self::descriptor_static()
-    }
-
-    fn new() -> Node {
-        Node::new()
-    }
-
-    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
-        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
-        };
-        unsafe {
-            descriptor.get(|| {
-                let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
-                    "node_name",
-                    |m: &Node| { &m.node_name },
-                    |m: &mut Node| { &mut m.node_name },
-                ));
-                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, LogNode>(
-                    "log_node",
-                    Node::has_log_node,
-                    Node::get_log_node,
-                ));
-                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, GrpcServerNode>(
-                    "grpc_server_node",
-                    Node::has_grpc_server_node,
-                    Node::get_grpc_server_node,
-                ));
-                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, WebAssemblyNode>(
-                    "web_assembly_node",
-                    Node::has_web_assembly_node,
-                    Node::get_web_assembly_node,
-                ));
-                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, StorageProxyNode>(
-                    "storage_node",
-                    Node::has_storage_node,
-                    Node::get_storage_node,
-                ));
-                ::protobuf::reflect::MessageDescriptor::new::<Node>(
-                    "Node",
-                    fields,
-                    file_descriptor_proto()
-                )
-            })
-        }
-    }
-
-    fn default_instance() -> &'static Node {
-        static mut instance: ::protobuf::lazy::Lazy<Node> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const Node,
-        };
-        unsafe {
-            instance.get(Node::new)
-        }
-    }
-}
-
-impl ::protobuf::Clear for Node {
-    fn clear(&mut self) {
-        self.node_name.clear();
-        self.node_type = ::std::option::Option::None;
-        self.node_type = ::std::option::Option::None;
-        self.node_type = ::std::option::Option::None;
-        self.node_type = ::std::option::Option::None;
-        self.unknown_fields.clear();
-    }
-}
-
-impl ::std::fmt::Debug for Node {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        ::protobuf::text_format::fmt(self, f)
-    }
-}
-
-impl ::protobuf::reflect::ProtobufValue for Node {
-    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
-        ::protobuf::reflect::ProtobufValueRef::Message(self)
-    }
-}
-
-#[derive(PartialEq,Clone,Default)]
-pub struct GrpcServerNode {
-    // special fields
-    pub unknown_fields: ::protobuf::UnknownFields,
-    pub cached_size: ::protobuf::CachedSize,
-}
-
-impl<'a> ::std::default::Default for &'a GrpcServerNode {
-    fn default() -> &'a GrpcServerNode {
-        <GrpcServerNode as ::protobuf::Message>::default_instance()
-    }
-}
-
-impl GrpcServerNode {
-    pub fn new() -> GrpcServerNode {
-        ::std::default::Default::default()
-    }
-}
-
-impl ::protobuf::Message for GrpcServerNode {
-    fn is_initialized(&self) -> bool {
-        true
-    }
-
-    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream) -> ::protobuf::ProtobufResult<()> {
-        while !is.eof()? {
-            let (field_number, wire_type) = is.read_tag_unpack()?;
-            match field_number {
-                _ => {
-                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
-                },
-            };
-        }
-        ::std::result::Result::Ok(())
-    }
-
-    // Compute sizes of nested messages
-    #[allow(unused_variables)]
-    fn compute_size(&self) -> u32 {
-        let mut my_size = 0;
-        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
-        self.cached_size.set(my_size);
-        my_size
-    }
-
-    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
-        os.write_unknown_fields(self.get_unknown_fields())?;
-        ::std::result::Result::Ok(())
-    }
-
-    fn get_cached_size(&self) -> u32 {
-        self.cached_size.get()
-    }
-
-    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
-        &self.unknown_fields
-    }
-
-    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
-        &mut self.unknown_fields
-    }
-
-    fn as_any(&self) -> &dyn (::std::any::Any) {
-        self as &dyn (::std::any::Any)
-    }
-    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
-        self as &mut dyn (::std::any::Any)
-    }
-    fn into_any(self: Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
-        self
-    }
-
-    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
-        Self::descriptor_static()
-    }
-
-    fn new() -> GrpcServerNode {
-        GrpcServerNode::new()
-    }
-
-    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
-        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
-        };
-        unsafe {
-            descriptor.get(|| {
-                let fields = ::std::vec::Vec::new();
-                ::protobuf::reflect::MessageDescriptor::new::<GrpcServerNode>(
-                    "GrpcServerNode",
-                    fields,
-                    file_descriptor_proto()
-                )
-            })
-        }
-    }
-
-    fn default_instance() -> &'static GrpcServerNode {
-        static mut instance: ::protobuf::lazy::Lazy<GrpcServerNode> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const GrpcServerNode,
-        };
-        unsafe {
-            instance.get(GrpcServerNode::new)
-        }
-    }
-}
-
-impl ::protobuf::Clear for GrpcServerNode {
-    fn clear(&mut self) {
-        self.unknown_fields.clear();
-    }
-}
-
-impl ::std::fmt::Debug for GrpcServerNode {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        ::protobuf::text_format::fmt(self, f)
-    }
-}
-
-impl ::protobuf::reflect::ProtobufValue for GrpcServerNode {
-    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
-        ::protobuf::reflect::ProtobufValueRef::Message(self)
-    }
-}
-
-#[derive(PartialEq,Clone,Default)]
-pub struct LogNode {
-    // special fields
-    pub unknown_fields: ::protobuf::UnknownFields,
-    pub cached_size: ::protobuf::CachedSize,
-}
-
-impl<'a> ::std::default::Default for &'a LogNode {
-    fn default() -> &'a LogNode {
-        <LogNode as ::protobuf::Message>::default_instance()
-    }
-}
-
-impl LogNode {
-    pub fn new() -> LogNode {
-        ::std::default::Default::default()
-    }
-}
-
-impl ::protobuf::Message for LogNode {
-    fn is_initialized(&self) -> bool {
-        true
-    }
-
-    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream) -> ::protobuf::ProtobufResult<()> {
-        while !is.eof()? {
-            let (field_number, wire_type) = is.read_tag_unpack()?;
-            match field_number {
-                _ => {
-                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
-                },
-            };
-        }
-        ::std::result::Result::Ok(())
-    }
-
-    // Compute sizes of nested messages
-    #[allow(unused_variables)]
-    fn compute_size(&self) -> u32 {
-        let mut my_size = 0;
-        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
-        self.cached_size.set(my_size);
-        my_size
-    }
-
-    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
-        os.write_unknown_fields(self.get_unknown_fields())?;
-        ::std::result::Result::Ok(())
-    }
-
-    fn get_cached_size(&self) -> u32 {
-        self.cached_size.get()
-    }
-
-    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
-        &self.unknown_fields
-    }
-
-    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
-        &mut self.unknown_fields
-    }
-
-    fn as_any(&self) -> &dyn (::std::any::Any) {
-        self as &dyn (::std::any::Any)
-    }
-    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
-        self as &mut dyn (::std::any::Any)
-    }
-    fn into_any(self: Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
-        self
-    }
-
-    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
-        Self::descriptor_static()
-    }
-
-    fn new() -> LogNode {
-        LogNode::new()
-    }
-
-    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
-        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
-        };
-        unsafe {
-            descriptor.get(|| {
-                let fields = ::std::vec::Vec::new();
-                ::protobuf::reflect::MessageDescriptor::new::<LogNode>(
-                    "LogNode",
-                    fields,
-                    file_descriptor_proto()
-                )
-            })
-        }
-    }
-
-    fn default_instance() -> &'static LogNode {
-        static mut instance: ::protobuf::lazy::Lazy<LogNode> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const LogNode,
-        };
-        unsafe {
-            instance.get(LogNode::new)
-        }
-    }
-}
-
-impl ::protobuf::Clear for LogNode {
-    fn clear(&mut self) {
-        self.unknown_fields.clear();
-    }
-}
-
-impl ::std::fmt::Debug for LogNode {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        ::protobuf::text_format::fmt(self, f)
-    }
-}
-
-impl ::protobuf::reflect::ProtobufValue for LogNode {
-    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
-        ::protobuf::reflect::ProtobufValueRef::Message(self)
-    }
-}
-
-#[derive(PartialEq,Clone,Default)]
-pub struct WebAssemblyNode {
-    // message fields
-    pub wasm_contents_name: ::std::string::String,
-    pub ports: ::protobuf::RepeatedField<Port>,
-    // special fields
-    pub unknown_fields: ::protobuf::UnknownFields,
-    pub cached_size: ::protobuf::CachedSize,
-}
-
-impl<'a> ::std::default::Default for &'a WebAssemblyNode {
-    fn default() -> &'a WebAssemblyNode {
-        <WebAssemblyNode as ::protobuf::Message>::default_instance()
-    }
-}
-
-impl WebAssemblyNode {
-    pub fn new() -> WebAssemblyNode {
-        ::std::default::Default::default()
-    }
-
-    // string wasm_contents_name = 1;
-
-
-    pub fn get_wasm_contents_name(&self) -> &str {
-        &self.wasm_contents_name
-    }
-    pub fn clear_wasm_contents_name(&mut self) {
-        self.wasm_contents_name.clear();
-    }
-
-    // Param is passed by value, moved
-    pub fn set_wasm_contents_name(&mut self, v: ::std::string::String) {
-        self.wasm_contents_name = v;
-    }
-
-    // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_wasm_contents_name(&mut self) -> &mut ::std::string::String {
-        &mut self.wasm_contents_name
-    }
-
-    // Take field
-    pub fn take_wasm_contents_name(&mut self) -> ::std::string::String {
-        ::std::mem::replace(&mut self.wasm_contents_name, ::std::string::String::new())
-    }
-
-    // repeated .oak.Port ports = 2;
-
-
-    pub fn get_ports(&self) -> &[Port] {
-        &self.ports
-    }
-    pub fn clear_ports(&mut self) {
-        self.ports.clear();
-    }
-
-    // Param is passed by value, moved
-    pub fn set_ports(&mut self, v: ::protobuf::RepeatedField<Port>) {
-        self.ports = v;
-    }
-
-    // Mutable pointer to the field.
-    pub fn mut_ports(&mut self) -> &mut ::protobuf::RepeatedField<Port> {
-        &mut self.ports
-    }
-
-    // Take field
-    pub fn take_ports(&mut self) -> ::protobuf::RepeatedField<Port> {
-        ::std::mem::replace(&mut self.ports, ::protobuf::RepeatedField::new())
-    }
-}
-
-impl ::protobuf::Message for WebAssemblyNode {
-    fn is_initialized(&self) -> bool {
-        for v in &self.ports {
-            if !v.is_initialized() {
-                return false;
-            }
-        };
-        true
-    }
-
-    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream) -> ::protobuf::ProtobufResult<()> {
-        while !is.eof()? {
-            let (field_number, wire_type) = is.read_tag_unpack()?;
-            match field_number {
-                1 => {
-                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.wasm_contents_name)?;
-                },
-                2 => {
-                    ::protobuf::rt::read_repeated_message_into(wire_type, is, &mut self.ports)?;
-                },
-                _ => {
-                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
-                },
-            };
-        }
-        ::std::result::Result::Ok(())
-    }
-
-    // Compute sizes of nested messages
-    #[allow(unused_variables)]
-    fn compute_size(&self) -> u32 {
-        let mut my_size = 0;
-        if !self.wasm_contents_name.is_empty() {
-            my_size += ::protobuf::rt::string_size(1, &self.wasm_contents_name);
-        }
-        for value in &self.ports {
-            let len = value.compute_size();
-            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
-        };
-        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
-        self.cached_size.set(my_size);
-        my_size
-    }
-
-    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
-        if !self.wasm_contents_name.is_empty() {
-            os.write_string(1, &self.wasm_contents_name)?;
-        }
-        for v in &self.ports {
-            os.write_tag(2, ::protobuf::wire_format::WireTypeLengthDelimited)?;
-            os.write_raw_varint32(v.get_cached_size())?;
-            v.write_to_with_cached_sizes(os)?;
-        };
-        os.write_unknown_fields(self.get_unknown_fields())?;
-        ::std::result::Result::Ok(())
-    }
-
-    fn get_cached_size(&self) -> u32 {
-        self.cached_size.get()
-    }
-
-    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
-        &self.unknown_fields
-    }
-
-    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
-        &mut self.unknown_fields
-    }
-
-    fn as_any(&self) -> &dyn (::std::any::Any) {
-        self as &dyn (::std::any::Any)
-    }
-    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
-        self as &mut dyn (::std::any::Any)
-    }
-    fn into_any(self: Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
-        self
-    }
-
-    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
-        Self::descriptor_static()
-    }
-
-    fn new() -> WebAssemblyNode {
-        WebAssemblyNode::new()
-    }
-
-    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
-        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
-        };
-        unsafe {
-            descriptor.get(|| {
-                let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
-                    "wasm_contents_name",
-                    |m: &WebAssemblyNode| { &m.wasm_contents_name },
-                    |m: &mut WebAssemblyNode| { &mut m.wasm_contents_name },
-                ));
-                fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<Port>>(
-                    "ports",
-                    |m: &WebAssemblyNode| { &m.ports },
-                    |m: &mut WebAssemblyNode| { &mut m.ports },
-                ));
-                ::protobuf::reflect::MessageDescriptor::new::<WebAssemblyNode>(
-                    "WebAssemblyNode",
-                    fields,
-                    file_descriptor_proto()
-                )
-            })
-        }
-    }
-
-    fn default_instance() -> &'static WebAssemblyNode {
-        static mut instance: ::protobuf::lazy::Lazy<WebAssemblyNode> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const WebAssemblyNode,
-        };
-        unsafe {
-            instance.get(WebAssemblyNode::new)
-        }
-    }
-}
-
-impl ::protobuf::Clear for WebAssemblyNode {
-    fn clear(&mut self) {
-        self.wasm_contents_name.clear();
-        self.ports.clear();
-        self.unknown_fields.clear();
-    }
-}
-
-impl ::std::fmt::Debug for WebAssemblyNode {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        ::protobuf::text_format::fmt(self, f)
-    }
-}
-
-impl ::protobuf::reflect::ProtobufValue for WebAssemblyNode {
-    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
-        ::protobuf::reflect::ProtobufValueRef::Message(self)
-    }
-}
-
-#[derive(PartialEq,Clone,Default)]
-pub struct WasmContents {
-    // message fields
-    pub name: ::std::string::String,
-    pub module_bytes: ::std::vec::Vec<u8>,
-    // special fields
-    pub unknown_fields: ::protobuf::UnknownFields,
-    pub cached_size: ::protobuf::CachedSize,
-}
-
-impl<'a> ::std::default::Default for &'a WasmContents {
-    fn default() -> &'a WasmContents {
-        <WasmContents as ::protobuf::Message>::default_instance()
-    }
-}
-
-impl WasmContents {
-    pub fn new() -> WasmContents {
+impl NodeConfiguration {
+    pub fn new() -> NodeConfiguration {
         ::std::default::Default::default()
     }
 
@@ -1304,35 +299,171 @@ impl WasmContents {
         ::std::mem::replace(&mut self.name, ::std::string::String::new())
     }
 
-    // bytes module_bytes = 2;
+    // .oak.WebAssemblyConfiguration wasm_config = 2;
 
 
-    pub fn get_module_bytes(&self) -> &[u8] {
-        &self.module_bytes
+    pub fn get_wasm_config(&self) -> &WebAssemblyConfiguration {
+        match self.config_type {
+            ::std::option::Option::Some(NodeConfiguration_oneof_config_type::wasm_config(ref v)) => v,
+            _ => WebAssemblyConfiguration::default_instance(),
+        }
     }
-    pub fn clear_module_bytes(&mut self) {
-        self.module_bytes.clear();
+    pub fn clear_wasm_config(&mut self) {
+        self.config_type = ::std::option::Option::None;
+    }
+
+    pub fn has_wasm_config(&self) -> bool {
+        match self.config_type {
+            ::std::option::Option::Some(NodeConfiguration_oneof_config_type::wasm_config(..)) => true,
+            _ => false,
+        }
     }
 
     // Param is passed by value, moved
-    pub fn set_module_bytes(&mut self, v: ::std::vec::Vec<u8>) {
-        self.module_bytes = v;
+    pub fn set_wasm_config(&mut self, v: WebAssemblyConfiguration) {
+        self.config_type = ::std::option::Option::Some(NodeConfiguration_oneof_config_type::wasm_config(v))
     }
 
     // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_module_bytes(&mut self) -> &mut ::std::vec::Vec<u8> {
-        &mut self.module_bytes
+    pub fn mut_wasm_config(&mut self) -> &mut WebAssemblyConfiguration {
+        if let ::std::option::Option::Some(NodeConfiguration_oneof_config_type::wasm_config(_)) = self.config_type {
+        } else {
+            self.config_type = ::std::option::Option::Some(NodeConfiguration_oneof_config_type::wasm_config(WebAssemblyConfiguration::new()));
+        }
+        match self.config_type {
+            ::std::option::Option::Some(NodeConfiguration_oneof_config_type::wasm_config(ref mut v)) => v,
+            _ => panic!(),
+        }
     }
 
     // Take field
-    pub fn take_module_bytes(&mut self) -> ::std::vec::Vec<u8> {
-        ::std::mem::replace(&mut self.module_bytes, ::std::vec::Vec::new())
+    pub fn take_wasm_config(&mut self) -> WebAssemblyConfiguration {
+        if self.has_wasm_config() {
+            match self.config_type.take() {
+                ::std::option::Option::Some(NodeConfiguration_oneof_config_type::wasm_config(v)) => v,
+                _ => panic!(),
+            }
+        } else {
+            WebAssemblyConfiguration::new()
+        }
+    }
+
+    // .oak.LogConfiguration log_config = 3;
+
+
+    pub fn get_log_config(&self) -> &LogConfiguration {
+        match self.config_type {
+            ::std::option::Option::Some(NodeConfiguration_oneof_config_type::log_config(ref v)) => v,
+            _ => LogConfiguration::default_instance(),
+        }
+    }
+    pub fn clear_log_config(&mut self) {
+        self.config_type = ::std::option::Option::None;
+    }
+
+    pub fn has_log_config(&self) -> bool {
+        match self.config_type {
+            ::std::option::Option::Some(NodeConfiguration_oneof_config_type::log_config(..)) => true,
+            _ => false,
+        }
+    }
+
+    // Param is passed by value, moved
+    pub fn set_log_config(&mut self, v: LogConfiguration) {
+        self.config_type = ::std::option::Option::Some(NodeConfiguration_oneof_config_type::log_config(v))
+    }
+
+    // Mutable pointer to the field.
+    pub fn mut_log_config(&mut self) -> &mut LogConfiguration {
+        if let ::std::option::Option::Some(NodeConfiguration_oneof_config_type::log_config(_)) = self.config_type {
+        } else {
+            self.config_type = ::std::option::Option::Some(NodeConfiguration_oneof_config_type::log_config(LogConfiguration::new()));
+        }
+        match self.config_type {
+            ::std::option::Option::Some(NodeConfiguration_oneof_config_type::log_config(ref mut v)) => v,
+            _ => panic!(),
+        }
+    }
+
+    // Take field
+    pub fn take_log_config(&mut self) -> LogConfiguration {
+        if self.has_log_config() {
+            match self.config_type.take() {
+                ::std::option::Option::Some(NodeConfiguration_oneof_config_type::log_config(v)) => v,
+                _ => panic!(),
+            }
+        } else {
+            LogConfiguration::new()
+        }
+    }
+
+    // .oak.StorageProxyConfiguration storage_config = 4;
+
+
+    pub fn get_storage_config(&self) -> &StorageProxyConfiguration {
+        match self.config_type {
+            ::std::option::Option::Some(NodeConfiguration_oneof_config_type::storage_config(ref v)) => v,
+            _ => StorageProxyConfiguration::default_instance(),
+        }
+    }
+    pub fn clear_storage_config(&mut self) {
+        self.config_type = ::std::option::Option::None;
+    }
+
+    pub fn has_storage_config(&self) -> bool {
+        match self.config_type {
+            ::std::option::Option::Some(NodeConfiguration_oneof_config_type::storage_config(..)) => true,
+            _ => false,
+        }
+    }
+
+    // Param is passed by value, moved
+    pub fn set_storage_config(&mut self, v: StorageProxyConfiguration) {
+        self.config_type = ::std::option::Option::Some(NodeConfiguration_oneof_config_type::storage_config(v))
+    }
+
+    // Mutable pointer to the field.
+    pub fn mut_storage_config(&mut self) -> &mut StorageProxyConfiguration {
+        if let ::std::option::Option::Some(NodeConfiguration_oneof_config_type::storage_config(_)) = self.config_type {
+        } else {
+            self.config_type = ::std::option::Option::Some(NodeConfiguration_oneof_config_type::storage_config(StorageProxyConfiguration::new()));
+        }
+        match self.config_type {
+            ::std::option::Option::Some(NodeConfiguration_oneof_config_type::storage_config(ref mut v)) => v,
+            _ => panic!(),
+        }
+    }
+
+    // Take field
+    pub fn take_storage_config(&mut self) -> StorageProxyConfiguration {
+        if self.has_storage_config() {
+            match self.config_type.take() {
+                ::std::option::Option::Some(NodeConfiguration_oneof_config_type::storage_config(v)) => v,
+                _ => panic!(),
+            }
+        } else {
+            StorageProxyConfiguration::new()
+        }
     }
 }
 
-impl ::protobuf::Message for WasmContents {
+impl ::protobuf::Message for NodeConfiguration {
     fn is_initialized(&self) -> bool {
+        if let Some(NodeConfiguration_oneof_config_type::wasm_config(ref v)) = self.config_type {
+            if !v.is_initialized() {
+                return false;
+            }
+        }
+        if let Some(NodeConfiguration_oneof_config_type::log_config(ref v)) = self.config_type {
+            if !v.is_initialized() {
+                return false;
+            }
+        }
+        if let Some(NodeConfiguration_oneof_config_type::storage_config(ref v)) = self.config_type {
+            if !v.is_initialized() {
+                return false;
+            }
+        }
         true
     }
 
@@ -1344,7 +475,22 @@ impl ::protobuf::Message for WasmContents {
                     ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.name)?;
                 },
                 2 => {
-                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.module_bytes)?;
+                    if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    self.config_type = ::std::option::Option::Some(NodeConfiguration_oneof_config_type::wasm_config(is.read_message()?));
+                },
+                3 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    self.config_type = ::std::option::Option::Some(NodeConfiguration_oneof_config_type::log_config(is.read_message()?));
+                },
+                4 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    self.config_type = ::std::option::Option::Some(NodeConfiguration_oneof_config_type::storage_config(is.read_message()?));
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -1361,8 +507,21 @@ impl ::protobuf::Message for WasmContents {
         if !self.name.is_empty() {
             my_size += ::protobuf::rt::string_size(1, &self.name);
         }
-        if !self.module_bytes.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(2, &self.module_bytes);
+        if let ::std::option::Option::Some(ref v) = self.config_type {
+            match v {
+                &NodeConfiguration_oneof_config_type::wasm_config(ref v) => {
+                    let len = v.compute_size();
+                    my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+                },
+                &NodeConfiguration_oneof_config_type::log_config(ref v) => {
+                    let len = v.compute_size();
+                    my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+                },
+                &NodeConfiguration_oneof_config_type::storage_config(ref v) => {
+                    let len = v.compute_size();
+                    my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+                },
+            };
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
@@ -1373,8 +532,24 @@ impl ::protobuf::Message for WasmContents {
         if !self.name.is_empty() {
             os.write_string(1, &self.name)?;
         }
-        if !self.module_bytes.is_empty() {
-            os.write_bytes(2, &self.module_bytes)?;
+        if let ::std::option::Option::Some(ref v) = self.config_type {
+            match v {
+                &NodeConfiguration_oneof_config_type::wasm_config(ref v) => {
+                    os.write_tag(2, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+                    os.write_raw_varint32(v.get_cached_size())?;
+                    v.write_to_with_cached_sizes(os)?;
+                },
+                &NodeConfiguration_oneof_config_type::log_config(ref v) => {
+                    os.write_tag(3, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+                    os.write_raw_varint32(v.get_cached_size())?;
+                    v.write_to_with_cached_sizes(os)?;
+                },
+                &NodeConfiguration_oneof_config_type::storage_config(ref v) => {
+                    os.write_tag(4, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+                    os.write_raw_varint32(v.get_cached_size())?;
+                    v.write_to_with_cached_sizes(os)?;
+                },
+            };
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -1406,8 +581,8 @@ impl ::protobuf::Message for WasmContents {
         Self::descriptor_static()
     }
 
-    fn new() -> WasmContents {
-        WasmContents::new()
+    fn new() -> NodeConfiguration {
+        NodeConfiguration::new()
     }
 
     fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
@@ -1420,16 +595,26 @@ impl ::protobuf::Message for WasmContents {
                 let mut fields = ::std::vec::Vec::new();
                 fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
                     "name",
-                    |m: &WasmContents| { &m.name },
-                    |m: &mut WasmContents| { &mut m.name },
+                    |m: &NodeConfiguration| { &m.name },
+                    |m: &mut NodeConfiguration| { &mut m.name },
                 ));
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
-                    "module_bytes",
-                    |m: &WasmContents| { &m.module_bytes },
-                    |m: &mut WasmContents| { &mut m.module_bytes },
+                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, WebAssemblyConfiguration>(
+                    "wasm_config",
+                    NodeConfiguration::has_wasm_config,
+                    NodeConfiguration::get_wasm_config,
                 ));
-                ::protobuf::reflect::MessageDescriptor::new::<WasmContents>(
-                    "WasmContents",
+                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, LogConfiguration>(
+                    "log_config",
+                    NodeConfiguration::has_log_config,
+                    NodeConfiguration::get_log_config,
+                ));
+                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, StorageProxyConfiguration>(
+                    "storage_config",
+                    NodeConfiguration::has_storage_config,
+                    NodeConfiguration::get_storage_config,
+                ));
+                ::protobuf::reflect::MessageDescriptor::new::<NodeConfiguration>(
+                    "NodeConfiguration",
                     fields,
                     file_descriptor_proto()
                 )
@@ -1437,39 +622,336 @@ impl ::protobuf::Message for WasmContents {
         }
     }
 
-    fn default_instance() -> &'static WasmContents {
-        static mut instance: ::protobuf::lazy::Lazy<WasmContents> = ::protobuf::lazy::Lazy {
+    fn default_instance() -> &'static NodeConfiguration {
+        static mut instance: ::protobuf::lazy::Lazy<NodeConfiguration> = ::protobuf::lazy::Lazy {
             lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const WasmContents,
+            ptr: 0 as *const NodeConfiguration,
         };
         unsafe {
-            instance.get(WasmContents::new)
+            instance.get(NodeConfiguration::new)
         }
     }
 }
 
-impl ::protobuf::Clear for WasmContents {
+impl ::protobuf::Clear for NodeConfiguration {
     fn clear(&mut self) {
         self.name.clear();
-        self.module_bytes.clear();
+        self.config_type = ::std::option::Option::None;
+        self.config_type = ::std::option::Option::None;
+        self.config_type = ::std::option::Option::None;
         self.unknown_fields.clear();
     }
 }
 
-impl ::std::fmt::Debug for WasmContents {
+impl ::std::fmt::Debug for NodeConfiguration {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         ::protobuf::text_format::fmt(self, f)
     }
 }
 
-impl ::protobuf::reflect::ProtobufValue for WasmContents {
+impl ::protobuf::reflect::ProtobufValue for NodeConfiguration {
     fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
         ::protobuf::reflect::ProtobufValueRef::Message(self)
     }
 }
 
 #[derive(PartialEq,Clone,Default)]
-pub struct StorageProxyNode {
+pub struct WebAssemblyConfiguration {
+    // message fields
+    pub module_bytes: ::std::vec::Vec<u8>,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a WebAssemblyConfiguration {
+    fn default() -> &'a WebAssemblyConfiguration {
+        <WebAssemblyConfiguration as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl WebAssemblyConfiguration {
+    pub fn new() -> WebAssemblyConfiguration {
+        ::std::default::Default::default()
+    }
+
+    // bytes module_bytes = 1;
+
+
+    pub fn get_module_bytes(&self) -> &[u8] {
+        &self.module_bytes
+    }
+    pub fn clear_module_bytes(&mut self) {
+        self.module_bytes.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_module_bytes(&mut self, v: ::std::vec::Vec<u8>) {
+        self.module_bytes = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_module_bytes(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.module_bytes
+    }
+
+    // Take field
+    pub fn take_module_bytes(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.module_bytes, ::std::vec::Vec::new())
+    }
+}
+
+impl ::protobuf::Message for WebAssemblyConfiguration {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.module_bytes)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if !self.module_bytes.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(1, &self.module_bytes);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
+        if !self.module_bytes.is_empty() {
+            os.write_bytes(1, &self.module_bytes)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> WebAssemblyConfiguration {
+        WebAssemblyConfiguration::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
+        };
+        unsafe {
+            descriptor.get(|| {
+                let mut fields = ::std::vec::Vec::new();
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                    "module_bytes",
+                    |m: &WebAssemblyConfiguration| { &m.module_bytes },
+                    |m: &mut WebAssemblyConfiguration| { &mut m.module_bytes },
+                ));
+                ::protobuf::reflect::MessageDescriptor::new::<WebAssemblyConfiguration>(
+                    "WebAssemblyConfiguration",
+                    fields,
+                    file_descriptor_proto()
+                )
+            })
+        }
+    }
+
+    fn default_instance() -> &'static WebAssemblyConfiguration {
+        static mut instance: ::protobuf::lazy::Lazy<WebAssemblyConfiguration> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const WebAssemblyConfiguration,
+        };
+        unsafe {
+            instance.get(WebAssemblyConfiguration::new)
+        }
+    }
+}
+
+impl ::protobuf::Clear for WebAssemblyConfiguration {
+    fn clear(&mut self) {
+        self.module_bytes.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for WebAssemblyConfiguration {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for WebAssemblyConfiguration {
+    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
+        ::protobuf::reflect::ProtobufValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct LogConfiguration {
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a LogConfiguration {
+    fn default() -> &'a LogConfiguration {
+        <LogConfiguration as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl LogConfiguration {
+    pub fn new() -> LogConfiguration {
+        ::std::default::Default::default()
+    }
+}
+
+impl ::protobuf::Message for LogConfiguration {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> LogConfiguration {
+        LogConfiguration::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
+        };
+        unsafe {
+            descriptor.get(|| {
+                let fields = ::std::vec::Vec::new();
+                ::protobuf::reflect::MessageDescriptor::new::<LogConfiguration>(
+                    "LogConfiguration",
+                    fields,
+                    file_descriptor_proto()
+                )
+            })
+        }
+    }
+
+    fn default_instance() -> &'static LogConfiguration {
+        static mut instance: ::protobuf::lazy::Lazy<LogConfiguration> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const LogConfiguration,
+        };
+        unsafe {
+            instance.get(LogConfiguration::new)
+        }
+    }
+}
+
+impl ::protobuf::Clear for LogConfiguration {
+    fn clear(&mut self) {
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for LogConfiguration {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for LogConfiguration {
+    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
+        ::protobuf::reflect::ProtobufValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct StorageProxyConfiguration {
     // message fields
     pub address: ::std::string::String,
     // special fields
@@ -1477,14 +959,14 @@ pub struct StorageProxyNode {
     pub cached_size: ::protobuf::CachedSize,
 }
 
-impl<'a> ::std::default::Default for &'a StorageProxyNode {
-    fn default() -> &'a StorageProxyNode {
-        <StorageProxyNode as ::protobuf::Message>::default_instance()
+impl<'a> ::std::default::Default for &'a StorageProxyConfiguration {
+    fn default() -> &'a StorageProxyConfiguration {
+        <StorageProxyConfiguration as ::protobuf::Message>::default_instance()
     }
 }
 
-impl StorageProxyNode {
-    pub fn new() -> StorageProxyNode {
+impl StorageProxyConfiguration {
+    pub fn new() -> StorageProxyConfiguration {
         ::std::default::Default::default()
     }
 
@@ -1515,7 +997,7 @@ impl StorageProxyNode {
     }
 }
 
-impl ::protobuf::Message for StorageProxyNode {
+impl ::protobuf::Message for StorageProxyConfiguration {
     fn is_initialized(&self) -> bool {
         true
     }
@@ -1581,8 +1063,8 @@ impl ::protobuf::Message for StorageProxyNode {
         Self::descriptor_static()
     }
 
-    fn new() -> StorageProxyNode {
-        StorageProxyNode::new()
+    fn new() -> StorageProxyConfiguration {
+        StorageProxyConfiguration::new()
     }
 
     fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
@@ -1595,11 +1077,11 @@ impl ::protobuf::Message for StorageProxyNode {
                 let mut fields = ::std::vec::Vec::new();
                 fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
                     "address",
-                    |m: &StorageProxyNode| { &m.address },
-                    |m: &mut StorageProxyNode| { &mut m.address },
+                    |m: &StorageProxyConfiguration| { &m.address },
+                    |m: &mut StorageProxyConfiguration| { &mut m.address },
                 ));
-                ::protobuf::reflect::MessageDescriptor::new::<StorageProxyNode>(
-                    "StorageProxyNode",
+                ::protobuf::reflect::MessageDescriptor::new::<StorageProxyConfiguration>(
+                    "StorageProxyConfiguration",
                     fields,
                     file_descriptor_proto()
                 )
@@ -1607,741 +1089,31 @@ impl ::protobuf::Message for StorageProxyNode {
         }
     }
 
-    fn default_instance() -> &'static StorageProxyNode {
-        static mut instance: ::protobuf::lazy::Lazy<StorageProxyNode> = ::protobuf::lazy::Lazy {
+    fn default_instance() -> &'static StorageProxyConfiguration {
+        static mut instance: ::protobuf::lazy::Lazy<StorageProxyConfiguration> = ::protobuf::lazy::Lazy {
             lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const StorageProxyNode,
+            ptr: 0 as *const StorageProxyConfiguration,
         };
         unsafe {
-            instance.get(StorageProxyNode::new)
+            instance.get(StorageProxyConfiguration::new)
         }
     }
 }
 
-impl ::protobuf::Clear for StorageProxyNode {
+impl ::protobuf::Clear for StorageProxyConfiguration {
     fn clear(&mut self) {
         self.address.clear();
         self.unknown_fields.clear();
     }
 }
 
-impl ::std::fmt::Debug for StorageProxyNode {
+impl ::std::fmt::Debug for StorageProxyConfiguration {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         ::protobuf::text_format::fmt(self, f)
     }
 }
 
-impl ::protobuf::reflect::ProtobufValue for StorageProxyNode {
-    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
-        ::protobuf::reflect::ProtobufValueRef::Message(self)
-    }
-}
-
-#[derive(PartialEq,Clone,Default)]
-pub struct Port {
-    // message fields
-    pub name: ::std::string::String,
-    pub field_type: Port_Type,
-    // special fields
-    pub unknown_fields: ::protobuf::UnknownFields,
-    pub cached_size: ::protobuf::CachedSize,
-}
-
-impl<'a> ::std::default::Default for &'a Port {
-    fn default() -> &'a Port {
-        <Port as ::protobuf::Message>::default_instance()
-    }
-}
-
-impl Port {
-    pub fn new() -> Port {
-        ::std::default::Default::default()
-    }
-
-    // string name = 1;
-
-
-    pub fn get_name(&self) -> &str {
-        &self.name
-    }
-    pub fn clear_name(&mut self) {
-        self.name.clear();
-    }
-
-    // Param is passed by value, moved
-    pub fn set_name(&mut self, v: ::std::string::String) {
-        self.name = v;
-    }
-
-    // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_name(&mut self) -> &mut ::std::string::String {
-        &mut self.name
-    }
-
-    // Take field
-    pub fn take_name(&mut self) -> ::std::string::String {
-        ::std::mem::replace(&mut self.name, ::std::string::String::new())
-    }
-
-    // .oak.Port.Type type = 2;
-
-
-    pub fn get_field_type(&self) -> Port_Type {
-        self.field_type
-    }
-    pub fn clear_field_type(&mut self) {
-        self.field_type = Port_Type::TYPE_UNSPECIFIED;
-    }
-
-    // Param is passed by value, moved
-    pub fn set_field_type(&mut self, v: Port_Type) {
-        self.field_type = v;
-    }
-}
-
-impl ::protobuf::Message for Port {
-    fn is_initialized(&self) -> bool {
-        true
-    }
-
-    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream) -> ::protobuf::ProtobufResult<()> {
-        while !is.eof()? {
-            let (field_number, wire_type) = is.read_tag_unpack()?;
-            match field_number {
-                1 => {
-                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.name)?;
-                },
-                2 => {
-                    ::protobuf::rt::read_proto3_enum_with_unknown_fields_into(wire_type, is, &mut self.field_type, 2, &mut self.unknown_fields)?
-                },
-                _ => {
-                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
-                },
-            };
-        }
-        ::std::result::Result::Ok(())
-    }
-
-    // Compute sizes of nested messages
-    #[allow(unused_variables)]
-    fn compute_size(&self) -> u32 {
-        let mut my_size = 0;
-        if !self.name.is_empty() {
-            my_size += ::protobuf::rt::string_size(1, &self.name);
-        }
-        if self.field_type != Port_Type::TYPE_UNSPECIFIED {
-            my_size += ::protobuf::rt::enum_size(2, self.field_type);
-        }
-        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
-        self.cached_size.set(my_size);
-        my_size
-    }
-
-    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
-        if !self.name.is_empty() {
-            os.write_string(1, &self.name)?;
-        }
-        if self.field_type != Port_Type::TYPE_UNSPECIFIED {
-            os.write_enum(2, self.field_type.value())?;
-        }
-        os.write_unknown_fields(self.get_unknown_fields())?;
-        ::std::result::Result::Ok(())
-    }
-
-    fn get_cached_size(&self) -> u32 {
-        self.cached_size.get()
-    }
-
-    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
-        &self.unknown_fields
-    }
-
-    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
-        &mut self.unknown_fields
-    }
-
-    fn as_any(&self) -> &dyn (::std::any::Any) {
-        self as &dyn (::std::any::Any)
-    }
-    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
-        self as &mut dyn (::std::any::Any)
-    }
-    fn into_any(self: Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
-        self
-    }
-
-    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
-        Self::descriptor_static()
-    }
-
-    fn new() -> Port {
-        Port::new()
-    }
-
-    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
-        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
-        };
-        unsafe {
-            descriptor.get(|| {
-                let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
-                    "name",
-                    |m: &Port| { &m.name },
-                    |m: &mut Port| { &mut m.name },
-                ));
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeEnum<Port_Type>>(
-                    "type",
-                    |m: &Port| { &m.field_type },
-                    |m: &mut Port| { &mut m.field_type },
-                ));
-                ::protobuf::reflect::MessageDescriptor::new::<Port>(
-                    "Port",
-                    fields,
-                    file_descriptor_proto()
-                )
-            })
-        }
-    }
-
-    fn default_instance() -> &'static Port {
-        static mut instance: ::protobuf::lazy::Lazy<Port> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const Port,
-        };
-        unsafe {
-            instance.get(Port::new)
-        }
-    }
-}
-
-impl ::protobuf::Clear for Port {
-    fn clear(&mut self) {
-        self.name.clear();
-        self.field_type = Port_Type::TYPE_UNSPECIFIED;
-        self.unknown_fields.clear();
-    }
-}
-
-impl ::std::fmt::Debug for Port {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        ::protobuf::text_format::fmt(self, f)
-    }
-}
-
-impl ::protobuf::reflect::ProtobufValue for Port {
-    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
-        ::protobuf::reflect::ProtobufValueRef::Message(self)
-    }
-}
-
-#[derive(Clone,PartialEq,Eq,Debug,Hash)]
-pub enum Port_Type {
-    TYPE_UNSPECIFIED = 0,
-    IN = 1,
-    OUT = 2,
-}
-
-impl ::protobuf::ProtobufEnum for Port_Type {
-    fn value(&self) -> i32 {
-        *self as i32
-    }
-
-    fn from_i32(value: i32) -> ::std::option::Option<Port_Type> {
-        match value {
-            0 => ::std::option::Option::Some(Port_Type::TYPE_UNSPECIFIED),
-            1 => ::std::option::Option::Some(Port_Type::IN),
-            2 => ::std::option::Option::Some(Port_Type::OUT),
-            _ => ::std::option::Option::None
-        }
-    }
-
-    fn values() -> &'static [Self] {
-        static values: &'static [Port_Type] = &[
-            Port_Type::TYPE_UNSPECIFIED,
-            Port_Type::IN,
-            Port_Type::OUT,
-        ];
-        values
-    }
-
-    fn enum_descriptor_static() -> &'static ::protobuf::reflect::EnumDescriptor {
-        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::EnumDescriptor> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const ::protobuf::reflect::EnumDescriptor,
-        };
-        unsafe {
-            descriptor.get(|| {
-                ::protobuf::reflect::EnumDescriptor::new("Port_Type", file_descriptor_proto())
-            })
-        }
-    }
-}
-
-impl ::std::marker::Copy for Port_Type {
-}
-
-impl ::std::default::Default for Port_Type {
-    fn default() -> Self {
-        Port_Type::TYPE_UNSPECIFIED
-    }
-}
-
-impl ::protobuf::reflect::ProtobufValue for Port_Type {
-    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
-        ::protobuf::reflect::ProtobufValueRef::Enum(self.descriptor())
-    }
-}
-
-#[derive(PartialEq,Clone,Default)]
-pub struct Channel {
-    // message fields
-    pub source_endpoint: ::protobuf::SingularPtrField<Channel_Endpoint>,
-    pub destination_endpoint: ::protobuf::SingularPtrField<Channel_Endpoint>,
-    // special fields
-    pub unknown_fields: ::protobuf::UnknownFields,
-    pub cached_size: ::protobuf::CachedSize,
-}
-
-impl<'a> ::std::default::Default for &'a Channel {
-    fn default() -> &'a Channel {
-        <Channel as ::protobuf::Message>::default_instance()
-    }
-}
-
-impl Channel {
-    pub fn new() -> Channel {
-        ::std::default::Default::default()
-    }
-
-    // .oak.Channel.Endpoint source_endpoint = 1;
-
-
-    pub fn get_source_endpoint(&self) -> &Channel_Endpoint {
-        self.source_endpoint.as_ref().unwrap_or_else(|| Channel_Endpoint::default_instance())
-    }
-    pub fn clear_source_endpoint(&mut self) {
-        self.source_endpoint.clear();
-    }
-
-    pub fn has_source_endpoint(&self) -> bool {
-        self.source_endpoint.is_some()
-    }
-
-    // Param is passed by value, moved
-    pub fn set_source_endpoint(&mut self, v: Channel_Endpoint) {
-        self.source_endpoint = ::protobuf::SingularPtrField::some(v);
-    }
-
-    // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_source_endpoint(&mut self) -> &mut Channel_Endpoint {
-        if self.source_endpoint.is_none() {
-            self.source_endpoint.set_default();
-        }
-        self.source_endpoint.as_mut().unwrap()
-    }
-
-    // Take field
-    pub fn take_source_endpoint(&mut self) -> Channel_Endpoint {
-        self.source_endpoint.take().unwrap_or_else(|| Channel_Endpoint::new())
-    }
-
-    // .oak.Channel.Endpoint destination_endpoint = 2;
-
-
-    pub fn get_destination_endpoint(&self) -> &Channel_Endpoint {
-        self.destination_endpoint.as_ref().unwrap_or_else(|| Channel_Endpoint::default_instance())
-    }
-    pub fn clear_destination_endpoint(&mut self) {
-        self.destination_endpoint.clear();
-    }
-
-    pub fn has_destination_endpoint(&self) -> bool {
-        self.destination_endpoint.is_some()
-    }
-
-    // Param is passed by value, moved
-    pub fn set_destination_endpoint(&mut self, v: Channel_Endpoint) {
-        self.destination_endpoint = ::protobuf::SingularPtrField::some(v);
-    }
-
-    // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_destination_endpoint(&mut self) -> &mut Channel_Endpoint {
-        if self.destination_endpoint.is_none() {
-            self.destination_endpoint.set_default();
-        }
-        self.destination_endpoint.as_mut().unwrap()
-    }
-
-    // Take field
-    pub fn take_destination_endpoint(&mut self) -> Channel_Endpoint {
-        self.destination_endpoint.take().unwrap_or_else(|| Channel_Endpoint::new())
-    }
-}
-
-impl ::protobuf::Message for Channel {
-    fn is_initialized(&self) -> bool {
-        for v in &self.source_endpoint {
-            if !v.is_initialized() {
-                return false;
-            }
-        };
-        for v in &self.destination_endpoint {
-            if !v.is_initialized() {
-                return false;
-            }
-        };
-        true
-    }
-
-    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream) -> ::protobuf::ProtobufResult<()> {
-        while !is.eof()? {
-            let (field_number, wire_type) = is.read_tag_unpack()?;
-            match field_number {
-                1 => {
-                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.source_endpoint)?;
-                },
-                2 => {
-                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.destination_endpoint)?;
-                },
-                _ => {
-                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
-                },
-            };
-        }
-        ::std::result::Result::Ok(())
-    }
-
-    // Compute sizes of nested messages
-    #[allow(unused_variables)]
-    fn compute_size(&self) -> u32 {
-        let mut my_size = 0;
-        if let Some(ref v) = self.source_endpoint.as_ref() {
-            let len = v.compute_size();
-            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
-        }
-        if let Some(ref v) = self.destination_endpoint.as_ref() {
-            let len = v.compute_size();
-            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
-        }
-        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
-        self.cached_size.set(my_size);
-        my_size
-    }
-
-    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
-        if let Some(ref v) = self.source_endpoint.as_ref() {
-            os.write_tag(1, ::protobuf::wire_format::WireTypeLengthDelimited)?;
-            os.write_raw_varint32(v.get_cached_size())?;
-            v.write_to_with_cached_sizes(os)?;
-        }
-        if let Some(ref v) = self.destination_endpoint.as_ref() {
-            os.write_tag(2, ::protobuf::wire_format::WireTypeLengthDelimited)?;
-            os.write_raw_varint32(v.get_cached_size())?;
-            v.write_to_with_cached_sizes(os)?;
-        }
-        os.write_unknown_fields(self.get_unknown_fields())?;
-        ::std::result::Result::Ok(())
-    }
-
-    fn get_cached_size(&self) -> u32 {
-        self.cached_size.get()
-    }
-
-    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
-        &self.unknown_fields
-    }
-
-    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
-        &mut self.unknown_fields
-    }
-
-    fn as_any(&self) -> &dyn (::std::any::Any) {
-        self as &dyn (::std::any::Any)
-    }
-    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
-        self as &mut dyn (::std::any::Any)
-    }
-    fn into_any(self: Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
-        self
-    }
-
-    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
-        Self::descriptor_static()
-    }
-
-    fn new() -> Channel {
-        Channel::new()
-    }
-
-    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
-        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
-        };
-        unsafe {
-            descriptor.get(|| {
-                let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<Channel_Endpoint>>(
-                    "source_endpoint",
-                    |m: &Channel| { &m.source_endpoint },
-                    |m: &mut Channel| { &mut m.source_endpoint },
-                ));
-                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<Channel_Endpoint>>(
-                    "destination_endpoint",
-                    |m: &Channel| { &m.destination_endpoint },
-                    |m: &mut Channel| { &mut m.destination_endpoint },
-                ));
-                ::protobuf::reflect::MessageDescriptor::new::<Channel>(
-                    "Channel",
-                    fields,
-                    file_descriptor_proto()
-                )
-            })
-        }
-    }
-
-    fn default_instance() -> &'static Channel {
-        static mut instance: ::protobuf::lazy::Lazy<Channel> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const Channel,
-        };
-        unsafe {
-            instance.get(Channel::new)
-        }
-    }
-}
-
-impl ::protobuf::Clear for Channel {
-    fn clear(&mut self) {
-        self.source_endpoint.clear();
-        self.destination_endpoint.clear();
-        self.unknown_fields.clear();
-    }
-}
-
-impl ::std::fmt::Debug for Channel {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        ::protobuf::text_format::fmt(self, f)
-    }
-}
-
-impl ::protobuf::reflect::ProtobufValue for Channel {
-    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
-        ::protobuf::reflect::ProtobufValueRef::Message(self)
-    }
-}
-
-#[derive(PartialEq,Clone,Default)]
-pub struct Channel_Endpoint {
-    // message fields
-    pub node_name: ::std::string::String,
-    pub port_name: ::std::string::String,
-    // special fields
-    pub unknown_fields: ::protobuf::UnknownFields,
-    pub cached_size: ::protobuf::CachedSize,
-}
-
-impl<'a> ::std::default::Default for &'a Channel_Endpoint {
-    fn default() -> &'a Channel_Endpoint {
-        <Channel_Endpoint as ::protobuf::Message>::default_instance()
-    }
-}
-
-impl Channel_Endpoint {
-    pub fn new() -> Channel_Endpoint {
-        ::std::default::Default::default()
-    }
-
-    // string node_name = 1;
-
-
-    pub fn get_node_name(&self) -> &str {
-        &self.node_name
-    }
-    pub fn clear_node_name(&mut self) {
-        self.node_name.clear();
-    }
-
-    // Param is passed by value, moved
-    pub fn set_node_name(&mut self, v: ::std::string::String) {
-        self.node_name = v;
-    }
-
-    // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_node_name(&mut self) -> &mut ::std::string::String {
-        &mut self.node_name
-    }
-
-    // Take field
-    pub fn take_node_name(&mut self) -> ::std::string::String {
-        ::std::mem::replace(&mut self.node_name, ::std::string::String::new())
-    }
-
-    // string port_name = 2;
-
-
-    pub fn get_port_name(&self) -> &str {
-        &self.port_name
-    }
-    pub fn clear_port_name(&mut self) {
-        self.port_name.clear();
-    }
-
-    // Param is passed by value, moved
-    pub fn set_port_name(&mut self, v: ::std::string::String) {
-        self.port_name = v;
-    }
-
-    // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_port_name(&mut self) -> &mut ::std::string::String {
-        &mut self.port_name
-    }
-
-    // Take field
-    pub fn take_port_name(&mut self) -> ::std::string::String {
-        ::std::mem::replace(&mut self.port_name, ::std::string::String::new())
-    }
-}
-
-impl ::protobuf::Message for Channel_Endpoint {
-    fn is_initialized(&self) -> bool {
-        true
-    }
-
-    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream) -> ::protobuf::ProtobufResult<()> {
-        while !is.eof()? {
-            let (field_number, wire_type) = is.read_tag_unpack()?;
-            match field_number {
-                1 => {
-                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.node_name)?;
-                },
-                2 => {
-                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.port_name)?;
-                },
-                _ => {
-                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
-                },
-            };
-        }
-        ::std::result::Result::Ok(())
-    }
-
-    // Compute sizes of nested messages
-    #[allow(unused_variables)]
-    fn compute_size(&self) -> u32 {
-        let mut my_size = 0;
-        if !self.node_name.is_empty() {
-            my_size += ::protobuf::rt::string_size(1, &self.node_name);
-        }
-        if !self.port_name.is_empty() {
-            my_size += ::protobuf::rt::string_size(2, &self.port_name);
-        }
-        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
-        self.cached_size.set(my_size);
-        my_size
-    }
-
-    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
-        if !self.node_name.is_empty() {
-            os.write_string(1, &self.node_name)?;
-        }
-        if !self.port_name.is_empty() {
-            os.write_string(2, &self.port_name)?;
-        }
-        os.write_unknown_fields(self.get_unknown_fields())?;
-        ::std::result::Result::Ok(())
-    }
-
-    fn get_cached_size(&self) -> u32 {
-        self.cached_size.get()
-    }
-
-    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
-        &self.unknown_fields
-    }
-
-    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
-        &mut self.unknown_fields
-    }
-
-    fn as_any(&self) -> &dyn (::std::any::Any) {
-        self as &dyn (::std::any::Any)
-    }
-    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
-        self as &mut dyn (::std::any::Any)
-    }
-    fn into_any(self: Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
-        self
-    }
-
-    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
-        Self::descriptor_static()
-    }
-
-    fn new() -> Channel_Endpoint {
-        Channel_Endpoint::new()
-    }
-
-    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
-        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
-        };
-        unsafe {
-            descriptor.get(|| {
-                let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
-                    "node_name",
-                    |m: &Channel_Endpoint| { &m.node_name },
-                    |m: &mut Channel_Endpoint| { &mut m.node_name },
-                ));
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
-                    "port_name",
-                    |m: &Channel_Endpoint| { &m.port_name },
-                    |m: &mut Channel_Endpoint| { &mut m.port_name },
-                ));
-                ::protobuf::reflect::MessageDescriptor::new::<Channel_Endpoint>(
-                    "Channel_Endpoint",
-                    fields,
-                    file_descriptor_proto()
-                )
-            })
-        }
-    }
-
-    fn default_instance() -> &'static Channel_Endpoint {
-        static mut instance: ::protobuf::lazy::Lazy<Channel_Endpoint> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const Channel_Endpoint,
-        };
-        unsafe {
-            instance.get(Channel_Endpoint::new)
-        }
-    }
-}
-
-impl ::protobuf::Clear for Channel_Endpoint {
-    fn clear(&mut self) {
-        self.node_name.clear();
-        self.port_name.clear();
-        self.unknown_fields.clear();
-    }
-}
-
-impl ::std::fmt::Debug for Channel_Endpoint {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        ::protobuf::text_format::fmt(self, f)
-    }
-}
-
-impl ::protobuf::reflect::ProtobufValue for Channel_Endpoint {
+impl ::protobuf::reflect::ProtobufValue for StorageProxyConfiguration {
     fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
         ::protobuf::reflect::ProtobufValueRef::Message(self)
     }
@@ -3031,40 +1803,27 @@ impl ::protobuf::reflect::ProtobufValue for TerminateApplicationResponse {
 }
 
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\rmanager.proto\x12\x03oak\"\x9d\x01\n\x18ApplicationConfiguration\x12\
-    \x1f\n\x05nodes\x18\x01\x20\x03(\x0b2\t.oak.NodeR\x05nodes\x12(\n\x08cha\
-    nnels\x18\x02\x20\x03(\x0b2\x0c.oak.ChannelR\x08channels\x126\n\rwasm_co\
-    ntents\x18\x03\x20\x03(\x0b2\x11.oak.WasmContentsR\x0cwasmContents\"\x9c\
-    \x02\n\x04Node\x12\x1b\n\tnode_name\x18\x01\x20\x01(\tR\x08nodeName\x12)\
-    \n\x08log_node\x18\x02\x20\x01(\x0b2\x0c.oak.LogNodeH\0R\x07logNode\x12?\
-    \n\x10grpc_server_node\x18\x03\x20\x01(\x0b2\x13.oak.GrpcServerNodeH\0R\
-    \x0egrpcServerNode\x12B\n\x11web_assembly_node\x18\x04\x20\x01(\x0b2\x14\
-    .oak.WebAssemblyNodeH\0R\x0fwebAssemblyNode\x12:\n\x0cstorage_node\x18\
-    \x05\x20\x01(\x0b2\x15.oak.StorageProxyNodeH\0R\x0bstorageNodeB\x0b\n\tn\
-    ode_type\"\x10\n\x0eGrpcServerNode\"\t\n\x07LogNode\"`\n\x0fWebAssemblyN\
-    ode\x12,\n\x12wasm_contents_name\x18\x01\x20\x01(\tR\x10wasmContentsName\
-    \x12\x1f\n\x05ports\x18\x02\x20\x03(\x0b2\t.oak.PortR\x05ports\"E\n\x0cW\
-    asmContents\x12\x12\n\x04name\x18\x01\x20\x01(\tR\x04name\x12!\n\x0cmodu\
-    le_bytes\x18\x02\x20\x01(\x0cR\x0bmoduleBytes\",\n\x10StorageProxyNode\
-    \x12\x18\n\x07address\x18\x01\x20\x01(\tR\x07address\"m\n\x04Port\x12\
-    \x12\n\x04name\x18\x01\x20\x01(\tR\x04name\x12\"\n\x04type\x18\x02\x20\
-    \x01(\x0e2\x0e.oak.Port.TypeR\x04type\"-\n\x04Type\x12\x14\n\x10TYPE_UNS\
-    PECIFIED\x10\0\x12\x06\n\x02IN\x10\x01\x12\x07\n\x03OUT\x10\x02\"\xd9\
-    \x01\n\x07Channel\x12>\n\x0fsource_endpoint\x18\x01\x20\x01(\x0b2\x15.oa\
-    k.Channel.EndpointR\x0esourceEndpoint\x12H\n\x14destination_endpoint\x18\
-    \x02\x20\x01(\x0b2\x15.oak.Channel.EndpointR\x13destinationEndpoint\x1aD\
-    \n\x08Endpoint\x12\x1b\n\tnode_name\x18\x01\x20\x01(\tR\x08nodeName\x12\
-    \x1b\n\tport_name\x18\x02\x20\x01(\tR\x08portName\"v\n\x18CreateApplicat\
-    ionRequest\x12Z\n\x19application_configuration\x18\x01\x20\x01(\x0b2\x1d\
-    .oak.ApplicationConfigurationR\x18applicationConfiguration\"_\n\x19Creat\
-    eApplicationResponse\x12%\n\x0eapplication_id\x18\x01\x20\x01(\tR\rappli\
-    cationId\x12\x1b\n\tgrpc_port\x18\x02\x20\x01(\x05R\x08grpcPort\"D\n\x1b\
-    TerminateApplicationRequest\x12%\n\x0eapplication_id\x18\x01\x20\x01(\tR\
-    \rapplicationId\"\x1e\n\x1cTerminateApplicationResponse2\xba\x01\n\x07Ma\
-    nager\x12R\n\x11CreateApplication\x12\x1d.oak.CreateApplicationRequest\
-    \x1a\x1e.oak.CreateApplicationResponse\x12[\n\x14TerminateApplication\
-    \x12\x20.oak.TerminateApplicationRequest\x1a!.oak.TerminateApplicationRe\
-    sponseb\x06proto3\
+    \n\rmanager.proto\x12\x03oak\"x\n\x18ApplicationConfiguration\x129\n\x0c\
+    node_configs\x18\x01\x20\x03(\x0b2\x16.oak.NodeConfigurationR\x0bnodeCon\
+    figs\x12!\n\x0cinitial_node\x18\x02\x20\x01(\tR\x0binitialNode\"\xf9\x01\
+    \n\x11NodeConfiguration\x12\x12\n\x04name\x18\x01\x20\x01(\tR\x04name\
+    \x12@\n\x0bwasm_config\x18\x02\x20\x01(\x0b2\x1d.oak.WebAssemblyConfigur\
+    ationH\0R\nwasmConfig\x126\n\nlog_config\x18\x03\x20\x01(\x0b2\x15.oak.L\
+    ogConfigurationH\0R\tlogConfig\x12G\n\x0estorage_config\x18\x04\x20\x01(\
+    \x0b2\x1e.oak.StorageProxyConfigurationH\0R\rstorageConfigB\r\n\x0bconfi\
+    g_type\"=\n\x18WebAssemblyConfiguration\x12!\n\x0cmodule_bytes\x18\x01\
+    \x20\x01(\x0cR\x0bmoduleBytes\"\x12\n\x10LogConfiguration\"5\n\x19Storag\
+    eProxyConfiguration\x12\x18\n\x07address\x18\x01\x20\x01(\tR\x07address\
+    \"v\n\x18CreateApplicationRequest\x12Z\n\x19application_configuration\
+    \x18\x01\x20\x01(\x0b2\x1d.oak.ApplicationConfigurationR\x18applicationC\
+    onfiguration\"_\n\x19CreateApplicationResponse\x12%\n\x0eapplication_id\
+    \x18\x01\x20\x01(\tR\rapplicationId\x12\x1b\n\tgrpc_port\x18\x02\x20\x01\
+    (\x05R\x08grpcPort\"D\n\x1bTerminateApplicationRequest\x12%\n\x0eapplica\
+    tion_id\x18\x01\x20\x01(\tR\rapplicationId\"\x1e\n\x1cTerminateApplicati\
+    onResponse2\xba\x01\n\x07Manager\x12R\n\x11CreateApplication\x12\x1d.oak\
+    .CreateApplicationRequest\x1a\x1e.oak.CreateApplicationResponse\x12[\n\
+    \x14TerminateApplication\x12\x20.oak.TerminateApplicationRequest\x1a!.oa\
+    k.TerminateApplicationResponseb\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {
