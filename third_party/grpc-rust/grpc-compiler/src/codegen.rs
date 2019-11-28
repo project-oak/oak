@@ -212,8 +212,7 @@ impl<'a> ServiceGen<'a> {
                     w.write_line(format!("\"{}\" => {},", full_path, method.dispatch_method()));
                 }
                 w.block("_ => {", "}", |w| {
-                    w.write_line("writeln!(oak::logging_channel(), \"unknown method name: {}\", method).unwrap();");
-                    w.write_line("panic!(\"unknown method name\");");
+                    w.write_line("panic!(\"unknown method name: {}\", method);");
                 });
             });
         });

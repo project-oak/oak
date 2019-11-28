@@ -22,10 +22,12 @@ use crate::proto::storage_channel::{
     StorageChannelDeleteRequest, StorageChannelDeleteResponse, StorageChannelReadRequest,
     StorageChannelReadResponse, StorageChannelWriteRequest, StorageChannelWriteResponse,
 };
-use crate::wasm::INVALID_HANDLE;
-use crate::WriteHandle;
 use log::info;
 use protobuf::{Message, ProtobufEnum};
+
+/// Default name for predefined node config that corresponds to a storage
+/// pseudo-Node.
+pub const DEFAULT_CONFIG_NAME: &str = "storage";
 
 /// Local representation of the connection to an external storage service.
 pub struct Storage {
@@ -33,22 +35,27 @@ pub struct Storage {
 }
 
 impl Storage {
-    /// Create a default `Storage` instance assuming the standard port name
-    /// (`"storage_out"`) for the pre-defined channel for outbound storage
-    /// requests.
+    /// Create a default `Storage` instance assuming the default pre-defined
+    /// name (`"storage"`) identifying storage node config.
     pub fn default() -> Option<Storage> {
-        Storage::new("storage_out")
+        Storage::new(DEFAULT_CONFIG_NAME)
     }
 
-    /// Create a `Storage` instance using the given port names for pre-defined
-    /// channels for storage communication.
-    pub fn new(port_name: &str) -> Option<Storage> {
-        let write_channel = WriteHandle {
-            handle: crate::channel_find(port_name),
+    /// Create a `Storage` instance using the given name identifying storage
+    /// node configuration.
+    pub fn new(config: &str) -> Option<Storage> {
+        // Create a channel and pass the read half to a fresh storage Node.
+        let (write_channel, read_channel) = match crate::channel_create() {
+            Ok(x) => x,
+            Err(_e) => return None,
         };
-        if write_channel.handle == INVALID_HANDLE {
+        if crate::node_create(config, read_channel) != crate::OakStatus::OK {
+            crate::channel_close(write_channel.handle);
+            crate::channel_close(read_channel.handle);
             return None;
         }
+
+        crate::channel_close(read_channel.handle);
         Some(Storage { write_channel })
     }
 

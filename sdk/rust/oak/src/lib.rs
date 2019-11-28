@@ -210,17 +210,11 @@ pub fn channel_close(handle: Handle) -> OakStatus {
     }
 }
 
-/// Determine the [`Handle`] for a pre-defined channel, identified by its
-/// `port_name`.
-pub fn channel_find(port_name: &str) -> Handle {
-    unsafe { wasm::channel_find(port_name.as_ptr(), port_name.len()) }
-}
-
-/// Create a new Node running the code identified by `contents_name`, passing
-/// it the given handle.
-pub fn node_create(contents_name: &str, half: ReadHandle) -> OakStatus {
+/// Create a new Node running the configuration identified by `config_name`,
+/// passing it the given handle.
+pub fn node_create(config_name: &str, half: ReadHandle) -> OakStatus {
     match OakStatus::from_i32(unsafe {
-        wasm::node_create(contents_name.as_ptr(), contents_name.len(), half.handle) as i32
+        wasm::node_create(config_name.as_ptr(), config_name.len(), half.handle) as i32
     }) {
         Some(s) => s,
         None => OakStatus::OAK_STATUS_UNSPECIFIED,
@@ -233,20 +227,6 @@ pub fn random_get(buf: &mut [u8]) -> OakStatus {
         Some(s) => s,
         None => OakStatus::OAK_STATUS_UNSPECIFIED,
     }
-}
-
-/// Return an instance of the [`std::io::Write`] trait that emits messages to
-/// the Node's logging channel.
-///
-/// Assumes that the Node has a pre-configured channel to the logging
-/// pseudo-Node that is identified by the default port name (`"log"`).
-pub fn logging_channel() -> impl std::io::Write {
-    let logging_handle = WriteHandle {
-        handle: channel_find("log"),
-    };
-    let logging_channel = io::Channel::new(logging_handle);
-    // Only flush logging channel on newlines.
-    std::io::LineWriter::new(logging_channel)
 }
 
 /// Install a panic hook that logs [panic information].
