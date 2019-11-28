@@ -510,7 +510,7 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelFind(wabt::interp::Environm
     uint32_t size = args[1].get_i32();
     if (!MemoryAvailable(env, offset, size)) {
       LOG(WARNING) << "{" << name_ << "} Node provided invalid memory offset+size";
-      results[0].set_i64(0);
+      results[0].set_i64(kInvalidHandle);
       return wabt::interp::Result::Ok;
     }
 

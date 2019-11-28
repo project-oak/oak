@@ -14,16 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef OAK_HANDLES_H_
-#define OAK_HANDLES_H_
-
-#include <stdint.h>
-
-#include "absl/base/attributes.h"
+#include "oak/common/handles.h"
 
 namespace oak {
-using Handle = uint64_t;
-ABSL_CONST_INIT extern const Handle kInvalidHandle;
+const Handle kInvalidHandle = 0;
 }  // namespace oak
-
-#endif  // OAK_HANDLES_H_
