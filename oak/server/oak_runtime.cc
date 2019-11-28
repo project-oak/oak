@@ -30,6 +30,13 @@
 
 namespace oak {
 
+namespace {
+// Name to use for the (sole) gRPC pseudo-Node.  This will not clash with any
+// dynamically created Node names because they are all of the form
+// "<config>-<number>".
+constexpr char kGrpcNodeName[] = "grpc";
+}  // namespace
+
 grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
   LOG(INFO) << "Initializing Oak Runtime";
   if (!ValidApplicationConfig(config)) {
@@ -37,109 +44,99 @@ grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
   }
   absl::MutexLock lock(&mu_);
 
-  // Accumulate the name => module_bytes map.
-  wasm_contents_.clear();
-  for (const auto& contents : config.wasm_contents()) {
-    wasm_contents_[contents.name()] = absl::make_unique<std::string>(contents.module_bytes());
-  }
-
-  // Create all of the nodes.  The validity check above will ensure there is at
-  // most one of each pseudo-Node type.
-  OakNode* log_node = nullptr;
-  for (const auto& node_config : config.nodes()) {
-    const std::string& node_name = node_config.node_name();
-    std::unique_ptr<OakNode> node;
-    if (node_config.has_web_assembly_node()) {
-      const auto& wasm_node = node_config.web_assembly_node();
-      LOG(INFO) << "Create Wasm node named {" << node_name << "}";
-      const std::string* module_bytes = wasm_contents_[wasm_node.wasm_contents_name()].get();
-      node = WasmNode::Create(this, node_config.node_name(), *module_bytes);
-    } else if (node_config.has_grpc_server_node()) {
-      LOG(INFO) << "Create gRPC pseudo-Node named {" << node_name << "}";
-      std::unique_ptr<OakGrpcNode> grpc_node = OakGrpcNode::Create(node_name);
-      grpc_node_ = grpc_node.get();  // borrowed copy
-      node = std::move(grpc_node);
-    } else if (node_config.has_log_node()) {
-      LOG(INFO) << "Create logging pseudo-node named {" << node_name << "}";
-      node = absl::make_unique<LoggingNode>(node_name);
-      log_node = node.get();
-    } else if (node_config.has_storage_node()) {
-      LOG(INFO) << "Created storage pseudo-Node named {" << node_name << "}";
-      node = absl::make_unique<StorageNode>(node_name, node_config.storage_node().address());
-    }
-    if (node == nullptr) {
-      return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Failed to create Oak Node");
-    }
-    nodes_[node_name] = std::move(node);
-  }
-
-  // Now create channels.
-  MessageChannelWriteHalf* logging_channel = nullptr;
-  for (const auto& channel_config : config.channels()) {
-    const std::string& src_name = channel_config.source_endpoint().node_name();
-    const std::string& src_port = channel_config.source_endpoint().port_name();
-    const std::string& dest_name = channel_config.destination_endpoint().node_name();
-    const std::string& dest_port = channel_config.destination_endpoint().port_name();
-    OakNode* src_node = nodes_[src_name].get();
-    OakNode* dest_node = nodes_[dest_name].get();
-    if (src_node == nullptr || dest_node == nullptr) {
-      return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Node at end of channel not found");
-    }
-
-    if (dest_node == log_node && logging_channel != nullptr) {
-      // Special case for all configured channels going to the logging
-      // pseudo-Node: share the existing channel and hold an extra reference to
-      // the write half of the channel.
-      LOG(INFO) << "Re-use logging channel for {" << src_name << "}." << src_port << " -> {"
-                << dest_name << "}." << dest_port;
-      src_node->AddNamedChannel(src_port, absl::make_unique<ChannelHalf>(logging_channel->Clone()));
-    } else {
-      LOG(INFO) << "Create channel {" << src_name << "}." << src_port << " -> {" << dest_name
-                << "}." << dest_port;
-      MessageChannel::ChannelHalves halves = MessageChannel::Create();
-      if (dest_node == log_node) {
-        // Remember the write half of logging channel for future re-use.
-        logging_channel = halves.write.get();
-      }
-
-      src_node->AddNamedChannel(src_port, absl::make_unique<ChannelHalf>(std::move(halves.write)));
-      dest_node->AddNamedChannel(dest_port, absl::make_unique<ChannelHalf>(std::move(halves.read)));
+  // Accumulate the various data structures indexed by config name.
+  wasm_config_.clear();
+  log_config_.clear();
+  storage_config_.clear();
+  for (const auto& node_config : config.node_configs()) {
+    if (node_config.has_wasm_config()) {
+      const WebAssemblyConfiguration& wasm_config = node_config.wasm_config();
+      wasm_config_[node_config.name()] = absl::make_unique<std::string>(wasm_config.module_bytes());
+    } else if (node_config.has_log_config()) {
+      log_config_.insert(node_config.name());
+    } else if (node_config.has_storage_config()) {
+      const StorageProxyConfiguration& storage_config = node_config.storage_config();
+      storage_config_[node_config.name()] =
+          absl::make_unique<std::string>(storage_config.address());
     }
   }
+
+  // Create a gRPC pseudo-Node.
+  const std::string grpc_name = kGrpcNodeName;
+  LOG(INFO) << "Create gRPC pseudo-Node named {" << grpc_name << "}";
+  std::unique_ptr<OakGrpcNode> grpc_node = OakGrpcNode::Create(grpc_name);
+  grpc_node_ = grpc_node.get();  // borrowed copy
+  nodes_[grpc_name] = std::move(grpc_node);
+
+  // Create the initial Application Node.
+  std::string node_name;
+  OakNode* app_node = CreateNode(config.initial_node(), &node_name);
+  if (app_node == nullptr) {
+    return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Failed to create initial Oak Node");
+  }
+  LOG(INFO) << "Created Wasm node named {" << node_name << "}";
+
+  // Create an initial channel from gRPC pseudo-Node to Application Node.
+  // Both of the initial nodes have exactly one registered handle.
+  MessageChannel::ChannelHalves halves = MessageChannel::Create();
+  Handle grpc_handle =
+      grpc_node_->AddChannel(absl::make_unique<ChannelHalf>(std::move(halves.write)));
+  Handle app_handle = app_node->AddChannel(absl::make_unique<ChannelHalf>(std::move(halves.read)));
+  LOG(INFO) << "Created initial channel from Wasm node {" << grpc_name << "}." << grpc_handle
+            << " to {" << node_name << "}." << app_handle;
 
   return grpc::Status::OK;
 }
 
-std::string OakRuntime::NextNodeName(const std::string& contents) {
-  absl::MutexLock lock(&mu_);
-  int index = next_index_[contents]++;
-  return absl::StrCat(contents, "-", index);
+std::string OakRuntime::NextNodeName(const std::string& config) {
+  int index = next_index_[config]++;
+  return absl::StrCat(config, "-", index);
 }
 
-bool OakRuntime::CreateWasmNode(const std::string& contents, std::unique_ptr<ChannelHalf> half,
-                                std::string* node_name) {
-  if (wasm_contents_.count(contents) != 1) {
-    LOG(ERROR) << "failed to find Wasm bytecode Node contents with name " << contents;
-    return false;
+// Create (but don't start) a new Node instance.  Return a borrowed pointer to
+// the new Node (or nullptr on failure).
+OakNode* OakRuntime::CreateNode(const std::string& config, std::string* node_name) {
+  std::string name = NextNodeName(config);
+  std::unique_ptr<OakNode> node;
+
+  if (wasm_config_.count(config) > 0) {
+    LOG(INFO) << "Create Wasm node named {" << name << "}";
+    const std::string* module_bytes = wasm_config_[config].get();
+    node = WasmNode::Create(this, name, *module_bytes);
+  } else if (log_config_.count(config) > 0) {
+    LOG(INFO) << "Create log node named {" << name << "}";
+    node = absl::make_unique<LoggingNode>(name);
+  } else if (storage_config_.count(config) > 0) {
+    std::string address = *(storage_config_[config].get());
+    LOG(INFO) << "Create storage proxy node named {" << name << "} connecting to " << address;
+    node = absl::make_unique<StorageNode>(name, address);
+  } else {
+    LOG(ERROR) << "failed to find config with name " << config;
+    return nullptr;
   }
-  std::string name = NextNodeName(contents);
 
-  LOG(INFO) << "Create Wasm node named {" << name << "}";
+  OakNode* result = node.get();
+  if (node != nullptr) {
+    nodes_[name] = std::move(node);
+  } else {
+    LOG(ERROR) << "failed to create Node with config of name " << config;
+  }
+  return result;
+}
 
-  const std::string* module_bytes = wasm_contents_[contents].get();
-  std::unique_ptr<OakNode> node = WasmNode::Create(this, name, *module_bytes);
+bool OakRuntime::CreateAndRunNode(const std::string& config, std::unique_ptr<ChannelHalf> half,
+                                  std::string* node_name) {
+  absl::MutexLock lock(&mu_);
+  OakNode* node = CreateNode(config, node_name);
   if (node == nullptr) {
-    LOG(ERROR) << "failed to create Wasm Node with contents of name " << contents;
     return false;
   }
 
+  // Add the given channel as the Node's single available handle.
   Handle handle = node->AddChannel(std::move(half));
 
-  absl::MutexLock lock(&mu_);
-  LOG(INFO) << "Start Wasm node named {" << name << "}";
-  node->Start(handle);
-  nodes_[name] = std::move(node);
-  *node_name = name;
+  LOG(INFO) << "Start node named {" << *node_name << "} with initial handle " << handle;
+  node->Start();
   return true;
 }
 
@@ -155,11 +152,10 @@ grpc::Status OakRuntime::Start() {
   LOG(INFO) << "Starting runtime";
   absl::MutexLock lock(&mu_);
 
-  // Now all dependencies are running, start the thread for all the Wasm Nodes.
+  // Now all dependencies are running, start the Nodes running.
   for (auto& named_node : nodes_) {
-    Handle handle = 0;
-    LOG(INFO) << "Starting node " << named_node.first << " with handle " << handle;
-    named_node.second->Start(handle);
+    LOG(INFO) << "Starting node " << named_node.first;
+    named_node.second->Start();
   }
 
   return grpc::Status::OK;

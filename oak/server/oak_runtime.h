@@ -21,6 +21,7 @@
 #include <string>
 #include <vector>
 
+#include "absl/base/thread_annotations.h"
 #include "include/grpcpp/security/server_credentials.h"
 #include "include/grpcpp/server.h"
 #include "oak/proto/manager.pb.h"
@@ -43,29 +44,40 @@ class OakRuntime : public BaseRuntime {
   OakRuntime() : grpc_node_(nullptr) {}
   virtual ~OakRuntime() = default;
 
-  // Initializes a gRPC server. If the server is already initialized, does nothing.
+  // Initializes an OakRuntime with a user-provided ApplicationConfiguration. This
+  // method should be called exactly once, before Start().
   grpc::Status Initialize(const ApplicationConfiguration& config) LOCKS_EXCLUDED(mu_);
   grpc::Status Start();
   grpc::Status Stop();
 
-  bool CreateWasmNode(const std::string& contents, std::unique_ptr<ChannelHalf> half,
-                      std::string* node_name) override LOCKS_EXCLUDED(mu_);
+  bool CreateAndRunNode(const std::string& config, std::unique_ptr<ChannelHalf> half,
+                        std::string* node_name) override;
 
   int32_t GetPort();
 
  private:
   OakRuntime& operator=(const OakRuntime& other) = delete;
 
-  std::string NextNodeName(const std::string& contents) LOCKS_EXCLUDED(mu_);
+  std::string NextNodeName(const std::string& config) EXCLUSIVE_LOCKS_REQUIRED(mu_);
 
-  // Collection of Wasm module bytes indexed by contents name.  Const after Initialize() called.
-  std::map<std::string, std::unique_ptr<std::string>> wasm_contents_;
+  OakNode* CreateNode(const std::string& config, std::string* node_name)
+      EXCLUSIVE_LOCKS_REQUIRED(mu_);
+
+  // Information derived from ApplicationConfiguration; const after Initialize() called:
+
+  // Collection of Wasm module bytes indexed by config name.
+  std::map<std::string, std::unique_ptr<std::string>> wasm_config_;
+  // Config names that refer to a logging node.
+  std::set<std::string> log_config_;
+  // Config names that refer to a storage proxy node.
+  std::map<std::string, std::unique_ptr<std::string>> storage_config_;
 
   // Next index for node name generation.
   mutable absl::Mutex mu_;  // protects nodes_, next_index_;
   std::map<std::string, int> next_index_ GUARDED_BY(mu_);
 
-  // Collection of running Nodes indexed by Node name.
+  // Collection of running Nodes indexed by Node name.  Note that Node name is
+  // unique but is not visible to the running Application in any way.
   std::map<std::string, std::unique_ptr<OakNode>> nodes_ GUARDED_BY(mu_);
 
   // Convenience (non-owning) reference to gRPC pseudo-node; const after Initialize() called.

@@ -33,7 +33,7 @@ class NodeThread : public OakNode {
   virtual ~NodeThread();
 
   // Start kicks off a separate thread that invokes the Run() method.
-  void Start(Handle handle) override;
+  void Start() override;
 
   // Stop terminates the thread associated with the pseudo-node.
   void Stop() override;

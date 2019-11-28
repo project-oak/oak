@@ -34,15 +34,6 @@ Handle OakNode::NextHandle() {
   }
 }
 
-Handle OakNode::AddNamedChannel(const std::string& port_name, std::unique_ptr<ChannelHalf> half) {
-  absl::MutexLock lock(&mu_);
-  Handle handle = NextHandle();
-  LOG(INFO) << "{" << name_ << "} port name '" << port_name << "' maps to handle " << handle;
-  named_channels_[port_name] = handle;
-  channel_halves_[handle] = std::move(half);
-  return handle;
-}
-
 Handle OakNode::AddChannel(std::unique_ptr<ChannelHalf> half) {
   absl::MutexLock lock(&mu_);
   Handle handle = NextHandle();
@@ -57,15 +48,6 @@ bool OakNode::CloseChannel(Handle handle) {
     return false;
   }
   channel_halves_.erase(it);
-
-  // Loop over named channels (under the assumption that there won't be too
-  // many) to remove any named reference to this channel handle.
-  for (const auto& name_it : named_channels_) {
-    if (name_it.second == handle) {
-      named_channels_.erase(name_it.first);
-      break;
-    }
-  }
   return true;
 }
 
@@ -104,15 +86,6 @@ MessageChannelWriteHalf* OakNode::BorrowWriteChannel(Handle handle) const {
     return nullptr;
   }
   return value->get();
-}
-
-Handle OakNode::FindChannel(const std::string& port_name) const {
-  absl::ReaderMutexLock lock(&mu_);
-  auto it = named_channels_.find(port_name);
-  if (it == named_channels_.end()) {
-    return kInvalidHandle;
-  }
-  return it->second;
 }
 
 bool OakNode::WaitOnChannels(std::vector<std::unique_ptr<ChannelStatus>>* statuses) const {
@@ -155,6 +128,14 @@ bool OakNode::WaitOnChannels(std::vector<std::unique_ptr<ChannelStatus>>* status
     // TODO: get rid of polling wait
     absl::SleepFor(absl::Milliseconds(100));
   }
+}
+
+Handle OakNode::SingleHandle() const {
+  absl::ReaderMutexLock lock(&mu_);
+  if (channel_halves_.size() != 1) {
+    return kInvalidHandle;
+  }
+  return channel_halves_.begin()->first;
 }
 
 }  // namespace oak
