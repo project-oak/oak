@@ -17,7 +17,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "oak/common/handles.h"
 #include "oak/module/defines.h"  // for imports and exports
 
 // TODO: Sort out inclusion of protobuf files

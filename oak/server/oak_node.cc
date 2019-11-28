@@ -96,7 +96,7 @@ Handle OakNode::FindChannel(const std::string& port_name) const {
   absl::ReaderMutexLock lock(&mu_);
   auto it = named_channels_.find(port_name);
   if (it == named_channels_.end()) {
-    return 0;
+    return kInvalidHandle;
   }
   return it->second;
 }
