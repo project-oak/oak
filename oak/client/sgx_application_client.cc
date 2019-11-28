@@ -54,12 +54,12 @@ const char* kDebugCpuSvn = "0000000000000000";
 Status Sha256HashFromHexString(const std::string& hash_string, asylo::Sha256HashProto* hash) {
   if (hash_string.size() != 64) {
     return Status(asylo::error::GoogleError::INTERNAL,
-                         "Hash string size is not 64: " + hash_string);
+                  "Hash string size is not 64: " + hash_string);
   }
   for (auto ch : hash_string) {
     if (std::isxdigit(ch) == 0) {
       return Status(asylo::error::GoogleError::INVALID_ARGUMENT,
-                           "Hash contains non-hexademical charachters: " + hash_string);
+                    "Hash contains non-hexademical charachters: " + hash_string);
     }
   }
   hash->set_hash(absl::HexStringToBytes(hash_string));
