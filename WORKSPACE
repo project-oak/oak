@@ -99,7 +99,6 @@ http_archive(
         "//third_party/wabt:0005-Introduce-static-cast-to-disambiguate-overload.patch",
         "//third_party/wabt:0006-Try-using-cxx11-version-of-to_string.patch",
         "//third_party/wabt:0007-Include-opcode-code-table.c.patch",
-        "//third_party/wabt:0009-Only-warn-on-NDEBUG-build.patch",
         "//third_party/wabt:0010-Use-std-stringstream-to-build-unique-name.patch",
     ],
     sha256 = "8bf8123b93c627bbd762fa54ec2e968db73a5155e9a5ae32c722b05350be4a21",

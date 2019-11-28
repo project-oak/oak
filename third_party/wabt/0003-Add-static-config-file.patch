@@ -19,7 +19,7 @@ index 00000000..df9a34e2
 +
 +// BEGIN GOOGLE3 MODIFICATIONS
 +#ifdef NDEBUG
-+#error This library uses assert()
++#warning This library uses assert()
 +#endif
 +// END GOOGLE3 MODIFICATIONS
 +
@@ -351,6 +351,6 @@ index 00000000..df9a34e2
 +#endif
 +
 +#endif /* WABT_CONFIG_H_ */
--- 
+--
 2.19.0.605.g01d371f741-goog
 
