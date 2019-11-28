@@ -41,7 +41,7 @@ message Node {
     GrpcServerNode grpc_server_node = 3;
     WebAssemblyNode web_assembly_node = 4;
     StorageProxyNode storage_node = 5;
-    HttpClientProxyNode http_client_node = 6;
+    HttpClientNode http_client_node = 6;
   }
 }
 
@@ -114,7 +114,7 @@ message StorageProxyNode {
 // - `request`: IN port on which outgoing storage requests are received.
 // - `response`: OUT port on which inbound responses to storage requests are
 // sent.
-message HttpClientProxyNode {
+message HttpClientNode {
 }
 
 // A Port represents an endpoint within a Node that can be connected via a
