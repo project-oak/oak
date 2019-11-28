@@ -323,6 +323,7 @@ pub enum Node_oneof_node_type {
     grpc_server_node(GrpcServerNode),
     web_assembly_node(WebAssemblyNode),
     storage_node(StorageProxyNode),
+    http_client_node(HttpClientProxyNode),
 }
 
 impl Node {
@@ -551,6 +552,55 @@ impl Node {
             StorageProxyNode::new()
         }
     }
+
+    // .oak.HttpClientProxyNode http_client_node = 6;
+
+
+    pub fn get_http_client_node(&self) -> &HttpClientProxyNode {
+        match self.node_type {
+            ::std::option::Option::Some(Node_oneof_node_type::http_client_node(ref v)) => v,
+            _ => HttpClientProxyNode::default_instance(),
+        }
+    }
+    pub fn clear_http_client_node(&mut self) {
+        self.node_type = ::std::option::Option::None;
+    }
+
+    pub fn has_http_client_node(&self) -> bool {
+        match self.node_type {
+            ::std::option::Option::Some(Node_oneof_node_type::http_client_node(..)) => true,
+            _ => false,
+        }
+    }
+
+    // Param is passed by value, moved
+    pub fn set_http_client_node(&mut self, v: HttpClientProxyNode) {
+        self.node_type = ::std::option::Option::Some(Node_oneof_node_type::http_client_node(v))
+    }
+
+    // Mutable pointer to the field.
+    pub fn mut_http_client_node(&mut self) -> &mut HttpClientProxyNode {
+        if let ::std::option::Option::Some(Node_oneof_node_type::http_client_node(_)) = self.node_type {
+        } else {
+            self.node_type = ::std::option::Option::Some(Node_oneof_node_type::http_client_node(HttpClientProxyNode::new()));
+        }
+        match self.node_type {
+            ::std::option::Option::Some(Node_oneof_node_type::http_client_node(ref mut v)) => v,
+            _ => panic!(),
+        }
+    }
+
+    // Take field
+    pub fn take_http_client_node(&mut self) -> HttpClientProxyNode {
+        if self.has_http_client_node() {
+            match self.node_type.take() {
+                ::std::option::Option::Some(Node_oneof_node_type::http_client_node(v)) => v,
+                _ => panic!(),
+            }
+        } else {
+            HttpClientProxyNode::new()
+        }
+    }
 }
 
 impl ::protobuf::Message for Node {
@@ -571,6 +621,11 @@ impl ::protobuf::Message for Node {
             }
         }
         if let Some(Node_oneof_node_type::storage_node(ref v)) = self.node_type {
+            if !v.is_initialized() {
+                return false;
+            }
+        }
+        if let Some(Node_oneof_node_type::http_client_node(ref v)) = self.node_type {
             if !v.is_initialized() {
                 return false;
             }
@@ -609,6 +664,12 @@ impl ::protobuf::Message for Node {
                     }
                     self.node_type = ::std::option::Option::Some(Node_oneof_node_type::storage_node(is.read_message()?));
                 },
+                6 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    self.node_type = ::std::option::Option::Some(Node_oneof_node_type::http_client_node(is.read_message()?));
+                },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
                 },
@@ -642,6 +703,10 @@ impl ::protobuf::Message for Node {
                     let len = v.compute_size();
                     my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
                 },
+                &Node_oneof_node_type::http_client_node(ref v) => {
+                    let len = v.compute_size();
+                    my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+                },
             };
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
@@ -672,6 +737,11 @@ impl ::protobuf::Message for Node {
                 },
                 &Node_oneof_node_type::storage_node(ref v) => {
                     os.write_tag(5, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+                    os.write_raw_varint32(v.get_cached_size())?;
+                    v.write_to_with_cached_sizes(os)?;
+                },
+                &Node_oneof_node_type::http_client_node(ref v) => {
+                    os.write_tag(6, ::protobuf::wire_format::WireTypeLengthDelimited)?;
                     os.write_raw_varint32(v.get_cached_size())?;
                     v.write_to_with_cached_sizes(os)?;
                 },
@@ -744,6 +814,11 @@ impl ::protobuf::Message for Node {
                     Node::has_storage_node,
                     Node::get_storage_node,
                 ));
+                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, HttpClientProxyNode>(
+                    "http_client_node",
+                    Node::has_http_client_node,
+                    Node::get_http_client_node,
+                ));
                 ::protobuf::reflect::MessageDescriptor::new::<Node>(
                     "Node",
                     fields,
@@ -767,6 +842,7 @@ impl ::protobuf::Message for Node {
 impl ::protobuf::Clear for Node {
     fn clear(&mut self) {
         self.node_name.clear();
+        self.node_type = ::std::option::Option::None;
         self.node_type = ::std::option::Option::None;
         self.node_type = ::std::option::Option::None;
         self.node_type = ::std::option::Option::None;
@@ -1632,6 +1708,132 @@ impl ::std::fmt::Debug for StorageProxyNode {
 }
 
 impl ::protobuf::reflect::ProtobufValue for StorageProxyNode {
+    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
+        ::protobuf::reflect::ProtobufValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct HttpClientProxyNode {
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a HttpClientProxyNode {
+    fn default() -> &'a HttpClientProxyNode {
+        <HttpClientProxyNode as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl HttpClientProxyNode {
+    pub fn new() -> HttpClientProxyNode {
+        ::std::default::Default::default()
+    }
+}
+
+impl ::protobuf::Message for HttpClientProxyNode {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> HttpClientProxyNode {
+        HttpClientProxyNode::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
+        };
+        unsafe {
+            descriptor.get(|| {
+                let fields = ::std::vec::Vec::new();
+                ::protobuf::reflect::MessageDescriptor::new::<HttpClientProxyNode>(
+                    "HttpClientProxyNode",
+                    fields,
+                    file_descriptor_proto()
+                )
+            })
+        }
+    }
+
+    fn default_instance() -> &'static HttpClientProxyNode {
+        static mut instance: ::protobuf::lazy::Lazy<HttpClientProxyNode> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const HttpClientProxyNode,
+        };
+        unsafe {
+            instance.get(HttpClientProxyNode::new)
+        }
+    }
+}
+
+impl ::protobuf::Clear for HttpClientProxyNode {
+    fn clear(&mut self) {
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for HttpClientProxyNode {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for HttpClientProxyNode {
     fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
         ::protobuf::reflect::ProtobufValueRef::Message(self)
     }
@@ -3034,37 +3236,39 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     \n\rmanager.proto\x12\x03oak\"\x9d\x01\n\x18ApplicationConfiguration\x12\
     \x1f\n\x05nodes\x18\x01\x20\x03(\x0b2\t.oak.NodeR\x05nodes\x12(\n\x08cha\
     nnels\x18\x02\x20\x03(\x0b2\x0c.oak.ChannelR\x08channels\x126\n\rwasm_co\
-    ntents\x18\x03\x20\x03(\x0b2\x11.oak.WasmContentsR\x0cwasmContents\"\x9c\
+    ntents\x18\x03\x20\x03(\x0b2\x11.oak.WasmContentsR\x0cwasmContents\"\xe2\
     \x02\n\x04Node\x12\x1b\n\tnode_name\x18\x01\x20\x01(\tR\x08nodeName\x12)\
     \n\x08log_node\x18\x02\x20\x01(\x0b2\x0c.oak.LogNodeH\0R\x07logNode\x12?\
     \n\x10grpc_server_node\x18\x03\x20\x01(\x0b2\x13.oak.GrpcServerNodeH\0R\
     \x0egrpcServerNode\x12B\n\x11web_assembly_node\x18\x04\x20\x01(\x0b2\x14\
     .oak.WebAssemblyNodeH\0R\x0fwebAssemblyNode\x12:\n\x0cstorage_node\x18\
-    \x05\x20\x01(\x0b2\x15.oak.StorageProxyNodeH\0R\x0bstorageNodeB\x0b\n\tn\
-    ode_type\"\x10\n\x0eGrpcServerNode\"\t\n\x07LogNode\"`\n\x0fWebAssemblyN\
-    ode\x12,\n\x12wasm_contents_name\x18\x01\x20\x01(\tR\x10wasmContentsName\
-    \x12\x1f\n\x05ports\x18\x02\x20\x03(\x0b2\t.oak.PortR\x05ports\"E\n\x0cW\
-    asmContents\x12\x12\n\x04name\x18\x01\x20\x01(\tR\x04name\x12!\n\x0cmodu\
-    le_bytes\x18\x02\x20\x01(\x0cR\x0bmoduleBytes\",\n\x10StorageProxyNode\
-    \x12\x18\n\x07address\x18\x01\x20\x01(\tR\x07address\"m\n\x04Port\x12\
-    \x12\n\x04name\x18\x01\x20\x01(\tR\x04name\x12\"\n\x04type\x18\x02\x20\
-    \x01(\x0e2\x0e.oak.Port.TypeR\x04type\"-\n\x04Type\x12\x14\n\x10TYPE_UNS\
-    PECIFIED\x10\0\x12\x06\n\x02IN\x10\x01\x12\x07\n\x03OUT\x10\x02\"\xd9\
-    \x01\n\x07Channel\x12>\n\x0fsource_endpoint\x18\x01\x20\x01(\x0b2\x15.oa\
-    k.Channel.EndpointR\x0esourceEndpoint\x12H\n\x14destination_endpoint\x18\
-    \x02\x20\x01(\x0b2\x15.oak.Channel.EndpointR\x13destinationEndpoint\x1aD\
-    \n\x08Endpoint\x12\x1b\n\tnode_name\x18\x01\x20\x01(\tR\x08nodeName\x12\
-    \x1b\n\tport_name\x18\x02\x20\x01(\tR\x08portName\"v\n\x18CreateApplicat\
-    ionRequest\x12Z\n\x19application_configuration\x18\x01\x20\x01(\x0b2\x1d\
-    .oak.ApplicationConfigurationR\x18applicationConfiguration\"_\n\x19Creat\
-    eApplicationResponse\x12%\n\x0eapplication_id\x18\x01\x20\x01(\tR\rappli\
-    cationId\x12\x1b\n\tgrpc_port\x18\x02\x20\x01(\x05R\x08grpcPort\"D\n\x1b\
-    TerminateApplicationRequest\x12%\n\x0eapplication_id\x18\x01\x20\x01(\tR\
-    \rapplicationId\"\x1e\n\x1cTerminateApplicationResponse2\xba\x01\n\x07Ma\
-    nager\x12R\n\x11CreateApplication\x12\x1d.oak.CreateApplicationRequest\
-    \x1a\x1e.oak.CreateApplicationResponse\x12[\n\x14TerminateApplication\
-    \x12\x20.oak.TerminateApplicationRequest\x1a!.oak.TerminateApplicationRe\
-    sponseb\x06proto3\
+    \x05\x20\x01(\x0b2\x15.oak.StorageProxyNodeH\0R\x0bstorageNode\x12D\n\
+    \x10http_client_node\x18\x06\x20\x01(\x0b2\x18.oak.HttpClientProxyNodeH\
+    \0R\x0ehttpClientNodeB\x0b\n\tnode_type\"\x10\n\x0eGrpcServerNode\"\t\n\
+    \x07LogNode\"`\n\x0fWebAssemblyNode\x12,\n\x12wasm_contents_name\x18\x01\
+    \x20\x01(\tR\x10wasmContentsName\x12\x1f\n\x05ports\x18\x02\x20\x03(\x0b\
+    2\t.oak.PortR\x05ports\"E\n\x0cWasmContents\x12\x12\n\x04name\x18\x01\
+    \x20\x01(\tR\x04name\x12!\n\x0cmodule_bytes\x18\x02\x20\x01(\x0cR\x0bmod\
+    uleBytes\",\n\x10StorageProxyNode\x12\x18\n\x07address\x18\x01\x20\x01(\
+    \tR\x07address\"\x15\n\x13HttpClientProxyNode\"m\n\x04Port\x12\x12\n\x04\
+    name\x18\x01\x20\x01(\tR\x04name\x12\"\n\x04type\x18\x02\x20\x01(\x0e2\
+    \x0e.oak.Port.TypeR\x04type\"-\n\x04Type\x12\x14\n\x10TYPE_UNSPECIFIED\
+    \x10\0\x12\x06\n\x02IN\x10\x01\x12\x07\n\x03OUT\x10\x02\"\xd9\x01\n\x07C\
+    hannel\x12>\n\x0fsource_endpoint\x18\x01\x20\x01(\x0b2\x15.oak.Channel.E\
+    ndpointR\x0esourceEndpoint\x12H\n\x14destination_endpoint\x18\x02\x20\
+    \x01(\x0b2\x15.oak.Channel.EndpointR\x13destinationEndpoint\x1aD\n\x08En\
+    dpoint\x12\x1b\n\tnode_name\x18\x01\x20\x01(\tR\x08nodeName\x12\x1b\n\tp\
+    ort_name\x18\x02\x20\x01(\tR\x08portName\"v\n\x18CreateApplicationReques\
+    t\x12Z\n\x19application_configuration\x18\x01\x20\x01(\x0b2\x1d.oak.Appl\
+    icationConfigurationR\x18applicationConfiguration\"_\n\x19CreateApplicat\
+    ionResponse\x12%\n\x0eapplication_id\x18\x01\x20\x01(\tR\rapplicationId\
+    \x12\x1b\n\tgrpc_port\x18\x02\x20\x01(\x05R\x08grpcPort\"D\n\x1bTerminat\
+    eApplicationRequest\x12%\n\x0eapplication_id\x18\x01\x20\x01(\tR\rapplic\
+    ationId\"\x1e\n\x1cTerminateApplicationResponse2\xba\x01\n\x07Manager\
+    \x12R\n\x11CreateApplication\x12\x1d.oak.CreateApplicationRequest\x1a\
+    \x1e.oak.CreateApplicationResponse\x12[\n\x14TerminateApplication\x12\
+    \x20.oak.TerminateApplicationRequest\x1a!.oak.TerminateApplicationRespon\
+    seb\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {
