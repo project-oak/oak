@@ -1,0 +1,35 @@
+From 30e914b1630db13080cc054b591ab5822b9b4768 Mon Sep 17 00:00:00 2001
+From: David Drysdale <drysdale@google.com>
+Date: Wed, 16 Oct 2019 15:29:08 +0100
+Subject: [PATCH 10/10] Use std::stringstream to build unique name
+
+---
+ src/binary-reader-ir.cc | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git src/binary-reader-ir.cc src/binary-reader-ir.cc
+index 0ce69a5b..be761c9f 100644
+--- src/binary-reader-ir.cc
++++ src/binary-reader-ir.cc
+@@ -21,6 +21,7 @@
+ #include <cstdarg>
+ #include <cstdint>
+ #include <cstdio>
++#include <sstream>
+ #include <vector>
+ 
+ #include "src/binary-reader-nop.h"
+@@ -1060,7 +1061,9 @@ Result BinaryReaderIR::OnFunctionName(Index index, string_view name) {
+   int counter = 1;
+   std::string orig_name = dollar_name;
+   while (module_->func_bindings.count(dollar_name) != 0) {
+-    dollar_name = orig_name + "." + std::__cxx11::to_string(counter++);
++    std::stringstream ss;
++    ss << orig_name << "." << counter++;
++    dollar_name = ss.str();
+   }
+   func->name = dollar_name;
+   module_->func_bindings.emplace(dollar_name, Binding(index));
+-- 
+2.19.0.605.g01d371f741-goog
+

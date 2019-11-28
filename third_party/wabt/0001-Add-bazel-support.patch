@@ -1,0 +1,50 @@
+From b6cab0cd21a94eec2d88075a3dc2710f3b01bd5e Mon Sep 17 00:00:00 2001
+From: Tiziano Santoro <tiziano88@gmail.com>
+Date: Wed, 31 Oct 2018 10:39:20 +0000
+Subject: [PATCH 01/10] Add bazel support
+
+---
+ BUILD     | 26 ++++++++++++++++++++++++++
+ WORKSPACE |  0
+ 2 files changed, 26 insertions(+)
+ create mode 100644 BUILD
+ create mode 100644 WORKSPACE
+
+diff --git BUILD BUILD
+new file mode 100644
+index 00000000..894a5997
+--- /dev/null
++++ BUILD
+@@ -0,0 +1,26 @@
++cc_library(
++    name = "wabt",
++    srcs = glob([
++        "src/*.cc",
++        "src/interp/*.cc",
++        "src/prebuilt/*.cc",
++    ],
++    exclude=[
++        "src/test-*",
++        "src/wast-lexer.cc",
++    ]),
++    hdrs = glob([
++        "config.h",
++        "src/*.h",
++        "src/interp/*.h",
++        "src/prebuilt/*.h",
++    ]),
++    textual_hdrs = [
++        "src/opcode.def",
++        "src/feature.def",
++        "src/token.def",
++        "src/prebuilt/wasm2c.include.h",
++        "src/prebuilt/wasm2c.include.c",
++        "src/range.h",
++    ],
++)
+diff --git WORKSPACE WORKSPACE
+new file mode 100644
+index 00000000..e69de29b
+-- 
+2.19.0.605.g01d371f741-goog
+

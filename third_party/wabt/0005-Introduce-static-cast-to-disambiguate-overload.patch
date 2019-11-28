@@ -1,0 +1,25 @@
+From bb4090f3139bbb77a88718391244c31639dc5ca0 Mon Sep 17 00:00:00 2001
+From: Tiziano Santoro <tiziano88@gmail.com>
+Date: Wed, 31 Oct 2018 12:17:14 +0000
+Subject: [PATCH 05/10] Introduce static cast to disambiguate overload
+
+---
+ src/binary-reader-ir.cc | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git src/binary-reader-ir.cc src/binary-reader-ir.cc
+index 86fba145..62b03a83 100644
+--- src/binary-reader-ir.cc
++++ src/binary-reader-ir.cc
+@@ -1060,7 +1060,7 @@ Result BinaryReaderIR::OnFunctionName(Index index, string_view name) {
+   int counter = 1;
+   std::string orig_name = dollar_name;
+   while (module_->func_bindings.count(dollar_name) != 0) {
+-    dollar_name = orig_name + "." + std::to_string(counter++);
++    dollar_name = orig_name + "." + std::to_string(static_cast<int>(counter++));
+   }
+   func->name = dollar_name;
+   module_->func_bindings.emplace(dollar_name, Binding(index));
+-- 
+2.19.0.605.g01d371f741-goog
+
