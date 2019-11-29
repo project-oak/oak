@@ -23,43 +23,33 @@ use crate::proto::storage_channel::{
     StorageChannelReadResponse, StorageChannelWriteRequest, StorageChannelWriteResponse,
 };
 use crate::wasm::INVALID_HANDLE;
-use crate::{ReadHandle, WriteHandle};
+use crate::WriteHandle;
 use log::info;
-use protobuf::Message;
+use protobuf::{Message, ProtobufEnum};
 
 /// Local representation of the connection to an external storage service.
 pub struct Storage {
-    write_channel: crate::io::Channel,
-    wait_space: Vec<u8>,
-    read_channel: crate::ReadHandle,
+    write_channel: crate::WriteHandle,
 }
 
 impl Storage {
-    /// Create a default `Storage` instance assuming the standard port names
-    /// (`"storage_in"`, `"storage_out"`) for pre-defined channels for storage
-    /// communication.
+    /// Create a default `Storage` instance assuming the standard port name
+    /// (`"storage_out"`) for the pre-defined channel for outbound storage
+    /// requests.
     pub fn default() -> Option<Storage> {
-        Storage::new("storage_in", "storage_out")
+        Storage::new("storage_out")
     }
 
     /// Create a `Storage` instance using the given port names for pre-defined
     /// channels for storage communication.
-    pub fn new(in_port_name: &str, out_port_name: &str) -> Option<Storage> {
-        let read_handle = ReadHandle {
-            handle: crate::channel_find(in_port_name),
+    pub fn new(port_name: &str) -> Option<Storage> {
+        let write_channel = WriteHandle {
+            handle: crate::channel_find(port_name),
         };
-        let write_handle = WriteHandle {
-            handle: crate::channel_find(out_port_name),
-        };
-        if read_handle.handle == INVALID_HANDLE || write_handle.handle == INVALID_HANDLE {
+        if write_channel.handle == INVALID_HANDLE {
             return None;
         }
-        let handles = vec![read_handle];
-        Some(Storage {
-            write_channel: crate::io::Channel::new(write_handle),
-            wait_space: crate::new_handle_space(&handles),
-            read_channel: read_handle,
-        })
+        Some(Storage { write_channel })
     }
 
     fn execute_operation<Req, Res>(
@@ -88,19 +78,37 @@ impl Storage {
         let mut grpc_request = GrpcRequest::new();
         grpc_request.method_name = grpc_method_name.to_owned();
         grpc_request.set_req_msg(request_any);
+        let mut grpc_data = Vec::new();
+        grpc_request.write_to_writer(&mut grpc_data).unwrap();
 
-        grpc_request
-            .write_to_writer(&mut self.write_channel)
-            .unwrap();
+        // Create an ephemeral channel for the response.
+        let (rsp_out, rsp_in) = match crate::channel_create() {
+            Ok(x) => x,
+            Err(status) => {
+                return Err(grpc::build_status(
+                    grpc::Code::INTERNAL,
+                    &format!(
+                        "failed to create storage response channel: {}",
+                        status.value()
+                    ),
+                ))
+            }
+        };
+
+        crate::channel_write(self.write_channel, &grpc_data, &[rsp_out.handle]);
+        crate::channel_close(rsp_out.handle);
 
         // Block until there is a response available.
-        unsafe {
-            crate::wasm::wait_on_channels(self.wait_space.as_mut_ptr(), 1);
+        loop {
+            let wait_result = crate::wait_on_channels(&[rsp_in]).unwrap();
+            if wait_result[0] == crate::ChannelReadStatus::READ_READY {
+                break;
+            }
         }
 
         let mut buffer = Vec::<u8>::with_capacity(256);
         let mut handles = Vec::<crate::Handle>::with_capacity(1);
-        crate::channel_read(self.read_channel, &mut buffer, &mut handles);
+        crate::channel_read(rsp_in, &mut buffer, &mut handles);
         if !handles.is_empty() {
             panic!("unexpected handles received alongside storage request")
         }
@@ -110,6 +118,7 @@ impl Storage {
             "StorageChannelResponse: {}",
             protobuf::text_format::print_to_string(&grpc_response)
         );
+        crate::channel_close(rsp_in.handle);
 
         let status = grpc_response.take_status();
         if status.code != 0 {

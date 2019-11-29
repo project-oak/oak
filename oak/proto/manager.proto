@@ -99,9 +99,9 @@ message WasmContents {
 // external storage provider.
 //
 // This Node defines the following implicit Ports:
-// - `request`: IN port on which outgoing storage requests are received.
-// - `response`: OUT port on which inbound responses to storage requests are
-// sent.
+// - `request`: IN port on which outgoing storage requests are received,
+//    each accompanied by a handle for a write half of a channel for responses
+//    to be delivered on.
 message StorageProxyNode {
   // The address of the external storage provider.
   string address = 1;
