@@ -1,8 +1,8 @@
 # Oak SDK
 
 Project Oak provides a Rust SDK with helper functions to facilitate interactions
-with the Oak VM from Rust code compiled to WebAssembly. This provides idiomatic
-Rust abstractions over the lower level WebAssembly interface.
+with the Oak Runtime from Rust code compiled to WebAssembly. This provides
+idiomatic Rust abstractions over the lower level WebAssembly interface.
 
 This page gives a summary of the functionality available in this SDK; refer to
 the [generated documentation](https://project-oak.github.io/oak) for more
