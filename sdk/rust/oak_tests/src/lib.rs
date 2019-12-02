@@ -469,7 +469,7 @@ fn set_node_name(name: String) {
 
 /// Declaration for the Node's main function.
 extern "C" {
-    pub fn oak_main() -> i32;
+    pub fn oak_main(handle: u64) -> i32;
 }
 
 /// Test-only implementation of channel wait functionality, which always
@@ -763,7 +763,7 @@ pub fn set_termination_pending(val: bool) {
 }
 
 /// Expected type for the main entrypoint to a Node under test.
-pub type NodeMain = fn() -> i32;
+pub type NodeMain = fn(u64) -> i32;
 
 /// Start running the Application under test, with the given initial Node and
 /// channel configuration.  Because multiple Nodes are linked into the same
@@ -787,7 +787,8 @@ pub fn start<S: ::std::hash::BuildHasher>(
         let node_name = name.clone();
         let thread_handle = spawn(move || {
             set_node_name(node_name);
-            entrypoint()
+            // TODO: provide a valid handle.
+            entrypoint(oak::wasm::INVALID_HANDLE)
         });
         RUNTIME.write().unwrap().started(&name, thread_handle);
     }
@@ -802,7 +803,7 @@ pub fn start_node(name: &str) {
     let node_name = name.to_string();
     let main_handle = spawn(|| unsafe {
         set_node_name(node_name);
-        oak_main()
+        oak_main(0)
     });
     RUNTIME.write().unwrap().started(name, main_handle)
 }
@@ -836,7 +837,7 @@ pub fn stop() -> OakStatus {
 }
 
 // Main loop function for a log pseudo-Node.
-fn log_node_main() -> i32 {
+fn log_node_main(_handle: u64) -> i32 {
     let half = oak::ReadHandle {
         handle: oak::channel_find(oak_log::IN_PORT_NAME),
     };

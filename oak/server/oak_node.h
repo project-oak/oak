@@ -34,7 +34,7 @@ class OakNode {
   OakNode(const std::string& name) : name_(name), termination_pending_(false), next_handle_(0) {}
   virtual ~OakNode() {}
 
-  virtual void Start() = 0;
+  virtual void Start(Handle handle) = 0;
   virtual void Stop() = 0;
 
   // Add channel identified by the given port name to the node.  This must

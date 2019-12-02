@@ -22,7 +22,7 @@ namespace oak {
 
 NodeThread::~NodeThread() { Stop(); }
 
-void NodeThread::Start() {
+void NodeThread::Start(Handle handle) {
   if (thread_.joinable()) {
     LOG(ERROR) << "Attempt to Start() an already-running NodeThread";
     return;
@@ -32,8 +32,8 @@ void NodeThread::Start() {
     return;
   }
 
-  LOG(INFO) << "Executing new {" << name_ << "} node thread";
-  thread_ = std::thread(&oak::NodeThread::Run, this);
+  LOG(INFO) << "Executing new {" << name_ << "} node thread with handle " << handle;
+  thread_ = std::thread(&oak::NodeThread::Run, this, handle);
   LOG(INFO) << "Started {" << name_ << "} node thread";
 }
 

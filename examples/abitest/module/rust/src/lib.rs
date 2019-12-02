@@ -40,13 +40,13 @@ struct FrontendNode {
 
 #[cfg(target_arch = "wasm32")]
 #[no_mangle]
-pub extern "C" fn oak_main() -> i32 {
-    match std::panic::catch_unwind(|| main()) {
+pub extern "C" fn oak_main(handle: u64) -> i32 {
+    match std::panic::catch_unwind(|| main(handle)) {
         Ok(rc) => rc,
         Err(_) => OakStatus::ERR_INTERNAL.value(),
     }
 }
-pub fn main() -> i32 {
+pub fn main(_handle: u64) -> i32 {
     let node = FrontendNode::new();
     let grpc_in = node.grpc_in;
     oak::grpc::event_loop(node, grpc_in)

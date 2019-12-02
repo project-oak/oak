@@ -55,7 +55,7 @@ pub fn derive_oak_exports(input: TokenStream) -> TokenStream {
 
     let expanded = quote! {
         #[no_mangle]
-        pub extern "C" fn oak_main() -> i32 {
+        pub extern "C" fn oak_main(handle: u64) -> i32 {
             // A panic in the Rust module code cannot safely pass through the FFI
             // boundary, so catch any panics here and translate to an error return.
             // https://doc.rust-lang.org/nomicon/ffi.html#ffi-and-panics

@@ -53,12 +53,14 @@ Two specific sets of integer values are used in multiple places in the ABI:
 Each Oak Module must expose the following **exported function** as a
 [WebAssembly export](https://webassembly.github.io/spec/core/syntax/modules.html#exports):
 
-- `oak_main: () -> u32`: Invoked when the Oak Manager executes the Oak Node.
-  This function should perform its own event loop, reading incoming messages
-  that arrive on the read halves of its channels, sending outgoing messages over
-  the write halves of channels. This function is generally expected to run
-  forever, but may return a status if the Node choses to terminate (whether
-  expectedly or unexpectedly).
+- `oak_main: (u64) -> u32`: Invoked when the Oak Manager executes the Oak Node;
+  a handle for the read half of an initial channel is passed in as a parameter.
+
+The `oak_main` function for each Node should perform its own event loop, reading
+incoming messages that arrive on the read halves of its channels, sending
+outgoing messages over the write halves of channels. The `oak_main` function is
+generally expected to run forever, but may return a status if the Node choses to
+terminate (whether expectedly or unexpectedly).
 
 ## Host Functions
 

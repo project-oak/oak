@@ -122,7 +122,7 @@ const std::vector<RequiredExport> kRequiredExports({
     {
         "oak_main",
         true,
-        wabt::interp::FuncSignature(std::vector<wabt::Type>{},
+        wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I64},
                                     std::vector<wabt::Type>{wabt::Type::I32}),
     },
 });
@@ -250,13 +250,14 @@ void WasmNode::InitEnvironment(wabt::interp::Environment* env) {
       this->OakRandomGet(env));
 }
 
-void WasmNode::Run() {
+void WasmNode::Run(Handle handle) {
   wabt::interp::Thread::Options thread_options;
   wabt::Stream* trace_stream = nullptr;
   wabt::interp::Executor executor(&env_, trace_stream, thread_options);
 
-  LOG(INFO) << "{" << name_ << "} module execution thread: run oak_main";
-  wabt::interp::TypedValues args;
+  LOG(INFO) << "{" << name_ << "} module execution thread: run oak_main(" << handle << ")";
+  wabt::interp::TypedValues args = {
+      wabt::interp::TypedValue(wabt::Type::I64, wabt::interp::Value{.i64 = handle})};
   wabt::interp::ExecResult exec_result = executor.RunExportByName(Module(), "oak_main", args);
 
   if (exec_result.result != wabt::interp::Result::Ok) {
