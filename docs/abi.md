@@ -4,7 +4,7 @@ Oak [Nodes](concepts.md#oak-node) are implemented as WebAssembly modules, and so
 can only interact with things outside of the WebAssembly environment through
 specific entrypoints which form the **Oak ABI**:
 
-- The [Oak VM](concepts.md#oak-vm) invokes the Oak Node via a single
+- The [Oak Runtime](concepts.md#oak-runtime) invokes the Oak Node via a single
   [exported function](#exported-function).
 - The Oak Node can make use of functionality provided by the Oak TCB by invoking
   [host functions](#host-functions), available as WebAssembly imports.

@@ -1,6 +1,6 @@
 # Oak Concepts
 
-- [Oak VM](#oak-vm)
+- [Oak Runtime](#oak-runtime)
 - [Oak Module](#oak-module)
   - [WebAssembly](#webassembly)
 - [Oak Node](#oak-node)
@@ -11,30 +11,29 @@
 - [Oak Manager](#oak-manager)
   - [Workflow](#workflow)
 - [Remote Attestation](#remote-attestation)
-- [Oak VM Updates](#oak-vm-updates)
+- [Oak Runtime Updates](#oak-runtime-updates)
 - [Time](#time)
 
-## Oak VM
+## Oak Runtime
 
-The **Oak VM** is currently the core software component of Project Oak; it is
+The **Oak Runtime** is the core software component of Project Oak; it is
 responsible for executing Oak Modules and enforcing policies on top of data, as
-well as producing remote attestations for clients. Other models are also
-possible.
+well as producing remote attestations for clients.
 
-Each Oak VM instance lives in its own dedicated enclave and is isolated from
-both the host as well as other enclaves and Oak VM instances on the same
-machine.
+Each Oak Runtime instance lives in its own dedicated enclave and is isolated
+from both the host as well as other enclaves and Oak Runtime instances on the
+same machine.
 
 ## Oak Module
 
 The unit of compilation and execution in Oak is an **Oak Module**. Each Oak
 Module is a self-contained
 [WebAssembly module](https://webassembly.org/docs/modules/) that is interpreted
-by an Oak VM instance as part of an Oak Application.
+by an Oak Runtime instance as part of an Oak Application.
 
 ### WebAssembly
 
-The current version of the Oak VM supports
+The current version of the Oak Runtime supports
 [WebAssembly](https://webassembly.org) as the first-class target language for
 Oak Module development. Developers wishing to run their code as part of Project
 Oak need to be able to compile their code to WebAssembly.
@@ -46,7 +45,7 @@ others, for example Go.
 
 ## Oak Node
 
-An **Oak Node** is an instance of an Oak Module running on an Oak VM.
+An **Oak Node** is an instance of an Oak Module running on an Oak Runtime.
 
 Each Oak Node also encapsulates an internal mutable state, corresponding the
 [WebAssembly linear memory](https://webassembly.org/docs/semantics/#linear-memory)
@@ -65,12 +64,12 @@ clients.
 
 ## Channels
 
-Communication from the Oak Node to the Oak VM and to other Nodes is implemented
-via **channels**. A channel represents a uni-directional stream of messages,
-with a receive half and a send half that an Oak Node can read from or write to
-respectively. Each half of a channel is identified by a **handle**, which is
-used as a parameter to the corresponding [host function](abi.md#host-functions)
-calls.
+Communication from the Oak Node to the Oak Runtime and to other Nodes is
+implemented via **channels**. A channel represents a uni-directional stream of
+messages, with a receive half and a send half that an Oak Node can read from or
+write to respectively. Each half of a channel is identified by a **handle**,
+which is used as a parameter to the corresponding
+[host function](abi.md#host-functions) calls.
 
 ### Pre-Defined Channels and Port Names
 
@@ -133,10 +132,10 @@ graph by including a pair of pre-defined channels to a gRPC
 Once a new Oak Application is initialized and its endpoint available, clients
 may connect to it using individually end-to-end encrypted, authenticated and
 attested channels. The remote attestation process proves to the client that the
-remote enclave is indeed running a genuine Oak VM and will therefore obey the
-policies set on the Oak Node; the Oak VM itself may then optionally prove
-additional details about the Oak Module and its properties, which may require
-reasoning about its internal structure.
+remote enclave is indeed running a genuine Oak Runtime and will therefore obey
+the policies set on the Oak Node; the Oak Runtime itself may then optionally
+prove additional details about the Oak Module and its properties, which may
+require reasoning about its internal structure.
 
 ## Oak Manager
 
@@ -161,7 +160,7 @@ initialized with the application configuration specified in the request.
 
 Sample flow:
 
-- ISV writes an Oak Module for the Oak VM using a high-level language and
+- ISV writes an Oak Module for the Oak Runtime using a high-level language and
   compiles it to WebAssembly.
 - The client connects to the Oak Manager, and requests the creation of an Oak
   Node running the compiled Oak Module.
@@ -172,13 +171,13 @@ Sample flow:
   client as part of the creation response.
   - Note up to this point no sensitive data has been exchanged.
   - The client still has no guarantees that the endpoint is in fact running an
-    Oak VM, as the Oak Manager is itself untrusted.
+    Oak Runtime, as the Oak Manager is itself untrusted.
 - The client connects to the Oak Node endpoint, and exchanges keys using the
   [Asylo assertion framework](https://asylo.dev/docs/reference/proto/identity/asylo.identity.v1.html).
   - This allows the client to verify the integrity of the Oak Node and the fact
-    that it is indeed running an actual Oak VM, and optionally also asserting
-    further properties about the remote system (e.g. possession of additional
-    secret keys, etc.).
+    that it is indeed running an actual Oak Runtime, and optionally also
+    asserting further properties about the remote system (e.g. possession of
+    additional secret keys, etc.).
   - If the client is satisfied with the attestation, it continues with the rest
     of the exchange, otherwise it aborts immediately.
 - The client sends its (potentially sensitive) data to the Oak Node, alongside
@@ -198,7 +197,7 @@ Remote attestation is a core part of Project Oak. When a client connects to an
 Oak Node, the two first establish a fresh ephemeral session key, and then they
 provide assertions to each other over a channel encrypted with such key; the
 client relies on this assertion to determine whether it is connecting to a valid
-version of the Oak VM (see below for what constitutes a valid version). In
+version of the Oak Runtime (see below for what constitutes a valid version). In
 particular, the attestation includes a _measurement_ (i.e. a hash) of the Oak
 Module running in the remote enclave, cryptographically bound to the session
 itself.
@@ -211,17 +210,17 @@ compiled Oak Module to some high-level properties of the source code.
 
 TODO: Expand on this.
 
-## Oak VM Updates
+## Oak Runtime Updates
 
 Under normal circumstances, a client connecting to an Oak Node validates the
 attestation it receives from the Oak Node when establishing the connection
 channel. The measurement in the attestation report corresponds to the hash of
 the code loaded in enclave memory at the time the connection was established.
-Because the Oak VM changes relatively infrequently, the list of known
+Because the Oak Runtime changes relatively infrequently, the list of known
 measurements is small enough that the client is able to just check the inclusion
 of the received measurement in the list.
 
-Occasionally, a particular version of the Oak VM may be found to contain
+Occasionally, a particular version of the Oak Runtime may be found to contain
 security vulnerabilities or bugs, and we would like to prevent further clients
 from connecting to servers using such versions.
 

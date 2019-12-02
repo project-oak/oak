@@ -264,12 +264,12 @@ enabled:
 ```
 <!-- prettier-ignore-end -->
 
-The Oak Manager will launch an [Oak VM](concepts.md#oak-vm) inside the enclave,
-and this VM will check the provided Wasm module(s) and application
+The Oak Manager will launch an [Oak Runtime](concepts.md#oak-vm) inside the
+enclave, and this Runtime will check the provided Wasm module(s) and application
 configuration. Assuming everything is correct (e.g. the Nodes all have an
 `oak_main` entrypoint and only expect to find the Oak
-[host functions](abi.md#host-functions)), the Oak VM opens up a port of its own
-and the `CreateApplication` returns this to the client.
+[host functions](abi.md#host-functions)), the Oak Runtime opens up a port of its
+own and the `CreateApplication` returns this to the client.
 
 The client can now connect to this separate gRPC service, and send
 (Node-specific) gRPC requests to it, over a channel that has end-to-end
@@ -296,13 +296,13 @@ sections) would be as follows:
   the `oak::grpc::event_loop` helper function.
   - `event_loop()` was invoked directly from the auto-generated `oak_main()`
     exported function.
-- The client C++ code builds a gRPC request and sends it to the Oak VM.
+- The client C++ code builds a gRPC request and sends it to the Oak Runtime.
   - This connection is end-to-end encrypted using the Asylo key exchange
     mechanism.
-- The Oak VM receives the message and encapsulates it in a `GrpcRequest` wrapper
-  message.
-- The Oak VM serializes the `GrpcRequest` and writes it to the gRPC-in channel
-  for the node.
+- The Oak Runtime receives the message and encapsulates it in a `GrpcRequest`
+  wrapper message.
+- The Oak Runtime serializes the `GrpcRequest` and writes it to the gRPC-in
+  channel for the node.
 - This unblocks the Node code, and `oak::grpc::event_loop` reads and
   deserializes the incoming gRPC request. It then calls the Node's `invoke()`
   method with the method name and (serialized) gRPC request.
@@ -313,8 +313,8 @@ sections) would be as follows:
 - The (user-written) code in this method does its work, and returns a response.
 - The auto-generated `dispatch()` code encapsulates the response into a
   `GrpcResponse` wrapper message, and serializes into the gRPC output channel.
-- The Oak VM reads this message from the channel, deserializes it and sends the
-  inner response back to the client.
+- The Oak Runtime reads this message from the channel, deserializes it and sends
+  the inner response back to the client.
 - The client C++ code receives the response.
 
 <!-- From (Google-internal): http://go/sequencediagram/view/5741464478810112 -->
@@ -324,7 +324,7 @@ sections) would be as follows:
 
 The client can also politely request that the Oak Application terminate, using
 the `TerminateApplication` method on the (outer) gRPC service. The Oak Manager
-passes this on to the Oak VM, which will then notify the running Nodes that
+passes this on to the Oak Runtime, which will then notify the running Nodes that
 termination has been requested (by returning `ERR_TERMINATED` on any current or
 future `oak.wait_on_channels()` invocations).
 
