@@ -391,9 +391,9 @@ fn test_hello_request() {
 This has a little bit more boilerplate than testing a method directly:
 
 - The inbound gRPC channel that requests are delivered over has to be explicitly
-  set up (`oak_tests::grpc_channel_setup`)
+  set up (`oak_tests::grpc_channel_setup_default`)
 - A separate thread running the Node's `oak_main` entrypoint is started
-  (`oak_tests::start`).
+  (`oak_tests::start_node`).
 - The injection of the gRPC request has to specify the method name (in
   `oak_tests::inject_grpc_request`).
 - The per-Node thread needs to be stopped at the end of the test
