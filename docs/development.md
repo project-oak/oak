@@ -42,8 +42,8 @@ clang and it's a very lightweight wrapper around a simple gRPC client. It
 doesn't use Docker or any of the Asylo toolchains and it does not create an
 enclave.
 
-As such, it can be used when working on the runtime, the client code or the
-module code as it can help with enabling a faster iteration.
+As such, it can be used when working on the runtime, the client code or the Node
+code as it can help with enabling a faster iteration.
 
 The following command builds and runs an Oak Development Server:
 
@@ -61,8 +61,8 @@ The following command builds and run Oak Local Server with tsan enabled. Replace
 
 ### Run Client
 
-The following command (run in a separate terminal) compiles an example module
-from Rust to WebAssembly, and sends it to the Oak Server running on the same
-machine. It works with both Servers (Docker and Dev).
+The following command (run in a separate terminal) compiles the code for an
+example Oak Node from Rust to a WebAssembly module, and sends it to the Oak
+Server running on the same machine. It works with both Servers (Docker and Dev).
 
 `./examples/hello_world/run`

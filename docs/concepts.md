@@ -1,9 +1,8 @@
 # Oak Concepts
 
 - [Oak Runtime](#oak-runtime)
-- [Oak Module](#oak-module)
-  - [WebAssembly](#webassembly)
 - [Oak Node](#oak-node)
+  - [WebAssembly](#webassembly)
 - [Channels](#channels)
   - [Pre-Defined Channels and Port Names](#pre-defined-channels-and-port-names)
 - [Pseudo-Nodes](#pseudo-nodes)
@@ -24,12 +23,25 @@ Each Oak Runtime instance lives in its own dedicated enclave and is isolated
 from both the host as well as other enclaves and Oak Runtime instances on the
 same machine.
 
-## Oak Module
+## Oak Node
 
-The unit of compilation and execution in Oak is an **Oak Module**. Each Oak
-Module is a self-contained
-[WebAssembly module](https://webassembly.org/docs/modules/) that is interpreted
-by an Oak Runtime instance as part of an Oak Application.
+The unit of execution in Oak is an **Oak Node**. The code for an Oak Node is a
+self-contained [WebAssembly module](https://webassembly.org/docs/modules/) that
+is interpreted by an Oak Runtime instance as part of an Oak Application.
+
+Each running Oak Node has a single thread of execution, and also encapsulates an
+internal mutable state, corresponding the
+[WebAssembly linear memory](https://webassembly.org/docs/semantics/#linear-memory)
+on which the Oak Module operates.
+
+This single-threaded execution means that external invocations of the same Oak
+Node are inherently serialized; however, the effect of one invocation may modify
+internal state and so affect the result of a subsequent external request (by the
+same client or a different client).
+
+Clients may therefore wish to only make use of an Oak Node that allows multiple
+invocations if it can be shown that the submitted data can only be retrieved in
+sufficiently anonymized form in subsequent invocations by other clients.
 
 ### WebAssembly
 
@@ -42,25 +54,6 @@ WebAssembly has a well-defined, unambiguous
 [formal specification](https://webassembly.github.io/spec/core/valid/instructions.html),
 and is targeted by most LLVM-based languages (including C++ and Rust), and
 others, for example Go.
-
-## Oak Node
-
-An **Oak Node** is an instance of an Oak Module running on an Oak Runtime.
-
-Each Oak Node also encapsulates an internal mutable state, corresponding the
-[WebAssembly linear memory](https://webassembly.org/docs/semantics/#linear-memory)
-on which the Oak Module operates. Concurrent invocations of the same Oak Node
-are serialized so that they do not concurrently access the same underlying
-memory, but individual invocations may modify the internal state in such a way
-that it is observable in subsequent invocations, potentially by different
-clients (assuming this is allowed by the policies associated with the Oak Node
-in the first place). Clients may rely on this together with additional
-properties related to the Oak Module to decide whether the Oak Node provides
-sufficient guarantees for the data they intend to exchange with the Oak Node;
-for instance a client may wish to send data to an Oak Node that allows multiple
-invocations, but only if it can also be shown that the data can only be
-retrieved in sufficiently anonymized form in subsequent invocations by other
-clients.
 
 ## Channels
 
