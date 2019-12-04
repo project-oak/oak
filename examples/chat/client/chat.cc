@@ -36,7 +36,9 @@
 
 ABSL_FLAG(std::string, manager_address, "127.0.0.1:8888",
           "Address of the Oak Manager to connect to");
-ABSL_FLAG(std::string, module, "", "File containing the compiled WebAssembly module");
+// TODO: separate these out into distinct flags when test scripting is able to cope.
+ABSL_FLAG(std::vector<std::string>, module, std::vector<std::string>{},
+          "Files containing the compiled WebAssembly modules (as 'backend,frontend')");
 ABSL_FLAG(std::string, app_address, "",
           "Address of the Oak Application to connect to (empty to create a new application)");
 ABSL_FLAG(std::string, room_name, "", "Name of room to create");
@@ -148,14 +150,27 @@ void Chat(Chat::Stub* stub, const RoomId& room_id, const std::string& user_handl
 class OakApplication {
  public:
   // Caller should ensure that the manager_client outlives this object.
-  OakApplication(oak::ManagerClient* manager_client, const std::string& module)
+  OakApplication(oak::ManagerClient* manager_client, const std::string& frontend_module,
+                 const std::string& backend_module)
       : manager_client_(manager_client) {
     // Load the Oak Module to execute. This needs to be compiled from Rust to WebAssembly
     // separately.
     LOG(INFO) << "Creating application";
-    std::string module_bytes = oak::utils::read_file(module);
+    std::string frontend_module_bytes = oak::utils::read_file(frontend_module);
+    std::string backend_module_bytes = oak::utils::read_file(backend_module);
+
+    // Build an application configuration: two Wasm nodes and a logging
+    // pseudo-Node available.
+    std::unique_ptr<oak::ApplicationConfiguration> config =
+        oak::DefaultConfig(frontend_module_bytes);
+    AddLoggingToConfig(config.get());
+    oak::NodeConfiguration* node_config = config->add_node_configs();
+    node_config->set_name("room-config");
+    oak::WebAssemblyConfiguration* wasm_config = node_config->mutable_wasm_config();
+    wasm_config->set_module_bytes(backend_module_bytes);
+
     std::unique_ptr<oak::CreateApplicationResponse> create_application_response =
-        manager_client_->CreateApplication(module_bytes);
+        manager_client_->CreateApplication(std::move(config));
     if (create_application_response == nullptr) {
       LOG(QFATAL) << "Failed to create application";
     }
@@ -229,11 +244,17 @@ int main(int argc, char** argv) {
   std::unique_ptr<OakApplication> application;
 
   if (addr.empty()) {
+    // Load the two Oak Modules to execute. These need to be compiled from Rust
+    // to WebAssembly separately.
+    std::vector<std::string> modules = absl::GetFlag(FLAGS_module);
+    if (modules.size() != 2) {
+      LOG(QFATAL) << "Need --module=backend,frontend flag";
+    }
+
     // Connect to the Oak Manager and create the Oak Application.
     manager_client = absl::make_unique<oak::ManagerClient>(grpc::CreateChannel(
         absl::GetFlag(FLAGS_manager_address), grpc::InsecureChannelCredentials()));
-    application =
-        absl::make_unique<OakApplication>(manager_client.get(), absl::GetFlag(FLAGS_module));
+    application = absl::make_unique<OakApplication>(manager_client.get(), modules[1], modules[0]);
     application_id = application->Id();
     addr = application->Addr();
     LOG(INFO) << "Connecting to new Oak Application id=" << application_id << "at " << addr;

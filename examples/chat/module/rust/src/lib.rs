@@ -14,17 +14,15 @@
 // limitations under the License.
 //
 
-mod proto;
-
+use chat_common::proto::chat::{CreateRoomRequest, DestroyRoomRequest};
+use chat_common::proto::chat::{JoinRoomRequest, ReceivedMessage, SentMessage};
+use chat_common::proto::chat_grpc::{dispatch, ChatNode};
 use log::info;
 use oak::grpc;
 use oak::grpc::OakNode;
 use oak_derive::OakExports;
-use proto::chat::{CreateRoomRequest, DestroyRoomRequest};
-use proto::chat::{JoinRoomRequest, ReceivedMessage, SentMessage};
-use proto::chat_grpc::{dispatch, ChatNode};
 use protobuf::well_known_types::Empty;
-use protobuf::ProtobufEnum;
+use protobuf::{Message, ProtobufEnum};
 use std::collections::HashMap;
 
 type RoomId = Vec<u8>;
@@ -32,9 +30,15 @@ type AdminId = Vec<u8>;
 
 #[derive(OakExports)]
 struct Node {
+    // TODO: use bimap crate for these fields?
     room_to_admin: HashMap<RoomId, AdminId>,
     admin_to_room: HashMap<AdminId, RoomId>,
     rooms: HashMap<AdminId, Room>,
+}
+
+struct Room {
+    name: String,
+    channel: oak::WriteHandle,
 }
 
 impl OakNode for Node {
@@ -74,11 +78,17 @@ impl ChatNode for Node {
         if self.room_to_admin.contains_key(&req.room_id) {
             return duplicate_id_err("Room");
         }
+
+        // Create a new Node for this room.
+        let (wh, rh) = oak::channel_create().unwrap();
+        oak::node_create("room-config", rh);
+        oak::channel_close(rh.handle);
+
         self.rooms.insert(
             req.admin_id.clone(),
             Room {
                 name: req.name,
-                writers: Vec::new(),
+                channel: wh,
             },
         );
         self.room_to_admin
@@ -94,7 +104,10 @@ impl ChatNode for Node {
         }
         let room = self.rooms.get_mut(&req.admin_id).unwrap();
         info!("Destroying room {}", room.name);
-        room.clear();
+
+        // Close the only input channel that reaches the per-room Node, which
+        // will trigger it to terminate.
+        oak::channel_close(room.channel.handle);
         let user_id = self.admin_to_room.get(&req.admin_id).unwrap().clone();
         self.admin_to_room.remove(&req.admin_id);
         self.room_to_admin.remove(&user_id);
@@ -103,55 +116,55 @@ impl ChatNode for Node {
     }
 
     fn join_room(&mut self, req: JoinRoomRequest, mut writer: grpc::ChannelResponseWriter) {
-        if !self.room_to_admin.contains_key(&req.room_id) {
-            writer.close(unknown_id_err("Room"));
-            return;
-        }
-
-        let admin_id = self.room_to_admin.get(&req.room_id).unwrap();
+        let admin_id = match self.room_to_admin.get(&req.room_id) {
+            None => {
+                writer.close(unknown_id_err("Room"));
+                return;
+            }
+            Some(id) => id,
+        };
         let room = self.rooms.get_mut(admin_id).unwrap();
-        room.writers.push(writer);
 
-        // Send a joining announcement.
+        // Send a joining announcement, including a handle to be included in
+        // future per-room broadcasts.
+        let rsp_handle = writer.handle().handle;
         info!("{} has joined room {}", req.user_handle, room.name);
         room.broadcast(
             "<server>",
             &format!("{} has joined room {}", req.user_handle, room.name).to_string(),
+            Some(rsp_handle),
         );
+        // Now that the backend has a reference to the response channel, we can close
+        // our reference to the underlying channel.
+        oak::channel_close(rsp_handle);
     }
 
     fn send_message(&mut self, req: SentMessage) -> grpc::Result<Empty> {
-        if !self.room_to_admin.contains_key(&req.room_id) {
-            return unknown_id_err("Room");
-        }
-        let admin_id = self.room_to_admin.get(&req.room_id).unwrap();
+        let admin_id = match self.room_to_admin.get(&req.room_id) {
+            None => return unknown_id_err("Room"),
+            Some(id) => id,
+        };
         let room = self.rooms.get_mut(admin_id).unwrap();
-        room.broadcast(&req.user_handle, &req.text);
+        room.broadcast(&req.user_handle, &req.text, None);
         Ok(Empty::new())
     }
 }
 
-struct Room {
-    name: String,
-    writers: Vec<grpc::ChannelResponseWriter>,
-}
-
 impl Room {
-    fn broadcast(&mut self, from: &str, text: &str) {
-        info!("broadcast {}: {}", from, text);
+    fn broadcast(&self, from: &str, text: &str, handle: Option<oak::Handle>) {
+        info!("broadcast({:?}) {}: {}", handle, from, text);
         let mut msg = ReceivedMessage::new();
         msg.room_name = self.name.clone();
         msg.user_handle = from.to_string();
         msg.text = text.to_string();
-        for writer in &mut self.writers {
-            writer.write(msg.clone(), grpc::WriteMode::KeepOpen);
+
+        let mut data = Vec::new();
+        msg.write_to_writer(&mut data).unwrap();
+
+        let mut handles = Vec::new();
+        if let Some(h) = handle {
+            handles.push(h);
         }
-    }
-    // Close all writers associated with the room.
-    fn clear(&mut self) {
-        info!("clear room {}", self.name);
-        for writer in &mut self.writers {
-            writer.close(Ok(()));
-        }
+        oak::channel_write(self.channel, &data, &handles);
     }
 }
