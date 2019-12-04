@@ -20,9 +20,23 @@
 
 namespace oak {
 
+Handle OakNode::NextHandle() {
+  std::uniform_int_distribution<Handle> distribution;
+  while (true) {
+    // Keep picking random Handle values until we find an unused (and valid) value.
+    Handle handle = distribution(prng_engine_);
+    if (handle == kInvalidHandle) {
+      continue;
+    }
+    if (channel_halves_.find(handle) == channel_halves_.end()) {
+      return handle;
+    }
+  }
+}
+
 Handle OakNode::AddNamedChannel(const std::string& port_name, std::unique_ptr<ChannelHalf> half) {
   absl::MutexLock lock(&mu_);
-  Handle handle = ++next_handle_;
+  Handle handle = NextHandle();
   LOG(INFO) << "{" << name_ << "} port name '" << port_name << "' maps to handle " << handle;
   named_channels_[port_name] = handle;
   channel_halves_[handle] = std::move(half);
@@ -31,7 +45,7 @@ Handle OakNode::AddNamedChannel(const std::string& port_name, std::unique_ptr<Ch
 
 Handle OakNode::AddChannel(std::unique_ptr<ChannelHalf> half) {
   absl::MutexLock lock(&mu_);
-  Handle handle = ++next_handle_;
+  Handle handle = NextHandle();
   channel_halves_[handle] = std::move(half);
   return handle;
 }

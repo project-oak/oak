@@ -19,6 +19,7 @@
 
 #include <atomic>
 #include <memory>
+#include <random>
 #include <unordered_map>
 #include <vector>
 
@@ -31,7 +32,7 @@ namespace oak {
 
 class OakNode {
  public:
-  OakNode(const std::string& name) : name_(name), termination_pending_(false), next_handle_(0) {}
+  OakNode(const std::string& name) : name_(name), termination_pending_(false), prng_engine_() {}
   virtual ~OakNode() {}
 
   virtual void Start(Handle handle) = 0;
@@ -74,12 +75,15 @@ class OakNode {
   std::atomic_bool termination_pending_;
 
  private:
+  Handle NextHandle() EXCLUSIVE_LOCKS_REQUIRED(mu_);
+
   using ChannelHalfTable = std::unordered_map<Handle, std::unique_ptr<ChannelHalf>>;
 
-  mutable absl::Mutex mu_;  // protects next_handle_, named_channels_, channel_halves_
+  mutable absl::Mutex mu_;  // protects next_handle_, prng_engine_, channel_halves_
+
+  std::random_device prng_engine_ GUARDED_BY(mu_);
 
   // Map from pre-configured port names to channel handles.
-  Handle next_handle_ GUARDED_BY(mu_);
   std::unordered_map<std::string, Handle> named_channels_ GUARDED_BY(mu_);
 
   // Map from channel handles to channel half instances.
