@@ -44,11 +44,6 @@ class ManagerClient {
   std::unique_ptr<CreateApplicationResponse> CreateApplication(const std::string& module_bytes,
                                                                bool enable_logging,
                                                                const std::string& storage_address) {
-    grpc::ClientContext context;
-
-    CreateApplicationRequest request;
-    auto response = absl::make_unique<CreateApplicationResponse>();
-
     // Build an application configuration with a single WebAssembly node with the provided
     // WebAssembly module bytes.
     std::unique_ptr<ApplicationConfiguration> application_config = DefaultConfig(module_bytes);
@@ -58,6 +53,14 @@ class ManagerClient {
     if (!storage_address.empty()) {
       AddStorageToConfig(application_config.get(), storage_address);
     }
+    return CreateApplication(std::move(application_config));
+  }
+
+  std::unique_ptr<CreateApplicationResponse> CreateApplication(
+      std::unique_ptr<ApplicationConfiguration> application_config) {
+    grpc::ClientContext context;
+    CreateApplicationRequest request;
+    auto response = absl::make_unique<CreateApplicationResponse>();
     request.set_allocated_application_configuration(application_config.release());
 
     LOG(INFO) << "Creating Oak Application";
