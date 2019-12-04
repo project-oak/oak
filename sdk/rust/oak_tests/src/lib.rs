@@ -185,9 +185,6 @@ struct OakRuntime {
 }
 
 struct OakNode {
-    // Each Node has its own handle numbering space; track the next available
-    // handle in this space.
-    next_handle: oak::Handle,
     contents_name: String,
     halves: HashMap<oak::Handle, ChannelHalf>,
     // Mapping from port name to channel handle, as induced by the Application
@@ -491,16 +488,27 @@ impl OakRuntime {
 impl OakNode {
     fn new() -> OakNode {
         OakNode {
-            next_handle: 1 as oak::Handle,
             contents_name: "<default>".to_string(),
             halves: HashMap::new(),
             ports: HashMap::new(),
             thread_handle: None,
         }
     }
+    fn next_handle(&self) -> oak::Handle {
+        let mut rng = rand::thread_rng();
+        loop {
+            // Keep picking random Handle values until we find an unused (and valid) value.
+            let handle = rng.gen::<oak::Handle>();
+            if handle == oak::wasm::INVALID_HANDLE {
+                continue;
+            }
+            if !self.halves.contains_key(&handle) {
+                return handle;
+            }
+        }
+    }
     fn add_half(&mut self, half: ChannelHalf) -> oak::Handle {
-        let handle = self.next_handle;
-        self.next_handle += 1;
+        let handle = self.next_handle();
         self.halves.insert(handle, half);
         handle
     }
@@ -640,7 +648,7 @@ pub unsafe extern "C" fn channel_write(
     handle_data.set_len(handle_size);
 
     let mut mem_reader = Cursor::new(handle_data);
-    for _i in 0..handle_count as isize {
+    for _ in 0..handle_count as isize {
         let handle = mem_reader.read_u64::<byteorder::LittleEndian>().unwrap();
         let half = RUNTIME.read().unwrap().node_half_for_handle(&name, handle);
         match half {
