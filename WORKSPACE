@@ -104,6 +104,42 @@ http_archive(
     urls = ["https://github.com/WebAssembly/wabt/archive/39ceee53a9cd23451a28d4e56e151ef76044b5df.tar.gz"],
 )
 
+# Tool used for creating a compilation database.
+http_archive(
+    name = "io_kythe",
+    sha256 = "85dac12cdeea46f9e369ff109934aa98967bed1cd7c4c4afdc11577c3f99d31a",
+    strip_prefix = "kythe-4814f9f3fcc05c49fbe11f62f1e58a428048da27",
+    urls = [
+        # Head commit on 2019-12-03.
+        "https://github.com/kythe/kythe/archive/4814f9f3fcc05c49fbe11f62f1e58a428048da27.tar.gz"
+    ],
+)
+
+# Kythe tool dependency.
+# Loading only a subset of Kythe dependencies necessary for
+# compilation database generation.
+# https://github.com/kythe/kythe/blob/4814f9f3fcc05c49fbe11f62f1e58a428048da27/external.bzl#L110-L123
+http_archive(
+    name = "com_github_google_glog",
+    strip_prefix = "glog-ba8a9f6952d04d1403b97df24e6836227751454e",
+    sha256 = "9b4867ab66c33c41e2672b5de7e3133d38411cdb75eeb0d2b72c88bb10375c71",
+    url = "https://github.com/google/glog/archive/ba8a9f6952d04d1403b97df24e6836227751454e.zip",
+    build_file_content = "\n".join([
+            "load(\"//:bazel/glog.bzl\", \"glog_library\")",
+            "glog_library(with_gflags=0)",
+        ]),
+)
+
+# Kythe tool dependency.
+# https://github.com/kythe/kythe/blob/4814f9f3fcc05c49fbe11f62f1e58a428048da27/external.bzl#L75-L85
+http_archive(
+    name = "com_github_tencent_rapidjson",
+    sha256 = "8e00c38829d6785a2dfb951bb87c6974fa07dfe488aa5b25deec4b8bc0f6a3ab",
+    strip_prefix = "rapidjson-1.1.0",
+    url = "https://github.com/Tencent/rapidjson/archive/v1.1.0.zip",
+    build_file = "@io_kythe//third_party:rapidjson.BUILD",
+)
+
 http_archive(
     name = "bazel_skylib",
     sha256 = "9a737999532daca978a158f94e77e9af6a6a169709c0cee274f0a4c3359519bd",
@@ -152,6 +188,15 @@ sgx_deps()
 load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
 
 grpc_deps()
+
+load("@io_kythe//:setup.bzl", "kythe_rule_repositories")
+
+kythe_rule_repositories()
+
+load("@io_bazel_rules_go//go/private:compat/compat_repo.bzl", "go_rules_compat")
+go_rules_compat(
+    name = "io_bazel_rules_go_compat"
+)
 
 # clang + llvm 8.0
 http_archive(
