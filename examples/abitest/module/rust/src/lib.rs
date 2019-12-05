@@ -32,6 +32,7 @@ use std::io::Write;
 const LOG_PORT_NAME: &str = "logging_port";
 
 const BACKEND_COUNT: usize = 3;
+
 struct FrontendNode {
     grpc_in: oak::ReadHandle,
     backend_out: [oak::WriteHandle; BACKEND_COUNT],
@@ -238,7 +239,8 @@ impl FrontendNode {
 
     fn test_channel_create(&self) -> std::io::Result<()> {
         let mut handles = Vec::<(oak::WriteHandle, oak::ReadHandle)>::new();
-        for _i in 0..500 {
+        const CHANNEL_COUNT: usize = 50;
+        for _ in 0..CHANNEL_COUNT {
             match oak::channel_create() {
                 Ok(pair) => handles.push(pair),
                 Err(status) => {
@@ -646,10 +648,6 @@ impl FrontendNode {
     }
 
     fn test_channel_wait(&self) -> std::io::Result<()> {
-        // Consume a lot of channel handles before we start, to ensure we're
-        // working with handles that don't fit in a single byte.
-        self.test_channel_create()?;
-
         let (out1, in1) = oak::channel_create().unwrap();
         let (out2, in2) = oak::channel_create().unwrap();
 
@@ -909,10 +907,10 @@ impl FrontendNode {
     fn test_backend_roundtrip(&self) -> std::io::Result<()> {
         // Make a collection of new channels for the backend nodes to read from,
         // and send the read handles to each backend node.
-        const COUNT: usize = 3;
-        let mut read_handles = Vec::with_capacity(COUNT);
-        let mut write_handles = Vec::with_capacity(COUNT);
-        for _i in 0..COUNT {
+        const CHANNEL_COUNT: usize = 3;
+        let mut read_handles = Vec::with_capacity(CHANNEL_COUNT);
+        let mut write_handles = Vec::with_capacity(CHANNEL_COUNT);
+        for _ in 0..CHANNEL_COUNT {
             let (new_write, new_read) = oak::channel_create().unwrap();
             write_handles.push(new_write);
             read_handles.push(new_read.handle);
