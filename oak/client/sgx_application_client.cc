@@ -79,9 +79,8 @@ Status SetSha256HashProto(const std::string& hash_string, asylo::Sha256HashProto
                     "Wrong Sha256 hash size: " + std::to_string(hash_bytes.size()));
     }
     hash->set_hash(hash_bytes);
-  } else {
-    return hash_bytes_status.status();
   }
+  return hash_bytes_status.status();
 }
 
 }  // namespace
