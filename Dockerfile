@@ -1,6 +1,6 @@
 FROM gcr.io/asylo-framework/asylo:buildenv-v0.4.1
 
-RUN apt-get -y update && apt-get install -y git curl clang-format shellcheck libncurses5 xml2
+RUN apt-get -y update && apt-get install -y git curl clang-format clang-tidy shellcheck libncurses5 xml2
 
 RUN curl -sL https://deb.nodesource.com/setup_12.x  | bash -
 RUN apt-get install -y nodejs

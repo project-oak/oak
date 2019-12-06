@@ -4,15 +4,17 @@ readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
 # shellcheck source=scripts/common
 source "$SCRIPTS_DIR/common"
 
+bazel_build_flags+=(
+    '--config=enc-sim'
+    '--experimental_action_listener=@io_kythe//kythe/cxx/tools/generate_compile_commands:extract_json'
+    '--noshow_progress'
+    '--noshow_loading_progress'
+)
+
 # Generate compilation database.
-./scripts/build_server_asylo -c
-./scripts/build_server_dev -c
-#./scripts/build_examples -c
-bazel build \
-    --experimental_action_listener=@io_kythe//kythe/cxx/tools/generate_compile_commands:extract_json \
-    //oak/client:manager_client //oak/client:application_client
+bazel build "${bazel_build_flags[@]}" //oak/...
 ./third_party/kythe/generate_compilation_database.sh
 
 # Run clang-tidy.
-#SOURCE_FILES=$(find . )
-#clang-tidy -p "$(bazel info execution_root)" "$SOURCE_FILES"
+SOURCE_FILES=$(find oak examples -name "*.cc" | grep -n "test")
+clang-tidy -p "$(bazel info execution_root)" "$SOURCE_FILES"
