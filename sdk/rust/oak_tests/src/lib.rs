@@ -328,13 +328,19 @@ impl OakRuntime {
         Some(half)
     }
     fn node_add_half(&mut self, node_name: &str, half: ChannelHalf) -> oak::Handle {
-        self.nodes.get_mut(node_name).unwrap().add_half(half)
+        self.nodes
+            .get_mut(node_name)
+            .unwrap_or_else(|| panic!("node {{{}}} not found", node_name))
+            .add_half(half)
     }
     fn node_channel_create(&mut self, node_name: &str) -> (oak::Handle, oak::Handle) {
         let channel = self.new_channel();
         let write_half = ChannelHalf::new(Direction::Write, channel.clone());
         let read_half = ChannelHalf::new(Direction::Read, channel.clone());
-        let node = self.nodes.get_mut(node_name).unwrap();
+        let node = self
+            .nodes
+            .get_mut(node_name)
+            .unwrap_or_else(|| panic!("node {{{}}} not found", node_name));
         (node.add_half(write_half), node.add_half(read_half))
     }
     fn node_channel_write(&mut self, node_name: &str, handle: oak::Handle, msg: OakMessage) -> u32 {
