@@ -670,11 +670,13 @@ pub unsafe extern "C" fn channel_read(
     );
     *actual_size = asize;
     *actual_handle_count = acount;
-    if let Err(status) = result {
-        debug!("{{{}}}: channel_read() -> Err {}", name, status);
-        return status;
-    }
-    let msg = result.unwrap();
+    let msg = match result {
+        Err(status) => {
+            debug!("{{{}}}: channel_read() -> Err {}", name, status);
+            return status;
+        }
+        Ok(msg) => msg,
+    };
     std::ptr::copy_nonoverlapping(msg.data.as_ptr(), buf, asize as usize);
     let mut handle_data = Vec::with_capacity(8 * msg.channels.len());
     for half in msg.channels {
@@ -909,11 +911,10 @@ pub fn stop() -> OakStatus {
 
     let mut overall_result = OakStatus::OK;
     loop {
-        let next = RUNTIME.write().expect(RUNTIME_MISSING).stop_next();
-        if next.is_none() {
-            break;
-        }
-        let (name, thread_handle) = next.unwrap();
+        let (name, thread_handle) = match RUNTIME.write().expect(RUNTIME_MISSING).stop_next() {
+            None => break,
+            Some(x) => x,
+        };
         debug!("{{{}}}: await thread join", name);
         let result = match OakStatus::from_i32(thread_handle.join().unwrap() as i32) {
             Some(status) => status,
@@ -1006,16 +1007,18 @@ where
             .write()
             .expect("corrupt channel ref")
             .read_message(std::usize::MAX, &mut size, std::u32::MAX, &mut count);
-        if let Err(e) = result {
-            if e == OakStatus::OK.value() as u32 {
-                info!("no pending gRPC response message; poll again soon");
-                std::thread::sleep(std::time::Duration::from_millis(100));
-                continue;
-            } else {
-                panic!(format!("failed to read from response channel: {}", e));
+        let rsp = match result {
+            Err(e) => {
+                if e == OakStatus::OK.value() as u32 {
+                    info!("no pending gRPC response message; poll again soon");
+                    std::thread::sleep(std::time::Duration::from_millis(100));
+                    continue;
+                } else {
+                    panic!(format!("failed to read from response channel: {}", e));
+                }
             }
-        }
-        let rsp = result.unwrap();
+            Ok(r) => r,
+        };
         if rsp.data.is_empty() {
             info!("no pending message; poll again soon");
             std::thread::sleep(std::time::Duration::from_millis(100));
