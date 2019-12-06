@@ -52,6 +52,7 @@ steps:
     args: ['./scripts/run_examples']
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_clang_tidy
+    waitFor: ['run_tests', 'run_examples']
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/run_clang_tidy']
