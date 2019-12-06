@@ -18,17 +18,32 @@
 
 #![no_std]
 #![feature(lang_items)]
+#![feature(allocator_api)]
 #![feature(alloc_prelude)]
 #![feature(alloc_error_handler)]
+#![feature(fn_traits)]
+#![feature(rustc_private)]
+#![feature(never_type)]
+#![feature(box_syntax)]
+#![feature(int_error_internals)]
+#![feature(array_error_internals)]
+#![feature(char_error_internals)]
+
 
 extern crate alloc;
-
-// TODO: Move to separate crate.
-mod asylo_alloc;
+extern crate core;
+extern crate libc;
 
 use alloc::prelude::v1::*;
 use core::alloc::Layout;
 use core::panic::PanicInfo;
+
+// TODO: Move to separate crate.
+// pub mod c_types;
+pub mod error;
+pub mod io;
+pub mod asylo_alloc;
+pub mod thread;
 
 // TODO: Move to separate crate and expose safe wrappers.
 #[link(name = "sgx_trts")]

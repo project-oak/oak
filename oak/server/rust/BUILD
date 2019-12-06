@@ -23,9 +23,10 @@ package(
 
 rust_library(
     name = "oak_runtime",
-    srcs = glob(["src/*.rs"]),
+    srcs = glob(["src/**/*.rs"]),
     crate_type = "staticlib",
     edition = "2018",
+    # deps = ["libc"]
 )
 
 # Strip unnecessary binary objects from the generated static library archive. It seems to contain

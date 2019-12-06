@@ -7,3 +7,6 @@ authors = ["Tiziano Santoro <tzn@google.com>"]
 
 [lib]
 crate-type = ["staticlib"]
+
+[dependencies]
+libc = { version = "0.2", default-features = false }

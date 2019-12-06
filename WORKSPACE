@@ -184,6 +184,14 @@ http_archive(
     ],
 )
 
+http_archive(
+    name = "cfg-if",
+    sha256 = "efdad25aa81c076ff7d9260cc00ae92b6987aa726e203f14a95bae773e304ab9",
+    strip_prefix = "cfg-if-f71bf60f212312faddee7da525fcf47daac66499",
+    urls = ["https://github.com/alexcrichton/cfg-if/archive/f71bf60f212312faddee7da525fcf47daac66499.tar.gz"],
+    build_file = "@//third_party/cfg-if:BUILD",
+)
+
 load("@io_bazel_rules_rust//rust:repositories.bzl", "rust_repository_set")
 
 rust_repository_set(
