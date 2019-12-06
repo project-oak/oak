@@ -344,15 +344,14 @@ impl OakRuntime {
         (node.add_half(write_half), node.add_half(read_half))
     }
     fn node_channel_write(&mut self, node_name: &str, handle: oak::Handle, msg: OakMessage) -> u32 {
-        let half = self.node_half_for_handle_dir(node_name, handle, Direction::Write);
-        if half.is_none() {
-            return oak::OakStatus::ERR_BAD_HANDLE.value() as u32;
+        match self.node_half_for_handle_dir(node_name, handle, Direction::Write) {
+            None => oak::OakStatus::ERR_BAD_HANDLE.value() as u32,
+            Some(half) => half
+                .channel
+                .write()
+                .expect("corrupt channel ref")
+                .write_message(msg),
         }
-        half.unwrap()
-            .channel
-            .write()
-            .expect("corrupt channel ref")
-            .write_message(msg)
     }
     fn node_channel_read(
         &mut self,
@@ -363,37 +362,31 @@ impl OakRuntime {
         handle_count: u32,
         actual_handle_count: &mut u32,
     ) -> Result<OakMessage, u32> {
-        let half = self.node_half_for_handle_dir(node_name, handle, Direction::Read);
-        if half.is_none() {
-            return Err(oak::OakStatus::ERR_BAD_HANDLE.value() as u32);
+        match self.node_half_for_handle_dir(node_name, handle, Direction::Read) {
+            None => Err(oak::OakStatus::ERR_BAD_HANDLE.value() as u32),
+            Some(half) => half
+                .channel
+                .write()
+                .expect("corrupt channel ref")
+                .read_message(size, actual_size, handle_count, actual_handle_count),
         }
-        half.unwrap()
-            .channel
-            .write()
-            .expect("corrupt channel ref")
-            .read_message(size, actual_size, handle_count, actual_handle_count)
     }
     fn channel_status_for_node(
         &self,
         node_name: &str,
         handle: oak::Handle,
     ) -> oak::ChannelReadStatus {
-        let half = self.node_half_for_handle_dir(node_name, handle, Direction::Read);
-        if half.is_none() {
-            oak::ChannelReadStatus::INVALID_CHANNEL
-        } else {
-            let channel = half
-                .as_ref()
-                .unwrap()
-                .channel
-                .expect("corrupt channel ref")
-                .unwrap();
-            if !channel.messages.is_empty() {
-                oak::ChannelReadStatus::READ_READY
-            } else if channel.half_count[&Direction::Write] == 0 {
-                oak::ChannelReadStatus::ORPHANED
-            } else {
-                oak::ChannelReadStatus::NOT_READY
+        match self.node_half_for_handle_dir(node_name, handle, Direction::Read) {
+            None => oak::ChannelReadStatus::INVALID_CHANNEL,
+            Some(half) => {
+                let channel = half.channel.read().expect("corrupt channel ref");
+                if !channel.messages.is_empty() {
+                    oak::ChannelReadStatus::READ_READY
+                } else if channel.half_count[&Direction::Write] == 0 {
+                    oak::ChannelReadStatus::ORPHANED
+                } else {
+                    oak::ChannelReadStatus::NOT_READY
+                }
             }
         }
     }
