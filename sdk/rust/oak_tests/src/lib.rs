@@ -25,7 +25,7 @@ use proto::manager::NodeConfiguration_oneof_config_type;
 use protobuf::{Message, ProtobufEnum};
 use rand::Rng;
 use std::cell::RefCell;
-use std::collections::hash_map::RandomState;
+use std::collections::hash_map::{Entry, RandomState};
 use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::convert::TryInto;
@@ -146,7 +146,7 @@ impl ChannelHalf {
         // Update the referenced channel's counts of extant halves.
         *channel
             .write()
-            .unwrap()
+            .expect("corrupt channel ref")
             .half_count
             .get_mut(&direction)
             .expect("missing enum value in half_count") += 1;
@@ -163,14 +163,21 @@ impl Clone for ChannelHalf {
 impl Drop for ChannelHalf {
     fn drop(&mut self) {
         // Update the referenced channel's counts of extant halves.
-        *self
+        match self
             .channel
             .write()
-            .unwrap()
+            .expect("corrupt channel ref")
             .half_count
-            .get_mut(&self.direction)
-            .expect("missing enum value in half_count") -= 1;
-        assert!(self.channel.read().unwrap().half_count[&self.direction] >= 0);
+            .entry(self.direction)
+        {
+            Entry::Occupied(mut e) => {
+                if *e.get() <= 0 {
+                    panic!("negative channel ref count");
+                }
+                *e.get_mut() -= 1;
+            }
+            Entry::Vacant(_) => panic!("missing enum value in half_count"),
+        };
     }
 }
 
@@ -342,7 +349,11 @@ impl OakRuntime {
         if half.is_none() {
             return oak::OakStatus::ERR_BAD_HANDLE.value() as u32;
         }
-        half.unwrap().channel.write().unwrap().write_message(msg)
+        half.unwrap()
+            .channel
+            .write()
+            .expect("corrupt channel ref")
+            .write_message(msg)
     }
     fn node_channel_read(
         &mut self,
@@ -357,12 +368,11 @@ impl OakRuntime {
         if half.is_none() {
             return Err(oak::OakStatus::ERR_BAD_HANDLE.value() as u32);
         }
-        half.unwrap().channel.write().unwrap().read_message(
-            size,
-            actual_size,
-            handle_count,
-            actual_handle_count,
-        )
+        half.unwrap()
+            .channel
+            .write()
+            .expect("corrupt channel ref")
+            .read_message(size, actual_size, handle_count, actual_handle_count)
     }
     fn channel_status_for_node(
         &self,
@@ -373,7 +383,12 @@ impl OakRuntime {
         if half.is_none() {
             oak::ChannelReadStatus::INVALID_CHANNEL
         } else {
-            let channel = half.as_ref().unwrap().channel.read().unwrap();
+            let channel = half
+                .as_ref()
+                .unwrap()
+                .channel
+                .expect("corrupt channel ref")
+                .unwrap();
             if !channel.messages.is_empty() {
                 oak::ChannelReadStatus::READ_READY
             } else if channel.half_count[&Direction::Write] == 0 {
@@ -779,7 +794,13 @@ pub fn last_message_as_string(handle: oak::Handle) -> String {
         .get(&handle)
         .unwrap()
         .clone();
-    let result = match half.channel.read().unwrap().messages.front() {
+    let result = match half
+        .channel
+        .read()
+        .expect("corrupt channel ref")
+        .messages
+        .front()
+    {
         Some(msg) => unsafe { std::str::from_utf8_unchecked(&msg.data).to_string() },
         None => "".to_string(),
     };
@@ -794,7 +815,10 @@ pub fn set_read_status(node_name: &str, handle: oak::Handle, status: Option<u32>
         .get(&handle)
         .unwrap()
         .clone();
-    half.channel.write().unwrap().read_status = status;
+    half.channel
+        .write()
+        .expect("corrupt channel ref")
+        .read_status = status;
 }
 
 /// Test helper that injects a failure for future channel write operations.
@@ -804,7 +828,10 @@ pub fn set_write_status(node_name: &str, handle: oak::Handle, status: Option<u32
         .get(&handle)
         .unwrap()
         .clone();
-    half.channel.write().unwrap().write_status = status;
+    half.channel
+        .write()
+        .expect("corrupt channel ref")
+        .write_status = status;
 }
 
 /// Test helper that clears any handle to channel half mappings.
@@ -978,12 +1005,11 @@ where
     loop {
         let mut size = 0u32;
         let mut count = 0u32;
-        let result = read_half.channel.write().unwrap().read_message(
-            std::usize::MAX,
-            &mut size,
-            std::u32::MAX,
-            &mut count,
-        );
+        let result = read_half
+            .channel
+            .write()
+            .expect("corrupt channel ref")
+            .read_message(std::usize::MAX, &mut size, std::u32::MAX, &mut count);
         if let Err(e) = result {
             if e == OakStatus::OK.value() as u32 {
                 info!("no pending gRPC response message; poll again soon");
