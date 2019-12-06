@@ -111,7 +111,7 @@ http_archive(
     strip_prefix = "kythe-4814f9f3fcc05c49fbe11f62f1e58a428048da27",
     urls = [
         # Head commit on 2019-12-03.
-        "https://github.com/kythe/kythe/archive/4814f9f3fcc05c49fbe11f62f1e58a428048da27.tar.gz"
+        "https://github.com/kythe/kythe/archive/4814f9f3fcc05c49fbe11f62f1e58a428048da27.tar.gz",
     ],
 )
 
@@ -121,23 +121,23 @@ http_archive(
 # https://github.com/kythe/kythe/blob/4814f9f3fcc05c49fbe11f62f1e58a428048da27/external.bzl#L110-L123
 http_archive(
     name = "com_github_google_glog",
-    strip_prefix = "glog-ba8a9f6952d04d1403b97df24e6836227751454e",
-    sha256 = "9b4867ab66c33c41e2672b5de7e3133d38411cdb75eeb0d2b72c88bb10375c71",
-    url = "https://github.com/google/glog/archive/ba8a9f6952d04d1403b97df24e6836227751454e.zip",
     build_file_content = "\n".join([
-            "load(\"//:bazel/glog.bzl\", \"glog_library\")",
-            "glog_library(with_gflags=0)",
-        ]),
+        "load(\"//:bazel/glog.bzl\", \"glog_library\")",
+        "glog_library(with_gflags=0)",
+    ]),
+    sha256 = "9b4867ab66c33c41e2672b5de7e3133d38411cdb75eeb0d2b72c88bb10375c71",
+    strip_prefix = "glog-ba8a9f6952d04d1403b97df24e6836227751454e",
+    url = "https://github.com/google/glog/archive/ba8a9f6952d04d1403b97df24e6836227751454e.zip",
 )
 
 # Kythe tool dependency.
 # https://github.com/kythe/kythe/blob/4814f9f3fcc05c49fbe11f62f1e58a428048da27/external.bzl#L75-L85
 http_archive(
     name = "com_github_tencent_rapidjson",
+    build_file = "@io_kythe//third_party:rapidjson.BUILD",
     sha256 = "8e00c38829d6785a2dfb951bb87c6974fa07dfe488aa5b25deec4b8bc0f6a3ab",
     strip_prefix = "rapidjson-1.1.0",
     url = "https://github.com/Tencent/rapidjson/archive/v1.1.0.zip",
-    build_file = "@io_kythe//third_party:rapidjson.BUILD",
 )
 
 http_archive(
@@ -193,9 +193,13 @@ load("@io_kythe//:setup.bzl", "kythe_rule_repositories")
 
 kythe_rule_repositories()
 
+# Kythe requires `go_rules_compat` to be loaded.
+# https://github.com/kythe/kythe/blob/9941fe8eabba4612daea78ce69c5cc205e9b0791/WORKSPACE#L28-L39
+# https://github.com/kythe/kythe/issues/4237
 load("@io_bazel_rules_go//go/private:compat/compat_repo.bzl", "go_rules_compat")
+
 go_rules_compat(
-    name = "io_bazel_rules_go_compat"
+    name = "io_bazel_rules_go_compat",
 )
 
 # clang + llvm 8.0
