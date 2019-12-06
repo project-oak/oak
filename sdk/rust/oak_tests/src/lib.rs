@@ -311,11 +311,8 @@ impl OakRuntime {
         Arc::new(RwLock::new(MockChannel::new()))
     }
     fn node_half_for_handle(&self, node_name: &str, handle: oak::Handle) -> Option<ChannelHalf> {
-        let node = self.nodes.get(node_name).unwrap();
-        if !node.halves.contains_key(&handle) {
-            return None;
-        }
-        let half = node.halves.get(&handle).unwrap();
+        let node = self.nodes.get(node_name)?;
+        let half = node.halves.get(&handle)?;
         Some(half.clone())
     }
     fn node_half_for_handle_dir(
