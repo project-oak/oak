@@ -575,7 +575,10 @@ pub unsafe extern "C" fn wait_on_channels(buf: *mut u8, count: u32) -> u32 {
             let p = buf.add(
                 i * oak::wasm::SPACE_BYTES_PER_HANDLE + (oak::wasm::SPACE_BYTES_PER_HANDLE - 1),
             );
-            *p = channel_status.value().try_into().unwrap();
+            *p = channel_status
+                .value()
+                .try_into()
+                .expect("failed to convert status to u8");
         }
         if RUNTIME.read().expect(RUNTIME_MISSING).termination_pending {
             debug!("{{{}}}: wait_on_channels() -> ERR_TERMINATED", name);
@@ -789,7 +792,7 @@ pub fn last_message_as_string(handle: oak::Handle) -> String {
     let half = RUNTIME.read().expect(RUNTIME_MISSING).nodes[DEFAULT_NODE_NAME]
         .halves
         .get(&handle)
-        .unwrap()
+        .expect("invalid handle passed to test helper")
         .clone();
     let result = match half
         .channel
@@ -810,7 +813,7 @@ pub fn set_read_status(node_name: &str, handle: oak::Handle, status: Option<u32>
     let half = RUNTIME.read().expect(RUNTIME_MISSING).nodes[node_name]
         .halves
         .get(&handle)
-        .unwrap()
+        .expect("invalid handle passed to test helper")
         .clone();
     half.channel
         .write()
@@ -823,7 +826,7 @@ pub fn set_write_status(node_name: &str, handle: oak::Handle, status: Option<u32
     let half = RUNTIME.read().expect(RUNTIME_MISSING).nodes[node_name]
         .halves
         .get(&handle)
-        .unwrap()
+        .expect("invalid handle passed to test helper")
         .clone();
     half.channel
         .write()
@@ -996,7 +999,10 @@ where
         .expect(RUNTIME_MISSING)
         .grpc_channel()
         .expect("no gRPC channel setup");
-    grpc_channel.write().unwrap().write_message(msg);
+    grpc_channel
+        .write()
+        .expect("corrupt gRPC channel ref")
+        .write_message(msg);
 
     // Read the serialized, encapsulated response.
     loop {
