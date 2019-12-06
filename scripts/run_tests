@@ -13,6 +13,14 @@ cargo clippy --all-targets --manifest-path=./sdk/rust/Cargo.toml -- --deny=warni
 cargo test --all-targets --manifest-path=./examples/Cargo.toml
 cargo clippy --all-targets --manifest-path=./examples/Cargo.toml -- --deny=warnings
 
+bazel_build_flags+=(
+  '--keep_going'
+)
+
+# Check everything builds (except Asylo-specific targets).
+bazel build "${bazel_build_flags[@]}" -- //oak/...:all -//oak/server/asylo:all
+
+# Run tests that are suitable for running on the host system (rather than the target).
 bazel test "${bazel_build_flags[@]}" \
   //oak/server:host_tests \
   //oak/server/storage:host_tests \
