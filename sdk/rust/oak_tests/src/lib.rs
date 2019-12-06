@@ -495,6 +495,8 @@ lazy_static! {
     static ref RUNTIME: RwLock<OakRuntime> = RwLock::new(OakRuntime::new());
 }
 
+const RUNTIME_MISSING: &str = "global OakRuntime object missing";
+
 // Per-thread Node name.
 thread_local! {
     static NODE_NAME: RefCell<String> = RefCell::new(DEFAULT_NODE_NAME.to_string());
@@ -550,7 +552,7 @@ pub unsafe extern "C" fn wait_on_channels(buf: *mut u8, count: u32) -> u32 {
         for (i, handle) in handles.iter().enumerate() {
             let channel_status = RUNTIME
                 .read()
-                .unwrap()
+                .expect(RUNTIME_MISSING)
                 .channel_status_for_node(&name, *handle);
             if channel_status != oak::ChannelReadStatus::INVALID_CHANNEL {
                 found_valid_handle = true;
@@ -565,7 +567,7 @@ pub unsafe extern "C" fn wait_on_channels(buf: *mut u8, count: u32) -> u32 {
             );
             *p = channel_status.value().try_into().unwrap();
         }
-        if RUNTIME.read().unwrap().termination_pending {
+        if RUNTIME.read().expect(RUNTIME_MISSING).termination_pending {
             debug!("{{{}}}: wait_on_channels() -> ERR_TERMINATED", name);
             return OakStatus::ERR_TERMINATED.value() as u32;
         }
@@ -611,7 +613,10 @@ pub unsafe extern "C" fn channel_write(
     let mut mem_reader = Cursor::new(handle_data);
     for _ in 0..handle_count as isize {
         let handle = mem_reader.read_u64::<byteorder::LittleEndian>().unwrap();
-        let half = RUNTIME.read().unwrap().node_half_for_handle(&name, handle);
+        let half = RUNTIME
+            .read()
+            .expect(RUNTIME_MISSING)
+            .node_half_for_handle(&name, handle);
         match half {
             Some(half) => msg.channels.push(half),
             None => return OakStatus::ERR_BAD_HANDLE.value() as u32,
@@ -620,7 +625,7 @@ pub unsafe extern "C" fn channel_write(
 
     let result = RUNTIME
         .write()
-        .unwrap()
+        .expect(RUNTIME_MISSING)
         .node_channel_write(&name, handle, msg);
     debug!("{{{}}}: channel_write() -> {}", name, result);
     result
@@ -645,7 +650,7 @@ pub unsafe extern "C" fn channel_read(
     );
     let mut asize = 0u32;
     let mut acount = 0u32;
-    let result = RUNTIME.write().unwrap().node_channel_read(
+    let result = RUNTIME.write().expect(RUNTIME_MISSING).node_channel_read(
         &name,
         handle,
         size,
@@ -663,7 +668,10 @@ pub unsafe extern "C" fn channel_read(
     std::ptr::copy_nonoverlapping(msg.data.as_ptr(), buf, asize as usize);
     let mut handle_data = Vec::with_capacity(8 * msg.channels.len());
     for half in msg.channels {
-        let handle = RUNTIME.write().unwrap().node_add_half(&name, half);
+        let handle = RUNTIME
+            .write()
+            .expect(RUNTIME_MISSING)
+            .node_add_half(&name, half);
         debug!("{{{}}}: channel_read() added handle {}", name, handle);
         handle_data
             .write_u64::<byteorder::LittleEndian>(handle)
@@ -680,7 +688,10 @@ pub unsafe extern "C" fn channel_read(
 pub unsafe extern "C" fn channel_create(write: *mut u64, read: *mut u64) -> u32 {
     let name = node_name();
     debug!("{{{}}}: channel_create({:?}, {:?})", name, write, read);
-    let (write_handle, read_handle) = RUNTIME.write().unwrap().node_channel_create(&name);
+    let (write_handle, read_handle) = RUNTIME
+        .write()
+        .expect(RUNTIME_MISSING)
+        .node_channel_create(&name);
 
     *write = write_handle;
     *read = read_handle;
@@ -698,7 +709,7 @@ pub extern "C" fn channel_close(handle: u64) -> u32 {
     debug!("{{{}}}: channel_close({})", name, handle);
     let result = RUNTIME
         .write()
-        .unwrap()
+        .expect(RUNTIME_MISSING)
         .nodes
         .get_mut(&name)
         .unwrap()
@@ -718,7 +729,11 @@ pub unsafe fn node_create(buf: *const u8, len: usize, handle: u64) -> u32 {
     let config = String::from_utf8(data).unwrap();
     debug!("{{{}}}: node_create('{}', {})", name, config, handle);
 
-    let start_info = match RUNTIME.write().unwrap().node_create(name, &config, handle) {
+    let start_info = match RUNTIME
+        .write()
+        .expect(RUNTIME_MISSING)
+        .node_create(name, &config, handle)
+    {
         Err(status) => return status.value() as u32,
         Ok(result) => result,
     };
@@ -734,7 +749,7 @@ pub unsafe fn node_create(buf: *const u8, len: usize, handle: u64) -> u32 {
     });
     RUNTIME
         .write()
-        .unwrap()
+        .expect(RUNTIME_MISSING)
         .started(&node_name_copy, thread_handle);
 
     OakStatus::OK.value() as u32
@@ -759,7 +774,7 @@ pub unsafe extern "C" fn random_get(buf: *mut u8, size: usize) -> u32 {
 /// Convenience test helper which returns the last message on a channel as a
 /// string (without removing it from the channel).
 pub fn last_message_as_string(handle: oak::Handle) -> String {
-    let half = RUNTIME.read().unwrap().nodes[DEFAULT_NODE_NAME]
+    let half = RUNTIME.read().expect(RUNTIME_MISSING).nodes[DEFAULT_NODE_NAME]
         .halves
         .get(&handle)
         .unwrap()
@@ -774,7 +789,7 @@ pub fn last_message_as_string(handle: oak::Handle) -> String {
 
 /// Test helper that injects a failure for future channel read operations.
 pub fn set_read_status(node_name: &str, handle: oak::Handle, status: Option<u32>) {
-    let half = RUNTIME.read().unwrap().nodes[node_name]
+    let half = RUNTIME.read().expect(RUNTIME_MISSING).nodes[node_name]
         .halves
         .get(&handle)
         .unwrap()
@@ -784,7 +799,7 @@ pub fn set_read_status(node_name: &str, handle: oak::Handle, status: Option<u32>
 
 /// Test helper that injects a failure for future channel write operations.
 pub fn set_write_status(node_name: &str, handle: oak::Handle, status: Option<u32>) {
-    let half = RUNTIME.read().unwrap().nodes[node_name]
+    let half = RUNTIME.read().expect(RUNTIME_MISSING).nodes[node_name]
         .halves
         .get(&handle)
         .unwrap()
@@ -794,7 +809,7 @@ pub fn set_write_status(node_name: &str, handle: oak::Handle, status: Option<u32
 
 /// Test helper that clears any handle to channel half mappings.
 pub fn reset() {
-    RUNTIME.write().unwrap().reset()
+    RUNTIME.write().expect(RUNTIME_MISSING).reset()
 }
 
 static LOG_INIT: Once = Once::new();
@@ -809,7 +824,7 @@ pub fn init_logging() {
 
 /// Test helper to mark the Application under test as pending termination.
 pub fn set_termination_pending(val: bool) {
-    RUNTIME.write().unwrap().termination_pending = val;
+    RUNTIME.write().expect(RUNTIME_MISSING).termination_pending = val;
 }
 
 /// Expected type for the main entrypoint to a Node under test.
@@ -831,21 +846,27 @@ pub fn start(
     config: proto::manager::ApplicationConfiguration,
     entrypoints: HashMap<String, NodeMain, RandomState>,
 ) {
-    let (name, entrypoint, handle) = RUNTIME.write().unwrap().configure(config, entrypoints);
+    let (name, entrypoint, handle) = RUNTIME
+        .write()
+        .expect(RUNTIME_MISSING)
+        .configure(config, entrypoints);
     debug!("{{{}}}: start per-Node thread", name);
     let node_name = name.clone();
     let thread_handle = spawn(move || {
         set_node_name(node_name);
         entrypoint(handle)
     });
-    RUNTIME.write().unwrap().started(&name, thread_handle);
+    RUNTIME
+        .write()
+        .expect(RUNTIME_MISSING)
+        .started(&name, thread_handle);
 }
 
 /// Start running a test of a single-Node Application.  This assumes that the
 /// single Node's main entrypoint is available as a global extern "C"
 /// oak_main(), as for a live version of the Application.
 pub fn start_node(handle: oak::Handle) {
-    RUNTIME.write().unwrap().termination_pending = false;
+    RUNTIME.write().expect(RUNTIME_MISSING).termination_pending = false;
     debug!("start per-Node thread with handle {}", handle);
     let node_name = DEFAULT_NODE_NAME.to_string();
     let main_handle = spawn(move || unsafe {
@@ -854,7 +875,7 @@ pub fn start_node(handle: oak::Handle) {
     });
     RUNTIME
         .write()
-        .unwrap()
+        .expect(RUNTIME_MISSING)
         .started(DEFAULT_NODE_NAME, main_handle)
 }
 
@@ -865,7 +886,7 @@ pub fn stop() -> OakStatus {
 
     let mut overall_result = OakStatus::OK;
     loop {
-        let next = RUNTIME.write().unwrap().stop_next();
+        let next = RUNTIME.write().expect(RUNTIME_MISSING).stop_next();
         if next.is_none() {
             break;
         }
@@ -913,7 +934,7 @@ fn log_node_main(handle: u64) -> i32 {
 pub fn grpc_channel_setup_default() -> oak::Handle {
     RUNTIME
         .write()
-        .unwrap()
+        .expect(RUNTIME_MISSING)
         .grpc_channel_setup(DEFAULT_NODE_NAME)
 }
 
@@ -940,7 +961,7 @@ where
         .expect("failed to serialize GrpcRequest message");
 
     // Create a new channel for the response to arrive on and attach to the message.
-    let channel = RUNTIME.write().unwrap().new_channel();
+    let channel = RUNTIME.write().expect(RUNTIME_MISSING).new_channel();
     msg.channels
         .push(ChannelHalf::new(Direction::Write, channel.clone()));
     let read_half = ChannelHalf::new(Direction::Read, channel);
@@ -948,7 +969,7 @@ where
     // Send the message (with attached write handle) into the Node under test.
     let grpc_channel = RUNTIME
         .read()
-        .unwrap()
+        .expect(RUNTIME_MISSING)
         .grpc_channel()
         .expect("no gRPC channel setup");
     grpc_channel.write().unwrap().write_message(msg);
