@@ -102,32 +102,34 @@ impl MockChannel {
         if let Some(status) = self.read_status {
             return Err(status);
         }
-        let msg = self.messages.pop_front();
-        if msg.is_none() {
-            *actual_size = 0;
-            *actual_handle_count = 0;
-            if self.half_count[&Direction::Write] == 0 {
-                // Channel is empty and there can be no future writers, so
-                // indicate that the channel is closed.
-                return Err(OakStatus::ERR_CHANNEL_CLOSED.value() as u32);
-            } else {
-                return Err(OakStatus::OK.value() as u32);
+        match self.messages.pop_front() {
+            None => {
+                *actual_size = 0;
+                *actual_handle_count = 0;
+                if self.half_count[&Direction::Write] == 0 {
+                    // Channel is empty and there can be no future writers, so
+                    // indicate that the channel is closed.
+                    Err(OakStatus::ERR_CHANNEL_CLOSED.value() as u32)
+                } else {
+                    Err(OakStatus::OK.value() as u32)
+                }
+            }
+            Some(msg) => {
+                // Check whether the message will fit within caller-specified limits; if
+                // not, put it back on the queue (and return the required limits).
+                *actual_size = msg.data.len() as u32;
+                *actual_handle_count = msg.channels.len() as u32;
+                if *actual_size > size as u32 {
+                    self.messages.push_front(msg);
+                    Err(OakStatus::ERR_BUFFER_TOO_SMALL.value() as u32)
+                } else if *actual_handle_count > handle_count {
+                    self.messages.push_front(msg);
+                    Err(OakStatus::ERR_HANDLE_SPACE_TOO_SMALL.value() as u32)
+                } else {
+                    Ok(msg)
+                }
             }
         }
-        // Check whether the message will fit within caller-specified limits; if
-        // not, put it back on the queue (and return the required limits).
-        let msg = msg.unwrap();
-        *actual_size = msg.data.len() as u32;
-        *actual_handle_count = msg.channels.len() as u32;
-        if *actual_size > size as u32 {
-            self.messages.push_front(msg);
-            return Err(OakStatus::ERR_BUFFER_TOO_SMALL.value() as u32);
-        }
-        if *actual_handle_count > handle_count {
-            self.messages.push_front(msg);
-            return Err(OakStatus::ERR_HANDLE_SPACE_TOO_SMALL.value() as u32);
-        }
-        Ok(msg)
     }
 }
 
