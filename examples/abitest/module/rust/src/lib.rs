@@ -760,6 +760,14 @@ impl FrontendNode {
             OakStatus::ERR_INVALID_ARGS,
             oak::node_create("no-such-config", self.backend_in[0])
         );
+        let non_utf8_name: Vec<u8> = vec![0xc3, 0x28];
+        expect_eq!(OakStatus::ERR_INVALID_ARGS.value() as u32, unsafe {
+            oak::wasm::node_create(
+                non_utf8_name.as_ptr(),
+                non_utf8_name.len(),
+                self.backend_in[0].handle,
+            )
+        });
         expect_eq!(
             OakStatus::ERR_BAD_HANDLE,
             oak::node_create(
