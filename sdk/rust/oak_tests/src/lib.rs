@@ -302,9 +302,7 @@ impl OakRuntime {
         None
     }
     fn reset(&mut self) {
-        let names: Vec<String> = self.nodes.keys().cloned().collect();
-        for name in &names {
-            let node = self.nodes.get_mut(name).unwrap();
+        for node in self.nodes.values_mut() {
             node.halves.clear();
         }
         self.grpc_in_half = None;
