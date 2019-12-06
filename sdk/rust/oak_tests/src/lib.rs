@@ -17,7 +17,7 @@
 //! Test utilities to help with unit testing of Oak SDK code.
 
 use lazy_static::lazy_static;
-use log::{debug, info};
+use log::{debug, info, warn};
 
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use oak::OakStatus;
@@ -979,7 +979,13 @@ where
     let mut grpc_req = oak::proto::grpc_encap::GrpcRequest::new();
     grpc_req.set_method_name(method_name.to_string());
     let mut any = protobuf::well_known_types::Any::new();
-    req.write_to_writer(&mut any.value).unwrap();
+    if let Err(e) = req.write_to_writer(&mut any.value) {
+        warn!("failed to serialize gRPC request: {}", e);
+        return Err(oak::grpc::build_status(
+            oak::grpc::Code::INTERNAL,
+            "failed to serialize gRPC request",
+        ));
+    }
     grpc_req.set_req_msg(any);
     grpc_req.set_last(true);
     let mut msg = OakMessage {
