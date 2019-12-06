@@ -393,7 +393,10 @@ impl OakRuntime {
     fn grpc_channel_setup(&mut self, node_name: &str) -> oak::Handle {
         let channel = self.new_channel();
         let half = ChannelHalf::new(Direction::Read, channel.clone());
-        let node = self.nodes.get_mut(node_name).unwrap();
+        let node = self
+            .nodes
+            .get_mut(node_name)
+            .unwrap_or_else(|| panic!("node {{{}}} not found", node_name));
         let read_handle = node.add_half(half);
         debug!(
             "set up gRPC channel to node {} with handle {}",
@@ -719,7 +722,7 @@ pub extern "C" fn channel_close(handle: u64) -> u32 {
         .expect(RUNTIME_MISSING)
         .nodes
         .get_mut(&name)
-        .unwrap()
+        .unwrap_or_else(|| panic!("node {{{}}} not found", name))
         .close_channel(handle);
     debug!("{{{}}}: channel_close({}) -> {}", name, handle, result);
     result
