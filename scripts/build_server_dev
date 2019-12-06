@@ -4,34 +4,9 @@ readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
 # shellcheck source=scripts/common
 source "$SCRIPTS_DIR/common"
 
-while getopts "hc" opt; do
-    case "$opt" in
-    h)
-        echo -e "Usage: $0 [-c]
-  -c    Generate compilation database
-  -h    Print this message"
-        exit 0
-        ;;
-    c)
-        readonly GENERATE_COMPILATION_DATABASE=true
-        ;;
-    *)
-        exit 1
-        ;;
-    esac
-done
-
 bazel_build_flags+=(
     '--config=clang'
 )
-
-if [[ -n "${GENERATE_COMPILATION_DATABASE}" ]]; then
-    bazel_build_flags+=(
-        '--experimental_action_listener=@io_kythe//kythe/cxx/tools/generate_compile_commands:extract_json'
-        '--noshow_progress'
-        '--noshow_loading_progress'
-    )
-fi
 
 # Use a different output_base so that we don't lose incremental state.
 # See https://docs.bazel.build/versions/master/command-line-reference.html#flag--output_base.
