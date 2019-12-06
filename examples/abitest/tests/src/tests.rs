@@ -63,7 +63,7 @@ fn test_abi() {
     let be: oak_tests::NodeMain = abitest_backend::main;
     entrypoints.insert(FRONTEND_CONFIG_NAME.to_string(), fe);
     entrypoints.insert(BACKEND_CONFIG_NAME.to_string(), be);
-    oak_tests::start(test_config(), entrypoints);
+    assert_eq!(Some(()), oak_tests::start(test_config(), entrypoints));
 
     let mut req = ABITestRequest::new();
     // Skip raw tests (which use invalid memory addresses etc.).
