@@ -741,7 +741,10 @@ pub unsafe fn node_create(buf: *const u8, len: usize, handle: u64) -> u32 {
     let mut data = Vec::with_capacity(len as usize);
     std::ptr::copy_nonoverlapping(buf, data.as_mut_ptr(), len as usize);
     data.set_len(len as usize);
-    let config = String::from_utf8(data).unwrap();
+    let config = match String::from_utf8(data) {
+        Err(_) => return OakStatus::ERR_INVALID_ARGS.value() as u32,
+        Ok(s) => s,
+    };
     debug!("{{{}}}: node_create('{}', {})", name, config, handle);
 
     let start_info = match RUNTIME
