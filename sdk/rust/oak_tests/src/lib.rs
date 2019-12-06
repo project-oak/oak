@@ -149,7 +149,7 @@ impl ChannelHalf {
             .unwrap()
             .half_count
             .get_mut(&direction)
-            .unwrap() += 1;
+            .expect("missing enum value in half_count") += 1;
         ChannelHalf { direction, channel }
     }
 }
@@ -169,7 +169,7 @@ impl Drop for ChannelHalf {
             .unwrap()
             .half_count
             .get_mut(&self.direction)
-            .unwrap() -= 1;
+            .expect("missing enum value in half_count") -= 1;
         assert!(self.channel.read().unwrap().half_count[&self.direction] >= 0);
     }
 }
