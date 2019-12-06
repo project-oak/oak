@@ -196,6 +196,8 @@ kythe_rule_repositories()
 # Kythe requires `go_rules_compat` to be loaded.
 # https://github.com/kythe/kythe/blob/9941fe8eabba4612daea78ce69c5cc205e9b0791/WORKSPACE#L28-L39
 # https://github.com/kythe/kythe/issues/4237
+# Visibility warnings are disabled, since they cause check_formatting to fail.
+# buildifier: disable=bzl-visibility
 load("@io_bazel_rules_go//go/private:compat/compat_repo.bzl", "go_rules_compat")
 
 go_rules_compat(
