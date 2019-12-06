@@ -240,7 +240,7 @@ impl OakRuntime {
         &mut self,
         config: proto::manager::ApplicationConfiguration,
         entrypoints: HashMap<String, NodeMain>,
-    ) -> (String, NodeMain, oak::Handle) {
+    ) -> Option<(String, NodeMain, oak::Handle)> {
         self.termination_pending = false;
         self.nodes.clear();
         self.entrypoints = entrypoints;
@@ -267,6 +267,7 @@ impl OakRuntime {
                 }
             }
         }
+        let entrypoint = self.entrypoint(&config.initial_node)?;
 
         let node_name = self.next_node_name(&config.initial_node);
         let node = OakNode::new();
@@ -275,9 +276,6 @@ impl OakRuntime {
             node_name, config.initial_node
         );
         self.nodes.insert(node_name.clone(), node);
-        let entrypoint = self
-            .entrypoint(&config.initial_node)
-            .unwrap_or_else(|| panic!("failed to find {} entrypoint", config.initial_node));
 
         // Setup the initial channel from gRPC pseudo-Node to Node.
         let channel = self.new_channel();
@@ -285,7 +283,7 @@ impl OakRuntime {
         let half = ChannelHalf::new(Direction::Read, channel.clone());
         let handle = self.nodes.get_mut(&node_name).unwrap().add_half(half);
 
-        (node_name, entrypoint, handle)
+        Some((node_name, entrypoint, handle))
     }
     // Record that a Node of the given name has been started in a distinct thread.
     fn started(&mut self, node_name: &str, join_handle: std::thread::JoinHandle<i32>) {
@@ -872,11 +870,11 @@ pub type NodeMain = fn(u64) -> i32;
 pub fn start(
     config: proto::manager::ApplicationConfiguration,
     entrypoints: HashMap<String, NodeMain, RandomState>,
-) {
+) -> Option<()> {
     let (name, entrypoint, handle) = RUNTIME
         .write()
         .expect(RUNTIME_MISSING)
-        .configure(config, entrypoints);
+        .configure(config, entrypoints)?;
     debug!("{{{}}}: start per-Node thread", name);
     let node_name = name.clone();
     let thread_handle = spawn(move || {
@@ -887,6 +885,7 @@ pub fn start(
         .write()
         .expect(RUNTIME_MISSING)
         .started(&name, thread_handle);
+    Some(())
 }
 
 /// Start running a test of a single-Node Application.  This assumes that the
