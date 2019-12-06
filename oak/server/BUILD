@@ -73,6 +73,7 @@ oak_fuzzer(
     srcs = [
         "wasm_node_fuzzer.cc",
     ],
+    tags = ["manual"],  # requires main() from fuzzer
     deps = [
         ":wasm_node",
     ],
