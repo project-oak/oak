@@ -295,8 +295,8 @@ impl OakRuntime {
     }
     fn stop_next(&mut self) -> Option<(String, std::thread::JoinHandle<i32>)> {
         for (name, node) in &mut self.nodes {
-            if node.thread_handle.is_some() {
-                return Some((name.to_string(), node.thread_handle.take().unwrap()));
+            if let Some(h) = node.thread_handle.take() {
+                return Some((name.to_string(), h));
             }
         }
         None
