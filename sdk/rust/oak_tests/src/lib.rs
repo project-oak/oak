@@ -270,18 +270,18 @@ impl OakRuntime {
         let entrypoint = self.entrypoint(&config.initial_node)?;
 
         let node_name = self.next_node_name(&config.initial_node);
-        let node = OakNode::new();
+        let mut node = OakNode::new();
         debug!(
             "{{{}}}: add Wasm node running config '{}'",
             node_name, config.initial_node
         );
-        self.nodes.insert(node_name.clone(), node);
 
         // Setup the initial channel from gRPC pseudo-Node to Node.
         let channel = self.new_channel();
         self.grpc_in_half = Some(ChannelHalf::new(Direction::Write, channel.clone()));
         let half = ChannelHalf::new(Direction::Read, channel.clone());
-        let handle = self.nodes.get_mut(&node_name).unwrap().add_half(half);
+        let handle = node.add_half(half);
+        self.nodes.insert(node_name.clone(), node);
 
         Some((node_name, entrypoint, handle))
     }
