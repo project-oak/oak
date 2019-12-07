@@ -5,7 +5,7 @@
 
 readonly FILE_NAME="compile_commands.json"
 readonly BAZEL_ROOT="$(bazel info execution_root)"
-cd "$BAZEL_ROOT"
+cd "$BAZEL_ROOT" || exit 1
 echo '[' > "$FILE_NAME"
 COUNT=0
 find . -name '*.compile_command.json' -print0 | while read -r -d '' fname; do
