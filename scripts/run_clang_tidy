@@ -11,7 +11,7 @@ bazel_build_flags+=(
 )
 
 # Compilation database should be stored in the Bazel execution root.
-readonly EXEC_ROOT=$(bazel info execution_root)
+readonly BAZEL_ROOT=$(bazel info execution_root)
 
 # Generate compilation database.
 # Asylo is excluded since it requires an '--config=enc-sim' flag.
@@ -20,7 +20,7 @@ bazel build "${bazel_build_flags[@]}" -- //oak/...:all -//oak/server/asylo:all
 
 # Run clang-tidy.
 mapfile -t SOURCE_FILES < <(find oak -path oak/server/asylo -prune -o -name '*.cc')
-clang-tidy -p "$EXEC_ROOT" -header-filter='.*' "${SOURCE_FILES[@]}"
+clang-tidy -p "$BAZEL_ROOT" -header-filter='.*' "${SOURCE_FILES[@]}"
 
 # TODO: Uncomment when https://github.com/project-oak/oak/issues/354 will be closed.
 ## Compile Asylo server separately with an Asylo toolchain.
@@ -30,4 +30,4 @@ clang-tidy -p "$EXEC_ROOT" -header-filter='.*' "${SOURCE_FILES[@]}"
 ## Check Asylo server separately, since clang-tidy requires all targets to be
 ## built at the same time.
 #mapfile -t ASYLO_SOURCE_FILES < <(find oak/server/asylo -name '*.cc')
-#clang-tidy -p "$EXEC_ROOT" -header-filter='.*' "${ASYLO_SOURCE_FILES[@]}"
+#clang-tidy -p "$BAZEL_ROOT" -header-filter='.*' "${ASYLO_SOURCE_FILES[@]}"
