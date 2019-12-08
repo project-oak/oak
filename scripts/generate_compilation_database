@@ -1,4 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
+# shellcheck source=scripts/common
+source "$SCRIPTS_DIR/common"
 
 # Generates a compile_commands.json file at $(bazel info execution_root) for
 # your Clang tooling needs.
