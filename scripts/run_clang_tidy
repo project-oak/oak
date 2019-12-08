@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+
+readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
+# shellcheck source=scripts/common
+source "$SCRIPTS_DIR/common"
+
+bazel_build_flags+=(
+    '--experimental_action_listener=@io_kythe//kythe/cxx/tools/generate_compile_commands:extract_json'
+    '--noshow_progress'
+    '--noshow_loading_progress'
+)
+
+# Compilation database should be stored in the Bazel execution root.
+readonly BAZEL_ROOT=$(bazel info execution_root)
+
+# Generate compilation database.
+# Asylo is excluded since it requires an '--config=enc-sim' flag.
+bazel build "${bazel_build_flags[@]}" -- //oak/...:all -//oak/server/asylo:all
+./scripts/generate_compilation_database
+
+# Run clang-tidy.
+mapfile -t SOURCE_FILES < <(find oak -path oak/server/asylo -prune -o -name '*.cc')
+clang-tidy -p "$BAZEL_ROOT" -header-filter='.*' "${SOURCE_FILES[@]}"
+
+# TODO: Uncomment when https://github.com/project-oak/oak/issues/354 will be closed.
+## Compile Asylo server separately with an Asylo toolchain.
+#bazel build "${bazel_build_flags[@]}" '--config=enc-sim' //oak/server/asylo:oak
+#./scripts/generate_compilation_database
+#
+## Check Asylo server separately, since clang-tidy requires all targets to be
+## built at the same time.
+#mapfile -t ASYLO_SOURCE_FILES < <(find oak/server/asylo -name '*.cc')
+#clang-tidy -p "$BAZEL_ROOT" -header-filter='.*' "${ASYLO_SOURCE_FILES[@]}"
