@@ -17,6 +17,8 @@
 #ifndef OAK_SERVER_STORAGE_FIXED_NONCE_GENERATOR_H_
 #define OAK_SERVER_STORAGE_FIXED_NONCE_GENERATOR_H_
 
+#include <openssl/sha.h>
+
 #include "asylo/crypto/nonce_generator.h"
 
 namespace oak {
@@ -33,8 +35,18 @@ class FixedNonceGenerator : public asylo::NonceGenerator<kAesGcmSivNonceSize> {
   // Called by asylo::AesGcmSiv::Seal.
   asylo::Status NextNonce(const std::vector<uint8_t>& key_id, AesGcmSivNonce* nonce) override {
     CHECK(nonce != nullptr);
-    std::copy(key_id.begin(), key_id.end(), nonce->begin());
-    std::copy(datum_name_.begin(), datum_name_.end(), nonce->begin() + key_id.size());
+
+    SHA256_CTX context;
+    SHA256_Init(&context);
+    SHA256_Update(&context, datum_name_.data(), datum_name_.size());
+    SHA256_Update(&context, key_id.data(), key_id.size());
+
+    std::vector<uint8_t> digest;
+    digest.resize(SHA256_DIGEST_LENGTH);
+    SHA256_Final(digest.data(), &context);
+    digest.resize(kAesGcmSivNonceSize);
+
+    std::copy(digest.begin(), digest.end(), nonce->begin());
 
     return asylo::Status::OkStatus();
   }
