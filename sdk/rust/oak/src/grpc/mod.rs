@@ -54,6 +54,11 @@ impl ChannelResponseWriter {
         }
     }
 
+    /// Retrieve the Oak handle underlying the writer object.
+    pub fn handle(self) -> crate::WriteHandle {
+        self.channel.handle
+    }
+
     /// Write out a gRPC response and optionally close out the method
     /// invocation.  Any errors from the channel are silently dropped.
     pub fn write<T: protobuf::Message>(&mut self, rsp: T, mode: WriteMode) {
