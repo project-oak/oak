@@ -94,14 +94,18 @@ http_archive(
 http_archive(
     name = "wabt",
     build_file = "@//third_party/wabt:wabt.BUILD",
-    patches = [
-        "//third_party/wabt:0003-Add-static-config-file.patch",
-        "//third_party/wabt:0007-Include-opcode-code-table.c.patch",
-        "//third_party/wabt:0010-Use-std-stringstream-to-build-unique-name.patch",
-    ],
-    sha256 = "8bf8123b93c627bbd762fa54ec2e968db73a5155e9a5ae32c722b05350be4a21",
-    strip_prefix = "wabt-39ceee53a9cd23451a28d4e56e151ef76044b5df",
-    urls = ["https://github.com/WebAssembly/wabt/archive/39ceee53a9cd23451a28d4e56e151ef76044b5df.tar.gz"],
+    # patches = [
+    #     "//third_party/wabt:0003-Add-static-config-file.patch",
+    #     "//third_party/wabt:0007-Include-opcode-code-table.c.patch",
+    #     "//third_party/wabt:0010-Use-std-stringstream-to-build-unique-name.patch",
+    # ],
+    # sha256 = "8bf8123b93c627bbd762fa54ec2e968db73a5155e9a5ae32c722b05350be4a21",
+    # strip_prefix = "wabt-39ceee53a9cd23451a28d4e56e151ef76044b5df",
+    # urls = ["https://github.com/WebAssembly/wabt/archive/39ceee53a9cd23451a28d4e56e151ef76044b5df.tar.gz"],
+
+    sha256 = "5333949ed4ae63808afa0d1f7d627cd7485ebeec339590571e5f2cb21e304f79",
+    strip_prefix = "wabt-1.0.12",
+    urls = ["https://github.com/WebAssembly/wabt/archive/1.0.12.tar.gz"],
 )
 
 # Tool used for creating a compilation database.
