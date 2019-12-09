@@ -28,6 +28,7 @@ namespace oak {
 class StorageProvider {
  public:
   StorageProvider() {}
+  virtual ~StorageProvider() {}
 
   virtual grpc::Status Read(const StorageReadRequest* request, StorageReadResponse* response) = 0;
   virtual grpc::Status Write(const StorageWriteRequest* request,
