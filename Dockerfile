@@ -82,5 +82,4 @@ RUN mkdir -p ${ANDROID_HOME} && cd ${ANDROID_HOME} && \
     rm *tools*linux*.zip
 
 # Install Android Platform Tools.
-
-
+#RUN ./tools/bin/sdkmanager "platform-tools" "platforms;android-26" "build-tools;26.0.0"

@@ -51,6 +51,6 @@ cc_grpc_library(
 java_grpc_library(
     name = "hello_world_java_grpc",
     srcs = ["hello_world_proto"],
-    flavor = "lite",  # Lite version is optimized for mobile devuces.
+    flavor = "lite",  # Lite version is optimized for mobile devices.
     deps = ["hello_world_java_proto"],
 )
