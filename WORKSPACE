@@ -175,6 +175,18 @@ load("@io_bazel_rules_rust//:workspace.bzl", "bazel_version")
 # See https://github.com/google/asylo/issues/44.
 bazel_version(name = "bazel_version_rust")
 
+# Bazel rules for Android applications.
+http_archive(
+    name = "rules_android",
+    urls = ["https://github.com/bazelbuild/rules_android/archive/v0.1.1.zip"],
+    sha256 = "cd06d15dd8bb59926e4d65f9003bfc20f9da4b2519985c27e190cddc8b7a7806",
+    strip_prefix = "rules_android-0.1.1",
+)
+
+load("@rules_android//android:rules.bzl", "android_sdk_repository")
+
+android_sdk_repository(name = "androidsdk")
+
 load("@com_google_asylo//asylo/bazel:asylo_deps.bzl", "asylo_deps", "asylo_go_deps")
 
 asylo_deps()
