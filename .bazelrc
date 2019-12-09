@@ -72,7 +72,7 @@ build:msan --copt=-fsanitize=memory
 build:msan --copt=-DADDRESS_SANITIZER
 build:msan --copt=-O1
 build:msan --copt=-fno-omit-frame-pointer
-build:msan --link=pt=-fsanitize=memory
+build:msan --linkopt=-fsanitize=memory
 
 # Undefined Behavior Sanitizer.
 # bazel build --config=ubsan
