@@ -30,7 +30,7 @@ use std::io;
 /// [`WriteHandle`]: crate::WriteHandle
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Channel {
-    handle: crate::WriteHandle,
+    pub handle: crate::WriteHandle,
 }
 
 impl Channel {
