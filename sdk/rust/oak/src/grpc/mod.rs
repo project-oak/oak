@@ -61,7 +61,7 @@ impl ChannelResponseWriter {
 
     /// Write out a gRPC response and optionally close out the method
     /// invocation.  Any errors from the channel are silently dropped.
-    pub fn write<T: protobuf::Message>(&mut self, rsp: T, mode: WriteMode) {
+    pub fn write<T: protobuf::Message>(&mut self, rsp: &T, mode: WriteMode) {
         // Put the serialized response into a GrpcResponse message wrapper and
         // serialize it into the channel.
         let mut grpc_rsp = proto::grpc_encap::GrpcResponse::new();
@@ -192,7 +192,7 @@ where
 {
     let r: R = protobuf::parse_from_bytes(&req).expect("Failed to parse request protobuf message");
     match node_fn(r) {
-        Ok(rsp) => writer.write(rsp, WriteMode::Close),
+        Ok(rsp) => writer.write(&rsp, WriteMode::Close),
         Err(status) => writer.close(Err(status)),
     }
 }
@@ -216,7 +216,7 @@ where
     let rr: Vec<R> =
         vec![protobuf::parse_from_bytes(&req).expect("Failed to parse request protobuf message")];
     match node_fn(rr) {
-        Ok(rsp) => writer.write(rsp, WriteMode::Close),
+        Ok(rsp) => writer.write(&rsp, WriteMode::Close),
         Err(status) => writer.close(Err(status)),
     }
 }
