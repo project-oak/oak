@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
+# shellcheck source=scripts/common
+source "$SCRIPTS_DIR/common"
+
+# Build Oak server.
+"$SCRIPTS_DIR/build_server_dev" "$@"
+
+# Run Oak server.
+./bazel-clang-bin/oak/server/dev/oak &
+SERVER_PID=$!
+# TODO: Ensure that background processes are killed with something like `trap cleanup_fn EXIT`.
+
+# Run Rust-based Oak examples, each with their own Oak server instance.
+readonly RUST_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module/rust$' | cut -d'/' -f2)"
+for example in ${RUST_EXAMPLES}; do
+  "${SCRIPTS_DIR}/run_example" "${example}"
+done
+
+# Run C++-based Oak examples.
+readonly CPP_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module/cpp$' | cut -d'/' -f2)"
+for example in ${CPP_EXAMPLES}; do
+  "${SCRIPTS_DIR}/run_example" -c "${example}"
+done
+
+# Terminate the server
+kill -s SIGTERM "$SERVER_PID"
