@@ -97,7 +97,6 @@ http_archive(
     patches = [
         "//third_party/wabt:config.h.patch",
     ],
-
     sha256 = "5333949ed4ae63808afa0d1f7d627cd7485ebeec339590571e5f2cb21e304f79",
     strip_prefix = "wabt-1.0.12",
     urls = ["https://github.com/WebAssembly/wabt/archive/1.0.12.tar.gz"],
