@@ -119,12 +119,12 @@ RUN mkdir -p ${ANDROID_HOME} && cd ${ANDROID_HOME} && \
 # https://developer.android.com/studio/releases/platform-tools
 # https://developer.android.com/studio/releases/platforms
 # https://developer.android.com/studio/releases/build-tools
-# 'platforms;android-29' 'build-tools;29.0.2' is the latest stable version (October 2019).
+# 'platforms;android-28' 'build-tools;28.0.3' is the maximal version supported by NDK.
 # 'platforms;android-26' 'build-tools;26.0.1' is the minimal verison for Bazel.
-ARG PLATFORM='29'
+ARG PLATFORM='28'
 ARG PLATFORM_BAZEL='26'
 # TODO: Use 28, since 29 is not supported by NDK
-ARG TOOLS='29.0.2'
+ARG TOOLS='28.0.3'
 ARG TOOLS_BAZEL='26.0.1'
 RUN cd ${ANDROID_HOME} && \
     ./tools/bin/sdkmanager --update && \

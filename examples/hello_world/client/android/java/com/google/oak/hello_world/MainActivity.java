@@ -29,16 +29,27 @@ public class MainActivity extends Activity {
   @Override
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    Log.v("Bazel", "Hello, Android");
 
-    setContentView(R.layout.activity_main);
+    channelHandle = createChannel("127.0.0.1");
+    //Log.v("Bazel", "Hello, Android");
 
-    Button clickMeButton = findViewById(R.id.clickMeButton);
-    TextView helloBazelTextView = findViewById(R.id.helloBazelTextView);
+    //setContentView(R.layout.activity_main);
 
-    Greeter greeter = new Greeter();
+    //Button clickMeButton = findViewById(R.id.clickMeButton);
+    //TextView helloBazelTextView = findViewById(R.id.helloBazelTextView);
+
+    //Greeter greeter = new Greeter();
 
     // Bazel supports Java 8 language features like lambdas!
-    clickMeButton.setOnClickListener(v -> helloBazelTextView.setText(greeter.sayHello()));
+    //clickMeButton.setOnClickListener(v -> helloBazelTextView.setText(greeter.sayHello()));
   }
+
+  public void onClick() {
+    String response = sayHello("World");
+  }
+
+  private native int createChannel(String address);
+  private native String sayHello(String name);
+
+  private int channelHandle;
 }
