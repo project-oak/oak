@@ -94,8 +94,9 @@ http_archive(
 http_archive(
     name = "wabt",
     build_file = "@//third_party/wabt:wabt.BUILD",
-    # patches = [
-    #     "//third_party/wabt:0003-Add-static-config-file.patch",
+    patches = [
+        "//third_party/wabt:config.h.patch",
+    ],
     #     "//third_party/wabt:0007-Include-opcode-code-table.c.patch",
     #     "//third_party/wabt:0010-Use-std-stringstream-to-build-unique-name.patch",
     # ],
