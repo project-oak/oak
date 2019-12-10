@@ -20,7 +20,7 @@
 
 namespace oak {
 
-NodeThread::~NodeThread() { Stop(); }
+NodeThread::~NodeThread() { StopThread(); }
 
 void NodeThread::Start(Handle handle) {
   if (thread_.joinable()) {
@@ -37,7 +37,9 @@ void NodeThread::Start(Handle handle) {
   LOG(INFO) << "Started {" << name_ << "} node thread";
 }
 
-void NodeThread::Stop() {
+void NodeThread::Stop() { StopThread(); }
+
+void NodeThread::StopThread() {
   termination_pending_ = true;
   if (thread_.joinable()) {
     LOG(INFO) << "Waiting for completion of {" << name_ << "} node thread";
