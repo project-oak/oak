@@ -183,9 +183,10 @@ http_archive(
     strip_prefix = "rules_android-0.1.1",
 )
 
-load("@rules_android//android:rules.bzl", "android_sdk_repository")
+load("@rules_android//android:rules.bzl", "android_sdk_repository", "android_ndk_repository")
 
 android_sdk_repository(name = "androidsdk")
+android_ndk_repository(name = "androidndk")
 
 load("@com_google_asylo//asylo/bazel:asylo_deps.bzl", "asylo_deps", "asylo_go_deps")
 

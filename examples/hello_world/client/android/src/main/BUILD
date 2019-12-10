@@ -14,15 +14,40 @@
 # limitations under the License.
 #
 
-load("@rules_android//android:rules.bzl", "android_binary")
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@rules_android//android:rules.bzl", "android_library", "android_binary")
 
 package(
     licenses = ["notice"],
 )
 
+cc_library(
+    name = "native_client",
+    srcs = ["cpp/client.cc"],
+    deps = [
+        "//examples/hello_world/proto:hello_world_cc_grpc",
+        "//examples/utils",
+        "//oak/client:application_client",
+        "//oak/client:manager_client",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/flags:parse",
+        "@com_google_absl//absl/memory",
+        "@com_google_asylo//asylo/util:logging",
+    ],
+)
+
+android_library(
+    name = "client_activity",
+    srcs = ["java/com/google/oak/hello_world/Client.java"],
+    manifest = "java/com/google/oak/hello_world/AndroidManifest.xml",
+    resource_files = glob(["res/**"]),
+    deps = [":native_client"],
+)
+
 android_binary(
     name = "client_app",
     manifest = "AndroidManifest.xml",
-    deps = ["//examples/hello_world/client/android/src/main/java/com/google/oak/hello_world:hello_world_activity"],
+    deps = [":client_activity"],
 )
 
