@@ -1,6 +1,6 @@
 FROM gcr.io/asylo-framework/asylo:buildenv-v0.4.1
 
-RUN apt-get -y update && apt-get install -y software-properties-common git curl clang-format clang-tidy shellcheck libncurses5 xml2
+RUN apt-get -y update && apt-get install -y git curl clang-format clang-tidy shellcheck libncurses5 xml2
 
 RUN curl -sL https://deb.nodesource.com/setup_12.x  | bash -
 RUN apt-get install -y nodejs
@@ -66,20 +66,3 @@ ENV GOPATH $HOME/go
 RUN mkdir -p $GOROOT
 RUN curl https://dl.google.com/go/go${GOLANG_VERSION}.linux-amd64.tar.gz | tar xzf - -C ${GOROOT} --strip-components=1
 RUN $GOROOT/bin/go get github.com/campoy/embedmd
-
-# Install Java 8 (Android SDK only supports this version).
-RUN add-apt-repository -y ppa:openjdk-r/ppa
-RUN apt-get update -y && apt-get -y install openjdk-8-jre
-
-# Download and install Android SDK.
-# https://developer.android.com/studio/#downloads
-ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64/ 
-ENV ANDROID_HOME /opt/android-sdk
-ARG ANDROID_SDK_VERSION=4333796
-RUN mkdir -p ${ANDROID_HOME} && cd ${ANDROID_HOME} && \
-    wget -q https://dl.google.com/android/repository/sdk-tools-linux-${ANDROID_SDK_VERSION}.zip && \
-    unzip *tools*linux*.zip && \
-    rm *tools*linux*.zip
-
-# Install Android Platform Tools.
-#RUN ./tools/bin/sdkmanager "platform-tools" "platforms;android-26" "build-tools;26.0.0"
