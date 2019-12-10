@@ -36,6 +36,7 @@ void StorageNode::Run(Handle handle) {
   MessageChannelReadHalf* request_channel = BorrowReadChannel(request_handle);
   if (request_channel == nullptr) {
     LOG(ERROR) << "Required channel not available; handle: " << request_handle;
+    return;
   }
   std::vector<std::unique_ptr<ChannelStatus>> channel_status;
   channel_status.push_back(absl::make_unique<ChannelStatus>(request_handle));
