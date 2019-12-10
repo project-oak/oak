@@ -40,6 +40,7 @@ cc_library(
 android_library(
     name = "client_activity",
     srcs = ["java/com/google/oak/hello_world/Client.java"],
+    custom_package = 'com.google.oak.hello_world',
     manifest = "java/com/google/oak/hello_world/AndroidManifest.xml",
     resource_files = glob(["res/**"]),
     deps = [":native_client"],
@@ -47,6 +48,7 @@ android_library(
 
 android_binary(
     name = "client_app",
+    custom_package = 'com.google.oak.hello_world',
     manifest = "AndroidManifest.xml",
     deps = [":client_activity"],
 )
