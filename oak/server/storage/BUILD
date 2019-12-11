@@ -74,6 +74,7 @@ cc_library(
     deps = [
         "//oak/proto:storage_cc_grpc",
         "//oak/proto:storage_channel_cc_proto",
+        "@boringssl//:crypto",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/memory",
         "@com_google_asylo//asylo/crypto:aes_gcm_siv",
