@@ -22,6 +22,8 @@ package(
     licenses = ["notice"],
 )
 
+exports_files(["LICENSE"])
+
 proto_library(
     name = "status_proto",
     srcs = ["status.proto"],
