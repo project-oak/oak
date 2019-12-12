@@ -43,6 +43,7 @@ pub mod error;
 pub mod io;
 pub mod asylo_alloc;
 pub mod thread;
+pub mod mutex;
 
 // TODO: Move to separate crate and expose safe wrappers.
 #[link(name = "sgx_trts")]
