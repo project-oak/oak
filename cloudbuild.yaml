@@ -70,19 +70,20 @@ steps:
     entrypoint: 'cp'
     args: ['./bazel-bin/oak/server/asylo/liboak_enclave_unsigned.so', './liboak_enclave_unsigned.so']
   # Build Docker image based for Android SDK.
-  # TODO: Uncomment, when Asylo will support ARM architecture.
+  - name: 'gcr.io/cloud-builders/docker'
+    id: build_android_image
+    waitFor: ['copy_artifacts']
+    timeout: 10m
+    args: ['build', '--file=android.Dockerfile', '--tag=oak-android-ci:latest', '.']
+  # Build Android Hello-World application.
+  # TODO: Remove `--fat_apk_cpu=x86_64`, when Asylo will support ARM architecture.
   # https://github.com/google/asylo/issues/55
-  #- name: 'gcr.io/cloud-builders/docker'
-  #  id: build_android_image
-  #  waitFor: ['copy_artifacts']
-  #  timeout: 10m
-  #  args: ['build', '--file=android.Dockerfile', '--tag=oak-android:latest', '.']
-  #- name: 'oak-android:latest'
-  #  id: build_examples_android
-  #  waitFor: ['build_android_image']
-  #  timeout: 30m
-  #  entrypoint: 'bash'
-  #  args: ['bazel' 'build' '//examples/hello_world/client/android:client_app']
+  - name: 'oak-android-ci:latest'
+    id: build_examples_android
+    waitFor: ['build_android_image']
+    timeout: 30m
+    entrypoint: 'bash'
+    args: ['bazel' 'build' '--fat_apk_cpu=x86_64' '//examples/hello_world/client/android:client_app']
 
 # Copy compiled enclave binary to Google Cloud Storage.
 # See:

@@ -40,6 +40,21 @@ http_archive(
     ],
 )
 
+# Patch gRPC ares BUILD file.
+# TODO: Remove when Asylo will update gRPC dependency.
+http_archive(
+    name = "com_github_grpc_grpc",
+    urls = ["https://github.com/grpc/grpc/archive/v1.25.0.tar.gz"],
+    sha256 = "ffbe61269160ea745e487f79b0fd06b6edd3d50c6d9123f053b5634737cf2f69",
+    patches = [
+        "@com_google_asylo//asylo/distrib:grpc_1_25_0.patch",
+        # This patch adds `ares_android.h` dependency in the Ares BUILD file.
+        # https://github.com/grpc/grpc/issues/21437
+        "//third_party/google/rpc:Add-ares-android.patch",
+    ],
+    strip_prefix = "grpc-1.25.0",
+)
+
 # Google Test
 git_repository(
     name = "gtest",
@@ -185,8 +200,15 @@ http_archive(
 
 load("@rules_android//android:rules.bzl", "android_sdk_repository", "android_ndk_repository")
 
-android_sdk_repository(name = "androidsdk")
-android_ndk_repository(name = "androidndk")
+android_sdk_repository(
+    name = "androidsdk",
+    api_level = 28,
+    build_tools_version = "28.0.3"
+)
+android_ndk_repository(
+    name = "androidndk",
+    api_level = 28,
+)
 
 load("@com_google_asylo//asylo/bazel:asylo_deps.bzl", "asylo_deps", "asylo_go_deps")
 
