@@ -42,8 +42,7 @@ use core::panic::PanicInfo;
 pub mod error;
 pub mod io;
 pub mod asylo_alloc;
-pub mod thread;
-pub mod mutex;
+pub mod sys;
 
 // TODO: Move to separate crate and expose safe wrappers.
 #[link(name = "sgx_trts")]
@@ -82,7 +81,10 @@ pub extern "C" fn eh_personality() {}
 /// It just adds "42" to the provided value and returns it to the caller.
 #[no_mangle]
 pub extern "C" fn add_magic_number(x: i32) -> i32 {
-    // Allocate a bunch of elements on the heap in order to exercise the allocator.
-    let v: Vec<i32> = (0..10).map(|n| n + 40).collect();
-    x + v[2]
+    let child = thread::spawn(move || {
+        let v: Vec<i32> = (0..10).map(|n| n + 40).collect();
+        x + v[2]
+    });
+    let res = child.join();
+    res
 }
