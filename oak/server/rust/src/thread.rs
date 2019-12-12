@@ -138,15 +138,7 @@ impl Drop for Thread {
     }
 }
 
-#[cfg(all(
-    not(all(target_os = "linux", not(target_env = "musl"))),
-    not(target_os = "freebsd"),
-    not(target_os = "macos"),
-    not(all(target_os = "netbsd", not(target_vendor = "rumprun"))),
-    not(target_os = "openbsd"),
-    not(target_os = "solaris")
-))]
-#[cfg_attr(test, allow(dead_code))]
+//TODO: dummy stub, remove?
 pub mod guard {
     use crate::ops::Range;
     pub type Guard = Range<usize>;
@@ -158,8 +150,6 @@ pub mod guard {
     }
 }
 
-// No point in looking up __pthread_get_minstack() on non-glibc
-// platforms.
 fn min_stack_size(_: *const libc::pthread_attr_t) -> usize {
     libc::PTHREAD_STACK_MIN
 }

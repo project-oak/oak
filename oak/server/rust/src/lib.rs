@@ -39,7 +39,6 @@ use core::alloc::Layout;
 use core::panic::PanicInfo;
 
 // TODO: Move to separate crate.
-// pub mod c_types;
 pub mod error;
 pub mod io;
 pub mod asylo_alloc;
