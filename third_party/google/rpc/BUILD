@@ -19,7 +19,10 @@ load("@rules_proto//proto:defs.bzl", "proto_library")
 
 package(
     default_visibility = ["//visibility:public"],
+    licenses = ["notice"],
 )
+
+exports_files(["LICENSE"])
 
 proto_library(
     name = "status_proto",
