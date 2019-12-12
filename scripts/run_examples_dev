@@ -7,10 +7,10 @@ source "$SCRIPTS_DIR/common"
 # Build Oak server.
 "$SCRIPTS_DIR/build_server_dev" "$@"
 
-# Run Oak server.
+# Run Oak server and ensure it is killed on exit.
 ./bazel-clang-bin/oak/server/dev/oak &
-SERVER_PID=$!
-# TODO: Ensure that background processes are killed with something like `trap cleanup_fn EXIT`.
+readonly server_pid=$!
+to_kill+=("${server_pid}")
 
 # Run Rust-based Oak examples, each with their own Oak server instance.
 readonly RUST_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module/rust$' | cut -d'/' -f2)"
@@ -23,6 +23,3 @@ readonly CPP_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.
 for example in ${CPP_EXAMPLES}; do
   "${SCRIPTS_DIR}/run_example" -c "${example}"
 done
-
-# Terminate the server
-kill -s SIGTERM "$SERVER_PID"

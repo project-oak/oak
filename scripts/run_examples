@@ -11,17 +11,22 @@ source "$SCRIPTS_DIR/common"
 readonly RUST_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module/rust$' | cut -d'/' -f2)"
 for example in ${RUST_EXAMPLES}; do
   ./bazel-bin/oak/server/asylo/oak &
-  SERVER_PID=$!
+  server_pid=$!
+  to_kill+=("${server_pid}")
+
   "${SCRIPTS_DIR}/run_example" "${example}"
-  # TODO: Ensure that background processes are killed with something like `trap cleanup_fn EXIT`.
-  kill -s SIGTERM "$SERVER_PID"
+
+  kill_bg_pids
 done
 
 # Run C++-based Oak examples.
 readonly CPP_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module/cpp$' | cut -d'/' -f2)"
 for example in ${CPP_EXAMPLES}; do
   ./bazel-bin/oak/server/asylo/oak &
-  SERVER_PID=$!
+  server_pid=$!
+  to_kill+=("${server_pid}")
+
   "${SCRIPTS_DIR}/run_example" -c "${example}"
-  kill -s SIGTERM "$SERVER_PID"
+
+  kill_bg_pids
 done
