@@ -15,6 +15,7 @@ RUN apt-get --yes update && \
   libncurses5 \
   libssl-dev \
   pkg-config \
+  procps \
   python-dev \
   python2.7-dev \
   python3-dev \

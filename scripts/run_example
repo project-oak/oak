@@ -76,11 +76,7 @@ if [[ "${server}" != "none" ]]; then
   "${SCRIPTS_DIR}/build_server" -s "${server}"
   "${SCRIPTS_DIR}/run_server" ${serverargs} -s "${server}" -l "${language}" -e "${EXAMPLE}" &
   readonly SERVER_PID=$!
-
-  function stop_server {
-    kill -s SIGTERM "${SERVER_PID}"
-  }
-  trap stop_server EXIT
+  to_kill+=("${SERVER_PID}")
 
   sleep 3  # Wait for the application to start.
 fi
@@ -94,7 +90,4 @@ else
                                                            "${CLIENT_ARGS[@]-}"
 fi
 
-# TODO: Ensure that background processes are killed with something like `trap cleanup_fn EXIT`.
-if [[ "${server}" != "none" ]]; then
-  kill -s SIGTERM "${SERVER_PID}"
-fi
+kill_bg_pids
