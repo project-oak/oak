@@ -45,3 +45,44 @@ else
         '--remote_upload_local_results=false'
     )
 fi
+
+# kill_pid tries to kill the given pid(s), first softly then more aggressively.
+kill_pid() {
+  local pids=( "$@" )
+  echo "Killing ${pids[*]}"
+  set +e
+  local count=0
+  while kill -INT "${pids[@]}" > /dev/null 2>&1; do
+    sleep 1
+    ((count++))
+    still_alive=()
+    for pid in "${pids[@]}"; do
+      if ps -p "${pid}" > /dev/null ; then
+        still_alive+=("${pid}")
+      fi
+    done
+    if [ ${#still_alive[@]} -eq 0 ]; then
+      break
+    fi
+    if [ $count -gt 5 ]; then
+      echo "Now do kill -KILL ${still_alive[*]}"
+      kill -KILL "${still_alive[@]}"
+      break
+    fi
+    pids=("${still_alive[@]}")
+    echo "Retry kill -INT ${pids[*]}"
+  done
+  set -e
+}
+
+declare -a to_kill
+
+# kill_bg_pids will clean up any pids in ${to_kill}.
+kill_bg_pids() {
+  if [ -v to_kill ]; then
+    kill_pid "${to_kill[@]}"
+    to_kill=()
+  fi
+}
+
+trap kill_bg_pids EXIT

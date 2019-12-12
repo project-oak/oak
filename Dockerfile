@@ -7,7 +7,8 @@ RUN apt-get --yes update && apt-get install --yes \
   git \
   libncurses5 \
   shellcheck \
-  xml2
+  xml2 \
+  procps
 
 # Install Node.js and npm.
 RUN curl --location https://deb.nodesource.com/setup_12.x | bash -
