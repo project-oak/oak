@@ -44,6 +44,8 @@ class NodeThread : public OakNode {
   virtual void Run(Handle handle) = 0;
 
  private:
+  void StopThread();
+
   std::thread thread_;
 };
 
