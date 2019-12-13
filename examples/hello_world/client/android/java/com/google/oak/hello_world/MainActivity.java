@@ -14,13 +14,15 @@
  * limitations under the License.
  */
 
-package com.google.oak;
+package com.google.oak.hello_world;
 
 import android.app.Activity;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.TextView;
+
+import com.google.oak.hello_world.R;
 
 /*
  * Main class for the Oak Android "Hello, World" app.
@@ -29,27 +31,24 @@ public class MainActivity extends Activity {
   @Override
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-
-    channelHandle = createChannel("127.0.0.1");
-    //Log.v("Bazel", "Hello, Android");
-
-    //setContentView(R.layout.activity_main);
-
-    //Button clickMeButton = findViewById(R.id.clickMeButton);
-    //TextView helloBazelTextView = findViewById(R.id.helloBazelTextView);
-
-    //Greeter greeter = new Greeter();
-
-    // Bazel supports Java 8 language features like lambdas!
-    //clickMeButton.setOnClickListener(v -> helloBazelTextView.setText(greeter.sayHello()));
+    
+    Log.v("Oak", "Hello, World!");
+    setContentView(R.layout.activity_main);
+    
+    Button helloButton = findViewById(R.id.helloButton);
+    TextView helloTextView = findViewById(R.id.helloTextView);
+    
+    //channelHandle = createChannel("127.0.0.1");
+    //helloButton.setOnClickListener(
+    //    v -> helloTextView.setText(sayHello("World")));
   }
 
-  public void onClick() {
-    String response = sayHello("World");
-  }
+  //public void onClick() {
+  //  String response = sayHello("World");
+  //}
 
-  private native int createChannel(String address);
-  private native String sayHello(String name);
+  //private native int createChannel(String address);
+  //private native String sayHello(String name);
 
   private int channelHandle;
 }

@@ -44,8 +44,8 @@ android_library(
     srcs = ["java/com/google/oak/hello_world/MainActivity.java"],
     custom_package = 'com.google.oak.hello_world',
     manifest = "java/com/google/oak/hello_world/AndroidManifest.xml",
-    resource_files = glob(["res/**"]),
-    deps = [":native_client"],
+    resource_files = glob(["java/com/google/oak/hello_world/res/**"]),
+    #deps = [":native_client"],
 )
 
 android_binary(
