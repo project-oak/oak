@@ -125,14 +125,19 @@ ARG TOOLS='28.0.3'
 RUN cd ${ANDROID_HOME}/tools/bin && \
     ./sdkmanager --update && \
     yes | ./sdkmanager --licenses && \
-    yes | ./tools/bin/sdkmanager \
+    yes | ./sdkmanager \
         'tools' 'platform-tools' 'cmake;3.6.4111459' \
         "platforms;android-${PLATFORM}" "build-tools;${TOOLS}" \
-        "system-images;android-${PLATFORM};google_apis;x86_64"
+        "system-images;android-${PLATFORM};default;x86_64"
+
+# Set up Android SDK paths.
+ENV PATH ${PATH}:${ANDROID_HOME}/emulator:${ANDROID_HOME}/tools:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/tools/bin
+ENV LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:${ANDROID_HOME}/emulator/lib64:${ANDROID_HOME}/emulator/lib64/qt/lib
 
 # Create an Android emulator.
+# `no` is used to opt-out from custom hardware profile.
 RUN cd ${ANDROID_HOME}/tools/bin && \
-    ./avdmanager create avd \
+    echo no | ./avdmanager create avd \
         -n "android-${PLATFORM}-x86_64" \
         -k "system-images;android-${PLATFORM};default;x86_64" \
         -b x86_64
@@ -147,10 +152,6 @@ RUN mkdir -p ${ANDROID_NDK_HOME} && cd ${ANDROID_NDK_HOME} && \
 	rm -f android-ndk*.zip && \
     mv android-ndk-r20b/* . && \
     rm -rf android-ndk-r20b
-
-# Set up Android SDK paths.
-ENV PATH ${PATH}:${ANDROID_HOME}/emulator:${ANDROID_HOME}/tools:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/tools/bin
-ENV LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:${ANDROID_HOME}/emulator/lib64:${ANDROID_HOME}/emulator/lib64/qt/lib
 
 # Default command to run.
 CMD ["/bin/bash"]
