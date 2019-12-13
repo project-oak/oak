@@ -119,19 +119,23 @@ RUN mkdir -p ${ANDROID_HOME} && cd ${ANDROID_HOME} && \
 # https://developer.android.com/studio/releases/platform-tools
 # https://developer.android.com/studio/releases/platforms
 # https://developer.android.com/studio/releases/build-tools
-# 'platforms;android-28' 'build-tools;28.0.3' is the maximal version supported by NDK.
-# 'platforms;android-26' 'build-tools;26.0.1' is the minimal verison for Bazel.
+# '28.0.3' is the maximal version supported by NDK.
 ARG PLATFORM='28'
-ARG PLATFORM_BAZEL='26'
-# TODO: Use 28, since 29 is not supported by NDK
 ARG TOOLS='28.0.3'
-ARG TOOLS_BAZEL='26.0.1'
-RUN cd ${ANDROID_HOME} && \
-    ./tools/bin/sdkmanager --update && \
+RUN cd ${ANDROID_HOME}/tools/bin && \
+    ./sdkmanager --update && \
+    yes | ./sdkmanager --licenses && \
     yes | ./tools/bin/sdkmanager \
         'tools' 'platform-tools' 'cmake;3.6.4111459' \
         "platforms;android-${PLATFORM}" "build-tools;${TOOLS}" \
-        "platforms;android-${PLATFORM_BAZEL}" "build-tools;${TOOLS_BAZEL}"
+        "system-images;android-${PLATFORM};google_apis;x86_64"
+
+# Create an Android emulator.
+RUN cd ${ANDROID_HOME}/tools/bin && \
+    ./avdmanager create avd \
+        -n "android-${PLATFORM}-x86_64" \
+        -k "system-images;android-${PLATFORM};default;x86_64" \
+        -b x86_64
 
 # Install Android NDK
 # https://developer.android.com/ndk/downloads
@@ -143,6 +147,10 @@ RUN mkdir -p ${ANDROID_NDK_HOME} && cd ${ANDROID_NDK_HOME} && \
 	rm -f android-ndk*.zip && \
     mv android-ndk-r20b/* . && \
     rm -rf android-ndk-r20b
+
+# Set up Android SDK paths.
+ENV PATH ${PATH}:${ANDROID_HOME}/emulator:${ANDROID_HOME}/tools:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/tools/bin
+ENV LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:${ANDROID_HOME}/emulator/lib64:${ANDROID_HOME}/emulator/lib64/qt/lib
 
 # Default command to run.
 CMD ["/bin/bash"]
