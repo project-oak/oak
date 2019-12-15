@@ -17,8 +17,10 @@ find . -name '*.compile_command.json' -print0 | while read -r -d '' fname; do
     echo ',' >> "$FILE_NAME"
   fi
   sed -e "s|@BAZEL_ROOT@|$BAZEL_ROOT|g" < "$fname" | \
-  # Clang doesn't recognize '-fno-canonical-system-headers'.
-  sed -e "s|-fno-canonical-system-headers|-no-canonical-prefixes|g" >> "$FILE_NAME"
+  # Change GCC parameters to Clang.
+  sed -e "s|-fno-canonical-system-headers|-no-canonical-prefixes|g" | \
+  sed -e "s|-Wno-free-nonheap-object|-Wno-sequence-point|g" | \
+  sed -e "s|-Wunused-but-set-parameter|-Wunused-parameter|g" >> "$FILE_NAME"
 done
 echo ']' >> "$FILE_NAME"
 
