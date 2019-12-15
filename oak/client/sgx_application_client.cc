@@ -29,6 +29,7 @@
 #include "asylo/identity/descriptions.h"
 #include "asylo/identity/enclave_assertion_authority_configs.h"
 #include "asylo/identity/init.h"
+#include "asylo/identity/sgx/sgx_identity.pb.h"
 #include "asylo/identity/sgx/sgx_identity_util.h"
 #include "asylo/identity/util/sha256_hash.pb.h"
 #include "asylo/util/logging.h"
