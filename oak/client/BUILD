@@ -68,6 +68,7 @@ cc_library(
         "@com_google_asylo//asylo/identity:enclave_assertion_authority_configs",
         "@com_google_asylo//asylo/identity:descriptions",
         "@com_google_asylo//asylo/identity:init",
+        "@com_google_asylo//asylo/identity/sgx:sgx_identity_cc_proto",
         "@com_google_asylo//asylo/identity/sgx:sgx_identity_util",
         "@com_google_asylo//asylo/identity/util:sha256_hash_cc_proto",
         "@com_google_asylo//asylo/util:logging",
