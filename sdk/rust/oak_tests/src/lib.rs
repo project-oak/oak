@@ -494,6 +494,36 @@ impl OakRuntime {
             None => None,
         }
     }
+    // Internal helper to set the (test-only) read status for a channel.
+    fn node_set_read_status(&mut self, node_name: &str, handle: oak::Handle, status: Option<u32>) {
+        let node = self
+            .nodes
+            .get(node_name)
+            .unwrap_or_else(|| panic!("node {{{}}} not found", node_name));
+        let half = node
+            .halves
+            .get(&handle)
+            .expect("invalid handle passed to internal helper");
+        half.channel
+            .write()
+            .expect("internal error: corrupt channel ref")
+            .read_status = status;
+    }
+    // Internal helper to set the (test-only) write status for a channel.
+    fn node_set_write_status(&mut self, node_name: &str, handle: oak::Handle, status: Option<u32>) {
+        let node = self
+            .nodes
+            .get(node_name)
+            .unwrap_or_else(|| panic!("node {{{}}} not found", node_name));
+        let half = node
+            .halves
+            .get(&handle)
+            .expect("invalid handle passed to internal helper");
+        half.channel
+            .write()
+            .expect("internal error: corrupt channel ref")
+            .write_status = status;
+    }
 }
 
 impl OakNode {
@@ -837,28 +867,18 @@ pub fn last_message_as_string(handle: oak::Handle) -> String {
 
 /// Test helper that injects a failure for future channel read operations.
 pub fn set_read_status(node_name: &str, handle: oak::Handle, status: Option<u32>) {
-    let half = RUNTIME.read().expect(RUNTIME_MISSING).nodes[node_name]
-        .halves
-        .get(&handle)
-        .expect("invalid handle passed to test helper")
-        .clone();
-    half.channel
+    RUNTIME
         .write()
-        .expect("corrupt channel ref")
-        .read_status = status;
+        .expect(RUNTIME_MISSING)
+        .node_set_read_status(node_name, handle, status);
 }
 
 /// Test helper that injects a failure for future channel write operations.
 pub fn set_write_status(node_name: &str, handle: oak::Handle, status: Option<u32>) {
-    let half = RUNTIME.read().expect(RUNTIME_MISSING).nodes[node_name]
-        .halves
-        .get(&handle)
-        .expect("invalid handle passed to test helper")
-        .clone();
-    half.channel
+    RUNTIME
         .write()
-        .expect("corrupt channel ref")
-        .write_status = status;
+        .expect(RUNTIME_MISSING)
+        .node_set_write_status(node_name, handle, status);
 }
 
 /// Test helper that clears any handle to channel half mappings.
