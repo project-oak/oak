@@ -351,6 +351,13 @@ impl OakRuntime {
             .unwrap_or_else(|| panic!("node {{{}}} not found", node_name));
         (node.add_half(write_half), node.add_half(read_half))
     }
+    fn node_channel_close(&mut self, node_name: &str, handle: oak::Handle) -> u32 {
+        let node = self
+            .nodes
+            .get_mut(node_name)
+            .unwrap_or_else(|| panic!("node {{{}}} not found", node_name));
+        node.close_channel(handle)
+    }
     fn node_channel_write(&mut self, node_name: &str, handle: oak::Handle, msg: OakMessage) -> u32 {
         match self.node_half_for_handle_dir(node_name, handle, Direction::Write) {
             None => oak::OakStatus::ERR_BAD_HANDLE.value() as u32,
@@ -729,10 +736,7 @@ pub extern "C" fn channel_close(handle: u64) -> u32 {
     let result = RUNTIME
         .write()
         .expect(RUNTIME_MISSING)
-        .nodes
-        .get_mut(&name)
-        .unwrap_or_else(|| panic!("node {{{}}} not found", name))
-        .close_channel(handle);
+        .node_channel_close(&name, handle);
     debug!("{{{}}}: channel_close({}) -> {}", name, handle, result);
     result
 }
