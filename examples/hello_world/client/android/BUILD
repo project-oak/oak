@@ -15,7 +15,7 @@
 #
 
 load("@rules_cc//cc:defs.bzl", "cc_library")
-load("@rules_android//android:rules.bzl", "android_library", "android_binary")
+load("@rules_android//android:rules.bzl", "android_binary", "android_library")
 
 package(
     licenses = ["notice"],
@@ -24,6 +24,7 @@ package(
 cc_library(
     name = "native_client",
     srcs = ["cpp/client.cc"],
+    copts = ["-std=c++11"],
     deps = [
         "//examples/hello_world/proto:hello_world_cc_grpc",
         "//examples/utils",
@@ -35,14 +36,13 @@ cc_library(
         "@com_google_absl//absl/memory",
         "@com_google_asylo//asylo/util:logging",
     ],
-    copts = ["-std=c++11"],
     alwayslink = 1,
 )
 
 android_library(
     name = "client_activity",
     srcs = ["java/com/google/oak/hello_world/MainActivity.java"],
-    custom_package = 'com.google.oak.hello_world',
+    custom_package = "com.google.oak.hello_world",
     manifest = "AndroidManifest.xml",
     resource_files = glob(["java/com/google/oak/hello_world/res/**"]),
     deps = [":native_client"],
@@ -50,8 +50,7 @@ android_library(
 
 android_binary(
     name = "client_app",
-    custom_package = 'com.google.oak.hello_world',
+    custom_package = "com.google.oak.hello_world",
     manifest = "AndroidManifest.xml",
     deps = [":client_activity"],
 )
-

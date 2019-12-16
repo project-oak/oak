@@ -44,15 +44,15 @@ http_archive(
 # TODO: Remove when Asylo will update gRPC dependency.
 http_archive(
     name = "com_github_grpc_grpc",
-    urls = ["https://github.com/grpc/grpc/archive/v1.25.0.tar.gz"],
-    sha256 = "ffbe61269160ea745e487f79b0fd06b6edd3d50c6d9123f053b5634737cf2f69",
     patches = [
         "@com_google_asylo//asylo/distrib:grpc_1_25_0.patch",
         # This patch adds `ares_android.h` dependency in the Ares BUILD file.
         # https://github.com/grpc/grpc/issues/21437
         "//third_party/google/rpc:Add-ares-android.patch",
     ],
+    sha256 = "ffbe61269160ea745e487f79b0fd06b6edd3d50c6d9123f053b5634737cf2f69",
     strip_prefix = "grpc-1.25.0",
+    urls = ["https://github.com/grpc/grpc/archive/v1.25.0.tar.gz"],
 )
 
 # Google Test
@@ -193,18 +193,19 @@ bazel_version(name = "bazel_version_rust")
 # Bazel rules for Android applications.
 http_archive(
     name = "rules_android",
-    urls = ["https://github.com/bazelbuild/rules_android/archive/v0.1.1.zip"],
     sha256 = "cd06d15dd8bb59926e4d65f9003bfc20f9da4b2519985c27e190cddc8b7a7806",
     strip_prefix = "rules_android-0.1.1",
+    urls = ["https://github.com/bazelbuild/rules_android/archive/v0.1.1.zip"],
 )
 
-load("@rules_android//android:rules.bzl", "android_sdk_repository", "android_ndk_repository")
+load("@rules_android//android:rules.bzl", "android_ndk_repository", "android_sdk_repository")
 
 android_sdk_repository(
     name = "androidsdk",
     api_level = 28,
-    build_tools_version = "28.0.3"
+    build_tools_version = "28.0.3",
 )
+
 android_ndk_repository(
     name = "androidndk",
     api_level = 28,
