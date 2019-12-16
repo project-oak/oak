@@ -19,7 +19,7 @@ use assert_matches::assert_matches;
 use log::{error, info};
 use oak::grpc;
 use oak::OakStatus;
-use oak_tests::proto::manager::{
+use oak_runtime::proto::manager::{
     ApplicationConfiguration, LogConfiguration, NodeConfiguration, WebAssemblyConfiguration,
 };
 use serial_test_derive::serial;

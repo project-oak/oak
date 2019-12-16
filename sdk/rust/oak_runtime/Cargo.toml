@@ -1,5 +1,5 @@
 [package]
-name = "oak_tests"
+name = "oak_runtime"
 version = "0.1.0"
 authors = ["David Drysdale <drysdale@google.com>"]
 edition = "2018"
@@ -10,7 +10,6 @@ lazy_static = "1.4"
 log = { version = "^0.4.0", features = ["std"] }
 oak_derive = "*"
 oak_log = "*"
-oak_runtime = "*"
 oak = "*"
 protobuf = "*"
 rand = { version = "0.7", features = ["std"] }
