@@ -208,11 +208,12 @@ struct NodeStartInfo {
 }
 
 impl OakRuntime {
-    fn new() -> OakRuntime {
+    fn new(node_name: Option<&str>) -> OakRuntime {
         let mut nodes = HashMap::new();
-        // For convenience, assume a single-Node application with the default
-        // name for that Node.
-        nodes.insert(DEFAULT_NODE_NAME.to_string(), OakNode::new());
+        if let Some(node_name) = node_name {
+            // Create a single Node with the given name.
+            nodes.insert(node_name.to_string(), OakNode::new());
+        }
         OakRuntime {
             termination_pending: false,
             entrypoints: HashMap::new(),
@@ -502,7 +503,7 @@ impl OakNode {
 // global entrypoints corresponding to the Oak TCB, and there's no other way to
 // get at the relevant associated state.
 lazy_static! {
-    static ref RUNTIME: RwLock<OakRuntime> = RwLock::new(OakRuntime::new());
+    static ref RUNTIME: RwLock<OakRuntime> = RwLock::new(OakRuntime::new(Some(DEFAULT_NODE_NAME)));
 }
 
 const RUNTIME_MISSING: &str = "global OakRuntime object missing";
