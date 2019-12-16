@@ -4,6 +4,7 @@ members = [
   "oak",
   "oak_derive",
   "oak_log",
+  "oak_runtime",
   "oak_tests",
 ]
 
@@ -16,4 +17,5 @@ members = [
 oak = { path = "oak" }
 oak_derive = { path = "oak_derive" }
 oak_log = { path = "oak_log" }
+oak_runtime = { path = "oak_runtime" }
 oak_tests = { path = "oak_tests" }
