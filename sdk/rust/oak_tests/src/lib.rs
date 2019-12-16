@@ -223,6 +223,13 @@ impl OakRuntime {
         }
     }
 
+    fn termination_pending(&self) -> bool {
+        self.termination_pending
+    }
+    fn set_termination_pending(&mut self, value: bool) {
+        self.termination_pending = value;
+    }
+
     fn entrypoint(&self, config: &str) -> Option<NodeMain> {
         self.entrypoints.get(config).copied()
     }
@@ -242,7 +249,7 @@ impl OakRuntime {
         config: proto::manager::ApplicationConfiguration,
         entrypoints: HashMap<String, NodeMain>,
     ) -> Option<(String, NodeMain, oak::Handle)> {
-        self.termination_pending = false;
+        self.set_termination_pending(false);
         self.nodes.clear();
         self.entrypoints = entrypoints;
         for node_config in config.get_node_configs() {
@@ -577,7 +584,7 @@ pub unsafe extern "C" fn wait_on_channels(buf: *mut u8, count: u32) -> u32 {
                 .try_into()
                 .expect("failed to convert status to u8");
         }
-        if RUNTIME.read().expect(RUNTIME_MISSING).termination_pending {
+        if RUNTIME.read().expect(RUNTIME_MISSING).termination_pending() {
             debug!("{{{}}}: wait_on_channels() -> ERR_TERMINATED", name);
             return OakStatus::ERR_TERMINATED.value() as u32;
         }
@@ -849,11 +856,6 @@ pub fn init_logging() {
     });
 }
 
-/// Test helper to mark the Application under test as pending termination.
-pub fn set_termination_pending(val: bool) {
-    RUNTIME.write().expect(RUNTIME_MISSING).termination_pending = val;
-}
-
 /// Expected type for the main entrypoint to a Node under test.
 pub type NodeMain = fn(u64) -> i32;
 
@@ -894,7 +896,10 @@ pub fn start(
 /// single Node's main entrypoint is available as a global extern "C"
 /// oak_main(), as for a live version of the Application.
 pub fn start_node(handle: oak::Handle) {
-    RUNTIME.write().expect(RUNTIME_MISSING).termination_pending = false;
+    RUNTIME
+        .write()
+        .expect(RUNTIME_MISSING)
+        .set_termination_pending(false);
     debug!("start per-Node thread with handle {}", handle);
     let node_name = DEFAULT_NODE_NAME.to_string();
     let main_handle = spawn(move || unsafe {
@@ -910,7 +915,10 @@ pub fn start_node(handle: oak::Handle) {
 /// Stop the running Application under test.
 pub fn stop() -> OakStatus {
     info!("stop all running Node threads");
-    set_termination_pending(true);
+    RUNTIME
+        .write()
+        .expect(RUNTIME_MISSING)
+        .set_termination_pending(true);
 
     let mut overall_result = OakStatus::OK;
     loop {
