@@ -287,7 +287,7 @@ impl OakRuntime {
         Some((node_name, entrypoint, handle))
     }
     // Record that a Node of the given name has been started in a distinct thread.
-    fn started(&mut self, node_name: &str, join_handle: std::thread::JoinHandle<i32>) {
+    fn node_started(&mut self, node_name: &str, join_handle: std::thread::JoinHandle<i32>) {
         self.nodes
             .get_mut(node_name)
             .unwrap_or_else(|| panic!("node {{{}}} not found", node_name))
@@ -372,11 +372,7 @@ impl OakRuntime {
                 .read_message(size, actual_size, handle_count, actual_handle_count),
         }
     }
-    fn channel_status_for_node(
-        &self,
-        node_name: &str,
-        handle: oak::Handle,
-    ) -> oak::ChannelReadStatus {
+    fn node_channel_status(&self, node_name: &str, handle: oak::Handle) -> oak::ChannelReadStatus {
         match self.node_half_for_handle_dir(node_name, handle, Direction::Read) {
             None => oak::ChannelReadStatus::INVALID_CHANNEL,
             Some(half) => {
@@ -564,7 +560,7 @@ pub unsafe extern "C" fn wait_on_channels(buf: *mut u8, count: u32) -> u32 {
             let channel_status = RUNTIME
                 .read()
                 .expect(RUNTIME_MISSING)
-                .channel_status_for_node(&name, *handle);
+                .node_channel_status(&name, *handle);
             if channel_status != oak::ChannelReadStatus::INVALID_CHANNEL {
                 found_valid_handle = true;
             }
@@ -769,7 +765,7 @@ pub unsafe fn node_create(buf: *const u8, len: usize, handle: u64) -> u32 {
     RUNTIME
         .write()
         .expect(RUNTIME_MISSING)
-        .started(&node_name_copy, thread_handle);
+        .node_started(&node_name_copy, thread_handle);
 
     OakStatus::OK.value() as u32
 }
@@ -890,7 +886,7 @@ pub fn start(
     RUNTIME
         .write()
         .expect(RUNTIME_MISSING)
-        .started(&name, thread_handle);
+        .node_started(&name, thread_handle);
     Some(())
 }
 
@@ -908,7 +904,7 @@ pub fn start_node(handle: oak::Handle) {
     RUNTIME
         .write()
         .expect(RUNTIME_MISSING)
-        .started(DEFAULT_NODE_NAME, main_handle)
+        .node_started(DEFAULT_NODE_NAME, main_handle)
 }
 
 /// Stop the running Application under test.
