@@ -472,6 +472,28 @@ impl OakRuntime {
             handle: new_handle,
         })
     }
+    // Internal helper to return a copy of the (data part of the) first message
+    // available for reading.
+    fn node_peek_message(&self, node_name: &str, handle: oak::Handle) -> Option<Vec<u8>> {
+        let node = self
+            .nodes
+            .get(node_name)
+            .unwrap_or_else(|| panic!("node {{{}}} not found", node_name));
+        let half = node
+            .halves
+            .get(&handle)
+            .expect("invalid handle passed to internal helper");
+        match half
+            .channel
+            .read()
+            .expect("internal error: corrupt channel ref")
+            .messages
+            .front()
+        {
+            Some(msg) => Some(msg.data.clone()),
+            None => None,
+        }
+    }
 }
 
 impl OakNode {
@@ -798,21 +820,15 @@ pub unsafe extern "C" fn random_get(buf: *mut u8, size: usize) -> u32 {
 // the mock Oak environment.
 
 /// Convenience test helper which returns the last message on a channel as a
-/// string (without removing it from the channel).
+/// string (without removing it from the channel), assuming that only a single
+/// Node (with the default internal name) is present and under test.
 pub fn last_message_as_string(handle: oak::Handle) -> String {
-    let half = RUNTIME.read().expect(RUNTIME_MISSING).nodes[DEFAULT_NODE_NAME]
-        .halves
-        .get(&handle)
-        .expect("invalid handle passed to test helper")
-        .clone();
-    let result = match half
-        .channel
+    let result = match RUNTIME
         .read()
-        .expect("corrupt channel ref")
-        .messages
-        .front()
+        .expect(RUNTIME_MISSING)
+        .node_peek_message(DEFAULT_NODE_NAME, handle)
     {
-        Some(msg) => unsafe { std::str::from_utf8_unchecked(&msg.data).to_string() },
+        Some(data) => unsafe { std::str::from_utf8_unchecked(&data).to_string() },
         None => "".to_string(),
     };
     debug!("last message '{}'", result);
