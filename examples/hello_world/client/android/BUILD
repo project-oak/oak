@@ -24,7 +24,6 @@ package(
 cc_library(
     name = "native_client",
     srcs = ["cpp/client.cc"],
-    hdrs = glob(["external/com_github_cares_cares/ares_android.h"]),
     deps = [
         "//examples/hello_world/proto:hello_world_cc_grpc",
         "//examples/utils",
@@ -37,15 +36,16 @@ cc_library(
         "@com_google_asylo//asylo/util:logging",
     ],
     copts = ["-std=c++11"],
+    alwayslink = 1,
 )
 
 android_library(
     name = "client_activity",
     srcs = ["java/com/google/oak/hello_world/MainActivity.java"],
     custom_package = 'com.google.oak.hello_world',
-    manifest = "java/com/google/oak/hello_world/AndroidManifest.xml",
+    manifest = "AndroidManifest.xml",
     resource_files = glob(["java/com/google/oak/hello_world/res/**"]),
-    #deps = [":native_client"],
+    deps = [":native_client"],
 )
 
 android_binary(

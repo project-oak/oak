@@ -21,6 +21,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.EditText;
 
 import com.google.oak.hello_world.R;
 
@@ -28,27 +29,51 @@ import com.google.oak.hello_world.R;
  * Main class for the Oak Android "Hello, World" app.
  */
 public class MainActivity extends Activity {
+  static {
+    // Load native library.
+    System.loadLibrary("client_app");
+  }
+
   @Override
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     
-    Log.v("Oak", "Hello, World!");
+    Log.v("Oak", "Start application");
     setContentView(R.layout.activity_main);
     
     Button helloButton = findViewById(R.id.helloButton);
-    TextView helloTextView = findViewById(R.id.helloTextView);
-    
-    //channelHandle = createChannel("127.0.0.1");
-    //helloButton.setOnClickListener(
-    //    v -> helloTextView.setText(sayHello("World")));
+    helloButton.setOnClickListener(v -> onClick());
+
+    // Set default address.
+    // Android emulator forwards `10.0.2.2` to the host machine.
+    EditText ipInput = findViewById(R.id.ipInput);
+    ipInput.setText("10.0.2.2");
   }
 
-  //public void onClick() {
-  //  String response = sayHello("World");
-  //}
+  @Override
+  public void onDestroy() {
+    super.onDestroy();
+  }
 
-  //private native int createChannel(String address);
-  //private native String sayHello(String name);
+  public void onClick() {
+    EditText ipInput = findViewById(R.id.ipInput);
+    EditText tcpInput = findViewById(R.id.tcpInput);
+    String address = ipInput.getText().toString() + ":" + tcpInput.getText().toString();
+
+    Log.v("Oak", "Create channel to: " + address);
+    deleteChannel(channelHandle);
+    channelHandle = createChannel(address);
+
+    Log.v("Oak", "Say Hello");
+    TextView helloTextView = findViewById(R.id.helloTextView);
+    String responce = sayHello(channelHandle, "World");
+    Log.v("Oak", "Responce is: " + responce);
+    helloTextView.setText(responce);
+  }
+
+  private native int createChannel(String address);
+  private native void deleteChannel(int handle);
+  private native String sayHello(int handle, String name);
 
   private int channelHandle;
 }
