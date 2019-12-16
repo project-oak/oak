@@ -32,7 +32,7 @@ DevOakManager::DevOakManager() : Service(), next_application_id_(0) {
   InitializeAssertionAuthorities();
 }
 
-grpc::Status DevOakManager::CreateApplication(grpc::ServerContext* context,
+grpc::Status DevOakManager::CreateApplication(grpc::ServerContext*,
                                               const oak::CreateApplicationRequest* request,
                                               oak::CreateApplicationResponse* response) {
   std::string application_id = NewApplicationId();
@@ -57,9 +57,9 @@ grpc::Status DevOakManager::CreateApplication(grpc::ServerContext* context,
   return grpc::Status::OK;
 }
 
-grpc::Status DevOakManager::TerminateApplication(grpc::ServerContext* context,
+grpc::Status DevOakManager::TerminateApplication(grpc::ServerContext*,
                                                  const oak::TerminateApplicationRequest* request,
-                                                 oak::TerminateApplicationResponse* response) {
+                                                 oak::TerminateApplicationResponse*) {
   LOG(INFO) << "Terminating application with ID " << request->application_id();
 
   OakRuntime* runtime = runtimes_[request->application_id()].get();

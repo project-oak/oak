@@ -31,7 +31,7 @@
 
 ABSL_FLAG(int, grpc_port, 8888, "Port to listen on");
 
-void sigint_handler(int param) {
+void sigint_handler(int) {
   LOG(QFATAL) << "SIGINT received";
   exit(1);
 }

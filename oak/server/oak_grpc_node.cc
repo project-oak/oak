@@ -83,9 +83,8 @@ void OakGrpcNode::CompletionQueueLoop() {
   }
 }
 
-grpc::Status OakGrpcNode::GetAttestation(grpc::ServerContext* context,
-                                         const GetAttestationRequest* request,
-                                         GetAttestationResponse* response) {
+grpc::Status OakGrpcNode::GetAttestation(grpc::ServerContext*, const GetAttestationRequest*,
+                                         GetAttestationResponse*) {
   // TODO: Move this method to the application and implement it there.
   return ::grpc::Status::OK;
 }
