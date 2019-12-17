@@ -24,8 +24,8 @@
 
 namespace oak {
 
-PolicyMetadata::PolicyMetadata(const oak::policy::Labels& labels)
-    : serialized_policy_(SerializePolicy(labels)) {}
+PolicyMetadata::PolicyMetadata(const oak::policy::Label& label)
+    : serialized_policy_(SerializePolicy(label)) {}
 
 grpc::Status PolicyMetadata::GetMetadata(grpc::string_ref service_url, grpc::string_ref method_name,
                                          const grpc::AuthContext& channel_auth_context,

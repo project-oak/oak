@@ -40,12 +40,12 @@ using ChannelHalf = absl::variant<std::unique_ptr<MessageChannelReadHalf>,
 
 // Each message transferred over a channel includes data and potentially
 // also references to halves of channels.
-// It also has a set of labels attached to it, which are used for information flow.
+// It also has a label attached to it, which is used for information flow.
 struct Message {
   std::vector<char> data;
   std::vector<std::unique_ptr<ChannelHalf>> channels;
   // TODO: Consider using a native struct here instead of the proto representation.
-  oak::policy::Labels labels;
+  oak::policy::Label label;
 };
 
 // Result of a read operation. If the operation would have produced a message

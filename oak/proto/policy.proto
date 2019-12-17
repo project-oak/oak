@@ -18,12 +18,12 @@ syntax = "proto3";
 
 package oak.policy;
 
-// Labels represents a policy associated with a message or a Node.
+// Label represents a policy associated with a message or a Node.
 //
 // See https://pdos.csail.mit.edu/papers/flume-sosp07.pdf section 3.1.
-message Labels {
+message Label {
   repeated Tag secrecy_tags = 1;
-  // TODO: Support integrity tags.
+  repeated Tag integrity_tags = 2;
 }
 
 // Tag represents a category of secrecy or integrity that is associated with data within Oak, and

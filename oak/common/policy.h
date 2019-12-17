@@ -38,14 +38,14 @@ ABSL_CONST_INIT extern const char kOakPolicyGrpcMetadataKey[];
 ABSL_CONST_INIT extern const char kOakAuthorizationBearerTokenGrpcMetadataKey[];
 
 // Serialized the provided policy so that it can be sent as a binary gRPC metadata value.
-std::string SerializePolicy(const oak::policy::Labels& policy);
+std::string SerializePolicy(const oak::policy::Label& policy);
 
 // Deserializes the provided binary gRPC metadata value into a policy.
-oak::policy::Labels DeserializePolicy(const std::string& serialized_policy);
+oak::policy::Label DeserializePolicy(const std::string& serialized_policy);
 
 // Creates a policy that only allows declassifying data for gRPC clients that can present the
 // provided authorization bearer token.
-oak::policy::Labels AuthorizationBearerTokenPolicy(const std::string& authorization_token);
+oak::policy::Label AuthorizationBearerTokenPolicy(const std::string& authorization_token);
 
 }  // namespace oak
 
