@@ -34,32 +34,44 @@ steps:
     waitFor: ['build_image']
     timeout: 30m
     entrypoint: 'bash'
+    env:
+    - 'BAZEL_GOOGLE_CREDENTIALS=$_BAZEL_GOOGLE_CREDENTIALS'
     args: ['./scripts/build_server_asylo']
   - name: 'gcr.io/oak-ci/oak:latest'
     id: build_server_dev
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/build_server_dev']
+    env:
+    - 'BAZEL_GOOGLE_CREDENTIALS=$_BAZEL_GOOGLE_CREDENTIALS'
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_tests
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/run_tests']
+    env:
+    - 'BAZEL_GOOGLE_CREDENTIALS=$_BAZEL_GOOGLE_CREDENTIALS'
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_examples
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/run_examples']
+    env:
+    - 'BAZEL_GOOGLE_CREDENTIALS=$_BAZEL_GOOGLE_CREDENTIALS'
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_examples_asan
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/run_examples_dev', '-a']
+    env:
+    - 'BAZEL_GOOGLE_CREDENTIALS=$_BAZEL_GOOGLE_CREDENTIALS'
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_examples_tsan
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/run_examples_dev', '-t']
+    env:
+    - 'BAZEL_GOOGLE_CREDENTIALS=$_BAZEL_GOOGLE_CREDENTIALS'
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_clang_tidy
     waitFor: ['run_tests', 'run_examples']
