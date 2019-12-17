@@ -39,7 +39,7 @@ uint CHANNEL_COUNT = 1;
 std::unordered_map<jint, std::unique_ptr<HelloWorld::Stub>> CHANNEL_MAP;
 
 // JNI initialization function.
-JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void* reserved) {
+JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
   JNI_LOG("gRPC channel has been created");
   return JNI_VERSION_1_6;
 }
@@ -61,14 +61,17 @@ JNIEXPORT jint JNICALL Java_com_google_oak_hello_1world_MainActivity_createChann
 }
 
 // Delete gRPC channel defined by `handle`.
-JNIEXPORT void JNICALL Java_com_google_oak_hello_1world_MainActivity_deleteChannel(
-    JNIEnv* env, jobject /*this*/, jint handle) {
+JNIEXPORT void JNICALL Java_com_google_oak_hello_1world_MainActivity_deleteChannel(JNIEnv* env,
+                                                                                   jobject /*this*/,
+                                                                                   jint handle) {
   CHANNEL_MAP.erase(handle);
 }
 
 // Send `jname` in the gRPC message through the channel represented by `handle`.
-JNIEXPORT jstring JNICALL Java_com_google_oak_hello_1world_MainActivity_sayHello(
-    JNIEnv* env, jobject /*this*/, jint handle, jstring jname) {
+JNIEXPORT jstring JNICALL Java_com_google_oak_hello_1world_MainActivity_sayHello(JNIEnv* env,
+                                                                                 jobject /*this*/,
+                                                                                 jint handle,
+                                                                                 jstring jname) {
   auto it = CHANNEL_MAP.find(handle);
   if (it != CHANNEL_MAP.end()) {
     auto name = env->GetStringUTFChars(jname, 0);
@@ -81,13 +84,12 @@ JNIEXPORT jstring JNICALL Java_com_google_oak_hello_1world_MainActivity_sayHello
     JNI_LOG("Hello message has been sent");
     if (!status.ok()) {
       std::stringstream warning;
-      warning << "Warning: Could not call SayHello('" << name << "'): "<< status.error_code()
+      warning << "Warning: Could not call SayHello('" << name << "'): " << status.error_code()
               << ": " << status.error_message();
       return env->NewStringUTF(warning.str().c_str());
     }
     return env->NewStringUTF(response.reply().c_str());
-  }
-  else {
+  } else {
     return env->NewStringUTF("Error: Wrong channel handle");
   }
 }
