@@ -15,9 +15,7 @@
 #
 
 load("@com_github_grpc_grpc//bazel:cc_grpc_library.bzl", "cc_grpc_library")
-load("@io_grpc_grpc_java//:java_grpc_library.bzl", "java_grpc_library")
 load("@rules_cc//cc:defs.bzl", "cc_proto_library")
-load("@rules_java//java:defs.bzl", "java_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
 
 package(
@@ -35,22 +33,10 @@ cc_proto_library(
     deps = [":hello_world_proto"],
 )
 
-java_proto_library(
-    name = "hello_world_java_proto",
-    deps = [":hello_world_proto"],
-)
-
 cc_grpc_library(
     name = "hello_world_cc_grpc",
     srcs = ["hello_world_proto"],
     grpc_only = True,
     well_known_protos = True,
     deps = ["hello_world_cc_proto"],
-)
-
-java_grpc_library(
-    name = "hello_world_java_grpc",
-    srcs = ["hello_world_proto"],
-    flavor = "lite",  # Lite version is optimized for mobile devices.
-    deps = ["hello_world_java_proto"],
 )
