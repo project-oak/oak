@@ -15,4 +15,6 @@ bazel_build_flags+=(
 
 # Use a different output_base so that we don't lose incremental state.
 # See https://docs.bazel.build/versions/master/command-line-reference.html#flag--output_base.
+# TODO: Remove `--fat_apk_cpu=x86_64`, when Asylo will support ARM architecture.
+# https://github.com/google/asylo/issues/55
 bazel --output_base="$CACHE_DIR/client-android" build "${bazel_build_flags[@]}" //examples/hello_world/client/android:client_app
