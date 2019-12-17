@@ -31,7 +31,7 @@ namespace oak {
 // See https://grpc.io/docs/guides/auth/.
 class PolicyMetadata : public grpc::MetadataCredentialsPlugin {
  public:
-  PolicyMetadata(const oak::policy::Labels& labels);
+  PolicyMetadata(const oak::policy::Label& label);
 
   grpc::Status GetMetadata(grpc::string_ref service_url, grpc::string_ref method_name,
                            const grpc::AuthContext& channel_auth_context,

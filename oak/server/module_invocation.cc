@@ -107,14 +107,14 @@ void ModuleInvocation::ProcessRequest(bool ok) {
     auto range = context_.client_metadata().equal_range(kOakPolicyGrpcMetadataKey);
     for (auto entry = range.first; entry != range.second; ++entry) {
       std::string policy_base64(entry->second.data(), entry->second.size());
-      oak::policy::Labels policy = DeserializePolicy(policy_base64);
+      oak::policy::Label policy = DeserializePolicy(policy_base64);
       // TODO(https://github.com/project-oak/oak/issues/306): Note that at the moment policies may
       // refer to authentication bearer tokens, which if logged in this way may be reused by
       // unauthorized parties. For now we are fine with this, eventually bearer tokens will be
       // removed and replaced by public key assertions, in which case it will always be safe to log
       // policies.
       LOG(INFO) << "invocation#" << stream_id_ << " Oak policy: " << policy.DebugString();
-      req_msg->labels = policy;
+      req_msg->label = policy;
     }
   }
   {

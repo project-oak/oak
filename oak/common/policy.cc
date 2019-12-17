@@ -30,23 +30,24 @@ const char kOakPolicyGrpcMetadataKey[] = "x-oak-policy-bin";
 // See https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md.
 const char kOakAuthorizationBearerTokenGrpcMetadataKey[] = "x-oak-authorization-bearer-token-bin";
 
-std::string SerializePolicy(const oak::policy::Labels& policy_proto) {
+std::string SerializePolicy(const oak::policy::Label& policy_proto) {
   return policy_proto.SerializeAsString();
 }
 
-oak::policy::Labels DeserializePolicy(const std::string& policy_bytes) {
-  oak::policy::Labels policy_proto;
+oak::policy::Label DeserializePolicy(const std::string& policy_bytes) {
+  oak::policy::Label policy_proto;
   // TODO: Check errors.
   policy_proto.ParseFromString(policy_bytes);
   return policy_proto;
 }
 
-oak::policy::Labels AuthorizationBearerTokenPolicy(const std::string& authorization_token) {
-  oak::policy::Labels labels;
-  auto secrecy_tags = labels.add_secrecy_tags();
-  auto grpc_tag = secrecy_tags->mutable_grpc_tag();
-  grpc_tag->set_authorization_bearer_token(authorization_token);
-  return labels;
+oak::policy::Label AuthorizationBearerTokenPolicy(const std::string& authorization_token) {
+  oak::policy::Label label;
+  auto* secrecy_tag = label.add_secrecy_tags();
+  auto* integrity_tag = label.add_integrity_tags();
+  secrecy_tag->mutable_grpc_tag()->set_authorization_bearer_token(authorization_token);
+  integrity_tag->mutable_grpc_tag()->set_authorization_bearer_token(authorization_token);
+  return label;
 }
 
 }  // namespace oak
