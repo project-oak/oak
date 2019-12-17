@@ -24,7 +24,7 @@ steps:
     timeout: 5m
     args: ['./scripts/env_test']
     env:
-    - 'ENV_TEST=$TEST'
+    - 'ENV_TEST=$_TEST'
   - name: 'gcr.io/oak-ci/oak:latest'
     id: git_init
     entrypoint: 'bash'
