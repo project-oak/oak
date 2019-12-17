@@ -88,6 +88,3 @@ RUN mkdir -p ${ANDROID_NDK_HOME} && cd ${ANDROID_NDK_HOME} && \
 	rm -f android-ndk*.zip && \
     mv android-ndk-r20b/* . && \
     rm -rf android-ndk-r20b
-
-# Default command to run.
-CMD ["/bin/bash"]
