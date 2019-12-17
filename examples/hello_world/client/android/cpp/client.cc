@@ -69,8 +69,8 @@ JNIEXPORT jstring JNICALL Java_com_google_oak_hello_1world_MainActivity_sayHello
   JNI_LOG("Hello message has been sent");
   if (!status.ok()) {
     std::stringstream warning;
-    warning << "Warning: Could not call SayHello('" << name << "'): " << status.error_code()
-            << ": " << status.error_message();
+    warning << "Warning: Could not call SayHello('" << name << "'): " << status.error_code() << ": "
+            << status.error_message();
     return env->NewStringUTF(warning.str().c_str());
   }
   return env->NewStringUTF(response.reply().c_str());
