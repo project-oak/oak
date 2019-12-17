@@ -226,14 +226,6 @@
 <span id="226">226</span>
 <span id="227">227</span>
 <span id="228">228</span>
-<span id="229">229</span>
-<span id="230">230</span>
-<span id="231">231</span>
-<span id="232">232</span>
-<span id="233">233</span>
-<span id="234">234</span>
-<span id="235">235</span>
-<span id="236">236</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -257,14 +249,6 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">proto</span>, <span class="ident">wasm</span>, <span class="ident">Handle</span>, <span class="ident">OakStatus</span>, <span class="ident">ReadHandle</span>, <span class="ident">WriteHandle</span>};
 <span class="kw">use</span> <span class="ident">log</span>::<span class="ident">info</span>;
 <span class="kw">use</span> <span class="ident">protobuf</span>::{<span class="ident">Message</span>, <span class="ident">ProtobufEnum</span>};
-
-<span class="doccomment">/// Implicit port name for the write half of a channel that connects out of</span>
-<span class="doccomment">/// the gRPC pseudo-Node (going to an Application Node).</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">OUT_PORT_NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;request&quot;</span>;
-
-<span class="doccomment">/// Default port name for the read half of a channel that connects into an</span>
-<span class="doccomment">/// Application Node (from the gRPC pseudo-Node).</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">DEFAULT_IN_PORT_NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;grpc_in&quot;</span>;
 
 <span class="doccomment">/// Result type that uses a [`proto::status::Status`] type for error values.</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">result</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">proto</span>::<span class="ident">status</span>::<span class="ident">Status</span><span class="op">&gt;</span>;

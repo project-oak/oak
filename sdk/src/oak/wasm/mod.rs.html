@@ -122,11 +122,6 @@
 <span id="122">122</span>
 <span id="123">123</span>
 <span id="124">124</span>
-<span id="125">125</span>
-<span id="126">126</span>
-<span id="127">127</span>
-<span id="128">128</span>
-<span id="129">129</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -224,16 +219,11 @@
     <span class="doccomment">/// [`OakStatus`]: crate::OakStatus</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_close</span>(<span class="ident">handle</span>: <span class="ident">u64</span>) <span class="op">-&gt;</span> <span class="ident">u32</span>;
 
-    <span class="doccomment">/// Find a pre-defined channel identified by port name.</span>
+    <span class="doccomment">/// Create a new Node instance running code identified by configuration</span>
+    <span class="doccomment">/// name.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// The port name is provided in the memory area given by `buf` and `len`.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Returns the handle value if found, or a zero (invalid) handle if not.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_find</span>(<span class="ident">buf</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">u8</span>, <span class="ident">len</span>: <span class="ident">usize</span>) <span class="op">-&gt;</span> <span class="ident">u64</span>;
-
-    <span class="doccomment">/// Create a new Node instance running code identified by contents name.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// The contents name is provided in the memory area given by `buf` and `len`.</span>
+    <span class="doccomment">/// The configuration name is provided in the memory area given by `buf` and</span>
+    <span class="doccomment">/// `len`.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Returns the status of the operation, as an [`OakStatus`] value.</span>
     <span class="doccomment">///</span>
