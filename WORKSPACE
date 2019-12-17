@@ -41,7 +41,8 @@ http_archive(
 )
 
 # Patch gRPC ares BUILD file.
-# TODO: Remove when Asylo will update gRPC dependency.
+# TODO: Remove when gRPC will fix Ares Android build and Asylo will update gRPC version.
+# https://github.com/grpc/grpc/pull/21463
 http_archive(
     name = "com_github_grpc_grpc",
     patches = [

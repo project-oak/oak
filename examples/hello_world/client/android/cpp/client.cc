@@ -35,8 +35,7 @@ using ::oak::examples::hello_world::HelloResponse;
 using ::oak::examples::hello_world::HelloWorld;
 
 // Global channel storage.
-uint CHANNEL_COUNT = 1;
-std::unordered_map<jint, std::unique_ptr<HelloWorld::Stub>> CHANNEL_MAP;
+std::unique_ptr<HelloWorld::Stub> kChannel;
 
 // JNI initialization function.
 JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
@@ -47,51 +46,34 @@ JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
 // Create gRPC channel to the `jaddress`.
 // Underscores in Java packages should be followed by `1`.
 // https://stackoverflow.com/questions/16069209/invoking-jni-functions-in-android-package-name-containing-underscore
-JNIEXPORT jint JNICALL Java_com_google_oak_hello_1world_MainActivity_createChannel(
+JNIEXPORT void JNICALL Java_com_google_oak_hello_1world_MainActivity_createChannel(
     JNIEnv* env, jobject /*this*/, jstring jaddress) {
-  jint channel_handle = CHANNEL_COUNT++;
-  auto address = env->GetStringUTFChars(jaddress, 0);
-
   oak::ApplicationClient::InitializeAssertionAuthorities();
-  auto channel = HelloWorld::NewStub(oak::ApplicationClient::CreateChannel(address));
+
+  auto address = env->GetStringUTFChars(jaddress, 0);
+  kChannel = HelloWorld::NewStub(oak::ApplicationClient::CreateChannel(address));
   JNI_LOG("gRPC channel has been created");
-
-  CHANNEL_MAP.emplace(channel_handle, std::move(channel));
-  return channel_handle;
 }
 
-// Delete gRPC channel defined by `handle`.
-JNIEXPORT void JNICALL Java_com_google_oak_hello_1world_MainActivity_deleteChannel(JNIEnv* env,
-                                                                                   jobject /*this*/,
-                                                                                   jint handle) {
-  CHANNEL_MAP.erase(handle);
-}
-
-// Send `jname` in the gRPC message through the channel represented by `handle`.
+// Send `jname` message to the gRPC channel `kChannel`.
 JNIEXPORT jstring JNICALL Java_com_google_oak_hello_1world_MainActivity_sayHello(JNIEnv* env,
                                                                                  jobject /*this*/,
-                                                                                 jint handle,
                                                                                  jstring jname) {
-  auto it = CHANNEL_MAP.find(handle);
-  if (it != CHANNEL_MAP.end()) {
-    auto name = env->GetStringUTFChars(jname, 0);
+  grpc::ClientContext context;
+  HelloRequest request;
+  HelloResponse response;
 
-    grpc::ClientContext context;
-    HelloRequest request;
-    HelloResponse response;
-    request.set_greeting(name);
-    grpc::Status status = it->second->SayHello(&context, request, &response);
-    JNI_LOG("Hello message has been sent");
-    if (!status.ok()) {
-      std::stringstream warning;
-      warning << "Warning: Could not call SayHello('" << name << "'): " << status.error_code()
-              << ": " << status.error_message();
-      return env->NewStringUTF(warning.str().c_str());
-    }
-    return env->NewStringUTF(response.reply().c_str());
-  } else {
-    return env->NewStringUTF("Error: Wrong channel handle");
+  auto name = env->GetStringUTFChars(jname, 0);
+  request.set_greeting(name);
+  grpc::Status status = kChannel->SayHello(&context, request, &response);
+  JNI_LOG("Hello message has been sent");
+  if (!status.ok()) {
+    std::stringstream warning;
+    warning << "Warning: Could not call SayHello('" << name << "'): " << status.error_code()
+            << ": " << status.error_message();
+    return env->NewStringUTF(warning.str().c_str());
   }
+  return env->NewStringUTF(response.reply().c_str());
 }
 
 }  // extern "C"

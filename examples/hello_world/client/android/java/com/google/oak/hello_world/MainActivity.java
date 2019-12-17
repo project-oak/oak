@@ -60,20 +60,21 @@ public class MainActivity extends Activity {
     EditText tcpInput = findViewById(R.id.tcpInput);
     String address = ipInput.getText().toString() + ":" + tcpInput.getText().toString();
 
-    Log.v("Oak", "Create channel to: " + address);
-    deleteChannel(channelHandle);
-    channelHandle = createChannel(address);
+    if (address != rpcAddress) {
+      Log.v("Oak", "Create channel to: " + address);
+      createChannel(address);
+      rpcAddress = address;
+    }
 
     Log.v("Oak", "Say Hello");
     TextView helloTextView = findViewById(R.id.helloTextView);
-    String responce = sayHello(channelHandle, "World");
+    String responce = sayHello("World");
     Log.v("Oak", "Responce is: " + responce);
     helloTextView.setText(responce);
   }
 
-  private native int createChannel(String address);
-  private native void deleteChannel(int handle);
-  private native String sayHello(int handle, String name);
+  private native void createChannel(String address);
+  private native String sayHello(String name);
 
-  private int channelHandle;
+  private String rpcAddress;
 }

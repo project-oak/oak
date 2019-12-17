@@ -16,9 +16,7 @@ RUN apt-get update && \
         libmpc-dev \
         libmpfr-dev \
         libncurses5 \
-        #libfl2 \
         ocaml-nox \
-        #ocamlbuild \
         openjdk-8-jdk \
         python-dev \
         python2.7-dev \
