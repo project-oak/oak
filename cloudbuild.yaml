@@ -83,7 +83,7 @@ steps:
     waitFor: ['build_android_image']
     timeout: 30m
     entrypoint: 'bash'
-    args: ['bazel', 'build', '--fat_apk_cpu=x86_64', --linkopt='-llog', '//examples/hello_world/client/android:client_app']
+    args: ['./scripts/build_examples_android']
 
 # Copy compiled enclave binary to Google Cloud Storage.
 # See:
