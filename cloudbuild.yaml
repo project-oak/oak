@@ -18,14 +18,6 @@ steps:
   # Init .git repository used by check_generated
   # Workaround for https://github.com/GoogleCloudPlatform/cloud-builders/issues/236
   - name: 'gcr.io/oak-ci/oak:latest'
-    id: env_test
-    entrypoint: 'bash'
-    waitFor: ['build_image']
-    timeout: 5m
-    args: ['./scripts/env_test']
-    env:
-    - 'ENV_TEST=$_TEST'
-  - name: 'gcr.io/oak-ci/oak:latest'
     id: git_init
     entrypoint: 'bash'
     waitFor: ['build_image']
@@ -42,44 +34,32 @@ steps:
     waitFor: ['build_image']
     timeout: 30m
     entrypoint: 'bash'
-    env:
-    - 'BAZEL_GOOGLE_CREDENTIALS=$_BAZEL_GOOGLE_CREDENTIALS'
     args: ['./scripts/build_server_asylo']
   - name: 'gcr.io/oak-ci/oak:latest'
     id: build_server_dev
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/build_server_dev']
-    env:
-    - 'BAZEL_GOOGLE_CREDENTIALS=$_BAZEL_GOOGLE_CREDENTIALS'
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_tests
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/run_tests']
-    env:
-    - 'BAZEL_GOOGLE_CREDENTIALS=$_BAZEL_GOOGLE_CREDENTIALS'
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_examples
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/run_examples']
-    env:
-    - 'BAZEL_GOOGLE_CREDENTIALS=$_BAZEL_GOOGLE_CREDENTIALS'
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_examples_asan
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/run_examples_dev', '-a']
-    env:
-    - 'BAZEL_GOOGLE_CREDENTIALS=$_BAZEL_GOOGLE_CREDENTIALS'
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_examples_tsan
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/run_examples_dev', '-t']
-    env:
-    - 'BAZEL_GOOGLE_CREDENTIALS=$_BAZEL_GOOGLE_CREDENTIALS'
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_clang_tidy
     waitFor: ['run_tests', 'run_examples']
@@ -114,6 +94,10 @@ artifacts:
 timeout: 2h
 
 options:
+  env: 
+  # This variable is only defined in the `merge` GCB trigger,
+  # and contains GCB credentials for updating Bazel cache.
+  - 'BAZEL_GOOGLE_CREDENTIALS=$_BAZEL_GOOGLE_CREDENTIALS'
   # See: https://cloud.google.com/cloud-build/docs/api/reference/rest/Shared.Types/MachineType
   machineType: 'N1_HIGHCPU_32'
   requestedVerifyOption: 'VERIFIED'
