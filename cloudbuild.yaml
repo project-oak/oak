@@ -74,23 +74,11 @@ steps:
     id: build_android_image
     waitFor: ['-']
     timeout: 30m
-    args: ['build', '--file=android.Dockerfile', '--tag=oak-android-ci:latest', '.']
+    args: ['build', '--file=android.Dockerfile', '--tag=gcr.io/oak-ci/oak-android:latest', '.']
   # Build Android Hello-World application.
   # TODO: Remove `--fat_apk_cpu=x86_64`, when Asylo will support ARM architecture.
   # https://github.com/google/asylo/issues/55
-  - name: 'oak-android-ci:latest'
-    id: build_examples_android_test1
-    waitFor: ['build_android_image']
-    timeout: 30m
-    entrypoint: 'bash'
-    args: ['ls', '-la']
-  - name: 'oak-android-ci:latest'
-    id: build_examples_android_test2
-    waitFor: ['build_android_image']
-    timeout: 30m
-    entrypoint: 'bash'
-    args: ['pwd']
-  - name: 'oak-android-ci:latest'
+  - name: 'gcr.io/oak-ci/oak-android:latest'
     id: build_examples_android
     waitFor: ['build_android_image']
     timeout: 30m
