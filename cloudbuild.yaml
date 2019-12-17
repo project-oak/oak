@@ -72,7 +72,7 @@ steps:
   # Build Docker image based for Android SDK.
   - name: 'gcr.io/cloud-builders/docker'
     id: build_android_image
-    waitFor: ['copy_artifacts']
+    waitFor: ['-']
     timeout: 30m
     args: ['build', '--file=android.Dockerfile', '--tag=oak-android-ci:latest', '.']
   # Build Android Hello-World application.
