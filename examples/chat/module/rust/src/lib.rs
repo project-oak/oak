@@ -51,14 +51,14 @@ impl OakNode for Node {
     }
 }
 
-fn unknown_id_err(which: &str) -> grpc::Result<Empty> {
+fn unknown_id_err<T>(which: &str) -> grpc::Result<T> {
     Err(grpc::build_status(
         grpc::Code::INVALID_ARGUMENT,
         &format!("{} ID unrecognized", which),
     ))
 }
 
-fn duplicate_id_err(which: &str) -> grpc::Result<Empty> {
+fn duplicate_id_err<T>(which: &str) -> grpc::Result<T> {
     Err(grpc::build_status(
         grpc::Code::ALREADY_EXISTS,
         &format!("{} ID already exists", which),
@@ -104,7 +104,7 @@ impl ChatNode for Node {
 
     fn join_room(&mut self, req: JoinRoomRequest, mut writer: grpc::ChannelResponseWriter) {
         if !self.room_to_admin.contains_key(&req.room_id) {
-            writer.close(unknown_id_err("Room").map(|_| ()));
+            writer.close(unknown_id_err("Room"));
             return;
         }
 
