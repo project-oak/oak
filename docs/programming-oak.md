@@ -10,7 +10,7 @@ This document walks through the basics of programming in Oak.
   - [Starting the Oak Application](#starting-the-oak-application)
 - [gRPC Request Processing Path](#grpc-request-processing-path)
 - [Node Termination](#node-termination)
-- [Channels and Handles](#channels-and-handles)
+- [Nodes, Channels and Handles](#nodes-channels-and-handles)
 - [Persistent Storage](#persistent-storage)
 - [Testing](#testing)
   - [Testing Multi-Node Applications](#testing-multi-node-applications)
@@ -328,9 +328,95 @@ passes this on to the Oak Runtime, which will then notify the running Nodes that
 termination has been requested (by returning `ERR_TERMINATED` on any current or
 future `oak.wait_on_channels()` invocations).
 
-## Channels and Handles
+## Nodes, Channels and Handles
 
-TODO: explore the primitives available here
+So far, we've only discussed writing a single Node for an Oak Application. This
+Node communicates with the outside world via a single channel, and the handle
+for the read half of this channel is acquired at start-of-day as the parameter
+to the `oak_main()` entrypoint. The other half of this single channel is a gRPC
+pseudo-Node, which passes on requests from external clients (and which is
+automatically created by the Oak Runtime at Application start-of-day).
+
+More sophisticated Applications are normally built from multiple interacting
+Nodes, for several reasons:
+
+- Dividing software into well-defined interacting components is a normal way to
+  reduce the overall complexity of software design.
+- Software that handles sensitive data, or which has additional privileges,
+  often separates out the parts that deal with this (the
+  ["principle of least privilege"](https://en.wikipedia.org/wiki/Principle_of_least_privilege)),
+  to reduce the blast radius if something goes wrong.
+- Information flow analysis can be more precise and fine-grained if components
+  are smaller and the interactions between them are constrained.
+
+The first step in building a multi-Node Application is to write the code for all
+of the Nodes; the `ApplicationConfiguration` needs to include the configuration
+and code for any Node that might get run as part of the Application. New Node
+types cannot be added after the application starts; any Node that the
+Application might need has to be included in the original configuration.
+
+As before, each Node must include an `oak_main(u64) -> u32` entrypoint, but for
+an internal Node it's entirely up to the Application developer as to what
+channel handle gets passed to this entrypoint, and as to what messages are sent
+down that channel. The application may choose to use protobuf-encoded messages
+(as gRPC does) for its internal communications, or something else entirely (e.g.
+the [serde crate](https://crates.io/crates/serde)).
+
+Regardless of how the application communicates with the new Node, the typical
+pattern for the existing Node is to:
+
+- Create a new channel with the
+  [`channel_create`](https://project-oak.github.io/oak/sdk/oak/fn.channel_create.html)
+  host function, receiving local handles for both halves of the channel.
+- Create a new Node instance with the
+  [`node_create`](https://project-oak.github.io/oak/sdk/oak/fn.node_create.html)
+  host function, passing in the handle for the read half of the new channel.
+- Afterwards, close the local handle for the read half, as it is no longer
+  needed.
+
+For example, the [example Chat application](../examples/chat) creates a Node for
+each chat room and saves off the write handle that will be used to send messages
+to the room:
+
+<!-- prettier-ignore-start -->
+[embedmd]:# (../examples/chat/module/rust/src/lib.rs Rust /.*Create a new Node/ /^ +\);$/)
+```Rust
+        // Create a new Node for this room.
+        let (wh, rh) = oak::channel_create().unwrap();
+        oak::node_create("room-config", rh);
+        oak::channel_close(rh.handle);
+
+        self.rooms.insert(
+            req.admin_id.clone(),
+            RoomRef {
+                name: req.name,
+                channel: wh,
+            },
+        );
+```
+<!-- prettier-ignore-end-->
+
+The same code (identified by `"room-config"`) will be run for each per-room
+Node, but each instance will have its own Web Assembly linear memory (≈heap) and
+stack.
+
+The `node_create()` call triggers the Oak Runtime to invoke the `oak_main()`
+entrypoint for the new Node, passing in the handle value for the channel read
+half that was provided as a parameter to `node_create()`. Note that the actual
+handle _value_ passed into `oak_main()` will (almost certainly) be different;
+internally, the Runtime translates the creator Node's handle value to a
+reference to the underlying channel object, then assigns a new numeric value for
+the created Node to use to refer to the underlying channel.
+
+Once a new Node has started, the existing Node can communicate with the new Node
+by sending messages over the channel via `channel_write`. Of course, the new
+Node only has a handle to the read half of a channel, and so only has a way of
+_receiving_.
+
+To cope with this, it's normal for the inbound messages to be accompanied by a
+handle for the _write_ half of a different channel, which is then used for
+responses &ndash; so the new Node has a way of _sending_ externally, as well as
+receiving.
 
 ## Persistent Storage
 

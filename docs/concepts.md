@@ -62,7 +62,10 @@ implemented via **channels**. A channel represents a uni-directional stream of
 messages, with a receive half and a send half that an Oak Node can read from or
 write to respectively. Each half of a channel is identified by a **handle**,
 which is used as a parameter to the corresponding
-[host function](abi.md#host-functions) calls.
+[host function](abi.md#host-functions) calls. Channel handles are integer values
+that are specific to a particular Node (like per-process UNIX file descriptors),
+so handle value 3 for Node A identify a different channel than handle value 3
+for Node B (unless there happens to be a coincidence of numbering).
 
 ## Pseudo-Nodes
 
