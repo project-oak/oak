@@ -73,7 +73,7 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     id: build_android_image
     waitFor: ['copy_artifacts']
-    timeout: 10m
+    timeout: 30m
     args: ['build', '--file=android.Dockerfile', '--tag=oak-android-ci:latest', '.']
   # Build Android Hello-World application.
   # TODO: Remove `--fat_apk_cpu=x86_64`, when Asylo will support ARM architecture.
