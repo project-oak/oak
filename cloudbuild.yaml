@@ -79,11 +79,23 @@ steps:
   # TODO: Remove `--fat_apk_cpu=x86_64`, when Asylo will support ARM architecture.
   # https://github.com/google/asylo/issues/55
   - name: 'oak-android-ci:latest'
+    id: build_examples_android_test1
+    waitFor: ['build_android_image']
+    timeout: 30m
+    entrypoint: 'bash'
+    args: ['ls', '-la']
+  - name: 'oak-android-ci:latest'
+    id: build_examples_android_test2
+    waitFor: ['build_android_image']
+    timeout: 30m
+    entrypoint: 'bash'
+    args: ['pwd']
+  - name: 'oak-android-ci:latest'
     id: build_examples_android
     waitFor: ['build_android_image']
     timeout: 30m
     entrypoint: 'bash'
-    args: ['ls', '-la', ';', 'pwd', ';', './scripts/build_examples_android']
+    args: ['./scripts/build_examples_android']
 
 # Copy compiled enclave binary to Google Cloud Storage.
 # See:
