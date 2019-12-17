@@ -18,6 +18,14 @@ steps:
   # Init .git repository used by check_generated
   # Workaround for https://github.com/GoogleCloudPlatform/cloud-builders/issues/236
   - name: 'gcr.io/oak-ci/oak:latest'
+    id: env_test
+    entrypoint: 'bash'
+    waitFor: ['build_image']
+    timeout: 5m
+    args: ['./scripts/env_test']
+    env:
+    - 'ENV_TEST=$TEST'
+  - name: 'gcr.io/oak-ci/oak:latest'
     id: git_init
     entrypoint: 'bash'
     waitFor: ['build_image']
