@@ -96,7 +96,7 @@ timeout: 2h
 options:
   env: 
   # This variable is only defined in the `merge` GCB trigger,
-  # and contains GCB credentials for updating Bazel cache.
+  # and contains GCB credentials for updating the Bazel cache.
   - 'BAZEL_GOOGLE_CREDENTIALS=$_BAZEL_GOOGLE_CREDENTIALS'
   # See: https://cloud.google.com/cloud-build/docs/api/reference/rest/Shared.Types/MachineType
   machineType: 'N1_HIGHCPU_32'
