@@ -35,7 +35,7 @@ pub struct OakMessage {
 }
 
 #[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
-pub enum Direction {
+enum Direction {
     Read,
     Write,
 }
@@ -122,16 +122,16 @@ impl MockChannel {
     }
 }
 
-pub type ChannelRef = Arc<RwLock<MockChannel>>;
+type ChannelRef = Arc<RwLock<MockChannel>>;
 
 // A channel half is a clonable reference to one half of a unidirectional channel.
 pub struct ChannelHalf {
-    pub direction: Direction,
-    pub channel: ChannelRef,
+    direction: Direction,
+    channel: ChannelRef,
 }
 
 impl ChannelHalf {
-    pub fn new(direction: Direction, channel: ChannelRef) -> ChannelHalf {
+    fn new(direction: Direction, channel: ChannelRef) -> ChannelHalf {
         // Update the referenced channel's counts of extant halves.
         *channel
             .write()
@@ -140,6 +140,21 @@ impl ChannelHalf {
             .get_mut(&direction)
             .expect("missing enum value in half_count") += 1;
         ChannelHalf { direction, channel }
+    }
+    pub fn read_message(
+        &mut self,
+        size: usize,
+        actual_size: &mut u32,
+        handle_count: u32,
+        actual_handle_count: &mut u32,
+    ) -> Result<OakMessage, u32> {
+        if self.direction != Direction::Read {
+            return Err(oak::OakStatus::ERR_BAD_HANDLE.value() as u32);
+        }
+        self.channel
+            .write()
+            .expect("corrupt channel ref")
+            .read_message(size, actual_size, handle_count, actual_handle_count)
     }
 }
 
@@ -274,10 +289,9 @@ impl OakRuntime {
         );
 
         // Setup the initial channel from gRPC pseudo-Node to Node.
-        let channel = self.new_channel();
-        self.grpc_in_half = Some(ChannelHalf::new(Direction::Write, channel.clone()));
-        let half = ChannelHalf::new(Direction::Read, channel.clone());
-        let handle = node.add_half(half);
+        let (write_half, read_half) = self.new_channel();
+        self.grpc_in_half = Some(write_half);
+        let handle = node.add_half(read_half);
         self.nodes.insert(node_name.clone(), node);
 
         Some((node_name, entrypoint, handle))
@@ -304,8 +318,12 @@ impl OakRuntime {
         }
         self.grpc_in_half = None;
     }
-    pub fn new_channel(&mut self) -> ChannelRef {
-        Arc::new(RwLock::new(MockChannel::new()))
+    pub fn new_channel(&mut self) -> (ChannelHalf, ChannelHalf) {
+        let channel = Arc::new(RwLock::new(MockChannel::new()));
+        (
+            ChannelHalf::new(Direction::Write, channel.clone()),
+            ChannelHalf::new(Direction::Read, channel),
+        )
     }
     pub fn node_half_for_handle(
         &self,
@@ -335,9 +353,7 @@ impl OakRuntime {
             .add_half(half)
     }
     pub fn node_channel_create(&mut self, node_name: &str) -> (oak::Handle, oak::Handle) {
-        let channel = self.new_channel();
-        let write_half = ChannelHalf::new(Direction::Write, channel.clone());
-        let read_half = ChannelHalf::new(Direction::Read, channel.clone());
+        let (write_half, read_half) = self.new_channel();
         let node = self
             .nodes
             .get_mut(node_name)
@@ -404,20 +420,19 @@ impl OakRuntime {
         }
     }
     pub fn grpc_channel_setup(&mut self, node_name: &str) -> oak::Handle {
-        let channel = self.new_channel();
-        let half = ChannelHalf::new(Direction::Read, channel.clone());
+        let (write_half, read_half) = self.new_channel();
         let node = self
             .nodes
             .get_mut(node_name)
             .unwrap_or_else(|| panic!("node {{{}}} not found", node_name));
-        let read_handle = node.add_half(half);
+        let read_handle = node.add_half(read_half);
         debug!(
             "set up gRPC channel to node {} with handle {}",
             node_name, read_handle
         );
         // Remember the write half of the channel to allow future test
         // injection of gRPC requests.
-        self.grpc_in_half = Some(ChannelHalf::new(Direction::Write, channel));
+        self.grpc_in_half = Some(write_half);
         read_handle
     }
     pub fn grpc_channel(&self) -> Option<ChannelRef> {
