@@ -14,6 +14,9 @@
 // limitations under the License.
 //
 
+//! Allocator backed by base C library allocation via Asylo, suitable for use as
+//! a global allocator.
+
 use core::alloc::{GlobalAlloc, Layout};
 
 extern "C" {

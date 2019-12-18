@@ -14,8 +14,7 @@
 // limitations under the License.
 //
 
-// TODO: Plug in memory allocator and depend on https://doc.rust-lang.org/alloc/ to enable use of
-// heap.
+//! Functionality to allow use of Rust code within the Oak Runtime.
 
 #![no_std]
 #![feature(lang_items)]
@@ -58,7 +57,9 @@ fn panic(_info: &PanicInfo) -> ! {
     unsafe { abort() }
 }
 
-// See https://doc.rust-lang.org/1.2.0/book/no-stdlib.html.
+/// Provide the entrypoint needed by the compiler's failure mechanisms when
+/// `std` is unavailable.  See ["No
+/// stdlib" documentation](https://doc.rust-lang.org/1.2.0/book/no-stdlib.html).
 #[lang = "eh_personality"]
 pub extern "C" fn eh_personality() {}
 
