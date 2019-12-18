@@ -18,6 +18,9 @@ readonly DOCKER_UID="${UID:-0}"
 readonly DOCKER_GID="${GID:-0}"
 readonly DOCKER_USER="${USER:-root}"
 
+# Create a directory to copy artifacts to.
+mkdir -p './.out'
+
 mkdir -p './bazel-cache'
 mkdir -p './cargo-cache'
 
@@ -37,6 +40,7 @@ docker_run_flags=(
   "--volume=$PWD/bazel-cache:/.cache/bazel"
   "--volume=$PWD/cargo-cache:/usr/local/cargo/registry"
   "--volume=$PWD:/opt/my-project"
+  "--volume=$PWD/.out:/opt/my-project/.out"
   '--workdir=/opt/my-project'
   '--network=host'
 )

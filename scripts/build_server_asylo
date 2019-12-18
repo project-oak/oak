@@ -9,3 +9,4 @@ bazel_build_flags+=(
 )
 
 bazel build "${bazel_build_flags[@]}" //oak/server/asylo:oak
+cp "${BIN_DIR}"/oak/server/asylo/oak_host_loader "${BIN_DIR}"/oak/server/asylo/oak_enclave_debug.so .out/
