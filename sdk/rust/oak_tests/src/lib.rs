@@ -21,7 +21,7 @@ use log::{debug, info, warn};
 
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use oak::OakStatus;
-use oak_runtime::{proto, ChannelHalf, Direction, OakMessage, OakRuntime};
+use oak_runtime::{proto, OakMessage, OakRuntime};
 use protobuf::{Message, ProtobufEnum};
 use rand::Rng;
 use std::cell::RefCell;
@@ -498,10 +498,8 @@ where
         .expect("failed to serialize GrpcRequest message");
 
     // Create a new channel for the response to arrive on and attach to the message.
-    let channel = RUNTIME.write().expect(RUNTIME_MISSING).new_channel();
-    msg.channels
-        .push(ChannelHalf::new(Direction::Write, channel.clone()));
-    let read_half = ChannelHalf::new(Direction::Read, channel);
+    let (write_half, mut read_half) = RUNTIME.write().expect(RUNTIME_MISSING).new_channel();
+    msg.channels.push(write_half);
 
     // Send the message (with attached write handle) into the Node under test.
     let grpc_channel = RUNTIME
@@ -518,11 +516,7 @@ where
     loop {
         let mut size = 0u32;
         let mut count = 0u32;
-        let result = read_half
-            .channel
-            .write()
-            .expect("corrupt channel ref")
-            .read_message(std::usize::MAX, &mut size, std::u32::MAX, &mut count);
+        let result = read_half.read_message(std::usize::MAX, &mut size, std::u32::MAX, &mut count);
         let rsp = match result {
             Err(e) => {
                 if e == OakStatus::OK.value() as u32 {
