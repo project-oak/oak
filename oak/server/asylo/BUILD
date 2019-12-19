@@ -157,7 +157,7 @@ container_image(
         "oak_host_loader",
     ],
     ports = [
-        # https://github.com/project-oak/oak/blob/667b07c555cde0c4705e5f7533b101203cc01c12/oak/server/asylo/asylo_oak_manager.cc#L48 
+        # https://github.com/project-oak/oak/blob/667b07c555cde0c4705e5f7533b101203cc01c12/oak/server/asylo/asylo_oak_manager.cc#L48
         "8080/tcp",  # Oak Application gRPC port.
         # https://github.com/project-oak/oak/blob/667b07c555cde0c4705e5f7533b101203cc01c12/oak/server/asylo/asylo_oak_main.cc#L33
         "8888/tcp",  # Oak Manager gRPC port.
