@@ -16,17 +16,10 @@
         android:text="@string/empty"/>
 
     <EditText
-        android:id="@+id/ipInput"
+        android:id="@+id/addressInput"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="@string/ip_address">
-    </EditText>
-
-    <EditText
-        android:id="@+id/tcpInput"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="@string/tcp_port">
+        android:hint="@string/address">
     </EditText>
 
     <Button

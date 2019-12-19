@@ -7,8 +7,6 @@ RUN apt-get update && \
         bash-completion \
         bison \
         build-essential \
-        clang-format \
-        clang-tidy \
         curl \
         flex \
         git \
@@ -22,7 +20,6 @@ RUN apt-get update && \
         python2.7-dev \
         python3-dev \
         rsync \
-        shellcheck \
         texinfo \
         vim \
         wget \
@@ -30,8 +27,6 @@ RUN apt-get update && \
         zlib1g-dev
 
 RUN git --version
-RUN clang-format -version
-RUN shellcheck --version
 
 # Install Bazel. 
 ARG bazel_version=1.2.1

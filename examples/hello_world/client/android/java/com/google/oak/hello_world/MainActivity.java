@@ -46,8 +46,8 @@ public class MainActivity extends Activity {
 
     // Set default address.
     // Android emulator forwards `10.0.2.2` to the host machine.
-    EditText ipInput = findViewById(R.id.ipInput);
-    ipInput.setText("10.0.2.2");
+    EditText addressInput = findViewById(R.id.addressInput);
+    addressInput.setText("10.0.2.2:8888");
   }
 
   @Override
@@ -56,9 +56,8 @@ public class MainActivity extends Activity {
   }
 
   public void onClick() {
-    EditText ipInput = findViewById(R.id.ipInput);
-    EditText tcpInput = findViewById(R.id.tcpInput);
-    String address = ipInput.getText().toString() + ":" + tcpInput.getText().toString();
+    EditText addressInput = findViewById(R.id.addressInput);
+    String address = addressInput.getText().toString();
 
     if (address != rpcAddress) {
       Log.v("Oak", "Create channel to: " + address);
