@@ -18,6 +18,9 @@
 //! a global allocator.
 
 use core::alloc::{GlobalAlloc, Layout};
+use core::panic::PanicInfo;
+
+use crate::enclave;
 
 extern "C" {
     // Signatures of the functions exposed by the underlying standard library used in Asylo
@@ -73,3 +76,37 @@ unsafe impl GlobalAlloc for System {
         free(ptr);
     }
 }
+
+//// TODO: Move to separate crate and expose safe wrappers.
+#[link(name = "sgx_trts")]
+extern "C" {
+    // SGX-enabled abort function that causes an undefined instruction (`UD2`) to be executed, which
+    // terminates the enclave execution.
+    //
+    // The C type of this function is `extern "C" void abort(void) __attribute__(__noreturn__);`
+    //
+    // See https://github.com/intel/linux-sgx/blob/d166ff0c808e2f78d37eebf1ab614d944437eea3/sdk/trts/linux/trts_pic.S#L565.
+    fn abort() -> !;
+}
+
+
+#[global_allocator]
+static A: enclave::allocator::System = enclave::allocator::System;
+
+// Define what happens in an Out Of Memory (OOM) condition.
+#[alloc_error_handler]
+fn alloc_error(_layout: Layout) -> ! {
+    unsafe { abort() }
+}
+
+// See https://doc.rust-lang.org/nomicon/panic-handler.html.
+#[panic_handler]
+fn panic(_info: &PanicInfo) -> ! {
+    unsafe { abort() }
+}
+
+/// Provide the entrypoint needed by the compiler's failure mechanisms when
+/// `std` is unavailable.  See ["No
+/// stdlib" documentation](https://doc.rust-lang.org/1.2.0/book/no-stdlib.html).
+#[lang = "eh_personality"]
+pub extern "C" fn eh_personality() {}

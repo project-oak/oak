@@ -26,7 +26,6 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     crate_type = "staticlib",
     edition = "2018",
-    # deps = ["libc"]
 )
 
 # Strip unnecessary binary objects from the generated static library archive. It seems to contain

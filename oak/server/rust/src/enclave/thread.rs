@@ -8,9 +8,8 @@ use core::mem;
 use core::ops::Fn;
 use core::ptr;
 
-use super::io;
-
-// use po::*;
+use crate::common;
+use crate::common::io;
 
 // Based on
 // - rust/src/libstd/sys_common/thread.rs

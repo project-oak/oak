@@ -1,11 +1,8 @@
-// use crate::convert::From;
-// use crate::error;
 use alloc::fmt;
 use core::result;
 use alloc::boxed::*;
-use crate::error;
-// use crate::result;
-// use crate::sys;
+
+use crate::common::error;
 
 /// A specialized [`Result`](../result/enum.Result.html) type for I/O
 /// operations.
