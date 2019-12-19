@@ -1,16 +1,3 @@
-use alloc::boxed::Box;
-
-use core::any::Any;
-use core::result;
-use core::cmp;
-use core::ffi;
-use core::mem;
-use core::ops::Fn;
-use core::ptr;
-
-use crate::common;
-use crate::common::io;
-
 // Based on
 // - rust/src/libstd/sys_common/thread.rs
 // - rust/src/libstd/sys/unix/thread.rs
@@ -18,34 +5,26 @@ use crate::common::io;
 // - No configuration loading from env
 // - No stack guards
 // - Doesn't set stack size (unsupported by Asylo)
+// - No sleep functionality. Should we re-add, does it make sense to have sleep which depends on
+// untrusted time
 
-use core::sync::atomic::{self, Ordering};
+use alloc::boxed::Box;
 
-pub const DEFAULT_MIN_STACK_SIZE: usize = 1024 * 1024;
+use core::mem;
+use core::ptr;
+
+use crate::common::io;
 
 #[allow(dead_code)]
 pub unsafe fn start_thread(main: *mut u8) {
+    // TODO: FIXME: needed for oak ?
+    //
+    // XXX original comment:
     // Next, set up our stack overflow handler which may get triggered if we run
     // out of stack.
-    // TODO: FIXME: needed for oak ?
-    // let _handler = stack_overflow::Handler::new();
+    // XXX asylo doesn't provide the functions needed to set this up
 
-    // Finally, let's run some code.
     Box::from_raw(main as *mut Box<dyn FnOnce()>)()
-}
-
-pub fn min_stack() -> usize {
-    static MIN: atomic::AtomicUsize = atomic::AtomicUsize::new(0);
-    match MIN.load(Ordering::SeqCst) {
-        0 => {}
-        n => return n - 1,
-    }
-    let amt = DEFAULT_MIN_STACK_SIZE;
-
-    // 0 is our sentinel value, so ensure that we'll never see 0 after
-    // initialization has run
-    MIN.store(amt + 1, Ordering::SeqCst);
-    amt
 }
 
 pub struct Thread {
@@ -58,7 +37,6 @@ unsafe impl Sync for Thread {}
 impl Thread {
     // unsafe: see thread::Builder::spawn_unchecked for safety requirements
     pub unsafe fn new(p: Box<dyn FnOnce()>) -> io::Result<Thread> {
-    // pub unsafe fn new(stack: usize, p: Box<dyn FnOnce()>) -> io::Result<Thread> {
         let p = box p;
         let mut native: libc::pthread_t = mem::zeroed();
         let mut attr: libc::pthread_attr_t = mem::zeroed();
@@ -87,31 +65,6 @@ impl Thread {
         debug_assert_eq!(ret, 0);
     }
 
-    //TODO: Duration
-    // pub fn sleep(dur: Duration) {
-    //     let mut secs = dur.as_secs();
-    //     let mut nsecs = dur.subsec_nanos() as _;
-
-    //     // If we're awoken with a signal then the return value will be -1 and
-    //     // nanosleep will fill in `ts` with the remaining time.
-    //     unsafe {
-    //         while secs > 0 || nsecs > 0 {
-    //             let mut ts = libc::timespec {
-    //                 tv_sec: cmp::min(libc::time_t::max_value() as u64, secs) as libc::time_t,
-    //                 tv_nsec: nsecs,
-    //             };
-    //             secs -= ts.tv_sec as u64;
-    //             if libc::nanosleep(&ts, &mut ts) == -1 {
-    //                 assert_eq!(os::errno(), libc::EINTR);
-    //                 secs += ts.tv_sec as u64;
-    //                 nsecs = ts.tv_nsec;
-    //             } else {
-    //                 nsecs = 0;
-    //             }
-    //         }
-    //     }
-    // }
-
     pub fn join(self) {
         unsafe {
             let ret = libc::pthread_join(self.id, ptr::null_mut());
@@ -136,8 +89,4 @@ impl Drop for Thread {
         let ret = unsafe { libc::pthread_detach(self.id) };
         debug_assert_eq!(ret, 0);
     }
-}
-
-fn min_stack_size(_: *const libc::pthread_attr_t) -> usize {
-    libc::PTHREAD_STACK_MIN
 }

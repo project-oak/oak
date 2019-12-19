@@ -469,7 +469,7 @@ impl Error {
         match self.repr {
             // TODO: sys::decode_error_kind unavailable
             // Repr::Os(code) => sys::decode_error_kind(code),
-            Repr::Os(code) => ErrorKind::Other,
+            Repr::Os(_code) => ErrorKind::Other,
             Repr::Custom(ref c) => c.kind,
             Repr::Simple(kind) => kind,
         }

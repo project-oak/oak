@@ -59,6 +59,6 @@ pub fn thread_test() -> common::io::Result<i32> {
 
 /// An exported placeholder function to check that linking against C++ is successful.
 #[no_mangle]
-pub extern "C" fn add_magic_number(x: i32) -> i32 {
+pub extern "C" fn add_magic_number(_x: i32) -> i32 {
     thread_test().unwrap_or(0)
 }

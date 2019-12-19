@@ -14,7 +14,6 @@
 use core::array;
 
 use crate::alloc::alloc::{AllocErr, LayoutErr, CannotReallocInPlace};
-// use crate::backtrace::Backtrace;
 use crate::alloc::borrow::Cow;
 use crate::alloc::boxed::Box;
 use crate::core::any::TypeId;
