@@ -17,6 +17,7 @@
 //! Functionality to allow use of Rust code within the Oak Runtime.
 
 #![no_std]
+
 #![feature(lang_items)]
 #![feature(allocator_api)]
 #![feature(alloc_prelude)]

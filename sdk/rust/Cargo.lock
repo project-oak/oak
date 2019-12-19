@@ -198,6 +198,9 @@ dependencies = [
 [[package]]
 name = "oak_runtime_compat"
 version = "0.1.0"
+dependencies = [
+ "libc",
+]
 
 [[package]]
 name = "oak_tests"

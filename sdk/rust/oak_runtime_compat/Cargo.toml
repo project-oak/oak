@@ -2,8 +2,13 @@
 name = "oak_runtime_compat"
 version = "0.1.0"
 authors = ["Ben Blaxill <benblaxill@google.com>"]
+edition = '2018'
 
-# [dependencies]
+[lib]
+name = "oak_runtime_compat"
+
+[dependencies]
+libc = "*"
 # byteorder = "1"
 # lazy_static = "1.4"
 # log = { version = "^0.4.0", features = ["std"] }
