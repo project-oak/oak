@@ -21,35 +21,32 @@ namespace oak {
 StorageService::StorageService(StorageProvider* storage_provider)
     : storage_provider_(storage_provider) {}
 
-grpc::Status StorageService::Read(grpc::ServerContext* context, const StorageReadRequest* request,
+grpc::Status StorageService::Read(grpc::ServerContext*, const StorageReadRequest* request,
                                   StorageReadResponse* response) {
   return storage_provider_->Read(request, response);
 }
 
-grpc::Status StorageService::Write(grpc::ServerContext* context, const StorageWriteRequest* request,
+grpc::Status StorageService::Write(grpc::ServerContext*, const StorageWriteRequest* request,
                                    StorageWriteResponse* response) {
   return storage_provider_->Write(request, response);
 }
 
-grpc::Status StorageService::Delete(grpc::ServerContext* context,
-                                    const StorageDeleteRequest* request,
+grpc::Status StorageService::Delete(grpc::ServerContext*, const StorageDeleteRequest* request,
                                     StorageDeleteResponse* response) {
   return storage_provider_->Delete(request, response);
 }
 
-grpc::Status StorageService::Begin(grpc::ServerContext* context, const StorageBeginRequest* request,
+grpc::Status StorageService::Begin(grpc::ServerContext*, const StorageBeginRequest* request,
                                    StorageBeginResponse* response) {
   return storage_provider_->Begin(request, response);
 }
 
-grpc::Status StorageService::Commit(grpc::ServerContext* context,
-                                    const StorageCommitRequest* request,
+grpc::Status StorageService::Commit(grpc::ServerContext*, const StorageCommitRequest* request,
                                     StorageCommitResponse* response) {
   return storage_provider_->Commit(request, response);
 }
 
-grpc::Status StorageService::Rollback(grpc::ServerContext* context,
-                                      const StorageRollbackRequest* request,
+grpc::Status StorageService::Rollback(grpc::ServerContext*, const StorageRollbackRequest* request,
                                       StorageRollbackResponse* response) {
   return storage_provider_->Rollback(request, response);
 }

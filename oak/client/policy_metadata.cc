@@ -27,8 +27,9 @@ namespace oak {
 PolicyMetadata::PolicyMetadata(const oak::policy::Label& label)
     : serialized_policy_(SerializePolicy(label)) {}
 
-grpc::Status PolicyMetadata::GetMetadata(grpc::string_ref service_url, grpc::string_ref method_name,
-                                         const grpc::AuthContext& channel_auth_context,
+grpc::Status PolicyMetadata::GetMetadata(grpc::string_ref /*service_url*/,
+                                         grpc::string_ref /*method_name*/,
+                                         const grpc::AuthContext& /*channel_auth_context*/,
                                          std::multimap<grpc::string, grpc::string>* metadata) {
   metadata->insert(std::make_pair(kOakPolicyGrpcMetadataKey, serialized_policy_));
   return grpc::Status::OK;

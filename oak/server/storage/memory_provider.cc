@@ -36,12 +36,12 @@ grpc::Status MemoryProvider::Read(const StorageReadRequest* req, StorageReadResp
   return grpc::Status::OK;
 }
 
-grpc::Status MemoryProvider::Write(const StorageWriteRequest* req, StorageWriteResponse* rsp) {
+grpc::Status MemoryProvider::Write(const StorageWriteRequest* req, StorageWriteResponse*) {
   stores_[req->storage_id()][req->datum_name()] = req->datum_value();
   return grpc::Status::OK;
 }
 
-grpc::Status MemoryProvider::Delete(const StorageDeleteRequest* req, StorageDeleteResponse* rsp) {
+grpc::Status MemoryProvider::Delete(const StorageDeleteRequest* req, StorageDeleteResponse*) {
   auto store = stores_.find(req->storage_id());
   if (store == stores_.end()) {
     return grpc::Status(grpc::StatusCode::NOT_FOUND,
@@ -51,14 +51,13 @@ grpc::Status MemoryProvider::Delete(const StorageDeleteRequest* req, StorageDele
   return grpc::Status::OK;
 }
 
-grpc::Status MemoryProvider::Begin(const StorageBeginRequest* req, StorageBeginResponse* rsp) {
+grpc::Status MemoryProvider::Begin(const StorageBeginRequest*, StorageBeginResponse*) {
   return grpc::Status(grpc::StatusCode::UNIMPLEMENTED, "No transaction semantics here");
 }
-grpc::Status MemoryProvider::Commit(const StorageCommitRequest* req, StorageCommitResponse* rsp) {
+grpc::Status MemoryProvider::Commit(const StorageCommitRequest*, StorageCommitResponse*) {
   return grpc::Status(grpc::StatusCode::UNIMPLEMENTED, "No transaction semantics here");
 }
-grpc::Status MemoryProvider::Rollback(const StorageRollbackRequest* req,
-                                      StorageRollbackResponse* rsp) {
+grpc::Status MemoryProvider::Rollback(const StorageRollbackRequest*, StorageRollbackResponse*) {
   return grpc::Status(grpc::StatusCode::UNIMPLEMENTED, "No transaction semantics here");
 }
 

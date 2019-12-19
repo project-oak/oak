@@ -27,8 +27,8 @@ AuthorizationBearerTokenMetadata::AuthorizationBearerTokenMetadata(
     : authorization_bearer_token_(authorization_bearer_token) {}
 
 grpc::Status AuthorizationBearerTokenMetadata::GetMetadata(
-    grpc::string_ref service_url, grpc::string_ref method_name,
-    const grpc::AuthContext& channel_auth_context,
+    grpc::string_ref /*service_url*/, grpc::string_ref /*method_name*/,
+    const grpc::AuthContext& /*channel_auth_context*/,
     std::multimap<grpc::string, grpc::string>* metadata) {
   metadata->insert(
       std::make_pair(kOakAuthorizationBearerTokenGrpcMetadataKey, authorization_bearer_token_));

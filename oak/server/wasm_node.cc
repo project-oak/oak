@@ -272,7 +272,7 @@ void WasmNode::Run(Handle handle) {
 }
 
 wabt::interp::HostFunc::Callback WasmNode::OakChannelRead(wabt::interp::Environment* env) {
-  return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
+  return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature*,
                      const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
     LogHostFunctionCall(name_, func, args);
 
@@ -353,7 +353,7 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelRead(wabt::interp::Environm
 }
 
 wabt::interp::HostFunc::Callback WasmNode::OakChannelWrite(wabt::interp::Environment* env) {
-  return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
+  return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature*,
                      const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
     LogHostFunctionCall(name_, func, args);
 
@@ -416,7 +416,7 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelWrite(wabt::interp::Environ
 }
 
 wabt::interp::HostFunc::Callback WasmNode::OakWaitOnChannels(wabt::interp::Environment* env) {
-  return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
+  return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature*,
                      const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
     LogHostFunctionCall(name_, func, args);
 
@@ -462,7 +462,7 @@ wabt::interp::HostFunc::Callback WasmNode::OakWaitOnChannels(wabt::interp::Envir
 }
 
 wabt::interp::HostFunc::Callback WasmNode::OakChannelCreate(wabt::interp::Environment* env) {
-  return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
+  return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature*,
                      const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
     LogHostFunctionCall(name_, func, args);
 
@@ -489,8 +489,8 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelCreate(wabt::interp::Enviro
   };
 }
 
-wabt::interp::HostFunc::Callback WasmNode::OakChannelClose(wabt::interp::Environment* env) {
-  return [this](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
+wabt::interp::HostFunc::Callback WasmNode::OakChannelClose(wabt::interp::Environment*) {
+  return [this](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature*,
                 const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
     LogHostFunctionCall(name_, func, args);
 
@@ -508,7 +508,7 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelClose(wabt::interp::Environ
 }
 
 wabt::interp::HostFunc::Callback WasmNode::OakNodeCreate(wabt::interp::Environment* env) {
-  return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
+  return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature*,
                      const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
     LogHostFunctionCall(name_, func, args);
 
@@ -551,7 +551,7 @@ wabt::interp::HostFunc::Callback WasmNode::OakNodeCreate(wabt::interp::Environme
 }
 
 wabt::interp::HostFunc::Callback WasmNode::OakRandomGet(wabt::interp::Environment* env) {
-  return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature* sig,
+  return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature*,
                      const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
     LogHostFunctionCall(name_, func, args);
 

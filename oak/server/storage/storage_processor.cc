@@ -34,7 +34,7 @@ std::string GetStorageId(const std::string& storage_name) {
   return storage_name;
 }
 
-asylo::CleansingVector<uint8_t> GetStorageEncryptionKey(const std::string& storage_name) {
+asylo::CleansingVector<uint8_t> GetStorageEncryptionKey(const std::string& /*storage_name*/) {
   // TODO: Request encryption key from escrow service.
   std::string encryption_key =
       absl::HexStringToBytes("c0dedeadc0dedeadc0dedeadc0dedeadc0dedeadc0dedeadc0dedeadc0dedead");
