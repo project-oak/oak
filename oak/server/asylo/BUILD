@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 load("@com_google_asylo//asylo/bazel:asylo.bzl", "enclave_loader")
 load("@com_google_asylo//asylo/bazel:copts.bzl", "ASYLO_DEFAULT_COPTS")
 load("@linux_sgx//:sgx_sdk.bzl", "sgx")
@@ -142,3 +143,19 @@ enclave_loader(
         "@com_google_asylo//asylo/util:logging",
     ],
 )
+
+container_image(
+    name = "oak-docker",
+    base = "@cc_image//image",
+    repository = "gcr.io/oak-ci",
+    entrypoint = [
+        "./oak_host_loader",
+        "--enclave_path=oak_enclave_debug.so",
+        "--grpc_port=8888"
+    ],
+    files = [
+        "oak_host_loader",
+        "oak_enclave_debug.so",
+    ]
+)
+

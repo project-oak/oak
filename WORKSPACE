@@ -19,6 +19,34 @@ workspace(name = "oak")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
+# Docker rules should be loaded in the beginning of the WORKSPACE file
+# to avoid diamond dependencies:
+# https://github.com/bazelbuild/rules_docker/blob/bb8da501955e5f7c1f704c50c0e4fce0193b2b2e/README.md#known-issues
+http_archive(
+    name = "io_bazel_rules_docker",
+    sha256 = "df13123c44b4a4ff2c2f337b906763879d94871d16411bf82dcfeba892b58607",
+    strip_prefix = "rules_docker-0.13.0",
+    urls = ["https://github.com/bazelbuild/rules_docker/releases/download/v0.13.0/rules_docker-v0.13.0.tar.gz"],
+)
+
+load("@io_bazel_rules_docker//repositories:repositories.bzl", container_repositories = "repositories")
+container_repositories()
+
+load("@io_bazel_rules_docker//cc:image.bzl", _cc_image_repos = "repositories")
+_cc_image_repos()
+
+load("@io_bazel_rules_docker//repositories:deps.bzl", container_deps = "deps")
+container_deps()
+
+# Load a Distroless-CC Docker image.
+load("@io_bazel_rules_docker//container:container.bzl", "container_pull")
+container_pull(
+    name = "cc_image",
+    registry = "gcr.io",
+    repository = "distroless/cc",
+    digest = "sha256:86f16733f25964c40dcd34edf14339ddbb2287af2f7c9dfad88f0366723c00d7",
+)
+
 http_archive(
     name = "com_google_absl",
     sha256 = "27184e97131edb9a289b1c2cd404c234afa5ceaae44c5eb6713138cb674535aa",
