@@ -17,7 +17,7 @@
 #![allow(unsafe_code)]
 #![allow(unused_imports)]
 #![allow(unused_results)]
-//! Generated file from `storage_channel.proto`
+//! Generated file from `oak/proto/storage_channel.proto`
 
 use protobuf::Message as Message_imported_for_functions;
 use protobuf::ProtobufEnum as ProtobufEnum_imported_for_functions;
@@ -2303,37 +2303,37 @@ impl ::protobuf::reflect::ProtobufValue for StorageChannelRollbackResponse {
 }
 
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\x15storage_channel.proto\x12\x03oak\"\x84\x01\n\x19StorageChannelRead\
-    Request\x12!\n\x0cstorage_name\x18\x01\x20\x01(\x0cR\x0bstorageName\x12%\
-    \n\x0etransaction_id\x18\x02\x20\x01(\x0cR\rtransactionId\x12\x1d\n\ndat\
-    um_name\x18\x03\x20\x01(\x0cR\tdatumName\"=\n\x1aStorageChannelReadRespo\
-    nse\x12\x1f\n\x0bdatum_value\x18\x01\x20\x01(\x0cR\ndatumValue\"\xa6\x01\
-    \n\x1aStorageChannelWriteRequest\x12!\n\x0cstorage_name\x18\x01\x20\x01(\
-    \x0cR\x0bstorageName\x12%\n\x0etransaction_id\x18\x02\x20\x01(\x0cR\rtra\
-    nsactionId\x12\x1d\n\ndatum_name\x18\x03\x20\x01(\x0cR\tdatumName\x12\
-    \x1f\n\x0bdatum_value\x18\x04\x20\x01(\x0cR\ndatumValue\"\x1d\n\x1bStora\
-    geChannelWriteResponse\"\x86\x01\n\x1bStorageChannelDeleteRequest\x12!\n\
-    \x0cstorage_name\x18\x01\x20\x01(\x0cR\x0bstorageName\x12%\n\x0etransact\
-    ion_id\x18\x02\x20\x01(\x0cR\rtransactionId\x12\x1d\n\ndatum_name\x18\
-    \x03\x20\x01(\x0cR\tdatumName\"\x1e\n\x1cStorageChannelDeleteResponse\"?\
-    \n\x1aStorageChannelBeginRequest\x12!\n\x0cstorage_name\x18\x01\x20\x01(\
-    \x0cR\x0bstorageName\"D\n\x1bStorageChannelBeginResponse\x12%\n\x0etrans\
-    action_id\x18\x01\x20\x01(\x0cR\rtransactionId\"g\n\x1bStorageChannelCom\
-    mitRequest\x12!\n\x0cstorage_name\x18\x01\x20\x01(\x0cR\x0bstorageName\
-    \x12%\n\x0etransaction_id\x18\x02\x20\x01(\x0cR\rtransactionId\"\x1e\n\
-    \x1cStorageChannelCommitResponse\"\x88\x01\n\x1dStorageChannelRollbackRe\
-    quest\x12!\n\x0cstorage_name\x18\x01\x20\x01(\x0cR\x0bstorageName\x12\
-    \x1d\n\nstorage_id\x18\x02\x20\x01(\x0cR\tstorageId\x12%\n\x0etransactio\
-    n_id\x18\x03\x20\x01(\x0cR\rtransactionId\"\x20\n\x1eStorageChannelRollb\
-    ackResponse2\xe0\x03\n\x0bStorageNode\x12G\n\x04Read\x12\x1e.oak.Storage\
-    ChannelReadRequest\x1a\x1f.oak.StorageChannelReadResponse\x12J\n\x05Writ\
-    e\x12\x1f.oak.StorageChannelWriteRequest\x1a\x20.oak.StorageChannelWrite\
-    Response\x12M\n\x06Delete\x12\x20.oak.StorageChannelDeleteRequest\x1a!.o\
-    ak.StorageChannelDeleteResponse\x12J\n\x05Begin\x12\x1f.oak.StorageChann\
-    elBeginRequest\x1a\x20.oak.StorageChannelBeginResponse\x12L\n\x06Commit\
-    \x12\x1f.oak.StorageChannelBeginRequest\x1a!.oak.StorageChannelCommitRes\
-    ponse\x12S\n\x08Rollback\x12\".oak.StorageChannelRollbackRequest\x1a#.oa\
-    k.StorageChannelRollbackResponseb\x06proto3\
+    \n\x1foak/proto/storage_channel.proto\x12\x03oak\"\x84\x01\n\x19StorageC\
+    hannelReadRequest\x12!\n\x0cstorage_name\x18\x01\x20\x01(\x0cR\x0bstorag\
+    eName\x12%\n\x0etransaction_id\x18\x02\x20\x01(\x0cR\rtransactionId\x12\
+    \x1d\n\ndatum_name\x18\x03\x20\x01(\x0cR\tdatumName\"=\n\x1aStorageChann\
+    elReadResponse\x12\x1f\n\x0bdatum_value\x18\x01\x20\x01(\x0cR\ndatumValu\
+    e\"\xa6\x01\n\x1aStorageChannelWriteRequest\x12!\n\x0cstorage_name\x18\
+    \x01\x20\x01(\x0cR\x0bstorageName\x12%\n\x0etransaction_id\x18\x02\x20\
+    \x01(\x0cR\rtransactionId\x12\x1d\n\ndatum_name\x18\x03\x20\x01(\x0cR\td\
+    atumName\x12\x1f\n\x0bdatum_value\x18\x04\x20\x01(\x0cR\ndatumValue\"\
+    \x1d\n\x1bStorageChannelWriteResponse\"\x86\x01\n\x1bStorageChannelDelet\
+    eRequest\x12!\n\x0cstorage_name\x18\x01\x20\x01(\x0cR\x0bstorageName\x12\
+    %\n\x0etransaction_id\x18\x02\x20\x01(\x0cR\rtransactionId\x12\x1d\n\nda\
+    tum_name\x18\x03\x20\x01(\x0cR\tdatumName\"\x1e\n\x1cStorageChannelDelet\
+    eResponse\"?\n\x1aStorageChannelBeginRequest\x12!\n\x0cstorage_name\x18\
+    \x01\x20\x01(\x0cR\x0bstorageName\"D\n\x1bStorageChannelBeginResponse\
+    \x12%\n\x0etransaction_id\x18\x01\x20\x01(\x0cR\rtransactionId\"g\n\x1bS\
+    torageChannelCommitRequest\x12!\n\x0cstorage_name\x18\x01\x20\x01(\x0cR\
+    \x0bstorageName\x12%\n\x0etransaction_id\x18\x02\x20\x01(\x0cR\rtransact\
+    ionId\"\x1e\n\x1cStorageChannelCommitResponse\"\x88\x01\n\x1dStorageChan\
+    nelRollbackRequest\x12!\n\x0cstorage_name\x18\x01\x20\x01(\x0cR\x0bstora\
+    geName\x12\x1d\n\nstorage_id\x18\x02\x20\x01(\x0cR\tstorageId\x12%\n\x0e\
+    transaction_id\x18\x03\x20\x01(\x0cR\rtransactionId\"\x20\n\x1eStorageCh\
+    annelRollbackResponse2\xe0\x03\n\x0bStorageNode\x12G\n\x04Read\x12\x1e.o\
+    ak.StorageChannelReadRequest\x1a\x1f.oak.StorageChannelReadResponse\x12J\
+    \n\x05Write\x12\x1f.oak.StorageChannelWriteRequest\x1a\x20.oak.StorageCh\
+    annelWriteResponse\x12M\n\x06Delete\x12\x20.oak.StorageChannelDeleteRequ\
+    est\x1a!.oak.StorageChannelDeleteResponse\x12J\n\x05Begin\x12\x1f.oak.St\
+    orageChannelBeginRequest\x1a\x20.oak.StorageChannelBeginResponse\x12L\n\
+    \x06Commit\x12\x1f.oak.StorageChannelBeginRequest\x1a!.oak.StorageChanne\
+    lCommitResponse\x12S\n\x08Rollback\x12\".oak.StorageChannelRollbackReque\
+    st\x1a#.oak.StorageChannelRollbackResponseb\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {

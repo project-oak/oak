@@ -17,7 +17,7 @@
 #![allow(unsafe_code)]
 #![allow(unused_imports)]
 #![allow(unused_results)]
-//! Generated file from `oak_api.proto`
+//! Generated file from `oak/proto/oak_api.proto`
 
 use protobuf::Message as Message_imported_for_functions;
 use protobuf::ProtobufEnum as ProtobufEnum_imported_for_functions;
@@ -167,15 +167,15 @@ impl ::protobuf::reflect::ProtobufValue for ChannelReadStatus {
 }
 
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\roak_api.proto\x12\x03oak*\xe7\x01\n\tOakStatus\x12\x1a\n\x16OAK_STAT\
-    US_UNSPECIFIED\x10\0\x12\x06\n\x02OK\x10\x01\x12\x12\n\x0eERR_BAD_HANDLE\
-    \x10\x02\x12\x14\n\x10ERR_INVALID_ARGS\x10\x03\x12\x16\n\x12ERR_CHANNEL_\
-    CLOSED\x10\x04\x12\x18\n\x14ERR_BUFFER_TOO_SMALL\x10\x05\x12\x1e\n\x1aER\
-    R_HANDLE_SPACE_TOO_SMALL\x10\x06\x12\x14\n\x10ERR_OUT_OF_RANGE\x10\x07\
-    \x12\x10\n\x0cERR_INTERNAL\x10\x08\x12\x12\n\x0eERR_TERMINATED\x10\t*U\n\
-    \x11ChannelReadStatus\x12\r\n\tNOT_READY\x10\0\x12\x0e\n\nREAD_READY\x10\
-    \x01\x12\x13\n\x0fINVALID_CHANNEL\x10\x02\x12\x0c\n\x08ORPHANED\x10\x03b\
-    \x06proto3\
+    \n\x17oak/proto/oak_api.proto\x12\x03oak*\xe7\x01\n\tOakStatus\x12\x1a\n\
+    \x16OAK_STATUS_UNSPECIFIED\x10\0\x12\x06\n\x02OK\x10\x01\x12\x12\n\x0eER\
+    R_BAD_HANDLE\x10\x02\x12\x14\n\x10ERR_INVALID_ARGS\x10\x03\x12\x16\n\x12\
+    ERR_CHANNEL_CLOSED\x10\x04\x12\x18\n\x14ERR_BUFFER_TOO_SMALL\x10\x05\x12\
+    \x1e\n\x1aERR_HANDLE_SPACE_TOO_SMALL\x10\x06\x12\x14\n\x10ERR_OUT_OF_RAN\
+    GE\x10\x07\x12\x10\n\x0cERR_INTERNAL\x10\x08\x12\x12\n\x0eERR_TERMINATED\
+    \x10\t*U\n\x11ChannelReadStatus\x12\r\n\tNOT_READY\x10\0\x12\x0e\n\nREAD\
+    _READY\x10\x01\x12\x13\n\x0fINVALID_CHANNEL\x10\x02\x12\x0c\n\x08ORPHANE\
+    D\x10\x03b\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {
