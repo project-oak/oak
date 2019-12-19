@@ -12,10 +12,22 @@ source "$SCRIPTS_DIR/common"
 readonly server_pid=$!
 to_kill+=("${server_pid}")
 
-# Run Rust-based Oak examples, each with their own Oak server instance.
+# Run Rust-based Oak examples, re-using the same Oak server instance.
 readonly RUST_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module/rust$' | cut -d'/' -f2)"
 for example in ${RUST_EXAMPLES}; do
+  deps_pid=""
+  deps_cmd=$(cat "./examples/${example}/run_deps" || true)
+  if [ -n "${deps_cmd}" ]; then
+    # Run the dependencies of the example.
+    ${deps_cmd} &
+    deps_pid=$!
+  fi
+
   "${SCRIPTS_DIR}/run_example" "${example}"
+
+  if [ -n "${deps_pid}" ]; then
+    kill_pid "${deps_pid}"
+  fi
 done
 
 # Run C++-based Oak examples.

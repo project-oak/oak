@@ -14,6 +14,14 @@ for example in ${RUST_EXAMPLES}; do
   server_pid=$!
   to_kill+=("${server_pid}")
 
+  deps_cmd=$(cat "./examples/${example}/run_deps" || true)
+  if [ -n "${deps_cmd}" ]; then
+    # Run the dependencies of the example.
+    ${deps_cmd} &
+    deps_pid=$!
+    to_kill+=("${deps_pid}")
+  fi
+
   "${SCRIPTS_DIR}/run_example" "${example}"
 
   kill_bg_pids

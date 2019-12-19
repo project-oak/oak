@@ -1,0 +1,1 @@
+bazel run //oak/server/storage:storage_server
