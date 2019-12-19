@@ -57,3 +57,7 @@ find . \
 grep --recursive --files-with-matches embedmd docs | while IFS= read -r file; do
   "$GOPATH/bin/embedmd" -d "$file"
 done
+
+# Check syntax in XML files.
+# TODO: Implement with `xmllint --noout your_test_file.xml`.
+

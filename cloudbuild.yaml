@@ -79,6 +79,19 @@ steps:
     timeout: 5m
     entrypoint: 'cp'
     args: ['./bazel-bin/oak/server/asylo/liboak_enclave_unsigned.so', './liboak_enclave_unsigned.so']
+  # Build Docker image based for Android SDK.
+  - name: 'gcr.io/cloud-builders/docker'
+    id: build_android_image
+    waitFor: ['-']
+    timeout: 30m
+    args: ['build', '--file=android.Dockerfile', '--tag=gcr.io/oak-ci/oak-android:latest', '.']
+  # Build Android Hello-World application.
+  - name: 'gcr.io/oak-ci/oak-android:latest'
+    id: build_examples_android
+    waitFor: ['build_android_image']
+    timeout: 30m
+    entrypoint: 'bash'
+    args: ['./scripts/build_examples_android']
 
 # Copy compiled enclave binary to Google Cloud Storage.
 # See:

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="empty"></string>
+  <string name="hello_button">Say hello</string>
+  <string name="ip_address">IP address</string>
+  <string name="tcp_port">TCP port</string>
+</resources>
