@@ -47,6 +47,10 @@ oak::policy::Label DeserializePolicy(const std::string& serialized_policy);
 // provided authorization bearer token.
 oak::policy::Label AuthorizationBearerTokenPolicy(const std::string& authorization_token);
 
+// Creates a policy that only allows declassifying data for modules that can present the
+// provided module attestation.
+oak::policy::Label ModuleAttestationPolicy(const std::string& module_attestation);
+
 }  // namespace oak
 
 #endif  // OAK_COMMON_POLICY_H_
