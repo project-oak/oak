@@ -156,5 +156,9 @@ container_image(
         "oak_enclave_debug.so",
         "oak_host_loader",
     ],
+    ports = [
+        "8080",  # Application port.
+        "8888",  # gRPC port.
+    ],
     repository = "gcr.io/oak-ci",
 )
