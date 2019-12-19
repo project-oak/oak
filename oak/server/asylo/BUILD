@@ -147,15 +147,14 @@ enclave_loader(
 container_image(
     name = "oak-docker",
     base = "@cc_image//image",
-    repository = "gcr.io/oak-ci",
     entrypoint = [
         "./oak_host_loader",
         "--enclave_path=oak_enclave_debug.so",
-        "--grpc_port=8888"
+        "--grpc_port=8888",
     ],
     files = [
-        "oak_host_loader",
         "oak_enclave_debug.so",
-    ]
+        "oak_host_loader",
+    ],
+    repository = "gcr.io/oak-ci",
 )
-

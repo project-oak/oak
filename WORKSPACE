@@ -30,21 +30,25 @@ http_archive(
 )
 
 load("@io_bazel_rules_docker//repositories:repositories.bzl", container_repositories = "repositories")
+
 container_repositories()
 
 load("@io_bazel_rules_docker//cc:image.bzl", _cc_image_repos = "repositories")
+
 _cc_image_repos()
 
 load("@io_bazel_rules_docker//repositories:deps.bzl", container_deps = "deps")
+
 container_deps()
 
 # Load a Distroless-CC Docker image.
 load("@io_bazel_rules_docker//container:container.bzl", "container_pull")
+
 container_pull(
     name = "cc_image",
+    digest = "sha256:86f16733f25964c40dcd34edf14339ddbb2287af2f7c9dfad88f0366723c00d7",
     registry = "gcr.io",
     repository = "distroless/cc",
-    digest = "sha256:86f16733f25964c40dcd34edf14339ddbb2287af2f7c9dfad88f0366723c00d7",
 )
 
 http_archive(
