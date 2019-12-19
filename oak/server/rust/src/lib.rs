@@ -38,11 +38,9 @@ use alloc::prelude::v1::*;
 use core::alloc::Layout;
 use core::panic::PanicInfo;
 
-// TODO: Move to separate crate.
+pub mod enclave;
 pub mod error;
-pub mod io;
-pub mod asylo_alloc;
-pub mod sys;
+// pub mod thread;
 
 // TODO: Move to separate crate and expose safe wrappers.
 #[link(name = "sgx_trts")]
@@ -57,7 +55,7 @@ extern "C" {
 }
 
 #[global_allocator]
-static A: asylo_alloc::System = asylo_alloc::System;
+static A: enclave::allocator::System = enclave::allocator::System;
 
 // Define what happens in an Out Of Memory (OOM) condition.
 #[alloc_error_handler]
@@ -77,14 +75,34 @@ fn panic(_info: &PanicInfo) -> ! {
 #[lang = "eh_personality"]
 pub extern "C" fn eh_personality() {}
 
+pub fn thread_test() -> enclave::io::Result<i32> {
+  use alloc::sync::Arc;
+  use core::sync::atomic::{AtomicI32, Ordering};
+  let val = Arc::new(AtomicI32::new(2));
+
+  let other = {
+    let val = Arc::clone(&val);
+    move || {
+      val.fetch_add(40, Ordering::SeqCst);
+    }
+  };
+
+  let t = unsafe {
+      enclave::thread::Thread::new(Box::new(other))
+  }?;
+  t.join();
+  Ok(val.load(Ordering::SeqCst))
+}
+
 /// An exported placeholder function to check that linking against C++ is successful.
 /// It just adds "42" to the provided value and returns it to the caller.
 #[no_mangle]
 pub extern "C" fn add_magic_number(x: i32) -> i32 {
-    let child = thread::spawn(move || {
-        let v: Vec<i32> = (0..10).map(|n| n + 40).collect();
-        x + v[2]
-    });
-    let res = child.join();
-    res
+    // let child = thread::spawn(move || {
+    //     let v: Vec<i32> = (0..10).map(|n| n + 40).collect();
+    //     x + v[2]
+    // });
+    // let res = child.join();
+    // res
+    thread_test().unwrap_or(0)
 }

@@ -23,9 +23,7 @@ package(
 
 rust_library(
     name = "oak_runtime",
-    srcs = glob(["src/*.rs",
-                 "src/sys/*.rs",
-                 "src/io/*.rs"]),
+    srcs = glob(["src/**/*.rs"]),
     crate_type = "staticlib",
     edition = "2018",
     # deps = ["libc"]

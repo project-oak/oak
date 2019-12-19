@@ -146,6 +146,12 @@ grpc::Status OakRuntime::Start() {
   {
     LOG(INFO) << "Calling Rust runtime";
     int32_t rust_check = add_magic_number(1000);
+
+    if (rust_check != 42) {
+      LOG(ERROR) << "failed rust magic number" << rust_check;
+      return grpc::Status::CANCELLED;
+    }
+
     LOG(INFO) << "Rust runtime called, result: " << rust_check;
   }
 
