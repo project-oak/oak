@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 
-#ifndef RUST_OAK_RUNTIME_OAK_RUNTIME_H_
-#define RUST_OAK_RUNTIME_OAK_RUNTIME_H_
+#ifndef RUST_CHECK_H_
+#define RUST_CHECK_H_
+
+// TODO: Using this to temporarily verify rust compat layer is working.
 
 #include <cstdint>
 
