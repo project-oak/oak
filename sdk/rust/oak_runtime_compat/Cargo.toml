@@ -1,9 +1,16 @@
-# Placeholder file, only to make VSCode happy. All compilation is actually done via Bazel.
-
 [package]
-name = "oak_runtime"
+name = "oak_runtime_compat"
 version = "0.1.0"
-authors = ["Tiziano Santoro <tzn@google.com>"]
+authors = ["Ben Blaxill <benblaxill@google.com>"]
 
-[lib]
-crate-type = ["staticlib"]
+# [dependencies]
+# byteorder = "1"
+# lazy_static = "1.4"
+# log = { version = "^0.4.0", features = ["std"] }
+# oak_runtime_compat = "*"
+# oak_derive = "*"
+# oak_log = "*"
+# oak = "*"
+# protobuf = "*"
+# rand = { version = "0.7", features = ["std"] }
+# simple_logger = "1"

@@ -20,7 +20,7 @@
 use core::alloc::{GlobalAlloc, Layout};
 use core::panic::PanicInfo;
 
-use crate::enclave;
+use crate::asylo;
 
 extern "C" {
     // Signatures of the functions exposed by the underlying standard library used in Asylo
@@ -91,7 +91,7 @@ extern "C" {
 
 
 #[global_allocator]
-static A: enclave::allocator::System = enclave::allocator::System;
+static A: asylo::allocator::System = asylo::allocator::System;
 
 // Define what happens in an Out Of Memory (OOM) condition.
 #[alloc_error_handler]

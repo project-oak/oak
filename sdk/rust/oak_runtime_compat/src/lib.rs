@@ -35,7 +35,7 @@ extern crate libc;
 
 use alloc::prelude::v1::*;
 
-pub mod enclave;
+pub mod asylo;
 pub mod common;
 
 pub fn thread_test() -> common::io::Result<i32> {
@@ -51,7 +51,7 @@ pub fn thread_test() -> common::io::Result<i32> {
   };
 
   let t = unsafe {
-      enclave::thread::Thread::new(Box::new(other))
+      asylo::thread::Thread::new(Box::new(other))
   }?;
   t.join();
   Ok(val.load(Ordering::SeqCst))

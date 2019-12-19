@@ -167,12 +167,12 @@ use crate::alloc::sync::Arc;
 use crate::alloc::boxed::Box;
 use crate::alloc::string::String;
 
-use crate::enclave::thread;
-use crate::enclave::thread as imp;
-use crate::enclave::thread::Thread;
-use crate::enclave::mutex;
-use crate::enclave::mutex::Mutex;
-use crate::enclave::io;
+use crate::asylo::thread;
+use crate::asylo::thread as imp;
+use crate::asylo::thread::Thread;
+use crate::asylo::mutex;
+use crate::asylo::mutex::Mutex;
+use crate::asylo::io;
 
 
 //////////////////////////////////////////////////////////////////////////////////
