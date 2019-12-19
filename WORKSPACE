@@ -46,7 +46,9 @@ load("@io_bazel_rules_docker//container:container.bzl", "container_pull")
 
 container_pull(
     name = "cc_image",
-    digest = "sha256:86f16733f25964c40dcd34edf14339ddbb2287af2f7c9dfad88f0366723c00d7",
+    # Image uploaded on 2019-10-28.
+    # https://pantheon.corp.google.com/gcr/images/distroless/GLOBAL/cc
+    digest = "sha256:f81e5db8287d66b012d874a6f7fea8da5b96d9cc509aa5a9b5d095a604d4bca1",
     registry = "gcr.io",
     repository = "distroless/cc",
 )
