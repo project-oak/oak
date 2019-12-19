@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 load("@com_google_asylo//asylo/bazel:asylo.bzl", "enclave_loader")
 load("@com_google_asylo//asylo/bazel:copts.bzl", "ASYLO_DEFAULT_COPTS")
 load("@linux_sgx//:sgx_sdk.bzl", "sgx")
@@ -141,4 +142,25 @@ enclave_loader(
         "@com_google_absl//absl/time",
         "@com_google_asylo//asylo/util:logging",
     ],
+)
+
+container_image(
+    name = "oak-docker",
+    base = "@cc_image//image",
+    entrypoint = [
+        "./oak_host_loader",
+        "--enclave_path=oak_enclave_debug.so",
+        "--grpc_port=8888",
+    ],
+    files = [
+        "oak_enclave_debug.so",
+        "oak_host_loader",
+    ],
+    ports = [
+        # https://github.com/project-oak/oak/blob/667b07c555cde0c4705e5f7533b101203cc01c12/oak/server/asylo/asylo_oak_manager.cc#L48
+        "8080/tcp",  # Oak Application gRPC port.
+        # https://github.com/project-oak/oak/blob/667b07c555cde0c4705e5f7533b101203cc01c12/oak/server/asylo/asylo_oak_main.cc#L33
+        "8888/tcp",  # Oak Manager gRPC port.
+    ],
+    repository = "gcr.io/oak-ci",
 )

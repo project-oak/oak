@@ -6,7 +6,9 @@ set -o xtrace
 
 # See https://pantheon.corp.google.com/gcr/images/oak-ci/GLOBAL/oak
 readonly DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak'
+readonly SERVER_DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak-server'
 
+readonly BIN_DIR='bazel-bin'
 readonly CACHE_DIR='bazel-cache'
 
 readonly OAK_REMOTE_CACHE_KEY='./.oak_remote_cache_key.json'

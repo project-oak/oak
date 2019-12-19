@@ -41,6 +41,12 @@ steps:
     entrypoint: 'bash'
     args: ['./scripts/build_server_dev']
   - name: 'gcr.io/oak-ci/oak:latest'
+    id: build_server_docker
+    waitFor: ['build_server_asylo']
+    timeout: 30m
+    entrypoint: 'bash'
+    args: ['./scripts/build_server_docker']
+  - name: 'gcr.io/oak-ci/oak:latest'
     id: run_tests
     timeout: 30m
     entrypoint: 'bash'
