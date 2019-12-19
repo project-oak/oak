@@ -157,8 +157,8 @@ container_image(
         "oak_host_loader",
     ],
     ports = [
-        "8080",  # Application port.
-        "8888",  # gRPC port.
+        "8080/tcp",  # Application port.
+        "8888/tcp",  # gRPC port.
     ],
     repository = "gcr.io/oak-ci",
 )
