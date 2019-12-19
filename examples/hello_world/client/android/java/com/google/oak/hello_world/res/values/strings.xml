@@ -2,5 +2,5 @@
 <resources>
   <string name="empty"></string>
   <string name="hello_button">Say hello</string>
-  <string name="address">IP address</string>
+  <string name="address">IP address : TCP port</string>
 </resources>
