@@ -7,24 +7,12 @@ steps:
     waitFor: ['-']
     timeout: 10m
     args: ['pull', 'gcr.io/oak-ci/oak:latest']
-  # Pull Android Docker image.
-  - name: 'gcr.io/cloud-builders/docker'
-    id: pull_android_image
-    waitFor: ['-']
-    timeout: 10m
-    args: ['pull', 'gcr.io/oak-ci/oak-android:latest']
   # Build Docker image based on current Dockerfile, if necessary.
   - name: 'gcr.io/cloud-builders/docker'
     id: build_image
     waitFor: ['pull_image']
     timeout: 10m
     args: ['build', '--pull', '--cache-from=gcr.io/oak-ci/oak:latest', '--tag=gcr.io/oak-ci/oak:latest', '.']
-  # Build Docker image based for Android SDK.
-  - name: 'gcr.io/cloud-builders/docker'
-    id: build_android_image
-    waitFor: ['pull_android_image']
-    timeout: 30m
-    args: ['build', '--pull', '--cache-from=gcr.io/oak-ci/oak-android:latest', '--tag=gcr.io/oak-ci/oak-android:latest', '--file=android.Dockerfile', '.']
   # Run next build steps inside the newly created Docker image.
   # See: https://cloud.google.com/cloud-build/docs/create-custom-build-steps
   # Init .git repository used by check_generated
@@ -98,6 +86,19 @@ steps:
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/build_examples_android']
+
+  # Pull Android Docker image.
+  - name: 'gcr.io/cloud-builders/docker'
+    id: pull_android_image
+    waitFor: ['-']
+    timeout: 10m
+    args: ['pull', 'gcr.io/oak-ci/oak-android:latest']
+  # Build Docker image based for Android SDK.
+  - name: 'gcr.io/cloud-builders/docker'
+    id: build_android_image
+    waitFor: ['pull_android_image']
+    timeout: 30m
+    args: ['build', '--pull', '--cache-from=gcr.io/oak-ci/oak-android:latest', '--tag=gcr.io/oak-ci/oak-android:latest', '--file=android.Dockerfile', '.']
 
 # Copy compiled enclave binary to Google Cloud Storage.
 # See:

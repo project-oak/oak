@@ -46,6 +46,7 @@ public class MainActivity extends Activity {
 
     // Set default address.
     // Android emulator forwards `10.0.2.2` to the host machine.
+    // https://developer.android.com/studio/run/emulator-networking
     EditText addressInput = findViewById(R.id.addressInput);
     addressInput.setText("10.0.2.2:8888");
   }
