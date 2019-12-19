@@ -95,7 +95,7 @@ std::string OakRuntime::NextNodeName(const std::string& config) {
 
 // Create (but don't start) a new Node instance.  Return a borrowed pointer to
 // the new Node (or nullptr on failure).
-OakNode* OakRuntime::CreateNode(const std::string& config, std::string* node_name) {
+OakNode* OakRuntime::CreateNode(const std::string& config, std::string* /*node_name*/) {
   std::string name = NextNodeName(config);
   std::unique_ptr<OakNode> node;
 
