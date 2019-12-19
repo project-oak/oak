@@ -19,8 +19,14 @@ bazel build "${bazel_build_flags[@]}" -- //oak/...:all -//oak/server/asylo:all
 ./scripts/generate_compilation_database
 
 # Run clang-tidy.
+readonly CLANG_TIDY_FLAGS=(
+    "-p=${BAZEL_ROOT}"
+    '-header-filter=-external'
+    '-warnings-as-errors=*'
+)
 mapfile -t SOURCE_FILES < <(find oak -path oak/server/asylo -prune -o -name '*.cc')
-clang-tidy -p "$BAZEL_ROOT" -header-filter='-external' "${SOURCE_FILES[@]}"
+#clang-tidy -p "$BAZEL_ROOT" -header-filter='-external' "${SOURCE_FILES[@]}"
+clang-tidy "${CLANG_TIDY_FLAGS[@]}" "${SOURCE_FILES[@]}"
 
 # TODO: Uncomment when https://github.com/project-oak/oak/issues/354 will be closed.
 ## Compile Asylo server separately with an Asylo toolchain.
