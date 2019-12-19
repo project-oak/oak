@@ -112,6 +112,7 @@ proto_library(
     name = "storage_channel_proto",
     srcs = ["storage_channel.proto"],
     deps = [
+        ":policy_proto",
         "//third_party/google/rpc:status_proto",
     ],
 )

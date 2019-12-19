@@ -18,26 +18,33 @@ syntax = "proto3";
 
 package oak;
 
+import "oak/proto/policy.proto";
+
 // In all the request messages below, the storage_name field is used to partition data within an Oak
 // Module and is not exposed to the StorageProvider. The StorageChannel generates a unique storage
 // identifier from storage_name and the Oak Module identifier to prevent name collisions among Oak
 // Modules.
 
+message StorageDatum {
+  bytes name = 1;
+  bytes value = 2;
+  oak.policy.Label policy = 3;
+}
+
 message StorageChannelReadRequest {
   bytes storage_name = 1;
   bytes transaction_id = 2;
-  bytes datum_name = 3;
+  StorageDatum datum = 3;
 }
 
 message StorageChannelReadResponse {
-  bytes datum_value = 1;
+  StorageDatum datum = 1;
 }
 
 message StorageChannelWriteRequest {
   bytes storage_name = 1;
   bytes transaction_id = 2;
-  bytes datum_name = 3;
-  bytes datum_value = 4;
+  StorageDatum datum = 3;
 }
 
 message StorageChannelWriteResponse {
@@ -46,7 +53,7 @@ message StorageChannelWriteResponse {
 message StorageChannelDeleteRequest {
   bytes storage_name = 1;
   bytes transaction_id = 2;
-  bytes datum_name = 3;
+  StorageDatum datum = 3;
 }
 
 message StorageChannelDeleteResponse {

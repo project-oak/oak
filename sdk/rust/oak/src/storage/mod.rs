@@ -20,7 +20,7 @@ use crate::grpc;
 use crate::proto::grpc_encap::{GrpcRequest, GrpcResponse};
 use crate::proto::storage_channel::{
     StorageChannelDeleteRequest, StorageChannelDeleteResponse, StorageChannelReadRequest,
-    StorageChannelReadResponse, StorageChannelWriteRequest, StorageChannelWriteResponse,
+    StorageChannelReadResponse, StorageChannelWriteRequest, StorageChannelWriteResponse
 };
 use log::info;
 use protobuf::{Message, ProtobufEnum};
@@ -142,23 +142,24 @@ impl Storage {
     pub fn read(&mut self, storage_name: &[u8], name: &[u8]) -> grpc::Result<Vec<u8>> {
         let mut read_request = StorageChannelReadRequest::new();
         read_request.storage_name = storage_name.to_owned();
-        read_request.datum_name = name.to_owned();
+        read_request.mut_datum().set_name(name.to_owned());
 
         // TODO: Automatically generate boilerplate from the proto definition.
         self.execute_operation::<StorageChannelReadRequest, StorageChannelReadResponse>(
             "/oak.StorageNode/Read",
             &read_request,
         )
-        .map(|r| r.get_datum_value().to_vec())
+        .map(|r| r.get_datum().get_value().to_vec())
     }
 
     /// Set the value associated with the given `name` from the storage instance
     /// identified by `name`.
     pub fn write(&mut self, storage_name: &[u8], name: &[u8], value: &[u8]) -> grpc::Result<()> {
         let mut write_request = StorageChannelWriteRequest::new();
+        // TODO: Set policy for datum.
         write_request.storage_name = storage_name.to_owned();
-        write_request.datum_name = name.to_owned();
-        write_request.datum_value = value.to_owned();
+        write_request.mut_datum().set_name(name.to_owned());
+        write_request.mut_datum().set_value(value.to_owned());
 
         // TODO: Automatically generate boilerplate from the proto definition.
         self.execute_operation::<StorageChannelWriteRequest, StorageChannelWriteResponse>(
@@ -173,7 +174,7 @@ impl Storage {
     pub fn delete(&mut self, storage_name: &[u8], name: &[u8]) -> grpc::Result<()> {
         let mut delete_request = StorageChannelDeleteRequest::new();
         delete_request.storage_name = storage_name.to_owned();
-        delete_request.datum_name = name.to_owned();
+        delete_request.mut_datum().set_name(name.to_owned());
 
         // TODO: Automatically generate boilerplate from the proto definition.
         self.execute_operation::<StorageChannelDeleteRequest, StorageChannelDeleteResponse>(

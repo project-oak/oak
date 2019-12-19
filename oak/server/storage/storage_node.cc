@@ -78,26 +78,32 @@ void StorageNode::Run(Handle request_handle) {
         // TODO: Handle errors.
       }
       StorageChannelReadResponse channel_read_response;
-      storage_processor_.Read(
-          channel_read_request.storage_name(), channel_read_request.datum_name(),
-          channel_read_request.transaction_id(), channel_read_response.mutable_datum_value());
-
+      std::string value;
+      storage_processor_.Read(channel_read_request.storage_name(),
+                              channel_read_request.datum().name(),
+                              channel_read_request.transaction_id(), &value);
+      channel_read_response.mutable_datum()->ParseFromString(value);
+      // TODO: Check security policy for datum.
       channel_response.mutable_rsp_msg()->PackFrom(channel_read_response);
     } else if (method_name == "/oak.StorageNode/Write") {
       StorageChannelWriteRequest channel_write_request;
       if (!channel_request.req_msg().UnpackTo(&channel_write_request)) {
         // TODO: Handle errors.
       }
-      storage_processor_.Write(
-          channel_write_request.storage_name(), channel_write_request.datum_name(),
-          channel_write_request.datum_value(), channel_write_request.transaction_id());
+      // TODO: Check integrity policy for datum.
+      std::string datum;
+      channel_write_request.datum().SerializeToString(&datum);
+      storage_processor_.Write(channel_write_request.storage_name(),
+                               channel_write_request.datum().name(), datum,
+                               channel_write_request.transaction_id());
     } else if (method_name == "/oak.StorageNode/Delete") {
       StorageChannelDeleteRequest channel_delete_request;
       if (!channel_request.req_msg().UnpackTo(&channel_delete_request)) {
         // TODO: Handle errors.
       }
+      // TODO: Check integrity policy for datum.
       storage_processor_.Delete(channel_delete_request.storage_name(),
-                                channel_delete_request.datum_name(),
+                                channel_delete_request.datum().name(),
                                 channel_delete_request.transaction_id());
     } else if (method_name == "/oak.StorageNode/Begin") {
       StorageChannelBeginRequest channel_begin_request;
