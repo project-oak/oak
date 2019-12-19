@@ -9,14 +9,14 @@ bazel_build_flags+=(
     '--noshow_progress'
     '--noshow_loading_progress'
 )
+
+# Compilation database should be stored in the Bazel execution root.
+readonly BAZEL_ROOT=$(bazel info execution_root)
 readonly CLANG_TIDY_FLAGS=(
     "-p=${BAZEL_ROOT}"
     '-header-filter=-external'
     '-warnings-as-errors=*'
 )
-
-# Compilation database should be stored in the Bazel execution root.
-readonly BAZEL_ROOT=$(bazel info execution_root)
 
 # Generate compilation database.
 # Asylo is excluded since it requires an '--config=enc-sim' flag.
@@ -25,7 +25,6 @@ bazel build "${bazel_build_flags[@]}" -- //oak/...:all -//oak/server/asylo:all
 
 # Run clang-tidy.
 mapfile -t SOURCE_FILES < <(find oak -path oak/server/asylo -prune -o -name '*.cc')
-#clang-tidy -p "$BAZEL_ROOT" -header-filter='-external' "${SOURCE_FILES[@]}"
 clang-tidy "${CLANG_TIDY_FLAGS[@]}" "${SOURCE_FILES[@]}"
 
 # TODO: Uncomment when https://github.com/project-oak/oak/issues/354 will be closed.
