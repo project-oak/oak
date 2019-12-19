@@ -77,7 +77,6 @@ unsafe impl GlobalAlloc for System {
     }
 }
 
-//// TODO: Move to separate crate and expose safe wrappers.
 #[link(name = "sgx_trts")]
 extern "C" {
     // SGX-enabled abort function that causes an undefined instruction (`UD2`) to be executed, which

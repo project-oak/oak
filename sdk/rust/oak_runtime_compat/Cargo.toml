@@ -9,13 +9,3 @@ name = "oak_runtime_compat"
 
 [dependencies]
 libc = "*"
-# byteorder = "1"
-# lazy_static = "1.4"
-# log = { version = "^0.4.0", features = ["std"] }
-# oak_runtime_compat = "*"
-# oak_derive = "*"
-# oak_log = "*"
-# oak = "*"
-# protobuf = "*"
-# rand = { version = "0.7", features = ["std"] }
-# simple_logger = "1"
