@@ -8,7 +8,6 @@ edition = "2018"
 byteorder = "1"
 lazy_static = "1.4"
 log = { version = "^0.4.0", features = ["std"] }
-oak_runtime_compat = "*"
 oak_derive = "*"
 oak_log = "*"
 oak = "*"
