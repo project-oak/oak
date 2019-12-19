@@ -210,7 +210,7 @@ void ModuleInvocation::BlockingSendResponse() {
   }
 }
 
-void ModuleInvocation::Finish(bool ok) {
+void ModuleInvocation::Finish(bool /*ok*/) {
   LOG(INFO) << "invocation#" << stream_id_ << " Finish: delete self";
   delete this;
 }
