@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["add_magic_number","An exported placeholder function to check that linking against C++ is successful. It just adds \"42\" to the provided value and returns it to the caller."],["eh_personality","Provide the entrypoint needed by the compiler's failure mechanisms when `std` is unavailable.  See \"No stdlib\" documentation."]]});
