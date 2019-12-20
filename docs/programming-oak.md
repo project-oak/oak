@@ -388,7 +388,7 @@ to the room:
 
         self.rooms.insert(
             req.admin_id.clone(),
-            RoomRef {
+            Room {
                 name: req.name,
                 channel: wh,
             },
