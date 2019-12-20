@@ -9,3 +9,5 @@ name = "oak_runtime_compat"
 
 [dependencies]
 libc = "*"
+
+[workspace]
