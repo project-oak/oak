@@ -18,9 +18,6 @@
 //! a global allocator.
 
 use core::alloc::{GlobalAlloc, Layout};
-use core::panic::PanicInfo;
-
-use crate::asylo;
 
 extern "C" {
     // Signatures of the functions exposed by the underlying standard library used in Asylo
@@ -76,21 +73,3 @@ unsafe impl GlobalAlloc for System {
         free(ptr);
     }
 }
-
-// Define what happens in an Out Of Memory (OOM) condition.
-#[alloc_error_handler]
-fn alloc_error(_layout: Layout) -> ! {
-    unsafe { asylo::abort() }
-}
-
-// See https://doc.rust-lang.org/nomicon/panic-handler.html.
-#[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
-    unsafe { asylo::abort() }
-}
-
-/// Provide the entrypoint needed by the compiler's failure mechanisms when
-/// `std` is unavailable.  See ["No
-/// stdlib" documentation](https://doc.rust-lang.org/1.2.0/book/no-stdlib.html).
-#[lang = "eh_personality"]
-pub extern "C" fn eh_personality() {}

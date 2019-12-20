@@ -42,19 +42,26 @@ pub mod common;
 #[global_allocator]
 static A: asylo::allocator::System = asylo::allocator::System;
 
-pub fn thread_test() -> common::io::Result<i32> {
+/// Provide the entrypoint needed by the compiler's failure mechanisms when
+/// `std` is unavailable.  See ["No
+/// stdlib" documentation](https://doc.rust-lang.org/1.2.0/book/no-stdlib.html).
+#[lang = "eh_personality"]
+pub extern "C" fn eh_personality() {}
+
+pub fn thread_test(x: i32) -> common::io::Result<i32> {
   use alloc::sync::Arc;
   use core::sync::atomic::{AtomicI32, Ordering};
-  let val = Arc::new(AtomicI32::new(2));
+  let val = Arc::new(AtomicI32::new(x));
 
   let other = {
     let val = Arc::clone(&val);
     move || {
-      val.fetch_add(40, Ordering::SeqCst);
+      val.fetch_add(42, Ordering::SeqCst);
     }
   };
 
   let t = unsafe {
+      // TODO: make safe thread interface in common/thread.rs
       asylo::thread::Thread::new(Box::new(other))
   }?;
   t.join();
@@ -63,6 +70,6 @@ pub fn thread_test() -> common::io::Result<i32> {
 
 /// An exported placeholder function to check that linking against C++ is successful.
 #[no_mangle]
-pub extern "C" fn add_magic_number(_x: i32) -> i32 {
-    thread_test().unwrap_or(0)
+pub extern "C" fn add_magic_number(x: i32) -> i32 {
+    thread_test(x).unwrap_or(0)
 }

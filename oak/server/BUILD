@@ -146,9 +146,7 @@ cc_library(
 cc_library(
     name = "rust_wrapper",
     srcs = ["//sdk/rust/oak_runtime_compat:oak_runtime_stripped"],
-    hdrs = ["oak_runtime.h"],
     linkstatic = True,
-    visibility = ["//oak/server:__subpackages__"],
 )
 
 cc_library(

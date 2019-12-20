@@ -14,6 +14,9 @@
 // limitations under the License.
 //
 
+use core::alloc::Layout;
+use core::panic::PanicInfo;
+
 pub mod thread;
 pub mod mutex;
 pub mod allocator;
@@ -27,4 +30,16 @@ extern "C" {
     //
     // See https://github.com/intel/linux-sgx/blob/d166ff0c808e2f78d37eebf1ab614d944437eea3/sdk/trts/linux/trts_pic.S#L565.
     fn abort() -> !;
+}
+
+// See https://doc.rust-lang.org/nomicon/panic-handler.html.
+#[panic_handler]
+fn panic(_info: &PanicInfo) -> ! {
+    unsafe { abort() }
+}
+
+// Define what happens in an Out Of Memory (OOM) condition.
+#[alloc_error_handler]
+fn alloc_error(_layout: Layout) -> ! {
+    unsafe { abort() }
 }

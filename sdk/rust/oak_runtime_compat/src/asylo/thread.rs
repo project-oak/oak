@@ -15,8 +15,8 @@
 //
 
 // Based on
-// - rust/src/libstd/sys_common/thread.rs
-// - rust/src/libstd/sys/unix/thread.rs
+// - https://github.com/rust-lang/rust/blob/6b561b4917e803c4be4ca44d8e552b680cb9e380/src/libstd/sys_common/thread.rs
+// - https://github.com/rust-lang/rust/blob/6b561b4917e803c4be4ca44d8e552b680cb9e380/src/libstd/sys/unix/thread.rs
 // Major differences:
 // - No configuration loading from env
 // - No stack guards
