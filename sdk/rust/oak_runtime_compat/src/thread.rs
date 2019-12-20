@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-// Loosely based on src/libstd/thread/mod.rs
+// Based on https://github.com/rust-lang/rust/blob/6b561b4917e803c4be4ca44d8e552b680cb9e380/src/libstd/thread/mod.rs
 
 //! Native threads.
 //!

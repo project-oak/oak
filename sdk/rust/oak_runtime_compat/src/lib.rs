@@ -39,6 +39,9 @@ use alloc::prelude::v1::*;
 pub mod asylo;
 pub mod common;
 
+#[global_allocator]
+static A: asylo::allocator::System = asylo::allocator::System;
+
 pub fn thread_test() -> common::io::Result<i32> {
   use alloc::sync::Arc;
   use core::sync::atomic::{AtomicI32, Ordering};

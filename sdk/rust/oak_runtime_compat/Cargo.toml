@@ -2,7 +2,7 @@
 name = "oak_runtime_compat"
 version = "0.1.0"
 authors = ["Ben Blaxill <benblaxill@google.com>"]
-edition = '2018'
+edition = "2018"
 
 [lib]
 name = "oak_runtime_compat"

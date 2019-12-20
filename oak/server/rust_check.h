@@ -28,4 +28,4 @@ extern "C" {
 int32_t add_magic_number(int32_t x);
 };
 
-#endif  // RUST_OAK_RUNTIME_OAK_RUNTIME_H_
+#endif // RUST_CHECK_H_

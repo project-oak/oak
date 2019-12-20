@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-// See rust/src/libstd/error.rs
+// See https://github.com/rust-lang/rust/blob/6b561b4917e803c4be4ca44d8e552b680cb9e380/src/libstd/error.rs
 
 //! Traits for working with Errors.
 

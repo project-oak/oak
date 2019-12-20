@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// See rust/src/libstd/io/error.rs
+// See https://github.com/rust-lang/rust/blob/6b561b4917e803c4be4ca44d8e552b680cb9e380/src/libstd/io/error.rs
 
 use alloc::fmt;
 use core::result;

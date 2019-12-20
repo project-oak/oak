@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-// See rust/src/libstd/sys/unix/mutex.rs
+// See https://github.com/rust-lang/rust/blob/6b561b4917e803c4be4ca44d8e552b680cb9e380/src/libstd/sys/unix/mutex.rs
 
 use crate::core::cell::UnsafeCell;
 use crate::core::mem::MaybeUninit;
