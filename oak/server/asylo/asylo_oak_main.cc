@@ -25,7 +25,7 @@
 #include "absl/synchronization/notification.h"
 #include "absl/time/time.h"
 #include "asylo/util/logging.h"
-#include "asylo_oak_manager.h"
+#include "asylo_oak_manager_service.h"
 #include "include/grpcpp/server.h"
 #include "include/grpcpp/server_builder.h"
 
@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
 
   // Create manager instance.
   std::unique_ptr<oak::Manager::Service> service =
-      absl::make_unique<oak::AsyloOakManager>(absl::GetFlag(FLAGS_enclave_path));
+      absl::make_unique<oak::AsyloOakManagerService>(absl::GetFlag(FLAGS_enclave_path));
 
   // Initialize and run gRPC server.
   int selected_port = absl::GetFlag(FLAGS_grpc_port);

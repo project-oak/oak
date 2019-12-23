@@ -25,37 +25,35 @@
 namespace oak {
 
 AsyloOakManager::AsyloOakManager(absl::string_view enclave_path)
-    : Service(), enclave_path_(enclave_path), application_id_(0) {
+    : enclave_path_(enclave_path), application_id_(0) {
   InitializeEnclaveManager();
 }
 
-grpc::Status AsyloOakManager::CreateApplication(grpc::ServerContext* context,
-                                                const oak::CreateApplicationRequest* request,
-                                                oak::CreateApplicationResponse* response) {
+asylo::StatusOr<oak::CreateApplicationResponse> AsyloOakManager::CreateApplication(
+    const oak::ApplicationConfiguration& application_configuration) {
   std::string application_id = NewApplicationId();
   LOG(INFO) << "Creating application " << application_id;
 
-  grpc::Status status = CreateEnclave(application_id, request->application_configuration());
+  asylo::Status status = CreateEnclave(application_id, application_configuration);
   if (!status.ok()) {
     return status;
   }
   asylo::StatusOr<oak::InitializeOutput> result = GetEnclaveOutput(application_id);
   if (!result.ok()) {
-    return result.status().ToOtherStatus<grpc::Status>();
+    return result.status();
   }
   oak::InitializeOutput out = result.ValueOrDie();
-  response->set_application_id(application_id);
-  response->set_grpc_port(out.grpc_port());
-  return grpc::Status::OK;
+  oak::CreateApplicationResponse response;
+  response.set_application_id(application_id);
+  response.set_grpc_port(out.grpc_port());
+  return response;
 }
 
-grpc::Status AsyloOakManager::TerminateApplication(grpc::ServerContext* context,
-                                                   const oak::TerminateApplicationRequest* request,
-                                                   oak::TerminateApplicationResponse* response) {
-  LOG(INFO) << "Terminating application with ID " << request->application_id();
+asylo::Status AsyloOakManager::TerminateApplication(const std::string& application_id) {
+  LOG(INFO) << "Terminating application with ID " << application_id;
 
-  DestroyEnclave(request->application_id());
-  return grpc::Status::OK;
+  DestroyEnclave(application_id);
+  return asylo::Status::OkStatus();
 }
 
 void AsyloOakManager::InitializeEnclaveManager() {
@@ -72,7 +70,7 @@ void AsyloOakManager::InitializeEnclaveManager() {
                                                         /*debug=*/true);
 }
 
-grpc::Status AsyloOakManager::CreateEnclave(
+asylo::Status AsyloOakManager::CreateEnclave(
     const std::string& application_id,
     const oak::ApplicationConfiguration& application_configuration) {
   LOG(INFO) << "Creating enclave";
@@ -87,10 +85,10 @@ grpc::Status AsyloOakManager::CreateEnclave(
   asylo::Status status = enclave_manager_->LoadEnclave(application_id, *enclave_loader_, config);
   if (!status.ok()) {
     LOG(ERROR) << "Could not load enclave " << enclave_path_ << ": " << status;
-    return status.ToOtherStatus<grpc::Status>();
+  } else {
+    LOG(INFO) << "Enclave created";
   }
-  LOG(INFO) << "Enclave created";
-  return grpc::Status::OK;
+  return status;
 }
 
 asylo::StatusOr<oak::InitializeOutput> AsyloOakManager::GetEnclaveOutput(

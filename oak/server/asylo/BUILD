@@ -69,6 +69,30 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "asylo_oak_manager_service",
+    srcs = [
+        "asylo_oak_manager_service.cc",
+    ],
+    hdrs = [
+        "asylo_oak_manager_service.h",
+    ],
+    deps = [
+        ":asylo_oak_manager",
+        "//oak/proto:application_cc_grpc",
+        "//oak/proto:enclave_cc_proto",
+        "//oak/proto:manager_cc_grpc",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/strings",
+        "@com_google_asylo//asylo:enclave_client",
+        "@com_google_asylo//asylo/grpc/util:enclave_server_cc_proto",
+        "@com_google_asylo//asylo/identity:descriptions",
+        "@com_google_asylo//asylo/identity:enclave_assertion_authority_config_cc_proto",
+        "@com_google_asylo//asylo/util:logging",
+    ],
+)
+
 sgx.enclave_configuration(
     name = "grpc_enclave_config",
     # gRPC needs more than the default amount of heap to run. ~1.2GB.
@@ -134,7 +158,7 @@ enclave_loader(
     enclaves = {"enclave": "//oak/server/asylo:oak_enclave_debug.so"},
     loader_args = ["--enclave_path='{enclave}'"],
     deps = [
-        ":asylo_oak_manager",
+        ":asylo_oak_manager_service",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",

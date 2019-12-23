@@ -28,23 +28,20 @@
 
 namespace oak {
 
-class AsyloOakManager final : public Manager::Service {
+class AsyloOakManager {
  public:
   explicit AsyloOakManager(absl::string_view enclave_path);
 
-  grpc::Status CreateApplication(grpc::ServerContext* context,
-                                 const CreateApplicationRequest* request,
-                                 CreateApplicationResponse* response) override;
-
-  grpc::Status TerminateApplication(grpc::ServerContext* context,
-                                    const TerminateApplicationRequest* request,
-                                    TerminateApplicationResponse* response) override;
+  asylo::StatusOr<oak::CreateApplicationResponse> CreateApplication(
+    const oak::ApplicationConfiguration& application_configuration);
+  
+  asylo::Status TerminateApplication(const std::string& application_id);
 
  private:
   void InitializeEnclaveManager();
 
-  grpc::Status CreateEnclave(const std::string& application_id,
-                             const oak::ApplicationConfiguration& application_configuration);
+  asylo::Status CreateEnclave(const std::string& application_id,
+                              const oak::ApplicationConfiguration& application_configuration);
 
   asylo::StatusOr<InitializeOutput> GetEnclaveOutput(const std::string& application_id);
 
@@ -60,4 +57,5 @@ class AsyloOakManager final : public Manager::Service {
 };
 
 }  // namespace oak
+
 #endif  // OAK_SERVER_ASYLO_ASYLO_OAK_MANAGER_H_
