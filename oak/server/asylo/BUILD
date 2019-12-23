@@ -21,7 +21,11 @@ load("@linux_sgx//:sgx_sdk.bzl", "sgx")
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
 package(
-    default_visibility = ["//visibility:public"],
+    #default_visibility = ["//visibility:public"],
+    default_visibility = [
+        "//oak/server:__subpackages__",
+        "//examples:__subpackages__"
+    ],
     licenses = ["notice"],
 )
 
