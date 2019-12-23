@@ -30,7 +30,9 @@ namespace oak {
 
 class OakGrpcNode final : public Application::Service, public OakNode {
  public:
-  static std::unique_ptr<OakGrpcNode> Create(const std::string& name);
+  // Create an Oak node with the `name` and gRPC `port`.
+  // If `port` equals 0, then gRPC port is assigned automatically.
+  static std::unique_ptr<OakGrpcNode> Create(const std::string& name, const uint16_t port = 0);
   virtual ~OakGrpcNode(){};
 
   void Start() override;

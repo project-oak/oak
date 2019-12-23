@@ -26,15 +26,18 @@
 
 namespace oak {
 
-std::unique_ptr<OakGrpcNode> OakGrpcNode::Create(const std::string& name) {
+std::unique_ptr<OakGrpcNode> OakGrpcNode::Create(const std::string& name, const uint16_t port) {
   std::unique_ptr<OakGrpcNode> node = absl::WrapUnique(new OakGrpcNode(name));
 
   // Build Server
   grpc::ServerBuilder builder;
 
-  // Use ":0" notation so that server listens on a free port.
+  // The default value is "[::]:0", that is used to listen on a free port.
+  std::stringstream address;
+  address << "[::]:" << port;
   builder.AddListeningPort(
-      "[::]:0", asylo::EnclaveServerCredentials(asylo::BidirectionalNullCredentialsOptions()),
+      address.str(),
+      asylo::EnclaveServerCredentials(asylo::BidirectionalNullCredentialsOptions()),
       &node->port_);
   builder.RegisterService(node.get());
 

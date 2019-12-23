@@ -210,11 +210,6 @@ container_image(
 container_image(
     name = "oak_app_docker",
     base = "@cc_image//image",
-    #entrypoint = [
-    #    "./oak_host_loader",
-    #    "--enclave_path=oak_enclave_debug.so",
-    #    "--grpc_port=8888",
-    #],
     files = [
         "oak_enclave_debug.so",
         "oak_app_host_loader",

@@ -59,8 +59,8 @@ int main(int argc, char* argv[]) {
 
   std::unique_ptr<oak::ApplicationConfiguration> application_config = 
       oak::DefaultConfig(module_bytes);
-  oak::AddLoggingToConfig(application_config.get());
   oak::AddStorageToConfig(application_config.get(), absl::GetFlag(FLAGS_storage_address));
+  oak::AddGrpcPortToConfig(application_config.get(), absl::GetFlag(FLAGS_grpc_port));
   asylo::StatusOr<oak::CreateApplicationResponse> result = manager->CreateApplication(
       *application_config);
   if (!result.ok()) {

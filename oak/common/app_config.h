@@ -33,6 +33,9 @@ void AddLoggingToConfig(ApplicationConfiguration* config);
 // Modify application configuration to make a storage proxy available.
 void AddStorageToConfig(ApplicationConfiguration* config, const std::string& storage_address);
 
+// Modify application configuration to make gRPC to use a specific port.
+void AddGrpcPortToConfig(ApplicationConfiguration* config, const int16_t grpc_port);
+
 // Checks whether the given ApplicationConfiguration is valid.
 bool ValidApplicationConfig(const ApplicationConfiguration& config);
 

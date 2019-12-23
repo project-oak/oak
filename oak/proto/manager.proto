@@ -33,6 +33,8 @@ message ApplicationConfiguration {
   // Indication of what configuration the initial Node should run.  Must identify a
   // NodeConfiguration entry that holds a WebAssemblyConfiguration object.
   string initial_node = 2;
+  // Port number used by the gRPC pseudo-node. If not set, port will be chosen automatically.
+  int32 grpc_port = 3;
 }
 
 // NodeConfiguration indicates the configuration of a created Node.

@@ -58,6 +58,10 @@ void AddStorageToConfig(ApplicationConfiguration* config, const std::string& sto
   storage->set_address(storage_address);
 }
 
+void AddGrpcPortToConfig(ApplicationConfiguration* config, const int16_t grpc_port) {
+  config->set_grpc_port(grpc_port);
+}
+
 bool ValidApplicationConfig(const ApplicationConfiguration& config) {
   // Check name uniqueness for NodeConfiguration.
   std::set<std::string> config_names;
