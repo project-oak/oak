@@ -31,7 +31,7 @@ pub struct CreateRoomRequest {
     // message fields
     pub name: ::std::string::String,
     pub room_id: ::std::vec::Vec<u8>,
-    pub admin_id: ::std::vec::Vec<u8>,
+    pub admin_token: ::std::vec::Vec<u8>,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -100,30 +100,30 @@ impl CreateRoomRequest {
         ::std::mem::replace(&mut self.room_id, ::std::vec::Vec::new())
     }
 
-    // bytes admin_id = 3;
+    // bytes admin_token = 3;
 
 
-    pub fn get_admin_id(&self) -> &[u8] {
-        &self.admin_id
+    pub fn get_admin_token(&self) -> &[u8] {
+        &self.admin_token
     }
-    pub fn clear_admin_id(&mut self) {
-        self.admin_id.clear();
+    pub fn clear_admin_token(&mut self) {
+        self.admin_token.clear();
     }
 
     // Param is passed by value, moved
-    pub fn set_admin_id(&mut self, v: ::std::vec::Vec<u8>) {
-        self.admin_id = v;
+    pub fn set_admin_token(&mut self, v: ::std::vec::Vec<u8>) {
+        self.admin_token = v;
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_admin_id(&mut self) -> &mut ::std::vec::Vec<u8> {
-        &mut self.admin_id
+    pub fn mut_admin_token(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.admin_token
     }
 
     // Take field
-    pub fn take_admin_id(&mut self) -> ::std::vec::Vec<u8> {
-        ::std::mem::replace(&mut self.admin_id, ::std::vec::Vec::new())
+    pub fn take_admin_token(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.admin_token, ::std::vec::Vec::new())
     }
 }
 
@@ -143,7 +143,7 @@ impl ::protobuf::Message for CreateRoomRequest {
                     ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.room_id)?;
                 },
                 3 => {
-                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.admin_id)?;
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.admin_token)?;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -163,8 +163,8 @@ impl ::protobuf::Message for CreateRoomRequest {
         if !self.room_id.is_empty() {
             my_size += ::protobuf::rt::bytes_size(2, &self.room_id);
         }
-        if !self.admin_id.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(3, &self.admin_id);
+        if !self.admin_token.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(3, &self.admin_token);
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
@@ -178,8 +178,8 @@ impl ::protobuf::Message for CreateRoomRequest {
         if !self.room_id.is_empty() {
             os.write_bytes(2, &self.room_id)?;
         }
-        if !self.admin_id.is_empty() {
-            os.write_bytes(3, &self.admin_id)?;
+        if !self.admin_token.is_empty() {
+            os.write_bytes(3, &self.admin_token)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -234,9 +234,9 @@ impl ::protobuf::Message for CreateRoomRequest {
                     |m: &mut CreateRoomRequest| { &mut m.room_id },
                 ));
                 fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
-                    "admin_id",
-                    |m: &CreateRoomRequest| { &m.admin_id },
-                    |m: &mut CreateRoomRequest| { &mut m.admin_id },
+                    "admin_token",
+                    |m: &CreateRoomRequest| { &m.admin_token },
+                    |m: &mut CreateRoomRequest| { &mut m.admin_token },
                 ));
                 ::protobuf::reflect::MessageDescriptor::new::<CreateRoomRequest>(
                     "CreateRoomRequest",
@@ -262,7 +262,7 @@ impl ::protobuf::Clear for CreateRoomRequest {
     fn clear(&mut self) {
         self.name.clear();
         self.room_id.clear();
-        self.admin_id.clear();
+        self.admin_token.clear();
         self.unknown_fields.clear();
     }
 }
@@ -282,7 +282,8 @@ impl ::protobuf::reflect::ProtobufValue for CreateRoomRequest {
 #[derive(PartialEq,Clone,Default)]
 pub struct DestroyRoomRequest {
     // message fields
-    pub admin_id: ::std::vec::Vec<u8>,
+    pub room_id: ::std::vec::Vec<u8>,
+    pub admin_token: ::std::vec::Vec<u8>,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -299,30 +300,56 @@ impl DestroyRoomRequest {
         ::std::default::Default::default()
     }
 
-    // bytes admin_id = 1;
+    // bytes room_id = 1;
 
 
-    pub fn get_admin_id(&self) -> &[u8] {
-        &self.admin_id
+    pub fn get_room_id(&self) -> &[u8] {
+        &self.room_id
     }
-    pub fn clear_admin_id(&mut self) {
-        self.admin_id.clear();
+    pub fn clear_room_id(&mut self) {
+        self.room_id.clear();
     }
 
     // Param is passed by value, moved
-    pub fn set_admin_id(&mut self, v: ::std::vec::Vec<u8>) {
-        self.admin_id = v;
+    pub fn set_room_id(&mut self, v: ::std::vec::Vec<u8>) {
+        self.room_id = v;
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_admin_id(&mut self) -> &mut ::std::vec::Vec<u8> {
-        &mut self.admin_id
+    pub fn mut_room_id(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.room_id
     }
 
     // Take field
-    pub fn take_admin_id(&mut self) -> ::std::vec::Vec<u8> {
-        ::std::mem::replace(&mut self.admin_id, ::std::vec::Vec::new())
+    pub fn take_room_id(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.room_id, ::std::vec::Vec::new())
+    }
+
+    // bytes admin_token = 2;
+
+
+    pub fn get_admin_token(&self) -> &[u8] {
+        &self.admin_token
+    }
+    pub fn clear_admin_token(&mut self) {
+        self.admin_token.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_admin_token(&mut self, v: ::std::vec::Vec<u8>) {
+        self.admin_token = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_admin_token(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.admin_token
+    }
+
+    // Take field
+    pub fn take_admin_token(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.admin_token, ::std::vec::Vec::new())
     }
 }
 
@@ -336,7 +363,10 @@ impl ::protobuf::Message for DestroyRoomRequest {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
-                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.admin_id)?;
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.room_id)?;
+                },
+                2 => {
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.admin_token)?;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -350,8 +380,11 @@ impl ::protobuf::Message for DestroyRoomRequest {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        if !self.admin_id.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(1, &self.admin_id);
+        if !self.room_id.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(1, &self.room_id);
+        }
+        if !self.admin_token.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(2, &self.admin_token);
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
@@ -359,8 +392,11 @@ impl ::protobuf::Message for DestroyRoomRequest {
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
-        if !self.admin_id.is_empty() {
-            os.write_bytes(1, &self.admin_id)?;
+        if !self.room_id.is_empty() {
+            os.write_bytes(1, &self.room_id)?;
+        }
+        if !self.admin_token.is_empty() {
+            os.write_bytes(2, &self.admin_token)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -405,9 +441,14 @@ impl ::protobuf::Message for DestroyRoomRequest {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
                 fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
-                    "admin_id",
-                    |m: &DestroyRoomRequest| { &m.admin_id },
-                    |m: &mut DestroyRoomRequest| { &mut m.admin_id },
+                    "room_id",
+                    |m: &DestroyRoomRequest| { &m.room_id },
+                    |m: &mut DestroyRoomRequest| { &mut m.room_id },
+                ));
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                    "admin_token",
+                    |m: &DestroyRoomRequest| { &m.admin_token },
+                    |m: &mut DestroyRoomRequest| { &mut m.admin_token },
                 ));
                 ::protobuf::reflect::MessageDescriptor::new::<DestroyRoomRequest>(
                     "DestroyRoomRequest",
@@ -431,7 +472,8 @@ impl ::protobuf::Message for DestroyRoomRequest {
 
 impl ::protobuf::Clear for DestroyRoomRequest {
     fn clear(&mut self) {
-        self.admin_id.clear();
+        self.room_id.clear();
+        self.admin_token.clear();
         self.unknown_fields.clear();
     }
 }
@@ -449,23 +491,23 @@ impl ::protobuf::reflect::ProtobufValue for DestroyRoomRequest {
 }
 
 #[derive(PartialEq,Clone,Default)]
-pub struct JoinRoomRequest {
+pub struct SendMessageRequest {
     // message fields
     pub room_id: ::std::vec::Vec<u8>,
-    pub user_handle: ::std::string::String,
+    pub message: ::protobuf::SingularPtrField<Message>,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
 }
 
-impl<'a> ::std::default::Default for &'a JoinRoomRequest {
-    fn default() -> &'a JoinRoomRequest {
-        <JoinRoomRequest as ::protobuf::Message>::default_instance()
+impl<'a> ::std::default::Default for &'a SendMessageRequest {
+    fn default() -> &'a SendMessageRequest {
+        <SendMessageRequest as ::protobuf::Message>::default_instance()
     }
 }
 
-impl JoinRoomRequest {
-    pub fn new() -> JoinRoomRequest {
+impl SendMessageRequest {
+    pub fn new() -> SendMessageRequest {
         ::std::default::Default::default()
     }
 
@@ -495,35 +537,47 @@ impl JoinRoomRequest {
         ::std::mem::replace(&mut self.room_id, ::std::vec::Vec::new())
     }
 
-    // string user_handle = 2;
+    // .oak.examples.chat.Message message = 3;
 
 
-    pub fn get_user_handle(&self) -> &str {
-        &self.user_handle
+    pub fn get_message(&self) -> &Message {
+        self.message.as_ref().unwrap_or_else(|| Message::default_instance())
     }
-    pub fn clear_user_handle(&mut self) {
-        self.user_handle.clear();
+    pub fn clear_message(&mut self) {
+        self.message.clear();
+    }
+
+    pub fn has_message(&self) -> bool {
+        self.message.is_some()
     }
 
     // Param is passed by value, moved
-    pub fn set_user_handle(&mut self, v: ::std::string::String) {
-        self.user_handle = v;
+    pub fn set_message(&mut self, v: Message) {
+        self.message = ::protobuf::SingularPtrField::some(v);
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_user_handle(&mut self) -> &mut ::std::string::String {
-        &mut self.user_handle
+    pub fn mut_message(&mut self) -> &mut Message {
+        if self.message.is_none() {
+            self.message.set_default();
+        }
+        self.message.as_mut().unwrap()
     }
 
     // Take field
-    pub fn take_user_handle(&mut self) -> ::std::string::String {
-        ::std::mem::replace(&mut self.user_handle, ::std::string::String::new())
+    pub fn take_message(&mut self) -> Message {
+        self.message.take().unwrap_or_else(|| Message::new())
     }
 }
 
-impl ::protobuf::Message for JoinRoomRequest {
+impl ::protobuf::Message for SendMessageRequest {
     fn is_initialized(&self) -> bool {
+        for v in &self.message {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
         true
     }
 
@@ -534,8 +588,8 @@ impl ::protobuf::Message for JoinRoomRequest {
                 1 => {
                     ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.room_id)?;
                 },
-                2 => {
-                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.user_handle)?;
+                3 => {
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.message)?;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -552,8 +606,9 @@ impl ::protobuf::Message for JoinRoomRequest {
         if !self.room_id.is_empty() {
             my_size += ::protobuf::rt::bytes_size(1, &self.room_id);
         }
-        if !self.user_handle.is_empty() {
-            my_size += ::protobuf::rt::string_size(2, &self.user_handle);
+        if let Some(ref v) = self.message.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
@@ -564,8 +619,10 @@ impl ::protobuf::Message for JoinRoomRequest {
         if !self.room_id.is_empty() {
             os.write_bytes(1, &self.room_id)?;
         }
-        if !self.user_handle.is_empty() {
-            os.write_string(2, &self.user_handle)?;
+        if let Some(ref v) = self.message.as_ref() {
+            os.write_tag(3, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -597,8 +654,8 @@ impl ::protobuf::Message for JoinRoomRequest {
         Self::descriptor_static()
     }
 
-    fn new() -> JoinRoomRequest {
-        JoinRoomRequest::new()
+    fn new() -> SendMessageRequest {
+        SendMessageRequest::new()
     }
 
     fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
@@ -611,16 +668,16 @@ impl ::protobuf::Message for JoinRoomRequest {
                 let mut fields = ::std::vec::Vec::new();
                 fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
                     "room_id",
-                    |m: &JoinRoomRequest| { &m.room_id },
-                    |m: &mut JoinRoomRequest| { &mut m.room_id },
+                    |m: &SendMessageRequest| { &m.room_id },
+                    |m: &mut SendMessageRequest| { &mut m.room_id },
                 ));
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
-                    "user_handle",
-                    |m: &JoinRoomRequest| { &m.user_handle },
-                    |m: &mut JoinRoomRequest| { &mut m.user_handle },
+                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<Message>>(
+                    "message",
+                    |m: &SendMessageRequest| { &m.message },
+                    |m: &mut SendMessageRequest| { &mut m.message },
                 ));
-                ::protobuf::reflect::MessageDescriptor::new::<JoinRoomRequest>(
-                    "JoinRoomRequest",
+                ::protobuf::reflect::MessageDescriptor::new::<SendMessageRequest>(
+                    "SendMessageRequest",
                     fields,
                     file_descriptor_proto()
                 )
@@ -628,41 +685,40 @@ impl ::protobuf::Message for JoinRoomRequest {
         }
     }
 
-    fn default_instance() -> &'static JoinRoomRequest {
-        static mut instance: ::protobuf::lazy::Lazy<JoinRoomRequest> = ::protobuf::lazy::Lazy {
+    fn default_instance() -> &'static SendMessageRequest {
+        static mut instance: ::protobuf::lazy::Lazy<SendMessageRequest> = ::protobuf::lazy::Lazy {
             lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const JoinRoomRequest,
+            ptr: 0 as *const SendMessageRequest,
         };
         unsafe {
-            instance.get(JoinRoomRequest::new)
+            instance.get(SendMessageRequest::new)
         }
     }
 }
 
-impl ::protobuf::Clear for JoinRoomRequest {
+impl ::protobuf::Clear for SendMessageRequest {
     fn clear(&mut self) {
         self.room_id.clear();
-        self.user_handle.clear();
+        self.message.clear();
         self.unknown_fields.clear();
     }
 }
 
-impl ::std::fmt::Debug for JoinRoomRequest {
+impl ::std::fmt::Debug for SendMessageRequest {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         ::protobuf::text_format::fmt(self, f)
     }
 }
 
-impl ::protobuf::reflect::ProtobufValue for JoinRoomRequest {
+impl ::protobuf::reflect::ProtobufValue for SendMessageRequest {
     fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
         ::protobuf::reflect::ProtobufValueRef::Message(self)
     }
 }
 
 #[derive(PartialEq,Clone,Default)]
-pub struct ReceivedMessage {
+pub struct Message {
     // message fields
-    pub room_name: ::std::string::String,
     pub user_handle: ::std::string::String,
     pub text: ::std::string::String,
     // special fields
@@ -670,41 +726,15 @@ pub struct ReceivedMessage {
     pub cached_size: ::protobuf::CachedSize,
 }
 
-impl<'a> ::std::default::Default for &'a ReceivedMessage {
-    fn default() -> &'a ReceivedMessage {
-        <ReceivedMessage as ::protobuf::Message>::default_instance()
+impl<'a> ::std::default::Default for &'a Message {
+    fn default() -> &'a Message {
+        <Message as ::protobuf::Message>::default_instance()
     }
 }
 
-impl ReceivedMessage {
-    pub fn new() -> ReceivedMessage {
+impl Message {
+    pub fn new() -> Message {
         ::std::default::Default::default()
-    }
-
-    // string room_name = 1;
-
-
-    pub fn get_room_name(&self) -> &str {
-        &self.room_name
-    }
-    pub fn clear_room_name(&mut self) {
-        self.room_name.clear();
-    }
-
-    // Param is passed by value, moved
-    pub fn set_room_name(&mut self, v: ::std::string::String) {
-        self.room_name = v;
-    }
-
-    // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_room_name(&mut self) -> &mut ::std::string::String {
-        &mut self.room_name
-    }
-
-    // Take field
-    pub fn take_room_name(&mut self) -> ::std::string::String {
-        ::std::mem::replace(&mut self.room_name, ::std::string::String::new())
     }
 
     // string user_handle = 2;
@@ -733,7 +763,7 @@ impl ReceivedMessage {
         ::std::mem::replace(&mut self.user_handle, ::std::string::String::new())
     }
 
-    // string text = 3;
+    // string text = 1;
 
 
     pub fn get_text(&self) -> &str {
@@ -760,7 +790,7 @@ impl ReceivedMessage {
     }
 }
 
-impl ::protobuf::Message for ReceivedMessage {
+impl ::protobuf::Message for Message {
     fn is_initialized(&self) -> bool {
         true
     }
@@ -769,13 +799,10 @@ impl ::protobuf::Message for ReceivedMessage {
         while !is.eof()? {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
-                1 => {
-                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.room_name)?;
-                },
                 2 => {
                     ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.user_handle)?;
                 },
-                3 => {
+                1 => {
                     ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.text)?;
                 },
                 _ => {
@@ -790,14 +817,11 @@ impl ::protobuf::Message for ReceivedMessage {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        if !self.room_name.is_empty() {
-            my_size += ::protobuf::rt::string_size(1, &self.room_name);
-        }
         if !self.user_handle.is_empty() {
             my_size += ::protobuf::rt::string_size(2, &self.user_handle);
         }
         if !self.text.is_empty() {
-            my_size += ::protobuf::rt::string_size(3, &self.text);
+            my_size += ::protobuf::rt::string_size(1, &self.text);
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
@@ -805,14 +829,11 @@ impl ::protobuf::Message for ReceivedMessage {
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
-        if !self.room_name.is_empty() {
-            os.write_string(1, &self.room_name)?;
-        }
         if !self.user_handle.is_empty() {
             os.write_string(2, &self.user_handle)?;
         }
         if !self.text.is_empty() {
-            os.write_string(3, &self.text)?;
+            os.write_string(1, &self.text)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -844,8 +865,8 @@ impl ::protobuf::Message for ReceivedMessage {
         Self::descriptor_static()
     }
 
-    fn new() -> ReceivedMessage {
-        ReceivedMessage::new()
+    fn new() -> Message {
+        Message::new()
     }
 
     fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
@@ -857,22 +878,17 @@ impl ::protobuf::Message for ReceivedMessage {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
                 fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
-                    "room_name",
-                    |m: &ReceivedMessage| { &m.room_name },
-                    |m: &mut ReceivedMessage| { &mut m.room_name },
-                ));
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
                     "user_handle",
-                    |m: &ReceivedMessage| { &m.user_handle },
-                    |m: &mut ReceivedMessage| { &mut m.user_handle },
+                    |m: &Message| { &m.user_handle },
+                    |m: &mut Message| { &mut m.user_handle },
                 ));
                 fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
                     "text",
-                    |m: &ReceivedMessage| { &m.text },
-                    |m: &mut ReceivedMessage| { &mut m.text },
+                    |m: &Message| { &m.text },
+                    |m: &mut Message| { &mut m.text },
                 ));
-                ::protobuf::reflect::MessageDescriptor::new::<ReceivedMessage>(
-                    "ReceivedMessage",
+                ::protobuf::reflect::MessageDescriptor::new::<Message>(
+                    "Message",
                     fields,
                     file_descriptor_proto()
                 )
@@ -880,57 +896,54 @@ impl ::protobuf::Message for ReceivedMessage {
         }
     }
 
-    fn default_instance() -> &'static ReceivedMessage {
-        static mut instance: ::protobuf::lazy::Lazy<ReceivedMessage> = ::protobuf::lazy::Lazy {
+    fn default_instance() -> &'static Message {
+        static mut instance: ::protobuf::lazy::Lazy<Message> = ::protobuf::lazy::Lazy {
             lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const ReceivedMessage,
+            ptr: 0 as *const Message,
         };
         unsafe {
-            instance.get(ReceivedMessage::new)
+            instance.get(Message::new)
         }
     }
 }
 
-impl ::protobuf::Clear for ReceivedMessage {
+impl ::protobuf::Clear for Message {
     fn clear(&mut self) {
-        self.room_name.clear();
         self.user_handle.clear();
         self.text.clear();
         self.unknown_fields.clear();
     }
 }
 
-impl ::std::fmt::Debug for ReceivedMessage {
+impl ::std::fmt::Debug for Message {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         ::protobuf::text_format::fmt(self, f)
     }
 }
 
-impl ::protobuf::reflect::ProtobufValue for ReceivedMessage {
+impl ::protobuf::reflect::ProtobufValue for Message {
     fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
         ::protobuf::reflect::ProtobufValueRef::Message(self)
     }
 }
 
 #[derive(PartialEq,Clone,Default)]
-pub struct SentMessage {
+pub struct SubscribeRequest {
     // message fields
     pub room_id: ::std::vec::Vec<u8>,
-    pub user_handle: ::std::string::String,
-    pub text: ::std::string::String,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
 }
 
-impl<'a> ::std::default::Default for &'a SentMessage {
-    fn default() -> &'a SentMessage {
-        <SentMessage as ::protobuf::Message>::default_instance()
+impl<'a> ::std::default::Default for &'a SubscribeRequest {
+    fn default() -> &'a SubscribeRequest {
+        <SubscribeRequest as ::protobuf::Message>::default_instance()
     }
 }
 
-impl SentMessage {
-    pub fn new() -> SentMessage {
+impl SubscribeRequest {
+    pub fn new() -> SubscribeRequest {
         ::std::default::Default::default()
     }
 
@@ -959,61 +972,9 @@ impl SentMessage {
     pub fn take_room_id(&mut self) -> ::std::vec::Vec<u8> {
         ::std::mem::replace(&mut self.room_id, ::std::vec::Vec::new())
     }
-
-    // string user_handle = 2;
-
-
-    pub fn get_user_handle(&self) -> &str {
-        &self.user_handle
-    }
-    pub fn clear_user_handle(&mut self) {
-        self.user_handle.clear();
-    }
-
-    // Param is passed by value, moved
-    pub fn set_user_handle(&mut self, v: ::std::string::String) {
-        self.user_handle = v;
-    }
-
-    // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_user_handle(&mut self) -> &mut ::std::string::String {
-        &mut self.user_handle
-    }
-
-    // Take field
-    pub fn take_user_handle(&mut self) -> ::std::string::String {
-        ::std::mem::replace(&mut self.user_handle, ::std::string::String::new())
-    }
-
-    // string text = 3;
-
-
-    pub fn get_text(&self) -> &str {
-        &self.text
-    }
-    pub fn clear_text(&mut self) {
-        self.text.clear();
-    }
-
-    // Param is passed by value, moved
-    pub fn set_text(&mut self, v: ::std::string::String) {
-        self.text = v;
-    }
-
-    // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_text(&mut self) -> &mut ::std::string::String {
-        &mut self.text
-    }
-
-    // Take field
-    pub fn take_text(&mut self) -> ::std::string::String {
-        ::std::mem::replace(&mut self.text, ::std::string::String::new())
-    }
 }
 
-impl ::protobuf::Message for SentMessage {
+impl ::protobuf::Message for SubscribeRequest {
     fn is_initialized(&self) -> bool {
         true
     }
@@ -1024,12 +985,6 @@ impl ::protobuf::Message for SentMessage {
             match field_number {
                 1 => {
                     ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.room_id)?;
-                },
-                2 => {
-                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.user_handle)?;
-                },
-                3 => {
-                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.text)?;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -1046,12 +1001,6 @@ impl ::protobuf::Message for SentMessage {
         if !self.room_id.is_empty() {
             my_size += ::protobuf::rt::bytes_size(1, &self.room_id);
         }
-        if !self.user_handle.is_empty() {
-            my_size += ::protobuf::rt::string_size(2, &self.user_handle);
-        }
-        if !self.text.is_empty() {
-            my_size += ::protobuf::rt::string_size(3, &self.text);
-        }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -1060,12 +1009,6 @@ impl ::protobuf::Message for SentMessage {
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
         if !self.room_id.is_empty() {
             os.write_bytes(1, &self.room_id)?;
-        }
-        if !self.user_handle.is_empty() {
-            os.write_string(2, &self.user_handle)?;
-        }
-        if !self.text.is_empty() {
-            os.write_string(3, &self.text)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -1097,8 +1040,8 @@ impl ::protobuf::Message for SentMessage {
         Self::descriptor_static()
     }
 
-    fn new() -> SentMessage {
-        SentMessage::new()
+    fn new() -> SubscribeRequest {
+        SubscribeRequest::new()
     }
 
     fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
@@ -1111,21 +1054,11 @@ impl ::protobuf::Message for SentMessage {
                 let mut fields = ::std::vec::Vec::new();
                 fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
                     "room_id",
-                    |m: &SentMessage| { &m.room_id },
-                    |m: &mut SentMessage| { &mut m.room_id },
+                    |m: &SubscribeRequest| { &m.room_id },
+                    |m: &mut SubscribeRequest| { &mut m.room_id },
                 ));
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
-                    "user_handle",
-                    |m: &SentMessage| { &m.user_handle },
-                    |m: &mut SentMessage| { &mut m.user_handle },
-                ));
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
-                    "text",
-                    |m: &SentMessage| { &m.text },
-                    |m: &mut SentMessage| { &mut m.text },
-                ));
-                ::protobuf::reflect::MessageDescriptor::new::<SentMessage>(
-                    "SentMessage",
+                ::protobuf::reflect::MessageDescriptor::new::<SubscribeRequest>(
+                    "SubscribeRequest",
                     fields,
                     file_descriptor_proto()
                 )
@@ -1133,33 +1066,31 @@ impl ::protobuf::Message for SentMessage {
         }
     }
 
-    fn default_instance() -> &'static SentMessage {
-        static mut instance: ::protobuf::lazy::Lazy<SentMessage> = ::protobuf::lazy::Lazy {
+    fn default_instance() -> &'static SubscribeRequest {
+        static mut instance: ::protobuf::lazy::Lazy<SubscribeRequest> = ::protobuf::lazy::Lazy {
             lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const SentMessage,
+            ptr: 0 as *const SubscribeRequest,
         };
         unsafe {
-            instance.get(SentMessage::new)
+            instance.get(SubscribeRequest::new)
         }
     }
 }
 
-impl ::protobuf::Clear for SentMessage {
+impl ::protobuf::Clear for SubscribeRequest {
     fn clear(&mut self) {
         self.room_id.clear();
-        self.user_handle.clear();
-        self.text.clear();
         self.unknown_fields.clear();
     }
 }
 
-impl ::std::fmt::Debug for SentMessage {
+impl ::std::fmt::Debug for SubscribeRequest {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         ::protobuf::text_format::fmt(self, f)
     }
 }
 
-impl ::protobuf::reflect::ProtobufValue for SentMessage {
+impl ::protobuf::reflect::ProtobufValue for SubscribeRequest {
     fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
         ::protobuf::reflect::ProtobufValueRef::Message(self)
     }
@@ -1167,23 +1098,22 @@ impl ::protobuf::reflect::ProtobufValue for SentMessage {
 
 static file_descriptor_proto_data: &'static [u8] = b"\
     \n\nchat.proto\x12\x11oak.examples.chat\x1a\x1bgoogle/protobuf/empty.pro\
-    to\"[\n\x11CreateRoomRequest\x12\x12\n\x04name\x18\x01\x20\x01(\tR\x04na\
-    me\x12\x17\n\x07room_id\x18\x02\x20\x01(\x0cR\x06roomId\x12\x19\n\x08adm\
-    in_id\x18\x03\x20\x01(\x0cR\x07adminId\"/\n\x12DestroyRoomRequest\x12\
-    \x19\n\x08admin_id\x18\x01\x20\x01(\x0cR\x07adminId\"K\n\x0fJoinRoomRequ\
-    est\x12\x17\n\x07room_id\x18\x01\x20\x01(\x0cR\x06roomId\x12\x1f\n\x0bus\
-    er_handle\x18\x02\x20\x01(\tR\nuserHandle\"c\n\x0fReceivedMessage\x12\
-    \x1b\n\troom_name\x18\x01\x20\x01(\tR\x08roomName\x12\x1f\n\x0buser_hand\
-    le\x18\x02\x20\x01(\tR\nuserHandle\x12\x12\n\x04text\x18\x03\x20\x01(\tR\
-    \x04text\"[\n\x0bSentMessage\x12\x17\n\x07room_id\x18\x01\x20\x01(\x0cR\
-    \x06roomId\x12\x1f\n\x0buser_handle\x18\x02\x20\x01(\tR\nuserHandle\x12\
-    \x12\n\x04text\x18\x03\x20\x01(\tR\x04text2\xbd\x02\n\x04Chat\x12J\n\nCr\
-    eateRoom\x12$.oak.examples.chat.CreateRoomRequest\x1a\x16.google.protobu\
-    f.Empty\x12L\n\x0bDestroyRoom\x12%.oak.examples.chat.DestroyRoomRequest\
-    \x1a\x16.google.protobuf.Empty\x12T\n\x08JoinRoom\x12\".oak.examples.cha\
-    t.JoinRoomRequest\x1a\".oak.examples.chat.ReceivedMessage0\x01\x12E\n\
-    \x0bSendMessage\x12\x1e.oak.examples.chat.SentMessage\x1a\x16.google.pro\
-    tobuf.Emptyb\x06proto3\
+    to\"a\n\x11CreateRoomRequest\x12\x12\n\x04name\x18\x01\x20\x01(\tR\x04na\
+    me\x12\x17\n\x07room_id\x18\x02\x20\x01(\x0cR\x06roomId\x12\x1f\n\x0badm\
+    in_token\x18\x03\x20\x01(\x0cR\nadminToken\"N\n\x12DestroyRoomRequest\
+    \x12\x17\n\x07room_id\x18\x01\x20\x01(\x0cR\x06roomId\x12\x1f\n\x0badmin\
+    _token\x18\x02\x20\x01(\x0cR\nadminToken\"c\n\x12SendMessageRequest\x12\
+    \x17\n\x07room_id\x18\x01\x20\x01(\x0cR\x06roomId\x124\n\x07message\x18\
+    \x03\x20\x01(\x0b2\x1a.oak.examples.chat.MessageR\x07message\">\n\x07Mes\
+    sage\x12\x1f\n\x0buser_handle\x18\x02\x20\x01(\tR\nuserHandle\x12\x12\n\
+    \x04text\x18\x01\x20\x01(\tR\x04text\"+\n\x10SubscribeRequest\x12\x17\n\
+    \x07room_id\x18\x01\x20\x01(\x0cR\x06roomId2\xbe\x02\n\x04Chat\x12J\n\nC\
+    reateRoom\x12$.oak.examples.chat.CreateRoomRequest\x1a\x16.google.protob\
+    uf.Empty\x12L\n\x0bDestroyRoom\x12%.oak.examples.chat.DestroyRoomRequest\
+    \x1a\x16.google.protobuf.Empty\x12N\n\tSubscribe\x12#.oak.examples.chat.\
+    SubscribeRequest\x1a\x1a.oak.examples.chat.Message0\x01\x12L\n\x0bSendMe\
+    ssage\x12%.oak.examples.chat.SendMessageRequest\x1a\x16.google.protobuf.\
+    Emptyb\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {

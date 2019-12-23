@@ -18,6 +18,7 @@ use byteorder::{ReadBytesExt, WriteBytesExt};
 
 use log::{debug, error};
 use protobuf::ProtobufEnum;
+use serde::{Deserialize, Serialize};
 
 // Re-export ABI constants that are also visible as part of the SDK API.
 pub use oak_abi::{ChannelReadStatus, OakStatus};
@@ -88,7 +89,7 @@ impl Handle {
 /// Wrapper for a handle to the read half of a channel.
 ///
 /// For use when the underlying [`Handle`] is known to be for a receive half.
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ReadHandle {
     pub handle: Handle,
 }
@@ -96,7 +97,7 @@ pub struct ReadHandle {
 /// Wrapper for a handle to the send half of a channel.
 ///
 /// For use when the underlying [`Handle`] is known to be for a send half.
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WriteHandle {
     pub handle: Handle,
 }

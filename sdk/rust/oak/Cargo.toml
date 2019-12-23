@@ -12,6 +12,7 @@ fmt = "*"
 log = "*"
 byteorder = "1"
 rand_core = { version = "0.5", features = ["std"] }
+serde = {version = "*", features = ["derive"]}
 
 [build-dependencies]
 protoc-rust = "*"

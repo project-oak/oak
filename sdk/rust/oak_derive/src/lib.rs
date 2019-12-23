@@ -53,6 +53,7 @@ pub fn derive_oak_exports(input: TokenStream) -> TokenStream {
         _ => panic!("#[derive(OakExports)] is only defined for structs"),
     };
 
+    // TODO: Use `unwrap_or` instead of pattern matching.
     let expanded = quote! {
         #[no_mangle]
         pub extern "C" fn oak_main(handle: u64) -> i32 {

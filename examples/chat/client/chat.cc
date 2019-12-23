@@ -52,9 +52,9 @@ using RoomId = std::string;
 using ::oak::examples::chat::Chat;
 using ::oak::examples::chat::CreateRoomRequest;
 using ::oak::examples::chat::DestroyRoomRequest;
-using ::oak::examples::chat::JoinRoomRequest;
-using ::oak::examples::chat::ReceivedMessage;
-using ::oak::examples::chat::SentMessage;
+using ::oak::examples::chat::Message;
+using ::oak::examples::chat::SendMessageRequest;
+using ::oak::examples::chat::SubscribeRequest;
 
 // Toy thread-safe class for (copyable) value types.
 template <typename T>
@@ -82,16 +82,14 @@ void Prompt(std::shared_ptr<Safe<std::string>> room_name, const std::string& use
 void ListenLoop(Chat::Stub* stub, const RoomId& room_id, const std::string& user_handle,
                 std::shared_ptr<Safe<std::string>> room_name, std::shared_ptr<Safe<bool>> done) {
   grpc::ClientContext context;
-  JoinRoomRequest req;
+  SubscribeRequest req;
   req.set_room_id(room_id);
-  req.set_user_handle(user_handle);
-  auto reader = stub->JoinRoom(&context, req);
+  auto reader = stub->Subscribe(&context, req);
   if (reader == nullptr) {
-    LOG(QFATAL) << "Could not call JoinRoom";
+    LOG(QFATAL) << "Could not call Subscribe";
   }
-  ReceivedMessage msg;
+  Message msg;
   while (reader->Read(&msg)) {
-    room_name->set(msg.room_name());
     std::cout << room_name->get() << ":" << msg.user_handle() << ": " << msg.text() << "\n";
     if (done->get()) {
       break;
@@ -103,10 +101,13 @@ void ListenLoop(Chat::Stub* stub, const RoomId& room_id, const std::string& user
 
 void SendLoop(Chat::Stub* stub, const RoomId& room_id, const std::string& user_handle,
               std::shared_ptr<Safe<std::string>> room_name, std::shared_ptr<Safe<bool>> done) {
-  // Re-use the same SentMessage object for each message.
-  SentMessage req;
+  // Re-use the same SendMessageRequest object for each message.
+  SendMessageRequest req;
   req.set_room_id(room_id);
-  req.set_user_handle(user_handle);
+
+  Message* msg = req.mutable_message();
+  msg->set_user_handle(user_handle);
+
   google::protobuf::Empty rsp;
 
   Prompt(room_name, user_handle);
@@ -116,7 +117,7 @@ void SendLoop(Chat::Stub* stub, const RoomId& room_id, const std::string& user_h
       break;
     }
     grpc::ClientContext context;
-    req.set_text(text);
+    msg->set_text(text);
     grpc::Status status = stub->SendMessage(&context, req, &rsp);
     if (!status.ok()) {
       LOG(WARNING) << "Could not SendMessage(): " << status.error_code() << ": "
@@ -209,7 +210,7 @@ class Room {
     auto room_nonce = generator.NextNonce();
     req_.set_room_id(std::string(room_nonce.begin(), room_nonce.end()));
     auto admin_nonce = generator.NextNonce();
-    req_.set_admin_id(std::string(admin_nonce.begin(), admin_nonce.end()));
+    req_.set_admin_token(std::string(admin_nonce.begin(), admin_nonce.end()));
     google::protobuf::Empty rsp;
     grpc::Status status = stub_->CreateRoom(&context, req_, &rsp);
     if (!status.ok()) {
@@ -221,7 +222,7 @@ class Room {
     LOG(INFO) << "Destroying room";
     grpc::ClientContext context;
     DestroyRoomRequest req;
-    req.set_admin_id(req_.admin_id());
+    req.set_admin_token(req_.admin_token());
     google::protobuf::Empty rsp;
     grpc::Status status = stub_->DestroyRoom(&context, req, &rsp);
     if (!status.ok()) {
@@ -258,7 +259,7 @@ int main(int argc, char** argv) {
     application = absl::make_unique<OakApplication>(manager_client.get(), modules[0], modules[1]);
     application_id = application->Id();
     addr = application->Addr();
-    LOG(INFO) << "Connecting to new Oak Application id=" << application_id << "at " << addr;
+    LOG(INFO) << "Connecting to new Oak Application id=" << application_id << " at " << addr;
   } else {
     LOG(INFO) << "Connecting to existing Oak Application at " << addr;
   }

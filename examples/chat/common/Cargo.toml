@@ -8,9 +8,12 @@ edition = "2018"
 crate-type = ["lib"]
 
 [dependencies]
+failure = "*"
 log = "*"
 oak = "*"
 protobuf = "*"
+bincode = "*"
+serde = {version = "*", features = ["derive"]}
 
 [build-dependencies]
 protoc-rust-grpc = { path = "../../../third_party/grpc-rust/protoc-rust-grpc" }

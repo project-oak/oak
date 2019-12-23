@@ -15,3 +15,54 @@
 //
 
 pub mod proto;
+
+use failure::ResultExt;
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize)]
+pub enum Msg {
+    Join(oak::WriteHandle),
+    // TODO: Embed native Message struct here when we support proto serialization via Serde.
+    // See https://github.com/stepancheg/rust-protobuf#serde_derive-support
+    SendMessage(Vec<u8>),
+}
+
+// TODO(#389): Automatically generate this code.
+// Currently we use [bincode](https://github.com/servo/bincode) to serialize data together with a
+// tag that allows to reconstruct the enum variant on the other side. We then send the tag+data as
+// bytes, and separately we send the handles, which we have to manually re-assemble on the other
+// side.
+impl Msg {
+    pub fn send(&self, write_handle: oak::WriteHandle) -> Result<(), failure::Error> {
+        let bytes = bincode::serialize(self).context("could not serialize message to bincode")?;
+        // Serialize handles.
+        let handles = match self {
+            Msg::Join(h) => vec![h.handle],
+            Msg::SendMessage(_) => vec![],
+        };
+        let status = oak::channel_write(write_handle, &bytes, &handles);
+        if status == oak::OakStatus::OK {
+            Ok(())
+        } else {
+            Err(failure::format_err!("could not write to channel"))
+        }
+    }
+
+    pub fn receive(read_handle: oak::ReadHandle) -> Result<Self, failure::Error> {
+        let mut bytes = Vec::<u8>::with_capacity(512);
+        let mut handles = Vec::with_capacity(2);
+        let status = oak::channel_read(read_handle, &mut bytes, &mut handles);
+        if status == oak::OakStatus::OK {
+            let msg: Msg = bincode::deserialize(&bytes)
+                .context("could not deserialize message from bincode")?;
+            // Restore handles in the received message.
+            let msg = match msg {
+                Msg::Join(_) => Msg::Join(oak::WriteHandle { handle: handles[0] }),
+                Msg::SendMessage(message_bytes) => Msg::SendMessage(message_bytes),
+            };
+            Ok(msg)
+        } else {
+            Err(failure::format_err!("could not read from channel"))
+        }
+    }
+}

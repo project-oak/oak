@@ -21,47 +21,51 @@ package oak.examples.chat;
 import "google/protobuf/empty.proto";
 
 message CreateRoomRequest {
-  // Name of the room; this is only used for UI purposes (and so does not need
-  // to be unique).
+  // Name of the room; this is only used for UI purposes (and so does not need to be unique).
   string name = 1;
-  // ID used to identify the room; knowledge of this value allows entry to the
-  // room.  The client should create a random bearer token of sufficient
-  // entropy to use as the ID.
+
+  // ID used to identify the room; knowledge of this value allows entry to the room. The client
+  // should create a random bearer token of sufficient entropy to use as the room ID.
+  //
+  // TODO(#212): Once more of the labelling / policy system is implemented in the Oak Runtime, the
+  // secrecy of each chat room will not be based on the secrecy of this value, rather by the labels
+  // attached to individual messages by the various clients.
   bytes room_id = 2;
-  // ID used to administer the room; knowledge of this value allows control over
-  // the room (including the ability to destroy the room). The client should
-  // create a random bearer token of sufficient entropy to use as the ID.)
-  bytes admin_id = 3;
+
+  // Bearer token used to administer the room; knowledge of this value allows control over the room
+  // (including the ability to destroy the room). The client should create a random bearer token of
+  // sufficient entropy to use as the admin token.
+  bytes admin_token = 3;
 }
 
 message DestroyRoomRequest {
-  bytes admin_id = 1;
-}
-
-message JoinRoomRequest {
   bytes room_id = 1;
-  // Handle for the user; this is only used for UI purposes (and so does not
-  // need to be unique nor persistent).
-  string user_handle = 2;
+  bytes admin_token = 2;
 }
 
-message ReceivedMessage {
-  string room_name = 1;
-  string user_handle = 2;
-  string text = 3;
-}
-
-message SentMessage {
+message SendMessageRequest {
   bytes room_id = 1;
-  // Handle for the user; this is only used for UI purposes (and so does not
-  // need to be unique nor persistent).
+  Message message = 3;
+}
+
+message Message {
+  // Handle for the user; this is only used for UI purposes (and so does not need to be unique nor
+  // persistent).
   string user_handle = 2;
-  string text = 3;
+  string text = 1;
+}
+
+message SubscribeRequest {
+  bytes room_id = 1;
 }
 
 service Chat {
   rpc CreateRoom(CreateRoomRequest) returns (google.protobuf.Empty);
   rpc DestroyRoom(DestroyRoomRequest) returns (google.protobuf.Empty);
-  rpc JoinRoom(JoinRoomRequest) returns (stream ReceivedMessage);
-  rpc SendMessage(SentMessage) returns (google.protobuf.Empty);
+
+  // Subscribe to a chat room, in order to receive future messages sent to it.
+  rpc Subscribe(SubscribeRequest) returns (stream Message);
+
+  // Send a message to a chat room.
+  rpc SendMessage(SendMessageRequest) returns (google.protobuf.Empty);
 }
