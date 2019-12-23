@@ -19,5 +19,4 @@ package(
     licenses = ["notice"],
 )
 
-exports_files(["target/wasm32-unknown-unknown/release/hello_world.wasm"])
-#exports_files(srcs = glob(["**.wasm"]))
+exports_files(srcs = glob(["target/wasm32-unknown-unknown/release/*.wasm"]))
