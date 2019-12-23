@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 load("@rules_cc//cc:defs.bzl", "cc_binary")
 
 package(
@@ -34,4 +35,22 @@ cc_binary(
         "@com_google_absl//absl/memory",
         "@com_google_asylo//asylo/util:logging",
     ],
+)
+
+container_image(
+    name = "client_docker",
+    base = "//oak/server/asylo:oak_app_docker",
+    entrypoint = [
+        "./oak_app_host_loader",
+        "--enclave_path=oak_enclave_debug.so",
+        "--module=hello_world.wasm",
+        "--grpc_port=8080",
+    ],
+    files = [
+        "//examples:target/wasm32-unknown-unknown/release/hello_world.wasm",
+    ],
+    ports = [
+        "8080/tcp",  # Oak Application gRPC port.
+    ],
+    repository = "gcr.io/oak-ci",
 )

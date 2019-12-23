@@ -21,7 +21,7 @@ load("@linux_sgx//:sgx_sdk.bzl", "sgx")
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
 package(
-    default_visibility = ["//oak/server:__subpackages__"],
+    default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
 
@@ -170,7 +170,7 @@ enclave_loader(
 
 enclave_loader(
     name = "oak_app",
-    srcs = ["asylo_oak_server_main.cc"],
+    srcs = ["asylo_oak_app_main.cc"],
     enclaves = {"enclave": "//oak/server/asylo:oak_enclave_debug.so"},
     loader_args = ["--enclave_path='{enclave}'"],
     deps = [
@@ -203,6 +203,24 @@ container_image(
         "8080/tcp",  # Oak Application gRPC port.
         # https://github.com/project-oak/oak/blob/667b07c555cde0c4705e5f7533b101203cc01c12/oak/server/asylo/asylo_oak_main.cc#L33
         "8888/tcp",  # Oak Manager gRPC port.
+    ],
+    repository = "gcr.io/oak-ci",
+)
+
+container_image(
+    name = "oak_app_docker",
+    base = "@cc_image//image",
+    #entrypoint = [
+    #    "./oak_host_loader",
+    #    "--enclave_path=oak_enclave_debug.so",
+    #    "--grpc_port=8888",
+    #],
+    files = [
+        "oak_enclave_debug.so",
+        "oak_app_host_loader",
+    ],
+    ports = [
+        "8080/tcp",  # Oak Application gRPC port.
     ],
     repository = "gcr.io/oak-ci",
 )
