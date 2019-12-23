@@ -28,11 +28,11 @@
 #include "asylo/util/logging.h"
 #include "examples/chat/proto/chat.grpc.pb.h"
 #include "examples/chat/proto/chat.pb.h"
-#include "oak/common/utils.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
 #include "oak/client/manager_client.h"
 #include "oak/common/nonce_generator.h"
+#include "oak/common/utils.h"
 
 ABSL_FLAG(std::string, manager_address, "127.0.0.1:8888",
           "Address of the Oak Manager to connect to");

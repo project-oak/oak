@@ -33,8 +33,8 @@ class AsyloOakManager {
   explicit AsyloOakManager(absl::string_view enclave_path);
 
   asylo::StatusOr<oak::CreateApplicationResponse> CreateApplication(
-    const oak::ApplicationConfiguration& application_configuration);
-  
+      const oak::ApplicationConfiguration& application_configuration);
+
   asylo::Status TerminateApplication(const std::string& application_id);
 
  private:

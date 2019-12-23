@@ -25,15 +25,13 @@
 namespace oak {
 
 AsyloOakManagerService::AsyloOakManagerService(absl::string_view enclave_path)
-    : Service(), manager_(enclave_path) {
-}
+    : Service(), manager_(enclave_path) {}
 
-grpc::Status AsyloOakManagerService::CreateApplication(
-    grpc::ServerContext* context,
-    const oak::CreateApplicationRequest* request,
-    oak::CreateApplicationResponse* response) {
-  asylo::StatusOr<oak::CreateApplicationResponse> result = manager_.CreateApplication(
-      request->application_configuration());
+grpc::Status AsyloOakManagerService::CreateApplication(grpc::ServerContext* context,
+                                                       const oak::CreateApplicationRequest* request,
+                                                       oak::CreateApplicationResponse* response) {
+  asylo::StatusOr<oak::CreateApplicationResponse> result =
+      manager_.CreateApplication(request->application_configuration());
   if (!result.ok()) {
     return result.status().ToOtherStatus<grpc::Status>();
   }
@@ -42,8 +40,7 @@ grpc::Status AsyloOakManagerService::CreateApplication(
 }
 
 grpc::Status AsyloOakManagerService::TerminateApplication(
-    grpc::ServerContext* context,
-    const oak::TerminateApplicationRequest* request,
+    grpc::ServerContext* context, const oak::TerminateApplicationRequest* request,
     oak::TerminateApplicationResponse* response) {
   manager_.TerminateApplication(request->application_id());
   return grpc::Status::OK;

@@ -175,8 +175,8 @@ enclave_loader(
     loader_args = ["--enclave_path='{enclave}'"],
     deps = [
         ":asylo_oak_manager",
-        "//oak/common:utils",
         "//oak/common:app_config",
+        "//oak/common:utils",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
@@ -211,8 +211,8 @@ container_image(
     name = "oak_app_docker",
     base = "@cc_image//image",
     files = [
-        "oak_enclave_debug.so",
         "oak_app_host_loader",
+        "oak_enclave_debug.so",
     ],
     ports = [
         "8080/tcp",  # Oak Application gRPC port.

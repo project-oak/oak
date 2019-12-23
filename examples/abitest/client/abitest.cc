@@ -24,11 +24,11 @@
 #include "examples/abitest/client/config.h"
 #include "examples/abitest/proto/abitest.grpc.pb.h"
 #include "examples/abitest/proto/abitest.pb.h"
-#include "oak/common/utils.h"
 #include "google/protobuf/text_format.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
 #include "oak/common/app_config.h"
+#include "oak/common/utils.h"
 #include "oak/proto/manager.grpc.pb.h"
 
 ABSL_FLAG(std::string, manager_address, "127.0.0.1:8888",

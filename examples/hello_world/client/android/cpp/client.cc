@@ -20,10 +20,10 @@
 
 #include "examples/hello_world/proto/hello_world.grpc.pb.h"
 #include "examples/hello_world/proto/hello_world.pb.h"
-#include "oak/common/utils.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
 #include "oak/client/manager_client.h"
+#include "oak/common/utils.h"
 
 extern "C" {
 

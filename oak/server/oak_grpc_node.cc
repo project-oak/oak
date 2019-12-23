@@ -36,8 +36,7 @@ std::unique_ptr<OakGrpcNode> OakGrpcNode::Create(const std::string& name, const 
   std::stringstream address;
   address << "[::]:" << port;
   builder.AddListeningPort(
-      address.str(),
-      asylo::EnclaveServerCredentials(asylo::BidirectionalNullCredentialsOptions()),
+      address.str(), asylo::EnclaveServerCredentials(asylo::BidirectionalNullCredentialsOptions()),
       &node->port_);
   builder.RegisterService(node.get());
 

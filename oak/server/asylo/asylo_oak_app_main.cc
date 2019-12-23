@@ -28,9 +28,9 @@
 #include "include/grpcpp/server.h"
 #include "include/grpcpp/server_builder.h"
 #include "oak/common/app_config.h"
+#include "oak/common/utils.h"
 #include "oak/proto/manager.grpc.pb.h"
 #include "oak/server/asylo/asylo_oak_manager.h"
-#include "oak/common/utils.h"
 
 ABSL_FLAG(std::string, enclave_path, "", "Path of the enclave to load");
 ABSL_FLAG(std::string, module, "", "File containing the compiled WebAssembly module");
@@ -57,12 +57,12 @@ int main(int argc, char* argv[]) {
   // Load the Oak Module to execute. This needs to be compiled from Rust to WebAssembly separately.
   std::string module_bytes = oak::utils::read_file(absl::GetFlag(FLAGS_module));
 
-  std::unique_ptr<oak::ApplicationConfiguration> application_config = 
+  std::unique_ptr<oak::ApplicationConfiguration> application_config =
       oak::DefaultConfig(module_bytes);
   oak::AddStorageToConfig(application_config.get(), absl::GetFlag(FLAGS_storage_address));
   oak::AddGrpcPortToConfig(application_config.get(), absl::GetFlag(FLAGS_grpc_port));
-  asylo::StatusOr<oak::CreateApplicationResponse> result = manager->CreateApplication(
-      *application_config);
+  asylo::StatusOr<oak::CreateApplicationResponse> result =
+      manager->CreateApplication(*application_config);
   if (!result.ok()) {
     LOG(QFATAL) << "Failed to create application";
     return 1;
