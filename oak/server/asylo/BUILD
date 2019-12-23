@@ -169,14 +169,13 @@ enclave_loader(
 )
 
 enclave_loader(
-    name = "oak_server",
+    name = "oak_app",
     srcs = ["asylo_oak_server_main.cc"],
     enclaves = {"enclave": "//oak/server/asylo:oak_enclave_debug.so"},
     loader_args = ["--enclave_path='{enclave}'"],
     deps = [
         ":asylo_oak_manager",
-        # TODO: Move utils to common.
-        "//examples/utils",
+        "//oak/common:utils",
         "//oak/common:app_config",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/flags:flag",
@@ -188,7 +187,7 @@ enclave_loader(
 )
 
 container_image(
-    name = "oak-docker",
+    name = "oak_docker",
     base = "@cc_image//image",
     entrypoint = [
         "./oak_host_loader",

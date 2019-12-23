@@ -34,10 +34,8 @@
 
 ABSL_FLAG(std::string, enclave_path, "", "Path of the enclave to load");
 ABSL_FLAG(std::string, module, "", "File containing the compiled WebAssembly module");
-
 ABSL_FLAG(std::string, storage_address, "127.0.0.1:7867",
           "Address ot the storage provider to connect to");
-
 
 void sigint_handler(int param) {
   LOG(QFATAL) << "SIGINT received";
