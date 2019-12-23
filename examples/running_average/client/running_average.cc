@@ -22,7 +22,7 @@
 #include "asylo/util/logging.h"
 #include "examples/running_average/proto/running_average.grpc.pb.h"
 #include "examples/running_average/proto/running_average.pb.h"
-#include "examples/utils/utils.h"
+#include "oak/common/utils.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
 #include "oak/client/manager_client.h"

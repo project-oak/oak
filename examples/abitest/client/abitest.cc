@@ -24,7 +24,7 @@
 #include "examples/abitest/client/config.h"
 #include "examples/abitest/proto/abitest.grpc.pb.h"
 #include "examples/abitest/proto/abitest.pb.h"
-#include "examples/utils/utils.h"
+#include "oak/common/utils.h"
 #include "google/protobuf/text_format.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"

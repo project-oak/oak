@@ -28,7 +28,7 @@
 #include "asylo/util/logging.h"
 #include "examples/chat/proto/chat.grpc.pb.h"
 #include "examples/chat/proto/chat.pb.h"
-#include "examples/utils/utils.h"
+#include "oak/common/utils.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
 #include "oak/client/manager_client.h"

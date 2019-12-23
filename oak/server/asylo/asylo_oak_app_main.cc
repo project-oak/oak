@@ -30,7 +30,7 @@
 #include "oak/common/app_config.h"
 #include "oak/proto/manager.grpc.pb.h"
 #include "oak/server/asylo/asylo_oak_manager.h"
-#include "examples/utils/utils.h"
+#include "oak/common/utils.h"
 
 ABSL_FLAG(std::string, enclave_path, "", "Path of the enclave to load");
 ABSL_FLAG(std::string, module, "", "File containing the compiled WebAssembly module");

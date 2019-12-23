@@ -22,7 +22,7 @@
 #include "asylo/util/logging.h"
 #include "examples/machine_learning/proto/machine_learning.grpc.pb.h"
 #include "examples/machine_learning/proto/machine_learning.pb.h"
-#include "examples/utils/utils.h"
+#include "oak/common/utils.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
 #include "oak/client/manager_client.h"
