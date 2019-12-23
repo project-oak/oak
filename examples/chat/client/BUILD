@@ -25,7 +25,7 @@ cc_binary(
     srcs = ["chat.cc"],
     deps = [
         "//examples/chat/proto:chat_cc_grpc",
-        "//examples/utils",
+        "//oak/common:utils",
         "//oak/client:application_client",
         "//oak/client:manager_client",
         "//oak/common:nonce_generator",

@@ -26,7 +26,7 @@ cc_binary(
     deps = [
         "//examples/private_set_intersection/proto:private_set_intersection_cc_grpc",
         "//examples/private_set_intersection/proto:private_set_intersection_cc_proto",
-        "//examples/utils",
+        "//oak/common:utils",
         "//oak/client:application_client",
         "//oak/client:manager_client",
         "@com_github_grpc_grpc//:grpc++",

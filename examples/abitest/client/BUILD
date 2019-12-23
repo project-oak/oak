@@ -26,7 +26,7 @@ cc_binary(
     deps = [
         ":client_config",
         "//examples/abitest/proto:abitest_cc_grpc",
-        "//examples/utils",
+        "//oak/common:utils",
         "//oak/client:application_client",
         "//oak/common:app_config",
         "//oak/proto:manager_cc_grpc",

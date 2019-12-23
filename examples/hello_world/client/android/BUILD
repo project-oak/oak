@@ -27,7 +27,7 @@ cc_library(
     copts = ["-std=c++11"],
     deps = [
         "//examples/hello_world/proto:hello_world_cc_grpc",
-        "//examples/utils",
+        "//oak/common:utils",
         "//oak/client:application_client",
         "//oak/client:manager_client",
         "@com_github_grpc_grpc//:grpc++",

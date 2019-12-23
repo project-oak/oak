@@ -25,7 +25,7 @@ cc_binary(
     srcs = ["running_average.cc"],
     deps = [
         "//examples/running_average/proto:running_average_cc_grpc",
-        "//examples/utils",
+        "//oak/common:utils",
         "//oak/client:application_client",
         "//oak/client:manager_client",
         "@com_github_grpc_grpc//:grpc++",
