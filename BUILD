@@ -22,4 +22,5 @@ package(
     licenses = ["notice"],
 )
 
+# Export LICENSE file for projects that reference Oak in Bazel as an external dependency.
 exports_files(["LICENSE"])
