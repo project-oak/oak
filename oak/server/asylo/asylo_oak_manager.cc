@@ -28,8 +28,8 @@ AsyloOakManager::AsyloOakManager(absl::string_view enclave_path)
     : Service(), manager_(enclave_path) {}
 
 grpc::Status AsyloOakManager::CreateApplication(grpc::ServerContext* context,
-                                                       const oak::CreateApplicationRequest* request,
-                                                       oak::CreateApplicationResponse* response) {
+                                                const oak::CreateApplicationRequest* request,
+                                                oak::CreateApplicationResponse* response) {
   asylo::StatusOr<oak::CreateApplicationResponse> result =
       manager_.CreateApplication(request->application_configuration());
   if (!result.ok()) {
@@ -39,9 +39,9 @@ grpc::Status AsyloOakManager::CreateApplication(grpc::ServerContext* context,
   return grpc::Status::OK;
 }
 
-grpc::Status AsyloOakManager::TerminateApplication(
-    grpc::ServerContext* context, const oak::TerminateApplicationRequest* request,
-    oak::TerminateApplicationResponse* response) {
+grpc::Status AsyloOakManager::TerminateApplication(grpc::ServerContext* context,
+                                                   const oak::TerminateApplicationRequest* request,
+                                                   oak::TerminateApplicationResponse* response) {
   manager_.TerminateApplication(request->application_id());
   return grpc::Status::OK;
 }
