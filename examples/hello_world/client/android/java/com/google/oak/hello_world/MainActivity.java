@@ -20,8 +20,8 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.Button;
-import android.widget.TextView;
 import android.widget.EditText;
+import android.widget.TextView;
 
 import com.google.oak.hello_world.R;
 
@@ -60,7 +60,7 @@ public class MainActivity extends Activity {
     EditText addressInput = findViewById(R.id.addressInput);
     String address = addressInput.getText().toString();
 
-    if (address != rpcAddress) {
+    if (!address.equals(rpcAddress)) {
       Log.v("Oak", "Create channel to: " + address);
       createChannel(address);
       rpcAddress = address;
