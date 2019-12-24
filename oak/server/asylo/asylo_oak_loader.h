@@ -50,6 +50,7 @@ class AsyloOakLoader {
   void DestroyEnclave(const std::string& node_id);
 
   asylo::EnclaveManager* enclave_manager_;
+  // TODO: Use non-simulated loader.
   std::unique_ptr<asylo::SimLoader> enclave_loader_;
   std::string enclave_path_;
 

@@ -55,9 +55,7 @@ int main(int argc, char* argv[]) {
       absl::make_unique<oak::AsyloOakLoader>(absl::GetFlag(FLAGS_enclave_path));
 
   // Load the Oak Module to execute. This needs to be compiled from Rust to WebAssembly separately.
-  // TODO: Use a `Config` file as an input:
-  // https://github.com/project-oak/oak/issues/412
-  // https://github.com/project-oak/oak/issues/413
+  // TODO(#412, #413): Use a `Config` file as an input.
   std::string module_bytes = oak::utils::read_file(absl::GetFlag(FLAGS_module));
 
   std::unique_ptr<oak::ApplicationConfiguration> application_config =
