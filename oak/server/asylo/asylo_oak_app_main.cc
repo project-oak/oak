@@ -25,12 +25,12 @@
 #include "absl/synchronization/notification.h"
 #include "absl/time/time.h"
 #include "asylo/util/logging.h"
+#include "asylo_oak_loader.h"
 #include "include/grpcpp/server.h"
 #include "include/grpcpp/server_builder.h"
 #include "oak/common/app_config.h"
 #include "oak/common/utils.h"
 #include "oak/proto/manager.grpc.pb.h"
-#include "oak/server/asylo/asylo_oak_manager.h"
 
 ABSL_FLAG(std::string, enclave_path, "", "Path of the enclave to load");
 ABSL_FLAG(std::string, module, "", "File containing the compiled WebAssembly module");
@@ -51,10 +51,13 @@ int main(int argc, char* argv[]) {
   std::signal(SIGINT, sigint_handler);
 
   // Create manager instance.
-  std::unique_ptr<oak::AsyloOakManager> manager =
-      absl::make_unique<oak::AsyloOakManager>(absl::GetFlag(FLAGS_enclave_path));
+  std::unique_ptr<oak::AsyloOakLoader> loader =
+      absl::make_unique<oak::AsyloOakLoader>(absl::GetFlag(FLAGS_enclave_path));
 
   // Load the Oak Module to execute. This needs to be compiled from Rust to WebAssembly separately.
+  // TODO: Use a `Config` file as an input:
+  // https://github.com/project-oak/oak/issues/412
+  // https://github.com/project-oak/oak/issues/413
   std::string module_bytes = oak::utils::read_file(absl::GetFlag(FLAGS_module));
 
   std::unique_ptr<oak::ApplicationConfiguration> application_config =
@@ -62,7 +65,7 @@ int main(int argc, char* argv[]) {
   oak::AddStorageToConfig(application_config.get(), absl::GetFlag(FLAGS_storage_address));
   oak::AddGrpcPortToConfig(application_config.get(), absl::GetFlag(FLAGS_grpc_port));
   asylo::StatusOr<oak::CreateApplicationResponse> result =
-      manager->CreateApplication(*application_config);
+      loader->CreateApplication(*application_config);
   if (!result.ok()) {
     LOG(QFATAL) << "Failed to create application";
     return 1;

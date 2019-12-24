@@ -21,7 +21,6 @@ load("@linux_sgx//:sgx_sdk.bzl", "sgx")
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
 package(
-    #default_visibility = ["//visibility:public"],
     default_visibility = [
         "//examples:__subpackages__",
         "//oak/server:__subpackages__",
@@ -51,12 +50,12 @@ cc_library(
 )
 
 cc_library(
-    name = "asylo_oak_manager",
+    name = "asylo_oak_loader",
     srcs = [
-        "asylo_oak_manager.cc",
+        "asylo_oak_loader.cc",
     ],
     hdrs = [
-        "asylo_oak_manager.h",
+        "asylo_oak_loader.h",
     ],
     deps = [
         "//oak/proto:application_cc_grpc",
@@ -74,15 +73,15 @@ cc_library(
 )
 
 cc_library(
-    name = "asylo_oak_manager_service",
+    name = "asylo_oak_manager",
     srcs = [
-        "asylo_oak_manager_service.cc",
+        "asylo_oak_manager.cc",
     ],
     hdrs = [
-        "asylo_oak_manager_service.h",
+        "asylo_oak_manager.h",
     ],
     deps = [
-        ":asylo_oak_manager",
+        ":asylo_oak_loader",
         "//oak/proto:application_cc_grpc",
         "//oak/proto:enclave_cc_proto",
         "//oak/proto:manager_cc_grpc",
@@ -162,7 +161,7 @@ enclave_loader(
     enclaves = {"enclave": "//oak/server/asylo:oak_enclave_debug.so"},
     loader_args = ["--enclave_path='{enclave}'"],
     deps = [
-        ":asylo_oak_manager_service",
+        ":asylo_oak_manager",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
@@ -178,7 +177,7 @@ enclave_loader(
     enclaves = {"enclave": "//oak/server/asylo:oak_enclave_debug.so"},
     loader_args = ["--enclave_path='{enclave}'"],
     deps = [
-        ":asylo_oak_manager",
+        ":asylo_oak_loader",
         "//oak/common:app_config",
         "//oak/common:utils",
         "@com_github_grpc_grpc//:grpc++",

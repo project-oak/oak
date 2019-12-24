@@ -37,6 +37,7 @@ cc_binary(
     ],
 )
 
+# TODO: Create a new Bazel rule `oak_application_server_docker`, that encapsulates this logic.
 container_image(
     name = "client_docker",
     base = "//oak/server/asylo:oak_app_docker",

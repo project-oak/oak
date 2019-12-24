@@ -19,4 +19,5 @@ package(
     licenses = ["notice"],
 )
 
+# These files are built via cargo outside of Bazel.
 exports_files(srcs = glob(["target/wasm32-unknown-unknown/release/*.wasm"]))

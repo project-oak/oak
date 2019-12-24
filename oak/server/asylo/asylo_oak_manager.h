@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 The Project Oak Authors
+ * Copyright 2019 The Project Oak Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,8 @@
 
 #include <string>
 
+#include "asylo_oak_loader.h"
+
 #include "absl/strings/string_view.h"
 #include "asylo/client.h"
 #include "asylo/grpc/util/enclave_server.pb.h"
@@ -28,32 +30,20 @@
 
 namespace oak {
 
-class AsyloOakManager {
+class AsyloOakManager final : public Manager::Service {
  public:
   explicit AsyloOakManager(absl::string_view enclave_path);
 
-  asylo::StatusOr<oak::CreateApplicationResponse> CreateApplication(
-      const oak::ApplicationConfiguration& application_configuration);
+  grpc::Status CreateApplication(grpc::ServerContext* context,
+                                 const CreateApplicationRequest* request,
+                                 CreateApplicationResponse* response) override;
 
-  asylo::Status TerminateApplication(const std::string& application_id);
+  grpc::Status TerminateApplication(grpc::ServerContext* context,
+                                    const TerminateApplicationRequest* request,
+                                    TerminateApplicationResponse* response) override;
 
  private:
-  void InitializeEnclaveManager();
-
-  asylo::Status CreateEnclave(const std::string& application_id,
-                              const oak::ApplicationConfiguration& application_configuration);
-
-  asylo::StatusOr<InitializeOutput> GetEnclaveOutput(const std::string& application_id);
-
-  std::string NewApplicationId();
-
-  void DestroyEnclave(const std::string& node_id);
-
-  asylo::EnclaveManager* enclave_manager_;
-  std::unique_ptr<asylo::SimLoader> enclave_loader_;
-  std::string enclave_path_;
-
-  uint64_t application_id_;
+  oak::AsyloOakLoader manager_;
 };
 
 }  // namespace oak
