@@ -90,3 +90,13 @@ cc_library(
         "@com_google_absl//absl/strings",
     ],
 )
+
+cc_library(
+    name = "utils",
+    hdrs = ["utils.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_asylo//asylo/util:logging",
+    ],
+)

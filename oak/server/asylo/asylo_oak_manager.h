@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 The Project Oak Authors
+ * Copyright 2019 The Project Oak Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@
 #define OAK_SERVER_ASYLO_ASYLO_OAK_MANAGER_H_
 
 #include <string>
+
+#include "asylo_oak_loader.h"
 
 #include "absl/strings/string_view.h"
 #include "asylo/client.h"
@@ -41,23 +43,9 @@ class AsyloOakManager final : public Manager::Service {
                                     TerminateApplicationResponse* response) override;
 
  private:
-  void InitializeEnclaveManager();
-
-  grpc::Status CreateEnclave(const std::string& application_id,
-                             const oak::ApplicationConfiguration& application_configuration);
-
-  asylo::StatusOr<InitializeOutput> GetEnclaveOutput(const std::string& application_id);
-
-  std::string NewApplicationId();
-
-  void DestroyEnclave(const std::string& node_id);
-
-  asylo::EnclaveManager* enclave_manager_;
-  std::unique_ptr<asylo::SimLoader> enclave_loader_;
-  std::string enclave_path_;
-
-  uint64_t application_id_;
+  oak::AsyloOakLoader manager_;
 };
 
 }  // namespace oak
+
 #endif  // OAK_SERVER_ASYLO_ASYLO_OAK_MANAGER_H_

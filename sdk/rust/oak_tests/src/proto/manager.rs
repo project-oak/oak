@@ -31,6 +31,7 @@ pub struct ApplicationConfiguration {
     // message fields
     pub node_configs: ::protobuf::RepeatedField<NodeConfiguration>,
     pub initial_node: ::std::string::String,
+    pub grpc_port: i32,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -97,6 +98,21 @@ impl ApplicationConfiguration {
     pub fn take_initial_node(&mut self) -> ::std::string::String {
         ::std::mem::replace(&mut self.initial_node, ::std::string::String::new())
     }
+
+    // int32 grpc_port = 3;
+
+
+    pub fn get_grpc_port(&self) -> i32 {
+        self.grpc_port
+    }
+    pub fn clear_grpc_port(&mut self) {
+        self.grpc_port = 0;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_grpc_port(&mut self, v: i32) {
+        self.grpc_port = v;
+    }
 }
 
 impl ::protobuf::Message for ApplicationConfiguration {
@@ -119,6 +135,13 @@ impl ::protobuf::Message for ApplicationConfiguration {
                 2 => {
                     ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.initial_node)?;
                 },
+                3 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_int32()?;
+                    self.grpc_port = tmp;
+                },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
                 },
@@ -138,6 +161,9 @@ impl ::protobuf::Message for ApplicationConfiguration {
         if !self.initial_node.is_empty() {
             my_size += ::protobuf::rt::string_size(2, &self.initial_node);
         }
+        if self.grpc_port != 0 {
+            my_size += ::protobuf::rt::value_size(3, self.grpc_port, ::protobuf::wire_format::WireTypeVarint);
+        }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -151,6 +177,9 @@ impl ::protobuf::Message for ApplicationConfiguration {
         };
         if !self.initial_node.is_empty() {
             os.write_string(2, &self.initial_node)?;
+        }
+        if self.grpc_port != 0 {
+            os.write_int32(3, self.grpc_port)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -204,6 +233,11 @@ impl ::protobuf::Message for ApplicationConfiguration {
                     |m: &ApplicationConfiguration| { &m.initial_node },
                     |m: &mut ApplicationConfiguration| { &mut m.initial_node },
                 ));
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeInt32>(
+                    "grpc_port",
+                    |m: &ApplicationConfiguration| { &m.grpc_port },
+                    |m: &mut ApplicationConfiguration| { &mut m.grpc_port },
+                ));
                 ::protobuf::reflect::MessageDescriptor::new::<ApplicationConfiguration>(
                     "ApplicationConfiguration",
                     fields,
@@ -228,6 +262,7 @@ impl ::protobuf::Clear for ApplicationConfiguration {
     fn clear(&mut self) {
         self.node_configs.clear();
         self.initial_node.clear();
+        self.grpc_port = 0;
         self.unknown_fields.clear();
     }
 }
@@ -1803,27 +1838,28 @@ impl ::protobuf::reflect::ProtobufValue for TerminateApplicationResponse {
 }
 
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\rmanager.proto\x12\x03oak\"x\n\x18ApplicationConfiguration\x129\n\x0c\
-    node_configs\x18\x01\x20\x03(\x0b2\x16.oak.NodeConfigurationR\x0bnodeCon\
-    figs\x12!\n\x0cinitial_node\x18\x02\x20\x01(\tR\x0binitialNode\"\xf9\x01\
-    \n\x11NodeConfiguration\x12\x12\n\x04name\x18\x01\x20\x01(\tR\x04name\
-    \x12@\n\x0bwasm_config\x18\x02\x20\x01(\x0b2\x1d.oak.WebAssemblyConfigur\
-    ationH\0R\nwasmConfig\x126\n\nlog_config\x18\x03\x20\x01(\x0b2\x15.oak.L\
-    ogConfigurationH\0R\tlogConfig\x12G\n\x0estorage_config\x18\x04\x20\x01(\
-    \x0b2\x1e.oak.StorageProxyConfigurationH\0R\rstorageConfigB\r\n\x0bconfi\
-    g_type\"=\n\x18WebAssemblyConfiguration\x12!\n\x0cmodule_bytes\x18\x01\
-    \x20\x01(\x0cR\x0bmoduleBytes\"\x12\n\x10LogConfiguration\"5\n\x19Storag\
-    eProxyConfiguration\x12\x18\n\x07address\x18\x01\x20\x01(\tR\x07address\
-    \"v\n\x18CreateApplicationRequest\x12Z\n\x19application_configuration\
-    \x18\x01\x20\x01(\x0b2\x1d.oak.ApplicationConfigurationR\x18applicationC\
-    onfiguration\"_\n\x19CreateApplicationResponse\x12%\n\x0eapplication_id\
-    \x18\x01\x20\x01(\tR\rapplicationId\x12\x1b\n\tgrpc_port\x18\x02\x20\x01\
-    (\x05R\x08grpcPort\"D\n\x1bTerminateApplicationRequest\x12%\n\x0eapplica\
-    tion_id\x18\x01\x20\x01(\tR\rapplicationId\"\x1e\n\x1cTerminateApplicati\
-    onResponse2\xba\x01\n\x07Manager\x12R\n\x11CreateApplication\x12\x1d.oak\
-    .CreateApplicationRequest\x1a\x1e.oak.CreateApplicationResponse\x12[\n\
-    \x14TerminateApplication\x12\x20.oak.TerminateApplicationRequest\x1a!.oa\
-    k.TerminateApplicationResponseb\x06proto3\
+    \n\rmanager.proto\x12\x03oak\"\x95\x01\n\x18ApplicationConfiguration\x12\
+    9\n\x0cnode_configs\x18\x01\x20\x03(\x0b2\x16.oak.NodeConfigurationR\x0b\
+    nodeConfigs\x12!\n\x0cinitial_node\x18\x02\x20\x01(\tR\x0binitialNode\
+    \x12\x1b\n\tgrpc_port\x18\x03\x20\x01(\x05R\x08grpcPort\"\xf9\x01\n\x11N\
+    odeConfiguration\x12\x12\n\x04name\x18\x01\x20\x01(\tR\x04name\x12@\n\
+    \x0bwasm_config\x18\x02\x20\x01(\x0b2\x1d.oak.WebAssemblyConfigurationH\
+    \0R\nwasmConfig\x126\n\nlog_config\x18\x03\x20\x01(\x0b2\x15.oak.LogConf\
+    igurationH\0R\tlogConfig\x12G\n\x0estorage_config\x18\x04\x20\x01(\x0b2\
+    \x1e.oak.StorageProxyConfigurationH\0R\rstorageConfigB\r\n\x0bconfig_typ\
+    e\"=\n\x18WebAssemblyConfiguration\x12!\n\x0cmodule_bytes\x18\x01\x20\
+    \x01(\x0cR\x0bmoduleBytes\"\x12\n\x10LogConfiguration\"5\n\x19StoragePro\
+    xyConfiguration\x12\x18\n\x07address\x18\x01\x20\x01(\tR\x07address\"v\n\
+    \x18CreateApplicationRequest\x12Z\n\x19application_configuration\x18\x01\
+    \x20\x01(\x0b2\x1d.oak.ApplicationConfigurationR\x18applicationConfigura\
+    tion\"_\n\x19CreateApplicationResponse\x12%\n\x0eapplication_id\x18\x01\
+    \x20\x01(\tR\rapplicationId\x12\x1b\n\tgrpc_port\x18\x02\x20\x01(\x05R\
+    \x08grpcPort\"D\n\x1bTerminateApplicationRequest\x12%\n\x0eapplication_i\
+    d\x18\x01\x20\x01(\tR\rapplicationId\"\x1e\n\x1cTerminateApplicationResp\
+    onse2\xba\x01\n\x07Manager\x12R\n\x11CreateApplication\x12\x1d.oak.Creat\
+    eApplicationRequest\x1a\x1e.oak.CreateApplicationResponse\x12[\n\x14Term\
+    inateApplication\x12\x20.oak.TerminateApplicationRequest\x1a!.oak.Termin\
+    ateApplicationResponseb\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {

@@ -21,7 +21,10 @@ load("@linux_sgx//:sgx_sdk.bzl", "sgx")
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
 package(
-    default_visibility = ["//oak/server:__subpackages__"],
+    default_visibility = [
+        "//examples:__subpackages__",
+        "//oak/server:__subpackages__",
+    ],
     licenses = ["notice"],
 )
 
@@ -47,6 +50,29 @@ cc_library(
 )
 
 cc_library(
+    name = "asylo_oak_loader",
+    srcs = [
+        "asylo_oak_loader.cc",
+    ],
+    hdrs = [
+        "asylo_oak_loader.h",
+    ],
+    deps = [
+        "//oak/proto:application_cc_grpc",
+        "//oak/proto:enclave_cc_proto",
+        "//oak/proto:manager_cc_grpc",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/strings",
+        "@com_google_asylo//asylo:enclave_client",
+        "@com_google_asylo//asylo/grpc/util:enclave_server_cc_proto",
+        "@com_google_asylo//asylo/identity:descriptions",
+        "@com_google_asylo//asylo/identity:enclave_assertion_authority_config_cc_proto",
+        "@com_google_asylo//asylo/util:logging",
+    ],
+)
+
+cc_library(
     name = "asylo_oak_manager",
     srcs = [
         "asylo_oak_manager.cc",
@@ -55,6 +81,7 @@ cc_library(
         "asylo_oak_manager.h",
     ],
     deps = [
+        ":asylo_oak_loader",
         "//oak/proto:application_cc_grpc",
         "//oak/proto:enclave_cc_proto",
         "//oak/proto:manager_cc_grpc",
@@ -144,8 +171,26 @@ enclave_loader(
     ],
 )
 
+enclave_loader(
+    name = "oak_app",
+    srcs = ["asylo_oak_app_main.cc"],
+    enclaves = {"enclave": "//oak/server/asylo:oak_enclave_debug.so"},
+    loader_args = ["--enclave_path='{enclave}'"],
+    deps = [
+        ":asylo_oak_loader",
+        "//oak/common:app_config",
+        "//oak/common:utils",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/flags:parse",
+        "@com_google_absl//absl/synchronization",
+        "@com_google_absl//absl/time",
+        "@com_google_asylo//asylo/util:logging",
+    ],
+)
+
 container_image(
-    name = "oak-docker",
+    name = "oak_docker",
     base = "@cc_image//image",
     entrypoint = [
         "./oak_host_loader",
@@ -161,6 +206,19 @@ container_image(
         "8080/tcp",  # Oak Application gRPC port.
         # https://github.com/project-oak/oak/blob/667b07c555cde0c4705e5f7533b101203cc01c12/oak/server/asylo/asylo_oak_main.cc#L33
         "8888/tcp",  # Oak Manager gRPC port.
+    ],
+    repository = "gcr.io/oak-ci",
+)
+
+container_image(
+    name = "oak_app_docker",
+    base = "@cc_image//image",
+    files = [
+        "oak_app_host_loader",
+        "oak_enclave_debug.so",
+    ],
+    ports = [
+        "8080/tcp",  # Oak Application gRPC port.
     ],
     repository = "gcr.io/oak-ci",
 )

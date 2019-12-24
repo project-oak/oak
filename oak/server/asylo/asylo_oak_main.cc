@@ -30,7 +30,7 @@
 #include "include/grpcpp/server_builder.h"
 
 ABSL_FLAG(std::string, enclave_path, "", "Path of the enclave to load");
-ABSL_FLAG(int, grpc_port, 8888, "Port to listen on");
+ABSL_FLAG(int, grpc_port, 8888, "Port for the Application to listen on");
 
 void sigint_handler(int param) {
   LOG(QFATAL) << "SIGINT received";

@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 load("@rules_cc//cc:defs.bzl", "cc_binary")
 
 package(
@@ -25,13 +26,32 @@ cc_binary(
     srcs = ["hello_world.cc"],
     deps = [
         "//examples/hello_world/proto:hello_world_cc_grpc",
-        "//examples/utils",
         "//oak/client:application_client",
         "//oak/client:manager_client",
+        "//oak/common:utils",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
         "@com_google_absl//absl/memory",
         "@com_google_asylo//asylo/util:logging",
     ],
+)
+
+# TODO: Create a new Bazel rule `oak_application_server_docker`, that encapsulates this logic.
+container_image(
+    name = "client_docker",
+    base = "//oak/server/asylo:oak_app_docker",
+    entrypoint = [
+        "./oak_app_host_loader",
+        "--enclave_path=oak_enclave_debug.so",
+        "--module=hello_world.wasm",
+        "--grpc_port=8080",
+    ],
+    files = [
+        "//examples:target/wasm32-unknown-unknown/release/hello_world.wasm",
+    ],
+    ports = [
+        "8080/tcp",  # Oak Application gRPC port.
+    ],
+    repository = "gcr.io/oak-ci",
 )

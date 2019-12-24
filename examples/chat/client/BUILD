@@ -25,10 +25,10 @@ cc_binary(
     srcs = ["chat.cc"],
     deps = [
         "//examples/chat/proto:chat_cc_grpc",
-        "//examples/utils",
         "//oak/client:application_client",
         "//oak/client:manager_client",
         "//oak/common:nonce_generator",
+        "//oak/common:utils",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",

@@ -14,18 +14,10 @@
 # limitations under the License.
 #
 
-load("@rules_cc//cc:defs.bzl", "cc_library")
-
 package(
+    default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
 
-cc_library(
-    name = "utils",
-    hdrs = ["utils.h"],
-    visibility = ["//visibility:public"],
-    deps = [
-        "@com_github_grpc_grpc//:grpc++",
-        "@com_google_asylo//asylo/util:logging",
-    ],
-)
+# These files are built via cargo outside of Bazel.
+exports_files(srcs = glob(["target/wasm32-unknown-unknown/release/*.wasm"]))

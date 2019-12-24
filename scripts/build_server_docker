@@ -8,4 +8,4 @@ bazel_build_flags+=(
     '--config=enc-sim'
 )
 
-bazel build "${bazel_build_flags[@]}" //oak/server/asylo:oak-docker.tar
+bazel build "${bazel_build_flags[@]}" //oak/server/asylo:oak_docker.tar
