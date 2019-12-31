@@ -132,38 +132,20 @@ cc_library(
     ],
 )
 
-# Wrapper rule to expose the resulting static library as a statically linked cc_library and
-# corresponding header so that it can be depended on by other cc_library and cc_binary rules.
-#
-# TODO: There seems to be something wrong with this rule related to caching in Bazel.
-# To reproduce:
-# - change src/lib.rs and introduce a syntax error
-# - bazel build //rust/oak_runtime:wrapper
-# - this should produce a compile error, instead Bazel is still caching the old artifact
-# The final link of //oak/server/asylo:oak uses oak_runtime_stripped.a not libwrapper.a. Similarly,
-# a change to the Rust file does induce a rebuild when doing bazel build //oak/server/dev:oak. So is
-# Bazel maybe doing something special for a target with a single src that is itself a .a file?
-cc_library(
-    name = "rust_wrapper",
-    srcs = ["//sdk/rust/oak_runtime_compat:oak_runtime_stripped"],
-    linkstatic = True,
-)
-
 cc_library(
     name = "oak_runtime",
     srcs = ["oak_runtime.cc"],
     hdrs = [
         "oak_runtime.h",
-        "rust_check.h",
     ],
     deps = [
         ":base_runtime",
         ":oak_grpc_node",
-        ":rust_wrapper",
         ":wasm_node",
         "//oak/common:app_config",
         "//oak/proto:enclave_cc_proto",
         "//oak/proto:oak_api_cc_proto",
+        "//sdk/rust/oak_runtime_compat:rust_wrapper",
         "//oak/server:logging_node",
         "//oak/server/storage:storage_node",
         "@com_google_absl//absl/memory",

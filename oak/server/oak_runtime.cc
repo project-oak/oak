@@ -25,8 +25,9 @@
 #include "absl/strings/str_cat.h"
 #include "asylo/util/logging.h"
 #include "oak/common/app_config.h"
-#include "oak/server/rust_check.h"
 #include "oak/server/wasm_node.h"
+
+#include "sdk/rust/oak_runtime_compat/rust_check.h"
 
 namespace oak {
 

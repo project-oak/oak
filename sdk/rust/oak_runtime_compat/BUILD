@@ -52,5 +52,23 @@ genrule(
     srcs = [":oak_runtime"],
     outs = ["oak_runtime_stripped.a"],
     cmd = "cp $< $@ && chmod +rw $@ && ar d $@ divxc3.o",
+)
+
+# Wrapper rule to expose the resulting static library as a statically linked cc_library and
+# corresponding header so that it can be depended on by other cc_library and cc_binary rules.
+#
+# TODO: There seems to be something wrong with this rule related to caching in Bazel.
+# To reproduce:
+# - change src/lib.rs and introduce a syntax error
+# - bazel build //rust/oak_runtime:wrapper
+# - this should produce a compile error, instead Bazel is still caching the old artifact
+# The final link of //oak/server/asylo:oak uses oak_runtime_stripped.a not libwrapper.a. Similarly,
+# a change to the Rust file does induce a rebuild when doing bazel build //oak/server/dev:oak. So is
+# Bazel maybe doing something special for a target with a single src that is itself a .a file?
+cc_library(
+    name = "rust_wrapper",
+    srcs = ["//sdk/rust/oak_runtime_compat:oak_runtime_stripped"],
+    linkstatic = True,
+    hdrs = ["rust_check.h"],
     visibility = ["//oak/server:__subpackages__"],
 )
