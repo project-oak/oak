@@ -36,11 +36,11 @@ extern crate libc;
 
 use alloc::prelude::v1::*;
 
-pub mod asylo;
+pub mod enclave;
 pub mod common;
 
 #[global_allocator]
-static A: asylo::allocator::System = asylo::allocator::System;
+static A: enclave::allocator::System = enclave::allocator::System;
 
 /// Provide the entrypoint needed by the compiler's failure mechanisms when
 /// `std` is unavailable.  See ["No
@@ -62,7 +62,7 @@ pub fn thread_test(x: i32) -> common::io::Result<i32> {
 
   let t = unsafe {
       // TODO: make safe thread interface in common/thread.rs
-      asylo::thread::Thread::new(Box::new(other))
+      enclave::thread::Thread::new(Box::new(other))
   }?;
   t.join();
   Ok(val.load(Ordering::SeqCst))
