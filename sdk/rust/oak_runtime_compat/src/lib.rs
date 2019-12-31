@@ -34,7 +34,7 @@ extern crate alloc;
 extern crate core;
 extern crate libc;
 
-use alloc::prelude::v1::*;
+pub use alloc::prelude::v1::*;
 
 pub mod enclave;
 pub mod common;
@@ -48,7 +48,8 @@ static A: enclave::allocator::System = enclave::allocator::System;
 #[lang = "eh_personality"]
 pub extern "C" fn eh_personality() {}
 
-pub fn thread_test(x: i32) -> common::io::Result<i32> {
+/// For testing externally linked code, see `add_magic_number`
+fn thread_test(x: i32) -> common::io::Result<i32> {
   use alloc::sync::Arc;
   use core::sync::atomic::{AtomicI32, Ordering};
   let val = Arc::new(AtomicI32::new(x));
@@ -60,11 +61,8 @@ pub fn thread_test(x: i32) -> common::io::Result<i32> {
     }
   };
 
-  let t = unsafe {
-      // TODO: make safe thread interface in common/thread.rs
-      enclave::thread::Thread::new(Box::new(other))
-  }?;
-  t.join();
+  enclave::spawn(box other)?.join();
+
   Ok(val.load(Ordering::SeqCst))
 }
 

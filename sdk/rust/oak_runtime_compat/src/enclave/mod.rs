@@ -14,5 +14,27 @@
 // limitations under the License.
 //
 
+use crate::common::io;
+use crate::alloc::boxed::Box;
+
+// TODO: Enclave backend that provides:
+// - Allocator
+// - Threads
+// - Mutexes
+// - TODO: Channel with automatic remote attestation
 mod asylo;
 pub use self::asylo::*;
+
+/// A safe function to spawn an enclave thread. At the moment, parameters cannot
+/// be passed in this function call, unlike the rust standard library. (This can
+/// be achieved by moving values into closures and spawning threads with said
+/// closures)
+pub fn spawn<F>(f: F) -> io::Result<thread::Thread>
+where
+    F: FnOnce() -> (),
+    F: Send + 'static,
+{
+    unsafe {
+      thread::Thread::new(Box::new(f))
+    }
+}
