@@ -68,7 +68,7 @@ genrule(
 cc_library(
     name = "rust_wrapper",
     srcs = ["//sdk/rust/oak_runtime_compat:oak_runtime_stripped"],
-    linkstatic = True,
     hdrs = ["rust_check.h"],
+    linkstatic = True,
     visibility = ["//oak/server:__subpackages__"],
 )
