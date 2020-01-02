@@ -26,13 +26,15 @@
 #include "absl/base/thread_annotations.h"
 #include "absl/synchronization/mutex.h"
 #include "oak/common/handles.h"
+#include "oak/server/base_runtime.h"
 #include "oak/server/channel.h"
 
 namespace oak {
 
 class OakNode {
  public:
-  OakNode(const std::string& name) : name_(name), termination_pending_(false), prng_engine_() {}
+  OakNode(BaseRuntime* runtime, const std::string& name)
+      : runtime_(runtime), name_(name), termination_pending_(false), prng_engine_() {}
   virtual ~OakNode() {}
 
   virtual void Start() = 0;
@@ -70,7 +72,11 @@ class OakNode {
   // parameter to the Node's oak_main() entrypoint.
   Handle SingleHandle() const LOCKS_EXCLUDED(mu_);
 
+  // Runtime instance that owns this Node.
+  BaseRuntime* const runtime_;
+
   const std::string name_;
+
   std::atomic_bool termination_pending_;
 
  private:

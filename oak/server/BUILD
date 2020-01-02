@@ -35,6 +35,7 @@ cc_library(
     srcs = ["oak_node.cc"],
     hdrs = ["oak_node.h"],
     deps = [
+        ":base_runtime",
         ":channel",
         "//oak/common:handles",
         "@com_google_absl//absl/synchronization",
@@ -53,7 +54,6 @@ cc_library(
         "wasm_node.h",
     ],
     deps = [
-        ":base_runtime",
         ":channel",
         "//oak/common:handles",
         "//oak/proto:grpc_encap_cc_proto",

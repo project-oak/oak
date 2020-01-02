@@ -20,7 +20,6 @@
 #include <memory>
 #include <random>
 
-#include "oak/server/base_runtime.h"
 #include "oak/server/node_thread.h"
 #include "src/interp/interp.h"
 
@@ -63,9 +62,6 @@ class WasmNode final : public NodeThread {
 
   // Native implementation of the `oak.random_get` host function.
   wabt::interp::HostFunc::Callback OakRandomGet(wabt::interp::Environment* env);
-
-  // Runtime instance that owns this Node.
-  BaseRuntime* runtime_;
 
   wabt::interp::Environment env_;
 

@@ -69,7 +69,7 @@ grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
     return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid gRPC port");
   }
   LOG(INFO) << "Create gRPC pseudo-Node named {" << grpc_name << "}";
-  std::unique_ptr<OakGrpcNode> grpc_node = OakGrpcNode::Create(grpc_name, grpc_port);
+  std::unique_ptr<OakGrpcNode> grpc_node = OakGrpcNode::Create(this, grpc_name, grpc_port);
   grpc_node_ = grpc_node.get();  // borrowed copy
   nodes_[grpc_name] = std::move(grpc_node);
 
@@ -110,11 +110,11 @@ OakNode* OakRuntime::CreateNode(const std::string& config, std::string* node_nam
     node = WasmNode::Create(this, name, *module_bytes);
   } else if (log_config_.count(config) > 0) {
     LOG(INFO) << "Create log node named {" << name << "}";
-    node = absl::make_unique<LoggingNode>(name);
+    node = absl::make_unique<LoggingNode>(this, name);
   } else if (storage_config_.count(config) > 0) {
     std::string address = *(storage_config_[config].get());
     LOG(INFO) << "Create storage proxy node named {" << name << "} connecting to " << address;
-    node = absl::make_unique<StorageNode>(name, address);
+    node = absl::make_unique<StorageNode>(this, name, address);
   } else {
     LOG(ERROR) << "failed to find config with name " << config;
     return nullptr;

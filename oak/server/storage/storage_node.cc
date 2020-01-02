@@ -27,8 +27,9 @@
 
 namespace oak {
 
-StorageNode::StorageNode(const std::string& name, const std::string& storage_address)
-    : NodeThread(name), storage_processor_(storage_address) {}
+StorageNode::StorageNode(BaseRuntime* runtime, const std::string& name,
+                         const std::string& storage_address)
+    : NodeThread(runtime, name), storage_processor_(storage_address) {}
 
 void StorageNode::Run(Handle request_handle) {
   // Borrow a pointer to the relevant channel half.
