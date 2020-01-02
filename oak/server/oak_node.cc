@@ -113,7 +113,7 @@ bool OakNode::WaitOnChannels(std::vector<std::unique_ptr<ChannelStatus>>* status
       }
     }
 
-    if (termination_pending_.load()) {
+    if (runtime_->TerminationPending()) {
       LOG(WARNING) << "{" << name_ << "} Node is pending termination";
       return false;
     }
