@@ -187,6 +187,11 @@ pub fn event_loop<T: OakNode>(mut node: T, grpc_in_handle: ReadHandle) -> i32 {
     }
 }
 
+/// Generic function that handles request deserialization and response
+/// serialization (and sending down a channel) for a function that handles a
+/// request/response pair.
+///
+/// Panics if [de-]serialization or channel operations fail.
 pub fn handle_req_rsp<C, R, Q>(mut node_fn: C, req: &[u8], mut writer: ChannelResponseWriter)
 where
     C: FnMut(R) -> Result<Q>,
@@ -203,6 +208,11 @@ where
     }
 }
 
+/// Generic function that handles request deserialization and response
+/// serialization (and sending down a channel) for a function that handles a
+/// request and streams responses.
+///
+/// Panics if [de-]serialization or channel operations fail.
 pub fn handle_req_stream<C, R>(mut node_fn: C, req: &[u8], writer: ChannelResponseWriter)
 where
     C: FnMut(R, ChannelResponseWriter),
@@ -212,6 +222,11 @@ where
     node_fn(r, writer)
 }
 
+/// Generic function that handles request deserialization and response
+/// serialization (and sending down a channel) for a function that handles a
+/// stream of requests to produce a response.
+///
+/// Panics if [de-]serialization or channel operations fail.
 pub fn handle_stream_rsp<C, R, Q>(mut node_fn: C, req: &[u8], mut writer: ChannelResponseWriter)
 where
     C: FnMut(Vec<R>) -> Result<Q>,
@@ -230,6 +245,11 @@ where
     }
 }
 
+/// Generic function that handles request deserialization and response
+/// serialization (and sending down a channel) for a function that handles a
+/// stream of requests to produce a stream of responses.
+///
+/// Panics if [de-]serialization or channel operations fail.
 pub fn handle_stream_stream<C, R>(mut node_fn: C, req: &[u8], writer: ChannelResponseWriter)
 where
     C: FnMut(Vec<R>, ChannelResponseWriter),
