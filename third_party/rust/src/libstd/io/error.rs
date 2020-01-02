@@ -1,8 +1,10 @@
-use crate::convert::From;
+// See https://github.com/rust-lang/rust/blob/6b561b4917e803c4be4ca44d8e552b680cb9e380/src/libstd/io/error.rs
+
+use alloc::fmt;
+use core::result;
+use alloc::boxed::*;
+
 use crate::error;
-use crate::fmt;
-use crate::result;
-use crate::sys;
 
 /// A specialized [`Result`](../result/enum.Result.html) type for I/O
 /// operations.
@@ -38,7 +40,6 @@ use crate::sys;
 ///     Ok(buffer)
 /// }
 /// ```
-#[stable(feature = "rust1", since = "1.0.0")]
 pub type Result<T> = result::Result<T, Error>;
 
 /// The error type for I/O operations of the [`Read`], [`Write`], [`Seek`], and
@@ -52,12 +53,10 @@ pub type Result<T> = result::Result<T, Error>;
 /// [`Write`]: ../io/trait.Write.html
 /// [`Seek`]: ../io/trait.Seek.html
 /// [`ErrorKind`]: enum.ErrorKind.html
-#[stable(feature = "rust1", since = "1.0.0")]
 pub struct Error {
     repr: Repr,
 }
 
-#[stable(feature = "rust1", since = "1.0.0")]
 impl fmt::Debug for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Debug::fmt(&self.repr, f)
@@ -85,48 +84,35 @@ struct Custom {
 ///
 /// [`io::Error`]: struct.Error.html
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-#[stable(feature = "rust1", since = "1.0.0")]
 #[allow(deprecated)]
 #[non_exhaustive]
 pub enum ErrorKind {
     /// An entity was not found, often a file.
-    #[stable(feature = "rust1", since = "1.0.0")]
     NotFound,
     /// The operation lacked the necessary privileges to complete.
-    #[stable(feature = "rust1", since = "1.0.0")]
     PermissionDenied,
     /// The connection was refused by the remote server.
-    #[stable(feature = "rust1", since = "1.0.0")]
     ConnectionRefused,
     /// The connection was reset by the remote server.
-    #[stable(feature = "rust1", since = "1.0.0")]
     ConnectionReset,
     /// The connection was aborted (terminated) by the remote server.
-    #[stable(feature = "rust1", since = "1.0.0")]
     ConnectionAborted,
     /// The network operation failed because it was not connected yet.
-    #[stable(feature = "rust1", since = "1.0.0")]
     NotConnected,
     /// A socket address could not be bound because the address is already in
     /// use elsewhere.
-    #[stable(feature = "rust1", since = "1.0.0")]
     AddrInUse,
     /// A nonexistent interface was requested or the requested address was not
     /// local.
-    #[stable(feature = "rust1", since = "1.0.0")]
     AddrNotAvailable,
     /// The operation failed because a pipe was closed.
-    #[stable(feature = "rust1", since = "1.0.0")]
     BrokenPipe,
     /// An entity already exists, often a file.
-    #[stable(feature = "rust1", since = "1.0.0")]
     AlreadyExists,
     /// The operation needs to block to complete, but the blocking operation was
     /// requested to not occur.
-    #[stable(feature = "rust1", since = "1.0.0")]
     WouldBlock,
     /// A parameter was incorrect.
-    #[stable(feature = "rust1", since = "1.0.0")]
     InvalidInput,
     /// Data not valid for the operation were encountered.
     ///
@@ -138,10 +124,8 @@ pub enum ErrorKind {
     /// `InvalidData` if the file's contents are not valid UTF-8.
     ///
     /// [`InvalidInput`]: #variant.InvalidInput
-    #[stable(feature = "io_invalid_data", since = "1.2.0")]
     InvalidData,
     /// The I/O operation's timeout expired, causing it to be canceled.
-    #[stable(feature = "rust1", since = "1.0.0")]
     TimedOut,
     /// An error returned when an operation could not be completed because a
     /// call to [`write`] returned [`Ok(0)`].
@@ -152,15 +136,12 @@ pub enum ErrorKind {
     ///
     /// [`write`]: ../../std/io/trait.Write.html#tymethod.write
     /// [`Ok(0)`]: ../../std/io/type.Result.html
-    #[stable(feature = "rust1", since = "1.0.0")]
     WriteZero,
     /// This operation was interrupted.
     ///
     /// Interrupted operations can typically be retried.
-    #[stable(feature = "rust1", since = "1.0.0")]
     Interrupted,
     /// Any I/O error not part of this list.
-    #[stable(feature = "rust1", since = "1.0.0")]
     Other,
 
     /// An error returned when an operation could not be completed because an
@@ -169,7 +150,6 @@ pub enum ErrorKind {
     /// This typically means that an operation could only succeed if it read a
     /// particular number of bytes but only a smaller number of bytes could be
     /// read.
-    #[stable(feature = "read_exact", since = "1.6.0")]
     UnexpectedEof,
 }
 
@@ -200,7 +180,6 @@ impl ErrorKind {
 
 /// Intended for use for errors not exposed to the user, where allocating onto
 /// the heap (for normal construction via Error::new) is too costly.
-#[stable(feature = "io_error_from_errorkind", since = "1.14.0")]
 impl From<ErrorKind> for Error {
     /// Converts an [`ErrorKind`] into an [`Error`].
     ///
@@ -243,7 +222,6 @@ impl Error {
     /// // errors can also be created from other errors
     /// let custom_error2 = Error::new(ErrorKind::Interrupted, custom_error);
     /// ```
-    #[stable(feature = "rust1", since = "1.0.0")]
     pub fn new<E>(kind: ErrorKind, error: E) -> Error
     where
         E: Into<Box<dyn error::Error + Send + Sync>>,
@@ -255,23 +233,22 @@ impl Error {
         Error { repr: Repr::Custom(Box::new(Custom { kind, error })) }
     }
 
-    /// Returns an error representing the last OS error which occurred.
-    ///
-    /// This function reads the value of `errno` for the target platform (e.g.
-    /// `GetLastError` on Windows) and will return a corresponding instance of
-    /// `Error` for the error code.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use std::io::Error;
-    ///
-    /// println!("last OS error: {:?}", Error::last_os_error());
-    /// ```
-    #[stable(feature = "rust1", since = "1.0.0")]
-    pub fn last_os_error() -> Error {
-        Error::from_raw_os_error(sys::os::errno() as i32)
-    }
+    ///// Returns an error representing the last OS error which occurred.
+    /////
+    ///// This function reads the value of `errno` for the target platform (e.g.
+    ///// `GetLastError` on Windows) and will return a corresponding instance of
+    ///// `Error` for the error code.
+    /////
+    ///// # Examples
+    /////
+    ///// ```
+    ///// use std::io::Error;
+    /////
+    ///// println!("last OS error: {:?}", Error::last_os_error());
+    ///// ```
+    //pub fn last_os_error() -> Error {
+    //    Error::from_raw_os_error(sys::os::errno() as i32)
+    //}
 
     /// Creates a new instance of an `Error` from a particular OS error code.
     ///
@@ -298,7 +275,6 @@ impl Error {
     /// assert_eq!(error.kind(), io::ErrorKind::InvalidInput);
     /// # }
     /// ```
-    #[stable(feature = "rust1", since = "1.0.0")]
     pub fn from_raw_os_error(code: i32) -> Error {
         Error { repr: Repr::Os(code) }
     }
@@ -329,7 +305,6 @@ impl Error {
     ///     print_os_error(&Error::new(ErrorKind::Other, "oh no!"));
     /// }
     /// ```
-    #[stable(feature = "rust1", since = "1.0.0")]
     pub fn raw_os_error(&self) -> Option<i32> {
         match self.repr {
             Repr::Os(i) => Some(i),
@@ -363,7 +338,6 @@ impl Error {
     ///     print_error(&Error::new(ErrorKind::Other, "oh no!"));
     /// }
     /// ```
-    #[stable(feature = "io_error_inner", since = "1.3.0")]
     pub fn get_ref(&self) -> Option<&(dyn error::Error + Send + Sync + 'static)> {
         match self.repr {
             Repr::Os(..) => None,
@@ -402,7 +376,9 @@ impl Error {
     ///     }
     /// }
     ///
-    /// impl error::Error for MyError {}
+    /// impl error::Error for MyError {
+    ///     fn description(&self) -> &str { &self.v }
+    /// }
     ///
     /// impl Display for MyError {
     ///     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -432,7 +408,6 @@ impl Error {
     ///     print_error(&change_error(Error::new(ErrorKind::Other, MyError::new())));
     /// }
     /// ```
-    #[stable(feature = "io_error_inner", since = "1.3.0")]
     pub fn get_mut(&mut self) -> Option<&mut (dyn error::Error + Send + Sync + 'static)> {
         match self.repr {
             Repr::Os(..) => None,
@@ -466,7 +441,6 @@ impl Error {
     ///     print_error(Error::new(ErrorKind::Other, "oh no!"));
     /// }
     /// ```
-    #[stable(feature = "io_error_inner", since = "1.3.0")]
     pub fn into_inner(self) -> Option<Box<dyn error::Error + Send + Sync>> {
         match self.repr {
             Repr::Os(..) => None,
@@ -475,28 +449,29 @@ impl Error {
         }
     }
 
-    /// Returns the corresponding `ErrorKind` for this error.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use std::io::{Error, ErrorKind};
-    ///
-    /// fn print_error(err: Error) {
-    ///     println!("{:?}", err.kind());
-    /// }
-    ///
-    /// fn main() {
-    ///     // Will print "No inner error".
-    ///     print_error(Error::last_os_error());
-    ///     // Will print "Inner error: ...".
-    ///     print_error(Error::new(ErrorKind::AddrInUse, "oh no!"));
-    /// }
-    /// ```
-    #[stable(feature = "rust1", since = "1.0.0")]
+    ///// Returns the corresponding `ErrorKind` for this error.
+    /////
+    ///// # Examples
+    /////
+    ///// ```
+    ///// use std::io::{Error, ErrorKind};
+    /////
+    ///// fn print_error(err: Error) {
+    /////     println!("{:?}", err.kind());
+    ///// }
+    /////
+    ///// fn main() {
+    /////     // Will print "No inner error".
+    /////     print_error(Error::last_os_error());
+    /////     // Will print "Inner error: ...".
+    /////     print_error(Error::new(ErrorKind::AddrInUse, "oh no!"));
+    ///// }
+    ///// ```
     pub fn kind(&self) -> ErrorKind {
         match self.repr {
-            Repr::Os(code) => sys::decode_error_kind(code),
+            // TODO: sys::decode_error_kind unavailable
+            // Repr::Os(code) => sys::decode_error_kind(code),
+            Repr::Os(_code) => ErrorKind::Other,
             Repr::Custom(ref c) => c.kind,
             Repr::Simple(kind) => kind,
         }
@@ -506,11 +481,16 @@ impl Error {
 impl fmt::Debug for Repr {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
+            // TODO: sys::decode_error_kind unavailable
+            // Repr::Os(code) => fmt
+            //     .debug_struct("Os")
+            //     .field("code", &code)
+            //     .field("kind", &sys::decode_error_kind(code))
+            //     .field("message", &sys::os::error_string(code))
+            //     .finish(),
             Repr::Os(code) => fmt
                 .debug_struct("Os")
                 .field("code", &code)
-                .field("kind", &sys::decode_error_kind(code))
-                .field("message", &sys::os::error_string(code))
                 .finish(),
             Repr::Custom(ref c) => fmt::Debug::fmt(&c, fmt),
             Repr::Simple(kind) => fmt.debug_tuple("Kind").field(&kind).finish(),
@@ -518,13 +498,14 @@ impl fmt::Debug for Repr {
     }
 }
 
-#[stable(feature = "rust1", since = "1.0.0")]
 impl fmt::Display for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.repr {
             Repr::Os(code) => {
-                let detail = sys::os::error_string(code);
-                write!(fmt, "{} (os error {})", detail, code)
+                // TODO: os::error_string
+                // let detail = sys::os::error_string(code);
+                // write!(fmt, "{} (os error {})", detail, code)
+                write!(fmt, "os error {}", code)
             }
             Repr::Custom(ref c) => c.error.fmt(fmt),
             Repr::Simple(kind) => write!(fmt, "{}", kind.as_str()),
@@ -532,9 +513,7 @@ impl fmt::Display for Error {
     }
 }
 
-#[stable(feature = "rust1", since = "1.0.0")]
 impl error::Error for Error {
-    #[allow(deprecated, deprecated_in_future)]
     fn description(&self) -> &str {
         match self.repr {
             Repr::Os(..) | Repr::Simple(..) => self.kind().as_str(),
@@ -604,18 +583,22 @@ mod test {
         struct TestError;
 
         impl fmt::Display for TestError {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                f.write_str("asdf")
+            fn fmt(&self, _: &mut fmt::Formatter<'_>) -> fmt::Result {
+                Ok(())
             }
         }
 
-        impl error::Error for TestError {}
+        impl error::Error for TestError {
+            fn description(&self) -> &str {
+                "asdf"
+            }
+        }
 
         // we have to call all of these UFCS style right now since method
         // resolution won't implicitly drop the Send+Sync bounds
         let mut err = Error::new(ErrorKind::Other, TestError);
         assert!(err.get_ref().unwrap().is::<TestError>());
-        assert_eq!("asdf", err.get_ref().unwrap().to_string());
+        assert_eq!("asdf", err.get_ref().unwrap().description());
         assert!(err.get_mut().unwrap().is::<TestError>());
         let extracted = err.into_inner().unwrap();
         extracted.downcast::<TestError>().unwrap();
