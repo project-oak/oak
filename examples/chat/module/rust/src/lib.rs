@@ -118,7 +118,9 @@ impl ChatNode for Node {
     fn join_room(&mut self, req: JoinRoomRequest, mut writer: grpc::ChannelResponseWriter) {
         let admin_id = match self.room_to_admin.get(&req.room_id) {
             None => {
-                writer.close(unknown_id_err("Room"));
+                writer
+                    .close(unknown_id_err("Room"))
+                    .expect("Failed to close writer");
                 return;
             }
             Some(id) => id,

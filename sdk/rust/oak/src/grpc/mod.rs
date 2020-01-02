@@ -19,7 +19,7 @@
 pub use crate::proto::code::Code;
 use crate::{proto, wasm, Handle, OakStatus, ReadHandle, WriteHandle};
 use log::info;
-use protobuf::{Message, ProtobufEnum};
+use protobuf::{Message, ProtobufEnum, ProtobufResult};
 
 /// Result type that uses a [`proto::status::Status`] type for error values.
 pub type Result<T> = std::result::Result<T, proto::status::Status>;
@@ -61,7 +61,7 @@ impl ChannelResponseWriter {
 
     /// Write out a gRPC response and optionally close out the method
     /// invocation.  Any errors from the channel are silently dropped.
-    pub fn write<T: protobuf::Message>(&mut self, rsp: &T, mode: WriteMode) {
+    pub fn write<T: protobuf::Message>(&mut self, rsp: &T, mode: WriteMode) -> ProtobufResult<()> {
         // Put the serialized response into a GrpcResponse message wrapper and
         // serialize it into the channel.
         let mut grpc_rsp = proto::grpc_encap::GrpcResponse::new();
@@ -72,29 +72,31 @@ impl ChannelResponseWriter {
             WriteMode::KeepOpen => false,
             WriteMode::Close => true,
         });
-        let _ = grpc_rsp.write_to_writer(&mut self.channel);
+        grpc_rsp.write_to_writer(&mut self.channel)?;
         if mode == WriteMode::Close {
-            let _ = self.channel.close();
+            self.channel.close()?;
         }
+        Ok(())
     }
 
     /// Write an empty gRPC response and optionally close out the method
     /// invocation. Any errors from the channel are silently dropped.
-    pub fn write_empty(&mut self, mode: WriteMode) {
+    pub fn write_empty(&mut self, mode: WriteMode) -> ProtobufResult<()> {
         let mut grpc_rsp = proto::grpc_encap::GrpcResponse::new();
         grpc_rsp.set_rsp_msg(protobuf::well_known_types::Any::new());
         grpc_rsp.set_last(match mode {
             WriteMode::KeepOpen => false,
             WriteMode::Close => true,
         });
-        let _ = grpc_rsp.write_to_writer(&mut self.channel);
+        grpc_rsp.write_to_writer(&mut self.channel)?;
         if mode == WriteMode::Close {
-            let _ = self.channel.close();
+            self.channel.close()?;
         }
+        Ok(())
     }
 
     /// Close out the gRPC method invocation with the given final result.
-    pub fn close(&mut self, result: Result<()>) {
+    pub fn close(&mut self, result: Result<()>) -> ProtobufResult<()> {
         // Build a final GrpcResponse message wrapper and serialize it into the
         // channel.
         let mut grpc_rsp = proto::grpc_encap::GrpcResponse::new();
@@ -102,8 +104,9 @@ impl ChannelResponseWriter {
         if let Err(status) = result {
             grpc_rsp.set_status(status);
         }
-        let _ = grpc_rsp.write_to_writer(&mut self.channel);
-        let _ = self.channel.close();
+        grpc_rsp.write_to_writer(&mut self.channel)?;
+        self.channel.close()?;
+        Ok(())
     }
 }
 
@@ -191,9 +194,12 @@ where
     Q: protobuf::Message,
 {
     let r: R = protobuf::parse_from_bytes(&req).expect("Failed to parse request protobuf message");
-    match node_fn(r) {
+    let result = match node_fn(r) {
         Ok(rsp) => writer.write(&rsp, WriteMode::Close),
         Err(status) => writer.close(Err(status)),
+    };
+    if let Err(e) = result {
+        panic!("Failed to process response: {}", e)
     }
 }
 
@@ -215,9 +221,12 @@ where
     // TODO(#97): better client-side streaming
     let rr: Vec<R> =
         vec![protobuf::parse_from_bytes(&req).expect("Failed to parse request protobuf message")];
-    match node_fn(rr) {
+    let result = match node_fn(rr) {
         Ok(rsp) => writer.write(&rsp, WriteMode::Close),
         Err(status) => writer.close(Err(status)),
+    };
+    if let Err(e) = result {
+        panic!("Failed to process response: {}", e)
     }
 }
 
