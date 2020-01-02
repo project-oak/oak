@@ -132,7 +132,7 @@ OakNode* OakRuntime::CreateNode(const std::string& config, std::string* node_nam
 
 bool OakRuntime::CreateAndRunNode(const std::string& config, std::unique_ptr<ChannelHalf> half,
                                   std::string* node_name) {
-  if (termination_pending_.load()) {
+  if (TerminationPending()) {
     LOG(WARNING) << "Runtime is pending termination, fail node creation";
     return false;
   }
