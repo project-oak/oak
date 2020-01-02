@@ -41,9 +41,13 @@ void NodeThread::Start() {
   LOG(INFO) << "Started {" << name_ << "} node thread";
 }
 
-void NodeThread::Stop() { StopThread(); }
+void NodeThread::Stop() {
+  LOG(INFO) << "Stopping node {" << name_ << "}";
+  StopThread();
+}
 
 void NodeThread::StopThread() {
+  LOG(INFO) << "Termination pending for {" << name_ << "}";
   termination_pending_ = true;
   if (thread_.joinable()) {
     LOG(INFO) << "Waiting for completion of {" << name_ << "} node thread";

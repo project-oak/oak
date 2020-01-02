@@ -131,6 +131,11 @@ OakNode* OakRuntime::CreateNode(const std::string& config, std::string* node_nam
 
 bool OakRuntime::CreateAndRunNode(const std::string& config, std::unique_ptr<ChannelHalf> half,
                                   std::string* node_name) {
+  if (termination_pending_.load()) {
+    LOG(WARNING) << "Runtime is pending termination, fail node creation";
+    return false;
+  }
+
   absl::MutexLock lock(&mu_);
   OakNode* node = CreateNode(config, node_name);
   if (node == nullptr) {
@@ -170,6 +175,7 @@ int32_t OakRuntime::GetPort() { return grpc_node_->GetPort(); }
 
 grpc::Status OakRuntime::Stop() {
   LOG(INFO) << "Stopping runtime...";
+  termination_pending_ = true;
 
   // Take local ownership of all the nodes owned by the runtime.
   std::map<std::string, std::unique_ptr<OakNode>> nodes;
