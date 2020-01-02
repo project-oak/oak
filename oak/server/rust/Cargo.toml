@@ -1,9 +1,0 @@
-# Placeholder file, only to make VSCode happy. All compilation is actually done via Bazel.
-
-[package]
-name = "oak_runtime"
-version = "0.1.0"
-authors = ["Tiziano Santoro <tzn@google.com>"]
-
-[lib]
-crate-type = ["staticlib"]
