@@ -2326,7 +2326,7 @@
 <span class="attribute">#![<span class="ident">allow</span>(<span class="ident">unsafe_code</span>)]</span>
 <span class="attribute">#![<span class="ident">allow</span>(<span class="ident">unused_imports</span>)]</span>
 <span class="attribute">#![<span class="ident">allow</span>(<span class="ident">unused_results</span>)]</span>
-<span class="doccomment">//! Generated file from `storage.proto`</span>
+<span class="doccomment">//! Generated file from `oak/proto/storage.proto`</span>
 
 <span class="kw">use</span> <span class="ident">protobuf</span>::<span class="ident">Message</span> <span class="kw">as</span> <span class="ident">Message_imported_for_functions</span>;
 <span class="kw">use</span> <span class="ident">protobuf</span>::<span class="ident">ProtobufEnum</span> <span class="kw">as</span> <span class="ident">ProtobufEnum_imported_for_functions</span>;
@@ -4570,33 +4570,33 @@
 }
 
 <span class="kw">static</span> <span class="ident">file_descriptor_proto_data</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> [<span class="ident">u8</span>] <span class="op">=</span> <span class="string">b&quot;\
-    \n\rstorage.proto\x12\x03oak\&quot;y\n\x12StorageReadRequest\x12\x1d\n\nstora\
-    ge_id\x18\x01\x20\x01(\x0cR\tstorageId\x12%\n\x0etransaction_id\x18\x02\
-    \x20\x01(\x0cR\rtransactionId\x12\x1d\n\ndatum_name\x18\x03\x20\x01(\x0c\
-    R\tdatumName\&quot;6\n\x13StorageReadResponse\x12\x1f\n\x0bdatum_value\x18\
-    \x01\x20\x01(\x0cR\ndatumValue\&quot;\x9b\x01\n\x13StorageWriteRequest\x12\
+    \n\x17oak/proto/storage.proto\x12\x03oak\&quot;y\n\x12StorageReadRequest\x12\
     \x1d\n\nstorage_id\x18\x01\x20\x01(\x0cR\tstorageId\x12%\n\x0etransactio\
     n_id\x18\x02\x20\x01(\x0cR\rtransactionId\x12\x1d\n\ndatum_name\x18\x03\
-    \x20\x01(\x0cR\tdatumName\x12\x1f\n\x0bdatum_value\x18\x04\x20\x01(\x0cR\
-    \ndatumValue\&quot;\x16\n\x14StorageWriteResponse\&quot;{\n\x14StorageDeleteReques\
-    t\x12\x1d\n\nstorage_id\x18\x01\x20\x01(\x0cR\tstorageId\x12%\n\x0etrans\
-    action_id\x18\x02\x20\x01(\x0cR\rtransactionId\x12\x1d\n\ndatum_name\x18\
-    \x03\x20\x01(\x0cR\tdatumName\&quot;\x17\n\x15StorageDeleteResponse\&quot;4\n\x13S\
-    torageBeginRequest\x12\x1d\n\nstorage_id\x18\x01\x20\x01(\x0cR\tstorageI\
-    d\&quot;=\n\x14StorageBeginResponse\x12%\n\x0etransaction_id\x18\x01\x20\x01(\
-    \x0cR\rtransactionId\&quot;\\\n\x14StorageCommitRequest\x12\x1d\n\nstorage_id\
-    \x18\x01\x20\x01(\x0cR\tstorageId\x12%\n\x0etransaction_id\x18\x02\x20\
-    \x01(\x0cR\rtransactionId\&quot;\x17\n\x15StorageCommitResponse\&quot;^\n\x16Stora\
-    geRollbackRequest\x12\x1d\n\nstorage_id\x18\x01\x20\x01(\x0cR\tstorageId\
-    \x12%\n\x0etransaction_id\x18\x02\x20\x01(\x0cR\rtransactionId\&quot;\x19\n\
-    \x17StorageRollbackResponse2\x89\x03\n\x07Storage\x129\n\x04Read\x12\x17\
-    .oak.StorageReadRequest\x1a\x18.oak.StorageReadResponse\x12&lt;\n\x05Write\
-    \x12\x18.oak.StorageWriteRequest\x1a\x19.oak.StorageWriteResponse\x12?\n\
-    \x06Delete\x12\x19.oak.StorageDeleteRequest\x1a\x1a.oak.StorageDeleteRes\
-    ponse\x12&lt;\n\x05Begin\x12\x18.oak.StorageBeginRequest\x1a\x19.oak.Storag\
-    eBeginResponse\x12?\n\x06Commit\x12\x19.oak.StorageCommitRequest\x1a\x1a\
-    .oak.StorageCommitResponse\x12E\n\x08Rollback\x12\x1b.oak.StorageRollbac\
-    kRequest\x1a\x1c.oak.StorageRollbackResponseb\x06proto3\
+    \x20\x01(\x0cR\tdatumName\&quot;6\n\x13StorageReadResponse\x12\x1f\n\x0bdatum\
+    _value\x18\x01\x20\x01(\x0cR\ndatumValue\&quot;\x9b\x01\n\x13StorageWriteRequ\
+    est\x12\x1d\n\nstorage_id\x18\x01\x20\x01(\x0cR\tstorageId\x12%\n\x0etra\
+    nsaction_id\x18\x02\x20\x01(\x0cR\rtransactionId\x12\x1d\n\ndatum_name\
+    \x18\x03\x20\x01(\x0cR\tdatumName\x12\x1f\n\x0bdatum_value\x18\x04\x20\
+    \x01(\x0cR\ndatumValue\&quot;\x16\n\x14StorageWriteResponse\&quot;{\n\x14StorageDe\
+    leteRequest\x12\x1d\n\nstorage_id\x18\x01\x20\x01(\x0cR\tstorageId\x12%\
+    \n\x0etransaction_id\x18\x02\x20\x01(\x0cR\rtransactionId\x12\x1d\n\ndat\
+    um_name\x18\x03\x20\x01(\x0cR\tdatumName\&quot;\x17\n\x15StorageDeleteRespons\
+    e\&quot;4\n\x13StorageBeginRequest\x12\x1d\n\nstorage_id\x18\x01\x20\x01(\x0c\
+    R\tstorageId\&quot;=\n\x14StorageBeginResponse\x12%\n\x0etransaction_id\x18\
+    \x01\x20\x01(\x0cR\rtransactionId\&quot;\\\n\x14StorageCommitRequest\x12\x1d\
+    \n\nstorage_id\x18\x01\x20\x01(\x0cR\tstorageId\x12%\n\x0etransaction_id\
+    \x18\x02\x20\x01(\x0cR\rtransactionId\&quot;\x17\n\x15StorageCommitResponse\&quot;\
+    ^\n\x16StorageRollbackRequest\x12\x1d\n\nstorage_id\x18\x01\x20\x01(\x0c\
+    R\tstorageId\x12%\n\x0etransaction_id\x18\x02\x20\x01(\x0cR\rtransaction\
+    Id\&quot;\x19\n\x17StorageRollbackResponse2\x89\x03\n\x07Storage\x129\n\x04Re\
+    ad\x12\x17.oak.StorageReadRequest\x1a\x18.oak.StorageReadResponse\x12&lt;\n\
+    \x05Write\x12\x18.oak.StorageWriteRequest\x1a\x19.oak.StorageWriteRespon\
+    se\x12?\n\x06Delete\x12\x19.oak.StorageDeleteRequest\x1a\x1a.oak.Storage\
+    DeleteResponse\x12&lt;\n\x05Begin\x12\x18.oak.StorageBeginRequest\x1a\x19.o\
+    ak.StorageBeginResponse\x12?\n\x06Commit\x12\x19.oak.StorageCommitReques\
+    t\x1a\x1a.oak.StorageCommitResponse\x12E\n\x08Rollback\x12\x1b.oak.Stora\
+    geRollbackRequest\x1a\x1c.oak.StorageRollbackResponseb\x06proto3\
 &quot;</span>;
 
 <span class="kw">static</span> <span class="kw-2">mut</span> <span class="ident">file_descriptor_proto_lazy</span>: ::<span class="ident">protobuf</span>::<span class="ident">lazy</span>::<span class="ident">Lazy</span><span class="op">&lt;</span>::<span class="ident">protobuf</span>::<span class="ident">descriptor</span>::<span class="ident">FileDescriptorProto</span><span class="op">&gt;</span> <span class="op">=</span> ::<span class="ident">protobuf</span>::<span class="ident">lazy</span>::<span class="ident">Lazy</span> {

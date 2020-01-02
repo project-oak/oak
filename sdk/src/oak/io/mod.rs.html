@@ -134,7 +134,7 @@
 <span class="doccomment">/// [`WriteHandle`]: crate::WriteHandle</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Channel</span> {
-    <span class="ident">handle</span>: <span class="kw">crate</span>::<span class="ident">WriteHandle</span>,
+    <span class="kw">pub</span> <span class="ident">handle</span>: <span class="kw">crate</span>::<span class="ident">WriteHandle</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Channel</span> {
