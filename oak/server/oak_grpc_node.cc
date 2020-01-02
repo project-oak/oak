@@ -73,7 +73,7 @@ void OakGrpcNode::CompletionQueueLoop() {
     bool ok;
     void* tag;
     if (!completion_queue_->Next(&tag, &ok)) {
-      if (!termination_pending_.load()) {
+      if (!runtime_->TerminationPending()) {
         LOG(FATAL) << "{" << name_ << "} Failure reading from completion queue";
       }
       LOG(INFO) << "{" << name_
@@ -93,7 +93,6 @@ grpc::Status OakGrpcNode::GetAttestation(grpc::ServerContext*, const GetAttestat
 }
 
 void OakGrpcNode::Stop() {
-  termination_pending_ = true;
   if (server_) {
     LOG(INFO) << "{" << name_ << "} Shutting down gRPC server...";
     server_->Shutdown();

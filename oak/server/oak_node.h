@@ -34,7 +34,7 @@ namespace oak {
 class OakNode {
  public:
   OakNode(BaseRuntime* runtime, const std::string& name)
-      : runtime_(runtime), name_(name), termination_pending_(false), prng_engine_() {}
+      : runtime_(runtime), name_(name), prng_engine_() {}
   virtual ~OakNode() {}
 
   virtual void Start() = 0;
@@ -76,8 +76,6 @@ class OakNode {
   BaseRuntime* const runtime_;
 
   const std::string name_;
-
-  std::atomic_bool termination_pending_;
 
  private:
   Handle NextHandle() EXCLUSIVE_LOCKS_REQUIRED(mu_);

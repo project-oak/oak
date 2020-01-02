@@ -27,7 +27,7 @@ void NodeThread::Start() {
     LOG(ERROR) << "Attempt to Start() an already-running NodeThread";
     return;
   }
-  if (termination_pending_.load()) {
+  if (runtime_->TerminationPending()) {
     LOG(ERROR) << "Attempt to Start() an already-terminated NodeThread";
     return;
   }
@@ -48,7 +48,6 @@ void NodeThread::Stop() {
 
 void NodeThread::StopThread() {
   LOG(INFO) << "Termination pending for {" << name_ << "}";
-  termination_pending_ = true;
   if (thread_.joinable()) {
     LOG(INFO) << "Waiting for completion of {" << name_ << "} node thread";
     thread_.join();
