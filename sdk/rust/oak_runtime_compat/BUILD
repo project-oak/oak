@@ -15,6 +15,7 @@
 #
 
 load("@io_bazel_rules_rust//rust:rust.bzl", "rust_library")
+load("@rules_cc//cc:defs.bzl", "cc_library")
 
 package(
     licenses = ["notice"],
