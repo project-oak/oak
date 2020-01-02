@@ -41,7 +41,7 @@ namespace oak {
 
 class OakRuntime : public BaseRuntime {
  public:
-  OakRuntime() : grpc_node_(nullptr) {}
+  OakRuntime() : termination_pending_(false), grpc_node_(nullptr) {}
   virtual ~OakRuntime() = default;
 
   // Initializes an OakRuntime with a user-provided ApplicationConfiguration. This
@@ -75,6 +75,8 @@ class OakRuntime : public BaseRuntime {
   // Next index for node name generation.
   mutable absl::Mutex mu_;  // protects nodes_, next_index_;
   std::map<std::string, int> next_index_ GUARDED_BY(mu_);
+
+  std::atomic_bool termination_pending_;
 
   // Collection of running Nodes indexed by Node name.  Note that Node name is
   // unique but is not visible to the running Application in any way.
