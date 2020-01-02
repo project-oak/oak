@@ -41,7 +41,7 @@ pub fn main(in_handle: u64) -> i32 {
             Err(err) => {
                 info!("room terminating with {}", err.value());
                 for writer in &mut rsp_writers {
-                    writer.close(Ok(()));
+                    writer.close(Ok(())).expect("Failed to close writer");
                 }
                 return err.value();
             }
@@ -81,7 +81,9 @@ pub fn main(in_handle: u64) -> i32 {
             rsp_writers.len()
         );
         for writer in &mut rsp_writers {
-            writer.write(&msg, oak::grpc::WriteMode::KeepOpen);
+            writer
+                .write(&msg, oak::grpc::WriteMode::KeepOpen)
+                .expect("Failed to write message");
         }
     }
 }

@@ -278,6 +278,8 @@ impl oak::grpc::OakNode for Node {
                 panic!("unknown method name");
             }
         }
-        writer.write_empty(grpc::WriteMode::Close);
+        writer
+            .write_empty(grpc::WriteMode::Close)
+            .expect("Failed to write empty response");
     }
 }

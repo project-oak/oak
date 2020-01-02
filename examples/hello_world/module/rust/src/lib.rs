@@ -83,7 +83,9 @@ impl HelloWorldNode for Node {
         info!("Say hello to {}", req.greeting);
         let mut res1 = HelloResponse::new();
         res1.reply = format!("HELLO {}!", req.greeting);
-        writer.write(&res1, grpc::WriteMode::KeepOpen);
+        writer
+            .write(&res1, grpc::WriteMode::KeepOpen)
+            .expect("Failed to write response");
 
         // Also generate a response with the last-stored value.
         let previous = if let Some(storage) = &mut self.storage {
@@ -104,7 +106,9 @@ impl HelloWorldNode for Node {
         info!("Say bonjour to {}", previous);
         let mut res2 = HelloResponse::new();
         res2.reply = format!("BONJOUR {}!", previous);
-        writer.write(&res2, grpc::WriteMode::Close);
+        writer
+            .write(&res2, grpc::WriteMode::Close)
+            .expect("Failed to write final response");
     }
 
     fn lots_of_greetings(&mut self, reqs: Vec<HelloRequest>) -> grpc::Result<HelloResponse> {
@@ -122,10 +126,14 @@ impl HelloWorldNode for Node {
         let msg = recipients(&reqs);
         let mut res1 = HelloResponse::new();
         res1.reply = format!("HELLO {}!", msg);
-        writer.write(&res1, grpc::WriteMode::KeepOpen);
+        writer
+            .write(&res1, grpc::WriteMode::KeepOpen)
+            .expect("Failed to write response");
         let mut res2 = HelloResponse::new();
         res2.reply = format!("BONJOUR {}!", msg);
-        writer.write(&res2, grpc::WriteMode::Close);
+        writer
+            .write(&res2, grpc::WriteMode::Close)
+            .expect("Failed to write final response");
     }
 }
 
