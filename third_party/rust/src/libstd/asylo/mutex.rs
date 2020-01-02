@@ -1,9 +1,9 @@
-use crate::cell::UnsafeCell;
-use crate::mem::MaybeUninit;
+// See https://github.com/rust-lang/rust/blob/6b561b4917e803c4be4ca44d8e552b680cb9e380/src/libstd/sys/unix/mutex.rs
 
-pub struct Mutex {
-    inner: UnsafeCell<libc::pthread_mutex_t>,
-}
+use crate::core::cell::UnsafeCell;
+use crate::core::mem::MaybeUninit;
+
+pub struct Mutex { inner: UnsafeCell<libc::pthread_mutex_t> }
 
 #[inline]
 pub unsafe fn raw(m: &Mutex) -> *mut libc::pthread_mutex_t {
@@ -13,7 +13,6 @@ pub unsafe fn raw(m: &Mutex) -> *mut libc::pthread_mutex_t {
 unsafe impl Send for Mutex {}
 unsafe impl Sync for Mutex {}
 
-#[allow(dead_code)] // sys isn't exported yet
 impl Mutex {
     pub const fn new() -> Mutex {
         // Might be moved to a different address, so it is better to avoid
@@ -67,26 +66,13 @@ impl Mutex {
         libc::pthread_mutex_trylock(self.inner.get()) == 0
     }
     #[inline]
-    #[cfg(not(target_os = "dragonfly"))]
     pub unsafe fn destroy(&self) {
         let r = libc::pthread_mutex_destroy(self.inner.get());
         debug_assert_eq!(r, 0);
     }
-    #[inline]
-    #[cfg(target_os = "dragonfly")]
-    pub unsafe fn destroy(&self) {
-        let r = libc::pthread_mutex_destroy(self.inner.get());
-        // On DragonFly pthread_mutex_destroy() returns EINVAL if called on a
-        // mutex that was just initialized with libc::PTHREAD_MUTEX_INITIALIZER.
-        // Once it is used (locked/unlocked) or pthread_mutex_init() is called,
-        // this behaviour no longer occurs.
-        debug_assert!(r == 0 || r == libc::EINVAL);
-    }
 }
 
-pub struct ReentrantMutex {
-    inner: UnsafeCell<libc::pthread_mutex_t>,
-}
+pub struct ReentrantMutex { inner: UnsafeCell<libc::pthread_mutex_t> }
 
 unsafe impl Send for ReentrantMutex {}
 unsafe impl Sync for ReentrantMutex {}
@@ -100,8 +86,8 @@ impl ReentrantMutex {
         let mut attr = MaybeUninit::<libc::pthread_mutexattr_t>::uninit();
         let result = libc::pthread_mutexattr_init(attr.as_mut_ptr());
         debug_assert_eq!(result, 0);
-        let result =
-            libc::pthread_mutexattr_settype(attr.as_mut_ptr(), libc::PTHREAD_MUTEX_RECURSIVE);
+        let result = libc::pthread_mutexattr_settype(attr.as_mut_ptr(),
+                                                    libc::PTHREAD_MUTEX_RECURSIVE);
         debug_assert_eq!(result, 0);
         let result = libc::pthread_mutex_init(self.inner.get(), attr.as_ptr());
         debug_assert_eq!(result, 0);

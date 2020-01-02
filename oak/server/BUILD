@@ -135,16 +135,18 @@ cc_library(
 cc_library(
     name = "oak_runtime",
     srcs = ["oak_runtime.cc"],
-    hdrs = ["oak_runtime.h"],
+    hdrs = [
+        "oak_runtime.h",
+    ],
     deps = [
         ":base_runtime",
         ":oak_grpc_node",
         ":wasm_node",
+        "//oak/asylo_rust:asylo_rust_wrapper",
         "//oak/common:app_config",
         "//oak/proto:enclave_cc_proto",
         "//oak/proto:oak_api_cc_proto",
         "//oak/server:logging_node",
-        "//oak/server/rust:wrapper",
         "//oak/server/storage:storage_node",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/strings",

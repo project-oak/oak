@@ -22,10 +22,11 @@ package(
 )
 
 rust_library(
-    name = "oak_runtime",
-    srcs = glob(["src/*.rs"]),
+    name = "asylo_rust",
+    srcs = glob(["src/**/*.rs"]),
     crate_type = "staticlib",
     edition = "2018",
+    deps = ["//third_party/rust/src/libstd:rust"],
 )
 
 # Strip unnecessary binary objects from the generated static library archive. It seems to contain
@@ -49,9 +50,9 @@ rust_library(
 # - Net cause: we're building the Rust library with a compiler that supports log double but linking
 #   with libraries that don't.
 genrule(
-    name = "oak_runtime_stripped",
-    srcs = [":oak_runtime"],
-    outs = ["oak_runtime_stripped.a"],
+    name = "asylo_rust_stripped",
+    srcs = [":asylo_rust"],
+    outs = ["asylo_rust_stripped.a"],
     cmd = "cp $< $@ && chmod +rw $@ && ar d $@ divxc3.o",
 )
 
@@ -67,9 +68,9 @@ genrule(
 # a change to the Rust file does induce a rebuild when doing bazel build //oak/server/dev:oak. So is
 # Bazel maybe doing something special for a target with a single src that is itself a .a file?
 cc_library(
-    name = "wrapper",
-    srcs = [":oak_runtime_stripped"],
-    hdrs = ["oak_runtime.h"],
+    name = "asylo_rust_wrapper",
+    srcs = ["//oak/asylo_rust:asylo_rust_stripped"],
+    hdrs = ["rust_check.h"],
     linkstatic = True,
     visibility = ["//oak/server:__subpackages__"],
 )
