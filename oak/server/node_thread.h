@@ -29,7 +29,7 @@ namespace oak {
 class NodeThread : public OakNode {
  public:
   // Construct a thread, identified by the given name in diagnostic messages.
-  NodeThread(const std::string& name) : OakNode(name) {}
+  NodeThread(BaseRuntime* runtime, const std::string& name) : OakNode(runtime, name) {}
   virtual ~NodeThread();
 
   // Start kicks off a separate thread that invokes the Run() method.

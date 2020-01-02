@@ -177,7 +177,7 @@ static bool CheckModuleExports(wabt::interp::Environment* env, wabt::interp::Mod
 }
 
 WasmNode::WasmNode(BaseRuntime* runtime, const std::string& name)
-    : NodeThread(name), runtime_(runtime), prng_engine_() {}
+    : NodeThread(runtime, name), prng_engine_() {}
 
 std::unique_ptr<WasmNode> WasmNode::Create(BaseRuntime* runtime, const std::string& name,
                                            const std::string& module) {
