@@ -53,6 +53,8 @@ class OakRuntime : public BaseRuntime {
   bool CreateAndRunNode(const std::string& config, std::unique_ptr<ChannelHalf> half,
                         std::string* node_name) override;
 
+  bool TerminationPending() override { return termination_pending_.load(); }
+
   int32_t GetPort();
 
  private:
