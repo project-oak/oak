@@ -1,0 +1,11 @@
+# proto-file: oak/proto/manager.proto
+# proto-message: oak.ApplicationConfiguration
+
+node_configs {
+  name: "app"
+  wasm_config {
+    module_bytes: "<bytes>"
+  }
+}
+initial_node: "app"
+grpc_port: "8080"
