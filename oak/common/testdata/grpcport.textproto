@@ -8,4 +8,4 @@ node_configs {
   }
 }
 initial_node: "app"
-grpc_port: "8080"
+grpc_port: 8080

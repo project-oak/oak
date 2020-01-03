@@ -69,7 +69,7 @@ TEST(ApplicationConfiguration, DefaultPlusStorage) {
 
 TEST(ApplicationConfiguration, DefaultPlusGrpcPort) {
   std::unique_ptr<ApplicationConfiguration> got = DefaultConfig("<bytes>");
-  AddGrpcPortToConfig(got.get(), "8080");
+  AddGrpcPortToConfig(got.get(), 8080);
   std::unique_ptr<ApplicationConfiguration> want =
       ConfigFrom("oak/common/testdata/grpcport.textproto");
   ASSERT_EQ(want->DebugString(), got->DebugString());
