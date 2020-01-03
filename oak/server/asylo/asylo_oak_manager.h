@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 The Project Oak Authors
+ * Copyright 2018 The Project Oak Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,7 +43,7 @@ class AsyloOakManager final : public Manager::Service {
                                     TerminateApplicationResponse* response) override;
 
  private:
-  oak::AsyloOakLoader manager_;
+  oak::AsyloOakLoader loader_;
 };
 
 }  // namespace oak
