@@ -24,10 +24,8 @@ pub extern "C" fn backend_oak_main(handle: u64) -> i32 {
     match std::panic::catch_unwind(|| {
         let room = Room::default();
         room.event_loop(handle)
-    }) {
-        Ok(rc) => rc,
-        Err(_) => oak::OakStatus::ERR_INTERNAL.value(),
-    }
+    })
+    .unwrap_or(oak::OakStatus::ERR_INTERNAL.value())
 }
 
 #[derive(Default)]
