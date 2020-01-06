@@ -117,8 +117,7 @@ impl ChatNode for Node {
             Some(room) => {
                 info!("new subscription to room {:?}", req.room_id);
                 let msg = chat_common::Msg::Join(writer.handle());
-                msg.send(room.channel)
-                    .expect("could not send message to room Node");
+                chat_common::send(room.channel, msg).expect("could not send message to room Node");
             }
         };
     }
@@ -134,8 +133,7 @@ impl ChatNode for Node {
                     .write_to_bytes()
                     .expect("could not convert message to bytes");
                 let msg = chat_common::Msg::SendMessage(message_bytes);
-                msg.send(room.channel)
-                    .expect("could not send message to room Node");
+                chat_common::send(room.channel, msg).expect("could not send message to room Node");
                 Ok(Empty::new())
             }
         }

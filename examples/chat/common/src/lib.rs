@@ -14,55 +14,41 @@
 // limitations under the License.
 //
 
+pub mod msg;
 pub mod proto;
 
 use anyhow::{anyhow, Context, Result};
-use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
-pub enum Msg {
-    Join(oak::WriteHandle),
-    // TODO: Embed native Message struct here when we support proto serialization via Serde.
-    // See https://github.com/stepancheg/rust-protobuf#serde_derive-support
-    SendMessage(Vec<u8>),
+pub use msg::*;
+
+/// A trait for objects that can be encoded as bytes + handles.
+pub trait Encodable {
+    fn encode(&self) -> Result<(Vec<u8>, Vec<oak::Handle>)>;
 }
 
-// TODO(#389): Automatically generate this code.
-// Currently we use [bincode](https://github.com/servo/bincode) to serialize data together with a
-// tag that allows to reconstruct the enum variant on the other side. We then send the tag+data as
-// bytes, and separately we send the handles, which we have to manually re-assemble on the other
-// side.
-impl Msg {
-    pub fn send(&self, write_handle: oak::WriteHandle) -> Result<()> {
-        let bytes = bincode::serialize(self).context("could not serialize message to bincode")?;
-        // Serialize handles.
-        let handles = match self {
-            Msg::Join(h) => vec![h.handle],
-            Msg::SendMessage(_) => vec![],
-        };
-        let status = oak::channel_write(write_handle, &bytes, &handles);
-        if status == oak::OakStatus::OK {
-            Ok(())
-        } else {
-            Err(anyhow!("could not write to channel"))
-        }
-    }
+/// A trait for objects that can be decoded from bytes + handles.
+pub trait Decodable: Sized {
+    fn decode(bytes: &[u8], handles: &[oak::Handle]) -> Result<Self>;
+}
 
-    pub fn receive(read_handle: oak::ReadHandle) -> Result<Self> {
-        let mut bytes = Vec::<u8>::with_capacity(512);
-        let mut handles = Vec::with_capacity(2);
-        let status = oak::channel_read(read_handle, &mut bytes, &mut handles);
-        if status == oak::OakStatus::OK {
-            let msg: Msg = bincode::deserialize(&bytes)
-                .context("could not deserialize message from bincode")?;
-            // Restore handles in the received message.
-            let msg = match msg {
-                Msg::Join(_) => Msg::Join(oak::WriteHandle { handle: handles[0] }),
-                Msg::SendMessage(message_bytes) => Msg::SendMessage(message_bytes),
-            };
-            Ok(msg)
-        } else {
-            Err(anyhow!("could not read from channel"))
-        }
+pub fn send<M: Encodable>(write_handle: oak::WriteHandle, msg: M) -> Result<()> {
+    let (bytes, handles) = msg.encode().context("could not encode object")?;
+    let status = oak::channel_write(write_handle, &bytes, &handles);
+    if status == oak::OakStatus::OK {
+        Ok(())
+    } else {
+        Err(anyhow!("could not write to channel"))
+    }
+}
+
+pub fn receive<M: Decodable>(read_handle: oak::ReadHandle) -> Result<M> {
+    let mut bytes = Vec::<u8>::with_capacity(512);
+    let mut handles = Vec::with_capacity(2);
+    let status = oak::channel_read(read_handle, &mut bytes, &mut handles);
+    if status == oak::OakStatus::OK {
+        let msg: M = M::decode(&bytes, &handles).context("could not decode message")?;
+        Ok(msg)
+    } else {
+        Err(anyhow!("could not read from channel"))
     }
 }

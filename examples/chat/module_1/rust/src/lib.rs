@@ -54,7 +54,7 @@ impl Room {
                 continue;
             };
 
-            let msg = Msg::receive(in_channel).expect("could not receive message");
+            let msg: Msg = chat_common::receive(in_channel).expect("could not receive message");
             match msg {
                 Msg::Join(h) => {
                     self.clients.push(oak::grpc::ChannelResponseWriter::new(h));
