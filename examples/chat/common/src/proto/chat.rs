@@ -491,6 +491,386 @@ impl ::protobuf::reflect::ProtobufValue for DestroyRoomRequest {
 }
 
 #[derive(PartialEq,Clone,Default)]
+pub struct SubscribeRequest {
+    // message fields
+    pub room_id: ::std::vec::Vec<u8>,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a SubscribeRequest {
+    fn default() -> &'a SubscribeRequest {
+        <SubscribeRequest as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl SubscribeRequest {
+    pub fn new() -> SubscribeRequest {
+        ::std::default::Default::default()
+    }
+
+    // bytes room_id = 1;
+
+
+    pub fn get_room_id(&self) -> &[u8] {
+        &self.room_id
+    }
+    pub fn clear_room_id(&mut self) {
+        self.room_id.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_room_id(&mut self, v: ::std::vec::Vec<u8>) {
+        self.room_id = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_room_id(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.room_id
+    }
+
+    // Take field
+    pub fn take_room_id(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.room_id, ::std::vec::Vec::new())
+    }
+}
+
+impl ::protobuf::Message for SubscribeRequest {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.room_id)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if !self.room_id.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(1, &self.room_id);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
+        if !self.room_id.is_empty() {
+            os.write_bytes(1, &self.room_id)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> SubscribeRequest {
+        SubscribeRequest::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
+        };
+        unsafe {
+            descriptor.get(|| {
+                let mut fields = ::std::vec::Vec::new();
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                    "room_id",
+                    |m: &SubscribeRequest| { &m.room_id },
+                    |m: &mut SubscribeRequest| { &mut m.room_id },
+                ));
+                ::protobuf::reflect::MessageDescriptor::new::<SubscribeRequest>(
+                    "SubscribeRequest",
+                    fields,
+                    file_descriptor_proto()
+                )
+            })
+        }
+    }
+
+    fn default_instance() -> &'static SubscribeRequest {
+        static mut instance: ::protobuf::lazy::Lazy<SubscribeRequest> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const SubscribeRequest,
+        };
+        unsafe {
+            instance.get(SubscribeRequest::new)
+        }
+    }
+}
+
+impl ::protobuf::Clear for SubscribeRequest {
+    fn clear(&mut self) {
+        self.room_id.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for SubscribeRequest {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for SubscribeRequest {
+    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
+        ::protobuf::reflect::ProtobufValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct Message {
+    // message fields
+    pub user_handle: ::std::string::String,
+    pub text: ::std::string::String,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a Message {
+    fn default() -> &'a Message {
+        <Message as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl Message {
+    pub fn new() -> Message {
+        ::std::default::Default::default()
+    }
+
+    // string user_handle = 2;
+
+
+    pub fn get_user_handle(&self) -> &str {
+        &self.user_handle
+    }
+    pub fn clear_user_handle(&mut self) {
+        self.user_handle.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_user_handle(&mut self, v: ::std::string::String) {
+        self.user_handle = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_user_handle(&mut self) -> &mut ::std::string::String {
+        &mut self.user_handle
+    }
+
+    // Take field
+    pub fn take_user_handle(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.user_handle, ::std::string::String::new())
+    }
+
+    // string text = 1;
+
+
+    pub fn get_text(&self) -> &str {
+        &self.text
+    }
+    pub fn clear_text(&mut self) {
+        self.text.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_text(&mut self, v: ::std::string::String) {
+        self.text = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_text(&mut self) -> &mut ::std::string::String {
+        &mut self.text
+    }
+
+    // Take field
+    pub fn take_text(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.text, ::std::string::String::new())
+    }
+}
+
+impl ::protobuf::Message for Message {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                2 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.user_handle)?;
+                },
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.text)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if !self.user_handle.is_empty() {
+            my_size += ::protobuf::rt::string_size(2, &self.user_handle);
+        }
+        if !self.text.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.text);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
+        if !self.user_handle.is_empty() {
+            os.write_string(2, &self.user_handle)?;
+        }
+        if !self.text.is_empty() {
+            os.write_string(1, &self.text)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> Message {
+        Message::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
+        };
+        unsafe {
+            descriptor.get(|| {
+                let mut fields = ::std::vec::Vec::new();
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                    "user_handle",
+                    |m: &Message| { &m.user_handle },
+                    |m: &mut Message| { &mut m.user_handle },
+                ));
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                    "text",
+                    |m: &Message| { &m.text },
+                    |m: &mut Message| { &mut m.text },
+                ));
+                ::protobuf::reflect::MessageDescriptor::new::<Message>(
+                    "Message",
+                    fields,
+                    file_descriptor_proto()
+                )
+            })
+        }
+    }
+
+    fn default_instance() -> &'static Message {
+        static mut instance: ::protobuf::lazy::Lazy<Message> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const Message,
+        };
+        unsafe {
+            instance.get(Message::new)
+        }
+    }
+}
+
+impl ::protobuf::Clear for Message {
+    fn clear(&mut self) {
+        self.user_handle.clear();
+        self.text.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for Message {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for Message {
+    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
+        ::protobuf::reflect::ProtobufValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
 pub struct SendMessageRequest {
     // message fields
     pub room_id: ::std::vec::Vec<u8>,
@@ -716,404 +1096,24 @@ impl ::protobuf::reflect::ProtobufValue for SendMessageRequest {
     }
 }
 
-#[derive(PartialEq,Clone,Default)]
-pub struct Message {
-    // message fields
-    pub user_handle: ::std::string::String,
-    pub text: ::std::string::String,
-    // special fields
-    pub unknown_fields: ::protobuf::UnknownFields,
-    pub cached_size: ::protobuf::CachedSize,
-}
-
-impl<'a> ::std::default::Default for &'a Message {
-    fn default() -> &'a Message {
-        <Message as ::protobuf::Message>::default_instance()
-    }
-}
-
-impl Message {
-    pub fn new() -> Message {
-        ::std::default::Default::default()
-    }
-
-    // string user_handle = 2;
-
-
-    pub fn get_user_handle(&self) -> &str {
-        &self.user_handle
-    }
-    pub fn clear_user_handle(&mut self) {
-        self.user_handle.clear();
-    }
-
-    // Param is passed by value, moved
-    pub fn set_user_handle(&mut self, v: ::std::string::String) {
-        self.user_handle = v;
-    }
-
-    // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_user_handle(&mut self) -> &mut ::std::string::String {
-        &mut self.user_handle
-    }
-
-    // Take field
-    pub fn take_user_handle(&mut self) -> ::std::string::String {
-        ::std::mem::replace(&mut self.user_handle, ::std::string::String::new())
-    }
-
-    // string text = 1;
-
-
-    pub fn get_text(&self) -> &str {
-        &self.text
-    }
-    pub fn clear_text(&mut self) {
-        self.text.clear();
-    }
-
-    // Param is passed by value, moved
-    pub fn set_text(&mut self, v: ::std::string::String) {
-        self.text = v;
-    }
-
-    // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_text(&mut self) -> &mut ::std::string::String {
-        &mut self.text
-    }
-
-    // Take field
-    pub fn take_text(&mut self) -> ::std::string::String {
-        ::std::mem::replace(&mut self.text, ::std::string::String::new())
-    }
-}
-
-impl ::protobuf::Message for Message {
-    fn is_initialized(&self) -> bool {
-        true
-    }
-
-    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream) -> ::protobuf::ProtobufResult<()> {
-        while !is.eof()? {
-            let (field_number, wire_type) = is.read_tag_unpack()?;
-            match field_number {
-                2 => {
-                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.user_handle)?;
-                },
-                1 => {
-                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.text)?;
-                },
-                _ => {
-                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
-                },
-            };
-        }
-        ::std::result::Result::Ok(())
-    }
-
-    // Compute sizes of nested messages
-    #[allow(unused_variables)]
-    fn compute_size(&self) -> u32 {
-        let mut my_size = 0;
-        if !self.user_handle.is_empty() {
-            my_size += ::protobuf::rt::string_size(2, &self.user_handle);
-        }
-        if !self.text.is_empty() {
-            my_size += ::protobuf::rt::string_size(1, &self.text);
-        }
-        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
-        self.cached_size.set(my_size);
-        my_size
-    }
-
-    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
-        if !self.user_handle.is_empty() {
-            os.write_string(2, &self.user_handle)?;
-        }
-        if !self.text.is_empty() {
-            os.write_string(1, &self.text)?;
-        }
-        os.write_unknown_fields(self.get_unknown_fields())?;
-        ::std::result::Result::Ok(())
-    }
-
-    fn get_cached_size(&self) -> u32 {
-        self.cached_size.get()
-    }
-
-    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
-        &self.unknown_fields
-    }
-
-    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
-        &mut self.unknown_fields
-    }
-
-    fn as_any(&self) -> &dyn (::std::any::Any) {
-        self as &dyn (::std::any::Any)
-    }
-    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
-        self as &mut dyn (::std::any::Any)
-    }
-    fn into_any(self: Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
-        self
-    }
-
-    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
-        Self::descriptor_static()
-    }
-
-    fn new() -> Message {
-        Message::new()
-    }
-
-    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
-        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
-        };
-        unsafe {
-            descriptor.get(|| {
-                let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
-                    "user_handle",
-                    |m: &Message| { &m.user_handle },
-                    |m: &mut Message| { &mut m.user_handle },
-                ));
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
-                    "text",
-                    |m: &Message| { &m.text },
-                    |m: &mut Message| { &mut m.text },
-                ));
-                ::protobuf::reflect::MessageDescriptor::new::<Message>(
-                    "Message",
-                    fields,
-                    file_descriptor_proto()
-                )
-            })
-        }
-    }
-
-    fn default_instance() -> &'static Message {
-        static mut instance: ::protobuf::lazy::Lazy<Message> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const Message,
-        };
-        unsafe {
-            instance.get(Message::new)
-        }
-    }
-}
-
-impl ::protobuf::Clear for Message {
-    fn clear(&mut self) {
-        self.user_handle.clear();
-        self.text.clear();
-        self.unknown_fields.clear();
-    }
-}
-
-impl ::std::fmt::Debug for Message {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        ::protobuf::text_format::fmt(self, f)
-    }
-}
-
-impl ::protobuf::reflect::ProtobufValue for Message {
-    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
-        ::protobuf::reflect::ProtobufValueRef::Message(self)
-    }
-}
-
-#[derive(PartialEq,Clone,Default)]
-pub struct SubscribeRequest {
-    // message fields
-    pub room_id: ::std::vec::Vec<u8>,
-    // special fields
-    pub unknown_fields: ::protobuf::UnknownFields,
-    pub cached_size: ::protobuf::CachedSize,
-}
-
-impl<'a> ::std::default::Default for &'a SubscribeRequest {
-    fn default() -> &'a SubscribeRequest {
-        <SubscribeRequest as ::protobuf::Message>::default_instance()
-    }
-}
-
-impl SubscribeRequest {
-    pub fn new() -> SubscribeRequest {
-        ::std::default::Default::default()
-    }
-
-    // bytes room_id = 1;
-
-
-    pub fn get_room_id(&self) -> &[u8] {
-        &self.room_id
-    }
-    pub fn clear_room_id(&mut self) {
-        self.room_id.clear();
-    }
-
-    // Param is passed by value, moved
-    pub fn set_room_id(&mut self, v: ::std::vec::Vec<u8>) {
-        self.room_id = v;
-    }
-
-    // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_room_id(&mut self) -> &mut ::std::vec::Vec<u8> {
-        &mut self.room_id
-    }
-
-    // Take field
-    pub fn take_room_id(&mut self) -> ::std::vec::Vec<u8> {
-        ::std::mem::replace(&mut self.room_id, ::std::vec::Vec::new())
-    }
-}
-
-impl ::protobuf::Message for SubscribeRequest {
-    fn is_initialized(&self) -> bool {
-        true
-    }
-
-    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream) -> ::protobuf::ProtobufResult<()> {
-        while !is.eof()? {
-            let (field_number, wire_type) = is.read_tag_unpack()?;
-            match field_number {
-                1 => {
-                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.room_id)?;
-                },
-                _ => {
-                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
-                },
-            };
-        }
-        ::std::result::Result::Ok(())
-    }
-
-    // Compute sizes of nested messages
-    #[allow(unused_variables)]
-    fn compute_size(&self) -> u32 {
-        let mut my_size = 0;
-        if !self.room_id.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(1, &self.room_id);
-        }
-        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
-        self.cached_size.set(my_size);
-        my_size
-    }
-
-    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
-        if !self.room_id.is_empty() {
-            os.write_bytes(1, &self.room_id)?;
-        }
-        os.write_unknown_fields(self.get_unknown_fields())?;
-        ::std::result::Result::Ok(())
-    }
-
-    fn get_cached_size(&self) -> u32 {
-        self.cached_size.get()
-    }
-
-    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
-        &self.unknown_fields
-    }
-
-    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
-        &mut self.unknown_fields
-    }
-
-    fn as_any(&self) -> &dyn (::std::any::Any) {
-        self as &dyn (::std::any::Any)
-    }
-    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
-        self as &mut dyn (::std::any::Any)
-    }
-    fn into_any(self: Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
-        self
-    }
-
-    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
-        Self::descriptor_static()
-    }
-
-    fn new() -> SubscribeRequest {
-        SubscribeRequest::new()
-    }
-
-    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
-        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
-        };
-        unsafe {
-            descriptor.get(|| {
-                let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
-                    "room_id",
-                    |m: &SubscribeRequest| { &m.room_id },
-                    |m: &mut SubscribeRequest| { &mut m.room_id },
-                ));
-                ::protobuf::reflect::MessageDescriptor::new::<SubscribeRequest>(
-                    "SubscribeRequest",
-                    fields,
-                    file_descriptor_proto()
-                )
-            })
-        }
-    }
-
-    fn default_instance() -> &'static SubscribeRequest {
-        static mut instance: ::protobuf::lazy::Lazy<SubscribeRequest> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const SubscribeRequest,
-        };
-        unsafe {
-            instance.get(SubscribeRequest::new)
-        }
-    }
-}
-
-impl ::protobuf::Clear for SubscribeRequest {
-    fn clear(&mut self) {
-        self.room_id.clear();
-        self.unknown_fields.clear();
-    }
-}
-
-impl ::std::fmt::Debug for SubscribeRequest {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        ::protobuf::text_format::fmt(self, f)
-    }
-}
-
-impl ::protobuf::reflect::ProtobufValue for SubscribeRequest {
-    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
-        ::protobuf::reflect::ProtobufValueRef::Message(self)
-    }
-}
-
 static file_descriptor_proto_data: &'static [u8] = b"\
     \n\nchat.proto\x12\x11oak.examples.chat\x1a\x1bgoogle/protobuf/empty.pro\
     to\"a\n\x11CreateRoomRequest\x12\x12\n\x04name\x18\x01\x20\x01(\tR\x04na\
     me\x12\x17\n\x07room_id\x18\x02\x20\x01(\x0cR\x06roomId\x12\x1f\n\x0badm\
     in_token\x18\x03\x20\x01(\x0cR\nadminToken\"N\n\x12DestroyRoomRequest\
     \x12\x17\n\x07room_id\x18\x01\x20\x01(\x0cR\x06roomId\x12\x1f\n\x0badmin\
-    _token\x18\x02\x20\x01(\x0cR\nadminToken\"c\n\x12SendMessageRequest\x12\
-    \x17\n\x07room_id\x18\x01\x20\x01(\x0cR\x06roomId\x124\n\x07message\x18\
-    \x03\x20\x01(\x0b2\x1a.oak.examples.chat.MessageR\x07message\">\n\x07Mes\
-    sage\x12\x1f\n\x0buser_handle\x18\x02\x20\x01(\tR\nuserHandle\x12\x12\n\
-    \x04text\x18\x01\x20\x01(\tR\x04text\"+\n\x10SubscribeRequest\x12\x17\n\
-    \x07room_id\x18\x01\x20\x01(\x0cR\x06roomId2\xbe\x02\n\x04Chat\x12J\n\nC\
-    reateRoom\x12$.oak.examples.chat.CreateRoomRequest\x1a\x16.google.protob\
-    uf.Empty\x12L\n\x0bDestroyRoom\x12%.oak.examples.chat.DestroyRoomRequest\
-    \x1a\x16.google.protobuf.Empty\x12N\n\tSubscribe\x12#.oak.examples.chat.\
-    SubscribeRequest\x1a\x1a.oak.examples.chat.Message0\x01\x12L\n\x0bSendMe\
-    ssage\x12%.oak.examples.chat.SendMessageRequest\x1a\x16.google.protobuf.\
-    Emptyb\x06proto3\
+    _token\x18\x02\x20\x01(\x0cR\nadminToken\"+\n\x10SubscribeRequest\x12\
+    \x17\n\x07room_id\x18\x01\x20\x01(\x0cR\x06roomId\">\n\x07Message\x12\
+    \x1f\n\x0buser_handle\x18\x02\x20\x01(\tR\nuserHandle\x12\x12\n\x04text\
+    \x18\x01\x20\x01(\tR\x04text\"c\n\x12SendMessageRequest\x12\x17\n\x07roo\
+    m_id\x18\x01\x20\x01(\x0cR\x06roomId\x124\n\x07message\x18\x03\x20\x01(\
+    \x0b2\x1a.oak.examples.chat.MessageR\x07message2\xbe\x02\n\x04Chat\x12J\
+    \n\nCreateRoom\x12$.oak.examples.chat.CreateRoomRequest\x1a\x16.google.p\
+    rotobuf.Empty\x12L\n\x0bDestroyRoom\x12%.oak.examples.chat.DestroyRoomRe\
+    quest\x1a\x16.google.protobuf.Empty\x12N\n\tSubscribe\x12#.oak.examples.\
+    chat.SubscribeRequest\x1a\x1a.oak.examples.chat.Message0\x01\x12L\n\x0bS\
+    endMessage\x12%.oak.examples.chat.SendMessageRequest\x1a\x16.google.prot\
+    obuf.Emptyb\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {

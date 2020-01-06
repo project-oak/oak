@@ -8,7 +8,7 @@ edition = "2018"
 crate-type = ["lib"]
 
 [dependencies]
-failure = "*"
+anyhow = "*"
 log = "*"
 oak = "*"
 protobuf = "*"

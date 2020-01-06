@@ -16,7 +16,7 @@
 
 pub mod proto;
 
-use failure::ResultExt;
+use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
@@ -33,7 +33,7 @@ pub enum Msg {
 // bytes, and separately we send the handles, which we have to manually re-assemble on the other
 // side.
 impl Msg {
-    pub fn send(&self, write_handle: oak::WriteHandle) -> Result<(), failure::Error> {
+    pub fn send(&self, write_handle: oak::WriteHandle) -> Result<()> {
         let bytes = bincode::serialize(self).context("could not serialize message to bincode")?;
         // Serialize handles.
         let handles = match self {
@@ -44,11 +44,11 @@ impl Msg {
         if status == oak::OakStatus::OK {
             Ok(())
         } else {
-            Err(failure::format_err!("could not write to channel"))
+            Err(anyhow!("could not write to channel"))
         }
     }
 
-    pub fn receive(read_handle: oak::ReadHandle) -> Result<Self, failure::Error> {
+    pub fn receive(read_handle: oak::ReadHandle) -> Result<Self> {
         let mut bytes = Vec::<u8>::with_capacity(512);
         let mut handles = Vec::with_capacity(2);
         let status = oak::channel_read(read_handle, &mut bytes, &mut handles);
@@ -62,7 +62,7 @@ impl Msg {
             };
             Ok(msg)
         } else {
-            Err(failure::format_err!("could not read from channel"))
+            Err(anyhow!("could not read from channel"))
         }
     }
 }
