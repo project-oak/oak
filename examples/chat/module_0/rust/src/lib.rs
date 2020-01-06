@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+use chat_common::msg::Msg;
 use chat_common::proto::chat::{
     CreateRoomRequest, DestroyRoomRequest, SendMessageRequest, SubscribeRequest,
 };
@@ -116,7 +117,7 @@ impl ChatNode for Node {
             }
             Some(room) => {
                 info!("new subscription to room {:?}", req.room_id);
-                let msg = chat_common::Msg::Join(writer.handle());
+                let msg = Msg::Join(writer.handle());
                 chat_common::send(room.channel, msg).expect("could not send message to room Node");
             }
         };
@@ -132,7 +133,7 @@ impl ChatNode for Node {
                     .get_message()
                     .write_to_bytes()
                     .expect("could not convert message to bytes");
-                let msg = chat_common::Msg::SendMessage(message_bytes);
+                let msg = Msg::SendMessage(message_bytes);
                 chat_common::send(room.channel, msg).expect("could not send message to room Node");
                 Ok(Empty::new())
             }

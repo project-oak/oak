@@ -19,8 +19,6 @@ pub mod proto;
 
 use anyhow::{anyhow, Context, Result};
 
-pub use msg::*;
-
 /// A trait for objects that can be encoded as bytes + handles.
 pub trait Encodable {
     fn encode(&self) -> Result<(Vec<u8>, Vec<oak::Handle>)>;

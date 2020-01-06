@@ -14,8 +14,8 @@
 // limitations under the License.
 //
 
+use chat_common::msg::Msg;
 use chat_common::proto::chat::Message;
-use chat_common::Msg;
 use log::info;
 use protobuf::ProtobufEnum;
 
