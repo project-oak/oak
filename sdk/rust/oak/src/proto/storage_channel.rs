@@ -27,11 +27,279 @@ use protobuf::ProtobufEnum as ProtobufEnum_imported_for_functions;
 const _PROTOBUF_VERSION_CHECK: () = ::protobuf::VERSION_2_8_0;
 
 #[derive(PartialEq,Clone,Default)]
+pub struct StorageDatum {
+    // message fields
+    pub name: ::std::vec::Vec<u8>,
+    pub value: ::std::vec::Vec<u8>,
+    pub policy: ::protobuf::SingularPtrField<super::policy::Label>,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a StorageDatum {
+    fn default() -> &'a StorageDatum {
+        <StorageDatum as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl StorageDatum {
+    pub fn new() -> StorageDatum {
+        ::std::default::Default::default()
+    }
+
+    // bytes name = 1;
+
+
+    pub fn get_name(&self) -> &[u8] {
+        &self.name
+    }
+    pub fn clear_name(&mut self) {
+        self.name.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_name(&mut self, v: ::std::vec::Vec<u8>) {
+        self.name = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_name(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.name
+    }
+
+    // Take field
+    pub fn take_name(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.name, ::std::vec::Vec::new())
+    }
+
+    // bytes value = 2;
+
+
+    pub fn get_value(&self) -> &[u8] {
+        &self.value
+    }
+    pub fn clear_value(&mut self) {
+        self.value.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_value(&mut self, v: ::std::vec::Vec<u8>) {
+        self.value = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_value(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.value
+    }
+
+    // Take field
+    pub fn take_value(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.value, ::std::vec::Vec::new())
+    }
+
+    // .oak.policy.Label policy = 3;
+
+
+    pub fn get_policy(&self) -> &super::policy::Label {
+        self.policy.as_ref().unwrap_or_else(|| super::policy::Label::default_instance())
+    }
+    pub fn clear_policy(&mut self) {
+        self.policy.clear();
+    }
+
+    pub fn has_policy(&self) -> bool {
+        self.policy.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_policy(&mut self, v: super::policy::Label) {
+        self.policy = ::protobuf::SingularPtrField::some(v);
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_policy(&mut self) -> &mut super::policy::Label {
+        if self.policy.is_none() {
+            self.policy.set_default();
+        }
+        self.policy.as_mut().unwrap()
+    }
+
+    // Take field
+    pub fn take_policy(&mut self) -> super::policy::Label {
+        self.policy.take().unwrap_or_else(|| super::policy::Label::new())
+    }
+}
+
+impl ::protobuf::Message for StorageDatum {
+    fn is_initialized(&self) -> bool {
+        for v in &self.policy {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.name)?;
+                },
+                2 => {
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.value)?;
+                },
+                3 => {
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.policy)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if !self.name.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(1, &self.name);
+        }
+        if !self.value.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(2, &self.value);
+        }
+        if let Some(ref v) = self.policy.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
+        if !self.name.is_empty() {
+            os.write_bytes(1, &self.name)?;
+        }
+        if !self.value.is_empty() {
+            os.write_bytes(2, &self.value)?;
+        }
+        if let Some(ref v) = self.policy.as_ref() {
+            os.write_tag(3, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> StorageDatum {
+        StorageDatum::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
+        };
+        unsafe {
+            descriptor.get(|| {
+                let mut fields = ::std::vec::Vec::new();
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                    "name",
+                    |m: &StorageDatum| { &m.name },
+                    |m: &mut StorageDatum| { &mut m.name },
+                ));
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                    "value",
+                    |m: &StorageDatum| { &m.value },
+                    |m: &mut StorageDatum| { &mut m.value },
+                ));
+                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::policy::Label>>(
+                    "policy",
+                    |m: &StorageDatum| { &m.policy },
+                    |m: &mut StorageDatum| { &mut m.policy },
+                ));
+                ::protobuf::reflect::MessageDescriptor::new::<StorageDatum>(
+                    "StorageDatum",
+                    fields,
+                    file_descriptor_proto()
+                )
+            })
+        }
+    }
+
+    fn default_instance() -> &'static StorageDatum {
+        static mut instance: ::protobuf::lazy::Lazy<StorageDatum> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const StorageDatum,
+        };
+        unsafe {
+            instance.get(StorageDatum::new)
+        }
+    }
+}
+
+impl ::protobuf::Clear for StorageDatum {
+    fn clear(&mut self) {
+        self.name.clear();
+        self.value.clear();
+        self.policy.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for StorageDatum {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for StorageDatum {
+    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
+        ::protobuf::reflect::ProtobufValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
 pub struct StorageChannelReadRequest {
     // message fields
     pub storage_name: ::std::vec::Vec<u8>,
     pub transaction_id: ::std::vec::Vec<u8>,
-    pub datum_name: ::std::vec::Vec<u8>,
+    pub datum: ::protobuf::SingularPtrField<StorageDatum>,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -100,35 +368,47 @@ impl StorageChannelReadRequest {
         ::std::mem::replace(&mut self.transaction_id, ::std::vec::Vec::new())
     }
 
-    // bytes datum_name = 3;
+    // .oak.StorageDatum datum = 3;
 
 
-    pub fn get_datum_name(&self) -> &[u8] {
-        &self.datum_name
+    pub fn get_datum(&self) -> &StorageDatum {
+        self.datum.as_ref().unwrap_or_else(|| StorageDatum::default_instance())
     }
-    pub fn clear_datum_name(&mut self) {
-        self.datum_name.clear();
+    pub fn clear_datum(&mut self) {
+        self.datum.clear();
+    }
+
+    pub fn has_datum(&self) -> bool {
+        self.datum.is_some()
     }
 
     // Param is passed by value, moved
-    pub fn set_datum_name(&mut self, v: ::std::vec::Vec<u8>) {
-        self.datum_name = v;
+    pub fn set_datum(&mut self, v: StorageDatum) {
+        self.datum = ::protobuf::SingularPtrField::some(v);
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_datum_name(&mut self) -> &mut ::std::vec::Vec<u8> {
-        &mut self.datum_name
+    pub fn mut_datum(&mut self) -> &mut StorageDatum {
+        if self.datum.is_none() {
+            self.datum.set_default();
+        }
+        self.datum.as_mut().unwrap()
     }
 
     // Take field
-    pub fn take_datum_name(&mut self) -> ::std::vec::Vec<u8> {
-        ::std::mem::replace(&mut self.datum_name, ::std::vec::Vec::new())
+    pub fn take_datum(&mut self) -> StorageDatum {
+        self.datum.take().unwrap_or_else(|| StorageDatum::new())
     }
 }
 
 impl ::protobuf::Message for StorageChannelReadRequest {
     fn is_initialized(&self) -> bool {
+        for v in &self.datum {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
         true
     }
 
@@ -143,7 +423,7 @@ impl ::protobuf::Message for StorageChannelReadRequest {
                     ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.transaction_id)?;
                 },
                 3 => {
-                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.datum_name)?;
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.datum)?;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -163,8 +443,9 @@ impl ::protobuf::Message for StorageChannelReadRequest {
         if !self.transaction_id.is_empty() {
             my_size += ::protobuf::rt::bytes_size(2, &self.transaction_id);
         }
-        if !self.datum_name.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(3, &self.datum_name);
+        if let Some(ref v) = self.datum.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
@@ -178,8 +459,10 @@ impl ::protobuf::Message for StorageChannelReadRequest {
         if !self.transaction_id.is_empty() {
             os.write_bytes(2, &self.transaction_id)?;
         }
-        if !self.datum_name.is_empty() {
-            os.write_bytes(3, &self.datum_name)?;
+        if let Some(ref v) = self.datum.as_ref() {
+            os.write_tag(3, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -233,10 +516,10 @@ impl ::protobuf::Message for StorageChannelReadRequest {
                     |m: &StorageChannelReadRequest| { &m.transaction_id },
                     |m: &mut StorageChannelReadRequest| { &mut m.transaction_id },
                 ));
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
-                    "datum_name",
-                    |m: &StorageChannelReadRequest| { &m.datum_name },
-                    |m: &mut StorageChannelReadRequest| { &mut m.datum_name },
+                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<StorageDatum>>(
+                    "datum",
+                    |m: &StorageChannelReadRequest| { &m.datum },
+                    |m: &mut StorageChannelReadRequest| { &mut m.datum },
                 ));
                 ::protobuf::reflect::MessageDescriptor::new::<StorageChannelReadRequest>(
                     "StorageChannelReadRequest",
@@ -262,7 +545,7 @@ impl ::protobuf::Clear for StorageChannelReadRequest {
     fn clear(&mut self) {
         self.storage_name.clear();
         self.transaction_id.clear();
-        self.datum_name.clear();
+        self.datum.clear();
         self.unknown_fields.clear();
     }
 }
@@ -282,7 +565,7 @@ impl ::protobuf::reflect::ProtobufValue for StorageChannelReadRequest {
 #[derive(PartialEq,Clone,Default)]
 pub struct StorageChannelReadResponse {
     // message fields
-    pub datum_value: ::std::vec::Vec<u8>,
+    pub datum: ::protobuf::SingularPtrField<StorageDatum>,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -299,35 +582,47 @@ impl StorageChannelReadResponse {
         ::std::default::Default::default()
     }
 
-    // bytes datum_value = 1;
+    // .oak.StorageDatum datum = 1;
 
 
-    pub fn get_datum_value(&self) -> &[u8] {
-        &self.datum_value
+    pub fn get_datum(&self) -> &StorageDatum {
+        self.datum.as_ref().unwrap_or_else(|| StorageDatum::default_instance())
     }
-    pub fn clear_datum_value(&mut self) {
-        self.datum_value.clear();
+    pub fn clear_datum(&mut self) {
+        self.datum.clear();
+    }
+
+    pub fn has_datum(&self) -> bool {
+        self.datum.is_some()
     }
 
     // Param is passed by value, moved
-    pub fn set_datum_value(&mut self, v: ::std::vec::Vec<u8>) {
-        self.datum_value = v;
+    pub fn set_datum(&mut self, v: StorageDatum) {
+        self.datum = ::protobuf::SingularPtrField::some(v);
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_datum_value(&mut self) -> &mut ::std::vec::Vec<u8> {
-        &mut self.datum_value
+    pub fn mut_datum(&mut self) -> &mut StorageDatum {
+        if self.datum.is_none() {
+            self.datum.set_default();
+        }
+        self.datum.as_mut().unwrap()
     }
 
     // Take field
-    pub fn take_datum_value(&mut self) -> ::std::vec::Vec<u8> {
-        ::std::mem::replace(&mut self.datum_value, ::std::vec::Vec::new())
+    pub fn take_datum(&mut self) -> StorageDatum {
+        self.datum.take().unwrap_or_else(|| StorageDatum::new())
     }
 }
 
 impl ::protobuf::Message for StorageChannelReadResponse {
     fn is_initialized(&self) -> bool {
+        for v in &self.datum {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
         true
     }
 
@@ -336,7 +631,7 @@ impl ::protobuf::Message for StorageChannelReadResponse {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
-                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.datum_value)?;
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.datum)?;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -350,8 +645,9 @@ impl ::protobuf::Message for StorageChannelReadResponse {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        if !self.datum_value.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(1, &self.datum_value);
+        if let Some(ref v) = self.datum.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
@@ -359,8 +655,10 @@ impl ::protobuf::Message for StorageChannelReadResponse {
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
-        if !self.datum_value.is_empty() {
-            os.write_bytes(1, &self.datum_value)?;
+        if let Some(ref v) = self.datum.as_ref() {
+            os.write_tag(1, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -404,10 +702,10 @@ impl ::protobuf::Message for StorageChannelReadResponse {
         unsafe {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
-                    "datum_value",
-                    |m: &StorageChannelReadResponse| { &m.datum_value },
-                    |m: &mut StorageChannelReadResponse| { &mut m.datum_value },
+                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<StorageDatum>>(
+                    "datum",
+                    |m: &StorageChannelReadResponse| { &m.datum },
+                    |m: &mut StorageChannelReadResponse| { &mut m.datum },
                 ));
                 ::protobuf::reflect::MessageDescriptor::new::<StorageChannelReadResponse>(
                     "StorageChannelReadResponse",
@@ -431,7 +729,7 @@ impl ::protobuf::Message for StorageChannelReadResponse {
 
 impl ::protobuf::Clear for StorageChannelReadResponse {
     fn clear(&mut self) {
-        self.datum_value.clear();
+        self.datum.clear();
         self.unknown_fields.clear();
     }
 }
@@ -453,8 +751,7 @@ pub struct StorageChannelWriteRequest {
     // message fields
     pub storage_name: ::std::vec::Vec<u8>,
     pub transaction_id: ::std::vec::Vec<u8>,
-    pub datum_name: ::std::vec::Vec<u8>,
-    pub datum_value: ::std::vec::Vec<u8>,
+    pub datum: ::protobuf::SingularPtrField<StorageDatum>,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -523,61 +820,47 @@ impl StorageChannelWriteRequest {
         ::std::mem::replace(&mut self.transaction_id, ::std::vec::Vec::new())
     }
 
-    // bytes datum_name = 3;
+    // .oak.StorageDatum datum = 3;
 
 
-    pub fn get_datum_name(&self) -> &[u8] {
-        &self.datum_name
+    pub fn get_datum(&self) -> &StorageDatum {
+        self.datum.as_ref().unwrap_or_else(|| StorageDatum::default_instance())
     }
-    pub fn clear_datum_name(&mut self) {
-        self.datum_name.clear();
+    pub fn clear_datum(&mut self) {
+        self.datum.clear();
+    }
+
+    pub fn has_datum(&self) -> bool {
+        self.datum.is_some()
     }
 
     // Param is passed by value, moved
-    pub fn set_datum_name(&mut self, v: ::std::vec::Vec<u8>) {
-        self.datum_name = v;
+    pub fn set_datum(&mut self, v: StorageDatum) {
+        self.datum = ::protobuf::SingularPtrField::some(v);
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_datum_name(&mut self) -> &mut ::std::vec::Vec<u8> {
-        &mut self.datum_name
+    pub fn mut_datum(&mut self) -> &mut StorageDatum {
+        if self.datum.is_none() {
+            self.datum.set_default();
+        }
+        self.datum.as_mut().unwrap()
     }
 
     // Take field
-    pub fn take_datum_name(&mut self) -> ::std::vec::Vec<u8> {
-        ::std::mem::replace(&mut self.datum_name, ::std::vec::Vec::new())
-    }
-
-    // bytes datum_value = 4;
-
-
-    pub fn get_datum_value(&self) -> &[u8] {
-        &self.datum_value
-    }
-    pub fn clear_datum_value(&mut self) {
-        self.datum_value.clear();
-    }
-
-    // Param is passed by value, moved
-    pub fn set_datum_value(&mut self, v: ::std::vec::Vec<u8>) {
-        self.datum_value = v;
-    }
-
-    // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_datum_value(&mut self) -> &mut ::std::vec::Vec<u8> {
-        &mut self.datum_value
-    }
-
-    // Take field
-    pub fn take_datum_value(&mut self) -> ::std::vec::Vec<u8> {
-        ::std::mem::replace(&mut self.datum_value, ::std::vec::Vec::new())
+    pub fn take_datum(&mut self) -> StorageDatum {
+        self.datum.take().unwrap_or_else(|| StorageDatum::new())
     }
 }
 
 impl ::protobuf::Message for StorageChannelWriteRequest {
     fn is_initialized(&self) -> bool {
+        for v in &self.datum {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
         true
     }
 
@@ -592,10 +875,7 @@ impl ::protobuf::Message for StorageChannelWriteRequest {
                     ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.transaction_id)?;
                 },
                 3 => {
-                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.datum_name)?;
-                },
-                4 => {
-                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.datum_value)?;
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.datum)?;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -615,11 +895,9 @@ impl ::protobuf::Message for StorageChannelWriteRequest {
         if !self.transaction_id.is_empty() {
             my_size += ::protobuf::rt::bytes_size(2, &self.transaction_id);
         }
-        if !self.datum_name.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(3, &self.datum_name);
-        }
-        if !self.datum_value.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(4, &self.datum_value);
+        if let Some(ref v) = self.datum.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
@@ -633,11 +911,10 @@ impl ::protobuf::Message for StorageChannelWriteRequest {
         if !self.transaction_id.is_empty() {
             os.write_bytes(2, &self.transaction_id)?;
         }
-        if !self.datum_name.is_empty() {
-            os.write_bytes(3, &self.datum_name)?;
-        }
-        if !self.datum_value.is_empty() {
-            os.write_bytes(4, &self.datum_value)?;
+        if let Some(ref v) = self.datum.as_ref() {
+            os.write_tag(3, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -691,15 +968,10 @@ impl ::protobuf::Message for StorageChannelWriteRequest {
                     |m: &StorageChannelWriteRequest| { &m.transaction_id },
                     |m: &mut StorageChannelWriteRequest| { &mut m.transaction_id },
                 ));
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
-                    "datum_name",
-                    |m: &StorageChannelWriteRequest| { &m.datum_name },
-                    |m: &mut StorageChannelWriteRequest| { &mut m.datum_name },
-                ));
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
-                    "datum_value",
-                    |m: &StorageChannelWriteRequest| { &m.datum_value },
-                    |m: &mut StorageChannelWriteRequest| { &mut m.datum_value },
+                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<StorageDatum>>(
+                    "datum",
+                    |m: &StorageChannelWriteRequest| { &m.datum },
+                    |m: &mut StorageChannelWriteRequest| { &mut m.datum },
                 ));
                 ::protobuf::reflect::MessageDescriptor::new::<StorageChannelWriteRequest>(
                     "StorageChannelWriteRequest",
@@ -725,8 +997,7 @@ impl ::protobuf::Clear for StorageChannelWriteRequest {
     fn clear(&mut self) {
         self.storage_name.clear();
         self.transaction_id.clear();
-        self.datum_name.clear();
-        self.datum_value.clear();
+        self.datum.clear();
         self.unknown_fields.clear();
     }
 }
@@ -874,7 +1145,7 @@ pub struct StorageChannelDeleteRequest {
     // message fields
     pub storage_name: ::std::vec::Vec<u8>,
     pub transaction_id: ::std::vec::Vec<u8>,
-    pub datum_name: ::std::vec::Vec<u8>,
+    pub datum: ::protobuf::SingularPtrField<StorageDatum>,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -943,35 +1214,47 @@ impl StorageChannelDeleteRequest {
         ::std::mem::replace(&mut self.transaction_id, ::std::vec::Vec::new())
     }
 
-    // bytes datum_name = 3;
+    // .oak.StorageDatum datum = 3;
 
 
-    pub fn get_datum_name(&self) -> &[u8] {
-        &self.datum_name
+    pub fn get_datum(&self) -> &StorageDatum {
+        self.datum.as_ref().unwrap_or_else(|| StorageDatum::default_instance())
     }
-    pub fn clear_datum_name(&mut self) {
-        self.datum_name.clear();
+    pub fn clear_datum(&mut self) {
+        self.datum.clear();
+    }
+
+    pub fn has_datum(&self) -> bool {
+        self.datum.is_some()
     }
 
     // Param is passed by value, moved
-    pub fn set_datum_name(&mut self, v: ::std::vec::Vec<u8>) {
-        self.datum_name = v;
+    pub fn set_datum(&mut self, v: StorageDatum) {
+        self.datum = ::protobuf::SingularPtrField::some(v);
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_datum_name(&mut self) -> &mut ::std::vec::Vec<u8> {
-        &mut self.datum_name
+    pub fn mut_datum(&mut self) -> &mut StorageDatum {
+        if self.datum.is_none() {
+            self.datum.set_default();
+        }
+        self.datum.as_mut().unwrap()
     }
 
     // Take field
-    pub fn take_datum_name(&mut self) -> ::std::vec::Vec<u8> {
-        ::std::mem::replace(&mut self.datum_name, ::std::vec::Vec::new())
+    pub fn take_datum(&mut self) -> StorageDatum {
+        self.datum.take().unwrap_or_else(|| StorageDatum::new())
     }
 }
 
 impl ::protobuf::Message for StorageChannelDeleteRequest {
     fn is_initialized(&self) -> bool {
+        for v in &self.datum {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
         true
     }
 
@@ -986,7 +1269,7 @@ impl ::protobuf::Message for StorageChannelDeleteRequest {
                     ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.transaction_id)?;
                 },
                 3 => {
-                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.datum_name)?;
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.datum)?;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -1006,8 +1289,9 @@ impl ::protobuf::Message for StorageChannelDeleteRequest {
         if !self.transaction_id.is_empty() {
             my_size += ::protobuf::rt::bytes_size(2, &self.transaction_id);
         }
-        if !self.datum_name.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(3, &self.datum_name);
+        if let Some(ref v) = self.datum.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
@@ -1021,8 +1305,10 @@ impl ::protobuf::Message for StorageChannelDeleteRequest {
         if !self.transaction_id.is_empty() {
             os.write_bytes(2, &self.transaction_id)?;
         }
-        if !self.datum_name.is_empty() {
-            os.write_bytes(3, &self.datum_name)?;
+        if let Some(ref v) = self.datum.as_ref() {
+            os.write_tag(3, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -1076,10 +1362,10 @@ impl ::protobuf::Message for StorageChannelDeleteRequest {
                     |m: &StorageChannelDeleteRequest| { &m.transaction_id },
                     |m: &mut StorageChannelDeleteRequest| { &mut m.transaction_id },
                 ));
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
-                    "datum_name",
-                    |m: &StorageChannelDeleteRequest| { &m.datum_name },
-                    |m: &mut StorageChannelDeleteRequest| { &mut m.datum_name },
+                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<StorageDatum>>(
+                    "datum",
+                    |m: &StorageChannelDeleteRequest| { &m.datum },
+                    |m: &mut StorageChannelDeleteRequest| { &mut m.datum },
                 ));
                 ::protobuf::reflect::MessageDescriptor::new::<StorageChannelDeleteRequest>(
                     "StorageChannelDeleteRequest",
@@ -1105,7 +1391,7 @@ impl ::protobuf::Clear for StorageChannelDeleteRequest {
     fn clear(&mut self) {
         self.storage_name.clear();
         self.transaction_id.clear();
-        self.datum_name.clear();
+        self.datum.clear();
         self.unknown_fields.clear();
     }
 }
@@ -2303,37 +2589,40 @@ impl ::protobuf::reflect::ProtobufValue for StorageChannelRollbackResponse {
 }
 
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\x1foak/proto/storage_channel.proto\x12\x03oak\"\x84\x01\n\x19StorageC\
-    hannelReadRequest\x12!\n\x0cstorage_name\x18\x01\x20\x01(\x0cR\x0bstorag\
-    eName\x12%\n\x0etransaction_id\x18\x02\x20\x01(\x0cR\rtransactionId\x12\
-    \x1d\n\ndatum_name\x18\x03\x20\x01(\x0cR\tdatumName\"=\n\x1aStorageChann\
-    elReadResponse\x12\x1f\n\x0bdatum_value\x18\x01\x20\x01(\x0cR\ndatumValu\
-    e\"\xa6\x01\n\x1aStorageChannelWriteRequest\x12!\n\x0cstorage_name\x18\
-    \x01\x20\x01(\x0cR\x0bstorageName\x12%\n\x0etransaction_id\x18\x02\x20\
-    \x01(\x0cR\rtransactionId\x12\x1d\n\ndatum_name\x18\x03\x20\x01(\x0cR\td\
-    atumName\x12\x1f\n\x0bdatum_value\x18\x04\x20\x01(\x0cR\ndatumValue\"\
-    \x1d\n\x1bStorageChannelWriteResponse\"\x86\x01\n\x1bStorageChannelDelet\
-    eRequest\x12!\n\x0cstorage_name\x18\x01\x20\x01(\x0cR\x0bstorageName\x12\
-    %\n\x0etransaction_id\x18\x02\x20\x01(\x0cR\rtransactionId\x12\x1d\n\nda\
-    tum_name\x18\x03\x20\x01(\x0cR\tdatumName\"\x1e\n\x1cStorageChannelDelet\
-    eResponse\"?\n\x1aStorageChannelBeginRequest\x12!\n\x0cstorage_name\x18\
-    \x01\x20\x01(\x0cR\x0bstorageName\"D\n\x1bStorageChannelBeginResponse\
-    \x12%\n\x0etransaction_id\x18\x01\x20\x01(\x0cR\rtransactionId\"g\n\x1bS\
-    torageChannelCommitRequest\x12!\n\x0cstorage_name\x18\x01\x20\x01(\x0cR\
-    \x0bstorageName\x12%\n\x0etransaction_id\x18\x02\x20\x01(\x0cR\rtransact\
-    ionId\"\x1e\n\x1cStorageChannelCommitResponse\"\x88\x01\n\x1dStorageChan\
-    nelRollbackRequest\x12!\n\x0cstorage_name\x18\x01\x20\x01(\x0cR\x0bstora\
-    geName\x12\x1d\n\nstorage_id\x18\x02\x20\x01(\x0cR\tstorageId\x12%\n\x0e\
-    transaction_id\x18\x03\x20\x01(\x0cR\rtransactionId\"\x20\n\x1eStorageCh\
-    annelRollbackResponse2\xe0\x03\n\x0bStorageNode\x12G\n\x04Read\x12\x1e.o\
-    ak.StorageChannelReadRequest\x1a\x1f.oak.StorageChannelReadResponse\x12J\
-    \n\x05Write\x12\x1f.oak.StorageChannelWriteRequest\x1a\x20.oak.StorageCh\
-    annelWriteResponse\x12M\n\x06Delete\x12\x20.oak.StorageChannelDeleteRequ\
-    est\x1a!.oak.StorageChannelDeleteResponse\x12J\n\x05Begin\x12\x1f.oak.St\
-    orageChannelBeginRequest\x1a\x20.oak.StorageChannelBeginResponse\x12L\n\
-    \x06Commit\x12\x1f.oak.StorageChannelBeginRequest\x1a!.oak.StorageChanne\
-    lCommitResponse\x12S\n\x08Rollback\x12\".oak.StorageChannelRollbackReque\
-    st\x1a#.oak.StorageChannelRollbackResponseb\x06proto3\
+    \n\x1foak/proto/storage_channel.proto\x12\x03oak\x1a\x16oak/proto/policy\
+    .proto\"c\n\x0cStorageDatum\x12\x12\n\x04name\x18\x01\x20\x01(\x0cR\x04n\
+    ame\x12\x14\n\x05value\x18\x02\x20\x01(\x0cR\x05value\x12)\n\x06policy\
+    \x18\x03\x20\x01(\x0b2\x11.oak.policy.LabelR\x06policy\"\x8e\x01\n\x19St\
+    orageChannelReadRequest\x12!\n\x0cstorage_name\x18\x01\x20\x01(\x0cR\x0b\
+    storageName\x12%\n\x0etransaction_id\x18\x02\x20\x01(\x0cR\rtransactionI\
+    d\x12'\n\x05datum\x18\x03\x20\x01(\x0b2\x11.oak.StorageDatumR\x05datum\"\
+    E\n\x1aStorageChannelReadResponse\x12'\n\x05datum\x18\x01\x20\x01(\x0b2\
+    \x11.oak.StorageDatumR\x05datum\"\x8f\x01\n\x1aStorageChannelWriteReques\
+    t\x12!\n\x0cstorage_name\x18\x01\x20\x01(\x0cR\x0bstorageName\x12%\n\x0e\
+    transaction_id\x18\x02\x20\x01(\x0cR\rtransactionId\x12'\n\x05datum\x18\
+    \x03\x20\x01(\x0b2\x11.oak.StorageDatumR\x05datum\"\x1d\n\x1bStorageChan\
+    nelWriteResponse\"\x90\x01\n\x1bStorageChannelDeleteRequest\x12!\n\x0cst\
+    orage_name\x18\x01\x20\x01(\x0cR\x0bstorageName\x12%\n\x0etransaction_id\
+    \x18\x02\x20\x01(\x0cR\rtransactionId\x12'\n\x05datum\x18\x03\x20\x01(\
+    \x0b2\x11.oak.StorageDatumR\x05datum\"\x1e\n\x1cStorageChannelDeleteResp\
+    onse\"?\n\x1aStorageChannelBeginRequest\x12!\n\x0cstorage_name\x18\x01\
+    \x20\x01(\x0cR\x0bstorageName\"D\n\x1bStorageChannelBeginResponse\x12%\n\
+    \x0etransaction_id\x18\x01\x20\x01(\x0cR\rtransactionId\"g\n\x1bStorageC\
+    hannelCommitRequest\x12!\n\x0cstorage_name\x18\x01\x20\x01(\x0cR\x0bstor\
+    ageName\x12%\n\x0etransaction_id\x18\x02\x20\x01(\x0cR\rtransactionId\"\
+    \x1e\n\x1cStorageChannelCommitResponse\"\x88\x01\n\x1dStorageChannelRoll\
+    backRequest\x12!\n\x0cstorage_name\x18\x01\x20\x01(\x0cR\x0bstorageName\
+    \x12\x1d\n\nstorage_id\x18\x02\x20\x01(\x0cR\tstorageId\x12%\n\x0etransa\
+    ction_id\x18\x03\x20\x01(\x0cR\rtransactionId\"\x20\n\x1eStorageChannelR\
+    ollbackResponse2\xe0\x03\n\x0bStorageNode\x12G\n\x04Read\x12\x1e.oak.Sto\
+    rageChannelReadRequest\x1a\x1f.oak.StorageChannelReadResponse\x12J\n\x05\
+    Write\x12\x1f.oak.StorageChannelWriteRequest\x1a\x20.oak.StorageChannelW\
+    riteResponse\x12M\n\x06Delete\x12\x20.oak.StorageChannelDeleteRequest\
+    \x1a!.oak.StorageChannelDeleteResponse\x12J\n\x05Begin\x12\x1f.oak.Stora\
+    geChannelBeginRequest\x1a\x20.oak.StorageChannelBeginResponse\x12L\n\x06\
+    Commit\x12\x1f.oak.StorageChannelBeginRequest\x1a!.oak.StorageChannelCom\
+    mitResponse\x12S\n\x08Rollback\x12\".oak.StorageChannelRollbackRequest\
+    \x1a#.oak.StorageChannelRollbackResponseb\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {
