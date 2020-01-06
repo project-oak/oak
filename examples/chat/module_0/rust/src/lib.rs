@@ -113,7 +113,9 @@ impl ChatNode for Node {
         info!("subscribing to room");
         match self.rooms.get(&req.room_id) {
             None => {
-                writer.close(room_id_not_found_err());
+                writer
+                    .close(room_id_not_found_err())
+                    .expect("could not close channel");
             }
             Some(room) => {
                 info!("new subscription to room {:?}", req.room_id);

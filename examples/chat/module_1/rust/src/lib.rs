@@ -65,7 +65,10 @@ impl Room {
                     self.messages.push(message.clone());
                     info!("fan out message to {} clients", self.clients.len());
                     for writer in &mut self.clients {
-                        writer.write(&message, oak::grpc::WriteMode::KeepOpen);
+                        // TODO: Improve error handling.
+                        writer
+                            .write(&message, oak::grpc::WriteMode::KeepOpen)
+                            .expect("could not write to channel");
                     }
                 }
             }
@@ -74,7 +77,8 @@ impl Room {
 
     fn close_all(&mut self) {
         for writer in &mut self.clients {
-            writer.close(Ok(()));
+            // TODO: Try to close subsequent channels even if one fails.
+            writer.close(Ok(())).expect("could not close channel");
         }
     }
 }
