@@ -43,9 +43,8 @@ message DestroyRoomRequest {
   bytes admin_token = 2;
 }
 
-message SendMessageRequest {
+message SubscribeRequest {
   bytes room_id = 1;
-  Message message = 3;
 }
 
 message Message {
@@ -55,8 +54,9 @@ message Message {
   string text = 1;
 }
 
-message SubscribeRequest {
+message SendMessageRequest {
   bytes room_id = 1;
+  Message message = 3;
 }
 
 service Chat {
