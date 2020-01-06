@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 The Project Oak Authors
+ * Copyright 2018 The Project Oak Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,13 +25,13 @@
 namespace oak {
 
 AsyloOakManager::AsyloOakManager(absl::string_view enclave_path)
-    : Service(), manager_(enclave_path) {}
+    : Service(), loader_(enclave_path) {}
 
 grpc::Status AsyloOakManager::CreateApplication(grpc::ServerContext* context,
                                                 const oak::CreateApplicationRequest* request,
                                                 oak::CreateApplicationResponse* response) {
   asylo::StatusOr<oak::CreateApplicationResponse> result =
-      manager_.CreateApplication(request->application_configuration());
+      loader_.CreateApplication(request->application_configuration());
   if (!result.ok()) {
     return result.status().ToOtherStatus<grpc::Status>();
   }
@@ -42,7 +42,7 @@ grpc::Status AsyloOakManager::CreateApplication(grpc::ServerContext* context,
 grpc::Status AsyloOakManager::TerminateApplication(grpc::ServerContext* context,
                                                    const oak::TerminateApplicationRequest* request,
                                                    oak::TerminateApplicationResponse* response) {
-  manager_.TerminateApplication(request->application_id());
+  loader_.TerminateApplication(request->application_id());
   return grpc::Status::OK;
 }
 
