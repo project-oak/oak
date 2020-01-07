@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use abitest_frontend::proto::abitest::{ABITestRequest, ABITestResponse};
+use abitest_0_frontend::proto::abitest::{ABITestRequest, ABITestResponse};
 use assert_matches::assert_matches;
 use log::{error, info};
 use oak::grpc;
@@ -59,8 +59,8 @@ fn test_abi() {
     // (A subsequent attempt to use the oak_log crate will fail.)
     oak_tests::init_logging();
     let mut entrypoints = HashMap::new();
-    let fe: oak_tests::NodeMain = abitest_frontend::main;
-    let be: oak_tests::NodeMain = abitest_backend::main;
+    let fe: oak_tests::NodeMain = abitest_0_frontend::main;
+    let be: oak_tests::NodeMain = abitest_1_backend::main;
     entrypoints.insert(FRONTEND_CONFIG_NAME.to_string(), fe);
     entrypoints.insert(BACKEND_CONFIG_NAME.to_string(), be);
     assert_eq!(Some(()), oak_tests::start(test_config(), entrypoints));

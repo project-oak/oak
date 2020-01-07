@@ -8,8 +8,8 @@ edition = "2018"
 crate-type = ["dylib"]
 
 [dependencies]
-abitest_frontend = { path = "../module/rust" }
-abitest_backend = { path = "../module2/rust" }
+abitest_0_frontend = { path = "../module_0/rust" }
+abitest_1_backend = { path = "../module_1/rust" }
 log = "*"
 oak = "*"
 oak_log = "*"
