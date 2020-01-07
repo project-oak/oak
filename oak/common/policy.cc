@@ -50,12 +50,12 @@ oak::policy::Label AuthorizationBearerTokenPolicy(const std::string& authorizati
   return label;
 }
 
-oak::policy::Label ModuleAttestationPolicy(const std::string& module_attestation) {
+oak::policy::Label WebAssemblyModuleAttestationPolicy(const std::string& module_attestation) {
   oak::policy::Label label;
   auto* secrecy_tag = label.add_secrecy_tags();
   auto* integrity_tag = label.add_integrity_tags();
-  secrecy_tag->mutable_module_tag()->set_module_attestation(module_attestation);
-  integrity_tag->mutable_module_tag()->set_module_attestation(module_attestation);
+  secrecy_tag->mutable_web_assembly_module_tag()->set_module_attestation(module_attestation);
+  integrity_tag->mutable_web_assembly_module_tag()->set_module_attestation(module_attestation);
   return label;
 }
 

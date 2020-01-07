@@ -269,6 +269,7 @@ impl<'a> ::std::default::Default for &'a Tag {
 #[derive(Clone,PartialEq,Debug)]
 pub enum Tag_oneof_tag {
     grpc_tag(GrpcTag),
+    web_assembly_module_tag(WebAssemblyModuleTag),
 }
 
 impl Tag {
@@ -324,11 +325,65 @@ impl Tag {
             GrpcTag::new()
         }
     }
+
+    // .oak.policy.WebAssemblyModuleTag web_assembly_module_tag = 2;
+
+
+    pub fn get_web_assembly_module_tag(&self) -> &WebAssemblyModuleTag {
+        match self.tag {
+            ::std::option::Option::Some(Tag_oneof_tag::web_assembly_module_tag(ref v)) => v,
+            _ => WebAssemblyModuleTag::default_instance(),
+        }
+    }
+    pub fn clear_web_assembly_module_tag(&mut self) {
+        self.tag = ::std::option::Option::None;
+    }
+
+    pub fn has_web_assembly_module_tag(&self) -> bool {
+        match self.tag {
+            ::std::option::Option::Some(Tag_oneof_tag::web_assembly_module_tag(..)) => true,
+            _ => false,
+        }
+    }
+
+    // Param is passed by value, moved
+    pub fn set_web_assembly_module_tag(&mut self, v: WebAssemblyModuleTag) {
+        self.tag = ::std::option::Option::Some(Tag_oneof_tag::web_assembly_module_tag(v))
+    }
+
+    // Mutable pointer to the field.
+    pub fn mut_web_assembly_module_tag(&mut self) -> &mut WebAssemblyModuleTag {
+        if let ::std::option::Option::Some(Tag_oneof_tag::web_assembly_module_tag(_)) = self.tag {
+        } else {
+            self.tag = ::std::option::Option::Some(Tag_oneof_tag::web_assembly_module_tag(WebAssemblyModuleTag::new()));
+        }
+        match self.tag {
+            ::std::option::Option::Some(Tag_oneof_tag::web_assembly_module_tag(ref mut v)) => v,
+            _ => panic!(),
+        }
+    }
+
+    // Take field
+    pub fn take_web_assembly_module_tag(&mut self) -> WebAssemblyModuleTag {
+        if self.has_web_assembly_module_tag() {
+            match self.tag.take() {
+                ::std::option::Option::Some(Tag_oneof_tag::web_assembly_module_tag(v)) => v,
+                _ => panic!(),
+            }
+        } else {
+            WebAssemblyModuleTag::new()
+        }
+    }
 }
 
 impl ::protobuf::Message for Tag {
     fn is_initialized(&self) -> bool {
         if let Some(Tag_oneof_tag::grpc_tag(ref v)) = self.tag {
+            if !v.is_initialized() {
+                return false;
+            }
+        }
+        if let Some(Tag_oneof_tag::web_assembly_module_tag(ref v)) = self.tag {
             if !v.is_initialized() {
                 return false;
             }
@@ -345,6 +400,12 @@ impl ::protobuf::Message for Tag {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     }
                     self.tag = ::std::option::Option::Some(Tag_oneof_tag::grpc_tag(is.read_message()?));
+                },
+                2 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    self.tag = ::std::option::Option::Some(Tag_oneof_tag::web_assembly_module_tag(is.read_message()?));
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -364,6 +425,10 @@ impl ::protobuf::Message for Tag {
                     let len = v.compute_size();
                     my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
                 },
+                &Tag_oneof_tag::web_assembly_module_tag(ref v) => {
+                    let len = v.compute_size();
+                    my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+                },
             };
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
@@ -376,6 +441,11 @@ impl ::protobuf::Message for Tag {
             match v {
                 &Tag_oneof_tag::grpc_tag(ref v) => {
                     os.write_tag(1, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+                    os.write_raw_varint32(v.get_cached_size())?;
+                    v.write_to_with_cached_sizes(os)?;
+                },
+                &Tag_oneof_tag::web_assembly_module_tag(ref v) => {
+                    os.write_tag(2, ::protobuf::wire_format::WireTypeLengthDelimited)?;
                     os.write_raw_varint32(v.get_cached_size())?;
                     v.write_to_with_cached_sizes(os)?;
                 },
@@ -428,6 +498,11 @@ impl ::protobuf::Message for Tag {
                     Tag::has_grpc_tag,
                     Tag::get_grpc_tag,
                 ));
+                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, WebAssemblyModuleTag>(
+                    "web_assembly_module_tag",
+                    Tag::has_web_assembly_module_tag,
+                    Tag::get_web_assembly_module_tag,
+                ));
                 ::protobuf::reflect::MessageDescriptor::new::<Tag>(
                     "Tag",
                     fields,
@@ -450,6 +525,7 @@ impl ::protobuf::Message for Tag {
 
 impl ::protobuf::Clear for Tag {
     fn clear(&mut self) {
+        self.tag = ::std::option::Option::None;
         self.tag = ::std::option::Option::None;
         self.unknown_fields.clear();
     }
@@ -636,14 +712,186 @@ impl ::protobuf::reflect::ProtobufValue for GrpcTag {
     }
 }
 
+#[derive(PartialEq,Clone,Default)]
+pub struct WebAssemblyModuleTag {
+    // message fields
+    pub module_attestation: ::std::vec::Vec<u8>,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a WebAssemblyModuleTag {
+    fn default() -> &'a WebAssemblyModuleTag {
+        <WebAssemblyModuleTag as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl WebAssemblyModuleTag {
+    pub fn new() -> WebAssemblyModuleTag {
+        ::std::default::Default::default()
+    }
+
+    // bytes module_attestation = 1;
+
+
+    pub fn get_module_attestation(&self) -> &[u8] {
+        &self.module_attestation
+    }
+    pub fn clear_module_attestation(&mut self) {
+        self.module_attestation.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_module_attestation(&mut self, v: ::std::vec::Vec<u8>) {
+        self.module_attestation = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_module_attestation(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.module_attestation
+    }
+
+    // Take field
+    pub fn take_module_attestation(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.module_attestation, ::std::vec::Vec::new())
+    }
+}
+
+impl ::protobuf::Message for WebAssemblyModuleTag {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.module_attestation)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if !self.module_attestation.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(1, &self.module_attestation);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
+        if !self.module_attestation.is_empty() {
+            os.write_bytes(1, &self.module_attestation)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> WebAssemblyModuleTag {
+        WebAssemblyModuleTag::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
+        };
+        unsafe {
+            descriptor.get(|| {
+                let mut fields = ::std::vec::Vec::new();
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                    "module_attestation",
+                    |m: &WebAssemblyModuleTag| { &m.module_attestation },
+                    |m: &mut WebAssemblyModuleTag| { &mut m.module_attestation },
+                ));
+                ::protobuf::reflect::MessageDescriptor::new::<WebAssemblyModuleTag>(
+                    "WebAssemblyModuleTag",
+                    fields,
+                    file_descriptor_proto()
+                )
+            })
+        }
+    }
+
+    fn default_instance() -> &'static WebAssemblyModuleTag {
+        static mut instance: ::protobuf::lazy::Lazy<WebAssemblyModuleTag> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const WebAssemblyModuleTag,
+        };
+        unsafe {
+            instance.get(WebAssemblyModuleTag::new)
+        }
+    }
+}
+
+impl ::protobuf::Clear for WebAssemblyModuleTag {
+    fn clear(&mut self) {
+        self.module_attestation.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for WebAssemblyModuleTag {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for WebAssemblyModuleTag {
+    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
+        ::protobuf::reflect::ProtobufValueRef::Message(self)
+    }
+}
+
 static file_descriptor_proto_data: &'static [u8] = b"\
     \n\x16oak/proto/policy.proto\x12\noak.policy\"s\n\x05Label\x122\n\x0csec\
     recy_tags\x18\x01\x20\x03(\x0b2\x0f.oak.policy.TagR\x0bsecrecyTags\x126\
     \n\x0eintegrity_tags\x18\x02\x20\x03(\x0b2\x0f.oak.policy.TagR\rintegrit\
-    yTags\">\n\x03Tag\x120\n\x08grpc_tag\x18\x01\x20\x01(\x0b2\x13.oak.polic\
-    y.GrpcTagH\0R\x07grpcTagB\x05\n\x03tag\"G\n\x07GrpcTag\x12<\n\x1aauthori\
-    zation_bearer_token\x18\x01\x20\x01(\x0cR\x18authorizationBearerTokenb\
-    \x06proto3\
+    yTags\"\x99\x01\n\x03Tag\x120\n\x08grpc_tag\x18\x01\x20\x01(\x0b2\x13.oa\
+    k.policy.GrpcTagH\0R\x07grpcTag\x12Y\n\x17web_assembly_module_tag\x18\
+    \x02\x20\x01(\x0b2\x20.oak.policy.WebAssemblyModuleTagH\0R\x14webAssembl\
+    yModuleTagB\x05\n\x03tag\"G\n\x07GrpcTag\x12<\n\x1aauthorization_bearer_\
+    token\x18\x01\x20\x01(\x0cR\x18authorizationBearerToken\"E\n\x14WebAssem\
+    blyModuleTag\x12-\n\x12module_attestation\x18\x01\x20\x01(\x0cR\x11modul\
+    eAttestationb\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {

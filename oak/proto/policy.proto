@@ -37,7 +37,7 @@ message Label {
 message Tag {
   oneof tag {
     GrpcTag grpc_tag = 1;
-    ModuleTag module_tag = 2;
+    WebAssemblyModuleTag web_assembly_module_tag = 2;
   }
 }
 
@@ -50,8 +50,9 @@ message GrpcTag {
 }
 
 // Policies related to modules, referring to the native WebAssembly node within the TCB.
-message ModuleTag {
-  // The attestation for a single WebAssembly module.
+message WebAssemblyModuleTag {
+  // The attestation for a single WebAssembly module, a sha256 digest of the
+  // module in binary format.
   // TODO: Replace this with identity assertions for multiple module versions,
   // based on a public verifiable log.
   bytes module_attestation = 1;
