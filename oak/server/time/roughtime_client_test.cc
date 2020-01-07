@@ -27,7 +27,10 @@ TEST(RoughtimeClient, TestGetRoughtTime) {
   auto current = std::chrono::duration_cast<std::chrono::microseconds>(
                      std::chrono::system_clock::now().time_since_epoch())
                      .count();
-  auto time = RoughtimeClient::GetRoughTime().ValueOrDie();
+  auto time_or_status = RoughtimeClient::GetRoughTime();
+  ASSERT_TRUE(time_or_status.ok());
+  auto time = time_or_status.ValueOrDie();
+
   LOG(INFO) << "System time: " << current << "μs from the epoch.";
   LOG(INFO) << "Roughtime: " << time << "μs from the epoch.";
   LOG(INFO) << "Difference: " << time - current << "μs.";

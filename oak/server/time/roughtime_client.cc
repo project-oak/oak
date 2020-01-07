@@ -61,23 +61,21 @@ const std::vector<RoughtimeServerSpec> servers{{"Google", "roughtime.sandbox.goo
                                                {"Cloudflare", "roughtime.cloudflare.com", "2002",
                                                 "gD63hSj3ScS+wuOeGrubXlq35N1c5Lby/S+T7MNTjxo="}};
 
-// TODO: Make multiple requests and calculate overlapping interval.
 // The minimum number of overlapping intervals we need to trust the time.
-// constexpr int kMinOverlappingTimeIntervals = 2;
+constexpr int kMinOverlappingTimeIntervals = 2;
 
 // Number of seconds that we will wait for a reply from the server.
 constexpr int kTimeoutSeconds = 3;
 
-// TODO: Retry on connection failure.
 // Number of times we will retry connecting to the server.
-// constexpr int kServerRetries = 3;
+constexpr int kServerRetries = 3;
 
 // The size of the receive buffer.
 // This seems to be the same as the minimum request size according to the Roughtime samples.
 // eg. https://roughtime.googlesource.com/roughtime/+/refs/heads/master/simple_client.cc#250
 constexpr size_t kReceiveBufferSize = roughtime::kMinRequestSize;
 
-// Maximum radius accepted for a roughtime response.
+// Maximum radius accepted for a roughtime response (1 minute in microseconds).
 constexpr uint32_t kMaxRadius = 60000000;
 
 // Creates a UDP socket connected to the host and port.
@@ -108,8 +106,19 @@ StatusOr<int> CreateSocket(const std::string& host, const std::string& port) {
 
 StatusOr<std::string> SendRequest(const RoughtimeServerSpec& server,
                                   const Nonce<roughtime::kNonceLength>& nonce) {
-  int handle;
-  ASYLO_ASSIGN_OR_RETURN(handle, CreateSocket(server.host, server.port));
+  StatusOr<int> create_socket_result;
+  int attempts = 0;
+  do {
+    ++attempts;
+    create_socket_result = CreateSocket(server.host, server.port);
+  } while (!create_socket_result.ok() && attempts <= kServerRetries);
+
+  if (!create_socket_result.ok()) {
+    return Status(asylo::error::GoogleError::INTERNAL,
+                  "Exceeded maximum retries while attempting to connect to " + server.name);
+  }
+
+  auto handle = create_socket_result.ValueOrDie();
   const std::string request = roughtime::CreateRequest(nonce.data());
 
   timeval timeout = {};
@@ -181,11 +190,47 @@ StatusOr<RoughtimeInterval> GetIntervalFromServer(const RoughtimeServerSpec& ser
   return RoughtimeInterval{(timestamp - radius), (timestamp + radius)};
 }
 
+StatusOr<RoughtimeInterval> FindOverlap(const std::vector<RoughtimeInterval>& intervals,
+                                        const int min_overlap) {
+  for (auto interval : intervals) {
+    int count = 0;
+    roughtime::rough_time_t min = 0;
+    roughtime::rough_time_t max = 0xFFFFFFFFFFFFFFFF;
+    roughtime::rough_time_t point = interval.min;
+    for (auto test : intervals) {
+      if (point >= test.min && point <= test.max) {
+        if (test.min > min) {
+          min = test.min;
+        }
+        if (test.max < max) {
+          max = test.max;
+        }
+        ++count;
+        if (count == min_overlap) {
+          return RoughtimeInterval{min, max};
+        }
+      }
+    }
+  }
+
+  return Status(asylo::error::GoogleError::INTERNAL,
+                absl::StrFormat("Could not find %d overlapping intervals.", min_overlap));
+}
+
 StatusOr<roughtime::rough_time_t> RoughtimeClient::GetRoughTime() {
-  // TODO: Connect to all servers and find overlapping intervals.
-  // TODO: Implement retries.
+  std::vector<RoughtimeInterval> valid_intervals;
+  for (auto server : servers) {
+    auto interval_or_status = GetIntervalFromServer(server);
+    if (interval_or_status.ok()) {
+      valid_intervals.push_back(interval_or_status.ValueOrDie());
+    } else {
+      LOG(WARNING) << "Could not get status from " << server.name << ":"
+                   << interval_or_status.status();
+    }
+  }
+
   RoughtimeInterval interval;
-  ASYLO_ASSIGN_OR_RETURN(interval, GetIntervalFromServer(servers[0]));
+  ASYLO_ASSIGN_OR_RETURN(interval, FindOverlap(valid_intervals, kMinOverlappingTimeIntervals));
   return (interval.min + interval.max) / 2;
 }
 
