@@ -38,7 +38,9 @@ impl Room {
     fn event_loop(mut self, in_handle: u64) -> i32 {
         // Wait for something on our single input channel.
         let in_channel = oak::ReadHandle { handle: in_handle };
+        info!("starting event loop");
         loop {
+            info!("waiting for new messages");
             let ready_status = match oak::wait_on_channels(&[in_channel]) {
                 Ok(ready_status) => ready_status,
                 Err(err) => {
@@ -52,6 +54,7 @@ impl Room {
                 continue;
             };
 
+            info!("reading incoming message");
             let msg: Msg = chat_common::receive(in_channel).expect("could not receive message");
             match msg {
                 Msg::Join(h) => {
