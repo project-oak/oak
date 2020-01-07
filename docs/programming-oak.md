@@ -508,7 +508,7 @@ for the various Nodes are ignored; instead, the second argument to
 entrypoint for each Node.
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/abitest/tests/src/tests.rs Rust /^#\[test\]/ /oak_tests::start().*/)
+[embedmd]:# (../examples/abitest/tests/src/tests.rs Rust /^#\[test\]/ /oak_tests::start\(.*/)
 ```Rust
 #[test]
 #[serial(node_test)]
@@ -532,7 +532,7 @@ Instead, we need a little bit of boilerplate in the source code for each of the
 Nodes to allow testability:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/abitest/module_0/rust/src/lib.rs Rust /^#.*wasm32.*/ /pub fn main().*/)
+[embedmd]:# (../examples/abitest/module_0/rust/src/lib.rs Rust /^#.*wasm32.*/ /pub fn main\(.*/)
 ```Rust
 #[cfg(target_arch = "wasm32")]
 #[no_mangle]
