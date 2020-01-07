@@ -14,10 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef RUST_CHECK_H_
-#define RUST_CHECK_H_
-
-// TODO: Using this to temporarily verify rust compat layer is working.
+#ifndef RUST_OAK_RUNTIME_OAK_RUNTIME_H_
+#define RUST_OAK_RUNTIME_OAK_RUNTIME_H_
 
 #include <cstdint>
 
@@ -28,4 +26,4 @@ extern "C" {
 int32_t add_magic_number(int32_t x);
 };
 
-#endif  // RUST_CHECK_H_
+#endif  // RUST_OAK_RUNTIME_OAK_RUNTIME_H_

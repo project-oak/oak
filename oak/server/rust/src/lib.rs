@@ -17,30 +17,45 @@
 //! Functionality to allow use of Rust code within the Oak Runtime.
 
 #![no_std]
-
 #![feature(lang_items)]
-#![feature(allocator_api)]
 #![feature(alloc_prelude)]
 #![feature(alloc_error_handler)]
-#![feature(fn_traits)]
-#![feature(rustc_private)]
-#![feature(never_type)]
-#![feature(box_syntax)]
-#![feature(int_error_internals)]
-#![feature(array_error_internals)]
-#![feature(char_error_internals)]
 
 extern crate alloc;
-extern crate core;
-extern crate libc;
 
-pub use alloc::prelude::v1::*;
+// TODO: Move to separate crate.
+mod asylo_alloc;
 
-pub mod enclave;
-pub mod common;
+use alloc::prelude::v1::*;
+use core::alloc::Layout;
+use core::panic::PanicInfo;
+
+// TODO: Move to separate crate and expose safe wrappers.
+#[link(name = "sgx_trts")]
+extern "C" {
+    // SGX-enabled abort function that causes an undefined instruction (`UD2`) to be executed, which
+    // terminates the enclave execution.
+    //
+    // The C type of this function is `extern "C" void abort(void) __attribute__(__noreturn__);`
+    //
+    // See https://github.com/intel/linux-sgx/blob/d166ff0c808e2f78d37eebf1ab614d944437eea3/sdk/trts/linux/trts_pic.S#L565.
+    fn abort() -> !;
+}
 
 #[global_allocator]
-static A: enclave::allocator::System = enclave::allocator::System;
+static A: asylo_alloc::System = asylo_alloc::System;
+
+// Define what happens in an Out Of Memory (OOM) condition.
+#[alloc_error_handler]
+fn alloc_error(_layout: Layout) -> ! {
+    unsafe { abort() }
+}
+
+// See https://doc.rust-lang.org/nomicon/panic-handler.html.
+#[panic_handler]
+fn panic(_info: &PanicInfo) -> ! {
+    unsafe { abort() }
+}
 
 /// Provide the entrypoint needed by the compiler's failure mechanisms when
 /// `std` is unavailable.  See ["No
@@ -48,26 +63,11 @@ static A: enclave::allocator::System = enclave::allocator::System;
 #[lang = "eh_personality"]
 pub extern "C" fn eh_personality() {}
 
-/// For testing externally linked code, see `add_magic_number`
-fn thread_test(x: i32) -> common::io::Result<i32> {
-  use alloc::sync::Arc;
-  use core::sync::atomic::{AtomicI32, Ordering};
-  let val = Arc::new(AtomicI32::new(x));
-
-  let other = {
-    let val = Arc::clone(&val);
-    move || {
-      val.fetch_add(42, Ordering::SeqCst);
-    }
-  };
-
-  enclave::spawn(box other)?.join();
-
-  Ok(val.load(Ordering::SeqCst))
-}
-
 /// An exported placeholder function to check that linking against C++ is successful.
+/// It just adds "42" to the provided value and returns it to the caller.
 #[no_mangle]
 pub extern "C" fn add_magic_number(x: i32) -> i32 {
-    thread_test(x).unwrap_or(0)
+    // Allocate a bunch of elements on the heap in order to exercise the allocator.
+    let v: Vec<i32> = (0..10).map(|n| n + 40).collect();
+    x + v[2]
 }

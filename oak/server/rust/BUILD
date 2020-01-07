@@ -23,7 +23,7 @@ package(
 
 rust_library(
     name = "oak_runtime",
-    srcs = glob(["src/**/*.rs"]),
+    srcs = glob(["src/*.rs"]),
     crate_type = "staticlib",
     edition = "2018",
 )
@@ -67,9 +67,9 @@ genrule(
 # a change to the Rust file does induce a rebuild when doing bazel build //oak/server/dev:oak. So is
 # Bazel maybe doing something special for a target with a single src that is itself a .a file?
 cc_library(
-    name = "rust_wrapper",
-    srcs = ["//sdk/rust/oak_runtime_compat:oak_runtime_stripped"],
-    hdrs = ["rust_check.h"],
+    name = "wrapper",
+    srcs = [":oak_runtime_stripped"],
+    hdrs = ["oak_runtime.h"],
     linkstatic = True,
     visibility = ["//oak/server:__subpackages__"],
 )

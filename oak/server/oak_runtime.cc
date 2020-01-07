@@ -25,9 +25,8 @@
 #include "absl/strings/str_cat.h"
 #include "asylo/util/logging.h"
 #include "oak/common/app_config.h"
+#include "oak/server/rust/oak_runtime.h"
 #include "oak/server/wasm_node.h"
-
-#include "sdk/rust/oak_runtime_compat/rust_check.h"
 
 namespace oak {
 
@@ -157,12 +156,6 @@ grpc::Status OakRuntime::Start() {
   {
     LOG(INFO) << "Calling Rust runtime";
     int32_t rust_check = add_magic_number(1000);
-
-    if (rust_check != 1042) {
-      LOG(ERROR) << "failed rust magic number" << rust_check;
-      return grpc::Status::CANCELLED;
-    }
-
     LOG(INFO) << "Rust runtime called, result: " << rust_check;
   }
 

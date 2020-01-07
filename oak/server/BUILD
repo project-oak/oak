@@ -135,9 +135,7 @@ cc_library(
 cc_library(
     name = "oak_runtime",
     srcs = ["oak_runtime.cc"],
-    hdrs = [
-        "oak_runtime.h",
-    ],
+    hdrs = ["oak_runtime.h"],
     deps = [
         ":base_runtime",
         ":oak_grpc_node",
@@ -146,8 +144,8 @@ cc_library(
         "//oak/proto:enclave_cc_proto",
         "//oak/proto:oak_api_cc_proto",
         "//oak/server:logging_node",
+        "//oak/server/rust:wrapper",
         "//oak/server/storage:storage_node",
-        "//sdk/rust/oak_runtime_compat:rust_wrapper",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/synchronization",
