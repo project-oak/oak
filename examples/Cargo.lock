@@ -215,7 +215,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "chat"
+name = "chat_0_frontend"
 version = "0.1.0"
 dependencies = [
  "chat_common 0.1.0",
@@ -229,7 +229,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "chat_backend"
+name = "chat_1_backend"
 version = "0.1.0"
 dependencies = [
  "chat_common 0.1.0",

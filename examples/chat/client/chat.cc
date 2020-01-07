@@ -38,7 +38,7 @@ ABSL_FLAG(std::string, manager_address, "127.0.0.1:8888",
           "Address of the Oak Manager to connect to");
 // TODO: separate these out into distinct flags when test scripting is able to cope.
 ABSL_FLAG(std::vector<std::string>, module, std::vector<std::string>{},
-          "Files containing the compiled WebAssembly modules (as 'backend,frontend')");
+          "Files containing the compiled WebAssembly modules (as 'frontend,backend')");
 ABSL_FLAG(std::string, app_address, "",
           "Address of the Oak Application to connect to (empty to create a new application)");
 ABSL_FLAG(std::string, room_name, "", "Name of room to create");
@@ -248,13 +248,13 @@ int main(int argc, char** argv) {
     // to WebAssembly separately.
     std::vector<std::string> modules = absl::GetFlag(FLAGS_module);
     if (modules.size() != 2) {
-      LOG(QFATAL) << "Need --module=backend,frontend flag";
+      LOG(QFATAL) << "Need --module=frontend,backend flag";
     }
 
     // Connect to the Oak Manager and create the Oak Application.
     manager_client = absl::make_unique<oak::ManagerClient>(grpc::CreateChannel(
         absl::GetFlag(FLAGS_manager_address), grpc::InsecureChannelCredentials()));
-    application = absl::make_unique<OakApplication>(manager_client.get(), modules[1], modules[0]);
+    application = absl::make_unique<OakApplication>(manager_client.get(), modules[0], modules[1]);
     application_id = application->Id();
     addr = application->Addr();
     LOG(INFO) << "Connecting to new Oak Application id=" << application_id << "at " << addr;
