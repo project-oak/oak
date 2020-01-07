@@ -35,7 +35,9 @@ pub fn main(in_handle: u64) -> i32 {
     let mut rsp_writers: Vec<oak::grpc::ChannelResponseWriter> = Vec::with_capacity(1);
     loop {
         // Wait for something on our single input channel.
-        let in_channel = oak::ReadHandle { handle: in_handle };
+        let in_channel = oak::ReadHandle {
+            handle: oak::Handle::from_raw(in_handle),
+        };
         let ready_status = match oak::wait_on_channels(&[in_channel]) {
             Ok(ready_status) => ready_status,
             Err(err) => {
@@ -58,7 +60,7 @@ pub fn main(in_handle: u64) -> i32 {
             return status.value();
         }
         for handle in handles {
-            info!("add handle {} to output writers", handle);
+            info!("add handle {:?} to output writers", handle);
             rsp_writers.push(oak::grpc::ChannelResponseWriter::new(oak::WriteHandle {
                 handle,
             }));

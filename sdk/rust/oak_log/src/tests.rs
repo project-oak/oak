@@ -83,6 +83,10 @@ fn test_log() {
         .module_path(Some("server"))
         .build();
     logger.log(&r1);
+
+    // TODO: let mut buf: Vec<u8>;
+    // let mut handles: Vec<Handle>;
+    // pub fn channel_read(half: ReadHandle, buf: &mut Vec<u8>, handles: &mut Vec<Handle>) -> OakStatus {
     assert_eq!("", last_message_as_string(handle));
 
     let error = Metadata::builder()

@@ -29,6 +29,8 @@ use std::sync::{Arc, RwLock};
 
 pub mod proto;
 
+pub type Handle = u64;
+
 pub struct OakMessage {
     pub data: Vec<u8>,
     pub channels: Vec<ChannelHalf>,
@@ -199,7 +201,7 @@ pub struct OakRuntime {
 }
 
 struct OakNode {
-    halves: HashMap<oak::Handle, ChannelHalf>,
+    halves: HashMap<Handle, ChannelHalf>,
     // Handle for a thread running the main loop for this node.
     thread_handle: Option<std::thread::JoinHandle<i32>>,
 }
@@ -208,7 +210,7 @@ struct OakNode {
 pub struct NodeStartInfo {
     pub entrypoint: NodeMain,
     pub node_name: String,
-    pub handle: oak::Handle,
+    pub handle: Handle,
 }
 
 impl OakRuntime {
@@ -252,7 +254,7 @@ impl OakRuntime {
         &mut self,
         config: proto::manager::ApplicationConfiguration,
         entrypoints: HashMap<String, NodeMain>,
-    ) -> Option<(String, NodeMain, oak::Handle)> {
+    ) -> Option<(String, NodeMain, Handle)> {
         self.set_termination_pending(false);
         self.nodes.clear();
         self.entrypoints = entrypoints;
@@ -325,11 +327,7 @@ impl OakRuntime {
             ChannelHalf::new(Direction::Read, channel),
         )
     }
-    pub fn node_half_for_handle(
-        &self,
-        node_name: &str,
-        handle: oak::Handle,
-    ) -> Option<ChannelHalf> {
+    pub fn node_half_for_handle(&self, node_name: &str, handle: Handle) -> Option<ChannelHalf> {
         let node = self.nodes.get(node_name)?;
         let half = node.halves.get(&handle)?;
         Some(half.clone())
@@ -337,7 +335,7 @@ impl OakRuntime {
     fn node_half_for_handle_dir(
         &self,
         node_name: &str,
-        handle: oak::Handle,
+        handle: Handle,
         dir: Direction,
     ) -> Option<ChannelHalf> {
         let half = self.node_half_for_handle(node_name, handle)?;
@@ -346,13 +344,13 @@ impl OakRuntime {
         }
         Some(half)
     }
-    pub fn node_add_half(&mut self, node_name: &str, half: ChannelHalf) -> oak::Handle {
+    pub fn node_add_half(&mut self, node_name: &str, half: ChannelHalf) -> Handle {
         self.nodes
             .get_mut(node_name)
             .unwrap_or_else(|| panic!("node {{{}}} not found", node_name))
             .add_half(half)
     }
-    pub fn node_channel_create(&mut self, node_name: &str) -> (oak::Handle, oak::Handle) {
+    pub fn node_channel_create(&mut self, node_name: &str) -> (Handle, Handle) {
         let (write_half, read_half) = self.new_channel();
         let node = self
             .nodes
@@ -360,19 +358,14 @@ impl OakRuntime {
             .unwrap_or_else(|| panic!("node {{{}}} not found", node_name));
         (node.add_half(write_half), node.add_half(read_half))
     }
-    pub fn node_channel_close(&mut self, node_name: &str, handle: oak::Handle) -> u32 {
+    pub fn node_channel_close(&mut self, node_name: &str, handle: Handle) -> u32 {
         let node = self
             .nodes
             .get_mut(node_name)
             .unwrap_or_else(|| panic!("node {{{}}} not found", node_name));
         node.close_channel(handle)
     }
-    pub fn node_channel_write(
-        &mut self,
-        node_name: &str,
-        handle: oak::Handle,
-        msg: OakMessage,
-    ) -> u32 {
+    pub fn node_channel_write(&mut self, node_name: &str, handle: Handle, msg: OakMessage) -> u32 {
         match self.node_half_for_handle_dir(node_name, handle, Direction::Write) {
             None => oak::OakStatus::ERR_BAD_HANDLE.value() as u32,
             Some(half) => half
@@ -385,7 +378,7 @@ impl OakRuntime {
     pub fn node_channel_read(
         &mut self,
         node_name: &str,
-        handle: oak::Handle,
+        handle: Handle,
         size: usize,
         actual_size: &mut u32,
         handle_count: u32,
@@ -400,11 +393,7 @@ impl OakRuntime {
                 .read_message(size, actual_size, handle_count, actual_handle_count),
         }
     }
-    pub fn node_channel_status(
-        &self,
-        node_name: &str,
-        handle: oak::Handle,
-    ) -> oak::ChannelReadStatus {
+    pub fn node_channel_status(&self, node_name: &str, handle: Handle) -> oak::ChannelReadStatus {
         match self.node_half_for_handle_dir(node_name, handle, Direction::Read) {
             None => oak::ChannelReadStatus::INVALID_CHANNEL,
             Some(half) => {
@@ -419,7 +408,7 @@ impl OakRuntime {
             }
         }
     }
-    pub fn grpc_channel_setup(&mut self, node_name: &str) -> oak::Handle {
+    pub fn grpc_channel_setup(&mut self, node_name: &str) -> Handle {
         let (write_half, read_half) = self.new_channel();
         let node = self
             .nodes
@@ -443,7 +432,7 @@ impl OakRuntime {
         &mut self,
         node_name: String,
         config: &str,
-        handle: oak::Handle,
+        handle: Handle,
     ) -> Result<NodeStartInfo, OakStatus> {
         // First, find the code referred to by the config name.
         let entrypoint = match self.entrypoint(&config) {
@@ -491,7 +480,7 @@ impl OakRuntime {
     }
     // Internal helper to return a copy of the (data part of the) first message
     // available for reading.
-    pub fn node_peek_message(&self, node_name: &str, handle: oak::Handle) -> Option<Vec<u8>> {
+    pub fn node_peek_message(&self, node_name: &str, handle: Handle) -> Option<Vec<u8>> {
         let node = self
             .nodes
             .get(node_name)
@@ -512,12 +501,7 @@ impl OakRuntime {
         }
     }
     // Internal helper to set the (test-only) read status for a channel.
-    pub fn node_set_read_status(
-        &mut self,
-        node_name: &str,
-        handle: oak::Handle,
-        status: Option<u32>,
-    ) {
+    pub fn node_set_read_status(&mut self, node_name: &str, handle: Handle, status: Option<u32>) {
         let node = self
             .nodes
             .get(node_name)
@@ -532,12 +516,7 @@ impl OakRuntime {
             .read_status = status;
     }
     // Internal helper to set the (test-only) write status for a channel.
-    pub fn node_set_write_status(
-        &mut self,
-        node_name: &str,
-        handle: oak::Handle,
-        status: Option<u32>,
-    ) {
+    pub fn node_set_write_status(&mut self, node_name: &str, handle: Handle, status: Option<u32>) {
         let node = self
             .nodes
             .get(node_name)
@@ -560,11 +539,11 @@ impl OakNode {
             thread_handle: None,
         }
     }
-    fn next_handle(&self) -> oak::Handle {
+    fn next_handle(&self) -> Handle {
         let mut rng = rand::thread_rng();
         loop {
             // Keep picking random Handle values until we find an unused (and valid) value.
-            let handle = rng.gen::<oak::Handle>();
+            let handle = rng.gen::<Handle>();
             if handle == oak::wasm::INVALID_HANDLE {
                 continue;
             }
@@ -573,12 +552,12 @@ impl OakNode {
             }
         }
     }
-    fn add_half(&mut self, half: ChannelHalf) -> oak::Handle {
+    fn add_half(&mut self, half: ChannelHalf) -> Handle {
         let handle = self.next_handle();
         self.halves.insert(handle, half);
         handle
     }
-    fn close_channel(&mut self, handle: oak::Handle) -> u32 {
+    fn close_channel(&mut self, handle: Handle) -> u32 {
         if !self.halves.contains_key(&handle) {
             return OakStatus::ERR_BAD_HANDLE.value() as u32;
         }
@@ -595,7 +574,9 @@ pub fn log_node_main(handle: u64) -> i32 {
     if handle == oak::wasm::INVALID_HANDLE {
         return OakStatus::ERR_BAD_HANDLE.value();
     }
-    let half = oak::ReadHandle { handle };
+    let half = oak::ReadHandle {
+        handle: oak::Handle::from_raw(handle),
+    };
     loop {
         if let Err(status) = oak::wait_on_channels(&[half]) {
             return status.value();

@@ -37,7 +37,18 @@ use serial_test_derive::serial;
 /// Handle used to identify read or write channel halves.
 ///
 /// These handles are used for all host function calls.
-pub type Handle = u64;
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub struct Handle {
+    id: u64,
+}
+
+impl Handle {
+    /// When using the Oak SDK, this method should not need to be called directly
+    /// as `Handles` are directly provided via functions such as `channel_create`
+    pub fn from_raw(id: u64) -> Handle {
+        Handle { id: id }
+    }
+}
 
 /// Wrapper for a handle to the read half of a channel.
 ///
@@ -61,7 +72,7 @@ fn new_handle_space(handles: &[ReadHandle]) -> Vec<u8> {
     let mut space = Vec::with_capacity(wasm::SPACE_BYTES_PER_HANDLE * handles.len());
     for handle in handles {
         space
-            .write_u64::<byteorder::LittleEndian>(handle.handle)
+            .write_u64::<byteorder::LittleEndian>(handle.handle.id)
             .unwrap();
         space.push(0x00);
     }
@@ -121,7 +132,7 @@ pub fn channel_read(half: ReadHandle, buf: &mut Vec<u8>, handles: &mut Vec<Handl
         let mut actual_handle_count: u32 = 0;
         let status = OakStatus::from_i32(unsafe {
             wasm::channel_read(
-                half.handle,
+                half.handle.id,
                 buf.as_mut_ptr(),
                 buf.capacity(),
                 &mut actual_size,
@@ -174,7 +185,7 @@ pub fn channel_read(half: ReadHandle, buf: &mut Vec<u8>, handles: &mut Vec<Handl
 pub fn channel_write(half: WriteHandle, buf: &[u8], handles: &[Handle]) -> OakStatus {
     match OakStatus::from_i32(unsafe {
         wasm::channel_write(
-            half.handle,
+            half.handle.id,
             buf.as_ptr(),
             buf.len(),
             handles.as_ptr() as *const u8, // Wasm spec defines this as little-endian
@@ -191,10 +202,17 @@ pub fn channel_write(half: WriteHandle, buf: &[u8], handles: &[Handle]) -> OakSt
 /// On success, returns [`WriteHandle`] and a [`ReadHandle`] values for the
 /// write and read halves (respectively).
 pub fn channel_create() -> Result<(WriteHandle, ReadHandle), OakStatus> {
-    let mut write = WriteHandle { handle: 0 };
-    let mut read = ReadHandle { handle: 0 };
+    let mut write = WriteHandle {
+        handle: Handle { id: 0 },
+    };
+    let mut read = ReadHandle {
+        handle: Handle { id: 0 },
+    };
     match OakStatus::from_i32(unsafe {
-        wasm::channel_create(&mut write.handle as *mut u64, &mut read.handle as *mut u64) as i32
+        wasm::channel_create(
+            &mut write.handle.id as *mut u64,
+            &mut read.handle.id as *mut u64,
+        ) as i32
     }) {
         Some(OakStatus::OK) => Ok((write, read)),
         Some(err) => Err(err),
@@ -204,7 +222,7 @@ pub fn channel_create() -> Result<(WriteHandle, ReadHandle), OakStatus> {
 
 /// Close the specified channel [`Handle`].
 pub fn channel_close(handle: Handle) -> OakStatus {
-    match OakStatus::from_i32(unsafe { wasm::channel_close(handle) as i32 }) {
+    match OakStatus::from_i32(unsafe { wasm::channel_close(handle.id) as i32 }) {
         Some(s) => s,
         None => OakStatus::OAK_STATUS_UNSPECIFIED,
     }
@@ -214,7 +232,7 @@ pub fn channel_close(handle: Handle) -> OakStatus {
 /// passing it the given handle.
 pub fn node_create(config_name: &str, half: ReadHandle) -> OakStatus {
     match OakStatus::from_i32(unsafe {
-        wasm::node_create(config_name.as_ptr(), config_name.len(), half.handle) as i32
+        wasm::node_create(config_name.as_ptr(), config_name.len(), half.handle.id) as i32
     }) {
         Some(s) => s,
         None => OakStatus::OAK_STATUS_UNSPECIFIED,
