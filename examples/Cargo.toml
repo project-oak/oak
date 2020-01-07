@@ -2,8 +2,8 @@
 
 members = [
     "abitest/abitest_common",
-    "abitest/module/rust",
-    "abitest/module2/rust",
+    "abitest/module_0/rust",
+    "abitest/module_1/rust",
     "abitest/tests",
     "chat/common",
     "chat/module_0/rust",

@@ -517,8 +517,8 @@ fn test_abi() {
     // (A subsequent attempt to use the oak_log crate will fail.)
     oak_tests::init_logging();
     let mut entrypoints = HashMap::new();
-    let fe: oak_tests::NodeMain = abitest_frontend::main;
-    let be: oak_tests::NodeMain = abitest_backend::main;
+    let fe: oak_tests::NodeMain = abitest_0_frontend::main;
+    let be: oak_tests::NodeMain = abitest_1_backend::main;
     entrypoints.insert(FRONTEND_CONFIG_NAME.to_string(), fe);
     entrypoints.insert(BACKEND_CONFIG_NAME.to_string(), be);
     assert_eq!(Some(()), oak_tests::start(test_config(), entrypoints));
@@ -532,7 +532,7 @@ Instead, we need a little bit of boilerplate in the source code for each of the
 Nodes to allow testability:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/abitest/module/rust/src/lib.rs Rust /^#.*wasm32.*/ /pub fn main().*/)
+[embedmd]:# (../examples/abitest/module_0/rust/src/lib.rs Rust /^#.*wasm32.*/ /pub fn main().*/)
 ```Rust
 #[cfg(target_arch = "wasm32")]
 #[no_mangle]
