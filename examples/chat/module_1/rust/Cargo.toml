@@ -1,5 +1,5 @@
 [package]
-name = "chat"
+name = "chat_1_backend"
 version = "0.1.0"
 authors = ["David Drysdale <drysdale@google.com>"]
 edition = "2018"
@@ -11,8 +11,5 @@ crate-type = ["cdylib"]
 chat_common = { path = "../../common" }
 log = "*"
 oak = "*"
-oak_derive = "*"
 oak_log = "*"
 protobuf = "*"
-rand_core = "0.5"
-rand = "0.7"
