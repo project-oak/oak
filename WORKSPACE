@@ -303,5 +303,5 @@ http_archive(
     name = "roughtime",
     build_file = "@//third_party/roughtime:roughtime.BUILD",
     #sha256 = "47c99712b4b34a6713ea7ecfec6860e6b88ba046df206386346de4c3409fe6dd",
-    url = "https://roughtime.googlesource.com/roughtime/+archive/51f6971f5f06ec101e5fbcabe5a49477708540f3.tar.gz"
+    url = "https://roughtime.googlesource.com/roughtime/+archive/51f6971f5f06ec101e5fbcabe5a49477708540f3.tar.gz",
 )

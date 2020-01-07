@@ -23,12 +23,12 @@ package(
 
 cc_library(
     name = "roughtime_client",
-    hdrs = ["roughtime_client.h"],
     srcs = ["roughtime_client.cc"],
+    hdrs = ["roughtime_client.h"],
     deps = [
         "//oak/common:nonce_generator",
-        "@roughtime//:client",
         "@com_google_asylo//asylo/util:status",
+        "@roughtime//:client",
     ],
 )
 
