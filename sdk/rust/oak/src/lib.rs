@@ -90,9 +90,9 @@ impl Handle {
 ///
 /// For use when the underlying [`Handle`] is known to be for a receive half.
 ///
-/// TODO: This type should not be trivially (de-)serializable, but we make it derive those traits so
-/// that we can use `serde` for most of the serialization, and then manually patch the appropriate
-/// handle values.
+/// TODO(#427): This type should not be trivially (de-)serializable, but we make it derive those
+/// traits so that we can use `serde` for most of the serialization, and then manually patch the
+/// appropriate handle values.
 #[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ReadHandle {
     pub handle: Handle,
@@ -102,9 +102,9 @@ pub struct ReadHandle {
 ///
 /// For use when the underlying [`Handle`] is known to be for a send half.
 ///
-/// TODO: This type should not be trivially (de-)serializable, but we make it derive those traits so
-/// that we can use `serde` for most of the serialization, and then manually patch the appropriate
-/// handle values.
+/// TODO(#427): This type should not be trivially (de-)serializable, but we make it derive those
+/// traits so that we can use `serde` for most of the serialization, and then manually patch the
+/// appropriate handle values.
 #[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WriteHandle {
     pub handle: Handle,
