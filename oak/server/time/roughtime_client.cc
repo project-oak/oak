@@ -187,6 +187,7 @@ StatusOr<RoughtimeInterval> GetIntervalFromServer(const RoughtimeServerSpec& ser
                                   server.name.c_str(), timestamp));
   }
 
+  LOG(INFO) << "Time from " << server.name << ": " << timestamp << " +/- " << radius;
   return RoughtimeInterval{(timestamp - radius), (timestamp + radius)};
 }
 
@@ -195,7 +196,7 @@ StatusOr<RoughtimeInterval> FindOverlap(const std::vector<RoughtimeInterval>& in
   for (auto interval : intervals) {
     int count = 0;
     roughtime::rough_time_t min = 0;
-    roughtime::rough_time_t max = 0xFFFFFFFFFFFFFFFF;
+    roughtime::rough_time_t max = UINT64_MAX;
     roughtime::rough_time_t point = interval.min;
     for (auto test : intervals) {
       if (point >= test.min && point <= test.max) {
