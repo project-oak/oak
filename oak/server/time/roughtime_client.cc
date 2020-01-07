@@ -64,10 +64,10 @@ const std::vector<RoughtimeServerSpec> servers{{"Google", "roughtime.sandbox.goo
 // The minimum number of overlapping intervals we need to trust the time.
 constexpr int kMinOverlappingTimeIntervals = 2;
 
-// Number of seconds that we will wait for a reply from the server.
+// Number of seconds that we will wait for a reply from each server.
 constexpr int kTimeoutSeconds = 3;
 
-// Number of times we will retry connecting to the server.
+// Number of times we will retry connecting to each server.
 constexpr int kServerRetries = 3;
 
 // The size of the receive buffer.
@@ -76,7 +76,7 @@ constexpr int kServerRetries = 3;
 constexpr size_t kReceiveBufferSize = roughtime::kMinRequestSize;
 
 // Maximum radius accepted for a roughtime response (1 minute in microseconds).
-constexpr uint32_t kMaxRadius = 60000000;
+constexpr uint32_t kMaxRadiusMicroseconds = 60000000;
 
 // Creates a UDP socket connected to the host and port.
 StatusOr<int> CreateSocket(const std::string& host, const std::string& port) {
@@ -157,8 +157,8 @@ StatusOr<RoughtimeInterval> GetIntervalFromServer(const RoughtimeServerSpec& ser
   std::string response;
   Nonce<roughtime::kNonceLength> nonce = generator.NextNonce();
   ASYLO_ASSIGN_OR_RETURN(response, SendRequest(server, nonce));
-  roughtime::rough_time_t timestamp;
-  uint32_t radius;
+  roughtime::rough_time_t timestamp_microseconds;
+  uint32_t radius_microseconds;
   std::string error;
   std::string public_key;
   if (!absl::Base64Unescape(server.public_key_base64, &public_key)) {
@@ -167,28 +167,31 @@ StatusOr<RoughtimeInterval> GetIntervalFromServer(const RoughtimeServerSpec& ser
                                   server.name.c_str()));
   }
 
-  if (!roughtime::ParseResponse(
-          &timestamp, &radius, &error, reinterpret_cast<const uint8_t*>(public_key.data()),
-          reinterpret_cast<const uint8_t*>(response.data()), response.size(), nonce.data())) {
+  if (!roughtime::ParseResponse(&timestamp_microseconds, &radius_microseconds, &error,
+                                reinterpret_cast<const uint8_t*>(public_key.data()),
+                                reinterpret_cast<const uint8_t*>(response.data()), response.size(),
+                                nonce.data())) {
     return Status(asylo::error::GoogleError::INTERNAL,
-                  absl::StrFormat("Response from %s failed verification: %s", server.name.c_str(),
+                  absl::StrFormat("Response from %s could not be parsed: %s", server.name.c_str(),
                                   error.c_str()));
   }
 
-  if (radius > kMaxRadius) {
-    return Status(
-        asylo::error::GoogleError::INTERNAL,
-        absl::StrFormat("Radius from %s is too large: %" PRIu32 "", server.name.c_str(), radius));
+  if (radius_microseconds > kMaxRadiusMicroseconds) {
+    return Status(asylo::error::GoogleError::INTERNAL,
+                  absl::StrFormat("Radius from %s is too large: %" PRIu32 "", server.name.c_str(),
+                                  radius_microseconds));
   }
 
-  if (radius > timestamp) {
+  if (radius_microseconds > timestamp_microseconds) {
     return Status(asylo::error::GoogleError::INTERNAL,
                   absl::StrFormat("Timestamp from %s is too small: %" PRIu64 "",
-                                  server.name.c_str(), timestamp));
+                                  server.name.c_str(), timestamp_microseconds));
   }
 
-  LOG(INFO) << "Time from " << server.name << ": " << timestamp << " +/- " << radius;
-  return RoughtimeInterval{(timestamp - radius), (timestamp + radius)};
+  LOG(INFO) << "Time from " << server.name << ": " << timestamp_microseconds << " +/- "
+            << radius_microseconds;
+  return RoughtimeInterval{(timestamp_microseconds - radius_microseconds),
+                           (timestamp_microseconds + radius_microseconds)};
 }
 
 StatusOr<RoughtimeInterval> FindOverlap(const std::vector<RoughtimeInterval>& intervals,

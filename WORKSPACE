@@ -17,7 +17,7 @@
 workspace(name = "oak")
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository", "new_git_repository")
 
 # Docker rules should be loaded in the beginning of the WORKSPACE file
 # to avoid diamond dependencies:
@@ -299,9 +299,10 @@ http_archive(
 )
 
 # Roughtime
-http_archive(
+new_git_repository(
     name = "roughtime",
-    build_file = "@//third_party/roughtime:roughtime.BUILD",
-    #sha256 = "47c99712b4b34a6713ea7ecfec6860e6b88ba046df206386346de4c3409fe6dd",
-    url = "https://roughtime.googlesource.com/roughtime/+archive/51f6971f5f06ec101e5fbcabe5a49477708540f3.tar.gz",
+    build_file = "//third_party/roughtime:roughtime.BUILD",
+    commit = "51f6971f5f06ec101e5fbcabe5a49477708540f3",
+    remote = "https://roughtime.googlesource.com/roughtime",
+    shallow_since = "1555608176 +0000",
 )
