@@ -24,19 +24,19 @@ package(
 )
 
 proto_library(
-    name = "hello_world_proto",
-    srcs = ["hello_world.proto"],
+    name = "tensorflow_proto",
+    srcs = ["tensorflow.proto"],
 )
 
 cc_proto_library(
-    name = "hello_world_cc_proto",
-    deps = [":hello_world_proto"],
+    name = "tensorflow_cc_proto",
+    deps = [":tensorflow_proto"],
 )
 
 cc_grpc_library(
-    name = "hello_world_cc_grpc",
-    srcs = ["hello_world_proto"],
+    name = "tensorflow_cc_grpc",
+    srcs = ["tensorflow_proto"],
     grpc_only = True,
     well_known_protos = True,
-    deps = ["hello_world_cc_proto"],
+    deps = ["tensorflow_cc_proto"],
 )

@@ -33,9 +33,9 @@ ABSL_FLAG(std::string, storage_address, "127.0.0.1:7867",
           "Address ot the storage provider to connect to");
 ABSL_FLAG(std::string, module, "", "File containing the compiled WebAssembly module");
 
-using ::oak::examples::Tensorflow::InitRequest;
-using ::oak::examples::Tensorflow::InitResponse;
-using ::oak::examples::Tensorflow::Tensorflow;
+using ::oak::examples::tensorflow::InitRequest;
+using ::oak::examples::tensorflow::InitResponse;
+using ::oak::examples::tensorflow::Tensorflow;
 
 void init_tensorflow(Tensorflow::Stub* stub) {
   grpc::ClientContext context;

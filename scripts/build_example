@@ -41,9 +41,12 @@ else
     TARGET="$NAME"
 fi
 
-for module in examples/"$TARGET"/module*/rust/Cargo.toml; do
-  cargo build --release --target=wasm32-unknown-unknown --manifest-path="$module"
-done
+readonly RUST_FOLDER="$(find examples/"$TARGET" -type d -name rust)"
+if [[ -n "$RUST_FOLDER" ]]; then
+    for module in examples/"$TARGET"/module*/rust/Cargo.toml; do
+    cargo build --release --target=wasm32-unknown-unknown --manifest-path="$module"
+    done
+fi
 
 bazel_build_flags+=(
     '--symlink_prefix=bazel-client-'
@@ -57,5 +60,5 @@ bazel --output_base="$CACHE_DIR/client" build "${bazel_build_flags[@]}" "//examp
 readonly CPP_FOLDER="$(find examples/"$TARGET" -type d -name cpp)"
 if [[ -n "$CPP_FOLDER" ]]; then
     # TODO: support compilation mode wasm.
-    bazel build --config=wasm32 "//examples/$TARGET/module/cpp:all"
+    bazel build --config=emscripten "//examples/$TARGET/module/cpp:all"
 fi

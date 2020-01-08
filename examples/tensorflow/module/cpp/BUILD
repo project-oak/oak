@@ -33,7 +33,7 @@ cc_binary(
         # Emscripten options' documentation is in:
         # https://github.com/emscripten-core/emscripten/blob/1.39.5/src/settings.js
         "-s AUTO_ARCHIVE_INDEXES=0",  # Necessary to remove console spam.
-        "-s ALLOW_MEMORY_GROWTH=1",
+        #"-s ALLOW_MEMORY_GROWTH=1",
         #"-s DEFAULT_LIBRARY_FUNCS_TO_INCLUDE=[]",
         "-s DISABLE_EXCEPTION_CATCHING=1",
         "-s ERROR_ON_UNDEFINED_SYMBOLS=0",  # TODO: Delete this after everything is compiled.
