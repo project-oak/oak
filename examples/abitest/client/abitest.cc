@@ -34,7 +34,7 @@
 ABSL_FLAG(std::string, manager_address, "127.0.0.1:8888",
           "Address of the Oak Manager to connect to");
 ABSL_FLAG(std::vector<std::string>, module, std::vector<std::string>{},
-          "Files containing the compiled WebAssembly modules (as 'backend,frontend')");
+          "Files containing the compiled WebAssembly modules (as 'frontend,backend')");
 ABSL_FLAG(std::string, test_include, "", "Filter indicating which tests to include");
 ABSL_FLAG(std::string, test_exclude, "", "Filter indicating tests to exclude (if nonempty)");
 
@@ -83,8 +83,8 @@ int main(int argc, char** argv) {
   auto manager_stub = oak::Manager::NewStub(channel, grpc::StubOptions());
 
   // Load the Oak Modules to execute. This needs to be compiled from Rust to WebAssembly separately.
-  std::string backend_module_bytes = oak::utils::read_file(modules[0]);
-  std::string frontend_module_bytes = oak::utils::read_file(modules[1]);
+  std::string frontend_module_bytes = oak::utils::read_file(modules[0]);
+  std::string backend_module_bytes = oak::utils::read_file(modules[1]);
 
   // Build an application configuration with two Wasm nodes.
   auto config = absl::make_unique<oak::ApplicationConfiguration>();
