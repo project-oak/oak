@@ -1,0 +1,120 @@
+{
+  "version": "0.0.1",
+  "name": "abitest",
+  "library_dependencies": [],
+  "bits_declarations": [],
+  "const_declarations": [
+    {
+      "name": "abitest/LOG_CONFIG_NAME",
+      "location": {
+        "filename": "../fidl/abitest.fidl",
+        "line": 7,
+        "column": 14
+      },
+      "type": {
+        "kind": "string",
+        "nullable": false
+      },
+      "value": {
+        "kind": "literal",
+        "literal": {
+          "kind": "string",
+          "value": "logging-config",
+          "expression": "\"logging-config\""
+        }
+      }
+    }
+  ],
+  "enum_declarations": [],
+  "interface_declarations": [],
+  "service_declarations": [],
+  "struct_declarations": [
+    {
+      "name": "abitest/InternalMessage",
+      "location": {
+        "filename": "../fidl/abitest.fidl",
+        "line": 3,
+        "column": 8
+      },
+      "anonymous": false,
+      "members": [
+        {
+          "type": {
+            "kind": "string",
+            "nullable": false
+          },
+          "name": "msg",
+          "location": {
+            "filename": "../fidl/abitest.fidl",
+            "line": 4,
+            "column": 12
+          },
+          "size": 16,
+          "max_out_of_line": 4294967295,
+          "alignment": 8,
+          "offset": 0,
+          "max_handles": 0,
+          "field_shape_old": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v1_no_ee": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "size": 16,
+      "max_out_of_line": 4294967295,
+      "alignment": 8,
+      "max_handles": 0,
+      "has_padding": true,
+      "type_shape_old": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      },
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      }
+    }
+  ],
+  "table_declarations": [],
+  "union_declarations": [],
+  "xunion_declarations": [],
+  "type_alias_declarations": [],
+  "declaration_order": [
+    "abitest/LOG_CONFIG_NAME",
+    "abitest/InternalMessage"
+  ],
+  "declarations": {
+    "abitest/LOG_CONFIG_NAME": "const",
+    "abitest/InternalMessage": "struct"
+  }
+}

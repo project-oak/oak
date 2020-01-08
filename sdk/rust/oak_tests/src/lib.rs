@@ -16,6 +16,8 @@
 
 //! Test utilities to help with unit testing of Oak SDK code.
 
+#![allow(clippy::missing_safety_doc)]
+
 use lazy_static::lazy_static;
 use log::{debug, info, warn};
 

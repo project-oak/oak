@@ -14,12 +14,4 @@
 // limitations under the License.
 //
 
-use serde::{Deserialize, Serialize};
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct InternalMessage {
-    pub msg: String,
-}
-
-// Expected name for log node config.
-pub const LOG_CONFIG_NAME: &str = "logging-config";
+pub mod fidl;

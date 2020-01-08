@@ -1,0 +1,92 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/fidl/wireformat.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_library("fidl") {
+  with_unit_tests = true
+  edition = "2018"
+  deps = [
+    "//src/lib/zircon/rust:fuchsia-zircon-status",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:bitflags",
+    "//third_party/rust_crates:byteorder",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:slab",
+    "//third_party/rust_crates:thiserror",
+  ]
+  if (is_fuchsia) {
+    deps += [
+      "//src/lib/fuchsia-async",
+      "//src/lib/syslog/rust:syslog",
+      "//src/lib/zircon/rust:fuchsia-zircon",
+    ]
+  } else {
+    deps += [
+      "//third_party/rust_crates:lazy_static",
+      "//third_party/rust_crates:slab",
+    ]
+  }
+  test_deps = [
+    "//src/lib/test_util",
+    "//third_party/rust_crates:futures-test",
+    "//third_party/rust_crates:matches",
+  ]
+  if (fidl_write_v1_wireformat) {
+    features = [ "fidl_write_v1" ]
+  }
+}
+
+# not actually used-- just to ensure successful compilation
+fidl("fidl.rust.test.compilation") {
+  sources = [
+    "compilation.test.fidl",
+  ]
+}
+
+# not actually used-- just to ensure successful compilation
+# tests we can compose protocols from another FIDL crate
+fidl("fidl.rust.test.compilation.compose") {
+  sources = [
+    "compilation_compose.test.fidl",
+  ]
+
+  public_deps = [
+    ":fidl.rust.test.compilation",
+  ]
+}
+
+test_package("rust_fidl_tests") {
+  deps = [
+    ":fidl.rust.test.compilation-rustc",
+    ":fidl.rust.test.compilation-rustc($host_toolchain)",
+    ":fidl_test",
+    "//garnet/public/lib/fidl/rust/fidl_tests:fidl_external_tests",
+  ]
+  tests = [
+    {
+      name = "fidl_lib_test"
+      dest = "fidl_tests"
+      environments = basic_envs
+    },
+    {
+      name = "fidl_external_tests"
+      dest = "fidl_external_tests"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":fidl_test($host_toolchain)",
+    ":rust_fidl_tests",
+  ]
+}

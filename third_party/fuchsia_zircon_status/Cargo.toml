@@ -1,0 +1,9 @@
+[package]
+name = "fuchsia_zircon_status"
+version = "0.1.0"
+authors = ["Tiziano Santoro <tzn@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+fuchsia-zircon-sys = {path = "../fuchsia-zircon-sys"}

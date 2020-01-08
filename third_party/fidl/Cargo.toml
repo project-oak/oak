@@ -1,0 +1,17 @@
+[package]
+name = "fidl"
+version = "0.1.0"
+authors = ["Tiziano Santoro <tzn@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = "*"
+bitflags = "*"
+byteorder = "*"
+futures = "*"
+parking_lot = "*"
+slab = "*"
+thiserror = "*"
+lazy_static = "*"
+fuchsia_zircon_status = {path = "../../third_party/fuchsia_zircon_status"}

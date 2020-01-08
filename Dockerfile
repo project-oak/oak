@@ -60,7 +60,8 @@ RUN chmod a+rwx ${RUSTUP_DIR}
 
 # Install Rust toolchain.
 # We currently need the nightly version in order to be able to compile some of the examples.
-ARG RUST_VERSION=nightly-2019-07-18
+# See https://rust-lang.github.io/rustup-components-history/.
+ARG RUST_VERSION=nightly-2020-01-08
 RUN rustup toolchain install ${RUST_VERSION}
 RUN rustup default ${RUST_VERSION}
 
@@ -87,3 +88,13 @@ RUN sha256sum --binary ${GOLANG_TEMP} && echo "${GOLANG_SHA256} *${GOLANG_TEMP}"
 RUN tar --extract --gzip --file=${GOLANG_TEMP} --directory=${GOROOT} --strip-components=1
 RUN rm ${GOLANG_TEMP}
 RUN ${GOROOT}/bin/go get github.com/campoy/embedmd
+
+# Install Fuchsia SDK (for FIDL).
+ARG FUCHSIA_SDK_SHA256=8c634d1f58e4e8f3defd03795f603fc63f924f217b0f00960ea8cffa8f1c7d97
+ARG FUCHSIA_SDK_DIR=/usr/local/fuchsia-sdk
+ARG FUCHSIA_SDK_TEMP=/tmp/fuchsia-sdk.zip
+RUN curl --location 'https://storage.googleapis.com/chrome-infra-packages/store/SHA256/8c634d1f58e4e8f3defd03795f603fc63f924f217b0f00960ea8cffa8f1c7d97?Expires=1578526201&GoogleAccessId=chrome-infra-packages%40appspot.gserviceaccount.com&Signature=pMKZbcOfLvgetXGoxfZwX%2Fp%2F%2FVj2Ec%2F%2F%2BenohLEyZOZq56cdlSpebC2vThgYkgRlUYWqrOKRE3dDWmtQXMuDXh1uP8eB8gRkjge61wrfXqRVDBgFzFyNVs75Mz3rwnEwbQJ0cnye59PsV4vf28S%2FlSkg96KdX5MVi0lXWHbbujyE1nTGDrZoyDqg3Bu1FIHwsrpYwqPUZOtsB%2BRfqy8OZnzAUUjTDgn8Ot3LlLU0UzMsFzoMSo1lLjTadPOVQJgjeV6RCNIP4aOhueloDy3bX1TkLXHgCKQjxp3yT5op3pcFN1oSjoX2D75ZB%2BLxTpKCr2Zpk%2BHvudcpMpUgPaW5fQ%3D%3D&response-content-disposition=attachment%3B+filename%3D%22core-linux-amd64.zip%22' > ${FUCHSIA_SDK_TEMP}
+RUN sha256sum --binary ${FUCHSIA_SDK_TEMP} && echo "${FUCHSIA_SDK_SHA256} *${FUCHSIA_SDK_TEMP}" | sha256sum --check
+RUN unzip ${FUCHSIA_SDK_TEMP} -d ${FUCHSIA_SDK_DIR}
+RUN chmod --recursive a+rwx ${FUCHSIA_SDK_DIR}/tools
+ENV PATH "${FUCHSIA_SDK_DIR}/tools:${PATH}"

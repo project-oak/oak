@@ -6,3 +6,5 @@ edition = "2018"
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
+fidl = {path = "../../../third_party/fidl"}
+fuchsia_zircon_status = {path = "../../../third_party/fuchsia_zircon_status"}

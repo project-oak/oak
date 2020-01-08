@@ -16,9 +16,10 @@
 
 pub mod proto;
 
-use abitest_common::{InternalMessage, LOG_CONFIG_NAME};
+use abitest_common::fidl::{InternalMessage, LOG_CONFIG_NAME};
 use byteorder::WriteBytesExt;
 use expect::{expect, expect_eq};
+use fidl::encoding::Decodable;
 use log::info;
 use oak::grpc::OakNode;
 use oak::{grpc, ChannelReadStatus, OakStatus};
@@ -901,17 +902,19 @@ impl FrontendNode {
         // request to one of the new channels that the backends just received
         // the read handles for.
         for new_write in write_handles.iter() {
-            let internal_req = InternalMessage {
+            let mut internal_req = InternalMessage {
                 msg: "aaa".to_string(),
             };
-            let serialized_req = serde_json::to_string(&internal_req)?;
+            let mut buf = Vec::<u8>::new();
+            let mut handles = Vec::<fidl::Handle>::new();
+            fidl::encoding::Encoder::encode(&mut buf, &mut handles, &mut internal_req);
 
             info!(
-                "send serialized message to new channel {}: {}",
-                new_write.handle, serialized_req
+                "send serialized message to new channel {}: {:?}",
+                new_write.handle, buf
             );
             let mut new_channel = oak::io::Channel::new(*new_write);
-            new_channel.write_all(&serialized_req.into_bytes())?;
+            new_channel.write_all(&buf)?;
             oak::channel_close(new_write.handle);
 
             // Block until there is a response from one of the backends
@@ -946,8 +949,13 @@ impl FrontendNode {
                 OakStatus::OK,
                 oak::channel_read(new_in_channel, &mut buffer, &mut vec![])
             );
-            let serialized_rsp = String::from_utf8(buffer).unwrap();
-            let internal_rsp: InternalMessage = serde_json::from_str(&serialized_rsp)?;
+            let mut internal_rsp = InternalMessage::new_empty();
+            fidl::encoding::Decoder::decode_into(
+                &fidl::encoding::TransactionHeader::new(0, 0),
+                &buffer,
+                &mut vec![],
+                &mut internal_rsp,
+            );
             expect_eq!("aaaxxx", internal_rsp.msg);
 
             // Drop the new read channel now we have got the response.

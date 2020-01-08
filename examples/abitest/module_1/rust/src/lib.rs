@@ -14,7 +14,8 @@
 // limitations under the License.
 //
 
-use abitest_common::{InternalMessage, LOG_CONFIG_NAME};
+use abitest_common::fidl::{InternalMessage, LOG_CONFIG_NAME};
+use fidl::encoding::Decodable;
 use log::info;
 use protobuf::ProtobufEnum;
 
@@ -85,21 +86,28 @@ pub fn main(in_handle: u64) -> i32 {
                 continue;
             }
 
-            let serialized_req = String::from_utf8(buf).unwrap();
-            let internal_req: InternalMessage = serde_json::from_str(&serialized_req).unwrap();
+            let mut internal_req = InternalMessage::new_empty();
+            fidl::encoding::Decoder::decode_into(
+                &fidl::encoding::TransactionHeader::new(0, 0),
+                &buf,
+                &mut vec![],
+                &mut internal_req,
+            );
             info!("received frontend request: {:?}", internal_req);
 
             // Create a new channel and write the response into it.
             let (new_write, new_read) = oak::channel_create().unwrap();
-            let internal_rsp = InternalMessage {
+            let mut internal_rsp = InternalMessage {
                 msg: internal_req.msg + "xxx",
             };
-            let serialized_rsp = serde_json::to_string(&internal_rsp).unwrap();
+            let mut buf = Vec::<u8>::new();
+            let mut handles = Vec::<fidl::Handle>::new();
+            fidl::encoding::Encoder::encode(&mut buf, &mut handles, &mut internal_rsp);
             info!(
-                "send serialized message to new channel {:?}: {}",
-                new_write, serialized_rsp
+                "send serialized message to new channel {:?}: {:?}",
+                new_write, buf
             );
-            oak::channel_write(new_write, &serialized_rsp.into_bytes(), &[]);
+            oak::channel_write(new_write, &buf, &[]);
             // Drop the write half now it has been written to.
             oak::channel_close(new_write.handle);
 

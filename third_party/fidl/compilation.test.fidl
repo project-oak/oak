@@ -1,0 +1,38 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fidl.rust.test.compilation;
+
+xunion TestXUnion {
+    1: bool variant;
+};
+
+enum ErrorReturn : uint32 {
+    OK = 0x00;
+    CHANGED = 0x0D;
+};
+
+[FragileBase]
+protocol TestInterface {
+  TestMethod(TestXUnion test_x_union) -> (TestXUnion test_x_union);
+  TestNullableXUnion(TestXUnion? test_x_union) -> (TestXUnion? test_x_union);
+  TestErrorMethod(uint16 arg) -> () error ErrorReturn;
+};
+
+struct HasBigArray {
+    array<uint8>:256 big_arr;
+};
+
+union HasStructWithBigArray {
+    1: HasBigArray variant;
+    2: uint8 variant2;
+};
+
+struct Result {
+    string ensure_that_type_named_result_compiles;
+};
+
+struct HasHostFidlHandleStubbing {
+    handle<debuglog> log;
+};

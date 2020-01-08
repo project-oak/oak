@@ -1,0 +1,7 @@
+library abitest;
+
+struct InternalMessage {
+    string msg;
+};
+
+const string LOG_CONFIG_NAME = "logging-config";

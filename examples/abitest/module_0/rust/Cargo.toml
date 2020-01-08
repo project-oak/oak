@@ -18,8 +18,7 @@ protobuf = "*"
 rand_core = "0.5"
 rand = "0.7"
 regex = "1"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+fidl = {path = "../../../../third_party/fidl"}
 
 [build-dependencies]
 protoc-rust-grpc = { path = "../../../../third_party/grpc-rust/protoc-rust-grpc" }
