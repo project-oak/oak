@@ -66,11 +66,11 @@ http_archive(
 # Asylo Framework.
 http_archive(
     name = "com_google_asylo",
-    sha256 = "7f53d61d91a8d6963a5665088b02129d643a4cfbcab883f1076b71bcbe07184d",
-    strip_prefix = "asylo-088ea3490dd4579655bd5b65b0e31fe18de7f6dd",
+    sha256 = "62eecfe6a8c649bad5c270fb3c297923021f55a66c26ae858865018ae17a1721",
+    strip_prefix = "asylo-ecf05ba8433a45ef21f37d33f21bcffec18cb310",
     urls = [
-        # Head commit on 2019-11-21.
-        "https://github.com/google/asylo/archive/088ea3490dd4579655bd5b65b0e31fe18de7f6dd.tar.gz",
+        # Head commit on 2019-12-17.
+        "https://github.com/google/asylo/archive/ecf05ba8433a45ef21f37d33f21bcffec18cb310.tar.gz",
     ],
 )
 
@@ -85,7 +85,7 @@ http_archive(
         # https://github.com/grpc/grpc/issues/21437
         "//third_party/google/rpc:Add-ares-android.patch",
     ],
-    sha256 = "ffbe61269160ea745e487f79b0fd06b6edd3d50c6d9123f053b5634737cf2f69",
+    #sha256 = "ffbe61269160ea745e487f79b0fd06b6edd3d50c6d9123f053b5634737cf2f69",
     strip_prefix = "grpc-1.25.0",
     urls = ["https://github.com/grpc/grpc/archive/v1.25.0.tar.gz"],
 )
@@ -138,6 +138,25 @@ http_archive(
     sha256 = "ba19948ebc4ea39358ba07fc0253f8927d7a2c9ba3462e8f34faad7ad5ac4142",
     strip_prefix = "gapic-generator-8e930b79e846b9d4876462be9dc4c1dbc04e2903",
     urls = ["https://github.com/googleapis/gapic-generator/archive/8e930b79e846b9d4876462be9dc4c1dbc04e2903.zip"],
+)
+
+
+http_archive(
+    name = "org_tensorflow",
+    sha256 = "8f0c227024fe2dffc691e71f4498c217f604d045079db254a300720db1eb4693",
+    strip_prefix = "tensorflow-2.1.0-rc2",
+    urls = ["https://github.com/tensorflow/tensorflow/archive/v2.1.0-rc2.tar.gz"],
+)
+
+# TensorFlow dependency.
+http_archive(
+    name = "io_bazel_rules_closure",
+    sha256 = "5b00383d08dd71f28503736db0500b6fb4dda47489ff5fc6bed42557c07c6ba9",
+    strip_prefix = "rules_closure-308b05b2419edb5c8ee0471b67a40403df940149",
+    urls = [
+        # Head commit on 2019-06-13
+        "https://github.com/bazelbuild/rules_closure/archive/308b05b2419edb5c8ee0471b67a40403df940149.tar.gz",
+    ],
 )
 
 # WebAssembly Binary Toolkit
@@ -288,6 +307,18 @@ load("@io_bazel_rules_go//go/private:compat/compat_repo.bzl", "go_rules_compat")
 go_rules_compat(
     name = "io_bazel_rules_go_compat",
 )
+
+load("//toolchain:emcc_toolchain_config.bzl", "emsdk_configure")
+
+emsdk_configure(name = "emsdk")
+
+load("@io_bazel_rules_closure//closure:defs.bzl", "closure_repositories")
+
+closure_repositories()
+
+load("@org_tensorflow//tensorflow:workspace.bzl", "tf_workspace")
+
+tf_workspace()
 
 # clang + llvm 8.0
 http_archive(

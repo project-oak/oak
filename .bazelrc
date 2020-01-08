@@ -36,6 +36,18 @@ build:clang --copt=-Wno-error=sign-compare
 # Use a different symlink prefix for clang-based artifacts.
 build:clang --symlink_prefix=bazel-clang-
 
+# Emscripten toolchain for WASM.
+build:emscripten --crosstool_top=//toolchain:emscripten
+build:emscripten --cpu=wasm
+build:emscripten --host_crosstool_top=@bazel_tools//tools/cpp:toolchain
+build:emscripten --cxxopt="-std=c++11"
+build:emscripten --cxxopt="-fno-rtti"
+build:emscripten --cxxopt="-fno-exceptions"
+build:emscripten --cxxopt="-fomit-frame-pointer"
+build:emscripten --cxxopt="-ffast-math"
+build:emscripten --copt="-ffast-math"
+build:emscripten --spawn_strategy=local
+
 # Address Sanitizer.
 # bazel build --config=asan
 build:asan --config=clang
