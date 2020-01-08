@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/fidl_external_tests"
+    }
+}

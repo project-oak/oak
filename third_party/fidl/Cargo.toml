@@ -1,0 +1,15 @@
+[package]
+name = "fidl"
+version = "0.0.1"
+edition = "2018"
+
+[dependencies]
+anyhow = "*"
+bitflags = "*"
+byteorder = "*"
+futures = "*"
+parking_lot = "*"
+slab = "*"
+thiserror = "*"
+lazy_static = "*"
+fuchsia_zircon_status = { path = "../../third_party/fuchsia-zircon-status" }

@@ -1,0 +1,19 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fidl.rust.test.compilation.compose;
+
+using fidl.rust.test.compilation;
+
+protocol TestComposeInterface {
+  compose fidl.rust.test.compilation.TestInterface;
+
+  TestNewMethod(fidl.rust.test.compilation.TestXUnion test_x_union)
+    -> (fidl.rust.test.compilation.TestXUnion test_x_union);
+};
+
+/// Same type name as the one we have a dep on.
+struct Result {
+  string ensure_that_type_named_result_compiles;
+};
