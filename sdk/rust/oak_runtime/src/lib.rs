@@ -78,6 +78,10 @@ impl MockChannel {
             // Channel is orphaned; no-one can ever read this message.
             return OakStatus::ERR_CHANNEL_CLOSED.value() as u32;
         }
+        if msg.data.is_empty() && msg.channels.is_empty() {
+            // Disallow empty messages
+            return OakStatus::ERR_INVALID_ARGS.value() as u32;
+        }
         self.messages.push_back(msg);
         OakStatus::OK.value() as u32
     }

@@ -439,7 +439,10 @@ impl FrontendNode {
 
         // Empty message.
         let empty = vec![];
-        expect_eq!(OakStatus::OK, oak::channel_write(out_channel, &empty, &[]));
+        expect_eq!(
+            OakStatus::ERR_INVALID_ARGS,
+            oak::channel_write(out_channel, &empty, &[])
+        );
 
         // Single message.
         let data = vec![0x01, 0x02, 0x03];

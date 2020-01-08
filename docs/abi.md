@@ -109,7 +109,8 @@ functions** as
   in Fuchsia.
 
 - `channel_write: (u64, usize, usize, usize, u32) -> u32`: Writes a single
-  message to the specified channel, together with any associated handles.
+  message to the specified channel, together with any associated handles. The
+  message must include at least one byte or one handle.
 
   - arg 0: Handle to channel send half
   - arg 1: Source buffer address holding message

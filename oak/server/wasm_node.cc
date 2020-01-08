@@ -363,6 +363,13 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelWrite(wabt::interp::Environ
     uint32_t handle_offset = args[3].get_i32();
     uint32_t handle_count = args[4].get_i32();
 
+    // Completely empty messages are not allowed.
+    if (size == 0 && handle_count == 0) {
+      LOG(WARNING) << "{" << name_ << "} Node provided completely empty message";
+      results[0].set_i32(OakStatus::ERR_INVALID_ARGS);
+      return wabt::interp::Result::Ok;
+    }
+
     // Check all provided linear memory is accessible.
     if (!MemoryAvailable(env, offset, size) ||
         !MemoryAvailable(env, handle_offset, handle_count * sizeof(Handle))) {
