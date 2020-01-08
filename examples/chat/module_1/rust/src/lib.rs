@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use chat_common::msg::Msg;
+use chat_common::command::Command;
 use chat_common::proto::chat::Message;
 use log::info;
 use protobuf::ProtobufEnum;
@@ -54,13 +54,14 @@ impl Room {
                 continue;
             };
 
-            info!("reading incoming message");
-            let msg: Msg = chat_common::receive(in_channel).expect("could not receive message");
-            match msg {
-                Msg::Join(h) => {
+            info!("reading incoming command");
+            let command: Command =
+                chat_common::receive(in_channel).expect("could not receive command");
+            match command {
+                Command::Join(h) => {
                     self.clients.push(oak::grpc::ChannelResponseWriter::new(h));
                 }
-                Msg::SendMessage(message_bytes) => {
+                Command::SendMessage(message_bytes) => {
                     let message: Message = protobuf::parse_from_bytes(&message_bytes)
                         .expect("could not parse message from bytes");
                     self.messages.push(message.clone());

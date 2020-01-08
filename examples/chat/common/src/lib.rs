@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-pub mod msg;
+pub mod command;
 pub mod proto;
 
 use anyhow::{anyhow, Context, Result};
