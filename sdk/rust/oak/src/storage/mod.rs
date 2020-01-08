@@ -20,7 +20,7 @@ use crate::grpc;
 use crate::proto::grpc_encap::{GrpcRequest, GrpcResponse};
 use crate::proto::storage_channel::{
     StorageChannelDeleteRequest, StorageChannelDeleteResponse, StorageChannelReadRequest,
-    StorageChannelReadResponse, StorageChannelWriteRequest, StorageChannelWriteResponse
+    StorageChannelReadResponse, StorageChannelWriteRequest, StorageChannelWriteResponse,
 };
 use log::info;
 use protobuf::{Message, ProtobufEnum};
@@ -98,7 +98,7 @@ impl Storage {
                         "failed to create storage response channel: {}",
                         status.value()
                     ),
-                ))
+                ));
             }
         };
 
