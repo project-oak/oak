@@ -43,8 +43,7 @@ void init_tensorflow(Tensorflow::Stub* stub) {
   InitResponse response;
   grpc::Status status = stub->InitTensorflow(&context, request, &response);
   if (!status.ok()) {
-    LOG(WARNING) << "Error: " << status.error_code()
-                 << ": " << status.error_message();
+    LOG(WARNING) << "Error: " << status.error_code() << ": " << status.error_message();
     return;
   }
   LOG(INFO) << "Status: " << response.status();

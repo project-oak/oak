@@ -140,7 +140,6 @@ http_archive(
     urls = ["https://github.com/googleapis/gapic-generator/archive/8e930b79e846b9d4876462be9dc4c1dbc04e2903.zip"],
 )
 
-
 http_archive(
     name = "org_tensorflow",
     sha256 = "8f0c227024fe2dffc691e71f4498c217f604d045079db254a300720db1eb4693",
