@@ -33,20 +33,15 @@ cc_binary(
         # Emscripten options' documentation is in:
         # https://github.com/emscripten-core/emscripten/blob/1.39.5/src/settings.js
         "-s AUTO_ARCHIVE_INDEXES=0",  # Necessary to remove console spam.
-        #"-s ALLOW_MEMORY_GROWTH=1",
-        #"-s DEFAULT_LIBRARY_FUNCS_TO_INCLUDE=[]",
         "-s DISABLE_EXCEPTION_CATCHING=1",
-        "-s ERROR_ON_UNDEFINED_SYMBOLS=0",  # TODO: Delete this after everything is compiled.
+        "-s ERROR_ON_UNDEFINED_SYMBOLS=0",
         "-s EXIT_RUNTIME=0",
         "-s EXPORTED_FUNCTIONS='[\"_oak_main\"]'",
         "-s FILESYSTEM=0",
-        #"-s LINKABLE=1",  # Disable dead code elimination (not recommended!!! a lot of unnecessary imports).
         "-s MALLOC=emmalloc",
-        #"-s MODULARIZE=1",  # TODO: Do we need this?
         "-s STANDALONE_WASM=1",  # WASM file should run without JavaScript.
         "-s WARN_ON_UNDEFINED_SYMBOLS=0",
         "-s WASM=1",
-        #"-s USE_PTHREADS=1",  # Try using this.
     ],
     deps = [
         "//oak/module:defines",
