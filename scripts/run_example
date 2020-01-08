@@ -49,7 +49,7 @@ else
   readonly MODULE_PATH="./examples/target/wasm32-unknown-unknown/release"
 fi
 # Accumulate all modules in a comma-separated list, in alphabetical order.
-readonly MODULES=$(find "$MODULE_PATH/$NAME"*.wasm | tr '\n' ',' | sed 's/,$//')
+readonly MODULES=$(find "$MODULE_PATH/$NAME"*.wasm | sort | tr '\n' ',' | sed 's/,$//')
 
 "./bazel-client-bin/examples/$NAME/client/client" \
   --manager_address="$OAK_MANAGER_ADDRESS" \
