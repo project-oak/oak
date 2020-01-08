@@ -42,6 +42,55 @@ enum OakStatus {
 
 }  // namespace oak
 
+const char kModelBuffer[] = {
+  0x18, 0x00, 0x00, 0x00, 0x54, 0x46, 0x4c, 0x33, 0x00, 0x00, 0x0e, 0x00,
+  0x14, 0x00, 0x04, 0x00, 0x08, 0x00, 0x0c, 0x00, 0x00, 0x00, 0x10, 0x00,
+  0x0e, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x44, 0x00, 0x00, 0x00,
+  0x08, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+  0x10, 0x00, 0x00, 0x00, 0x0c, 0x00, 0x14, 0x00, 0x04, 0x00, 0x08, 0x00,
+  0x0c, 0x00, 0x10, 0x00, 0x0c, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00,
+  0x18, 0x00, 0x00, 0x00, 0x0c, 0x00, 0x00, 0x00, 0x0c, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+  0x0c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x08, 0x00, 0x04, 0x00,
+  0x06, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
+//const size_t kModelBufferSize = 132;
+
+std::string init_tensorflow() {
+  // Load model.
+  std::unique_ptr<tflite::FlatBufferModel> model = tflite::FlatBufferModel::BuildFromBuffer(
+      reinterpret_cast<const char*>(&kModelBuffer), sizeof(kModelBuffer));
+  if (model == nullptr) {
+    return std::string("Error: Model was not loaded successfully");
+  }
+
+  // Build the interpreter.
+  tflite::ops::builtin::BuiltinOpResolver resolver;
+  tflite::InterpreterBuilder builder(*model, resolver);
+  std::unique_ptr<tflite::Interpreter> interpreter;
+  builder(&interpreter);
+  if (interpreter == nullptr) {
+    return std::string("Error: Interpreter was not created successfully");
+  }
+
+  // Allocate tensor buffers.
+  if (interpreter->AllocateTensors() != kTfLiteOk) {
+    //printf("=== Pre-invoke Interpreter State ===\n");
+    //tflite::PrintInterpreterState(interpreter.get());
+    return std::string("Error: Tensors were not allocated successfully");
+  }
+
+  // Run inference.
+  if (interpreter->Invoke() != kTfLiteOk) {
+    //printf("\n\n=== Post-invoke Interpreter State ===\n");
+    //tflite::PrintInterpreterState(interpreter.get());
+    return std::string("Error: Interpreter was not invoked successfully");
+  }
+
+  return std::string("Success: Model was loaded correctly");
+}
+
 WASM_IMPORT("oak") uint32_t wait_on_channels(uint8_t* buff, int32_t count);
 WASM_IMPORT("oak")
 uint32_t channel_read(uint64_t handle, uint8_t* buff, size_t usize, uint32_t* actual_size,
@@ -79,6 +128,8 @@ WASM_EXPORT int32_t oak_main(uint64_t grpc_in_handle) {
     uint64_t rsp_handle;
     channel_read(grpc_in_handle, _buf, sizeof(_buf), &actual_size, &rsp_handle, 1, &handle_count);
 
+    init_tensorflow();
+
     uint8_t buf[] = "\x0a\x0b\x12\x09\x0A\x07\x74\x65\x73\x74\x69\x6e\x67\x18\x01";
     // TODO: replace with use of message type and serialization.
     channel_write(rsp_handle, buf, sizeof(buf) - 1, nullptr, 0);
@@ -86,37 +137,3 @@ WASM_EXPORT int32_t oak_main(uint64_t grpc_in_handle) {
   }
   return oak::OakStatus::OK;
 }
-
-const char* kModelBuffer = "";
-/*
-std::string init_tensorflow() {
-  // Load model.
-  std::unique_ptr<tflite::FlatBufferModel> model = BuildFromBuffer(
-      kModelBuffer, kModelBufferSize);
-  if (model == nullptr) {
-    return std::string("Error: Model was not loaded successfully");
-  }
-
-  // Build the interpreter.
-  tflite::ops::builtin::BuiltinOpResolver resolver;
-  InterpreterBuilder builder(*model, resolver);
-  std::unique_ptr<Interpreter> interpreter;
-  builder(&interpreter);
-  if (interpreter == nullptr) {
-    return std::string("Error: Interpreter was not created successfully");
-  }
-
-  // Allocate tensor buffers.
-  if (interpreter->AllocateTensors() != kTfLiteOk) {
-    //printf("=== Pre-invoke Interpreter State ===\n");
-    //tflite::PrintInterpreterState(interpreter.get());
-    return std::string("Error: Tensors were not allocated successfully");
-  }
-
-  // Run inference.
-  if (interpreter->Invoke() != kTfLiteOk) {
-    //printf("\n\n=== Post-invoke Interpreter State ===\n");
-    //tflite::PrintInterpreterState(interpreter.get());
-    return std::string("Error: Interpreter was not invoked successfully");
-  }
-}*/

@@ -20,8 +20,8 @@
 #include "absl/flags/parse.h"
 #include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
-#include "examples/hello_world/proto/hello_world.grpc.pb.h"
-#include "examples/hello_world/proto/hello_world.pb.h"
+#include "examples/tensorflow/proto/tensorflow.grpc.pb.h"
+#include "examples/tensorflow/proto/tensorflow.pb.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
 #include "oak/client/manager_client.h"
@@ -33,38 +33,21 @@ ABSL_FLAG(std::string, storage_address, "127.0.0.1:7867",
           "Address ot the storage provider to connect to");
 ABSL_FLAG(std::string, module, "", "File containing the compiled WebAssembly module");
 
-using ::oak::examples::hello_world::HelloRequest;
-using ::oak::examples::hello_world::HelloResponse;
-using ::oak::examples::hello_world::HelloWorld;
+using ::oak::examples::Tensorflow::InitRequest;
+using ::oak::examples::Tensorflow::InitResponse;
+using ::oak::examples::Tensorflow::Tensorflow;
 
-void say_hello(HelloWorld::Stub* stub, std::string name) {
+void init_tensorflow(Tensorflow::Stub* stub) {
   grpc::ClientContext context;
-  HelloRequest request;
-  request.set_greeting(name);
-  LOG(INFO) << "Request: " << request.greeting();
-  HelloResponse response;
-  grpc::Status status = stub->SayHello(&context, request, &response);
+  InitRequest request;
+  InitResponse response;
+  grpc::Status status = stub->InitTensorflow(&context, request, &response);
   if (!status.ok()) {
-    LOG(WARNING) << "Could not call SayHello('" << name << "'): " << status.error_code() << ": "
-                 << status.error_message();
+    LOG(WARNING) << "Error: " << status.error_code()
+                 << ": " << status.error_message();
     return;
   }
-  LOG(INFO) << "Response: " << response.reply();
-}
-
-void lots_of_replies(HelloWorld::Stub* stub, std::string name) {
-  grpc::ClientContext context;
-  HelloRequest request;
-  request.set_greeting(name);
-  LOG(INFO) << "Request: " << request.greeting();
-  auto reader = stub->LotsOfReplies(&context, request);
-  if (reader == nullptr) {
-    LOG(QFATAL) << "Could not call LotsOfReplies";
-  }
-  HelloResponse response;
-  while (reader->Read(&response)) {
-    LOG(INFO) << "Response: " << response.reply();
-  }
+  LOG(INFO) << "Status: " << response.status();
 }
 
 int main(int argc, char** argv) {
@@ -92,16 +75,10 @@ int main(int argc, char** argv) {
   oak::ApplicationClient::InitializeAssertionAuthorities();
 
   // Connect to the newly created Oak Application.
-  auto stub = HelloWorld::NewStub(oak::ApplicationClient::CreateChannel(addr.str()));
+  auto stub = Tensorflow::NewStub(oak::ApplicationClient::CreateChannel(addr.str()));
 
   // Perform multiple invocations of the same Oak Application, with different parameters.
-  say_hello(stub.get(), "WORLD");
-  say_hello(stub.get(), "MONDO");
-  say_hello(stub.get(), "世界");
-  say_hello(stub.get(), "Query-of-Error");
-  say_hello(stub.get(), "MONDE");
-
-  lots_of_replies(stub.get(), "WORLDS");
+  init_tensorflow(stub.get());
 
   // Request termination of the Oak Application.
   LOG(INFO) << "Terminating application id=" << application_id;

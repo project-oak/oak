@@ -27,6 +27,6 @@ message InitResponse {
 }
 
 // As seen in https://grpc.io/docs/guides/concepts/.
-service HelloWorld {
+service Tensorflow {
   rpc InitTensorflow(InitRequest) returns (InitResponse);
 }
