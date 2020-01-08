@@ -66,11 +66,11 @@ http_archive(
 # Asylo Framework.
 http_archive(
     name = "com_google_asylo",
-    sha256 = "62eecfe6a8c649bad5c270fb3c297923021f55a66c26ae858865018ae17a1721",
-    strip_prefix = "asylo-ecf05ba8433a45ef21f37d33f21bcffec18cb310",
+    sha256 = "bc500dab6673fc6d33f7f1d6df7ba406c46992985d4c301092e6bd58732d2646",
+    strip_prefix = "asylo-6f809ed623bc33900b420b5c513829257a40f548",
     urls = [
-        # Head commit on 2019-12-17.
-        "https://github.com/google/asylo/archive/ecf05ba8433a45ef21f37d33f21bcffec18cb310.tar.gz",
+        # Head commit on 2020-01-07.
+        "https://github.com/google/asylo/archive/6f809ed623bc33900b420b5c513829257a40f548.tar.gz",
     ],
 )
 
@@ -85,7 +85,7 @@ http_archive(
         # https://github.com/grpc/grpc/issues/21437
         "//third_party/google/rpc:Add-ares-android.patch",
     ],
-    #sha256 = "ffbe61269160ea745e487f79b0fd06b6edd3d50c6d9123f053b5634737cf2f69",
+    sha256 = "ffbe61269160ea745e487f79b0fd06b6edd3d50c6d9123f053b5634737cf2f69",
     strip_prefix = "grpc-1.25.0",
     urls = ["https://github.com/grpc/grpc/archive/v1.25.0.tar.gz"],
 )
@@ -316,9 +316,11 @@ load("@io_bazel_rules_closure//closure:defs.bzl", "closure_repositories")
 
 closure_repositories()
 
-load("@org_tensorflow//tensorflow:workspace.bzl", "tf_workspace")
+# Do not use `tf_workspace()` - it interferes with gRPC loaded by Asylo
+# and causes missing `ares.h` error.
+load("@org_tensorflow//tensorflow:workspace.bzl", "tf_repositories")
 
-tf_workspace()
+tf_repositories()
 
 # clang + llvm 8.0
 http_archive(

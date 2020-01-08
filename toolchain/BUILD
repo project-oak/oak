@@ -42,16 +42,16 @@ cc_toolchain_suite(
     },
 )
 
-#emcc_toolchain_config(
-#    name = "emscripten_toolchain_config_wasm",
-#)
-#
-#cc_toolchain_suite(
-#    name = "emscripten",
-#    toolchains = {
-#        "wasm": ":emscripten_toolchain_wasm",
-#    },
-#)
+emcc_toolchain_config(
+    name = "emscripten_toolchain_config_wasm",
+)
+
+cc_toolchain_suite(
+    name = "emscripten",
+    toolchains = {
+        "wasm": ":emscripten_toolchain_wasm",
+    },
+)
 
 filegroup(
     #name = "all_files",
@@ -94,15 +94,15 @@ cc_toolchain(
     toolchain_identifier = "clang-toolchain_k8",
 )
 
-#cc_toolchain(
-#    name = "emscripten_toolchain_wasm",
-#    all_files = ":all",
-#    compiler_files = ":all",
-#    dwp_files = ":empty",
-#    linker_files = ":all",
-#    objcopy_files = ":empty",
-#    strip_files = ":empty",
-#    supports_param_files = 0,
-#    toolchain_config = ":emscripten_toolchain_config_wasm",
-#    toolchain_identifier = "emscripten-toolchain_wasm",
-#)
+cc_toolchain(
+    name = "emscripten_toolchain_wasm",
+    all_files = ":all",
+    compiler_files = ":all",
+    dwp_files = ":empty",
+    linker_files = ":all",
+    objcopy_files = ":empty",
+    strip_files = ":empty",
+    supports_param_files = 0,
+    toolchain_config = ":emscripten_toolchain_config_wasm",
+    toolchain_identifier = "emscripten-toolchain_wasm",
+)
