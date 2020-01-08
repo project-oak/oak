@@ -16,13 +16,12 @@
 
 use crate::OakChannelLogger;
 use log::{Level, LevelFilter, Log, Metadata, Record};
-use oak_tests::last_message_as_string;
 use serial_test_derive::serial;
 
-fn test_logger() -> (oak::Handle, OakChannelLogger) {
-    let (write_handle, _read_handle) = oak::channel_create().unwrap();
+fn test_logger() -> (oak::ReadHandle, OakChannelLogger) {
+    let (write_handle, read_handle) = oak::channel_create().unwrap();
     (
-        write_handle.handle,
+        read_handle,
         OakChannelLogger {
             channel: oak::io::Channel::new(oak::WriteHandle {
                 handle: write_handle.handle,
@@ -84,10 +83,14 @@ fn test_log() {
         .build();
     logger.log(&r1);
 
-    // TODO: let mut buf: Vec<u8>;
-    // let mut handles: Vec<Handle>;
-    // pub fn channel_read(half: ReadHandle, buf: &mut Vec<u8>, handles: &mut Vec<Handle>) -> OakStatus {
-    assert_eq!("", last_message_as_string(handle));
+    let mut buf = Vec::new();
+    let mut handles = Vec::new();
+    assert_eq!(
+        oak::OakStatus::OK,
+        oak::channel_read(handle, &mut buf, &mut handles)
+    );
+    assert_eq!(0, buf.len());
+    assert_eq!(0, handles.len());
 
     let error = Metadata::builder()
         .level(Level::Error)
@@ -101,9 +104,16 @@ fn test_log() {
         .module_path(Some("server"))
         .build();
     logger.log(&r2);
+    let mut buf = Vec::new();
+    let mut handles = Vec::new();
+    assert_eq!(
+        oak::OakStatus::OK,
+        oak::channel_read(handle, &mut buf, &mut handles)
+    );
+    assert_eq!(0, handles.len());
     assert_eq!(
         "ERROR  app.rs : 433 : Error!\n",
-        last_message_as_string(handle)
+        std::str::from_utf8(&buf).unwrap()
     );
 }
 

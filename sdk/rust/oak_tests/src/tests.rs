@@ -35,7 +35,9 @@ fn test_panic_catch() {
     crate::reset();
     crate::init_logging();
     let (mut write_handle, mut read_handle) = (0u64, 0u64);
-    unsafe { oak::wasm::channel_create(&mut write_handle as *mut u64, &mut read_handle as *mut u64); }
+    unsafe {
+        oak::wasm::channel_create(&mut write_handle as *mut u64, &mut read_handle as *mut u64);
+    }
 
     // Mock up a GrpcRequest to trigger invoke()
     let mut grpc_req = oak::proto::grpc_encap::GrpcRequest::new();
@@ -46,10 +48,13 @@ fn test_panic_catch() {
     // Serialize the request and send it with a handle.
     let mut req_data = Vec::new();
     grpc_req.write_to_writer(&mut req_data).unwrap();
-    oak::channel_write(oak::WriteHandle { handle: oak::Handle::from_raw(write_handle) }, &req_data, &[oak::Handle::from_raw(write_handle)]);
-
-    assert_eq!(
-        oak::OakStatus::ERR_INTERNAL.value(),
-        oak_main(read_handle)
+    oak::channel_write(
+        oak::WriteHandle {
+            handle: oak::Handle::from_raw(write_handle),
+        },
+        &req_data,
+        &[oak::Handle::from_raw(write_handle)],
     );
+
+    assert_eq!(oak::OakStatus::ERR_INTERNAL.value(), oak_main(read_handle));
 }

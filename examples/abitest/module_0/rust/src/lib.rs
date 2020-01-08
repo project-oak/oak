@@ -218,7 +218,7 @@ impl FrontendNode {
         let mut w = 0;
         let mut r = 0;
         unsafe {
-            oak::wasm::channel_create(&mut w as *mut u64, &mut r as *mut u64) as i32;
+            oak::wasm::channel_create(&mut w as *mut u64, &mut r as *mut u64);
         }
 
         unsafe {
@@ -257,8 +257,7 @@ impl FrontendNode {
         let mut out_channel = 0;
         let mut in_channel = 0;
         unsafe {
-            oak::wasm::channel_create(&mut out_channel as *mut u64, &mut in_channel as *mut u64)
-                as i32;
+            oak::wasm::channel_create(&mut out_channel as *mut u64, &mut in_channel as *mut u64);
         }
 
         let mut buf = Vec::<u8>::with_capacity(5);
@@ -419,8 +418,7 @@ impl FrontendNode {
         let mut out_channel = 0u64;
         let mut in_channel = 0u64;
         unsafe {
-            oak::wasm::channel_create(&mut out_channel as *mut u64, &mut in_channel as *mut u64)
-                as i32;
+            oak::wasm::channel_create(&mut out_channel as *mut u64, &mut in_channel as *mut u64);
         }
 
         let buf = vec![0x01];
@@ -507,8 +505,7 @@ impl FrontendNode {
         let mut in_channel = 0u64;
 
         unsafe {
-            oak::wasm::channel_create(&mut out_channel as *mut u64, &mut in_channel as *mut u64)
-                as i32;
+            oak::wasm::channel_create(&mut out_channel as *mut u64, &mut in_channel as *mut u64);
 
             // Write a message to the channel so wait operations don't block.
             let data = vec![0x01, 0x02, 0x03];
@@ -798,8 +795,7 @@ impl FrontendNode {
         let mut in_channel = 0u64;
 
         unsafe {
-            oak::wasm::channel_create(&mut out_channel as *mut u64, &mut in_channel as *mut u64)
-                as i32;
+            oak::wasm::channel_create(&mut out_channel as *mut u64, &mut in_channel as *mut u64);
 
             expect_eq!(
                 OakStatus::ERR_INVALID_ARGS.value() as u32,
@@ -926,7 +922,7 @@ impl FrontendNode {
         oak::node_create(LOG_CONFIG_NAME, read_handle);
         oak::channel_close(read_handle.handle);
 
-        expect!(logging_handle.handle != oak::Handle::from_raw(oak::wasm::INVALID_HANDLE));
+        expect!(logging_handle.handle.is_valid());
         let (out_handle, in_handle) = oak::channel_create().unwrap();
 
         oak::channel_write(

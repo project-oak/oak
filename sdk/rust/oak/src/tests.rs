@@ -23,7 +23,10 @@ fn test_write_message() {
     let (write_handle, read_handle) = channel_create().unwrap();
     let data = [0x44, 0x4d, 0x44];
     assert_eq!(OakStatus::OK, channel_write(write_handle, &data, &[]));
-    assert_eq!("DMD", oak_tests::last_message_as_string(read_handle.handle.id));
+    assert_eq!(
+        "DMD",
+        oak_tests::last_message_as_string(read_handle.handle.id)
+    );
 }
 
 #[test]
@@ -104,7 +107,14 @@ fn test_read_message_internal_failure() {
 
 #[test]
 fn test_handle_space() {
-    let h = vec![ReadHandle { handle: Handle::from_raw(1) }, ReadHandle { handle: Handle::from_raw(2) }];
+    let h = vec![
+        ReadHandle {
+            handle: Handle::from_raw(1),
+        },
+        ReadHandle {
+            handle: Handle::from_raw(2),
+        },
+    ];
     let data = [
         0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00,

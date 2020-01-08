@@ -44,9 +44,19 @@ pub struct Handle {
 
 impl Handle {
     /// When using the Oak SDK, this method should not need to be called directly
-    /// as `Handles` are directly provided via functions such as `channel_create`
+    /// as `Handles` are directly provided via functions such as `channel_create`.
     pub fn from_raw(id: u64) -> Handle {
-        Handle { id: id }
+        Handle { id }
+    }
+
+    /// Check this handle is valid.
+    pub fn is_valid(&self) -> bool {
+        return self.id != wasm::INVALID_HANDLE
+    }
+
+    /// Returns an intentionally invalid handle. Intended for debugging purposes.
+    pub fn invalid() -> Handle {
+        Handle { id: wasm::INVALID_HANDLE }
     }
 }
 
@@ -202,12 +212,8 @@ pub fn channel_write(half: WriteHandle, buf: &[u8], handles: &[Handle]) -> OakSt
 /// On success, returns [`WriteHandle`] and a [`ReadHandle`] values for the
 /// write and read halves (respectively).
 pub fn channel_create() -> Result<(WriteHandle, ReadHandle), OakStatus> {
-    let mut write = WriteHandle {
-        handle: Handle { id: 0 },
-    };
-    let mut read = ReadHandle {
-        handle: Handle { id: 0 },
-    };
+    let mut write = WriteHandle { Handle.invalid() };
+    let mut read = ReadHandle { Handle.invalid() };
     match OakStatus::from_i32(unsafe {
         wasm::channel_create(
             &mut write.handle.id as *mut u64,
