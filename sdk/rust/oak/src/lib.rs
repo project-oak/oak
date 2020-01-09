@@ -163,19 +163,28 @@ pub fn channel_read(half: ReadHandle, buf: &mut Vec<u8>, handles: &mut Vec<Handl
                     };
                     return s;
                 }
-                OakStatus::ERR_BUFFER_TOO_SMALL if !(*resized) => {
-                    // Extend the vector to be large enough for the message
-                    debug!("Got {}, need {}", buf.capacity(), actual_size);
-                    if (actual_size as usize) < buf.len() {
-                        error!(
-                            "Internal error: provided {} bytes for receive, asked for {}",
-                            buf.len(),
-                            actual_size
-                        );
-                        return OakStatus::ERR_INTERNAL;
+                OakStatus::ERR_BUFFER_TOO_SMALL | OakStatus::ERR_HANDLE_SPACE_TOO_SMALL
+                    if !(*resized) =>
+                {
+                    // Extend the vectors to be large enough for the message
+                    debug!(
+                        "Got space for {} bytes, need {}",
+                        buf.capacity(),
+                        actual_size
+                    );
+                    if (actual_size as usize) > buf.capacity() {
+                        let extra = (actual_size as usize) - buf.len();
+                        buf.reserve(extra);
                     }
-                    let extra = (actual_size as usize) - buf.len();
-                    buf.reserve(extra);
+                    debug!(
+                        "Got space for {} handles, need {}",
+                        handles.capacity(),
+                        actual_handle_count
+                    );
+                    if (actual_handle_count as usize) > handles.capacity() {
+                        let extra = (actual_handle_count as usize) - handles.len();
+                        handles.reserve(extra);
+                    }
 
                     // Try again with a buffer resized to cope with expected size of data.
                     continue;
