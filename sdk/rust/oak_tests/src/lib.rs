@@ -88,7 +88,7 @@ pub unsafe extern "C" fn wait_on_channels(buf: *mut u8, count: u32) -> u32 {
     }
 
     // Accumulate the handles we're interested in.
-    let size = oak::wasm::SPACE_BYTES_PER_HANDLE * count as usize;
+    let size = oak_abi::SPACE_BYTES_PER_HANDLE * count as usize;
     let mut handle_data = Vec::<u8>::with_capacity(size);
     std::ptr::copy_nonoverlapping(buf, handle_data.as_mut_ptr(), size);
     handle_data.set_len(size);
@@ -117,9 +117,8 @@ pub unsafe extern "C" fn wait_on_channels(buf: *mut u8, count: u32) -> u32 {
             }
 
             // Write channel status back to the raw pointer.
-            let p = buf.add(
-                i * oak::wasm::SPACE_BYTES_PER_HANDLE + (oak::wasm::SPACE_BYTES_PER_HANDLE - 1),
-            );
+            let p = buf
+                .add(i * oak_abi::SPACE_BYTES_PER_HANDLE + (oak_abi::SPACE_BYTES_PER_HANDLE - 1));
             *p = channel_status
                 .value()
                 .try_into()

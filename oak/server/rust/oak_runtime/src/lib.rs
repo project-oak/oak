@@ -545,7 +545,7 @@ impl OakNode {
         loop {
             // Keep picking random Handle values until we find an unused (and valid) value.
             let handle = rng.gen::<Handle>();
-            if handle == oak::wasm::INVALID_HANDLE {
+            if handle == oak_abi::INVALID_HANDLE {
                 continue;
             }
             if !self.halves.contains_key(&handle) {
@@ -572,7 +572,7 @@ pub type NodeMain = fn(u64) -> i32;
 
 // Main loop function for a log pseudo-Node.
 pub fn log_node_main(handle: u64) -> i32 {
-    if handle == oak::wasm::INVALID_HANDLE {
+    if handle == oak_abi::INVALID_HANDLE {
         return OakStatus::ERR_BAD_HANDLE.value();
     }
     let half = oak::ReadHandle {

@@ -36,7 +36,7 @@ fn test_direct_hello_request() {
 #[test]
 #[serial(node_test)]
 fn test_no_handle() {
-    oak_tests::start_node(oak::wasm::INVALID_HANDLE);
+    oak_tests::start_node(oak_abi::INVALID_HANDLE);
     assert_eq!(OakStatus::ERR_CHANNEL_CLOSED, oak_tests::stop());
 }
 
