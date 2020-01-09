@@ -40,6 +40,8 @@ enum OakStatus {
   ERR_INTERNAL = 8;
   // Node terminated.
   ERR_TERMINATED = 9;
+  // Channel has no messages available to read.
+  ERR_CHANNEL_EMPTY = 10;
 }
 
 // Single byte values used to indicate the read status of a channel on the

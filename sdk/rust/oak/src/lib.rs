@@ -155,40 +155,40 @@ pub fn channel_read(half: ReadHandle, buf: &mut Vec<u8>, handles: &mut Vec<Handl
             ) as i32
         });
         match status {
-            Some(OakStatus::OK) => {
-                unsafe {
-                    buf.set_len(actual_size as usize);
-                    // Handles are written in little-endian order, which matches Wasm spec.
-                    handles.set_len(actual_handle_count as usize);
-                };
-                return OakStatus::OK;
-            }
-            Some(OakStatus::ERR_BUFFER_TOO_SMALL) => {
-                if *resized {
-                    return OakStatus::ERR_BUFFER_TOO_SMALL;
+            Some(s) => match s {
+                OakStatus::OK | OakStatus::ERR_CHANNEL_EMPTY => {
+                    unsafe {
+                        buf.set_len(actual_size as usize);
+                        // Handles are written in little-endian order, which matches Wasm spec.
+                        handles.set_len(actual_handle_count as usize);
+                    };
+                    return s;
                 }
-                // Can escape the match if buffer is too small and !resized.
-            }
-            Some(s) => {
-                return s;
-            }
+                OakStatus::ERR_BUFFER_TOO_SMALL if !(*resized) => {
+                    // Extend the vector to be large enough for the message
+                    debug!("Got {}, need {}", buf.capacity(), actual_size);
+                    if (actual_size as usize) < buf.len() {
+                        error!(
+                            "Internal error: provided {} bytes for receive, asked for {}",
+                            buf.len(),
+                            actual_size
+                        );
+                        return OakStatus::ERR_INTERNAL;
+                    }
+                    let extra = (actual_size as usize) - buf.len();
+                    buf.reserve(extra);
+
+                    // Try again with a buffer resized to cope with expected size of data.
+                    continue;
+                }
+                s => {
+                    return s;
+                }
+            },
             None => {
                 return OakStatus::ERR_INTERNAL;
             }
         }
-
-        // Extend the vector to be large enough for the message
-        debug!("Got {}, need {}", buf.capacity(), actual_size);
-        if (actual_size as usize) < buf.len() {
-            error!(
-                "Internal error: provided {} bytes for receive, asked for {}",
-                buf.len(),
-                actual_size
-            );
-            return OakStatus::ERR_INTERNAL;
-        }
-        let extra = (actual_size as usize) - buf.len();
-        buf.reserve(extra);
     }
     error!("unreachable code reached");
     OakStatus::ERR_INTERNAL

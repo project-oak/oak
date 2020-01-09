@@ -328,7 +328,7 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelRead(wabt::interp::Environm
         LOG(INFO) << "{" << name_ << "} channel_read[" << channel_handle << "]: no writers left";
         results[0].set_i32(OakStatus::ERR_CHANNEL_CLOSED);
       } else {
-        results[0].set_i32(OakStatus::OK);
+        results[0].set_i32(OakStatus::ERR_CHANNEL_EMPTY);
       }
       return wabt::interp::Result::Ok;
     }

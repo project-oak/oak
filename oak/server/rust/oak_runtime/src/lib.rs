@@ -100,7 +100,7 @@ impl MockChannel {
                     // indicate that the channel is closed.
                     Err(OakStatus::ERR_CHANNEL_CLOSED.value() as u32)
                 } else {
-                    Err(OakStatus::OK.value() as u32)
+                    Err(OakStatus::ERR_CHANNEL_EMPTY.value() as u32)
                 }
             }
             Some(msg) => {

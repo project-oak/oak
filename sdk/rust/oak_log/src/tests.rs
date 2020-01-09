@@ -86,7 +86,7 @@ fn test_log() {
     let mut buf = Vec::new();
     let mut handles = Vec::new();
     assert_eq!(
-        oak::OakStatus::OK,
+        oak::OakStatus::ERR_CHANNEL_EMPTY,
         oak::channel_read(handle, &mut buf, &mut handles)
     );
     assert_eq!(0, buf.len());

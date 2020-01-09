@@ -45,6 +45,8 @@ extern "C" {
     /// spaces provided by `actual_size` and `actual_handle_count`.
     ///
     /// Returns the status of the operation, as an [`OakStatus`] value.
+    /// If no message is available on the channel, [`ERR_CHANNEL_EMPTY`] will be
+    /// returned.
     ///
     /// [`ERR_BUFFER_TOO_SMALL`]: crate::OakStatus::ERR_BUFFER_TOO_SMALL
     /// [`ERR_HANDLE_SPACE_TOO_SMALL`]: crate::OakStatus::ERR_HANDLE_SPACE_TOO_SMALL
