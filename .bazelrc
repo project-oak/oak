@@ -48,6 +48,9 @@ build:emscripten --cxxopt="-ffast-math"
 build:emscripten --copt="-ffast-math"
 build:emscripten --spawn_strategy=local
 
+# Use a different symlink prefix for emscripten-based artifacts.
+build:emscripten --symlink_prefix=bazel-emscripten-
+
 # Address Sanitizer.
 # bazel build --config=asan
 build:asan --config=clang
