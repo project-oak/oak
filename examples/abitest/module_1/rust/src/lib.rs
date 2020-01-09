@@ -33,11 +33,11 @@ pub extern "C" fn oak_main(handle: u64) -> i32 {
     }
 }
 pub fn main(in_handle: u64) -> i32 {
+    let _ = oak_log::init(log::Level::Debug, LOG_CONFIG_NAME);
+    oak::set_panic_hook();
     let in_channel = oak::ReadHandle {
         handle: oak::Handle::from_raw(in_handle),
     };
-    let _ = oak_log::init(log::Level::Debug, LOG_CONFIG_NAME);
-    oak::set_panic_hook();
 
     let mut buf = Vec::<u8>::with_capacity(2);
     let mut handles = Vec::with_capacity(2);

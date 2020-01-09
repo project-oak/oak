@@ -521,6 +521,7 @@ impl FrontendNode {
 
         unsafe {
             // Wait on [write handle, ready read handle].
+            // TODO: Re-add NOT_READY subcase, removed in #429
             const COUNT: usize = 2;
             let mut space = Vec::with_capacity(COUNT * oak::wasm::SPACE_BYTES_PER_HANDLE);
             space

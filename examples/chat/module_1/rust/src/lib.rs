@@ -32,12 +32,13 @@ pub fn main(in_handle: u64) -> i32 {
     oak::set_panic_hook();
     info!("per-room node started");
 
+    let in_channel = oak::ReadHandle {
+        handle: oak::Handle::from_raw(in_handle),
+    };
+
     let mut rsp_writers: Vec<oak::grpc::ChannelResponseWriter> = Vec::with_capacity(1);
     loop {
         // Wait for something on our single input channel.
-        let in_channel = oak::ReadHandle {
-            handle: oak::Handle::from_raw(in_handle),
-        };
         let ready_status = match oak::wait_on_channels(&[in_channel]) {
             Ok(ready_status) => ready_status,
             Err(err) => {

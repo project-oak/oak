@@ -29,6 +29,7 @@ use std::sync::{Arc, RwLock};
 
 pub mod proto;
 
+// TODO(#447)
 pub type Handle = u64;
 
 pub struct OakMessage {
