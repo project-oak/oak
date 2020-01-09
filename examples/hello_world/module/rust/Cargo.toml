@@ -16,6 +16,7 @@ protobuf = "*"
 
 [dev-dependencies]
 assert_matches = "*"
+oak_abi = "*"
 oak_tests = "*"
 serial_test = "0.2"
 serial_test_derive = "0.2"

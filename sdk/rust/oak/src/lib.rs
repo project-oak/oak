@@ -82,7 +82,7 @@ pub struct WriteHandle {
 // Build a chunk of memory that is suitable for passing to wasm::wait_on_channels,
 // holding the given collection of channel handles.
 fn new_handle_space(handles: &[ReadHandle]) -> Vec<u8> {
-    let mut space = Vec::with_capacity(wasm::SPACE_BYTES_PER_HANDLE * handles.len());
+    let mut space = Vec::with_capacity(oak_abi::SPACE_BYTES_PER_HANDLE * handles.len());
     for handle in handles {
         space
             .write_u64::<byteorder::LittleEndian>(handle.handle.id)
@@ -97,7 +97,7 @@ fn new_handle_space(handles: &[ReadHandle]) -> Vec<u8> {
 fn prep_handle_space(space: &mut [u8]) {
     let count = space.len() / 8;
     for i in 0..count {
-        space[i * wasm::SPACE_BYTES_PER_HANDLE + (wasm::SPACE_BYTES_PER_HANDLE - 1)] = 0;
+        space[i * oak_abi::SPACE_BYTES_PER_HANDLE + (oak_abi::SPACE_BYTES_PER_HANDLE - 1)] = 0;
     }
 }
 
@@ -120,7 +120,7 @@ pub fn wait_on_channels(handles: &[ReadHandle]) -> Result<Vec<ChannelReadStatus>
         let mut results = Vec::with_capacity(handles.len());
         for i in 0..handles.len() {
             match space
-                .get(i * wasm::SPACE_BYTES_PER_HANDLE + (wasm::SPACE_BYTES_PER_HANDLE - 1))
+                .get(i * oak_abi::SPACE_BYTES_PER_HANDLE + (oak_abi::SPACE_BYTES_PER_HANDLE - 1))
                 .cloned()
                 .map(i32::from)
                 .and_then(ChannelReadStatus::from_i32)

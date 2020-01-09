@@ -13,6 +13,7 @@ byteorder = "1"
 expect = { path = "../../../../third_party/expect" }
 log = "*"
 oak = "*"
+oak_abi = "*"
 oak_log = "*"
 protobuf = "*"
 rand_core = "0.5"

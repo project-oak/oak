@@ -523,7 +523,7 @@ impl FrontendNode {
             // Wait on [write handle, ready read handle].
             // TODO: Re-add NOT_READY subcase, removed in #429
             const COUNT: usize = 2;
-            let mut space = Vec::with_capacity(COUNT * oak::wasm::SPACE_BYTES_PER_HANDLE);
+            let mut space = Vec::with_capacity(COUNT * oak_abi::SPACE_BYTES_PER_HANDLE);
             space
                 .write_u64::<byteorder::LittleEndian>(out_channel)
                 .unwrap();
@@ -549,7 +549,7 @@ impl FrontendNode {
         unsafe {
             // Wait on [nonsense handle, read handle].
             const COUNT: usize = 2;
-            let mut space = Vec::with_capacity(COUNT * oak::wasm::SPACE_BYTES_PER_HANDLE);
+            let mut space = Vec::with_capacity(COUNT * oak_abi::SPACE_BYTES_PER_HANDLE);
             space
                 .write_u64::<byteorder::LittleEndian>(9_123_456)
                 .unwrap();
@@ -580,7 +580,7 @@ impl FrontendNode {
         // the channel is closed.
         unsafe {
             const COUNT: usize = 1;
-            let mut space = Vec::with_capacity(COUNT * oak::wasm::SPACE_BYTES_PER_HANDLE);
+            let mut space = Vec::with_capacity(COUNT * oak_abi::SPACE_BYTES_PER_HANDLE);
             space
                 .write_u64::<byteorder::LittleEndian>(in_channel)
                 .unwrap();
@@ -616,7 +616,7 @@ impl FrontendNode {
         // Read half is now orphaned (no pending message, no possible writers).
         unsafe {
             const COUNT: usize = 1;
-            let mut space = Vec::with_capacity(COUNT * oak::wasm::SPACE_BYTES_PER_HANDLE);
+            let mut space = Vec::with_capacity(COUNT * oak_abi::SPACE_BYTES_PER_HANDLE);
             space
                 .write_u64::<byteorder::LittleEndian>(in_channel)
                 .unwrap();
@@ -805,7 +805,7 @@ impl FrontendNode {
             oak::node_create(
                 BACKEND_CONFIG_NAME,
                 oak::ReadHandle {
-                    handle: oak::Handle::from_raw(oak::wasm::INVALID_HANDLE)
+                    handle: oak::Handle::from_raw(oak_abi::INVALID_HANDLE)
                 }
             )
         );
