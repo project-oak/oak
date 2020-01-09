@@ -72,12 +72,11 @@ extern "C" {
     pub fn oak_main(handle: u64) -> i32;
 }
 
-/// Test implementation of channel wait functionality, which always indicates
-/// that all provided channels are ready for reading.
+/// Test implementation of channel wait functionality.
 ///
 /// # Safety
 ///
-/// The linear memory range [buf, buf+count*SPACE_BYTES_PER_HANDLE) should be
+/// The linear memory range [buf, buf+count*SPACE_BYTES_PER_HANDLE) must be
 /// valid.
 #[no_mangle]
 pub unsafe extern "C" fn wait_on_channels(buf: *mut u8, count: u32) -> u32 {
@@ -147,7 +146,7 @@ pub unsafe extern "C" fn wait_on_channels(buf: *mut u8, count: u32) -> u32 {
 ///
 /// # Safety
 ///
-/// The linear memory ranges [buf, buf+size) and [handle_buf, handle_buf+handle_count*8) should be
+/// The linear memory ranges [buf, buf+size) and [handle_buf, handle_buf+handle_count*8) must be
 /// valid.
 #[no_mangle]
 pub unsafe extern "C" fn channel_write(
@@ -195,13 +194,12 @@ pub unsafe extern "C" fn channel_write(
     result
 }
 
-/// Test implementation of channel read functionality, which reads a message
-/// from the test channel.
+/// Test implementation of channel read functionality.
 ///
 /// # Safety
 ///
-/// The linear memory ranges [buf, buf+size) and [handle_buf, handle_buf+handle_count*8) should be
-/// valid, as should the raw pointers actual_size and actual_handle_count.
+/// The linear memory ranges [buf, buf+size) and [handle_buf, handle_buf+handle_count*8) must be
+/// valid, as must the raw pointers actual_size and actual_handle_count.
 #[no_mangle]
 pub unsafe extern "C" fn channel_read(
     handle: u64,
@@ -258,7 +256,7 @@ pub unsafe extern "C" fn channel_read(
 ///
 /// # Safety
 ///
-/// The raw pointers to linear memory should be valid.
+/// The raw pointers to linear memory must be valid.
 #[no_mangle]
 pub unsafe extern "C" fn channel_create(write: *mut u64, read: *mut u64) -> u32 {
     let name = node_name();
@@ -294,7 +292,7 @@ pub extern "C" fn channel_close(handle: u64) -> u32 {
 ///
 /// # Safety
 ///
-/// The linear memory range [buf, buf+len) should be valid.
+/// The linear memory range [buf, buf+len) must be valid.
 #[no_mangle]
 pub unsafe fn node_create(buf: *const u8, len: usize, handle: u64) -> u32 {
     let name = node_name();
@@ -338,7 +336,7 @@ pub unsafe fn node_create(buf: *const u8, len: usize, handle: u64) -> u32 {
 ///
 /// # Safety
 ///
-/// The linear memory range [buf, buf+size) should be valid.
+/// The linear memory range [buf, buf+size) must be valid.
 #[no_mangle]
 pub unsafe extern "C" fn random_get(buf: *mut u8, size: usize) -> u32 {
     let name = node_name();
