@@ -40,7 +40,7 @@ build:clang --symlink_prefix=bazel-clang-
 build:emscripten --crosstool_top=//toolchain:emscripten
 build:emscripten --cpu=wasm
 build:emscripten --host_crosstool_top=@bazel_tools//tools/cpp:toolchain
-build:emscripten --cxxopt="-std=c++11"
+build:emscripten --cxxopt="-std=c++14"
 build:emscripten --cxxopt="-fno-rtti"
 build:emscripten --cxxopt="-fno-exceptions"
 build:emscripten --cxxopt="-fomit-frame-pointer"
