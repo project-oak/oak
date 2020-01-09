@@ -16,7 +16,7 @@
 
 use chat_common::command::Command;
 use chat_common::proto::chat::Message;
-use log::info;
+use log::{error, info};
 use protobuf::ProtobufEnum;
 
 #[no_mangle]
@@ -81,8 +81,9 @@ impl Room {
 
     fn close_all(&mut self) {
         for writer in &mut self.clients {
-            // TODO: Try to close subsequent channels even if one fails.
-            writer.close(Ok(())).expect("could not close channel");
+            writer
+                .close(Ok(()))
+                .unwrap_or_else(|err| error!("could not close channel: {}", err))
         }
     }
 }
