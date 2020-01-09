@@ -201,16 +201,16 @@ class Room {
     oak::NonceGenerator<64> generator;
     grpc::ClientContext context;
     CreateRoomRequest req;
-    auto room_nonce = generator.NextNonce();
-    auto room_nonce_string = std::string(room_nonce.begin(), room_nonce.end());
-    req_.set_room_id(room_nonce_string);
-    auto admin_nonce = generator.NextNonce();
-    req_.set_admin_token(std::string(admin_nonce.begin(), admin_nonce.end()));
+    auto room_id = generator.NextNonce();
+    auto room_id_string = std::string(room_id.begin(), room_id.end());
+    req_.set_room_id(room_id_string);
+    auto admin_token = generator.NextNonce();
+    req_.set_admin_token(std::string(admin_token.begin(), admin_token.end()));
     google::protobuf::Empty rsp;
     grpc::Status status = stub_->CreateRoom(&context, req_, &rsp);
     if (!status.ok()) {
-      LOG(QFATAL) << "Could not CreateRoom('" << room_nonce_string << "'): " << status.error_code()
-                  << ": " << status.error_message();
+      LOG(QFATAL) << "Could not CreateRoom('" << absl::Base64Escape(room_id_string)
+                  << "'): " << status.error_code() << ": " << status.error_message();
     }
   }
   ~Room() {
