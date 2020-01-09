@@ -18,7 +18,7 @@
 
 use log::{debug, info};
 
-use oak_abi::{ChannelReadStatus, OakStatus};
+use oak_abi::{ChannelReadStatus, Handle, OakStatus};
 use proto::manager::NodeConfiguration_oneof_config_type;
 use protobuf::ProtobufEnum;
 use rand::Rng;
@@ -28,9 +28,6 @@ use std::collections::VecDeque;
 use std::sync::{Arc, RwLock};
 
 pub mod proto;
-
-// TODO(#447)
-pub type Handle = u64;
 
 pub struct OakMessage {
     pub data: Vec<u8>,
@@ -568,10 +565,10 @@ impl OakNode {
 }
 
 /// Expected type for the main entrypoint to a Node under test.
-pub type NodeMain = fn(u64) -> i32;
+pub type NodeMain = fn(Handle) -> i32;
 
 // Main loop function for a log pseudo-Node.
-pub fn log_node_main(handle: u64) -> i32 {
+pub fn log_node_main(handle: Handle) -> i32 {
     if handle == oak_abi::INVALID_HANDLE {
         return OakStatus::ERR_BAD_HANDLE.value();
     }
