@@ -93,7 +93,7 @@ RUN ${GOROOT}/bin/go get github.com/campoy/embedmd
 ARG EMSCRIPTEN_VERSION=1.39.5
 ARG EMSCRIPTEN_COMMIT=369013943283939412fb2807bb0d2ded8ebd5a9e
 ARG EMSCRIPTEN_SHA256=0d192691e3186cf14833ab861a19262996a6bf69b62cb205d8662068d57f68ab
-ARG EMSCRIPTEN_DIR=/usr/local/emscripten
+ARG EMSCRIPTEN_DIR=/usr/local/emsdk
 ARG EMSCRIPTEN_TEMP=/tmp/emscripten.zip
 RUN mkdir --parents ${EMSCRIPTEN_DIR}
 RUN curl --location https://github.com/emscripten-core/emsdk/archive/${EMSCRIPTEN_COMMIT}.tar.gz > ${EMSCRIPTEN_TEMP}
@@ -104,15 +104,5 @@ RUN cd ${EMSCRIPTEN_DIR} \
     && ./emsdk install ${EMSCRIPTEN_VERSION} \
     && ./emsdk activate ${EMSCRIPTEN_VERSION}
 ENV PATH "${EMSCRIPTEN_DIR}:${EMSCRIPTEN_DIR}/upstream/emscripten:${PATH}"
-ENV EMSDK /usr/local/emscripten
-
-# Install WABT.
-ARG WABT_VERSION=1.0.12
-ARG WABT_SHA256=540632382afd3e658761f2abb742e0504b4986ffcd127cef250fc843e46d9271
-ARG WABT_DIR=/usr/local/wabt
-ARG WABT_TEMP=/tmp/wabt.tar.gz
-RUN mkdir --parents ${WABT_DIR}
-RUN curl --location https://github.com/WebAssembly/wabt/releases/download/${WABT_VERSION}/wabt-${WABT_VERSION}-linux.tar.gz > ${WABT_TEMP}
-RUN sha256sum --binary ${WABT_TEMP} && echo "${WABT_SHA256} *${WABT_TEMP}" | sha256sum --check
-RUN tar --extract --gzip --file=${WABT_TEMP} --directory=${WABT_DIR} --strip-components=1
-ENV PATH "${WABT_DIR}:${PATH}"
+ENV EMSDK "${EMSCRIPTEN_DIR}"
+ENV EM_CONFIG "/root/.emscripten"
