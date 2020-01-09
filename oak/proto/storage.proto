@@ -38,18 +38,18 @@ service Storage {
 message StorageReadRequest {
   bytes storage_id = 1;
   bytes transaction_id = 2;
-  bytes datum_name = 3;
+  bytes item_name = 3;
 }
 
 message StorageReadResponse {
-  bytes datum_value = 1;
+  bytes item_value = 1;
 }
 
 message StorageWriteRequest {
   bytes storage_id = 1;
   bytes transaction_id = 2;
-  bytes datum_name = 3;
-  bytes datum_value = 4;
+  bytes item_name = 3;
+  bytes item_value = 4;
 }
 
 message StorageWriteResponse {
@@ -58,7 +58,7 @@ message StorageWriteResponse {
 message StorageDeleteRequest {
   bytes storage_id = 1;
   bytes transaction_id = 2;
-  bytes datum_name = 3;
+  bytes item_name = 3;
 }
 
 message StorageDeleteResponse {

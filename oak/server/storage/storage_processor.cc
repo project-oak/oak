@@ -45,39 +45,39 @@ asylo::CleansingVector<uint8_t> GetStorageEncryptionKey(const std::string& /*sto
 
 StorageProcessor::StorageProcessor(const std::string& storage_address)
     : fixed_nonce_generator_(new oak::FixedNonceGenerator()),
-      datum_name_cryptor_(kMaxMessageSize, fixed_nonce_generator_),
-      datum_value_cryptor_(kMaxMessageSize, new asylo::AesGcmSivNonceGenerator()),
+      item_name_cryptor_(kMaxMessageSize, fixed_nonce_generator_),
+      item_value_cryptor_(kMaxMessageSize, new asylo::AesGcmSivNonceGenerator()),
       storage_service_(oak::Storage::NewStub(
           grpc::CreateChannel(storage_address, grpc::InsecureChannelCredentials()))) {}
 
-const asylo::StatusOr<std::string> StorageProcessor::EncryptDatum(const std::string& datum,
-                                                                  DatumType datum_type) {
+const asylo::StatusOr<std::string> StorageProcessor::EncryptItem(const std::string& item,
+                                                                 ItemType item_type) {
   // TODO: Replace "foo" with identifier for the encryption key.
   asylo::CleansingVector<uint8_t> key = GetStorageEncryptionKey("foo");
   asylo::CleansingString additional_authenticated_data;
   asylo::CleansingString nonce;
-  asylo::CleansingString datum_encrypted;
+  asylo::CleansingString item_encrypted;
   asylo::AesGcmSivCryptor* cryptor = nullptr;
 
-  switch (datum_type) {
-    case DatumType::NAME: {
-      fixed_nonce_generator_->set_datum_name(datum);
-      cryptor = &datum_name_cryptor_;
+  switch (item_type) {
+    case ItemType::NAME: {
+      fixed_nonce_generator_->set_item_name(item);
+      cryptor = &item_name_cryptor_;
       break;
     };
-    case DatumType::VALUE: {
-      cryptor = &datum_value_cryptor_;
+    case ItemType::VALUE: {
+      cryptor = &item_value_cryptor_;
       break;
     };
   };
   ASYLO_RETURN_IF_ERROR(
-      cryptor->Seal(key, additional_authenticated_data, datum, &nonce, &datum_encrypted));
+      cryptor->Seal(key, additional_authenticated_data, item, &nonce, &item_encrypted));
 
-  return absl::StrCat(nonce, datum_encrypted);
+  return absl::StrCat(nonce, item_encrypted);
 }
 
-const asylo::StatusOr<std::string> StorageProcessor::DecryptDatum(const std::string& input,
-                                                                  DatumType datum_type) {
+const asylo::StatusOr<std::string> StorageProcessor::DecryptItem(const std::string& input,
+                                                                 ItemType item_type) {
   asylo::CleansingString input_clean(input.data(), input.size());
 
   if (input_clean.size() < kAesGcmSivNonceSize) {
@@ -90,29 +90,29 @@ const asylo::StatusOr<std::string> StorageProcessor::DecryptDatum(const std::str
   asylo::CleansingVector<uint8_t> key(GetStorageEncryptionKey("foo"));
   asylo::CleansingString additional_authenticated_data;
   asylo::CleansingString nonce = input_clean.substr(0, kAesGcmSivNonceSize);
-  asylo::CleansingString datum_encrypted = input_clean.substr(kAesGcmSivNonceSize);
-  asylo::CleansingString datum_decrypted;
+  asylo::CleansingString item_encrypted = input_clean.substr(kAesGcmSivNonceSize);
+  asylo::CleansingString item_decrypted;
   asylo::AesGcmSivCryptor* cryptor = nullptr;
 
-  switch (datum_type) {
-    case DatumType::NAME: {
-      cryptor = &datum_name_cryptor_;
+  switch (item_type) {
+    case ItemType::NAME: {
+      cryptor = &item_name_cryptor_;
       break;
     };
-    case DatumType::VALUE: {
-      cryptor = &datum_value_cryptor_;
+    case ItemType::VALUE: {
+      cryptor = &item_value_cryptor_;
       break;
     };
   };
   ASYLO_RETURN_IF_ERROR(
-      cryptor->Open(key, additional_authenticated_data, datum_encrypted, nonce, &datum_decrypted));
+      cryptor->Open(key, additional_authenticated_data, item_encrypted, nonce, &item_decrypted));
 
-  return std::string(datum_decrypted.data(), datum_decrypted.size());
+  return std::string(item_decrypted.data(), item_decrypted.size());
 }
 
-void StorageProcessor::Read(const std::string& storage_name, const std::string& datum_name,
-                            const std::string& transaction_id, std::string* datum_value) {
-  CHECK(datum_value != nullptr);
+void StorageProcessor::Read(const std::string& storage_name, const std::string& item_name,
+                            const std::string& transaction_id, std::string* item_value) {
+  CHECK(item_value != nullptr);
 
   StorageReadRequest read_request;
   read_request.set_storage_id(GetStorageId(storage_name));
@@ -120,8 +120,8 @@ void StorageProcessor::Read(const std::string& storage_name, const std::string& 
     read_request.set_transaction_id(transaction_id);
   }
   // TODO: Propagate error status.
-  asylo::StatusOr<std::string> name_or = EncryptDatum(datum_name, DatumType::NAME);
-  read_request.set_datum_name(name_or.ValueOrDie());
+  asylo::StatusOr<std::string> name_or = EncryptItem(item_name, ItemType::NAME);
+  read_request.set_item_name(name_or.ValueOrDie());
 
   grpc::ClientContext context;
   StorageReadResponse read_response;
@@ -129,32 +129,32 @@ void StorageProcessor::Read(const std::string& storage_name, const std::string& 
   // TODO: Propagate error status.
   if (status.ok()) {
     asylo::StatusOr<std::string> value_or =
-        DecryptDatum(read_response.datum_value(), DatumType::VALUE);
-    *datum_value = value_or.ValueOrDie();
+        DecryptItem(read_response.item_value(), ItemType::VALUE);
+    *item_value = value_or.ValueOrDie();
   }
 }
 
-void StorageProcessor::Write(const std::string& storage_name, const std::string& datum_name,
-                             const std::string& datum_value, const std::string& transaction_id) {
+void StorageProcessor::Write(const std::string& storage_name, const std::string& item_name,
+                             const std::string& item_value, const std::string& transaction_id) {
   StorageWriteRequest write_request;
   write_request.set_storage_id(GetStorageId(storage_name));
   if (!transaction_id.empty()) {
     write_request.set_transaction_id(transaction_id);
   }
   // TODO: Propagate error status.
-  asylo::StatusOr<std::string> name_or = EncryptDatum(datum_name, DatumType::NAME);
-  write_request.set_datum_name(name_or.ValueOrDie());
+  asylo::StatusOr<std::string> name_or = EncryptItem(item_name, ItemType::NAME);
+  write_request.set_item_name(name_or.ValueOrDie());
 
   // TODO: Propagate error status.
-  asylo::StatusOr<std::string> value_or = EncryptDatum(datum_value, DatumType::VALUE);
-  write_request.set_datum_value(value_or.ValueOrDie());
+  asylo::StatusOr<std::string> value_or = EncryptItem(item_value, ItemType::VALUE);
+  write_request.set_item_value(value_or.ValueOrDie());
 
   grpc::ClientContext context;
   StorageWriteResponse write_response;
   grpc::Status status = storage_service_->Write(&context, write_request, &write_response);
 }
 
-void StorageProcessor::Delete(const std::string& storage_name, const std::string& datum_name,
+void StorageProcessor::Delete(const std::string& storage_name, const std::string& item_name,
                               const std::string& transaction_id) {
   StorageDeleteRequest delete_request;
   delete_request.set_storage_id(GetStorageId(storage_name));
@@ -162,8 +162,8 @@ void StorageProcessor::Delete(const std::string& storage_name, const std::string
     delete_request.set_transaction_id(transaction_id);
   }
   // TODO: Propagate error status.
-  asylo::StatusOr<std::string> name_or = EncryptDatum(datum_name, DatumType::NAME);
-  delete_request.set_datum_name(name_or.ValueOrDie());
+  asylo::StatusOr<std::string> name_or = EncryptItem(item_name, ItemType::NAME);
+  delete_request.set_item_name(name_or.ValueOrDie());
 
   grpc::ClientContext context;
   StorageDeleteResponse delete_response;

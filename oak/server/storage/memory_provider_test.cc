@@ -31,11 +31,11 @@ class PopulatedMemoryProvider : public ::testing::Test {
     StorageWriteRequest req;
     req.set_storage_id("test-00");
     StorageWriteResponse rsp;
-    req.set_datum_name("key0");
-    req.set_datum_value("value0");
+    req.set_item_name("key0");
+    req.set_item_value("value0");
     EXPECT_TRUE(mem_.Write(&req, &rsp).ok());
-    req.set_datum_name("key1");
-    req.set_datum_value("value1");
+    req.set_item_name("key1");
+    req.set_item_value("value1");
     EXPECT_TRUE(mem_.Write(&req, &rsp).ok());
   }
 
@@ -46,7 +46,7 @@ TEST(MemoryStorage, ReadStorageIDAbsent) {
   MemoryProvider mem;
   StorageReadRequest req;
   req.set_storage_id("absent");
-  req.set_datum_name("key0");
+  req.set_item_name("key0");
   StorageReadResponse rsp;
   grpc::Status status = mem.Read(&req, &rsp);
   ASSERT_EQ(grpc::StatusCode::NOT_FOUND, status.error_code());
@@ -55,7 +55,7 @@ TEST(MemoryStorage, ReadStorageIDAbsent) {
 TEST_F(PopulatedMemoryProvider, ReadKeyAbsent) {
   StorageReadRequest req;
   req.set_storage_id("test-00");
-  req.set_datum_name("key2");
+  req.set_item_name("key2");
   StorageReadResponse rsp;
   grpc::Status status = mem_.Read(&req, &rsp);
   ASSERT_EQ(grpc::StatusCode::NOT_FOUND, status.error_code());
@@ -64,24 +64,24 @@ TEST_F(PopulatedMemoryProvider, ReadKeyAbsent) {
 TEST_F(PopulatedMemoryProvider, ReadOK) {
   StorageReadRequest req;
   req.set_storage_id("test-00");
-  req.set_datum_name("key0");
+  req.set_item_name("key0");
   StorageReadResponse rsp;
   EXPECT_TRUE(mem_.Read(&req, &rsp).ok());
-  EXPECT_EQ("value0", rsp.datum_value());
+  EXPECT_EQ("value0", rsp.item_value());
 }
 
 TEST_F(PopulatedMemoryProvider, DeleteOK) {
   {
     StorageDeleteRequest req;
     req.set_storage_id("test-00");
-    req.set_datum_name("key0");
+    req.set_item_name("key0");
     StorageDeleteResponse rsp;
     EXPECT_TRUE(mem_.Delete(&req, &rsp).ok());
   }
   {
     StorageReadRequest req;
     req.set_storage_id("test-00");
-    req.set_datum_name("key0");
+    req.set_item_name("key0");
     StorageReadResponse rsp;
     grpc::Status status = mem_.Read(&req, &rsp);
     ASSERT_EQ(grpc::StatusCode::NOT_FOUND, status.error_code());
@@ -91,7 +91,7 @@ TEST_F(PopulatedMemoryProvider, DeleteOK) {
 TEST_F(PopulatedMemoryProvider, DeleteStorageIDAbsent) {
   StorageDeleteRequest req;
   req.set_storage_id("test-99");
-  req.set_datum_name("key0");
+  req.set_item_name("key0");
   StorageDeleteResponse rsp;
   grpc::Status status = mem_.Delete(&req, &rsp);
   ASSERT_EQ(grpc::StatusCode::NOT_FOUND, status.error_code());
@@ -102,17 +102,17 @@ TEST_F(PopulatedMemoryProvider, WriteThenRead) {
     StorageWriteRequest req;
     req.set_storage_id("test-00");
     StorageWriteResponse rsp;
-    req.set_datum_name("key7");
-    req.set_datum_value("value7");
+    req.set_item_name("key7");
+    req.set_item_value("value7");
     EXPECT_TRUE(mem_.Write(&req, &rsp).ok());
   }
   {
     StorageReadRequest req;
     req.set_storage_id("test-00");
-    req.set_datum_name("key7");
+    req.set_item_name("key7");
     StorageReadResponse rsp;
     EXPECT_TRUE(mem_.Read(&req, &rsp).ok());
-    EXPECT_EQ("value7", rsp.datum_value());
+    EXPECT_EQ("value7", rsp.item_value());
   }
 }
 
@@ -121,17 +121,17 @@ TEST_F(PopulatedMemoryProvider, WriteThenReadNewStorageID) {
     StorageWriteRequest req;
     req.set_storage_id("test-01");
     StorageWriteResponse rsp;
-    req.set_datum_name("key7");
-    req.set_datum_value("value7");
+    req.set_item_name("key7");
+    req.set_item_value("value7");
     EXPECT_TRUE(mem_.Write(&req, &rsp).ok());
   }
   {
     StorageReadRequest req;
     req.set_storage_id("test-01");
-    req.set_datum_name("key7");
+    req.set_item_name("key7");
     StorageReadResponse rsp;
     EXPECT_TRUE(mem_.Read(&req, &rsp).ok());
-    EXPECT_EQ("value7", rsp.datum_value());
+    EXPECT_EQ("value7", rsp.item_value());
   }
 }
 
