@@ -568,7 +568,7 @@ impl OakNode {
 pub type NodeMain = fn(Handle) -> i32;
 
 // Main loop function for a log pseudo-Node.
-pub fn log_node_main(handle: Handle) -> i32 {
+fn log_node_main(handle: Handle) -> i32 {
     if handle == oak_abi::INVALID_HANDLE {
         return OakStatus::ERR_BAD_HANDLE.value();
     }
