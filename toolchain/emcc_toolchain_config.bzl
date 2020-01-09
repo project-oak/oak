@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-"""This file is configuring an Emscripten toolchain to use for WASM.
+"""This file is configuring an Emscripten toolchain to use for Wasm.
 It overwrites the tool paths to point to clang and sets the needed flags for different
 types of actions.
 """

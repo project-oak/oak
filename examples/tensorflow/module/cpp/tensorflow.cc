@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 The Project Oak Authors
+ * Copyright 2020 The Project Oak Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-//#include "examples/tensorflow/proto/tensorflow.grpc.pb.h"
-//#include "examples/tensorflow/proto/tensorflow.pb.h"
 #include "oak/module/defines.h"  // for imports and exports
-//#include "oak/proto/oak_api.pb.h"
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/kernels/register.h"
 #include "tensorflow/lite/model.h"
@@ -122,6 +119,16 @@ WASM_EXPORT int32_t oak_main(uint64_t grpc_in_handle) {
 
     init_tensorflow();
 
+    // Encapsulated GrpcResponse protobuf.
+    //    0a                 b00001.010 = tag 1 (GrpcResponse.rsp_msg), length-delimited field
+    //    0b                 length=11
+    //      12                 b00010.010 = tag 2 (Any.value), length-delimited field
+    //      09                 length=9
+    //        0A                 b00001.010 = tag 1 (HelloResponse.reply), length-delimited field
+    //        07                 length=7
+    //          74657374696e67   "testing"
+    //    18                 b00011.000 = tag 3 (GrpcResponse.last), varint
+    //    01                 true
     uint8_t buf[] = "\x0a\x0b\x12\x09\x0A\x07\x74\x65\x73\x74\x69\x6e\x67\x18\x01";
     // TODO: replace with use of message type and serialization.
     channel_write(rsp_handle, buf, sizeof(buf) - 1, nullptr, 0);

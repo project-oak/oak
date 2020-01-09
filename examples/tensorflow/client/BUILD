@@ -1,5 +1,5 @@
 #
-# Copyright 2019 The Project Oak Authors
+# Copyright 2020 The Project Oak Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -38,20 +38,4 @@ cc_binary(
 )
 
 # TODO: Create a new Bazel rule `oak_application_server_docker`, that encapsulates this logic.
-container_image(
-    name = "client_docker",
-    base = "//oak/server/asylo:oak_app_docker",
-    entrypoint = [
-        "./oak_app_host_loader",
-        "--enclave_path=oak_enclave_debug.so",
-        "--module=tensorflow.wasm",
-        "--grpc_port=8080",
-    ],
-    files = [
-        "//examples:target/wasm32-unknown-unknown/release/tensorflow.wasm",
-    ],
-    ports = [
-        "8080/tcp",  # Oak Application gRPC port.
-    ],
-    repository = "gcr.io/oak-ci",
-)
+# https://github.com/project-oak/oak/issues/448
