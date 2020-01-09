@@ -61,7 +61,7 @@ pub fn derive_oak_exports(input: TokenStream) -> TokenStream {
             // https://doc.rust-lang.org/nomicon/ffi.html#ffi-and-panics
             std::panic::catch_unwind(||{
                 let mut node = <#name>::new();
-                oak::grpc::event_loop(node, oak::ReadHandle{ handle })
+                oak::grpc::event_loop(node, oak::ReadHandle{ handle: oak::Handle::from_raw(handle) })
             }).unwrap_or(oak::OakStatus::ERR_INTERNAL.value())
         }
     };

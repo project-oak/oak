@@ -35,9 +35,10 @@ pub extern "C" fn oak_main(handle: u64) -> i32 {
 pub fn main(in_handle: u64) -> i32 {
     let _ = oak_log::init(log::Level::Debug, LOG_CONFIG_NAME);
     oak::set_panic_hook();
+    let in_channel = oak::ReadHandle {
+        handle: oak::Handle::from_raw(in_handle),
+    };
 
-    // We expect a single empty message holding a reply channel.
-    let in_channel = oak::ReadHandle { handle: in_handle };
     let mut buf = Vec::<u8>::with_capacity(2);
     let mut handles = Vec::with_capacity(2);
     oak::channel_read(in_channel, &mut buf, &mut handles);
@@ -45,7 +46,7 @@ pub fn main(in_handle: u64) -> i32 {
         return oak::OakStatus::ERR_INTERNAL.value();
     }
     let out_handle = handles[0];
-    info!("backend node: in={}, out={}", in_handle, out_handle);
+    info!("backend node: in={:?}, out={:?}", in_channel, out_handle);
 
     let out_channel = oak::WriteHandle { handle: out_handle };
     // Wait on 1+N read handles (starting with N=0).
@@ -62,7 +63,7 @@ pub fn main(in_handle: u64) -> i32 {
             let mut handles = Vec::with_capacity(5);
             oak::channel_read(in_channel, &mut buf, &mut handles);
             for handle in handles {
-                info!("add new handle {} to waiting set", handle);
+                info!("add new handle {:?} to waiting set", handle);
                 wait_handles.push(oak::ReadHandle { handle });
             }
         }

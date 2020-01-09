@@ -144,7 +144,7 @@ pub trait OakNode {
 /// [`GrpcRequest`]: crate::proto::grpc_encap::GrpcRequest
 pub fn event_loop<T: OakNode>(mut node: T, grpc_in_handle: ReadHandle) -> i32 {
     info!("start event loop for node with handle {:?}", grpc_in_handle);
-    if grpc_in_handle.handle == wasm::INVALID_HANDLE {
+    if !grpc_in_handle.handle.is_valid() {
         return OakStatus::ERR_CHANNEL_CLOSED.value();
     }
     crate::set_panic_hook();

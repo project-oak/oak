@@ -23,7 +23,10 @@ fn test_write_message() {
     let (write_handle, read_handle) = channel_create().unwrap();
     let data = [0x44, 0x4d, 0x44];
     assert_eq!(OakStatus::OK, channel_write(write_handle, &data, &[]));
-    assert_eq!("DMD", oak_tests::last_message_as_string(read_handle.handle));
+    assert_eq!(
+        "DMD",
+        oak_tests::last_message_as_string(read_handle.handle.id)
+    );
 }
 
 #[test]
@@ -34,7 +37,7 @@ fn test_write_message_failure() {
     let data = [0x44, 0x4d, 0x44];
     oak_tests::set_write_status(
         oak_tests::DEFAULT_NODE_NAME,
-        write_handle.handle,
+        write_handle.handle.id,
         Some(OakStatus::ERR_INVALID_ARGS.value() as u32),
     );
     assert_eq!(
@@ -70,7 +73,7 @@ fn test_read_message_failure() {
     let (_write_handle, read_handle) = channel_create().unwrap();
     oak_tests::set_read_status(
         oak_tests::DEFAULT_NODE_NAME,
-        read_handle.handle,
+        read_handle.handle.id,
         Some(OakStatus::ERR_INVALID_ARGS.value() as u32),
     );
 
@@ -90,7 +93,7 @@ fn test_read_message_internal_failure() {
     // Set buffer too small but don't set actual size, so the retry gets confused.
     oak_tests::set_read_status(
         oak_tests::DEFAULT_NODE_NAME,
-        read_handle.handle,
+        read_handle.handle.id,
         Some(OakStatus::ERR_BUFFER_TOO_SMALL.value() as u32),
     );
 
@@ -104,7 +107,14 @@ fn test_read_message_internal_failure() {
 
 #[test]
 fn test_handle_space() {
-    let h = vec![ReadHandle { handle: 1 }, ReadHandle { handle: 2 }];
+    let h = vec![
+        ReadHandle {
+            handle: Handle::from_raw(1),
+        },
+        ReadHandle {
+            handle: Handle::from_raw(2),
+        },
+    ];
     let data = [
         0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00,
