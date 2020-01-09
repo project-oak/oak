@@ -170,10 +170,18 @@ fn status_convert<T>(result: Result<T, OakStatus>) -> std::io::Result<T> {
 }
 
 // Return an offset value that is beyond the bounds of available linear memory.
-fn invalid_raw_offset() -> *mut u64 {
+unsafe fn invalid_raw_offset() -> *mut u64 {
     // Currently no way to get at the `memory.size` Wasm instruction from Rust,
     // so pick a large number instead.
     0x7fff_fff0 as *mut u64
+}
+
+// Helper function to simplify creating nodes through oak::wasm::channel_create
+fn channel_create_raw() -> (u64, u64, u32) {
+    let mut w = 0u64;
+    let mut r = 0u64;
+    let result = unsafe { oak::wasm::channel_create(&mut w as *mut u64, &mut r as *mut u64) };
+    (w, r, result)
 }
 
 impl FrontendNode {
@@ -215,11 +223,7 @@ impl FrontendNode {
     }
 
     fn test_channel_close_raw(&self) -> std::io::Result<()> {
-        let mut w = 0;
-        let mut r = 0;
-        unsafe {
-            oak::wasm::channel_create(&mut w as *mut u64, &mut r as *mut u64);
-        }
+        let (w, r, _) = channel_create_raw();
 
         unsafe {
             expect_eq!(OakStatus::OK.value() as u32, oak::wasm::channel_close(w));
@@ -254,11 +258,7 @@ impl FrontendNode {
     }
 
     fn test_channel_read_raw(&self) -> std::io::Result<()> {
-        let mut out_channel = 0;
-        let mut in_channel = 0;
-        unsafe {
-            oak::wasm::channel_create(&mut out_channel as *mut u64, &mut in_channel as *mut u64);
-        }
+        let (out_channel, in_channel, _) = channel_create_raw();
 
         let mut buf = Vec::<u8>::with_capacity(5);
         let mut handles = Vec::with_capacity(5);
@@ -415,11 +415,7 @@ impl FrontendNode {
     }
 
     fn test_channel_write_raw(&self) -> std::io::Result<()> {
-        let mut out_channel = 0u64;
-        let mut in_channel = 0u64;
-        unsafe {
-            oak::wasm::channel_create(&mut out_channel as *mut u64, &mut in_channel as *mut u64);
-        }
+        let (out_channel, in_channel, _) = channel_create_raw();
 
         let buf = vec![0x01];
         let handles = vec![in_channel];
@@ -501,12 +497,9 @@ impl FrontendNode {
     }
 
     fn test_channel_wait_raw(&self) -> std::io::Result<()> {
-        let mut out_channel = 0u64;
-        let mut in_channel = 0u64;
+        let (out_channel, in_channel, _) = channel_create_raw();
 
         unsafe {
-            oak::wasm::channel_create(&mut out_channel as *mut u64, &mut in_channel as *mut u64);
-
             // Write a message to the channel so wait operations don't block.
             let data = vec![0x01, 0x02, 0x03];
             expect_eq!(
@@ -791,12 +784,9 @@ impl FrontendNode {
     }
 
     fn test_node_create_raw(&self) -> std::io::Result<()> {
-        let mut out_channel = 0u64;
-        let mut in_channel = 0u64;
+        let (_, in_channel, _) = channel_create_raw();
 
         unsafe {
-            oak::wasm::channel_create(&mut out_channel as *mut u64, &mut in_channel as *mut u64);
-
             expect_eq!(
                 OakStatus::ERR_INVALID_ARGS.value() as u32,
                 oak::wasm::node_create(invalid_raw_offset() as *mut u8, 1, in_channel)
