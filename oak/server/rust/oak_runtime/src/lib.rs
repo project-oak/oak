@@ -16,7 +16,7 @@
 
 //! Test utilities to help with unit testing of Oak SDK code.
 
-use log::{debug, info};
+use log::{debug, error, info, warn};
 
 use oak_abi::{ChannelReadStatus, Handle, OakStatus};
 use proto::manager::NodeConfiguration_oneof_config_type;
@@ -259,7 +259,8 @@ impl OakRuntime {
         for node_config in config.get_node_configs() {
             match &node_config.config_type {
                 None => {
-                    panic!("Node config {} with no type", node_config.name);
+                    error!("Node config {} with no type", node_config.name);
+                    return None;
                 }
                 Some(NodeConfiguration_oneof_config_type::log_config(_)) => {
                     self.entrypoints
@@ -268,14 +269,16 @@ impl OakRuntime {
                 Some(NodeConfiguration_oneof_config_type::wasm_config(_)) => {
                     // Check that we have an entrypoint corresponding to this.
                     if !self.entrypoints.contains_key(&node_config.name) {
-                        panic!(
+                        error!(
                             "no entrypoint provided for Node config {}",
                             node_config.name
-                        )
+                        );
+                        return None;
                     }
                 }
                 Some(NodeConfiguration_oneof_config_type::storage_config(_storage_config)) => {
                     // TODO: Implement a storage pseudo-Node
+                    warn!("Storage pseudo-Node not yet implemented!");
                 }
             }
         }
