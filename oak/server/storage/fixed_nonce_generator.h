@@ -27,8 +27,8 @@ namespace oak {
 
 constexpr size_t kAesGcmSivNonceSize = 12;
 
-// Produces fixed nonces using the storage encryption key and datum name to
-// allow deterministic encryption of the datum name.
+// Produces fixed nonces using the storage encryption key and item name to
+// allow deterministic encryption of the item name.
 class FixedNonceGenerator : public asylo::NonceGenerator<kAesGcmSivNonceSize> {
  public:
   using AesGcmSivNonce = asylo::UnsafeBytes<kAesGcmSivNonceSize>;
@@ -41,7 +41,7 @@ class FixedNonceGenerator : public asylo::NonceGenerator<kAesGcmSivNonceSize> {
     // Generates a digest of the inputs to extract a fixed-size nonce.
     SHA256_CTX context;
     SHA256_Init(&context);
-    SHA256_Update(&context, datum_name_.data(), datum_name_.size());
+    SHA256_Update(&context, item_name_.data(), item_name_.size());
     SHA256_Update(&context, key_id.data(), key_id.size());
     std::vector<uint8_t> digest(SHA256_DIGEST_LENGTH);
     SHA256_Final(digest.data(), &context);
@@ -53,12 +53,12 @@ class FixedNonceGenerator : public asylo::NonceGenerator<kAesGcmSivNonceSize> {
   // Causes asylo::AesGcmSiv::Seal to encrypt the nonce before use.
   bool uses_key_id() override { return true; }
 
-  // Sets the datum name used to generate the nonce.  Must be called before
+  // Sets the item name used to generate the nonce.  Must be called before
   // each invocation of NextNonce or asylo::AesGcmSiv::Seal.
-  void set_datum_name(const std::string& datum_name) { datum_name_ = datum_name; }
+  void set_item_name(const std::string& item_name) { item_name_ = item_name; }
 
  private:
-  std::string datum_name_;
+  std::string item_name_;
 };
 
 }  // namespace oak

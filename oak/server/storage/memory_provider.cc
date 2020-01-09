@@ -26,18 +26,18 @@ grpc::Status MemoryProvider::Read(const StorageReadRequest* req, StorageReadResp
     return grpc::Status(grpc::StatusCode::NOT_FOUND,
                         absl::StrCat("No store found for storage ID ", req->storage_id()));
   }
-  auto kv = store->second.find(req->datum_name());
+  auto kv = store->second.find(req->item_name());
   if (kv == store->second.end()) {
     return grpc::Status(grpc::StatusCode::NOT_FOUND,
-                        absl::StrCat("No value found for ", req->datum_name()));
+                        absl::StrCat("No value found for ", req->item_name()));
   }
-  rsp->set_datum_value(kv->second);
+  rsp->set_item_value(kv->second);
 
   return grpc::Status::OK;
 }
 
 grpc::Status MemoryProvider::Write(const StorageWriteRequest* req, StorageWriteResponse*) {
-  stores_[req->storage_id()][req->datum_name()] = req->datum_value();
+  stores_[req->storage_id()][req->item_name()] = req->item_value();
   return grpc::Status::OK;
 }
 
@@ -47,7 +47,7 @@ grpc::Status MemoryProvider::Delete(const StorageDeleteRequest* req, StorageDele
     return grpc::Status(grpc::StatusCode::NOT_FOUND,
                         absl::StrCat("No store found for storage ID ", req->storage_id()));
   }
-  store->second.erase(req->datum_name());
+  store->second.erase(req->item_name());
   return grpc::Status::OK;
 }
 

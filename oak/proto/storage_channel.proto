@@ -25,7 +25,7 @@ import "oak/proto/policy.proto";
 // identifier from storage_name and the Oak Module identifier to prevent name collisions among Oak
 // Modules.
 
-message StorageDatum {
+message StorageItem {
   bytes name = 1;
   bytes value = 2;
   oak.policy.Label policy = 3;
@@ -34,17 +34,17 @@ message StorageDatum {
 message StorageChannelReadRequest {
   bytes storage_name = 1;
   bytes transaction_id = 2;
-  StorageDatum datum = 3;
+  StorageItem item = 3;
 }
 
 message StorageChannelReadResponse {
-  StorageDatum datum = 1;
+  StorageItem item = 1;
 }
 
 message StorageChannelWriteRequest {
   bytes storage_name = 1;
   bytes transaction_id = 2;
-  StorageDatum datum = 3;
+  StorageItem item = 3;
 }
 
 message StorageChannelWriteResponse {
@@ -53,7 +53,7 @@ message StorageChannelWriteResponse {
 message StorageChannelDeleteRequest {
   bytes storage_name = 1;
   bytes transaction_id = 2;
-  StorageDatum datum = 3;
+  StorageItem item = 3;
 }
 
 message StorageChannelDeleteResponse {
