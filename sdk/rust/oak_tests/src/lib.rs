@@ -21,6 +21,7 @@ use log::{debug, info, warn};
 
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use oak::OakStatus;
+use oak_abi::Handle;
 use oak_runtime::{proto, OakMessage, OakRuntime};
 use protobuf::{Message, ProtobufEnum};
 use rand::Rng;
@@ -354,7 +355,7 @@ pub unsafe extern "C" fn random_get(buf: *mut u8, size: usize) -> u32 {
 /// Convenience test helper which returns the last message on a channel as a
 /// string (without removing it from the channel), assuming that only a single
 /// Node (with the default internal name) is present and under test.
-pub fn last_message_as_string(handle: oak_runtime::Handle) -> String {
+pub fn last_message_as_string(handle: Handle) -> String {
     let result = match RUNTIME
         .read()
         .expect(RUNTIME_MISSING)
@@ -368,7 +369,7 @@ pub fn last_message_as_string(handle: oak_runtime::Handle) -> String {
 }
 
 /// Test helper that injects a failure for future channel read operations.
-pub fn set_read_status(node_name: &str, handle: oak_runtime::Handle, status: Option<u32>) {
+pub fn set_read_status(node_name: &str, handle: Handle, status: Option<u32>) {
     RUNTIME
         .write()
         .expect(RUNTIME_MISSING)
@@ -376,7 +377,7 @@ pub fn set_read_status(node_name: &str, handle: oak_runtime::Handle, status: Opt
 }
 
 /// Test helper that injects a failure for future channel write operations.
-pub fn set_write_status(node_name: &str, handle: oak_runtime::Handle, status: Option<u32>) {
+pub fn set_write_status(node_name: &str, handle: Handle, status: Option<u32>) {
     RUNTIME
         .write()
         .expect(RUNTIME_MISSING)
@@ -437,7 +438,7 @@ pub fn start(
 /// Start running a test of a single-Node Application.  This assumes that the
 /// single Node's main entrypoint is available as a global extern "C"
 /// oak_main(), as for a live version of the Application.
-pub fn start_node(handle: oak_runtime::Handle) {
+pub fn start_node(handle: Handle) {
     RUNTIME
         .write()
         .expect(RUNTIME_MISSING)
@@ -486,7 +487,7 @@ pub fn stop() -> OakStatus {
 
 /// Test helper to set up a channel into the (single) Node under test for
 /// injected gRPC requests.
-pub fn grpc_channel_setup_default() -> oak_runtime::Handle {
+pub fn grpc_channel_setup_default() -> Handle {
     RUNTIME
         .write()
         .expect(RUNTIME_MISSING)

@@ -21,6 +21,11 @@ pub use proto::oak_api::OakStatus;
 
 pub mod proto;
 
+/// Handle used to identify read or write channel halves.
+///
+/// These handles are used for all host function calls.
+pub type Handle = u64;
+
 /// Number of bytes needed per-handle for channel readiness notifications.
 ///
 /// The notification space consists of the channel handle (as a little-endian
@@ -29,4 +34,4 @@ pub mod proto;
 pub const SPACE_BYTES_PER_HANDLE: usize = 9;
 
 /// Invalid handle value.
-pub const INVALID_HANDLE: u64 = 0;
+pub const INVALID_HANDLE: Handle = 0;
