@@ -54,7 +54,7 @@ impl Handle {
         self.id != wasm::INVALID_HANDLE
     }
 
-    /// Returns an intentionally invalid handle. Intended for debugging purposes.
+    /// Returns an intentionally invalid handle.
     pub fn invalid() -> Handle {
         Handle {
             id: wasm::INVALID_HANDLE,
