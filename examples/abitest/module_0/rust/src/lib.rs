@@ -563,11 +563,11 @@ impl FrontendNode {
                 oak::wasm::wait_on_channels(space.as_mut_ptr(), COUNT as u32)
             );
             expect_eq!(
-                oak::proto::oak_api::ChannelReadStatus::INVALID_CHANNEL.value(),
+                ChannelReadStatus::INVALID_CHANNEL.value(),
                 i32::from(space[8])
             );
             expect_eq!(
-                oak::proto::oak_api::ChannelReadStatus::READ_READY.value(),
+                ChannelReadStatus::READ_READY.value(),
                 i32::from(space[9 + 8])
             );
             expect_eq!(
@@ -589,10 +589,7 @@ impl FrontendNode {
                 OakStatus::OK.value() as u32,
                 oak::wasm::wait_on_channels(space.as_mut_ptr(), COUNT as u32)
             );
-            expect_eq!(
-                oak::proto::oak_api::ChannelReadStatus::READ_READY.value(),
-                i32::from(space[8])
-            );
+            expect_eq!(ChannelReadStatus::READ_READY.value(), i32::from(space[8]));
         }
         // Consume the pending message.
         let mut buffer = Vec::with_capacity(5);
@@ -628,10 +625,7 @@ impl FrontendNode {
                 OakStatus::ERR_BAD_HANDLE.value() as u32,
                 oak::wasm::wait_on_channels(space.as_mut_ptr(), COUNT as u32)
             );
-            expect_eq!(
-                oak::proto::oak_api::ChannelReadStatus::ORPHANED.value(),
-                i32::from(space[8])
-            );
+            expect_eq!(ChannelReadStatus::ORPHANED.value(), i32::from(space[8]));
 
             expect_eq!(
                 OakStatus::OK.value() as u32,
