@@ -20,6 +20,7 @@ pub use proto::oak_api::ChannelReadStatus;
 pub use proto::oak_api::OakStatus;
 
 pub mod proto;
+pub mod wasm;
 
 /// Handle used to identify read or write channel halves.
 ///

@@ -19,6 +19,7 @@ use log::{debug, error};
 use protobuf::ProtobufEnum;
 
 // Re-export ABI constants that are also visible as part of the SDK API.
+pub use oak_abi::wasm;
 pub use oak_abi::{ChannelReadStatus, OakStatus};
 
 pub mod grpc;
@@ -28,7 +29,6 @@ pub mod rand;
 pub mod storage;
 #[cfg(test)]
 mod tests;
-pub mod wasm;
 
 #[cfg(test)]
 use assert_matches::assert_matches;
