@@ -48,7 +48,7 @@ impl Room {
         oak::channel_close(rh.handle);
         Room {
             channel: wh,
-            admin_token: admin_token,
+            admin_token,
         }
     }
 }

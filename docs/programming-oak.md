@@ -388,7 +388,7 @@ to the room:
         oak::channel_close(rh.handle);
         Room {
             channel: wh,
-            admin_token: admin_token,
+            admin_token,
         }
 ```
 <!-- prettier-ignore-end-->
