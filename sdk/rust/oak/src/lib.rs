@@ -16,9 +16,10 @@
 
 use byteorder::WriteBytesExt;
 use log::{debug, error};
-pub use proto::oak_api::ChannelReadStatus;
-pub use proto::oak_api::OakStatus;
 use protobuf::ProtobufEnum;
+
+// Re-export ABI constants that are also visible as part of the SDK API.
+pub use oak_abi::{ChannelReadStatus, OakStatus};
 
 pub mod grpc;
 pub mod io;
@@ -51,13 +52,13 @@ impl Handle {
 
     /// Check this handle is valid.
     pub fn is_valid(self) -> bool {
-        self.id != wasm::INVALID_HANDLE
+        self.id != oak_abi::INVALID_HANDLE
     }
 
     /// Returns an intentionally invalid handle.
     pub fn invalid() -> Handle {
         Handle {
-            id: wasm::INVALID_HANDLE,
+            id: oak_abi::INVALID_HANDLE,
         }
     }
 }

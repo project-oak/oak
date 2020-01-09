@@ -14,6 +14,7 @@ members = [
 # > explicit about the dependency relationships between the crates.
 [patch.crates-io]
 oak = { path = "oak" }
+oak_abi = { path = "../../oak/server/rust/oak_abi" }
 oak_derive = { path = "oak_derive" }
 oak_log = { path = "oak_log" }
 oak_runtime = { path = "../../oak/server/rust/oak_runtime" }

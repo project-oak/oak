@@ -5,7 +5,6 @@ fn main() {
             "../../../third_party/google/rpc/code.proto",
             "../../../third_party/google/rpc/status.proto",
             "../../../oak/proto/grpc_encap.proto",
-            "../../../oak/proto/oak_api.proto",
             "../../../oak/proto/policy.proto",
             "../../../oak/proto/storage.proto",
             "../../../oak/proto/storage_channel.proto",

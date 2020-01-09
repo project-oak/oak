@@ -18,7 +18,7 @@
 
 use log::{debug, info};
 
-use oak::OakStatus;
+use oak_abi::{ChannelReadStatus, OakStatus};
 use proto::manager::NodeConfiguration_oneof_config_type;
 use protobuf::ProtobufEnum;
 use rand::Rng;
@@ -152,7 +152,7 @@ impl ChannelHalf {
         actual_handle_count: &mut u32,
     ) -> Result<OakMessage, u32> {
         if self.direction != Direction::Read {
-            return Err(oak::OakStatus::ERR_BAD_HANDLE.value() as u32);
+            return Err(OakStatus::ERR_BAD_HANDLE.value() as u32);
         }
         self.channel
             .write()
@@ -368,7 +368,7 @@ impl OakRuntime {
     }
     pub fn node_channel_write(&mut self, node_name: &str, handle: Handle, msg: OakMessage) -> u32 {
         match self.node_half_for_handle_dir(node_name, handle, Direction::Write) {
-            None => oak::OakStatus::ERR_BAD_HANDLE.value() as u32,
+            None => OakStatus::ERR_BAD_HANDLE.value() as u32,
             Some(half) => half
                 .channel
                 .write()
@@ -386,7 +386,7 @@ impl OakRuntime {
         actual_handle_count: &mut u32,
     ) -> Result<OakMessage, u32> {
         match self.node_half_for_handle_dir(node_name, handle, Direction::Read) {
-            None => Err(oak::OakStatus::ERR_BAD_HANDLE.value() as u32),
+            None => Err(OakStatus::ERR_BAD_HANDLE.value() as u32),
             Some(half) => half
                 .channel
                 .write()
@@ -394,17 +394,17 @@ impl OakRuntime {
                 .read_message(size, actual_size, handle_count, actual_handle_count),
         }
     }
-    pub fn node_channel_status(&self, node_name: &str, handle: Handle) -> oak::ChannelReadStatus {
+    pub fn node_channel_status(&self, node_name: &str, handle: Handle) -> ChannelReadStatus {
         match self.node_half_for_handle_dir(node_name, handle, Direction::Read) {
-            None => oak::ChannelReadStatus::INVALID_CHANNEL,
+            None => ChannelReadStatus::INVALID_CHANNEL,
             Some(half) => {
                 let channel = half.channel.read().expect("corrupt channel ref");
                 if !channel.messages.is_empty() {
-                    oak::ChannelReadStatus::READ_READY
+                    ChannelReadStatus::READ_READY
                 } else if channel.half_count[&Direction::Write] == 0 {
-                    oak::ChannelReadStatus::ORPHANED
+                    ChannelReadStatus::ORPHANED
                 } else {
-                    oak::ChannelReadStatus::NOT_READY
+                    ChannelReadStatus::NOT_READY
                 }
             }
         }

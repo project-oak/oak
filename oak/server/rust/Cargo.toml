@@ -1,6 +1,7 @@
 [workspace]
 
 members = [
+  "oak_abi",
   "oak_runtime",
 ]
 
@@ -11,4 +12,5 @@ members = [
 # > explicit about the dependency relationships between the crates.
 [patch.crates-io]
 oak = { path = "../../../sdk/rust/oak" }
+oak_abi = { path = "oak_abi" }
 oak_runtime = { path = "oak_runtime" }
