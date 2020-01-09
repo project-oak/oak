@@ -344,7 +344,7 @@ impl FrontendNode {
         let (out_channel, in_channel) = oak::channel_create().unwrap();
 
         let mut buffer = Vec::<u8>::with_capacity(5);
-        let mut handles = Vec::with_capacity(5);
+        let mut handles = Vec::with_capacity(1);
         expect_eq!(
             OakStatus::ERR_CHANNEL_EMPTY,
             oak::channel_read(in_channel, &mut buffer, &mut handles)
@@ -390,6 +390,32 @@ impl FrontendNode {
             OakStatus::ERR_BAD_HANDLE,
             oak::channel_read(bogus_channel, &mut buffer, &mut handles)
         );
+
+        // Send and receive lots of handles.
+        let data = vec![0x01, 0x02, 0x03];
+        expect_eq!(
+            OakStatus::OK,
+            oak::channel_write(
+                out_channel,
+                &data,
+                &[
+                    out_channel.handle,
+                    out_channel.handle,
+                    out_channel.handle,
+                    out_channel.handle
+                ]
+            )
+        );
+        expect_eq!(
+            OakStatus::OK,
+            oak::channel_read(in_channel, &mut buffer, &mut handles)
+        );
+        expect_eq!(3, buffer.len());
+        expect_eq!(4, handles.len());
+        for handle in &handles {
+            oak::channel_close(*handle);
+        }
+        handles.clear();
 
         expect_eq!(OakStatus::OK, oak::channel_close(out_channel.handle));
         expect_eq!(OakStatus::OK, oak::channel_close(in_channel.handle));
