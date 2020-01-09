@@ -35,7 +35,7 @@ pub fn send<M: Encodable>(write_handle: oak::WriteHandle, msg: M) -> Result<()> 
     if status == oak::OakStatus::OK {
         Ok(())
     } else {
-        Err(anyhow!("could not write to channel"))
+        Err(anyhow!("could not write to channel: {:?}", status))
     }
 }
 
@@ -47,6 +47,6 @@ pub fn receive<M: Decodable>(read_handle: oak::ReadHandle) -> Result<M> {
         let msg: M = M::decode(&bytes, &handles).context("could not decode message")?;
         Ok(msg)
     } else {
-        Err(anyhow!("could not read from channel"))
+        Err(anyhow!("could not read from channel: {:?}", status))
     }
 }

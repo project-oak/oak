@@ -381,26 +381,15 @@ each chat room and saves off the write handle that will be used to send messages
 to the room:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/chat/module_0/rust/src/lib.rs Rust /.*create_chat_room()/ /\}$/)
+[embedmd]:# (../examples/chat/module_0/rust/src/lib.rs Rust /.*channel_create\(\)/ /\}$/)
 ```Rust
-fn create_chat_room() -> oak::WriteHandle {
-    let (wh, rh) = oak::channel_create().unwrap();
-    oak::node_create("room-config", rh);
-    oak::channel_close(rh.handle);
-    wh
-}
-```
-
-[embedmd]:# (../examples/chat/module_0/rust/src/lib.rs Rust /.*Create a new Node/ /room\);$/)
-```Rust
-        // Create a new Node for this room, and keep the write handle and admin token in the `rooms`
-        // map.
-        let wh = create_chat_room();
-        let room = Room {
+        let (wh, rh) = oak::channel_create().unwrap();
+        oak::node_create("room-config", rh);
+        oak::channel_close(rh.handle);
+        Room {
             channel: wh,
-            admin_token: req.admin_token,
-        };
-        self.rooms.insert(req.room_id.clone(), room);
+            admin_token: admin_token,
+        }
 ```
 <!-- prettier-ignore-end-->
 

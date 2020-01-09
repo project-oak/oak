@@ -41,7 +41,6 @@ ABSL_FLAG(std::vector<std::string>, module, std::vector<std::string>{},
           "Files containing the compiled WebAssembly modules (as 'frontend,backend')");
 ABSL_FLAG(std::string, app_address, "",
           "Address of the Oak Application to connect to (empty to create a new application)");
-ABSL_FLAG(std::string, room_name, "", "Name of room to create");
 ABSL_FLAG(std::string, room_id, "",
           "Base64-encoded room ID to join (only used if room_name is blank)");
 ABSL_FLAG(std::string, handle, "", "User handle to display");
@@ -75,12 +74,10 @@ class Safe {
   T val_ GUARDED_BY(mu_);
 };
 
-void Prompt(std::shared_ptr<Safe<std::string>> room_name, const std::string& user_handle) {
-  std::cout << room_name->get() << ":" << user_handle << "> ";
-}
+void Prompt(const std::string& user_handle) { std::cout << user_handle << "> "; }
 
 void ListenLoop(Chat::Stub* stub, const RoomId& room_id, const std::string& user_handle,
-                std::shared_ptr<Safe<std::string>> room_name, std::shared_ptr<Safe<bool>> done) {
+                std::shared_ptr<Safe<bool>> done) {
   grpc::ClientContext context;
   SubscribeRequest req;
   req.set_room_id(room_id);
@@ -90,17 +87,17 @@ void ListenLoop(Chat::Stub* stub, const RoomId& room_id, const std::string& user
   }
   Message msg;
   while (reader->Read(&msg)) {
-    std::cout << room_name->get() << ":" << msg.user_handle() << ": " << msg.text() << "\n";
+    std::cout << msg.user_handle() << ": " << msg.text() << "\n";
     if (done->get()) {
       break;
     }
   }
   done->set(true);
-  std::cout << "\n\nRoom " << room_name->get() << " closed.\n\n";
+  std::cout << "\n\nRoom " << room_id << " closed.\n\n";
 }
 
 void SendLoop(Chat::Stub* stub, const RoomId& room_id, const std::string& user_handle,
-              std::shared_ptr<Safe<std::string>> room_name, std::shared_ptr<Safe<bool>> done) {
+              std::shared_ptr<Safe<bool>> done) {
   // Re-use the same SendMessageRequest object for each message.
   SendMessageRequest req;
   req.set_room_id(room_id);
@@ -110,7 +107,7 @@ void SendLoop(Chat::Stub* stub, const RoomId& room_id, const std::string& user_h
 
   google::protobuf::Empty rsp;
 
-  Prompt(room_name, user_handle);
+  Prompt(user_handle);
   std::string text;
   while (std::getline(std::cin, text)) {
     if (done->get()) {
@@ -124,27 +121,26 @@ void SendLoop(Chat::Stub* stub, const RoomId& room_id, const std::string& user_h
                    << status.error_message();
       break;
     }
-    Prompt(room_name, user_handle);
+    Prompt(user_handle);
   }
   done->set(true);
-  std::cout << "\n\nLeaving room " << room_name->get() << ".\n\n";
+  std::cout << "\n\nLeaving room " << room_id << ".\n\n";
 }
 
 void Chat(Chat::Stub* stub, const RoomId& room_id, const std::string& user_handle) {
   // TODO: make both loops notice immediately when done is true.
   auto done = std::make_shared<Safe<bool>>(false);
-  auto room_name = std::make_shared<Safe<std::string>>("{room_id}");
 
   // Start a separate thread for incoming messages.
-  std::thread listener([stub, room_id, &user_handle, room_name, done] {
+  std::thread listener([stub, room_id, &user_handle, done] {
     LOG(INFO) << "New thread for incoming messages in room ID " << absl::Base64Escape(room_id);
-    ListenLoop(stub, room_id, user_handle, room_name, done);
+    ListenLoop(stub, room_id, user_handle, done);
     LOG(INFO) << "Incoming message thread done";
   });
   listener.detach();
 
   std::cout << "\n\n\n";
-  SendLoop(stub, room_id, user_handle, room_name, done);
+  SendLoop(stub, room_id, user_handle, done);
 }
 
 // RAII class to handle creation/destruction of an Oak Application instance.
@@ -201,21 +197,20 @@ class OakApplication {
 class Room {
  public:
   // Caller should ensure stub outlives this object.
-  Room(Chat::Stub* stub, const std::string& room_name) : stub_(stub) {
-    LOG(INFO) << "Creating new room '" << room_name << "'";
+  Room(Chat::Stub* stub) : stub_(stub) {
     oak::NonceGenerator<64> generator;
     grpc::ClientContext context;
     CreateRoomRequest req;
-    req_.set_name(room_name);
     auto room_nonce = generator.NextNonce();
-    req_.set_room_id(std::string(room_nonce.begin(), room_nonce.end()));
+    auto room_nonce_string = std::string(room_nonce.begin(), room_nonce.end());
+    req_.set_room_id(room_nonce_string);
     auto admin_nonce = generator.NextNonce();
     req_.set_admin_token(std::string(admin_nonce.begin(), admin_nonce.end()));
     google::protobuf::Empty rsp;
     grpc::Status status = stub_->CreateRoom(&context, req_, &rsp);
     if (!status.ok()) {
-      LOG(QFATAL) << "Could not CreateRoom('" << room_name << "'): " << status.error_code() << ": "
-                  << status.error_message();
+      LOG(QFATAL) << "Could not CreateRoom('" << room_nonce_string << "'): " << status.error_code()
+                  << ": " << status.error_message();
     }
   }
   ~Room() {
@@ -275,16 +270,12 @@ int main(int argc, char** argv) {
   if (!absl::Base64Unescape(absl::GetFlag(FLAGS_room_id), &room_id)) {
     LOG(QFATAL) << "Failed to parse --room_id as base 64";
   }
-  const std::string& room_name = absl::GetFlag(FLAGS_room_name);
   std::unique_ptr<Room> room;
-  if (!room_name.empty()) {
-    room = absl::make_unique<Room>(stub.get(), room_name);
+  if (room_id.empty()) {
+    room = absl::make_unique<Room>(stub.get());
     room_id = room->Id();
     LOG(INFO) << "Join this room with --app_address=" << addr
               << " --room_id=" << absl::Base64Escape(room_id);
-  } else if (room_id.empty()) {
-    LOG(WARNING) << "Neither room name nor room ID specified, exiting";
-    return 0;
   }
 
   // Calculate a user handle.

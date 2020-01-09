@@ -21,21 +21,18 @@ package oak.examples.chat;
 import "google/protobuf/empty.proto";
 
 message CreateRoomRequest {
-  // Name of the room; this is only used for UI purposes (and so does not need to be unique).
-  string name = 1;
-
   // ID used to identify the room; knowledge of this value allows entry to the room. The client
   // should create a random bearer token of sufficient entropy to use as the room ID.
   //
   // TODO(#212): Once more of the labelling / policy system is implemented in the Oak Runtime, the
   // secrecy of each chat room will not be based on the secrecy of this value, rather by the labels
   // attached to individual messages by the various clients.
-  bytes room_id = 2;
+  bytes room_id = 1;
 
   // Bearer token used to administer the room; knowledge of this value allows control over the room
   // (including the ability to destroy the room). The client should create a random bearer token of
   // sufficient entropy to use as the admin token.
-  bytes admin_token = 3;
+  bytes admin_token = 2;
 }
 
 message DestroyRoomRequest {

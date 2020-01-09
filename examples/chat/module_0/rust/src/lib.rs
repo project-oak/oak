@@ -41,6 +41,18 @@ struct Room {
     admin_token: AdminToken,
 }
 
+impl Room {
+    fn new(admin_token: AdminToken) -> Self {
+        let (wh, rh) = oak::channel_create().unwrap();
+        oak::node_create("room-config", rh);
+        oak::channel_close(rh.handle);
+        Room {
+            channel: wh,
+            admin_token: admin_token,
+        }
+    }
+}
+
 impl OakNode for Node {
     fn new() -> Self {
         oak_log::init_default();
@@ -62,13 +74,6 @@ fn room_id_duplicate_err<T>() -> grpc::Result<T> {
     ))
 }
 
-fn create_chat_room() -> oak::WriteHandle {
-    let (wh, rh) = oak::channel_create().unwrap();
-    oak::node_create("room-config", rh);
-    oak::channel_close(rh.handle);
-    wh
-}
-
 impl ChatNode for Node {
     fn create_room(&mut self, req: CreateRoomRequest) -> grpc::Result<Empty> {
         info!("creating room");
@@ -78,12 +83,7 @@ impl ChatNode for Node {
 
         // Create a new Node for this room, and keep the write handle and admin token in the `rooms`
         // map.
-        let wh = create_chat_room();
-        let room = Room {
-            channel: wh,
-            admin_token: req.admin_token,
-        };
-        self.rooms.insert(req.room_id.clone(), room);
+        self.rooms.insert(req.room_id, Room::new(req.admin_token));
 
         Ok(Empty::new())
     }

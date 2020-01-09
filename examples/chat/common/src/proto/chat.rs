@@ -29,7 +29,6 @@ const _PROTOBUF_VERSION_CHECK: () = ::protobuf::VERSION_2_8_0;
 #[derive(PartialEq,Clone,Default)]
 pub struct CreateRoomRequest {
     // message fields
-    pub name: ::std::string::String,
     pub room_id: ::std::vec::Vec<u8>,
     pub admin_token: ::std::vec::Vec<u8>,
     // special fields
@@ -48,33 +47,7 @@ impl CreateRoomRequest {
         ::std::default::Default::default()
     }
 
-    // string name = 1;
-
-
-    pub fn get_name(&self) -> &str {
-        &self.name
-    }
-    pub fn clear_name(&mut self) {
-        self.name.clear();
-    }
-
-    // Param is passed by value, moved
-    pub fn set_name(&mut self, v: ::std::string::String) {
-        self.name = v;
-    }
-
-    // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_name(&mut self) -> &mut ::std::string::String {
-        &mut self.name
-    }
-
-    // Take field
-    pub fn take_name(&mut self) -> ::std::string::String {
-        ::std::mem::replace(&mut self.name, ::std::string::String::new())
-    }
-
-    // bytes room_id = 2;
+    // bytes room_id = 1;
 
 
     pub fn get_room_id(&self) -> &[u8] {
@@ -100,7 +73,7 @@ impl CreateRoomRequest {
         ::std::mem::replace(&mut self.room_id, ::std::vec::Vec::new())
     }
 
-    // bytes admin_token = 3;
+    // bytes admin_token = 2;
 
 
     pub fn get_admin_token(&self) -> &[u8] {
@@ -137,12 +110,9 @@ impl ::protobuf::Message for CreateRoomRequest {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
-                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.name)?;
-                },
-                2 => {
                     ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.room_id)?;
                 },
-                3 => {
+                2 => {
                     ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.admin_token)?;
                 },
                 _ => {
@@ -157,14 +127,11 @@ impl ::protobuf::Message for CreateRoomRequest {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        if !self.name.is_empty() {
-            my_size += ::protobuf::rt::string_size(1, &self.name);
-        }
         if !self.room_id.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(2, &self.room_id);
+            my_size += ::protobuf::rt::bytes_size(1, &self.room_id);
         }
         if !self.admin_token.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(3, &self.admin_token);
+            my_size += ::protobuf::rt::bytes_size(2, &self.admin_token);
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
@@ -172,14 +139,11 @@ impl ::protobuf::Message for CreateRoomRequest {
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
-        if !self.name.is_empty() {
-            os.write_string(1, &self.name)?;
-        }
         if !self.room_id.is_empty() {
-            os.write_bytes(2, &self.room_id)?;
+            os.write_bytes(1, &self.room_id)?;
         }
         if !self.admin_token.is_empty() {
-            os.write_bytes(3, &self.admin_token)?;
+            os.write_bytes(2, &self.admin_token)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -223,11 +187,6 @@ impl ::protobuf::Message for CreateRoomRequest {
         unsafe {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
-                    "name",
-                    |m: &CreateRoomRequest| { &m.name },
-                    |m: &mut CreateRoomRequest| { &mut m.name },
-                ));
                 fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
                     "room_id",
                     |m: &CreateRoomRequest| { &m.room_id },
@@ -260,7 +219,6 @@ impl ::protobuf::Message for CreateRoomRequest {
 
 impl ::protobuf::Clear for CreateRoomRequest {
     fn clear(&mut self) {
-        self.name.clear();
         self.room_id.clear();
         self.admin_token.clear();
         self.unknown_fields.clear();
@@ -1098,22 +1056,21 @@ impl ::protobuf::reflect::ProtobufValue for SendMessageRequest {
 
 static file_descriptor_proto_data: &'static [u8] = b"\
     \n\nchat.proto\x12\x11oak.examples.chat\x1a\x1bgoogle/protobuf/empty.pro\
-    to\"a\n\x11CreateRoomRequest\x12\x12\n\x04name\x18\x01\x20\x01(\tR\x04na\
-    me\x12\x17\n\x07room_id\x18\x02\x20\x01(\x0cR\x06roomId\x12\x1f\n\x0badm\
-    in_token\x18\x03\x20\x01(\x0cR\nadminToken\"N\n\x12DestroyRoomRequest\
-    \x12\x17\n\x07room_id\x18\x01\x20\x01(\x0cR\x06roomId\x12\x1f\n\x0badmin\
-    _token\x18\x02\x20\x01(\x0cR\nadminToken\"+\n\x10SubscribeRequest\x12\
-    \x17\n\x07room_id\x18\x01\x20\x01(\x0cR\x06roomId\">\n\x07Message\x12\
-    \x1f\n\x0buser_handle\x18\x02\x20\x01(\tR\nuserHandle\x12\x12\n\x04text\
-    \x18\x01\x20\x01(\tR\x04text\"c\n\x12SendMessageRequest\x12\x17\n\x07roo\
-    m_id\x18\x01\x20\x01(\x0cR\x06roomId\x124\n\x07message\x18\x03\x20\x01(\
-    \x0b2\x1a.oak.examples.chat.MessageR\x07message2\xbe\x02\n\x04Chat\x12J\
-    \n\nCreateRoom\x12$.oak.examples.chat.CreateRoomRequest\x1a\x16.google.p\
-    rotobuf.Empty\x12L\n\x0bDestroyRoom\x12%.oak.examples.chat.DestroyRoomRe\
-    quest\x1a\x16.google.protobuf.Empty\x12N\n\tSubscribe\x12#.oak.examples.\
-    chat.SubscribeRequest\x1a\x1a.oak.examples.chat.Message0\x01\x12L\n\x0bS\
-    endMessage\x12%.oak.examples.chat.SendMessageRequest\x1a\x16.google.prot\
-    obuf.Emptyb\x06proto3\
+    to\"M\n\x11CreateRoomRequest\x12\x17\n\x07room_id\x18\x01\x20\x01(\x0cR\
+    \x06roomId\x12\x1f\n\x0badmin_token\x18\x02\x20\x01(\x0cR\nadminToken\"N\
+    \n\x12DestroyRoomRequest\x12\x17\n\x07room_id\x18\x01\x20\x01(\x0cR\x06r\
+    oomId\x12\x1f\n\x0badmin_token\x18\x02\x20\x01(\x0cR\nadminToken\"+\n\
+    \x10SubscribeRequest\x12\x17\n\x07room_id\x18\x01\x20\x01(\x0cR\x06roomI\
+    d\">\n\x07Message\x12\x1f\n\x0buser_handle\x18\x02\x20\x01(\tR\nuserHand\
+    le\x12\x12\n\x04text\x18\x01\x20\x01(\tR\x04text\"c\n\x12SendMessageRequ\
+    est\x12\x17\n\x07room_id\x18\x01\x20\x01(\x0cR\x06roomId\x124\n\x07messa\
+    ge\x18\x03\x20\x01(\x0b2\x1a.oak.examples.chat.MessageR\x07message2\xbe\
+    \x02\n\x04Chat\x12J\n\nCreateRoom\x12$.oak.examples.chat.CreateRoomReque\
+    st\x1a\x16.google.protobuf.Empty\x12L\n\x0bDestroyRoom\x12%.oak.examples\
+    .chat.DestroyRoomRequest\x1a\x16.google.protobuf.Empty\x12N\n\tSubscribe\
+    \x12#.oak.examples.chat.SubscribeRequest\x1a\x1a.oak.examples.chat.Messa\
+    ge0\x01\x12L\n\x0bSendMessage\x12%.oak.examples.chat.SendMessageRequest\
+    \x1a\x16.google.protobuf.Emptyb\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {

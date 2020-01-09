@@ -19,7 +19,7 @@ The first client to run typically creates the Oak Application and a first chat
 room inside it:
 
 ```bash
-$ ./examples/chat/run -C --room_name=MyRoom
+$ ./examples/chat/run
 ```
 
 This will emit a trace line that holds the information needed to:
@@ -42,7 +42,7 @@ Application by just copying the `--app_address` argument, but specifying a new
 room name:
 
 ```bash
-$ ./examples/chat/run -C --app_address=127.0.0.1:32889 --room_name=NewRoom
+$ ./examples/chat/run -C --app_address=127.0.0.1:32889
 ```
 
 This will again emit a trace line with the information needed to join this new
