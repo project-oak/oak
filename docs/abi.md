@@ -91,7 +91,8 @@ functions** as
   for data (args 1 and 2) or handles (args 4 and 5) are not large enough for the
   read operation, then no data will be returned and either `BUFFER_TOO_SMALL` or
   `HANDLE_SPACE_TOO_SMALL` will be returned; in either case, the required sizes
-  will be returned in the spaces provided by args 3 and 6.
+  will be returned in the spaces provided by args 3 and 6. If no messages are
+  available on the channel, `CHANNEL_EMPTY` will be returned.
 
   - arg 0: Handle to channel receive half
   - arg 1: Destination buffer address

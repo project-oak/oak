@@ -544,7 +544,7 @@ where
         let result = read_half.read_message(std::usize::MAX, &mut size, std::u32::MAX, &mut count);
         let rsp = match result {
             Err(e) => {
-                if e == OakStatus::OK.value() as u32 {
+                if e == OakStatus::ERR_CHANNEL_EMPTY.value() as u32 {
                     info!("no pending gRPC response message; poll again soon");
                     std::thread::sleep(std::time::Duration::from_millis(100));
                     continue;

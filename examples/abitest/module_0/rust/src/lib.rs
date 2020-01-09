@@ -317,7 +317,7 @@ impl FrontendNode {
 
             // Valid case.
             expect_eq!(
-                OakStatus::OK.value() as u32,
+                OakStatus::ERR_CHANNEL_EMPTY.value() as u32,
                 oak::wasm::channel_read(
                     in_channel,
                     buf.as_mut_ptr(),
@@ -346,7 +346,7 @@ impl FrontendNode {
         let mut buffer = Vec::<u8>::with_capacity(5);
         let mut handles = Vec::with_capacity(5);
         expect_eq!(
-            OakStatus::OK,
+            OakStatus::ERR_CHANNEL_EMPTY,
             oak::channel_read(in_channel, &mut buffer, &mut handles)
         );
         expect_eq!(0, buffer.len());
@@ -364,7 +364,7 @@ impl FrontendNode {
 
         // Reading again zeroes the vector length.
         expect_eq!(
-            OakStatus::OK,
+            OakStatus::ERR_CHANNEL_EMPTY,
             oak::channel_read(in_channel, &mut buffer, &mut handles)
         );
         expect_eq!(0, buffer.len());

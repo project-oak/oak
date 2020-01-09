@@ -39,6 +39,8 @@ pub fn main(in_handle: u64) -> i32 {
         handle: oak::Handle::from_raw(in_handle),
     };
 
+    // We expect a single empty message holding a reply channel to already
+    // be waiting on the channel.
     let mut buf = Vec::<u8>::with_capacity(2);
     let mut handles = Vec::with_capacity(2);
     oak::channel_read(in_channel, &mut buf, &mut handles);
