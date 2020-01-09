@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 load("@rules_cc//cc:defs.bzl", "cc_binary")
 
 package(

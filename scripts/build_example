@@ -59,7 +59,7 @@ bazel --output_base="$CACHE_DIR/client" build "${bazel_build_flags[@]}" "//examp
 
 readonly CPP_FOLDER="$(find examples/"$TARGET" -type d -name cpp)"
 if [[ -n "$CPP_FOLDER" ]]; then
-    if [[ "tensorflow" != $TARGET ]]; then
+    if [[ "tensorflow" != "$TARGET" ]]; then
         # TODO: support compilation mode wasm.
         bazel build --config=wasm32 "//examples/$TARGET/module/cpp:all"
     else
