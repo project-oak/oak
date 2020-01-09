@@ -37,7 +37,9 @@ struct Room {
 impl Room {
     fn event_loop(mut self, in_handle: u64) -> i32 {
         // Wait for something on our single input channel.
-        let in_channel = oak::ReadHandle { handle: in_handle };
+        let in_channel = oak::ReadHandle {
+            handle: oak::Handle::from_raw(in_handle),
+        };
         info!("starting event loop");
         loop {
             info!("waiting for new messages");
