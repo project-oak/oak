@@ -25,6 +25,7 @@ term = { git = "https://github.com/Stebalien/term", rev = "11e754980706a53dda998
 
 # Patch dependencies on oak crates so that they refer to the versions within this same repository.
 oak = { path = "../sdk/rust/oak" }
+oak_abi = { path = "../oak/server/rust/oak_abi" }
 oak_derive = { path = "../sdk/rust/oak_derive" }
 oak_log = { path = "../sdk/rust/oak_log" }
 oak_runtime = { path = "../oak/server/rust/oak_runtime" }
