@@ -34,7 +34,6 @@ size_t MessageChannel::Count() const {
 }
 
 void MessageChannel::Write(std::unique_ptr<Message> msg) {
-  LOG(INFO) << "Writing to channel";
   if (msg == nullptr) {
     LOG(WARNING) << "Ignoring attempt to write null message";
     return;
@@ -46,7 +45,6 @@ void MessageChannel::Write(std::unique_ptr<Message> msg) {
 }
 
 ReadResult MessageChannel::Read(uint32_t max_size, uint32_t max_channels) {
-  LOG(INFO) << "Reading from channel";
   absl::MutexLock lock(&mu_);
   if (msgs_.empty()) {
     return ReadResult{0};
