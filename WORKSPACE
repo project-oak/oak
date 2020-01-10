@@ -307,8 +307,18 @@ go_rules_compat(
     name = "io_bazel_rules_go_compat",
 )
 
+# clang + llvm 8.0
+http_archive(
+    name = "clang",
+    build_file = "//toolchain:clang.BUILD",
+    sha256 = "0f5c314f375ebd5c35b8c1d5e5b161d9efaeff0523bac287f8b4e5b751272f51",
+    strip_prefix = "clang+llvm-8.0.0-x86_64-linux-gnu-ubuntu-18.04",
+    url = "http://releases.llvm.org/8.0.0/clang+llvm-8.0.0-x86_64-linux-gnu-ubuntu-18.04.tar.xz",
+)
+
 load("//toolchain:emcc_toolchain_config.bzl", "emsdk_configure")
 
+# Should be configured after loading `clang`.
 emsdk_configure(name = "emsdk")
 
 load("@io_bazel_rules_closure//closure:defs.bzl", "closure_repositories")
@@ -320,15 +330,6 @@ closure_repositories()
 load("@org_tensorflow//tensorflow:workspace.bzl", "tf_repositories")
 
 tf_repositories()
-
-# clang + llvm 8.0
-http_archive(
-    name = "clang",
-    build_file = "//toolchain:clang.BUILD",
-    sha256 = "0f5c314f375ebd5c35b8c1d5e5b161d9efaeff0523bac287f8b4e5b751272f51",
-    strip_prefix = "clang+llvm-8.0.0-x86_64-linux-gnu-ubuntu-18.04",
-    url = "http://releases.llvm.org/8.0.0/clang+llvm-8.0.0-x86_64-linux-gnu-ubuntu-18.04.tar.xz",
-)
 
 # Roughtime
 new_git_repository(

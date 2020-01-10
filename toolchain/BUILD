@@ -54,14 +54,13 @@ cc_toolchain_suite(
 )
 
 filegroup(
-    #name = "all_files",
-    name = "all",
+    name = "all_files",
     srcs = [
         "ar.sh",
         "clang.sh",
         "emar.sh",
         "emcc.sh",
-        #"@clang//:all_files",
+        "@clang//:all_files",
         "@emsdk//:all",
     ],
 )
@@ -96,10 +95,10 @@ cc_toolchain(
 
 cc_toolchain(
     name = "emscripten_toolchain_wasm",
-    all_files = ":all",
-    compiler_files = ":all",
+    all_files = ":all_files",
+    compiler_files = ":all_files",
     dwp_files = ":empty",
-    linker_files = ":all",
+    linker_files = ":all_files",
     objcopy_files = ":empty",
     strip_files = ":empty",
     supports_param_files = 0,
