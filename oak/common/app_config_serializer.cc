@@ -32,7 +32,7 @@ ABSL_FLAG(std::string, storage_address, "127.0.0.1:7867",
 ABSL_FLAG(int, grpc_port, 8080, "Port for the Application to listen on");
 ABSL_FLAG(std::string, output_file, "", "File to write an application configuration to");
 
-void sigint_handler(int param) {
+void sigint_handler(int) {
   LOG(QFATAL) << "SIGINT received";
   exit(1);
 }
