@@ -36,7 +36,7 @@ fn test_panic_catch() {
     crate::init_logging();
     let (mut write_handle, mut read_handle) = (0u64, 0u64);
     unsafe {
-        oak::wasm::channel_create(&mut write_handle as *mut u64, &mut read_handle as *mut u64);
+        oak_abi::channel_create(&mut write_handle as *mut u64, &mut read_handle as *mut u64);
     }
 
     // Mock up a GrpcRequest to trigger invoke()

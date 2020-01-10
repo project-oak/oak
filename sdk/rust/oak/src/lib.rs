@@ -19,7 +19,6 @@ use log::{debug, error};
 use protobuf::ProtobufEnum;
 
 // Re-export ABI constants that are also visible as part of the SDK API.
-pub use oak_abi::wasm;
 pub use oak_abi::{ChannelReadStatus, OakStatus};
 
 pub mod grpc;
@@ -79,7 +78,7 @@ pub struct WriteHandle {
     pub handle: Handle,
 }
 
-// Build a chunk of memory that is suitable for passing to wasm::wait_on_channels,
+// Build a chunk of memory that is suitable for passing to oak_abi::wait_on_channels,
 // holding the given collection of channel handles.
 fn new_handle_space(handles: &[ReadHandle]) -> Vec<u8> {
     let mut space = Vec::with_capacity(oak_abi::SPACE_BYTES_PER_HANDLE * handles.len());
@@ -105,13 +104,13 @@ fn prep_handle_space(space: &mut [u8]) {
 /// from.  On success, the returned vector of [`ChannelReadStatus`] values
 /// will be in 1-1 correspondence with the passed-in vector of [`Handle`]s.
 ///
-/// This is a convenience wrapper around the [`wasm::wait_on_channels`] host
+/// This is a convenience wrapper around the [`oak_abi::wait_on_channels`] host
 /// function. This version is easier to use in Rust but is less efficient
 /// (because the notification space is re-created on each invocation).
 pub fn wait_on_channels(handles: &[ReadHandle]) -> Result<Vec<ChannelReadStatus>, OakStatus> {
     let mut space = new_handle_space(handles);
     unsafe {
-        let status = wasm::wait_on_channels(space.as_mut_ptr(), handles.len() as u32);
+        let status = oak_abi::wait_on_channels(space.as_mut_ptr(), handles.len() as u32);
         match OakStatus::from_i32(status as i32) {
             Some(OakStatus::OK) => (),
             Some(err) => return Err(err),
@@ -144,7 +143,7 @@ pub fn channel_read(half: ReadHandle, buf: &mut Vec<u8>, handles: &mut Vec<Handl
         let mut actual_size: u32 = 0;
         let mut actual_handle_count: u32 = 0;
         let status = OakStatus::from_i32(unsafe {
-            wasm::channel_read(
+            oak_abi::channel_read(
                 half.handle.id,
                 buf.as_mut_ptr(),
                 buf.capacity(),
@@ -197,7 +196,7 @@ pub fn channel_read(half: ReadHandle, buf: &mut Vec<u8>, handles: &mut Vec<Handl
 /// Write a message to a channel.
 pub fn channel_write(half: WriteHandle, buf: &[u8], handles: &[Handle]) -> OakStatus {
     match OakStatus::from_i32(unsafe {
-        wasm::channel_write(
+        oak_abi::channel_write(
             half.handle.id,
             buf.as_ptr(),
             buf.len(),
@@ -222,7 +221,7 @@ pub fn channel_create() -> Result<(WriteHandle, ReadHandle), OakStatus> {
         handle: Handle::invalid(),
     };
     match OakStatus::from_i32(unsafe {
-        wasm::channel_create(
+        oak_abi::channel_create(
             &mut write.handle.id as *mut u64,
             &mut read.handle.id as *mut u64,
         ) as i32
@@ -235,7 +234,7 @@ pub fn channel_create() -> Result<(WriteHandle, ReadHandle), OakStatus> {
 
 /// Close the specified channel [`Handle`].
 pub fn channel_close(handle: Handle) -> OakStatus {
-    match OakStatus::from_i32(unsafe { wasm::channel_close(handle.id) as i32 }) {
+    match OakStatus::from_i32(unsafe { oak_abi::channel_close(handle.id) as i32 }) {
         Some(s) => s,
         None => OakStatus::OAK_STATUS_UNSPECIFIED,
     }
@@ -245,7 +244,7 @@ pub fn channel_close(handle: Handle) -> OakStatus {
 /// passing it the given handle.
 pub fn node_create(config_name: &str, half: ReadHandle) -> OakStatus {
     match OakStatus::from_i32(unsafe {
-        wasm::node_create(config_name.as_ptr(), config_name.len(), half.handle.id) as i32
+        oak_abi::node_create(config_name.as_ptr(), config_name.len(), half.handle.id) as i32
     }) {
         Some(s) => s,
         None => OakStatus::OAK_STATUS_UNSPECIFIED,
@@ -254,7 +253,7 @@ pub fn node_create(config_name: &str, half: ReadHandle) -> OakStatus {
 
 /// Fill a buffer with random data.
 pub fn random_get(buf: &mut [u8]) -> OakStatus {
-    match OakStatus::from_i32(unsafe { wasm::random_get(buf.as_mut_ptr(), buf.len()) as i32 }) {
+    match OakStatus::from_i32(unsafe { oak_abi::random_get(buf.as_mut_ptr(), buf.len()) as i32 }) {
         Some(s) => s,
         None => OakStatus::OAK_STATUS_UNSPECIFIED,
     }

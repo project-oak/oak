@@ -489,7 +489,7 @@ impl OakNode {
 
 // Main loop function for a log pseudo-Node.
 fn log_node_main(handle: u64) -> i32 {
-    if handle == oak::wasm::INVALID_HANDLE {
+    if handle == oak_abi::INVALID_HANDLE {
         return OakStatus::ERR_BAD_HANDLE.value();
     }
     let half = oak::ReadHandle { handle };
