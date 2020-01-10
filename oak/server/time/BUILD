@@ -36,8 +36,8 @@ cc_library(
 )
 
 test_suite(
-    name = "host_tests",
-    tags = ["host"],
+    name = "local_tests",
+    tags = ["local"],
 )
 
 cc_test(
@@ -45,7 +45,7 @@ cc_test(
     srcs = [
         "roughtime_client_test.cc",
     ],
-    tags = ["host"],
+    tags = ["local"],
     deps = [
         ":roughtime_client",
         "@gtest//:gtest_main",

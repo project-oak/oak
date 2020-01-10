@@ -23,6 +23,7 @@
 namespace oak {
 
 // Client for getting roughtime (in microseconds since Unix epoch) from multiple servers.
+// The list of servers are currently hardcoded in roughttime_client.cc
 // Based on https://roughtime.googlesource.com/roughtime/+/refs/heads/master/simple_client.cc
 // and https://roughtime.googlesource.com/roughtime/+/refs/heads/master/go/client/client.go
 class RoughtimeClient {
