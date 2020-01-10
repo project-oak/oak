@@ -105,6 +105,7 @@ cc_library(
 cc_binary(
     name = "app_config_serializer",
     srcs = ["app_config_serializer.cc"],
+    visibility = ["//visibility:public"],
     deps = [
         "//oak/common:app_config",
         "//oak/common:utils",

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 The Project Oak Authors
+ * Copyright 2020 The Project Oak Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@
 #include "absl/flags/parse.h"
 #include "asylo/util/logging.h"
 
-ABSL_FLAG(std::string, enclave_path, "", "Path of the enclave to load");
 ABSL_FLAG(std::string, module, "", "File containing the compiled WebAssembly module");
 ABSL_FLAG(bool, logging, false, "Enable application logging");
 ABSL_FLAG(std::string, storage_address, "127.0.0.1:7867",
