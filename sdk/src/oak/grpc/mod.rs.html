@@ -280,7 +280,7 @@
 <span class="doccomment">//! Functionality to help Oak Nodes interact with gRPC.</span>
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">code</span>::<span class="ident">Code</span>;
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">proto</span>, <span class="ident">wasm</span>, <span class="ident">Handle</span>, <span class="ident">OakStatus</span>, <span class="ident">ReadHandle</span>, <span class="ident">WriteHandle</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">proto</span>, <span class="ident">Handle</span>, <span class="ident">OakStatus</span>, <span class="ident">ReadHandle</span>, <span class="ident">WriteHandle</span>};
 <span class="kw">use</span> <span class="ident">log</span>::<span class="ident">info</span>;
 <span class="kw">use</span> <span class="ident">protobuf</span>::{<span class="ident">Message</span>, <span class="ident">ProtobufEnum</span>, <span class="ident">ProtobufResult</span>};
 
@@ -407,7 +407,7 @@
 <span class="doccomment">/// [`GrpcRequest`]: crate::proto::grpc_encap::GrpcRequest</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">event_loop</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">OakNode</span><span class="op">&gt;</span>(<span class="kw-2">mut</span> <span class="ident">node</span>: <span class="ident">T</span>, <span class="ident">grpc_in_handle</span>: <span class="ident">ReadHandle</span>) <span class="op">-&gt;</span> <span class="ident">i32</span> {
     <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;start event loop for node with handle {:?}&quot;</span>, <span class="ident">grpc_in_handle</span>);
-    <span class="kw">if</span> <span class="ident">grpc_in_handle</span>.<span class="ident">handle</span> <span class="op">==</span> <span class="ident">wasm</span>::<span class="ident">INVALID_HANDLE</span> {
+    <span class="kw">if</span> <span class="op">!</span><span class="ident">grpc_in_handle</span>.<span class="ident">handle</span>.<span class="ident">is_valid</span>() {
         <span class="kw">return</span> <span class="ident">OakStatus</span>::<span class="ident">ERR_CHANNEL_CLOSED</span>.<span class="ident">value</span>();
     }
     <span class="kw">crate</span>::<span class="ident">set_panic_hook</span>();
@@ -419,7 +419,7 @@
         <span class="comment">// Block until there is a message to read on an input channel.</span>
         <span class="kw">crate</span>::<span class="ident">prep_handle_space</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">space</span>);
         <span class="kw">unsafe</span> {
-            <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="ident">wasm</span>::<span class="ident">wait_on_channels</span>(<span class="ident">space</span>.<span class="ident">as_mut_ptr</span>(), <span class="ident">read_handles</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>);
+            <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="ident">oak_abi</span>::<span class="ident">wait_on_channels</span>(<span class="ident">space</span>.<span class="ident">as_mut_ptr</span>(), <span class="ident">read_handles</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>);
             <span class="kw">match</span> <span class="ident">OakStatus</span>::<span class="ident">from_i32</span>(<span class="ident">status</span> <span class="kw">as</span> <span class="ident">i32</span>) {
                 <span class="prelude-val">Some</span>(<span class="ident">OakStatus</span>::<span class="ident">OK</span>) <span class="op">=&gt;</span> (),
                 <span class="prelude-val">Some</span>(<span class="ident">err</span>) <span class="op">=&gt;</span> <span class="kw">return</span> <span class="ident">err</span> <span class="kw">as</span> <span class="ident">i32</span>,
