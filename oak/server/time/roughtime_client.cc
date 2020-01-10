@@ -81,6 +81,7 @@ constexpr uint32_t kMaxRadiusMicroseconds = 60000000;
 // Creates a UDP socket connected to the host and port.
 StatusOr<int> CreateSocket(const std::string& host, const std::string& port) {
   addrinfo hints = {};
+  hints.ai_family = AF_UNSPEC;
   hints.ai_socktype = SOCK_DGRAM;
   hints.ai_protocol = IPPROTO_UDP;
   hints.ai_flags = AI_NUMERICSERV;
@@ -119,23 +120,23 @@ StatusOr<std::string> SendRequest(const RoughtimeServerSpec& server,
   }
 
   auto handle = create_socket_result.ValueOrDie();
-  const std::string request = roughtime::CreateRequest(nonce.data());
-
   timeval timeout = {};
   timeout.tv_sec = kTimeoutSeconds;
   timeout.tv_usec = 0;
   setsockopt(handle, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+
+  const std::string request = roughtime::CreateRequest(nonce.data());
   ssize_t send_size;
   do {
     send_size = send(handle, request.data(), request.size(), 0 /* flags */);
   } while (send_size == -1 && errno == EINTR);
-  if (send_size < 0 || static_cast<size_t>(send_size) != request.size()) {
+  if (send_size != static_cast<ssize_t>(request.size())) {
     close(handle);
     return Status(asylo::error::GoogleError::INTERNAL,
                   "Network error on sending request to " + server.name);
   }
 
-  uint8_t receive_buffer[kReceiveBufferSize];
+  char receive_buffer[kReceiveBufferSize];
   ssize_t receive_size;
   do {
     receive_size = recv(handle, receive_buffer, kReceiveBufferSize, 0 /* flags */);
@@ -148,18 +149,10 @@ StatusOr<std::string> SendRequest(const RoughtimeServerSpec& server,
     return Status(asylo::error::GoogleError::INTERNAL, "No response received from " + server.name);
   }
 
-  return std::string(reinterpret_cast<const char*>(receive_buffer),
-                     static_cast<size_t>(receive_size));
+  return std::string(receive_buffer, static_cast<size_t>(receive_size));
 }
 
 StatusOr<RoughtimeInterval> GetIntervalFromServer(const RoughtimeServerSpec& server) {
-  oak::NonceGenerator<roughtime::kNonceLength> generator;
-  std::string response;
-  Nonce<roughtime::kNonceLength> nonce = generator.NextNonce();
-  ASYLO_ASSIGN_OR_RETURN(response, SendRequest(server, nonce));
-  roughtime::rough_time_t timestamp_microseconds;
-  uint32_t radius_microseconds;
-  std::string error;
   std::string public_key;
   if (!absl::Base64Unescape(server.public_key_base64, &public_key)) {
     return Status(asylo::error::GoogleError::INVALID_ARGUMENT,
@@ -167,6 +160,14 @@ StatusOr<RoughtimeInterval> GetIntervalFromServer(const RoughtimeServerSpec& ser
                                   server.name.c_str()));
   }
 
+  oak::NonceGenerator<roughtime::kNonceLength> generator;
+  Nonce<roughtime::kNonceLength> nonce = generator.NextNonce();
+  std::string response;
+  ASYLO_ASSIGN_OR_RETURN(response, SendRequest(server, nonce));
+
+  roughtime::rough_time_t timestamp_microseconds;
+  uint32_t radius_microseconds;
+  std::string error;
   if (!roughtime::ParseResponse(&timestamp_microseconds, &radius_microseconds, &error,
                                 reinterpret_cast<const uint8_t*>(public_key.data()),
                                 reinterpret_cast<const uint8_t*>(response.data()), response.size(),
@@ -196,12 +197,12 @@ StatusOr<RoughtimeInterval> GetIntervalFromServer(const RoughtimeServerSpec& ser
 
 StatusOr<RoughtimeInterval> FindOverlap(const std::vector<RoughtimeInterval>& intervals,
                                         const int min_overlap) {
-  for (auto interval : intervals) {
+  for (const auto& interval : intervals) {
     int count = 0;
     roughtime::rough_time_t min = 0;
     roughtime::rough_time_t max = UINT64_MAX;
     roughtime::rough_time_t point = interval.min;
-    for (auto test : intervals) {
+    for (const auto& test : intervals) {
       if (point >= test.min && point <= test.max) {
         if (test.min > min) {
           min = test.min;
@@ -223,7 +224,7 @@ StatusOr<RoughtimeInterval> FindOverlap(const std::vector<RoughtimeInterval>& in
 
 StatusOr<roughtime::rough_time_t> RoughtimeClient::GetRoughTime() {
   std::vector<RoughtimeInterval> valid_intervals;
-  for (auto server : servers) {
+  for (const auto& server : servers) {
     auto interval_or_status = GetIntervalFromServer(server);
     if (interval_or_status.ok()) {
       valid_intervals.push_back(interval_or_status.ValueOrDie());

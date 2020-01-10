@@ -23,7 +23,7 @@
 
 namespace oak {
 
-TEST(RoughtimeClient, TestGetRoughtTime) {
+TEST(RoughtimeClient, TestGetRoughTime) {
   auto current = std::chrono::duration_cast<std::chrono::microseconds>(
                      std::chrono::system_clock::now().time_since_epoch())
                      .count();

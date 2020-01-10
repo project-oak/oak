@@ -17,8 +17,6 @@
 #ifndef OAK_SERVER_TIME_ROUGHTIME_CLIENT_H_
 #define OAK_SERVER_TIME_ROUGHTIME_CLIENT_H_
 
-#include <stdint.h>
-
 #include "asylo/util/statusor.h"
 #include "protocol.h"
 

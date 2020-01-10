@@ -27,6 +27,9 @@ cc_library(
     hdrs = ["roughtime_client.h"],
     deps = [
         "//oak/common:nonce_generator",
+        "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/strings",
+        "@com_google_asylo//asylo/util:logging",
         "@com_google_asylo//asylo/util:status",
         "@roughtime//:client",
     ],
