@@ -21,7 +21,9 @@ use protobuf::ProtobufEnum;
 
 #[no_mangle]
 pub extern "C" fn backend_oak_main(handle: u64) -> i32 {
-    match std::panic::catch_unwind(|| {
+    std::panic::catch_unwind(|| {
+        oak_log::init_default();
+        oak::set_panic_hook();
         let room = Room::default();
         room.event_loop(handle)
     })

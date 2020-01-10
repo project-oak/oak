@@ -20,11 +20,15 @@ pub mod proto;
 use anyhow::{anyhow, Context, Result};
 
 /// A trait for objects that can be encoded as bytes + handles.
+///
+/// TODO(#457): Move to SDK crate.
 pub trait Encodable {
     fn encode(&self) -> Result<(Vec<u8>, Vec<oak::Handle>)>;
 }
 
 /// A trait for objects that can be decoded from bytes + handles.
+///
+/// TODO(#457): Move to SDK crate.
 pub trait Decodable: Sized {
     fn decode(bytes: &[u8], handles: &[oak::Handle]) -> Result<Self>;
 }
@@ -35,6 +39,7 @@ pub fn send<M: Encodable>(write_handle: oak::WriteHandle, msg: M) -> Result<()> 
     if status == oak::OakStatus::OK {
         Ok(())
     } else {
+        // TODO(#457): Propagate error code to caller.
         Err(anyhow!("could not write to channel: {:?}", status))
     }
 }
@@ -47,6 +52,7 @@ pub fn receive<M: Decodable>(read_handle: oak::ReadHandle) -> Result<M> {
         let msg: M = M::decode(&bytes, &handles).context("could not decode message")?;
         Ok(msg)
     } else {
+        // TODO(#457): Propagate error code to caller.
         Err(anyhow!("could not read from channel: {:?}", status))
     }
 }
