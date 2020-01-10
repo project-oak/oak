@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
 
 package(
     licenses = ["notice"],
@@ -43,6 +43,7 @@ cc_library(
     hdrs = ["app_config.h"],
     visibility = ["//visibility:public"],
     deps = [
+        "//oak/common:utils",
         "//oak/proto:manager_cc_proto",
         "@com_google_absl//absl/memory",
         "@com_google_asylo//asylo/util:logging",
@@ -97,5 +98,14 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "@com_google_asylo//asylo/util:logging",
+    ],
+)
+
+cc_binary(
+    name = "app_config_serializer",
+    srcs = ["app_config_serializer.cc"]
+    visibility = ["//visibility:public"],
+    deps = [
+        ":app_config",
     ],
 )
