@@ -165,7 +165,7 @@ pub fn channel_read(half: ReadHandle, buf: &mut Vec<u8>, handles: &mut Vec<Handl
 
     // We cannot deserialize directly into the handles vector because `Handle` may
     // not have the correct memory layout.
-    let mut handles_buf = vec![];
+    let mut handles_buf = Vec::with_capacity(handles.capacity() * 8);
     for resized in &[false, true] {
         let mut actual_size: u32 = 0;
         let mut actual_handle_count: u32 = 0;
@@ -208,7 +208,7 @@ pub fn channel_read(half: ReadHandle, buf: &mut Vec<u8>, handles: &mut Vec<Handl
                         buf.reserve(extra);
                     }
 
-                    let handles_capacity = handles_buf.len() / 8;
+                    let handles_capacity = handles_buf.capacity() / 8;
                     debug!(
                         "Got space for {} handles, need {}",
                         handles_capacity, actual_handle_count
