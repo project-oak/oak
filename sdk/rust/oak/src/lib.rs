@@ -14,7 +14,8 @@
 // limitations under the License.
 //
 
-use byteorder::WriteBytesExt;
+use byteorder::{ReadBytesExt, WriteBytesExt};
+
 use log::{debug, error};
 use protobuf::ProtobufEnum;
 
@@ -58,6 +59,28 @@ impl Handle {
     pub fn invalid() -> Handle {
         Handle {
             id: oak_abi::INVALID_HANDLE,
+        }
+    }
+
+    /// Pack a slice of `Handles` into the Wasm host ABI format.
+    fn pack(handles: &[Handle]) -> Vec<u8> {
+        let mut packed = Vec::with_capacity(handles.len() * 8);
+        for handle in handles {
+            packed
+                .write_u64::<byteorder::LittleEndian>(handle.id)
+                .unwrap();
+        }
+        packed
+    }
+
+    /// Unpack a slice of Handles from the Wasm host ABI format.
+    fn unpack(bytes: &[u8], handle_count: u32, handles: &mut Vec<Handle>) {
+        handles.clear();
+        let mut reader = std::io::Cursor::new(bytes);
+        for _ in 0..handle_count {
+            handles.push(Handle {
+                id: reader.read_u64::<byteorder::LittleEndian>().unwrap(),
+            });
         }
     }
 }
@@ -139,6 +162,10 @@ pub fn wait_on_channels(handles: &[ReadHandle]) -> Result<Vec<ChannelReadStatus>
 pub fn channel_read(half: ReadHandle, buf: &mut Vec<u8>, handles: &mut Vec<Handle>) -> OakStatus {
     // Try reading from the channel twice: first with provided vectors, then
     // with vectors that have been resized to meet size requirements.
+
+    // We cannot deserialize directly into the handles vector because `Handle` may
+    // not have the correct memory layout.
+    let mut handles_buf = vec![];
     for resized in &[false, true] {
         let mut actual_size: u32 = 0;
         let mut actual_handle_count: u32 = 0;
@@ -148,21 +175,25 @@ pub fn channel_read(half: ReadHandle, buf: &mut Vec<u8>, handles: &mut Vec<Handl
                 buf.as_mut_ptr(),
                 buf.capacity(),
                 &mut actual_size,
-                handles.as_mut_ptr() as *mut u8,
-                handles.capacity() as u32,
+                handles_buf.as_mut_ptr(),
+                handles_buf.capacity() as u32 / 8, // Handle count, not byte count
                 &mut actual_handle_count,
             ) as i32
         });
+
         match status {
             Some(s) => match s {
                 OakStatus::OK | OakStatus::ERR_CHANNEL_EMPTY => {
                     unsafe {
                         buf.set_len(actual_size as usize);
-                        // Handles are written in little-endian order, which matches Wasm spec.
-                        handles.set_len(actual_handle_count as usize);
+
+                        // actual_handle_count is number of handles not bytes
+                        handles_buf.set_len(actual_handle_count as usize * 8);
+                        Handle::unpack(&handles_buf, actual_handle_count, handles);
                     };
                     return s;
                 }
+
                 OakStatus::ERR_BUFFER_TOO_SMALL | OakStatus::ERR_HANDLE_SPACE_TOO_SMALL
                     if !(*resized) =>
                 {
@@ -176,14 +207,15 @@ pub fn channel_read(half: ReadHandle, buf: &mut Vec<u8>, handles: &mut Vec<Handl
                         let extra = (actual_size as usize) - buf.len();
                         buf.reserve(extra);
                     }
+
+                    let handles_capacity = handles_buf.len() / 8;
                     debug!(
                         "Got space for {} handles, need {}",
-                        handles.capacity(),
-                        actual_handle_count
+                        handles_capacity, actual_handle_count
                     );
-                    if (actual_handle_count as usize) > handles.capacity() {
-                        let extra = (actual_handle_count as usize) - handles.len();
-                        handles.reserve(extra);
+                    if (actual_handle_count as usize) > handles_capacity {
+                        let extra = (actual_handle_count as usize * 8) - handles_buf.len();
+                        handles_buf.reserve(extra);
                     }
 
                     // Try again with a buffer resized to cope with expected size of data.
@@ -204,13 +236,14 @@ pub fn channel_read(half: ReadHandle, buf: &mut Vec<u8>, handles: &mut Vec<Handl
 
 /// Write a message to a channel.
 pub fn channel_write(half: WriteHandle, buf: &[u8], handles: &[Handle]) -> OakStatus {
+    let handle_buf = Handle::pack(handles);
     match OakStatus::from_i32(unsafe {
         oak_abi::channel_write(
             half.handle.id,
             buf.as_ptr(),
             buf.len(),
-            handles.as_ptr() as *const u8, // Wasm spec defines this as little-endian
-            handles.len() as u32,
+            handle_buf.as_ptr(),
+            handles.len() as u32, // Number of handles, not bytes
         ) as i32
     }) {
         Some(s) => s,
