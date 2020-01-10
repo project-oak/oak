@@ -61,6 +61,6 @@ int main(int argc, char* argv[]) {
     return 1;
   }
   oak::WriteConfigToFile(application_config.get(), output_file);
- 
+
   return 0;
 }
