@@ -24,4 +24,5 @@ bazel build "${bazel_build_flags[@]}" -- //oak/...:all -//oak/server/asylo:all
 bazel test "${bazel_build_flags[@]}" \
   //oak/server:host_tests \
   //oak/server/storage:host_tests \
+  //oak/server/time:host_tests \
   //oak/common:host_tests

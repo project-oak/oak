@@ -36,6 +36,7 @@
 #include "asylo/util/status_macros.h"
 #include "client.h"
 #include "oak/common/nonce_generator.h"
+#include "oak/server/time/roughtime_util.h"
 
 using ::asylo::Status;
 using ::asylo::StatusOr;
@@ -49,11 +50,6 @@ struct RoughtimeServerSpec {
   std::string host;
   std::string port;
   std::string public_key_base64;
-};
-
-struct RoughtimeInterval {
-  roughtime::rough_time_t min;
-  roughtime::rough_time_t max;
 };
 
 const std::vector<RoughtimeServerSpec> servers{{"Google", "roughtime.sandbox.google.com", "2002",
@@ -193,33 +189,6 @@ StatusOr<RoughtimeInterval> GetIntervalFromServer(const RoughtimeServerSpec& ser
             << radius_microseconds;
   return RoughtimeInterval{(timestamp_microseconds - radius_microseconds),
                            (timestamp_microseconds + radius_microseconds)};
-}
-
-StatusOr<RoughtimeInterval> FindOverlap(const std::vector<RoughtimeInterval>& intervals,
-                                        const int min_overlap) {
-  for (const auto& interval : intervals) {
-    int count = 0;
-    roughtime::rough_time_t min = 0;
-    roughtime::rough_time_t max = UINT64_MAX;
-    roughtime::rough_time_t point = interval.min;
-    for (const auto& test : intervals) {
-      if (point >= test.min && point <= test.max) {
-        if (test.min > min) {
-          min = test.min;
-        }
-        if (test.max < max) {
-          max = test.max;
-        }
-        ++count;
-        if (count == min_overlap) {
-          return RoughtimeInterval{min, max};
-        }
-      }
-    }
-  }
-
-  return Status(asylo::error::GoogleError::INTERNAL,
-                absl::StrFormat("Could not find %d overlapping intervals.", min_overlap));
 }
 
 StatusOr<roughtime::rough_time_t> RoughtimeClient::GetRoughTime() {

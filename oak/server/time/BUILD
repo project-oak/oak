@@ -22,10 +22,23 @@ package(
 )
 
 cc_library(
+    name = "roughtime_util",
+    srcs = ["roughtime_util.cc"],
+    hdrs = ["roughtime_util.h"],
+    visibility = ["//oak/server/time:__pkg__"],
+    deps = [
+        "@com_google_absl//absl/strings",
+        "@com_google_asylo//asylo/util:status",
+        "@roughtime//:protocol",
+    ],
+)
+
+cc_library(
     name = "roughtime_client",
     srcs = ["roughtime_client.cc"],
     hdrs = ["roughtime_client.h"],
     deps = [
+        ":roughtime_util",
         "//oak/common:nonce_generator",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/strings",
@@ -40,6 +53,11 @@ test_suite(
     tags = ["local"],
 )
 
+test_suite(
+    name = "host_tests",
+    tags = ["host"],
+)
+
 cc_test(
     name = "roughtime_client_test",
     srcs = [
@@ -48,6 +66,18 @@ cc_test(
     tags = ["local"],
     deps = [
         ":roughtime_client",
+        "@gtest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "roughtime_util_test",
+    srcs = [
+        "roughtime_util_test.cc",
+    ],
+    tags = ["host"],
+    deps = [
+        ":roughtime_util",
         "@gtest//:gtest_main",
     ],
 )
