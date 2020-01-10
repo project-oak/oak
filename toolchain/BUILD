@@ -54,24 +54,30 @@ cc_toolchain_suite(
 )
 
 filegroup(
-    name = "all_files",
+    name = "clang_files",
     srcs = [
         "ar.sh",
         "clang.sh",
+        "@clang//:all_files",
+    ],
+)
+
+filegroup(
+    name = "emscripten_files",
+    srcs = [
         "emar.sh",
         "emcc.sh",
-        "@clang//:all_files",
         "@emsdk//:all",
     ],
 )
 
 cc_toolchain(
     name = "clang_toolchain_wasm32",
-    all_files = ":all_files",
-    ar_files = ":all_files",
-    compiler_files = ":all_files",
+    all_files = ":clang_files",
+    ar_files = ":clang_files",
+    compiler_files = ":clang_files",
     dwp_files = ":empty",
-    linker_files = ":all_files",
+    linker_files = ":clang_files",
     objcopy_files = ":empty",
     strip_files = ":empty",
     supports_param_files = 0,
@@ -81,11 +87,11 @@ cc_toolchain(
 
 cc_toolchain(
     name = "clang_toolchain_k8",
-    all_files = ":all_files",
-    ar_files = ":all_files",
-    compiler_files = ":all_files",
+    all_files = ":clang_files",
+    ar_files = ":clang_files",
+    compiler_files = ":clang_files",
     dwp_files = ":empty",
-    linker_files = ":all_files",
+    linker_files = ":clang_files",
     objcopy_files = ":empty",
     strip_files = ":empty",
     supports_param_files = 0,
@@ -95,10 +101,10 @@ cc_toolchain(
 
 cc_toolchain(
     name = "emscripten_toolchain_wasm",
-    all_files = ":all_files",
-    compiler_files = ":all_files",
+    all_files = ":emscripten_files",
+    compiler_files = ":emscripten_files",
     dwp_files = ":empty",
-    linker_files = ":all_files",
+    linker_files = ":emscripten_files",
     objcopy_files = ":empty",
     strip_files = ":empty",
     supports_param_files = 0,
