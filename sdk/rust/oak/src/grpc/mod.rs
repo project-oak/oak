@@ -17,7 +17,7 @@
 //! Functionality to help Oak Nodes interact with gRPC.
 
 pub use crate::proto::code::Code;
-use crate::{proto, wasm, Handle, OakStatus, ReadHandle, WriteHandle};
+use crate::{proto, Handle, OakStatus, ReadHandle, WriteHandle};
 use log::info;
 use protobuf::{Message, ProtobufEnum, ProtobufResult};
 
@@ -156,7 +156,7 @@ pub fn event_loop<T: OakNode>(mut node: T, grpc_in_handle: ReadHandle) -> i32 {
         // Block until there is a message to read on an input channel.
         crate::prep_handle_space(&mut space);
         unsafe {
-            let status = wasm::wait_on_channels(space.as_mut_ptr(), read_handles.len() as u32);
+            let status = oak_abi::wait_on_channels(space.as_mut_ptr(), read_handles.len() as u32);
             match OakStatus::from_i32(status as i32) {
                 Some(OakStatus::OK) => (),
                 Some(err) => return err as i32,
