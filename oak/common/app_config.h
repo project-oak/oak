@@ -28,7 +28,7 @@ namespace oak {
 std::unique_ptr<ApplicationConfiguration> DefaultConfig(const std::string& module_bytes);
 
 // Reads a serialized application configuration from `file`.
-std::unique<ApplicationConfiguration> ReadConfigFromFile(const std::string& file);
+std::unique_ptr<ApplicationConfiguration> ReadConfigFromFile(const std::string& file);
 
 // Serializes an application configuration from `config` and writes it into a `file`.
 void WriteConfigToFile(const ApplicationConfiguration* config, const std::string& file);

@@ -46,14 +46,17 @@ std::unique_ptr<ApplicationConfiguration> DefaultConfig(const std::string& modul
   return config;
 }
 
-std::unique<ApplicationConfiguration> ReadConfigFromFile(const std::string& file) {
+std::unique_ptr<ApplicationConfiguration> ReadConfigFromFile(const std::string& file) {
   auto config = absl::make_unique<ApplicationConfiguration>();
-  auto data = utils::read_file(file);
-  return config.ParseFromString(data);
+
+  std::string data = utils::read_file(file);
+  config->ParseFromString(data);
+
+  return config;
 }
 
 void WriteConfigToFile(const ApplicationConfiguration* config, const std::string& file) {
-  auto data = config->SerializeAsString();
+  std::string data = config->SerializeAsString();
   utils::write_file(data, file);
 }
 

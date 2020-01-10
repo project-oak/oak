@@ -94,6 +94,7 @@ cc_library(
 
 cc_library(
     name = "utils",
+    srcs = ["utils.cc"],
     hdrs = ["utils.h"],
     visibility = ["//visibility:public"],
     deps = [
@@ -103,9 +104,12 @@ cc_library(
 
 cc_binary(
     name = "app_config_serializer",
-    srcs = ["app_config_serializer.cc"]
-    visibility = ["//visibility:public"],
+    srcs = ["app_config_serializer.cc"],
     deps = [
-        ":app_config",
+        "//oak/common:app_config",
+        "//oak/common:utils",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/flags:parse",
+        "@com_google_asylo//asylo/util:logging",
     ],
 )

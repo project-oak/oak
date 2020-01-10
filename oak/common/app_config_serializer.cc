@@ -14,12 +14,16 @@
  * limitations under the License.
  */
 
-#ifndef OAK_COMMON_APP_CONFIG_SERIALIZER_H_
-#define OAK_COMMON_APP_CONFIG_SERIALIZER_H_
-
-#include <memory>
-
 #include "oak/common/app_config.h"
+#include "oak/common/utils.h"
+
+#include <csignal>
+#include <memory>
+#include <string>
+
+#include "absl/flags/flag.h"
+#include "absl/flags/parse.h"
+#include "asylo/util/logging.h"
 
 ABSL_FLAG(std::string, enclave_path, "", "Path of the enclave to load");
 ABSL_FLAG(std::string, module, "", "File containing the compiled WebAssembly module");
@@ -27,7 +31,7 @@ ABSL_FLAG(bool, logging, false, "Enable application logging");
 ABSL_FLAG(std::string, storage_address, "127.0.0.1:7867",
           "Address ot the storage provider to connect to");
 ABSL_FLAG(int, grpc_port, 8080, "Port for the Application to listen on");
-ABSL_FLAG(std::string, output_file, "", "File to write an application configuration to")
+ABSL_FLAG(std::string, output_file, "", "File to write an application configuration to");
 
 void sigint_handler(int param) {
   LOG(QFATAL) << "SIGINT received";
@@ -43,19 +47,21 @@ int main(int argc, char* argv[]) {
 
   // Create an application configuration.
   std::string module_bytes = oak::utils::read_file(absl::GetFlag(FLAGS_module));
-  std::unique_ptr<oak::ApplicationConfiguration> application_config =
-      oak::DefaultConfig(module_bytes);
+  auto application_config = oak::DefaultConfig(module_bytes);
 
   // Set application configuration parameters.
   if (absl::GetFlag(FLAGS_logging)) {
-    oak::AddLoggingToConfig();
+    oak::AddLoggingToConfig(application_config.get());
   }
   oak::AddStorageToConfig(application_config.get(), absl::GetFlag(FLAGS_storage_address));
   oak::AddGrpcPortToConfig(application_config.get(), absl::GetFlag(FLAGS_grpc_port));
 
+  std::string output_file = absl::GetFlag(FLAGS_output_file);
+  if (output_file.empty()) {
+    LOG(QFATAL) << "Output file is not specified";
+    return 1;
+  }
   oak::WriteConfigToFile(application_config.get(), output_file);
  
   return 0;
 }
-
-#endif  // OAK_COMMON_APP_CONFIG_SERIALIZER_H_
