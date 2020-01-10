@@ -69,6 +69,7 @@ extern "C" {
     /// returned.
     ///
     /// [`ERR_BUFFER_TOO_SMALL`]: crate::OakStatus::ERR_BUFFER_TOO_SMALL
+    /// [`ERR_CHANNEL_EMPTY`]: crate::OakStatus::ERR_CHANNEL_EMPTY
     /// [`ERR_HANDLE_SPACE_TOO_SMALL`]: crate::OakStatus::ERR_HANDLE_SPACE_TOO_SMALL
     /// [`OakStatus`]: crate::OakStatus
     pub fn channel_read(
