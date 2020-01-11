@@ -22,6 +22,7 @@ package(
 )
 
 load(":cc_toolchain_config.bzl", "cc_toolchain_config")
+load(":emcc_toolchain_config.bzl", "emcc_toolchain_config")
 
 cc_toolchain_config(
     name = "clang_toolchain_config_wasm32",
@@ -41,8 +42,19 @@ cc_toolchain_suite(
     },
 )
 
+emcc_toolchain_config(
+    name = "emscripten_toolchain_config_wasm",
+)
+
+cc_toolchain_suite(
+    name = "emscripten",
+    toolchains = {
+        "wasm": ":emscripten_toolchain_wasm",
+    },
+)
+
 filegroup(
-    name = "all_files",
+    name = "clang_files",
     srcs = [
         "ar.sh",
         "clang.sh",
@@ -50,13 +62,22 @@ filegroup(
     ],
 )
 
+filegroup(
+    name = "emscripten_files",
+    srcs = [
+        "emar.sh",
+        "emcc.sh",
+        "@emsdk//:all",
+    ],
+)
+
 cc_toolchain(
     name = "clang_toolchain_wasm32",
-    all_files = ":all_files",
-    ar_files = ":all_files",
-    compiler_files = ":all_files",
+    all_files = ":clang_files",
+    ar_files = ":clang_files",
+    compiler_files = ":clang_files",
     dwp_files = ":empty",
-    linker_files = ":all_files",
+    linker_files = ":clang_files",
     objcopy_files = ":empty",
     strip_files = ":empty",
     supports_param_files = 0,
@@ -66,14 +87,27 @@ cc_toolchain(
 
 cc_toolchain(
     name = "clang_toolchain_k8",
-    all_files = ":all_files",
-    ar_files = ":all_files",
-    compiler_files = ":all_files",
+    all_files = ":clang_files",
+    ar_files = ":clang_files",
+    compiler_files = ":clang_files",
     dwp_files = ":empty",
-    linker_files = ":all_files",
+    linker_files = ":clang_files",
     objcopy_files = ":empty",
     strip_files = ":empty",
     supports_param_files = 0,
     toolchain_config = ":clang_toolchain_config_k8",
     toolchain_identifier = "clang-toolchain_k8",
+)
+
+cc_toolchain(
+    name = "emscripten_toolchain_wasm",
+    all_files = ":emscripten_files",
+    compiler_files = ":emscripten_files",
+    dwp_files = ":empty",
+    linker_files = ":emscripten_files",
+    objcopy_files = ":empty",
+    strip_files = ":empty",
+    supports_param_files = 0,
+    toolchain_config = ":emscripten_toolchain_config_wasm",
+    toolchain_identifier = "emscripten-toolchain_wasm",
 )
