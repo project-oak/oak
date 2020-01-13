@@ -18,9 +18,8 @@ use chat_common::proto::chat::ReceivedMessage;
 use log::{info, warn};
 use protobuf::ProtobufEnum;
 
-#[cfg(target_arch = "wasm32")]
 #[no_mangle]
-pub extern "C" fn oak_main(handle: u64) -> i32 {
+pub extern "C" fn backend_oak_main(handle: u64) -> i32 {
     match std::panic::catch_unwind(|| main(handle)) {
         Ok(rc) => rc,
         Err(_) => oak::OakStatus::ERR_INTERNAL.value(),
