@@ -8,7 +8,8 @@ source "$SCRIPTS_DIR/common"
 "$SCRIPTS_DIR/build_server_asylo"
 
 # Run Rust-based Oak examples, each with their own Oak server instance.
-readonly RUST_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module/rust$' | cut -d'/' -f2)"
+readonly RUST_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/rust$' | cut -d'/' -f2 | uniq)"
+
 for example in ${RUST_EXAMPLES}; do
   ./bazel-bin/oak/server/asylo/oak &
   SERVER_PID=$!
@@ -20,7 +21,7 @@ done
 # Run C++-based Oak examples.
 # TODO: Run TensorFlow example when Emscripten imports will be fixed.
 # https://github.com/project-oak/oak/issues/439
-readonly CPP_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module/cpp$' | cut -d'/' -f2 | grep -v tensorflow)"
+readonly CPP_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/cpp$' | cut -d'/' -f2 | uniq | grep -v tensorflow)"
 for example in ${CPP_EXAMPLES}; do
   ./bazel-bin/oak/server/asylo/oak &
   SERVER_PID=$!
