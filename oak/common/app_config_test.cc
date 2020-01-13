@@ -111,13 +111,18 @@ TEST_F(ApplicationConfigurationTest, MultipleLogNodes) {
   ASSERT_EQ(true, ValidApplicationConfig(*config));
 }
 
-TEST_F(ApplicationConfigurationTest, NonWasmCode) {
+TEST_F(ApplicationConfigurationTest, NoWasmCode) {
   auto config = ConfigFrom("oak/common/testdata/missing_wasm.textproto");
   ASSERT_EQ(false, ValidApplicationConfig(*config));
 }
 
 TEST_F(ApplicationConfigurationTest, DuplicateWasmName) {
   auto config = ConfigFrom("oak/common/testdata/dup_wasm.textproto");
+  ASSERT_EQ(false, ValidApplicationConfig(*config));
+}
+
+TEST_F(ApplicationConfigurationTest, EmptyWasmEntrypoint) {
+  auto config = ConfigFrom("oak/common/testdata/no_wasm_main.textproto");
   ASSERT_EQ(false, ValidApplicationConfig(*config));
 }
 

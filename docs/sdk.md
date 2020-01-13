@@ -104,4 +104,4 @@ crate provides the
 [`OakExports`](https://project-oak.github.io/oak/sdk/oak_derive/index.html)
 [derive macro](https://doc.rust-lang.org/reference/procedural-macros.html#derive-macros).
 This macro annotates a `struct` that implements the `oak::grpc::OakNode` trait,
-so that it serves as the Node's overall `oak_main` entrypoint.
+so that it serves as the Node's overall main entrypoint, with name `oak_main`.

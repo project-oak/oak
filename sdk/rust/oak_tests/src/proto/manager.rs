@@ -694,6 +694,7 @@ impl ::protobuf::reflect::ProtobufValue for NodeConfiguration {
 pub struct WebAssemblyConfiguration {
     // message fields
     pub module_bytes: ::std::vec::Vec<u8>,
+    pub main_entrypoint: ::std::string::String,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -735,6 +736,32 @@ impl WebAssemblyConfiguration {
     pub fn take_module_bytes(&mut self) -> ::std::vec::Vec<u8> {
         ::std::mem::replace(&mut self.module_bytes, ::std::vec::Vec::new())
     }
+
+    // string main_entrypoint = 2;
+
+
+    pub fn get_main_entrypoint(&self) -> &str {
+        &self.main_entrypoint
+    }
+    pub fn clear_main_entrypoint(&mut self) {
+        self.main_entrypoint.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_main_entrypoint(&mut self, v: ::std::string::String) {
+        self.main_entrypoint = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_main_entrypoint(&mut self) -> &mut ::std::string::String {
+        &mut self.main_entrypoint
+    }
+
+    // Take field
+    pub fn take_main_entrypoint(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.main_entrypoint, ::std::string::String::new())
+    }
 }
 
 impl ::protobuf::Message for WebAssemblyConfiguration {
@@ -748,6 +775,9 @@ impl ::protobuf::Message for WebAssemblyConfiguration {
             match field_number {
                 1 => {
                     ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.module_bytes)?;
+                },
+                2 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.main_entrypoint)?;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -764,6 +794,9 @@ impl ::protobuf::Message for WebAssemblyConfiguration {
         if !self.module_bytes.is_empty() {
             my_size += ::protobuf::rt::bytes_size(1, &self.module_bytes);
         }
+        if !self.main_entrypoint.is_empty() {
+            my_size += ::protobuf::rt::string_size(2, &self.main_entrypoint);
+        }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -772,6 +805,9 @@ impl ::protobuf::Message for WebAssemblyConfiguration {
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
         if !self.module_bytes.is_empty() {
             os.write_bytes(1, &self.module_bytes)?;
+        }
+        if !self.main_entrypoint.is_empty() {
+            os.write_string(2, &self.main_entrypoint)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -820,6 +856,11 @@ impl ::protobuf::Message for WebAssemblyConfiguration {
                     |m: &WebAssemblyConfiguration| { &m.module_bytes },
                     |m: &mut WebAssemblyConfiguration| { &mut m.module_bytes },
                 ));
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                    "main_entrypoint",
+                    |m: &WebAssemblyConfiguration| { &m.main_entrypoint },
+                    |m: &mut WebAssemblyConfiguration| { &mut m.main_entrypoint },
+                ));
                 ::protobuf::reflect::MessageDescriptor::new::<WebAssemblyConfiguration>(
                     "WebAssemblyConfiguration",
                     fields,
@@ -843,6 +884,7 @@ impl ::protobuf::Message for WebAssemblyConfiguration {
 impl ::protobuf::Clear for WebAssemblyConfiguration {
     fn clear(&mut self) {
         self.module_bytes.clear();
+        self.main_entrypoint.clear();
         self.unknown_fields.clear();
     }
 }
@@ -1847,19 +1889,20 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     \0R\nwasmConfig\x126\n\nlog_config\x18\x03\x20\x01(\x0b2\x15.oak.LogConf\
     igurationH\0R\tlogConfig\x12G\n\x0estorage_config\x18\x04\x20\x01(\x0b2\
     \x1e.oak.StorageProxyConfigurationH\0R\rstorageConfigB\r\n\x0bconfig_typ\
-    e\"=\n\x18WebAssemblyConfiguration\x12!\n\x0cmodule_bytes\x18\x01\x20\
-    \x01(\x0cR\x0bmoduleBytes\"\x12\n\x10LogConfiguration\"5\n\x19StoragePro\
-    xyConfiguration\x12\x18\n\x07address\x18\x01\x20\x01(\tR\x07address\"v\n\
-    \x18CreateApplicationRequest\x12Z\n\x19application_configuration\x18\x01\
-    \x20\x01(\x0b2\x1d.oak.ApplicationConfigurationR\x18applicationConfigura\
-    tion\"_\n\x19CreateApplicationResponse\x12%\n\x0eapplication_id\x18\x01\
-    \x20\x01(\tR\rapplicationId\x12\x1b\n\tgrpc_port\x18\x02\x20\x01(\x05R\
-    \x08grpcPort\"D\n\x1bTerminateApplicationRequest\x12%\n\x0eapplication_i\
-    d\x18\x01\x20\x01(\tR\rapplicationId\"\x1e\n\x1cTerminateApplicationResp\
-    onse2\xba\x01\n\x07Manager\x12R\n\x11CreateApplication\x12\x1d.oak.Creat\
-    eApplicationRequest\x1a\x1e.oak.CreateApplicationResponse\x12[\n\x14Term\
-    inateApplication\x12\x20.oak.TerminateApplicationRequest\x1a!.oak.Termin\
-    ateApplicationResponseb\x06proto3\
+    e\"f\n\x18WebAssemblyConfiguration\x12!\n\x0cmodule_bytes\x18\x01\x20\
+    \x01(\x0cR\x0bmoduleBytes\x12'\n\x0fmain_entrypoint\x18\x02\x20\x01(\tR\
+    \x0emainEntrypoint\"\x12\n\x10LogConfiguration\"5\n\x19StorageProxyConfi\
+    guration\x12\x18\n\x07address\x18\x01\x20\x01(\tR\x07address\"v\n\x18Cre\
+    ateApplicationRequest\x12Z\n\x19application_configuration\x18\x01\x20\
+    \x01(\x0b2\x1d.oak.ApplicationConfigurationR\x18applicationConfiguration\
+    \"_\n\x19CreateApplicationResponse\x12%\n\x0eapplication_id\x18\x01\x20\
+    \x01(\tR\rapplicationId\x12\x1b\n\tgrpc_port\x18\x02\x20\x01(\x05R\x08gr\
+    pcPort\"D\n\x1bTerminateApplicationRequest\x12%\n\x0eapplication_id\x18\
+    \x01\x20\x01(\tR\rapplicationId\"\x1e\n\x1cTerminateApplicationResponse2\
+    \xba\x01\n\x07Manager\x12R\n\x11CreateApplication\x12\x1d.oak.CreateAppl\
+    icationRequest\x1a\x1e.oak.CreateApplicationResponse\x12[\n\x14Terminate\
+    Application\x12\x20.oak.TerminateApplicationRequest\x1a!.oak.TerminateAp\
+    plicationResponseb\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {

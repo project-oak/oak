@@ -5,6 +5,7 @@ node_configs {
   name: "app"
   wasm_config {
     module_bytes: "<bytes>"
+    main_entrypoint: "oak_main"
   }
 }
 node_configs {
