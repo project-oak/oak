@@ -67,8 +67,8 @@ class OakRuntime : public BaseRuntime {
 
   // Information derived from ApplicationConfiguration; const after Initialize() called:
 
-  // Collection of Wasm module bytes indexed by config name.
-  std::map<std::string, std::unique_ptr<std::string>> wasm_config_;
+  // Collection of Wasm configuration info indexed by config name.
+  std::map<std::string, std::unique_ptr<const WebAssemblyConfiguration>> wasm_config_;
   // Config names that refer to a logging node.
   std::set<std::string> log_config_;
   // Config names that refer to a storage proxy node.

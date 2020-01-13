@@ -29,11 +29,12 @@ class WasmNode final : public NodeThread {
  public:
   // Creates a Wasm Node by loading the Wasm module code.
   static std::unique_ptr<WasmNode> Create(BaseRuntime* runtime, const std::string& name,
-                                          const std::string& module);
+                                          const std::string& module,
+                                          const std::string& main_entrypoint);
 
  private:
   // Clients should construct WasmNode instances with Create() (which can fail).
-  WasmNode(BaseRuntime* runtime, const std::string& name);
+  WasmNode(BaseRuntime* runtime, const std::string& name, const std::string& main_entrypoint);
 
   void InitEnvironment(wabt::interp::Environment* env);
 
@@ -62,6 +63,8 @@ class WasmNode final : public NodeThread {
 
   // Native implementation of the `oak.random_get` host function.
   wabt::interp::HostFunc::Callback OakRandomGet(wabt::interp::Environment* env);
+
+  const std::string main_entrypoint_;
 
   wabt::interp::Environment env_;
 

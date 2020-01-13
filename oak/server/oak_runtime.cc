@@ -51,8 +51,8 @@ grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
   storage_config_.clear();
   for (const auto& node_config : config.node_configs()) {
     if (node_config.has_wasm_config()) {
-      const WebAssemblyConfiguration& wasm_config = node_config.wasm_config();
-      wasm_config_[node_config.name()] = absl::make_unique<std::string>(wasm_config.module_bytes());
+      wasm_config_[node_config.name()] =
+          absl::make_unique<const WebAssemblyConfiguration>(node_config.wasm_config());
     } else if (node_config.has_log_config()) {
       log_config_.insert(node_config.name());
     } else if (node_config.has_storage_config()) {
@@ -106,8 +106,8 @@ OakNode* OakRuntime::CreateNode(const std::string& config, std::string* node_nam
 
   if (wasm_config_.count(config) > 0) {
     LOG(INFO) << "Create Wasm node named {" << name << "}";
-    const std::string* module_bytes = wasm_config_[config].get();
-    node = WasmNode::Create(this, name, *module_bytes);
+    const WebAssemblyConfiguration* wasm_cfg = wasm_config_[config].get();
+    node = WasmNode::Create(this, name, wasm_cfg->module_bytes(), wasm_cfg->main_entrypoint());
   } else if (log_config_.count(config) > 0) {
     LOG(INFO) << "Create log node named {" << name << "}";
     node = absl::make_unique<LoggingNode>(this, name);
