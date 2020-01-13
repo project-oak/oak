@@ -38,9 +38,8 @@ struct FrontendNode {
     backend_in: Vec<oak::ReadHandle>,
 }
 
-#[cfg(target_arch = "wasm32")]
 #[no_mangle]
-pub extern "C" fn oak_main(handle: u64) -> i32 {
+pub extern "C" fn frontend_oak_main(handle: u64) -> i32 {
     match std::panic::catch_unwind(|| main(handle)) {
         Ok(rc) => rc,
         Err(_) => OakStatus::ERR_INTERNAL.value(),
