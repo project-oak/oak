@@ -22,11 +22,16 @@
 
 namespace oak {
 
+// Represents a roughtime interval as the minimum and maximum number of microseconds relative to the
+// Unix epoch. The minimum and maximum points of the interval are both inclusive.
 struct RoughtimeInterval {
   roughtime::rough_time_t min;
   roughtime::rough_time_t max;
 };
 
+// Finds the first min_overlap overlapping intervals from a vector of intervals and returns the
+// intersection of these overlapping intervals. An error status will be returned if there are not
+// min_overlap overlapping intervals.
 asylo::StatusOr<RoughtimeInterval> FindOverlap(const std::vector<RoughtimeInterval>& intervals,
                                                const int min_overlap);
 

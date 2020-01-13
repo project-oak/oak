@@ -26,7 +26,7 @@ TEST(RoughtimeUtil, TestValidOverlapOneOfThree) {
   ASSERT_TRUE(interval_or_status.ok());
   auto interval = interval_or_status.ValueOrDie();
   ASSERT_EQ(interval.min, 1);
-  ASSERT_GE(interval.max, 4);
+  ASSERT_EQ(interval.max, 4);
 }
 
 TEST(RoughtimeUtil, TestValidOverlapTwoOfThree) {
@@ -35,7 +35,7 @@ TEST(RoughtimeUtil, TestValidOverlapTwoOfThree) {
   ASSERT_TRUE(interval_or_status.ok());
   auto interval = interval_or_status.ValueOrDie();
   ASSERT_EQ(interval.min, 2);
-  ASSERT_GE(interval.max, 4);
+  ASSERT_EQ(interval.max, 4);
 }
 
 TEST(RoughtimeUtil, TestValidOverlapThreeOfThree) {
@@ -44,7 +44,34 @@ TEST(RoughtimeUtil, TestValidOverlapThreeOfThree) {
   ASSERT_TRUE(interval_or_status.ok());
   auto interval = interval_or_status.ValueOrDie();
   ASSERT_EQ(interval.min, 3);
-  ASSERT_GE(interval.max, 4);
+  ASSERT_EQ(interval.max, 4);
+}
+
+TEST(RoughtimeUtil, TestValidOverlapOneOfThreeReversed) {
+  std::vector<RoughtimeInterval> intervals{{3, 5}, {2, 6}, {1, 4}};
+  auto interval_or_status = FindOverlap(intervals, 1);
+  ASSERT_TRUE(interval_or_status.ok());
+  auto interval = interval_or_status.ValueOrDie();
+  ASSERT_EQ(interval.min, 3);
+  ASSERT_EQ(interval.max, 5);
+}
+
+TEST(RoughtimeUtil, TestValidOverlapTwoOfThreeReversed) {
+  std::vector<RoughtimeInterval> intervals{{3, 5}, {2, 6}, {1, 4}};
+  auto interval_or_status = FindOverlap(intervals, 2);
+  ASSERT_TRUE(interval_or_status.ok());
+  auto interval = interval_or_status.ValueOrDie();
+  ASSERT_EQ(interval.min, 3);
+  ASSERT_EQ(interval.max, 5);
+}
+
+TEST(RoughtimeUtil, TestValidOverlapThreeOfThreeReversed) {
+  std::vector<RoughtimeInterval> intervals{{3, 5}, {2, 6}, {1, 4}};
+  auto interval_or_status = FindOverlap(intervals, 3);
+  ASSERT_TRUE(interval_or_status.ok());
+  auto interval = interval_or_status.ValueOrDie();
+  ASSERT_EQ(interval.min, 3);
+  ASSERT_EQ(interval.max, 4);
 }
 
 TEST(RoughtimeUtil, TestValidOverlapFiveOfTen) {
@@ -54,7 +81,7 @@ TEST(RoughtimeUtil, TestValidOverlapFiveOfTen) {
   ASSERT_TRUE(interval_or_status.ok());
   auto interval = interval_or_status.ValueOrDie();
   ASSERT_EQ(interval.min, 5);
-  ASSERT_GE(interval.max, 9);
+  ASSERT_EQ(interval.max, 9);
 }
 
 TEST(RoughtimeUtil, TestValidOverlapPoint) {
@@ -63,7 +90,7 @@ TEST(RoughtimeUtil, TestValidOverlapPoint) {
   ASSERT_TRUE(interval_or_status.ok());
   auto interval = interval_or_status.ValueOrDie();
   ASSERT_EQ(interval.min, 4);
-  ASSERT_GE(interval.max, 4);
+  ASSERT_EQ(interval.max, 4);
 }
 
 TEST(RoughtimeUtil, TestInvalidOverlapFourOfThree) {
