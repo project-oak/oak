@@ -29,11 +29,11 @@ things from there.
 ### Per-Node Boilerplate
 
 An Oak Node needs to provide a single
-[`oak_main()` entrypoint](abi.md#exported-function), which is the point at which
-Node execution begins. However, Node authors don't _have_ to implement this
-function themselves; for a Node which is triggered by external gRPC requests
-(the normal "front door" for an Oak application), there are helper functions in
-the Oak SDK that make this easier.
+[main entrypoint](abi.md#exported-function), which is the point at which Node
+execution begins. However, Node authors don't _have_ to implement this function
+themselves; for a Node which is triggered by external gRPC requests (the normal
+"front door" for an Oak application), there are helper functions in the Oak SDK
+that make this easier.
 
 To use these helpers, an Oak Node should implement a `struct` of some kind to
 represent the Node itself, and then add the `derive(OakExports)` attribute (from
@@ -65,7 +65,8 @@ struct Node {
 
 Under the covers the
 [`derive(OakExports)`](https://project-oak.github.io/oak/sdk/oak_derive/derive.OakExports.html)
-macro implements `oak_main` for you, with the following default behaviour:
+macro implements a main function named `oak_main` for you, with the following
+default behaviour:
 
 - Create an instance of your Node `struct` (using the `new()` method from the
   [`OakNode`](https://project-oak.github.io/oak/sdk/oak/grpc/trait.OakNode.html)
@@ -265,8 +266,8 @@ enabled:
 
 The Oak Manager will launch an [Oak Runtime](concepts.md#oak-vm) inside the
 enclave, and this Runtime will check the provided Wasm module(s) and application
-configuration. Assuming everything is correct (e.g. the Nodes all have an
-`oak_main` entrypoint and only expect to find the Oak
+configuration. Assuming everything is correct (e.g. the Nodes all have a main
+entrypoint and only expect to find the Oak
 [host functions](abi.md#host-functions)), the Oak Runtime opens up a port of its
 own and the `CreateApplication` returns this to the client.
 
@@ -355,12 +356,13 @@ and code for any Node that might get run as part of the Application. New Node
 types cannot be added after the application starts; any Node that the
 Application might need has to be included in the original configuration.
 
-As before, each Node must include an `oak_main(u64) -> u32` entrypoint, but for
-an internal Node it's entirely up to the Application developer as to what
-channel handle gets passed to this entrypoint, and as to what messages are sent
-down that channel. The application may choose to use protobuf-encoded messages
-(as gRPC does) for its internal communications, or something else entirely (e.g.
-the [serde crate](https://crates.io/crates/serde)).
+As before, each Node must include a main entrypoint with signature
+`(u64) -> u32`, but for an internal Node it's entirely up to the Application
+developer as to what channel handle gets passed to this entrypoint, and as to
+what messages are sent down that channel. The application may choose to use
+protobuf-encoded messages (as gRPC does) for its internal communications, or
+something else entirely (e.g. the
+[serde crate](https://crates.io/crates/serde)).
 
 Regardless of how the application communicates with the new Node, the typical
 pattern for the existing Node is to:
@@ -400,13 +402,14 @@ The same code (identified by `"room-config"`) will be run for each per-room
 Node, but each instance will have its own Web Assembly linear memory (≈heap) and
 stack.
 
-The `node_create()` call triggers the Oak Runtime to invoke the `oak_main()`
-entrypoint for the new Node, passing in the handle value for the channel read
-half that was provided as a parameter to `node_create()`. Note that the actual
-handle _value_ passed into `oak_main()` will (almost certainly) be different;
-internally, the Runtime translates the creator Node's handle value to a
-reference to the underlying channel object, then assigns a new numeric value for
-the created Node to use to refer to the underlying channel.
+The `node_create()` call triggers the Oak Runtime to invoke the main entrypoint
+for the new Node (as specified in the Application configuration), passing in the
+handle value for the channel read half that was provided as a parameter to
+`node_create()`. Note that the actual handle _value_ passed into the main
+entrypoint will (almost certainly) be different; internally, the Runtime
+translates the creator Node's handle value to a reference to the underlying
+channel object, then assigns a new numeric value for the created Node to use to
+refer to the underlying channel.
 
 Once a new Node has started, the existing Node can communicate with the new Node
 by sending messages over the channel via `channel_write`. Of course, the new
