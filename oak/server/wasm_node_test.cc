@@ -37,30 +37,39 @@ std::string DataFrom(const std::string& filename) {
 
 TEST(WasmNode, MalformedFailure) {
   // No magic.
-  ASSERT_EQ(nullptr, WasmNode::Create(nullptr, "test", ""));
+  ASSERT_EQ(nullptr, WasmNode::Create(nullptr, "test", "", "oak_main"));
   // Wrong magic.
   ASSERT_EQ(nullptr,
-            WasmNode::Create(nullptr, "test", std::string("\x00\x61\x73\x6b\x01\x00\x00\x00", 8)));
+            WasmNode::Create(nullptr, "test", std::string("\x00\x61\x73\x6b\x01\x00\x00\x00", 8),
+                             "oak_main"));
   // Wrong version.
   ASSERT_EQ(nullptr,
-            WasmNode::Create(nullptr, "test", std::string("\x00\x61\x73\x6d\x09\x00\x00\x00", 8)));
+            WasmNode::Create(nullptr, "test", std::string("\x00\x61\x73\x6d\x09\x00\x00\x00", 8),
+                             "oak_main"));
   // Right magic+version, no contents.
-  ASSERT_EQ(nullptr, WasmNode::Create(nullptr, "test", DataFrom("oak/server/testdata/empty.wasm")));
+  ASSERT_EQ(nullptr, WasmNode::Create(nullptr, "test", DataFrom("oak/server/testdata/empty.wasm"),
+                                      "oak_main"));
 }
 
 TEST(WasmNode, MinimalSuccess) {
   std::unique_ptr<WasmNode> node =
-      WasmNode::Create(nullptr, "test", DataFrom("oak/server/testdata/minimal.wasm"));
+      WasmNode::Create(nullptr, "test", DataFrom("oak/server/testdata/minimal.wasm"), "oak_main");
   EXPECT_NE(nullptr, node);
 }
 
-TEST(WasmNode, MissingExports) {
-  ASSERT_EQ(nullptr,
-            WasmNode::Create(nullptr, "test", DataFrom("oak/server/testdata/missing.wasm")));
+TEST(WasmNode, MissingExport) {
+  ASSERT_EQ(nullptr, WasmNode::Create(nullptr, "test", DataFrom("oak/server/testdata/missing.wasm"),
+                                      "oak_main"));
+}
+
+TEST(WasmNode, WrongExport) {
+  ASSERT_EQ(nullptr, WasmNode::Create(nullptr, "test", DataFrom("oak/server/testdata/minimal.wasm"),
+                                      "oak_other_main"));
 }
 
 TEST(WasmNode, WrongSignature) {
-  ASSERT_EQ(nullptr, WasmNode::Create(nullptr, "test", DataFrom("oak/server/testdata/wrong.wasm")));
+  ASSERT_EQ(nullptr, WasmNode::Create(nullptr, "test", DataFrom("oak/server/testdata/wrong.wasm"),
+                                      "oak_main"));
 }
 
 }  // namespace oak

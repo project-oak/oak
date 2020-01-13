@@ -103,44 +103,22 @@ static wabt::Result ReadModule(const std::string& module_bytes, wabt::interp::En
                                 &module);
 }
 
-// Describes an expected export from an Oak module.
-struct RequiredExport {
-  std::string name_;
-  bool mandatory_;
-  wabt::interp::FuncSignature sig_;
-};
-
 }  // namespace oak
-
-std::ostream& operator<<(std::ostream& os, const oak::RequiredExport& r) {
-  return os << (r.mandatory_ ? "required" : "optional") << " export '" << r.name_
-            << "' with signature " << r.sig_;
-}
 
 namespace oak {
 
-const std::vector<RequiredExport> kRequiredExports({
-    {
-        "oak_main",
-        true,
-        wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I64},
-                                    std::vector<wabt::Type>{wabt::Type::I32}),
-    },
-});
+const wabt::interp::FuncSignature kRequiredExport(wabt::interp::FuncSignature(
+    std::vector<wabt::Type>{wabt::Type::I64}, std::vector<wabt::Type>{wabt::Type::I32}));
 
-// Check module exports all required functions with the correct signatures,
+// Check module exports the required function with the correct signatures,
 // returning true if so.
 static bool CheckModuleExport(wabt::interp::Environment* env, wabt::interp::Module* module,
-                              const RequiredExport& req) {
-  LOG(INFO) << "check for " << req;
-  wabt::interp::Export* exp = module->GetExport(req.name_);
+                              const std::string& main_entrypoint) {
+  LOG(INFO) << "check for " << main_entrypoint;
+  wabt::interp::Export* exp = module->GetExport(main_entrypoint);
   if (exp == nullptr) {
-    if (req.mandatory_) {
-      LOG(WARNING) << "Could not find required export '" << req.name_ << "' in module";
-      return false;
-    }
-    LOG(INFO) << "optional import '" << req.name_ << "' missing";
-    return true;
+    LOG(WARNING) << "Could not find required export '" << main_entrypoint << "' in module";
+    return false;
   }
   if (exp->kind != wabt::ExternalKind::Func) {
     LOG(WARNING) << "Required export of kind " << exp->kind << " not func in module";
@@ -163,27 +141,25 @@ static bool CheckModuleExport(wabt::interp::Environment* env, wabt::interp::Modu
   }
   LOG(INFO) << "function #" << exp->index << " has type #" << func->sig_index << " with signature "
             << *sig;
-  if ((sig->param_types != req.sig_.param_types) || (sig->result_types != req.sig_.result_types)) {
-    LOG(WARNING) << "Function signature mismatch for " << req.name_ << ": got " << *sig << ", want "
-                 << req.sig_;
+  if ((sig->param_types != kRequiredExport.param_types) ||
+      (sig->result_types != kRequiredExport.result_types)) {
+    LOG(WARNING) << "Function signature mismatch for " << main_entrypoint << ": got " << *sig
+                 << ", want " << kRequiredExport;
     return false;
   }
   return true;
 }
-static bool CheckModuleExports(wabt::interp::Environment* env, wabt::interp::Module* module) {
-  return std::all_of(
-      kRequiredExports.begin(), kRequiredExports.end(),
-      [env, module](const RequiredExport& req) { return CheckModuleExport(env, module, req); });
-}
 
-WasmNode::WasmNode(BaseRuntime* runtime, const std::string& name)
-    : NodeThread(runtime, name), prng_engine_() {}
+WasmNode::WasmNode(BaseRuntime* runtime, const std::string& name,
+                   const std::string& main_entrypoint)
+    : NodeThread(runtime, name), main_entrypoint_(main_entrypoint), prng_engine_() {}
 
 std::unique_ptr<WasmNode> WasmNode::Create(BaseRuntime* runtime, const std::string& name,
-                                           const std::string& module) {
+                                           const std::string& module,
+                                           const std::string& main_entrypoint) {
   LOG(INFO) << "Creating Wasm Node";
 
-  std::unique_ptr<WasmNode> node = absl::WrapUnique(new WasmNode(runtime, name));
+  std::unique_ptr<WasmNode> node = absl::WrapUnique(new WasmNode(runtime, name, main_entrypoint));
   node->InitEnvironment(&node->env_);
   LOG(INFO) << "Runtime at: " << (void*)node->runtime_;
   LOG(INFO) << "Host func count: " << node->env_.GetFuncCount();
@@ -198,7 +174,7 @@ std::unique_ptr<WasmNode> WasmNode::Create(BaseRuntime* runtime, const std::stri
   }
 
   LOG(INFO) << "Reading module done";
-  if (!CheckModuleExports(&node->env_, node->Module())) {
+  if (!CheckModuleExport(&node->env_, node->Module(), main_entrypoint)) {
     LOG(WARNING) << "Failed to validate module";
     return nullptr;
   }
@@ -260,7 +236,7 @@ void WasmNode::Run(Handle handle) {
   LOG(INFO) << "{" << name_ << "} module execution thread: run oak_main(" << handle << ")";
   wabt::interp::TypedValues args = {
       wabt::interp::TypedValue(wabt::Type::I64, wabt::interp::Value{.i64 = handle})};
-  wabt::interp::ExecResult exec_result = executor.RunExportByName(Module(), "oak_main", args);
+  wabt::interp::ExecResult exec_result = executor.RunExportByName(Module(), main_entrypoint_, args);
 
   if (exec_result.result != wabt::interp::Result::Ok) {
     LOG(ERROR) << "{" << name_
