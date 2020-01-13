@@ -168,7 +168,7 @@ class OakApplication {
     node_config->set_name("room-config");
     oak::WebAssemblyConfiguration* wasm_config = node_config->mutable_wasm_config();
     wasm_config->set_module_bytes(backend_module_bytes);
-    wasm_config->set_main_entrypoint("oak_main");
+    wasm_config->set_main_entrypoint("backend_oak_main");
 
     std::unique_ptr<oak::CreateApplicationResponse> create_application_response =
         manager_client_->CreateApplication(std::move(config));
