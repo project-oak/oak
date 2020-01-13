@@ -41,20 +41,22 @@ int main(int argc, char* argv[]) {
 
   // Create an application configuration.
   std::string module_bytes = oak::utils::read_file(absl::GetFlag(FLAGS_module));
-  std::unique_ptr<oak::ApplicationConfiguration> application_config = oak::DefaultConfig(
-      module_bytes);
+  std::unique_ptr<oak::ApplicationConfiguration> application_config =
+      oak::DefaultConfig(module_bytes);
 
   // Set application configuration parameters.
   if (absl::GetFlag(FLAGS_logging)) {
     oak::AddLoggingToConfig(application_config.get());
   }
-  oak::AddStorageToConfig(application_config.get(), absl::GetFlag(FLAGS_storage_address));
+  std::string storage_address = absl::GetFlag(FLAGS_storage_address);
+  if (!storage_address.empty()) {
+    oak::AddStorageToConfig(application_config.get(), storage_address);
+  }
   oak::AddGrpcPortToConfig(application_config.get(), absl::GetFlag(FLAGS_grpc_port));
 
   if (ValidApplicationConfig(application_config.get())) {
     oak::WriteConfigToFile(application_config.get(), output_file);
-  }
-  else {
+  } else {
     LOG(QFATAL) << "Incorrect application configuration";
     return 1;
   }

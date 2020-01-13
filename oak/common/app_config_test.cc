@@ -59,6 +59,8 @@ TEST_F(ApplicationConfigurationTest, Default) {
 }
 
 TEST_F(ApplicationConfigurationTest, ReadWriteFile) {
+  std::ifstream existing_file(kTmpFilename, std::ifstream::in);
+  ASSERT_FALSE(existing_file.is_open());
   std::unique_ptr<ApplicationConfiguration> want = DefaultConfig("<bytes>");
   WriteConfigToFile(want.get(), kTmpFilename);
   std::unique_ptr<ApplicationConfiguration> got = ReadConfigFromFile(kTmpFilename);
