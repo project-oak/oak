@@ -481,8 +481,10 @@ This has a little bit more boilerplate than testing a method directly:
 
 - The inbound gRPC channel that requests are delivered over has to be explicitly
   set up (`oak_tests::grpc_channel_setup_default`)
-- A separate thread running the Node's `oak_main` entrypoint is started
-  (`oak_tests::start_node`).
+- A separate thread running the Node's main entrypoint (assumed to be called
+  `oak_main`, which is the name that the
+  [`derive(OakExports)`](https://project-oak.github.io/oak/sdk/oak_derive/derive.OakExports.html)
+  macro creates) is started (`oak_tests::start_node`).
 - The injection of the gRPC request has to specify the method name (in
   `oak_tests::inject_grpc_request`).
 - The per-Node thread needs to be stopped at the end of the test
@@ -529,17 +531,17 @@ fn test_abi() {
 <!-- prettier-ignore-end -->
 
 Because there are multiple Nodes linked into the whole Application under test,
-this means that this main entrypoint for the node can't be the (global)
-`extern "C" fn oak_main` function [described previously](#per-node-boilerplate).
-Instead, we need a little bit of boilerplate in the source code for each of the
-Nodes to allow testability:
+each Node should use a [main entrypoint](abi.md#exported-function) with a
+different name, to prevent their names clashing.
+
+It can also be helpful to defer the real functionality to an inner main
+function:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/abitest/module_0/rust/src/lib.rs Rust /^#.*wasm32.*/ /pub fn main\(.*/)
+[embedmd]:# (../examples/abitest/module_0/rust/src/lib.rs Rust /^#.*no_mangle.*/ /pub fn main\(.*/)
 ```Rust
-#[cfg(target_arch = "wasm32")]
 #[no_mangle]
-pub extern "C" fn oak_main(handle: u64) -> i32 {
+pub extern "C" fn frontend_oak_main(handle: u64) -> i32 {
     match std::panic::catch_unwind(|| main(handle)) {
         Ok(rc) => rc,
         Err(_) => OakStatus::ERR_INTERNAL.value(),
@@ -549,18 +551,13 @@ pub fn main(handle: u64) -> i32 {
 ```
 <!-- prettier-ignore-end -->
 
-Breaking this down in detail:
-
-- The `extern "C" fn oak_main` function is only defined if the build target is
-  `wasm32`; this avoids there being duplicate copies of this function at link
-  time.
-- The [`catch_unwind`](https://doc.rust-lang.org/std/panic/fn.catch_unwind.html)
-  protection belongs in this Wasm-specific function, as it's particularly needed
-  to prevent panics crossing the Wasm FFI boundary. Also, it's useful when
-  testing for panics to be fully propagated.
-- The core functionality of the node is implemented in a `main()` function, but
-  as this function is _not_ `extern "C"` it's namespaced to the Node crate. This
-  function is also `pub` so that it's available to the overall test.
+This allows the
+[`catch_unwind`](https://doc.rust-lang.org/std/panic/fn.catch_unwind.html)
+protection to be localized to the main entrypoint that the real Oak Runtime
+invokes, where it's particularly needed to prevent panic crossing the Wasm FFI
+boundary. The inner main is used for testing (and so needs to be `pub`), and
+_does_ allow panics to propagate to the tests &ndash; which is helpful for
+debugging.
 
 The overall test then lives in a crate of its own, which imports the individual
 crates for the different Oak Nodes, and uses `oak_tests::start` to assemble
