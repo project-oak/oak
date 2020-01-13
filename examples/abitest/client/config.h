@@ -23,14 +23,14 @@ node_configs {
   name: "frontend-config"
   wasm_config {
     module_bytes: "<filled in later>"
-    main_entrypoint: "oak_main"
+    main_entrypoint: "frontend_oak_main"
   }
 }
 node_configs {
   name: "backend-config"
   wasm_config {
     module_bytes: "<filled in later>"
-    main_entrypoint: "oak_main"
+    main_entrypoint: "backend_oak_main"
   }
 }
 node_configs {

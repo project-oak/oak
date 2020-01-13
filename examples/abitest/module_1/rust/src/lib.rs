@@ -24,9 +24,8 @@ use protobuf::ProtobufEnum;
 // frontend via the "to_frontend" channel, but in a slightly convoluted way: the
 // response is written to a fresh channel, and the read handle for that new channel
 // is what's sent back to the frontend.
-#[cfg(target_arch = "wasm32")]
 #[no_mangle]
-pub extern "C" fn oak_main(handle: u64) -> i32 {
+pub extern "C" fn backend_oak_main(handle: u64) -> i32 {
     match std::panic::catch_unwind(|| main(handle)) {
         Ok(rc) => rc,
         Err(_) => oak::OakStatus::ERR_INTERNAL.value(),
