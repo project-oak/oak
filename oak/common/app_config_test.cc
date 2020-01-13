@@ -30,7 +30,7 @@ namespace {
 // Fixture class for testing `ApplicationConfiguration` correctness.
 class ApplicationConfigurationTest : public ::testing::Test {
  protected:
-  virtual void TearDown() {
+  void TearDown() override {
     // Clean up temporary files.
     std::remove(kTmpFilename.c_str());
   }
