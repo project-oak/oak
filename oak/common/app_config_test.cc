@@ -27,21 +27,30 @@ namespace oak {
 
 namespace {
 
-std::unique_ptr<ApplicationConfiguration> ConfigFrom(const std::string& filename) {
-  std::ifstream ifs(filename.c_str(), std::ios::in | std::ios::binary);
-  EXPECT_TRUE(ifs.is_open()) << "failed to open " << filename;
-  std::stringstream ss;
-  ss << ifs.rdbuf();
-  ifs.close();
+// Fixture class for testing `ApplicationConfiguration` correctness.
+class ApplicationConfigurationTest : public ::testing::Test {
+ protected:
+  virtual void TearDown() {
+    // Clean up temporary files.
+    std::remove(kTmpFilename.c_str());
+  }
 
-  auto config = absl::make_unique<ApplicationConfiguration>();
-  google::protobuf::TextFormat::MergeFromString(ss.str(), config.get());
-  return config;
-}
+  std::unique_ptr<ApplicationConfiguration> ConfigFrom(const std::string& filename) {
+    std::ifstream ifs(filename.c_str(), std::ios::in | std::ios::binary);
+    EXPECT_TRUE(ifs.is_open()) << "failed to open " << filename;
+    std::stringstream ss;
+    ss << ifs.rdbuf();
+    ifs.close();
 
-}  // namespace
+    auto config = absl::make_unique<ApplicationConfiguration>();
+    google::protobuf::TextFormat::MergeFromString(ss.str(), config.get());
+    return config;
+  }
 
-TEST(ApplicationConfiguration, Default) {
+  const std::string kTmpFilename = "oak/common/testdata/tmp.bin";
+};
+
+TEST_F(ApplicationConfigurationTest, Default) {
   std::unique_ptr<ApplicationConfiguration> got = DefaultConfig("<bytes>");
   std::unique_ptr<ApplicationConfiguration> want =
       ConfigFrom("oak/common/testdata/barenode.textproto");
@@ -49,7 +58,15 @@ TEST(ApplicationConfiguration, Default) {
   ASSERT_EQ(true, ValidApplicationConfig(*got));
 }
 
-TEST(ApplicationConfiguration, DefaultPlusLogging) {
+TEST_F(ApplicationConfigurationTest, ReadWriteFile) {
+  std::unique_ptr<ApplicationConfiguration> want = DefaultConfig("<bytes>");
+  WriteConfigToFile(want.get(), kTmpFilename);
+  std::unique_ptr<ApplicationConfiguration> got = ReadConfigFromFile(kTmpFilename);
+  ASSERT_EQ(want->DebugString(), got->DebugString());
+  ASSERT_EQ(true, ValidApplicationConfig(*got));
+}
+
+TEST_F(ApplicationConfigurationTest, DefaultPlusLogging) {
   std::unique_ptr<ApplicationConfiguration> got = DefaultConfig("<bytes>");
   AddLoggingToConfig(got.get());
   std::unique_ptr<ApplicationConfiguration> want =
@@ -58,7 +75,7 @@ TEST(ApplicationConfiguration, DefaultPlusLogging) {
   ASSERT_EQ(true, ValidApplicationConfig(*got));
 }
 
-TEST(ApplicationConfiguration, DefaultPlusStorage) {
+TEST_F(ApplicationConfigurationTest, DefaultPlusStorage) {
   std::unique_ptr<ApplicationConfiguration> got = DefaultConfig("<bytes>");
   AddStorageToConfig(got.get(), "localhost:8888");
   std::unique_ptr<ApplicationConfiguration> want =
@@ -67,7 +84,7 @@ TEST(ApplicationConfiguration, DefaultPlusStorage) {
   ASSERT_EQ(true, ValidApplicationConfig(*got));
 }
 
-TEST(ApplicationConfiguration, DefaultPlusGrpcPort) {
+TEST_F(ApplicationConfigurationTest, DefaultPlusGrpcPort) {
   std::unique_ptr<ApplicationConfiguration> got = DefaultConfig("<bytes>");
   AddGrpcPortToConfig(got.get(), 8080);
   std::unique_ptr<ApplicationConfiguration> want =
@@ -76,30 +93,32 @@ TEST(ApplicationConfiguration, DefaultPlusGrpcPort) {
   ASSERT_EQ(true, ValidApplicationConfig(*got));
 }
 
-TEST(ApplicationConfiguration, Valid) {
+TEST_F(ApplicationConfigurationTest, Valid) {
   auto config = ConfigFrom("oak/common/testdata/default.textproto");
   ASSERT_EQ(true, ValidApplicationConfig(*config));
 }
 
-TEST(ApplicationConfiguration, DuplicateConfigName) {
+TEST_F(ApplicationConfigurationTest, DuplicateConfigName) {
   auto config = ConfigFrom("oak/common/testdata/dup_config_name.textproto");
   ASSERT_EQ(false, ValidApplicationConfig(*config));
 }
 
-TEST(ApplicationConfiguration, MultipleLogNodes) {
+TEST_F(ApplicationConfigurationTest, MultipleLogNodes) {
   // Two log configs are OK.
   auto config = ConfigFrom("oak/common/testdata/two_log.textproto");
   ASSERT_EQ(true, ValidApplicationConfig(*config));
 }
 
-TEST(ApplicationConfiguration, NonWasmCode) {
+TEST_F(ApplicationConfigurationTest, NonWasmCode) {
   auto config = ConfigFrom("oak/common/testdata/missing_wasm.textproto");
   ASSERT_EQ(false, ValidApplicationConfig(*config));
 }
 
-TEST(ApplicationConfiguration, DuplicateWasmName) {
+TEST_F(ApplicationConfigurationTest, DuplicateWasmName) {
   auto config = ConfigFrom("oak/common/testdata/dup_wasm.textproto");
   ASSERT_EQ(false, ValidApplicationConfig(*config));
 }
+
+}  // namespace
 
 }  // namespace oak

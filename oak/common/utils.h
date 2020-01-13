@@ -23,10 +23,10 @@ namespace oak {
 namespace utils {
 
 // Reads a binary file and returns its contents as a std::string.
-std::string read_file(const std::string& module_path);
+std::string read_file(const std::string& filename);
 
-// Writes `data` string into a binary `file`.
-void write_file(const std::string& data, const std::string& file);
+// Writes `data` string into a binary file.
+void write_file(const std::string& data, const std::string& filename);
 
 }  // namespace utils
 }  // namespace oak
