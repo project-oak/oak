@@ -570,9 +570,6 @@
 <span id="570">570</span>
 <span id="571">571</span>
 <span id="572">572</span>
-<span id="573">573</span>
-<span id="574">574</span>
-<span id="575">575</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -598,7 +595,7 @@
 <span class="kw">use</span> <span class="ident">byteorder</span>::{<span class="ident">ReadBytesExt</span>, <span class="ident">WriteBytesExt</span>};
 <span class="kw">use</span> <span class="ident">oak</span>::<span class="ident">OakStatus</span>;
 <span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">Handle</span>;
-<span class="kw">use</span> <span class="ident">oak_runtime</span>::{<span class="ident">proto</span>, <span class="ident">OakMessage</span>, <span class="ident">OakRuntime</span>};
+<span class="kw">use</span> <span class="ident">oak_runtime</span>::{<span class="ident">proto</span>, <span class="ident">NodeMain</span>, <span class="ident">OakMessage</span>, <span class="ident">OakRuntime</span>};
 <span class="kw">use</span> <span class="ident">protobuf</span>::{<span class="ident">Message</span>, <span class="ident">ProtobufEnum</span>};
 <span class="kw">use</span> <span class="ident">rand</span>::<span class="ident">Rng</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">cell</span>::<span class="ident">RefCell</span>;
@@ -974,9 +971,6 @@
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Logging via simple_logger initialized&quot;</span>);
     });
 }
-
-<span class="doccomment">/// Expected type for the main entrypoint to a Node under test.</span>
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">NodeMain</span> <span class="op">=</span> <span class="kw">fn</span>(<span class="ident">u64</span>) <span class="op">-&gt;</span> <span class="ident">i32</span>;
 
 <span class="doccomment">/// Start running the Application under test, with the given initial Node and</span>
 <span class="doccomment">/// channel configuration.  Because multiple Nodes are linked into the same</span>
