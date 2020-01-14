@@ -1,3 +1,19 @@
+//
+// Copyright 2020 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
 //! A utility binary to run tests and orchestrate examples and other tools within the repository,
 //! for local development and CI.
 //!
@@ -16,6 +32,9 @@ use std::process::Command;
 /// avoid descending into blacklisted directories.
 fn is_ignored_path(path: &PathBuf) -> bool {
     path.starts_with("./bazel-cache")
+        || path.starts_with("./bazel-clang-oak")
+        || path.starts_with("./bazel-client-oak")
+        || path.starts_with("./bazel-oak")
         || path.starts_with("./cargo-cache")
         || path.starts_with("./third_party")
         || path.starts_with("./.git")
@@ -37,6 +56,14 @@ fn source_files() -> impl Iterator<Item = PathBuf> {
         .map(|e| e.into_path())
 }
 
+/// Return an iterator of all known Cargo Manifest files that define workspaces.
+fn workspace_manifest_files() -> impl Iterator<Item = PathBuf> {
+    // TODO: Automatically discover workspace-level Manifest files.
+    ["./sdk/rust/Cargo.toml", "./examples/Cargo.toml"]
+        .iter()
+        .map(PathBuf::from)
+}
+
 /// Return whether the provided path refers to a Bazel file (`BUILD`, `WORKSPACE`, or `*.bzl`)
 fn is_bazel_file(path: &PathBuf) -> bool {
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
@@ -49,97 +76,111 @@ fn is_markdown_file(path: &PathBuf) -> bool {
     filename.ends_with(".md")
 }
 
-fn main() {
-    let step = Step::root();
-    {
-        let step = step.with_prefix("buildifier");
-        for entry in source_files().filter(is_bazel_file) {
-            step.with_prefix(entry.to_str().unwrap()).run_command(
-                "buildifier",
-                &["-lint=warn", "-mode=check", entry.to_str().unwrap()],
-            );
-        }
-    }
-    {
-        let step = step.with_prefix("prettier");
-        for entry in source_files().filter(is_markdown_file) {
-            step.with_prefix(entry.to_str().unwrap())
-                .run_command("prettier", &["--check", entry.to_str().unwrap()]);
-        }
-    }
-    {
-        let step = step.with_prefix("embedmd");
-        for entry in source_files().filter(is_markdown_file) {
-            step.with_prefix(entry.to_str().unwrap()).run_command(
-                &format!("{}/bin/embedmd", std::env::var("GOPATH").unwrap()),
-                &["-d", entry.to_str().unwrap()],
-            );
-        }
-    }
-    let cargo_manifests = ["./sdk/rust/Cargo.toml", "./examples/Cargo.toml"];
-    {
-        let step = step.with_prefix("cargo fmt");
-        for m in cargo_manifests.iter() {
-            let step = step.with_prefix(m);
-            step.run_command(
-                "cargo",
-                &[
-                    "fmt",
-                    "--all",
-                    &format!("--manifest-path={}", m),
-                    "--",
-                    "--check",
-                ],
-            );
-        }
-    }
-    {
-        let step = step.with_prefix("cargo test");
-        for m in cargo_manifests.iter() {
-            let step = step.with_prefix(m);
-            step.run_command(
-                "cargo",
-                &["test", "--all-targets", &format!("--manifest-path={}", m)],
-            );
-        }
-    }
-    {
-        let step = step.with_prefix("cargo test");
-        for m in cargo_manifests.iter() {
-            let step = step.with_prefix(m);
-            step.run_command(
-                "cargo",
-                &[
-                    "clippy",
-                    "--all-targets",
-                    &format!("--manifest-path={}", m),
-                    "--",
-                    "--deny=warnings",
-                ],
-            );
-        }
-    }
-    {
-        let step = step.with_prefix("bazel build");
-        step.with_prefix("non-Asylo targets").run_command(
-            "bazel",
-            &["build", "--", "//oak/...:all", "-//oak/server/asylo:all"],
+fn run_buildifier(step: &Step) {
+    for entry in source_files().filter(is_bazel_file) {
+        step.with_prefix(entry.to_str().unwrap()).run_command(
+            "buildifier",
+            &["-lint=warn", "-mode=check", entry.to_str().unwrap()],
         );
     }
-    {
-        let step = step.with_prefix("bazel test");
-        step.with_prefix("host targets").run_command(
-            "bazel",
-            // TODO: Extract these targets with `bazel query` at runtime, based on some label or
-            // attribute.
+}
+
+fn run_prettier(step: &Step) {
+    for entry in source_files().filter(is_markdown_file) {
+        step.with_prefix(entry.to_str().unwrap())
+            .run_command("prettier", &["--check", entry.to_str().unwrap()]);
+    }
+}
+
+fn run_embedmd(step: &Step) {
+    for entry in source_files().filter(is_markdown_file) {
+        step.with_prefix(entry.to_str().unwrap()).run_command(
+            &format!("{}/bin/embedmd", std::env::var("GOPATH").unwrap()),
+            &["-d", entry.to_str().unwrap()],
+        );
+    }
+}
+
+fn run_cargo_fmt(step: &Step) {
+    for m in workspace_manifest_files() {
+        let manifest_filename = m.to_str().unwrap();
+        let step = step.with_prefix(manifest_filename);
+        step.run_command(
+            "cargo",
             &[
-                "test",
-                "//oak/server:host_tests",
-                "//oak/server/storage:host_tests",
-                "//oak/common:host_tests",
+                "fmt",
+                "--all",
+                &format!("--manifest-path={}", manifest_filename),
+                "--",
+                "--check",
             ],
         );
     }
+}
+
+fn run_cargo_test(step: &Step) {
+    for m in workspace_manifest_files() {
+        let manifest_filename = m.to_str().unwrap();
+        let step = step.with_prefix(manifest_filename);
+        step.run_command(
+            "cargo",
+            &[
+                "test",
+                "--all-targets",
+                &format!("--manifest-path={}", manifest_filename),
+            ],
+        );
+    }
+}
+
+fn run_cargo_clippy(step: &Step) {
+    for m in workspace_manifest_files() {
+        let manifest_filename = m.to_str().unwrap();
+        let step = step.with_prefix(manifest_filename);
+        step.run_command(
+            "cargo",
+            &[
+                "clippy",
+                "--all-targets",
+                &format!("--manifest-path={}", manifest_filename),
+                "--",
+                "--deny=warnings",
+            ],
+        );
+    }
+}
+
+fn run_bazel_build(step: &Step) {
+    step.with_prefix("non-Asylo targets").run_command(
+        "bazel",
+        &["build", "--", "//oak/...:all", "-//oak/server/asylo:all"],
+    );
+}
+
+fn run_bazel_test(step: &Step) {
+    step.with_prefix("host targets").run_command(
+        "bazel",
+        // TODO: Extract these targets with `bazel query` at runtime, based on some label or
+        // attribute.
+        &[
+            "test",
+            "//oak/server:host_tests",
+            "//oak/server/storage:host_tests",
+            "//oak/common:host_tests",
+        ],
+    );
+}
+
+fn main() {
+    let root = Step::root();
+    run_buildifier(&root.with_prefix("buildifier"));
+    run_prettier(&root.with_prefix("prettier"));
+    run_embedmd(&root.with_prefix("embedmd"));
+    run_cargo_fmt(&root.with_prefix("cargo fmt"));
+    run_cargo_test(&root.with_prefix("cargo test"));
+    run_cargo_clippy(&root.with_prefix("cargo clippy"));
+    run_bazel_build(&root.with_prefix("bazel build"));
+    run_bazel_test(&root.with_prefix("bazel test"));
 }
 
 /// A step executor, which pretty prints the current nesting level, and allows executing commands
@@ -189,9 +230,9 @@ impl Step {
         } else {
             eprintln!("{} ({})", "ERROR".bold().bright_red(), output.status);
             // TODO: Add `verbose` flag to always print logs.
-            // TODO: Support both stdout and stderr.
             eprintln!(
-                "⬇⬇⬇⬇\n{}\n⬆⬆⬆⬆",
+                "⬇⬇⬇⬇\n{}\n----\n{}\n⬆⬆⬆⬆",
+                std::str::from_utf8(&output.stdout).expect("could not parse command output"),
                 std::str::from_utf8(&output.stderr).expect("could not parse command output"),
             );
         }
