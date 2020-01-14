@@ -90,7 +90,7 @@ impl ChatNode for Node {
 
     fn destroy_room(&mut self, req: DestroyRoomRequest) -> grpc::Result<Empty> {
         info!("destroying room");
-        match self.rooms.entry(req.room_id.clone()) {
+        match self.rooms.entry(req.room_id) {
             Entry::Occupied(e) => {
                 if e.get().admin_token == req.admin_token {
                     // Close the only input channel that reaches the per-room Node, which
