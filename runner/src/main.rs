@@ -30,6 +30,7 @@ use std::process::Command;
 
 fn main() {
     let root = Step::root();
+    // TODO: Add support for running individual commands via command line flags.
     run_buildifier(&root.with_prefix("buildifier"));
     run_prettier(&root.with_prefix("prettier"));
     run_embedmd(&root.with_prefix("embedmd"));
