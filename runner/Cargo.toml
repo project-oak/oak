@@ -1,0 +1,9 @@
+[package]
+name = "runner"
+version = "0.1.0"
+authors = ["Tiziano Santoro <tzn@google.com>"]
+edition = "2018"
+
+[dependencies]
+colored = "*"
+walkdir = "*"
