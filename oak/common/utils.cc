@@ -14,21 +14,32 @@
  * limitations under the License.
  */
 
-#ifndef OAK_COMMON_UTILS_H_
-#define OAK_COMMON_UTILS_H_
+#include <fstream>
 
-#include <string>
+#include "asylo/util/logging.h"
+#include "oak/common/utils.h"
 
 namespace oak {
 namespace utils {
 
-// Reads a binary file and returns its contents as a std::string.
-std::string read_file(const std::string& filename);
+std::string read_file(const std::string& filename) {
+  std::ifstream t(filename, std::ifstream::in);
+  if (!t.is_open()) {
+    LOG(QFATAL) << "Could not open file " << filename;
+  }
+  std::stringstream buffer;
+  buffer << t.rdbuf();
+  return buffer.str();
+}
 
-// Writes `data` string into a binary file.
-void write_file(const std::string& data, const std::string& filename);
+void write_file(const std::string& data, const std::string& filename) {
+  std::ofstream t(filename, std::ofstream::out);
+  if (!t.is_open()) {
+    LOG(QFATAL) << "Could not open file " << filename;
+  }
+  t << data;
+  t.close();
+}
 
 }  // namespace utils
 }  // namespace oak
-
-#endif  // OAK_COMMON_UTILS_H_

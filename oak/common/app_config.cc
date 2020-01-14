@@ -15,6 +15,7 @@
  */
 
 #include "oak/common/app_config.h"
+#include "oak/common/utils.h"
 
 #include <set>
 #include <utility>
@@ -43,6 +44,20 @@ std::unique_ptr<ApplicationConfiguration> DefaultConfig(const std::string& modul
   code->set_module_bytes(module_bytes);
 
   return config;
+}
+
+std::unique_ptr<ApplicationConfiguration> ReadConfigFromFile(const std::string& filename) {
+  auto config = absl::make_unique<ApplicationConfiguration>();
+
+  std::string data = utils::read_file(filename);
+  config->ParseFromString(data);
+
+  return config;
+}
+
+void WriteConfigToFile(const ApplicationConfiguration* config, const std::string& filename) {
+  std::string data = config->SerializeAsString();
+  utils::write_file(data, filename);
 }
 
 void AddLoggingToConfig(ApplicationConfiguration* config) {
