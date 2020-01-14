@@ -28,6 +28,18 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
 
+fn main() {
+    let root = Step::root();
+    run_buildifier(&root.with_prefix("buildifier"));
+    run_prettier(&root.with_prefix("prettier"));
+    run_embedmd(&root.with_prefix("embedmd"));
+    run_cargo_fmt(&root.with_prefix("cargo fmt"));
+    run_cargo_test(&root.with_prefix("cargo test"));
+    run_cargo_clippy(&root.with_prefix("cargo clippy"));
+    run_bazel_build(&root.with_prefix("bazel build"));
+    run_bazel_test(&root.with_prefix("bazel test"));
+}
+
 /// Return whether to ignore the specified path. This is used by the `walker` package to efficiently
 /// avoid descending into blacklisted directories.
 fn is_ignored_path(path: &PathBuf) -> bool {
@@ -169,18 +181,6 @@ fn run_bazel_test(step: &Step) {
             "//oak/common:host_tests",
         ],
     );
-}
-
-fn main() {
-    let root = Step::root();
-    run_buildifier(&root.with_prefix("buildifier"));
-    run_prettier(&root.with_prefix("prettier"));
-    run_embedmd(&root.with_prefix("embedmd"));
-    run_cargo_fmt(&root.with_prefix("cargo fmt"));
-    run_cargo_test(&root.with_prefix("cargo test"));
-    run_cargo_clippy(&root.with_prefix("cargo clippy"));
-    run_bazel_build(&root.with_prefix("bazel build"));
-    run_bazel_test(&root.with_prefix("bazel test"));
 }
 
 /// A step executor, which pretty prints the current nesting level, and allows executing commands
