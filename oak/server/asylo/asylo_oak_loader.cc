@@ -66,7 +66,7 @@ void AsyloOakLoader::InitializeEnclaveManager() {
   enclave_manager_ = manager_result.ValueOrDie();
   LOG(INFO) << "Enclave manager initialized";
   LOG(INFO) << "Loading enclave code from " << enclave_path_;
-  enclave_loader_ = absl::make_unique<asylo::SimLoader>(enclave_path_,
+  enclave_loader_ = absl::make_unique<asylo::SgxLoader>(enclave_path_,
                                                         /*debug=*/true);
 }
 

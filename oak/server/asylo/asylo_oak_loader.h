@@ -51,7 +51,7 @@ class AsyloOakLoader {
 
   asylo::EnclaveManager* enclave_manager_;
   // TODO: Use non-simulated loader.
-  std::unique_ptr<asylo::SimLoader> enclave_loader_;
+  std::unique_ptr<asylo::SgxLoader> enclave_loader_;
   std::string enclave_path_;
 
   uint64_t application_id_;
