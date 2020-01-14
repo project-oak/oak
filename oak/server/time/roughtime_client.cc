@@ -52,13 +52,21 @@ struct RoughtimeServerSpec {
   std::string public_key_base64;
 };
 
-const std::vector<RoughtimeServerSpec> servers{{"Google", "roughtime.sandbox.google.com", "2002",
-                                                "etPaaIxcBMY1oUeGpwvPMCJMwlRVNxv51KK/tktoJTQ="},
-                                               {"Cloudflare", "roughtime.cloudflare.com", "2002",
-                                                "gD63hSj3ScS+wuOeGrubXlq35N1c5Lby/S+T7MNTjxo="}};
+// Based on
+// https://github.com/cloudflare/roughtime/blob/569dc6f5119970035fe0a008b83398d59363ed45/ecosystem.json
+const std::vector<RoughtimeServerSpec> servers{
+    {"Caesium", "caesium.tannerryan.ca", "2002", "iBVjxg/1j7y1+kQUTBYdTabxCppesU/07D4PMDJk2WA="},
+    {"Chainpoint", "roughtime.chainpoint.org", "2002",
+     "bbT+RPS7zKX6w71ssPibzmwWqU9ffRV5oj2OresSmhE="},
+    {"Google", "roughtime.sandbox.google.com", "2002",
+     "etPaaIxcBMY1oUeGpwvPMCJMwlRVNxv51KK/tktoJTQ="},
+    {"Cloudflare", "roughtime.cloudflare.com", "2002",
+     "gD63hSj3ScS+wuOeGrubXlq35N1c5Lby/S+T7MNTjxo="},
+    {"int08h", "roughtime.int08h.com", "2002", "AW5uAoTSTDfG5NfY1bTh08GUnOqlRb+HVhbJ3ODJvsE="},
+    {"mixmin", "ticktock.mixmin.net", "5333", "cj8GsiNlRkqiDElAeNMSBBMwrAl15hYPgX50+GWX/lA="}};
 
 // The minimum number of overlapping intervals we need to trust the time.
-constexpr int kMinOverlappingTimeIntervals = 2;
+constexpr int kMinOverlappingTimeIntervals = 3;
 
 // Number of seconds that we will wait for a reply from each server.
 constexpr int kTimeoutSeconds = 3;
