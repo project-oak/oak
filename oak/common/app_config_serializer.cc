@@ -54,12 +54,6 @@ int main(int argc, char* argv[]) {
   }
   oak::AddGrpcPortToConfig(application_config.get(), absl::GetFlag(FLAGS_grpc_port));
 
-  if (ValidApplicationConfig(application_config.get())) {
-    oak::WriteConfigToFile(application_config.get(), output_file);
-  } else {
-    LOG(QFATAL) << "Incorrect application configuration";
-    return 1;
-  }
-
+  oak::WriteConfigToFile(application_config.get(), output_file);
   return 0;
 }
