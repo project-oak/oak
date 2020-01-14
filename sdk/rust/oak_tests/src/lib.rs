@@ -22,7 +22,7 @@ use log::{debug, info, warn};
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use oak::OakStatus;
 use oak_abi::Handle;
-use oak_runtime::{proto, OakMessage, OakRuntime};
+use oak_runtime::{proto, NodeMain, OakMessage, OakRuntime};
 use protobuf::{Message, ProtobufEnum};
 use rand::Rng;
 use std::cell::RefCell;
@@ -398,9 +398,6 @@ pub fn init_logging() {
         info!("Logging via simple_logger initialized");
     });
 }
-
-/// Expected type for the main entrypoint to a Node under test.
-pub type NodeMain = fn(u64) -> i32;
 
 /// Start running the Application under test, with the given initial Node and
 /// channel configuration.  Because multiple Nodes are linked into the same
