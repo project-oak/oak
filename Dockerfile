@@ -6,7 +6,7 @@ RUN apt-get --yes update && apt-get install --yes \
   curl \
   git \
   libncurses5 \
-  python3-pip \
+  python3-six \
   shellcheck \
   xml2
 
