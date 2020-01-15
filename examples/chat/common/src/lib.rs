@@ -35,24 +35,23 @@ pub trait Decodable: Sized {
 
 pub fn send<M: Encodable>(write_handle: oak::WriteHandle, msg: M) -> Result<()> {
     let (bytes, handles) = msg.encode().context("could not encode object")?;
-    let status = oak::channel_write(write_handle, &bytes, &handles);
-    if status == oak::OakStatus::OK {
-        Ok(())
-    } else {
-        // TODO(#457): Propagate error code to caller.
-        Err(anyhow!("could not write to channel: {:?}", status))
-    }
+    // TODO(#457): Propagate error code to caller.
+    oak::channel_write(write_handle, &bytes, &handles)
+        .map_err(|status| anyhow!("could not write to channel: {:?}", status))
 }
 
 pub fn receive<M: Decodable>(read_handle: oak::ReadHandle) -> Result<M> {
     let mut bytes = Vec::<u8>::with_capacity(512);
     let mut handles = Vec::with_capacity(2);
-    let status = oak::channel_read(read_handle, &mut bytes, &mut handles);
-    if status == oak::OakStatus::OK {
-        let msg: M = M::decode(&bytes, &handles).context("could not decode message")?;
-        Ok(msg)
-    } else {
-        // TODO(#457): Propagate error code to caller.
-        Err(anyhow!("could not read from channel: {:?}", status))
+    match oak::channel_read(read_handle, &mut bytes, &mut handles) {
+        Ok(oak::ChannelStatus::Ready) => {
+            let msg: M = M::decode(&bytes, &handles).context("could not decode message")?;
+            Ok(msg)
+        }
+        Ok(oak::ChannelStatus::NotReady) => Err(anyhow!("channel not ready")),
+        Err(status) => {
+            // TODO(#457): Propagate error code to caller.
+            Err(anyhow!("could not read from channel: {:?}", status))
+        }
     }
 }

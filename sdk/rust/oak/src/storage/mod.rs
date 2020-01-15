@@ -22,7 +22,7 @@ use crate::proto::storage_channel::{
     StorageChannelDeleteRequest, StorageChannelDeleteResponse, StorageChannelReadRequest,
     StorageChannelReadResponse, StorageChannelWriteRequest, StorageChannelWriteResponse,
 };
-use log::info;
+use log::{info, warn};
 use protobuf::{Message, ProtobufEnum};
 
 /// Default name for predefined node config that corresponds to a storage
@@ -49,13 +49,19 @@ impl Storage {
             Ok(x) => x,
             Err(_e) => return None,
         };
-        if crate::node_create(config, read_channel) != crate::OakStatus::OK {
-            crate::channel_close(write_channel.handle);
-            crate::channel_close(read_channel.handle);
+        if crate::node_create(config, read_channel).is_err() {
+            if let Err(status) = crate::channel_close(write_channel.handle) {
+                warn!("could not close write channel: {:?}", status);
+            };
+            if let Err(status) = crate::channel_close(read_channel.handle) {
+                warn!("could not close read channel: {:?}", status);
+            };
             return None;
         }
 
-        crate::channel_close(read_channel.handle);
+        if let Err(status) = crate::channel_close(read_channel.handle) {
+            warn!("could not close read channel: {:?}", status);
+        };
         Some(Storage { write_channel })
     }
 
@@ -81,12 +87,14 @@ impl Storage {
         );
         operation_request
             .write_to_writer(&mut request_any.value)
-            .unwrap();
+            .expect("could not convert operation request to `Any` value");
         let mut grpc_request = GrpcRequest::new();
         grpc_request.method_name = grpc_method_name.to_owned();
         grpc_request.set_req_msg(request_any);
         let mut grpc_data = Vec::new();
-        grpc_request.write_to_writer(&mut grpc_data).unwrap();
+        grpc_request
+            .write_to_writer(&mut grpc_data)
+            .expect("could not convert gRPC request to bytes");
 
         // Create an ephemeral channel for the response.
         let (rsp_out, rsp_in) = match crate::channel_create() {
@@ -102,8 +110,9 @@ impl Storage {
             }
         };
 
-        crate::channel_write(self.write_channel, &grpc_data, &[rsp_out.handle]);
-        crate::channel_close(rsp_out.handle);
+        crate::channel_write(self.write_channel, &grpc_data, &[rsp_out.handle])
+            .expect("could not write to channel");
+        crate::channel_close(rsp_out.handle).expect("could not close channel");
 
         // Block until there is a response available.
         loop {
@@ -115,24 +124,29 @@ impl Storage {
 
         let mut buffer = Vec::<u8>::with_capacity(256);
         let mut handles = Vec::<crate::Handle>::with_capacity(1);
-        crate::channel_read(rsp_in, &mut buffer, &mut handles);
+        if crate::channel_read(rsp_in, &mut buffer, &mut handles)
+            .expect("could not read from channel")
+            != crate::ChannelStatus::Ready
+        {
+            panic!("empty message received");
+        }
         if !handles.is_empty() {
             panic!("unexpected handles received alongside storage request")
         }
-        let mut grpc_response: GrpcResponse =
-            protobuf::parse_from_reader(&mut &buffer[..]).unwrap();
+        let mut grpc_response: GrpcResponse = protobuf::parse_from_reader(&mut &buffer[..])
+            .expect("could not parse gRPC response from bytes");
         info!(
             "StorageChannelResponse: {}",
             protobuf::text_format::print_to_string(&grpc_response)
         );
-        crate::channel_close(rsp_in.handle);
+        crate::channel_close(rsp_in.handle).expect("could not close channel");
 
         let status = grpc_response.take_status();
         if status.code != 0 {
             Err(status)
         } else {
-            let response =
-                protobuf::parse_from_bytes(grpc_response.get_rsp_msg().value.as_slice()).unwrap();
+            let response = protobuf::parse_from_bytes(grpc_response.get_rsp_msg().value.as_slice())
+                .expect("could not parse gRPC response message from `Any` value");
             Ok(response)
         }
     }

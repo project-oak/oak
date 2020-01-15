@@ -584,8 +584,7 @@ fn log_node_main(handle: Handle) -> i32 {
         }
         let mut buf = Vec::<u8>::with_capacity(1024);
         let mut handles = Vec::with_capacity(8);
-        oak::channel_read(half, &mut buf, &mut handles);
-        if buf.is_empty() {
+        if oak::channel_read(half, &mut buf, &mut handles).expect("could not read from channel") == oak::ChannelStatus::NotReady {
             debug!("no pending message; poll again");
             continue;
         }

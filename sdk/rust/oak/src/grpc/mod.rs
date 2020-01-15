@@ -166,10 +166,15 @@ pub fn event_loop<T: OakNode>(mut node: T, grpc_in_handle: ReadHandle) -> i32 {
 
         let mut buf = Vec::<u8>::with_capacity(1024);
         let mut handles = Vec::<Handle>::with_capacity(1);
-        crate::channel_read(grpc_in_handle, &mut buf, &mut handles);
-        if buf.is_empty() {
+        if crate::channel_read(grpc_in_handle, &mut buf, &mut handles)
+            .expect("could not read from gRPC input channel")
+            == crate::ChannelStatus::NotReady
+        {
             info!("no pending message; poll again");
             continue;
+        }
+        if buf.is_empty() {
+            panic!("no bytes received")
         }
         if handles.is_empty() {
             panic!("no response handle received alongside gRPC request")

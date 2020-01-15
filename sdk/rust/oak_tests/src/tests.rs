@@ -54,7 +54,8 @@ fn test_panic_catch() {
         },
         &req_data,
         &[oak::Handle::from_raw(write_handle)],
-    );
+    )
+    .expect("could not write to channel");
 
     assert_eq!(oak::OakStatus::ERR_INTERNAL.value(), oak_main(read_handle));
 }
