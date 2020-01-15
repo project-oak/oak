@@ -32,11 +32,8 @@
 #include "oak/common/utils.h"
 #include "oak/proto/manager.grpc.pb.h"
 
+ABSL_FLAG(std::string, config, "", "Application configuration file");
 ABSL_FLAG(std::string, enclave_path, "", "Path of the enclave to load");
-ABSL_FLAG(std::string, module, "", "File containing the compiled WebAssembly module");
-ABSL_FLAG(std::string, storage_address, "127.0.0.1:7867",
-          "Address ot the storage provider to connect to");
-ABSL_FLAG(int, grpc_port, 8080, "Port for the Application to listen on");
 
 void sigint_handler(int param) {
   LOG(QFATAL) << "SIGINT received";
@@ -54,14 +51,10 @@ int main(int argc, char* argv[]) {
   std::unique_ptr<oak::AsyloOakLoader> loader =
       absl::make_unique<oak::AsyloOakLoader>(absl::GetFlag(FLAGS_enclave_path));
 
-  // Load the Oak Module to execute. This needs to be compiled from Rust to WebAssembly separately.
-  // TODO(#412, #413): Use a `Config` file as an input.
-  std::string module_bytes = oak::utils::read_file(absl::GetFlag(FLAGS_module));
-
+  // Load application configuration.
   std::unique_ptr<oak::ApplicationConfiguration> application_config =
-      oak::DefaultConfig(module_bytes);
-  oak::AddStorageToConfig(application_config.get(), absl::GetFlag(FLAGS_storage_address));
-  oak::AddGrpcPortToConfig(application_config.get(), absl::GetFlag(FLAGS_grpc_port));
+      oak::ReadConfigFromFile(absl::GetFlag(FLAGS_config));
+
   asylo::StatusOr<oak::CreateApplicationResponse> result =
       loader->CreateApplication(*application_config);
   if (!result.ok()) {
