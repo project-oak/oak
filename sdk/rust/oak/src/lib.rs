@@ -18,6 +18,7 @@ use byteorder::{ReadBytesExt, WriteBytesExt};
 
 use log::{debug, error};
 use protobuf::ProtobufEnum;
+use serde::{Deserialize, Serialize};
 
 // Re-export ABI constants that are also visible as part of the SDK API.
 pub use oak_abi::{ChannelReadStatus, OakStatus};
@@ -41,6 +42,44 @@ use serial_test_derive::serial;
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Handle {
     id: u64,
+}
+
+/// Serialize a `Handle` as the invalid handle value.
+impl serde::Serialize for Handle {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_u64(oak_abi::INVALID_HANDLE)
+    }
+}
+
+struct HandleVisitor;
+
+/// Deserialize a `Handle` as the invalid handle value. Most likely, it will have been serialized to
+/// an invalid handle in the first place anyways, but we are being extra cautions and even if the
+/// serialized value was modified, we make sure that the resulting `Handle` is invalid.
+impl<'de> serde::de::Visitor<'de> for HandleVisitor {
+    type Value = Handle;
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("a handle type")
+    }
+
+    fn visit_u64<E>(self, _v: u64) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        Ok(Handle::invalid())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Handle {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_u64(HandleVisitor)
+    }
 }
 
 impl Handle {
@@ -88,7 +127,7 @@ impl Handle {
 /// Wrapper for a handle to the read half of a channel.
 ///
 /// For use when the underlying [`Handle`] is known to be for a receive half.
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ReadHandle {
     pub handle: Handle,
 }
@@ -96,7 +135,7 @@ pub struct ReadHandle {
 /// Wrapper for a handle to the send half of a channel.
 ///
 /// For use when the underlying [`Handle`] is known to be for a send half.
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WriteHandle {
     pub handle: Handle,
 }

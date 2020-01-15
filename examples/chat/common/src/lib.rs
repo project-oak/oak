@@ -14,4 +14,45 @@
 // limitations under the License.
 //
 
+pub mod command;
 pub mod proto;
+
+use anyhow::{anyhow, Context, Result};
+
+/// A trait for objects that can be encoded as bytes + handles.
+///
+/// TODO(#457): Move to SDK crate.
+pub trait Encodable {
+    fn encode(&self) -> Result<(Vec<u8>, Vec<oak::Handle>)>;
+}
+
+/// A trait for objects that can be decoded from bytes + handles.
+///
+/// TODO(#457): Move to SDK crate.
+pub trait Decodable: Sized {
+    fn decode(bytes: &[u8], handles: &[oak::Handle]) -> Result<Self>;
+}
+
+pub fn send<M: Encodable>(write_handle: oak::WriteHandle, msg: M) -> Result<()> {
+    let (bytes, handles) = msg.encode().context("could not encode object")?;
+    let status = oak::channel_write(write_handle, &bytes, &handles);
+    if status == oak::OakStatus::OK {
+        Ok(())
+    } else {
+        // TODO(#457): Propagate error code to caller.
+        Err(anyhow!("could not write to channel: {:?}", status))
+    }
+}
+
+pub fn receive<M: Decodable>(read_handle: oak::ReadHandle) -> Result<M> {
+    let mut bytes = Vec::<u8>::with_capacity(512);
+    let mut handles = Vec::with_capacity(2);
+    let status = oak::channel_read(read_handle, &mut bytes, &mut handles);
+    if status == oak::OakStatus::OK {
+        let msg: M = M::decode(&bytes, &handles).context("could not decode message")?;
+        Ok(msg)
+    } else {
+        // TODO(#457): Propagate error code to caller.
+        Err(anyhow!("could not read from channel: {:?}", status))
+    }
+}

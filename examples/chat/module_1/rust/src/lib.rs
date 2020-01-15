@@ -14,78 +14,78 @@
 // limitations under the License.
 //
 
-use chat_common::proto::chat::ReceivedMessage;
-use log::{info, warn};
+use chat_common::command::Command;
+use chat_common::proto::chat::Message;
+use log::{error, info};
 use protobuf::ProtobufEnum;
 
 #[no_mangle]
 pub extern "C" fn backend_oak_main(handle: u64) -> i32 {
-    match std::panic::catch_unwind(|| main(handle)) {
-        Ok(rc) => rc,
-        Err(_) => oak::OakStatus::ERR_INTERNAL.value(),
-    }
+    std::panic::catch_unwind(|| {
+        oak_log::init_default();
+        oak::set_panic_hook();
+        let room = Room::default();
+        room.event_loop(handle)
+    })
+    .unwrap_or_else(|_| oak::OakStatus::ERR_INTERNAL.value())
 }
 
-pub fn main(in_handle: u64) -> i32 {
-    oak_log::init_default();
-    oak::set_panic_hook();
-    info!("per-room node started");
+#[derive(Default)]
+struct Room {
+    messages: Vec<Message>,
+    clients: Vec<oak::grpc::ChannelResponseWriter>,
+}
 
-    let in_channel = oak::ReadHandle {
-        handle: oak::Handle::from_raw(in_handle),
-    };
-
-    let mut rsp_writers: Vec<oak::grpc::ChannelResponseWriter> = Vec::with_capacity(1);
-    loop {
+impl Room {
+    fn event_loop(mut self, in_handle: u64) -> i32 {
         // Wait for something on our single input channel.
-        let ready_status = match oak::wait_on_channels(&[in_channel]) {
-            Ok(ready_status) => ready_status,
-            Err(err) => {
-                info!("room terminating with {}", err.value());
-                for writer in &mut rsp_writers {
-                    writer.close(Ok(())).expect("Failed to close writer");
+        let in_channel = oak::ReadHandle {
+            handle: oak::Handle::from_raw(in_handle),
+        };
+        info!("starting event loop");
+        loop {
+            info!("waiting for new messages");
+            let ready_status = match oak::wait_on_channels(&[in_channel]) {
+                Ok(ready_status) => ready_status,
+                Err(err) => {
+                    // The other side of the channel was closed.
+                    info!("room terminating with {}", err.value());
+                    self.close_all();
+                    return err.value();
                 }
-                return err.value();
-            }
-        };
-        if ready_status[0] != oak::ChannelReadStatus::READ_READY {
-            continue;
-        }
+            };
+            if ready_status[0] != oak::ChannelReadStatus::READ_READY {
+                continue;
+            };
 
-        // Read a message and possible additional outbound handles.
-        let mut buf = Vec::<u8>::with_capacity(512);
-        let mut handles = Vec::with_capacity(2);
-        let status = oak::channel_read(in_channel, &mut buf, &mut handles);
-        if status != oak::OakStatus::OK {
-            return status.value();
-        }
-        for handle in handles {
-            info!("add handle {:?} to output writers", handle);
-            rsp_writers.push(oak::grpc::ChannelResponseWriter::new(oak::WriteHandle {
-                handle,
-            }));
-        }
-        if buf.is_empty() {
-            continue;
-        }
-        let msg: ReceivedMessage = match protobuf::parse_from_bytes(&buf) {
-            Err(_) => {
-                warn!("failed to parse ReceivedMessage");
-                return oak::OakStatus::ERR_INTERNAL.value();
+            info!("reading incoming command");
+            let command: Command =
+                chat_common::receive(in_channel).expect("could not receive command");
+            match command {
+                Command::Join(h) => {
+                    self.clients.push(oak::grpc::ChannelResponseWriter::new(h));
+                }
+                Command::SendMessage(message_bytes) => {
+                    let message: Message = protobuf::parse_from_bytes(&message_bytes)
+                        .expect("could not parse message from bytes");
+                    self.messages.push(message.clone());
+                    info!("fan out message to {} clients", self.clients.len());
+                    for writer in &mut self.clients {
+                        // TODO: Improve error handling.
+                        writer
+                            .write(&message, oak::grpc::WriteMode::KeepOpen)
+                            .expect("could not write to channel");
+                    }
+                }
             }
-            Ok(m) => m,
-        };
+        }
+    }
 
-        info!(
-            "{}: fan out message from {} to {} outputs",
-            msg.room_name,
-            msg.user_handle,
-            rsp_writers.len()
-        );
-        for writer in &mut rsp_writers {
+    fn close_all(&mut self) {
+        for writer in &mut self.clients {
             writer
-                .write(&msg, oak::grpc::WriteMode::KeepOpen)
-                .expect("Failed to write message");
+                .close(Ok(()))
+                .unwrap_or_else(|err| error!("could not close channel: {}", err))
         }
     }
 }

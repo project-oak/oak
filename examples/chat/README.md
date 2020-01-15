@@ -19,7 +19,7 @@ The first client to run typically creates the Oak Application and a first chat
 room inside it:
 
 ```bash
-$ ./examples/chat/run -C --room_name=MyRoom
+$ ./examples/chat/run
 ```
 
 This will emit a trace line that holds the information needed to:
@@ -27,7 +27,7 @@ This will emit a trace line that holds the information needed to:
 - connect to the same Oak application (with `--app_address`)
 - join the chat room (with `--room_id`).
 
-```
+```log
 2019-10-24 10:47:20  INFO  chat.cc : 242 : Join this room with --app_address=127.0.0.1:32889 --room_id=NKsceNlg69UbcvryfzmFGnMv9qnZ0DYh6u6gJxujnPPxvHsxMehoD368sumKawVaq9WaSkzrcStoNYLvVNdzhA==
 ```
 
@@ -42,13 +42,13 @@ Application by just copying the `--app_address` argument, but specifying a new
 room name:
 
 ```bash
-$ ./examples/chat/run -C --app_address=127.0.0.1:32889 --room_name=NewRoom
+$ ./examples/chat/run -C --app_address=127.0.0.1:32889
 ```
 
 This will again emit a trace line with the information needed to join this new
 room (on the same server):
 
-```
+```log
 2019-10-24 11:04:40  INFO  chat.cc : 242 : Join this room with --app_address=127.0.0.1:32889 --room_id=msSGas1Ie2rtGIvG0bLa2Jh3ODjO35nix46R3j2iYjAcB8zDcJpn/P2DD7c0yB1NMmfoipBSAePJzlXjknm8gg==
 ```
 

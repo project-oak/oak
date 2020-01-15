@@ -125,3 +125,38 @@ fn test_handle_space() {
     prep_handle_space(&mut space);
     assert_eq!(data.to_vec(), space);
 }
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+struct TestStruct {
+    a: u64,
+    h: Handle,
+    b: u64,
+}
+
+/// Verify that serializing a handle to JSON results in an invalid handle value.
+#[test]
+fn test_handle_serialize_json() {
+    let s = TestStruct {
+        a: 111,
+        h: Handle::from_raw(222),
+        b: 333,
+    };
+    let serialized_struct = serde_json::to_string(&s).unwrap();
+    assert_eq!(r#"{"a":111,"h":0,"b":333}"#, serialized_struct);
+}
+
+/// Verify that deserializing a handle from JSON results in an invalid handle value.
+#[test]
+fn test_handle_deserialize_json() {
+    let serialized_struct = r#"{"a":111,"h":222,"b":333}"#;
+    let deserialized_struct: TestStruct =
+        serde_json::from_str(&serialized_struct).expect("could not deserialize");
+    assert_eq!(
+        TestStruct {
+            a: 111,
+            h: Handle::invalid(),
+            b: 333
+        },
+        deserialized_struct,
+    );
+}
