@@ -28,9 +28,7 @@
 #include "oak/common/nonce_generator.h"
 #include "oak/common/utils.h"
 
-ABSL_FLAG(std::string, manager_address, "127.0.0.1:8888",
-          "Address of the Oak Manager to connect to");
-ABSL_FLAG(std::string, module, "", "File containing the compiled WebAssembly module");
+ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak application to connect to");
 
 using ::oak::examples::running_average::GetAverageResponse;
 using ::oak::examples::running_average::RunningAverage;
@@ -63,24 +61,10 @@ int retrieve_average(RunningAverage::Stub* stub) {
 int main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
 
-  // Connect to the Oak Manager.
-  std::unique_ptr<oak::ManagerClient> manager_client =
-      absl::make_unique<oak::ManagerClient>(grpc::CreateChannel(
-          absl::GetFlag(FLAGS_manager_address), grpc::InsecureChannelCredentials()));
-
-  // Load the Oak Module to execute. This needs to be compiled from Rust to WebAssembly separately.
-  std::string module_bytes = oak::utils::read_file(absl::GetFlag(FLAGS_module));
-  std::unique_ptr<oak::CreateApplicationResponse> create_application_response =
-      manager_client->CreateApplication(module_bytes);
-  if (create_application_response == nullptr) {
-    LOG(QFATAL) << "Failed to create application";
-  }
-
-  std::stringstream addr;
-  addr << "127.0.0.1:" << create_application_response->grpc_port();
-  LOG(INFO) << "Connecting to Oak Application: " << addr.str();
-
   oak::ApplicationClient::InitializeAssertionAuthorities();
+
+  std::string address = absl::GetFlag(FLAGS_address);
+  LOG(INFO) << "Connecting to Oak Application: " << address;
 
   // Connect to the newly created Oak Application from different clients sharing the same access
   // token.
@@ -88,11 +72,11 @@ int main(int argc, char** argv) {
   std::string authorization_bearer_token = oak::NonceToBytes(nonce_generator.NextNonce());
 
   auto stub_0 = RunningAverage::NewStub(oak::ApplicationClient::CreateChannel(
-      addr.str(), oak::ApplicationClient::authorization_bearer_token_call_credentials(
+      address, oak::ApplicationClient::authorization_bearer_token_call_credentials(
                       authorization_bearer_token)));
 
   auto stub_1 = RunningAverage::NewStub(oak::ApplicationClient::CreateChannel(
-      addr.str(), oak::ApplicationClient::authorization_bearer_token_call_credentials(
+      address, oak::ApplicationClient::authorization_bearer_token_call_credentials(
                       authorization_bearer_token)));
 
   // Submit samples from different clients.

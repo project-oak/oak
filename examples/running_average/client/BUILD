@@ -36,3 +36,16 @@ cc_binary(
         "@com_google_asylo//asylo/util:logging",
     ],
 )
+
+genrule(
+    name = "client_config",
+    srcs = ["//examples:target/wasm32-unknown-unknown/release/running_average.wasm"],
+    outs = ["client_config.bin"],
+    cmd = "$(location //oak/common:app_config_serializer)" +
+          " --module=$<" +
+          " --logging" +
+          " --storage_address=127.0.0.1:7867" +
+          " --grpc_port=8080" +
+          " --output_file=$@",
+    tools = ["//oak/common:app_config_serializer"],
+)
