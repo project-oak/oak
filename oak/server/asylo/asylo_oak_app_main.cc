@@ -47,13 +47,13 @@ int main(int argc, char* argv[]) {
   // does not seem to work.
   std::signal(SIGINT, sigint_handler);
 
-  // Load application configuration.
-  std::unique_ptr<oak::ApplicationConfiguration> application_config =
-      oak::ReadConfigFromFile(absl::GetFlag(FLAGS_config));
-
   // Create manager instance.
   std::unique_ptr<oak::AsyloOakLoader> loader =
       absl::make_unique<oak::AsyloOakLoader>(absl::GetFlag(FLAGS_enclave_path));
+
+  // Load application configuration.
+  std::unique_ptr<oak::ApplicationConfiguration> application_config =
+      oak::ReadConfigFromFile(absl::GetFlag(FLAGS_config));
 
   asylo::StatusOr<oak::CreateApplicationResponse> result =
       loader->CreateApplication(*application_config);
