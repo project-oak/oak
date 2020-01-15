@@ -28,13 +28,7 @@
 #include "oak/common/app_config.h"
 #include "oak/common/utils.h"
 
-ABSL_FLAG(std::string, manager_address, "127.0.0.1:8888",
-          "Address of the Oak Manager to connect to");
-ABSL_FLAG(std::string, storage_address, "127.0.0.1:7867",
-          "Address of the storage provider to connect to");
-ABSL_FLAG(std::string, module, "", "File containing the compiled WebAssembly module");
-ABSL_FLAG(std::string, translator_module, "",
-          "File containing a compiled WebAssembly module with a Translator Node");
+ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak application to connect to");
 
 using ::oak::examples::hello_world::HelloRequest;
 using ::oak::examples::hello_world::HelloResponse;
@@ -73,50 +67,13 @@ void lots_of_replies(HelloWorld::Stub* stub, std::string name) {
 int main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
 
-  // Connect to the Oak Manager.
-  std::unique_ptr<oak::ManagerClient> manager_client =
-      absl::make_unique<oak::ManagerClient>(grpc::CreateChannel(
-          absl::GetFlag(FLAGS_manager_address), grpc::InsecureChannelCredentials()));
-
-  // Load the Oak Module to execute. This needs to be compiled from Rust to WebAssembly separately.
-  std::string module_bytes = oak::utils::read_file(absl::GetFlag(FLAGS_module));
-
-  // Build an application configuration with a single WebAssembly Node config
-  // using the provided WebAssembly module bytes.
-  std::unique_ptr<oak::ApplicationConfiguration> app_config = oak::DefaultConfig(module_bytes);
-  oak::AddLoggingToConfig(app_config.get());
-  std::string storage_address = absl::GetFlag(FLAGS_storage_address);
-  if (!storage_address.empty()) {
-    oak::AddStorageToConfig(app_config.get(), storage_address);
-  }
-
-  // Optionally load another WebAssembly module holding code for a translator
-  // Node.
-  std::string translator_module = absl::GetFlag(FLAGS_translator_module);
-  if (!translator_module.empty()) {
-    LOG(INFO) << "Adding 'translator' module config with Wasm code from " << translator_module;
-    std::string translator_module_bytes = oak::utils::read_file(translator_module);
-    oak::NodeConfiguration* node_config = app_config->add_node_configs();
-    node_config->set_name("translator");
-    oak::WebAssemblyConfiguration* wasm_config = node_config->mutable_wasm_config();
-    wasm_config->set_module_bytes(translator_module_bytes);
-  }
-
-  std::unique_ptr<oak::CreateApplicationResponse> create_application_response =
-      manager_client->CreateApplication(std::move(app_config));
-  if (create_application_response == nullptr) {
-    LOG(QFATAL) << "Failed to create application";
-  }
-
-  std::stringstream addr;
-  addr << "127.0.0.1:" << create_application_response->grpc_port();
-  std::string application_id(create_application_response->application_id());
-  LOG(INFO) << "Connecting to Oak Application id=" << application_id << ": " << addr.str();
-
   oak::ApplicationClient::InitializeAssertionAuthorities();
 
+  std::string address = absl::GetFlag(FLAGS_address);
+  LOG(INFO) << "Connecting to Oak Application: " << address;
+
   // Connect to the newly created Oak Application.
-  auto stub = HelloWorld::NewStub(oak::ApplicationClient::CreateChannel(addr.str()));
+  auto stub = HelloWorld::NewStub(oak::ApplicationClient::CreateChannel(address));
 
   // Perform multiple invocations of the same Oak Application, with different parameters.
   say_hello(stub.get(), "WORLD");
@@ -126,10 +83,6 @@ int main(int argc, char** argv) {
   say_hello(stub.get(), "MONDE");
 
   lots_of_replies(stub.get(), "WORLDS");
-
-  // Request termination of the Oak Application.
-  LOG(INFO) << "Terminating application id=" << application_id;
-  manager_client->TerminateApplication(application_id);
 
   return EXIT_SUCCESS;
 }

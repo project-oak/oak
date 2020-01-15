@@ -37,6 +37,32 @@ cc_binary(
     ],
 )
 
+genrule(
+    name = "client_config",
+    srcs = ["//examples:target/wasm32-unknown-unknown/release/hello_world.wasm"],
+    outs = ["client_config.bin"],
+    cmd = "$(location //oak/common:app_config_serializer)" +
+          " --module=$<" +
+          " --logging" +
+          " --storage_address=127.0.0.1:7867" +
+          " --grpc_port=8080" +
+          " --output_file=$@",
+    tools = ["//oak/common:app_config_serializer"],
+)
+
+genrule(
+    name = "client_config_cpp",
+    srcs = ["//examples/hello_world/module/cpp:hello_world.wasm"],
+    outs = ["client_config_cpp.bin"],
+    cmd = "$(location //oak/common:app_config_serializer)" +
+          " --module=$<" +
+          " --logging" +
+          " --storage_address=127.0.0.1:7867" +
+          " --grpc_port=8080" +
+          " --output_file=$@",
+    tools = ["//oak/common:app_config_serializer"],
+)
+
 # TODO: Create a new Bazel rule `oak_application_server_docker`, that encapsulates this logic.
 container_image(
     name = "client_docker",
