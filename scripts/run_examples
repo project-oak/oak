@@ -12,7 +12,8 @@ source "$SCRIPTS_DIR/common"
 readonly RUST_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/rust$' | cut -d'/' -f2 | uniq | grep -v rustfmt)"
 
 for example in ${RUST_EXAMPLES}; do
-  ./bazel-bin/oak/server/asylo/oak &
+  ./bazel-bin/oak/server/asylo/oak_app_loader \
+    --config="$PWD/bazel-client-bin/examples/${example}/client/client_config.bin" &
   SERVER_PID=$!
   # Currently `chat` application starts an infinite loop, so `run_examples` just checks
   # if the module can be loaded correctly.
@@ -30,8 +31,9 @@ done
 # https://github.com/project-oak/oak/issues/439
 readonly CPP_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/cpp$' | cut -d'/' -f2 | uniq | grep -v tensorflow)"
 for example in ${CPP_EXAMPLES}; do
-  ./bazel-bin/oak/server/asylo/oak &
+  ./bazel-bin/oak/server/asylo/oak_app_loader \
+    --config="$PWD/bazel-clang-bin/examples/${example}/client/client_config_cpp.bin" &
   SERVER_PID=$!
-  "${SCRIPTS_DIR}/run_example" -c "${example}"
+  "${SCRIPTS_DIR}/run_example" "${example}"
   kill -s SIGTERM "$SERVER_PID"
 done

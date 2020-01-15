@@ -48,6 +48,21 @@ if [[ -n "$RUST_FOLDER" ]]; then
     done
 fi
 
+readonly CPP_FOLDER="$(find examples/"$TARGET" -type d -name cpp)"
+if [[ -n "$CPP_FOLDER" ]]; then
+    readonly BUILD_RULES=(
+        "//examples/$TARGET/module/cpp:all"
+        "//examples/$TARGET/client:client_config_cpp")
+    if [[ "tensorflow" != "$TARGET" ]]; then
+        # TODO: support compilation mode wasm.
+        bazel build --config=wasm32 "${BUILD_RULES[@]}"
+    else
+        # TODO: Compile all examples in Emscripten when imports will be fixed.
+        # https://github.com/project-oak/oak/issues/439
+        bazel build --config=emscripten "${BUILD_RULES[@]}"
+    fi
+fi
+
 bazel_build_flags+=(
     '--symlink_prefix=bazel-client-'
     "--compilation_mode=$COMPILATION_MODE"
@@ -55,14 +70,6 @@ bazel_build_flags+=(
 
 # Use a different output_base so that we don't lose incremental state.
 # See https://docs.bazel.build/versions/master/command-line-reference.html#flag--output_base.
-bazel --output_base="$CACHE_DIR/client" build "${bazel_build_flags[@]}" "//examples/$TARGET/client"
-
-readonly CPP_FOLDER="$(find examples/"$TARGET" -type d -name cpp)"
-if [[ -n "$CPP_FOLDER" ]]; then
-    if [[ "tensorflow" != "$TARGET" ]]; then
-        # TODO: support compilation mode wasm.
-        bazel build --config=wasm32 "//examples/$TARGET/module/cpp:all"
-    else
-        bazel build --config=emscripten "//examples/$TARGET/module/cpp:all"
-    fi
-fi
+bazel --output_base="$CACHE_DIR/client" build "${bazel_build_flags[@]}" \
+    "//examples/$TARGET/client:client" \
+    "//examples/$TARGET/client:client_config"
