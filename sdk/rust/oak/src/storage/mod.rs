@@ -124,12 +124,8 @@ impl Storage {
 
         let mut buffer = Vec::<u8>::with_capacity(256);
         let mut handles = Vec::<crate::Handle>::with_capacity(1);
-        if crate::channel_read(rsp_in, &mut buffer, &mut handles)
-            .expect("could not read from channel")
-            != crate::ChannelStatus::Ready
-        {
-            panic!("empty message received");
-        }
+        crate::channel_read(rsp_in, &mut buffer, &mut handles)
+            .expect("could not read from channel");
         if !handles.is_empty() {
             panic!("unexpected handles received alongside storage request")
         }

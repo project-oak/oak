@@ -194,14 +194,9 @@ pub fn wait_on_channels(handles: &[ReadHandle]) -> Result<Vec<ChannelReadStatus>
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
-#[must_use]
-pub enum ChannelStatus {
-    Ready,
-    NotReady,
-}
-
-/// Read a message from a channel.
+/// Read a message from a channel without blocking.
+///
+/// Return an error if the underlying channel is empty (i.e. not ready to read).
 ///
 /// The provided vectors for received data and associated handles will be
 /// resized to accomodate the information in the message; any data already
@@ -239,17 +234,12 @@ pub fn channel_read(half: ReadHandle, buf: &mut Vec<u8>, handles: &mut Vec<Handl
                         // zero).  As the data is already present in the vectors, set
                         // their length to match what's available.
                         buf.set_len(actual_size as usize);
-
                         // actual_handle_count is number of handles not bytes
                         handles_buf.set_len(actual_handle_count as usize * 8);
                     }
                     Handle::unpack(&handles_buf, actual_handle_count, handles);
                     return Ok(());
                 }
-
-                // This also counts as success, but we signal to the caller that the operation did
-                // not yield any message.
-                OakStatus::ERR_CHANNEL_EMPTY => return Ok(ChannelStatus::NotReady),
 
                 OakStatus::ERR_BUFFER_TOO_SMALL | OakStatus::ERR_HANDLE_SPACE_TOO_SMALL
                     if !(*resized) =>

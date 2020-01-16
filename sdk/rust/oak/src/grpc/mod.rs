@@ -155,24 +155,18 @@ pub fn event_loop<T: OakNode>(mut node: T, grpc_in_handle: ReadHandle) -> i32 {
     loop {
         // Block until there is a message to read on an input channel.
         crate::prep_handle_space(&mut space);
-        unsafe {
-            let status = oak_abi::wait_on_channels(space.as_mut_ptr(), read_handles.len() as u32);
-            match OakStatus::from_i32(status as i32) {
-                Some(OakStatus::OK) => (),
-                Some(err) => return err as i32,
-                None => return OakStatus::OAK_STATUS_UNSPECIFIED.value(),
-            }
+        let status =
+            unsafe { oak_abi::wait_on_channels(space.as_mut_ptr(), read_handles.len() as u32) };
+        match OakStatus::from_i32(status as i32) {
+            Some(OakStatus::OK) => (),
+            Some(err) => return err as i32,
+            None => return OakStatus::OAK_STATUS_UNSPECIFIED.value(),
         }
 
         let mut buf = Vec::<u8>::with_capacity(1024);
         let mut handles = Vec::<Handle>::with_capacity(1);
-        if crate::channel_read(grpc_in_handle, &mut buf, &mut handles)
-            .expect("could not read from gRPC input channel")
-            == crate::ChannelStatus::NotReady
-        {
-            info!("no pending message; poll again");
-            continue;
-        }
+        crate::channel_read(grpc_in_handle, &mut buf, &mut handles)
+            .expect("could not read from gRPC input channel");
         if buf.is_empty() {
             panic!("no bytes received")
         }
