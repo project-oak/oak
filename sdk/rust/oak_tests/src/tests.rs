@@ -57,5 +57,5 @@ fn test_panic_catch() {
     )
     .expect("could not write to channel");
 
-    // assert_eq!(oak::OakStatus::ERR_INTERNAL.value(), oak_main(read_handle));
+    assert_eq!(oak::OakStatus::ERR_INTERNAL.value(), oak_main(read_handle));
 }

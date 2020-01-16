@@ -347,7 +347,9 @@ pub fn random_get(buf: &mut [u8]) -> Result<(), OakStatus> {
     result_from_status(status, ())
 }
 
-fn result_from_status<T>(status: Option<OakStatus>, val: T) -> Result<T, OakStatus> {
+/// Convert a status obtained from `OakStatus::from_i32` to a `Result`. If the status is `OK` then
+/// return the provided value as `Result::Ok`, otherwise return the status as `Result::Err`.
+pub fn result_from_status<T>(status: Option<OakStatus>, val: T) -> Result<T, OakStatus> {
     match status {
         Some(OakStatus::OK) => Ok(val),
         Some(status) => Err(status),
