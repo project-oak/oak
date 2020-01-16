@@ -62,7 +62,11 @@ pub fn derive_oak_exports(input: TokenStream) -> TokenStream {
             std::panic::catch_unwind(||{
                 let mut node = <#name>::new();
                 oak::grpc::event_loop(node, oak::ReadHandle{ handle: oak::Handle::from_raw(handle) })
-            }).unwrap_or(oak::OakStatus::ERR_INTERNAL.value())
+            })
+            .unwrap_or_else(|_| Err(oak::OakStatus::ERR_INTERNAL))
+            .err()
+            .unwrap_or(oak::OakStatus::OK)
+            .value()
         }
     };
 

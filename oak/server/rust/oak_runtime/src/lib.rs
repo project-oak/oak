@@ -568,20 +568,18 @@ impl OakNode {
 }
 
 /// Expected type for the main entrypoint to a Node under test.
-pub type NodeMain = fn(Handle) -> i32;
+pub type NodeMain = fn(Handle) -> Result<(), oak::OakStatus>;
 
 // Main loop function for a log pseudo-Node.
-fn log_node_main(handle: Handle) -> i32 {
+fn log_node_main(handle: Handle) -> Result<(), oak::OakStatus> {
     if handle == oak_abi::INVALID_HANDLE {
-        return OakStatus::ERR_BAD_HANDLE.value();
+        return Err(OakStatus::ERR_BAD_HANDLE);
     }
     let half = oak::ReadHandle {
         handle: oak::Handle::from_raw(handle),
     };
     loop {
-        if let Err(status) = oak::wait_on_channels(&[half]) {
-            return status.value();
-        }
+        oak::wait_on_channels(&[half])?;
         let mut buf = Vec::<u8>::with_capacity(1024);
         let mut handles = Vec::with_capacity(8);
         oak::channel_read(half, &mut buf, &mut handles).expect("could not read from channel");

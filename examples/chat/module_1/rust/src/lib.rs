@@ -27,7 +27,10 @@ pub extern "C" fn backend_oak_main(handle: u64) -> i32 {
         let room = Room::default();
         room.event_loop(handle)
     })
-    .unwrap_or_else(|_| oak::OakStatus::ERR_INTERNAL.value())
+    .unwrap_or_else(|_| Err(oak::OakStatus::ERR_INTERNAL))
+    .err()
+    .unwrap_or(oak::OakStatus::OK)
+    .value()
 }
 
 #[derive(Default)]
@@ -37,7 +40,7 @@ struct Room {
 }
 
 impl Room {
-    fn event_loop(mut self, in_handle: u64) -> i32 {
+    fn event_loop(mut self, in_handle: u64) -> Result<(), oak::OakStatus> {
         // Wait for something on our single input channel.
         let in_channel = oak::ReadHandle {
             handle: oak::Handle::from_raw(in_handle),
@@ -51,7 +54,7 @@ impl Room {
                     // The other side of the channel was closed.
                     info!("room terminating with {}", err.value());
                     self.close_all();
-                    return err.value();
+                    return Err(err);
                 }
             };
             if ready_status[0] != oak::ChannelReadStatus::READ_READY {

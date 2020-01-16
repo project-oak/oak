@@ -58,17 +58,11 @@ fn test_read_message() {
 
     let mut buf = Vec::with_capacity(1);
     let mut handles = Vec::with_capacity(1);
-    assert_matches!(
-        channel_read(rcv, &mut buf, &mut handles),
-        Ok(ChannelStatus::Ready)
-    );
+    assert_matches!(channel_read(rcv, &mut buf, &mut handles), Ok(()));
     assert_eq!(data.to_vec(), buf);
 
     let mut big_buf = Vec::with_capacity(100);
-    assert_matches!(
-        channel_read(rcv, &mut big_buf, &mut handles),
-        Ok(ChannelStatus::Ready)
-    );
+    assert_matches!(channel_read(rcv, &mut big_buf, &mut handles), Ok(()));
     assert_eq!(data.to_vec(), big_buf);
 }
 

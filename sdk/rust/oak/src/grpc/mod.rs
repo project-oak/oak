@@ -142,10 +142,10 @@ pub trait OakNode {
 ///
 /// [`invoke`]: OakNode::invoke
 /// [`GrpcRequest`]: crate::proto::grpc_encap::GrpcRequest
-pub fn event_loop<T: OakNode>(mut node: T, grpc_in_handle: ReadHandle) -> i32 {
+pub fn event_loop<T: OakNode>(mut node: T, grpc_in_handle: ReadHandle) -> std::result::Result<(), crate::OakStatus> {
     info!("start event loop for node with handle {:?}", grpc_in_handle);
     if !grpc_in_handle.handle.is_valid() {
-        return OakStatus::ERR_CHANNEL_CLOSED.value();
+        return Err(OakStatus::ERR_CHANNEL_CLOSED);
     }
     crate::set_panic_hook();
 
@@ -155,18 +155,18 @@ pub fn event_loop<T: OakNode>(mut node: T, grpc_in_handle: ReadHandle) -> i32 {
     loop {
         // Block until there is a message to read on an input channel.
         crate::prep_handle_space(&mut space);
+        // TODO: Use higher-level wait function from SDK instead of the ABI one.
         let status =
             unsafe { oak_abi::wait_on_channels(space.as_mut_ptr(), read_handles.len() as u32) };
         match OakStatus::from_i32(status as i32) {
             Some(OakStatus::OK) => (),
-            Some(err) => return err as i32,
-            None => return OakStatus::OAK_STATUS_UNSPECIFIED.value(),
+            Some(err) => return Err(err),
+            None => return Err(OakStatus::OAK_STATUS_UNSPECIFIED),
         }
 
         let mut buf = Vec::<u8>::with_capacity(1024);
         let mut handles = Vec::<Handle>::with_capacity(1);
-        crate::channel_read(grpc_in_handle, &mut buf, &mut handles)
-            .expect("could not read from gRPC input channel");
+        crate::channel_read(grpc_in_handle, &mut buf, &mut handles)?;
         if buf.is_empty() {
             panic!("no bytes received")
         }

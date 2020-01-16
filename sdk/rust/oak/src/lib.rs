@@ -196,12 +196,16 @@ pub fn wait_on_channels(handles: &[ReadHandle]) -> Result<Vec<ChannelReadStatus>
 
 /// Read a message from a channel without blocking.
 ///
-/// Return an error if the underlying channel is empty (i.e. not ready to read).
+/// It also returns an error if the underlying channel is empty (i.e. not ready to read).
 ///
 /// The provided vectors for received data and associated handles will be
 /// resized to accomodate the information in the message; any data already
 /// held in the vectors will be overwritten.
-pub fn channel_read(half: ReadHandle, buf: &mut Vec<u8>, handles: &mut Vec<Handle>) -> Result<(), OakStatus> {
+pub fn channel_read(
+    half: ReadHandle,
+    buf: &mut Vec<u8>,
+    handles: &mut Vec<Handle>,
+) -> Result<(), OakStatus> {
     // Try reading from the channel twice: first with provided vectors, making
     // use of their available capacity, then with vectors whose capacity has
     // been extended to meet size requirements.

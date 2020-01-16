@@ -44,11 +44,10 @@ pub fn receive<M: Decodable>(read_handle: oak::ReadHandle) -> Result<M> {
     let mut bytes = Vec::<u8>::with_capacity(512);
     let mut handles = Vec::with_capacity(2);
     match oak::channel_read(read_handle, &mut bytes, &mut handles) {
-        Ok(oak::ChannelStatus::Ready) => {
+        Ok(()) => {
             let msg: M = M::decode(&bytes, &handles).context("could not decode message")?;
             Ok(msg)
         }
-        Ok(oak::ChannelStatus::NotReady) => Err(anyhow!("channel not ready")),
         Err(status) => {
             // TODO(#457): Propagate error code to caller.
             Err(anyhow!("could not read from channel: {:?}", status))
