@@ -42,14 +42,6 @@ cc_binary(
         "-s STANDALONE_WASM=1",  # WASM file should run without JavaScript.
         "-s WARN_ON_UNDEFINED_SYMBOLS=0",
         "-s WASM=1",
-        "-s USE_SDL=0",
-        "-nostdlib",
-        #"-s ONLY_MY_CODE=1",
-        #"-v",
-        #"-s SINGLE_FILE",
-        #"-s SIDE_MODULE=1",
-        #"-s MAIN_MODULE=1",
-        #"-s EMCC_FORCE_STDLIBS=1",
     ],
     deps = [
         "//oak/module:defines",
