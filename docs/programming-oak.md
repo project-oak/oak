@@ -467,7 +467,7 @@ fn test_hello_request() {
     assert_matches!(result, Ok(_));
     assert_eq!("HELLO world!", result.unwrap().reply);
 
-    assert_eq!(OakStatus::ERR_TERMINATED, oak_tests::stop());
+    assert_eq!(Err(OakStatus::ERR_TERMINATED), oak_tests::stop());
 }
 ```
 <!-- prettier-ignore-end -->

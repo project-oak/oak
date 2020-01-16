@@ -37,7 +37,7 @@ fn test_direct_hello_request() {
 #[serial(node_test)]
 fn test_no_handle() {
     oak_tests::start_node(oak_abi::INVALID_HANDLE);
-    assert_eq!(OakStatus::ERR_CHANNEL_CLOSED, oak_tests::stop());
+    assert_eq!(Err(OakStatus::ERR_CHANNEL_CLOSED), oak_tests::stop());
 }
 
 // Test invoking a Node service method via the Oak entrypoints.
@@ -54,5 +54,5 @@ fn test_hello_request() {
     assert_matches!(result, Ok(_));
     assert_eq!("HELLO world!", result.unwrap().reply);
 
-    assert_eq!(OakStatus::ERR_TERMINATED, oak_tests::stop());
+    assert_eq!(Err(OakStatus::ERR_TERMINATED), oak_tests::stop());
 }
