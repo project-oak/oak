@@ -342,6 +342,7 @@ impl FrontendNode {
     fn test_channel_read(&self) -> std::io::Result<()> {
         let (out_channel, in_channel) = oak::channel_create().unwrap();
 
+        // No message pending.
         let mut buffer = Vec::<u8>::with_capacity(5);
         let mut handles = Vec::with_capacity(1);
         expect_eq!(
@@ -350,6 +351,16 @@ impl FrontendNode {
         );
         expect_eq!(0, buffer.len());
         expect_eq!(0, handles.len());
+
+        // No message pending clears any data in input vectors.
+        let mut nonempty_buffer = vec![0x91, 0x92, 0x93];
+        let mut nonempty_handles = vec![out_channel.handle];
+        expect_eq!(
+            OakStatus::ERR_CHANNEL_EMPTY,
+            oak::channel_read(in_channel, &mut nonempty_buffer, &mut nonempty_handles)
+        );
+        expect_eq!(0, nonempty_buffer.len());
+        expect_eq!(0, nonempty_handles.len());
 
         // Single message.
         let data = vec![0x01, 0x02, 0x03];
@@ -414,7 +425,14 @@ impl FrontendNode {
         for handle in &handles {
             oak::channel_close(*handle);
         }
-        handles.clear();
+
+        // Reading again clears the buffer and the handles.
+        expect_eq!(
+            OakStatus::ERR_CHANNEL_EMPTY,
+            oak::channel_read(in_channel, &mut buffer, &mut handles)
+        );
+        expect_eq!(0, buffer.len());
+        expect_eq!(0, handles.len());
 
         expect_eq!(OakStatus::OK, oak::channel_close(out_channel.handle));
         expect_eq!(OakStatus::OK, oak::channel_close(in_channel.handle));
