@@ -231,7 +231,7 @@ pub fn channel_read(
 
         match status {
             Some(s) => match s {
-                OakStatus::OK => {
+                OakStatus::OK | OakStatus::ERR_CHANNEL_EMPTY => {
                     unsafe {
                         // The read operation succeeded, and overwrote some fraction
                         // of the vectors' available capacity with returned data (possibly
@@ -242,7 +242,11 @@ pub fn channel_read(
                         handles_buf.set_len(actual_handle_count as usize * 8);
                     }
                     Handle::unpack(&handles_buf, actual_handle_count, handles);
-                    return Ok(());
+                    if s == OakStatus::OK {
+                        return Ok(());
+                    } else {
+                        return Err(s);
+                    }
                 }
 
                 OakStatus::ERR_BUFFER_TOO_SMALL | OakStatus::ERR_HANDLE_SPACE_TOO_SMALL
@@ -273,7 +277,6 @@ pub fn channel_read(
                     continue;
                 }
 
-                // This case includes `ERR_CHANNEL_EMPTY`.
                 s => {
                     return Err(s);
                 }
