@@ -453,7 +453,7 @@ pub fn start_node(handle: Handle) {
 }
 
 /// Stop the running Application under test.
-pub fn stop() -> OakStatus {
+pub fn stop() -> Result<(), OakStatus> {
     info!("stop all running Node threads");
     RUNTIME
         .write()

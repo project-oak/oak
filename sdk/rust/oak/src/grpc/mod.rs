@@ -142,7 +142,10 @@ pub trait OakNode {
 ///
 /// [`invoke`]: OakNode::invoke
 /// [`GrpcRequest`]: crate::proto::grpc_encap::GrpcRequest
-pub fn event_loop<T: OakNode>(mut node: T, grpc_in_handle: ReadHandle) -> std::result::Result<(), crate::OakStatus> {
+pub fn event_loop<T: OakNode>(
+    mut node: T,
+    grpc_in_handle: ReadHandle,
+) -> std::result::Result<(), crate::OakStatus> {
     info!("start event loop for node with handle {:?}", grpc_in_handle);
     if !grpc_in_handle.handle.is_valid() {
         return Err(OakStatus::ERR_CHANNEL_CLOSED);
