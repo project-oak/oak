@@ -18,6 +18,7 @@
 #include <stdint.h>
 
 #include "oak/module/defines.h"  // for imports and exports
+#include "oak/module/placeholders.h"
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/kernels/register.h"
 #include "tensorflow/lite/model.h"
