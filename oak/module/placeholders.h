@@ -17,6 +17,7 @@
 #ifndef OAK_MODULE_PLACEHOLDERS_H_
 #define OAK_MODULE_PLACEHOLDERS_H_
 
+#include <assert.h>
 #include <math.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -26,7 +27,13 @@
 #include <time.h>
 #include <unistd.h>
 
-// These placeholders were originally added to remove imports from the TensorFlow Lite.
+// When Emscripten generates a Wasm file from TensorFlow, it leaves unresolved symbols 
+// (imported functions), and these symbols prevend running TensorFlow in the Oak Runtime.
+// So we currently patch these unresolved symbols with non-functional implementations.
+// TODO: These placeholders should be deleted after resolving:
+// https://github.com/project-oak/oak/issues/482
+#define PLACEHOLDER(ret, name, ...) ret name(__VA_ARGS__) { abort(); }
+
 extern "C" {
 
 int __syscall5(int, int) { return NULL; }
@@ -45,6 +52,9 @@ int nanosleep(const struct timespec*, struct timespec*) { return NULL; }
 
 double round(double x) { return __builtin_round(x); }
 float roundf(float x) { return __builtin_roundf(x); }
+
+// The implementation was taken from:
+// https://github.com/m-labs/compiler-rt-lm32/blob/06cc76fb7060dcd822cd67ca9affef9cadf8c443/lib/powidf2.c#L19-L34
 double __powidf2(double a, int b) {
   const int recip = b < 0;
   double r = 1;
