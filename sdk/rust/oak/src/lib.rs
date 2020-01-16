@@ -197,13 +197,16 @@ pub fn wait_on_channels(handles: &[ReadHandle]) -> Result<Vec<ChannelReadStatus>
 /// Read a message from a channel.
 ///
 /// The provided vectors for received data and associated handles will be
-/// resized to accomodate the information in the message.
+/// resized to accomodate the information in the message; any data already
+/// held in the vectors will be overwritten.
 pub fn channel_read(half: ReadHandle, buf: &mut Vec<u8>, handles: &mut Vec<Handle>) -> OakStatus {
-    // Try reading from the channel twice: first with provided vectors, then
-    // with vectors that have been resized to meet size requirements.
+    // Try reading from the channel twice: first with provided vectors, making
+    // use of their available capacity, then with vectors whose capacity has
+    // been extended to meet size requirements.
 
-    // We cannot deserialize directly into the handles vector because `Handle` may
-    // not have the correct memory layout.
+    // We cannot deserialize directly into the handles vector because `Handle`
+    // may not have the correct memory layout, so create a separate buffer with
+    // equivalent capacity.
     let mut handles_buf = Vec::with_capacity(handles.capacity() * 8);
     for resized in &[false, true] {
         let mut actual_size: u32 = 0;
@@ -224,12 +227,16 @@ pub fn channel_read(half: ReadHandle, buf: &mut Vec<u8>, handles: &mut Vec<Handl
             Some(s) => match s {
                 OakStatus::OK | OakStatus::ERR_CHANNEL_EMPTY => {
                     unsafe {
+                        // The read operation succeeded, and overwrote some fraction
+                        // of the vectors' available capacity with returned data (possibly
+                        // zero).  As the data is already present in the vectors, set
+                        // their length to match what's available.
                         buf.set_len(actual_size as usize);
 
                         // actual_handle_count is number of handles not bytes
                         handles_buf.set_len(actual_handle_count as usize * 8);
-                        Handle::unpack(&handles_buf, actual_handle_count, handles);
-                    };
+                    }
+                    Handle::unpack(&handles_buf, actual_handle_count, handles);
                     return s;
                 }
 
