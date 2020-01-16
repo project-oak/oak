@@ -32,48 +32,51 @@
 // So we currently patch these unresolved symbols with non-functional implementations.
 // TODO: These placeholders should be deleted after resolving:
 // https://github.com/project-oak/oak/issues/482
-#define PLACEHOLDER(ret, name, ...) ret name(__VA_ARGS__) { abort(); }
+#define PLACEHOLDER(ret, func, ...) ret func(__VA_ARGS__) { abort(); }
 
 extern "C" {
 
-int __syscall5(int, int) { return NULL; }
-int __syscall192(int, int) { return NULL; }
-int __syscall194(int, int) { return NULL; }
+PLACEHOLDER(int, __syscall5, int, int)
+PLACEHOLDER(int, __syscall192, int, int)
+PLACEHOLDER(int, __syscall194, int, int)
 
-int fstat(int, struct stat*) { return NULL; }
-ssize_t lgetxattr(const char*, const char*, void*, size_t) { return NULL; }
-ssize_t listxattr(const char*, char*, size_t) { return NULL; }
+PLACEHOLDER(int, fstat, int, struct stat*)
+PLACEHOLDER(ssize_t, lgetxattr, const char*, const char*, void*, size_t)
+PLACEHOLDER(ssize_t, listxattr, const char*, char*, size_t)
 
-void* dlopen(const char*, int) { return NULL; }
-long sysconf(int) { return NULL; }
+PLACEHOLDER(void*, dlopen, const char*, int)
+PLACEHOLDER(void*, dlsym, void*, const char*)
+PLACEHOLDER(long, sysconf, int)
 
-int clock_gettime(clockid_t, struct timespec*) { return NULL; }
-int nanosleep(const struct timespec*, struct timespec*) { return NULL; }
+PLACEHOLDER(int, clock_gettime, clockid_t, struct timespec*)
+PLACEHOLDER(int, nanosleep, const struct timespec*, struct timespec*)
+
+PLACEHOLDER(int, pthread_cond_destroy, pthread_cond_t*)
+PLACEHOLDER(int, pthread_cond_init, pthread_cond_t*, const pthread_condattr_t*)
+PLACEHOLDER(int, pthread_create, pthread_t*, const pthread_attr_t*, void* (*)(void*), void*)
+PLACEHOLDER(int, pthread_equal, pthread_t, pthread_t)
+PLACEHOLDER(void, pthread_exit, void*)
+PLACEHOLDER(int, pthread_join, pthread_t, void**)
+PLACEHOLDER(int, pthread_setcancelstate, int, int*)
 
 double round(double x) { return __builtin_round(x); }
 float roundf(float x) { return __builtin_roundf(x); }
 
 // The implementation was taken from:
-// https://github.com/m-labs/compiler-rt-lm32/blob/06cc76fb7060dcd822cd67ca9affef9cadf8c443/lib/powidf2.c#L19-L34
+// https://github.com/llvm-mirror/compiler-rt/blob/f0745e8476f069296a7c71accedd061dce4cdf79/lib/builtins/powidf2.c#L17-L29
 double __powidf2(double a, int b) {
   const int recip = b < 0;
   double r = 1;
   while (1) {
-    if (b & 1) r *= a;
+    if (b & 1)
+      r *= a;
     b /= 2;
-    if (b == 0) break;
+    if (b == 0)
+      break;
     a *= a;
   }
   return recip ? 1 / r : r;
 }
-
-int pthread_cond_destroy(pthread_cond_t*) { return NULL; }
-int pthread_cond_init(pthread_cond_t*, const pthread_condattr_t*) { return NULL; }
-int pthread_create(pthread_t*, const pthread_attr_t*, void* (*)(void*), void*) { return NULL; }
-int pthread_equal(pthread_t, pthread_t) { return NULL; }
-void pthread_exit(void*) { exit(0); }
-int pthread_join(pthread_t, void**) { return NULL; }
-int pthread_setcancelstate(int, int*) { return NULL; }
 
 }  // extern "C"
 
