@@ -27,12 +27,13 @@
 #include <time.h>
 #include <unistd.h>
 
-// When Emscripten generates a Wasm file from TensorFlow, it leaves unresolved symbols 
+// When Emscripten generates a Wasm file from TensorFlow, it leaves unresolved symbols
 // (imported functions), and these symbols prevend running TensorFlow in the Oak Runtime.
 // So we currently patch these unresolved symbols with non-functional implementations.
 // TODO: These placeholders should be deleted after resolving:
 // https://github.com/project-oak/oak/issues/482
-#define PLACEHOLDER(ret, func, ...) ret func(__VA_ARGS__) { abort(); }
+#define PLACEHOLDER(ret, func, ...) \
+  ret func(__VA_ARGS__) { abort(); }
 
 extern "C" {
 
@@ -68,11 +69,9 @@ double __powidf2(double a, int b) {
   const int recip = b < 0;
   double r = 1;
   while (1) {
-    if (b & 1)
-      r *= a;
+    if (b & 1) r *= a;
     b /= 2;
-    if (b == 0)
-      break;
+    if (b == 0) break;
     a *= a;
   }
   return recip ? 1 / r : r;
