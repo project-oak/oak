@@ -25,3 +25,9 @@ cc_library(
     hdrs = ["defines.h"],
     visibility = ["//visibility:public"],
 )
+
+cc_library(
+    name = "placeholders",
+    hdrs = ["placeholders.h"],
+    visibility = ["//visibility:public"],
+)
