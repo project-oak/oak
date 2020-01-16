@@ -27,7 +27,7 @@ pub extern "C" fn backend_oak_main(handle: u64) -> i32 {
         let room = Room::default();
         room.event_loop(handle)
     })
-    .unwrap_or_else(|_| Err(oak::OakStatus::ERR_INTERNAL))
+    .unwrap_or(Err(oak::OakStatus::ERR_INTERNAL))
     .err()
     .unwrap_or(oak::OakStatus::OK)
     .value()

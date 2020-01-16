@@ -27,7 +27,7 @@ use protobuf::ProtobufEnum;
 #[no_mangle]
 pub extern "C" fn backend_oak_main(handle: u64) -> i32 {
     std::panic::catch_unwind(|| main(handle))
-        .unwrap_or_else(|_| Err(oak::OakStatus::ERR_INTERNAL))
+        .unwrap_or(Err(oak::OakStatus::ERR_INTERNAL))
         .err()
         .unwrap_or(oak::OakStatus::OK)
         .value()
