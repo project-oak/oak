@@ -26,16 +26,18 @@ use protobuf::ProtobufEnum;
 // is what's sent back to the frontend.
 #[no_mangle]
 pub extern "C" fn backend_oak_main(handle: u64) -> i32 {
-    std::panic::catch_unwind(|| main(handle))
-        .unwrap_or(Err(oak::OakStatus::ERR_INTERNAL))
-        .err()
-        .unwrap_or(oak::OakStatus::OK)
-        .value()
+    std::panic::catch_unwind(|| {
+        oak::set_panic_hook();
+        main(handle)
+    })
+    .unwrap_or(Err(oak::OakStatus::ERR_INTERNAL))
+    .err()
+    .unwrap_or(oak::OakStatus::OK)
+    .value()
 }
 
 pub fn main(in_handle: u64) -> Result<(), oak::OakStatus> {
     let _ = oak_log::init(log::Level::Debug, LOG_CONFIG_NAME);
-    oak::set_panic_hook();
     let in_channel = oak::ReadHandle {
         handle: oak::Handle::from_raw(in_handle),
     };
