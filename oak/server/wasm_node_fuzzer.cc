@@ -8,6 +8,6 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   // Build a WasmNode instance treating the fuzzing input as Wasm module code.
   // No need to pass in an owning runtime instance (first argument) since the
   // built Node is never run.
-  std::unique_ptr<oak::WasmNode> node = oak::WasmNode::Create(nullptr, "test", module);
+  std::unique_ptr<oak::WasmNode> node = oak::WasmNode::Create(nullptr, "test", module, "oak_main");
   return 0;
 }
