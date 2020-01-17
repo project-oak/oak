@@ -154,8 +154,6 @@ pub fn event_loop<T: OakNode>(
     if !grpc_in_handle.handle.is_valid() {
         return Err(OakStatus::ERR_CHANNEL_CLOSED);
     }
-    crate::set_panic_hook();
-
     let read_handles = vec![grpc_in_handle];
     let mut space = crate::new_handle_space(&read_handles);
 
