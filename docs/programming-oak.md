@@ -387,7 +387,7 @@ to the room:
         oak::node_create("room-config", rh).expect("could not create node");
         oak::channel_close(rh.handle).expect("could not close channel");
         Room {
-            channel: wh,
+            sender: oak::io::Sender::new(wh),
             admin_token,
         }
 ```

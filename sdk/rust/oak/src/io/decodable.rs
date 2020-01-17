@@ -1,5 +1,5 @@
 //
-// Copyright 2019 The Project Oak Authors
+// Copyright 2020 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,5 +14,9 @@
 // limitations under the License.
 //
 
-pub mod command;
-pub mod proto;
+use crate::{Handle, OakError};
+
+/// A trait for objects that can be decoded from bytes + handles.
+pub trait Decodable: Sized {
+    fn decode(bytes: &[u8], handles: &[Handle]) -> Result<Self, OakError>;
+}

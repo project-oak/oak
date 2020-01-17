@@ -37,7 +37,7 @@ struct Node {
 }
 
 struct Room {
-    channel: oak::WriteHandle,
+    sender: oak::io::Sender,
     admin_token: AdminToken,
 }
 
@@ -47,7 +47,7 @@ impl Room {
         oak::node_create("room-config", rh).expect("could not create node");
         oak::channel_close(rh.handle).expect("could not close channel");
         Room {
-            channel: wh,
+            sender: oak::io::Sender::new(wh),
             admin_token,
         }
     }
@@ -95,7 +95,7 @@ impl ChatNode for Node {
                 if e.get().admin_token == req.admin_token {
                     // Close the only input channel that reaches the per-room Node, which
                     // will trigger it to terminate.
-                    oak::channel_close(e.get().channel.handle).expect("could not close channel");
+                    e.get().sender.close().expect("could not close channel");
                     e.remove();
                     Ok(Empty::new())
                 } else {
@@ -120,7 +120,8 @@ impl ChatNode for Node {
             Some(room) => {
                 info!("new subscription to room {:?}", req.room_id);
                 let command = Command::Join(writer.handle());
-                chat_common::send(room.channel, command)
+                room.sender
+                    .send(command)
                     .expect("could not send command to room Node");
             }
         };
@@ -137,7 +138,8 @@ impl ChatNode for Node {
                     .write_to_bytes()
                     .expect("could not convert message to bytes");
                 let command = Command::SendMessage(message_bytes);
-                chat_common::send(room.channel, command)
+                room.sender
+                    .send(command)
                     .expect("could not send command to room Node");
                 Ok(Empty::new())
             }
