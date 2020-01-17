@@ -64,13 +64,19 @@ pub fn derive_oak_exports(input: TokenStream) -> TokenStream {
             // boundary, so catch any panics here and translate to an error return.
             // https://doc.rust-lang.org/nomicon/ffi.html#ffi-and-panics
             std::panic::catch_unwind(||{
-                let mut node = <#name>::new();
-                oak::grpc::event_loop(node, oak::ReadHandle{ handle: oak::Handle::from_raw(handle) })
+                oak::set_panic_hook();
+                inner_main(handle)
             })
             .unwrap_or(Err(oak::OakStatus::ERR_INTERNAL))
             .err()
             .unwrap_or(oak::OakStatus::OK)
             .value()
+        }
+        // Internal version of the main entrypoint, to allow testing without any
+        // panic interception.
+        pub fn inner_main(handle: u64) -> Result<(), oak::OakStatus> {
+            let mut node = <#name>::new();
+            oak::grpc::event_loop(node, oak::ReadHandle{ handle: oak::Handle::from_raw(handle) })
         }
     };
 
