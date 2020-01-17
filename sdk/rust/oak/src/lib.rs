@@ -364,10 +364,17 @@ pub fn result_from_status<T>(status: Option<OakStatus>, val: T) -> Result<T, Oak
 /// [panic information]: std::panic::PanicInfo
 pub fn set_panic_hook() {
     std::panic::set_hook(Box::new(|panic_info| {
-        let msg = panic_info
-            .payload()
-            .downcast_ref::<&str>()
-            .unwrap_or(&"<UNKNOWN MESSAGE>");
+        let payload = panic_info.payload();
+        // The payload can be a static string slice or a string, depending on how panic was called.
+        // Code for extracting the message is inspired by the rust default panic hook:
+        // https://github.com/rust-lang/rust/blob/master/src/libstd/panicking.rs#L188-L194
+        let msg = match payload.downcast_ref::<&'static str>() {
+            Some(content) => *content,
+            None => match payload.downcast_ref::<String>() {
+                Some(content) => &content[..],
+                None => "<UNKNOWN MESSAGE>",
+            },
+        };
         let (file, line) = match panic_info.location() {
             Some(location) => (location.file(), location.line()),
             None => ("<UNKNOWN FILE>", 0),
