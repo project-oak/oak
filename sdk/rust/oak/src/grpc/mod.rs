@@ -36,7 +36,7 @@ pub fn build_status(code: Code, msg: &str) -> proto::status::Status {
 /// `GrpcResponse` wrapper messages and writes serialized versions to a send
 ///  channel.
 pub struct ChannelResponseWriter {
-    channel: crate::io::Channel,
+    channel: crate::io::Sender,
 }
 
 /// Indicate whether a write method should leave the current gRPC method
@@ -50,7 +50,7 @@ pub enum WriteMode {
 impl ChannelResponseWriter {
     pub fn new(out_handle: crate::WriteHandle) -> Self {
         ChannelResponseWriter {
-            channel: crate::io::Channel::new(out_handle),
+            channel: crate::io::Sender::new(out_handle),
         }
     }
 

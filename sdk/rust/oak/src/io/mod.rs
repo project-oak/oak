@@ -27,14 +27,14 @@ use std::io;
 ///
 /// [`WriteHandle`]: crate::WriteHandle
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Channel {
+pub struct Sender {
     pub handle: crate::WriteHandle,
 }
 
-impl Channel {
+impl Sender {
     /// Create a new `io::Channel` that uses the given channel handle.
     pub fn new(handle: crate::WriteHandle) -> Self {
-        Channel { handle }
+        Sender { handle }
     }
     /// Close the underlying channel handle.
     pub fn close(self) -> std::io::Result<()> {
@@ -42,9 +42,9 @@ impl Channel {
     }
 }
 
-/// Implement the [`std::io::Write`] trait for `io::Channel`, to allow logging
+/// Implement the [`std::io::Write`] trait for `io::Sender`, to allow logging
 /// and use of protobuf serialization methods.
-impl std::io::Write for Channel {
+impl std::io::Write for Sender {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         channel_write(self.handle, buf, &[])
             .map(|_| buf.len()) // We replace `()` with the length of the written buffer, if successful.

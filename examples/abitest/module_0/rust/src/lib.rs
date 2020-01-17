@@ -988,7 +988,7 @@ impl FrontendNode {
                 "send serialized message to new channel {:?}: {}",
                 new_write.handle, serialized_req
             );
-            let mut new_channel = oak::io::Channel::new(*new_write);
+            let mut new_channel = oak::io::Sender::new(*new_write);
             new_channel.write_all(&serialized_req.into_bytes())?;
             oak::channel_close(new_write.handle).expect("could not close channel");
 
