@@ -1,4 +1,3 @@
-use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
@@ -18,9 +17,10 @@ pub enum Command {
 //
 // FIDL implements something similar to this in
 // https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/garnet/public/lib/fidl/rust/fidl/src/encoding.rs.
-impl crate::Encodable for Command {
-    fn encode(&self) -> Result<(Vec<u8>, Vec<oak::Handle>)> {
-        let bytes = bincode::serialize(self).context("could not serialize command to bincode")?;
+impl oak::io::Encodable for Command {
+    fn encode(&self) -> Result<(Vec<u8>, Vec<oak::Handle>), oak::OakError> {
+        // TODO: Propagate more details about the source error.
+        let bytes = bincode::serialize(self).map_err(|_| oak::OakStatus::ERR_INVALID_ARGS)?;
         // Serialize handles separately.
         let handles = match self {
             Command::Join(h) => vec![h.handle],
@@ -31,10 +31,11 @@ impl crate::Encodable for Command {
 }
 
 // TODO(#389): Automatically generate this code.
-impl crate::Decodable for Command {
-    fn decode(bytes: &[u8], handles: &[oak::Handle]) -> Result<Self> {
+impl oak::io::Decodable for Command {
+    fn decode(bytes: &[u8], handles: &[oak::Handle]) -> Result<Self, oak::OakError> {
+        // TODO: Propagate more details about the source error.
         let command: Command =
-            bincode::deserialize(&bytes).context("could not deserialize command from bincode")?;
+            bincode::deserialize(&bytes).map_err(|_| oak::OakStatus::ERR_INVALID_ARGS)?;
         // Restore handles in the received message.
         let command = match command {
             Command::Join(_) => Command::Join(oak::WriteHandle { handle: handles[0] }),

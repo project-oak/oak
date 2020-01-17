@@ -22,6 +22,9 @@ use serde::{Deserialize, Serialize};
 // Re-export ABI constants that are also visible as part of the SDK API.
 pub use oak_abi::{ChannelReadStatus, OakStatus};
 
+mod error;
+pub use error::OakError;
+
 pub mod grpc;
 pub mod io;
 pub mod proto;

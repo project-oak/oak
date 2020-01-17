@@ -17,9 +17,9 @@
 //! Functionality to help Oak Nodes interact with gRPC.
 
 pub use crate::proto::code::Code;
-use crate::{proto, Handle, OakStatus, ReadHandle, WriteHandle};
+use crate::{proto, Handle, OakError, OakStatus, ReadHandle, WriteHandle};
 use log::info;
-use protobuf::{Message, ProtobufEnum, ProtobufResult};
+use protobuf::{Message, ProtobufEnum};
 
 /// Result type that uses a [`proto::status::Status`] type for error values.
 pub type Result<T> = std::result::Result<T, proto::status::Status>;
@@ -61,12 +61,16 @@ impl ChannelResponseWriter {
 
     /// Write out a gRPC response and optionally close out the method
     /// invocation.  Any errors from the channel are silently dropped.
-    pub fn write<T: protobuf::Message>(&mut self, rsp: &T, mode: WriteMode) -> ProtobufResult<()> {
+    pub fn write<T: protobuf::Message>(
+        &mut self,
+        rsp: &T,
+        mode: WriteMode,
+    ) -> std::result::Result<(), OakError> {
         // Put the serialized response into a GrpcResponse message wrapper and
         // serialize it into the channel.
         let mut grpc_rsp = proto::grpc_encap::GrpcResponse::new();
         let mut any = protobuf::well_known_types::Any::new();
-        rsp.write_to_writer(&mut any.value).unwrap();
+        rsp.write_to_writer(&mut any.value)?;
         grpc_rsp.set_rsp_msg(any);
         grpc_rsp.set_last(match mode {
             WriteMode::KeepOpen => false,
@@ -81,7 +85,7 @@ impl ChannelResponseWriter {
 
     /// Write an empty gRPC response and optionally close out the method
     /// invocation. Any errors from the channel are silently dropped.
-    pub fn write_empty(&mut self, mode: WriteMode) -> ProtobufResult<()> {
+    pub fn write_empty(&mut self, mode: WriteMode) -> std::result::Result<(), OakError> {
         let mut grpc_rsp = proto::grpc_encap::GrpcResponse::new();
         grpc_rsp.set_rsp_msg(protobuf::well_known_types::Any::new());
         grpc_rsp.set_last(match mode {
@@ -96,7 +100,7 @@ impl ChannelResponseWriter {
     }
 
     /// Close out the gRPC method invocation with the given final result.
-    pub fn close(&mut self, result: Result<()>) -> ProtobufResult<()> {
+    pub fn close(&mut self, result: Result<()>) -> std::result::Result<(), OakError> {
         // Build a final GrpcResponse message wrapper and serialize it into the
         // channel.
         let mut grpc_rsp = proto::grpc_encap::GrpcResponse::new();
@@ -206,7 +210,7 @@ where
         Err(status) => writer.close(Err(status)),
     };
     if let Err(e) = result {
-        panic!("Failed to process response: {}", e)
+        panic!("Failed to process response: {:?}", e)
     }
 }
 
@@ -243,7 +247,7 @@ where
         Err(status) => writer.close(Err(status)),
     };
     if let Err(e) = result {
-        panic!("Failed to process response: {}", e)
+        panic!("Failed to process response: {:?}", e)
     }
 }
 
