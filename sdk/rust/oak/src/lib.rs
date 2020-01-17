@@ -15,7 +15,6 @@
 //
 
 use byteorder::{ReadBytesExt, WriteBytesExt};
-
 use log::{debug, error};
 use protobuf::ProtobufEnum;
 use serde::{Deserialize, Serialize};
@@ -28,6 +27,7 @@ pub mod io;
 pub mod proto;
 pub mod rand;
 pub mod storage;
+
 #[cfg(test)]
 mod tests;
 
@@ -194,12 +194,18 @@ pub fn wait_on_channels(handles: &[ReadHandle]) -> Result<Vec<ChannelReadStatus>
     }
 }
 
-/// Read a message from a channel.
+/// Read a message from a channel without blocking.
+///
+/// It also returns an error if the underlying channel is empty (i.e. not ready to read).
 ///
 /// The provided vectors for received data and associated handles will be
 /// resized to accomodate the information in the message; any data already
 /// held in the vectors will be overwritten.
-pub fn channel_read(half: ReadHandle, buf: &mut Vec<u8>, handles: &mut Vec<Handle>) -> OakStatus {
+pub fn channel_read(
+    half: ReadHandle,
+    buf: &mut Vec<u8>,
+    handles: &mut Vec<Handle>,
+) -> Result<(), OakStatus> {
     // Try reading from the channel twice: first with provided vectors, making
     // use of their available capacity, then with vectors whose capacity has
     // been extended to meet size requirements.
@@ -232,12 +238,15 @@ pub fn channel_read(half: ReadHandle, buf: &mut Vec<u8>, handles: &mut Vec<Handl
                         // zero).  As the data is already present in the vectors, set
                         // their length to match what's available.
                         buf.set_len(actual_size as usize);
-
                         // actual_handle_count is number of handles not bytes
                         handles_buf.set_len(actual_handle_count as usize * 8);
                     }
                     Handle::unpack(&handles_buf, actual_handle_count, handles);
-                    return s;
+                    if s == OakStatus::OK {
+                        return Ok(());
+                    } else {
+                        return Err(s);
+                    }
                 }
 
                 OakStatus::ERR_BUFFER_TOO_SMALL | OakStatus::ERR_HANDLE_SPACE_TOO_SMALL
@@ -267,23 +276,24 @@ pub fn channel_read(half: ReadHandle, buf: &mut Vec<u8>, handles: &mut Vec<Handl
                     // Try again with a buffer resized to cope with expected size of data.
                     continue;
                 }
+
                 s => {
-                    return s;
+                    return Err(s);
                 }
             },
             None => {
-                return OakStatus::ERR_INTERNAL;
+                return Err(OakStatus::ERR_INTERNAL);
             }
         }
     }
     error!("unreachable code reached");
-    OakStatus::ERR_INTERNAL
+    Err(OakStatus::ERR_INTERNAL)
 }
 
 /// Write a message to a channel.
-pub fn channel_write(half: WriteHandle, buf: &[u8], handles: &[Handle]) -> OakStatus {
+pub fn channel_write(half: WriteHandle, buf: &[u8], handles: &[Handle]) -> Result<(), OakStatus> {
     let handle_buf = Handle::pack(handles);
-    match OakStatus::from_i32(unsafe {
+    let status = OakStatus::from_i32(unsafe {
         oak_abi::channel_write(
             half.handle.id,
             buf.as_ptr(),
@@ -291,10 +301,8 @@ pub fn channel_write(half: WriteHandle, buf: &[u8], handles: &[Handle]) -> OakSt
             handle_buf.as_ptr(),
             handles.len() as u32, // Number of handles, not bytes
         ) as i32
-    }) {
-        Some(s) => s,
-        None => OakStatus::ERR_INTERNAL,
-    }
+    });
+    result_from_status(status, ())
 }
 
 /// Create a new unidirectional channel.
@@ -308,42 +316,44 @@ pub fn channel_create() -> Result<(WriteHandle, ReadHandle), OakStatus> {
     let mut read = ReadHandle {
         handle: Handle::invalid(),
     };
-    match OakStatus::from_i32(unsafe {
+    let status = OakStatus::from_i32(unsafe {
         oak_abi::channel_create(
             &mut write.handle.id as *mut u64,
             &mut read.handle.id as *mut u64,
-        ) as i32
-    }) {
-        Some(OakStatus::OK) => Ok((write, read)),
-        Some(err) => Err(err),
-        None => Err(OakStatus::OAK_STATUS_UNSPECIFIED),
-    }
+        )
+    } as i32);
+    result_from_status(status, (write, read))
 }
 
 /// Close the specified channel [`Handle`].
-pub fn channel_close(handle: Handle) -> OakStatus {
-    match OakStatus::from_i32(unsafe { oak_abi::channel_close(handle.id) as i32 }) {
-        Some(s) => s,
-        None => OakStatus::OAK_STATUS_UNSPECIFIED,
-    }
+pub fn channel_close(handle: Handle) -> Result<(), OakStatus> {
+    let status = OakStatus::from_i32(unsafe { oak_abi::channel_close(handle.id) as i32 });
+    result_from_status(status, ())
 }
 
 /// Create a new Node running the configuration identified by `config_name`,
 /// passing it the given handle.
-pub fn node_create(config_name: &str, half: ReadHandle) -> OakStatus {
-    match OakStatus::from_i32(unsafe {
+pub fn node_create(config_name: &str, half: ReadHandle) -> Result<(), OakStatus> {
+    let status = OakStatus::from_i32(unsafe {
         oak_abi::node_create(config_name.as_ptr(), config_name.len(), half.handle.id) as i32
-    }) {
-        Some(s) => s,
-        None => OakStatus::OAK_STATUS_UNSPECIFIED,
-    }
+    });
+    result_from_status(status, ())
 }
 
 /// Fill a buffer with random data.
-pub fn random_get(buf: &mut [u8]) -> OakStatus {
-    match OakStatus::from_i32(unsafe { oak_abi::random_get(buf.as_mut_ptr(), buf.len()) as i32 }) {
-        Some(s) => s,
-        None => OakStatus::OAK_STATUS_UNSPECIFIED,
+pub fn random_get(buf: &mut [u8]) -> Result<(), OakStatus> {
+    let status =
+        OakStatus::from_i32(unsafe { oak_abi::random_get(buf.as_mut_ptr(), buf.len()) as i32 });
+    result_from_status(status, ())
+}
+
+/// Convert a status obtained from `OakStatus::from_i32` to a `Result`. If the status is `OK` then
+/// return the provided value as `Result::Ok`, otherwise return the status as `Result::Err`.
+pub fn result_from_status<T>(status: Option<OakStatus>, val: T) -> Result<T, OakStatus> {
+    match status {
+        Some(OakStatus::OK) => Ok(val),
+        Some(status) => Err(status),
+        None => Err(OakStatus::OAK_STATUS_UNSPECIFIED),
     }
 }
 

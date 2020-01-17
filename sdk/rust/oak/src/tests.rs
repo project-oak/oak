@@ -22,7 +22,7 @@ fn test_write_message() {
     oak_tests::reset();
     let (write_handle, read_handle) = channel_create().unwrap();
     let data = [0x44, 0x4d, 0x44];
-    assert_eq!(OakStatus::OK, channel_write(write_handle, &data, &[]));
+    assert_eq!(Ok(()), channel_write(write_handle, &data, &[]));
     assert_eq!(
         "DMD",
         oak_tests::last_message_as_string(read_handle.handle.id)
@@ -41,7 +41,7 @@ fn test_write_message_failure() {
         Some(OakStatus::ERR_INVALID_ARGS.value() as u32),
     );
     assert_eq!(
-        OakStatus::ERR_INVALID_ARGS,
+        Err(OakStatus::ERR_INVALID_ARGS),
         channel_write(write_handle, &data, &[])
     );
 }
@@ -53,16 +53,16 @@ fn test_read_message() {
 
     let (send, rcv) = channel_create().unwrap();
     let data = [0x44, 0x4d, 0x44];
-    assert_eq!(OakStatus::OK, channel_write(send, &data, &[]));
-    assert_eq!(OakStatus::OK, channel_write(send, &data, &[]));
+    assert_eq!(Ok(()), channel_write(send, &data, &[]));
+    assert_eq!(Ok(()), channel_write(send, &data, &[]));
 
     let mut buf = Vec::with_capacity(1);
     let mut handles = Vec::with_capacity(1);
-    assert_matches!(channel_read(rcv, &mut buf, &mut handles), OakStatus::OK);
+    assert_matches!(channel_read(rcv, &mut buf, &mut handles), Ok(()));
     assert_eq!(data.to_vec(), buf);
 
     let mut big_buf = Vec::with_capacity(100);
-    assert_matches!(channel_read(rcv, &mut big_buf, &mut handles), OakStatus::OK);
+    assert_matches!(channel_read(rcv, &mut big_buf, &mut handles), Ok(()));
     assert_eq!(data.to_vec(), big_buf);
 }
 
@@ -81,7 +81,7 @@ fn test_read_message_failure() {
     let mut handles = Vec::with_capacity(1);
     assert_eq!(
         channel_read(read_handle, &mut buf, &mut handles),
-        OakStatus::ERR_INVALID_ARGS
+        Err(OakStatus::ERR_INVALID_ARGS)
     );
 }
 
@@ -101,7 +101,7 @@ fn test_read_message_internal_failure() {
     let mut handles = Vec::with_capacity(1);
     assert_matches!(
         channel_read(read_handle, &mut buf, &mut handles),
-        OakStatus::ERR_BUFFER_TOO_SMALL
+        Err(OakStatus::ERR_BUFFER_TOO_SMALL)
     );
 }
 
@@ -159,4 +159,10 @@ fn test_handle_deserialize_json() {
         },
         deserialized_struct,
     );
+}
+
+#[test]
+fn test_result_from_status() {
+    assert_matches!(result_from_status(Some(OakStatus::OK), 12), Ok(12));
+    assert_matches!(result_from_status(None, 12), Err(_));
 }

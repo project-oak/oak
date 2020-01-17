@@ -32,14 +32,13 @@ impl RngCore for OakRng {
     }
 
     fn fill_bytes(&mut self, dest: &mut [u8]) {
-        self.try_fill_bytes(dest).unwrap();
+        self.try_fill_bytes(dest)
+            .expect("could not fill bytes with random data");
     }
 
     fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), Error> {
-        match crate::random_get(dest) {
-            crate::OakStatus::OK => Ok(()),
-            err => Err(Error::new(crate::io::error_from_nonok_status(err))),
-        }
+        crate::random_get(dest)
+            .map_err(|status| Error::new(crate::io::error_from_nonok_status(status)))
     }
 }
 

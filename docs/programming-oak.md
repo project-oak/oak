@@ -384,8 +384,8 @@ to the room:
 [embedmd]:# (../examples/chat/module_0/rust/src/lib.rs Rust /.*channel_create\(\)/ /\}$/)
 ```Rust
         let (wh, rh) = oak::channel_create().unwrap();
-        oak::node_create("room-config", rh);
-        oak::channel_close(rh.handle);
+        oak::node_create("room-config", rh).expect("could not create node");
+        oak::channel_close(rh.handle).expect("could not close channel");
         Room {
             channel: wh,
             admin_token,
@@ -467,7 +467,7 @@ fn test_hello_request() {
     assert_matches!(result, Ok(_));
     assert_eq!("HELLO world!", result.unwrap().reply);
 
-    assert_eq!(OakStatus::ERR_TERMINATED, oak_tests::stop());
+    assert_eq!(Err(OakStatus::ERR_TERMINATED), oak_tests::stop());
 }
 ```
 <!-- prettier-ignore-end -->
@@ -537,12 +537,14 @@ function:
 ```Rust
 #[no_mangle]
 pub extern "C" fn frontend_oak_main(handle: u64) -> i32 {
-    match std::panic::catch_unwind(|| main(handle)) {
-        Ok(rc) => rc,
-        Err(_) => OakStatus::ERR_INTERNAL.value(),
-    }
+    std::panic::catch_unwind(|| main(handle))
+        .unwrap_or(Err(oak::OakStatus::ERR_INTERNAL))
+        .err()
+        .unwrap_or(oak::OakStatus::OK)
+        .value()
 }
-pub fn main(handle: u64) -> i32 {
+
+pub fn main(handle: u64) -> Result<(), oak::OakStatus> {
 ```
 <!-- prettier-ignore-end -->
 

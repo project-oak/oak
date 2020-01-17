@@ -17,8 +17,6 @@
 //! Wrappers for Oak SDK types to allow their use with [`std::io`].
 
 use crate::{channel_close, channel_write, OakStatus};
-#[cfg(test)]
-use assert_matches::assert_matches;
 use std::io;
 
 /// Wrapper for a WriteHandle to implement the [`std::io::Write`] trait.
@@ -40,7 +38,7 @@ impl Channel {
     }
     /// Close the underlying channel handle.
     pub fn close(self) -> std::io::Result<()> {
-        result_from_status(Some(channel_close(self.handle.handle)), ())
+        channel_close(self.handle.handle).map_err(error_from_nonok_status)
     }
 }
 
@@ -48,8 +46,9 @@ impl Channel {
 /// and use of protobuf serialization methods.
 impl std::io::Write for Channel {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        let status = channel_write(self.handle, buf, &[]);
-        result_from_status(Some(status), buf.len())
+        channel_write(self.handle, buf, &[])
+            .map(|_| buf.len()) // We replace `()` with the length of the written buffer, if successful.
+            .map_err(error_from_nonok_status)
     }
     fn flush(&mut self) -> std::io::Result<()> {
         Ok(())
@@ -85,22 +84,4 @@ pub fn error_from_nonok_status(status: OakStatus) -> io::Error {
             io::Error::new(io::ErrorKind::UnexpectedEof, "Channel empty")
         }
     }
-}
-
-/// Map an [`OakStatus`] value to the nearest available [`std::io::Result`].
-fn result_from_status<T>(status: Option<OakStatus>, val: T) -> std::io::Result<T> {
-    match status {
-        Some(OakStatus::OK) => Ok(val),
-        Some(status) => Err(error_from_nonok_status(status)),
-        None => Err(io::Error::new(
-            io::ErrorKind::Other,
-            "Unknown Oak status value",
-        )),
-    }
-}
-
-#[test]
-fn test_result_from_status() {
-    assert_matches!(result_from_status(Some(OakStatus::OK), 12), Ok(12));
-    assert_matches!(result_from_status(None, 12), Err(_));
 }

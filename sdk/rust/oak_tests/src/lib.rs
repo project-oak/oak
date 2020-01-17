@@ -444,7 +444,9 @@ pub fn start_node(handle: Handle) {
     let node_name = DEFAULT_NODE_NAME.to_string();
     let main_handle = spawn(move || unsafe {
         set_node_name(node_name);
-        oak_main(handle)
+        // Convert `i32` to `Result<(), OakStatus>` before returning.
+        let status = OakStatus::from_i32(oak_main(handle));
+        oak::result_from_status(status, ())
     });
     RUNTIME
         .write()
@@ -453,26 +455,23 @@ pub fn start_node(handle: Handle) {
 }
 
 /// Stop the running Application under test.
-pub fn stop() -> OakStatus {
+pub fn stop() -> Result<(), OakStatus> {
     info!("stop all running Node threads");
     RUNTIME
         .write()
         .expect(RUNTIME_MISSING)
         .set_termination_pending(true);
 
-    let mut overall_result = OakStatus::OK;
+    let mut overall_result = Ok(());
     loop {
         let (name, thread_handle) = match RUNTIME.write().expect(RUNTIME_MISSING).stop_next() {
             None => break,
             Some(x) => x,
         };
         debug!("{{{}}}: await thread join", name);
-        let result = match OakStatus::from_i32(thread_handle.join().unwrap() as i32) {
-            Some(status) => status,
-            None => OakStatus::OAK_STATUS_UNSPECIFIED,
-        };
-        debug!("{{{}}}: thread result {}", name, result.value());
-        if overall_result == OakStatus::OK || result == OakStatus::ERR_TERMINATED {
+        let result = thread_handle.join().expect("could not join thread");
+        debug!("{{{}}}: thread result {:?}", name, result);
+        if overall_result == Ok(()) || result == Err(OakStatus::ERR_TERMINATED) {
             // If any Node was terminated, treat the whole application as terminated.
             // Otherwise, take the first non-OK result from a Node.
             overall_result = result;

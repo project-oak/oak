@@ -86,7 +86,7 @@ fn test_log() {
     let mut buf = Vec::new();
     let mut handles = Vec::new();
     assert_eq!(
-        oak::OakStatus::ERR_CHANNEL_EMPTY,
+        Err(oak::OakStatus::ERR_CHANNEL_EMPTY),
         oak::channel_read(handle, &mut buf, &mut handles)
     );
     assert_eq!(0, buf.len());
@@ -106,10 +106,7 @@ fn test_log() {
     logger.log(&r2);
     let mut buf = Vec::new();
     let mut handles = Vec::new();
-    assert_eq!(
-        oak::OakStatus::OK,
-        oak::channel_read(handle, &mut buf, &mut handles)
-    );
+    assert_eq!(Ok(()), oak::channel_read(handle, &mut buf, &mut handles));
     assert_eq!(0, handles.len());
     assert_eq!(
         "ERROR  app.rs : 433 : Error!\n",

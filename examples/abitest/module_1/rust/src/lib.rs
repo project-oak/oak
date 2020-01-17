@@ -26,12 +26,14 @@ use protobuf::ProtobufEnum;
 // is what's sent back to the frontend.
 #[no_mangle]
 pub extern "C" fn backend_oak_main(handle: u64) -> i32 {
-    match std::panic::catch_unwind(|| main(handle)) {
-        Ok(rc) => rc,
-        Err(_) => oak::OakStatus::ERR_INTERNAL.value(),
-    }
+    std::panic::catch_unwind(|| main(handle))
+        .unwrap_or(Err(oak::OakStatus::ERR_INTERNAL))
+        .err()
+        .unwrap_or(oak::OakStatus::OK)
+        .value()
 }
-pub fn main(in_handle: u64) -> i32 {
+
+pub fn main(in_handle: u64) -> Result<(), oak::OakStatus> {
     let _ = oak_log::init(log::Level::Debug, LOG_CONFIG_NAME);
     oak::set_panic_hook();
     let in_channel = oak::ReadHandle {
@@ -42,9 +44,9 @@ pub fn main(in_handle: u64) -> i32 {
     // be waiting on the channel.
     let mut buf = Vec::<u8>::with_capacity(2);
     let mut handles = Vec::with_capacity(2);
-    oak::channel_read(in_channel, &mut buf, &mut handles);
+    oak::channel_read(in_channel, &mut buf, &mut handles)?;
     if handles.len() != 1 {
-        return oak::OakStatus::ERR_INTERNAL.value();
+        return Err(oak::OakStatus::ERR_INTERNAL);
     }
     let out_handle = handles[0];
     info!("backend node: in={:?}, out={:?}", in_channel, out_handle);
@@ -53,16 +55,13 @@ pub fn main(in_handle: u64) -> i32 {
     // Wait on 1+N read handles (starting with N=0).
     let mut wait_handles = vec![in_channel];
     loop {
-        let ready_status = match oak::wait_on_channels(&wait_handles) {
-            Ok(ready_status) => ready_status,
-            Err(err) => return err.value(),
-        };
+        let ready_status = oak::wait_on_channels(&wait_handles)?;
         // If there is a message on in_channel, it is expected to contain
         // a collection of read handles for future listening
         if ready_status[0] == oak::ChannelReadStatus::READ_READY {
             let mut buf = Vec::<u8>::with_capacity(16);
             let mut handles = Vec::with_capacity(5);
-            oak::channel_read(in_channel, &mut buf, &mut handles);
+            oak::channel_read(in_channel, &mut buf, &mut handles)?;
             for handle in handles {
                 info!("add new handle {:?} to waiting set", handle);
                 wait_handles.push(oak::ReadHandle { handle });
@@ -81,7 +80,7 @@ pub fn main(in_handle: u64) -> i32 {
             );
             let mut buf = Vec::<u8>::with_capacity(1024);
             let mut handles = Vec::with_capacity(1);
-            oak::channel_read(wait_handles[i], &mut buf, &mut handles);
+            oak::channel_read(wait_handles[i], &mut buf, &mut handles)?;
             if buf.is_empty() {
                 info!("no pending message; poll again");
                 continue;
@@ -92,7 +91,7 @@ pub fn main(in_handle: u64) -> i32 {
             info!("received frontend request: {:?}", internal_req);
 
             // Create a new channel and write the response into it.
-            let (new_write, new_read) = oak::channel_create().unwrap();
+            let (new_write, new_read) = oak::channel_create()?;
             let internal_rsp = InternalMessage {
                 msg: internal_req.msg + "xxx",
             };
@@ -101,14 +100,14 @@ pub fn main(in_handle: u64) -> i32 {
                 "send serialized message to new channel {:?}: {}",
                 new_write, serialized_rsp
             );
-            oak::channel_write(new_write, &serialized_rsp.into_bytes(), &[]);
+            oak::channel_write(new_write, &serialized_rsp.into_bytes(), &[])?;
             // Drop the write half now it has been written to.
-            oak::channel_close(new_write.handle);
+            oak::channel_close(new_write.handle)?;
 
             // Send a copy of the read half of the new channel back to the frontend,
             // then close our handle to the read half.
-            oak::channel_write(out_channel, &[], &[new_read.handle]);
-            oak::channel_close(new_read.handle);
+            oak::channel_write(out_channel, &[], &[new_read.handle])?;
+            oak::channel_close(new_read.handle)?;
         }
     }
 }

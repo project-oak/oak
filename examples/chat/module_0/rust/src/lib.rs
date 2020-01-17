@@ -44,8 +44,8 @@ struct Room {
 impl Room {
     fn new(admin_token: AdminToken) -> Self {
         let (wh, rh) = oak::channel_create().unwrap();
-        oak::node_create("room-config", rh);
-        oak::channel_close(rh.handle);
+        oak::node_create("room-config", rh).expect("could not create node");
+        oak::channel_close(rh.handle).expect("could not close channel");
         Room {
             channel: wh,
             admin_token,
@@ -95,7 +95,7 @@ impl ChatNode for Node {
                 if e.get().admin_token == req.admin_token {
                     // Close the only input channel that reaches the per-room Node, which
                     // will trigger it to terminate.
-                    oak::channel_close(e.get().channel.handle);
+                    oak::channel_close(e.get().channel.handle).expect("could not close channel");
                     e.remove();
                     Ok(Empty::new())
                 } else {

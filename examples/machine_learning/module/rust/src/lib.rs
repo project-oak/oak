@@ -161,8 +161,8 @@ impl oak::grpc::OakNode for Node {
     fn new() -> Self {
         // Create a channel and pass the read half to a fresh logging Node.
         let (write_handle, read_handle) = oak::channel_create().unwrap();
-        oak::node_create("log", read_handle);
-        oak::channel_close(read_handle.handle);
+        oak::node_create("log", read_handle).expect("could not create node");
+        oak::channel_close(read_handle.handle).expect("could not close channel");
         let raw_logging = oak::io::Channel::new(write_handle);
         Node {
             logging_channel: std::io::LineWriter::new(raw_logging),
