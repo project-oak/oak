@@ -68,11 +68,6 @@ fn set_node_name(name: String) {
 // These implementations generally handle the unsafe raw memory manipulation
 // then forward on to the equivalent method on the current OakRuntime instance.
 
-/// Declaration for the Node's main function.
-extern "C" {
-    pub fn oak_main(handle: u64) -> i32;
-}
-
 /// Test implementation of channel wait functionality.
 ///
 /// # Safety
@@ -432,21 +427,17 @@ pub fn start(
     Some(())
 }
 
-/// Start running a test of a single-Node Application.  This assumes that the
-/// single Node's main entrypoint is available as a global extern "C"
-/// oak_main(), as for a live version of the Application.
-pub fn start_node(handle: Handle) {
+/// Start running a test of a single-Node Application.
+pub fn start_node(handle: Handle, entrypoint: NodeMain) {
     RUNTIME
         .write()
         .expect(RUNTIME_MISSING)
         .set_termination_pending(false);
     debug!("start per-Node thread with handle {}", handle);
     let node_name = DEFAULT_NODE_NAME.to_string();
-    let main_handle = spawn(move || unsafe {
+    let main_handle = spawn(move || {
         set_node_name(node_name);
-        // Convert `i32` to `Result<(), OakStatus>` before returning.
-        let status = oak_main(handle);
-        oak::result_from_status(status, ())
+        entrypoint(handle)
     });
     RUNTIME
         .write()

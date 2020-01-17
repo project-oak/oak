@@ -458,7 +458,7 @@ crate also allows the gRPC service methods to be tested via the
 #[serial(node_test)]
 fn test_hello_request() {
     let handle = oak_tests::grpc_channel_setup_default();
-    oak_tests::start_node(handle);
+    oak_tests::start_node(handle, crate::inner_main);
 
     let mut req = HelloRequest::new();
     req.set_greeting("world".to_string());
@@ -476,10 +476,12 @@ This has a little bit more boilerplate than testing a method directly:
 
 - The inbound gRPC channel that requests are delivered over has to be explicitly
   set up (`oak_tests::grpc_channel_setup_default`)
-- A separate thread running the Node's main entrypoint (assumed to be called
-  `oak_main`, which is the name that the
-  [`derive(OakExports)`](https://project-oak.github.io/oak/sdk/oak_derive/derive.OakExports.html)
-  macro creates) is started (`oak_tests::start_node`).
+- A separate thread running an inner main entrypoint for the Node is started
+  (`oak_tests::start_node`). This inner main entrypoint needs to have type
+  `oak_runtime::NodeMain`, and the `derive(OakExports)` macro (from the
+  [`oak_derive`](https://project-oak.github.io/oak/sdk/oak_derive/index.html)
+  crate) provides this (it populates an `extern "C" oak_main` main entrypoint
+  that forwards onto a `crate::inner_main` inner main).
 - The injection of the gRPC request has to specify the method name (in
   `oak_tests::inject_grpc_request`).
 - The per-Node thread needs to be stopped at the end of the test
