@@ -309,6 +309,9 @@ pub fn random_get(buf: &mut [u8]) -> OakStatus {
 pub fn set_panic_hook() {
     std::panic::set_hook(Box::new(|panic_info| {
         let payload = panic_info.payload();
+        // The payload can be a static string slice or a string, depending on how panic was called.
+        // Code for extracting the message is inspired by the rust default panic hook:
+        // https://github.com/rust-lang/rust/blob/master/src/libstd/panicking.rs#L188-L194
         let msg = match payload.downcast_ref::<&'static str>() {
             Some(content) => *content,
             None => match payload.downcast_ref::<String>() {
