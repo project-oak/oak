@@ -26,7 +26,7 @@ use log::{Level, Log, Metadata, Record, SetLoggerError};
 use std::io::Write;
 
 struct OakChannelLogger {
-    channel: oak::io::Channel,
+    channel: oak::io::Sender,
 }
 
 impl Log for OakChannelLogger {
@@ -83,7 +83,7 @@ pub fn init(level: Level, config: &str) -> Result<(), SetLoggerError> {
     oak::channel_close(read_handle.handle).expect("could not close channel");
 
     log::set_boxed_logger(Box::new(OakChannelLogger {
-        channel: oak::io::Channel::new(write_handle),
+        channel: oak::io::Sender::new(write_handle),
     }))?;
     log::set_max_level(level.to_level_filter());
     Ok(())

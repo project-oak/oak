@@ -23,7 +23,7 @@ fn test_logger() -> (oak::ReadHandle, OakChannelLogger) {
     (
         read_handle,
         OakChannelLogger {
-            channel: oak::io::Channel::new(oak::WriteHandle {
+            channel: oak::io::Sender::new(oak::WriteHandle {
                 handle: write_handle.handle,
             }),
         },

@@ -150,7 +150,7 @@ struct Config {
 
 #[derive(OakExports)]
 struct Node {
-    logging_channel: std::io::LineWriter<oak::io::Channel>,
+    logging_channel: std::io::LineWriter<oak::io::Sender>,
     training_set_size: usize,
     test_set_size: usize,
     config: Option<Config>,
@@ -163,7 +163,7 @@ impl oak::grpc::OakNode for Node {
         let (write_handle, read_handle) = oak::channel_create().unwrap();
         oak::node_create("log", read_handle).expect("could not create node");
         oak::channel_close(read_handle.handle).expect("could not close channel");
-        let raw_logging = oak::io::Channel::new(write_handle);
+        let raw_logging = oak::io::Sender::new(write_handle);
         Node {
             logging_channel: std::io::LineWriter::new(raw_logging),
             training_set_size: 1000,
