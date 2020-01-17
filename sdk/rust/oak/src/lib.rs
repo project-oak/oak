@@ -308,10 +308,14 @@ pub fn random_get(buf: &mut [u8]) -> OakStatus {
 /// [panic information]: std::panic::PanicInfo
 pub fn set_panic_hook() {
     std::panic::set_hook(Box::new(|panic_info| {
-        let msg = panic_info
-            .payload()
-            .downcast_ref::<&str>()
-            .unwrap_or(&"<UNKNOWN MESSAGE>");
+        let payload = panic_info.payload();
+        let msg = match payload.downcast_ref::<&'static str>() {
+            Some(content) => *content,
+            None => match payload.downcast_ref::<String>() {
+                Some(content) => &content[..],
+                None => "<UNKNOWN MESSAGE>",
+            },
+        };
         let (file, line) = match panic_info.location() {
             Some(location) => (location.file(), location.line()),
             None => ("<UNKNOWN FILE>", 0),
