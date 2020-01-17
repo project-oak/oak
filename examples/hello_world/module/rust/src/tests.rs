@@ -36,7 +36,7 @@ fn test_direct_hello_request() {
 #[test]
 #[serial(node_test)]
 fn test_no_handle() {
-    oak_tests::start_node(oak_abi::INVALID_HANDLE);
+    oak_tests::start_node(oak_abi::INVALID_HANDLE, crate::inner_main);
     assert_eq!(Err(OakStatus::ERR_CHANNEL_CLOSED), oak_tests::stop());
 }
 
@@ -45,7 +45,7 @@ fn test_no_handle() {
 #[serial(node_test)]
 fn test_hello_request() {
     let handle = oak_tests::grpc_channel_setup_default();
-    oak_tests::start_node(handle);
+    oak_tests::start_node(handle, crate::inner_main);
 
     let mut req = HelloRequest::new();
     req.set_greeting("world".to_string());
