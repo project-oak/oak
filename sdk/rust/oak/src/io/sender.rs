@@ -18,7 +18,8 @@ use crate::io::Encodable;
 use crate::{OakError, OakStatus, WriteHandle};
 use serde::{Deserialize, Serialize};
 
-/// Wrapper for a handle to the send half of a channel.
+/// Wrapper for a handle to the send half of a channel, allowing to send data that can be encoded as
+/// bytes + handles via the `Encodable` trait.
 ///
 /// For use when the underlying [`Handle`] is known to be for a send half.
 #[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
@@ -47,6 +48,19 @@ impl Sender {
     {
         let (bytes, handles) = t.encode()?;
         crate::channel_write(self.handle, &bytes, &handles)?;
+        Ok(())
+    }
+}
+
+/// Implement the [`std::io::Write`] trait for `io::Sender`, to allow logging
+/// and use of protobuf serialization methods.
+impl std::io::Write for Sender {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        crate::channel_write(self.handle, buf, &[])
+            .map(|_| buf.len()) // We replace `()` with the length of the written buffer, if successful.
+            .map_err(super::error_from_nonok_status)
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
         Ok(())
     }
 }
