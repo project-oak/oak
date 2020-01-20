@@ -445,7 +445,7 @@ pub fn start_node(handle: Handle) {
     let main_handle = spawn(move || unsafe {
         set_node_name(node_name);
         // Convert `i32` to `Result<(), OakStatus>` before returning.
-        let status = OakStatus::from_i32(oak_main(handle));
+        let status = oak_main(handle);
         oak::result_from_status(status, ())
     });
     RUNTIME

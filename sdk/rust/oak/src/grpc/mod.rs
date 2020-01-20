@@ -165,11 +165,7 @@ pub fn event_loop<T: OakNode>(
         // TODO: Use higher-level wait function from SDK instead of the ABI one.
         let status =
             unsafe { oak_abi::wait_on_channels(space.as_mut_ptr(), read_handles.len() as u32) };
-        match OakStatus::from_i32(status as i32) {
-            Some(OakStatus::OK) => (),
-            Some(err) => return Err(err),
-            None => return Err(OakStatus::OAK_STATUS_UNSPECIFIED),
-        }
+        crate::result_from_status(status as i32, ())?;
 
         let mut buf = Vec::<u8>::with_capacity(1024);
         let mut handles = Vec::<Handle>::with_capacity(1);
