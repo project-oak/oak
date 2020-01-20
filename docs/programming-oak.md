@@ -357,7 +357,7 @@ types cannot be added after the application starts; any Node that the
 Application might need has to be included in the original configuration.
 
 As before, each Node must include a main entrypoint with signature
-`(u64) -> u32`, but for an internal Node it's entirely up to the Application
+`fn(u64) -> ()`, but for an internal Node it's entirely up to the Application
 developer as to what channel handle gets passed to this entrypoint, and as to
 what messages are sent down that channel. The application may choose to use
 protobuf-encoded messages (as gRPC does) for its internal communications, or
@@ -467,7 +467,7 @@ fn test_hello_request() {
     assert_matches!(result, Ok(_));
     assert_eq!("HELLO world!", result.unwrap().reply);
 
-    assert_eq!(Err(OakStatus::ERR_TERMINATED), oak_tests::stop());
+    oak_tests::stop();
 }
 ```
 <!-- prettier-ignore-end -->
@@ -506,12 +506,9 @@ now in Rust rather than C++).
 However, the fields in the application configuration that hold the Wasm bytecode
 for the various Nodes are ignored; instead, the second argument to
 `oak_tests::start()` is a map from the relevant `NodeContents.name` to a
-function pointer of type `oak_runtime::NodeMain` that acts as the main
-entrypoint for the Node under test. This inner test entrypoint is intended for
-use from Rust test code, and so has a signature
-(`fn(u64) -> Result<(), oak::OakStatus>`) which allows for better error handling
-than the signature (`fn(u64) -> i32`) that is available for the real Wasm
-entrypoint.
+function pointer of signature `fn(u64) -> ()` (which is type
+`oak_runtime::NodeMain`) that acts as the main entrypoint for the Node under
+test.
 
 <!-- prettier-ignore-start -->
 [embedmd]:# (../examples/abitest/tests/src/tests.rs Rust /^#\[test\]/ /oak_tests::start\(.*/)
@@ -535,24 +532,18 @@ Because there are multiple Nodes linked into the whole Application under test,
 each Node should use a [main entrypoint](abi.md#exported-function) with a
 different name, to prevent their names clashing.
 
-The inner main functionality described above also allows
-[panic interception for FFI](https://doc.rust-lang.org/nomicon/ffi.html#ffi-and-panics)
-to be localized to the real Wasm entrypoint; testing via the inner main
-therefore allows panic conditions to be tested more easily.
+It can also be helpful to defer the real functionality to an inner main
+function:
 
 <!-- prettier-ignore-start -->
 [embedmd]:# (../examples/abitest/module_0/rust/src/lib.rs Rust /^#.*no_mangle.*/ /pub fn main\(.*/)
 ```Rust
 #[no_mangle]
-pub extern "C" fn frontend_oak_main(handle: u64) -> i32 {
-    std::panic::catch_unwind(|| main(handle))
-        .unwrap_or(Err(oak::OakStatus::ERR_INTERNAL))
-        .err()
-        .unwrap_or(oak::OakStatus::OK)
-        .value()
+pub extern "C" fn frontend_oak_main(handle: u64) {
+    let _ = std::panic::catch_unwind(|| main(handle));
 }
 
-pub fn main(handle: u64) -> Result<(), oak::OakStatus> {
+pub fn main(handle: u64) {
 ```
 <!-- prettier-ignore-end -->
 

@@ -19,7 +19,6 @@ use crate::proto::hello_world_grpc::HelloWorldNode;
 use assert_matches::assert_matches;
 use oak::grpc;
 use oak::grpc::OakNode;
-use oak::OakStatus;
 use serial_test_derive::serial;
 
 // Test invoking a Node service method directly.
@@ -37,7 +36,7 @@ fn test_direct_hello_request() {
 #[serial(node_test)]
 fn test_no_handle() {
     oak_tests::start_node(oak_abi::INVALID_HANDLE, crate::inner_main);
-    assert_eq!(Err(OakStatus::ERR_CHANNEL_CLOSED), oak_tests::stop());
+    oak_tests::stop();
 }
 
 // Test invoking a Node service method via the Oak entrypoints.
@@ -54,5 +53,5 @@ fn test_hello_request() {
     assert_matches!(result, Ok(_));
     assert_eq!("HELLO world!", result.unwrap().reply);
 
-    assert_eq!(Err(OakStatus::ERR_TERMINATED), oak_tests::stop());
+    oak_tests::stop();
 }

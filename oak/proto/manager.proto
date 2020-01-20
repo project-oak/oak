@@ -54,8 +54,8 @@ message WebAssemblyConfiguration {
   // TODO: Replace this with just a hash of the bytecode to instantiate, and
   // pass the actual bytecode to the Oak Manager in some other way.
   bytes module_bytes = 1;
-  // The name of an exported Web Assembly function (with signature i64->i32) that will
-  // be used as the Node's main entrypoint.
+  // The name of an exported Web Assembly function that will be used as the
+  // Node's main entrypoint.
   string main_entrypoint = 2;
 }
 

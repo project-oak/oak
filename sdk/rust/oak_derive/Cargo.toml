@@ -9,6 +9,7 @@ license = "Apache-2.0"
 proc-macro = true
 
 [dependencies]
+log = "*"
 oak = "=0.1.0"
 protobuf = "*"
 quote = "*"

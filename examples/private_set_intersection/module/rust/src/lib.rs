@@ -27,13 +27,13 @@
 
 mod proto;
 
+use log::warn;
 use oak::grpc;
 use oak::grpc::OakNode;
 use oak_derive::OakExports;
 use proto::private_set_intersection::{GetIntersectionResponse, SubmitSetRequest};
 use proto::private_set_intersection_grpc::{dispatch, PrivateSetIntersectionNode};
 use protobuf::well_known_types::Empty;
-use protobuf::ProtobufEnum;
 use std::collections::HashSet;
 
 #[derive(Default, OakExports)]

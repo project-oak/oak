@@ -16,25 +16,18 @@
 
 use chat_common::command::Command;
 use chat_common::proto::chat::Message;
-use log::{error, info};
-use protobuf::ProtobufEnum;
+use log::{error, info, warn};
 
 #[no_mangle]
-pub extern "C" fn backend_oak_main(handle: u64) -> i32 {
-    std::panic::catch_unwind(|| {
+pub extern "C" fn backend_oak_main(handle: u64) {
+    let _ = std::panic::catch_unwind(|| {
         oak_log::init_default();
         oak::set_panic_hook();
         let room = Room::default();
-        // We unwrap any error here so that it can be logged by the panic hook, if the configuration
-        // allows it. In this case, the return value of the entry point function will be
-        // `ERR_INTERNAL` regardless of the actual error.
-        room.event_loop(handle).expect("terminating with error");
-        Ok(())
-    })
-    .unwrap_or(Err(oak::OakStatus::ERR_INTERNAL))
-    .err()
-    .unwrap_or(oak::OakStatus::OK)
-    .value()
+        if let Err(s) = room.event_loop(handle) {
+            warn!("backend Node terminating with {:?}", s);
+        }
+    });
 }
 
 #[derive(Default)]

@@ -19,12 +19,12 @@ use chat_common::proto::chat::{
     CreateRoomRequest, DestroyRoomRequest, SendMessageRequest, SubscribeRequest,
 };
 use chat_common::proto::chat_grpc::{dispatch, ChatNode};
-use log::info;
+use log::{info, warn};
 use oak::grpc;
 use oak::grpc::OakNode;
 use oak_derive::OakExports;
 use protobuf::well_known_types::Empty;
-use protobuf::{Message, ProtobufEnum};
+use protobuf::Message;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 
