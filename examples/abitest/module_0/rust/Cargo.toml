@@ -12,7 +12,7 @@ abitest_common = { path = "../../abitest_common" }
 byteorder = "1"
 expect = { path = "../../../../third_party/expect" }
 log = "*"
-oak = "*"
+oak = "=0.1.0"
 oak_abi = "*"
 oak_log = "*"
 protobuf = "*"
