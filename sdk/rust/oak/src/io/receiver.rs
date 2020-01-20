@@ -16,7 +16,6 @@
 
 use crate::io::Decodable;
 use crate::{OakError, OakStatus, ReadHandle};
-use protobuf::ProtobufEnum;
 use serde::{Deserialize, Serialize};
 
 /// Wrapper for a handle to the read half of a channel.
@@ -72,10 +71,6 @@ impl Receiver {
         crate::prep_handle_space(&mut space);
         let status =
             unsafe { oak_abi::wait_on_channels(space.as_mut_ptr(), read_handles.len() as u32) };
-        match OakStatus::from_i32(status as i32) {
-            Some(OakStatus::OK) => Ok(()),
-            Some(err) => Err(err),
-            None => Err(OakStatus::OAK_STATUS_UNSPECIFIED),
-        }
+        crate::result_from_status(status as i32, ())
     }
 }

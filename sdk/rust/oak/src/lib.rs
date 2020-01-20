@@ -176,11 +176,7 @@ pub fn wait_on_channels(handles: &[ReadHandle]) -> Result<Vec<ChannelReadStatus>
     let mut space = new_handle_space(handles);
     unsafe {
         let status = oak_abi::wait_on_channels(space.as_mut_ptr(), handles.len() as u32);
-        match OakStatus::from_i32(status as i32) {
-            Some(OakStatus::OK) => (),
-            Some(err) => return Err(err),
-            None => return Err(OakStatus::OAK_STATUS_UNSPECIFIED),
-        }
+        result_from_status(status as i32, ())?;
         let mut results = Vec::with_capacity(handles.len());
         for i in 0..handles.len() {
             match space
@@ -296,16 +292,16 @@ pub fn channel_read(
 /// Write a message to a channel.
 pub fn channel_write(half: WriteHandle, buf: &[u8], handles: &[Handle]) -> Result<(), OakStatus> {
     let handle_buf = Handle::pack(handles);
-    let status = OakStatus::from_i32(unsafe {
+    let status = unsafe {
         oak_abi::channel_write(
             half.handle.id,
             buf.as_ptr(),
             buf.len(),
             handle_buf.as_ptr(),
             handles.len() as u32, // Number of handles, not bytes
-        ) as i32
-    });
-    result_from_status(status, ())
+        )
+    };
+    result_from_status(status as i32, ())
 }
 
 /// Create a new unidirectional channel.
@@ -319,41 +315,46 @@ pub fn channel_create() -> Result<(WriteHandle, ReadHandle), OakStatus> {
     let mut read = ReadHandle {
         handle: Handle::invalid(),
     };
-    let status = OakStatus::from_i32(unsafe {
+    let status = unsafe {
         oak_abi::channel_create(
             &mut write.handle.id as *mut u64,
             &mut read.handle.id as *mut u64,
         )
-    } as i32);
-    result_from_status(status, (write, read))
+    };
+    result_from_status(status as i32, (write, read))
 }
 
 /// Close the specified channel [`Handle`].
 pub fn channel_close(handle: Handle) -> Result<(), OakStatus> {
-    let status = OakStatus::from_i32(unsafe { oak_abi::channel_close(handle.id) as i32 });
-    result_from_status(status, ())
+    let status = unsafe { oak_abi::channel_close(handle.id) };
+    result_from_status(status as i32, ())
 }
 
 /// Create a new Node running the configuration identified by `config_name`,
 /// passing it the given handle.
 pub fn node_create(config_name: &str, half: ReadHandle) -> Result<(), OakStatus> {
-    let status = OakStatus::from_i32(unsafe {
-        oak_abi::node_create(config_name.as_ptr(), config_name.len(), half.handle.id) as i32
-    });
-    result_from_status(status, ())
+    let status =
+        unsafe { oak_abi::node_create(config_name.as_ptr(), config_name.len(), half.handle.id) };
+    result_from_status(status as i32, ())
 }
 
 /// Fill a buffer with random data.
 pub fn random_get(buf: &mut [u8]) -> Result<(), OakStatus> {
-    let status =
-        OakStatus::from_i32(unsafe { oak_abi::random_get(buf.as_mut_ptr(), buf.len()) as i32 });
-    result_from_status(status, ())
+    let status = unsafe { oak_abi::random_get(buf.as_mut_ptr(), buf.len()) };
+    result_from_status(status as i32, ())
 }
 
-/// Convert a status obtained from `OakStatus::from_i32` to a `Result`. If the status is `OK` then
-/// return the provided value as `Result::Ok`, otherwise return the status as `Result::Err`.
-pub fn result_from_status<T>(status: Option<OakStatus>, val: T) -> Result<T, OakStatus> {
-    match status {
+/// Convert a status returned from a host function call to a `Result`.
+///
+/// The status is interpreted as an int representing an `OakStatus` enum value.
+///
+/// If the status is `OK` then return the provided value as `Result::Ok`, otherwise return the
+/// status as `Result::Err`.
+///
+/// Note that host function calls usually return an `u32` because of limitations of the Wasm type
+/// system, so these values would usually be converted (via a cast) to `i32` by callers.
+pub fn result_from_status<T>(status: i32, val: T) -> Result<T, OakStatus> {
+    match OakStatus::from_i32(status) {
         Some(OakStatus::OK) => Ok(val),
         Some(status) => Err(status),
         None => Err(OakStatus::OAK_STATUS_UNSPECIFIED),

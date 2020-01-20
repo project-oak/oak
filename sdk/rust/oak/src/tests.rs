@@ -163,6 +163,18 @@ fn test_handle_deserialize_json() {
 
 #[test]
 fn test_result_from_status() {
-    assert_matches!(result_from_status(Some(OakStatus::OK), 12), Ok(12));
-    assert_matches!(result_from_status(None, 12), Err(_));
+    assert_eq!(Ok(12), result_from_status(OakStatus::OK.value(), 12));
+    assert_eq!(
+        Err(OakStatus::ERR_BAD_HANDLE),
+        result_from_status(OakStatus::ERR_BAD_HANDLE.value(), 12),
+    );
+    assert_eq!(
+        Err(OakStatus::OAK_STATUS_UNSPECIFIED),
+        result_from_status(OakStatus::OAK_STATUS_UNSPECIFIED.value(), 12),
+    );
+    const INVALID_OAK_STATUS_VALUE: i32 = 1988;
+    assert_eq!(
+        Err(OakStatus::OAK_STATUS_UNSPECIFIED),
+        result_from_status(INVALID_OAK_STATUS_VALUE, 12)
+    );
 }
