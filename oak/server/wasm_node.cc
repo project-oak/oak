@@ -233,7 +233,8 @@ void WasmNode::Run(Handle handle) {
   wabt::Stream* trace_stream = nullptr;
   wabt::interp::Executor executor(&env_, trace_stream, thread_options);
 
-  LOG(INFO) << "{" << name_ << "} module execution thread: run oak_main(" << handle << ")";
+  LOG(INFO) << "{" << name_ << "} module execution thread: run " << main_entrypoint_ << "("
+            << handle << ")";
   wabt::interp::TypedValues args = {
       wabt::interp::TypedValue(wabt::Type::I64, wabt::interp::Value{.i64 = handle})};
   wabt::interp::ExecResult exec_result = executor.RunExportByName(Module(), main_entrypoint_, args);
