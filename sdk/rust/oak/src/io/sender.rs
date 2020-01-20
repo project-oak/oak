@@ -46,8 +46,8 @@ impl Sender {
     where
         T: Encodable,
     {
-        let (bytes, handles) = t.encode()?;
-        crate::channel_write(self.handle, &bytes, &handles)?;
+        let message = t.encode()?;
+        crate::channel_write(self.handle, &message.bytes, &message.handles)?;
         Ok(())
     }
 }

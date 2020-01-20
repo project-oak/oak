@@ -29,6 +29,13 @@ pub use encodable::Encodable;
 pub use receiver::Receiver;
 pub use sender::Sender;
 
+/// A simple holder for bytes + handles, using internally owned buffers.
+#[derive(Debug, PartialEq, Eq)]
+pub struct Message {
+    pub bytes: Vec<u8>,
+    pub handles: Vec<crate::Handle>,
+}
+
 /// Map a non-OK [`OakStatus`] value to the nearest available [`std::io::Error`].
 ///
 /// Panics if passed an `OakStatus::OK` value.

@@ -14,9 +14,10 @@
 // limitations under the License.
 //
 
-use crate::{Handle, OakError};
+use crate::io::Message;
+use crate::OakError;
 
 /// A trait for objects that can be encoded as bytes + handles.
 pub trait Encodable {
-    fn encode(&self) -> Result<(Vec<u8>, Vec<Handle>), OakError>;
+    fn encode(&self) -> Result<Message, OakError>;
 }

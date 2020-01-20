@@ -61,7 +61,9 @@ impl Receiver {
         let mut bytes = Vec::with_capacity(1024);
         let mut handles = Vec::with_capacity(16);
         crate::channel_read(self.handle, &mut bytes, &mut handles)?;
-        T::decode(&bytes, &handles)
+        // `bytes` and `handles` are moved into `Message`, so there is no extra copy happening here.
+        let message = crate::io::Message { bytes, handles };
+        T::decode(&message)
     }
 
     /// Wait for a value to be available from this receiver.

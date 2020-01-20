@@ -18,7 +18,7 @@ pub enum Command {
 // FIDL implements something similar to this in
 // https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/garnet/public/lib/fidl/rust/fidl/src/encoding.rs.
 impl oak::io::Encodable for Command {
-    fn encode(&self) -> Result<(Vec<u8>, Vec<oak::Handle>), oak::OakError> {
+    fn encode(&self) -> Result<oak::io::Message, oak::OakError> {
         // TODO: Propagate more details about the source error.
         let bytes = bincode::serialize(self).map_err(|_| oak::OakStatus::ERR_INVALID_ARGS)?;
         // Serialize handles separately.
@@ -26,19 +26,21 @@ impl oak::io::Encodable for Command {
             Command::Join(h) => vec![h.handle],
             Command::SendMessage(_) => vec![],
         };
-        Ok((bytes, handles))
+        Ok(oak::io::Message { bytes, handles })
     }
 }
 
 // TODO(#389): Automatically generate this code.
 impl oak::io::Decodable for Command {
-    fn decode(bytes: &[u8], handles: &[oak::Handle]) -> Result<Self, oak::OakError> {
+    fn decode(message: &oak::io::Message) -> Result<Self, oak::OakError> {
         // TODO: Propagate more details about the source error.
         let command: Command =
-            bincode::deserialize(&bytes).map_err(|_| oak::OakStatus::ERR_INVALID_ARGS)?;
+            bincode::deserialize(&message.bytes).map_err(|_| oak::OakStatus::ERR_INVALID_ARGS)?;
         // Restore handles in the received message.
         let command = match command {
-            Command::Join(_) => Command::Join(oak::WriteHandle { handle: handles[0] }),
+            Command::Join(_) => Command::Join(oak::WriteHandle {
+                handle: message.handles[0],
+            }),
             Command::SendMessage(message_bytes) => Command::SendMessage(message_bytes),
         };
         Ok(command)
