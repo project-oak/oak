@@ -98,7 +98,7 @@ pub fn init_default() {
 pub fn init(level: Level, config: &str) -> Result<(), SetLoggerError> {
     // Create a channel and pass the read half to a fresh logging Node.
     let (write_handle, read_handle) = oak::channel_create().expect("could not create channel");
-    oak::node_create(config, read_handle).expect("could not create node");
+    oak::node_create(config, "oak_main", read_handle).expect("could not create node");
     oak::channel_close(read_handle.handle).expect("could not close channel");
 
     log::set_boxed_logger(Box::new(OakChannelLogger {

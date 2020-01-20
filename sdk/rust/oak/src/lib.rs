@@ -331,10 +331,22 @@ pub fn channel_close(handle: Handle) -> Result<(), OakStatus> {
 }
 
 /// Create a new Node running the configuration identified by `config_name`,
-/// passing it the given handle.
-pub fn node_create(config_name: &str, half: ReadHandle) -> Result<(), OakStatus> {
-    let status =
-        unsafe { oak_abi::node_create(config_name.as_ptr(), config_name.len(), half.handle.id) };
+/// running the entrypoint identified by `entrypoint_name` (for a Web Assembly
+/// Node), passing it the given handle.
+pub fn node_create(
+    config_name: &str,
+    entrypoint_name: &str,
+    half: ReadHandle,
+) -> Result<(), OakStatus> {
+    let status = unsafe {
+        oak_abi::node_create(
+            config_name.as_ptr(),
+            config_name.len(),
+            entrypoint_name.as_ptr(),
+            entrypoint_name.len(),
+            half.handle.id,
+        )
+    };
     result_from_status(status as i32, ())
 }
 

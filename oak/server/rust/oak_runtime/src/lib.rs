@@ -185,10 +185,19 @@ impl Drop for ChannelHalf {
     }
 }
 
+#[derive(PartialEq, Clone, Debug, Eq, Hash)]
+pub struct WasmEntrypointName {
+    // Name of the config stanza for the Node.
+    pub config: String,
+    // Entrypoint name.
+    pub entrypoint: String,
+}
+
 pub struct OakRuntime {
     termination_pending: bool,
-    // Map name of Node config names to a test entrypoint function pointer.
-    entrypoints: HashMap<String, NodeMain>,
+    node_configs: HashMap<String, NodeConfiguration_oneof_config_type>,
+    // Map entrypoint names to a test entrypoint function pointer.
+    entrypoints: HashMap<WasmEntrypointName, NodeMain>,
     // Map name of Node config names to next index.
     next_index: HashMap<String, u32>,
     // Track a reference to the write half of the channel used for sending
@@ -220,6 +229,7 @@ impl OakRuntime {
         }
         OakRuntime {
             termination_pending: false,
+            node_configs: HashMap::new(),
             entrypoints: HashMap::new(),
             next_index: HashMap::new(),
             grpc_in_half: None,
@@ -234,13 +244,16 @@ impl OakRuntime {
         self.termination_pending = value;
     }
 
-    fn entrypoint(&self, config: &str) -> Option<NodeMain> {
-        self.entrypoints.get(config).copied()
+    fn entrypoint(&self, entrypoint_name: &WasmEntrypointName) -> Option<NodeMain> {
+        self.entrypoints.get(entrypoint_name).copied()
     }
 
-    fn next_node_name(&mut self, config: &str) -> String {
-        let index = self.next_index.entry(config.to_string()).or_insert(0);
-        let name = format!("{}-{}", config, *index);
+    fn next_node_name(&mut self, full_name: &WasmEntrypointName) -> String {
+        let index = self
+            .next_index
+            .entry(full_name.config.to_string())
+            .or_insert(0);
+        let name = format!("{}-{}-{}", full_name.config, *index, full_name.entrypoint);
         *index += 1;
         name
     }
@@ -250,46 +263,39 @@ impl OakRuntime {
     // tuple indicating the initial Node that should be started.
     pub fn configure(
         &mut self,
-        config: proto::manager::ApplicationConfiguration,
-        entrypoints: HashMap<String, NodeMain>,
+        mut config: proto::manager::ApplicationConfiguration,
+        entrypoints: HashMap<WasmEntrypointName, NodeMain>,
     ) -> Option<(String, NodeMain, Handle)> {
         self.set_termination_pending(false);
         self.nodes.clear();
         self.entrypoints = entrypoints;
-        for node_config in config.get_node_configs() {
-            match &node_config.config_type {
+        for node_config in config.take_node_configs().into_vec() {
+            match node_config.config_type {
                 None => {
                     error!("Node config {} with no type", node_config.name);
                     return None;
-                }
-                Some(NodeConfiguration_oneof_config_type::log_config(_)) => {
-                    self.entrypoints
-                        .insert(node_config.name.clone(), log_node_main);
-                }
-                Some(NodeConfiguration_oneof_config_type::wasm_config(_)) => {
-                    // Check that we have an entrypoint corresponding to this.
-                    if !self.entrypoints.contains_key(&node_config.name) {
-                        error!(
-                            "no entrypoint provided for Node config {}",
-                            node_config.name
-                        );
-                        return None;
-                    }
                 }
                 Some(NodeConfiguration_oneof_config_type::storage_config(_storage_config)) => {
                     // TODO: Implement a storage pseudo-Node
                     warn!("Storage pseudo-Node not yet implemented!");
                 }
+                Some(cfg) => {
+                    self.node_configs.insert(node_config.name.clone(), cfg);
+                }
             }
         }
-        let entrypoint = self.entrypoint(&config.initial_node)?;
 
-        let node_name = self.next_node_name(&config.initial_node);
-        let mut node = OakNode::new();
+        let full_name = WasmEntrypointName {
+            config: config.initial_node,
+            entrypoint: config.initial_entrypoint,
+        };
+        let node_name = self.next_node_name(&full_name);
         debug!(
-            "{{{}}}: add Wasm node running config '{}'",
-            node_name, config.initial_node
+            "{{{}}}: add Wasm node running config '{}' entrypoint '{}'",
+            node_name, full_name.config, full_name.entrypoint
         );
+        let entrypoint = self.entrypoint(&full_name)?;
+        let mut node = OakNode::new();
 
         // Setup the initial channel from gRPC pseudo-Node to Node.
         let (write_half, read_half) = self.new_channel();
@@ -432,16 +438,46 @@ impl OakRuntime {
     pub fn node_create(
         &mut self,
         node_name: String,
-        config: &str,
+        config_name: &str,
+        entrypoint_name: &str,
         handle: Handle,
     ) -> Result<NodeStartInfo, OakStatus> {
-        // First, find the code referred to by the config name.
-        let entrypoint = match self.entrypoint(&config) {
-            Some(e) => e,
+        // First, check the config name exists.
+        let config = match self.node_configs.get(config_name) {
+            Some(c) => c,
             None => {
                 debug!(
-                    "{{{}}}: node_create('{}', {}) -> ERR_INVALID_ARGS",
-                    node_name, config, handle
+                    "{{{}}}: node_create('{}', '{}', {}) -> ERR_INVALID_ARGS",
+                    node_name, config_name, entrypoint_name, handle
+                );
+                return Err(OakStatus::ERR_INVALID_ARGS);
+            }
+        };
+        // Now find the corresponding entrypoint
+        let full_name = WasmEntrypointName {
+            config: config_name.to_string(),
+            entrypoint: entrypoint_name.to_string(),
+        };
+        let entrypoint: NodeMain = match config {
+            NodeConfiguration_oneof_config_type::wasm_config(_) => {
+                match self.entrypoint(&full_name) {
+                    Some(e) => e,
+                    None => {
+                        debug!(
+                            "{{{}}}: node_create('{}', '{}', {}) -> ERR_INVALID_ARGS",
+                            node_name, config_name, entrypoint_name, handle
+                        );
+                        return Err(OakStatus::ERR_INVALID_ARGS);
+                    }
+                }
+            }
+            NodeConfiguration_oneof_config_type::log_config(_) => {
+                log_node_main // note: entrypoint_name is ignored
+            }
+            NodeConfiguration_oneof_config_type::storage_config(_) => {
+                error!(
+                    "{{{}}}: Storage pseudo-Node not yet implemented!",
+                    node_name
                 );
                 return Err(OakStatus::ERR_INVALID_ARGS);
             }
@@ -452,19 +488,19 @@ impl OakRuntime {
             Some(h) => h,
             None => {
                 debug!(
-                    "{{{}}}: node_create('{}', {}) -> ERR_BAD_HANDLE",
-                    node_name, config, handle
+                    "{{{}}}: node_create('{}', '{}', {}) -> ERR_BAD_HANDLE",
+                    node_name, config_name, entrypoint_name, handle
                 );
                 return Err(OakStatus::ERR_BAD_HANDLE);
             }
         };
 
         // Create the new Node instance.
-        let new_node_name = self.next_node_name(&config);
+        let new_node_name = self.next_node_name(&full_name);
         let node = OakNode::new();
         debug!(
-            "{{{}}}: add node running config '{}'",
-            new_node_name, config
+            "{{{}}}: add node running config '{}' entrypoint '{}'",
+            new_node_name, config_name, entrypoint_name
         );
         self.nodes.insert(new_node_name.to_string(), node);
 

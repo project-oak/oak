@@ -12,3 +12,4 @@ node_configs {
   }
 }
 initial_node: "log"
+initial_entrypoint: "oak_main"

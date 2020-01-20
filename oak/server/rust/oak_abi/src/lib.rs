@@ -124,15 +124,22 @@ extern "C" {
     pub fn channel_close(handle: u64) -> u32;
 
     /// Create a new Node instance running code identified by configuration
-    /// name.
+    /// name and entrypoint.
     ///
-    /// The configuration name is provided in the memory area given by `buf` and
-    /// `len`.
+    /// The configuration name is provided in the memory area given by
+    /// `config_buf` and `config_len`; the entrypoint name is provided in the
+    /// memory area given by `entrypoint_buf` and `entrypoint_len`.
     ///
     /// Returns the status of the operation, as an [`OakStatus`] value.
     ///
     /// [`OakStatus`]: crate::OakStatus
-    pub fn node_create(buf: *const u8, len: usize, handle: u64) -> u32;
+    pub fn node_create(
+        config_buf: *const u8,
+        config_len: usize,
+        entrypoint_buf: *const u8,
+        entrypoint_len: usize,
+        handle: u64,
+    ) -> u32;
 
     /// Fill a buffer with random data.
     ///

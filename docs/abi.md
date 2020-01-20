@@ -138,13 +138,17 @@ functions** as
   - arg 0: Handle to channel
   - return 0: Status of operation
 
-- `node_create: (usize, usize, u64) -> u32`: Create a new Node running the Node
-  contents identified by args 0 and 1, and pass it an initial handle to the read
-  half of a channel identified by arg 2.
+- `node_create: (usize, usize, usize, usize, u64) -> u32`: Create a new Node
+  running the Node configuration identified by args 0 and 1, using the
+  entrypoint specified by args 2 and 3, passing in an initial handle to the read
+  half of a channel identified by arg 4. The entrypoint name is ignored when
+  creating non-Wasm Nodes.
 
-  - arg 0: Source buffer holding contents name
-  - arg 1: Source buffer size in bytes
-  - arg 2: Handle to channel
+  - arg 0: Source buffer holding node configuration name
+  - arg 1: Node configuration name size in bytes
+  - arg 2: Source buffer holding entrypoint name.
+  - arg 3: Entrypoint name size in bytes
+  - arg 4: Handle to channel
   - return 0: Status of operation
 
 - `random_get: (usize, usize) -> u32`: Fill a buffer with random bytes.

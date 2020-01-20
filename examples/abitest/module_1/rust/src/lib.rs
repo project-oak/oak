@@ -120,3 +120,9 @@ fn inner_main(in_handle: u64) -> Result<(), oak::OakStatus> {
         }
     }
 }
+
+// Exported entrypoint that has the wrong signature for a main Oak
+// entrypoint; just used for testing
+pub extern "C" fn backend_fake_main(_handle: u64, _another: u64) {
+    panic!("reached backend_fake_main!");
+}

@@ -23,14 +23,12 @@ node_configs {
   name: "frontend-config"
   wasm_config {
     module_bytes: "<filled in later>"
-    main_entrypoint: "frontend_oak_main"
   }
 }
 node_configs {
   name: "backend-config"
   wasm_config {
     module_bytes: "<filled in later>"
-    main_entrypoint: "backend_oak_main"
   }
 }
 node_configs {
@@ -38,6 +36,7 @@ node_configs {
   log_config {}
 }
 initial_node: "frontend-config"
+initial_entrypoint: "frontend_oak_main"
 )raw";
 
 #endif  // OAK_EXAMPLES_ABITEST_CLIENT_CONFIG_H_

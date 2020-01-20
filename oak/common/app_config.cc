@@ -43,7 +43,7 @@ std::unique_ptr<ApplicationConfiguration> DefaultConfig(const std::string& modul
   node_config->set_name(kAppConfigName);
   WebAssemblyConfiguration* code = node_config->mutable_wasm_config();
   code->set_module_bytes(module_bytes);
-  code->set_main_entrypoint(kAppEntrypointName);
+  config->set_initial_entrypoint(kAppEntrypointName);
 
   return config;
 }
@@ -91,16 +91,16 @@ bool ValidApplicationConfig(const ApplicationConfiguration& config) {
     config_names.insert(node_config.name());
     if (node_config.has_wasm_config()) {
       wasm_names.insert(node_config.name());
-      if (node_config.wasm_config().main_entrypoint().empty()) {
-        LOG(ERROR) << "missing entrypoint for Wasm node of name " << node_config.name();
-        return false;
-      }
     }
   }
 
   // Check name for the config of the initial node is present and is a Web
   // Assembly variant.
   if (wasm_names.count(config.initial_node()) == 0) {
+    return false;
+  }
+  if (config.initial_entrypoint().empty()) {
+    LOG(ERROR) << "missing entrypoint name";
     return false;
   }
   return true;

@@ -44,7 +44,7 @@ struct Room {
 impl Room {
     fn new(admin_token: AdminToken) -> Self {
         let (wh, rh) = oak::channel_create().unwrap();
-        oak::node_create("room-config", rh).expect("could not create node");
+        oak::node_create("room-config", "backend_oak_main", rh).expect("could not create node");
         oak::channel_close(rh.handle).expect("could not close channel");
         Room {
             sender: oak::io::Sender::new(wh),

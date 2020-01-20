@@ -218,7 +218,8 @@ void WasmNode::InitEnvironment(wabt::interp::Environment* env) {
   oak_module->AppendFuncExport(
       "node_create",
       wabt::interp::FuncSignature(
-          std::vector<wabt::Type>{wabtUsizeType, wabtUsizeType, wabt::Type::I64},
+          std::vector<wabt::Type>{wabtUsizeType, wabtUsizeType, wabtUsizeType, wabtUsizeType,
+                                  wabt::Type::I64},
           std::vector<wabt::Type>{wabt::Type::I32}),
       this->OakNodeCreate(env));
   oak_module->AppendFuncExport(
@@ -488,11 +489,18 @@ wabt::interp::HostFunc::Callback WasmNode::OakNodeCreate(wabt::interp::Environme
                      const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
     LogHostFunctionCall(name_, func, args);
 
-    uint64_t offset = args[0].get_i32();
-    uint32_t size = args[1].get_i32();
-    Handle channel_handle = args[2].get_i64();
-    if (!MemoryAvailable(env, offset, size)) {
-      LOG(WARNING) << "Node provided invalid memory offset+size";
+    uint64_t config_offset = args[0].get_i32();
+    uint32_t config_size = args[1].get_i32();
+    uint64_t entrypoint_offset = args[2].get_i32();
+    uint32_t entrypoint_size = args[3].get_i32();
+    Handle channel_handle = args[4].get_i64();
+    if (!MemoryAvailable(env, config_offset, config_size)) {
+      LOG(WARNING) << "Node provided invalid memory offset+size for config";
+      results[0].set_i32(OakStatus::ERR_INVALID_ARGS);
+      return wabt::interp::Result::Ok;
+    }
+    if (!MemoryAvailable(env, entrypoint_offset, entrypoint_size)) {
+      LOG(WARNING) << "Node provided invalid memory offset+size for entrypoint";
       results[0].set_i32(OakStatus::ERR_INVALID_ARGS);
       return wabt::interp::Result::Ok;
     }
@@ -511,12 +519,15 @@ wabt::interp::HostFunc::Callback WasmNode::OakNodeCreate(wabt::interp::Environme
     }
     std::unique_ptr<ChannelHalf> half = CloneChannelHalf(borrowed_half);
 
-    auto base = env->GetMemory(0)->data.begin() + offset;
-    std::string config_name(base, base + size);
-    LOG(INFO) << "Create a new node with config '" << config_name << "'";
+    auto config_base = env->GetMemory(0)->data.begin() + config_offset;
+    std::string config_name(config_base, config_base + config_size);
+    auto entrypoint_base = env->GetMemory(0)->data.begin() + entrypoint_offset;
+    std::string entrypoint_name(entrypoint_base, entrypoint_base + entrypoint_size);
+    LOG(INFO) << "Create a new node with config '" << config_name << "' and entrypoint '"
+              << entrypoint_name << "'";
 
     std::string node_name;
-    if (!runtime_->CreateAndRunNode(config_name, std::move(half), &node_name)) {
+    if (!runtime_->CreateAndRunNode(config_name, entrypoint_name, std::move(half), &node_name)) {
       results[0].set_i32(OakStatus::ERR_INVALID_ARGS);
     } else {
       LOG(INFO) << "Created new node named {" << node_name << "}";
