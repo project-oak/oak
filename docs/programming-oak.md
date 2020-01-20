@@ -504,8 +504,12 @@ now in Rust rather than C++).
 However, the fields in the application configuration that hold the Wasm bytecode
 for the various Nodes are ignored; instead, the second argument to
 `oak_tests::start()` is a map from the relevant `NodeContents.name` to a
-`fn() -> i32` function pointer (aliased as `oak_tests::NodeMain`) for the main
-entrypoint for each Node.
+function pointer of type `oak_runtime::NodeMain` that acts as the main
+entrypoint for the Node under test. This inner test entrypoint is intended for
+use from Rust test code, and so has a signature
+(`fn(u64) -> Result<(), oak::OakStatus>`) which allows for better error handling
+than the signature (`fn(u64) -> i32`) that is available for the real Wasm
+entrypoint.
 
 <!-- prettier-ignore-start -->
 [embedmd]:# (../examples/abitest/tests/src/tests.rs Rust /^#\[test\]/ /oak_tests::start\(.*/)
@@ -529,8 +533,10 @@ Because there are multiple Nodes linked into the whole Application under test,
 each Node should use a [main entrypoint](abi.md#exported-function) with a
 different name, to prevent their names clashing.
 
-It can also be helpful to defer the real functionality to an inner main
-function:
+The inner main functionality described above also allows
+[panic interception for FFI](https://doc.rust-lang.org/nomicon/ffi.html#ffi-and-panics)
+to be localized to the real Wasm entrypoint; testing via the inner main
+therefore allows panic conditions to be tested more easily.
 
 <!-- prettier-ignore-start -->
 [embedmd]:# (../examples/abitest/module_0/rust/src/lib.rs Rust /^#.*no_mangle.*/ /pub fn main\(.*/)
