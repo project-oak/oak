@@ -9,7 +9,7 @@ license = "Apache-2.0"
 proc-macro = true
 
 [dependencies]
-oak = "*"
+oak = "=0.1.0"
 protobuf = "*"
 quote = "*"
 syn = { version = "*", features = ["extra-traits"]}
