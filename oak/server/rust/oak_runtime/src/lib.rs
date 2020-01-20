@@ -201,7 +201,7 @@ pub struct OakRuntime {
 struct OakNode {
     halves: HashMap<Handle, ChannelHalf>,
     // Handle for a thread running the main loop for this node.
-    thread_handle: Option<std::thread::JoinHandle<Result<(), oak::OakStatus>>>,
+    thread_handle: Option<std::thread::JoinHandle<()>>,
 }
 
 // Encapsulate the information needed to start a new per-Node thread.
@@ -300,20 +300,14 @@ impl OakRuntime {
         Some((node_name, entrypoint, handle))
     }
     // Record that a Node of the given name has been started in a distinct thread.
-    pub fn node_started(
-        &mut self,
-        node_name: &str,
-        join_handle: std::thread::JoinHandle<Result<(), oak::OakStatus>>,
-    ) {
+    pub fn node_started(&mut self, node_name: &str, join_handle: std::thread::JoinHandle<()>) {
         self.nodes
             .get_mut(node_name)
             .unwrap_or_else(|| panic!("node {{{}}} not found", node_name))
             .thread_handle
             .replace(join_handle);
     }
-    pub fn stop_next(
-        &mut self,
-    ) -> Option<(String, std::thread::JoinHandle<Result<(), oak::OakStatus>>)> {
+    pub fn stop_next(&mut self) -> Option<(String, std::thread::JoinHandle<()>)> {
         for (name, node) in &mut self.nodes {
             if let Some(h) = node.thread_handle.take() {
                 return Some((name.to_string(), h));
@@ -574,18 +568,29 @@ impl OakNode {
 }
 
 /// Expected type for the main entrypoint to a Node under test.
-pub type NodeMain = fn(Handle) -> Result<(), oak::OakStatus>;
+pub type NodeMain = fn(Handle);
 
 // Main loop function for a log pseudo-Node.
-fn log_node_main(handle: Handle) -> Result<(), oak::OakStatus> {
+fn log_node_main(handle: Handle) {
     if handle == oak_abi::INVALID_HANDLE {
-        return Err(OakStatus::ERR_BAD_HANDLE);
+        error!("Invalid handle provided to log pseudo-Node");
+        return;
     }
     let half = oak::ReadHandle {
         handle: oak::Handle::from_raw(handle),
     };
     loop {
-        oak::wait_on_channels(&[half])?;
+        match oak::wait_on_channels(&[half]) {
+            Err(OakStatus::ERR_TERMINATED) => {
+                info!("log pseudo-Node terminated");
+                return;
+            }
+            Err(s) => {
+                error!("failed to wait for message, {:?}", s);
+                return;
+            }
+            Ok(_) => {}
+        }
         let mut buf = Vec::<u8>::with_capacity(1024);
         let mut handles = Vec::with_capacity(8);
         oak::channel_read(half, &mut buf, &mut handles).expect("could not read from channel");

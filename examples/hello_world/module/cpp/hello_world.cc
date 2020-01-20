@@ -47,7 +47,7 @@ uint32_t channel_write(uint64_t handle, uint8_t* buff, size_t usize, uint8_t* ha
                        size_t handle_count);
 WASM_IMPORT("oak") uint32_t channel_close(uint64_t handle);
 
-WASM_EXPORT int32_t oak_main(uint64_t grpc_in_handle) {
+WASM_EXPORT void oak_main(uint64_t grpc_in_handle) {
   uint8_t buf[256];
   uint32_t actual_size;
   uint32_t handle_count;
@@ -67,7 +67,7 @@ WASM_EXPORT int32_t oak_main(uint64_t grpc_in_handle) {
   while (true) {
     int32_t result = wait_on_channels(handle_space, 1);
     if (result != oak::OakStatus::OK) {
-      return result;
+      return;
     }
 
     uint64_t rsp_handle;
@@ -88,5 +88,4 @@ WASM_EXPORT int32_t oak_main(uint64_t grpc_in_handle) {
     channel_write(rsp_handle, rsp_buf, sizeof(rsp_buf) - 1, nullptr, 0);
     channel_close(rsp_handle);
   }
-  return oak::OakStatus::OK;
 }

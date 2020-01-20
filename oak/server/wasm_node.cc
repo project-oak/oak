@@ -108,7 +108,7 @@ static wabt::Result ReadModule(const std::string& module_bytes, wabt::interp::En
 namespace oak {
 
 const wabt::interp::FuncSignature kRequiredExport(wabt::interp::FuncSignature(
-    std::vector<wabt::Type>{wabt::Type::I64}, std::vector<wabt::Type>{wabt::Type::I32}));
+    std::vector<wabt::Type>{wabt::Type::I64}, std::vector<wabt::Type>{}));
 
 // Check module exports the required function with the correct signatures,
 // returning true if so.
@@ -244,8 +244,7 @@ void WasmNode::Run(Handle handle) {
                << "} execution failure: " << wabt::interp::ResultToString(exec_result.result);
     return;
   }
-  uint32_t status = exec_result.values[0].get_i32();
-  LOG(WARNING) << "{" << name_ << "} module execution terminated with status " << status;
+  LOG(WARNING) << "{" << name_ << "} module execution terminated";
 }
 
 wabt::interp::HostFunc::Callback WasmNode::OakChannelRead(wabt::interp::Environment* env) {

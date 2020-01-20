@@ -718,6 +718,7 @@ dependencies = [
 name = "oak_derive"
 version = "0.1.0"
 dependencies = [
+ "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "oak 0.1.0",
  "protobuf 2.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "quote 0.6.13 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -800,6 +801,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "private_set_intersection"
 version = "0.1.0"
 dependencies = [
+ "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "oak 0.1.0",
  "oak_derive 0.1.0",
  "protobuf 2.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1107,6 +1109,7 @@ dependencies = [
 name = "running_average"
 version = "0.1.0"
 dependencies = [
+ "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "oak 0.1.0",
  "oak_derive 0.1.0",
  "protobuf 2.8.0 (registry+https://github.com/rust-lang/crates.io-index)",

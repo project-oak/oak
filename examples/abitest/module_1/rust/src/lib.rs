@@ -15,8 +15,7 @@
 //
 
 use abitest_common::{InternalMessage, LOG_CONFIG_NAME};
-use log::info;
-use protobuf::ProtobufEnum;
+use log::{error, info};
 
 // Backend node for channel testing.  This node listens for read channel handles
 // arriving on the "from_frontend" channel, then in turn listens for JSON-serialized
@@ -25,18 +24,26 @@ use protobuf::ProtobufEnum;
 // response is written to a fresh channel, and the read handle for that new channel
 // is what's sent back to the frontend.
 #[no_mangle]
-pub extern "C" fn backend_oak_main(handle: u64) -> i32 {
-    std::panic::catch_unwind(|| {
+pub extern "C" fn backend_oak_main(handle: u64) {
+    let _ = std::panic::catch_unwind(|| {
         oak::set_panic_hook();
         main(handle)
-    })
-    .unwrap_or(Err(oak::OakStatus::ERR_INTERNAL))
-    .err()
-    .unwrap_or(oak::OakStatus::OK)
-    .value()
+    });
 }
 
-pub fn main(in_handle: u64) -> Result<(), oak::OakStatus> {
+pub fn main(in_handle: u64) {
+    match inner_main(in_handle) {
+        Err(oak::OakStatus::ERR_TERMINATED) => {
+            info!("node terminated");
+        }
+        Err(s) => {
+            error!("node failed: {:?}", s);
+        }
+        Ok(_) => {}
+    }
+}
+
+fn inner_main(in_handle: u64) -> Result<(), oak::OakStatus> {
     let _ = oak_log::init(log::Level::Debug, LOG_CONFIG_NAME);
     let in_channel = oak::ReadHandle {
         handle: oak::Handle::from_raw(in_handle),

@@ -53,7 +53,7 @@ Two specific sets of integer values are used in multiple places in the ABI:
 
 Each Oak Module must expose a single **exported function** as a
 [WebAssembly export](https://webassembly.github.io/spec/core/syntax/modules.html#exports),
-with signature `(u64) -> u32`. This function is invoked when the Oak Manager
+with signature `fn(u64) -> ()`. This function is invoked when the Oak Manager
 executes the Oak Node; a handle for the read half of an initial channel is
 passed in as a parameter. The name of this entrypoint function for a Node is
 provided as part of the Application configuration.
@@ -61,7 +61,7 @@ provided as part of the Application configuration.
 The entrypoint function for each Node should perform its own event loop, reading
 incoming messages that arrive on the read halves of its channels, sending
 outgoing messages over the write halves of channels. The "oak_main" function is
-generally expected to run forever, but may return a status if the Node choses to
+generally expected to run forever, but may return if the Node choses to
 terminate (whether expectedly or unexpectedly).
 
 Each Oak Application starts with a single initial Oak Node; this Node receives

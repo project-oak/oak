@@ -18,7 +18,6 @@ use abitest_0_frontend::proto::abitest::{ABITestRequest, ABITestResponse};
 use assert_matches::assert_matches;
 use log::{error, info};
 use oak::grpc;
-use oak::OakStatus;
 use oak_runtime::proto::manager::{
     ApplicationConfiguration, LogConfiguration, NodeConfiguration, WebAssemblyConfiguration,
 };
@@ -72,7 +71,7 @@ fn test_abi() {
         oak_tests::inject_grpc_request("/oak.examples.abitest.OakABITestService/RunTests", req);
     assert_matches!(result, Ok(_));
 
-    assert_eq!(Err(OakStatus::ERR_TERMINATED), oak_tests::stop());
+    oak_tests::stop();
 
     for result in result.unwrap().get_results() {
         info!(

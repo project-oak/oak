@@ -21,7 +21,6 @@ use log::{error, info, warn};
 use oak::grpc;
 use oak::grpc::OakNode;
 use oak_derive::OakExports;
-use protobuf::ProtobufEnum;
 use rand::prelude::*;
 use rand_distr::Distribution;
 use rand_distr::Normal;

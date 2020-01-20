@@ -31,8 +31,7 @@ use quote::quote;
 /// that would otherwise conflict if implemented multiple times.
 ///
 /// ```rust
-/// extern crate oak;
-/// extern crate protobuf;
+/// use log::warn;
 /// use oak::grpc::OakNode;
 /// use protobuf::ProtobufEnum;
 ///
@@ -59,24 +58,22 @@ pub fn derive_oak_exports(input: TokenStream) -> TokenStream {
 
     let expanded = quote! {
         #[no_mangle]
-        pub extern "C" fn oak_main(handle: u64) -> i32 {
+        pub extern "C" fn oak_main(handle: u64) {
             // A panic in the Rust module code cannot safely pass through the FFI
-            // boundary, so catch any panics here and translate to an error return.
+            // boundary, so catch any panics here and drop them.
             // https://doc.rust-lang.org/nomicon/ffi.html#ffi-and-panics
-            std::panic::catch_unwind(||{
+            let _ = std::panic::catch_unwind(||{
                 oak::set_panic_hook();
                 inner_main(handle)
-            })
-            .unwrap_or(Err(oak::OakStatus::ERR_INTERNAL))
-            .err()
-            .unwrap_or(oak::OakStatus::OK)
-            .value()
+            });
         }
         // Internal version of the main entrypoint, to allow testing without any
         // panic interception.
-        pub fn inner_main(handle: u64) -> Result<(), oak::OakStatus> {
+        pub fn inner_main(handle: u64) {
             let mut node = <#name>::new();
-            oak::grpc::event_loop(node, oak::ReadHandle{ handle: oak::Handle::from_raw(handle) })
+            if let Err(s) = oak::grpc::event_loop(node, oak::ReadHandle{ handle: oak::Handle::from_raw(handle) }) {
+                warn!("Node terminating with {:?}", s);
+            }
         }
     };
 

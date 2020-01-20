@@ -33,9 +33,6 @@ use std::io::Cursor;
 use std::sync::{Once, RwLock};
 use std::thread::spawn;
 
-#[cfg(test)]
-mod tests;
-
 // Node name used for single-Node tests.
 pub static DEFAULT_NODE_NAME: &str = "internal-0";
 
@@ -446,30 +443,23 @@ pub fn start_node(handle: Handle, entrypoint: NodeMain) {
 }
 
 /// Stop the running Application under test.
-pub fn stop() -> Result<(), OakStatus> {
+pub fn stop() {
     info!("stop all running Node threads");
     RUNTIME
         .write()
         .expect(RUNTIME_MISSING)
         .set_termination_pending(true);
 
-    let mut overall_result = Ok(());
     loop {
         let (name, thread_handle) = match RUNTIME.write().expect(RUNTIME_MISSING).stop_next() {
             None => break,
             Some(x) => x,
         };
         debug!("{{{}}}: await thread join", name);
-        let result = thread_handle.join().expect("could not join thread");
-        debug!("{{{}}}: thread result {:?}", name, result);
-        if overall_result == Ok(()) || result == Err(OakStatus::ERR_TERMINATED) {
-            // If any Node was terminated, treat the whole application as terminated.
-            // Otherwise, take the first non-OK result from a Node.
-            overall_result = result;
-        }
+        thread_handle.join().expect("could not join thread");
+        debug!("{{{}}}: thread completed", name);
     }
     reset();
-    overall_result
 }
 
 /// Test helper to set up a channel into the (single) Node under test for
