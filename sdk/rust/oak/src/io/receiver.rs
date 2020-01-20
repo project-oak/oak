@@ -18,7 +18,8 @@ use crate::io::Decodable;
 use crate::{OakError, OakStatus, ReadHandle};
 use serde::{Deserialize, Serialize};
 
-/// Wrapper for a handle to the read half of a channel.
+/// Wrapper for a handle to the read half of a channel, allowing to receive data that can be decoded
+/// as bytes + handles via the `Decodable` trait.
 ///
 /// For use when the underlying [`Handle`] is known to be for a receive half.
 #[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
@@ -66,6 +67,7 @@ impl Receiver {
     /// Wait for a value to be available from this receiver.
     #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn wait(&self) -> Result<(), OakStatus> {
+        // TODO(#500): Consider creating the handle notification space once and for all in `new`.
         let read_handles = vec![self.handle];
         let mut space = crate::new_handle_space(&read_handles);
         crate::prep_handle_space(&mut space);

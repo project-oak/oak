@@ -16,7 +16,7 @@
 
 //! Wrappers for Oak SDK types to allow their use with [`std::io`].
 
-use crate::{channel_write, OakStatus};
+use crate::OakStatus;
 use std::io;
 
 mod decodable;
@@ -28,19 +28,6 @@ pub use decodable::Decodable;
 pub use encodable::Encodable;
 pub use receiver::Receiver;
 pub use sender::Sender;
-
-/// Implement the [`std::io::Write`] trait for `io::Sender`, to allow logging
-/// and use of protobuf serialization methods.
-impl std::io::Write for Sender {
-    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        channel_write(self.handle, buf, &[])
-            .map(|_| buf.len()) // We replace `()` with the length of the written buffer, if successful.
-            .map_err(error_from_nonok_status)
-    }
-    fn flush(&mut self) -> std::io::Result<()> {
-        Ok(())
-    }
-}
 
 /// Map a non-OK [`OakStatus`] value to the nearest available [`std::io::Error`].
 ///
