@@ -36,6 +36,7 @@ fn main() {
     run_embedmd(&root.with_prefix("embedmd"));
     run_cargo_fmt(&root.with_prefix("cargo fmt"));
     run_cargo_test(&root.with_prefix("cargo test"));
+    run_cargo_doc_test(&root.with_prefix("cargo doc test"));
     run_cargo_clippy(&root.with_prefix("cargo clippy"));
     run_bazel_build(&root.with_prefix("bazel build"));
     run_bazel_test(&root.with_prefix("bazel test"));
@@ -140,6 +141,21 @@ fn run_cargo_test(step: &Step) {
             &[
                 "test",
                 "--all-targets",
+                &format!("--manifest-path={}", manifest_filename),
+            ],
+        );
+    }
+}
+
+fn run_cargo_doc_test(step: &Step) {
+    for m in workspace_manifest_files() {
+        let manifest_filename = m.to_str().unwrap();
+        let step = step.with_prefix(manifest_filename);
+        step.run_command(
+            "cargo",
+            &[
+                "test",
+                "--doc",
                 &format!("--manifest-path={}", manifest_filename),
             ],
         );

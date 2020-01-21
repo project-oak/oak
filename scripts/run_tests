@@ -4,13 +4,19 @@ readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
 # shellcheck source=scripts/common
 source "$SCRIPTS_DIR/common"
 
-# For each Rust workspace, first run tests, then run clippy, turning warnings into errors.
-# See https://github.com/rust-lang/rust-clippy.
+# For each Rust workspace, first run tests, then run doc tests, then run clippy (turning warnings
+# into errors).
+#
+# See:
+# - https://doc.rust-lang.org/cargo/commands/cargo-test.html
+# - https://github.com/rust-lang/rust-clippy.
 
 cargo test --all-targets --manifest-path=./sdk/rust/Cargo.toml
+cargo test --doc --manifest-path=./sdk/rust/Cargo.toml
 cargo clippy --all-targets --manifest-path=./sdk/rust/Cargo.toml -- --deny=warnings
 
 cargo test --all-targets --manifest-path=./examples/Cargo.toml
+cargo test --doc --manifest-path=./examples/Cargo.toml
 cargo clippy --all-targets --manifest-path=./examples/Cargo.toml -- --deny=warnings
 
 bazel_build_flags+=(
