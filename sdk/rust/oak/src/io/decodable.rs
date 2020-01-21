@@ -14,9 +14,10 @@
 // limitations under the License.
 //
 
-use crate::{Handle, OakError};
+use crate::io::Message;
+use crate::OakError;
 
 /// A trait for objects that can be decoded from bytes + handles.
 pub trait Decodable: Sized {
-    fn decode(bytes: &[u8], handles: &[Handle]) -> Result<Self, OakError>;
+    fn decode(message: &Message) -> Result<Self, OakError>;
 }
