@@ -66,11 +66,11 @@ http_archive(
 # Asylo Framework.
 http_archive(
     name = "com_google_asylo",
-    sha256 = "bc500dab6673fc6d33f7f1d6df7ba406c46992985d4c301092e6bd58732d2646",
-    strip_prefix = "asylo-6f809ed623bc33900b420b5c513829257a40f548",
+    sha256 = "1ac2b321969bb958dcd17e45a5027395d5e8f25f210fb47334458f8f27340c19",
+    strip_prefix = "asylo-f3b0e5099d460540053b04dfe7ae95f805dda1c7",
     urls = [
-        # Head commit on 2020-01-07.
-        "https://github.com/google/asylo/archive/6f809ed623bc33900b420b5c513829257a40f548.tar.gz",
+        # Head commit on 2020-01-16.
+        "https://github.com/google/asylo/archive/f3b0e5099d460540053b04dfe7ae95f805dda1c7.tar.gz",
     ],
 )
 
