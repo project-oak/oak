@@ -7,7 +7,7 @@ license = "Apache-2.0"
 
 [dependencies]
 log = { version = "^0.4.0", features = ["std"] }
-oak = "*"
+oak = "=0.1.0"
 oak_abi = "*"
 protobuf = "*"
 rand = { version = "0.7", features = ["std"] }

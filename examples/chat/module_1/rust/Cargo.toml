@@ -10,6 +10,6 @@ crate-type = ["cdylib"]
 [dependencies]
 chat_common = { path = "../../common" }
 log = "*"
-oak = "*"
+oak = "=0.1.0"
 oak_log = "*"
 protobuf = "*"

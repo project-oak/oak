@@ -11,6 +11,6 @@ crate-type = ["cdylib"]
 rusty-machine = "*"
 rand = "*"
 rand_distr = "*"
-oak = "*"
+oak = "=0.1.0"
 oak_derive = "*"
 protobuf = "*"

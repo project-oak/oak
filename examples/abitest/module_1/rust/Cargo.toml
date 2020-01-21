@@ -10,7 +10,7 @@ crate-type = ["cdylib", "lib"]
 [dependencies]
 log = "*"
 abitest_common = { path = "../../abitest_common" }
-oak = "*"
+oak = "=0.1.0"
 oak_log = "*"
 protobuf = "*"
 serde = { version = "1.0", features = ["derive"] }

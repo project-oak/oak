@@ -9,7 +9,7 @@ crate-type = ["lib"]
 
 [dependencies]
 log = "*"
-oak = "*"
+oak = "=0.1.0"
 protobuf = "*"
 bincode = "*"
 serde = {version = "*", features = ["derive"]}

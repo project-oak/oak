@@ -11,13 +11,13 @@ crate-type = ["dylib"]
 abitest_0_frontend = { path = "../module_0/rust" }
 abitest_1_backend = { path = "../module_1/rust" }
 log = "*"
-oak = "*"
+oak = "=0.1.0"
 oak_log = "*"
 protobuf = "*"
 
 [dev-dependencies]
 assert_matches = "*"
-oak_runtime = "*"
+oak_runtime = "=0.1.0"
 oak_tests = "*"
 serial_test = "0.2"
 serial_test_derive = "0.2"
