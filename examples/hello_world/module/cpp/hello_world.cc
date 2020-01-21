@@ -48,23 +48,21 @@ uint32_t channel_write(uint64_t handle, uint8_t* buff, size_t usize, uint8_t* ha
 WASM_IMPORT("oak") uint32_t channel_close(uint64_t handle);
 
 WASM_EXPORT int32_t oak_main(uint64_t grpc_in_handle) {
-  char grpc_in_name[] = "grpc_in";
-  char grpc_out_name[] = "grpc_out";
-  uint8_t handle_space[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
-  uint8_t _buf[256];
+  uint8_t buf[256];
   uint32_t actual_size;
   uint32_t handle_count;
-
   // TODO: Add C++ helpers for dealing with handle notification space.
-  handle_space[0] = grpc_in_handle & 0xff;
-  handle_space[1] = (grpc_in_handle >> 8) & 0xff;
-  handle_space[2] = (grpc_in_handle >> 16) & 0xff;
-  handle_space[3] = (grpc_in_handle >> 24) & 0xff;
-  handle_space[4] = (grpc_in_handle >> 32) & 0xff;
-  handle_space[5] = (grpc_in_handle >> 40) & 0xff;
-  handle_space[6] = (grpc_in_handle >> 48) & 0xff;
-  handle_space[7] = (grpc_in_handle >> 56) & 0xff;
-  handle_space[8] = 0x00;  // read ready?
+  uint8_t handle_space[9] = {
+      static_cast<uint8_t>(grpc_in_handle & 0xff),
+      static_cast<uint8_t>((grpc_in_handle >> 8) & 0xff),
+      static_cast<uint8_t>((grpc_in_handle >> 16) & 0xff),
+      static_cast<uint8_t>((grpc_in_handle >> 24) & 0xff),
+      static_cast<uint8_t>((grpc_in_handle >> 32) & 0xff),
+      static_cast<uint8_t>((grpc_in_handle >> 40) & 0xff),
+      static_cast<uint8_t>((grpc_in_handle >> 48) & 0xff),
+      static_cast<uint8_t>((grpc_in_handle >> 56) & 0xff),
+      0x00,  // read ready?
+  };
 
   while (true) {
     int32_t result = wait_on_channels(handle_space, 1);
@@ -73,7 +71,7 @@ WASM_EXPORT int32_t oak_main(uint64_t grpc_in_handle) {
     }
 
     uint64_t rsp_handle;
-    channel_read(grpc_in_handle, _buf, sizeof(_buf), &actual_size, &rsp_handle, 1, &handle_count);
+    channel_read(grpc_in_handle, buf, sizeof(buf), &actual_size, &rsp_handle, 1, &handle_count);
 
     // Encapsulated GrpcResponse protobuf.
     //    0a                 b00001.010 = tag 1 (GrpcResponse.rsp_msg), length-delimited field
@@ -85,9 +83,9 @@ WASM_EXPORT int32_t oak_main(uint64_t grpc_in_handle) {
     //          74657374696e67   "testing"
     //    18                 b00011.000 = tag 3 (GrpcResponse.last), varint
     //    01                 true
-    uint8_t buf[] = "\x0a\x0b\x12\x09\x0A\x07\x74\x65\x73\x74\x69\x6e\x67\x18\x01";
-    // TODO: replace with use of message type and serialization.
-    channel_write(rsp_handle, buf, sizeof(buf) - 1, nullptr, 0);
+    uint8_t rsp_buf[] = "\x0a\x0b\x12\x09\x0A\x07\x74\x65\x73\x74\x69\x6e\x67\x18\x01";
+    // TODO(#422): replace with use of message type and serialization.
+    channel_write(rsp_handle, rsp_buf, sizeof(rsp_buf) - 1, nullptr, 0);
     channel_close(rsp_handle);
   }
   return oak::OakStatus::OK;
