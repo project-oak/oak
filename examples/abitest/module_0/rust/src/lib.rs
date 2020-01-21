@@ -27,7 +27,6 @@ use proto::abitest_grpc::{dispatch, OakABITestServiceNode};
 use protobuf::ProtobufEnum;
 use rand::Rng;
 use std::collections::HashMap;
-use std::io::Write;
 
 const BACKEND_COUNT: usize = 3;
 
@@ -982,14 +981,14 @@ impl FrontendNode {
             let internal_req = InternalMessage {
                 msg: "aaa".to_string(),
             };
-            let serialized_req = serde_json::to_string(&internal_req)?;
-
             info!(
-                "send serialized message to new channel {:?}: {}",
-                new_write.handle, serialized_req
+                "sending message to new channel {:?}: {:?}",
+                new_write.handle, internal_req,
             );
-            let mut new_channel = oak::io::Sender::new(*new_write);
-            new_channel.write_all(&serialized_req.into_bytes())?;
+            let new_channel = oak::io::Sender::new(*new_write);
+            new_channel
+                .send(&internal_req)
+                .expect("could not send request over channel");
             oak::channel_close(new_write.handle).expect("could not close channel");
 
             // Block until there is a response from one of the backends

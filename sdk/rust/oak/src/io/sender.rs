@@ -23,13 +23,17 @@ use serde::{Deserialize, Serialize};
 ///
 /// For use when the underlying [`Handle`] is known to be for a send half.
 #[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Sender {
+pub struct Sender<T: Encodable> {
     pub handle: WriteHandle,
+    phantom: std::marker::PhantomData<T>,
 }
 
-impl Sender {
+impl<T: Encodable> Sender<T> {
     pub fn new(handle: WriteHandle) -> Self {
-        Sender { handle }
+        Sender {
+            handle,
+            phantom: std::marker::PhantomData,
+        }
     }
 
     /// Close the underlying channel used by this sender.
@@ -42,25 +46,9 @@ impl Sender {
     ///
     /// See https://doc.rust-lang.org/std/sync/mpsc/struct.Sender.html#method.send
     #[allow(clippy::trivially_copy_pass_by_ref)]
-    pub fn send<T>(&self, t: T) -> Result<(), OakError>
-    where
-        T: Encodable,
-    {
+    pub fn send(&self, t: &T) -> Result<(), OakError> {
         let message = t.encode()?;
         crate::channel_write(self.handle, &message.bytes, &message.handles)?;
-        Ok(())
-    }
-}
-
-/// Implement the [`std::io::Write`] trait for `io::Sender`, to allow logging
-/// and use of protobuf serialization methods.
-impl std::io::Write for Sender {
-    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        crate::channel_write(self.handle, buf, &[])
-            .map(|_| buf.len()) // We replace `()` with the length of the written buffer, if successful.
-            .map_err(super::error_from_nonok_status)
-    }
-    fn flush(&mut self) -> std::io::Result<()> {
         Ok(())
     }
 }

@@ -23,13 +23,17 @@ use serde::{Deserialize, Serialize};
 ///
 /// For use when the underlying [`Handle`] is known to be for a receive half.
 #[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Receiver {
+pub struct Receiver<T: Decodable> {
     pub handle: ReadHandle,
+    phantom: std::marker::PhantomData<T>,
 }
 
-impl Receiver {
+impl<T: Decodable> Receiver<T> {
     pub fn new(handle: ReadHandle) -> Self {
-        Receiver { handle }
+        Receiver {
+            handle,
+            phantom: std::marker::PhantomData,
+        }
     }
 
     /// Close the underlying channel used by this receiver.
@@ -42,10 +46,7 @@ impl Receiver {
     ///
     /// See https://doc.rust-lang.org/std/sync/mpsc/struct.Receiver.html#method.recv
     #[allow(clippy::trivially_copy_pass_by_ref)]
-    pub fn receive<T>(&self) -> Result<T, OakError>
-    where
-        T: Decodable,
-    {
+    pub fn receive(&self) -> Result<T, OakError> {
         self.wait()?;
         self.try_receive()
     }
@@ -54,10 +55,7 @@ impl Receiver {
     ///
     /// See https://doc.rust-lang.org/std/sync/mpsc/struct.Receiver.html#method.try_recv
     #[allow(clippy::trivially_copy_pass_by_ref)]
-    pub fn try_receive<T>(&self) -> Result<T, OakError>
-    where
-        T: Decodable,
-    {
+    pub fn try_receive(&self) -> Result<T, OakError> {
         let mut bytes = Vec::with_capacity(1024);
         let mut handles = Vec::with_capacity(16);
         crate::channel_read(self.handle, &mut bytes, &mut handles)?;

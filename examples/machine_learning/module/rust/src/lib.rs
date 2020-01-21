@@ -17,6 +17,7 @@
 // This model was inspired by
 // https://github.com/AtheMathmo/rusty-machine/blob/master/examples/naive_bayes_dogs.rs .
 
+use log::{error, info, warn};
 use oak::grpc;
 use oak::grpc::OakNode;
 use oak_derive::OakExports;
@@ -28,7 +29,6 @@ use rand_distr::Standard;
 use rusty_machine::learning::naive_bayes::{self, NaiveBayes};
 use rusty_machine::learning::SupModel;
 use rusty_machine::linalg::{BaseMatrix, Matrix};
-use std::io::Write;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Type {
@@ -79,14 +79,13 @@ impl Distribution<Animal> for Standard {
 
 // FIXME: move data generation to client once we can write clients in Rust.
 fn generate_animal_data(
-    logging_channel: &mut dyn Write,
     training_set_size: usize,
     test_set_size: usize,
 ) -> (Matrix<f64>, Matrix<f64>, Matrix<f64>, Vec<Animal>) {
-    writeln!(logging_channel, "rnd xxx").unwrap();
+    info!("rnd xxx");
     //let mut rng = rand::thread_rng();
     let mut rng = rand::rngs::StdRng::seed_from_u64(123);
-    writeln!(logging_channel, "rnd OK").unwrap();
+    info!("rnd OK");
 
     // We'll train the model on these dogs
     let training_animals = (0..training_set_size)
@@ -150,7 +149,6 @@ struct Config {
 
 #[derive(OakExports)]
 struct Node {
-    logging_channel: std::io::LineWriter<oak::io::Sender>,
     training_set_size: usize,
     test_set_size: usize,
     config: Option<Config>,
@@ -159,13 +157,8 @@ struct Node {
 
 impl oak::grpc::OakNode for Node {
     fn new() -> Self {
-        // Create a channel and pass the read half to a fresh logging Node.
-        let (write_handle, read_handle) = oak::channel_create().unwrap();
-        oak::node_create("log", read_handle).expect("could not create node");
-        oak::channel_close(read_handle.handle).expect("could not close channel");
-        let raw_logging = oak::io::Sender::new(write_handle);
+        oak_log::init_default();
         Node {
-            logging_channel: std::io::LineWriter::new(raw_logging),
             training_set_size: 1000,
             test_set_size: 1000,
             config: None,
@@ -175,15 +168,11 @@ impl oak::grpc::OakNode for Node {
     fn invoke(&mut self, method: &str, _req: &[u8], mut writer: grpc::ChannelResponseWriter) {
         match method {
             "/oak.examples.machine_learning.MachineLearning/Data" => {
-                writeln!(self.logging_channel, "Data").unwrap();
+                info!("Data");
                 //(self.training_set_size, self.test_set_size) = (1000, 1000);
                 // Generate all of our train and test data
                 let (training_matrix, target_matrix, test_matrix, test_animals) =
-                    generate_animal_data(
-                        &mut self.logging_channel,
-                        self.training_set_size,
-                        self.test_set_size,
-                    );
+                    generate_animal_data(self.training_set_size, self.test_set_size);
                 self.config = Some(Config {
                     training_matrix,
                     target_matrix,
@@ -192,7 +181,7 @@ impl oak::grpc::OakNode for Node {
                 });
             }
             "/oak.examples.machine_learning.MachineLearning/Learn" => {
-                writeln!(self.logging_channel, "Training model").unwrap();
+                info!("Training model");
                 //self.model = NaiveBayes::<naive_bayes::Gaussian>::new();
                 match self.config {
                     Some(ref c) => self
@@ -200,12 +189,12 @@ impl oak::grpc::OakNode for Node {
                         .train(&c.training_matrix, &c.target_matrix)
                         .expect("failed to train model of dogs"),
                     None => {
-                        writeln!(self.logging_channel, "config not set").unwrap();
+                        warn!("config not set");
                     }
                 }
             }
             "/oak.examples.machine_learning.MachineLearning/Predict" => {
-                writeln!(self.logging_channel, "Predicting").unwrap();
+                info!("Predicting");
                 let mut predictions = None;
                 match self.config {
                     Some(ref c) => {
@@ -216,7 +205,7 @@ impl oak::grpc::OakNode for Node {
                         )
                     }
                     None => {
-                        writeln!(self.logging_channel, "config not set").unwrap();
+                        warn!("config not set");
                     }
                 }
                 // Score how well we did.
@@ -236,13 +225,13 @@ impl oak::grpc::OakNode for Node {
                         }
                     }
                     None => {
-                        writeln!(self.logging_channel, "test_animals not set").unwrap();
+                        warn!("test_animals not set");
                         return;
                     }
                 }
 
                 if unprinted_total > 0 {
-                    writeln!(self.logging_channel, "...").unwrap();
+                    info!("...");
                 }
 
                 if let Some(ref c) = self.config {
@@ -255,26 +244,22 @@ impl oak::grpc::OakNode for Node {
                         {
                             let (actual_type, accurate) =
                                 evaluate_prediction(&mut hits, animal, prediction);
-                            writeln!(
-                                self.logging_channel,
+                            info!(
                                 "Predicted: {:?}; Actual: {:?}; Accurate? {:?}",
                                 animal.type_, actual_type, accurate
-                            )
-                            .unwrap();
+                            );
                         }
                     }
                 }
-                writeln!(
-                    self.logging_channel,
+                info!(
                     "Accuracy: {}/{} = {:.1}%",
                     hits,
                     self.test_set_size,
                     (f64::from(hits)) / (f64::from(self.test_set_size as u32)) * 100.
-                )
-                .unwrap();
+                );
             }
             _ => {
-                writeln!(self.logging_channel, "unknown method name: {}", method).unwrap();
+                error!("unknown method name: {}", method);
                 panic!("unknown method name");
             }
         }
