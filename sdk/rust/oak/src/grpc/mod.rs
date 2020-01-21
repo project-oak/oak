@@ -124,9 +124,9 @@ impl ChannelResponseWriter {
 
 /// Trait for Oak Nodes that act as a gRPC services.
 ///
-/// An `OakNode` instance is normally passed to [`event_loop`], to allow
+/// An `OakGrpcServerNode` instance is normally passed to [`event_loop`], to allow
 /// repeated invocation of its `invoke()` method.
-pub trait OakNode {
+pub trait OakGrpcServerNode {
     /// Construct the (single) instance of the node.
     ///
     /// This method may choose to initialize logging by invoking
@@ -152,9 +152,9 @@ pub trait OakNode {
 /// giving the [`invoke`] method the outbound channel for encapsulated responses
 /// to be written to.
 ///
-/// [`invoke`]: OakNode::invoke
+/// [`invoke`]: OakGrpcServerNode::invoke
 /// [`GrpcRequest`]: crate::proto::grpc_encap::GrpcRequest
-pub fn event_loop<T: OakNode>(
+pub fn event_loop<T: OakGrpcServerNode>(
     mut node: T,
     grpc_in_handle: ReadHandle,
 ) -> std::result::Result<(), crate::OakStatus> {

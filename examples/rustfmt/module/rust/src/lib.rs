@@ -17,16 +17,16 @@
 mod proto;
 
 use oak::grpc;
-use oak::grpc::OakNode;
-use oak_derive::OakExports;
+use oak::grpc::OakGrpcServerNode;
+use oak_derive::OakGrpcEntrypoint;
 use proto::rustfmt::{FormatRequest, FormatResponse};
 use proto::rustfmt_grpc::{dispatch, FormatServiceNode};
 use protobuf::ProtobufEnum;
 
-#[derive(OakExports)]
+#[derive(OakGrpcEntrypoint)]
 struct Node;
 
-impl oak::grpc::OakNode for Node {
+impl OakGrpcServerNode for Node {
     fn new() -> Self {
         oak_log::init_default();
         Node

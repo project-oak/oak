@@ -20,13 +20,13 @@ mod tests;
 
 use log::{info, warn};
 use oak::grpc;
-use oak::grpc::OakNode;
-use oak_derive::OakExports;
+use oak::grpc::OakGrpcServerNode;
+use oak_derive::OakGrpcEntrypoint;
 use proto::hello_world::{HelloRequest, HelloResponse};
 use proto::hello_world_grpc::{dispatch, HelloWorldNode};
 use protobuf::ProtobufEnum;
 
-#[derive(OakExports)]
+#[derive(OakGrpcEntrypoint)]
 struct Node {
     storage: Option<oak::storage::Storage>,
 }
@@ -43,7 +43,7 @@ fn init_logging() {
     oak_log::init_default();
 }
 
-impl OakNode for Node {
+impl OakGrpcServerNode for Node {
     fn new() -> Self {
         init_logging();
         Node {

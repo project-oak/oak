@@ -70,12 +70,12 @@ world over gRPC, via the implicit [gRPC pseudo-Node](concepts.md#pseudo-nodes)
 that has a channel to the Application's initial Node.
 
 An Oak Node that interacts with gRPC typically implements the
-[`oak::grpc::OakNode`](https://project-oak.github.io/oak/sdk/oak/grpc/trait.OakNode.html)
+[`oak::grpc::OakGrpcServerNode`](https://project-oak.github.io/oak/sdk/oak/grpc/trait.OakGrpcServerNode.html)
 trait together with the
 [`oak::grpc::event_loop()`](https://project-oak.github.io/oak/sdk/oak/grpc/fn.event_loop.html)
 function; the latter services gRPC requests in a loop, invoking the former
 trait's
-[`invoke()`](https://project-oak.github.io/oak/sdk/oak/grpc/trait.OakNode.html#tymethod.invoke)
+[`invoke()`](https://project-oak.github.io/oak/sdk/oak/grpc/trait.OakGrpcServerNode.html#tymethod.invoke)
 method for each request.
 
 ### `oak::storage` Module
@@ -101,7 +101,8 @@ freshly-created logging pseudo-Node as the underlying logging mechanism.
 
 The [`oak_derive`](https://project-oak.github.io/oak/sdk/oak_derive/index.html)
 crate provides the
-[`OakExports`](https://project-oak.github.io/oak/sdk/oak_derive/index.html)
+[`OakGrpcEntrypoint`](https://project-oak.github.io/oak/sdk/oak_derive/index.html)
 [derive macro](https://doc.rust-lang.org/reference/procedural-macros.html#derive-macros).
-This macro annotates a `struct` that implements the `oak::grpc::OakNode` trait,
-so that it serves as the Node's overall main entrypoint, with name `oak_main`.
+This macro annotates a `struct` that implements the
+`oak::grpc::OakGrpcServerNode` trait, so that it serves as the Node's overall
+main entrypoint, with name `oak_main`.

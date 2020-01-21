@@ -20,7 +20,7 @@ use abitest_common::{InternalMessage, LOG_CONFIG_NAME};
 use byteorder::WriteBytesExt;
 use expect::{expect, expect_eq};
 use log::info;
-use oak::grpc::OakNode;
+use oak::grpc::OakGrpcServerNode;
 use oak::{grpc, ChannelReadStatus, OakStatus};
 use proto::abitest::{ABITestRequest, ABITestResponse, ABITestResponse_TestResult};
 use proto::abitest_grpc::{dispatch, OakABITestServiceNode};
@@ -56,7 +56,7 @@ pub fn main(handle: u64) -> Result<(), oak::OakStatus> {
     )
 }
 
-impl oak::grpc::OakNode for FrontendNode {
+impl OakGrpcServerNode for FrontendNode {
     fn new() -> Self {
         // Carry on even if the the Oak logging infrastructure is unavailable.
         let _ = oak_log::init(log::Level::Debug, LOG_CONFIG_NAME);

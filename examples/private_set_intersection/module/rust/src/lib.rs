@@ -28,20 +28,20 @@
 mod proto;
 
 use oak::grpc;
-use oak::grpc::OakNode;
-use oak_derive::OakExports;
+use oak::grpc::OakGrpcServerNode;
+use oak_derive::OakGrpcEntrypoint;
 use proto::private_set_intersection::{GetIntersectionResponse, SubmitSetRequest};
 use proto::private_set_intersection_grpc::{dispatch, PrivateSetIntersectionNode};
 use protobuf::well_known_types::Empty;
 use protobuf::ProtobufEnum;
 use std::collections::HashSet;
 
-#[derive(Default, OakExports)]
+#[derive(Default, OakGrpcEntrypoint)]
 struct Node {
     values: Option<HashSet<String>>,
 }
 
-impl oak::grpc::OakNode for Node {
+impl OakGrpcServerNode for Node {
     fn new() -> Self {
         Node::default()
     }

@@ -25,20 +25,20 @@
 mod proto;
 
 use oak::grpc;
-use oak::grpc::OakNode;
-use oak_derive::OakExports;
+use oak::grpc::OakGrpcServerNode;
+use oak_derive::OakGrpcEntrypoint;
 use proto::running_average::{GetAverageResponse, SubmitSampleRequest};
 use proto::running_average_grpc::{dispatch, RunningAverageNode};
 use protobuf::well_known_types::Empty;
 use protobuf::ProtobufEnum;
 
-#[derive(Default, OakExports)]
+#[derive(Default, OakGrpcEntrypoint)]
 struct Node {
     sum: u64,
     count: u64,
 }
 
-impl oak::grpc::OakNode for Node {
+impl OakGrpcServerNode for Node {
     fn new() -> Self {
         Node::default()
     }

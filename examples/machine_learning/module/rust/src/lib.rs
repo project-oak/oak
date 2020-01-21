@@ -19,8 +19,8 @@
 
 use log::{error, info, warn};
 use oak::grpc;
-use oak::grpc::OakNode;
-use oak_derive::OakExports;
+use oak::grpc::OakGrpcServerNode;
+use oak_derive::OakGrpcEntrypoint;
 use protobuf::ProtobufEnum;
 use rand::prelude::*;
 use rand_distr::Distribution;
@@ -147,7 +147,7 @@ struct Config {
     test_animals: Vec<Animal>,
 }
 
-#[derive(OakExports)]
+#[derive(OakGrpcEntrypoint)]
 struct Node {
     training_set_size: usize,
     test_set_size: usize,
@@ -155,7 +155,7 @@ struct Node {
     model: NaiveBayes<naive_bayes::Gaussian>,
 }
 
-impl oak::grpc::OakNode for Node {
+impl OakGrpcServerNode for Node {
     fn new() -> Self {
         oak_log::init_default();
         Node {

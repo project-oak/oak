@@ -33,13 +33,13 @@ use quote::quote;
 /// ```rust
 /// extern crate oak;
 /// extern crate protobuf;
-/// use oak::grpc::OakNode;
+/// use oak::grpc::OakGrpcServerNode;
 /// use protobuf::ProtobufEnum;
 ///
-/// #[derive(oak_derive::OakExports)]
+/// #[derive(oak_derive::OakGrpcEntrypoint)]
 /// struct Node;
 ///
-/// impl OakNode for Node {
+/// impl OakGrpcServerNode for Node {
 ///     fn new() -> Self {
 ///         Node
 ///     }
@@ -48,13 +48,13 @@ use quote::quote;
 ///     }
 /// }
 /// ```
-#[proc_macro_derive(OakExports)]
-pub fn derive_oak_exports(input: TokenStream) -> TokenStream {
+#[proc_macro_derive(OakGrpcEntrypoint)]
+pub fn derive_oak_grpc_entrypoint(input: TokenStream) -> TokenStream {
     let input = syn::parse_macro_input!(input as syn::DeriveInput);
     let name = input.ident;
     match input.data {
         syn::Data::Struct(_) => (),
-        _ => panic!("#[derive(OakExports)] is only defined for structs"),
+        _ => panic!("#[derive(OakGrpcEntrypoint)] is only defined for structs"),
     };
 
     let expanded = quote! {

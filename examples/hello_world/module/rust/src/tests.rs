@@ -18,7 +18,7 @@ use crate::proto::hello_world::{HelloRequest, HelloResponse};
 use crate::proto::hello_world_grpc::HelloWorldNode;
 use assert_matches::assert_matches;
 use oak::grpc;
-use oak::grpc::OakNode;
+use oak::grpc::OakGrpcServerNode;
 use oak::OakStatus;
 use serial_test_derive::serial;
 

@@ -21,8 +21,8 @@ use chat_common::proto::chat::{
 use chat_common::proto::chat_grpc::{dispatch, ChatNode};
 use log::info;
 use oak::grpc;
-use oak::grpc::OakNode;
-use oak_derive::OakExports;
+use oak::grpc::OakGrpcServerNode;
+use oak_derive::OakGrpcEntrypoint;
 use protobuf::well_known_types::Empty;
 use protobuf::{Message, ProtobufEnum};
 use std::collections::hash_map::Entry;
@@ -31,7 +31,7 @@ use std::collections::HashMap;
 type RoomId = Vec<u8>;
 type AdminToken = Vec<u8>;
 
-#[derive(OakExports, Default)]
+#[derive(OakGrpcEntrypoint, Default)]
 struct Node {
     rooms: HashMap<RoomId, Room>,
 }
@@ -53,7 +53,7 @@ impl Room {
     }
 }
 
-impl OakNode for Node {
+impl OakGrpcServerNode for Node {
     fn new() -> Self {
         oak_log::init_default();
         Node::default()

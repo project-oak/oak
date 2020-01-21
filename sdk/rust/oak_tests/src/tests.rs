@@ -14,13 +14,14 @@
 // limitations under the License.
 //
 
-use oak::grpc::OakNode;
+use oak::grpc::OakGrpcServerNode;
+use oak_derive::OakGrpcEntrypoint;
 use protobuf::{Message, ProtobufEnum};
 
-#[derive(oak_derive::OakExports)]
+#[derive(OakGrpcEntrypoint)]
 struct PanicNode;
 
-impl oak::grpc::OakNode for PanicNode {
+impl OakGrpcServerNode for PanicNode {
     fn new() -> Self {
         PanicNode
     }
