@@ -23,10 +23,27 @@
 mod tests;
 
 use log::{Level, Log, Metadata, Record, SetLoggerError};
-use std::io::Write;
 
 struct OakChannelLogger {
-    channel: oak::io::Sender,
+    channel: oak::io::Sender<LogEntry>,
+}
+
+/// An object representing a log entry. Currently just a wrapper around a string, but it may be
+/// extended in the future with additional fields, e.g. level or file / line information, though
+/// that would probably require defining a cross-language schema such as protobuf or FIDL for it,
+/// rather than just a Rust struct.
+struct LogEntry {
+    message: String,
+}
+
+/// Trivial implementation of [`oak::io::Encodable`], just converting the log entry message to bytes
+/// and no handles.
+impl oak::io::Encodable for LogEntry {
+    fn encode(&self) -> Result<oak::io::Message, oak::OakError> {
+        let bytes = self.message.as_bytes().into();
+        let handles = vec![];
+        Ok(oak::io::Message { bytes, handles })
+    }
 }
 
 impl Log for OakChannelLogger {
@@ -37,17 +54,19 @@ impl Log for OakChannelLogger {
         if !self.enabled(record.metadata()) {
             return;
         }
-        // Only flush logging channel on newlines.
-        let mut channel = std::io::LineWriter::new(self.channel);
-        writeln!(
-            &mut channel,
-            "{}  {} : {} : {}",
-            record.level(),
-            record.file().unwrap_or_default(),
-            record.line().unwrap_or_default(),
-            record.args()
-        )
-        .unwrap();
+        let log_entry = LogEntry {
+            // We add a newline to the message to force flushing when printed by the host.
+            message: format!(
+                "{}  {} : {} : {}\n",
+                record.level(),
+                record.file().unwrap_or_default(),
+                record.line().unwrap_or_default(),
+                record.args()
+            ),
+        };
+        self.channel
+            .send(&log_entry)
+            .expect("could not send log message over log channel");
     }
     fn flush(&self) {}
 }

@@ -37,7 +37,7 @@ struct Node {
 }
 
 struct Room {
-    sender: oak::io::Sender,
+    sender: oak::io::Sender<Command>,
     admin_token: AdminToken,
 }
 
@@ -121,7 +121,7 @@ impl ChatNode for Node {
                 info!("new subscription to room {:?}", req.room_id);
                 let command = Command::Join(writer.handle());
                 room.sender
-                    .send(command)
+                    .send(&command)
                     .expect("could not send command to room Node");
             }
         };
@@ -139,7 +139,7 @@ impl ChatNode for Node {
                     .expect("could not convert message to bytes");
                 let command = Command::SendMessage(message_bytes);
                 room.sender
-                    .send(command)
+                    .send(&command)
                     .expect("could not send command to room Node");
                 Ok(Empty::new())
             }

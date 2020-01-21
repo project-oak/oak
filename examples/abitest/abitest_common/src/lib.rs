@@ -21,5 +21,15 @@ pub struct InternalMessage {
     pub msg: String,
 }
 
+impl oak::io::Encodable for InternalMessage {
+    fn encode(&self) -> Result<oak::io::Message, oak::OakError> {
+        let bytes = serde_json::to_string(&self)
+            .expect("could not serialize message to JSON")
+            .into_bytes();
+        let handles = Vec::new();
+        Ok(oak::io::Message { bytes, handles })
+    }
+}
+
 // Expected name for log node config.
 pub const LOG_CONFIG_NAME: &str = "logging-config";

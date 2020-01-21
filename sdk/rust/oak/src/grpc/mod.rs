@@ -36,7 +36,15 @@ pub fn build_status(code: Code, msg: &str) -> proto::status::Status {
 /// `GrpcResponse` wrapper messages and writes serialized versions to a send
 ///  channel.
 pub struct ChannelResponseWriter {
-    channel: crate::io::Sender,
+    channel: crate::io::Sender<proto::grpc_encap::GrpcResponse>,
+}
+
+impl crate::io::Encodable for proto::grpc_encap::GrpcResponse {
+    fn encode(&self) -> std::result::Result<crate::io::Message, crate::OakError> {
+        let bytes = self.write_to_bytes()?;
+        let handles = Vec::new();
+        Ok(crate::io::Message { bytes, handles })
+    }
 }
 
 /// Indicate whether a write method should leave the current gRPC method
@@ -76,7 +84,7 @@ impl ChannelResponseWriter {
             WriteMode::KeepOpen => false,
             WriteMode::Close => true,
         });
-        grpc_rsp.write_to_writer(&mut self.channel)?;
+        self.channel.send(&grpc_rsp)?;
         if mode == WriteMode::Close {
             self.channel.close()?;
         }
@@ -92,7 +100,7 @@ impl ChannelResponseWriter {
             WriteMode::KeepOpen => false,
             WriteMode::Close => true,
         });
-        grpc_rsp.write_to_writer(&mut self.channel)?;
+        self.channel.send(&grpc_rsp)?;
         if mode == WriteMode::Close {
             self.channel.close()?;
         }
@@ -108,7 +116,7 @@ impl ChannelResponseWriter {
         if let Err(status) = result {
             grpc_rsp.set_status(status);
         }
-        grpc_rsp.write_to_writer(&mut self.channel)?;
+        self.channel.send(&grpc_rsp)?;
         self.channel.close()?;
         Ok(())
     }
