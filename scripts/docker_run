@@ -32,7 +32,6 @@ docker_run_flags=(
   '--rm'
   "--user=$DOCKER_UID:$DOCKER_GID"
   "--env=USER=$DOCKER_USER"
-  "--env=HOME=/tmp"
   '--env=BAZEL_REMOTE_CACHE_ENABLED'
   '--env=BAZEL_GOOGLE_CREDENTIALS'
   "--volume=$PWD/bazel-cache:/.cache/bazel"
