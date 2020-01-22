@@ -40,8 +40,9 @@ find scripts -type f -exec shellcheck {} +
 
 # Fortunately, rustfmt has the --check option that will make it exit with 1
 # if formatting has to be applied.
-cargo fmt --all --manifest-path examples/Cargo.toml -- --check
-cargo fmt --all --manifest-path sdk/rust/Cargo.toml -- --check
+cargo fmt --all --manifest-path ./examples/Cargo.toml -- --check
+cargo fmt --all --manifest-path ./sdk/rust/Cargo.toml -- --check
+cargo fmt --all --manifest-path ./oak/server/rust/Cargo.toml -- --check
 
 find . \
   \(  \
@@ -60,4 +61,3 @@ done
 
 # Check syntax in XML files.
 # TODO: Implement with `xmllint --noout your_test_file.xml`.
-

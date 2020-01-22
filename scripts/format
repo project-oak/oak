@@ -29,8 +29,9 @@ find . \
     \( -type f -name '*.h' -or -name '*.cc' -or -name '*.proto' \) \
   \) -exec clang-format -i -style=file {} +
 
-cargo fmt --all --manifest-path examples/Cargo.toml
-cargo fmt --all --manifest-path sdk/rust/Cargo.toml
+cargo fmt --all --manifest-path ./examples/Cargo.toml
+cargo fmt --all --manifest-path ./sdk/rust/Cargo.toml
+cargo fmt --all --manifest-path ./oak/server/rust/Cargo.toml
 
 find . \
   \(  \

@@ -19,6 +19,10 @@ cargo test --all-targets --manifest-path=./examples/Cargo.toml
 cargo test --doc --manifest-path=./examples/Cargo.toml
 cargo clippy --all-targets --manifest-path=./examples/Cargo.toml -- --deny=warnings
 
+cargo test --all-targets --manifest-path=./oak/server/rust/Cargo.toml
+cargo test --doc --manifest-path=./oak/server/rust/Cargo.toml
+cargo clippy --all-targets --manifest-path=./oak/server/rust/Cargo.toml -- --deny=warnings
+
 bazel_build_flags+=(
   '--keep_going'
 )

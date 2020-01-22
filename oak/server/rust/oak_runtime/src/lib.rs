@@ -300,14 +300,20 @@ impl OakRuntime {
         Some((node_name, entrypoint, handle))
     }
     // Record that a Node of the given name has been started in a distinct thread.
-    pub fn node_started(&mut self, node_name: &str, join_handle: std::thread::JoinHandle<Result<(), oak::OakStatus>>) {
+    pub fn node_started(
+        &mut self,
+        node_name: &str,
+        join_handle: std::thread::JoinHandle<Result<(), oak::OakStatus>>,
+    ) {
         self.nodes
             .get_mut(node_name)
             .unwrap_or_else(|| panic!("node {{{}}} not found", node_name))
             .thread_handle
             .replace(join_handle);
     }
-    pub fn stop_next(&mut self) -> Option<(String, std::thread::JoinHandle<Result<(), oak::OakStatus>>)> {
+    pub fn stop_next(
+        &mut self,
+    ) -> Option<(String, std::thread::JoinHandle<Result<(), oak::OakStatus>>)> {
         for (name, node) in &mut self.nodes {
             if let Some(h) = node.thread_handle.take() {
                 return Some((name.to_string(), h));
