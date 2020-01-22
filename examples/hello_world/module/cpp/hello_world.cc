@@ -48,9 +48,6 @@ uint32_t channel_write(uint64_t handle, uint8_t* buff, size_t usize, uint8_t* ha
 WASM_IMPORT("oak") uint32_t channel_close(uint64_t handle);
 
 WASM_EXPORT void oak_main(uint64_t grpc_in_handle) {
-  uint8_t buf[256];
-  uint32_t actual_size;
-  uint32_t handle_count;
   // TODO: Add C++ helpers for dealing with handle notification space.
   uint8_t handle_space[9] = {
       static_cast<uint8_t>(grpc_in_handle & 0xff),
@@ -70,10 +67,24 @@ WASM_EXPORT void oak_main(uint64_t grpc_in_handle) {
       return;
     }
 
-    uint64_t rsp_handle;
-    channel_read(grpc_in_handle, buf, sizeof(buf), &actual_size, &rsp_handle, 1, &handle_count);
+    // Reading from main channel should give no data and a (read, write) pair of handles.
+    uint32_t actual_size;
+    uint32_t handle_count;
+    uint64_t handles[2];
+    channel_read(grpc_in_handle, nullptr, 0, &actual_size, handles, 2, &handle_count);
+    if ((actual_size != 0) || (handle_count != 2)) {
+      return;
+    }
+    uint64_t req_handle = handles[0];
+    uint64_t rsp_handle = handles[1];
 
-    // Encapsulated GrpcResponse protobuf.
+    // Read an incoming request from the read handle, expecting data but no handles.
+    // (However, ignore its contents for now).
+    uint8_t buf[256];
+    channel_read(req_handle, buf, sizeof(buf), &actual_size, nullptr, 0, &handle_count);
+    channel_close(req_handle);
+
+    // Manually create an encapsulated GrpcResponse protobuf and send it back.
     //    0a                 b00001.010 = tag 1 (GrpcResponse.rsp_msg), length-delimited field
     //    0b                 length=11
     //      12                 b00010.010 = tag 2 (Any.value), length-delimited field

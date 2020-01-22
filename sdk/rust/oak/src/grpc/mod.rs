@@ -18,7 +18,7 @@
 
 pub use crate::proto::code::Code;
 use crate::{proto, Handle, OakError, OakStatus, ReadHandle, WriteHandle};
-use log::info;
+use log::{error, info};
 use protobuf::{Message, ProtobufEnum};
 
 /// Result type that uses a [`proto::status::Status`] type for error values.
@@ -166,22 +166,34 @@ pub fn event_loop<T: OakNode>(
     let mut space = crate::new_handle_space(&read_handles);
 
     loop {
-        // Block until there is a message to read on an input channel.
+        // Block until there is a method notification message to read on an
+        // input channel.
         crate::prep_handle_space(&mut space);
         // TODO: Use higher-level wait function from SDK instead of the ABI one.
         let status =
             unsafe { oak_abi::wait_on_channels(space.as_mut_ptr(), read_handles.len() as u32) };
         crate::result_from_status(status as i32, ())?;
 
-        let mut buf = Vec::<u8>::with_capacity(1024);
-        let mut handles = Vec::<Handle>::with_capacity(1);
+        let mut buf = Vec::<u8>::new();
+        let mut handles = Vec::<Handle>::with_capacity(2);
         crate::channel_read(grpc_in_handle, &mut buf, &mut handles)?;
-        if buf.is_empty() {
-            panic!("no bytes received")
+        if !buf.is_empty() {
+            error!("unexpected data received in gRPC notification message")
         }
-        if handles.is_empty() {
-            panic!("no response handle received alongside gRPC request")
+        if handles.len() != 2 {
+            panic!(
+                "unexpected number of handles {} received alongside gRPC request",
+                handles.len()
+            )
         }
+        let req_handle = ReadHandle { handle: handles[0] };
+        let rsp_handle = WriteHandle { handle: handles[1] };
+
+        // Read a single encapsulated request message from the read half.
+        let mut buf = Vec::<u8>::with_capacity(1024);
+        let mut handles = Vec::<Handle>::new();
+        crate::channel_read(req_handle, &mut buf, &mut handles)?;
+        let _ = crate::channel_close(req_handle.handle);
         let req: proto::grpc_encap::GrpcRequest =
             protobuf::parse_from_bytes(&buf).expect("failed to parse GrpcRequest message");
         if !req.last {
@@ -190,7 +202,7 @@ pub fn event_loop<T: OakNode>(
         node.invoke(
             &req.method_name,
             req.get_req_msg().value.as_slice(),
-            ChannelResponseWriter::new(WriteHandle { handle: handles[0] }),
+            ChannelResponseWriter::new(rsp_handle),
         );
     }
 }

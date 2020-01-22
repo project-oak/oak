@@ -90,8 +90,7 @@ void ModuleInvocation::ProcessRequest(bool ok) {
               << value << "]";
   }
 
-  // Build an encapsulation of the gRPC request invocation and write its serialized
-  // form to the gRPC input channel.
+  // Build an encapsulation of the gRPC request invocation and put it in a Message.
   oak::GrpcRequest grpc_request;
   grpc_request.set_method_name(context_.method());
   google::protobuf::Any* any = new google::protobuf::Any();
@@ -127,19 +126,31 @@ void ModuleInvocation::ProcessRequest(bool ok) {
     }
   }
 
-  // Create a channel for responses to this particular method invocation, and
-  // attach the write half to the message.
-  MessageChannel::ChannelHalves halves = MessageChannel::Create();
-  rsp_half_ = std::move(halves.read);
-  auto bare_half = absl::make_unique<ChannelHalf>(std::move(halves.write));
-  req_msg->channels.push_back(std::move(bare_half));
+  // Create a pair of channels for communication corresponding to this
+  // particular method invocation, one for sending in requests, and one for
+  // receiving responses.
+  MessageChannel::ChannelHalves req_halves = MessageChannel::Create();
+  req_half_ = std::move(req_halves.write);
+  MessageChannel::ChannelHalves rsp_halves = MessageChannel::Create();
+  rsp_half_ = std::move(rsp_halves.read);
 
-  // Write data to the gRPC input channel, which the runtime connected to the
-  // Node.
-  MessageChannelWriteHalf* req_half = grpc_node_->BorrowWriteChannel();
-  req_half->Write(std::move(req_msg));
+  // Build a notification message that just holds references to these two
+  // newly-created channels.
+  std::unique_ptr<Message> notify_msg = absl::make_unique<Message>();
+  notify_msg->channels.push_back(absl::make_unique<ChannelHalf>(std::move(req_halves.read)));
+  notify_msg->channels.push_back(absl::make_unique<ChannelHalf>(std::move(rsp_halves.write)));
+
+  // Write the request message to the just-created request channel.
+  req_half_->Write(std::move(req_msg));
   LOG(INFO) << "invocation#" << stream_id_
-            << " ProcessRequest: Wrote encapsulated request to gRPC input channel";
+            << " ProcessRequest: Wrote encapsulated request to new gRPC request channel";
+
+  // Write the notification message to the gRPC input channel, which the runtime
+  // connected to the Node.
+  MessageChannelWriteHalf* notify_half = grpc_node_->BorrowWriteChannel();
+  notify_half->Write(std::move(notify_msg));
+  LOG(INFO) << "invocation#" << stream_id_
+            << " ProcessRequest: Wrote notification request to gRPC input channel";
 
   // Move straight onto sending first response.
   SendResponse(true);
@@ -219,7 +230,7 @@ void ModuleInvocation::CleanUp(bool /*ok*/) {
 void ModuleInvocation::FinishAndCleanUp(const grpc::Status& status) {
   // Finish the current invocation (which triggers self-destruction).
   LOG(INFO) << "invocation#" << stream_id_
-            << "  FinishAndCleanUp: request stream->Finish => CleanUp";
+            << " FinishAndCleanUp: request stream->Finish => CleanUp";
   auto callback = new std::function<void(bool)>(
       std::bind(&ModuleInvocation::CleanUp, this, std::placeholders::_1));
   stream_.Finish(status, callback);

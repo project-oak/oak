@@ -75,6 +75,9 @@ class ModuleInvocation {
   // Borrowed references to gRPC Node that this invocation is on behalf of.
   OakGrpcNode* grpc_node_;
 
+  // Channel references for the two channels that are used for communication
+  // related to this method invocation.
+  std::unique_ptr<MessageChannelWriteHalf> req_half_;
   std::unique_ptr<MessageChannelReadHalf> rsp_half_;
 
   grpc::GenericServerContext context_;
