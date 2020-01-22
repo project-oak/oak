@@ -18,7 +18,6 @@
 #include <stdint.h>
 
 #include "oak/module/defines.h"  // for imports and exports
-#include "oak/module/placeholders.h"
 #include "tensorflow/lite/micro/kernels/all_ops_resolver.h"
 #include "tensorflow/lite/micro/micro_interpreter.h"
 
@@ -41,7 +40,7 @@ enum OakStatus {
 // Constants were taken from the TFLite exapmles:
 // https://github.com/tensorflow/tensorflow/blob/11bed638b14898cdde967f6b108e45732aa4798a/tensorflow/lite/micro/examples/network_tester/network_tester_test.cc#L25
 // https://github.com/tensorflow/tensorflow/blob/11bed638b14898cdde967f6b108e45732aa4798a/tensorflow/lite/micro/examples/network_tester/network_model.h#L16-L64
-const uint16_t kTensorArenaSize 1024;
+const uint16_t kTensorArenaSize = 1024;
 
 const unsigned char kModelBuffer[] = {
     0x18, 0x00, 0x00, 0x00, 0x54, 0x46, 0x4c, 0x33, 0x00, 0x00, 0x0e, 0x00,
@@ -106,7 +105,7 @@ std::string init_tensorflow() {
   // https://www.tensorflow.org/lite/microcontrollers#limitations
   uint8_t tensor_arena[kTensorArenaSize];
   tflite::MicroInterpreter interpreter(model, resolver, tensor_arena,
-                                       kTensorArenaSize, error_reporter);
+                                       kTensorArenaSize, nullptr);
   interpreter.AllocateTensors();
 
   TfLiteTensor* input = interpreter.input(0);
