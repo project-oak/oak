@@ -540,7 +540,10 @@ function:
 ```Rust
 #[no_mangle]
 pub extern "C" fn frontend_oak_main(handle: u64) {
-    let _ = std::panic::catch_unwind(|| main(handle));
+    let _ = std::panic::catch_unwind(|| {
+        oak::set_panic_hook();
+        main(handle)
+    });
 }
 
 pub fn main(handle: u64) {
