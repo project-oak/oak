@@ -90,9 +90,9 @@ RUN rm ${GOLANG_TEMP}
 RUN ${GOROOT}/bin/go get github.com/campoy/embedmd
 
 # Install Emscripten.
-ARG EMSCRIPTEN_VERSION=1.39.5
-ARG EMSCRIPTEN_COMMIT=369013943283939412fb2807bb0d2ded8ebd5a9e
-ARG EMSCRIPTEN_SHA256=0d192691e3186cf14833ab861a19262996a6bf69b62cb205d8662068d57f68ab
+ARG EMSCRIPTEN_VERSION=1.39.6
+ARG EMSCRIPTEN_COMMIT=6bfbe2a7da68e650054af2d272d2b79307a6ad72
+ARG EMSCRIPTEN_SHA256=aa4c3b8f23fd26363f98207674bffcc138105c621c6c8bf12175f6aab1231357
 ARG EMSCRIPTEN_DIR=/usr/local/emsdk
 ARG EMSCRIPTEN_TEMP=/tmp/emscripten.zip
 RUN mkdir --parents ${EMSCRIPTEN_DIR}
@@ -102,7 +102,9 @@ RUN tar --extract --gzip --file=${EMSCRIPTEN_TEMP} --directory=${EMSCRIPTEN_DIR}
 RUN rm ${EMSCRIPTEN_TEMP}
 RUN cd ${EMSCRIPTEN_DIR} \
     && ./emsdk install ${EMSCRIPTEN_VERSION} \
-    && ./emsdk activate ${EMSCRIPTEN_VERSION}
-ENV PATH "${EMSCRIPTEN_DIR}:${EMSCRIPTEN_DIR}/upstream/emscripten:${PATH}"
+    && ./emsdk activate --embedded ${EMSCRIPTEN_VERSION}
 ENV EMSDK "${EMSCRIPTEN_DIR}"
-ENV EM_CONFIG "/root/.emscripten"
+ENV EM_CONFIG "${EMSCRIPTEN_DIR}/.emscripten"
+ENV EM_CACHE "${EMSCRIPTEN_DIR}/.emscripten_cache"
+# We need to allow a non-root Docker container to write into the `EM_CACHE` directory.
+RUN chmod -R go+wx "${EM_CACHE}"
