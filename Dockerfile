@@ -1,4 +1,4 @@
-FROM gcr.io/asylo-framework/asylo:buildenv-v0.5.1
+FROM gcr.io/asylo-framework/asylo:buildenv-v0.5.2
 
 RUN apt-get --yes update && apt-get install --yes \
   clang-format \

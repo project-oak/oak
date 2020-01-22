@@ -54,6 +54,16 @@ container_pull(
 )
 
 http_archive(
+    name = "rules_cc",
+    sha256 = "ff1710c6f2a880784abe6aa9a6fcb6c4cbfc2cf3e5d81ef5d92dddc8ef537864",
+    strip_prefix = "rules_cc-0489ba308b2e1fe458dea5a3e6efebd25087a339",
+    urls = [
+        # Head commit on 2020-01-14.
+        "https://github.com/bazelbuild/rules_cc/archive/0489ba308b2e1fe458dea5a3e6efebd25087a339.tar.gz"
+    ],
+)
+
+http_archive(
     name = "com_google_absl",
     sha256 = "27184e97131edb9a289b1c2cd404c234afa5ceaae44c5eb6713138cb674535aa",
     strip_prefix = "abseil-cpp-ac78ffc3bc0a8b295cab9a03817760fd460df2a1",
@@ -66,11 +76,11 @@ http_archive(
 # Asylo Framework.
 http_archive(
     name = "com_google_asylo",
-    sha256 = "172b8a690c36a41280813fbb124bc5a3903428fe794107070c58814821bf5ac0",
-    strip_prefix = "asylo-cf74bd57d504a6f9ef52a46fdce6230e9d44f542",
+    sha256 = "7a32cb64b3f5cb2f2716eef063db0caccf7bafd9c771183b3e0146df2bc1697d",
+    strip_prefix = "asylo-0.5.2",
     urls = [
-        # Head commit on 2020-01-15.
-        "https://github.com/google/asylo/archive/cf74bd57d504a6f9ef52a46fdce6230e9d44f542.tar.gz",
+        # Head commit on 2020-01-16 (v0.5.2).
+        "https://github.com/google/asylo/archive/v0.5.2.tar.gz",
     ],
 )
 
@@ -100,10 +110,10 @@ git_repository(
 # Google Protocol Buffers.
 http_archive(
     name = "com_google_protobuf",
-    sha256 = "98e615d592d237f94db8bf033fba78cd404d979b0b70351a9e5aaff725398357",
-    strip_prefix = "protobuf-3.9.1",
+    sha256 = "e8c7601439dbd4489fe5069c33d374804990a56c2f710e00227ee5d8fd650e67",
+    strip_prefix = "protobuf-3.11.2",
     urls = [
-        "https://github.com/protocolbuffers/protobuf/archive/v3.9.1.tar.gz",
+        "https://github.com/protocolbuffers/protobuf/archive/v3.11.2.tar.gz",
     ],
 )
 
