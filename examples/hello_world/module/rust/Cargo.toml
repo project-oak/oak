@@ -18,8 +18,8 @@ protobuf = "*"
 assert_matches = "*"
 oak_abi = "*"
 oak_tests = "*"
-serial_test = "0.2"
-serial_test_derive = "0.2"
+serial_test = "^0.2"
+serial_test_derive = "^0.2"
 
 [build-dependencies]
 protoc-rust-grpc = { path = "../../../../third_party/grpc-rust/protoc-rust-grpc" }

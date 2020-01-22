@@ -10,8 +10,8 @@ oak_abi = "*"
 protobuf = "*"
 fmt = "*"
 log = "*"
-byteorder = "1"
-rand_core = { version = "0.5", features = ["std"] }
+byteorder = "^1"
+rand_core = { version = "^0.5", features = ["std"] }
 serde = { version = "*", features = ["derive"] }
 
 [build-dependencies]
@@ -21,6 +21,6 @@ protoc-rust = "*"
 assert_matches = "*"
 oak_derive = "*"
 oak_tests = "*"
-serial_test = "0.2"
-serial_test_derive = "0.2"
+serial_test = "^0.2"
+serial_test_derive = "^0.2"
 serde_json = "*"

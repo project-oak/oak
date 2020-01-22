@@ -6,8 +6,8 @@ edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
-byteorder = "1"
-lazy_static = "1.4"
+byteorder = "^1"
+lazy_static = "^1.4"
 log = { version = "^0.4.0", features = ["std"] }
 oak = "=0.1.0"
 oak_abi = "*"
@@ -15,8 +15,8 @@ oak_derive = "*"
 oak_log = "*"
 oak_runtime = "=0.1.0"
 protobuf = "*"
-rand = { version = "0.7", features = ["std"] }
-simple_logger = "1"
+rand = { version = "^0.7", features = ["std"] }
+simple_logger = "^1"
 
 [build-dependencies]
 protoc-rust = "*"
