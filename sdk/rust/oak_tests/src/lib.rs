@@ -21,8 +21,8 @@ use log::{debug, info, warn};
 
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use oak::OakStatus;
-use oak_abi::Handle;
-use oak_runtime::{proto, NodeMain, OakMessage, OakRuntime};
+use oak_abi::{Handle, NodeMain};
+use oak_runtime::{proto, OakMessage, OakRuntime};
 use protobuf::{Message, ProtobufEnum};
 use rand::Rng;
 use std::cell::RefCell;

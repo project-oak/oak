@@ -18,7 +18,7 @@
 
 use log::{debug, error, info, warn};
 
-use oak_abi::{ChannelReadStatus, Handle, OakStatus};
+use oak_abi::{ChannelReadStatus, Handle, NodeMain, OakStatus};
 use proto::manager::NodeConfiguration_oneof_config_type;
 use protobuf::ProtobufEnum;
 use rand::Rng;
@@ -566,9 +566,6 @@ impl OakNode {
         OakStatus::OK.value() as u32
     }
 }
-
-/// Expected type for the main entrypoint to a Node under test.
-pub type NodeMain = fn(Handle);
 
 // Main loop function for a log pseudo-Node.
 fn log_node_main(handle: Handle) {

@@ -26,6 +26,12 @@ pub mod proto;
 /// These handles are used for all host function calls.
 pub type Handle = u64;
 
+/// Expected type for a Node entrypoint that is exposed as a Wasm export.
+pub type NodeMainC = extern "C" fn(Handle);
+
+/// Expected Rust type for a Node entrypoint.
+pub type NodeMain = fn(Handle);
+
 /// Number of bytes needed per-handle for channel readiness notifications.
 ///
 /// The notification space consists of the channel handle (as a little-endian
