@@ -24,7 +24,7 @@
 //! ```
 
 use colored::*;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::process::Command;
 
@@ -72,10 +72,9 @@ fn source_files() -> impl Iterator<Item = PathBuf> {
 
 /// Return an iterator of all known Cargo Manifest files that define workspaces.
 fn workspace_manifest_files() -> impl Iterator<Item = PathBuf> {
-    // TODO: Automatically discover workspace-level Manifest files.
-    ["./sdk/rust/Cargo.toml", "./examples/Cargo.toml"]
-        .iter()
-        .map(PathBuf::from)
+    source_files()
+        .filter(is_cargo_toml_file)
+        .filter(is_cargo_workspace_file)
 }
 
 /// Return whether the provided path refers to a Bazel file (`BUILD`, `WORKSPACE`, or `*.bzl`)
@@ -88,6 +87,26 @@ fn is_bazel_file(path: &PathBuf) -> bool {
 fn is_markdown_file(path: &PathBuf) -> bool {
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
     filename.ends_with(".md")
+}
+
+/// Return whether the provided path refers to a `Cargo.toml` file. Note that it does not
+/// differentiate between workspace-level and crate-level files.
+fn is_cargo_toml_file(path: &PathBuf) -> bool {
+    let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+    filename == "Cargo.toml"
+}
+
+/// Return whether the provided path refers to a workspace-level `Cargo.toml` file, by looking at
+/// the contents of the file.
+fn is_cargo_workspace_file(path: &PathBuf) -> bool {
+    let mut file = std::fs::File::open(path).expect("could not open file");
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)
+        .expect("could not read file contents");
+    // We naively look for the `[workspace]` string to appear in the contents of the file. A better
+    // alternative would be to actually parse the file as `toml` and figure out whether it has a
+    // `workspace` section, but it seems overkill for now.
+    contents.contains("[workspace]")
 }
 
 fn run_buildifier(step: &Step) {
