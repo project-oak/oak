@@ -152,9 +152,12 @@ http_archive(
 
 http_archive(
     name = "org_tensorflow",
-    sha256 = "8f0c227024fe2dffc691e71f4498c217f604d045079db254a300720db1eb4693",
-    strip_prefix = "tensorflow-2.1.0-rc2",
-    urls = ["https://github.com/tensorflow/tensorflow/archive/v2.1.0-rc2.tar.gz"],
+    sha256 = "4844e49a4d6ed9bceef608ce7f65f41b75e6362b2721c4e0d34a053d58753f42",
+    strip_prefix = "tensorflow-11bed638b14898cdde967f6b108e45732aa4798a",
+    urls = [
+        # Head commit on 2020-01-20.
+        "https://github.com/tensorflow/tensorflow/archive/11bed638b14898cdde967f6b108e45732aa4798a.tar.gz"
+    ],
 )
 
 # TensorFlow dependency.
@@ -163,7 +166,7 @@ http_archive(
     sha256 = "5b00383d08dd71f28503736db0500b6fb4dda47489ff5fc6bed42557c07c6ba9",
     strip_prefix = "rules_closure-308b05b2419edb5c8ee0471b67a40403df940149",
     urls = [
-        # Head commit on 2019-06-13
+        # Head commit on 2019-06-13.
         "https://github.com/bazelbuild/rules_closure/archive/308b05b2419edb5c8ee0471b67a40403df940149.tar.gz",
     ],
 )
