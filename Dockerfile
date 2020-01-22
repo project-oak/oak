@@ -1,4 +1,4 @@
-FROM gcr.io/asylo-framework/asylo:buildenv-v0.5.1
+FROM gcr.io/asylo-framework/asylo:buildenv-v0.5.2
 
 RUN apt-get --yes update && apt-get install --yes \
   clang-format \
@@ -38,8 +38,8 @@ ENV PATH "${BUILDIFIER_DIR}:${PATH}"
 RUN chmod +x ${BUILDIFIER_BIN}
 
 # Install Protobuf compiler.
-ARG PROTOBUF_VERSION=3.9.1
-ARG PROTOBUF_SHA256=77410d08e9a3c1ebb68afc13ee0c0fb4272c01c20bfd289adfb51b1c622bab07
+ARG PROTOBUF_VERSION=3.11.2
+ARG PROTOBUF_SHA256=c0c666fb679a8221bed01bffeed1f80727c6c7827d0cbd8f162195efb12df9e0
 ARG PROTOBUF_DIR=/usr/local/protobuf
 ARG PROTOBUF_TEMP=/tmp/protobuf.zip
 RUN curl --location https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOBUF_VERSION}/protoc-${PROTOBUF_VERSION}-linux-x86_64.zip > ${PROTOBUF_TEMP}
