@@ -59,7 +59,7 @@ http_archive(
     strip_prefix = "rules_cc-0489ba308b2e1fe458dea5a3e6efebd25087a339",
     urls = [
         # Head commit on 2020-01-14.
-        "https://github.com/bazelbuild/rules_cc/archive/0489ba308b2e1fe458dea5a3e6efebd25087a339.tar.gz"
+        "https://github.com/bazelbuild/rules_cc/archive/0489ba308b2e1fe458dea5a3e6efebd25087a339.tar.gz",
     ],
 )
 
