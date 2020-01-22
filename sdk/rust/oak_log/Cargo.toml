@@ -11,5 +11,5 @@ log = { version = "^0.4.0", features = ["std"] }
 
 [dev-dependencies]
 oak_tests = "*"
-serial_test = "0.2"
-serial_test_derive = "0.2"
+serial_test = "^0.2"
+serial_test_derive = "^0.2"
