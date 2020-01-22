@@ -516,34 +516,44 @@ where
     }
     grpc_req.set_req_msg(any);
     grpc_req.set_last(true);
-    let mut msg = OakMessage {
+    let mut req_msg = OakMessage {
         data: Vec::new(),
         channels: Vec::new(),
     };
     grpc_req
-        .write_to_writer(&mut msg.data)
+        .write_to_writer(&mut req_msg.data)
         .expect("failed to serialize GrpcRequest message");
 
-    // Create a new channel for the response to arrive on and attach to the message.
-    let (write_half, mut read_half) = RUNTIME.write().expect(RUNTIME_MISSING).new_channel();
-    msg.channels.push(write_half);
+    // Create a new channel to hold the request message.
+    let (mut req_write_half, req_read_half) = RUNTIME.write().expect(RUNTIME_MISSING).new_channel();
+    req_write_half.write_message(req_msg);
 
-    // Send the message (with attached write handle) into the Node under test.
+    // Create a new channel for responses to arrive on and also attach that to the message.
+    let (rsp_write_half, mut rsp_read_half) = RUNTIME.write().expect(RUNTIME_MISSING).new_channel();
+
+    // Create a notification message and attach the method-invocation specific channels to it.
+    let notify_msg = OakMessage {
+        data: Vec::new(),
+        channels: vec![req_read_half, rsp_write_half],
+    };
+
+    // Send the notification message (with attached handles) into the Node under test.
     let grpc_channel = RUNTIME
         .read()
         .expect(RUNTIME_MISSING)
         .grpc_channel()
-        .expect("no gRPC channel setup");
+        .expect("no gRPC notification channel setup");
     grpc_channel
         .write()
         .expect("corrupt gRPC channel ref")
-        .write_message(msg);
+        .write_message(notify_msg);
 
     // Read the serialized, encapsulated response.
     loop {
         let mut size = 0u32;
         let mut count = 0u32;
-        let result = read_half.read_message(std::usize::MAX, &mut size, std::u32::MAX, &mut count);
+        let result =
+            rsp_read_half.read_message(std::usize::MAX, &mut size, std::u32::MAX, &mut count);
         let rsp = match result {
             Err(e) => {
                 if e == OakStatus::ERR_CHANNEL_EMPTY.value() as u32 {

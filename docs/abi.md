@@ -65,8 +65,9 @@ generally expected to run forever, but may return if the Node choses to
 terminate (whether expectedly or unexpectedly).
 
 Each Oak Application starts with a single initial Oak Node; this Node receives
-as its initial handle the read half of a channel that receives gRPC requests
-from an implicit [gRPC pseudo-Node](concepts.md#pseudo-nodes).
+as its initial handle the read half of a channel that receives notifications of
+gRPC method invocations from an implicit
+[gRPC pseudo-Node](concepts.md#pseudo-nodes).
 
 ## Host Functions
 

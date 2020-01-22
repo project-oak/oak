@@ -88,13 +88,16 @@ outside world.
 The available pseudo-Nodes are:
 
 - **gRPC pseudo-node**: Provides a 'front door' for external interaction with an
-  Oak Application, by implementing a gRPC service. External requests to the gRPC
-  service are written to a channel that connects from the pseudo-Node to the
-  initial Node of the Application. Each new request is accompanied by a
-  corresponding inbound channel handle, which the initial Node uses to send
-  response messages. The Oak Runtime automatically creates a gRPC pseudo-Node at
-  Application start-of-day (and so gRPC pseudo-Nodes cannot be created with
-  `node_create()`).
+  Oak Application, by implementing a gRPC service. The Oak Runtime automatically
+  creates a gRPC pseudo-Node at Application start-of-day (and so gRPC
+  pseudo-Nodes cannot be created with `node_create()`). External method
+  invocations of the Application's gRPC service are delivered to a channel that
+  connects from the pseudo-Node to the initial Node of the Application, as a
+  message no data bytes but with two attached handles (in the following order):
+  - A handle for the read half of a channel holding the inbound request, ready
+    for the Node to read.
+  - A handle for the write half of a channel that the Node should write the
+    corresponding response message(s) to.
 - **Logging pseudo-node**: Provides a logging mechanism for Nodes under
   development by including a single inbound channel; anything received on the
   channel will be logged. This node should only be enabled during application

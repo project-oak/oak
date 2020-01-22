@@ -156,6 +156,15 @@ impl ChannelHalf {
             .expect("corrupt channel ref")
             .read_message(size, actual_size, handle_count, actual_handle_count)
     }
+    pub fn write_message(&mut self, msg: OakMessage) -> u32 {
+        if self.direction != Direction::Write {
+            return OakStatus::ERR_BAD_HANDLE.value() as u32;
+        }
+        self.channel
+            .write()
+            .expect("corrupt channel ref")
+            .write_message(msg)
+    }
 }
 
 impl Clone for ChannelHalf {
@@ -201,7 +210,7 @@ pub struct OakRuntime {
     // Map name of Node config names to next index.
     next_index: HashMap<String, u32>,
     // Track a reference to the write half of the channel used for sending
-    // gRPC requests in to the Application under test.
+    // gRPC method notifications in to the Application under test.
     grpc_in_half: Option<ChannelHalf>,
     // Node instances organized by internal Node name.
     nodes: HashMap<String, OakNode>,
@@ -430,7 +439,7 @@ impl OakRuntime {
             node_name, read_handle
         );
         // Remember the write half of the channel to allow future test
-        // injection of gRPC requests.
+        // injection of gRPC method notifications.
         self.grpc_in_half = Some(write_half);
         read_handle
     }
