@@ -10,16 +10,16 @@ crate-type = ["cdylib"]
 [dependencies]
 log = "*"
 oak = "=0.1.0"
-oak_derive = "*"
-oak_log = "*"
+oak_derive = "=0.1.0"
+oak_log = "=0.1.0"
 protobuf = "*"
 
 [dev-dependencies]
 assert_matches = "*"
-oak_abi = "*"
-oak_tests = "*"
-serial_test = "^0.2"
-serial_test_derive = "^0.2"
+oak_abi = "=0.1.0"
+oak_tests = "=0.1.0"
+serial_test = "*"
+serial_test_derive = "*"
 
 [build-dependencies]
 protoc-rust-grpc = { path = "../../../../third_party/grpc-rust/protoc-rust-grpc" }

@@ -6,12 +6,12 @@ edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
-oak_abi = "*"
+oak_abi = "=0.1.0"
 protobuf = "*"
 fmt = "*"
 log = "*"
-byteorder = "^1"
-rand_core = { version = "^0.5", features = ["std"] }
+byteorder = "*"
+rand_core = { version = "*", features = ["std"] }
 serde = { version = "*", features = ["derive"] }
 
 [build-dependencies]
@@ -19,8 +19,8 @@ protoc-rust = "*"
 
 [dev-dependencies]
 assert_matches = "*"
-oak_derive = "*"
-oak_tests = "*"
-serial_test = "^0.2"
-serial_test_derive = "^0.2"
+oak_derive = "=0.1.0"
+oak_tests = "=0.1.0"
+serial_test = "*"
+serial_test_derive = "*"
 serde_json = "*"
