@@ -95,10 +95,6 @@ ARG EMSCRIPTEN_COMMIT=6bfbe2a7da68e650054af2d272d2b79307a6ad72
 ARG EMSCRIPTEN_SHA256=aa4c3b8f23fd26363f98207674bffcc138105c621c6c8bf12175f6aab1231357
 ARG EMSCRIPTEN_DIR=/usr/local/emsdk
 ARG EMSCRIPTEN_TEMP=/tmp/emscripten.zip
-ENV PATH "${EMSCRIPTEN_DIR}:${EMSCRIPTEN_DIR}/upstream/emscripten:${PATH}"
-ENV EMSDK "${EMSCRIPTEN_DIR}"
-ENV EM_CONFIG '/tmp/.emscripten'
-ENV EM_CACHE '/tmp/.emscripten_cache'
 RUN mkdir --parents ${EMSCRIPTEN_DIR}
 RUN curl --location https://github.com/emscripten-core/emsdk/archive/${EMSCRIPTEN_COMMIT}.tar.gz > ${EMSCRIPTEN_TEMP}
 RUN sha256sum --binary ${EMSCRIPTEN_TEMP} && echo "${EMSCRIPTEN_SHA256} *${EMSCRIPTEN_TEMP}" | sha256sum --check
@@ -106,10 +102,9 @@ RUN tar --extract --gzip --file=${EMSCRIPTEN_TEMP} --directory=${EMSCRIPTEN_DIR}
 RUN rm ${EMSCRIPTEN_TEMP}
 RUN cd ${EMSCRIPTEN_DIR} \
     && ./emsdk install ${EMSCRIPTEN_VERSION} \
-    && ./emsdk activate ${EMSCRIPTEN_VERSION}
-# Emscripten config file is automatically generated in `/root/`, so we need to allow access to it
-# and put it in a directory with write access, so `emcc` will be able to create `.emscripten_cache.lock`
-RUN cp /root/.emscripten "${EM_CONFIG}" \
-    && chmod ugo+rw "${EM_CONFIG}" \
-    && mkdir -p "${EM_CACHE}" \
-    && chmod ugo+rwx "${EM_CACHE}"
+    && ./emsdk activate --embedded ${EMSCRIPTEN_VERSION}
+ENV EMSDK "${EMSCRIPTEN_DIR}"
+ENV EM_CONFIG "${EMSCRIPTEN_DIR}/.emscripten"
+ENV EM_CACHE "${EMSCRIPTEN_DIR}/.emscripten_cache"
+# We need to allow a non-root Docker container to write into the `EM_CACHE` directory.
+RUN chmod -R go+wx "${EM_CACHE}"
