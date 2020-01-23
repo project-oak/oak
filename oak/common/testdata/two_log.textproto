@@ -15,5 +15,5 @@ node_configs {
   name: "log2"
   log_config {}
 }
-initial_node: "app"
-initial_entrypoint: "oak_main"
+initial_node_config_name: "app"
+initial_entrypoint_name: "oak_main"

@@ -50,8 +50,8 @@ fn test_config() -> ApplicationConfiguration {
         backend_config,
         log_config,
     ]));
-    config.set_initial_node(FRONTEND_CONFIG_NAME.to_string());
-    config.set_initial_entrypoint(FRONTEND_ENTRYPOINT_NAME.to_string());
+    config.set_initial_node_config_name(FRONTEND_CONFIG_NAME.to_string());
+    config.set_initial_entrypoint_name(FRONTEND_ENTRYPOINT_NAME.to_string());
     config
 }
 

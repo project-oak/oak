@@ -75,7 +75,8 @@ grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
 
   // Create the initial Application Node.
   std::string node_name;
-  OakNode* app_node = CreateNode(config.initial_node(), config.initial_entrypoint(), &node_name);
+  OakNode* app_node =
+      CreateNode(config.initial_node_config_name(), config.initial_entrypoint_name(), &node_name);
   if (app_node == nullptr) {
     return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Failed to create initial Oak Node");
   }

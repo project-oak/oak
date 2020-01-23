@@ -35,8 +35,8 @@ node_configs {
   name: "logging-config"
   log_config {}
 }
-initial_node: "frontend-config"
-initial_entrypoint: "frontend_oak_main"
+initial_node_config_name: "frontend-config"
+initial_entrypoint_name: "frontend_oak_main"
 )raw";
 
 #endif  // OAK_EXAMPLES_ABITEST_CLIENT_CONFIG_H_

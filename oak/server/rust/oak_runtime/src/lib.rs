@@ -286,8 +286,8 @@ impl OakRuntime {
         }
 
         let full_name = WasmEntrypointFullName {
-            config: config.initial_node,
-            entrypoint: config.initial_entrypoint,
+            config: config.initial_node_config_name,
+            entrypoint: config.initial_entrypoint_name,
         };
         let node_name = self.next_node_name(&full_name);
         debug!(

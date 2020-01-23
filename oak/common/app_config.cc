@@ -38,12 +38,12 @@ constexpr char kStorageConfigName[] = "storage";
 std::unique_ptr<ApplicationConfiguration> DefaultConfig(const std::string& module_bytes) {
   auto config = absl::make_unique<ApplicationConfiguration>();
 
-  config->set_initial_node(kAppConfigName);
+  config->set_initial_node_config_name(kAppConfigName);
   NodeConfiguration* node_config = config->add_node_configs();
   node_config->set_name(kAppConfigName);
   WebAssemblyConfiguration* code = node_config->mutable_wasm_config();
   code->set_module_bytes(module_bytes);
-  config->set_initial_entrypoint(kAppEntrypointName);
+  config->set_initial_entrypoint_name(kAppEntrypointName);
 
   return config;
 }
@@ -96,10 +96,10 @@ bool ValidApplicationConfig(const ApplicationConfiguration& config) {
 
   // Check name for the config of the initial node is present and is a Web
   // Assembly variant.
-  if (wasm_names.count(config.initial_node()) == 0) {
+  if (wasm_names.count(config.initial_node_config_name()) == 0) {
     return false;
   }
-  if (config.initial_entrypoint().empty()) {
+  if (config.initial_entrypoint_name().empty()) {
     LOG(ERROR) << "missing entrypoint name";
     return false;
   }

@@ -17,4 +17,4 @@ node_configs {
     address: "localhost:8888"
   }
 }
-initial_node: "app"
+initial_node_config_name: "app"

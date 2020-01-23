@@ -11,5 +11,5 @@ node_configs {
     address: "localhost:8888"
   }
 }
-initial_node: "log"
-initial_entrypoint: "oak_main"
+initial_node_config_name: "log"
+initial_entrypoint_name: "oak_main"
