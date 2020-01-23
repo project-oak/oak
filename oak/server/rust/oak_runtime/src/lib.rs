@@ -188,9 +188,9 @@ impl Drop for ChannelHalf {
 #[derive(PartialEq, Clone, Debug, Eq, Hash)]
 pub struct WasmEntrypointFullName {
     // Name of the config stanza for the Node.
-    pub config: String,
+    pub config_name: String,
     // Entrypoint name.
-    pub entrypoint: String,
+    pub entrypoint_name: String,
 }
 
 pub struct OakRuntime {
@@ -251,9 +251,12 @@ impl OakRuntime {
     fn next_node_name(&mut self, full_name: &WasmEntrypointFullName) -> String {
         let index = self
             .next_index
-            .entry(full_name.config.to_string())
+            .entry(full_name.config_name.to_string())
             .or_insert(0);
-        let name = format!("{}-{}-{}", full_name.config, *index, full_name.entrypoint);
+        let name = format!(
+            "{}-{}-{}",
+            full_name.config_name, *index, full_name.entrypoint_name
+        );
         *index += 1;
         name
     }
@@ -286,13 +289,13 @@ impl OakRuntime {
         }
 
         let full_name = WasmEntrypointFullName {
-            config: config.initial_node_config_name,
-            entrypoint: config.initial_entrypoint_name,
+            config_name: config.initial_node_config_name,
+            entrypoint_name: config.initial_entrypoint_name,
         };
         let node_name = self.next_node_name(&full_name);
         debug!(
             "{{{}}}: add Wasm node running config '{}' entrypoint '{}'",
-            node_name, full_name.config, full_name.entrypoint
+            node_name, full_name.config_name, full_name.entrypoint_name
         );
         let entrypoint = self.entrypoint(&full_name)?;
         let mut node = OakNode::new();
@@ -455,8 +458,8 @@ impl OakRuntime {
         };
         // Now find the corresponding entrypoint
         let full_name = WasmEntrypointFullName {
-            config: config_name.to_string(),
-            entrypoint: entrypoint_name.to_string(),
+            config_name: config_name.to_string(),
+            entrypoint_name: entrypoint_name.to_string(),
         };
         let entrypoint: NodeMain = match config {
             NodeConfiguration_oneof_config_type::wasm_config(_) => {

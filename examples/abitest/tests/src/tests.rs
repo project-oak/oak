@@ -63,12 +63,12 @@ fn test_abi() {
     oak_tests::init_logging();
     let mut entrypoints = HashMap::new();
     let fe_name = WasmEntrypointFullName {
-        config: FRONTEND_CONFIG_NAME.to_string(),
-        entrypoint: FRONTEND_ENTRYPOINT_NAME.to_string(),
+        config_name: FRONTEND_CONFIG_NAME.to_string(),
+        entrypoint_name: FRONTEND_ENTRYPOINT_NAME.to_string(),
     };
     let be_name = WasmEntrypointFullName {
-        config: BACKEND_CONFIG_NAME.to_string(),
-        entrypoint: BACKEND_ENTRYPOINT_NAME.to_string(),
+        config_name: BACKEND_CONFIG_NAME.to_string(),
+        entrypoint_name: BACKEND_ENTRYPOINT_NAME.to_string(),
     };
     let fe: oak_abi::NodeMain = abitest_0_frontend::main;
     let be: oak_abi::NodeMain = abitest_1_backend::main;

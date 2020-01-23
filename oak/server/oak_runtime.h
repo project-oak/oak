@@ -50,7 +50,7 @@ class OakRuntime : public BaseRuntime {
   grpc::Status Start();
   grpc::Status Stop();
 
-  bool CreateAndRunNode(const std::string& config, const std::string& entrypoint,
+  bool CreateAndRunNode(const std::string& config_name, const std::string& entrypoint_name,
                         std::unique_ptr<ChannelHalf> half, std::string* node_name) override;
 
   bool TerminationPending() override { return termination_pending_.load(); }
@@ -60,11 +60,11 @@ class OakRuntime : public BaseRuntime {
  private:
   OakRuntime& operator=(const OakRuntime& other) = delete;
 
-  std::string NextNodeName(const std::string& config, const std::string& entrypoint)
+  std::string NextNodeName(const std::string& config_name, const std::string& entrypoint_name)
       EXCLUSIVE_LOCKS_REQUIRED(mu_);
 
-  OakNode* CreateNode(const std::string& config, const std::string& entrypoint,
-                      std::string* entrypoint_name) EXCLUSIVE_LOCKS_REQUIRED(mu_);
+  OakNode* CreateNode(const std::string& config_name, const std::string& entrypoint_name,
+                      std::string* node_name) EXCLUSIVE_LOCKS_REQUIRED(mu_);
 
   // Information derived from ApplicationConfiguration; const after Initialize() called:
 
