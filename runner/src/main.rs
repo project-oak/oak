@@ -121,54 +121,50 @@ fn is_cargo_workspace_file(path: &PathBuf) -> bool {
 fn run_buildifier() -> R {
     Sequence::new(
         "buildifier",
-        source_files().filter(is_bazel_file).map(|entry| {
-            Step::new(
-                entry.to_str().unwrap(),
-                "buildifier",
-                &["-lint=warn", "-mode=check", entry.to_str().unwrap()],
-            )
-        }),
+        source_files()
+            .filter(is_bazel_file)
+            .map(to_string)
+            .map(|entry| Step::new(&entry, "buildifier", &["-lint=warn", "-mode=check", &entry])),
     )
 }
 
 fn run_prettier() -> R {
     Sequence::new(
         "prettier",
-        source_files().filter(is_markdown_file).map(|entry| {
-            Step::new(
-                entry.to_str().unwrap(),
-                "prettier",
-                &["--check", entry.to_str().unwrap()],
-            )
-        }),
+        source_files()
+            .filter(is_markdown_file)
+            .map(to_string)
+            .map(|entry| Step::new(&entry, "prettier", &["--check", &entry])),
     )
 }
 
 fn run_embedmd() -> R {
     Sequence::new(
         "embedmd",
-        source_files().filter(is_markdown_file).map(|entry| {
-            Step::new(
-                entry.to_str().unwrap(),
-                &format!("{}/bin/embedmd", std::env::var("GOPATH").unwrap()),
-                &["-d", entry.to_str().unwrap()],
-            )
-        }),
+        source_files()
+            .filter(is_markdown_file)
+            .map(to_string)
+            .map(|entry| {
+                Step::new(
+                    &entry,
+                    &format!("{}/bin/embedmd", std::env::var("GOPATH").unwrap()),
+                    &["-d", &entry],
+                )
+            }),
     )
 }
 
 fn run_cargo_fmt() -> R {
     Sequence::new(
         "cargo fmt",
-        workspace_manifest_files().map(|entry| {
-            let manifest_filename = entry.to_str().unwrap();
+        workspace_manifest_files().map(to_string).map(|entry| {
             Step::new(
-                manifest_filename,
+                &entry,
                 "cargo",
                 &[
                     "fmt",
                     "--all",
-                    &format!("--manifest-path={}", manifest_filename),
+                    &format!("--manifest-path={}", &entry),
                     "--",
                     "--check",
                 ],
@@ -180,15 +176,14 @@ fn run_cargo_fmt() -> R {
 fn run_cargo_test() -> R {
     Sequence::new(
         "cargo test",
-        workspace_manifest_files().map(|entry| {
-            let manifest_filename = entry.to_str().unwrap();
+        workspace_manifest_files().map(to_string).map(|entry| {
             Step::new(
-                manifest_filename,
+                &entry,
                 "cargo",
                 &[
                     "test",
                     "--all-targets",
-                    &format!("--manifest-path={}", manifest_filename),
+                    &format!("--manifest-path={}", &entry),
                 ],
             )
         }),
@@ -198,16 +193,11 @@ fn run_cargo_test() -> R {
 fn run_cargo_doc_test() -> R {
     Sequence::new(
         "cargo doc test",
-        workspace_manifest_files().map(|entry| {
-            let manifest_filename = entry.to_str().unwrap();
+        workspace_manifest_files().map(to_string).map(|entry| {
             Step::new(
-                manifest_filename,
+                &entry,
                 "cargo",
-                &[
-                    "test",
-                    "--doc",
-                    &format!("--manifest-path={}", manifest_filename),
-                ],
+                &["test", "--doc", &format!("--manifest-path={}", &entry)],
             )
         }),
     )
@@ -216,15 +206,14 @@ fn run_cargo_doc_test() -> R {
 fn run_cargo_clippy() -> R {
     Sequence::new(
         "cargo clippy",
-        workspace_manifest_files().map(|entry| {
-            let manifest_filename = entry.to_str().unwrap();
+        workspace_manifest_files().map(to_string).map(|entry| {
             Step::new(
-                manifest_filename,
+                &entry,
                 "cargo",
                 &[
                     "clippy",
                     "--all-targets",
-                    &format!("--manifest-path={}", manifest_filename),
+                    &format!("--manifest-path={}", &entry),
                     "--",
                     "--deny=warnings",
                 ],
@@ -254,4 +243,8 @@ fn run_bazel_test() -> R {
             "//oak/common:host_tests",
         ],
     )
+}
+
+pub fn to_string(path: PathBuf) -> String {
+    path.to_str().unwrap().to_string()
 }
