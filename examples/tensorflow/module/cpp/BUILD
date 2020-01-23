@@ -35,7 +35,6 @@ cc_binary(
         "-s AUTO_ARCHIVE_INDEXES=0",  # Necessary to remove console spam.
         "-s DISABLE_EXCEPTION_CATCHING=1",
         "-s ERROR_ON_UNDEFINED_SYMBOLS=0",
-        "-s EXIT_RUNTIME=0",
         "-s EXPORTED_FUNCTIONS='[\"_oak_main\"]'",
         "-s FILESYSTEM=0",
         "-s MALLOC=emmalloc",
@@ -68,16 +67,17 @@ cc_binary(
         "-s AUTO_ARCHIVE_INDEXES=0",  # Necessary to remove console spam.
         "-s DISABLE_EXCEPTION_CATCHING=1",
         "-s ERROR_ON_UNDEFINED_SYMBOLS=0",
-        "-s EXIT_RUNTIME=0",
         "-s EXPORTED_FUNCTIONS='[\"_oak_main\"]'",
         "-s FILESYSTEM=0",
         "-s MALLOC=emmalloc",
         "-s STANDALONE_WASM=1",  # WASM file should run without JavaScript.
+        "-s STRICT=1",
         "-s WARN_ON_UNDEFINED_SYMBOLS=0",
         "-s WASM=1",
     ],
     deps = [
         "//oak/module:defines",
+        "//oak/module:placeholders",
         # TODO: Sort out inclusion of protobuf files
         # "//oak/proto:oak_api_cc_proto",
         "@org_tensorflow//tensorflow/lite/micro:micro_framework",

@@ -18,6 +18,7 @@
 #include <stdint.h>
 
 #include "oak/module/defines.h"  // for imports and exports
+#include "oak/module/placeholders.h"
 #include "tensorflow/lite/micro/kernels/all_ops_resolver.h"
 #include "tensorflow/lite/micro/micro_interpreter.h"
 
@@ -120,9 +121,6 @@ std::string init_tensorflow() {
   if (memcmp(kExpectedOutputData, output->data.uint8, output->bytes) != 0) {
     return std::string("Error: Model output is incorrect");
   }
-  //for (int i = 0; i < output->bytes; ++i) {
-  //  success &= (output->data.uint8[i] == kExpectedOutputData[i]);
-  //}
   return std::string("Success: Model was loaded correctly");
 }
 
