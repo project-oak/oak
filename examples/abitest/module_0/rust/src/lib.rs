@@ -547,6 +547,7 @@ impl FrontendNode {
 
     fn test_channel_wait_raw(&self) -> std::io::Result<()> {
         let (out_channel, in_channel, _) = channel_create_raw();
+        let (out_empty_channel, in_empty_channel, _) = channel_create_raw();
 
         unsafe {
             // Write a message to the channel so wait operations don't block.
@@ -563,9 +564,8 @@ impl FrontendNode {
         }
 
         unsafe {
-            // Wait on [write handle, ready read handle].
-            // TODO: Re-add NOT_READY subcase, removed in #429
-            const COUNT: usize = 2;
+            // Wait on [write handle, ready read handle, not-ready read handle].
+            const COUNT: usize = 3;
             let mut space = Vec::with_capacity(COUNT * oak_abi::SPACE_BYTES_PER_HANDLE);
             space
                 .write_u64::<byteorder::LittleEndian>(out_channel)
@@ -575,6 +575,11 @@ impl FrontendNode {
                 .write_u64::<byteorder::LittleEndian>(in_channel)
                 .unwrap();
             space.push(0x00);
+            space
+                .write_u64::<byteorder::LittleEndian>(in_empty_channel)
+                .unwrap();
+            space.push(0x00);
+
             expect_eq!(
                 OakStatus::OK.value() as u32,
                 oak_abi::wait_on_channels(space.as_mut_ptr(), COUNT as u32)
@@ -586,6 +591,10 @@ impl FrontendNode {
             expect_eq!(
                 ChannelReadStatus::READ_READY.value(),
                 i32::from(space[9 + 8])
+            );
+            expect_eq!(
+                ChannelReadStatus::NOT_READY.value(),
+                i32::from(space[9 + 9 + 8])
             );
         }
 
@@ -673,6 +682,17 @@ impl FrontendNode {
             expect_eq!(
                 OakStatus::OK.value() as u32,
                 oak_abi::channel_close(in_channel)
+            );
+        }
+
+        unsafe {
+            expect_eq!(
+                OakStatus::OK.value() as u32,
+                oak_abi::channel_close(in_empty_channel)
+            );
+            expect_eq!(
+                OakStatus::OK.value() as u32,
+                oak_abi::channel_close(out_empty_channel)
             );
         }
 
