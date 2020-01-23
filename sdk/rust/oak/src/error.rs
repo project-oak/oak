@@ -22,6 +22,18 @@ pub enum OakError {
     IoError(std::io::Error),
 }
 
+impl std::fmt::Display for OakError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OakError::ProtobufError(e) => write!(f, "protobuf error: {}", e),
+            OakError::OakStatus(e) => write!(f, "Oak status value: {:?}", e),
+            OakError::IoError(e) => write!(f, "I/O error: {}", e),
+        }
+    }
+}
+
+impl std::error::Error for OakError {}
+
 impl From<protobuf::ProtobufError> for OakError {
     fn from(err: protobuf::ProtobufError) -> Self {
         OakError::ProtobufError(err)
