@@ -15,5 +15,6 @@ if [[ -n "${EM_CACHE}" ]]; then
   export EM_CACHE="${EM_CACHE}"
   export EM_EXCLUSIVE_CACHE_ACCESS=1
 fi
+export EMCC_WASM_BACKEND=1
 
 external/emsdk/emsdk/upstream/emscripten/emar "$@"

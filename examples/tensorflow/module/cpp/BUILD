@@ -35,7 +35,6 @@ cc_binary(
         "-s AUTO_ARCHIVE_INDEXES=0",  # Necessary to remove console spam.
         "-s DISABLE_EXCEPTION_CATCHING=1",
         "-s ERROR_ON_UNDEFINED_SYMBOLS=0",
-        "-s EXIT_RUNTIME=0",
         "-s EXPORTED_FUNCTIONS='[\"_oak_main\"]'",
         "-s FILESYSTEM=0",
         "-s MALLOC=emmalloc",
@@ -50,5 +49,38 @@ cc_binary(
         # "//oak/proto:oak_api_cc_proto",
         "@org_tensorflow//tensorflow/lite:framework",
         "@org_tensorflow//tensorflow/lite/kernels:builtin_ops",
+    ],
+)
+
+cc_binary(
+    name = "tensorflow_micro.wasm",
+    srcs = ["tensorflow_micro.cc"],
+    linkopts = [
+        # Most of the link options are originated from the TFJS WASM backend:
+        # https://github.com/tensorflow/tfjs/blob/09297d20dec2eef06150040a570499437757c919/tfjs-backend-wasm/src/cc/BUILD#L13-L24
+        # It is not recommended to use "-s SINGLE_FILE=1" since a lot of the TensorFlow
+        # libraries have `-lpthread -lm -ldl -lrt -ldl` link flags.
+        # It is also not recommended to use "-s LINKABLE=1" parameter that disables dead code
+        # elimination, since it would add a lot of unnecessary imports.
+        # Emscripten options' documentation is in:
+        # https://github.com/emscripten-core/emscripten/blob/1.39.5/src/settings.js
+        "-s AUTO_ARCHIVE_INDEXES=0",  # Necessary to remove console spam.
+        "-s DISABLE_EXCEPTION_CATCHING=1",
+        "-s ERROR_ON_UNDEFINED_SYMBOLS=0",
+        "-s EXPORTED_FUNCTIONS='[\"_oak_main\"]'",
+        "-s FILESYSTEM=0",
+        "-s MALLOC=emmalloc",
+        "-s STANDALONE_WASM=1",  # WASM file should run without JavaScript.
+        "-s STRICT=1",
+        "-s WARN_ON_UNDEFINED_SYMBOLS=0",
+        "-s WASM=1",
+    ],
+    deps = [
+        "//oak/module:defines",
+        "//oak/module:placeholders",
+        # TODO: Sort out inclusion of protobuf files
+        # "//oak/proto:oak_api_cc_proto",
+        "@org_tensorflow//tensorflow/lite/micro:micro_framework",
+        "@org_tensorflow//tensorflow/lite/micro/kernels:all_ops_resolver",
     ],
 )
