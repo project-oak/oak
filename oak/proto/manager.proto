@@ -32,9 +32,12 @@ message ApplicationConfiguration {
   repeated NodeConfiguration node_configs = 1;
   // Indication of what configuration the initial Node should run.  Must identify a
   // NodeConfiguration entry that holds a WebAssemblyConfiguration object.
-  string initial_node = 2;
+  string initial_node_config_name = 2;
+  // The name of an exported Web Assembly function in the initial Node to
+  // be used as the Node's main entrypoint.
+  string initial_entrypoint_name = 3;
   // Port number used by the gRPC pseudo-node. If zero or unset, port will be chosen automatically.
-  int32 grpc_port = 3;
+  int32 grpc_port = 4;
 }
 
 // NodeConfiguration indicates the configuration of a created Node.
@@ -54,9 +57,6 @@ message WebAssemblyConfiguration {
   // TODO: Replace this with just a hash of the bytecode to instantiate, and
   // pass the actual bytecode to the Oak Manager in some other way.
   bytes module_bytes = 1;
-  // The name of an exported Web Assembly function that will be used as the
-  // Node's main entrypoint.
-  string main_entrypoint = 2;
 }
 
 // LogConfiguration describes the configuration of a logging pseudo-Node (which

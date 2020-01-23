@@ -21,13 +21,16 @@ use oak::grpc;
 use oak_runtime::proto::manager::{
     ApplicationConfiguration, LogConfiguration, NodeConfiguration, WebAssemblyConfiguration,
 };
+use oak_tests::WasmEntrypointFullName;
 use serial_test_derive::serial;
 use std::collections::HashMap;
 
 // Constants for Node config names that should match those in the textproto
 // config held in ../../client/config.h.
 const FRONTEND_CONFIG_NAME: &str = "frontend-config";
+const FRONTEND_ENTRYPOINT_NAME: &str = "frontend_oak_main";
 const BACKEND_CONFIG_NAME: &str = "backend-config";
+const BACKEND_ENTRYPOINT_NAME: &str = "backend_oak_main";
 const LOG_CONFIG_NAME: &str = "logging-config";
 
 fn test_config() -> ApplicationConfiguration {
@@ -47,7 +50,8 @@ fn test_config() -> ApplicationConfiguration {
         backend_config,
         log_config,
     ]));
-    config.set_initial_node(FRONTEND_CONFIG_NAME.to_string());
+    config.set_initial_node_config_name(FRONTEND_CONFIG_NAME.to_string());
+    config.set_initial_entrypoint_name(FRONTEND_ENTRYPOINT_NAME.to_string());
     config
 }
 
@@ -58,10 +62,18 @@ fn test_abi() {
     // (A subsequent attempt to use the oak_log crate will fail.)
     oak_tests::init_logging();
     let mut entrypoints = HashMap::new();
+    let fe_name = WasmEntrypointFullName {
+        config_name: FRONTEND_CONFIG_NAME.to_string(),
+        entrypoint_name: FRONTEND_ENTRYPOINT_NAME.to_string(),
+    };
+    let be_name = WasmEntrypointFullName {
+        config_name: BACKEND_CONFIG_NAME.to_string(),
+        entrypoint_name: BACKEND_ENTRYPOINT_NAME.to_string(),
+    };
     let fe: oak_abi::NodeMain = abitest_0_frontend::main;
     let be: oak_abi::NodeMain = abitest_1_backend::main;
-    entrypoints.insert(FRONTEND_CONFIG_NAME.to_string(), fe);
-    entrypoints.insert(BACKEND_CONFIG_NAME.to_string(), be);
+    entrypoints.insert(fe_name, fe);
+    entrypoints.insert(be_name, be);
     assert_eq!(Some(()), oak_tests::start(test_config(), entrypoints));
 
     let mut req = ABITestRequest::new();

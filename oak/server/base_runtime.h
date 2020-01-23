@@ -31,8 +31,8 @@ namespace oak {
 class BaseRuntime {
  public:
   virtual ~BaseRuntime() {}
-  virtual bool CreateAndRunNode(const std::string& config, std::unique_ptr<ChannelHalf> half,
-                                std::string* node_name) = 0;
+  virtual bool CreateAndRunNode(const std::string& config_name, const std::string& entrypoint_name,
+                                std::unique_ptr<ChannelHalf> half, std::string* node_name) = 0;
   virtual bool TerminationPending() = 0;
 };  // class BaseRuntime
 

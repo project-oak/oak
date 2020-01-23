@@ -384,7 +384,7 @@ to the room:
 [embedmd]:# (../examples/chat/module_0/rust/src/lib.rs Rust /.*channel_create\(\)/ /\}$/)
 ```Rust
         let (wh, rh) = oak::channel_create().unwrap();
-        oak::node_create("room-config", rh).expect("could not create node");
+        oak::node_create("room-config", "backend_oak_main", rh).expect("could not create node");
         oak::channel_close(rh.handle).expect("could not close channel");
         Room {
             sender: oak::io::Sender::new(wh),
@@ -505,9 +505,17 @@ now in Rust rather than C++).
 
 However, the fields in the application configuration that hold the Wasm bytecode
 for the various Nodes are ignored; instead, the second argument to
-`oak_tests::start()` is a map from the relevant `NodeContents.name` to a
-function pointer of signature `fn(u64) -> ()` (which is type
-`oak_runtime::NodeMain`) that acts as the main entrypoint for the Node under
+`oak_tests::start()` is a map:
+
+- **from** the relevant entrypoint name, described as a combination
+  (`WasmEntrypointName`) of:
+  - the name of the config stanza for the Node
+  - the function name for the entrypoint (in the Wasm code described by that
+    Node configuration)
+- **to** a function pointer of signature `fn(u64) -> ()` (which is type
+  `oak_runtime::NodeMain`).
+
+This allows the test runtime to find the Node entrypoints to execute in the
 test.
 
 <!-- prettier-ignore-start -->
@@ -520,10 +528,18 @@ fn test_abi() {
     // (A subsequent attempt to use the oak_log crate will fail.)
     oak_tests::init_logging();
     let mut entrypoints = HashMap::new();
+    let fe_name = WasmEntrypointFullName {
+        config_name: FRONTEND_CONFIG_NAME.to_string(),
+        entrypoint_name: FRONTEND_ENTRYPOINT_NAME.to_string(),
+    };
+    let be_name = WasmEntrypointFullName {
+        config_name: BACKEND_CONFIG_NAME.to_string(),
+        entrypoint_name: BACKEND_ENTRYPOINT_NAME.to_string(),
+    };
     let fe: oak_abi::NodeMain = abitest_0_frontend::main;
     let be: oak_abi::NodeMain = abitest_1_backend::main;
-    entrypoints.insert(FRONTEND_CONFIG_NAME.to_string(), fe);
-    entrypoints.insert(BACKEND_CONFIG_NAME.to_string(), be);
+    entrypoints.insert(fe_name, fe);
+    entrypoints.insert(be_name, be);
     assert_eq!(Some(()), oak_tests::start(test_config(), entrypoints));
 ```
 <!-- prettier-ignore-end -->

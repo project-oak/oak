@@ -49,7 +49,7 @@ impl Storage {
             Ok(x) => x,
             Err(_e) => return None,
         };
-        if crate::node_create(config, read_channel).is_err() {
+        if crate::node_create(config, "oak_main", read_channel).is_err() {
             if let Err(status) = crate::channel_close(write_channel.handle) {
                 warn!("could not close write channel: {:?}", status);
             };

@@ -22,6 +22,7 @@ use log::{debug, info, warn};
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use oak::OakStatus;
 use oak_abi::{Handle, NodeMain};
+pub use oak_runtime::WasmEntrypointFullName;
 use oak_runtime::{proto, OakMessage, OakRuntime};
 use protobuf::{Message, ProtobufEnum};
 use rand::Rng;
@@ -284,25 +285,49 @@ pub extern "C" fn channel_close(handle: u64) -> u32 {
 ///
 /// # Safety
 ///
-/// The linear memory range [buf, buf+len) must be valid.
+/// The linear memory ranges [config_buf, config_buf+config_len) and
+/// [entrypoint_buf, entrypoint_buf+entrypoint_len) must be valid.
 #[no_mangle]
-pub unsafe fn node_create(buf: *const u8, len: usize, handle: u64) -> u32 {
+pub unsafe fn node_create(
+    config_buf: *const u8,
+    config_len: usize,
+    entrypoint_buf: *const u8,
+    entrypoint_len: usize,
+
+    handle: u64,
+) -> u32 {
     let name = node_name();
-    debug!("{{{}}}: node_create({:?}, {}, {})", name, buf, len, handle);
-    let mut data = Vec::with_capacity(len as usize);
-    std::ptr::copy_nonoverlapping(buf, data.as_mut_ptr(), len as usize);
-    data.set_len(len as usize);
+    debug!(
+        "{{{}}}: node_create({:?}, {}, {:?}, {}, {})",
+        name, config_buf, config_len, entrypoint_buf, entrypoint_len, handle
+    );
+
+    let mut data = Vec::with_capacity(config_len as usize);
+    std::ptr::copy_nonoverlapping(config_buf, data.as_mut_ptr(), config_len as usize);
+    data.set_len(config_len as usize);
     let config = match String::from_utf8(data) {
         Err(_) => return OakStatus::ERR_INVALID_ARGS.value() as u32,
         Ok(s) => s,
     };
-    debug!("{{{}}}: node_create('{}', {})", name, config, handle);
 
-    let start_info = match RUNTIME
-        .write()
-        .expect(RUNTIME_MISSING)
-        .node_create(name, &config, handle)
-    {
+    let mut data = Vec::with_capacity(entrypoint_len as usize);
+    std::ptr::copy_nonoverlapping(entrypoint_buf, data.as_mut_ptr(), entrypoint_len as usize);
+    data.set_len(entrypoint_len as usize);
+    let entrypoint = match String::from_utf8(data) {
+        Err(_) => return OakStatus::ERR_INVALID_ARGS.value() as u32,
+        Ok(s) => s,
+    };
+    debug!(
+        "{{{}}}: node_create('{}', '{}', {})",
+        name, config, entrypoint, handle
+    );
+
+    let start_info = match RUNTIME.write().expect(RUNTIME_MISSING).node_create(
+        name,
+        &config,
+        &entrypoint,
+        handle,
+    ) {
         Err(status) => return status.value() as u32,
         Ok(result) => result,
     };
@@ -405,7 +430,7 @@ pub fn init_logging() {
 /// oak_log::init().
 pub fn start(
     config: proto::manager::ApplicationConfiguration,
-    entrypoints: HashMap<String, NodeMain, RandomState>,
+    entrypoints: HashMap<WasmEntrypointFullName, NodeMain, RandomState>,
 ) -> Option<()> {
     let (name, entrypoint, handle) = RUNTIME
         .write()

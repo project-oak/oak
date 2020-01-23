@@ -5,7 +5,6 @@ node_configs {
   name: "app"
   wasm_config {
     module_bytes: "<bytes>"
-    main_entrypoint: "oak_main"
   }
 }
 node_configs {
@@ -18,4 +17,5 @@ node_configs {
     address: "localhost:8888"
   }
 }
-initial_node: "app"
+initial_node_config_name: "app"
+initial_entrypoint_name: "oak_main"

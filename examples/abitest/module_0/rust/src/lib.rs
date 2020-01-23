@@ -31,6 +31,7 @@ use std::collections::HashMap;
 const BACKEND_COUNT: usize = 3;
 
 const BACKEND_CONFIG_NAME: &str = "backend-config";
+const BACKEND_ENTRYPOINT_NAME: &str = "backend_oak_main";
 
 struct FrontendNode {
     backend_out: Vec<oak::WriteHandle>,
@@ -68,7 +69,8 @@ impl oak::grpc::OakNode for FrontendNode {
         for i in 0..BACKEND_COUNT {
             let (write_handle, read_handle) =
                 oak::channel_create().expect("could not create channel");
-            oak::node_create(BACKEND_CONFIG_NAME, read_handle).expect("could not create node");
+            oak::node_create(BACKEND_CONFIG_NAME, BACKEND_ENTRYPOINT_NAME, read_handle)
+                .expect("could not create node");
             oak::channel_close(read_handle.handle).expect("could not close channel");
             backend_out.push(write_handle);
 
@@ -833,16 +835,51 @@ impl FrontendNode {
     fn test_node_create_raw(&self) -> TestResult {
         let (_, in_channel, _) = channel_create_raw();
 
+        let valid = "a_string";
+        let non_utf8_name: Vec<u8> = vec![0xc3, 0x28];
         unsafe {
             expect_eq!(
                 OakStatus::ERR_INVALID_ARGS.value() as u32,
-                oak_abi::node_create(invalid_raw_offset() as *mut u8, 1, in_channel)
+                oak_abi::node_create(
+                    invalid_raw_offset() as *mut u8,
+                    1,
+                    valid.as_ptr(),
+                    valid.len(),
+                    in_channel
+                )
             );
 
-            let non_utf8_name: Vec<u8> = vec![0xc3, 0x28];
             expect_eq!(
                 OakStatus::ERR_INVALID_ARGS.value() as u32,
-                oak_abi::node_create(non_utf8_name.as_ptr(), non_utf8_name.len(), in_channel)
+                oak_abi::node_create(
+                    non_utf8_name.as_ptr(),
+                    non_utf8_name.len(),
+                    valid.as_ptr(),
+                    valid.len(),
+                    in_channel
+                )
+            );
+
+            expect_eq!(
+                OakStatus::ERR_INVALID_ARGS.value() as u32,
+                oak_abi::node_create(
+                    valid.as_ptr(),
+                    valid.len(),
+                    invalid_raw_offset() as *mut u8,
+                    1,
+                    in_channel
+                )
+            );
+
+            expect_eq!(
+                OakStatus::ERR_INVALID_ARGS.value() as u32,
+                oak_abi::node_create(
+                    valid.as_ptr(),
+                    valid.len(),
+                    non_utf8_name.as_ptr(),
+                    non_utf8_name.len(),
+                    in_channel
+                )
             );
         }
         Ok(())
@@ -850,20 +887,47 @@ impl FrontendNode {
     fn test_node_create(&self) -> TestResult {
         expect_eq!(
             Err(OakStatus::ERR_INVALID_ARGS),
-            oak::node_create("no-such-config", self.backend_in[0])
+            oak::node_create(
+                "no-such-config",
+                BACKEND_ENTRYPOINT_NAME,
+                self.backend_in[0]
+            )
+        );
+        expect_eq!(
+            Err(OakStatus::ERR_INVALID_ARGS),
+            oak::node_create(
+                BACKEND_CONFIG_NAME,
+                "no-such-entrypoint",
+                self.backend_in[0]
+            )
+        );
+        expect_eq!(
+            Err(OakStatus::ERR_INVALID_ARGS),
+            oak::node_create(
+                BACKEND_CONFIG_NAME,
+                "backend_fake_main", // exists but wrong signature
+                self.backend_in[0]
+            )
         );
         expect_eq!(
             Err(OakStatus::ERR_BAD_HANDLE),
             oak::node_create(
                 BACKEND_CONFIG_NAME,
+                BACKEND_ENTRYPOINT_NAME,
                 oak::ReadHandle {
                     handle: oak::Handle::from_raw(oak_abi::INVALID_HANDLE)
                 }
             )
         );
         let (out_handle, in_handle) = oak::channel_create().unwrap();
-        expect_eq!(Ok(()), oak::node_create(BACKEND_CONFIG_NAME, in_handle));
-        expect_eq!(Ok(()), oak::node_create(BACKEND_CONFIG_NAME, in_handle));
+        expect_eq!(
+            Ok(()),
+            oak::node_create(BACKEND_CONFIG_NAME, BACKEND_ENTRYPOINT_NAME, in_handle)
+        );
+        expect_eq!(
+            Ok(()),
+            oak::node_create(BACKEND_CONFIG_NAME, BACKEND_ENTRYPOINT_NAME, in_handle)
+        );
 
         expect_eq!(Ok(()), oak::channel_close(in_handle.handle));
         expect_eq!(Ok(()), oak::channel_close(out_handle.handle));
@@ -951,7 +1015,7 @@ impl FrontendNode {
         // Include some handles which will be ignored.
         let (logging_handle, read_handle) =
             oak::channel_create().expect("could not create channel");
-        oak::node_create(LOG_CONFIG_NAME, read_handle).expect("could not create node");
+        oak::node_create(LOG_CONFIG_NAME, "oak_main", read_handle).expect("could not create node");
         oak::channel_close(read_handle.handle).expect("could not close channel");
 
         expect!(logging_handle.handle.is_valid());

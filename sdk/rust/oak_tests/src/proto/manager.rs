@@ -30,7 +30,8 @@ use protobuf::ProtobufEnum as ProtobufEnum_imported_for_functions;
 pub struct ApplicationConfiguration {
     // message fields
     pub node_configs: ::protobuf::RepeatedField<NodeConfiguration>,
-    pub initial_node: ::std::string::String,
+    pub initial_node_config_name: ::std::string::String,
+    pub initial_entrypoint_name: ::std::string::String,
     pub grpc_port: i32,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
@@ -73,33 +74,59 @@ impl ApplicationConfiguration {
         ::std::mem::replace(&mut self.node_configs, ::protobuf::RepeatedField::new())
     }
 
-    // string initial_node = 2;
+    // string initial_node_config_name = 2;
 
 
-    pub fn get_initial_node(&self) -> &str {
-        &self.initial_node
+    pub fn get_initial_node_config_name(&self) -> &str {
+        &self.initial_node_config_name
     }
-    pub fn clear_initial_node(&mut self) {
-        self.initial_node.clear();
+    pub fn clear_initial_node_config_name(&mut self) {
+        self.initial_node_config_name.clear();
     }
 
     // Param is passed by value, moved
-    pub fn set_initial_node(&mut self, v: ::std::string::String) {
-        self.initial_node = v;
+    pub fn set_initial_node_config_name(&mut self, v: ::std::string::String) {
+        self.initial_node_config_name = v;
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_initial_node(&mut self) -> &mut ::std::string::String {
-        &mut self.initial_node
+    pub fn mut_initial_node_config_name(&mut self) -> &mut ::std::string::String {
+        &mut self.initial_node_config_name
     }
 
     // Take field
-    pub fn take_initial_node(&mut self) -> ::std::string::String {
-        ::std::mem::replace(&mut self.initial_node, ::std::string::String::new())
+    pub fn take_initial_node_config_name(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.initial_node_config_name, ::std::string::String::new())
     }
 
-    // int32 grpc_port = 3;
+    // string initial_entrypoint_name = 3;
+
+
+    pub fn get_initial_entrypoint_name(&self) -> &str {
+        &self.initial_entrypoint_name
+    }
+    pub fn clear_initial_entrypoint_name(&mut self) {
+        self.initial_entrypoint_name.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_initial_entrypoint_name(&mut self, v: ::std::string::String) {
+        self.initial_entrypoint_name = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_initial_entrypoint_name(&mut self) -> &mut ::std::string::String {
+        &mut self.initial_entrypoint_name
+    }
+
+    // Take field
+    pub fn take_initial_entrypoint_name(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.initial_entrypoint_name, ::std::string::String::new())
+    }
+
+    // int32 grpc_port = 4;
 
 
     pub fn get_grpc_port(&self) -> i32 {
@@ -133,9 +160,12 @@ impl ::protobuf::Message for ApplicationConfiguration {
                     ::protobuf::rt::read_repeated_message_into(wire_type, is, &mut self.node_configs)?;
                 },
                 2 => {
-                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.initial_node)?;
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.initial_node_config_name)?;
                 },
                 3 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.initial_entrypoint_name)?;
+                },
+                4 => {
                     if wire_type != ::protobuf::wire_format::WireTypeVarint {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     }
@@ -158,11 +188,14 @@ impl ::protobuf::Message for ApplicationConfiguration {
             let len = value.compute_size();
             my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
         };
-        if !self.initial_node.is_empty() {
-            my_size += ::protobuf::rt::string_size(2, &self.initial_node);
+        if !self.initial_node_config_name.is_empty() {
+            my_size += ::protobuf::rt::string_size(2, &self.initial_node_config_name);
+        }
+        if !self.initial_entrypoint_name.is_empty() {
+            my_size += ::protobuf::rt::string_size(3, &self.initial_entrypoint_name);
         }
         if self.grpc_port != 0 {
-            my_size += ::protobuf::rt::value_size(3, self.grpc_port, ::protobuf::wire_format::WireTypeVarint);
+            my_size += ::protobuf::rt::value_size(4, self.grpc_port, ::protobuf::wire_format::WireTypeVarint);
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
@@ -175,11 +208,14 @@ impl ::protobuf::Message for ApplicationConfiguration {
             os.write_raw_varint32(v.get_cached_size())?;
             v.write_to_with_cached_sizes(os)?;
         };
-        if !self.initial_node.is_empty() {
-            os.write_string(2, &self.initial_node)?;
+        if !self.initial_node_config_name.is_empty() {
+            os.write_string(2, &self.initial_node_config_name)?;
+        }
+        if !self.initial_entrypoint_name.is_empty() {
+            os.write_string(3, &self.initial_entrypoint_name)?;
         }
         if self.grpc_port != 0 {
-            os.write_int32(3, self.grpc_port)?;
+            os.write_int32(4, self.grpc_port)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -229,9 +265,14 @@ impl ::protobuf::Message for ApplicationConfiguration {
                     |m: &mut ApplicationConfiguration| { &mut m.node_configs },
                 ));
                 fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
-                    "initial_node",
-                    |m: &ApplicationConfiguration| { &m.initial_node },
-                    |m: &mut ApplicationConfiguration| { &mut m.initial_node },
+                    "initial_node_config_name",
+                    |m: &ApplicationConfiguration| { &m.initial_node_config_name },
+                    |m: &mut ApplicationConfiguration| { &mut m.initial_node_config_name },
+                ));
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                    "initial_entrypoint_name",
+                    |m: &ApplicationConfiguration| { &m.initial_entrypoint_name },
+                    |m: &mut ApplicationConfiguration| { &mut m.initial_entrypoint_name },
                 ));
                 fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeInt32>(
                     "grpc_port",
@@ -261,7 +302,8 @@ impl ::protobuf::Message for ApplicationConfiguration {
 impl ::protobuf::Clear for ApplicationConfiguration {
     fn clear(&mut self) {
         self.node_configs.clear();
-        self.initial_node.clear();
+        self.initial_node_config_name.clear();
+        self.initial_entrypoint_name.clear();
         self.grpc_port = 0;
         self.unknown_fields.clear();
     }
@@ -694,7 +736,6 @@ impl ::protobuf::reflect::ProtobufValue for NodeConfiguration {
 pub struct WebAssemblyConfiguration {
     // message fields
     pub module_bytes: ::std::vec::Vec<u8>,
-    pub main_entrypoint: ::std::string::String,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -736,32 +777,6 @@ impl WebAssemblyConfiguration {
     pub fn take_module_bytes(&mut self) -> ::std::vec::Vec<u8> {
         ::std::mem::replace(&mut self.module_bytes, ::std::vec::Vec::new())
     }
-
-    // string main_entrypoint = 2;
-
-
-    pub fn get_main_entrypoint(&self) -> &str {
-        &self.main_entrypoint
-    }
-    pub fn clear_main_entrypoint(&mut self) {
-        self.main_entrypoint.clear();
-    }
-
-    // Param is passed by value, moved
-    pub fn set_main_entrypoint(&mut self, v: ::std::string::String) {
-        self.main_entrypoint = v;
-    }
-
-    // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_main_entrypoint(&mut self) -> &mut ::std::string::String {
-        &mut self.main_entrypoint
-    }
-
-    // Take field
-    pub fn take_main_entrypoint(&mut self) -> ::std::string::String {
-        ::std::mem::replace(&mut self.main_entrypoint, ::std::string::String::new())
-    }
 }
 
 impl ::protobuf::Message for WebAssemblyConfiguration {
@@ -775,9 +790,6 @@ impl ::protobuf::Message for WebAssemblyConfiguration {
             match field_number {
                 1 => {
                     ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.module_bytes)?;
-                },
-                2 => {
-                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.main_entrypoint)?;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -794,9 +806,6 @@ impl ::protobuf::Message for WebAssemblyConfiguration {
         if !self.module_bytes.is_empty() {
             my_size += ::protobuf::rt::bytes_size(1, &self.module_bytes);
         }
-        if !self.main_entrypoint.is_empty() {
-            my_size += ::protobuf::rt::string_size(2, &self.main_entrypoint);
-        }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -805,9 +814,6 @@ impl ::protobuf::Message for WebAssemblyConfiguration {
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
         if !self.module_bytes.is_empty() {
             os.write_bytes(1, &self.module_bytes)?;
-        }
-        if !self.main_entrypoint.is_empty() {
-            os.write_string(2, &self.main_entrypoint)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -856,11 +862,6 @@ impl ::protobuf::Message for WebAssemblyConfiguration {
                     |m: &WebAssemblyConfiguration| { &m.module_bytes },
                     |m: &mut WebAssemblyConfiguration| { &mut m.module_bytes },
                 ));
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
-                    "main_entrypoint",
-                    |m: &WebAssemblyConfiguration| { &m.main_entrypoint },
-                    |m: &mut WebAssemblyConfiguration| { &mut m.main_entrypoint },
-                ));
                 ::protobuf::reflect::MessageDescriptor::new::<WebAssemblyConfiguration>(
                     "WebAssemblyConfiguration",
                     fields,
@@ -884,7 +885,6 @@ impl ::protobuf::Message for WebAssemblyConfiguration {
 impl ::protobuf::Clear for WebAssemblyConfiguration {
     fn clear(&mut self) {
         self.module_bytes.clear();
-        self.main_entrypoint.clear();
         self.unknown_fields.clear();
     }
 }
@@ -1880,29 +1880,29 @@ impl ::protobuf::reflect::ProtobufValue for TerminateApplicationResponse {
 }
 
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\rmanager.proto\x12\x03oak\"\x95\x01\n\x18ApplicationConfiguration\x12\
+    \n\rmanager.proto\x12\x03oak\"\xe3\x01\n\x18ApplicationConfiguration\x12\
     9\n\x0cnode_configs\x18\x01\x20\x03(\x0b2\x16.oak.NodeConfigurationR\x0b\
-    nodeConfigs\x12!\n\x0cinitial_node\x18\x02\x20\x01(\tR\x0binitialNode\
-    \x12\x1b\n\tgrpc_port\x18\x03\x20\x01(\x05R\x08grpcPort\"\xf9\x01\n\x11N\
-    odeConfiguration\x12\x12\n\x04name\x18\x01\x20\x01(\tR\x04name\x12@\n\
-    \x0bwasm_config\x18\x02\x20\x01(\x0b2\x1d.oak.WebAssemblyConfigurationH\
-    \0R\nwasmConfig\x126\n\nlog_config\x18\x03\x20\x01(\x0b2\x15.oak.LogConf\
-    igurationH\0R\tlogConfig\x12G\n\x0estorage_config\x18\x04\x20\x01(\x0b2\
-    \x1e.oak.StorageProxyConfigurationH\0R\rstorageConfigB\r\n\x0bconfig_typ\
-    e\"f\n\x18WebAssemblyConfiguration\x12!\n\x0cmodule_bytes\x18\x01\x20\
-    \x01(\x0cR\x0bmoduleBytes\x12'\n\x0fmain_entrypoint\x18\x02\x20\x01(\tR\
-    \x0emainEntrypoint\"\x12\n\x10LogConfiguration\"5\n\x19StorageProxyConfi\
-    guration\x12\x18\n\x07address\x18\x01\x20\x01(\tR\x07address\"v\n\x18Cre\
-    ateApplicationRequest\x12Z\n\x19application_configuration\x18\x01\x20\
-    \x01(\x0b2\x1d.oak.ApplicationConfigurationR\x18applicationConfiguration\
-    \"_\n\x19CreateApplicationResponse\x12%\n\x0eapplication_id\x18\x01\x20\
-    \x01(\tR\rapplicationId\x12\x1b\n\tgrpc_port\x18\x02\x20\x01(\x05R\x08gr\
-    pcPort\"D\n\x1bTerminateApplicationRequest\x12%\n\x0eapplication_id\x18\
-    \x01\x20\x01(\tR\rapplicationId\"\x1e\n\x1cTerminateApplicationResponse2\
-    \xba\x01\n\x07Manager\x12R\n\x11CreateApplication\x12\x1d.oak.CreateAppl\
-    icationRequest\x1a\x1e.oak.CreateApplicationResponse\x12[\n\x14Terminate\
-    Application\x12\x20.oak.TerminateApplicationRequest\x1a!.oak.TerminateAp\
-    plicationResponseb\x06proto3\
+    nodeConfigs\x127\n\x18initial_node_config_name\x18\x02\x20\x01(\tR\x15in\
+    itialNodeConfigName\x126\n\x17initial_entrypoint_name\x18\x03\x20\x01(\t\
+    R\x15initialEntrypointName\x12\x1b\n\tgrpc_port\x18\x04\x20\x01(\x05R\
+    \x08grpcPort\"\xf9\x01\n\x11NodeConfiguration\x12\x12\n\x04name\x18\x01\
+    \x20\x01(\tR\x04name\x12@\n\x0bwasm_config\x18\x02\x20\x01(\x0b2\x1d.oak\
+    .WebAssemblyConfigurationH\0R\nwasmConfig\x126\n\nlog_config\x18\x03\x20\
+    \x01(\x0b2\x15.oak.LogConfigurationH\0R\tlogConfig\x12G\n\x0estorage_con\
+    fig\x18\x04\x20\x01(\x0b2\x1e.oak.StorageProxyConfigurationH\0R\rstorage\
+    ConfigB\r\n\x0bconfig_type\"=\n\x18WebAssemblyConfiguration\x12!\n\x0cmo\
+    dule_bytes\x18\x01\x20\x01(\x0cR\x0bmoduleBytes\"\x12\n\x10LogConfigurat\
+    ion\"5\n\x19StorageProxyConfiguration\x12\x18\n\x07address\x18\x01\x20\
+    \x01(\tR\x07address\"v\n\x18CreateApplicationRequest\x12Z\n\x19applicati\
+    on_configuration\x18\x01\x20\x01(\x0b2\x1d.oak.ApplicationConfigurationR\
+    \x18applicationConfiguration\"_\n\x19CreateApplicationResponse\x12%\n\
+    \x0eapplication_id\x18\x01\x20\x01(\tR\rapplicationId\x12\x1b\n\tgrpc_po\
+    rt\x18\x02\x20\x01(\x05R\x08grpcPort\"D\n\x1bTerminateApplicationRequest\
+    \x12%\n\x0eapplication_id\x18\x01\x20\x01(\tR\rapplicationId\"\x1e\n\x1c\
+    TerminateApplicationResponse2\xba\x01\n\x07Manager\x12R\n\x11CreateAppli\
+    cation\x12\x1d.oak.CreateApplicationRequest\x1a\x1e.oak.CreateApplicatio\
+    nResponse\x12[\n\x14TerminateApplication\x12\x20.oak.TerminateApplicatio\
+    nRequest\x1a!.oak.TerminateApplicationResponseb\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {

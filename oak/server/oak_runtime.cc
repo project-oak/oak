@@ -75,7 +75,8 @@ grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
 
   // Create the initial Application Node.
   std::string node_name;
-  OakNode* app_node = CreateNode(config.initial_node(), &node_name);
+  OakNode* app_node =
+      CreateNode(config.initial_node_config_name(), config.initial_entrypoint_name(), &node_name);
   if (app_node == nullptr) {
     return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Failed to create initial Oak Node");
   }
@@ -93,30 +94,34 @@ grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
   return grpc::Status::OK;
 }
 
-std::string OakRuntime::NextNodeName(const std::string& config) {
-  int index = next_index_[config]++;
-  return absl::StrCat(config, "-", index);
+// Generate a unique (per-Runtime) name for a new Node, running the given Node
+// configuration and entrypoint.
+std::string OakRuntime::NextNodeName(const std::string& config_name,
+                                     const std::string& entrypoint_name) {
+  int index = next_index_[config_name]++;
+  return absl::StrCat(config_name, "-", index, "-", entrypoint_name);
 }
 
 // Create (but don't start) a new Node instance.  Return a borrowed pointer to
 // the new Node (or nullptr on failure).
-OakNode* OakRuntime::CreateNode(const std::string& config, std::string* node_name) {
-  std::string name = NextNodeName(config);
+OakNode* OakRuntime::CreateNode(const std::string& config_name, const std::string& entrypoint_name,
+                                std::string* node_name) {
+  std::string name = NextNodeName(config_name, entrypoint_name);
   std::unique_ptr<OakNode> node;
 
-  if (wasm_config_.count(config) > 0) {
+  if (wasm_config_.count(config_name) > 0) {
     LOG(INFO) << "Create Wasm node named {" << name << "}";
-    const WebAssemblyConfiguration* wasm_cfg = wasm_config_[config].get();
-    node = WasmNode::Create(this, name, wasm_cfg->module_bytes(), wasm_cfg->main_entrypoint());
-  } else if (log_config_.count(config) > 0) {
+    const WebAssemblyConfiguration* wasm_cfg = wasm_config_[config_name].get();
+    node = WasmNode::Create(this, name, wasm_cfg->module_bytes(), entrypoint_name);
+  } else if (log_config_.count(config_name) > 0) {
     LOG(INFO) << "Create log node named {" << name << "}";
     node = absl::make_unique<LoggingNode>(this, name);
-  } else if (storage_config_.count(config) > 0) {
-    std::string address = *(storage_config_[config].get());
+  } else if (storage_config_.count(config_name) > 0) {
+    std::string address = *(storage_config_[config_name].get());
     LOG(INFO) << "Create storage proxy node named {" << name << "} connecting to " << address;
     node = absl::make_unique<StorageNode>(this, name, address);
   } else {
-    LOG(ERROR) << "failed to find config with name " << config;
+    LOG(ERROR) << "failed to find config with name " << config_name;
     return nullptr;
   }
 
@@ -125,20 +130,21 @@ OakNode* OakRuntime::CreateNode(const std::string& config, std::string* node_nam
     nodes_[name] = std::move(node);
     *node_name = name;
   } else {
-    LOG(ERROR) << "failed to create Node with config of name " << config;
+    LOG(ERROR) << "failed to create Node with config of name " << config_name;
   }
   return result;
 }
 
-bool OakRuntime::CreateAndRunNode(const std::string& config, std::unique_ptr<ChannelHalf> half,
-                                  std::string* node_name) {
+bool OakRuntime::CreateAndRunNode(const std::string& config_name,
+                                  const std::string& entrypoint_name,
+                                  std::unique_ptr<ChannelHalf> half, std::string* node_name) {
   if (TerminationPending()) {
     LOG(WARNING) << "Runtime is pending termination, fail node creation";
     return false;
   }
 
   absl::MutexLock lock(&mu_);
-  OakNode* node = CreateNode(config, node_name);
+  OakNode* node = CreateNode(config_name, entrypoint_name, node_name);
   if (node == nullptr) {
     return false;
   }
