@@ -19,7 +19,7 @@ use chat_common::proto::chat::{
     CreateRoomRequest, DestroyRoomRequest, SendMessageRequest, SubscribeRequest,
 };
 use chat_common::proto::chat_grpc::{dispatch, ChatNode};
-use log::{info, warn};
+use log::info;
 use oak::grpc;
 use oak::grpc::OakNode;
 use oak_derive::OakExports;

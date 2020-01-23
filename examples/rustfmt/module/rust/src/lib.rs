@@ -16,7 +16,6 @@
 
 mod proto;
 
-use log::warn;
 use oak::grpc;
 use oak::grpc::OakNode;
 use oak_derive::OakExports;
