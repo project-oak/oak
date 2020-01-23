@@ -168,7 +168,7 @@ void ModuleInvocation::BlockingSendResponse() {
   if (rsp_result.required_size > 0) {
     LOG(ERROR) << "invocation#" << stream_id_
                << " SendResponse: Message size too large: " << rsp_result.required_size;
-    FinishAndRestart(grpc::Status(grpc::StatusCode::INTERNAL, "Message size too large"));
+    FinishAndCleanUp(grpc::Status(grpc::StatusCode::INTERNAL, "Message size too large"));
     return;
   }
 
@@ -179,7 +179,7 @@ void ModuleInvocation::BlockingSendResponse() {
           std::string(rsp_result.msg->data.data(), rsp_result.msg->data.size()))) {
     LOG(ERROR) << "invocation#" << stream_id_
                << " SendResponse: failed to parse encapsulated message";
-    FinishAndRestart(grpc::Status(grpc::StatusCode::INTERNAL, "Message failed to parse"));
+    FinishAndCleanUp(grpc::Status(grpc::StatusCode::INTERNAL, "Message failed to parse"));
     return;
   }
   // Any channel references included with the message will be dropped.
@@ -190,6 +190,7 @@ void ModuleInvocation::BlockingSendResponse() {
 
   grpc::WriteOptions options;
   if (!grpc_response.last()) {
+    // More response data is expected, so queue up another SendResponse action.
     LOG(INFO) << "invocation#" << stream_id_ << " SendResponse: Non-final inner response of size "
               << inner_msg.size() << ", request stream->Write => SendResponse";
     auto callback = new std::function<void(bool)>(
@@ -198,29 +199,29 @@ void ModuleInvocation::BlockingSendResponse() {
   } else if (!grpc_response.has_rsp_msg()) {
     // Final iteration but no response, just Finish.
     LOG(INFO) << "invocation#" << stream_id_ << " SendResponse: Final inner response empty";
-    FinishAndRestart(::grpc::Status::OK);
+    FinishAndCleanUp(::grpc::Status::OK);
   } else {
-    // Final response, so WriteAndFinish then kick off the next round.
+    // Final response, so WriteAndFinish.
     LOG(INFO) << "invocation#" << stream_id_ << " SendResponse: Final inner response of size "
-              << inner_msg.size() << ", request stream->WriteAndFinish => Finish";
+              << inner_msg.size() << ", request stream->WriteAndFinish => CleanUp";
     options.set_last_message();
     auto callback = new std::function<void(bool)>(
-        std::bind(&ModuleInvocation::Finish, this, std::placeholders::_1));
+        std::bind(&ModuleInvocation::CleanUp, this, std::placeholders::_1));
     stream_.WriteAndFinish(bb, options, ::grpc::Status::OK, callback);
   }
 }
 
-void ModuleInvocation::Finish(bool /*ok*/) {
-  LOG(INFO) << "invocation#" << stream_id_ << " Finish: delete self";
+void ModuleInvocation::CleanUp(bool /*ok*/) {
+  LOG(INFO) << "invocation#" << stream_id_ << " CleanUp: delete self";
   delete this;
 }
 
-void ModuleInvocation::FinishAndRestart(const grpc::Status& status) {
+void ModuleInvocation::FinishAndCleanUp(const grpc::Status& status) {
   // Finish the current invocation (which triggers self-destruction).
   LOG(INFO) << "invocation#" << stream_id_
-            << "  FinishAndRestart: request stream->Finish => Finish";
+            << "  FinishAndCleanUp: request stream->Finish => CleanUp";
   auto callback = new std::function<void(bool)>(
-      std::bind(&ModuleInvocation::Finish, this, std::placeholders::_1));
+      std::bind(&ModuleInvocation::CleanUp, this, std::placeholders::_1));
   stream_.Finish(status, callback);
 }
 

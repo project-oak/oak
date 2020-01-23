@@ -64,10 +64,10 @@ class ModuleInvocation {
   void BlockingSendResponse();
 
   // Cleans up by deleting this object.
-  void Finish(bool ok);
+  void CleanUp(bool ok);
 
  private:
-  void FinishAndRestart(const grpc::Status& status);
+  void FinishAndCleanUp(const grpc::Status& status);
 
   grpc::AsyncGenericService* const service_;
   grpc::ServerCompletionQueue* const queue_;
