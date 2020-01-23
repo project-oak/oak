@@ -156,7 +156,7 @@ http_archive(
     strip_prefix = "tensorflow-11bed638b14898cdde967f6b108e45732aa4798a",
     urls = [
         # Head commit on 2020-01-20.
-        "https://github.com/tensorflow/tensorflow/archive/11bed638b14898cdde967f6b108e45732aa4798a.tar.gz"
+        "https://github.com/tensorflow/tensorflow/archive/11bed638b14898cdde967f6b108e45732aa4798a.tar.gz",
     ],
 )
 
