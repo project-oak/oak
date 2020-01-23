@@ -92,6 +92,9 @@ impl oak::grpc::OakNode for FrontendNode {
     }
 }
 
+type TestResult = Result<(), Box<dyn std::error::Error>>;
+type TestFn = fn(&FrontendNode) -> TestResult;
+
 impl OakABITestServiceNode for FrontendNode {
     fn run_tests(&mut self, req: ABITestRequest) -> grpc::Result<ABITestResponse> {
         info!(
@@ -103,8 +106,6 @@ impl OakABITestServiceNode for FrontendNode {
         let mut results = protobuf::RepeatedField::<ABITestResponse_TestResult>::new();
 
         // Manual registry of all tests.
-        // TODO: Generalize return type to a generic `Result` (not just `std::io::Result`).
-        type TestFn = fn(&FrontendNode) -> std::io::Result<()>;
         let mut tests: HashMap<&str, TestFn> = HashMap::new();
         tests.insert("ChannelCreateRaw", FrontendNode::test_channel_create_raw);
         tests.insert("ChannelCreate", FrontendNode::test_channel_create);
@@ -190,7 +191,7 @@ fn channel_create_raw() -> (u64, u64, u32) {
 }
 
 impl FrontendNode {
-    fn test_channel_create_raw(&self) -> std::io::Result<()> {
+    fn test_channel_create_raw(&self) -> TestResult {
         let mut write = 0u64;
         let mut read = 0u64;
         unsafe {
@@ -206,17 +207,17 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_channel_create(&self) -> std::io::Result<()> {
+    fn test_channel_create(&self) -> TestResult {
         let mut handles = Vec::<(oak::WriteHandle, oak::ReadHandle)>::new();
         const CHANNEL_COUNT: usize = 50;
         for _ in 0..CHANNEL_COUNT {
             match oak::channel_create() {
                 Ok(pair) => handles.push(pair),
                 Err(status) => {
-                    return Err(std::io::Error::new(
+                    return Err(Box::new(std::io::Error::new(
                         std::io::ErrorKind::Other,
                         format!("channel_create failure {:?}", status),
-                    ));
+                    )));
                 }
             }
         }
@@ -227,7 +228,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_channel_close_raw(&self) -> std::io::Result<()> {
+    fn test_channel_close_raw(&self) -> TestResult {
         let (w, r, _) = channel_create_raw();
 
         unsafe {
@@ -245,7 +246,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_channel_close(&self) -> std::io::Result<()> {
+    fn test_channel_close(&self) -> TestResult {
         let (w, r) = oak::channel_create().unwrap();
         expect_eq!(Ok(()), oak::channel_close(w.handle));
         expect_eq!(Ok(()), oak::channel_close(r.handle));
@@ -262,7 +263,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_channel_read_raw(&self) -> std::io::Result<()> {
+    fn test_channel_read_raw(&self) -> TestResult {
         let (out_channel, in_channel, _) = channel_create_raw();
 
         let mut buf = Vec::<u8>::with_capacity(5);
@@ -345,7 +346,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_channel_read(&self) -> std::io::Result<()> {
+    fn test_channel_read(&self) -> TestResult {
         let (out_channel, in_channel) = oak::channel_create().unwrap();
 
         // No message pending.
@@ -445,7 +446,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_channel_read_orphan(&self) -> std::io::Result<()> {
+    fn test_channel_read_orphan(&self) -> TestResult {
         let (out_channel, in_channel) = oak::channel_create().unwrap();
 
         // Drop the only write handle for this channel.
@@ -463,7 +464,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_channel_write_raw(&self) -> std::io::Result<()> {
+    fn test_channel_write_raw(&self) -> TestResult {
         let (out_channel, in_channel, _) = channel_create_raw();
 
         let buf = vec![0x01];
@@ -499,7 +500,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_channel_write(&self) -> std::io::Result<()> {
+    fn test_channel_write(&self) -> TestResult {
         let (out_channel, in_channel) = oak::channel_create().unwrap();
 
         // Empty message.
@@ -528,7 +529,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_channel_write_orphan(&self) -> std::io::Result<()> {
+    fn test_channel_write_orphan(&self) -> TestResult {
         let (out_channel, in_channel) = oak::channel_create().unwrap();
 
         // Close the only read handle for the channel.
@@ -545,7 +546,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_channel_wait_raw(&self) -> std::io::Result<()> {
+    fn test_channel_wait_raw(&self) -> TestResult {
         let (out_channel, in_channel, _) = channel_create_raw();
         let (out_empty_channel, in_empty_channel, _) = channel_create_raw();
 
@@ -699,7 +700,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_channel_wait(&self) -> std::io::Result<()> {
+    fn test_channel_wait(&self) -> TestResult {
         let (out1, in1) = oak::channel_create().unwrap();
         let (out2, in2) = oak::channel_create().unwrap();
 
@@ -792,7 +793,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_channel_wait_orphan(&self) -> std::io::Result<()> {
+    fn test_channel_wait_orphan(&self) -> TestResult {
         // Use 2 channels so there's always a ready channel to prevent
         // wait_on_channels blocking.
         let (out1, in1) = oak::channel_create().unwrap();
@@ -835,7 +836,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_node_create_raw(&self) -> std::io::Result<()> {
+    fn test_node_create_raw(&self) -> TestResult {
         let (_, in_channel, _) = channel_create_raw();
 
         unsafe {
@@ -852,7 +853,7 @@ impl FrontendNode {
         }
         Ok(())
     }
-    fn test_node_create(&self) -> std::io::Result<()> {
+    fn test_node_create(&self) -> TestResult {
         expect_eq!(
             Err(OakStatus::ERR_INVALID_ARGS),
             oak::node_create("no-such-config", self.backend_in[0])
@@ -875,7 +876,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_random_get_raw(&self) -> std::io::Result<()> {
+    fn test_random_get_raw(&self) -> TestResult {
         unsafe {
             expect_eq!(
                 OakStatus::ERR_INVALID_ARGS.value() as u32,
@@ -885,7 +886,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_random_get(&self) -> std::io::Result<()> {
+    fn test_random_get(&self) -> TestResult {
         let original = vec![0x01, 0x02, 0x03, 0x04];
         let mut data = original.clone();
         expect_eq!(Ok(()), oak::random_get(&mut data));
@@ -894,7 +895,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_random_rng(&self) -> std::io::Result<()> {
+    fn test_random_rng(&self) -> TestResult {
         let mut rng = oak::rand::OakRng {};
         let x1 = rng.gen::<u64>();
         let x2 = rng.gen::<u64>();
@@ -902,7 +903,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_channel_handle_reuse(&self) -> std::io::Result<()> {
+    fn test_channel_handle_reuse(&self) -> TestResult {
         // Set up a fresh channel with a pending message so wait_on_channels
         // doesn't block.
         let (out_handle, in_handle) = oak::channel_create().unwrap();
@@ -951,7 +952,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_direct_log(&self) -> std::io::Result<()> {
+    fn test_direct_log(&self) -> TestResult {
         // Send a message directly to a fresh logging Node (not via the log facade).
         // Include some handles which will be ignored.
         let (logging_handle, read_handle) =
@@ -974,7 +975,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_backend_roundtrip(&self) -> std::io::Result<()> {
+    fn test_backend_roundtrip(&self) -> TestResult {
         // Make a collection of new channels for the backend nodes to read from,
         // and send the read handles to each backend node.
         const CHANNEL_COUNT: usize = 3;
