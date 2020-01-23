@@ -186,7 +186,7 @@ impl Drop for ChannelHalf {
 }
 
 #[derive(PartialEq, Clone, Debug, Eq, Hash)]
-pub struct WasmEntrypointName {
+pub struct WasmEntrypointFullName {
     // Name of the config stanza for the Node.
     pub config: String,
     // Entrypoint name.
@@ -197,7 +197,7 @@ pub struct OakRuntime {
     termination_pending: bool,
     node_configs: HashMap<String, NodeConfiguration_oneof_config_type>,
     // Map entrypoint names to a test entrypoint function pointer.
-    entrypoints: HashMap<WasmEntrypointName, NodeMain>,
+    entrypoints: HashMap<WasmEntrypointFullName, NodeMain>,
     // Map name of Node config names to next index.
     next_index: HashMap<String, u32>,
     // Track a reference to the write half of the channel used for sending
@@ -244,11 +244,11 @@ impl OakRuntime {
         self.termination_pending = value;
     }
 
-    fn entrypoint(&self, entrypoint_name: &WasmEntrypointName) -> Option<NodeMain> {
+    fn entrypoint(&self, entrypoint_name: &WasmEntrypointFullName) -> Option<NodeMain> {
         self.entrypoints.get(entrypoint_name).copied()
     }
 
-    fn next_node_name(&mut self, full_name: &WasmEntrypointName) -> String {
+    fn next_node_name(&mut self, full_name: &WasmEntrypointFullName) -> String {
         let index = self
             .next_index
             .entry(full_name.config.to_string())
@@ -264,7 +264,7 @@ impl OakRuntime {
     pub fn configure(
         &mut self,
         mut config: proto::manager::ApplicationConfiguration,
-        entrypoints: HashMap<WasmEntrypointName, NodeMain>,
+        entrypoints: HashMap<WasmEntrypointFullName, NodeMain>,
     ) -> Option<(String, NodeMain, Handle)> {
         self.set_termination_pending(false);
         self.nodes.clear();
@@ -285,7 +285,7 @@ impl OakRuntime {
             }
         }
 
-        let full_name = WasmEntrypointName {
+        let full_name = WasmEntrypointFullName {
             config: config.initial_node,
             entrypoint: config.initial_entrypoint,
         };
@@ -454,7 +454,7 @@ impl OakRuntime {
             }
         };
         // Now find the corresponding entrypoint
-        let full_name = WasmEntrypointName {
+        let full_name = WasmEntrypointFullName {
             config: config_name.to_string(),
             entrypoint: entrypoint_name.to_string(),
         };

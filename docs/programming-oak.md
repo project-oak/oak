@@ -528,11 +528,11 @@ fn test_abi() {
     // (A subsequent attempt to use the oak_log crate will fail.)
     oak_tests::init_logging();
     let mut entrypoints = HashMap::new();
-    let fe_name = WasmEntrypointName {
+    let fe_name = WasmEntrypointFullName {
         config: FRONTEND_CONFIG_NAME.to_string(),
         entrypoint: FRONTEND_ENTRYPOINT_NAME.to_string(),
     };
-    let be_name = WasmEntrypointName {
+    let be_name = WasmEntrypointFullName {
         config: BACKEND_CONFIG_NAME.to_string(),
         entrypoint: BACKEND_ENTRYPOINT_NAME.to_string(),
     };

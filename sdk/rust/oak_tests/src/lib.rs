@@ -22,7 +22,7 @@ use log::{debug, info, warn};
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use oak::OakStatus;
 use oak_abi::{Handle, NodeMain};
-pub use oak_runtime::WasmEntrypointName;
+pub use oak_runtime::WasmEntrypointFullName;
 use oak_runtime::{proto, OakMessage, OakRuntime};
 use protobuf::{Message, ProtobufEnum};
 use rand::Rng;
@@ -430,7 +430,7 @@ pub fn init_logging() {
 /// oak_log::init().
 pub fn start(
     config: proto::manager::ApplicationConfiguration,
-    entrypoints: HashMap<WasmEntrypointName, NodeMain, RandomState>,
+    entrypoints: HashMap<WasmEntrypointFullName, NodeMain, RandomState>,
 ) -> Option<()> {
     let (name, entrypoint, handle) = RUNTIME
         .write()
