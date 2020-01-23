@@ -58,9 +58,13 @@ pub trait Runnable {
 /// Type alias for a boxed, dynamically dispatched `Runnable` instance.
 pub type R = Box<dyn Runnable>;
 
+pub fn run(runnable: R, opt: Opt) {
+    runnable.run(&Context::root(opt))
+}
+
 /// A step executor, which pretty prints the current nesting level, and allows executing commands
 /// and reporting their result.
-pub struct Step {
+struct Step {
     name: String,
     executable: String,
     args: Vec<String>,
@@ -68,13 +72,17 @@ pub struct Step {
 
 impl Step {
     /// Create the root step executor, of which there should only be one.
-    pub fn new(name: &str, executable: &str, args: &[&str]) -> R {
-        Box::new(Step {
+    fn new(name: &str, executable: &str, args: &[&str]) -> Self {
+        Step {
             name: name.to_string(),
             executable: executable.to_string(),
             args: args.iter().cloned().map(|s| s.to_string()).collect(),
-        })
+        }
     }
+}
+
+pub fn step(name: &str, executable: &str, args: &[&str]) -> R {
+    Box::new(Step::new(name, executable, args))
 }
 
 impl Runnable for Step {
@@ -121,21 +129,28 @@ impl Runnable for Step {
     }
 }
 
-pub struct Sequence {
+struct Sequence {
     name: String,
     entries: Vec<R>,
 }
 
 impl Sequence {
-    pub fn new<E>(name: &str, entries: E) -> R
+    fn new<E>(name: &str, entries: E) -> Self
     where
         E: IntoIterator<Item = R>,
     {
-        Box::new(Sequence {
+        Sequence {
             name: name.to_string(),
             entries: entries.into_iter().collect(),
-        })
+        }
     }
+}
+
+pub fn sequence<E>(name: &str, entries: E) -> R
+where
+    E: IntoIterator<Item = R>,
+{
+    Box::new(Sequence::new(name, entries))
 }
 
 impl Runnable for Sequence {
