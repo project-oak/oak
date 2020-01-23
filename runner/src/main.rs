@@ -33,7 +33,7 @@ use internal::*;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let opt = Opt::from_args();
     // TODO: Add support for running individual commands via command line flags.
-    let root = Sequence::new(
+    let root = sequence(
         "root",
         vec![
             run_buildifier(),
@@ -47,7 +47,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             run_bazel_test(),
         ],
     );
-    root.run(&Context::root(opt));
+    run(root, opt);
     Ok(())
 }
 
@@ -119,33 +119,33 @@ fn is_cargo_workspace_file(path: &PathBuf) -> bool {
 }
 
 fn run_buildifier() -> R {
-    Sequence::new(
+    sequence(
         "buildifier",
         source_files()
             .filter(is_bazel_file)
             .map(to_string)
-            .map(|entry| Step::new(&entry, "buildifier", &["-lint=warn", "-mode=check", &entry])),
+            .map(|entry| step(&entry, "buildifier", &["-lint=warn", "-mode=check", &entry])),
     )
 }
 
 fn run_prettier() -> R {
-    Sequence::new(
+    sequence(
         "prettier",
         source_files()
             .filter(is_markdown_file)
             .map(to_string)
-            .map(|entry| Step::new(&entry, "prettier", &["--check", &entry])),
+            .map(|entry| step(&entry, "prettier", &["--check", &entry])),
     )
 }
 
 fn run_embedmd() -> R {
-    Sequence::new(
+    sequence(
         "embedmd",
         source_files()
             .filter(is_markdown_file)
             .map(to_string)
             .map(|entry| {
-                Step::new(
+                step(
                     &entry,
                     &format!("{}/bin/embedmd", std::env::var("GOPATH").unwrap()),
                     &["-d", &entry],
@@ -155,10 +155,10 @@ fn run_embedmd() -> R {
 }
 
 fn run_cargo_fmt() -> R {
-    Sequence::new(
+    sequence(
         "cargo fmt",
         workspace_manifest_files().map(to_string).map(|entry| {
-            Step::new(
+            step(
                 &entry,
                 "cargo",
                 &[
@@ -174,10 +174,10 @@ fn run_cargo_fmt() -> R {
 }
 
 fn run_cargo_test() -> R {
-    Sequence::new(
+    sequence(
         "cargo test",
         workspace_manifest_files().map(to_string).map(|entry| {
-            Step::new(
+            step(
                 &entry,
                 "cargo",
                 &[
@@ -191,10 +191,10 @@ fn run_cargo_test() -> R {
 }
 
 fn run_cargo_doc_test() -> R {
-    Sequence::new(
+    sequence(
         "cargo doc test",
         workspace_manifest_files().map(to_string).map(|entry| {
-            Step::new(
+            step(
                 &entry,
                 "cargo",
                 &["test", "--doc", &format!("--manifest-path={}", &entry)],
@@ -204,10 +204,10 @@ fn run_cargo_doc_test() -> R {
 }
 
 fn run_cargo_clippy() -> R {
-    Sequence::new(
+    sequence(
         "cargo clippy",
         workspace_manifest_files().map(to_string).map(|entry| {
-            Step::new(
+            step(
                 &entry,
                 "cargo",
                 &[
@@ -223,7 +223,7 @@ fn run_cargo_clippy() -> R {
 }
 
 fn run_bazel_build() -> R {
-    Step::new(
+    step(
         "non-Asylo targets",
         "bazel",
         &["build", "--", "//oak/...:all", "-//oak/server/asylo:all"],
@@ -231,7 +231,7 @@ fn run_bazel_build() -> R {
 }
 
 fn run_bazel_test() -> R {
-    Step::new(
+    step(
         "host targets",
         "bazel",
         // TODO: Extract these targets with `bazel query` at runtime, based on some label or
