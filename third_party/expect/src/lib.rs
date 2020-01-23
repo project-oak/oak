@@ -6,7 +6,7 @@ macro_rules! expect_eq {
         match (&$left, &$right) {
             (left_val, right_val) => {
                 if !(*left_val == *right_val) {
-                    return Err(std::io::Error::new(
+                    return Err(Box::new(std::io::Error::new(
                         std::io::ErrorKind::Other,
                         format!(
                             r#"{}:{}: expectation failed: `(left == right)`
@@ -17,7 +17,7 @@ macro_rules! expect_eq {
                             &*left_val,
                             &*right_val
                         ),
-                    ));
+                    )));
                 }
             }
         }
@@ -32,7 +32,7 @@ macro_rules! expect_matches {
         match $e {
             $pat => (),
             ref e => {
-                return Err(std::io::Error::new(
+                return Err(Box::new(std::io::Error::new(
                     std::io::ErrorKind::Other,
                     format!(
                         "{}:{}: expectation failed: `{:?}` does not match `{}`",
@@ -41,7 +41,7 @@ macro_rules! expect_matches {
                         e,
                         stringify!($pat)
                     ),
-                ));
+                )));
             }
         }
     };
@@ -51,7 +51,7 @@ macro_rules! expect_matches {
 macro_rules! expect {
     ( $e:expr ) => {
         if !$e {
-            return Err(std::io::Error::new(
+            return Err(Box::new(std::io::Error::new(
                 std::io::ErrorKind::Other,
                 format!(
                     "{}:{}: expectation failed: {:?} is false",
@@ -59,7 +59,7 @@ macro_rules! expect {
                     line!(),
                     stringify!($e)
                 ),
-            ));
+            )));
         }
     };
 }
