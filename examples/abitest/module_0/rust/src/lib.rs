@@ -165,13 +165,10 @@ impl OakABITestServiceNode for FrontendNode {
 }
 
 // Helper for status conversion
-fn status_convert<T>(result: Result<T, OakStatus>) -> std::io::Result<T> {
+fn status_convert<T>(result: Result<T, OakStatus>) -> Result<T, oak::OakError> {
     match result {
         Ok(t) => Ok(t),
-        Err(status) => Err(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            format!("failure {:?}", status),
-        )),
+        Err(status) => Err(oak::OakError::OakStatus(status)),
     }
 }
 
@@ -214,10 +211,7 @@ impl FrontendNode {
             match oak::channel_create() {
                 Ok(pair) => handles.push(pair),
                 Err(status) => {
-                    return Err(Box::new(std::io::Error::new(
-                        std::io::ErrorKind::Other,
-                        format!("channel_create failure {:?}", status),
-                    )));
+                    return Err(Box::new(oak::OakError::OakStatus(status)));
                 }
             }
         }
@@ -1015,12 +1009,8 @@ impl FrontendNode {
 
             // Block until there is a response from one of the backends
             // available.
-            let readies = oak::wait_on_channels(&self.backend_in).map_err(|status| {
-                std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    format!("Wait failure {:?}", status),
-                )
-            })?;
+            let readies =
+                oak::wait_on_channels(&self.backend_in).map_err(oak::OakError::OakStatus)?;
 
             // Expect exactly one of the backends to have received
             // the message.
