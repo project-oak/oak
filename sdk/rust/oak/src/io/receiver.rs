@@ -22,6 +22,8 @@ use serde::{Deserialize, Serialize};
 /// as bytes + handles via the `Decodable` trait.
 ///
 /// For use when the underlying [`Handle`] is known to be for a receive half.
+///
+/// [`Handle`]: crate::Handle
 #[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Receiver<T: Decodable> {
     pub handle: ReadHandle,
