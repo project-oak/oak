@@ -14,19 +14,21 @@
 // limitations under the License.
 //
 
-use chat_common::command::Command;
-use chat_common::proto::chat::{
-    CreateRoomRequest, DestroyRoomRequest, SendMessageRequest, SubscribeRequest,
-};
-use chat_common::proto::chat_grpc::{dispatch, ChatNode};
+use command::Command;
 use log::info;
 use oak::grpc;
 use oak::grpc::OakNode;
 use oak_derive::OakExports;
+use proto::chat::{CreateRoomRequest, DestroyRoomRequest, SendMessageRequest, SubscribeRequest};
+use proto::chat_grpc::{dispatch, ChatNode};
 use protobuf::well_known_types::Empty;
 use protobuf::Message;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+
+mod backend;
+mod command;
+mod proto;
 
 type RoomId = Vec<u8>;
 type AdminToken = Vec<u8>;
@@ -44,7 +46,7 @@ struct Room {
 impl Room {
     fn new(admin_token: AdminToken) -> Self {
         let (wh, rh) = oak::channel_create().unwrap();
-        oak::node_create("room-config", "backend_oak_main", rh).expect("could not create node");
+        oak::node_create("app", "backend_oak_main", rh).expect("could not create node");
         oak::channel_close(rh.handle).expect("could not close channel");
         Room {
             sender: oak::io::Sender::new(wh),
