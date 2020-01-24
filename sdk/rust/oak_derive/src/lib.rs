@@ -62,8 +62,8 @@ pub fn derive_oak_exports(input: TokenStream) -> TokenStream {
             // A panic in the Rust module code cannot safely pass through the FFI
             // boundary, so catch any panics here and drop them.
             // https://doc.rust-lang.org/nomicon/ffi.html#ffi-and-panics
-            let _ = std::panic::catch_unwind(||{
-                oak::set_panic_hook();
+            let _ = ::std::panic::catch_unwind(||{
+                ::oak::set_panic_hook();
                 inner_main(handle)
             });
         }
@@ -71,8 +71,13 @@ pub fn derive_oak_exports(input: TokenStream) -> TokenStream {
         // panic interception.
         pub fn inner_main(handle: u64) {
             let mut node = <#name>::new();
-            if let Err(s) = oak::grpc::event_loop(node, oak::ReadHandle{ handle: oak::Handle::from_raw(handle) }) {
-                warn!("Node terminating with {:?}", s);
+            if let ::std::result::Result::Err(s) = ::oak::grpc::event_loop(
+                node,
+                ::oak::ReadHandle{
+                    handle: ::oak::Handle::from_raw(handle),
+                },
+            ) {
+                ::log::warn!("Node terminating with {:?}", s);
             }
         }
     };
