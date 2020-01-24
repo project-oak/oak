@@ -79,7 +79,9 @@ functions** as
   reading from one of the specified channel handles. The channel handles are
   encoded in a buffer that holds N contiguous 9-byte chunks, each of which is
   made up of an 8-byte channel handle value (little-endian u64) followed by a
-  single byte that is set on return if data is available on that channel.
+  single status byte corresponding to `oak::ChannelReadStatus`. Invalid handles
+  will have an `INVALID_CHANNEL` status, but `wait_on_channels` return value
+  will only fail for internal errors.
 
   - arg0: Address of handle status buffer
   - arg1: Count N of handles provided
