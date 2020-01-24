@@ -381,10 +381,10 @@ each chat room and saves off the write handle that will be used to send messages
 to the room:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/chat/module_0/rust/src/lib.rs Rust /.*channel_create\(\)/ /\}$/)
+[embedmd]:# (../examples/chat/module/rust/src/lib.rs Rust /.*channel_create\(\)/ /\}$/)
 ```Rust
         let (wh, rh) = oak::channel_create().unwrap();
-        oak::node_create("room-config", "backend_oak_main", rh).expect("could not create node");
+        oak::node_create("app", "backend_oak_main", rh).expect("could not create node");
         oak::channel_close(rh.handle).expect("could not close channel");
         Room {
             sender: oak::io::Sender::new(wh),

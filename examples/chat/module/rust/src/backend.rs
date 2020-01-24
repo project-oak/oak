@@ -14,8 +14,8 @@
 // limitations under the License.
 //
 
-use chat_common::command::Command;
-use chat_common::proto::chat::Message;
+use crate::command::Command;
+use crate::proto::chat::Message;
 use log::{error, info, warn};
 
 #[no_mangle]
