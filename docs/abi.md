@@ -45,8 +45,8 @@ type.
 Three specific sets of integer values are also used in the ABI:
 
 - Many operations take a `u64` **handle** value; these values are Node-specific
-  and non-zero (zero is reserved to indicate an invalid handle), and reference
-  a particular [channel](concepts.md#channels).
+  and non-zero (zero is reserved to indicate an invalid handle), and reference a
+  particular [channel](concepts.md#channels).
 - Many ABI operations return a `u32` **status** value, indicating the result of
   the operation. The possible values for this are defined in the `OakStatus`
   enum in [oak_abi.proto](/oak/proto/oak_abi.proto).
