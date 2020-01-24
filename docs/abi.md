@@ -49,11 +49,11 @@ Three specific sets of integer values are also used in the ABI:
   particular [channel](concepts.md#channels).
 - Many ABI operations return a `u32` **status** value, indicating the result of
   the operation. The possible values for this are defined in the `OakStatus`
-  enum in [oak_abi.proto](/oak/proto/oak_abi.proto).
+  enum in [oak_api.proto](/oak/proto/oak_api.proto).
 - The `wait_on_channels` host function fills in a **channel status** value,
   indicating the readiness status of a particular channel. The possible values
   for this are defined in the `ChannelReadStatus` enum in
-  [oak_abi.proto](/oak/proto/oak_abi.proto).
+  [oak_api.proto](/oak/proto/oak_api.proto).
 
 ## Exported Function
 
