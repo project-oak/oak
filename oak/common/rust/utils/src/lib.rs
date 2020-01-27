@@ -1,36 +1,66 @@
+//
+// Copyright 2020 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::fs;
+use std::io;
+use std::path::Path;
+
+#[cfg(test)]
+mod tests;
 
 // ...
 // Current version doesn't support nested directories since `protoc_rust` doesn't ...
-// pub fn run_protoc_rust(args: protoc_rust::Args) -> std::io::Result<()> {
+pub fn run_protoc_rust(args: protoc_rust::Args) -> io::Result<()> {
+    let out_path = Path::new(args.out_dir);
 
-//     let temp_dir = tempfile::tempdir()?;
-//     let temp_path = temp_dir.path();
-//     let mut temp_args = args;
-//     temp_args.out_dir = temp_path.to_str().unwrap_or(Err(()));
-//     protoc_rust::run(temp_args)?;
+    // Create a temporary directory.
+    let temp_dir = tempfile::tempdir()?;
+    let temp_path = temp_dir.path();
 
-//     // get_files(out_dir).zip(get_files).into_iter()
-//     let old_files = get_files(args.out_dir);
-//     let new_files = get_files(temp_path).iter()
-//         .filter_map(|(filename, content)| {
-//             old_files.get(filename)
-//                 .map_or(None, |old_content| {
-//                     if content == old_content {
-//                         None
-//                     } else {
-//                         Some((filename, content))
-//                     }
-//                 })
-//         })
+    // Generate `.proto` files in the temporary directory.
+    let mut temp_args = args;
+    temp_args.out_dir = temp_path.to_str().expect("Temporary path error");
+    protoc_rust::run(temp_args)?;
 
-//     // drop(temp_dir);
-//     Ok(())
-// }
+    // Check if new `.proto` files a different from the old ones ...
+    let updated_files = get_updated_files(out_path, temp_path);
+    for updated_file in updated_files.iter() {
+        fs::copy(temp_path.join(&updated_file), out_path.join(&updated_file))?;
+    }
 
-// fn get_updated_files() {
-// }
+    Ok(())
+}
+
+fn get_updated_files(old_dir: &Path, new_dir: &Path) -> Vec<String> {
+    let old_files = get_files(old_dir);
+    get_files(new_dir).iter()
+        .filter_map(|(filename, content)| {
+            old_files.get(filename)
+                .map_or(Some(filename), |old_content| {
+                    if content == old_content {
+                        None
+                    } else {
+                        Some(filename)
+                    }
+                })
+        })
+        .cloned()
+        .collect()
+}
 
 fn get_files(dir: &Path) -> HashMap<String, String> {
     walkdir::WalkDir::new(dir)
@@ -39,28 +69,13 @@ fn get_files(dir: &Path) -> HashMap<String, String> {
         .filter(|entry| entry.path().is_file())
         .map(|entry| {
             let path = entry.into_path();
-            let content = std::fs::read_to_string(&path).unwrap();
-            (String::from(path.file_name().unwrap()), content)
+            let content = fs::read_to_string(&path).expect("Read error");
+            let filename = path.file_name()
+                .expect("Filename error")
+                .to_os_string()
+                .into_string()
+                .expect("OsString error");
+            (filename, content)
         })
-        .collect::<HashMap<PathBuf, String>>()
-}
-
-const TEMP_FILES: [&str; 3] = ["1", "2", "3"];
-
-#[test]
-fn get_files_test() {
-    let temp_dir = tempfile::tempdir().unwrap();
-    println!("{}", temp_dir.path().display());
-    for filename in TEMP_FILES.iter() {
-        let path = temp_dir.path().join(filename);
-        let file = std::fs::File::create(path).unwrap();
-        file.write_all(filename);
-    }
-    let files = get_files(temp_dir.path());
-    for (key, value) in files {
-        println!("{}: {}", key.to_str().unwrap(), value);
-    }
-    for filename in TEMP_FILES.iter() {
-        assert_eq!(files.get(filename), Some(String::from(*filename)));
-    }
+        .collect()
 }
