@@ -87,7 +87,7 @@ functions** as
   made up of an 8-byte channel handle value (little-endian u64) followed by a
   single channel status byte. Invalid handles will have an `INVALID_CHANNEL`
   status, but `wait_on_channels` return value will only fail for internal
-  errors.
+  errors or if _all_ channels are invalid.
 
   - arg0: Address of handle status buffer
   - arg1: Count N of handles provided
