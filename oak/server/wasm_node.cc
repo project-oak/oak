@@ -227,6 +227,45 @@ void WasmNode::InitEnvironment(wabt::interp::Environment* env) {
       wabt::interp::FuncSignature(std::vector<wabt::Type>{wabtUsizeType, wabtUsizeType},
                                   std::vector<wabt::Type>{wabt::Type::I32}),
       this->OakRandomGet(env));
+
+  // Experimental.
+  wabt::interp::HostModule* wasi_module = env->AppendHostModule("wasi_snapshot_preview1");
+  wasi_module->AppendFuncExport(
+      "proc_exit",
+      wabt::interp::FuncSignature(
+          std::vector<wabt::Type>{wabt::Type::I32},
+          std::vector<wabt::Type>{}),
+      this->WasiPlaceholder(env));
+  wasi_module->AppendFuncExport(
+      "fd_write",
+      wabt::interp::FuncSignature(
+          std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32, wabt::Type::I32, wabt::Type::I32},
+          std::vector<wabt::Type>{wabt::Type::I32}),
+      this->WasiPlaceholder(env));
+  wasi_module->AppendFuncExport(
+      "fd_seek",
+      wabt::interp::FuncSignature(
+          std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I64, wabt::Type::I32, wabt::Type::I32},
+          std::vector<wabt::Type>{wabt::Type::I32}),
+      this->WasiPlaceholder(env));
+  wasi_module->AppendFuncExport(
+      "fd_close",
+      wabt::interp::FuncSignature(
+          std::vector<wabt::Type>{wabt::Type::I32},
+          std::vector<wabt::Type>{wabt::Type::I32}),
+      this->WasiPlaceholder(env));
+  wasi_module->AppendFuncExport(
+      "environ_sizes_get",
+      wabt::interp::FuncSignature(
+          std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
+          std::vector<wabt::Type>{wabt::Type::I32}),
+      this->WasiPlaceholder(env));
+  wasi_module->AppendFuncExport(
+      "environ_get",
+      wabt::interp::FuncSignature(
+          std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
+          std::vector<wabt::Type>{wabt::Type::I32}),
+      this->WasiPlaceholder(env));
 }
 
 void WasmNode::Run(Handle handle) {
@@ -557,6 +596,16 @@ wabt::interp::HostFunc::Callback WasmNode::OakRandomGet(wabt::interp::Environmen
     }
 
     results[0].set_i32(OakStatus::OK);
+    return wabt::interp::Result::Ok;
+  };
+}
+
+wabt::interp::HostFunc::Callback WasmNode::WasiPlaceholder(wabt::interp::Environment* env) {
+  return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature*,
+                     const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
+    LogHostFunctionCall(name_, func, args);
+    LOG(QFATAL) << "{" << name_ << "} WASI is not implemented";
+    results[0].set_i32(OakStatus::ERR_INTERNAL);
     return wabt::interp::Result::Ok;
   };
 }
