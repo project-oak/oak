@@ -232,39 +232,35 @@ void WasmNode::InitEnvironment(wabt::interp::Environment* env) {
   wabt::interp::HostModule* wasi_module = env->AppendHostModule("wasi_snapshot_preview1");
   wasi_module->AppendFuncExport(
       "proc_exit",
-      wabt::interp::FuncSignature(
-          std::vector<wabt::Type>{wabt::Type::I32},
-          std::vector<wabt::Type>{}),
+      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32},
+                                  std::vector<wabt::Type>{}),
       this->WasiPlaceholder(env));
   wasi_module->AppendFuncExport(
       "fd_write",
-      wabt::interp::FuncSignature(
-          std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32, wabt::Type::I32, wabt::Type::I32},
-          std::vector<wabt::Type>{wabt::Type::I32}),
+      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32,
+                                                          wabt::Type::I32, wabt::Type::I32},
+                                  std::vector<wabt::Type>{wabt::Type::I32}),
       this->WasiPlaceholder(env));
   wasi_module->AppendFuncExport(
       "fd_seek",
-      wabt::interp::FuncSignature(
-          std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I64, wabt::Type::I32, wabt::Type::I32},
-          std::vector<wabt::Type>{wabt::Type::I32}),
+      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I64,
+                                                          wabt::Type::I32, wabt::Type::I32},
+                                  std::vector<wabt::Type>{wabt::Type::I32}),
       this->WasiPlaceholder(env));
   wasi_module->AppendFuncExport(
       "fd_close",
-      wabt::interp::FuncSignature(
-          std::vector<wabt::Type>{wabt::Type::I32},
-          std::vector<wabt::Type>{wabt::Type::I32}),
+      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32},
+                                  std::vector<wabt::Type>{wabt::Type::I32}),
       this->WasiPlaceholder(env));
   wasi_module->AppendFuncExport(
       "environ_sizes_get",
-      wabt::interp::FuncSignature(
-          std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
-          std::vector<wabt::Type>{wabt::Type::I32}),
+      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
+                                  std::vector<wabt::Type>{wabt::Type::I32}),
       this->WasiPlaceholder(env));
   wasi_module->AppendFuncExport(
       "environ_get",
-      wabt::interp::FuncSignature(
-          std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
-          std::vector<wabt::Type>{wabt::Type::I32}),
+      wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
+                                  std::vector<wabt::Type>{wabt::Type::I32}),
       this->WasiPlaceholder(env));
 }
 
