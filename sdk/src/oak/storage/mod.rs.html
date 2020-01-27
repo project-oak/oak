@@ -184,6 +184,16 @@
 <span id="184">184</span>
 <span id="185">185</span>
 <span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -209,7 +219,7 @@
     <span class="ident">StorageChannelDeleteRequest</span>, <span class="ident">StorageChannelDeleteResponse</span>, <span class="ident">StorageChannelReadRequest</span>,
     <span class="ident">StorageChannelReadResponse</span>, <span class="ident">StorageChannelWriteRequest</span>, <span class="ident">StorageChannelWriteResponse</span>,
 };
-<span class="kw">use</span> <span class="ident">log</span>::<span class="ident">info</span>;
+<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">info</span>, <span class="ident">warn</span>};
 <span class="kw">use</span> <span class="ident">protobuf</span>::{<span class="ident">Message</span>, <span class="ident">ProtobufEnum</span>};
 
 <span class="doccomment">/// Default name for predefined node config that corresponds to a storage</span>
@@ -236,13 +246,19 @@
             <span class="prelude-val">Ok</span>(<span class="ident">x</span>) <span class="op">=&gt;</span> <span class="ident">x</span>,
             <span class="prelude-val">Err</span>(<span class="ident">_e</span>) <span class="op">=&gt;</span> <span class="kw">return</span> <span class="prelude-val">None</span>,
         };
-        <span class="kw">if</span> <span class="kw">crate</span>::<span class="ident">node_create</span>(<span class="ident">config</span>, <span class="ident">read_channel</span>) <span class="op">!=</span> <span class="kw">crate</span>::<span class="ident">OakStatus</span>::<span class="ident">OK</span> {
-            <span class="kw">crate</span>::<span class="ident">channel_close</span>(<span class="ident">write_channel</span>.<span class="ident">handle</span>);
-            <span class="kw">crate</span>::<span class="ident">channel_close</span>(<span class="ident">read_channel</span>.<span class="ident">handle</span>);
+        <span class="kw">if</span> <span class="kw">crate</span>::<span class="ident">node_create</span>(<span class="ident">config</span>, <span class="string">&quot;oak_main&quot;</span>, <span class="ident">read_channel</span>).<span class="ident">is_err</span>() {
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">status</span>) <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">channel_close</span>(<span class="ident">write_channel</span>.<span class="ident">handle</span>) {
+                <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;could not close write channel: {:?}&quot;</span>, <span class="ident">status</span>);
+            };
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">status</span>) <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">channel_close</span>(<span class="ident">read_channel</span>.<span class="ident">handle</span>) {
+                <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;could not close read channel: {:?}&quot;</span>, <span class="ident">status</span>);
+            };
             <span class="kw">return</span> <span class="prelude-val">None</span>;
         }
 
-        <span class="kw">crate</span>::<span class="ident">channel_close</span>(<span class="ident">read_channel</span>.<span class="ident">handle</span>);
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">status</span>) <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">channel_close</span>(<span class="ident">read_channel</span>.<span class="ident">handle</span>) {
+            <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;could not close read channel: {:?}&quot;</span>, <span class="ident">status</span>);
+        };
         <span class="prelude-val">Some</span>(<span class="ident">Storage</span> { <span class="ident">write_channel</span> })
     }
 
@@ -268,12 +284,14 @@
         );
         <span class="ident">operation_request</span>
             .<span class="ident">write_to_writer</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">request_any</span>.<span class="ident">value</span>)
-            .<span class="ident">unwrap</span>();
+            .<span class="ident">expect</span>(<span class="string">&quot;could not convert operation request to `Any` value&quot;</span>);
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">grpc_request</span> <span class="op">=</span> <span class="ident">GrpcRequest</span>::<span class="ident">new</span>();
         <span class="ident">grpc_request</span>.<span class="ident">method_name</span> <span class="op">=</span> <span class="ident">grpc_method_name</span>.<span class="ident">to_owned</span>();
         <span class="ident">grpc_request</span>.<span class="ident">set_req_msg</span>(<span class="ident">request_any</span>);
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">grpc_data</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
-        <span class="ident">grpc_request</span>.<span class="ident">write_to_writer</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">grpc_data</span>).<span class="ident">unwrap</span>();
+        <span class="ident">grpc_request</span>
+            .<span class="ident">write_to_writer</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">grpc_data</span>)
+            .<span class="ident">expect</span>(<span class="string">&quot;could not convert gRPC request to bytes&quot;</span>);
 
         <span class="comment">// Create an ephemeral channel for the response.</span>
         <span class="kw">let</span> (<span class="ident">rsp_out</span>, <span class="ident">rsp_in</span>) <span class="op">=</span> <span class="kw">match</span> <span class="kw">crate</span>::<span class="ident">channel_create</span>() {
@@ -289,8 +307,9 @@
             }
         };
 
-        <span class="kw">crate</span>::<span class="ident">channel_write</span>(<span class="self">self</span>.<span class="ident">write_channel</span>, <span class="kw-2">&amp;</span><span class="ident">grpc_data</span>, <span class="kw-2">&amp;</span>[<span class="ident">rsp_out</span>.<span class="ident">handle</span>]);
-        <span class="kw">crate</span>::<span class="ident">channel_close</span>(<span class="ident">rsp_out</span>.<span class="ident">handle</span>);
+        <span class="kw">crate</span>::<span class="ident">channel_write</span>(<span class="self">self</span>.<span class="ident">write_channel</span>, <span class="kw-2">&amp;</span><span class="ident">grpc_data</span>, <span class="kw-2">&amp;</span>[<span class="ident">rsp_out</span>.<span class="ident">handle</span>])
+            .<span class="ident">expect</span>(<span class="string">&quot;could not write to channel&quot;</span>);
+        <span class="kw">crate</span>::<span class="ident">channel_close</span>(<span class="ident">rsp_out</span>.<span class="ident">handle</span>).<span class="ident">expect</span>(<span class="string">&quot;could not close channel&quot;</span>);
 
         <span class="comment">// Block until there is a response available.</span>
         <span class="kw">loop</span> {
@@ -302,24 +321,25 @@
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buffer</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>::<span class="ident">with_capacity</span>(<span class="number">256</span>);
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">handles</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="op">&lt;</span><span class="kw">crate</span>::<span class="ident">Handle</span><span class="op">&gt;</span>::<span class="ident">with_capacity</span>(<span class="number">1</span>);
-        <span class="kw">crate</span>::<span class="ident">channel_read</span>(<span class="ident">rsp_in</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buffer</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">handles</span>);
+        <span class="kw">crate</span>::<span class="ident">channel_read</span>(<span class="ident">rsp_in</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buffer</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">handles</span>)
+            .<span class="ident">expect</span>(<span class="string">&quot;could not read from channel&quot;</span>);
         <span class="kw">if</span> <span class="op">!</span><span class="ident">handles</span>.<span class="ident">is_empty</span>() {
             <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;unexpected handles received alongside storage request&quot;</span>)
         }
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">grpc_response</span>: <span class="ident">GrpcResponse</span> <span class="op">=</span>
-            <span class="ident">protobuf</span>::<span class="ident">parse_from_reader</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw-2">&amp;</span><span class="ident">buffer</span>[..]).<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">grpc_response</span>: <span class="ident">GrpcResponse</span> <span class="op">=</span> <span class="ident">protobuf</span>::<span class="ident">parse_from_reader</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw-2">&amp;</span><span class="ident">buffer</span>[..])
+            .<span class="ident">expect</span>(<span class="string">&quot;could not parse gRPC response from bytes&quot;</span>);
         <span class="macro">info</span><span class="macro">!</span>(
             <span class="string">&quot;StorageChannelResponse: {}&quot;</span>,
             <span class="ident">protobuf</span>::<span class="ident">text_format</span>::<span class="ident">print_to_string</span>(<span class="kw-2">&amp;</span><span class="ident">grpc_response</span>)
         );
-        <span class="kw">crate</span>::<span class="ident">channel_close</span>(<span class="ident">rsp_in</span>.<span class="ident">handle</span>);
+        <span class="kw">crate</span>::<span class="ident">channel_close</span>(<span class="ident">rsp_in</span>.<span class="ident">handle</span>).<span class="ident">expect</span>(<span class="string">&quot;could not close channel&quot;</span>);
 
         <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="ident">grpc_response</span>.<span class="ident">take_status</span>();
         <span class="kw">if</span> <span class="ident">status</span>.<span class="ident">code</span> <span class="op">!=</span> <span class="number">0</span> {
             <span class="prelude-val">Err</span>(<span class="ident">status</span>)
         } <span class="kw">else</span> {
-            <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span>
-                <span class="ident">protobuf</span>::<span class="ident">parse_from_bytes</span>(<span class="ident">grpc_response</span>.<span class="ident">get_rsp_msg</span>().<span class="ident">value</span>.<span class="ident">as_slice</span>()).<span class="ident">unwrap</span>();
+            <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">protobuf</span>::<span class="ident">parse_from_bytes</span>(<span class="ident">grpc_response</span>.<span class="ident">get_rsp_msg</span>().<span class="ident">value</span>.<span class="ident">as_slice</span>())
+                .<span class="ident">expect</span>(<span class="string">&quot;could not parse gRPC response message from `Any` value&quot;</span>);
             <span class="prelude-val">Ok</span>(<span class="ident">response</span>)
         }
     }

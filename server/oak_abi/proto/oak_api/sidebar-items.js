@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["ChannelReadStatus",""],["OakStatus",""]],"fn":[["file_descriptor_proto",""]]});
+initSidebarItems({"enum":[["ChannelReadStatus",""],["OakStatus","Generated files are compatible only with the same version of protobuf runtime."]],"fn":[["file_descriptor_proto",""]]});

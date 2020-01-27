@@ -570,6 +570,11 @@
 <span id="570">570</span>
 <span id="571">571</span>
 <span id="572">572</span>
+<span id="573">573</span>
+<span id="574">574</span>
+<span id="575">575</span>
+<span id="576">576</span>
+<span id="577">577</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -594,8 +599,9 @@
 
 <span class="kw">use</span> <span class="ident">byteorder</span>::{<span class="ident">ReadBytesExt</span>, <span class="ident">WriteBytesExt</span>};
 <span class="kw">use</span> <span class="ident">oak</span>::<span class="ident">OakStatus</span>;
-<span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">Handle</span>;
-<span class="kw">use</span> <span class="ident">oak_runtime</span>::{<span class="ident">proto</span>, <span class="ident">NodeMain</span>, <span class="ident">OakMessage</span>, <span class="ident">OakRuntime</span>};
+<span class="kw">use</span> <span class="ident">oak_abi</span>::{<span class="ident">Handle</span>, <span class="ident">NodeMain</span>};
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">oak_runtime</span>::<span class="ident">WasmEntrypointFullName</span>;
+<span class="kw">use</span> <span class="ident">oak_runtime</span>::{<span class="ident">proto</span>, <span class="ident">OakMessage</span>, <span class="ident">OakRuntime</span>};
 <span class="kw">use</span> <span class="ident">protobuf</span>::{<span class="ident">Message</span>, <span class="ident">ProtobufEnum</span>};
 <span class="kw">use</span> <span class="ident">rand</span>::<span class="ident">Rng</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">cell</span>::<span class="ident">RefCell</span>;
@@ -605,9 +611,6 @@
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">Cursor</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::{<span class="ident">Once</span>, <span class="ident">RwLock</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">thread</span>::<span class="ident">spawn</span>;
-
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span>;
 
 <span class="comment">// Node name used for single-Node tests.</span>
 <span class="kw">pub</span> <span class="kw">static</span> <span class="ident">DEFAULT_NODE_NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;internal-0&quot;</span>;
@@ -640,11 +643,6 @@
 <span class="comment">// Implementations of the Oak API host functions in Rust for testing.</span>
 <span class="comment">// These implementations generally handle the unsafe raw memory manipulation</span>
 <span class="comment">// then forward on to the equivalent method on the current OakRuntime instance.</span>
-
-<span class="doccomment">/// Declaration for the Node&#39;s main function.</span>
-<span class="kw">extern</span> <span class="string">&quot;C&quot;</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">oak_main</span>(<span class="ident">handle</span>: <span class="ident">u64</span>) <span class="op">-&gt;</span> <span class="ident">i32</span>;
-}
 
 <span class="doccomment">/// Test implementation of channel wait functionality.</span>
 <span class="doccomment">///</span>
@@ -865,25 +863,49 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// # Safety</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// The linear memory range [buf, buf+len) must be valid.</span>
+<span class="doccomment">/// The linear memory ranges [config_buf, config_buf+config_len) and</span>
+<span class="doccomment">/// [entrypoint_buf, entrypoint_buf+entrypoint_len) must be valid.</span>
 <span class="attribute">#[<span class="ident">no_mangle</span>]</span>
-<span class="kw">pub</span> <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">node_create</span>(<span class="ident">buf</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">u8</span>, <span class="ident">len</span>: <span class="ident">usize</span>, <span class="ident">handle</span>: <span class="ident">u64</span>) <span class="op">-&gt;</span> <span class="ident">u32</span> {
+<span class="kw">pub</span> <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">node_create</span>(
+    <span class="ident">config_buf</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">u8</span>,
+    <span class="ident">config_len</span>: <span class="ident">usize</span>,
+    <span class="ident">entrypoint_buf</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">u8</span>,
+    <span class="ident">entrypoint_len</span>: <span class="ident">usize</span>,
+
+    <span class="ident">handle</span>: <span class="ident">u64</span>,
+) <span class="op">-&gt;</span> <span class="ident">u32</span> {
     <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">node_name</span>();
-    <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{{{}}}: node_create({:?}, {}, {})&quot;</span>, <span class="ident">name</span>, <span class="ident">buf</span>, <span class="ident">len</span>, <span class="ident">handle</span>);
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">with_capacity</span>(<span class="ident">len</span> <span class="kw">as</span> <span class="ident">usize</span>);
-    <span class="ident">std</span>::<span class="ident">ptr</span>::<span class="ident">copy_nonoverlapping</span>(<span class="ident">buf</span>, <span class="ident">data</span>.<span class="ident">as_mut_ptr</span>(), <span class="ident">len</span> <span class="kw">as</span> <span class="ident">usize</span>);
-    <span class="ident">data</span>.<span class="ident">set_len</span>(<span class="ident">len</span> <span class="kw">as</span> <span class="ident">usize</span>);
+    <span class="macro">debug</span><span class="macro">!</span>(
+        <span class="string">&quot;{{{}}}: node_create({:?}, {}, {:?}, {}, {})&quot;</span>,
+        <span class="ident">name</span>, <span class="ident">config_buf</span>, <span class="ident">config_len</span>, <span class="ident">entrypoint_buf</span>, <span class="ident">entrypoint_len</span>, <span class="ident">handle</span>
+    );
+
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">with_capacity</span>(<span class="ident">config_len</span> <span class="kw">as</span> <span class="ident">usize</span>);
+    <span class="ident">std</span>::<span class="ident">ptr</span>::<span class="ident">copy_nonoverlapping</span>(<span class="ident">config_buf</span>, <span class="ident">data</span>.<span class="ident">as_mut_ptr</span>(), <span class="ident">config_len</span> <span class="kw">as</span> <span class="ident">usize</span>);
+    <span class="ident">data</span>.<span class="ident">set_len</span>(<span class="ident">config_len</span> <span class="kw">as</span> <span class="ident">usize</span>);
     <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">String</span>::<span class="ident">from_utf8</span>(<span class="ident">data</span>) {
         <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=&gt;</span> <span class="kw">return</span> <span class="ident">OakStatus</span>::<span class="ident">ERR_INVALID_ARGS</span>.<span class="ident">value</span>() <span class="kw">as</span> <span class="ident">u32</span>,
         <span class="prelude-val">Ok</span>(<span class="ident">s</span>) <span class="op">=&gt;</span> <span class="ident">s</span>,
     };
-    <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{{{}}}: node_create(&#39;{}&#39;, {})&quot;</span>, <span class="ident">name</span>, <span class="ident">config</span>, <span class="ident">handle</span>);
 
-    <span class="kw">let</span> <span class="ident">start_info</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">RUNTIME</span>
-        .<span class="ident">write</span>()
-        .<span class="ident">expect</span>(<span class="ident">RUNTIME_MISSING</span>)
-        .<span class="ident">node_create</span>(<span class="ident">name</span>, <span class="kw-2">&amp;</span><span class="ident">config</span>, <span class="ident">handle</span>)
-    {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">with_capacity</span>(<span class="ident">entrypoint_len</span> <span class="kw">as</span> <span class="ident">usize</span>);
+    <span class="ident">std</span>::<span class="ident">ptr</span>::<span class="ident">copy_nonoverlapping</span>(<span class="ident">entrypoint_buf</span>, <span class="ident">data</span>.<span class="ident">as_mut_ptr</span>(), <span class="ident">entrypoint_len</span> <span class="kw">as</span> <span class="ident">usize</span>);
+    <span class="ident">data</span>.<span class="ident">set_len</span>(<span class="ident">entrypoint_len</span> <span class="kw">as</span> <span class="ident">usize</span>);
+    <span class="kw">let</span> <span class="ident">entrypoint</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">String</span>::<span class="ident">from_utf8</span>(<span class="ident">data</span>) {
+        <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=&gt;</span> <span class="kw">return</span> <span class="ident">OakStatus</span>::<span class="ident">ERR_INVALID_ARGS</span>.<span class="ident">value</span>() <span class="kw">as</span> <span class="ident">u32</span>,
+        <span class="prelude-val">Ok</span>(<span class="ident">s</span>) <span class="op">=&gt;</span> <span class="ident">s</span>,
+    };
+    <span class="macro">debug</span><span class="macro">!</span>(
+        <span class="string">&quot;{{{}}}: node_create(&#39;{}&#39;, &#39;{}&#39;, {})&quot;</span>,
+        <span class="ident">name</span>, <span class="ident">config</span>, <span class="ident">entrypoint</span>, <span class="ident">handle</span>
+    );
+
+    <span class="kw">let</span> <span class="ident">start_info</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">RUNTIME</span>.<span class="ident">write</span>().<span class="ident">expect</span>(<span class="ident">RUNTIME_MISSING</span>).<span class="ident">node_create</span>(
+        <span class="ident">name</span>,
+        <span class="kw-2">&amp;</span><span class="ident">config</span>,
+        <span class="kw-2">&amp;</span><span class="ident">entrypoint</span>,
+        <span class="ident">handle</span>,
+    ) {
         <span class="prelude-val">Err</span>(<span class="ident">status</span>) <span class="op">=&gt;</span> <span class="kw">return</span> <span class="ident">status</span>.<span class="ident">value</span>() <span class="kw">as</span> <span class="ident">u32</span>,
         <span class="prelude-val">Ok</span>(<span class="ident">result</span>) <span class="op">=&gt;</span> <span class="ident">result</span>,
     };
@@ -986,7 +1008,7 @@
 <span class="doccomment">/// oak_log::init().</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start</span>(
     <span class="ident">config</span>: <span class="ident">proto</span>::<span class="ident">manager</span>::<span class="ident">ApplicationConfiguration</span>,
-    <span class="ident">entrypoints</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">NodeMain</span>, <span class="ident">RandomState</span><span class="op">&gt;</span>,
+    <span class="ident">entrypoints</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">WasmEntrypointFullName</span>, <span class="ident">NodeMain</span>, <span class="ident">RandomState</span><span class="op">&gt;</span>,
 ) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="kw">let</span> (<span class="ident">name</span>, <span class="ident">entrypoint</span>, <span class="ident">handle</span>) <span class="op">=</span> <span class="ident">RUNTIME</span>
         .<span class="ident">write</span>()
@@ -1005,19 +1027,17 @@
     <span class="prelude-val">Some</span>(())
 }
 
-<span class="doccomment">/// Start running a test of a single-Node Application.  This assumes that the</span>
-<span class="doccomment">/// single Node&#39;s main entrypoint is available as a global extern &quot;C&quot;</span>
-<span class="doccomment">/// oak_main(), as for a live version of the Application.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start_node</span>(<span class="ident">handle</span>: <span class="ident">Handle</span>) {
+<span class="doccomment">/// Start running a test of a single-Node Application.</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start_node</span>(<span class="ident">handle</span>: <span class="ident">Handle</span>, <span class="ident">entrypoint</span>: <span class="ident">NodeMain</span>) {
     <span class="ident">RUNTIME</span>
         .<span class="ident">write</span>()
         .<span class="ident">expect</span>(<span class="ident">RUNTIME_MISSING</span>)
         .<span class="ident">set_termination_pending</span>(<span class="bool-val">false</span>);
     <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;start per-Node thread with handle {}&quot;</span>, <span class="ident">handle</span>);
     <span class="kw">let</span> <span class="ident">node_name</span> <span class="op">=</span> <span class="ident">DEFAULT_NODE_NAME</span>.<span class="ident">to_string</span>();
-    <span class="kw">let</span> <span class="ident">main_handle</span> <span class="op">=</span> <span class="ident">spawn</span>(<span class="kw">move</span> <span class="op">||</span> <span class="kw">unsafe</span> {
+    <span class="kw">let</span> <span class="ident">main_handle</span> <span class="op">=</span> <span class="ident">spawn</span>(<span class="kw">move</span> <span class="op">||</span> {
         <span class="ident">set_node_name</span>(<span class="ident">node_name</span>);
-        <span class="ident">oak_main</span>(<span class="ident">handle</span>)
+        <span class="ident">entrypoint</span>(<span class="ident">handle</span>)
     });
     <span class="ident">RUNTIME</span>
         .<span class="ident">write</span>()
@@ -1026,33 +1046,23 @@
 }
 
 <span class="doccomment">/// Stop the running Application under test.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">stop</span>() <span class="op">-&gt;</span> <span class="ident">OakStatus</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">stop</span>() {
     <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;stop all running Node threads&quot;</span>);
     <span class="ident">RUNTIME</span>
         .<span class="ident">write</span>()
         .<span class="ident">expect</span>(<span class="ident">RUNTIME_MISSING</span>)
         .<span class="ident">set_termination_pending</span>(<span class="bool-val">true</span>);
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">overall_result</span> <span class="op">=</span> <span class="ident">OakStatus</span>::<span class="ident">OK</span>;
     <span class="kw">loop</span> {
         <span class="kw">let</span> (<span class="ident">name</span>, <span class="ident">thread_handle</span>) <span class="op">=</span> <span class="kw">match</span> <span class="ident">RUNTIME</span>.<span class="ident">write</span>().<span class="ident">expect</span>(<span class="ident">RUNTIME_MISSING</span>).<span class="ident">stop_next</span>() {
             <span class="prelude-val">None</span> <span class="op">=&gt;</span> <span class="kw">break</span>,
             <span class="prelude-val">Some</span>(<span class="ident">x</span>) <span class="op">=&gt;</span> <span class="ident">x</span>,
         };
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{{{}}}: await thread join&quot;</span>, <span class="ident">name</span>);
-        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">OakStatus</span>::<span class="ident">from_i32</span>(<span class="ident">thread_handle</span>.<span class="ident">join</span>().<span class="ident">unwrap</span>() <span class="kw">as</span> <span class="ident">i32</span>) {
-            <span class="prelude-val">Some</span>(<span class="ident">status</span>) <span class="op">=&gt;</span> <span class="ident">status</span>,
-            <span class="prelude-val">None</span> <span class="op">=&gt;</span> <span class="ident">OakStatus</span>::<span class="ident">OAK_STATUS_UNSPECIFIED</span>,
-        };
-        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{{{}}}: thread result {}&quot;</span>, <span class="ident">name</span>, <span class="ident">result</span>.<span class="ident">value</span>());
-        <span class="kw">if</span> <span class="ident">overall_result</span> <span class="op">==</span> <span class="ident">OakStatus</span>::<span class="ident">OK</span> <span class="op">||</span> <span class="ident">result</span> <span class="op">==</span> <span class="ident">OakStatus</span>::<span class="ident">ERR_TERMINATED</span> {
-            <span class="comment">// If any Node was terminated, treat the whole application as terminated.</span>
-            <span class="comment">// Otherwise, take the first non-OK result from a Node.</span>
-            <span class="ident">overall_result</span> <span class="op">=</span> <span class="ident">result</span>;
-        }
+        <span class="ident">thread_handle</span>.<span class="ident">join</span>().<span class="ident">expect</span>(<span class="string">&quot;could not join thread&quot;</span>);
+        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{{{}}}: thread completed&quot;</span>, <span class="ident">name</span>);
     }
     <span class="ident">reset</span>();
-    <span class="ident">overall_result</span>
 }
 
 <span class="doccomment">/// Test helper to set up a channel into the (single) Node under test for</span>

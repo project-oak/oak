@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["Tag_oneof_tag",""]],"fn":[["file_descriptor_proto",""]],"struct":[["GrpcTag",""],["Label",""],["Tag",""],["WebAssemblyModuleTag",""]]});
+initSidebarItems({"enum":[["Tag_oneof_tag",""]],"fn":[["file_descriptor_proto",""]],"struct":[["GrpcTag",""],["Label","Generated files are compatible only with the same version of protobuf runtime."],["Tag",""],["WebAssemblyModuleTag",""]]});

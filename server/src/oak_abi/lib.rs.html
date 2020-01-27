@@ -135,6 +135,19 @@
 <span id="135">135</span>
 <span id="136">136</span>
 <span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -163,6 +176,12 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// These handles are used for all host function calls.</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">Handle</span> <span class="op">=</span> <span class="ident">u64</span>;
+
+<span class="doccomment">/// Expected type for a Node entrypoint that is exposed as a Wasm export.</span>
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">NodeMainC</span> <span class="op">=</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span>(<span class="ident">Handle</span>);
+
+<span class="doccomment">/// Expected Rust type for a Node entrypoint.</span>
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">NodeMain</span> <span class="op">=</span> <span class="kw">fn</span>(<span class="ident">Handle</span>);
 
 <span class="doccomment">/// Number of bytes needed per-handle for channel readiness notifications.</span>
 <span class="doccomment">///</span>
@@ -256,15 +275,22 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_close</span>(<span class="ident">handle</span>: <span class="ident">u64</span>) <span class="op">-&gt;</span> <span class="ident">u32</span>;
 
     <span class="doccomment">/// Create a new Node instance running code identified by configuration</span>
-    <span class="doccomment">/// name.</span>
+    <span class="doccomment">/// name and entrypoint.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// The configuration name is provided in the memory area given by `buf` and</span>
-    <span class="doccomment">/// `len`.</span>
+    <span class="doccomment">/// The configuration name is provided in the memory area given by</span>
+    <span class="doccomment">/// `config_buf` and `config_len`; the entrypoint name is provided in the</span>
+    <span class="doccomment">/// memory area given by `entrypoint_buf` and `entrypoint_len`.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Returns the status of the operation, as an [`OakStatus`] value.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`OakStatus`]: crate::OakStatus</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">node_create</span>(<span class="ident">buf</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">u8</span>, <span class="ident">len</span>: <span class="ident">usize</span>, <span class="ident">handle</span>: <span class="ident">u64</span>) <span class="op">-&gt;</span> <span class="ident">u32</span>;
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">node_create</span>(
+        <span class="ident">config_buf</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">u8</span>,
+        <span class="ident">config_len</span>: <span class="ident">usize</span>,
+        <span class="ident">entrypoint_buf</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">u8</span>,
+        <span class="ident">entrypoint_len</span>: <span class="ident">usize</span>,
+        <span class="ident">handle</span>: <span class="ident">u64</span>,
+    ) <span class="op">-&gt;</span> <span class="ident">u32</span>;
 
     <span class="doccomment">/// Fill a buffer with random data.</span>
     <span class="doccomment">///</span>

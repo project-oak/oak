@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["file_descriptor_proto",""]],"struct":[["GrpcRequest",""],["GrpcResponse",""]]});
+initSidebarItems({"fn":[["file_descriptor_proto",""]],"struct":[["GrpcRequest","Generated files are compatible only with the same version of protobuf runtime."],["GrpcResponse",""]]});
