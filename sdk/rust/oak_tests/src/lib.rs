@@ -526,7 +526,10 @@ where
 
     // Create a new channel to hold the request message.
     let (mut req_write_half, req_read_half) = RUNTIME.write().expect(RUNTIME_MISSING).new_channel();
-    req_write_half.write_message(req_msg);
+    let status = req_write_half.write_message(req_msg);
+    if status != oak::OakStatus::OK.value() as u32 {
+        panic!("could not write message (status: {})", status);
+    }
 
     // Create a new channel for responses to arrive on and also attach that to the message.
     let (rsp_write_half, mut rsp_read_half) = RUNTIME.write().expect(RUNTIME_MISSING).new_channel();
@@ -543,10 +546,13 @@ where
         .expect(RUNTIME_MISSING)
         .grpc_channel()
         .expect("no gRPC notification channel setup");
-    grpc_channel
+    let status = grpc_channel
         .write()
         .expect("corrupt gRPC channel ref")
         .write_message(notify_msg);
+    if status != oak::OakStatus::OK.value() as u32 {
+        panic!("could not write message (status: {})", status);
+    }
 
     // Read the serialized, encapsulated response.
     loop {
@@ -561,7 +567,7 @@ where
                     std::thread::sleep(std::time::Duration::from_millis(100));
                     continue;
                 } else {
-                    panic!(format!("failed to read from response channel: {}", e));
+                    panic!("failed to read from response channel: {}", e);
                 }
             }
             Ok(r) => r,

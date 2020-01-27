@@ -70,6 +70,7 @@ impl MockChannel {
                 .collect(),
         }
     }
+    #[must_use]
     pub fn write_message(&mut self, msg: OakMessage) -> u32 {
         if let Some(status) = self.write_status {
             return status;
@@ -156,6 +157,7 @@ impl ChannelHalf {
             .expect("corrupt channel ref")
             .read_message(size, actual_size, handle_count, actual_handle_count)
     }
+    #[must_use]
     pub fn write_message(&mut self, msg: OakMessage) -> u32 {
         if self.direction != Direction::Write {
             return OakStatus::ERR_BAD_HANDLE.value() as u32;
