@@ -597,7 +597,7 @@ wabt::interp::HostFunc::Callback WasmNode::OakRandomGet(wabt::interp::Environmen
 }
 
 wabt::interp::HostFunc::Callback WasmNode::WasiPlaceholder(wabt::interp::Environment* env) {
-  return [this, env](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature*,
+  return [this](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature*,
                      const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
     LogHostFunctionCall(name_, func, args);
     LOG(QFATAL) << "{" << name_ << "} WASI is not implemented";
