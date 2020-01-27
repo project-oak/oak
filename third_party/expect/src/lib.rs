@@ -6,18 +6,20 @@ macro_rules! expect_eq {
         match (&$left, &$right) {
             (left_val, right_val) => {
                 if !(*left_val == *right_val) {
-                    return Err(Box::new(std::io::Error::new(
-                        std::io::ErrorKind::Other,
-                        format!(
-                            r#"{}:{}: expectation failed: `(left == right)`
+                    return ::std::result::Result::Err(::std::boxed::Box::new(
+                        ::std::io::Error::new(
+                            ::std::io::ErrorKind::Other,
+                            ::std::format!(
+                                r#"{}:{}: expectation failed: `(left == right)`
   left: `{:?}`,
  right: `{:?}`"#,
-                            file!(),
-                            line!(),
-                            &*left_val,
-                            &*right_val
+                                file!(),
+                                line!(),
+                                &*left_val,
+                                &*right_val
+                            ),
                         ),
-                    )));
+                    ));
                 }
             }
         }
@@ -32,9 +34,9 @@ macro_rules! expect_matches {
         match $e {
             $pat => (),
             ref e => {
-                return Err(Box::new(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    format!(
+                return ::std::result::Result::Err(::std::boxed::Box::new(::std::io::Error::new(
+                    ::std::io::ErrorKind::Other,
+                    ::std::format!(
                         "{}:{}: expectation failed: `{:?}` does not match `{}`",
                         file!(),
                         line!(),
@@ -51,9 +53,9 @@ macro_rules! expect_matches {
 macro_rules! expect {
     ( $e:expr ) => {
         if !$e {
-            return Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!(
+            return ::std::result::Result::Err(::std::boxed::Box::new(::std::io::Error::new(
+                ::std::io::ErrorKind::Other,
+                ::std::format!(
                     "{}:{}: expectation failed: {:?} is false",
                     file!(),
                     line!(),
