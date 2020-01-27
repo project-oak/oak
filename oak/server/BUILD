@@ -142,7 +142,6 @@ cc_library(
         ":base_runtime",
         ":oak_grpc_node",
         ":wasm_node",
-        "//oak/asylo_rust:asylo_rust_wrapper",
         "//oak/common:app_config",
         "//oak/proto:enclave_cc_proto",
         "//oak/proto:oak_api_cc_proto",
