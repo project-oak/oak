@@ -41,6 +41,7 @@ pub fn run(args: Args) -> Result<()> {
             includes: args.includes,
             input: args.input,
             customize: args.rust_protobuf_customize,
+            ..Default::default()
         })?;
     }
 
@@ -67,7 +68,7 @@ pub fn run(args: Args) -> Result<()> {
 
     let mut includes = args.includes;
     if includes.is_empty() {
-        static DOT_SLICE: &[&str] = &["."];
+        static DOT_SLICE: &'static [&'static str] = &["."];
         includes = DOT_SLICE;
     }
 
@@ -120,7 +121,7 @@ fn remove_path_prefix<'a>(mut path: &'a str, mut prefix: &str) -> Option<&'a str
         return Some(path);
     }
 
-    if prefix.ends_with('/') || prefix.ends_with('\\') {
+    if prefix.ends_with("/") || prefix.ends_with("\\") {
         prefix = &prefix[..prefix.len() - 1];
     }
 
@@ -133,9 +134,9 @@ fn remove_path_prefix<'a>(mut path: &'a str, mut prefix: &str) -> Option<&'a str
     }
 
     if path.as_bytes()[prefix.len()] == b'/' || path.as_bytes()[prefix.len()] == b'\\' {
-        Some(&path[prefix.len() + 1..])
+        return Some(&path[prefix.len() + 1..]);
     } else {
-        None
+        return None;
     }
 }
 
