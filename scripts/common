@@ -11,6 +11,16 @@ readonly SERVER_DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak-server'
 readonly BIN_DIR='bazel-bin'
 readonly CACHE_DIR='bazel-cache'
 
+# To set up remote cache write credentials:
+# - navigate to https://pantheon.corp.google.com/iam-admin/serviceaccounts?project=oak-ci
+# - click on "Create Service Account"
+#   + use your @google.com username as the service account name (e.g. "tzn")
+#   + leave the service account ID as is (e.g. "tzn-110")
+#   + leave the service account description empty
+# - grant the "Storage Object Admin" role to the newly created account
+# - click on "Create Key", then select "JSON"
+# - save the generated key as the file referenced below, within the project directory
+#   + make sure to not check it in to git, check your `.gitignore` configuration
 readonly OAK_REMOTE_CACHE_KEY='./.oak_remote_cache_key.json'
 
 (
