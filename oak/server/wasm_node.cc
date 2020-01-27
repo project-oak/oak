@@ -234,34 +234,34 @@ void WasmNode::InitEnvironment(wabt::interp::Environment* env) {
       "proc_exit",
       wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32},
                                   std::vector<wabt::Type>{}),
-      this->WasiPlaceholder(env));
+      this->WasiPlaceholder());
   wasi_module->AppendFuncExport(
       "fd_write",
       wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32,
                                                           wabt::Type::I32, wabt::Type::I32},
                                   std::vector<wabt::Type>{wabt::Type::I32}),
-      this->WasiPlaceholder(env));
+      this->WasiPlaceholder());
   wasi_module->AppendFuncExport(
       "fd_seek",
       wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I64,
                                                           wabt::Type::I32, wabt::Type::I32},
                                   std::vector<wabt::Type>{wabt::Type::I32}),
-      this->WasiPlaceholder(env));
+      this->WasiPlaceholder());
   wasi_module->AppendFuncExport(
       "fd_close",
       wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32},
                                   std::vector<wabt::Type>{wabt::Type::I32}),
-      this->WasiPlaceholder(env));
+      this->WasiPlaceholder());
   wasi_module->AppendFuncExport(
       "environ_sizes_get",
       wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
                                   std::vector<wabt::Type>{wabt::Type::I32}),
-      this->WasiPlaceholder(env));
+      this->WasiPlaceholder());
   wasi_module->AppendFuncExport(
       "environ_get",
       wabt::interp::FuncSignature(std::vector<wabt::Type>{wabt::Type::I32, wabt::Type::I32},
                                   std::vector<wabt::Type>{wabt::Type::I32}),
-      this->WasiPlaceholder(env));
+      this->WasiPlaceholder());
 }
 
 void WasmNode::Run(Handle handle) {
@@ -596,7 +596,7 @@ wabt::interp::HostFunc::Callback WasmNode::OakRandomGet(wabt::interp::Environmen
   };
 }
 
-wabt::interp::HostFunc::Callback WasmNode::WasiPlaceholder(wabt::interp::Environment* env) {
+wabt::interp::HostFunc::Callback WasmNode::WasiPlaceholder() {
   return [this](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature*,
                 const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
     LogHostFunctionCall(name_, func, args);
