@@ -42,12 +42,18 @@ current WebAsssembly implementation(s). However, in any future
 version of WebAssembly this `usize` type would instead be an alias for the `u64`
 type.
 
-Two specific sets of integer values are used in multiple places in the ABI:
+Three specific sets of integer values are also used in the ABI:
 
-- Many ABI operations return a `u32` **status** value, indicating the result of
-  the operation.
 - Many operations take a `u64` **handle** value; these values are Node-specific
-  and non-zero (zero is reserved to indicate an invalid handle).
+  and non-zero (zero is reserved to indicate an invalid handle), and reference a
+  particular [channel](concepts.md#channels).
+- Many ABI operations return a `u32` **status** value, indicating the result of
+  the operation. The possible values for this are defined in the `OakStatus`
+  enum in [oak_api.proto](/oak/proto/oak_api.proto).
+- The `wait_on_channels` host function fills in a **channel status** value,
+  indicating the readiness status of a particular channel. The possible values
+  for this are defined in the `ChannelReadStatus` enum in
+  [oak_api.proto](/oak/proto/oak_api.proto).
 
 ## Exported Function
 
@@ -80,7 +86,9 @@ functions** as
   reading from one of the specified channel handles. The channel handles are
   encoded in a buffer that holds N contiguous 9-byte chunks, each of which is
   made up of an 8-byte channel handle value (little-endian u64) followed by a
-  single byte that is set on return if data is available on that channel.
+  single channel status byte. Invalid handles will have an `INVALID_CHANNEL`
+  status, but `wait_on_channels` return value will only fail for internal errors
+  or if _all_ channels are invalid.
 
   - arg0: Address of handle status buffer
   - arg1: Count N of handles provided

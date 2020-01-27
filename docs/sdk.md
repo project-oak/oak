@@ -16,7 +16,7 @@ includes wrapper functions for all of the
 types for easier use.
 
 - Status values are returned as
-  [`oak::OakStatus`](https://project-oak.github.io/oak/sdk/oak/proto/oak_api/enum.OakStatus.html)
+  [`oak::OakStatus`](https://project-oak.github.io/oak/sdk/oak/enum.OakStatus.html)
   `enum` values rather than `i32` values.
 - Channel handles are held in the
   [`Handle`](https://project-oak.github.io/oak/sdk/oak/type.Handle.html) type,
