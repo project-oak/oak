@@ -19,3 +19,4 @@ oak_derive = { path = "oak_derive" }
 oak_log = { path = "oak_log" }
 oak_runtime = { path = "../../oak/server/rust/oak_runtime" }
 oak_tests = { path = "oak_tests" }
+oak_utils = { path = "../oak/common/rust/utils" }

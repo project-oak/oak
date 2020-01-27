@@ -1,0 +1,10 @@
+[package]
+name = "oak_utils"
+version = "0.1.0"
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+protoc-rust = "*"
+tempfile = "*"
+walkdir = "*"

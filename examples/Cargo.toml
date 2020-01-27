@@ -28,3 +28,4 @@ oak_derive = { path = "../sdk/rust/oak_derive" }
 oak_log = { path = "../sdk/rust/oak_log" }
 oak_runtime = { path = "../oak/server/rust/oak_runtime" }
 oak_tests = { path = "../sdk/rust/oak_tests" }
+oak_utils = { path = "../oak/common/rust/utils" }
