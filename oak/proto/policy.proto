@@ -43,17 +43,24 @@ message Tag {
 
 // Policies related to gRPC communication, referring to the native gRPC node within the TCB.
 message GrpcTag {
-  // TODO: Replace this with identity assertions based on public keys when Asylo supports it.
+  // TODO: Add identity assertions based on public keys when Asylo supports it.
   // See
   // https://github.com/google/asylo/blob/3158887cb768112516424b3e65046f3946eb4465/asylo/identity/identity.proto#L40.
-  bytes authorization_bearer_token = 1;
+
+  // In order for a client to be authorized to fulfill a tag with (public)
+  // `authorization_bearer_token_hmac` value h, the client needs to provide a (secret) bearer token
+  // s such that h = HMAC-SHA256(s, "oak-grpc-bearer-token-1").
+  //
+  // We don't use the raw token t as the tag itself because labels are considered public by default,
+  // so the secrecy of the token would be compromised immediately.
+  bytes authorization_bearer_token_hmac = 1;
 }
 
 // Policies related to modules, referring to the native WebAssembly node within the TCB.
 message WebAssemblyModuleTag {
-  // The attestation for a single WebAssembly module, a sha256 digest of the
-  // module in binary format.
-  // TODO: Replace this with identity assertions for multiple module versions,
-  // based on a public verifiable log.
+  // The attestation for a single WebAssembly module, a SHA256 digest of the module in binary
+  // format.
+  // TODO: Replace this with identity assertions for multiple module versions, based on a public
+  // verifiable log.
   bytes module_attestation = 1;
 }

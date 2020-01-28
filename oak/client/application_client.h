@@ -25,6 +25,7 @@
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/authorization_bearer_token_metadata.h"
 #include "oak/client/policy_metadata.h"
+#include "oak/common/hmac.h"
 #include "oak/common/nonce_generator.h"
 #include "oak/common/policy.h"
 #include "oak/proto/application.grpc.pb.h"
@@ -34,6 +35,7 @@ namespace oak {
 
 namespace {
 constexpr size_t kPerChannelNonceSizeBytes = 32;
+const std::string kBearerTokenHmacData{"oak-grpc-bearer-token-1"};
 }  // namespace
 
 // A client connected to a previously created Oak Application.
@@ -94,11 +96,18 @@ class ApplicationClient {
 
     NonceGenerator<kPerChannelNonceSizeBytes> nonce_generator;
     auto channel_authorization_token_bytes = NonceToBytes(nonce_generator.NextNonce());
+
+    std::string channel_authorization_token_hmac =
+        oak::utils::hmac_sha256(channel_authorization_token_bytes, kBearerTokenHmacData)
+            .ValueOrDie();
+
+    // Create composite channel credentials by using the (secret) token to authenticate, and the
+    // (public) token HMAC to set a corresponding policy on the data.
     auto call_credentials = grpc::CompositeCallCredentials(
         grpc::MetadataCredentialsFromPlugin(
             absl::make_unique<AuthorizationBearerTokenMetadata>(channel_authorization_token_bytes)),
         grpc::MetadataCredentialsFromPlugin(absl::make_unique<PolicyMetadata>(
-            AuthorizationBearerTokenPolicy(channel_authorization_token_bytes))));
+            AuthorizationBearerTokenPolicy(channel_authorization_token_hmac))));
 
     auto composite_credentials =
         grpc::CompositeChannelCredentials(channel_credentials, call_credentials);

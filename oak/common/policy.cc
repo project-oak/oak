@@ -41,12 +41,16 @@ oak::policy::Label DeserializePolicy(const std::string& policy_bytes) {
   return policy_proto;
 }
 
-oak::policy::Label AuthorizationBearerTokenPolicy(const std::string& authorization_token) {
+oak::policy::Label AuthorizationBearerTokenPolicy(const std::string& authorization_token_hmac) {
   oak::policy::Label label;
   auto* secrecy_tag = label.add_secrecy_tags();
   auto* integrity_tag = label.add_integrity_tags();
-  secrecy_tag->mutable_grpc_tag()->set_authorization_bearer_token(authorization_token);
-  integrity_tag->mutable_grpc_tag()->set_authorization_bearer_token(authorization_token);
+  secrecy_tag->mutable_grpc_tag()->set_authorization_bearer_token_hmac(authorization_token_hmac);
+  // We set integrity tag here, even though it would make more sense for the server to determine
+  // what integrity tag to assign to the incoming message, based on the authentication mechanism
+  // used (e.g. the actual bearer token, rather than its HMAC).
+  // Partly tracked in #420.
+  integrity_tag->mutable_grpc_tag()->set_authorization_bearer_token_hmac(authorization_token_hmac);
   return label;
 }
 

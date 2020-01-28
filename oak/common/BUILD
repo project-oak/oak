@@ -38,6 +38,26 @@ cc_library(
 )
 
 cc_library(
+    name = "hmac",
+    srcs = ["hmac.cc"],
+    hdrs = ["hmac.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@boringssl//:crypto",
+        "@com_google_asylo//asylo/util:status",
+    ],
+)
+
+cc_test(
+    name = "hmac_test",
+    srcs = ["hmac_test.cc"],
+    deps = [
+        ":hmac",
+        "@gtest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "app_config",
     srcs = ["app_config.cc"],
     hdrs = ["app_config.h"],

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 The Project Oak Authors
+ * Copyright 2020 The Project Oak Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,22 @@
  * limitations under the License.
  */
 
-#ifndef OAK_COMMON_HANDLES_H_
-#define OAK_COMMON_HANDLES_H_
+#ifndef OAK_COMMON_HMAC_H_
+#define OAK_COMMON_HMAC_H_
 
-#include <stdint.h>
+#include "asylo/util/statusor.h"
 
-#include "absl/base/attributes.h"
+using asylo::StatusOr;
 
 namespace oak {
-using Handle = uint64_t;
-ABSL_CONST_INIT extern const Handle kInvalidHandle;
+namespace utils {
+
+// Computes a HMAC-SHA256 with the provided key over the provided message.
+//
+// See https://en.wikipedia.org/wiki/HMAC.
+StatusOr<std::string> hmac_sha256(const std::string& key, const std::string& message);
+
+}  // namespace utils
 }  // namespace oak
 
-#endif  // OAK_COMMON_HANDLES_H_
+#endif  // OAK_COMMON_HMAC_H_
