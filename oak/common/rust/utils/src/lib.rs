@@ -40,16 +40,51 @@ pub fn run_protoc_rust(args: protoc_rust::Args) -> io::Result<()> {
     protoc_rust::run(temp_args)?;
 
     // Copy updated Rust `proto` files to the `out_path`.
-    let updated_files = get_updated_files(out_path, temp_path);
-    for updated_file in updated_files.iter() {
-        fs::copy(
-            temp_path.join(&updated_file),
-            out_path.join(&updated_file))?;
-    }
+    copy_updated_files(temp_path, out_path)?;
 
     Ok(())
 }
 
+// This function is identical to `run_protoc_rust` but uses `protoc_rust_grpc` instead.
+pub fn run_protoc_rust_grpc(args: protoc_rust_grpc::Args) -> io::Result<()> {
+    let out_path = Path::new(args.out_dir);
+
+    // Create a temporary directory.
+    let temp_dir = tempfile::tempdir()?;
+    let temp_path = temp_dir.path();
+
+    // Generate Rust `grpc` files in the temporary directory.
+    let mut temp_args = args;
+    temp_args.out_dir = temp_path.to_str().expect("Temporary path error");
+    protoc_rust_grpc::run(temp_args)?;
+
+    // Copy updated Rust `grpc` files to the `out_path`.
+    copy_updated_files(temp_path, out_path)?;
+
+    Ok(())
+}
+
+// This function traverses `dir` and gets a `HashMap` of filenames and their contents.
+fn get_files(dir: &Path) -> HashMap<String, String> {
+    walkdir::WalkDir::new(dir)
+        .into_iter()
+        .filter_map(|entry| entry.ok())
+        .filter(|entry| entry.path().is_file())
+        .map(|entry| {
+            let path = entry.into_path();
+            let content = fs::read_to_string(&path).expect("Read error");
+            let filename = path.file_name()
+                .expect("Filename error")
+                .to_os_string()
+                .into_string()
+                .expect("OsString error");
+            (filename, content)
+        })
+        .collect()
+}
+
+// This function returns a list of files in the `new_dir` that are different from files with
+// same names in the `old_dir`.
 fn get_updated_files(old_dir: &Path, new_dir: &Path) -> Vec<String> {
     let old_files = get_files(old_dir);
     get_files(new_dir).iter()
@@ -67,20 +102,11 @@ fn get_updated_files(old_dir: &Path, new_dir: &Path) -> Vec<String> {
         .collect()
 }
 
-fn get_files(dir: &Path) -> HashMap<String, String> {
-    walkdir::WalkDir::new(dir)
-        .into_iter()
-        .filter_map(|entry| entry.ok())
-        .filter(|entry| entry.path().is_file())
-        .map(|entry| {
-            let path = entry.into_path();
-            let content = fs::read_to_string(&path).expect("Read error");
-            let filename = path.file_name()
-                .expect("Filename error")
-                .to_os_string()
-                .into_string()
-                .expect("OsString error");
-            (filename, content)
-        })
-        .collect()
+// This function copies updated files from `src_dir` to `dst_dir` directory.
+fn copy_updated_files(src_dir: &Path, dst_dir: &Path) -> io::Result<()> {
+    let updated_files = get_updated_files(dst_dir, src_dir);
+    for updated_file in updated_files.iter() {
+        fs::copy(src_dir.join(&updated_file), dst_dir.join(&updated_file))?;
+    }
+    Ok(())
 }
