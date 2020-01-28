@@ -22,8 +22,11 @@ use std::path::Path;
 #[cfg(test)]
 mod tests;
 
-// ...
-// Current version doesn't support nested directories since `protoc_rust` doesn't ...
+// This function uses `protoc_rust` to generate `.proto` files in a temporary directory,
+// checks previously generated files and updates them if their contents have changed.
+// This is a workaround for `protoc_rust` that always updates files, thus provoking recompilation
+// of all dependent targets.
+// Function doesn't support nested directories since `protoc_rust` doesn't generate them.
 pub fn run_protoc_rust(args: protoc_rust::Args) -> io::Result<()> {
     let out_path = Path::new(args.out_dir);
 
@@ -36,10 +39,12 @@ pub fn run_protoc_rust(args: protoc_rust::Args) -> io::Result<()> {
     temp_args.out_dir = temp_path.to_str().expect("Temporary path error");
     protoc_rust::run(temp_args)?;
 
-    // Check if new `.proto` files a different from the old ones ...
+    // Copy updated `.proto` files to the `out_path`.
     let updated_files = get_updated_files(out_path, temp_path);
     for updated_file in updated_files.iter() {
-        fs::copy(temp_path.join(&updated_file), out_path.join(&updated_file))?;
+        fs::copy(
+            temp_path.join(&updated_file),
+            out_path.join(&updated_file))?;
     }
 
     Ok(())
