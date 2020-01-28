@@ -57,7 +57,9 @@ impl Room {
     fn handle_command(&mut self, command: Command) -> Result<(), oak::OakError> {
         match command {
             Command::Join(h) => {
-                self.clients.push(oak::grpc::ChannelResponseWriter::new(h));
+                let sender = oak::io::Sender::new(h);
+                self.clients
+                    .push(oak::grpc::ChannelResponseWriter::new(sender));
                 Ok(())
             }
             Command::SendMessage(message_bytes) => {
