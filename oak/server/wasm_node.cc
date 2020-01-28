@@ -228,7 +228,11 @@ void WasmNode::InitEnvironment(wabt::interp::Environment* env) {
                                   std::vector<wabt::Type>{wabt::Type::I32}),
       this->OakRandomGet(env));
 
-  // Experimental.
+  // These exported functions are used to run applications that have been ported to Wasm
+  // without code refactoring, and thus may require several WASI functions to be imported.
+  // WASI is an interface that provides access to OS features (e.g. filesystems, sockets, etc.).
+  // https://wasi.dev/
+  // These particular functions are required by TensorFlow Lite for Microcontrollers.
   wabt::interp::HostModule* wasi_module = env->AppendHostModule("wasi_snapshot_preview1");
   wasi_module->AppendFuncExport(
       "proc_exit",
