@@ -2,18 +2,19 @@
 
 This document walks through the basics of programming in Oak.
 
-- [Writing an Oak Node](#writing-an-oak-node)
-  - [Per-Node Boilerplate](#per-node-boilerplate)
-  - [Generated gRPC service code](#generated-grpc-service-code)
-- [Using an Oak Application from a client](#using-an-oak-application-from-a-client)
-  - [Connecting to the Oak Manager](#connecting-to-the-oak-manager)
-  - [Starting the Oak Application](#starting-the-oak-application)
-- [gRPC Request Processing Path](#grpc-request-processing-path)
-- [Node Termination](#node-termination)
-- [Nodes, Channels and Handles](#nodes-channels-and-handles)
-- [Persistent Storage](#persistent-storage)
-- [Testing](#testing)
-  - [Testing Multi-Node Applications](#testing-multi-node-applications)
+- [Programming Oak](#programming-oak)
+  - [Writing an Oak Node](#writing-an-oak-node)
+    - [Per-Node Boilerplate](#per-node-boilerplate)
+    - [Generated gRPC service code](#generated-grpc-service-code)
+  - [Using an Oak Application from a client](#using-an-oak-application-from-a-client)
+    - [Connecting to the Oak Manager](#connecting-to-the-oak-manager)
+    - [Starting the Oak Application](#starting-the-oak-application)
+  - [gRPC Request Processing Path](#grpc-request-processing-path)
+  - [Node Termination](#node-termination)
+  - [Nodes, Channels and Handles](#nodes-channels-and-handles)
+  - [Persistent Storage](#persistent-storage)
+  - [Testing](#testing)
+    - [Testing Multi-Node Applications](#testing-multi-node-applications)
 
 ## Writing an Oak Node
 
@@ -112,9 +113,9 @@ next section.
 ### Generated gRPC service code
 
 The Oak SDK includes a `proto_rust_grpc` tool (forked from
-https://github.com/stepancheg/rust-protobuf) which takes a
-[gRPC service definition](https://grpc.io/docs/guides/concepts/) and
-autogenerates Rust code for the corresponding Oak Node that implements that
+https://github.com/stepancheg/rust-protobuf and wrapped in the `oak_utils`)
+which takes a [gRPC service definition](https://grpc.io/docs/guides/concepts/)
+and autogenerates Rust code for the corresponding Oak Node that implements that
 service.
 
 Adding a `build.rs` file to the Node that invokes this tool results in a
@@ -124,10 +125,10 @@ generated file appearing in `src/proto/<service>_grpc.rs`.
 [embedmd]:# (../examples/hello_world/module/rust/build.rs Rust /fn main/ /^}/)
 ```Rust
 fn main() {
-    protoc_rust_grpc::run(protoc_rust_grpc::Args {
+    oak_utils::run_protoc_rust_grpc(protoc_rust_grpc::Args {
         out_dir: "src/proto",
         input: &["../../proto/hello_world.proto"],
-        includes: &["../../proto", "../../third_party"],
+        includes: &["../../proto", "../../../../third_party"],
         rust_protobuf: true, // also generate protobuf messages, not just services
         ..Default::default()
     })
