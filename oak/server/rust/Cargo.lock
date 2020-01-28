@@ -69,6 +69,7 @@ dependencies = [
  "oak_abi 0.1.0",
  "oak_utils 0.1.0",
  "protobuf 2.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "protoc-rust 2.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand_core 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -79,6 +80,7 @@ version = "0.1.0"
 dependencies = [
  "oak_utils 0.1.0",
  "protobuf 2.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "protoc-rust 2.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -90,6 +92,7 @@ dependencies = [
  "oak_abi 0.1.0",
  "oak_utils 0.1.0",
  "protobuf 2.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "protoc-rust 2.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
