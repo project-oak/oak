@@ -22,7 +22,7 @@ use std::path::Path;
 #[cfg(test)]
 mod tests;
 
-// This function uses `protoc_rust` to generate `.proto` files in a temporary directory,
+// This function uses `protoc_rust` to generate Rust `proto` files in a temporary directory,
 // checks previously generated files and updates them if their contents have changed.
 // This is a workaround for `protoc_rust` that always updates files, thus provoking recompilation
 // of all dependent targets.
@@ -34,12 +34,12 @@ pub fn run_protoc_rust(args: protoc_rust::Args) -> io::Result<()> {
     let temp_dir = tempfile::tempdir()?;
     let temp_path = temp_dir.path();
 
-    // Generate `.proto` files in the temporary directory.
+    // Generate Rust `proto` files in the temporary directory.
     let mut temp_args = args;
     temp_args.out_dir = temp_path.to_str().expect("Temporary path error");
     protoc_rust::run(temp_args)?;
 
-    // Copy updated `.proto` files to the `out_path`.
+    // Copy updated Rust `proto` files to the `out_path`.
     let updated_files = get_updated_files(out_path, temp_path);
     for updated_file in updated_files.iter() {
         fs::copy(
