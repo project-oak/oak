@@ -60,8 +60,11 @@ fn get_updated_files_test() {
     updated_files.sort();
 
     assert_eq!(updated_files.len(), CHANGED_FILES.len());
-    assert_eq!(true,
-        updated_files.iter()
+    assert_eq!(
+        true,
+        updated_files
+            .iter()
             .zip(CHANGED_FILES.iter())
-            .all(|(a, b)| a == b));
+            .all(|(a, b)| a == b)
+    );
 }

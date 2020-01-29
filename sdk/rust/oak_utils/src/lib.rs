@@ -73,7 +73,8 @@ fn get_files(dir: &Path) -> HashMap<String, String> {
         .map(|entry| {
             let path = entry.into_path();
             let content = fs::read_to_string(&path).expect("Read error");
-            let filename = path.file_name()
+            let filename = path
+                .file_name()
                 .expect("Filename error")
                 .to_os_string()
                 .into_string()
@@ -87,9 +88,11 @@ fn get_files(dir: &Path) -> HashMap<String, String> {
 // same names in the `old_dir`.
 fn get_updated_files(old_dir: &Path, new_dir: &Path) -> Vec<String> {
     let old_files = get_files(old_dir);
-    get_files(new_dir).iter()
+    get_files(new_dir)
+        .iter()
         .filter_map(|(filename, content)| {
-            old_files.get(filename)
+            old_files
+                .get(filename)
                 .map_or(Some(filename), |old_content| {
                     if content == old_content {
                         None
