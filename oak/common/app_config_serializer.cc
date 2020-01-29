@@ -16,44 +16,67 @@
 
 #include <memory>
 #include <string>
+#include <map>
 
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
+#include "absl/strings/str_split.h"
 #include "asylo/util/logging.h"
+#include "google/protobuf/text_format.h"
 #include "oak/common/app_config.h"
 #include "oak/common/utils.h"
 
-ABSL_FLAG(std::string, module, "", "File containing the compiled WebAssembly module");
-ABSL_FLAG(bool, logging, false, "Enable application logging");
-ABSL_FLAG(std::string, storage_address, "127.0.0.1:7867",
-          "Address ot the storage provider to connect to");
-ABSL_FLAG(int, grpc_port, 8080, "Port for the Application to listen on");
+ABSL_FLAG(std::string, textproto, "", "Textproto file with application configuration");
+ABSL_FLAG(std::vector<std::string>, modules, std::vector<std::string>{},
+          "A comma-separated list of entries `module=path` "
+          "with files containing compiled WebAssembly modules");
 ABSL_FLAG(std::string, output_file, "", "File to write an application configuration to");
 
 int main(int argc, char* argv[]) {
   absl::ParseCommandLine(argc, argv);
-
+  std::string textproto = absl::GetFlag(FLAGS_textproto);
+  if (textproto.empty()) {
+    LOG(QFATAL) << "Textproto file is not specified";
+    return 1;
+  }
+  std::vector<std::string> modules = absl::GetFlag(FLAGS_modules);
+  if (modules.empty()) {
+    LOG(QFATAL) << "Wasm modules are not specified";
+    return 1;
+  }
   std::string output_file = absl::GetFlag(FLAGS_output_file);
   if (output_file.empty()) {
     LOG(QFATAL) << "Output file is not specified";
     return 1;
   }
 
-  // Create an application configuration.
-  std::string module_bytes = oak::utils::read_file(absl::GetFlag(FLAGS_module));
-  std::unique_ptr<oak::ApplicationConfiguration> application_config =
-      oak::DefaultConfig(module_bytes);
-
-  // Set application configuration parameters.
-  if (absl::GetFlag(FLAGS_logging)) {
-    oak::AddLoggingToConfig(application_config.get());
+  // Parse module names.
+  std::map<std::string, std::string> module_map;
+  for (const std::string& module : absl::GetFlag(FLAGS_modules)) {
+    std::vector<std::string> module_info = absl::StrSplit(module, '=');
+    if (module_info.size() != 2) {
+      LOG(QFATAL) << "Incorrect item:" << module;
+      return 1;
+    }
+    module_map.emplace(module_info.front(), module_info.back());
   }
-  std::string storage_address = absl::GetFlag(FLAGS_storage_address);
-  if (!storage_address.empty()) {
-    oak::AddStorageToConfig(application_config.get(), storage_address);
-  }
-  oak::AddGrpcPortToConfig(application_config.get(), absl::GetFlag(FLAGS_grpc_port));
 
-  oak::WriteConfigToFile(application_config.get(), output_file);
+  // Load application configuration.
+  auto config = absl::make_unique<oak::ApplicationConfiguration>();
+  google::protobuf::TextFormat::MergeFromString(textproto, config.get());
+
+  // Add Wasm module bytes to the application configuration.
+  for (auto& node_config : *config->mutable_node_configs()) {
+    auto it = module_map.find(node_config.name());
+    if (it != module_map.end()) {
+      std::string module_bytes = oak::utils::read_file(it->second);
+      node_config.mutable_wasm_config()->set_module_bytes(module_bytes);
+    } else {
+      LOG(QFATAL) << "Module path for " << it->first << " is not specified";
+      return 1;
+    }
+  }
+
+  oak::WriteConfigToFile(config.get(), output_file);
   return 0;
 }
