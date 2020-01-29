@@ -6,6 +6,6 @@ license = "Apache-2.0"
 
 [dependencies]
 protoc-rust = "*"
-protoc-rust-grpc = { path = "../../../../third_party/grpc-rust/protoc-rust-grpc" }
+protoc-rust-grpc = { path = "../../../third_party/grpc-rust/protoc-rust-grpc" }
 tempfile = "*"
 walkdir = "*"
