@@ -230,8 +230,10 @@ void WasmNode::InitEnvironment(wabt::interp::Environment* env) {
 
   // These exported functions are used to run applications that have been ported to Wasm
   // without code refactoring, and thus may require several WASI functions to be imported.
-  // WASI is an interface that provides access to OS features (e.g. filesystems, sockets, etc.).
+  // WASI is an interface that provides access to OS features (e.g. filesystems, sockets, etc.):
   // https://wasi.dev/
+  // WASI functions are imported from a `wasi_snapshot_preview1` module:
+  // https://github.com/CraneStation/wasi-libc/blob/12f5832b45c7450f8320db271334081247191d58/libc-bottom-half/headers/public/wasi/api.h#L1584
   // These particular functions are required by TensorFlow Lite for Microcontrollers.
   wabt::interp::HostModule* wasi_module = env->AppendHostModule("wasi_snapshot_preview1");
   wasi_module->AppendFuncExport(
@@ -606,7 +608,7 @@ wabt::interp::HostFunc::Callback WasmNode::WasiPlaceholder() {
     LogHostFunctionCall(name_, func, args);
     LOG(QFATAL) << "{" << name_ << "} WASI is not implemented";
     results[0].set_i32(OakStatus::ERR_INTERNAL);
-    return wabt::interp::Result::Ok;
+    return wabt::interp::Result::TrapUnreachable;
   };
 }
 

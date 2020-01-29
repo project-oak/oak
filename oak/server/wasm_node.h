@@ -65,6 +65,8 @@ class WasmNode final : public NodeThread {
   wabt::interp::HostFunc::Callback OakRandomGet(wabt::interp::Environment* env);
 
   // Placeholder for WASI functions.
+  // Since WASI functions are currently not supported by Oak, this function
+  // will always log, return an error and terminate the program.
   wabt::interp::HostFunc::Callback WasiPlaceholder();
 
   const std::string main_entrypoint_;
