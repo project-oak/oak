@@ -55,7 +55,7 @@ int main(int argc, char* argv[]) {
   for (const std::string& module : absl::GetFlag(FLAGS_modules)) {
     std::vector<std::string> module_info = absl::StrSplit(module, '=');
     if (module_info.size() != 2) {
-      LOG(QFATAL) << "Incorrect item:" << module;
+      LOG(QFATAL) << "Incorrect module specification:" << module;
       return 1;
     }
     module_map.emplace(module_info.front(), module_info.back());
