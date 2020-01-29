@@ -20,6 +20,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
+#include "absl/memory/memory.h"
 #include "absl/strings/str_split.h"
 #include "asylo/util/logging.h"
 #include "google/protobuf/text_format.h"
