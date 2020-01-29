@@ -112,7 +112,7 @@ cc_binary(
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
         "@com_google_absl//absl/memory",
-        "@com_google_absl//absl/strings:strings",
+        "@com_google_absl//absl/strings",
         "@com_google_asylo//asylo/util:logging",
     ],
 )

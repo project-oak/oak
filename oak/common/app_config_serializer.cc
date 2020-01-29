@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
+#include <map>
 #include <memory>
 #include <string>
-#include <map>
 
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
@@ -64,7 +64,8 @@ int main(int argc, char* argv[]) {
 
   // Load application configuration.
   auto config = absl::make_unique<oak::ApplicationConfiguration>();
-  google::protobuf::TextFormat::MergeFromString(textproto, config.get());
+  std::string textproto_string = oak::utils::read_file(textproto);
+  google::protobuf::TextFormat::MergeFromString(textproto_string, config.get());
 
   // Add Wasm module bytes to the application configuration.
   for (auto& node_config : *config->mutable_node_configs()) {
