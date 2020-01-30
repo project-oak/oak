@@ -41,7 +41,6 @@ pub fn run(args: Args) -> Result<()> {
             includes: args.includes,
             input: args.input,
             customize: args.rust_protobuf_customize,
-            ..Default::default()
         })?;
     }
 
