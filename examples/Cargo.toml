@@ -11,6 +11,7 @@ members = [
     "private_set_intersection/module/rust",
     "running_average/module/rust",
     "rustfmt/module/rust",
+    "translator/module/rust",
 ]
 
 [patch.crates-io]
