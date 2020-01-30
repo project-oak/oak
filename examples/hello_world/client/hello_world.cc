@@ -30,7 +30,7 @@
 ABSL_FLAG(std::string, manager_address, "127.0.0.1:8888",
           "Address of the Oak Manager to connect to");
 ABSL_FLAG(std::string, storage_address, "127.0.0.1:7867",
-          "Address ot the storage provider to connect to");
+          "Address of the storage provider to connect to");
 ABSL_FLAG(std::string, module, "", "File containing the compiled WebAssembly module");
 
 using ::oak::examples::hello_world::HelloRequest;
