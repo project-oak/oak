@@ -21,8 +21,6 @@ package(
     licenses = ["notice"],
 )
 
-exports_files(srcs = glob(["*.textproto"]))
-
 cc_binary(
     name = "client",
     srcs = ["hello_world.cc"],
@@ -37,28 +35,6 @@ cc_binary(
         "@com_google_absl//absl/memory",
         "@com_google_asylo//asylo/util:logging",
     ],
-)
-
-genrule(
-    name = "client_config",
-    srcs = ["//examples:target/wasm32-unknown-unknown/release/hello_world.wasm"],
-    outs = ["client_config.bin"],
-    cmd = "$(location //oak/common:app_config_serializer) " +
-          "--textproto=$(location :config.textproto) " +
-          "--modules=app:$< " +
-          "--output_file=$@ ",
-    tools = ["//oak/common:app_config_serializer"],
-)
-
-genrule(
-    name = "client_config_cpp",
-    srcs = ["//examples/hello_world/module/cpp:hello_world.wasm"],
-    outs = ["client_config_cpp.bin"],
-    cmd = "$(location //oak/common:app_config_serializer) " +
-          "--textproto=$(location :config.textproto) " +
-          "--modules=app:$< " +
-          "--output_file=$@ ",
-    tools = ["//oak/common:app_config_serializer"],
 )
 
 # TODO: Create a new Bazel rule `oak_application_server_docker`, that encapsulates this logic.
