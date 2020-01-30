@@ -25,6 +25,7 @@
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
 #include "oak/client/manager_client.h"
+#include "oak/common/app_config.h"
 #include "oak/common/utils.h"
 
 ABSL_FLAG(std::string, manager_address, "127.0.0.1:8888",
@@ -77,9 +78,18 @@ int main(int argc, char** argv) {
 
   // Load the Oak Module to execute. This needs to be compiled from Rust to WebAssembly separately.
   std::string module_bytes = oak::utils::read_file(absl::GetFlag(FLAGS_module));
+
+  // Build an application configuration with a single WebAssembly node with the provided
+  // WebAssembly module bytes.
+  std::unique_ptr<oak::ApplicationConfiguration> app_config = oak::DefaultConfig(module_bytes);
+  oak::AddLoggingToConfig(app_config.get());
+  std::string storage_address = absl::GetFlag(FLAGS_storage_address);
+  if (!storage_address.empty()) {
+    oak::AddStorageToConfig(app_config.get(), storage_address);
+  }
+
   std::unique_ptr<oak::CreateApplicationResponse> create_application_response =
-      manager_client->CreateApplication(module_bytes, /* logging= */ true,
-                                        absl::GetFlag(FLAGS_storage_address));
+      manager_client->CreateApplication(std::move(app_config));
   if (create_application_response == nullptr) {
     LOG(QFATAL) << "Failed to create application";
   }

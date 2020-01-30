@@ -252,12 +252,12 @@ specify a storage provider to connect to, and to control whether logging is
 enabled:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/hello_world/client/hello_world.cc C++ /.*FLAGS_module/ /}/)
+[embedmd]:# (../examples/translator/client/translator.cc C++ /.*FLAGS_module/ /}/)
 ```C++
   std::string module_bytes = oak::utils::read_file(absl::GetFlag(FLAGS_module));
   std::unique_ptr<oak::CreateApplicationResponse> create_application_response =
       manager_client->CreateApplication(module_bytes, /* logging= */ true,
-                                        absl::GetFlag(FLAGS_storage_address));
+                                        /* storage_address= */ "");
   if (create_application_response == nullptr) {
     LOG(QFATAL) << "Failed to create application";
   }
