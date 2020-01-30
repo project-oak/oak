@@ -28,8 +28,8 @@
 #include "oak/common/utils.h"
 
 ABSL_FLAG(std::string, textproto, "",
-         "Textproto file with application configuration, where the `module_bytes` value is empty, "
-         "(it will be overritten by module bytes after serialization)");
+          "Textproto file with application configuration, where the `module_bytes` value is empty, "
+          "(it will be overritten by module bytes after serialization)");
 ABSL_FLAG(std::vector<std::string>, modules, std::vector<std::string>{},
           "A comma-separated list of entries `module=path` with files containing compiled "
           "WebAssembly modules to insert into the generated configuration");
