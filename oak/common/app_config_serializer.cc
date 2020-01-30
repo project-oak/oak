@@ -27,10 +27,12 @@
 #include "oak/common/app_config.h"
 #include "oak/common/utils.h"
 
-ABSL_FLAG(std::string, textproto, "", "Textproto file with application configuration");
+ABSL_FLAG(std::string, textproto, "",
+         "Textproto file with application configuration, where the `module_bytes` value is empty, "
+         "(it will be overritten by module bytes after serialization)");
 ABSL_FLAG(std::vector<std::string>, modules, std::vector<std::string>{},
-          "A comma-separated list of entries `module=path` "
-          "with files containing compiled WebAssembly modules");
+          "A comma-separated list of entries `module=path` with files containing compiled "
+          "WebAssembly modules to insert into the generated configuration");
 ABSL_FLAG(std::string, output_file, "", "File to write an application configuration to");
 
 int main(int argc, char* argv[]) {
@@ -69,13 +71,20 @@ int main(int argc, char* argv[]) {
 
   // Add Wasm module bytes to the application configuration.
   for (auto& node_config : *config->mutable_node_configs()) {
-    auto it = module_map.find(node_config.name());
-    if (it != module_map.end()) {
-      std::string module_bytes = oak::utils::read_file(it->second);
-      node_config.mutable_wasm_config()->set_module_bytes(module_bytes);
-    } else {
-      LOG(QFATAL) << "Module path for " << it->first << " is not specified";
-      return 1;
+    if (node_config.has_wasm_config()) {
+      std::string module_name = node_config.name();
+      auto it = module_map.find(module_name);
+      if (it != module_map.end()) {
+        std::string module_bytes = oak::utils::read_file(it->second);
+        if (module_bytes.empty()) {
+          LOG(QFATAL) << "Empty Wasm module:" << module_name;
+          return 1;
+        }
+        node_config.mutable_wasm_config()->set_module_bytes(module_bytes);
+      } else {
+        LOG(QFATAL) << "Module path for " << module_name << " is not specified";
+        return 1;
+      }
     }
   }
 

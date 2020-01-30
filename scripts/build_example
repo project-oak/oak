@@ -55,9 +55,7 @@ bazel_build_flags+=(
 
 # Use a different output_base so that we don't lose incremental state.
 # See https://docs.bazel.build/versions/master/command-line-reference.html#flag--output_base.
-bazel --output_base="$CACHE_DIR/client" build "${bazel_build_flags[@]}" \
-    "//examples/$TARGET/client" \
-    "//oak/common:app_config_serializer"
+bazel --output_base="$CACHE_DIR/client" build "${bazel_build_flags[@]}" "//examples/$TARGET/client"
 
 readonly CPP_FOLDER="$(find examples/"$TARGET" -type d -name cpp)"
 if [[ -n "$CPP_FOLDER" ]]; then
