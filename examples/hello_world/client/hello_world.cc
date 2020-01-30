@@ -33,6 +33,8 @@ ABSL_FLAG(std::string, manager_address, "127.0.0.1:8888",
 ABSL_FLAG(std::string, storage_address, "127.0.0.1:7867",
           "Address of the storage provider to connect to");
 ABSL_FLAG(std::string, module, "", "File containing the compiled WebAssembly module");
+ABSL_FLAG(std::string, translator_module, "",
+          "File containing a compiled WebAssembly module with a Translator Node");
 
 using ::oak::examples::hello_world::HelloRequest;
 using ::oak::examples::hello_world::HelloResponse;
@@ -79,13 +81,25 @@ int main(int argc, char** argv) {
   // Load the Oak Module to execute. This needs to be compiled from Rust to WebAssembly separately.
   std::string module_bytes = oak::utils::read_file(absl::GetFlag(FLAGS_module));
 
-  // Build an application configuration with a single WebAssembly node with the provided
-  // WebAssembly module bytes.
+  // Build an application configuration with a single WebAssembly Node config
+  // using the provided WebAssembly module bytes.
   std::unique_ptr<oak::ApplicationConfiguration> app_config = oak::DefaultConfig(module_bytes);
   oak::AddLoggingToConfig(app_config.get());
   std::string storage_address = absl::GetFlag(FLAGS_storage_address);
   if (!storage_address.empty()) {
     oak::AddStorageToConfig(app_config.get(), storage_address);
+  }
+
+  // Optionally load another WebAssembly module holding code for a translator
+  // Node.
+  std::string translator_module = absl::GetFlag(FLAGS_translator_module);
+  if (!translator_module.empty()) {
+    LOG(INFO) << "Adding 'translator' module config with Wasm code from " << translator_module;
+    std::string translator_module_bytes = oak::utils::read_file(translator_module);
+    oak::NodeConfiguration* node_config = app_config->add_node_configs();
+    node_config->set_name("translator");
+    oak::WebAssemblyConfiguration* wasm_config = node_config->mutable_wasm_config();
+    wasm_config->set_module_bytes(translator_module_bytes);
   }
 
   std::unique_ptr<oak::CreateApplicationResponse> create_application_response =
