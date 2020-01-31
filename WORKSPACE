@@ -323,10 +323,22 @@ go_rules_compat(
 # clang + llvm 8.0
 http_archive(
     name = "clang",
-    build_file = "//toolchain:clang.BUILD",
+    build_file = "//toolchain:all_files.BUILD",
     sha256 = "0f5c314f375ebd5c35b8c1d5e5b161d9efaeff0523bac287f8b4e5b751272f51",
     strip_prefix = "clang+llvm-8.0.0-x86_64-linux-gnu-ubuntu-18.04",
     url = "http://releases.llvm.org/8.0.0/clang+llvm-8.0.0-x86_64-linux-gnu-ubuntu-18.04.tar.xz",
+)
+
+# Gcc compiler for Arm
+# We need the compiler in order to get the sysroot for aarch64_linux to crosscompile + all the
+# needed libraries to link agaisnt.
+# NB: we are not usign gcc to build, clang is still the default compiler.
+http_archive(
+    name = "gcc_arm",
+    build_file = "//toolchain:all_files.BUILD",
+    sha256 = "8ce3e7688a47d8cd2d8e8323f147104ae1c8139520eca50ccf8a7fa933002731",
+    strip_prefix = "gcc-arm-8.3-2019.03-x86_64-aarch64-linux-gnu",
+    url = "https://developer.arm.com/-/media/Files/downloads/gnu-a/8.3-2019.03/binrel/gcc-arm-8.3-2019.03-x86_64-aarch64-linux-gnu.tar.xz",
 )
 
 load("//toolchain:emcc_toolchain_config.bzl", "emsdk_configure")

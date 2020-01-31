@@ -103,9 +103,9 @@ def _impl(ctx):
         ),
     ]
 
-    # System include path we need to setup for the downloaded clang
-    isystem_flags = feature(
-        name = "isystem_flags",
+    # aarch64 linux gnu cross compile flags
+    arm_compile_flags = feature(
+        name = "arm_compile_flags",
         enabled = True,
         flag_sets = [
             flag_set(
@@ -113,9 +113,15 @@ def _impl(ctx):
                 flag_groups = [
                     flag_group(
                         flags = [
-                            # Bazel require explicit include paths for system headers
-                            "-isystem",
-                            "external/clang/lib/clang/8.0.0/include",
+                            # sysroot that has all the includes.
+                            "--sysroot=external/gcc_arm/aarch64-linux-gnu/libc",
+                            # Path to get all the .so files we needed.
+                            "--gcc-toolchain=external/gcc_arm",
+                            # Compile for aarch64 linux.
+                            "--target=aarch64-linux-gnu",
+                            # Use armv8a architecture.
+                            "-march=armv8a",
+                            # Make the include paths absolute, not relative to clang binary
                             "-no-canonical-prefixes",
                         ],
                     ),
@@ -124,8 +130,35 @@ def _impl(ctx):
         ],
     )
 
-    # Because we use clang to build everything (instead of clang++), we need to remind it to
-    # link the correct stdc++ library
+    arm_link_flags = feature(
+        name = "arm_link_flags",
+        enabled = True,
+        flag_sets = [
+            flag_set(
+                actions = [ACTION_NAMES.cpp_link_executable],
+                flag_groups = [
+                    flag_group(
+                        flags = [
+                            # Use lld as the linker as it is faster and shows better error messages.
+                            "-fuse-ld=lld",
+                            # sysroot that has all the includes.
+                            "--sysroot=external/gcc_arm/aarch64-linux-gnu/libc",
+                            # Path to get all the .so files we needed.
+                            "--gcc-toolchain=external/gcc_arm",
+                            # Compile for aarch64 linux.
+                            "--target=aarch64-linux-gnu",
+                            # Use armv8a architecture.
+                            "-march=armv8a",
+                            # Because we use clang to build everything (instead of clang++), we need
+                            # to remind it to link the correct stdc++ library.
+                            "-lstdc++",
+                        ],
+                    ),
+                ],
+            ),
+        ],
+    )
+
     k8_link_flags = feature(
         name = "k8_link_flags",
         enabled = True,
@@ -135,6 +168,10 @@ def _impl(ctx):
                 flag_groups = [
                     flag_group(
                         flags = [
+                            # Use lld as the linker as it is faster and shows better error messages.
+                            "-fuse-ld=lld",
+                            # Because we use clang to build everything (instead of clang++), we need
+                            # to remind it to link the correct stdc++ library.
                             "-lstdc++",
                         ],
                     ),
@@ -152,25 +189,8 @@ def _impl(ctx):
                 flag_groups = [
                     flag_group(
                         flags = [
-                            # Force the usage of stack protectors for all functions.
-                            "-fstack-protector-all",
-                            # Pretty colours.
-                            "-fcolor-diagnostics",
-                            # Don't omit the frame pointer, useful for debug.
-                            "-fno-omit-frame-pointer",
-                            # Enable all warnings.
-                            "-Wall",
-                            # Enable extra warnings.
-                            "-Wextra",
-                            # Simple but useful static checking to detect potential race conditions.
-                            "-Wthread-safety",
-                            # Treat warnings as errors.
-                            "-Werror",
-                            # Disable some warnings:
-                            # protobuf generates unusused parameters, so skip this for now.
-                            "-Wno-unused-parameter",
-                            # https://stackoverflow.com/questions/1538943
-                            "-Wno-missing-field-initializers",
+                            # Make the include paths absolute, not relative to clang binary
+                            "-no-canonical-prefixes",
                         ],
                     ),
                 ],
@@ -194,6 +214,11 @@ def _impl(ctx):
                             # Do not try to use any standard includes for C or C++
                             "-nostdinc",
                             "-nostdinc++",
+                            # Make the include paths absolute, not relative to clang binary
+                            "-no-canonical-prefixes",
+                            # Bazel require explicit include paths for system headers
+                            "-isystem",
+                            "external/clang/lib/clang/8.0.0/include",
                         ],
                     ),
                 ],
@@ -244,11 +269,21 @@ def _impl(ctx):
             "/usr/include",
         ]
         features = [
-            isystem_flags,
             k8_compile_flags,
             k8_link_flags,
         ]
         toolchain_identifier = "clang-toolchain_k8"
+    elif (ctx.attr.cpu == "armv8"):
+        target_cpu = "armv8a"
+        target_system_name = "aarch64"
+        abi_version = "aarch64-linux-gnu"
+        abi_libc_version = "aarch64-linux-gnu"
+        cxx_builtin_include_directories = []
+        features = [
+            arm_compile_flags,
+            arm_link_flags,
+        ]
+        toolchain_identifier = "clang-toolchain_armv8"
     elif (ctx.attr.cpu == "wasm32"):
         target_cpu = "wasm32"
         target_system_name = "wasm32-unknown-unknown"
@@ -256,7 +291,6 @@ def _impl(ctx):
         abi_libc_version = "unknown"
         cxx_builtin_include_directories = []
         features = [
-            isystem_flags,
             wasm_compile_flags,
             wasm_link_flags,
         ]
@@ -283,7 +317,7 @@ def _impl(ctx):
 cc_toolchain_config = rule(
     implementation = _impl,
     attrs = {
-        "cpu": attr.string(mandatory = True, values = ["k8", "wasm32"]),
+        "cpu": attr.string(mandatory = True, values = ["k8", "wasm32", "armv8"]),
     },
     provides = [CcToolchainConfigInfo],
 )
