@@ -31,19 +31,26 @@ void LoggingNode::Run(Handle handle) {
   }
   std::vector<std::unique_ptr<ChannelStatus>> status;
   status.push_back(absl::make_unique<ChannelStatus>(handle));
-  while (true) {
+  bool done = false;
+  while (!done) {
     if (!WaitOnChannels(&status)) {
       LOG(WARNING) << "{" << name_ << "} Node termination requested, " << channel->Count()
                    << " log messages pending";
-      return;
+      done = true;
     }
-    ReadResult result = channel->Read(INT_MAX, INT_MAX);
-    if (result.required_size > 0) {
-      LOG(ERROR) << "{" << name_ << "} Message size too large: " << result.required_size;
-      return;
+    ReadResult result;
+    while (true) {
+      result = channel->Read(INT_MAX, INT_MAX);
+      if (result.required_size > 0) {
+        LOG(ERROR) << "{" << name_ << "} Message size too large: " << result.required_size;
+        return;
+      }
+      if (result.msg == nullptr) {
+        break;
+      }
+      LOG(INFO) << "LOG: " << std::string(result.msg->data.data(), result.msg->data.size());
+      // Any channel references included with the message will be dropped.
     }
-    LOG(INFO) << "LOG: " << std::string(result.msg->data.data(), result.msg->data.size());
-    // Any channel references included with the message will be dropped.
   }
 }
 
