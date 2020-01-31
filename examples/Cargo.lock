@@ -1604,6 +1604,16 @@ dependencies = [
  "oak_log 0.1.0",
  "protobuf 2.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "protoc-rust-grpc 0.7.0",
+ "translator_common 0.1.0",
+]
+
+[[package]]
+name = "translator_common"
+version = "0.1.0"
+dependencies = [
+ "oak 0.1.0",
+ "protobuf 2.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "protoc-rust-grpc 0.7.0",
 ]
 
 [[package]]

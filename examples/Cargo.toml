@@ -11,6 +11,7 @@ members = [
     "private_set_intersection/module/rust",
     "running_average/module/rust",
     "rustfmt/module/rust",
+    "translator/common",
     "translator/module/rust",
 ]
 
@@ -30,3 +31,4 @@ oak_log = { path = "../sdk/rust/oak_log" }
 oak_runtime = { path = "../oak/server/rust/oak_runtime" }
 oak_tests = { path = "../sdk/rust/oak_tests" }
 oak_utils = { path = "../sdk/rust/oak_utils" }
+translator_common = { path = "translator/common" }
