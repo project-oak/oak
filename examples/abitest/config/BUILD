@@ -1,5 +1,5 @@
 #
-# Copyright 2019 The Project Oak Authors
+# Copyright 2020 The Project Oak Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,24 +14,20 @@
 # limitations under the License.
 #
 
-load("@rules_cc//cc:defs.bzl", "cc_binary")
+load("//oak/common:app_config.bzl", "serialized_config")
 
 package(
     licenses = ["notice"],
 )
 
-cc_binary(
-    name = "client",
-    srcs = ["rustfmt.cc"],
-    deps = [
-        "//examples/rustfmt/proto:rustfmt_cc_grpc",
-        "//oak/client:application_client",
-        "//oak/client:manager_client",
-        "//oak/common:utils",
-        "@com_github_grpc_grpc//:grpc++",
-        "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/flags:parse",
-        "@com_google_absl//absl/memory",
-        "@com_google_asylo//asylo/util:logging",
-    ],
+exports_files(srcs = glob(["*.textproto"]))
+
+serialized_config(
+    name = "config", 
+    textproto = ":config.textproto", 
+    modules = {
+        "frontend-config" : "//examples:target/wasm32-unknown-unknown/release/abitest_0_frontend.wasm"
+        "backend-config" : "//examples:target/wasm32-unknown-unknown/release/abitest_1_backend.wasm"
+    },
+    output = "config.bin"
 )
