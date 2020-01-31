@@ -499,6 +499,7 @@ dependencies = [
  "protoc-rust-grpc 0.7.0",
  "serial_test 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serial_test_derive 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "translator_common 0.1.0",
 ]
 
 [[package]]
