@@ -2,18 +2,19 @@
 
 This document walks through the basics of programming in Oak.
 
-- [Writing an Oak Node](#writing-an-oak-node)
-  - [Per-Node Boilerplate](#per-node-boilerplate)
-  - [Generated gRPC service code](#generated-grpc-service-code)
-- [Using an Oak Application from a client](#using-an-oak-application-from-a-client)
-  - [Connecting to the Oak Manager](#connecting-to-the-oak-manager)
-  - [Starting the Oak Application](#starting-the-oak-application)
-- [gRPC Request Processing Path](#grpc-request-processing-path)
-- [Node Termination](#node-termination)
-- [Nodes, Channels and Handles](#nodes-channels-and-handles)
-- [Persistent Storage](#persistent-storage)
-- [Testing](#testing)
-  - [Testing Multi-Node Applications](#testing-multi-node-applications)
+- [Programming Oak](#programming-oak)
+  - [Writing an Oak Node](#writing-an-oak-node)
+    - [Per-Node Boilerplate](#per-node-boilerplate)
+    - [Generated gRPC service code](#generated-grpc-service-code)
+  - [Using an Oak Application from a client](#using-an-oak-application-from-a-client)
+    - [Connecting to the Oak Manager](#connecting-to-the-oak-manager)
+    - [Starting the Oak Application](#starting-the-oak-application)
+  - [gRPC Request Processing Path](#grpc-request-processing-path)
+  - [Node Termination](#node-termination)
+  - [Nodes, Channels and Handles](#nodes-channels-and-handles)
+  - [Persistent Storage](#persistent-storage)
+  - [Testing](#testing)
+    - [Testing Multi-Node Applications](#testing-multi-node-applications)
 
 ## Writing an Oak Node
 
@@ -188,7 +189,6 @@ Oak client code (in C++) first needs to connect to the
 [Oak Manager](concepts.md#oak-manager), as a normal gRPC client:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/abitest/client/abitest.cc C++ /.*Connect to the Oak Manager/ /NewStub.*;/)
 ```C++
   // Connect to the Oak Manager.
   auto channel =
@@ -222,7 +222,6 @@ Alternatively, the manager client can also be wrapped up in a
 configuration (described in the next section) easier:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/rustfmt/client/rustfmt.cc C++ /.*Connect to the Oak Manager/ /FLAGS_manager_address.*;/)
 ```C++
   // Connect to the Oak Manager.
   std::unique_ptr<oak::ManagerClient> manager_client =
@@ -241,7 +240,6 @@ client just need to provide the code that is going to be run in the Node, as a
 Wasm module:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/rustfmt/client/rustfmt.cc C++ /.*FLAGS_module/ /}/)
 ```C++
   std::string module_bytes = oak::utils::read_file(absl::GetFlag(FLAGS_module));
   std::unique_ptr<oak::CreateApplicationResponse> create_application_response =
@@ -285,8 +283,11 @@ encryption into the enclave:
 ```C++
   oak::ApplicationClient::InitializeAssertionAuthorities();
 
+  std::string address = absl::GetFlag(FLAGS_address);
+  LOG(INFO) << "Connecting to Oak Application: " << address;
+
   // Connect to the newly created Oak Application.
-  auto stub = FormatService::NewStub(oak::ApplicationClient::CreateChannel(addr.str()));
+  auto stub = FormatService::NewStub(oak::ApplicationClient::CreateChannel(address));
 ```
 <!-- prettier-ignore-end -->
 
