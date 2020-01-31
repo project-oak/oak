@@ -29,7 +29,7 @@ pub trait OakABITestServiceNode {
 }
 
 // Oak Node gRPC method dispatcher
-pub fn dispatch(node: &mut dyn OakABITestServiceNode, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
+pub fn dispatch<T: OakABITestServiceNode>(node: &mut T, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
     match method {
         "/oak.examples.abitest.OakABITestService/RunTests" => grpc::handle_req_rsp(|r| node.run_tests(r), req, writer),
         _ => {

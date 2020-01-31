@@ -32,7 +32,7 @@ pub trait HelloWorldNode {
 }
 
 // Oak Node gRPC method dispatcher
-pub fn dispatch(node: &mut dyn HelloWorldNode, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
+pub fn dispatch<T: HelloWorldNode>(node: &mut T, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
     match method {
         "/oak.examples.hello_world.HelloWorld/SayHello" => grpc::handle_req_rsp(|r| node.say_hello(r), req, writer),
         "/oak.examples.hello_world.HelloWorld/LotsOfReplies" => grpc::handle_req_stream(|r, w| node.lots_of_replies(r, w), req, writer),

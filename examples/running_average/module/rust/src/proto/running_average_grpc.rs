@@ -30,7 +30,7 @@ pub trait RunningAverageNode {
 }
 
 // Oak Node gRPC method dispatcher
-pub fn dispatch(node: &mut dyn RunningAverageNode, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
+pub fn dispatch<T: RunningAverageNode>(node: &mut T, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
     match method {
         "/oak.examples.running_average.RunningAverage/SubmitSample" => grpc::handle_req_rsp(|r| node.submit_sample(r), req, writer),
         "/oak.examples.running_average.RunningAverage/GetAverage" => grpc::handle_req_rsp(|r| node.get_average(r), req, writer),
