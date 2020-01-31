@@ -23,10 +23,10 @@ package(
 exports_files(srcs = glob(["*.textproto"]))
 
 serialized_config(
-    name = "config", 
-    textproto = ":config.textproto", 
+    name = "config",
     modules = {
-        "app" : "//examples:target/wasm32-unknown-unknown/release/rustfmt.wasm"
+        "app": "//examples:target/wasm32-unknown-unknown/release/rustfmt.wasm",
     },
-    output = "config.bin"
+    output = "config.bin",
+    textproto = ":config.textproto",
 )

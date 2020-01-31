@@ -16,6 +16,7 @@
 
 """Rule for serializing an Oak application configuration."""
 
+<<<<<<< HEAD
 def serialized_config(name, textproto, modules):
     """Serializes an Oak application configuration in a binary file.
 

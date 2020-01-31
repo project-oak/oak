@@ -23,19 +23,19 @@ package(
 exports_files(srcs = glob(["*.textproto"]))
 
 serialized_config(
-    name = "config", 
-    textproto = ":config.textproto", 
+    name = "config",
     modules = {
-        "app" : "//examples:target/wasm32-unknown-unknown/release/hello_world.wasm"
+        "app": "//examples:target/wasm32-unknown-unknown/release/hello_world.wasm",
     },
-    output = "config.bin"
+    output = "config.bin",
+    textproto = ":config.textproto",
 )
 
 serialized_config(
-    name = "config_cpp", 
-    textproto = ":config.textproto", 
+    name = "config_cpp",
     modules = {
-        "app" : "//examples/hello_world/module/cpp:hello_world.wasm"
+        "app": "//examples/hello_world/module/cpp:hello_world.wasm",
     },
-    output = "config_cpp.bin"
+    output = "config_cpp.bin",
+    textproto = ":config.textproto",
 )

@@ -23,10 +23,10 @@ package(
 exports_files(srcs = glob(["*.textproto"]))
 
 serialized_config(
-    name = "config_cpp", 
-    textproto = ":config.textproto", 
+    name = "config_cpp",
     modules = {
-        "app" : "//examples/tensorflow/module/cpp:tensorflow_micro.wasm"
+        "app": "//examples/tensorflow/module/cpp:tensorflow_micro.wasm",
     },
-    output = "config_cpp.bin"
+    output = "config_cpp.bin",
+    textproto = ":config.textproto",
 )
