@@ -18,7 +18,7 @@
 
 pub use crate::proto::code::Code;
 use crate::{proto, OakError, OakStatus, ReadHandle};
-use log::info;
+use log::{info, warn};
 use proto::grpc_encap::{GrpcRequest, GrpcResponse};
 use protobuf::{Message, ProtobufEnum};
 
@@ -160,6 +160,22 @@ pub trait OakNode {
     /// request is held in `req`.  Response messages should be written using
     /// `writer.write`, followed by `writer.close`.
     fn invoke(&mut self, method: &str, req: &[u8], writer: ChannelResponseWriter);
+}
+
+/// Encapsulate a protocol buffer message in a GrpcRequest wrapper using the
+/// given method name.
+pub fn encap_request<T: protobuf::Message>(req: T, method_name: &str) -> Option<GrpcRequest> {
+    // Put the request in a GrpcRequest wrapper and serialize it.
+    let mut grpc_req = GrpcRequest::new();
+    grpc_req.set_method_name(method_name.to_string());
+    let mut any = protobuf::well_known_types::Any::new();
+    if let Err(e) = req.write_to_writer(&mut any.value) {
+        warn!("failed to serialize gRPC request: {}", e);
+        return None;
+    };
+    grpc_req.set_req_msg(any);
+    grpc_req.set_last(true);
+    Some(grpc_req)
 }
 
 /// Perform a gRPC event loop for a Node.
