@@ -14,14 +14,12 @@
 // limitations under the License.
 //
 
-mod proto;
-
 use log::info;
 use oak::grpc;
 use oak::grpc::OakNode;
 use oak_derive::OakExports;
-use proto::translator::{TranslateRequest, TranslateResponse};
-use proto::translator_grpc::{dispatch, TranslatorNode};
+use translator_common::proto::translator::{TranslateRequest, TranslateResponse};
+use translator_common::proto::translator_grpc::{dispatch, TranslatorNode};
 
 #[derive(OakExports)]
 struct Node {}

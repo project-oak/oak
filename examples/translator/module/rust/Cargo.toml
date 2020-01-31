@@ -13,6 +13,7 @@ oak = "=0.1.0"
 oak_derive = "=0.1.0"
 oak_log = "=0.1.0"
 protobuf = "*"
+translator_common = "=0.1.0"
 
 [build-dependencies]
 protoc-rust-grpc = { path = "../../../../third_party/grpc-rust/protoc-rust-grpc" }
