@@ -15,3 +15,66 @@
 //
 
 pub mod proto;
+
+use log::{info, warn};
+use proto::translator::{TranslateRequest, TranslateResponse};
+
+/// Client for a translator Node.
+pub struct TranslatorClient {
+    invocation_sender: oak::io::Sender<oak::grpc::Invocation>,
+}
+
+// TODO(#549): autogenerate most of this code based on the gRPC service definition.
+impl TranslatorClient {
+    /// Attempt to create a new translator Node and connection to it, assuming
+    /// that the Wasm code for the translator Node is available under the given
+    /// config name.  Returns `None` if it was not possible to create the
+    /// translator.
+    pub fn new(config_name: &str) -> Option<TranslatorClient> {
+        let (invocation_sender, invocation_receiver) =
+            oak::io::channel_create().expect("failed to create channel");
+        let status = oak::node_create(config_name, "oak_main", invocation_receiver.handle);
+        invocation_receiver
+            .close()
+            .expect("failed to close channel");
+        match status {
+            Ok(_) => {
+                info!("translator client created");
+                Some(TranslatorClient { invocation_sender })
+            }
+            Err(status) => {
+                warn!("failed to create translator: {:?}", status);
+                None
+            }
+        }
+    }
+    pub fn translate(&self, text: &str, from_lang: &str, to_lang: &str) -> Option<String> {
+        info!(
+            "attempt to translate '{}' from {} to {}",
+            text, from_lang, to_lang
+        );
+        let mut req = TranslateRequest::new();
+        req.text = text.to_string();
+        req.from_lang = from_lang.to_string();
+        req.to_lang = to_lang.to_string();
+
+        let rsp: oak::grpc::Result<TranslateResponse> = oak::grpc::invoke_grpc_method(
+            "/oak.examples.translator.Translator/Translate",
+            req,
+            &self.invocation_sender,
+        );
+        match rsp {
+            Ok(rsp) => {
+                info!("translation '{}'", rsp.translated_text);
+                Some(rsp.translated_text)
+            }
+            Err(status) => {
+                warn!(
+                    "gRPC invocation failed: code {} msg {}",
+                    status.code, status.message
+                );
+                None
+            }
+        }
+    }
+}
