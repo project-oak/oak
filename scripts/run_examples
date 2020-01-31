@@ -11,8 +11,7 @@ source "$SCRIPTS_DIR/common"
 # TODO(#594): Re-enable rustfmt when upstream rustc internal error is fixed.
 readonly RUST_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/rust$' | cut -d'/' -f2 | uniq | grep -v rustfmt)"
 
-# for example in ${RUST_EXAMPLES}; do
-for example in hello_world; do
+for example in ${RUST_EXAMPLES}; do
   ./bazel-bin/oak/server/asylo/oak_app_loader \
     --config="$PWD/bazel-client-bin/examples/${example}/config/config.bin" &
   SERVER_PID=$!
@@ -32,10 +31,10 @@ done
 # https://github.com/project-oak/oak/issues/439
 readonly CPP_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/cpp$' | cut -d'/' -f2 | uniq | grep -v tensorflow)"
  
-# for example in ${CPP_EXAMPLES}; do
-  # ./bazel-bin/oak/server/asylo/oak_app_loader \
-    # --config="$PWD/bazel-clang-bin/examples/${example}/client/config_cpp.bin" &
-  # SERVER_PID=$!
-  # "${SCRIPTS_DIR}/run_example" "${example}"
-  # kill -s SIGTERM "$SERVER_PID"
-# done
+for example in ${CPP_EXAMPLES}; do
+  ./bazel-bin/oak/server/asylo/oak_app_loader \
+    --config="$PWD/bazel-clang-bin/examples/${example}/client/config_cpp.bin" &
+  SERVER_PID=$!
+  "${SCRIPTS_DIR}/run_example" "${example}"
+  kill -s SIGTERM "$SERVER_PID"
+done
