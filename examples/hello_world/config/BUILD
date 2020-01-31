@@ -14,8 +14,7 @@
 # limitations under the License.
 #
 
-load("@io_bazel_rules_docker//container:container.bzl", "container_image")
-load("@rules_cc//cc:defs.bzl", "cc_binary")
+load("//oak/common:app_config.bzl", "serialized_config")
 
 package(
     licenses = ["notice"],
@@ -23,32 +22,20 @@ package(
 
 exports_files(srcs = glob(["*.textproto"]))
 
-genrule(
-    name = "config",
-    srcs = [
-        ":config.textproto",
-        "//examples:target/wasm32-unknown-unknown/release/hello_world.wasm",
-    ],
-    outs = ["config.bin"],
-    cmd = "$(location //oak/common:app_config_serializer)" +
-          " --textproto=$(location :config.textproto)" +
-          " --modules=" +
-              "app:$(location //examples:target/wasm32-unknown-unknown/release/hello_world.wasm)" + 
-          " --output_file=$@",
-    tools = ["//oak/common:app_config_serializer"],
+serialized_config(
+    name = "config", 
+    textproto = ":config.textproto", 
+    modules = {
+        "app" : "//examples:target/wasm32-unknown-unknown/release/hello_world.wasm"
+    },
+    output = "config.bin"
 )
 
-genrule(
-    name = "config_cpp",
-    srcs = [
-        ":config.textproto",
-        "//examples/hello_world/module/cpp:hello_world.wasm",
-    ],
-    outs = ["config_cpp.bin"],
-    cmd = "$(location //oak/common:app_config_serializer)" +
-          " --textproto=$(location :config.textproto)" +
-          " --modules=" +
-              "app:$(location //examples/hello_world/module/cpp:hello_world.wasm)" + 
-          " --output_file=$@",
-    tools = ["//oak/common:app_config_serializer"],
+serialized_config(
+    name = "config_cpp", 
+    textproto = ":config.textproto", 
+    modules = {
+        "app" : "//examples/hello_world/module/cpp:hello_world.wasm"
+    },
+    output = "config_cpp.bin"
 )
