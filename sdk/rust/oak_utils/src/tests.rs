@@ -49,14 +49,14 @@ const NEW_FILE_DATA: [&str; 4] = ["5", "2", "3", "4"];
 const CHANGED_FILES: [&str; 2] = ["1", "4"];
 
 #[test]
-fn get_updated_files_test() {
+fn get_changed_files_test() {
     let old_temp_dir = tempfile::tempdir().unwrap();
     let new_temp_dir = tempfile::tempdir().unwrap();
 
     write_files(old_temp_dir.path(), &OLD_FILES, &OLD_FILE_DATA);
     write_files(new_temp_dir.path(), &NEW_FILES, &NEW_FILE_DATA);
 
-    let mut updated_files = get_updated_files(old_temp_dir.path(), new_temp_dir.path());
+    let mut updated_files = get_changed_files(old_temp_dir.path(), new_temp_dir.path());
     updated_files.sort();
 
     assert_eq!(updated_files.len(), CHANGED_FILES.len());
