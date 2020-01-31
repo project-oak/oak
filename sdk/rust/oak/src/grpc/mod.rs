@@ -18,7 +18,7 @@
 
 pub use crate::proto::code::Code;
 use crate::{proto, OakError, OakStatus, ReadHandle};
-use log::{info, warn};
+use log::{error, info, warn};
 use proto::grpc_encap::{GrpcRequest, GrpcResponse};
 use protobuf::{Message, ProtobufEnum};
 
@@ -183,6 +183,64 @@ pub fn encap_request<T: protobuf::Message>(req: T, method_name: &str) -> Option<
     grpc_req.set_req_msg(any);
     grpc_req.set_last(true);
     Some(grpc_req)
+}
+
+/// Helper to inject a (single) gRPC request message via a notification channel,
+/// in the same manner as the gRPC pseudo-Node does, and collect a (single)
+/// response.
+pub fn invoke_grpc_method<R, Q>(
+    method_name: &str,
+    req: R,
+    invocation_channel: &crate::io::Sender<Invocation>,
+) -> Result<Q>
+where
+    R: protobuf::Message,
+    Q: protobuf::Message,
+{
+    // Create a new channel for request message delivery.
+    let (req_sender, req_receiver) =
+        crate::io::channel_create::<GrpcRequest>().expect("failed to create channel");
+
+    // Put the request in a GrpcRequest wrapper and send it into the request
+    // message channel.
+    let req = encap_request(req, method_name).expect("failed to serialize GrpcRequest");
+    req_sender.send(&req).expect("failed to write to channel");
+    req_sender.close().expect("failed to close channel");
+
+    // Create a new channel for responses to arrive on.
+    let (rsp_sender, rsp_receiver) =
+        crate::io::channel_create::<GrpcResponse>().expect("failed to create channel");
+
+    // Build an Invocation holding the two channels and send it down the
+    // specified channel.
+    let invocation = Invocation {
+        request_receiver: req_receiver.clone(),
+        response_sender: rsp_sender.clone(),
+    };
+    invocation_channel
+        .send(&invocation)
+        .expect("failed to write invocation to channel");
+    req_receiver.close().expect("failed to close channel");
+    rsp_sender.close().expect("failed to close channel");
+
+    // Read a single encapsulated response.
+    let mut rsp = rsp_receiver.receive().map_err(|status| {
+        error!("failed to receive response: {:?}", status);
+        build_status(
+            Code::INTERNAL,
+            &format!("failed to receive gRPC response: {:?}", status),
+        )
+    })?;
+    rsp_receiver.close().expect("failed to close channel");
+    if !rsp.last {
+        panic!("Expected single final response");
+    }
+
+    if rsp.get_status().code != Code::OK.value() {
+        return Err(rsp.take_status());
+    }
+    Ok(protobuf::parse_from_bytes(&rsp.get_rsp_msg().value)
+        .expect("Failed to parse response protobuf message"))
 }
 
 /// Perform a gRPC event loop for a Node.
