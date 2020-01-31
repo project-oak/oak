@@ -28,6 +28,15 @@ use proto::hello_world_grpc::{dispatch, HelloWorldNode};
 #[derive(OakExports)]
 struct Node {
     storage: Option<oak::storage::Storage>,
+    translator: Option<translator_common::TranslatorClient>,
+}
+
+impl Node {
+    fn translate(&self, text: &str, from_lang: &str, to_lang: &str) -> Option<String> {
+        self.translator
+            .as_ref()?
+            .translate(text, from_lang, to_lang)
+    }
 }
 
 const STORAGE_NAME: &[u8] = b"HelloWorld";
@@ -47,6 +56,7 @@ impl OakNode for Node {
         init_logging();
         Node {
             storage: oak::storage::Storage::default(),
+            translator: translator_common::TranslatorClient::new("translator"),
         }
     }
     fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
@@ -102,9 +112,19 @@ impl HelloWorldNode for Node {
         } else {
             "<default>".to_string()
         };
-        info!("Say bonjour to {}", previous);
+        // Attempt to also generate a translated response.
+        if let Some(salutation) = self.translate(&req.greeting, "en", "fr") {
+            info!("Say bonjour to {}", salutation);
+            let mut res = HelloResponse::new();
+            res.reply = format!("BONJOUR {}!", salutation);
+            writer
+                .write(&res, grpc::WriteMode::KeepOpen)
+                .expect("Failed to write translated response");
+        }
+
+        info!("Say hello again to {}", previous);
         let mut res2 = HelloResponse::new();
-        res2.reply = format!("BONJOUR {}!", previous);
+        res2.reply = format!("HELLO AGAIN {}!", previous);
         writer
             .write(&res2, grpc::WriteMode::Close)
             .expect("Failed to write final response");
