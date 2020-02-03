@@ -28,9 +28,7 @@ for example in ${RUST_EXAMPLES}; do
 done
 
 # Run C++-based Oak examples.
-# TODO: Run TensorFlow example when Emscripten imports will be fixed.
-# https://github.com/project-oak/oak/issues/439
-readonly CPP_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/cpp$' | cut -d'/' -f2 | uniq | grep -v tensorflow)"
+readonly CPP_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/cpp$' | cut -d'/' -f2 | uniq)"
  
 for example in ${CPP_EXAMPLES}; do
   "${SCRIPTS_DIR}/build_example" "${example}"
