@@ -575,6 +575,22 @@
 <span id="575">575</span>
 <span id="576">576</span>
 <span id="577">577</span>
+<span id="578">578</span>
+<span id="579">579</span>
+<span id="580">580</span>
+<span id="581">581</span>
+<span id="582">582</span>
+<span id="583">583</span>
+<span id="584">584</span>
+<span id="585">585</span>
+<span id="586">586</span>
+<span id="587">587</span>
+<span id="588">588</span>
+<span id="589">589</span>
+<span id="590">590</span>
+<span id="591">591</span>
+<span id="592">592</span>
+<span id="593">593</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -1094,34 +1110,50 @@
     }
     <span class="ident">grpc_req</span>.<span class="ident">set_req_msg</span>(<span class="ident">any</span>);
     <span class="ident">grpc_req</span>.<span class="ident">set_last</span>(<span class="bool-val">true</span>);
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">msg</span> <span class="op">=</span> <span class="ident">OakMessage</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">req_msg</span> <span class="op">=</span> <span class="ident">OakMessage</span> {
         <span class="ident">data</span>: <span class="ident">Vec</span>::<span class="ident">new</span>(),
         <span class="ident">channels</span>: <span class="ident">Vec</span>::<span class="ident">new</span>(),
     };
     <span class="ident">grpc_req</span>
-        .<span class="ident">write_to_writer</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">msg</span>.<span class="ident">data</span>)
+        .<span class="ident">write_to_writer</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">req_msg</span>.<span class="ident">data</span>)
         .<span class="ident">expect</span>(<span class="string">&quot;failed to serialize GrpcRequest message&quot;</span>);
 
-    <span class="comment">// Create a new channel for the response to arrive on and attach to the message.</span>
-    <span class="kw">let</span> (<span class="ident">write_half</span>, <span class="kw-2">mut</span> <span class="ident">read_half</span>) <span class="op">=</span> <span class="ident">RUNTIME</span>.<span class="ident">write</span>().<span class="ident">expect</span>(<span class="ident">RUNTIME_MISSING</span>).<span class="ident">new_channel</span>();
-    <span class="ident">msg</span>.<span class="ident">channels</span>.<span class="ident">push</span>(<span class="ident">write_half</span>);
+    <span class="comment">// Create a new channel to hold the request message.</span>
+    <span class="kw">let</span> (<span class="kw-2">mut</span> <span class="ident">req_write_half</span>, <span class="ident">req_read_half</span>) <span class="op">=</span> <span class="ident">RUNTIME</span>.<span class="ident">write</span>().<span class="ident">expect</span>(<span class="ident">RUNTIME_MISSING</span>).<span class="ident">new_channel</span>();
+    <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="ident">req_write_half</span>.<span class="ident">write_message</span>(<span class="ident">req_msg</span>);
+    <span class="kw">if</span> <span class="ident">status</span> <span class="op">!=</span> <span class="ident">oak</span>::<span class="ident">OakStatus</span>::<span class="ident">OK</span>.<span class="ident">value</span>() <span class="kw">as</span> <span class="ident">u32</span> {
+        <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;could not write message (status: {})&quot;</span>, <span class="ident">status</span>);
+    }
 
-    <span class="comment">// Send the message (with attached write handle) into the Node under test.</span>
+    <span class="comment">// Create a new channel for responses to arrive on and also attach that to the message.</span>
+    <span class="kw">let</span> (<span class="ident">rsp_write_half</span>, <span class="kw-2">mut</span> <span class="ident">rsp_read_half</span>) <span class="op">=</span> <span class="ident">RUNTIME</span>.<span class="ident">write</span>().<span class="ident">expect</span>(<span class="ident">RUNTIME_MISSING</span>).<span class="ident">new_channel</span>();
+
+    <span class="comment">// Create a notification message and attach the method-invocation specific channels to it.</span>
+    <span class="kw">let</span> <span class="ident">notify_msg</span> <span class="op">=</span> <span class="ident">OakMessage</span> {
+        <span class="ident">data</span>: <span class="ident">Vec</span>::<span class="ident">new</span>(),
+        <span class="ident">channels</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">req_read_half</span>, <span class="ident">rsp_write_half</span>],
+    };
+
+    <span class="comment">// Send the notification message (with attached handles) into the Node under test.</span>
     <span class="kw">let</span> <span class="ident">grpc_channel</span> <span class="op">=</span> <span class="ident">RUNTIME</span>
         .<span class="ident">read</span>()
         .<span class="ident">expect</span>(<span class="ident">RUNTIME_MISSING</span>)
         .<span class="ident">grpc_channel</span>()
-        .<span class="ident">expect</span>(<span class="string">&quot;no gRPC channel setup&quot;</span>);
-    <span class="ident">grpc_channel</span>
+        .<span class="ident">expect</span>(<span class="string">&quot;no gRPC notification channel setup&quot;</span>);
+    <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="ident">grpc_channel</span>
         .<span class="ident">write</span>()
         .<span class="ident">expect</span>(<span class="string">&quot;corrupt gRPC channel ref&quot;</span>)
-        .<span class="ident">write_message</span>(<span class="ident">msg</span>);
+        .<span class="ident">write_message</span>(<span class="ident">notify_msg</span>);
+    <span class="kw">if</span> <span class="ident">status</span> <span class="op">!=</span> <span class="ident">oak</span>::<span class="ident">OakStatus</span>::<span class="ident">OK</span>.<span class="ident">value</span>() <span class="kw">as</span> <span class="ident">u32</span> {
+        <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;could not write message (status: {})&quot;</span>, <span class="ident">status</span>);
+    }
 
     <span class="comment">// Read the serialized, encapsulated response.</span>
     <span class="kw">loop</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">size</span> <span class="op">=</span> <span class="number">0u32</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">count</span> <span class="op">=</span> <span class="number">0u32</span>;
-        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">read_half</span>.<span class="ident">read_message</span>(<span class="ident">std</span>::<span class="ident">usize</span>::<span class="ident">MAX</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">size</span>, <span class="ident">std</span>::<span class="ident">u32</span>::<span class="ident">MAX</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">count</span>);
+        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span>
+            <span class="ident">rsp_read_half</span>.<span class="ident">read_message</span>(<span class="ident">std</span>::<span class="ident">usize</span>::<span class="ident">MAX</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">size</span>, <span class="ident">std</span>::<span class="ident">u32</span>::<span class="ident">MAX</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">count</span>);
         <span class="kw">let</span> <span class="ident">rsp</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">result</span> {
             <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=&gt;</span> {
                 <span class="kw">if</span> <span class="ident">e</span> <span class="op">==</span> <span class="ident">OakStatus</span>::<span class="ident">ERR_CHANNEL_EMPTY</span>.<span class="ident">value</span>() <span class="kw">as</span> <span class="ident">u32</span> {
@@ -1129,7 +1161,7 @@
                     <span class="ident">std</span>::<span class="ident">thread</span>::<span class="ident">sleep</span>(<span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">Duration</span>::<span class="ident">from_millis</span>(<span class="number">100</span>));
                     <span class="kw">continue</span>;
                 } <span class="kw">else</span> {
-                    <span class="macro">panic</span><span class="macro">!</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;failed to read from response channel: {}&quot;</span>, <span class="ident">e</span>));
+                    <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;failed to read from response channel: {}&quot;</span>, <span class="ident">e</span>);
                 }
             }
             <span class="prelude-val">Ok</span>(<span class="ident">r</span>) <span class="op">=&gt;</span> <span class="ident">r</span>,

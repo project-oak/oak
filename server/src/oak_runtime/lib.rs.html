@@ -634,6 +634,17 @@
 <span id="634">634</span>
 <span id="635">635</span>
 <span id="636">636</span>
+<span id="637">637</span>
+<span id="638">638</span>
+<span id="639">639</span>
+<span id="640">640</span>
+<span id="641">641</span>
+<span id="642">642</span>
+<span id="643">643</span>
+<span id="644">644</span>
+<span id="645">645</span>
+<span id="646">646</span>
+<span id="647">647</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -707,6 +718,7 @@
                 .<span class="ident">collect</span>(),
         }
     }
+    <span class="attribute">#[<span class="ident">must_use</span>]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write_message</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">msg</span>: <span class="ident">OakMessage</span>) <span class="op">-&gt;</span> <span class="ident">u32</span> {
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">status</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">write_status</span> {
             <span class="kw">return</span> <span class="ident">status</span>;
@@ -793,6 +805,16 @@
             .<span class="ident">expect</span>(<span class="string">&quot;corrupt channel ref&quot;</span>)
             .<span class="ident">read_message</span>(<span class="ident">size</span>, <span class="ident">actual_size</span>, <span class="ident">handle_count</span>, <span class="ident">actual_handle_count</span>)
     }
+    <span class="attribute">#[<span class="ident">must_use</span>]</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write_message</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">msg</span>: <span class="ident">OakMessage</span>) <span class="op">-&gt;</span> <span class="ident">u32</span> {
+        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">direction</span> <span class="op">!=</span> <span class="ident">Direction</span>::<span class="ident">Write</span> {
+            <span class="kw">return</span> <span class="ident">OakStatus</span>::<span class="ident">ERR_BAD_HANDLE</span>.<span class="ident">value</span>() <span class="kw">as</span> <span class="ident">u32</span>;
+        }
+        <span class="self">self</span>.<span class="ident">channel</span>
+            .<span class="ident">write</span>()
+            .<span class="ident">expect</span>(<span class="string">&quot;corrupt channel ref&quot;</span>)
+            .<span class="ident">write_message</span>(<span class="ident">msg</span>)
+    }
 }
 
 <span class="kw">impl</span> <span class="ident">Clone</span> <span class="kw">for</span> <span class="ident">ChannelHalf</span> {
@@ -838,7 +860,7 @@
     <span class="comment">// Map name of Node config names to next index.</span>
     <span class="ident">next_index</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">u32</span><span class="op">&gt;</span>,
     <span class="comment">// Track a reference to the write half of the channel used for sending</span>
-    <span class="comment">// gRPC requests in to the Application under test.</span>
+    <span class="comment">// gRPC method notifications in to the Application under test.</span>
     <span class="ident">grpc_in_half</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ChannelHalf</span><span class="op">&gt;</span>,
     <span class="comment">// Node instances organized by internal Node name.</span>
     <span class="ident">nodes</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">OakNode</span><span class="op">&gt;</span>,
@@ -1067,7 +1089,7 @@
             <span class="ident">node_name</span>, <span class="ident">read_handle</span>
         );
         <span class="comment">// Remember the write half of the channel to allow future test</span>
-        <span class="comment">// injection of gRPC requests.</span>
+        <span class="comment">// injection of gRPC method notifications.</span>
         <span class="self">self</span>.<span class="ident">grpc_in_half</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">write_half</span>);
         <span class="ident">read_handle</span>
     }
