@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+#[macro_use] extern crate maplit;
+
 use std::collections::HashMap;
 use std::fs;
 use std::io;
@@ -24,8 +26,9 @@ mod tests;
 
 // Generates Rust `proto` files in a temporary directory using `protoc_rust`,
 // checks previously generated files and updates them if their contents have changed.
-// This is a workaround for `protoc_rust` that always updates files, thus provoking recompilation
+// This is a workaround for `protoc_rust` issue that always updates files, thus provoking recompilation
 // of all dependent targets.
+// https://github.com/rust-lang/cargo/issues/6529
 // Function doesn't support nested directories since `protoc_rust` doesn't generate them.
 pub fn run_protoc_rust(args: protoc_rust::Args) -> io::Result<()> {
     let out_path = Path::new(args.out_dir);
@@ -39,8 +42,8 @@ pub fn run_protoc_rust(args: protoc_rust::Args) -> io::Result<()> {
     temp_args.out_dir = temp_path.to_str().expect("Temporary path error");
     protoc_rust::run(temp_args)?;
 
-    // Copy updated Rust `proto` files to the `out_path`.
-    copy_updated_files(temp_path, out_path)?;
+    // Copy changed Rust `proto` files to the `out_path`.
+    copy_changed_files(temp_path, out_path)?;
 
     Ok(())
 }
@@ -59,8 +62,8 @@ pub fn run_protoc_rust_grpc(args: protoc_rust_grpc::Args) -> io::Result<()> {
     temp_args.out_dir = temp_path.to_str().expect("Temporary path error");
     protoc_rust_grpc::run(temp_args)?;
 
-    // Copy updated Rust `grpc` files to the `out_path`.
-    copy_updated_files(temp_path, out_path)?;
+    // Copy changed Rust `grpc` files to the `out_path`.
+    copy_changed_files(temp_path, out_path)?;
 
     Ok(())
 }
@@ -87,15 +90,15 @@ fn get_files(dir: &Path) -> HashMap<String, String> {
 
 // This function returns a list of files in the `new_dir` that are different from files with
 // same names in the `old_dir`.
-fn get_changed_files(old_dir: &Path, new_dir: &Path) -> Vec<String> {
-    let old_files = get_files(old_dir);
-    get_files(new_dir)
+fn get_changed_and_removed_files(old_dir: &Path, new_dir: &Path) -> (Vec<String>, Vec<String>) {
+    let mut old_files = get_files(old_dir);
+    let changed_files = get_files(new_dir)
         .iter()
-        .filter_map(|(filename, content)| {
+        .filter_map(|(filename, new_content)| {
             old_files
-                .get(filename)
+                .remove(filename)
                 .map_or(Some(filename), |old_content| {
-                    if content == old_content {
+                    if *new_content == old_content {
                         None
                     } else {
                         Some(filename)
@@ -103,14 +106,20 @@ fn get_changed_files(old_dir: &Path, new_dir: &Path) -> Vec<String> {
                 })
         })
         .cloned()
-        .collect()
+        .collect::<Vec<String>>();
+    let removed_files = old_files.keys().cloned().collect::<Vec<String>>();
+    (changed_files, removed_files)
 }
 
-// This function copies updated files from `src_dir` to `dst_dir` directory.
-fn copy_updated_files(src_dir: &Path, dst_dir: &Path) -> io::Result<()> {
-    let updated_files = get_changed_files(dst_dir, src_dir);
-    for updated_file in updated_files.iter() {
-        fs::copy(src_dir.join(&updated_file), dst_dir.join(&updated_file))?;
+// This function copies changed files from `src_dir` to `dst_dir` directory and removes files
+// from `dst_dir` that are not present in `src_dir`.
+fn copy_changed_files(src_dir: &Path, dst_dir: &Path) -> io::Result<()> {
+    let (changed_files, removed_files) = get_changed_and_removed_files(dst_dir, src_dir);
+    for changed_file in changed_files.iter() {
+        fs::copy(src_dir.join(&changed_file), dst_dir.join(&changed_file))?;
+    }
+    for removed_file in removed_files.iter() {
+        fs::remove_file(dst_dir.join(&removed_file))?;
     }
     Ok(())
 }

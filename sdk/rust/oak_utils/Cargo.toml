@@ -5,6 +5,7 @@ edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
+maplit = "*"
 protoc-rust = "*"
 protoc-rust-grpc = { path = "../../../third_party/grpc-rust/protoc-rust-grpc" }
 tempfile = "*"

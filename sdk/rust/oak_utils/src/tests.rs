@@ -16,55 +16,73 @@
 
 use crate::*;
 
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 
-fn write_files(dir: &Path, filenames: &[&str], data: &[&str]) {
-    for (filename, data) in filenames.iter().zip(data.iter()) {
+fn write_files(dir: &Path, files: &HashMap<&str, &str>) {
+    for (filename, data) in files.iter() {
         let path = dir.join(filename);
         let mut file = File::create(path).unwrap();
         file.write_all(data.as_bytes()).expect("Write error");
     }
 }
 
-const TEMP_FILES: [&str; 3] = ["1", "2", "3"];
+fn are_equal_files(files: &Vec<String>, expected_files: &[&str]) -> bool {
+    return files.len() == expected_files.len() &&
+           files.iter()
+                .zip(expected_files.iter())
+                .all(|(a, b)| a == b)
+}
 
 #[test]
 fn get_files_test() {
+    let temp_files = hashmap!{
+        "1" => "string1",
+        "2" => "string2",
+        "3" => "string3",
+    };
+
     let temp_dir = tempfile::tempdir().unwrap();
-    write_files(temp_dir.path(), &TEMP_FILES, &TEMP_FILES);
+    write_files(temp_dir.path(), &temp_files);
 
     let files = get_files(temp_dir.path());
-    for filename_str in TEMP_FILES.iter() {
-        let filename = String::from(*filename_str);
-        assert_eq!(files.get(&filename), Some(&filename));
+    for (filename, data) in temp_files.iter() {
+        assert_eq!(
+            files.get(&String::from(*filename)),
+            Some(&String::from(*data)));
     }
 }
 
-const OLD_FILES: [&str; 3] = ["1", "2", "3"];
-const OLD_FILE_DATA: [&str; 3] = ["1", "2", "3"];
-const NEW_FILES: [&str; 4] = ["1", "2", "3", "4"];
-const NEW_FILE_DATA: [&str; 4] = ["5", "2", "3", "4"];
-const CHANGED_FILES: [&str; 2] = ["1", "4"];
 
 #[test]
-fn get_changed_files_test() {
+fn get_changed_and_removed_files_test() {
+    let old_files = hashmap!{
+        "1" => "string1",
+        "2" => "string2",
+        "3" => "string3",
+    };
+    let new_files = hashmap!{
+        "1" => "changed_string1",
+        "3" => "string3",
+        "4" => "string4",
+    };
+    let expected_changed_files: &[&str] = &["1", "4"];
+    let expected_removed_files: &[&str] = &["2"];
+
     let old_temp_dir = tempfile::tempdir().unwrap();
     let new_temp_dir = tempfile::tempdir().unwrap();
 
-    write_files(old_temp_dir.path(), &OLD_FILES, &OLD_FILE_DATA);
-    write_files(new_temp_dir.path(), &NEW_FILES, &NEW_FILE_DATA);
+    write_files(old_temp_dir.path(), &old_files);
+    write_files(new_temp_dir.path(), &new_files);
 
-    let mut updated_files = get_changed_files(old_temp_dir.path(), new_temp_dir.path());
-    updated_files.sort();
-
-    assert_eq!(updated_files.len(), CHANGED_FILES.len());
-    assert_eq!(
-        true,
-        updated_files
-            .iter()
-            .zip(CHANGED_FILES.iter())
-            .all(|(a, b)| a == b)
-    );
+    let (mut changed_files, mut removed_files) = get_changed_and_removed_files(
+        old_temp_dir.path(), new_temp_dir.path());
+        
+    changed_files.sort();
+    assert_eq!(true, are_equal_files(&changed_files, expected_changed_files));
+    
+    removed_files.sort();
+    assert_eq!(true, are_equal_files(&removed_files, expected_removed_files));
 }
