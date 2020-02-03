@@ -12,6 +12,7 @@ source "$SCRIPTS_DIR/common"
 readonly RUST_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/rust$' | cut -d'/' -f2 | uniq | grep -v rustfmt)"
 
 for example in ${RUST_EXAMPLES}; do
+  "${SCRIPTS_DIR}/build_example" "${example}"
   ./bazel-bin/oak/server/asylo/oak_app_loader \
     --config="$PWD/bazel-client-bin/examples/${example}/config/config.bin" &
   SERVER_PID=$!
@@ -32,6 +33,7 @@ done
 readonly CPP_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/cpp$' | cut -d'/' -f2 | uniq | grep -v tensorflow)"
  
 for example in ${CPP_EXAMPLES}; do
+  "${SCRIPTS_DIR}/build_example" "${example}"
   ./bazel-bin/oak/server/asylo/oak_app_loader \
     --config="$PWD/bazel-clang-bin/examples/${example}/client/config_cpp.bin" &
   SERVER_PID=$!
