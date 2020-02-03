@@ -16,6 +16,7 @@
 
 use crate::*;
 
+use maplit::hashmap;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
@@ -29,16 +30,14 @@ fn write_files(dir: &Path, files: &HashMap<&str, &str>) {
     }
 }
 
-fn are_equal_files(files: &Vec<String>, expected_files: &[&str]) -> bool {
-    return files.len() == expected_files.len() &&
-           files.iter()
-                .zip(expected_files.iter())
-                .all(|(a, b)| a == b)
+fn are_equal_files(files: &[String], expected_files: &[&str]) -> bool {
+    files.len() == expected_files.len()
+        && files.iter().zip(expected_files.iter()).all(|(a, b)| a == b)
 }
 
 #[test]
 fn get_files_test() {
-    let temp_files = hashmap!{
+    let temp_files = hashmap! {
         "1" => "string1",
         "2" => "string2",
         "3" => "string3",
@@ -51,19 +50,19 @@ fn get_files_test() {
     for (filename, data) in temp_files.iter() {
         assert_eq!(
             files.get(&String::from(*filename)),
-            Some(&String::from(*data)));
+            Some(&String::from(*data))
+        );
     }
 }
 
-
 #[test]
 fn get_changed_and_removed_files_test() {
-    let old_files = hashmap!{
+    let old_files = hashmap! {
         "1" => "string1",
         "2" => "string2",
         "3" => "string3",
     };
-    let new_files = hashmap!{
+    let new_files = hashmap! {
         "1" => "changed_string1",
         "3" => "string3",
         "4" => "string4",
@@ -77,12 +76,18 @@ fn get_changed_and_removed_files_test() {
     write_files(old_temp_dir.path(), &old_files);
     write_files(new_temp_dir.path(), &new_files);
 
-    let (mut changed_files, mut removed_files) = get_changed_and_removed_files(
-        old_temp_dir.path(), new_temp_dir.path());
-        
+    let (mut changed_files, mut removed_files) =
+        get_changed_and_removed_files(old_temp_dir.path(), new_temp_dir.path());
+
     changed_files.sort();
-    assert_eq!(true, are_equal_files(&changed_files, expected_changed_files));
-    
+    assert_eq!(
+        true,
+        are_equal_files(&changed_files, expected_changed_files)
+    );
+
     removed_files.sort();
-    assert_eq!(true, are_equal_files(&removed_files, expected_removed_files));
+    assert_eq!(
+        true,
+        are_equal_files(&removed_files, expected_removed_files)
+    );
 }
