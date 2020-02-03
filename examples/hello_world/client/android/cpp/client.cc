@@ -16,6 +16,7 @@
 
 #include <android/log.h>
 #include <jni.h>
+
 #include <string>
 
 #include "examples/hello_world/proto/hello_world.grpc.pb.h"

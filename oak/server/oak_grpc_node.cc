@@ -39,7 +39,6 @@ std::unique_ptr<OakGrpcNode> OakGrpcNode::Create(BaseRuntime* runtime, const std
   builder.AddListeningPort(
       address.str(), asylo::EnclaveServerCredentials(asylo::BidirectionalNullCredentialsOptions()),
       &node->port_);
-  builder.RegisterService(node.get());
 
   // Add a completion queue and a generic service, in order to proxy incoming RPCs to the Oak Node.
   node->completion_queue_ = builder.AddCompletionQueue();
@@ -84,12 +83,6 @@ void OakGrpcNode::CompletionQueueLoop() {
     (*callback)(ok);
     delete callback;
   }
-}
-
-grpc::Status OakGrpcNode::GetAttestation(grpc::ServerContext*, const GetAttestationRequest*,
-                                         GetAttestationResponse*) {
-  // TODO: Move this method to the application and implement it there.
-  return ::grpc::Status::OK;
 }
 
 void OakGrpcNode::Stop() {

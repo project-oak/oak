@@ -27,6 +27,7 @@ cc_binary(
         "//examples/running_average/proto:running_average_cc_grpc",
         "//oak/client:application_client",
         "//oak/client:manager_client",
+        "//oak/common:nonce_generator",
         "//oak/common:utils",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/flags:flag",

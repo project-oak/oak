@@ -25,6 +25,7 @@
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
 #include "oak/client/manager_client.h"
+#include "oak/common/nonce_generator.h"
 #include "oak/common/utils.h"
 
 ABSL_FLAG(std::string, manager_address, "127.0.0.1:8888",
@@ -81,10 +82,18 @@ int main(int argc, char** argv) {
 
   oak::ApplicationClient::InitializeAssertionAuthorities();
 
-  // Connect to the newly created Oak Application from different clients.
-  auto stub_0 = RunningAverage::NewStub(oak::ApplicationClient::CreateChannel(addr.str()));
+  // Connect to the newly created Oak Application from different clients sharing the same access
+  // token.
+  oak::NonceGenerator<oak::kPerChannelNonceSizeBytes> nonce_generator;
+  std::string authorization_bearer_token = oak::NonceToBytes(nonce_generator.NextNonce());
 
-  auto stub_1 = RunningAverage::NewStub(oak::ApplicationClient::CreateChannel(addr.str()));
+  auto stub_0 = RunningAverage::NewStub(oak::ApplicationClient::CreateChannel(
+      addr.str(), oak::ApplicationClient::authorization_bearer_token_call_credentials(
+                      authorization_bearer_token)));
+
+  auto stub_1 = RunningAverage::NewStub(oak::ApplicationClient::CreateChannel(
+      addr.str(), oak::ApplicationClient::authorization_bearer_token_call_credentials(
+                      authorization_bearer_token)));
 
   // Submit samples from different clients.
   submit_sample(stub_0.get(), 100);

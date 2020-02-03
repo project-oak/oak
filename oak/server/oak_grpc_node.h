@@ -22,13 +22,12 @@
 #include "absl/synchronization/mutex.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/common/app_config.h"
-#include "oak/proto/application.grpc.pb.h"
 #include "oak/server/channel.h"
 #include "oak/server/oak_node.h"
 
 namespace oak {
 
-class OakGrpcNode final : public Application::Service, public OakNode {
+class OakGrpcNode final : public OakNode {
  public:
   // Create an Oak node with the `name` and gRPC `port`.
   // If `port` equals 0, then gRPC port is assigned automatically.
@@ -53,9 +52,6 @@ class OakGrpcNode final : public Application::Service, public OakNode {
       : OakNode(runtime, name), next_stream_id_(1) {}
   OakGrpcNode(const OakGrpcNode&) = delete;
   OakGrpcNode& operator=(const OakGrpcNode&) = delete;
-
-  grpc::Status GetAttestation(grpc::ServerContext* context, const GetAttestationRequest* request,
-                              GetAttestationResponse* response) override;
 
   MessageChannelWriteHalf* BorrowWriteChannel() const {
     return OakNode::BorrowWriteChannel(SingleHandle());

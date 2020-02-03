@@ -38,24 +38,6 @@ cc_proto_library(
 )
 
 proto_library(
-    name = "application_proto",
-    srcs = ["application.proto"],
-)
-
-cc_proto_library(
-    name = "application_cc_proto",
-    deps = [":application_proto"],
-)
-
-cc_grpc_library(
-    name = "application_cc_grpc",
-    srcs = [":application_proto"],
-    grpc_only = True,
-    well_known_protos = True,
-    deps = [":application_cc_proto"],
-)
-
-proto_library(
     name = "manager_proto",
     srcs = ["manager.proto"],
 )
