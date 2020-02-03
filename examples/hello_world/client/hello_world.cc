@@ -24,8 +24,6 @@
 #include "examples/hello_world/proto/hello_world.pb.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
-#include "oak/client/manager_client.h"
-#include "oak/common/app_config.h"
 #include "oak/common/utils.h"
 
 ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak application to connect to");
