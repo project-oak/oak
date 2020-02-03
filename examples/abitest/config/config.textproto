@@ -14,7 +14,7 @@ node_configs {
   }
 }
 node_configs {
-  name: "log"
+  name: "logging-config"
   log_config {}
 }
 grpc_port: 8080

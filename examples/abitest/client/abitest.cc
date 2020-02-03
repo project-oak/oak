@@ -64,55 +64,6 @@ static bool run_tests(OakABITestService::Stub* stub, const std::string& include,
 int main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
 
-  // int rc = EXIT_SUCCESS;
-
-  // std::vector<std::string> modules = absl::GetFlag(FLAGS_module);
-  // if (modules.size() < 2) {
-  //   LOG(QFATAL) << "Need --module=backend,frontend flag";
-  // }
-
-  // // Connect to the Oak Manager.
-  // auto channel =
-  //     grpc::CreateChannel(absl::GetFlag(FLAGS_manager_address),
-  //     grpc::InsecureChannelCredentials());
-  // auto manager_stub = oak::Manager::NewStub(channel, grpc::StubOptions());
-
-  // // Load the Oak Modules to execute. This needs to be compiled from Rust to WebAssembly
-  // separately. std::string frontend_module_bytes = oak::utils::read_file(modules[0]); std::string
-  // backend_module_bytes = oak::utils::read_file(modules[1]);
-
-  // // Build an application configuration with two Wasm nodes.
-  // auto config = absl::make_unique<oak::ApplicationConfiguration>();
-  // google::protobuf::TextFormat::MergeFromString(app_config_textproto, config.get());
-
-  // // Add the Wasm module bytes to the config.
-  // for (auto& node_config : *config->mutable_node_configs()) {
-  //   if (node_config.name() == "frontend-config") {
-  //     node_config.mutable_wasm_config()->set_module_bytes(frontend_module_bytes);
-  //   } else if (node_config.name() == "backend-config") {
-  //     node_config.mutable_wasm_config()->set_module_bytes(backend_module_bytes);
-  //   }
-  // }
-  // if (!ValidApplicationConfig(*config)) {
-  //   LOG(QFATAL) << "Application config is not valid";
-  // }
-
-  // grpc::ClientContext create_ctx;
-  // oak::CreateApplicationRequest create_req;
-  // oak::CreateApplicationResponse create_rsp;
-  // create_req.set_allocated_application_configuration(config.release());
-
-  // LOG(INFO) << "Creating multi-Node Oak Application";
-  // grpc::Status status = manager_stub->CreateApplication(&create_ctx, create_req, &create_rsp);
-  // if (!status.ok()) {
-  //   LOG(QFATAL) << "Failed: " << status.error_code() << '/' << status.error_message() << '/'
-  //               << status.error_details();
-  // }
-
-  // std::stringstream addr;
-  // addr << "127.0.0.1:" << create_rsp.grpc_port();
-  // std::string application_id(create_rsp.application_id());
-  // LOG(INFO) << "Connecting to Oak Application id=" << application_id << ": " << addr.str();
   oak::ApplicationClient::InitializeAssertionAuthorities();
 
   std::string address = absl::GetFlag(FLAGS_address);
