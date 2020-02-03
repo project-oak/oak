@@ -29,5 +29,15 @@ for example in ${CPP_EXAMPLES}; do
   "${SCRIPTS_DIR}/run_example" -c "${example}"
 done
 
+# Special case: run the hello_world example with:
+#  - a storage provider
+#  - a configured translator module.
+./bazel-clang-bin/oak/server/storage/storage_server &
+STORAGE_PID=$!
+./examples/hello_world/run -C \
+  --translator_module=./examples/target/wasm32-unknown-unknown/release/translator.wasm \
+  --storage_address=127.0.0.1:7867
+kill -s SIGTERM "$STORAGE_PID"
+
 # Terminate the server
 kill -s SIGTERM "$SERVER_PID"
