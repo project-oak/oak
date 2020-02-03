@@ -73,12 +73,13 @@ int main(int argc, char** argv) {
 
   // // Connect to the Oak Manager.
   // auto channel =
-  //     grpc::CreateChannel(absl::GetFlag(FLAGS_manager_address), grpc::InsecureChannelCredentials());
+  //     grpc::CreateChannel(absl::GetFlag(FLAGS_manager_address),
+  //     grpc::InsecureChannelCredentials());
   // auto manager_stub = oak::Manager::NewStub(channel, grpc::StubOptions());
 
-  // // Load the Oak Modules to execute. This needs to be compiled from Rust to WebAssembly separately.
-  // std::string frontend_module_bytes = oak::utils::read_file(modules[0]);
-  // std::string backend_module_bytes = oak::utils::read_file(modules[1]);
+  // // Load the Oak Modules to execute. This needs to be compiled from Rust to WebAssembly
+  // separately. std::string frontend_module_bytes = oak::utils::read_file(modules[0]); std::string
+  // backend_module_bytes = oak::utils::read_file(modules[1]);
 
   // // Build an application configuration with two Wasm nodes.
   // auto config = absl::make_unique<oak::ApplicationConfiguration>();
