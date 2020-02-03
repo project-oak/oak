@@ -30,16 +30,11 @@
 #include "examples/chat/proto/chat.pb.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
-#include "oak/client/manager_client.h"
 #include "oak/common/nonce_generator.h"
 #include "oak/common/utils.h"
 
 ABSL_FLAG(bool, test, false, "Run a non-interactive version of chat application for testing");
-ABSL_FLAG(std::string, manager_address, "127.0.0.1:8888",
-          "Address of the Oak Manager to connect to");
-ABSL_FLAG(std::string, module, "", "File containing the compiled WebAssembly module");
-ABSL_FLAG(std::string, app_address, "",
-          "Address of the Oak Application to connect to (empty to create a new application)");
+ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak application to connect to");
 ABSL_FLAG(std::string, room_id, "",
           "Base64-encoded room ID to join (only used if room_name is blank)");
 ABSL_FLAG(std::string, handle, "", "User handle to display");
@@ -225,28 +220,14 @@ class Room {
 int main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
 
-  std::unique_ptr<oak::ManagerClient> manager_client;
-  std::string addr = absl::GetFlag(FLAGS_app_address);
-  std::string application_id;
-  std::unique_ptr<OakApplication> application;
+  oak::ApplicationClient::InitializeAssertionAuthorities();
 
-  if (addr.empty()) {
-    // Connect to the Oak Manager and create the Oak Application.
-    manager_client = absl::make_unique<oak::ManagerClient>(grpc::CreateChannel(
-        absl::GetFlag(FLAGS_manager_address), grpc::InsecureChannelCredentials()));
-    application =
-        absl::make_unique<OakApplication>(manager_client.get(), absl::GetFlag(FLAGS_module));
-    application_id = application->Id();
-    addr = application->Addr();
-    LOG(INFO) << "Connecting to new Oak Application id=" << application_id << " at " << addr;
-  } else {
-    LOG(INFO) << "Connecting to existing Oak Application at " << addr;
-  }
+  std::string address = absl::GetFlag(FLAGS_address);
+  LOG(INFO) << "Connecting to Oak Application: " << address;
 
   // Connect to the Oak Application.
   // TODO(#488): Use the token provided on command line for authorization and labelling of data.
-  oak::ApplicationClient::InitializeAssertionAuthorities();
-  auto stub = Chat::NewStub(oak::ApplicationClient::CreateChannel(addr));
+  auto stub = Chat::NewStub(oak::ApplicationClient::CreateChannel(address));
   if (stub == nullptr) {
     LOG(QFATAL) << "Failed to create application stub";
   }
@@ -264,7 +245,7 @@ int main(int argc, char** argv) {
   if (room_id.empty()) {
     room = absl::make_unique<Room>(stub.get());
     room_id = room->Id();
-    LOG(INFO) << "Join this room with --app_address=" << addr
+    LOG(INFO) << "Join this room with --app_address=" << address
               << " --room_id=" << absl::Base64Escape(room_id);
   }
 
@@ -278,7 +259,9 @@ int main(int argc, char** argv) {
   }
 
   // Main chat loop.
-  Chat(stub.get(), room_id, user_handle);
+  if (!absl::GetFlag((FLAGS_no_main_loop))) {
+    Chat(stub.get(), room_id, user_handle);
+  }
 
   return EXIT_SUCCESS;
 }
