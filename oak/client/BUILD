@@ -39,6 +39,7 @@ cc_library(
         ":authorization_bearer_token_metadata",
         ":policy_metadata",
         "//oak/common:app_config",
+        "//oak/common:hmac",
         "//oak/common:nonce_generator",
         "//oak/proto:application_cc_grpc",
         "@com_github_grpc_grpc//:grpc++",

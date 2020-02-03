@@ -546,7 +546,7 @@ impl ::protobuf::reflect::ProtobufValue for Tag {
 #[derive(PartialEq,Clone,Default)]
 pub struct GrpcTag {
     // message fields
-    pub authorization_bearer_token: ::std::vec::Vec<u8>,
+    pub authorization_bearer_token_hmac: ::std::vec::Vec<u8>,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -563,30 +563,30 @@ impl GrpcTag {
         ::std::default::Default::default()
     }
 
-    // bytes authorization_bearer_token = 1;
+    // bytes authorization_bearer_token_hmac = 1;
 
 
-    pub fn get_authorization_bearer_token(&self) -> &[u8] {
-        &self.authorization_bearer_token
+    pub fn get_authorization_bearer_token_hmac(&self) -> &[u8] {
+        &self.authorization_bearer_token_hmac
     }
-    pub fn clear_authorization_bearer_token(&mut self) {
-        self.authorization_bearer_token.clear();
+    pub fn clear_authorization_bearer_token_hmac(&mut self) {
+        self.authorization_bearer_token_hmac.clear();
     }
 
     // Param is passed by value, moved
-    pub fn set_authorization_bearer_token(&mut self, v: ::std::vec::Vec<u8>) {
-        self.authorization_bearer_token = v;
+    pub fn set_authorization_bearer_token_hmac(&mut self, v: ::std::vec::Vec<u8>) {
+        self.authorization_bearer_token_hmac = v;
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_authorization_bearer_token(&mut self) -> &mut ::std::vec::Vec<u8> {
-        &mut self.authorization_bearer_token
+    pub fn mut_authorization_bearer_token_hmac(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.authorization_bearer_token_hmac
     }
 
     // Take field
-    pub fn take_authorization_bearer_token(&mut self) -> ::std::vec::Vec<u8> {
-        ::std::mem::replace(&mut self.authorization_bearer_token, ::std::vec::Vec::new())
+    pub fn take_authorization_bearer_token_hmac(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.authorization_bearer_token_hmac, ::std::vec::Vec::new())
     }
 }
 
@@ -600,7 +600,7 @@ impl ::protobuf::Message for GrpcTag {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
-                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.authorization_bearer_token)?;
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.authorization_bearer_token_hmac)?;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -614,8 +614,8 @@ impl ::protobuf::Message for GrpcTag {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        if !self.authorization_bearer_token.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(1, &self.authorization_bearer_token);
+        if !self.authorization_bearer_token_hmac.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(1, &self.authorization_bearer_token_hmac);
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
@@ -623,8 +623,8 @@ impl ::protobuf::Message for GrpcTag {
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
-        if !self.authorization_bearer_token.is_empty() {
-            os.write_bytes(1, &self.authorization_bearer_token)?;
+        if !self.authorization_bearer_token_hmac.is_empty() {
+            os.write_bytes(1, &self.authorization_bearer_token_hmac)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -669,9 +669,9 @@ impl ::protobuf::Message for GrpcTag {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
                 fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
-                    "authorization_bearer_token",
-                    |m: &GrpcTag| { &m.authorization_bearer_token },
-                    |m: &mut GrpcTag| { &mut m.authorization_bearer_token },
+                    "authorization_bearer_token_hmac",
+                    |m: &GrpcTag| { &m.authorization_bearer_token_hmac },
+                    |m: &mut GrpcTag| { &mut m.authorization_bearer_token_hmac },
                 ));
                 ::protobuf::reflect::MessageDescriptor::new::<GrpcTag>(
                     "GrpcTag",
@@ -695,7 +695,7 @@ impl ::protobuf::Message for GrpcTag {
 
 impl ::protobuf::Clear for GrpcTag {
     fn clear(&mut self) {
-        self.authorization_bearer_token.clear();
+        self.authorization_bearer_token_hmac.clear();
         self.unknown_fields.clear();
     }
 }
@@ -888,10 +888,10 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     yTags\"\x99\x01\n\x03Tag\x120\n\x08grpc_tag\x18\x01\x20\x01(\x0b2\x13.oa\
     k.policy.GrpcTagH\0R\x07grpcTag\x12Y\n\x17web_assembly_module_tag\x18\
     \x02\x20\x01(\x0b2\x20.oak.policy.WebAssemblyModuleTagH\0R\x14webAssembl\
-    yModuleTagB\x05\n\x03tag\"G\n\x07GrpcTag\x12<\n\x1aauthorization_bearer_\
-    token\x18\x01\x20\x01(\x0cR\x18authorizationBearerToken\"E\n\x14WebAssem\
-    blyModuleTag\x12-\n\x12module_attestation\x18\x01\x20\x01(\x0cR\x11modul\
-    eAttestationb\x06proto3\
+    yModuleTagB\x05\n\x03tag\"P\n\x07GrpcTag\x12E\n\x1fauthorization_bearer_\
+    token_hmac\x18\x01\x20\x01(\x0cR\x1cauthorizationBearerTokenHmac\"E\n\
+    \x14WebAssemblyModuleTag\x12-\n\x12module_attestation\x18\x01\x20\x01(\
+    \x0cR\x11moduleAttestationb\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {
