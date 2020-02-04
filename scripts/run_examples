@@ -33,8 +33,14 @@ readonly CPP_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.
  
 for example in ${CPP_EXAMPLES}; do
   "${SCRIPTS_DIR}/build_example" "${example}"
-  ./bazel-bin/oak/server/asylo/oak_app_loader \
-    --config="$PWD/bazel-clang-bin/examples/${example}/client/config_cpp.bin" &
+  # TensorFlow example is compiled with Emscripten and other examples with Clang.
+  if [[ "tensorflow" != "${example}" ]]; then
+    ./bazel-bin/oak/server/asylo/oak_app_loader \
+      --config="$PWD/bazel-wasm-bin/examples/${example}/config/config_cpp.bin" &
+  else
+    ./bazel-bin/oak/server/asylo/oak_app_loader \
+      --config="$PWD/bazel-emscripten-bin/examples/${example}/config/config_cpp.bin" &
+  fi
   SERVER_PID=$!
   "${SCRIPTS_DIR}/run_example" "${example}"
   kill -s SIGTERM "$SERVER_PID"
