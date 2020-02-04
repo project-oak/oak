@@ -28,13 +28,13 @@
 #include "oak/common/hmac.h"
 #include "oak/common/nonce_generator.h"
 #include "oak/common/policy.h"
-#include "oak/proto/application.grpc.pb.h"
 #include "oak/proto/policy.pb.h"
 
 namespace oak {
 
-namespace {
 constexpr size_t kPerChannelNonceSizeBytes = 32;
+
+namespace {
 const std::string kBearerTokenHmacData{"oak-grpc-bearer-token-1"};
 }  // namespace
 
@@ -48,21 +48,45 @@ const std::string kBearerTokenHmacData{"oak-grpc-bearer-token-1"};
 // instantiate.
 class ApplicationClient {
  public:
-  ApplicationClient(const std::shared_ptr<grpc::ChannelInterface>& channel)
-      : stub_(Application::NewStub(channel, grpc::StubOptions())) {
+  ApplicationClient(const std::shared_ptr<grpc::ChannelInterface>& channel) {
     InitializeAssertionAuthorities();
   }
 
-  GetAttestationResponse GetAttestation() {
-    grpc::ClientContext context;
-    GetAttestationRequest request;
-    GetAttestationResponse response;
-    auto status = stub_->GetAttestation(&context, request, &response);
-    if (!status.ok()) {
-      LOG(QFATAL) << "Could not get attestation: " << status.error_code() << ": "
-                  << status.error_message();
-    }
-    return response;
+  // Creates gRPC channel credentials by using the provided (secret) token to authenticate, and the
+  // derived (public) token HMAC to set a corresponding label on any data sent over the call.
+  static std::shared_ptr<grpc::CallCredentials> authorization_bearer_token_call_credentials(
+      const std::string& authorization_bearer_token) {
+    std::string authorization_bearer_token_hmac =
+        oak::utils::hmac_sha256(authorization_bearer_token, kBearerTokenHmacData).ValueOrDie();
+
+    return grpc::CompositeCallCredentials(
+        grpc::MetadataCredentialsFromPlugin(
+            absl::make_unique<AuthorizationBearerTokenMetadata>(authorization_bearer_token)),
+        grpc::MetadataCredentialsFromPlugin(absl::make_unique<PolicyMetadata>(
+            AuthorizationBearerTokenPolicy(authorization_bearer_token_hmac))));
+  }
+
+  // Generates a fresh nonce to use as authorization bearer token, and uses that to authenticate and
+  // also set a corresponding label on any data sent over this call that allows only this instance
+  // of the call to be able to retrieve it.
+  //
+  // For instance, a client may interact with a server and send some data, and then later on
+  // retrieve the data via a different call over the same channel.
+  //
+  // Note that the generated token is not directly accessible outside of this method: if the channel
+  // is closed (either intentionally or accidentally) then the previously sent data will not be
+  // accessible any more, since a new channel will be required, which will be associated with a
+  // different token.
+  //
+  // TODO: Consider introducing a server-side garbage collection mechanism so that inaccessible data
+  // may be deleted. If this is not feasible, perhaps it may be based on access time only, or based
+  // on additional metadata or specific time-related policies.
+  static std::shared_ptr<grpc::CallCredentials>
+  private_authorization_bearer_token_call_credentials() {
+    NonceGenerator<kPerChannelNonceSizeBytes> nonce_generator;
+    std::string channel_authorization_bearer_token = NonceToBytes(nonce_generator.NextNonce());
+
+    return authorization_bearer_token_call_credentials(channel_authorization_bearer_token);
   }
 
   // Returns a grpc Channel connecting to the specified address initialised with the following
@@ -74,45 +98,23 @@ class ApplicationClient {
   // that modifies metadata for each call, and in this case it happens to always attach the same
   // metadata to each outgoing call.
   //
-  // A fresh nonce is created for each newly created channel, and it is attached as an authorization
-  // bearer token to each outgoing call. Also a corresponding policy allowing access to the newly
-  // created token is attached to each outgoing call. Both of these are performed by instances of
-  // `grpc::MetadataPlugin` via their `GetMetadata` method. The combined effect is that any
-  // interactions over this channel are private to the channel itself.
-  //
-  // For instance, a client may interact with a server and send some data, and then later on
-  // retrieve the data via a different call over the same channel. If the channel is closed (either
-  // intentionally or accidentally) then the previously sent data will not be accessible any more,
-  // since a new channel will be required, which will be associated with a different token.
-  //
-  // TODO: Consider introducing a server-side garbage collection mechanism so that inaccessible data
-  // may be deleted. If this is not feasible, perhaps it may be based on access time only, or based
-  // on additional metadata or specific time-related policies.
-  //
   // See https://grpc.io/docs/guides/auth/.
-  static std::shared_ptr<grpc::Channel> CreateChannel(std::string addr) {
+  static std::shared_ptr<grpc::Channel> CreateChannel(
+      std::string addr, std::shared_ptr<grpc::CallCredentials> call_credentials) {
     auto channel_credentials =
         asylo::EnclaveChannelCredentials(asylo::BidirectionalNullCredentialsOptions());
-
-    NonceGenerator<kPerChannelNonceSizeBytes> nonce_generator;
-    auto channel_authorization_token_bytes = NonceToBytes(nonce_generator.NextNonce());
-
-    std::string channel_authorization_token_hmac =
-        oak::utils::hmac_sha256(channel_authorization_token_bytes, kBearerTokenHmacData)
-            .ValueOrDie();
-
-    // Create composite channel credentials by using the (secret) token to authenticate, and the
-    // (public) token HMAC to set a corresponding policy on the data.
-    auto call_credentials = grpc::CompositeCallCredentials(
-        grpc::MetadataCredentialsFromPlugin(
-            absl::make_unique<AuthorizationBearerTokenMetadata>(channel_authorization_token_bytes)),
-        grpc::MetadataCredentialsFromPlugin(absl::make_unique<PolicyMetadata>(
-            AuthorizationBearerTokenPolicy(channel_authorization_token_hmac))));
 
     auto composite_credentials =
         grpc::CompositeChannelCredentials(channel_credentials, call_credentials);
 
     return grpc::CreateChannel(addr, composite_credentials);
+  }
+
+  // Returns a gRPC Channel initialized with a private authorization bearer token.
+  //
+  // See `private_authorization_bearer_token_call_credentials`.
+  static std::shared_ptr<grpc::Channel> CreateChannel(std::string addr) {
+    return CreateChannel(addr, private_authorization_bearer_token_call_credentials());
   }
 
   static asylo::EnclaveAssertionAuthorityConfig GetNullAssertionAuthorityConfig() {
@@ -139,8 +141,6 @@ class ApplicationClient {
 
     LOG(INFO) << "Assertion authorities initialized";
   }
-
-  std::unique_ptr<Application::Stub> stub_;
 };
 
 }  // namespace oak

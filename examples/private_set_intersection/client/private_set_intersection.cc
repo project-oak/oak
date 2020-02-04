@@ -25,6 +25,7 @@
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
 #include "oak/client/manager_client.h"
+#include "oak/common/nonce_generator.h"
 #include "oak/common/utils.h"
 
 ABSL_FLAG(std::string, manager_address, "127.0.0.1:8888",
@@ -87,14 +88,18 @@ int main(int argc, char** argv) {
 
   oak::ApplicationClient::InitializeAssertionAuthorities();
 
-  // Connect to the newly created Oak Application from different clients.
-  auto channel_0 = oak::ApplicationClient::CreateChannel(addr.str());
-  oak::ApplicationClient client_0(channel_0);
-  oak::GetAttestationResponse attestation = client_0.GetAttestation();
-  LOG(INFO) << "Oak Application attestation: " << attestation.DebugString();
-  auto stub_0 = PrivateSetIntersection::NewStub(channel_0);
+  // Connect to the newly created Oak Application from different clients sharing the same access
+  // token.
+  oak::NonceGenerator<oak::kPerChannelNonceSizeBytes> nonce_generator;
+  std::string authorization_bearer_token = oak::NonceToBytes(nonce_generator.NextNonce());
 
-  auto stub_1 = PrivateSetIntersection::NewStub(oak::ApplicationClient::CreateChannel(addr.str()));
+  auto stub_0 = PrivateSetIntersection::NewStub(oak::ApplicationClient::CreateChannel(
+      addr.str(), oak::ApplicationClient::authorization_bearer_token_call_credentials(
+                      authorization_bearer_token)));
+
+  auto stub_1 = PrivateSetIntersection::NewStub(oak::ApplicationClient::CreateChannel(
+      addr.str(), oak::ApplicationClient::authorization_bearer_token_call_credentials(
+                      authorization_bearer_token)));
 
   // Submit sets from different clients.
   std::vector<std::string> set_0{"a", "b", "c"};

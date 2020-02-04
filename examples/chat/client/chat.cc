@@ -243,6 +243,7 @@ int main(int argc, char** argv) {
   }
 
   // Connect to the Oak Application.
+  // TODO(#488): Use the token provided on command line for authorization and labelling of data.
   oak::ApplicationClient::InitializeAssertionAuthorities();
   auto stub = Chat::NewStub(oak::ApplicationClient::CreateChannel(addr));
   if (stub == nullptr) {
