@@ -1,5 +1,5 @@
 fn main() {
-    protoc_rust_grpc::run(protoc_rust_grpc::Args {
+    oak_utils::run_protoc_rust_grpc(protoc_rust_grpc::Args {
         out_dir: "src/proto",
         input: &["../../proto/private_set_intersection.proto"],
         includes: &["../../proto"],

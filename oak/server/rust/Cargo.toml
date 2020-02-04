@@ -14,3 +14,4 @@ members = [
 oak = { path = "../../../sdk/rust/oak" }
 oak_abi = { path = "oak_abi" }
 oak_runtime = { path = "oak_runtime" }
+oak_utils = { path = "../../../sdk/rust/oak_utils" }

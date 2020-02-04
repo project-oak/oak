@@ -23,4 +23,5 @@ serde = { version = "*", features = ["derive"] }
 serde_json = "*"
 
 [build-dependencies]
+oak_utils = "*"
 protoc-rust-grpc = { path = "../../../../third_party/grpc-rust/protoc-rust-grpc" }

@@ -1,5 +1,5 @@
 fn main() {
-    protoc_rust::run(protoc_rust::Args {
+    oak_utils::run_protoc_rust(protoc_rust::Args {
         out_dir: "src/proto",
         input: &["../../../../oak/proto/manager.proto"],
         includes: &["../../../../oak/proto"],

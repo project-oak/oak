@@ -15,6 +15,7 @@ rand_core = { version = "*", features = ["std"] }
 serde = { version = "*", features = ["derive"] }
 
 [build-dependencies]
+oak_utils = "*"
 protoc-rust = "*"
 
 [dev-dependencies]

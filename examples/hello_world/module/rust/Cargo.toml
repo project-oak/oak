@@ -22,4 +22,5 @@ serial_test = "*"
 serial_test_derive = "*"
 
 [build-dependencies]
+oak_utils = "*"
 protoc-rust-grpc = { path = "../../../../third_party/grpc-rust/protoc-rust-grpc" }

@@ -13,4 +13,5 @@ protobuf = "*"
 rand = { version = "*", features = ["std"] }
 
 [build-dependencies]
+oak_utils = "*"
 protoc-rust = "*"
