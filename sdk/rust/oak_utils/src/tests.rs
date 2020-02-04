@@ -32,7 +32,7 @@ fn write_files(dir: &Path, files: &HashMap<String, String>) {
 
 #[test]
 fn get_files_test() {
-    let temp_files = hashmap!{
+    let temp_files = hashmap! {
         "1".to_string() => "string1".to_string(),
         "2".to_string() => "string2".to_string(),
         "3".to_string() => "string3".to_string(),
@@ -52,50 +52,60 @@ fn filediff_action_test() {
             filename: "test".to_string(),
             old_content: Some("1".to_string()),
             new_content: Some("2".to_string()),
-        }.action(),
+        }
+        .action(),
         FileAction::Update {
             new_content: "2".to_string()
-        });
+        }
+    );
     assert_eq!(
         FileDiff {
             filename: "test".to_string(),
             old_content: Some("1".to_string()),
             new_content: Some("1".to_string()),
-        }.action(),
-        FileAction::Ignore);
+        }
+        .action(),
+        FileAction::Ignore
+    );
     assert_eq!(
         FileDiff {
             filename: "test".to_string(),
             old_content: Some("1".to_string()),
             new_content: None,
-        }.action(),
-        FileAction::Remove);
+        }
+        .action(),
+        FileAction::Remove
+    );
     assert_eq!(
         FileDiff {
             filename: "mod.rs".to_string(),
             old_content: Some("1".to_string()),
             new_content: None,
-        }.action(),
-        FileAction::Ignore);
+        }
+        .action(),
+        FileAction::Ignore
+    );
     assert_eq!(
         FileDiff {
             filename: "test".to_string(),
             old_content: None,
             new_content: Some("2".to_string()),
-        }.action(),
+        }
+        .action(),
         FileAction::Update {
             new_content: "2".to_string()
-        });
+        }
+    );
 }
 
 #[test]
 fn get_file_diffs_test() {
-    let old_files = hashmap!{
+    let old_files = hashmap! {
         "1".to_string() => "string1".to_string(),
         "2".to_string() => "string2".to_string(),
         "3".to_string() => "string3".to_string(),
     };
-    let new_files = hashmap!{
+    let new_files = hashmap! {
         "1".to_string() => "changed_string1".to_string(),
         "3".to_string() => "string3".to_string(),
         "4".to_string() => "string4".to_string(),
