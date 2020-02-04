@@ -41,11 +41,19 @@ else
     TARGET="$NAME"
 fi
 
+bazel_build_flags+=(
+    '--symlink_prefix=bazel-client-'
+    "--compilation_mode=$COMPILATION_MODE"
+)
+
 readonly RUST_FOLDER="$(find examples/"$TARGET" -type d -name rust)"
 if [[ -n "$RUST_FOLDER" ]]; then
     for module in examples/"$TARGET"/module*/rust/Cargo.toml; do
     cargo build --release --target=wasm32-unknown-unknown --manifest-path="$module"
     done
+
+    # Serialize application configuration for Rust module.
+    bazel --output_base="$CACHE_DIR/client" build "${bazel_build_flags[@]}" "//examples/$TARGET/config:config"
 fi
 
 readonly CPP_FOLDER="$(find examples/"$TARGET" -type d -name cpp)"
@@ -64,13 +72,6 @@ if [[ -n "$CPP_FOLDER" ]]; then
     fi
 fi
 
-bazel_build_flags+=(
-    '--symlink_prefix=bazel-client-'
-    "--compilation_mode=$COMPILATION_MODE"
-)
-
 # Use a different output_base so that we don't lose incremental state.
 # See https://docs.bazel.build/versions/master/command-line-reference.html#flag--output_base.
-bazel --output_base="$CACHE_DIR/client" build "${bazel_build_flags[@]}" \
-    "//examples/$TARGET/client:client" \
-    "//examples/$TARGET/config:config"
+bazel --output_base="$CACHE_DIR/client" build "${bazel_build_flags[@]}" "//examples/$TARGET/client:client"

@@ -30,6 +30,7 @@
 #include "examples/chat/proto/chat.pb.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
+#include "oak/client/manager_client.h"
 #include "oak/common/nonce_generator.h"
 #include "oak/common/utils.h"
 
