@@ -249,7 +249,6 @@ int main(int argc, char** argv) {
     LOG(INFO) << "Join this room with --app_address=" << address
               << " --room_id=" << absl::Base64Escape(room_id);
   }
-
   // Calculate a user handle.
   std::string user_handle = absl::GetFlag(FLAGS_handle);
   if (user_handle.empty()) {
@@ -260,9 +259,7 @@ int main(int argc, char** argv) {
   }
 
   // Main chat loop.
-  if (!absl::GetFlag((FLAGS_no_main_loop))) {
-    Chat(stub.get(), room_id, user_handle);
-  }
+  Chat(stub.get(), room_id, user_handle);
 
   return EXIT_SUCCESS;
 }
