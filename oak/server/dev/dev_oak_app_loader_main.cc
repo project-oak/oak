@@ -31,7 +31,7 @@
 
 ABSL_FLAG(std::string, config, "", "Application configuration file");
 
-void sigint_handler(int param) {
+void sigint_handler(int) {
   LOG(QFATAL) << "SIGINT received";
   exit(1);
 }
