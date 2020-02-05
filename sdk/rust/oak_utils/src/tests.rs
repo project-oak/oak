@@ -132,7 +132,7 @@ fn get_file_diffs_test() {
         "3".to_string() => "string3".to_string(),
         "4".to_string() => "string4".to_string(),
     };
-    let expected_file_diffs = hashset!{
+    let expected_file_diffs = hashset! {
         FileDiff {
             filename: "1".to_string(),
             old_content: Some("string1".to_string()),
