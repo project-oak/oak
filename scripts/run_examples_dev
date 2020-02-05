@@ -7,15 +7,17 @@ source "$SCRIPTS_DIR/common"
 # Build Oak server.
 "$SCRIPTS_DIR/build_server_dev" "$@"
 
-# Run Oak server.
-./bazel-clang-bin/oak/server/dev/oak &
-SERVER_PID=$!
 # TODO: Ensure that background processes are killed with something like `trap cleanup_fn EXIT`.
 
 # Run Rust-based Oak examples against a common Oak server instance.
 # TODO(#594): Re-enable rustfmt when upstream rustc internal error is fixed.
 readonly RUST_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/rust$' | cut -d'/' -f2 | uniq | grep -v rustfmt)"
 for example in ${RUST_EXAMPLES}; do
+  # Running `build_example` to compile application configurations before running the server.
+  "${SCRIPTS_DIR}/build_example" "${example}"
+  ./bazel-clang-bin/oak/server/dev/oak_app_loader \
+    --config="$PWD/bazel-client-bin/examples/${example}/config/config.bin" &
+  SERVER_PID=$!
   # Currently `chat` application starts an infinite loop, so `run_examples` just checks
   # if the module can be loaded correctly.
   if [[ "chat" == "${example}" ]]; then
@@ -23,14 +25,26 @@ for example in ${RUST_EXAMPLES}; do
   else
     "${SCRIPTS_DIR}/run_example" "${example}"
   fi
+  # TODO: Ensure that background processes are killed with something like `trap cleanup_fn EXIT`.
+  kill -s SIGTERM "$SERVER_PID"
 done
 
 # Run C++-based Oak examples.
-# TODO: Run TensorFlow example when Emscripten imports will be fixed.
-# https://github.com/project-oak/oak/issues/439
-readonly CPP_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/cpp$' | cut -d'/' -f2 | grep -v tensorflow)"
+readonly CPP_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/cpp$' | cut -d'/' -f2 | uniq)"
+
 for example in ${CPP_EXAMPLES}; do
+  "${SCRIPTS_DIR}/build_example" "${example}"
+  # TensorFlow example is compiled with Emscripten and other examples with Clang.
+  if [[ "tensorflow" != "${example}" ]]; then
+    ./bazel-clang-bin/oak/server/dev/oak_app_loader \
+      --config="$PWD/bazel-wasm-bin/examples/${example}/config/config_cpp.bin" &
+  else
+    ./bazel-clang-bin/oak/server/dev/oak_app_loader \
+      --config="$PWD/bazel-emscripten-bin/examples/${example}/config/config_cpp.bin" &
+  fi
+  SERVER_PID=$!
   "${SCRIPTS_DIR}/run_example" -c "${example}"
+  kill -s SIGTERM "$SERVER_PID"
 done
 
 # Special case: run the hello_world example with:
