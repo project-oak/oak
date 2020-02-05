@@ -42,6 +42,6 @@ for example in ${CPP_EXAMPLES}; do
       --config="$PWD/bazel-emscripten-bin/examples/${example}/config/config_cpp.bin" &
   fi
   SERVER_PID=$!
-  "${SCRIPTS_DIR}/run_example" "${example}"
+  "${SCRIPTS_DIR}/run_example" -c "${example}"
   kill -s SIGTERM "$SERVER_PID"
 done

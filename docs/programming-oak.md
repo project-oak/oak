@@ -2,19 +2,18 @@
 
 This document walks through the basics of programming in Oak.
 
-- [Programming Oak](#programming-oak)
-  - [Writing an Oak Node](#writing-an-oak-node)
-    - [Per-Node Boilerplate](#per-node-boilerplate)
-    - [Generated gRPC service code](#generated-grpc-service-code)
-  - [Using an Oak Application from a client](#using-an-oak-application-from-a-client)
-    - [Connecting to the Oak Manager](#connecting-to-the-oak-manager)
-    - [Starting the Oak Application](#starting-the-oak-application)
-  - [gRPC Request Processing Path](#grpc-request-processing-path)
-  - [Node Termination](#node-termination)
-  - [Nodes, Channels and Handles](#nodes-channels-and-handles)
-  - [Persistent Storage](#persistent-storage)
-  - [Testing](#testing)
-    - [Testing Multi-Node Applications](#testing-multi-node-applications)
+- [Writing an Oak Node](#writing-an-oak-node)
+  - [Per-Node Boilerplate](#per-node-boilerplate)
+  - [Generated gRPC service code](#generated-grpc-service-code)
+- [Using an Oak Application from a client](#using-an-oak-application-from-a-client)
+  - [Connecting to the Oak Manager](#connecting-to-the-oak-manager)
+  - [Starting the Oak Application](#starting-the-oak-application)
+- [gRPC Request Processing Path](#grpc-request-processing-path)
+- [Node Termination](#node-termination)
+- [Nodes, Channels and Handles](#nodes-channels-and-handles)
+- [Persistent Storage](#persistent-storage)
+- [Testing](#testing)
+  - [Testing Multi-Node Applications](#testing-multi-node-applications)
 
 ## Writing an Oak Node
 
@@ -177,6 +176,8 @@ as a gRPC server:
   trait.
 
 ## Using an Oak Application from a client
+
+TODO(#431) Update documentation to use a single app oak server.
 
 A client that is outside of the Oak ecosystem can use an Oak Application by
 interacting with it as a gRPC service. However, this does involve a few
