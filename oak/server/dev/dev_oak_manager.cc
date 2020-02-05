@@ -28,8 +28,7 @@
 
 namespace oak {
 
-DevOakManager::DevOakManager()
-    : Service(), loader_() {}
+DevOakManager::DevOakManager() : Service(), loader_() {}
 
 grpc::Status DevOakManager::CreateApplication(grpc::ServerContext*,
                                               const oak::CreateApplicationRequest* request,
