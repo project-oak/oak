@@ -16,7 +16,7 @@
 
 use crate::*;
 
-use maplit::hashmap;
+use maplit::{hashmap, hashset};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
@@ -132,7 +132,7 @@ fn get_file_diffs_test() {
         "3".to_string() => "string3".to_string(),
         "4".to_string() => "string4".to_string(),
     };
-    let mut expected_file_diffs = vec![
+    let expected_file_diffs = hashset!{
         FileDiff {
             filename: "1".to_string(),
             old_content: Some("string1".to_string()),
@@ -153,12 +153,9 @@ fn get_file_diffs_test() {
             old_content: None,
             new_content: Some("string4".to_string()),
         },
-    ];
-    expected_file_diffs.sort();
+    };
 
-    let mut file_diffs = get_file_diffs(&old_files, &new_files);
-    file_diffs.sort();
-
+    let file_diffs = get_file_diffs(&old_files, &new_files);
     assert_eq!(file_diffs, expected_file_diffs);
 }
 

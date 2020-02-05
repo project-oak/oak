@@ -67,14 +67,14 @@ pub fn run_protoc_rust_grpc(args: protoc_rust_grpc::Args) -> io::Result<()> {
     Ok(())
 }
 
-#[derive(Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Debug, Eq, PartialEq, Hash)]
 struct FileDiff {
     filename: String,
     old_content: Option<String>,
     new_content: Option<String>,
 }
 
-#[derive(Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Debug, Eq, PartialEq)]
 enum FileAction {
     Ignore,
     Remove,
@@ -131,11 +131,11 @@ fn update_files(temp_path: &Path, path: &Path) -> io::Result<()> {
         })
 }
 
-// Returns a vector of file differences that represent old and new contents.
+// Returns a hash set of file differences that represent old and new contents.
 fn get_file_diffs(
     old_files: &HashMap<String, String>,
     new_files: &HashMap<String, String>,
-) -> Vec<FileDiff> {
+) -> HashSet<FileDiff> {
     let file_set = old_files
         .keys()
         .chain(new_files.keys())
