@@ -25,15 +25,11 @@
 #include "absl/synchronization/notification.h"
 #include "absl/time/time.h"
 #include "asylo/util/logging.h"
-#include "asylo_oak_loader.h"
+#include "dev_oak_loader.h"
 #include "include/grpcpp/server.h"
 #include "include/grpcpp/server_builder.h"
-#include "oak/common/app_config.h"
-#include "oak/common/utils.h"
-#include "oak/proto/manager.grpc.pb.h"
 
 ABSL_FLAG(std::string, config, "", "Application configuration file");
-ABSL_FLAG(std::string, enclave_path, "", "Path of the enclave to load");
 
 void sigint_handler(int param) {
   LOG(QFATAL) << "SIGINT received";
@@ -47,9 +43,8 @@ int main(int argc, char* argv[]) {
   // does not seem to work.
   std::signal(SIGINT, sigint_handler);
 
-  // Create manager instance.
-  std::unique_ptr<oak::AsyloOakLoader> loader =
-      absl::make_unique<oak::AsyloOakLoader>(absl::GetFlag(FLAGS_enclave_path));
+  // Create loader instance.
+  std::unique_ptr<oak::DevOakLoader> loader = absl::make_unique<oak::DevOakLoader>();
 
   // Load application configuration.
   std::unique_ptr<oak::ApplicationConfiguration> application_config =

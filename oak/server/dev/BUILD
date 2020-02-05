@@ -79,3 +79,19 @@ cc_binary(
         "@com_google_asylo//asylo/util:logging",
     ],
 )
+
+cc_binary(
+    name = "oak_app_loader",
+    srcs = ["dev_oak_app_loader_main.cc"],
+    deps = [
+        ":dev_oak_loader",
+        "//oak/common:app_config",
+        "//oak/common:utils",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/flags:parse",
+        "@com_google_absl//absl/synchronization",
+        "@com_google_absl//absl/time",
+        "@com_google_asylo//asylo/util:logging",
+    ],
+)
