@@ -21,3 +21,11 @@ use crate::OakError;
 pub trait Encodable {
     fn encode(&self) -> Result<Message, OakError>;
 }
+
+impl<T: protobuf::Message> Encodable for T {
+    fn encode(&self) -> Result<Message, OakError> {
+        let bytes = self.write_to_bytes()?;
+        let handles = Vec::new();
+        Ok(crate::io::Message { bytes, handles })
+    }
+}

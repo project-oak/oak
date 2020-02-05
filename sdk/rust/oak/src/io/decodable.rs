@@ -21,3 +21,15 @@ use crate::OakError;
 pub trait Decodable: Sized {
     fn decode(message: &Message) -> Result<Self, OakError>;
 }
+
+impl<T: protobuf::Message> Decodable for T {
+    fn decode(message: &Message) -> Result<Self, OakError> {
+        if !message.handles.is_empty() {
+            return Err(
+                protobuf::ProtobufError::WireError(protobuf::error::WireError::Other).into(),
+            );
+        }
+        let value = protobuf::parse_from_bytes(&message.bytes)?;
+        Ok(value)
+    }
+}

@@ -20,7 +20,7 @@ pub use crate::proto::code::Code;
 use crate::{proto, OakError, OakStatus, ReadHandle};
 use log::{error, info, warn};
 use proto::grpc_encap::{GrpcRequest, GrpcResponse};
-use protobuf::{Message, ProtobufEnum};
+use protobuf::ProtobufEnum;
 
 mod invocation;
 pub use invocation::Invocation;
@@ -36,41 +36,11 @@ pub fn build_status(code: Code, msg: &str) -> proto::status::Status {
     status
 }
 
-impl crate::io::Encodable for GrpcRequest {
-    fn encode(&self) -> std::result::Result<crate::io::Message, crate::OakError> {
-        let bytes = self.write_to_bytes()?;
-        let handles = Vec::new();
-        Ok(crate::io::Message { bytes, handles })
-    }
-}
-
-impl crate::io::Decodable for GrpcRequest {
-    fn decode(message: &crate::io::Message) -> std::result::Result<Self, crate::OakError> {
-        let value = protobuf::parse_from_bytes(&message.bytes)?;
-        Ok(value)
-    }
-}
-
 /// Channel-holding object that encapsulates response messages into
 /// `GrpcResponse` wrapper messages and writes serialized versions to a send
 /// channel.
 pub struct ChannelResponseWriter {
     sender: crate::io::Sender<GrpcResponse>,
-}
-
-impl crate::io::Encodable for GrpcResponse {
-    fn encode(&self) -> std::result::Result<crate::io::Message, crate::OakError> {
-        let bytes = self.write_to_bytes()?;
-        let handles = Vec::new();
-        Ok(crate::io::Message { bytes, handles })
-    }
-}
-
-impl crate::io::Decodable for GrpcResponse {
-    fn decode(message: &crate::io::Message) -> std::result::Result<Self, crate::OakError> {
-        let value = protobuf::parse_from_bytes(&message.bytes)?;
-        Ok(value)
-    }
 }
 
 /// Indicate whether a write method should leave the current gRPC method
