@@ -28,6 +28,6 @@ readonly CPP_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.
 for example in ${CPP_EXAMPLES}; do
   ./bazel-bin/oak/server/asylo/oak &
   SERVER_PID=$!
-  "${SCRIPTS_DIR}/run_example" -c "${example}"
+  "${SCRIPTS_DIR}/run_example" "${example}"
   kill -s SIGTERM "$SERVER_PID"
 done
