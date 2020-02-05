@@ -57,6 +57,17 @@ find . \
     \( -type f -name '*.md' \) \
   \) -exec prettier --check {} +
 
+find . \
+  \(  \
+    -not \( -path ./bazel-cache -prune \) -and \
+    -not \( -path ./cargo-cache -prune \) -and \
+    -not \( -path ./examples/target -prune \) -and \
+    -not \( -path ./oak/server/rust/target -prune \) -and \
+    -not \( -path ./sdk/rust/target -prune \) -and \
+    -not \( -path ./third_party -prune \) \
+    \( -type f \( -name '*.rs' -o -name '*.cc' \) \) \
+  \) -exec ./scripts/check_license {} +
+
 # Check embedded code snippets are up-to-date.
 grep --recursive --files-with-matches embedmd docs | while IFS= read -r file; do
   "$GOPATH/bin/embedmd" -d "$file"
