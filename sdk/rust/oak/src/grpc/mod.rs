@@ -66,6 +66,13 @@ impl crate::io::Encodable for GrpcResponse {
     }
 }
 
+impl crate::io::Decodable for GrpcResponse {
+    fn decode(message: &crate::io::Message) -> std::result::Result<Self, crate::OakError> {
+        let value = protobuf::parse_from_bytes(&message.bytes)?;
+        Ok(value)
+    }
+}
+
 /// Indicate whether a write method should leave the current gRPC method
 /// invocation open or close it.
 #[derive(PartialEq, Clone, Debug)]
