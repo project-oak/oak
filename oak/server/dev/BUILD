@@ -22,12 +22,12 @@ package(
 )
 
 cc_library(
-    name = "dev_oak_manager",
+    name = "dev_oak_loader",
     srcs = [
-        "dev_oak_manager.cc",
+        "dev_oak_loader.cc",
     ],
     hdrs = [
-        "dev_oak_manager.h",
+        "dev_oak_loader.h",
     ],
     deps = [
         "//oak/proto:enclave_cc_proto",
@@ -39,6 +39,30 @@ cc_library(
         "@com_google_asylo//asylo/grpc/auth:null_credentials_options",
         "@com_google_asylo//asylo/identity:init",
         "@com_google_asylo//asylo/util:logging",
+        "@com_google_asylo//asylo/util:status",
+    ],
+)
+
+cc_library(
+    name = "dev_oak_manager",
+    srcs = [
+        "dev_oak_manager.cc",
+    ],
+    hdrs = [
+        "dev_oak_manager.h",
+    ],
+    deps = [
+        ":dev_oak_loader",
+        "//oak/proto:enclave_cc_proto",
+        "//oak/proto:manager_cc_grpc",
+        "//oak/server:oak_runtime",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/strings",
+        "@com_google_asylo//asylo/grpc/auth:null_credentials_options",
+        "@com_google_asylo//asylo/identity:init",
+        "@com_google_asylo//asylo/util:logging",
+        "@com_google_asylo//asylo/util:status",
     ],
 )
 

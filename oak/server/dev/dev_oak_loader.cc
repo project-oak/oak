@@ -1,0 +1,102 @@
+/*
+ * Copyright 2018 The Project Oak Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "dev_oak_loader.h"
+
+#include "absl/memory/memory.h"
+#include "asylo/grpc/auth/enclave_server_credentials.h"
+#include "asylo/grpc/auth/null_credentials_options.h"
+#include "asylo/identity/descriptions.h"
+#include "asylo/identity/init.h"
+#include "asylo/util/logging.h"
+#include "asylo/util/statusor.h"
+#include "grpcpp/support/status_code_enum.h"
+#include "include/grpcpp/grpcpp.h"
+
+namespace oak {
+
+DevOakLoader::DevOakLoader()
+    : next_application_id_(0) {
+  InitializeAssertionAuthorities();
+}
+
+asylo::StatusOr<oak::CreateApplicationResponse> DevOakLoader::CreateApplication(
+    const oak::ApplicationConfiguration& application_configuration) {
+  std::string application_id = NewApplicationId();
+  LOG(INFO) << "Creating application with ID" << application_id;
+
+  auto runtime = absl::make_unique<OakRuntime>();
+  auto status = runtime->Initialize(application_configuration);
+  if (!status.ok()) {
+    return asylo::Status(status);
+  }
+
+  // Start the runtime.
+  runtime->Start();
+
+  int32_t port = runtime->GetPort();
+  LOG(INFO) << "gRPC server is listening on port: " << port;
+  runtimes_[application_id] = std::move(runtime);
+
+  oak::CreateApplicationResponse response;
+  response.set_application_id(application_id);
+  response.set_grpc_port(port);
+  return response;
+}
+
+grpc::Status DevOakLoader::TerminateApplication(const std::string& application_id) {
+  LOG(INFO) << "Terminating application with ID " << application_id;
+
+  OakRuntime* runtime = runtimes_[application_id].get();
+  if (runtime == nullptr) {
+    LOG(ERROR) << "Unrecognized application ID";
+    return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Unknown application ID");
+  }
+
+  runtime->Stop();
+  LOG(INFO) << "Application with ID " << application_id << " stopped";
+  runtimes_.erase(application_id);
+
+  return grpc::Status::OK;
+}
+
+// Even if we are not running in an enclave, we are still relying on Asylo assertion authorities
+// This allows us to use the same client code to connect to the runtime, and it will potentially
+// allow us to use non-enclave identities in the future.
+void DevOakLoader::InitializeAssertionAuthorities() {
+  LOG(INFO) << "Initializing assertion authorities";
+  asylo::EnclaveAssertionAuthorityConfig null_config;
+  asylo::SetNullAssertionDescription(null_config.mutable_description());
+  std::vector<asylo::EnclaveAssertionAuthorityConfig> configs = {
+      null_config,
+  };
+  asylo::Status status =
+      asylo::InitializeEnclaveAssertionAuthorities(configs.begin(), configs.end());
+  if (!status.ok()) {
+    LOG(QFATAL) << "Could not initialize assertion authorities";
+  }
+  LOG(INFO) << "Assertion authorities initialized";
+}
+
+std::string DevOakLoader::NewApplicationId() {
+  // For dev purposes, just increment a value
+  std::stringstream id_str;
+  id_str << next_application_id_;
+  next_application_id_ += 1;
+  return id_str.str();
+}
+
+}  // namespace oak

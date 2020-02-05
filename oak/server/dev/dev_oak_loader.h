@@ -13,12 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef OAK_SERVER_DEV_DEV_OAK_MANAGER_H_
-#define OAK_SERVER_DEV_DEV_OAK_MANAGER_H_
+
+#ifndef OAK_SERVER_DEV_DEV_OAK_LOADER_H_
+#define OAK_SERVER_DEV_DEV_OAK_LOADER_H_
 
 #include <string>
-
-#include "dev_oak_loader.h"
 
 #include "absl/strings/string_view.h"
 #include "asylo/util/logging.h"
@@ -28,21 +27,25 @@
 
 namespace oak {
 
-class DevOakManager final : public Manager::Service {
+class DevOakLoader {
  public:
-  DevOakManager();
+  DevOakLoader();
 
-  grpc::Status CreateApplication(grpc::ServerContext* context,
-                                 const CreateApplicationRequest* request,
-                                 CreateApplicationResponse* response) override;
+  asylo::StatusOr<oak::CreateApplicationResponse> CreateApplication(
+      const oak::ApplicationConfiguration& application_configuration);
 
-  grpc::Status TerminateApplication(grpc::ServerContext* context,
-                                    const TerminateApplicationRequest* request,
-                                    TerminateApplicationResponse* response) override;
+  grpc::Status TerminateApplication(const std::string& application_id);
 
  private:
-  oak::DevOakLoader loader_;
+  void InitializeAssertionAuthorities();
+  std::string NewApplicationId();
+
+  // For each application, identified by its id as a string we have a runtime
+  std::unordered_map<std::string, std::unique_ptr<OakRuntime>> runtimes_;
+  // The next available application ID.
+  uint64_t next_application_id_;
 };
 
 }  // namespace oak
-#endif  // OAK_SERVER_DEV_DEV_OAK_MANAGER_H_
+
+#endif  // OAK_SERVER_DEV_DEV_OAK_LOADER_H_
