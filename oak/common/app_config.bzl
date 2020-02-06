@@ -16,16 +16,16 @@
 
 """Rule for serializing an Oak application configuration."""
 
-def serialized_config(name, textproto, modules, output):
+def serialized_config(name, textproto, modules):
     """Serializes an Oak application configuration in a binary file.
 
     Args:
         name: Name of the build rule.
         textproto: Textproto file with application configuration.
         modules: A dictionary with module names as keys and module paths as values.
-        output: Output file.
     """
     srcs = [textproto] + modules.values()
+    output = name + ".bin"
     module_list = ",".join([n + ":$(location " + path + ")" for (n, path) in modules.items()])
     cmd = "$(location //oak/common:app_config_serializer)" + \
           " --textproto=$(location " + textproto + ")" + \
