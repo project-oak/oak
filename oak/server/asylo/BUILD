@@ -58,7 +58,6 @@ cc_library(
         "asylo_oak_loader.h",
     ],
     deps = [
-        "//oak/proto:application_cc_grpc",
         "//oak/proto:enclave_cc_proto",
         "//oak/proto:manager_cc_grpc",
         "@com_github_grpc_grpc//:grpc++",
@@ -82,7 +81,6 @@ cc_library(
     ],
     deps = [
         ":asylo_oak_loader",
-        "//oak/proto:application_cc_grpc",
         "//oak/proto:enclave_cc_proto",
         "//oak/proto:manager_cc_grpc",
         "@com_github_grpc_grpc//:grpc++",

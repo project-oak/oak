@@ -25,12 +25,12 @@
 #include "absl/synchronization/notification.h"
 #include "absl/time/time.h"
 #include "asylo/util/logging.h"
-#include "asylo_oak_loader.h"
 #include "include/grpcpp/server.h"
 #include "include/grpcpp/server_builder.h"
 #include "oak/common/app_config.h"
 #include "oak/common/utils.h"
 #include "oak/proto/manager.grpc.pb.h"
+#include "oak/server/asylo/asylo_oak_loader.h"
 
 ABSL_FLAG(std::string, config, "", "Application configuration file");
 ABSL_FLAG(std::string, enclave_path, "", "Path of the enclave to load");
