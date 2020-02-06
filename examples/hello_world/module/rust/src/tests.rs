@@ -15,43 +15,40 @@
 //
 
 use crate::proto::hello_world::{HelloRequest, HelloResponse};
-use crate::proto::hello_world_grpc::HelloWorldNode;
 use assert_matches::assert_matches;
 use oak::grpc;
-use oak::grpc::OakNode;
-use serial_test_derive::serial;
 
-// Test invoking a Node service method directly.
-#[test]
-fn test_direct_hello_request() {
-    let mut node = crate::Node::new();
-    let mut req = HelloRequest::new();
-    req.set_greeting("world".to_string());
-    let result = node.say_hello(req);
-    assert_matches!(result, Ok(_));
-    assert_eq!("HELLO world!", result.unwrap().reply);
-}
+const MODULE_CONFIG_NAME: &str = "hello_world";
+const LOG_CONFIG_NAME: &str = "log";
+const ENTRYPOINT_NAME: &str = "oak_main";
 
-#[test]
-#[serial(node_test)]
-fn test_no_handle() {
-    oak_tests::start_node(oak_abi::INVALID_HANDLE, crate::inner_main);
-    oak_tests::stop();
-}
+// TODO(#541)
+const WASM_PATH: &str = "../../../target/wasm32-unknown-unknown/debug/hello_world.wasm";
 
-// Test invoking a Node service method via the Oak entrypoints.
+// Test invoking the SayHello Node service method via the Oak runtime.
 #[test]
-#[serial(node_test)]
-fn test_hello_request() {
-    let handle = oak_tests::grpc_channel_setup_default();
-    oak_tests::start_node(handle, crate::inner_main);
+fn test_say_hello() {
+    simple_logger::init().unwrap();
+
+    let configuration = oak_tests::test_configuration(
+        &[(MODULE_CONFIG_NAME, WASM_PATH)],
+        LOG_CONFIG_NAME,
+        MODULE_CONFIG_NAME,
+        ENTRYPOINT_NAME,
+    );
+
+    let (runtime, entry_channel) = oak_runtime::Runtime::configure_and_run(configuration)
+        .expect("Unable to configure runtime with test wasm!");
 
     let mut req = HelloRequest::new();
     req.set_greeting("world".to_string());
-    let result: grpc::Result<HelloResponse> =
-        oak_tests::inject_grpc_request("/oak.examples.hello_world.HelloWorld/SayHello", req);
+    let result: grpc::Result<HelloResponse> = oak_tests::grpc_request(
+        &entry_channel,
+        "/oak.examples.hello_world.HelloWorld/SayHello",
+        req,
+    );
     assert_matches!(result, Ok(_));
     assert_eq!("HELLO world!", result.unwrap().reply);
 
-    oak_tests::stop();
+    runtime.stop();
 }

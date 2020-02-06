@@ -18,72 +18,42 @@ use abitest_0_frontend::proto::abitest::{ABITestRequest, ABITestResponse};
 use assert_matches::assert_matches;
 use log::{error, info};
 use oak::grpc;
-use oak_runtime::proto::manager::{
-    ApplicationConfiguration, LogConfiguration, NodeConfiguration, WebAssemblyConfiguration,
-};
-use oak_tests::WasmEntrypointFullName;
-use serial_test_derive::serial;
-use std::collections::HashMap;
 
 // Constants for Node config names that should match those in the textproto
 // config held in ../../client/config.h.
 const FRONTEND_CONFIG_NAME: &str = "frontend-config";
-const FRONTEND_ENTRYPOINT_NAME: &str = "frontend_oak_main";
 const BACKEND_CONFIG_NAME: &str = "backend-config";
-const BACKEND_ENTRYPOINT_NAME: &str = "backend_oak_main";
 const LOG_CONFIG_NAME: &str = "logging-config";
+const FRONTEND_ENTRYPOINT_NAME: &str = "frontend_oak_main";
 
-fn test_config() -> ApplicationConfiguration {
-    let mut frontend_config = NodeConfiguration::new();
-    frontend_config.set_name(FRONTEND_CONFIG_NAME.to_string());
-    frontend_config.set_wasm_config(WebAssemblyConfiguration::new());
-    let mut backend_config = NodeConfiguration::new();
-    backend_config.set_name(BACKEND_CONFIG_NAME.to_string());
-    backend_config.set_wasm_config(WebAssemblyConfiguration::new());
-    let mut log_config = NodeConfiguration::new();
-    log_config.set_name(LOG_CONFIG_NAME.to_string());
-    log_config.set_log_config(LogConfiguration::new());
-
-    let mut config = ApplicationConfiguration::new();
-    config.set_node_configs(protobuf::RepeatedField::from_vec(vec![
-        frontend_config,
-        backend_config,
-        log_config,
-    ]));
-    config.set_initial_node_config_name(FRONTEND_CONFIG_NAME.to_string());
-    config.set_initial_entrypoint_name(FRONTEND_ENTRYPOINT_NAME.to_string());
-    config
-}
+// TODO(#541)
+const FRONTEND_WASM: &str = "../../target/wasm32-unknown-unknown/debug/abitest_0_frontend.wasm";
+const BACKEND_WASM: &str = "../../target/wasm32-unknown-unknown/debug/abitest_1_backend.wasm";
 
 #[test]
-#[serial(node_test)]
 fn test_abi() {
-    // Initialize the test logger first, so logging gets redirected to simple_logger.
-    // (A subsequent attempt to use the oak_log crate will fail.)
-    oak_tests::init_logging();
-    let mut entrypoints = HashMap::new();
-    let fe_name = WasmEntrypointFullName {
-        config_name: FRONTEND_CONFIG_NAME.to_string(),
-        entrypoint_name: FRONTEND_ENTRYPOINT_NAME.to_string(),
-    };
-    let be_name = WasmEntrypointFullName {
-        config_name: BACKEND_CONFIG_NAME.to_string(),
-        entrypoint_name: BACKEND_ENTRYPOINT_NAME.to_string(),
-    };
-    let fe: oak_abi::NodeMain = abitest_0_frontend::main;
-    let be: oak_abi::NodeMain = abitest_1_backend::main;
-    entrypoints.insert(fe_name, fe);
-    entrypoints.insert(be_name, be);
-    assert_eq!(Some(()), oak_tests::start(test_config(), entrypoints));
+    simple_logger::init().unwrap();
 
-    let mut req = ABITestRequest::new();
-    // Skip raw tests (which use invalid memory addresses etc.).
-    req.exclude = "Raw".to_string();
-    let result: grpc::Result<ABITestResponse> =
-        oak_tests::inject_grpc_request("/oak.examples.abitest.OakABITestService/RunTests", req);
+    let configuration = oak_tests::test_configuration(
+        &[
+            (FRONTEND_CONFIG_NAME, FRONTEND_WASM),
+            (BACKEND_CONFIG_NAME, BACKEND_WASM),
+        ],
+        LOG_CONFIG_NAME,
+        FRONTEND_CONFIG_NAME,
+        FRONTEND_ENTRYPOINT_NAME,
+    );
+    let (runtime, entry_channel) = oak_runtime::Runtime::configure_and_run(configuration)
+        .expect("Unable to configure runtime with test wasm!");
+
+    let result: grpc::Result<ABITestResponse> = oak_tests::grpc_request(
+        &entry_channel,
+        "/oak.examples.abitest.OakABITestService/RunTests",
+        ABITestRequest::new(),
+    );
     assert_matches!(result, Ok(_));
 
-    oak_tests::stop();
+    runtime.stop();
 
     for result in result.unwrap().get_results() {
         info!(

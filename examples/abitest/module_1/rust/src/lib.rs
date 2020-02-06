@@ -44,7 +44,7 @@ pub fn main(in_handle: u64) {
 }
 
 fn inner_main(in_handle: u64) -> Result<(), oak::OakStatus> {
-    let _ = oak_log::init(log::Level::Debug, LOG_CONFIG_NAME);
+    oak_log::init(log::Level::Debug, LOG_CONFIG_NAME).expect("Couldn't initialize logging node!");
     let in_channel = oak::ReadHandle {
         handle: oak::Handle::from_raw(in_handle),
     };
@@ -123,6 +123,7 @@ fn inner_main(in_handle: u64) -> Result<(), oak::OakStatus> {
 
 // Exported entrypoint that has the wrong signature for a main Oak
 // entrypoint; just used for testing
+#[no_mangle]
 pub extern "C" fn backend_fake_main(_handle: u64, _another: u64) {
     panic!("reached backend_fake_main!");
 }

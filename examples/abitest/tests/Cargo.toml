@@ -5,7 +5,7 @@ authors = ["David Drysdale <drysdale@google.com>"]
 edition = "2018"
 
 [lib]
-crate-type = ["dylib"]
+crate-type = ["cdylib"]
 
 [dependencies]
 abitest_0_frontend = { path = "../module_0/rust" }
@@ -22,3 +22,4 @@ oak_runtime = "=0.1.0"
 oak_tests = "=0.1.0"
 serial_test = "*"
 serial_test_derive = "*"
+simple_logger = "*"

@@ -1,16 +1,26 @@
 [package]
 name = "oak_runtime"
 version = "0.1.0"
-authors = ["David Drysdale <drysdale@google.com>"]
+authors = ["David Drysdale <drysdale@google.com>", "Ben Blaxill<benblaxill@google.com>"]
 edition = "2018"
 license = "Apache-2.0"
 
+[features]
+std = ["no-std-compat/std"]
+no_std = []
+default = ["std"]
+
 [dependencies]
-log = { version = "*", features = ["std"] }
-oak = "=0.1.0"
+log = { version = "*" }
 oak_abi = "=0.1.0"
 protobuf = "*"
-rand = { version = "*", features = ["std"] }
+wasmi = { version = "*", default-features = false, features = ["core"] }
+byteorder = { version = "*", default-features = false }
+rand = { version = "*" }
+
+no-std-compat = { version = "0.2.0", features = [ "alloc", "compat_hash"] }
+
+asylo_rust = { version = "*", optional = true }
 
 [build-dependencies]
 oak_utils = "*"
