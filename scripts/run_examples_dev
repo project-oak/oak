@@ -26,7 +26,7 @@ done
 # https://github.com/project-oak/oak/issues/439
 readonly CPP_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/cpp$' | cut -d'/' -f2 | grep -v tensorflow)"
 for example in ${CPP_EXAMPLES}; do
-  "${SCRIPTS_DIR}/run_example" "${example}"
+  "${SCRIPTS_DIR}/run_example" -c "${example}"
 done
 
 # Special case: run the hello_world example with:
