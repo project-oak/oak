@@ -28,8 +28,8 @@ def serialized_config(name, textproto, modules):
     output = name + ".bin"
     module_list = ",".join([n + ":$(location " + path + ")" for (n, path) in modules.items()])
     cmd = "$(location //oak/common:app_config_serializer)" + \
-          " --textproto=$(location " + textproto + ")" + \
-          " --modules=" + module_list + \
+          " --textproto=$(location {})".format(textproto) + \
+          " --modules={}".format(module_list) + \
           " --output_file=$@"
     native.genrule(
         name = name,
