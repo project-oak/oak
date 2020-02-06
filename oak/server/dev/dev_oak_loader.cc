@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-#include "dev_oak_loader.h"
 
 #include "absl/memory/memory.h"
 #include "asylo/grpc/auth/enclave_server_credentials.h"
@@ -24,6 +23,7 @@
 #include "asylo/util/logging.h"
 #include "asylo/util/statusor.h"
 #include "include/grpcpp/grpcpp.h"
+#include "oak/server/dev/dev_oak_loader.h"
 
 namespace oak {
 
@@ -69,7 +69,7 @@ grpc::Status DevOakLoader::TerminateApplication(const std::string& application_i
   return grpc::Status::OK;
 }
 
-// Even if we are not running in an enclave, we are still relying on Asylo assertion authorities
+// Even if we are not running in an enclave, we are still relying on Asylo assertion authorities.
 // This allows us to use the same client code to connect to the runtime, and it will potentially
 // allow us to use non-enclave identities in the future.
 void DevOakLoader::InitializeAssertionAuthorities() {

@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-#include "dev_oak_manager.h"
 
 #include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
 #include "asylo/util/statusor.h"
 #include "include/grpcpp/grpcpp.h"
+#include "oak/server/dev/dev_oak_manager.h"
 
 namespace oak {
 

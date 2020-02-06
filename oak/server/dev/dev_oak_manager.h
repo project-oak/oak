@@ -23,7 +23,7 @@
 
 namespace oak {
 
-// Implements a gRPC service for `server_dev` and forwards all its functionality
+// Implements a gRPC service for `dev_oak_main.cc` and forwards all its functionality
 // on to a `DevOakLoader`.
 class DevOakManager final : public Manager::Service {
  public:
