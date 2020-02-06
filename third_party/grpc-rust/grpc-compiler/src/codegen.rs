@@ -136,6 +136,54 @@ impl<'a> MethodGen<'a> {
         w.fn_def(&self.server_sig())
     }
 
+    fn full_path(&self) -> String {
+        format!("{}/{}", self.service_path, self.proto.get_name())
+    }
+
+    fn client_resp_type(&self) -> String {
+        format!(
+            " -> grpc::Result<{}>",
+            if self.proto.get_server_streaming() {
+                // TODO(#592): ideally the return type for a streaming method would be
+                //   format!("oak::io::Receiver<{}>", self.output_message());
+                // This is not possible with the current io::Receiver's direct use of
+                // the underlying handle.
+                "oak::io::Receiver<grpc::GrpcResponse>".to_string()
+            } else {
+                self.output_message()
+            }
+        )
+    }
+
+    fn client_sig(&self) -> Option<String> {
+        if self.proto.get_client_streaming() {
+            // TODO(#97): support client-side streaming
+            return None;
+        }
+        Some(format!(
+            "{}(&self, req: {}){}",
+            self.snake_name(),
+            self.server_req_type(),
+            self.client_resp_type()
+        ))
+    }
+
+    fn write_client_impl(&self, w: &mut CodeWriter) {
+        if let Some(sig) = self.client_sig() {
+            w.pub_fn(&sig, |w| {
+                w.write_line(format!(
+                    "oak::grpc::{}(\"{}\", req, &self.0.invocation_sender)",
+                    if self.proto.get_server_streaming() {
+                        "invoke_grpc_method_stream"
+                    } else {
+                        "invoke_grpc_method"
+                    },
+                    self.full_path()
+                ));
+            });
+        }
+    }
+
     fn dispatch_method(&self) -> String {
         // Figure out which generic function applies
         let (gen_fn, lambda_params) = if self.proto.get_client_streaming() {
@@ -191,7 +239,7 @@ impl<'a> ServiceGen<'a> {
         }
     }
 
-    // trait name
+    // trait name for server functionality
     fn server_intf_name(&self) -> String {
         // Just use the service name, unadorned.
         self.proto.get_name().to_string()
@@ -209,13 +257,30 @@ impl<'a> ServiceGen<'a> {
         w.pub_fn(&format!("dispatch<T: {}>(node: &mut T, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter)", self.server_intf_name()), |w| {
             w.block("match method {", "};", |w| {
                 for method in &self.methods {
-                    let full_path = format!("{}/{}", method.service_path, method.proto.get_name());
-                    w.write_line(format!("\"{}\" => {},", full_path, method.dispatch_method()));
+                    w.write_line(format!("\"{}\" => {},", method.full_path(), method.dispatch_method()));
                 }
                 w.block("_ => {", "}", |w| {
                     w.write_line("panic!(\"unknown method name: {}\", method);");
                 });
             });
+        });
+    }
+
+    // trait name for client functionality
+    fn client_intf_name(&self) -> String {
+        format!("{}Client", self.proto.get_name())
+    }
+
+    fn write_client(&self, w: &mut CodeWriter) {
+        w.write_line(format!(
+            "pub struct {}(pub oak::grpc::client::Client);",
+            self.client_intf_name(),
+        ));
+        w.write_line("");
+        w.impl_self_block(self.client_intf_name(), |w| {
+            for method in &self.methods {
+                method.write_client_impl(w);
+            }
         });
     }
 
@@ -229,6 +294,9 @@ impl<'a> ServiceGen<'a> {
         w.write_line("");
         w.comment("Oak Node gRPC method dispatcher");
         self.write_dispatcher(w);
+        w.write_line("");
+        w.comment("Client interface");
+        self.write_client(w);
     }
 }
 

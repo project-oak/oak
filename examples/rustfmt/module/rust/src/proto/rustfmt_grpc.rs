@@ -37,3 +37,12 @@ pub fn dispatch<T: FormatService>(node: &mut T, method: &str, req: &[u8], writer
         }
     };
 }
+
+// Client interface
+pub struct FormatServiceClient(pub oak::grpc::client::Client);
+
+impl FormatServiceClient {
+    pub fn format(&self, req: super::rustfmt::FormatRequest) -> grpc::Result<super::rustfmt::FormatResponse> {
+        oak::grpc::invoke_grpc_method("/oak.examples.rustfmt.FormatService/Format", req, &self.0.invocation_sender)
+    }
+}

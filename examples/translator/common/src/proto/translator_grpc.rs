@@ -37,3 +37,12 @@ pub fn dispatch<T: Translator>(node: &mut T, method: &str, req: &[u8], writer: g
         }
     };
 }
+
+// Client interface
+pub struct TranslatorClient(pub oak::grpc::client::Client);
+
+impl TranslatorClient {
+    pub fn translate(&self, req: super::translator::TranslateRequest) -> grpc::Result<super::translator::TranslateResponse> {
+        oak::grpc::invoke_grpc_method("/oak.examples.translator.Translator/Translate", req, &self.0.invocation_sender)
+    }
+}
