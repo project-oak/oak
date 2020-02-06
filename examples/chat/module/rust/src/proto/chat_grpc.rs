@@ -43,3 +43,21 @@ pub fn dispatch<T: Chat>(node: &mut T, method: &str, req: &[u8], writer: grpc::C
         }
     };
 }
+
+// Client interface
+pub struct ChatClient(pub oak::grpc::client::Client);
+
+impl ChatClient {
+    pub fn create_room(&self, req: super::chat::CreateRoomRequest) -> grpc::Result<protobuf::well_known_types::Empty> {
+        oak::grpc::invoke_grpc_method("/oak.examples.chat.Chat/CreateRoom", req, &self.0.invocation_sender)
+    }
+    pub fn destroy_room(&self, req: super::chat::DestroyRoomRequest) -> grpc::Result<protobuf::well_known_types::Empty> {
+        oak::grpc::invoke_grpc_method("/oak.examples.chat.Chat/DestroyRoom", req, &self.0.invocation_sender)
+    }
+    pub fn subscribe(&self, req: super::chat::SubscribeRequest) -> grpc::Result<oak::io::Receiver<grpc::GrpcResponse>> {
+        oak::grpc::invoke_grpc_method_stream("/oak.examples.chat.Chat/Subscribe", req, &self.0.invocation_sender)
+    }
+    pub fn send_message(&self, req: super::chat::SendMessageRequest) -> grpc::Result<protobuf::well_known_types::Empty> {
+        oak::grpc::invoke_grpc_method("/oak.examples.chat.Chat/SendMessage", req, &self.0.invocation_sender)
+    }
+}

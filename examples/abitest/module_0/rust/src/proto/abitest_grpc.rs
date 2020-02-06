@@ -37,3 +37,12 @@ pub fn dispatch<T: OakABITestService>(node: &mut T, method: &str, req: &[u8], wr
         }
     };
 }
+
+// Client interface
+pub struct OakABITestServiceClient(pub oak::grpc::client::Client);
+
+impl OakABITestServiceClient {
+    pub fn run_tests(&self, req: super::abitest::ABITestRequest) -> grpc::Result<super::abitest::ABITestResponse> {
+        oak::grpc::invoke_grpc_method("/oak.examples.abitest.OakABITestService/RunTests", req, &self.0.invocation_sender)
+    }
+}
