@@ -3,4 +3,5 @@ sourcesIndex["oak"] = {"name":"","dirs":[{"name":"grpc","files":["invocation.rs"
 sourcesIndex["oak_derive"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["oak_log"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["oak_tests"] = {"name":"","files":["lib.rs"]};
+sourcesIndex["oak_utils"] = {"name":"","files":["lib.rs"]};
 createSourceSidebar();

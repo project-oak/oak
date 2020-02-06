@@ -1459,7 +1459,7 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">PartialEq</span>,<span class="ident">Clone</span>,<span class="ident">Default</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GrpcTag</span> {
     <span class="comment">// message fields</span>
-    <span class="kw">pub</span> <span class="ident">authorization_bearer_token</span>: ::<span class="ident">std</span>::<span class="ident">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">authorization_bearer_token_hmac</span>: ::<span class="ident">std</span>::<span class="ident">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
     <span class="comment">// special fields</span>
     <span class="kw">pub</span> <span class="ident">unknown_fields</span>: ::<span class="ident">protobuf</span>::<span class="ident">UnknownFields</span>,
     <span class="kw">pub</span> <span class="ident">cached_size</span>: ::<span class="ident">protobuf</span>::<span class="ident">CachedSize</span>,
@@ -1476,30 +1476,30 @@
         ::<span class="ident">std</span>::<span class="ident">default</span>::<span class="ident">Default</span>::<span class="ident">default</span>()
     }
 
-    <span class="comment">// bytes authorization_bearer_token = 1;</span>
+    <span class="comment">// bytes authorization_bearer_token_hmac = 1;</span>
 
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_authorization_bearer_token</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span>[<span class="ident">u8</span>] {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">authorization_bearer_token</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_authorization_bearer_token_hmac</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span>[<span class="ident">u8</span>] {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">authorization_bearer_token_hmac</span>
     }
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">clear_authorization_bearer_token</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
-        <span class="self">self</span>.<span class="ident">authorization_bearer_token</span>.<span class="ident">clear</span>();
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">clear_authorization_bearer_token_hmac</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
+        <span class="self">self</span>.<span class="ident">authorization_bearer_token_hmac</span>.<span class="ident">clear</span>();
     }
 
     <span class="comment">// Param is passed by value, moved</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_authorization_bearer_token</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">v</span>: ::<span class="ident">std</span>::<span class="ident">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) {
-        <span class="self">self</span>.<span class="ident">authorization_bearer_token</span> <span class="op">=</span> <span class="ident">v</span>;
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_authorization_bearer_token_hmac</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">v</span>: ::<span class="ident">std</span>::<span class="ident">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) {
+        <span class="self">self</span>.<span class="ident">authorization_bearer_token_hmac</span> <span class="op">=</span> <span class="ident">v</span>;
     }
 
     <span class="comment">// Mutable pointer to the field.</span>
     <span class="comment">// If field is not initialized, it is initialized with default value first.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">mut_authorization_bearer_token</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> ::<span class="ident">std</span>::<span class="ident">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
-        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">authorization_bearer_token</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">mut_authorization_bearer_token_hmac</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> ::<span class="ident">std</span>::<span class="ident">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
+        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">authorization_bearer_token_hmac</span>
     }
 
     <span class="comment">// Take field</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">take_authorization_bearer_token</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-&gt;</span> ::<span class="ident">std</span>::<span class="ident">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
-        ::<span class="ident">std</span>::<span class="ident">mem</span>::<span class="ident">replace</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">authorization_bearer_token</span>, ::<span class="ident">std</span>::<span class="ident">vec</span>::<span class="ident">Vec</span>::<span class="ident">new</span>())
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">take_authorization_bearer_token_hmac</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-&gt;</span> ::<span class="ident">std</span>::<span class="ident">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
+        ::<span class="ident">std</span>::<span class="ident">mem</span>::<span class="ident">replace</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">authorization_bearer_token_hmac</span>, ::<span class="ident">std</span>::<span class="ident">vec</span>::<span class="ident">Vec</span>::<span class="ident">new</span>())
     }
 }
 
@@ -1513,7 +1513,7 @@
             <span class="kw">let</span> (<span class="ident">field_number</span>, <span class="ident">wire_type</span>) <span class="op">=</span> <span class="ident">is</span>.<span class="ident">read_tag_unpack</span>()<span class="question-mark">?</span>;
             <span class="kw">match</span> <span class="ident">field_number</span> {
                 <span class="number">1</span> <span class="op">=&gt;</span> {
-                    ::<span class="ident">protobuf</span>::<span class="ident">rt</span>::<span class="ident">read_singular_proto3_bytes_into</span>(<span class="ident">wire_type</span>, <span class="ident">is</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">authorization_bearer_token</span>)<span class="question-mark">?</span>;
+                    ::<span class="ident">protobuf</span>::<span class="ident">rt</span>::<span class="ident">read_singular_proto3_bytes_into</span>(<span class="ident">wire_type</span>, <span class="ident">is</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">authorization_bearer_token_hmac</span>)<span class="question-mark">?</span>;
                 },
                 <span class="kw">_</span> <span class="op">=&gt;</span> {
                     ::<span class="ident">protobuf</span>::<span class="ident">rt</span>::<span class="ident">read_unknown_or_skip_group</span>(<span class="ident">field_number</span>, <span class="ident">wire_type</span>, <span class="ident">is</span>, <span class="self">self</span>.<span class="ident">mut_unknown_fields</span>())<span class="question-mark">?</span>;
@@ -1527,8 +1527,8 @@
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">unused_variables</span>)]</span>
     <span class="kw">fn</span> <span class="ident">compute_size</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">u32</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">my_size</span> <span class="op">=</span> <span class="number">0</span>;
-        <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">authorization_bearer_token</span>.<span class="ident">is_empty</span>() {
-            <span class="ident">my_size</span> <span class="op">+=</span> ::<span class="ident">protobuf</span>::<span class="ident">rt</span>::<span class="ident">bytes_size</span>(<span class="number">1</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">authorization_bearer_token</span>);
+        <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">authorization_bearer_token_hmac</span>.<span class="ident">is_empty</span>() {
+            <span class="ident">my_size</span> <span class="op">+=</span> ::<span class="ident">protobuf</span>::<span class="ident">rt</span>::<span class="ident">bytes_size</span>(<span class="number">1</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">authorization_bearer_token_hmac</span>);
         }
         <span class="ident">my_size</span> <span class="op">+=</span> ::<span class="ident">protobuf</span>::<span class="ident">rt</span>::<span class="ident">unknown_fields_size</span>(<span class="self">self</span>.<span class="ident">get_unknown_fields</span>());
         <span class="self">self</span>.<span class="ident">cached_size</span>.<span class="ident">set</span>(<span class="ident">my_size</span>);
@@ -1536,8 +1536,8 @@
     }
 
     <span class="kw">fn</span> <span class="ident">write_to_with_cached_sizes</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">os</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> ::<span class="ident">protobuf</span>::<span class="ident">CodedOutputStream</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> ::<span class="ident">protobuf</span>::<span class="ident">ProtobufResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">authorization_bearer_token</span>.<span class="ident">is_empty</span>() {
-            <span class="ident">os</span>.<span class="ident">write_bytes</span>(<span class="number">1</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">authorization_bearer_token</span>)<span class="question-mark">?</span>;
+        <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">authorization_bearer_token_hmac</span>.<span class="ident">is_empty</span>() {
+            <span class="ident">os</span>.<span class="ident">write_bytes</span>(<span class="number">1</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">authorization_bearer_token_hmac</span>)<span class="question-mark">?</span>;
         }
         <span class="ident">os</span>.<span class="ident">write_unknown_fields</span>(<span class="self">self</span>.<span class="ident">get_unknown_fields</span>())<span class="question-mark">?</span>;
         ::<span class="ident">std</span>::<span class="ident">result</span>::<span class="prelude-ty">Result</span>::<span class="prelude-val">Ok</span>(())
@@ -1582,9 +1582,9 @@
             <span class="ident">descriptor</span>.<span class="ident">get</span>(<span class="op">||</span> {
                 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">fields</span> <span class="op">=</span> ::<span class="ident">std</span>::<span class="ident">vec</span>::<span class="ident">Vec</span>::<span class="ident">new</span>();
                 <span class="ident">fields</span>.<span class="ident">push</span>(::<span class="ident">protobuf</span>::<span class="ident">reflect</span>::<span class="ident">accessor</span>::<span class="ident">make_simple_field_accessor</span>::<span class="op">&lt;</span><span class="kw">_</span>, ::<span class="ident">protobuf</span>::<span class="ident">types</span>::<span class="ident">ProtobufTypeBytes</span><span class="op">&gt;</span>(
-                    <span class="string">&quot;authorization_bearer_token&quot;</span>,
-                    <span class="op">|</span><span class="ident">m</span>: <span class="kw-2">&amp;</span><span class="ident">GrpcTag</span><span class="op">|</span> { <span class="kw-2">&amp;</span><span class="ident">m</span>.<span class="ident">authorization_bearer_token</span> },
-                    <span class="op">|</span><span class="ident">m</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">GrpcTag</span><span class="op">|</span> { <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">m</span>.<span class="ident">authorization_bearer_token</span> },
+                    <span class="string">&quot;authorization_bearer_token_hmac&quot;</span>,
+                    <span class="op">|</span><span class="ident">m</span>: <span class="kw-2">&amp;</span><span class="ident">GrpcTag</span><span class="op">|</span> { <span class="kw-2">&amp;</span><span class="ident">m</span>.<span class="ident">authorization_bearer_token_hmac</span> },
+                    <span class="op">|</span><span class="ident">m</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">GrpcTag</span><span class="op">|</span> { <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">m</span>.<span class="ident">authorization_bearer_token_hmac</span> },
                 ));
                 ::<span class="ident">protobuf</span>::<span class="ident">reflect</span>::<span class="ident">MessageDescriptor</span>::<span class="ident">new</span>::<span class="op">&lt;</span><span class="ident">GrpcTag</span><span class="op">&gt;</span>(
                     <span class="string">&quot;GrpcTag&quot;</span>,
@@ -1608,7 +1608,7 @@
 
 <span class="kw">impl</span> ::<span class="ident">protobuf</span>::<span class="ident">Clear</span> <span class="kw">for</span> <span class="ident">GrpcTag</span> {
     <span class="kw">fn</span> <span class="ident">clear</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
-        <span class="self">self</span>.<span class="ident">authorization_bearer_token</span>.<span class="ident">clear</span>();
+        <span class="self">self</span>.<span class="ident">authorization_bearer_token_hmac</span>.<span class="ident">clear</span>();
         <span class="self">self</span>.<span class="ident">unknown_fields</span>.<span class="ident">clear</span>();
     }
 }
@@ -1801,10 +1801,10 @@
     yTags\&quot;\x99\x01\n\x03Tag\x120\n\x08grpc_tag\x18\x01\x20\x01(\x0b2\x13.oa\
     k.policy.GrpcTagH\0R\x07grpcTag\x12Y\n\x17web_assembly_module_tag\x18\
     \x02\x20\x01(\x0b2\x20.oak.policy.WebAssemblyModuleTagH\0R\x14webAssembl\
-    yModuleTagB\x05\n\x03tag\&quot;G\n\x07GrpcTag\x12&lt;\n\x1aauthorization_bearer_\
-    token\x18\x01\x20\x01(\x0cR\x18authorizationBearerToken\&quot;E\n\x14WebAssem\
-    blyModuleTag\x12-\n\x12module_attestation\x18\x01\x20\x01(\x0cR\x11modul\
-    eAttestationb\x06proto3\
+    yModuleTagB\x05\n\x03tag\&quot;P\n\x07GrpcTag\x12E\n\x1fauthorization_bearer_\
+    token_hmac\x18\x01\x20\x01(\x0cR\x1cauthorizationBearerTokenHmac\&quot;E\n\
+    \x14WebAssemblyModuleTag\x12-\n\x12module_attestation\x18\x01\x20\x01(\
+    \x0cR\x11moduleAttestationb\x06proto3\
 &quot;</span>;
 
 <span class="kw">static</span> <span class="kw-2">mut</span> <span class="ident">file_descriptor_proto_lazy</span>: ::<span class="ident">protobuf</span>::<span class="ident">lazy</span>::<span class="ident">Lazy</span><span class="op">&lt;</span>::<span class="ident">protobuf</span>::<span class="ident">descriptor</span>::<span class="ident">FileDescriptorProto</span><span class="op">&gt;</span> <span class="op">=</span> ::<span class="ident">protobuf</span>::<span class="ident">lazy</span>::<span class="ident">Lazy</span> {

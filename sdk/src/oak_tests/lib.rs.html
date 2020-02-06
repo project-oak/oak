@@ -580,17 +580,6 @@
 <span id="580">580</span>
 <span id="581">581</span>
 <span id="582">582</span>
-<span id="583">583</span>
-<span id="584">584</span>
-<span id="585">585</span>
-<span id="586">586</span>
-<span id="587">587</span>
-<span id="588">588</span>
-<span id="589">589</span>
-<span id="590">590</span>
-<span id="591">591</span>
-<span id="592">592</span>
-<span id="593">593</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -611,7 +600,7 @@
 <span class="doccomment">//! Test utilities to help with unit testing of Oak SDK code.</span>
 
 <span class="kw">use</span> <span class="ident">lazy_static</span>::<span class="ident">lazy_static</span>;
-<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">info</span>, <span class="ident">warn</span>};
+<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">info</span>};
 
 <span class="kw">use</span> <span class="ident">byteorder</span>::{<span class="ident">ReadBytesExt</span>, <span class="ident">WriteBytesExt</span>};
 <span class="kw">use</span> <span class="ident">oak</span>::<span class="ident">OakStatus</span>;
@@ -1098,18 +1087,7 @@
     <span class="ident">Q</span>: <span class="ident">protobuf</span>::<span class="ident">Message</span>,
 {
     <span class="comment">// Put the request in a GrpcRequest wrapper and serialize into a message.</span>
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">grpc_req</span> <span class="op">=</span> <span class="ident">oak</span>::<span class="ident">proto</span>::<span class="ident">grpc_encap</span>::<span class="ident">GrpcRequest</span>::<span class="ident">new</span>();
-    <span class="ident">grpc_req</span>.<span class="ident">set_method_name</span>(<span class="ident">method_name</span>.<span class="ident">to_string</span>());
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">any</span> <span class="op">=</span> <span class="ident">protobuf</span>::<span class="ident">well_known_types</span>::<span class="ident">Any</span>::<span class="ident">new</span>();
-    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="ident">req</span>.<span class="ident">write_to_writer</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">any</span>.<span class="ident">value</span>) {
-        <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;failed to serialize gRPC request: {}&quot;</span>, <span class="ident">e</span>);
-        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">oak</span>::<span class="ident">grpc</span>::<span class="ident">build_status</span>(
-            <span class="ident">oak</span>::<span class="ident">grpc</span>::<span class="ident">Code</span>::<span class="ident">INTERNAL</span>,
-            <span class="string">&quot;failed to serialize gRPC request&quot;</span>,
-        ));
-    }
-    <span class="ident">grpc_req</span>.<span class="ident">set_req_msg</span>(<span class="ident">any</span>);
-    <span class="ident">grpc_req</span>.<span class="ident">set_last</span>(<span class="bool-val">true</span>);
+    <span class="kw">let</span> <span class="ident">grpc_req</span> <span class="op">=</span> <span class="ident">oak</span>::<span class="ident">grpc</span>::<span class="ident">encap_request</span>(<span class="ident">req</span>, <span class="ident">method_name</span>).<span class="ident">expect</span>(<span class="string">&quot;failed to build GrpcRequest&quot;</span>);
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">req_msg</span> <span class="op">=</span> <span class="ident">OakMessage</span> {
         <span class="ident">data</span>: <span class="ident">Vec</span>::<span class="ident">new</span>(),
         <span class="ident">channels</span>: <span class="ident">Vec</span>::<span class="ident">new</span>(),
