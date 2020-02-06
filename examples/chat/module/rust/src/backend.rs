@@ -16,17 +16,16 @@
 
 use crate::command::Command;
 use crate::proto::chat::Message;
-use log::{error, info, warn};
+use log::info;
+use oak::Node;
 
 #[no_mangle]
 pub extern "C" fn backend_oak_main(handle: u64) {
     let _ = std::panic::catch_unwind(|| {
         oak_log::init_default();
         oak::set_panic_hook();
-        let room = Room::default();
-        if let Err(s) = room.event_loop(handle) {
-            warn!("backend Node terminating with {:?}", s);
-        }
+        let room = Room::new();
+        oak::run_event_loop(room, handle);
     });
 }
 
@@ -36,22 +35,9 @@ struct Room {
     clients: Vec<oak::grpc::ChannelResponseWriter>,
 }
 
-impl Room {
-    fn event_loop(mut self, in_handle: u64) -> Result<(), oak::OakError> {
-        // Wait for something on our single input channel.
-        let in_channel = oak::ReadHandle {
-            handle: oak::Handle::from_raw(in_handle),
-        };
-        let receiver = oak::io::Receiver::new(in_channel);
-        info!("starting event loop");
-        loop {
-            info!("reading incoming command");
-            let command: Command = receiver.receive()?;
-            if let Err(e) = self.handle_command(command) {
-                self.close_all();
-                return Err(e);
-            }
-        }
+impl oak::Node<Command> for Room {
+    fn new() -> Self {
+        Room::default()
     }
 
     fn handle_command(&mut self, command: Command) -> Result<(), oak::OakError> {
@@ -75,14 +61,6 @@ impl Room {
                 }
                 Ok(())
             }
-        }
-    }
-
-    fn close_all(&mut self) {
-        for writer in &mut self.clients {
-            writer
-                .close(Ok(()))
-                .unwrap_or_else(|err| error!("could not close channel: {:?}", err))
         }
     }
 }

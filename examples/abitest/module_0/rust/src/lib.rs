@@ -19,7 +19,7 @@ pub mod proto;
 use abitest_common::{InternalMessage, LOG_CONFIG_NAME};
 use byteorder::WriteBytesExt;
 use expect::{expect, expect_eq};
-use log::{info, warn};
+use log::info;
 use oak::grpc::OakNode;
 use oak::{grpc, ChannelReadStatus, OakStatus};
 use proto::abitest::{ABITestRequest, ABITestResponse, ABITestResponse_TestResult};
@@ -39,23 +39,16 @@ struct FrontendNode {
 }
 
 #[no_mangle]
-pub extern "C" fn frontend_oak_main(handle: u64) {
+pub extern "C" fn frontend_oak_main(in_handle: u64) {
     let _ = std::panic::catch_unwind(|| {
         oak::set_panic_hook();
-        main(handle)
+        main(in_handle);
     });
 }
 
-pub fn main(handle: u64) {
+pub fn main(in_handle: u64) {
     let node = FrontendNode::new();
-    if let Err(s) = oak::grpc::event_loop(
-        node,
-        oak::ReadHandle {
-            handle: oak::Handle::from_raw(handle),
-        },
-    ) {
-        warn!("Node terminating with {:?}", s);
-    }
+    oak::run_event_loop(node, in_handle);
 }
 
 impl oak::grpc::OakNode for FrontendNode {

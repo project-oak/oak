@@ -58,27 +58,20 @@ pub fn derive_oak_exports(input: TokenStream) -> TokenStream {
 
     let expanded = quote! {
         #[no_mangle]
-        pub extern "C" fn oak_main(handle: u64) {
+        pub extern "C" fn oak_main(in_handle: u64) {
             // A panic in the Rust module code cannot safely pass through the FFI
             // boundary, so catch any panics here and drop them.
             // https://doc.rust-lang.org/nomicon/ffi.html#ffi-and-panics
             let _ = ::std::panic::catch_unwind(||{
                 ::oak::set_panic_hook();
-                inner_main(handle)
+                inner_main(in_handle);
             });
         }
         // Internal version of the main entrypoint, to allow testing without any
         // panic interception.
-        pub fn inner_main(handle: u64) {
-            let mut node = <#name>::new();
-            if let ::std::result::Result::Err(s) = ::oak::grpc::event_loop(
-                node,
-                ::oak::ReadHandle{
-                    handle: ::oak::Handle::from_raw(handle),
-                },
-            ) {
-                ::log::warn!("Node terminating with {:?}", s);
-            }
+        pub fn inner_main(in_handle: u64) {
+            let node = <#name>::new();
+            ::oak::run_event_loop(node, in_handle);
         }
     };
 

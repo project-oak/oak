@@ -22,7 +22,7 @@ use translator_common::proto::translator::{TranslateRequest, TranslateResponse};
 use translator_common::proto::translator_grpc::{dispatch, TranslatorNode};
 
 #[derive(OakExports)]
-struct Node {}
+struct Node;
 
 impl OakNode for Node {
     fn new() -> Self {
