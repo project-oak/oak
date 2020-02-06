@@ -14,34 +14,21 @@
  * limitations under the License.
  */
 
-#include <csignal>
-#include <fstream>
-#include <iostream>
 #include <string>
-#include <vector>
 
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 #include "absl/synchronization/notification.h"
 #include "absl/time/time.h"
 #include "asylo/util/logging.h"
-#include "dev_oak_manager.h"
 #include "include/grpcpp/server.h"
 #include "include/grpcpp/server_builder.h"
+#include "oak/server/dev/dev_oak_manager.h"
 
 ABSL_FLAG(int, grpc_port, 8888, "Port to listen on");
 
-void sigint_handler(int) {
-  LOG(QFATAL) << "SIGINT received";
-  exit(1);
-}
-
 int main(int argc, char* argv[]) {
   absl::ParseCommandLine(argc, argv);
-
-  // We install an explicit SIGINT handler, as for some reason the default one
-  // does not seem to work.
-  std::signal(SIGINT, sigint_handler);
 
   // Create manager instance.
   std::unique_ptr<oak::Manager::Service> service = absl::make_unique<oak::DevOakManager>();
