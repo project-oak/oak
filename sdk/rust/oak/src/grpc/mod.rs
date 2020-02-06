@@ -22,6 +22,7 @@ use log::{error, warn};
 use proto::grpc_encap::{GrpcRequest, GrpcResponse};
 use protobuf::ProtobufEnum;
 
+pub mod client;
 mod invocation;
 pub use invocation::Invocation;
 
