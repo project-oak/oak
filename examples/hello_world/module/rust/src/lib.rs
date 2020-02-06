@@ -23,7 +23,7 @@ use oak::grpc;
 use oak::grpc::OakNode;
 use oak_derive::OakExports;
 use proto::hello_world::{HelloRequest, HelloResponse};
-use proto::hello_world_grpc::{dispatch, HelloWorldNode};
+use proto::hello_world_grpc::{dispatch, HelloWorld};
 
 #[derive(OakExports)]
 struct Node {
@@ -55,7 +55,7 @@ impl OakNode for Node {
     }
 }
 
-impl HelloWorldNode for Node {
+impl HelloWorld for Node {
     fn say_hello(&mut self, req: HelloRequest) -> grpc::Result<HelloResponse> {
         if req.greeting == "Query-of-Error" {
             return Err(grpc::build_status(

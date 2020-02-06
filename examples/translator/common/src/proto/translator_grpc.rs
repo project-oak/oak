@@ -24,12 +24,12 @@ use protobuf::Message;
 use std::io::Write;
 
 // Oak Node server interface
-pub trait TranslatorNode {
+pub trait Translator {
     fn translate(&mut self, req: super::translator::TranslateRequest) -> grpc::Result<super::translator::TranslateResponse>;
 }
 
 // Oak Node gRPC method dispatcher
-pub fn dispatch<T: TranslatorNode>(node: &mut T, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
+pub fn dispatch<T: Translator>(node: &mut T, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
     match method {
         "/oak.examples.translator.Translator/Translate" => grpc::handle_req_rsp(|r| node.translate(r), req, writer),
         _ => {

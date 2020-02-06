@@ -19,7 +19,7 @@ use oak::grpc;
 use oak::grpc::OakNode;
 use oak_derive::OakExports;
 use translator_common::proto::translator::{TranslateRequest, TranslateResponse};
-use translator_common::proto::translator_grpc::{dispatch, TranslatorNode};
+use translator_common::proto::translator_grpc::{dispatch, Translator};
 
 #[derive(OakExports)]
 struct Node;
@@ -34,7 +34,7 @@ impl OakNode for Node {
     }
 }
 
-impl TranslatorNode for Node {
+impl Translator for Node {
     fn translate(&mut self, req: TranslateRequest) -> grpc::Result<TranslateResponse> {
         info!(
             "attempt to translate '{}' from {} to {}",

@@ -28,7 +28,7 @@ use oak::grpc;
 use oak::grpc::OakNode;
 use oak_derive::OakExports;
 use proto::running_average::{GetAverageResponse, SubmitSampleRequest};
-use proto::running_average_grpc::{dispatch, RunningAverageNode};
+use proto::running_average_grpc::{dispatch, RunningAverage};
 use protobuf::well_known_types::Empty;
 
 #[derive(Default, OakExports)]
@@ -46,7 +46,7 @@ impl oak::grpc::OakNode for Node {
     }
 }
 
-impl RunningAverageNode for Node {
+impl RunningAverage for Node {
     fn submit_sample(&mut self, req: SubmitSampleRequest) -> grpc::Result<Empty> {
         self.sum += req.value;
         self.count += 1;
