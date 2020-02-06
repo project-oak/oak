@@ -23,7 +23,6 @@
 #include "asylo/identity/init.h"
 #include "asylo/util/logging.h"
 #include "asylo/util/statusor.h"
-#include "grpcpp/support/status_code_enum.h"
 #include "include/grpcpp/grpcpp.h"
 
 namespace oak {

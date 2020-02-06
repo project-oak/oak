@@ -18,16 +18,13 @@
 
 #include <string>
 
-#include "dev_oak_loader.h"
-
-#include "absl/strings/string_view.h"
-#include "asylo/util/logging.h"
-#include "oak/proto/enclave.pb.h"
 #include "oak/proto/manager.grpc.pb.h"
-#include "oak/server/oak_runtime.h"
+#include "oak/server/dev/dev_oak_loader.h"
 
 namespace oak {
 
+// Implements a gRPC service for `server_dev` and forwards all its functionality
+// on to a `DevOakLoader`.
 class DevOakManager final : public Manager::Service {
  public:
   DevOakManager();

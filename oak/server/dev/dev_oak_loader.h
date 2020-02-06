@@ -18,12 +18,12 @@
 #define OAK_SERVER_DEV_DEV_OAK_LOADER_H_
 
 #include <string>
+#include <unordered_map>
 
-#include "absl/strings/string_view.h"
-#include "asylo/util/logging.h"
-#include "oak/proto/enclave.pb.h"
-#include "oak/proto/manager.grpc.pb.h"
+#include "absl/memory/memory.h"
+#include "asylo/util/statusor.h"
 #include "oak/server/oak_runtime.h"
+#include "include/grpcpp/grpcpp.h"
 
 namespace oak {
 
@@ -41,7 +41,7 @@ class DevOakLoader {
   std::string NewApplicationId();
 
   // For each application, identified by its id as a string we have a runtime
-  std::unordered_map<std::string, std::unique_ptr<OakRuntime>> runtimes_;
+  std::unordered_map<std::string, std::unique_ptr<oak::OakRuntime>> runtimes_;
   // The next available application ID.
   uint64_t next_application_id_;
 };

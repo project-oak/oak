@@ -14,34 +14,20 @@
  * limitations under the License.
  */
 
-#include <csignal>
-#include <fstream>
-#include <iostream>
 #include <string>
-#include <vector>
+#include <sstream>
 
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 #include "absl/synchronization/notification.h"
 #include "absl/time/time.h"
 #include "asylo/util/logging.h"
-#include "dev_oak_loader.h"
-#include "include/grpcpp/server.h"
-#include "include/grpcpp/server_builder.h"
+#include "oak/server/dev/dev_oak_loader.h"
 
 ABSL_FLAG(std::string, config, "", "Application configuration file");
 
-void sigint_handler(int) {
-  LOG(QFATAL) << "SIGINT received";
-  exit(1);
-}
-
 int main(int argc, char* argv[]) {
   absl::ParseCommandLine(argc, argv);
-
-  // We install an explicit SIGINT handler, as for some reason the default one
-  // does not seem to work.
-  std::signal(SIGINT, sigint_handler);
 
   // Create loader instance.
   std::unique_ptr<oak::DevOakLoader> loader = absl::make_unique<oak::DevOakLoader>();
@@ -53,7 +39,7 @@ int main(int argc, char* argv[]) {
   asylo::StatusOr<oak::CreateApplicationResponse> result =
       loader->CreateApplication(*application_config);
   if (!result.ok()) {
-    LOG(QFATAL) << "Failed to create application";
+    LOG(ERROR) << "Failed to create application";
     return 1;
   }
   oak::CreateApplicationResponse response = result.ValueOrDie();
