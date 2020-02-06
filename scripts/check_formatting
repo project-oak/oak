@@ -11,16 +11,18 @@ source "$SCRIPTS_DIR/common"
 # language for the job.
 find . \
   \(  \
+    -not \( -path ./.git -prune \) -and \
     -not \( -path ./bazel-cache -prune \) -and \
     -not \( -path ./cargo-cache -prune \) -and \
     -not \( -path ./examples/target -prune \) -and \
     -not \( -path ./sdk/rust/target -prune \) -and \
     -not \( -path ./third_party -prune \) \
-    \( -type f -name BUILD -or -name WORKSPACE -or -name '*bzl' \) \
+    \( -type f -name BUILD -or -name WORKSPACE -or -name '*.bzl' \) \
   \) -exec buildifier -lint=warn -mode=check {} +
 
 find . \
   \(  \
+    -not \( -path ./.git -prune \) -and \
     -not \( -path ./bazel-cache -prune \) -and \
     -not \( -path ./cargo-cache -prune \) -and \
     -not \( -path ./examples/target -prune \) -and \
@@ -46,6 +48,7 @@ cargo fmt --all --manifest-path ./oak/server/rust/Cargo.toml -- --check
 
 find . \
   \(  \
+    -not \( -path ./.git -prune \) -and \
     -not \( -path ./bazel-cache -prune \) -and \
     -not \( -path ./cargo-cache -prune \) -and \
     -not \( -path ./examples/target -prune \) -and \
