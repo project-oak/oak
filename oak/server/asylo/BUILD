@@ -58,6 +58,7 @@ cc_library(
         "asylo_oak_loader.h",
     ],
     deps = [
+        "//oak/proto:application_cc_grpc",
         "//oak/proto:enclave_cc_proto",
         "//oak/proto:manager_cc_grpc",
         "@com_github_grpc_grpc//:grpc++",
@@ -81,6 +82,7 @@ cc_library(
     ],
     deps = [
         ":asylo_oak_loader",
+        "//oak/proto:application_cc_grpc",
         "//oak/proto:enclave_cc_proto",
         "//oak/proto:manager_cc_grpc",
         "@com_github_grpc_grpc//:grpc++",
@@ -170,8 +172,8 @@ enclave_loader(
 )
 
 enclave_loader(
-    name = "oak_app",
-    srcs = ["asylo_oak_app_main.cc"],
+    name = "oak_app_loader",
+    srcs = ["asylo_oak_app_loader_main.cc"],
     enclaves = {"enclave": "//oak/server/asylo:oak_enclave_debug.so"},
     loader_args = ["--enclave_path='{enclave}'"],
     deps = [
