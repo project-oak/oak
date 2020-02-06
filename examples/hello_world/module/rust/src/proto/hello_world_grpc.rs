@@ -24,7 +24,7 @@ use protobuf::Message;
 use std::io::Write;
 
 // Oak Node server interface
-pub trait HelloWorldNode {
+pub trait HelloWorld {
     fn say_hello(&mut self, req: super::hello_world::HelloRequest) -> grpc::Result<super::hello_world::HelloResponse>;
     fn lots_of_replies(&mut self, req: super::hello_world::HelloRequest, writer: grpc::ChannelResponseWriter);
     fn lots_of_greetings(&mut self, reqs: Vec<super::hello_world::HelloRequest>) -> grpc::Result<super::hello_world::HelloResponse>;
@@ -32,7 +32,7 @@ pub trait HelloWorldNode {
 }
 
 // Oak Node gRPC method dispatcher
-pub fn dispatch<T: HelloWorldNode>(node: &mut T, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
+pub fn dispatch<T: HelloWorld>(node: &mut T, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
     match method {
         "/oak.examples.hello_world.HelloWorld/SayHello" => grpc::handle_req_rsp(|r| node.say_hello(r), req, writer),
         "/oak.examples.hello_world.HelloWorld/LotsOfReplies" => grpc::handle_req_stream(|r, w| node.lots_of_replies(r, w), req, writer),

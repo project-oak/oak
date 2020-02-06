@@ -193,7 +193,8 @@ impl<'a> ServiceGen<'a> {
 
     // trait name
     fn server_intf_name(&self) -> String {
-        format!("{}Node", self.proto.get_name())
+        // Just use the service name, unadorned.
+        self.proto.get_name().to_string()
     }
 
     fn write_server_intf(&self, w: &mut CodeWriter) {

@@ -24,13 +24,13 @@ use protobuf::Message;
 use std::io::Write;
 
 // Oak Node server interface
-pub trait PrivateSetIntersectionNode {
+pub trait PrivateSetIntersection {
     fn submit_set(&mut self, req: super::private_set_intersection::SubmitSetRequest) -> grpc::Result<protobuf::well_known_types::Empty>;
     fn get_intersection(&mut self, req: protobuf::well_known_types::Empty) -> grpc::Result<super::private_set_intersection::GetIntersectionResponse>;
 }
 
 // Oak Node gRPC method dispatcher
-pub fn dispatch<T: PrivateSetIntersectionNode>(node: &mut T, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
+pub fn dispatch<T: PrivateSetIntersection>(node: &mut T, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
     match method {
         "/oak.examples.private_set_intersection.PrivateSetIntersection/SubmitSet" => grpc::handle_req_rsp(|r| node.submit_set(r), req, writer),
         "/oak.examples.private_set_intersection.PrivateSetIntersection/GetIntersection" => grpc::handle_req_rsp(|r| node.get_intersection(r), req, writer),

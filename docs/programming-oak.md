@@ -148,9 +148,9 @@ in the gRPC service, taking the relevant (auto-generated) request and response
 types. The Oak Node implements the gRPC service by implementing this trait.
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/rustfmt/module/rust/src/proto/rustfmt_grpc.rs Rust /pub trait FormatServiceNode/ /^}/)
+[embedmd]:# (../examples/rustfmt/module/rust/src/proto/rustfmt_grpc.rs Rust /pub trait FormatService/ /^}/)
 ```Rust
-pub trait FormatServiceNode {
+pub trait FormatService {
     fn format(&mut self, req: super::rustfmt::FormatRequest) -> grpc::Result<super::rustfmt::FormatResponse>;
 }
 ```

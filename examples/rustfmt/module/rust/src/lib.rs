@@ -20,7 +20,7 @@ use oak::grpc;
 use oak::grpc::OakNode;
 use oak_derive::OakExports;
 use proto::rustfmt::{FormatRequest, FormatResponse};
-use proto::rustfmt_grpc::{dispatch, FormatServiceNode};
+use proto::rustfmt_grpc::{dispatch, FormatService};
 
 #[derive(OakExports)]
 struct Node;
@@ -35,7 +35,7 @@ impl oak::grpc::OakNode for Node {
     }
 }
 
-impl FormatServiceNode for Node {
+impl FormatService for Node {
     fn format(&mut self, req: FormatRequest) -> grpc::Result<FormatResponse> {
         let mut output = Vec::new();
         {

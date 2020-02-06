@@ -24,12 +24,12 @@ use protobuf::Message;
 use std::io::Write;
 
 // Oak Node server interface
-pub trait FormatServiceNode {
+pub trait FormatService {
     fn format(&mut self, req: super::rustfmt::FormatRequest) -> grpc::Result<super::rustfmt::FormatResponse>;
 }
 
 // Oak Node gRPC method dispatcher
-pub fn dispatch<T: FormatServiceNode>(node: &mut T, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
+pub fn dispatch<T: FormatService>(node: &mut T, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
     match method {
         "/oak.examples.rustfmt.FormatService/Format" => grpc::handle_req_rsp(|r| node.format(r), req, writer),
         _ => {

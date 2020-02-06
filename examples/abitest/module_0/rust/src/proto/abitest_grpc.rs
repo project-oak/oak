@@ -24,12 +24,12 @@ use protobuf::Message;
 use std::io::Write;
 
 // Oak Node server interface
-pub trait OakABITestServiceNode {
+pub trait OakABITestService {
     fn run_tests(&mut self, req: super::abitest::ABITestRequest) -> grpc::Result<super::abitest::ABITestResponse>;
 }
 
 // Oak Node gRPC method dispatcher
-pub fn dispatch<T: OakABITestServiceNode>(node: &mut T, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
+pub fn dispatch<T: OakABITestService>(node: &mut T, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
     match method {
         "/oak.examples.abitest.OakABITestService/RunTests" => grpc::handle_req_rsp(|r| node.run_tests(r), req, writer),
         _ => {

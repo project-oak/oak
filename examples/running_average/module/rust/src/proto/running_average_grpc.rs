@@ -24,13 +24,13 @@ use protobuf::Message;
 use std::io::Write;
 
 // Oak Node server interface
-pub trait RunningAverageNode {
+pub trait RunningAverage {
     fn submit_sample(&mut self, req: super::running_average::SubmitSampleRequest) -> grpc::Result<protobuf::well_known_types::Empty>;
     fn get_average(&mut self, req: protobuf::well_known_types::Empty) -> grpc::Result<super::running_average::GetAverageResponse>;
 }
 
 // Oak Node gRPC method dispatcher
-pub fn dispatch<T: RunningAverageNode>(node: &mut T, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
+pub fn dispatch<T: RunningAverage>(node: &mut T, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
     match method {
         "/oak.examples.running_average.RunningAverage/SubmitSample" => grpc::handle_req_rsp(|r| node.submit_sample(r), req, writer),
         "/oak.examples.running_average.RunningAverage/GetAverage" => grpc::handle_req_rsp(|r| node.get_average(r), req, writer),

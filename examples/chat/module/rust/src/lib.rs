@@ -20,7 +20,7 @@ use oak::grpc;
 use oak::grpc::OakNode;
 use oak_derive::OakExports;
 use proto::chat::{CreateRoomRequest, DestroyRoomRequest, SendMessageRequest, SubscribeRequest};
-use proto::chat_grpc::{dispatch, ChatNode};
+use proto::chat_grpc::{dispatch, Chat};
 use protobuf::well_known_types::Empty;
 use protobuf::Message;
 use std::collections::hash_map::Entry;
@@ -76,7 +76,7 @@ fn room_id_duplicate_err<T>() -> grpc::Result<T> {
     ))
 }
 
-impl ChatNode for Node {
+impl Chat for Node {
     fn create_room(&mut self, req: CreateRoomRequest) -> grpc::Result<Empty> {
         info!("creating room");
         if self.rooms.contains_key(&req.room_id) {

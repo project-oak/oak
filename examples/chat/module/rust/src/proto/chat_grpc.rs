@@ -24,7 +24,7 @@ use protobuf::Message;
 use std::io::Write;
 
 // Oak Node server interface
-pub trait ChatNode {
+pub trait Chat {
     fn create_room(&mut self, req: super::chat::CreateRoomRequest) -> grpc::Result<protobuf::well_known_types::Empty>;
     fn destroy_room(&mut self, req: super::chat::DestroyRoomRequest) -> grpc::Result<protobuf::well_known_types::Empty>;
     fn subscribe(&mut self, req: super::chat::SubscribeRequest, writer: grpc::ChannelResponseWriter);
@@ -32,7 +32,7 @@ pub trait ChatNode {
 }
 
 // Oak Node gRPC method dispatcher
-pub fn dispatch<T: ChatNode>(node: &mut T, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
+pub fn dispatch<T: Chat>(node: &mut T, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
     match method {
         "/oak.examples.chat.Chat/CreateRoom" => grpc::handle_req_rsp(|r| node.create_room(r), req, writer),
         "/oak.examples.chat.Chat/DestroyRoom" => grpc::handle_req_rsp(|r| node.destroy_room(r), req, writer),

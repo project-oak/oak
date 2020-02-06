@@ -23,7 +23,7 @@ use log::info;
 use oak::grpc::OakNode;
 use oak::{grpc, ChannelReadStatus, OakStatus};
 use proto::abitest::{ABITestRequest, ABITestResponse, ABITestResponse_TestResult};
-use proto::abitest_grpc::{dispatch, OakABITestServiceNode};
+use proto::abitest_grpc::{dispatch, OakABITestService};
 use protobuf::ProtobufEnum;
 use rand::Rng;
 use std::collections::HashMap;
@@ -86,7 +86,7 @@ impl oak::grpc::OakNode for FrontendNode {
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 type TestFn = fn(&FrontendNode) -> TestResult;
 
-impl OakABITestServiceNode for FrontendNode {
+impl OakABITestService for FrontendNode {
     fn run_tests(&mut self, req: ABITestRequest) -> grpc::Result<ABITestResponse> {
         info!(
             "Run tests matching {} except those matching {}",
