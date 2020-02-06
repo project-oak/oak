@@ -15,8 +15,7 @@ oak_derive = "=0.1.0"
 oak_log = "=0.1.0"
 oak_runtime = "=0.1.0"
 protobuf = "*"
-rand = { version = "*", features = ["std"] }
-simple_logger = "*"
+rand = { version = "*" }
 
 [build-dependencies]
 protoc-rust = "*"

@@ -18,9 +18,11 @@ translator_common = "=0.1.0"
 [dev-dependencies]
 assert_matches = "*"
 oak_abi = "=0.1.0"
+oak_runtime = "=0.1.0"
 oak_tests = "=0.1.0"
 serial_test = "*"
 serial_test_derive = "*"
+simple_logger = "*"
 
 [build-dependencies]
 oak_utils = "*"

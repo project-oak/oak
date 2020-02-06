@@ -31,13 +31,7 @@ pub mod proto;
 pub mod rand;
 pub mod storage;
 
-#[cfg(test)]
-mod tests;
-
-#[cfg(test)]
-use assert_matches::assert_matches;
-#[cfg(test)]
-use serial_test_derive::serial;
+// TODO(#544)
 
 /// Handle used to identify read or write channel halves.
 ///

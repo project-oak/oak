@@ -42,18 +42,9 @@ impl Node {
 const STORAGE_NAME: &[u8] = b"HelloWorld";
 const FIELD_NAME: &[u8] = b"last-greeting";
 
-#[cfg(test)]
-fn init_logging() {
-    oak_tests::init_logging();
-}
-#[cfg(not(test))]
-fn init_logging() {
-    oak_log::init_default();
-}
-
 impl OakNode for Node {
     fn new() -> Self {
-        init_logging();
+        oak_log::init_default();
         Node {
             storage: oak::storage::Storage::default(),
             translator: translator_common::TranslatorClient::new("translator"),

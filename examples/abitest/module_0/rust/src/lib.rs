@@ -60,8 +60,8 @@ pub fn main(handle: u64) {
 
 impl oak::grpc::OakNode for FrontendNode {
     fn new() -> Self {
-        // Carry on even if the the Oak logging infrastructure is unavailable.
-        let _ = oak_log::init(log::Level::Debug, LOG_CONFIG_NAME);
+        oak_log::init(log::Level::Debug, LOG_CONFIG_NAME)
+            .expect("could not initialize logging node");
 
         // Create backend node instances.
         let mut backend_out = Vec::with_capacity(BACKEND_COUNT);

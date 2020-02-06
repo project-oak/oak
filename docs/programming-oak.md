@@ -426,48 +426,40 @@ TODO: describe use of storage
 > it." - [Donald Knuth](https://www-cs-faculty.stanford.edu/~knuth/faq.html)
 
 Regardless of how the code for an Oak Application is produced, it's always a
-good idea to write tests for any software. For an Oak Node that
-[implements a gRPC service](#generated-grpc-service-code) purely internally,
-it's straightforward to test the methods of the service just by calling them:
+good idea to write tests. The
+[oak_tests](https://project-oak.github.io/oak/sdk/oak_tests/index.html) crate
+allows node gRPC service methods to be tested with the [Oak SDK](sdk.md)
+framework via the Oak Runtime:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/hello_world/module/rust/src/tests.rs Rust /^.*Test invoking a Node service method directly.*/ /^}$/)
+[embedmd]:# (../examples/hello_world/module/rust/src/tests.rs Rust /^.*Test invoking the SayHello Node service method via the Oak runtime.*/ /^}$/)
 ```Rust
-// Test invoking a Node service method directly.
+// Test invoking the SayHello Node service method via the Oak runtime.
 #[test]
-fn test_direct_hello_request() {
-    let mut node = crate::Node::new();
-    let mut req = HelloRequest::new();
-    req.set_greeting("world".to_string());
-    let result = node.say_hello(req);
-    assert_matches!(result, Ok(_));
-    assert_eq!("HELLO world!", result.unwrap().reply);
-}
-```
-<!-- prettier-ignore-end -->
+fn test_say_hello() {
+    simple_logger::init().unwrap();
 
-The [oak_tests](https://project-oak.github.io/oak/sdk/oak_tests/index.html)
-crate also allows the gRPC service methods to be tested via the
-[Oak SDK](sdk.md) framework:
+    let configuration = oak_tests::test_configuration(
+        &[(MODULE_CONFIG_NAME, WASM_PATH)],
+        LOG_CONFIG_NAME,
+        MODULE_CONFIG_NAME,
+        ENTRYPOINT_NAME,
+    );
 
-<!-- prettier-ignore-start -->
-[embedmd]:# (../examples/hello_world/module/rust/src/tests.rs Rust /^.*Test invoking a Node service method via the Oak.*/ /^}$/)
-```Rust
-// Test invoking a Node service method via the Oak entrypoints.
-#[test]
-#[serial(node_test)]
-fn test_hello_request() {
-    let handle = oak_tests::grpc_channel_setup_default();
-    oak_tests::start_node(handle, crate::inner_main);
+    let (runtime, entry_channel) = oak_runtime::Runtime::configure_and_run(configuration)
+        .expect("Unable to configure runtime with test wasm!");
 
     let mut req = HelloRequest::new();
     req.set_greeting("world".to_string());
-    let result: grpc::Result<HelloResponse> =
-        oak_tests::inject_grpc_request("/oak.examples.hello_world.HelloWorld/SayHello", req);
+    let result: grpc::Result<HelloResponse> = oak_tests::grpc_request(
+        &entry_channel,
+        "/oak.examples.hello_world.HelloWorld/SayHello",
+        req,
+    );
     assert_matches!(result, Ok(_));
     assert_eq!("HELLO world!", result.unwrap().reply);
 
-    oak_tests::stop();
+    runtime.stop();
 }
 ```
 <!-- prettier-ignore-end -->
@@ -476,20 +468,14 @@ This has a little bit more boilerplate than testing a method directly:
 
 - The inbound gRPC channel that requests are delivered over has to be explicitly
   set up (`oak_tests::grpc_channel_setup_default`)
-- A separate thread running an inner main entrypoint for the Node is started
-  (`oak_tests::start_node`). This inner main entrypoint needs to have type
-  `oak_runtime::NodeMain`, and the `derive(OakExports)` macro (from the
+- After being configured, the runtime executes Nodes in separate threads
+  (`oak_runtime::configure_and_run`). The `derive(OakExports)` macro (from the
   [`oak_derive`](https://project-oak.github.io/oak/sdk/oak_derive/index.html)
-  crate) provides this (it populates an `extern "C" oak_main` main entrypoint
-  that forwards onto a `crate::inner_main` inner main).
+  crate) provides an entrypoint with a gRPC dispatch handler.
 - The injection of the gRPC request has to specify the method name (in
-  `oak_tests::inject_grpc_request`).
-- The per-Node thread needs to be stopped at the end of the test
-  (`oak_tests::stop`).
-- Because the Node's `oak_main` entrypoint should only be running in a single
-  thread, we use the [serial_test](https://crates.io/crates/serial_test) crate
-  to mark that the test should be serialized with any other tests that involve
-  the node (`#[serial(node_test)]`).
+  `oak_tests::grpc_request`).
+- The per-Node threads needs to be stopped at the end of the test
+  (`oak_runtime::stop`).
 
 However, this extra complication does allow the Node to be tested in a way that
 is closer to real execution, and (more importantly) allows testing of a Node
@@ -498,55 +484,20 @@ that makes use of the functionality of the Oak TCB.
 ### Testing Multi-Node Applications
 
 It's also possible to test an Oak Application that's built from multiple Nodes,
-using the `oak_tests::start()` entrypoint. The first argument to this entrypoint
-is an `ApplicationConfiguration` protobuf message, the same as is needed for
-normally [starting the Oak Application](#starting-the-oak-application) (except
-now in Rust rather than C++).
-
-However, the fields in the application configuration that hold the Wasm bytecode
-for the various Nodes are ignored; instead, the second argument to
-`oak_tests::start()` is a map:
-
-- **from** the relevant entrypoint name, described as a combination
-  (`WasmEntrypointName`) of:
-  - the name of the config stanza for the Node
-  - the function name for the entrypoint (in the Wasm code described by that
-    Node configuration)
-- **to** a function pointer of signature `fn(u64) -> ()` (which is type
-  `oak_runtime::NodeMain`).
-
-This allows the test runtime to find the Node entrypoints to execute in the
-test.
+using the `oak_tests::test_configuration` to create a configuration and then
+`oak_runtime::Runtime::configure_and_run(configuration)` to configure and run
+the runtime.
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/abitest/tests/src/tests.rs Rust /^#\[test\]/ /oak_tests::start\(.*/)
+[embedmd]:# (../examples/abitest/tests/src/tests.rs Rust /^#\[test\]/ /oak_tests::test_configuration\(.*/)
 ```Rust
 #[test]
-#[serial(node_test)]
 fn test_abi() {
-    // Initialize the test logger first, so logging gets redirected to simple_logger.
-    // (A subsequent attempt to use the oak_log crate will fail.)
-    oak_tests::init_logging();
-    let mut entrypoints = HashMap::new();
-    let fe_name = WasmEntrypointFullName {
-        config_name: FRONTEND_CONFIG_NAME.to_string(),
-        entrypoint_name: FRONTEND_ENTRYPOINT_NAME.to_string(),
-    };
-    let be_name = WasmEntrypointFullName {
-        config_name: BACKEND_CONFIG_NAME.to_string(),
-        entrypoint_name: BACKEND_ENTRYPOINT_NAME.to_string(),
-    };
-    let fe: oak_abi::NodeMain = abitest_0_frontend::main;
-    let be: oak_abi::NodeMain = abitest_1_backend::main;
-    entrypoints.insert(fe_name, fe);
-    entrypoints.insert(be_name, be);
-    assert_eq!(Some(()), oak_tests::start(test_config(), entrypoints));
+    simple_logger::init().unwrap();
+
+    let configuration = oak_tests::test_configuration(
 ```
 <!-- prettier-ignore-end -->
-
-Because there are multiple Nodes linked into the whole Application under test,
-each Node should use a [main entrypoint](abi.md#exported-function) with a
-different name, to prevent their names clashing.
 
 It can also be helpful to defer the real functionality to an inner main
 function:

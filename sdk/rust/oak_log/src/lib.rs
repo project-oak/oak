@@ -19,8 +19,7 @@
 //!
 //! [log facade]: https://crates.io/crates/log
 
-#[cfg(test)]
-mod tests;
+// TODO(#544)
 
 use log::{Level, Log, Metadata, Record, SetLoggerError};
 
@@ -64,9 +63,11 @@ impl Log for OakChannelLogger {
                 record.args()
             ),
         };
-        self.channel
-            .send(&log_entry)
-            .expect("could not send log message over log channel");
+        match self.channel.send(&log_entry) {
+            Ok(()) => (),
+            Err(oak::OakError::OakStatus(oak::OakStatus::ERR_TERMINATED)) => (),
+            Err(e) => panic!("could not send log message over log channel: {}", e),
+        }
     }
     fn flush(&self) {}
 }

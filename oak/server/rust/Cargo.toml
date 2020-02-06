@@ -11,7 +11,7 @@ members = [
 # > Cargo doesn’t assume that crates in a workspace will depend on each other, so we need to be
 # > explicit about the dependency relationships between the crates.
 [patch.crates-io]
-oak = { path = "../../../sdk/rust/oak" }
 oak_abi = { path = "oak_abi" }
 oak_runtime = { path = "oak_runtime" }
 oak_utils = { path = "../../../sdk/rust/oak_utils" }
+asylo_rust = { path = "../../asylo_rust" }
