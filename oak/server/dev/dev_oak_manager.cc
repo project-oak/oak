@@ -19,7 +19,6 @@
 #include "asylo/util/logging.h"
 #include "asylo/util/statusor.h"
 #include "include/grpcpp/grpcpp.h"
-#include "oak/server/dev/dev_oak_manager.h"
 
 namespace oak {
 
