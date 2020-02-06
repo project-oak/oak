@@ -33,9 +33,8 @@ struct Node {
 
 impl Node {
     fn translate(&self, text: &str, from_lang: &str, to_lang: &str) -> Option<String> {
-        self.translator
-            .as_ref()?
-            .translate(text, from_lang, to_lang)
+        let client = self.translator.as_ref()?;
+        translator_common::translate(client, text, from_lang, to_lang)
     }
 }
 
@@ -47,7 +46,8 @@ impl OakNode for Node {
         oak_log::init_default();
         Node {
             storage: oak::storage::Storage::default(),
-            translator: translator_common::TranslatorClient::new("translator"),
+            translator: grpc::client::Client::new("translator", "oak_main")
+                .map(translator_common::TranslatorClient),
         }
     }
     fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
