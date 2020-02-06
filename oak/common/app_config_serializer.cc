@@ -27,11 +27,12 @@
 #include "oak/common/app_config.h"
 #include "oak/common/utils.h"
 
-ABSL_FLAG(std::string, textproto, "",
-          "Textproto file with application configuration, where the `module_bytes` value is empty, "
-          "(it will be overwritten by module bytes after serialization)");
+ABSL_FLAG(
+    std::string, textproto, "",
+    "Textproto file with an application configuration, where the `module_bytes` value is empty, "
+    "(it will be overwritten by module bytes after serialization)");
 ABSL_FLAG(std::vector<std::string>, modules, std::vector<std::string>{},
-          "A comma-separated list of entries `module=path` with files containing compiled "
+          "A comma-separated list of entries `module:path` with files containing compiled "
           "WebAssembly modules to insert into the generated configuration");
 ABSL_FLAG(std::string, output_file, "", "File to write an application configuration to");
 
@@ -56,9 +57,9 @@ int main(int argc, char* argv[]) {
   // Parse module names.
   std::map<std::string, std::string> module_map;
   for (const std::string& module : absl::GetFlag(FLAGS_modules)) {
-    std::vector<std::string> module_info = absl::StrSplit(module, '=');
+    std::vector<std::string> module_info = absl::StrSplit(module, ':');
     if (module_info.size() != 2) {
-      LOG(QFATAL) << "Incorrect module specification:" << module;
+      LOG(QFATAL) << "Incorrect module specification: " << module;
       return 1;
     }
     module_map.emplace(module_info.front(), module_info.back());
@@ -86,6 +87,12 @@ int main(int argc, char* argv[]) {
         return 1;
       }
     }
+  }
+
+  // Check application configuration validity.
+  if (!oak::ValidApplicationConfig(*config.get())) {
+    LOG(INFO) << "Application config is not valid";
+    return 1;
   }
 
   oak::WriteConfigToFile(config.get(), output_file);
