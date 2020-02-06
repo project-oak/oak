@@ -26,10 +26,10 @@ def serialized_config(name, textproto, modules, output):
         output: Output file.
     """
     srcs = [textproto] + modules.values()
-    apps = ",".join([n + ":$(location " + path + ")" for (n, path) in modules.items()])
+    module_list = ",".join([n + ":$(location " + path + ")" for (n, path) in modules.items()])
     cmd = "$(location //oak/common:app_config_serializer)" + \
           " --textproto=$(location " + textproto + ")" + \
-          " --modules=" + apps + \
+          " --modules=" + module_list + \
           " --output_file=$@"
     native.genrule(
         name = name,
