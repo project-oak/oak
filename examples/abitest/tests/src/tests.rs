@@ -33,19 +33,15 @@ const FRONTEND_WASM_NAME: &str = "abitest_0_frontend.wasm";
 const BACKEND_WASM_NAME: &str = "abitest_1_backend.wasm";
 
 fn build_wasm() -> std::io::Result<Vec<(String, Vec<u8>)>> {
-    let mut frontend = oak_tests::compile_rust_to_wasm(FRONTEND_MANIFEST)?;
-    frontend.push("wasm32-unknown-unknown/debug");
-    frontend.push(FRONTEND_WASM_NAME);
-    let mut backend = oak_tests::compile_rust_to_wasm(BACKEND_MANIFEST)?;
-    backend.push("wasm32-unknown-unknown/debug");
-    backend.push(BACKEND_WASM_NAME);
-
-    let frontend_wasm = std::fs::read(frontend)?;
-    let backend_wasm = std::fs::read(backend)?;
-
     Ok(vec![
-        (FRONTEND_CONFIG_NAME.to_owned(), frontend_wasm),
-        (BACKEND_CONFIG_NAME.to_owned(), backend_wasm),
+        (
+            FRONTEND_CONFIG_NAME.to_owned(),
+            oak_tests::compile_rust_wasm(FRONTEND_MANIFEST, FRONTEND_WASM_NAME)?,
+        ),
+        (
+            BACKEND_CONFIG_NAME.to_owned(),
+            oak_tests::compile_rust_wasm(BACKEND_MANIFEST, BACKEND_WASM_NAME)?,
+        ),
     ])
 }
 

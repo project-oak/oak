@@ -466,8 +466,6 @@ fn test_say_hello() {
 
 This has a little bit more boilerplate than testing a method directly:
 
-- The inbound gRPC channel that requests are delivered over has to be explicitly
-  set up (`oak_tests::grpc_channel_setup_default`)
 - After being configured, the runtime executes Nodes in separate threads
   (`oak_runtime::configure_and_run`). The `derive(OakExports)` macro (from the
   [`oak_derive`](https://project-oak.github.io/oak/sdk/oak_derive/index.html)

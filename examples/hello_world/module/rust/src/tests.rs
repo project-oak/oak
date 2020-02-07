@@ -26,13 +26,10 @@ const MODULE_MANIFEST: &str = "Cargo.toml";
 const MODULE_WASM_NAME: &str = "hello_world.wasm";
 
 fn build_wasm() -> std::io::Result<Vec<(String, Vec<u8>)>> {
-    let mut wasm_file = oak_tests::compile_rust_to_wasm(MODULE_MANIFEST)?;
-    wasm_file.push("wasm32-unknown-unknown/debug");
-    wasm_file.push(MODULE_WASM_NAME);
-
-    let wasm = std::fs::read(wasm_file)?;
-
-    Ok(vec![(MODULE_CONFIG_NAME.to_owned(), wasm)])
+    Ok(vec![(
+        MODULE_CONFIG_NAME.to_owned(),
+        oak_tests::compile_rust_wasm(MODULE_MANIFEST, MODULE_WASM_NAME)?,
+    )])
 }
 
 // Test invoking the SayHello Node service method via the Oak runtime.

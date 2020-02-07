@@ -30,8 +30,9 @@ use oak_runtime::proto::manager::{
 
 // TODO(#544)
 
-/// Uses cargo to compile a Rust manifest to Wasm module outputting to a temporary directory.
-pub fn compile_rust_to_wasm(cargo_path: &str) -> std::io::Result<std::path::PathBuf> {
+/// Uses cargo to compile a Rust manifest to Wasm bytes. Compilation is performed in a temporary
+/// directory.
+pub fn compile_rust_wasm(cargo_path: &str, module_name: &str) -> std::io::Result<Vec<u8>> {
     let temp_dir = TempDir::new("")?;
     Command::new("cargo")
         .args(&["build", "--target=wasm32-unknown-unknown"])
@@ -42,7 +43,11 @@ pub fn compile_rust_to_wasm(cargo_path: &str) -> std::io::Result<std::path::Path
         .spawn()?
         .wait()?;
 
-    Ok(temp_dir.into_path())
+    let mut path = temp_dir.into_path();
+    path.push("wasm32-unknown-unknown/debug");
+    path.push(module_name);
+
+    std::fs::read(path)
 }
 
 /// Create a simple configuration with collection of Wasm nodes and a logger node.
