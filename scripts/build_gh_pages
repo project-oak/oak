@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+
+readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
+# shellcheck source=scripts/common
+source "$SCRIPTS_DIR/common"
+
+readonly SRC_SUBDIRS=(sdk/rust oak/server/rust)
+readonly DOC_SUBDIRS=(sdk server)
+
+# Update the gh-pages branch. Note that `cargo doc` is **not deterministic** so
+# this should only be done when there is a real change.
+readonly BRANCH=${1:-master}
+readonly PREV_COMMIT=$(git log --oneline -n 1 gh-pages | sed 's/.*branch at \([0-9a-f]*\)/\1/')
+
+readonly CHANGES=$(git diff "${PREV_COMMIT}..${BRANCH}" -- "${SRC_SUBDIRS[@]}" | grep -e '[+-]//[/!]')
+
+if [ -z "${CHANGES}" ]; then
+  echo "No doc comment changes found in ${PREV_COMMIT}..${BRANCH}" subdirs "${SRC_SUBDIRS[@]}"
+  exit 0
+fi
+
+git checkout "${BRANCH}"
+readonly BRANCH_SHA1=$(git rev-parse --short HEAD)
+readonly BRANCH_SUBJECT=$(git log -n 1 --format=format:%s)
+readonly COMMIT_MESSAGE=$(cat <<-END
+Update gh-pages to ${BRANCH} branch at ${BRANCH_SHA1}
+
+Auto-generated from commit ${BRANCH_SHA1} ("${BRANCH_SUBJECT}").
+END
+)
+
+tgz_gen() {
+  local srcdir=$1
+  local docdir=$2
+  local tarfile="/tmp/oak-doc-${docdir}-${BRANCH_SHA1}.tgz"
+  # Build Cargo docs and save them off outside the repo
+  (
+    cd "${srcdir}" || exit
+    rm -rf target/doc
+    cargo doc --no-deps
+    cargo deadlinks
+    cd target/doc || exit
+    tar czf "${tarfile}" ./*
+  )
+  echo "${tarfile}"
+}
+
+tarfiles=()
+for ii in "${!SRC_SUBDIRS[@]}"; do
+   tarfiles+=( "$(tgz_gen "${SRC_SUBDIRS[$ii]}" "${DOC_SUBDIRS[$ii]}")" )
+done
+
+# Shift to gh-pages branch and replace contents
+git checkout gh-pages
+
+doc_update() {
+  local docdir=$1
+  local tgzfile=$2
+  rm -rf "${docdir}"
+  mkdir "${docdir}"
+  (
+    cd "${docdir}" || exit
+    tar xzf "${tgzfile}"
+  )
+}
+
+for ii in "${!DOC_SUBDIRS[@]}"; do
+  doc_update "${DOC_SUBDIRS[$ii]}" "${tarfiles[$ii]}"
+done
+
+# Commit any differences
+git add "${DOC_SUBDIRS[@]}"
+git commit --message="${COMMIT_MESSAGE}"
+git checkout "${BRANCH}"
