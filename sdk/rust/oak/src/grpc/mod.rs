@@ -191,16 +191,15 @@ pub fn encap_request<T: protobuf::Message>(req: T, method_name: &str) -> Option<
 }
 
 /// Helper to inject a (single) gRPC request message via a notification channel,
-/// in the same manner as the gRPC pseudo-Node does, and collect a (single)
-/// response.
-pub fn invoke_grpc_method<R, Q>(
+/// in the same manner as the gRPC pseudo-Node does, and return a channel for
+/// reading responses from.
+pub fn invoke_grpc_method_stream<R>(
     method_name: &str,
     req: R,
     invocation_channel: &crate::io::Sender<Invocation>,
-) -> Result<Q>
+) -> Result<crate::io::Receiver<GrpcResponse>>
 where
     R: protobuf::Message,
-    Q: protobuf::Message,
 {
     // Create a new channel for request message delivery.
     let (req_sender, req_receiver) =
@@ -228,6 +227,22 @@ where
     req_receiver.close().expect("failed to close channel");
     rsp_sender.close().expect("failed to close channel");
 
+    Ok(rsp_receiver)
+}
+
+/// Helper to inject a (single) gRPC request message via a notification channel,
+/// in the same manner as the gRPC pseudo-Node does, and collect a (single)
+/// response.
+pub fn invoke_grpc_method<R, Q>(
+    method_name: &str,
+    req: R,
+    invocation_channel: &crate::io::Sender<Invocation>,
+) -> Result<Q>
+where
+    R: protobuf::Message,
+    Q: protobuf::Message,
+{
+    let rsp_receiver = invoke_grpc_method_stream(method_name, req, invocation_channel)?;
     // Read a single encapsulated response.
     let mut rsp = rsp_receiver.receive().map_err(|status| {
         error!("failed to receive response: {:?}", status);
