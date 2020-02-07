@@ -31,13 +31,16 @@ things from there.
 An Oak Node needs to provide a single
 [main entrypoint](abi.md#exported-function), which is the point at which Node
 execution begins. However, Node authors don't _have_ to implement this function
-themselves; for a Node which is triggered by external gRPC requests (the normal
-"front door" for an Oak application), there are helper functions in the Oak SDK
-that make this easier.
+themselves; for a Node which receives messages (bytes + handles) that can be
+[decoded](https://project-oak.github.io/oak/sdk/oak/io/trait.Decodable.html)
+into a Rust type, there are helper functions in the Oak SDK that make this
+easier.
 
-To use these helpers, an Oak Node should implement a `struct` of some kind to
-represent the Node itself, and then add the `derive(OakExports)` attribute (from
-the [`oak_derive`](https://project-oak.github.io/oak/sdk/oak_derive/index.html)
+To use these helpers, an Oak Node should be a `struct` of some kind to represent
+the internal state of the Node itself (which may be empty), implement the
+[`Node`](https://project-oak.github.io/oak/sdk/oak/trait.Node.html) trait for
+it, and then add the `derive(OakExports)` attribute (from the
+[`oak_derive`](https://project-oak.github.io/oak/sdk/oak_derive/index.html)
 crate):
 
 <!-- prettier-ignore-start -->
@@ -69,16 +72,18 @@ macro implements a main function named `oak_main` for you, with the following
 default behaviour:
 
 - Create an instance of your Node `struct` (using the `new()` method from the
-  [`OakNode`](https://project-oak.github.io/oak/sdk/oak/grpc/trait.OakNode.html)
-  trait described below).
+  [`Node`](https://project-oak.github.io/oak/sdk/oak/trait.Node.html) trait.
 - Take the channel handle passed to `oak_main()` and use it for gRPC input.
 - Pass the Node `struct` and the channel handle to the
-  [`event_loop()`](https://project-oak.github.io/oak/sdk/oak/grpc/fn.event_loop.html)
-  function from the [`oak::grpc` module](sdk.md#oakgrpc-module).
+  [`run_event_loop()`](https://project-oak.github.io/oak/sdk/oak/fn.run_event_loop.html)
+  function.
 
-To make this work, the Node `struct` must implement the
+For gRPC server nodes (the normal "front door" for an Oak application), the Node
+`struct` must implement the
 [`oak::grpc::OakNode`](https://project-oak.github.io/oak/sdk/oak/grpc/trait.OakNode.html)
-trait. This has two methods:
+trait (which provides an automatic implementation of the
+[`Node`](https://project-oak.github.io/oak/sdk/oak/trait.Node.html)). This has
+two methods:
 
 - A
   [`new()`](https://project-oak.github.io/oak/sdk/oak/grpc/trait.OakNode.html#tymethod.new)
@@ -506,14 +511,14 @@ function:
 [embedmd]:# (../examples/abitest/module_0/rust/src/lib.rs Rust /^#.*no_mangle.*/ /pub fn main\(.*/)
 ```Rust
 #[no_mangle]
-pub extern "C" fn frontend_oak_main(handle: u64) {
+pub extern "C" fn frontend_oak_main(in_handle: u64) {
     let _ = std::panic::catch_unwind(|| {
         oak::set_panic_hook();
-        main(handle)
+        main(in_handle);
     });
 }
 
-pub fn main(handle: u64) {
+pub fn main(in_handle: u64) {
 ```
 <!-- prettier-ignore-end -->
 

@@ -15,7 +15,7 @@
 //
 
 use byteorder::{ReadBytesExt, WriteBytesExt};
-use log::{debug, error};
+use log::{debug, error, info};
 use protobuf::ProtobufEnum;
 use serde::{Deserialize, Serialize};
 
@@ -394,4 +394,71 @@ pub fn set_panic_hook() {
             file, line, msg
         );
     }));
+}
+
+/// Trait implemented by all Oak Nodes.
+///
+/// It has a single method for handling commands, which are [`Decodable`](crate::io::Decodable)
+/// objects that are received via the single incoming channel handle which is passed in at node
+/// creation time. The return value is only used for logging in case of failure.
+pub trait Node<T: crate::io::Decodable> {
+    fn new() -> Self;
+    fn handle_command(&mut self, command: T) -> Result<(), crate::OakError>;
+}
+
+/// Run an event loop on the provided `node`:
+///
+/// - wait for new messages on the provided channel `in_handle`
+/// - if the runtime signals that the node was terminated while waiting, then exit the event loop
+/// - otherwise, read the available message via the provided channel handle
+/// - decode the message from (bytes + handles) to the specified type `T`
+/// - pass the typed object to the `Node::handle_command` method of the `node`, which executes a
+///   single iteration of the event loop
+///
+/// Note the loop is only interrupted if the node is terminated while waiting. Other errors are just
+/// logged, and the event loop continues with the next iteration.
+pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(mut node: N, in_handle: u64) {
+    let in_channel = crate::ReadHandle {
+        handle: crate::Handle::from_raw(in_handle),
+    };
+    if !in_channel.handle.is_valid() {
+        error!("invalid input handle");
+        return;
+    }
+    let receiver = crate::io::Receiver::new(in_channel);
+    info!("starting event loop");
+    loop {
+        // First wait until a message is available. If the node was terminated while waiting, this
+        // will return `ERR_TERMINATED`, which indicates that the event loop should be terminated.
+        // For any other error raised while waiting is logged, we try and determine whether it is
+        // transient or not, and then continue or terminate the event loop, respectively.
+        match receiver.wait() {
+            Err(status) => {
+                error!("error waiting for command: {:?}", status);
+                use crate::OakStatus::*;
+                match status {
+                    ERR_TERMINATED | ERR_BAD_HANDLE | ERR_CHANNEL_CLOSED => {
+                        info!("non-transient error: terminating event loop");
+                        return;
+                    }
+                    _ => {
+                        info!("(possibly) transient error: continuing event loop");
+                        continue;
+                    }
+                }
+            }
+            Ok(()) => {}
+        }
+        match receiver.try_receive() {
+            Ok(command) => {
+                info!("received command");
+                if let Err(err) = node.handle_command(command) {
+                    error!("error handling command: {}", err);
+                }
+            }
+            Err(err) => {
+                error!("error receiving command: {}", err);
+            }
+        }
+    }
 }

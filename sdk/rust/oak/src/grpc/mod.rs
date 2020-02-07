@@ -17,8 +17,8 @@
 //! Functionality to help Oak Nodes interact with gRPC.
 
 pub use crate::proto::code::Code;
-use crate::{proto, OakError, OakStatus, ReadHandle};
-use log::{error, info, warn};
+use crate::{proto, OakError};
+use log::{error, warn};
 use proto::grpc_encap::{GrpcRequest, GrpcResponse};
 use protobuf::ProtobufEnum;
 
@@ -139,6 +139,40 @@ pub trait OakNode {
     fn invoke(&mut self, method: &str, req: &[u8], writer: ChannelResponseWriter);
 }
 
+impl<T: OakNode> crate::Node<Invocation> for T {
+    fn new() -> Self {
+        T::new()
+    }
+    /// Handle incoming gRPC events for an [`OakNode`].
+    ///
+    /// Invoking the given `node`'s [`invoke`] method for each incoming request that
+    /// arrives on the inbound channel as a serialized [`Invocation`] object,
+    /// giving the [`invoke`] method the outbound channel for encapsulated responses
+    /// to be written to.
+    ///
+    /// [`invoke`]: OakNode::invoke
+    fn handle_command(
+        &mut self,
+        invocation: Invocation,
+    ) -> std::result::Result<(), crate::OakError> {
+        // Read a single encapsulated request message from the read half.
+        let req: GrpcRequest = invocation.request_receiver.receive()?;
+        // Since we are expecting a single message, close the channel immediately.
+        // This will change when we implement client streaming (#97).
+        invocation.request_receiver.close()?;
+        if !req.last {
+            // TODO(#97): Implement client streaming.
+            panic!("Support for streaming requests not yet implemented");
+        }
+        self.invoke(
+            &req.method_name,
+            req.get_req_msg().value.as_slice(),
+            ChannelResponseWriter::new(invocation.response_sender),
+        );
+        Ok(())
+    }
+}
+
 /// Encapsulate a protocol buffer message in a GrpcRequest wrapper using the
 /// given method name.
 pub fn encap_request<T: protobuf::Message>(req: T, method_name: &str) -> Option<GrpcRequest> {
@@ -211,54 +245,6 @@ where
     }
     Ok(protobuf::parse_from_bytes(&rsp.get_rsp_msg().value)
         .expect("Failed to parse response protobuf message"))
-}
-
-/// Perform a gRPC event loop for a Node.
-///
-/// Invoking the given `node`'s [`invoke`] method for each incoming request that
-/// arrives on the inbound channel as a serialized [`GrpcRequest`] message,
-/// giving the [`invoke`] method the outbound channel for encapsulated responses
-/// to be written to.
-///
-/// [`invoke`]: OakNode::invoke
-/// [`GrpcRequest`]: crate::proto::grpc_encap::GrpcRequest
-pub fn event_loop<T: OakNode>(
-    mut node: T,
-    grpc_in_handle: ReadHandle,
-) -> std::result::Result<(), crate::OakStatus> {
-    info!("start event loop for node with handle {:?}", grpc_in_handle);
-    if !grpc_in_handle.handle.is_valid() {
-        return Err(OakStatus::ERR_CHANNEL_CLOSED);
-    }
-    let invocation_receiver = crate::io::Receiver::new(grpc_in_handle);
-    loop {
-        // Explicitly call `wait` and then `try_receive` here because calling `receive` would hide
-        // any `OakStatus::ERR_TERMINATED` errors that may occur in the `wait` phase, since they
-        // would be wrapped in a `OakError` value that would then always be unwrapped and panic.
-        invocation_receiver.wait()?;
-        let invocation: Invocation = invocation_receiver.try_receive().unwrap_or_else(|err| {
-            panic!("could not receive gRPC invocation: {}", err);
-        });
-
-        // Read a single encapsulated request message from the read half.
-        let req: GrpcRequest = invocation.request_receiver.receive().unwrap_or_else(|err| {
-            panic!("could not read gRPC request: {:?}", err);
-        });
-        // Since we are expecting a single message, close the channel immediately.
-        // This will change when we implement client streaming (#97).
-        invocation.request_receiver.close().unwrap_or_else(|err| {
-            panic!("could not close gRPC request channel: {:?}", err);
-        });
-        if !req.last {
-            // TODO(#97): Implement client streaming.
-            panic!("Support for streaming requests not yet implemented");
-        }
-        node.invoke(
-            &req.method_name,
-            req.get_req_msg().value.as_slice(),
-            ChannelResponseWriter::new(invocation.response_sender),
-        );
-    }
 }
 
 /// Generic function that handles request deserialization and response
