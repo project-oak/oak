@@ -17,6 +17,7 @@
 load("@io_bazel_rules_rust//rust:rust.bzl", "rust_library")
 
 package(
+    default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
 
@@ -25,5 +26,4 @@ rust_library(
     srcs = glob(["**/*.rs"]),
     crate_type = "lib",
     edition = "2018",
-    visibility = ["//visibility:public"],
 )
