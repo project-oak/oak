@@ -97,6 +97,7 @@ bool ValidApplicationConfig(const ApplicationConfiguration& config) {
   // Check name for the config of the initial node is present and is a Web
   // Assembly variant.
   if (wasm_names.count(config.initial_node_config_name()) == 0) {
+    LOG(ERROR) << "config of the initial node is not present in Wasm";
     return false;
   }
   if (config.initial_entrypoint_name().empty()) {
