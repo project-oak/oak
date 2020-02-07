@@ -87,7 +87,7 @@ void DevOakLoader::InitializeAssertionAuthorities() {
 }
 
 std::string DevOakLoader::NewApplicationId() {
-  // For dev purposes, just increment a value
+  // For dev purposes, just increment a value.
   std::stringstream id_str;
   id_str << next_application_id_;
   next_application_id_ += 1;

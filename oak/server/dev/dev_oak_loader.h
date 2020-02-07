@@ -40,7 +40,7 @@ class DevOakLoader {
   void InitializeAssertionAuthorities();
   std::string NewApplicationId();
 
-  // For each application, identified by its id as a string we have a runtime
+  // For each application, identified by its id as a string we have a runtime.
   std::unordered_map<std::string, std::unique_ptr<oak::OakRuntime>> runtimes_;
   // The next available application ID.
   uint64_t next_application_id_;
