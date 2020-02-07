@@ -41,6 +41,7 @@ pub enum NodeConfiguration {
     WasmNode { module: Arc<wasmi::Module> },
 }
 
+/// A enumeration for errors occuring when building `NodeConfiguration` from protobuf types.
 pub enum ConfigurationError {
     WasmiModuleInializationError(wasmi::Error),
 }
@@ -55,7 +56,8 @@ impl std::fmt::Display for ConfigurationError {
     }
 }
 
-/// Loads a Wasm module into a node configuration.
+/// Loads a Wasm module into a node configuration, returning an error if `wasmi` failed to load the
+/// module.
 pub fn load_wasm(wasm_bytes: &[u8]) -> Result<NodeConfiguration, ConfigurationError> {
     let module = wasmi::Module::from_buffer(wasm_bytes)
         .map_err(ConfigurationError::WasmiModuleInializationError)?;
