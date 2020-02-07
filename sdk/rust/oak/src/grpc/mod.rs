@@ -118,8 +118,8 @@ impl ChannelResponseWriter {
 
 /// Trait for Oak Nodes that act as a gRPC services.
 ///
-/// An `OakNode` instance is normally passed to [`event_loop`], to allow
-/// repeated invocation of its `invoke()` method.
+/// An `OakNode` instance is normally passed to [`oak::run_event_loop`], to
+/// allow repeated invocation of its `invoke()` method.
 pub trait OakNode {
     /// Construct the (single) instance of the node.
     ///
