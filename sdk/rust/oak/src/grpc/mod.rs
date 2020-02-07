@@ -19,7 +19,7 @@
 pub use crate::proto::code::Code;
 use crate::{proto, OakError};
 use log::{error, warn};
-use proto::grpc_encap::{GrpcRequest, GrpcResponse};
+pub use proto::grpc_encap::{GrpcRequest, GrpcResponse};
 use protobuf::ProtobufEnum;
 
 pub mod client;
@@ -190,6 +190,22 @@ pub fn encap_request<T: protobuf::Message>(req: T, method_name: &str) -> Option<
     Some(grpc_req)
 }
 
+/// Extract a protocol buffer message from a GrpcResponse wrapper.
+/// Returns the message together with an indicator of whether this is the last
+/// response.
+pub fn decap_response<T: protobuf::Message>(mut grpc_rsp: GrpcResponse) -> Result<(T, bool)> {
+    if grpc_rsp.get_status().get_code() != Code::OK.value() {
+        return Err(grpc_rsp.take_status());
+    }
+    let rsp = protobuf::parse_from_bytes(&grpc_rsp.get_rsp_msg().value).map_err(|proto_err| {
+        build_status(
+            Code::INVALID_ARGUMENT,
+            &format!("message parsing failed: {}", proto_err),
+        )
+    })?;
+    Ok((rsp, grpc_rsp.get_last()))
+}
+
 /// Helper to inject a (single) gRPC request message via a notification channel,
 /// in the same manner as the gRPC pseudo-Node does, and return a channel for
 /// reading responses from.
@@ -244,7 +260,7 @@ where
 {
     let rsp_receiver = invoke_grpc_method_stream(method_name, req, invocation_channel)?;
     // Read a single encapsulated response.
-    let mut rsp = rsp_receiver.receive().map_err(|status| {
+    let grpc_rsp = rsp_receiver.receive().map_err(|status| {
         error!("failed to receive response: {:?}", status);
         build_status(
             Code::INTERNAL,
@@ -252,15 +268,12 @@ where
         )
     })?;
     rsp_receiver.close().expect("failed to close channel");
-    if !rsp.last {
+    let (rsp, last) = decap_response(grpc_rsp)?;
+    if !last {
         panic!("Expected single final response");
     }
 
-    if rsp.get_status().code != Code::OK.value() {
-        return Err(rsp.take_status());
-    }
-    Ok(protobuf::parse_from_bytes(&rsp.get_rsp_msg().value)
-        .expect("Failed to parse response protobuf message"))
+    Ok(rsp)
 }
 
 /// Generic function that handles request deserialization and response
