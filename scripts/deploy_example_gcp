@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+
+readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
+source "$SCRIPTS_DIR/common"
+
+"$SCRIPTS_DIR/build_example" "hello_world"
+
+bazel_build_flags+=(
+    '--config=enc-sim'
+)
+
+# Prerequisites:
+# - Google Cloud SDK
+# - Environment variable GCP_PROJECT_ID: id of the GCP project to use.
+# - Environment variable GCP_ACCOUNT_FILE: path to the exported key for the service
+#   account that will be used to connect to GCP.
+# - Service account must be in the following IAM roles:
+#   - Compute Instance Admin (v1)
+#   - Compute Security Admin
+#   - Service Account User 
+
+# Create a minimal ubuntu linux image on the GCP project.
+# The image will be named oak-gcp-hello-world.
+bazel run "${bazel_build_flags[@]}" //examples/hello_world/gcp:deploy-oak-gcp-hello-world
+
+# Authenticate as the service account
+gcloud auth activate-service-account --project=$GCP_PROJECT_ID --key-file=$GCP_ACCOUNT_FILE
+
+# Create Oak hello world VM instance and starts the Oak app on it.
+gcloud beta compute instances create oak-hello-world-instance --zone=europe-west2-c \
+--machine-type=n1-standard-1 --tags=oak-hello-world-network --image=oak-gcp-hello-world \
+--boot-disk-size=16GB --boot-disk-type=pd-standard --boot-disk-device-name=oak-hello-world-disk \
+--metadata startup-script="/opt/oak/oak_app_loader_host_loader --enclave_path=/opt/oak/oak_enclave_debug.so --config=/opt/oak/config.bin"
+
+# Create a firewall rule to allow access to the hello world VM on port 8080
+gcloud compute firewall-rules create oak-hello-world-access \
+--description="Access to Oak hello world sample app on port 8080" --direction=INGRESS \
+--priority=1000 --network=default --action=ALLOW --rules=tcp:8080 --source-ranges=0.0.0.0/0 \
+--target-tags=oak-hello-world-network
+
+# List instance details
+gcloud compute instances list --filter="name=('oak-hello-world-instance')"

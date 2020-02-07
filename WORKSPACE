@@ -366,3 +366,17 @@ new_git_repository(
     remote = "https://roughtime.googlesource.com/roughtime",
     shallow_since = "1555608176 +0000",
 )
+
+# Bazel rules for packaging and deployment by Grakn Labs
+http_archive(
+    name = "graknlabs_bazel_distribution",
+    sha256 = "cbb8357cc5b78a141ab7871558916c991f3ba80778d91fd4e2aa6b7894f52749",
+    strip_prefix = "bazel-distribution-01973c5e50eadf7a64273d72d0158d58012f977c",
+    url = "https://github.com/graknlabs/bazel-distribution/archive/01973c5e50eadf7a64273d72d0158d58012f977c.zip",
+)
+
+load("@graknlabs_bazel_distribution//common:dependencies.bzl", "bazelbuild_rules_pkg")
+bazelbuild_rules_pkg()
+
+load("@graknlabs_bazel_distribution//packer:dependencies.bzl", "deploy_packer_dependencies")
+deploy_packer_dependencies()
