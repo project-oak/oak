@@ -42,13 +42,9 @@ struct FrontendNode {
 pub extern "C" fn frontend_oak_main(in_handle: u64) {
     let _ = std::panic::catch_unwind(|| {
         oak::set_panic_hook();
-        main(in_handle);
+        let node = FrontendNode::new();
+        oak::run_event_loop(node, in_handle);
     });
-}
-
-pub fn main(in_handle: u64) {
-    let node = FrontendNode::new();
-    oak::run_event_loop(node, in_handle);
 }
 
 impl oak::grpc::OakNode for FrontendNode {

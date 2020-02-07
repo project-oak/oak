@@ -502,32 +502,17 @@ fn test_abi() {
 ```
 <!-- prettier-ignore-end -->
 
-It can also be helpful to defer the real functionality to an inner main
-function:
+Any Rust panic originating in an Oak Node must be caught before going through
+the Wasm FFI boundary. If you use the `derive(OakExports)` macro, this is
+performed for you. To implement this manually you can use the method
+[`catch_unwind`](https://doc.rust-lang.org/std/panic/fn.catch_unwind.html) from
+the Rust standard library:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/abitest/module_0/rust/src/lib.rs Rust /^#.*no_mangle.*/ /pub fn main\(.*/)
+[embedmd]:# (../examples/abitest/module_0/rust/src/lib.rs Rust /^#.*no_mangle.*/ /let _ = std::panic::catch_unwind.*/)
 ```Rust
 #[no_mangle]
 pub extern "C" fn frontend_oak_main(in_handle: u64) {
     let _ = std::panic::catch_unwind(|| {
-        oak::set_panic_hook();
-        main(in_handle);
-    });
-}
-
-pub fn main(in_handle: u64) {
 ```
 <!-- prettier-ignore-end -->
-
-This allows the
-[`catch_unwind`](https://doc.rust-lang.org/std/panic/fn.catch_unwind.html)
-protection to be localized to the main entrypoint that the real Oak Runtime
-invokes, where it's particularly needed to prevent panic crossing the Wasm FFI
-boundary. The inner main is used for testing (and so needs to be `pub`), and
-_does_ allow panics to propagate to the tests &ndash; which is helpful for
-debugging.
-
-The overall test then lives in a crate of its own, which imports the individual
-crates for the different Oak Nodes, and uses `oak_tests::start` to assemble
-different threads running the per-Node entrypoints.

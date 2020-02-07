@@ -27,20 +27,17 @@ use log::{error, info};
 pub extern "C" fn backend_oak_main(handle: u64) {
     let _ = std::panic::catch_unwind(|| {
         oak::set_panic_hook();
-        main(handle)
-    });
-}
 
-pub fn main(in_handle: u64) {
-    match inner_main(in_handle) {
-        Err(oak::OakStatus::ERR_TERMINATED) => {
-            info!("node terminated");
+        match inner_main(handle) {
+            Err(oak::OakStatus::ERR_TERMINATED) => {
+                info!("node terminated");
+            }
+            Err(s) => {
+                error!("node failed: {:?}", s);
+            }
+            Ok(_) => {}
         }
-        Err(s) => {
-            error!("node failed: {:?}", s);
-        }
-        Ok(_) => {}
-    }
+    });
 }
 
 fn inner_main(in_handle: u64) -> Result<(), oak::OakStatus> {

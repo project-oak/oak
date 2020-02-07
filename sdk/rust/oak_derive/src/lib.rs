@@ -64,14 +64,10 @@ pub fn derive_oak_exports(input: TokenStream) -> TokenStream {
             // https://doc.rust-lang.org/nomicon/ffi.html#ffi-and-panics
             let _ = ::std::panic::catch_unwind(||{
                 ::oak::set_panic_hook();
-                inner_main(in_handle);
+
+                let node = <#name>::new();
+                ::oak::run_event_loop(node, in_handle);
             });
-        }
-        // Internal version of the main entrypoint, to allow testing without any
-        // panic interception.
-        pub fn inner_main(in_handle: u64) {
-            let node = <#name>::new();
-            ::oak::run_event_loop(node, in_handle);
         }
     };
 
