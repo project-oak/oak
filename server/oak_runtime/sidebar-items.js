@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["proto","Auto-generated code for processing protocol buffer message definitions and gRPC service definitions."]],"struct":[["ChannelHalf",""],["MockChannel","Unidirectional message-based channel object that also allows fault injection."],["NodeStartInfo",""],["OakMessage",""],["OakRuntime",""],["WasmEntrypointFullName",""]]});
+initSidebarItems({"mod":[["channel",""],["message",""],["node",""],["proto","Auto-generated code for processing protocol buffer message definitions and gRPC service definitions."],["runtime",""]]});

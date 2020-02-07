@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Message","Encapsulates a message consisting of opaque data bytes and a vector of channels. The data bytes should not contain any pointers or handles."]]});
