@@ -68,7 +68,7 @@ impl Runtime {
                     Some(NodeConfiguration_oneof_config_type::wasm_config(
                         proto::manager::WebAssemblyConfiguration { module_bytes, .. },
                     )) => load_wasm(&module_bytes).map_err(|e| {
-                        error!("Error loading wasm: {}", e);
+                        error!("Error loading Wasm module: {}", e);
                         OakStatus::ERR_INVALID_ARGS
                     })?,
                     Some(_) => {
