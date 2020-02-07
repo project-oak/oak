@@ -16,6 +16,7 @@ oak_log = "=0.1.0"
 oak_runtime = "=0.1.0"
 protobuf = "*"
 rand = { version = "*" }
+tempdir = "*"
 
 [build-dependencies]
 protoc-rust = "*"
