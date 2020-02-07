@@ -22,8 +22,15 @@ const MODULE_CONFIG_NAME: &str = "hello_world";
 const LOG_CONFIG_NAME: &str = "log";
 const ENTRYPOINT_NAME: &str = "oak_main";
 
-// TODO(#541)
-const WASM_PATH: &str = "../../../target/wasm32-unknown-unknown/debug/hello_world.wasm";
+const MODULE_MANIFEST: &str = "Cargo.toml";
+const MODULE_WASM_NAME: &str = "hello_world.wasm";
+
+fn build_wasm() -> std::io::Result<Vec<(String, Vec<u8>)>> {
+    Ok(vec![(
+        MODULE_CONFIG_NAME.to_owned(),
+        oak_tests::compile_rust_wasm(MODULE_MANIFEST, MODULE_WASM_NAME)?,
+    )])
+}
 
 // Test invoking the SayHello Node service method via the Oak runtime.
 #[test]
@@ -31,7 +38,7 @@ fn test_say_hello() {
     simple_logger::init().unwrap();
 
     let configuration = oak_tests::test_configuration(
-        &[(MODULE_CONFIG_NAME, WASM_PATH)],
+        build_wasm().expect("failed to build wasm modules"),
         LOG_CONFIG_NAME,
         MODULE_CONFIG_NAME,
         ENTRYPOINT_NAME,

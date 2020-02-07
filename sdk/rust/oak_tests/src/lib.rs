@@ -21,31 +21,53 @@ use log::info;
 use oak_runtime::ChannelEither;
 use protobuf::{Message, ProtobufEnum};
 
+use std::process::Command;
+use tempdir::TempDir;
+
 use oak_runtime::proto::manager::{
     ApplicationConfiguration, LogConfiguration, NodeConfiguration, WebAssemblyConfiguration,
 };
 
 // TODO(#544)
 
+/// Uses cargo to compile a Rust manifest to Wasm bytes. Compilation is performed in a temporary
+/// directory.
+pub fn compile_rust_wasm(cargo_path: &str, module_name: &str) -> std::io::Result<Vec<u8>> {
+    let temp_dir = TempDir::new("")?;
+    Command::new("cargo")
+        .args(&["build", "--target=wasm32-unknown-unknown"])
+        .args(&[
+            format!("--manifest-path={}", cargo_path),
+            format!("--target-dir={}", temp_dir.path().display()),
+        ])
+        .spawn()?
+        .wait()?;
+
+    let mut path = temp_dir.into_path();
+    path.push("wasm32-unknown-unknown/debug");
+    path.push(module_name);
+
+    std::fs::read(path)
+}
+
 /// Create a simple configuration with collection of Wasm nodes and a logger node.
 ///
-/// - module_name_wasm: Node name and path to associated Wasm file.
+/// - module_name_wasm: Node name and Wasm bytes.
 /// - logger_name: Node name to use for a logger configuration.
 /// - initial_node: Initial node to run on launch.
 /// - entrypoint: Entrypoint in the initial node to run on launch.
 // TODO(#563)
-pub fn test_configuration<P: AsRef<std::path::Path>>(
-    module_name_wasm: &[(&str, P)],
+pub fn test_configuration(
+    module_name_wasm: Vec<(String, Vec<u8>)>,
     logger_name: &str,
     initial_node: &str,
     entrypoint: &str,
 ) -> ApplicationConfiguration {
     let mut nodes: Vec<NodeConfiguration> = module_name_wasm
-        .iter()
-        .map(|(name, module)| {
-            let wasm = std::fs::read(module).expect("Module missing");
+        .into_iter()
+        .map(|(name, wasm)| {
             let mut node = NodeConfiguration::new();
-            node.set_name(name.to_string());
+            node.set_name(name);
             node.set_wasm_config({
                 let mut w = WebAssemblyConfiguration::new();
                 w.set_module_bytes(wasm);

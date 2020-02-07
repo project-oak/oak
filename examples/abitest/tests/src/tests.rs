@@ -26,25 +26,38 @@ const BACKEND_CONFIG_NAME: &str = "backend-config";
 const LOG_CONFIG_NAME: &str = "logging-config";
 const FRONTEND_ENTRYPOINT_NAME: &str = "frontend_oak_main";
 
-// TODO(#541)
-const FRONTEND_WASM: &str = "../../target/wasm32-unknown-unknown/debug/abitest_0_frontend.wasm";
-const BACKEND_WASM: &str = "../../target/wasm32-unknown-unknown/debug/abitest_1_backend.wasm";
+const FRONTEND_MANIFEST: &str = "../module_0/rust/Cargo.toml";
+const BACKEND_MANIFEST: &str = "../module_1/rust/Cargo.toml";
+
+const FRONTEND_WASM_NAME: &str = "abitest_0_frontend.wasm";
+const BACKEND_WASM_NAME: &str = "abitest_1_backend.wasm";
+
+fn build_wasm() -> std::io::Result<Vec<(String, Vec<u8>)>> {
+    Ok(vec![
+        (
+            FRONTEND_CONFIG_NAME.to_owned(),
+            oak_tests::compile_rust_wasm(FRONTEND_MANIFEST, FRONTEND_WASM_NAME)?,
+        ),
+        (
+            BACKEND_CONFIG_NAME.to_owned(),
+            oak_tests::compile_rust_wasm(BACKEND_MANIFEST, BACKEND_WASM_NAME)?,
+        ),
+    ])
+}
 
 #[test]
 fn test_abi() {
     simple_logger::init().unwrap();
 
     let configuration = oak_tests::test_configuration(
-        &[
-            (FRONTEND_CONFIG_NAME, FRONTEND_WASM),
-            (BACKEND_CONFIG_NAME, BACKEND_WASM),
-        ],
+        build_wasm().expect("failed to build wasm modules"),
         LOG_CONFIG_NAME,
         FRONTEND_CONFIG_NAME,
         FRONTEND_ENTRYPOINT_NAME,
     );
+
     let (runtime, entry_channel) = oak_runtime::Runtime::configure_and_run(configuration)
-        .expect("Unable to configure runtime with test wasm!");
+        .expect("unable to configure runtime with test wasm");
 
     let result: grpc::Result<ABITestResponse> = oak_tests::grpc_request(
         &entry_channel,
