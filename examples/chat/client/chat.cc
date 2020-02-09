@@ -14,25 +14,18 @@
  * limitations under the License.
  */
 
-#include <cstdlib>
-#include <memory>
-#include <string>
 #include <thread>
 
 #include "absl/base/thread_annotations.h"
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
-#include "absl/memory/memory.h"
-#include "absl/strings/escaping.h"
 #include "absl/synchronization/mutex.h"
 #include "asylo/util/logging.h"
 #include "examples/chat/proto/chat.grpc.pb.h"
 #include "examples/chat/proto/chat.pb.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
-#include "oak/client/manager_client.h"
 #include "oak/common/nonce_generator.h"
-#include "oak/common/utils.h"
 
 ABSL_FLAG(bool, test, false, "Run a non-interactive version of chat application for testing");
 ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak application to connect to");
@@ -138,47 +131,6 @@ void Chat(Chat::Stub* stub, const RoomId& room_id, const std::string& user_handl
   SendLoop(stub, room_id, user_handle, done);
 }
 
-// RAII class to handle creation/destruction of an Oak Application instance.
-class OakApplication {
- public:
-  // Caller should ensure that the manager_client outlives this object.
-  OakApplication(oak::ManagerClient* manager_client, const std::string& module)
-      : manager_client_(manager_client) {
-    // Load the Oak Module to execute. This needs to be compiled from Rust to WebAssembly
-    // separately.
-    LOG(INFO) << "Creating application";
-    std::string module_bytes = oak::utils::read_file(module);
-
-    // Build an application configuration including logging.
-    std::unique_ptr<oak::ApplicationConfiguration> config = oak::DefaultConfig(module_bytes);
-    AddLoggingToConfig(config.get());
-
-    std::unique_ptr<oak::CreateApplicationResponse> create_application_response =
-        manager_client_->CreateApplication(std::move(config));
-    if (create_application_response == nullptr) {
-      LOG(QFATAL) << "Failed to create application";
-    }
-
-    application_id_ = create_application_response->application_id();
-    std::stringstream ss;
-    ss << "127.0.0.1:" << create_application_response->grpc_port();
-    addr_ = ss.str();
-  }
-
-  ~OakApplication() {
-    LOG(INFO) << "Terminating application id=" << application_id_;
-    manager_client_->TerminateApplication(application_id_);
-  }
-
-  const std::string& Id() const { return application_id_; }
-  const std::string& Addr() const { return addr_; }
-
- private:
-  oak::ManagerClient* manager_client_;
-  std::string application_id_;
-  std::string addr_;
-};
-
 // RAII class to handle creation/destruction of a chat room.
 class Room {
  public:
@@ -221,10 +173,10 @@ class Room {
 int main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
 
-  oak::ApplicationClient::InitializeAssertionAuthorities();
-
   std::string address = absl::GetFlag(FLAGS_address);
   LOG(INFO) << "Connecting to Oak Application: " << address;
+
+  oak::ApplicationClient::InitializeAssertionAuthorities();
 
   // Connect to the Oak Application.
   // TODO(#488): Use the token provided on command line for authorization and labelling of data.
