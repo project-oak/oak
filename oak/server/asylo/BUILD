@@ -170,8 +170,8 @@ enclave_loader(
 )
 
 enclave_loader(
-    name = "oak_app_loader",
-    srcs = ["asylo_oak_app_loader_main.cc"],
+    name = "oak_runner",
+    srcs = ["asylo_oak_runner_main.cc"],
     enclaves = {"enclave": "//oak/server/asylo:oak_enclave_debug.so"},
     loader_args = ["--enclave_path='{enclave}'"],
     deps = [
