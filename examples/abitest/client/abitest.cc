@@ -14,18 +14,13 @@
  * limitations under the License.
  */
 
-#include <cstdlib>
-
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
-#include "absl/memory/memory.h"
-#include "absl/strings/match.h"
 #include "asylo/util/logging.h"
 #include "examples/abitest/proto/abitest.grpc.pb.h"
 #include "examples/abitest/proto/abitest.pb.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
-#include "oak/common/utils.h"
 
 ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak application to connect to");
 ABSL_FLAG(std::string, test_include, "", "Filter indicating which tests to include");
@@ -64,10 +59,10 @@ static bool run_tests(OakABITestService::Stub* stub, const std::string& include,
 int main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
 
-  oak::ApplicationClient::InitializeAssertionAuthorities();
-
   std::string address = absl::GetFlag(FLAGS_address);
   LOG(INFO) << "Connecting to Oak Application: " << address;
+
+  oak::ApplicationClient::InitializeAssertionAuthorities();
 
   // Connect to the newly created Oak Application.
   auto stub = OakABITestService::NewStub(oak::ApplicationClient::CreateChannel(address));

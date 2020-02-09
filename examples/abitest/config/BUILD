@@ -28,6 +28,5 @@ serialized_config(
         "frontend-config": "//examples:target/wasm32-unknown-unknown/release/abitest_0_frontend.wasm",
         "backend-config": "//examples:target/wasm32-unknown-unknown/release/abitest_1_backend.wasm",
     },
-    output = "config.bin",
     textproto = ":config.textproto",
 )
