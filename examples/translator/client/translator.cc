@@ -14,22 +14,15 @@
  * limitations under the License.
  */
 
-#include <cstdlib>
-
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
-#include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
 #include "examples/translator/proto/translator.grpc.pb.h"
 #include "examples/translator/proto/translator.pb.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
-#include "oak/client/manager_client.h"
-#include "oak/common/utils.h"
 
-ABSL_FLAG(std::string, manager_address, "127.0.0.1:8888",
-          "Address of the Oak Manager to connect to");
-ABSL_FLAG(std::string, module, "", "File containing the compiled WebAssembly module");
+ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak application to connect to");
 
 using ::oak::examples::translator::TranslateRequest;
 using ::oak::examples::translator::TranslateResponse;
@@ -57,38 +50,18 @@ void translate(Translator::Stub* stub, const std::string& text, const std::strin
 int main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
 
-  // Connect to the Oak Manager.
-  std::unique_ptr<oak::ManagerClient> manager_client =
-      absl::make_unique<oak::ManagerClient>(grpc::CreateChannel(
-          absl::GetFlag(FLAGS_manager_address), grpc::InsecureChannelCredentials()));
-
-  // Load the Oak Module to execute. This needs to be compiled from Rust to WebAssembly separately.
-  std::string module_bytes = oak::utils::read_file(absl::GetFlag(FLAGS_module));
-  std::unique_ptr<oak::CreateApplicationResponse> create_application_response =
-      manager_client->CreateApplication(module_bytes, /* logging= */ true,
-                                        /* storage_address= */ "");
-  if (create_application_response == nullptr) {
-    LOG(QFATAL) << "Failed to create application";
-  }
-
-  std::stringstream addr;
-  addr << "127.0.0.1:" << create_application_response->grpc_port();
-  std::string application_id(create_application_response->application_id());
-  LOG(INFO) << "Connecting to Oak Application id=" << application_id << ": " << addr.str();
+  std::string address = absl::GetFlag(FLAGS_address);
+  LOG(INFO) << "Connecting to Oak Application: " << address;
 
   oak::ApplicationClient::InitializeAssertionAuthorities();
 
   // Connect to the newly created Oak Application.
-  auto stub = Translator::NewStub(oak::ApplicationClient::CreateChannel(addr.str()));
+  auto stub = Translator::NewStub(oak::ApplicationClient::CreateChannel(address));
 
   translate(stub.get(), "WORLDS", "en", "fr");
   translate(stub.get(), "WORLDS", "en", "it");
   translate(stub.get(), "WORLDS", "en", "cn");
   translate(stub.get(), "OSSIFRAGE", "en", "fr");
-
-  // Request termination of the Oak Application.
-  LOG(INFO) << "Terminating application id=" << application_id;
-  manager_client->TerminateApplication(application_id);
 
   return EXIT_SUCCESS;
 }
