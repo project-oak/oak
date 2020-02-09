@@ -15,8 +15,9 @@ readonly RUST_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '
 for example in ${RUST_EXAMPLES}; do
   # Running `build_example` to compile application configurations before running the server.
   "${SCRIPTS_DIR}/build_example" "${example}"
-  ./bazel-clang-bin/oak/server/dev/oak_app_loader \
-    --config="$PWD/bazel-client-bin/examples/${example}/config/config.bin" &
+  ./bazel-clang-bin/oak/server/dev/oak_runner \
+    --config="$PWD/bazel-client-bin/examples/${example}/config/config" &
+  sleep 2  # Wait for an application to start.
   SERVER_PID=$!
   # Currently `chat` application starts an infinite loop, so `run_examples` just checks
   # if the module can be loaded correctly.
@@ -36,12 +37,13 @@ for example in ${CPP_EXAMPLES}; do
   "${SCRIPTS_DIR}/build_example" "${example}"
   # TensorFlow example is compiled with Emscripten and other examples with Clang.
   if [[ "tensorflow" != "${example}" ]]; then
-    ./bazel-clang-bin/oak/server/dev/oak_app_loader \
-      --config="$PWD/bazel-wasm-bin/examples/${example}/config/config_cpp.bin" &
+    ./bazel-clang-bin/oak/server/dev/oak_runner \
+      --config="$PWD/bazel-wasm-bin/examples/${example}/config/config_cpp" &
   else
-    ./bazel-clang-bin/oak/server/dev/oak_app_loader \
-      --config="$PWD/bazel-emscripten-bin/examples/${example}/config/config_cpp.bin" &
+    ./bazel-clang-bin/oak/server/dev/oak_runner \
+      --config="$PWD/bazel-emscripten-bin/examples/${example}/config/config_cpp" &
   fi
+  sleep 2  # Wait for an application to start.
   SERVER_PID=$!
   "${SCRIPTS_DIR}/run_example" -c "${example}"
   kill -s SIGTERM "$SERVER_PID"
