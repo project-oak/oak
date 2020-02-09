@@ -27,6 +27,5 @@ serialized_config(
     modules = {
         "app": "//examples:target/wasm32-unknown-unknown/release/private_set_intersection.wasm",
     },
-    output = "config.bin",
     textproto = ":config.textproto",
 )

@@ -27,6 +27,5 @@ serialized_config(
     modules = {
         "app": "//examples/tensorflow/module/cpp:tensorflow_micro.wasm",
     },
-    output = "config_cpp.bin",
     textproto = ":config.textproto",
 )

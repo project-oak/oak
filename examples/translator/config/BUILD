@@ -30,11 +30,3 @@ serialized_config(
     },
     textproto = ":config.textproto",
 )
-
-serialized_config(
-    name = "config_cpp",
-    modules = {
-        "app": "//examples/hello_world/module/cpp:hello_world.wasm",
-    },
-    textproto = ":config_no_translator.textproto",
-)

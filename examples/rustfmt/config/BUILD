@@ -27,6 +27,5 @@ serialized_config(
     modules = {
         "app": "//examples:target/wasm32-unknown-unknown/release/rustfmt.wasm",
     },
-    output = "config.bin",
     textproto = ":config.textproto",
 )

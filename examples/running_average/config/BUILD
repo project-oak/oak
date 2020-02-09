@@ -27,6 +27,5 @@ serialized_config(
     modules = {
         "app": "//examples:target/wasm32-unknown-unknown/release/running_average.wasm",
     },
-    output = "config.bin",
     textproto = ":config.textproto",
 )

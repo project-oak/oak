@@ -14,17 +14,13 @@
  * limitations under the License.
  */
 
-#include <cstdlib>
-
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
-#include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
 #include "examples/machine_learning/proto/machine_learning.grpc.pb.h"
 #include "examples/machine_learning/proto/machine_learning.pb.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
-#include "oak/common/utils.h"
 
 ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak application to connect to");
 
@@ -72,13 +68,13 @@ std::string predict(MachineLearning::Stub* stub) {
 int main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
 
-  oak::ApplicationClient::InitializeAssertionAuthorities();
-
   std::string address = absl::GetFlag(FLAGS_address);
   LOG(INFO) << "Connecting to Oak Application: " << address;
 
   // Connect to the newly created Oak Application.
   auto stub = MachineLearning::NewStub(oak::ApplicationClient::CreateChannel(address));
+
+  oak::ApplicationClient::InitializeAssertionAuthorities();
 
   // Perform multiple invocations of the same Oak Application, with different parameters.
   auto message_0 = send_data(stub.get());

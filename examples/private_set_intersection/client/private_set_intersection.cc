@@ -14,18 +14,14 @@
  * limitations under the License.
  */
 
-#include <cstdlib>
-
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
-#include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
 #include "examples/private_set_intersection/proto/private_set_intersection.grpc.pb.h"
 #include "examples/private_set_intersection/proto/private_set_intersection.pb.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
 #include "oak/common/nonce_generator.h"
-#include "oak/common/utils.h"
 
 ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak application to connect to");
 
@@ -66,10 +62,10 @@ std::vector<std::string> RetrieveIntersection(PrivateSetIntersection::Stub* stub
 int main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
 
-  oak::ApplicationClient::InitializeAssertionAuthorities();
-
   std::string address = absl::GetFlag(FLAGS_address);
   LOG(INFO) << "Connecting to Oak Application: " << address;
+
+  oak::ApplicationClient::InitializeAssertionAuthorities();
 
   // Connect to the newly created Oak Application from different clients sharing the same access
   // token.
@@ -78,11 +74,11 @@ int main(int argc, char** argv) {
 
   auto stub_0 = PrivateSetIntersection::NewStub(oak::ApplicationClient::CreateChannel(
       address, oak::ApplicationClient::authorization_bearer_token_call_credentials(
-                      authorization_bearer_token)));
+                   authorization_bearer_token)));
 
   auto stub_1 = PrivateSetIntersection::NewStub(oak::ApplicationClient::CreateChannel(
       address, oak::ApplicationClient::authorization_bearer_token_call_credentials(
-                      authorization_bearer_token)));
+                   authorization_bearer_token)));
 
   // Submit sets from different clients.
   std::vector<std::string> set_0{"a", "b", "c"};

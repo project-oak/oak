@@ -28,11 +28,9 @@ cc_binary(
         "//examples/private_set_intersection/proto:private_set_intersection_cc_proto",
         "//oak/client:application_client",
         "//oak/common:nonce_generator",
-        "//oak/common:utils",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
-        "@com_google_absl//absl/memory",
         "@com_google_asylo//asylo/util:logging",
     ],
 )
