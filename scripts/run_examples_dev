@@ -45,6 +45,6 @@ for example in ${CPP_EXAMPLES}; do
   fi
   sleep 2  # Wait for an application to start.
   SERVER_PID=$!
-  "${SCRIPTS_DIR}/run_example" -c "${example}"
+  "${SCRIPTS_DIR}/run_example" "${example}"
   kill -s SIGTERM "$SERVER_PID"
 done
