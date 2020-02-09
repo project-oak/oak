@@ -43,39 +43,6 @@ cc_library(
     ],
 )
 
-cc_library(
-    name = "dev_oak_manager",
-    srcs = [
-        "dev_oak_manager.cc",
-    ],
-    hdrs = [
-        "dev_oak_manager.h",
-    ],
-    deps = [
-        ":dev_oak_loader",
-        "//oak/proto:manager_cc_grpc",
-        "//oak/server:oak_runtime",
-        "@com_github_grpc_grpc//:grpc++",
-        "@com_google_absl//absl/memory",
-        "@com_google_asylo//asylo/util:logging",
-        "@com_google_asylo//asylo/util:status",
-    ],
-)
-
-cc_binary(
-    name = "oak",
-    srcs = ["dev_oak_main.cc"],
-    deps = [
-        ":dev_oak_manager",
-        "@com_github_grpc_grpc//:grpc++",
-        "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/flags:parse",
-        "@com_google_absl//absl/synchronization",
-        "@com_google_absl//absl/time",
-        "@com_google_asylo//asylo/util:logging",
-    ],
-)
-
 cc_binary(
     name = "dev_oak_runner",
     srcs = ["dev_oak_runner_main.cc"],
