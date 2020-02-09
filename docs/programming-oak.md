@@ -256,7 +256,6 @@ specify a storage provider to connect to, and to control whether logging is
 enabled:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/translator/client/translator.cc C++ /.*FLAGS_module/ /}/)
 ```C++
   std::string module_bytes = oak::utils::read_file(absl::GetFlag(FLAGS_module));
   std::unique_ptr<oak::CreateApplicationResponse> create_application_response =
@@ -283,9 +282,6 @@ encryption into the enclave:
 [embedmd]:# (../examples/rustfmt/client/rustfmt.cc C++ /.*InitializeAssertionAuthorities/ /CreateChannel.*/)
 ```C++
   oak::ApplicationClient::InitializeAssertionAuthorities();
-
-  std::string address = absl::GetFlag(FLAGS_address);
-  LOG(INFO) << "Connecting to Oak Application: " << address;
 
   // Connect to the newly created Oak Application.
   auto stub = FormatService::NewStub(oak::ApplicationClient::CreateChannel(address));
