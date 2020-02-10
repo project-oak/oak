@@ -255,7 +255,7 @@ rust_repository_set(
     name = "rust_linux_x86_64",
     exec_triple = "x86_64-unknown-linux-gnu",
     extra_target_triples = [],
-    iso_date = "2019-11-06",
+    iso_date = "2020-02-06",
     version = "nightly",
 )
 
