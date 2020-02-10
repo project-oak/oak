@@ -18,14 +18,13 @@
 
 #include <string>
 
-#include "absl/strings/string_view.h"
-#include "asylo/util/logging.h"
-#include "oak/proto/enclave.pb.h"
 #include "oak/proto/manager.grpc.pb.h"
-#include "oak/server/oak_runtime.h"
+#include "oak/server/dev/dev_oak_loader.h"
 
 namespace oak {
 
+// Implements a gRPC service for `dev_oak_main.cc` and forwards all its functionality
+// on to a `DevOakLoader`.
 class DevOakManager final : public Manager::Service {
  public:
   DevOakManager();
@@ -39,14 +38,7 @@ class DevOakManager final : public Manager::Service {
                                     TerminateApplicationResponse* response) override;
 
  private:
-  void CreateServer();
-  void InitializeAssertionAuthorities();
-  std::string NewApplicationId();
-
-  // The next available application ID.
-  uint64_t next_application_id_;
-  // For each application, identified by its id as a string we have a runtime
-  std::unordered_map<std::string, std::unique_ptr<OakRuntime>> runtimes_;
+  oak::DevOakLoader loader_;
 };
 
 }  // namespace oak
