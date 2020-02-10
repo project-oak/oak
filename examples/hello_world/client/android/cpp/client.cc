@@ -17,14 +17,10 @@
 #include <android/log.h>
 #include <jni.h>
 
-#include <string>
-
 #include "examples/hello_world/proto/hello_world.grpc.pb.h"
 #include "examples/hello_world/proto/hello_world.pb.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
-#include "oak/client/manager_client.h"
-#include "oak/common/utils.h"
 
 extern "C" {
 
