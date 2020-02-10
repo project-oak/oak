@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["channel",""],["message",""],["node",""],["proto","Auto-generated code for processing protocol buffer message definitions and gRPC service definitions."],["runtime",""]]});
+initSidebarItems({"mod":[["channel",""],["message",""],["node",""],["proto",""],["runtime",""]]});
