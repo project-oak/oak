@@ -19,8 +19,11 @@
 def serialized_config(name, textproto, modules):
     """Serializes an Oak application configuration in a binary file.
 
+    Implicit output targets:
+        name.bin: A binary file with a serialized application configuration.
+
     Args:
-        name: Name of the generated binary file.
+        name: Name of the generated binary file (the output file will have a `.bin` extension).
         textproto: Textproto file with application configuration.
         modules: A dictionary with module names as keys and module paths as values.
     """
@@ -33,7 +36,8 @@ def serialized_config(name, textproto, modules):
     native.genrule(
         name = name,
         srcs = srcs,
-        outs = [name],
+        # Name of the rule cannot be the same as the output file.
+        outs = ["{}.bin".format(name)],
         cmd = cmd,
         tools = ["//oak/common:app_config_serializer"],
     )
