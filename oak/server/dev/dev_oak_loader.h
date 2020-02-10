@@ -34,16 +34,13 @@ class DevOakLoader {
   asylo::StatusOr<oak::CreateApplicationResponse> CreateApplication(
       const oak::ApplicationConfiguration& application_configuration);
 
-  grpc::Status TerminateApplication(const std::string& application_id);
+  grpc::Status TerminateApplication();
 
  private:
   void InitializeAssertionAuthorities();
-  std::string NewApplicationId();
 
-  // For each application, identified by its id as a string we have a runtime.
-  std::unordered_map<std::string, std::unique_ptr<oak::OakRuntime>> runtimes_;
-  // The next available application ID.
-  uint64_t next_application_id_;
+  // Runtime of the loaded Oak application.
+  std::unique_ptr<oak::OakRuntime> runtime_;
 };
 
 }  // namespace oak

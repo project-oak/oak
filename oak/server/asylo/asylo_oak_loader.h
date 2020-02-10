@@ -45,16 +45,12 @@ class AsyloOakLoader {
 
   asylo::StatusOr<InitializeOutput> GetEnclaveOutput(const std::string& application_id);
 
-  std::string NewApplicationId();
-
   void DestroyEnclave(const std::string& node_id);
 
   asylo::EnclaveManager* enclave_manager_;
   // TODO: Use non-simulated loader.
   std::unique_ptr<asylo::SgxLoader> enclave_loader_;
   std::string enclave_path_;
-
-  uint64_t application_id_;
 };
 
 }  // namespace oak

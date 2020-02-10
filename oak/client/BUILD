@@ -21,17 +21,6 @@ package(
 )
 
 cc_library(
-    name = "manager_client",
-    hdrs = ["manager_client.h"],
-    visibility = ["//visibility:public"],
-    deps = [
-        "//oak/proto:manager_cc_grpc",
-        "@com_github_grpc_grpc//:grpc++",
-        "@com_google_absl//absl/memory",
-    ],
-)
-
-cc_library(
     name = "application_client",
     hdrs = ["application_client.h"],
     visibility = ["//visibility:public"],
