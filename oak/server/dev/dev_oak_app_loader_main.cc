@@ -48,7 +48,7 @@ int main(int argc, char* argv[]) {
   std::string application_id(response.application_id());
   LOG(INFO) << "Oak Application id=" << application_id << ": " << address.str();
 
-  // Wait.
+  // Wait (same as `sleep(86400)`).
   absl::Notification server_timeout;
   server_timeout.WaitForNotificationWithTimeout(absl::Hours(24));
 
