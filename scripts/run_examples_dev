@@ -48,3 +48,14 @@ for example in ${CPP_EXAMPLES}; do
   "${SCRIPTS_DIR}/run_example" "${example}"
   kill -s SIGTERM "$SERVER_PID"
 done
+
+# Special case: run the hello_world example with:
+#  - a storage provider
+#  - a configured translator module.
+./bazel-clang-bin/oak/server/dev/oak_runner \
+  --config="$PWD/bazel-client-bin/examples/hello_world/config/storage_config" &
+SERVER_PID=$!
+./bazel-clang-bin/oak/server/storage/storage_server &
+STORAGE_PID=$!
+"${SCRIPTS_DIR}/run_example" "hello_world"
+kill -s SIGTERM "$STORAGE_PID" "$SERVER_PID"

@@ -8,8 +8,20 @@ node_configs {
   }
 }
 node_configs {
+  name: "translator"
+  wasm_config {
+    module_bytes: "<bytes>"
+  }
+}
+node_configs {
   name: "log"
   log_config {}
+}
+node_configs {
+  name: "storage"
+  storage_config {
+    address: "localhost:7867"
+  }
 }
 grpc_port: 8080
 initial_node_config_name: "app"
