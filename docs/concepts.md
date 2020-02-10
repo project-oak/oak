@@ -7,7 +7,7 @@
   - [Pre-Defined Channels and Port Names](#pre-defined-channels-and-port-names)
 - [Pseudo-Nodes](#pseudo-nodes)
 - [Oak Application](#oak-application)
-- [Oak Manager](#oak-manager)
+- [Oak Loader](#oak-loader)
   - [Workflow](#workflow)
 - [Remote Attestation](#remote-attestation)
 - [Oak Runtime Updates](#oak-runtime-updates)
@@ -132,7 +132,7 @@ handles to either half of the channel may be passed between Nodes (over
 channels).
 
 The allowed contents of the Nodes, and the initial Node to run, are specified by
-an [Application Configuration](/oak/proto/manager.proto).
+an [Application Configuration](/oak/proto/application.proto).
 
 Once a new Oak Application is initialized and its endpoint available, clients
 may connect to it using individually end-to-end encrypted, authenticated and
@@ -142,11 +142,11 @@ the policies set on the Oak Node; the Oak Runtime itself may then optionally
 prove additional details about the Oak Module and its properties, which may
 require reasoning about its internal structure.
 
-## Oak Manager
+## Oak Loader
 
-The **Oak Manager** creates Oak Applications running within a platform provider.
+The **Oak Loader** creates an Oak Application running within a platform provider.
 
-Note that the Oak Manager is not part of the TCB: the actual trusted attestation
+Note that the Oak Loader is not part of the TCB: the actual trusted attestation
 only happens between client and the Oak Application running in the enclave at
 execution time.
 
@@ -159,24 +159,21 @@ following system diagram.
 
 ### Workflow
 
-In response to an application creation request, the Oak Manager sends back to
-the caller details about the gRPC endpoint of the newly created Oak Application,
-initialized with the application configuration specified in the request.
+ISV runs an Oak Application using the Oak Loader and publishes details about the
+gRPC endpoint for a client to connect to.
 
 Sample flow:
 
-- ISV writes an Oak Module for the Oak Runtime using a high-level language and
-  compiles it to WebAssembly.
-- The client connects to the Oak Manager, and requests the creation of an Oak
-  Node running the compiled Oak Module.
-  - The module code itself is passed as part of the creation request.
-- The Oak Manager creates a new enclave and initializes it with a fresh Oak
+- ISV writes an Oak Module for the Oak Runtime using a high-level language,
+  compiles it to WebAssembly and requests the creation of an Oak Node using the
+  Oak Loader.
+- The Oak Loader creates a new enclave and initializes it with a fresh Oak
   Node, and then seals the enclave. The Oak Node exposes a gRPC endpoint at a
   newly allocated endpoint (host:port). The endpoint gets forwarded to the
   client as part of the creation response.
   - Note up to this point no sensitive data has been exchanged.
   - The client still has no guarantees that the endpoint is in fact running an
-    Oak Runtime, as the Oak Manager is itself untrusted.
+    Oak Runtime, as the Oak Loader is itself untrusted.
 - The client connects to the Oak Node endpoint, and exchanges keys using the
   [Asylo assertion framework](https://asylo.dev/docs/reference/proto/identity/asylo.identity.v1.html).
   - This allows the client to verify the integrity of the Oak Node and the fact
@@ -190,8 +187,8 @@ Sample flow:
 - The Oak Node receives the data and performs the desired (and pre-determined)
   computation on top of them, and sends the results back to the client.
 
-The following sequence diagram shows a basic flow of requests between a client,
-the Oak Manager and an Oak Application.
+The following sequence diagram shows a basic flow of requests between a client
+and an Oak Application.
 
 <!-- From (Google-internal): http://go/sequencediagram/view/5170404486283264 -->
 <img src="images/BasicFlow.png" width="850">
