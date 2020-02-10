@@ -24,8 +24,6 @@
 #include "asylo/util/statusor.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/server/oak_runtime.h"
-#include "include/grpcpp/grpcpp.h"
-#include "oak/server/oak_runtime.h"
 
 namespace oak {
 
