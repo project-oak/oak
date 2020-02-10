@@ -100,7 +100,7 @@ pub fn new() -> (ChannelWriter, ChannelReader) {
         messages: platform::RwLock::new(VecDeque::new()),
     });
     let writer = ChannelWriter(ChannelRef::from_arc(chan.clone()));
-    let reader = ChannelReader(ChannelRef::from_arc(chan.clone()));
+    let reader = ChannelReader(ChannelRef::from_arc(chan));
     (writer, reader)
 }
 

@@ -15,7 +15,6 @@
 //
 
 // TODO(#546): fix no_std
-#![feature(result_map_or_else)]
 #![feature(result_contains_err)]
 // #![deny(missing_docs)]
 #![cfg_attr(not(feature = "std"), no_std)]
