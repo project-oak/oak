@@ -4,71 +4,68 @@ readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
 # shellcheck source=scripts/common
 source "$SCRIPTS_DIR/common"
 
-readonly SRC_SUBDIRS=(sdk/rust oak/server/rust)
-readonly DOC_SUBDIRS=(sdk server)
+# First check if the current commit is "clean" with respect to the master branch.
+readonly BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+([[ "${BRANCH}" == 'master' ]] && git diff --exit-code master && git diff --cached --exit-code master) \
+  || (echo "please commit any pending changes first and run this script from the master branch"; exit 1)
 
-# Update the gh-pages branch. Note that `cargo doc` is **not deterministic** so
-# this should only be done when there is a real change.
-readonly BRANCH=${1:-master}
-readonly PREV_COMMIT=$(git log --oneline -n 1 gh-pages | sed 's/.*branch at \([0-9a-f]*\)/\1/')
-
-readonly CHANGES=$(git diff "${PREV_COMMIT}..${BRANCH}" -- "${SRC_SUBDIRS[@]}" | grep -e '[+-]//[/!]')
-
-if [ -z "${CHANGES}" ]; then
-  echo "No doc comment changes found in ${PREV_COMMIT}..${BRANCH}" subdirs "${SRC_SUBDIRS[@]}"
-  exit 0
-fi
-
-git checkout "${BRANCH}"
-readonly BRANCH_SHA1=$(git rev-parse --short HEAD)
+readonly BRANCH_SHA1=$(git rev-parse --short=12 HEAD)
 readonly BRANCH_SUBJECT=$(git log -n 1 --format=format:%s)
 readonly COMMIT_MESSAGE=$(cat <<-END
-Update gh-pages to ${BRANCH} branch at ${BRANCH_SHA1}
+Update gh-pages from ${BRANCH_SHA1}
 
 Auto-generated from commit ${BRANCH_SHA1} ("${BRANCH_SUBJECT}").
 END
 )
 
-tgz_gen() {
+# Create a temporary directory to stage the output of the generation process.
+readonly TARGET_DIR=$(mktemp --directory --tmpdir=/tmp 'project-oak-gh-pages-XXXXXXXXXX')
+
+# Clone the gh-pages branch to the target directory, limiting to one commit.
+git clone git@github.com:project-oak/oak.git --branch=gh-pages --depth=1 "${TARGET_DIR}"
+
+# Remove everything from the target directory. This script is supposed to automatically recreate
+# everything within that directory.
+rm --recursive --force "${TARGET_DIR:?}"/*
+
+readonly SRC_SUBDIRS=(sdk/rust oak/server/rust)
+readonly DOC_SUBDIRS=(sdk server)
+
+doc_gen() {
   local srcdir=$1
   local docdir=$2
-  local tarfile="/tmp/oak-doc-${docdir}-${BRANCH_SHA1}.tgz"
-  # Build Cargo docs and save them off outside the repo
   (
     cd "${srcdir}" || exit
-    rm -rf target/doc
+    # Remove previously generated artifacts, since `cargo doc` only regenerates new or modified
+    # files, but does not remove artifacts generated from now-removed files.
+    rm --recursive --force ./target/doc
     cargo doc --no-deps
     cargo deadlinks
-    cd target/doc || exit
-    tar czf "${tarfile}" ./*
+    cp --recursive ./target/doc "${TARGET_DIR}/${docdir}"
   )
-  echo "${tarfile}"
 }
 
-tarfiles=()
 for ii in "${!SRC_SUBDIRS[@]}"; do
-   tarfiles+=( "$(tgz_gen "${SRC_SUBDIRS[$ii]}" "${DOC_SUBDIRS[$ii]}")" )
+  doc_gen "${SRC_SUBDIRS[$ii]}" "${DOC_SUBDIRS[$ii]}"
 done
 
-# Shift to gh-pages branch and replace contents
-git checkout gh-pages
+cat <<-END > "${TARGET_DIR}/index.html"
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Refresh" content="0; url=./sdk/oak/index.html" />
+  </head>
+  <body>
+    <p><a href="./sdk/oak/index.html">Oak SDK main page</a></p>
+  </body>
+</html>
+END
 
-doc_update() {
-  local docdir=$1
-  local tgzfile=$2
-  rm -rf "${docdir}"
-  mkdir "${docdir}"
-  (
-    cd "${docdir}" || exit
-    tar xzf "${tgzfile}"
-  )
-}
-
-for ii in "${!DOC_SUBDIRS[@]}"; do
-  doc_update "${DOC_SUBDIRS[$ii]}" "${tarfiles[$ii]}"
-done
-
-# Commit any differences
-git add "${DOC_SUBDIRS[@]}"
-git commit --message="${COMMIT_MESSAGE}"
-git checkout "${BRANCH}"
+(
+  cd "${TARGET_DIR}"
+  # Stage everything for commit, including the `index.html` page.
+  git add .
+  git commit --message="${COMMIT_MESSAGE}"
+  echo "to push changes, run the following command:"
+  echo "(cd ${TARGET_DIR} && git push)"
+)

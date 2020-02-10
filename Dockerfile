@@ -1,11 +1,13 @@
 FROM gcr.io/asylo-framework/asylo:buildenv-v0.5.2
 
-RUN apt-get --yes update && apt-get install --yes \
+RUN apt-get --yes update && apt-get install --no-install-recommends --yes \
   clang-format \
   clang-tidy \
   curl \
   git \
   libncurses5 \
+  libssl-dev \
+  pkg-config \
   python3-six \
   shellcheck \
   xml2
@@ -76,6 +78,8 @@ RUN rustup component add \
   rust-src \
   rustfmt
 
+RUN cargo install cargo-deadlinks
+
 # Install embedmd (via Go).
 ARG GOLANG_VERSION=1.13.1
 ARG GOLANG_SHA256=94f874037b82ea5353f4061e543681a0e79657f787437974214629af8407d124
@@ -101,8 +105,8 @@ RUN sha256sum --binary ${EMSCRIPTEN_TEMP} && echo "${EMSCRIPTEN_SHA256} *${EMSCR
 RUN tar --extract --gzip --file=${EMSCRIPTEN_TEMP} --directory=${EMSCRIPTEN_DIR} --strip-components=1
 RUN rm ${EMSCRIPTEN_TEMP}
 RUN cd ${EMSCRIPTEN_DIR} \
-    && ./emsdk install ${EMSCRIPTEN_VERSION} \
-    && ./emsdk activate --embedded ${EMSCRIPTEN_VERSION}
+  && ./emsdk install ${EMSCRIPTEN_VERSION} \
+  && ./emsdk activate --embedded ${EMSCRIPTEN_VERSION}
 ENV EMSDK "${EMSCRIPTEN_DIR}"
 ENV EM_CONFIG "${EMSCRIPTEN_DIR}/.emscripten"
 ENV EM_CACHE "${EMSCRIPTEN_DIR}/.emscripten_cache"
