@@ -22,8 +22,7 @@ import "asylo/enclave.proto";
 import "oak/proto/manager.proto";
 
 message InitializeInput {
-  optional string application_id = 1;
-  optional ApplicationConfiguration application_configuration = 2;
+  optional ApplicationConfiguration application_configuration = 1;
 }
 
 // See

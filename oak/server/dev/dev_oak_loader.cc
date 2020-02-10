@@ -26,11 +26,13 @@
 
 namespace oak {
 
-DevOakLoader::DevOakLoader() : { InitializeAssertionAuthorities(); }
+DevOakLoader::DevOakLoader() {
+  InitializeAssertionAuthorities();
+}
 
-asylo::StatusOr<oak::CreateApplicationResponse> DevOakLoader::CreateApplication(
+asylo::StatusOr<oak::ApplicationCreationStatus> DevOakLoader::CreateApplication(
     const oak::ApplicationConfiguration& application_configuration) {
-  LOG(INFO) << "Creating an application";
+  LOG(INFO) << "Creating an Oak application";
 
   auto runtime = absl::make_unique<OakRuntime>();
   auto status = runtime->Initialize(application_configuration);
@@ -45,9 +47,9 @@ asylo::StatusOr<oak::CreateApplicationResponse> DevOakLoader::CreateApplication(
   LOG(INFO) << "gRPC server is listening on port: " << port;
   runtime_ = std::move(runtime);
 
-  oak::CreateApplicationResponse response;
-  response.set_grpc_port(port);
-  return response;
+  oak::ApplicationCreationStatus app_status;
+  app_status.set_grpc_port(port);
+  return app_status;
 }
 
 grpc::Status DevOakLoader::TerminateApplication() {
@@ -56,10 +58,9 @@ grpc::Status DevOakLoader::TerminateApplication() {
     LOG(ERROR) << error;
     return grpc::Status(grpc::StatusCode::INTERNAL, error);
   }
+  LOG(INFO) << "Terminating an Oak application";
 
   runtime_->Stop();
-  LOG(INFO) << "Application with stopped";
-
   return grpc::Status::OK;
 }
 

@@ -72,34 +72,7 @@ message StorageProxyConfiguration {
   string address = 1;
 }
 
-message CreateApplicationRequest {
-  ApplicationConfiguration application_configuration = 1;
-}
-
-message CreateApplicationResponse {
-  // The unique ID of the newly created Application.
-  string application_id = 1;
-
+message ApplicationCreationStatus {
   // The port on which the Application is listening over gRPC.
-  int32 grpc_port = 2;
-}
-
-message TerminateApplicationRequest {
-  string application_id = 1;
-}
-
-message TerminateApplicationResponse {
-}
-
-// Untrusted service in charge of creating Oak Applications on demand.
-service Manager {
-  // Request the creation of a new Oak Application with the specified configuration.
-  //
-  // After the Oak Node is created, the client should connect to the returned
-  // endpoint via gRPC and perform a direct attestation against the Node itself,
-  // to verify that its configuration corresponds to what the client expects.
-  rpc CreateApplication(CreateApplicationRequest) returns (CreateApplicationResponse);
-
-  // Request that an Oak Application terminate.
-  rpc TerminateApplication(TerminateApplicationRequest) returns (TerminateApplicationResponse);
+  int32 grpc_port = 1;
 }

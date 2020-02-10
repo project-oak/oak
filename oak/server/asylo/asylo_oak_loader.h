@@ -32,25 +32,26 @@ class AsyloOakLoader {
  public:
   explicit AsyloOakLoader(absl::string_view enclave_path);
 
-  asylo::StatusOr<oak::CreateApplicationResponse> CreateApplication(
+  asylo::StatusOr<oak::ApplicationCreationStatus> CreateApplication(
       const oak::ApplicationConfiguration& application_configuration);
 
-  asylo::Status TerminateApplication(const std::string& application_id);
+  asylo::Status TerminateApplication();
 
  private:
   void InitializeEnclaveManager();
 
-  asylo::Status CreateEnclave(const std::string& application_id,
-                              const oak::ApplicationConfiguration& application_configuration);
+  asylo::Status CreateEnclave(const oak::ApplicationConfiguration& application_configuration);
 
-  asylo::StatusOr<InitializeOutput> GetEnclaveOutput(const std::string& application_id);
+  asylo::StatusOr<InitializeOutput> GetEnclaveOutput();
 
-  void DestroyEnclave(const std::string& node_id);
+  void DestroyEnclave();
 
   asylo::EnclaveManager* enclave_manager_;
   // TODO: Use non-simulated loader.
   std::unique_ptr<asylo::SgxLoader> enclave_loader_;
   std::string enclave_path_;
+
+  const std::string enclave_name_ = "oak";
 };
 
 }  // namespace oak

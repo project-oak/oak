@@ -31,7 +31,7 @@ class DevOakLoader {
  public:
   DevOakLoader();
 
-  asylo::StatusOr<oak::CreateApplicationResponse> CreateApplication(
+  asylo::StatusOr<oak::ApplicationCreationStatus> CreateApplication(
       const oak::ApplicationConfiguration& application_configuration);
 
   grpc::Status TerminateApplication();
