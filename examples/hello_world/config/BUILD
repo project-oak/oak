@@ -39,10 +39,10 @@ serialized_config(
 )
 
 serialized_config(
-    name = "storage_config",
+    name = "config_translator",
     modules = {
         "app": "//examples:target/wasm32-unknown-unknown/release/hello_world.wasm",
         "translator": "//examples:target/wasm32-unknown-unknown/release/translator.wasm",
     },
-    textproto = ":storage_config.textproto",
+    textproto = ":config_translator.textproto",
 )

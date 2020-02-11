@@ -66,7 +66,7 @@ int main(int argc, char** argv) {
 
   oak::ApplicationClient::InitializeAssertionAuthorities();
 
-  // Connect to the newly created Oak Application.
+  // Connect to the Oak Application.
   auto stub = HelloWorld::NewStub(oak::ApplicationClient::CreateChannel(address));
 
   // Perform multiple invocations of the same Oak Application, with different parameters.

@@ -61,8 +61,7 @@ int main(int argc, char** argv) {
 
   oak::ApplicationClient::InitializeAssertionAuthorities();
 
-  // Connect to the newly created Oak Application from different clients sharing the same access
-  // token.
+  // Connect to the Oak Application from different clients sharing the same access token.
   oak::NonceGenerator<oak::kPerChannelNonceSizeBytes> nonce_generator;
   std::string authorization_bearer_token = oak::NonceToBytes(nonce_generator.NextNonce());
 

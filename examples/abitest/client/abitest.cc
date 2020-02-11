@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
 
   oak::ApplicationClient::InitializeAssertionAuthorities();
 
-  // Connect to the newly created Oak Application.
+  // Connect to the Oak Application.
   auto stub = OakABITestService::NewStub(oak::ApplicationClient::CreateChannel(address));
 
   // Invoke the application.

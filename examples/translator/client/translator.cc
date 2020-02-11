@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
 
   oak::ApplicationClient::InitializeAssertionAuthorities();
 
-  // Connect to the newly created Oak Application.
+  // Connect to the Oak Application.
   auto stub = Translator::NewStub(oak::ApplicationClient::CreateChannel(address));
 
   translate(stub.get(), "WORLDS", "en", "fr");

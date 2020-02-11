@@ -36,12 +36,12 @@ readonly CPP_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.
 for example in ${CPP_EXAMPLES}; do
   "${SCRIPTS_DIR}/build_example" "${example}"
   # TensorFlow example is compiled with Emscripten and other examples with Clang.
-  if [[ "tensorflow" != "${example}" ]]; then
-    ./bazel-clang-bin/oak/server/dev/dev_oak_runner \
-      --config="$PWD/bazel-wasm-bin/examples/${example}/config/config_cpp.bin" &
-  else
+  if [[ "tensorflow" == "${example}" ]]; then
     ./bazel-clang-bin/oak/server/dev/dev_oak_runner \
       --config="$PWD/bazel-emscripten-bin/examples/${example}/config/config_cpp.bin" &
+  else
+    ./bazel-clang-bin/oak/server/dev/dev_oak_runner \
+      --config="$PWD/bazel-wasm-bin/examples/${example}/config/config_cpp.bin" &
   fi
   SERVER_PID=$!
   sleep 2  # Wait for an application to start.
@@ -53,7 +53,7 @@ done
 #  - a storage provider
 #  - a configured translator module.
 ./bazel-clang-bin/oak/server/dev/dev_oak_runner \
-  --config="$PWD/bazel-client-bin/examples/hello_world/config/storage_config.bin" &
+  --config="$PWD/bazel-client-bin/examples/hello_world/config/config_translator.bin" &
 SERVER_PID=$!
 ./bazel-clang-bin/oak/server/storage/storage_server &
 STORAGE_PID=$!

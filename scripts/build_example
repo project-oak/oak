@@ -53,15 +53,15 @@ if [[ -n "$RUST_FOLDER" ]]; then
     done
 
     # Serialize application configuration for Rust module.
-    if [[ "hello_world" != "$TARGET" ]]; then
-        bazel --output_base="$CACHE_DIR/client" build "${bazel_build_flags[@]}" "//examples/$TARGET/config:config"
-    else
-        # Build translator.
+    if [[ "hello_world" == "$TARGET" ]]; then
+        # `hello_world` example has an optional additional `translator` module.
         cargo build --release --target=wasm32-unknown-unknown --manifest-path="examples/translator/module/rust/Cargo.toml"
 
         bazel --output_base="$CACHE_DIR/client" build "${bazel_build_flags[@]}" \
             "//examples/$TARGET/config:config" \
-            "//examples/$TARGET/config:storage_config"
+            "//examples/$TARGET/config:config_translator"
+    else
+        bazel --output_base="$CACHE_DIR/client" build "${bazel_build_flags[@]}" "//examples/$TARGET/config:config"
     fi
 fi
 
@@ -70,14 +70,15 @@ if [[ -n "$CPP_FOLDER" ]]; then
     # `config_cpp` depends on a Wasm module, so it should be built with `wasm32` or `emscripten`.
     readonly BUILD_RULES=(
         "//examples/$TARGET/module/cpp:all"
-        "//examples/$TARGET/config:config_cpp")
-    if [[ "tensorflow" != "$TARGET" ]]; then
-        # TODO: support compilation mode wasm.
-        bazel build --config=wasm32 "${BUILD_RULES[@]}"
-    else
+        "//examples/$TARGET/config:config_cpp"
+    )
+    if [[ "tensorflow" == "$TARGET" ]]; then
         # TODO: Compile all examples in Emscripten when imports will be fixed.
         # https://github.com/project-oak/oak/issues/439
         bazel build --config=emscripten "${BUILD_RULES[@]}"
+    else
+        # TODO: support compilation mode wasm.
+        bazel build --config=wasm32 "${BUILD_RULES[@]}"
     fi
 fi
 

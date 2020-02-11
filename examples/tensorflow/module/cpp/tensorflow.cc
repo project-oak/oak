@@ -110,7 +110,7 @@ WASM_EXPORT void oak_main(uint64_t grpc_in_handle) {
       return;
     }
 
-    // Reading from main channel should give no data and a (read, write) pair of handles.
+    // Reading from main channel should return no bytes and a (read, write) pair of handles.
     uint32_t actual_size;
     uint32_t handle_count;
     uint64_t handles[2];

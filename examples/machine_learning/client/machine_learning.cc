@@ -71,7 +71,7 @@ int main(int argc, char** argv) {
   std::string address = absl::GetFlag(FLAGS_address);
   LOG(INFO) << "Connecting to Oak Application: " << address;
 
-  // Connect to the newly created Oak Application.
+  // Connect to the Oak Application.
   auto stub = MachineLearning::NewStub(oak::ApplicationClient::CreateChannel(address));
 
   oak::ApplicationClient::InitializeAssertionAuthorities();
