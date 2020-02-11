@@ -77,8 +77,8 @@ cc_binary(
 )
 
 cc_binary(
-    name = "oak_app_loader",
-    srcs = ["dev_oak_app_loader_main.cc"],
+    name = "dev_oak_runner",
+    srcs = ["dev_oak_runner_main.cc"],
     deps = [
         ":dev_oak_loader",
         "//oak/common:app_config",
