@@ -16,8 +16,8 @@ for example in ${RUST_EXAMPLES}; do
   "${SCRIPTS_DIR}/build_example" "${example}"
   ./bazel-bin/oak/server/asylo/asylo_oak_runner \
     --config="$PWD/bazel-client-bin/examples/${example}/config/config.bin" &
-  sleep 2  # Wait for an application to start.
   SERVER_PID=$!
+  sleep 2  # Wait for an application to start.
   # Currently `chat` application starts an infinite loop, so `run_examples` just checks
   # if the module can be loaded correctly.
   if [[ "chat" == "${example}" ]]; then
@@ -42,8 +42,8 @@ for example in ${CPP_EXAMPLES}; do
     ./bazel-bin/oak/server/asylo/asylo_oak_runner \
       --config="$PWD/bazel-emscripten-bin/examples/${example}/config/config_cpp.bin" &
   fi
-  sleep 2  # Wait for an application to start.
   SERVER_PID=$!
+  sleep 2  # Wait for an application to start.
   "${SCRIPTS_DIR}/run_example" "${example}"
   kill -s SIGTERM "$SERVER_PID"
 done

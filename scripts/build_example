@@ -49,11 +49,20 @@ bazel_build_flags+=(
 readonly RUST_FOLDER="$(find examples/"$TARGET" -type d -name rust)"
 if [[ -n "$RUST_FOLDER" ]]; then
     for module in examples/"$TARGET"/module*/rust/Cargo.toml; do
-    cargo build --release --target=wasm32-unknown-unknown --manifest-path="$module"
+        cargo build --release --target=wasm32-unknown-unknown --manifest-path="$module"
     done
 
     # Serialize application configuration for Rust module.
-    bazel --output_base="$CACHE_DIR/client" build "${bazel_build_flags[@]}" "//examples/$TARGET/config:config"
+    if [[ "hello_world" != "$TARGET" ]]; then
+        bazel --output_base="$CACHE_DIR/client" build "${bazel_build_flags[@]}" "//examples/$TARGET/config:config"
+    else
+        # Build translator.
+        cargo build --release --target=wasm32-unknown-unknown --manifest-path="examples/translator/module/rust/Cargo.toml"
+
+        bazel --output_base="$CACHE_DIR/client" build "${bazel_build_flags[@]}" \
+            "//examples/$TARGET/config:config" \
+            "//examples/$TARGET/config:storage_config"
+    fi
 fi
 
 readonly CPP_FOLDER="$(find examples/"$TARGET" -type d -name cpp)"
