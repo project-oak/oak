@@ -283,7 +283,7 @@ encryption into the enclave:
 ```C++
   oak::ApplicationClient::InitializeAssertionAuthorities();
 
-  // Connect to the newly created Oak Application.
+  // Connect to the Oak Application.
   auto stub = FormatService::NewStub(oak::ApplicationClient::CreateChannel(address));
 ```
 <!-- prettier-ignore-end -->
