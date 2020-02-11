@@ -32,7 +32,7 @@ protocol compiler.
 
 The following command compiles the code for an example Oak Application from Rust
 to a WebAssembly module and then serializes it into a binary application
-configuration file `hello_world.bin` to be loaded to the Oak Server.
+configuration file `config.bin` to be loaded to the Oak Server.
 
 `./scripts/build_example hello_world`
 
@@ -40,7 +40,7 @@ configuration file `hello_world.bin` to be loaded to the Oak Server.
 
 The following command builds and runs an Oak Server instance.
 
-`./scripts/docker_run ./scripts/run_server_asylo --config=<APP_CONFIG_PATH>`
+`./scripts/docker_run ./scripts/run_server_asylo --config="$PWD/bazel-client-bin/examples/hello_world/config/config.bin"`
 
 ### Run Development Server
 
@@ -55,7 +55,7 @@ code as it can help with enabling a faster iteration.
 
 The following command builds and runs an Oak Development Server:
 
-`./scripts/run_server_dev --config=<APP_CONFIG_PATH>`
+`./scripts/run_server_dev --config="$PWD/bazel-client-bin/examples/hello_world/config/config.bin"`
 
 As this compiles using clang on your local machine, it can be easily build in
 debug mode, as well as use any of the Sanitizers clang supports (e.g. asan, tsan
