@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 
+readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
+source "$SCRIPTS_DIR/common"
+
 # Prerequisites:
 # - Google Cloud SDK
-# - Environment variable GCP_PROJECT_ID: id of the GCP project to use.
+# - Environment variable GCP_PROJECT_ID: id of the GCP project to use (eg oak-vm-testing).
 # - Environment variable GCP_ACCOUNT_FILE: path to the exported key for the service
 #   account that will be used to connect to GCP.
 # - Service account must be in the following IAM roles:

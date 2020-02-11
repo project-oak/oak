@@ -23,21 +23,12 @@ package(
 
 exports_files(["config.json"])
 
-serialized_config(
-    name = "config",
-    modules = {
-        "app": "//examples:target/wasm32-unknown-unknown/release/hello_world.wasm",
-    },
-    textproto = ":config.textproto",
-)
-
 assemble_packer(
     name = "assemble-oak-gcp-hello-world",
     config = ":config.json",
     files = {
-        "//oak/server/asylo:oak_app_loader_host_loader" : "oak_app_loader_host_loader",
-        "//oak/server/asylo:oak_enclave_debug.so" : "oak_enclave_debug.so",
-        ":config.bin" : "config.bin",
+        "//oak/server/dev:dev_oak_runner" : "dev_oak_runner",
+        "//examples/hello_world/config:config.bin" : "config.bin",
     }
 )
 

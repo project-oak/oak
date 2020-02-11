@@ -32,7 +32,7 @@
       "inline": [
         "sudo mkdir /opt/oak", 
         "sudo cp /tmp/deployment/* /opt/oak/", 
-        "sudo chmod +x /opt/oak/oak_app_loader_host_loader"
+        "sudo chmod +x /opt/oak/dev_oak_runner"
       ]
     }
   ]
