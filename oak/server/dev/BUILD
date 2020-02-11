@@ -30,7 +30,6 @@ cc_library(
         "dev_oak_loader.h",
     ],
     deps = [
-        ":dev_oak_loader",
         "//oak/proto:enclave_cc_proto",
         "//oak/proto:manager_cc_grpc",
         "//oak/server:oak_runtime",

@@ -35,7 +35,7 @@ def serialized_config(name, textproto, modules):
           " --output_file=$@"
     native.genrule(
         # Name of the rule cannot be the same as the output file.
-        name = "serialized_{}".format(name),
+        name = name,
         srcs = srcs,
         # Name of the rule cannot be the same as the output file.
         outs = ["{}.bin".format(name)],
