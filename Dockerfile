@@ -63,6 +63,7 @@ RUN chmod a+rwx ${RUSTUP_DIR}
 # We currently need the nightly version in order to be able to compile some of the examples.
 # See https://rust-lang.github.io/rustup-components-history/ for how to pick a version that supports
 # the appropriate set of components.
+# Make sure to update WORKSPACE too, e.g. when updating nightly version
 ARG RUST_VERSION=nightly-2020-02-06
 RUN rustup toolchain install ${RUST_VERSION}
 RUN rustup default ${RUST_VERSION}
