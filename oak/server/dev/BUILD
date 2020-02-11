@@ -77,7 +77,7 @@ cc_binary(
 )
 
 cc_binary(
-    name = "oak_runner",
+    name = "dev_oak_runner",
     srcs = ["dev_oak_runner_main.cc"],
     deps = [
         ":dev_oak_loader",
