@@ -1,6 +1,3 @@
-# proto-file: oak/proto/manager.proto
-# proto-message: oak.ApplicationConfiguration
-
 node_configs {
   name: "app"
   wasm_config {

@@ -64,10 +64,10 @@ int main(int argc, char** argv) {
   std::string address = absl::GetFlag(FLAGS_address);
   LOG(INFO) << "Connecting to Oak Application: " << address;
 
+  oak::ApplicationClient::InitializeAssertionAuthorities();
+
   // Connect to the newly created Oak Application.
   auto stub = HelloWorld::NewStub(oak::ApplicationClient::CreateChannel(address));
-
-  oak::ApplicationClient::InitializeAssertionAuthorities();
 
   // Perform multiple invocations of the same Oak Application, with different parameters.
   say_hello(stub.get(), "WORLD");
