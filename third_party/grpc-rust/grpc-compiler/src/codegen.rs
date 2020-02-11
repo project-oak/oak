@@ -96,7 +96,7 @@ impl<'a> MethodGen<'a> {
             // TODO(#97): better client-side streaming
             format!("Vec<{}>", self.input_message())
         } else {
-            self.input_message().to_string()
+            self.input_message()
         }
     }
 

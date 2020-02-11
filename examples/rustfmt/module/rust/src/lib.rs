@@ -42,7 +42,7 @@ impl FormatService for Node {
             let mut config = rustfmt_nightly::Config::default();
             config.set().emit_mode(rustfmt_nightly::EmitMode::Stdout);
             let mut session = rustfmt_nightly::Session::new(config, Some(&mut output));
-            let input = rustfmt_nightly::Input::Text(req.code.clone());
+            let input = rustfmt_nightly::Input::Text(req.code);
             session.format(input).expect("could not format input");
         }
         let mut res = FormatResponse::new();

@@ -251,11 +251,12 @@ http_archive(
 
 load("@io_bazel_rules_rust//rust:repositories.bzl", "rust_repository_set")
 
+# Make sure to update Dockerfile too, e.g. when updating nightly version
 rust_repository_set(
     name = "rust_linux_x86_64",
     exec_triple = "x86_64-unknown-linux-gnu",
     extra_target_triples = [],
-    iso_date = "2019-11-06",
+    iso_date = "2020-02-06",
     version = "nightly",
 )
 
