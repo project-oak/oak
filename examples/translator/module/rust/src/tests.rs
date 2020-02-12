@@ -27,10 +27,12 @@ fn test_translate() {
     let (runtime, entry_channel) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
         .expect("Unable to configure runtime with test wasm!");
 
-    let mut req = TranslateRequest::new();
-    req.text = "WORLDS".to_string();
-    req.from_lang = "en".to_string();
-    req.to_lang = "it".to_string();
+    let req = TranslateRequest {
+        text: "WORLDS".into(),
+        from_lang: "en".into(),
+        to_lang: "it".into(),
+        ..Default::default()
+    };
     let result: grpc::Result<TranslateResponse> = oak_tests::grpc_request(
         &entry_channel,
         "/oak.examples.translator.Translator/Translate",

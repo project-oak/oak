@@ -22,8 +22,10 @@ use protobuf::well_known_types::Empty;
 const MODULE_CONFIG_NAME: &str = "running_average";
 
 fn submit_sample(entry_channel: &oak_runtime::ChannelWriter, value: u64) {
-    let mut req = SubmitSampleRequest::new();
-    req.value = value;
+    let req = SubmitSampleRequest {
+        value,
+        ..Default::default()
+    };
     let result: grpc::Result<Empty> = oak_tests::grpc_request(
         &entry_channel,
         "/oak.examples.running_average.RunningAverage/SubmitSample",
