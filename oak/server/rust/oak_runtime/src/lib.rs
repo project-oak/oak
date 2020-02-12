@@ -30,6 +30,9 @@ pub mod message;
 pub mod node;
 pub mod runtime;
 
+#[cfg(test)]
+mod tests;
+
 pub use channel::{ChannelEither, ChannelReader, ChannelWriter};
 pub use config::application_configuration;
 pub use message::Message;
