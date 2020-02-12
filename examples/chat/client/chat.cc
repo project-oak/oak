@@ -251,7 +251,9 @@ int main(int argc, char** argv) {
     LOG(QFATAL) << "Failed to create application stub";
   }
 
-  if (!absl::GetFlag(FLAGS_test)) {
+  if (absl::GetFlag(FLAGS_test)) {
+    return EXIT_SUCCESS;
+  } else {
     RoomId room_id;
     if (!absl::Base64Unescape(absl::GetFlag(FLAGS_room_id), &room_id)) {
       LOG(QFATAL) << "Failed to parse --room_id as base 64";
@@ -275,7 +277,7 @@ int main(int argc, char** argv) {
 
     // Main chat loop.
     Chat(stub.get(), room_id, user_handle);
-  }
 
-  return EXIT_SUCCESS;
+    return EXIT_SUCCESS;
+  }
 }
