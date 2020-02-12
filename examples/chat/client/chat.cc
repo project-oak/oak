@@ -252,32 +252,33 @@ int main(int argc, char** argv) {
   }
 
   if (absl::GetFlag(FLAGS_test)) {
-    return EXIT_SUCCESS;
-  } else {
-    RoomId room_id;
-    if (!absl::Base64Unescape(absl::GetFlag(FLAGS_room_id), &room_id)) {
-      LOG(QFATAL) << "Failed to parse --room_id as base 64";
-    }
-    std::unique_ptr<Room> room;
-    if (room_id.empty()) {
-      room = absl::make_unique<Room>(stub.get());
-      room_id = room->Id();
-      LOG(INFO) << "Join this room with --app_address=" << addr
-                << " --room_id=" << absl::Base64Escape(room_id);
-    }
-
-    // Calculate a user handle.
-    std::string user_handle = absl::GetFlag(FLAGS_handle);
-    if (user_handle.empty()) {
-      user_handle = std::getenv("USER");
-    }
-    if (user_handle.empty()) {
-      user_handle = "<anonymous>";
-    }
-
-    // Main chat loop.
-    Chat(stub.get(), room_id, user_handle);
-
+    // Disable interactive behaviour.
     return EXIT_SUCCESS;
   }
+  
+  RoomId room_id;
+  if (!absl::Base64Unescape(absl::GetFlag(FLAGS_room_id), &room_id)) {
+    LOG(QFATAL) << "Failed to parse --room_id as base 64";
+  }
+  std::unique_ptr<Room> room;
+  if (room_id.empty()) {
+    room = absl::make_unique<Room>(stub.get());
+    room_id = room->Id();
+    LOG(INFO) << "Join this room with --app_address=" << addr
+              << " --room_id=" << absl::Base64Escape(room_id);
+  }
+
+  // Calculate a user handle.
+  std::string user_handle = absl::GetFlag(FLAGS_handle);
+  if (user_handle.empty()) {
+    user_handle = std::getenv("USER");
+  }
+  if (user_handle.empty()) {
+    user_handle = "<anonymous>";
+  }
+
+  // Main chat loop.
+  Chat(stub.get(), room_id, user_handle);
+
+  return EXIT_SUCCESS;
 }
