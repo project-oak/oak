@@ -34,8 +34,7 @@
 #include "oak/common/nonce_generator.h"
 #include "oak/common/utils.h"
 
-ABSL_FLAG(bool, test, false,
-         "Run a non-interactive version of chat application for testing");
+ABSL_FLAG(bool, test, false, "Run a non-interactive version of chat application for testing");
 ABSL_FLAG(std::string, manager_address, "127.0.0.1:8888",
           "Address of the Oak Manager to connect to");
 ABSL_FLAG(std::string, module, "", "File containing the compiled WebAssembly module");
