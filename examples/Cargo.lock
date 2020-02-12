@@ -1658,11 +1658,15 @@ dependencies = [
 name = "translator"
 version = "0.1.0"
 dependencies = [
+ "assert_matches 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "oak 0.1.0",
  "oak_derive 0.1.0",
  "oak_log 0.1.0",
+ "oak_runtime 0.1.0",
+ "oak_tests 0.1.0",
  "protobuf 2.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "simple_logger 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "translator_common 0.1.0",
 ]
 

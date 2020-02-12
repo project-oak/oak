@@ -7,6 +7,12 @@ edition = "2018"
 [lib]
 crate-type = ["cdylib"]
 
+[dev-dependencies]
+assert_matches = "*"
+oak_runtime = "=0.1.0"
+oak_tests = "=0.1.0"
+simple_logger = "*"
+
 [dependencies]
 log = "*"
 oak = "=0.1.0"

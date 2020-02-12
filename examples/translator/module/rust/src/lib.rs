@@ -14,6 +14,9 @@
 // limitations under the License.
 //
 
+#[cfg(test)]
+mod tests;
+
 use log::info;
 use oak::grpc;
 use oak::grpc::OakNode;
