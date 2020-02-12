@@ -2,10 +2,10 @@
 
 readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
 # shellcheck source=scripts/common
-source "$SCRIPTS_DIR/common"
+source "${SCRIPTS_DIR}/common"
 
 # Build Oak server.
-"$SCRIPTS_DIR/build_server_asylo"
+"${SCRIPTS_DIR}/build_server_asylo"
 
 # Run Rust-based Oak examples, each with their own Oak server instance.
 # TODO(#594): Re-enable rustfmt when upstream rustc internal error is fixed.
@@ -15,8 +15,8 @@ for example in ${RUST_EXAMPLES}; do
   # Running `build_example` to compile application configurations before running the server.
   "${SCRIPTS_DIR}/build_example" "${example}"
   ./bazel-bin/oak/server/asylo/asylo_oak_runner \
-    --config="$PWD/bazel-client-bin/examples/${example}/config/config.bin" &
-  SERVER_PID=$!
+    --config="${PWD}/bazel-client-bin/examples/${example}/config/config.bin" &
+  local rust_example_pid=$!
   sleep 2  # Wait for an application to start.
   # Currently `chat` application starts an infinite loop, so `run_examples` just checks
   # if the module can be loaded correctly.
@@ -26,7 +26,7 @@ for example in ${RUST_EXAMPLES}; do
     "${SCRIPTS_DIR}/run_example" "${example}"
   fi
   # TODO: Ensure that background processes are killed with something like `trap cleanup_fn EXIT`.
-  kill -s SIGTERM "$SERVER_PID"
+  kill -s SIGTERM "${rust_example_pid}"
 done
 
 # Run C++-based Oak examples.
@@ -37,13 +37,13 @@ for example in ${CPP_EXAMPLES}; do
   # TensorFlow example is compiled with Emscripten and other examples with Clang.
   if [[ "tensorflow" == "${example}" ]]; then
     ./bazel-bin/oak/server/asylo/asylo_oak_runner \
-      --config="$PWD/bazel-emscripten-bin/examples/${example}/config/config_cpp.bin" &
+      --config="${PWD}/bazel-emscripten-bin/examples/${example}/config/config_cpp.bin" &
   else
     ./bazel-bin/oak/server/asylo/asylo_oak_runner \
-      --config="$PWD/bazel-wasm-bin/examples/${example}/config/config_cpp.bin" &
+      --config="${PWD}/bazel-wasm-bin/examples/${example}/config/config_cpp.bin" &
   fi
-  SERVER_PID=$!
+  cpp_example_pid=$!
   sleep 2  # Wait for an application to start.
   "${SCRIPTS_DIR}/run_example" "${example}"
-  kill -s SIGTERM "$SERVER_PID"
+  kill -s SIGTERM "${cpp_example_pid}"
 done

@@ -58,8 +58,8 @@ if [[ -n "$RUST_FOLDER" ]]; then
         cargo build --release --target=wasm32-unknown-unknown --manifest-path="examples/translator/module/rust/Cargo.toml"
 
         bazel --output_base="$CACHE_DIR/client" build "${bazel_build_flags[@]}" \
-            "//examples/$TARGET/config:config" \
-            "//examples/$TARGET/config:config_translator"
+            "//examples/hello_world/config:config" \
+            "//examples/hello_world/config:config_translator"
     else
         bazel --output_base="$CACHE_DIR/client" build "${bazel_build_flags[@]}" "//examples/$TARGET/config:config"
     fi
