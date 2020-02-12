@@ -17,7 +17,9 @@
 use abitest_0_frontend::proto::abitest::{ABITestRequest, ABITestResponse};
 use assert_matches::assert_matches;
 use log::{error, info};
+use maplit::hashmap;
 use oak::grpc;
+use std::collections::HashMap;
 
 // Constants for Node config names that should match those in the textproto
 // config held in ../../client/config.h.
@@ -32,16 +34,10 @@ const BACKEND_MANIFEST: &str = "../module_1/rust/Cargo.toml";
 const FRONTEND_WASM_NAME: &str = "abitest_0_frontend.wasm";
 const BACKEND_WASM_NAME: &str = "abitest_1_backend.wasm";
 
-fn build_wasm() -> std::io::Result<Vec<(String, Vec<u8>)>> {
-    Ok(vec![
-        (
-            FRONTEND_CONFIG_NAME.to_owned(),
-            oak_tests::compile_rust_wasm(FRONTEND_MANIFEST, FRONTEND_WASM_NAME)?,
-        ),
-        (
-            BACKEND_CONFIG_NAME.to_owned(),
-            oak_tests::compile_rust_wasm(BACKEND_MANIFEST, BACKEND_WASM_NAME)?,
-        ),
+fn build_wasm() -> std::io::Result<HashMap<String, Vec<u8>>> {
+    Ok(hashmap![
+        FRONTEND_CONFIG_NAME.to_owned() => oak_tests::compile_rust_wasm(FRONTEND_MANIFEST, FRONTEND_WASM_NAME)?,
+        BACKEND_CONFIG_NAME.to_owned() => oak_tests::compile_rust_wasm(BACKEND_MANIFEST, BACKEND_WASM_NAME)?,
     ])
 }
 

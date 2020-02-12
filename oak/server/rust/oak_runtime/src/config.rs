@@ -17,21 +17,24 @@
 use crate::proto::manager::{
     ApplicationConfiguration, LogConfiguration, NodeConfiguration, WebAssemblyConfiguration,
 };
+use itertools::Itertools;
+use std::collections::HashMap;
 
 /// Create an application configuration.
 ///
-/// - module_name_wasm: Node name and Wasm bytes.
+/// - module_name_wasm: collection of Wasm bytes indexed by config name.
 /// - logger_name: Node name to use for a logger configuration; if empty no logger will be included.
 /// - initial_node: Initial node to run on launch.
 /// - entrypoint: Entrypoint in the initial node to run on launch.
-pub fn application_configuration(
-    module_name_wasm: Vec<(String, Vec<u8>)>,
+pub fn application_configuration<S: ::std::hash::BuildHasher>(
+    module_name_wasm: HashMap<String, Vec<u8>, S>,
     logger_name: &str,
     initial_node: &str,
     entrypoint: &str,
 ) -> ApplicationConfiguration {
     let mut nodes: Vec<NodeConfiguration> = module_name_wasm
         .into_iter()
+        .sorted()
         .map(|(name, wasm)| {
             let mut node = NodeConfiguration::new();
             node.set_name(name);
@@ -53,10 +56,10 @@ pub fn application_configuration(
         });
     }
 
-    let mut config = ApplicationConfiguration::new();
-    config.set_node_configs(protobuf::RepeatedField::from_vec(nodes));
-    config.set_initial_node_config_name(initial_node.to_string());
-    config.set_initial_entrypoint_name(entrypoint.to_string());
-
-    config
+    ApplicationConfiguration {
+        node_configs: nodes.into(),
+        initial_node_config_name: initial_node.into(),
+        initial_entrypoint_name: entrypoint.into(),
+        ..Default::default()
+    }
 }

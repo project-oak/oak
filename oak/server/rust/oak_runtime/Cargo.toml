@@ -11,16 +11,20 @@ no_std = []
 default = ["std"]
 
 [dependencies]
+byteorder = { version = "*", default-features = false }
+itertools = "*"
 log = { version = "*" }
 oak_abi = "=0.1.0"
 protobuf = "*"
-wasmi = { version = "*", default-features = false, features = ["core"] }
-byteorder = { version = "*", default-features = false }
 rand = { version = "*" }
+wasmi = { version = "*", default-features = false, features = ["core"] }
 
 no-std-compat = { version = "0.2.0", features = [ "alloc", "compat_hash"] }
 
 asylo_rust = { version = "*", optional = true }
+
+[dev-dependencies]
+maplit = "*"
 
 [build-dependencies]
 oak_utils = "*"
