@@ -84,7 +84,7 @@ int main(int argc, char* argv[]) {
   }
 
   // Check application configuration validity.
-  if (!oak::ValidApplicationConfig(*config.get())) {
+  if (!oak::ValidApplicationConfig(*config)) {
     LOG(QFATAL) << "Application config is not valid";
   }
 
