@@ -20,7 +20,7 @@ use log::info;
 
 use oak_runtime::ChannelEither;
 use protobuf::{Message, ProtobufEnum};
-
+use std::collections::HashMap;
 use std::process::Command;
 use tempdir::TempDir;
 
@@ -65,14 +65,17 @@ pub fn run_single_module(
     module_config_name: &str,
     entrypoint_name: &str,
 ) -> Result<(oak_runtime::RuntimeRef, oak_runtime::ChannelWriter), oak::OakStatus> {
-    let wasm = vec![(
+    let wasm: HashMap<String, Vec<u8>> = [(
         module_config_name.to_owned(),
         compile_rust_wasm(
             DEFAULT_MODULE_MANIFEST,
             &(module_config_name.to_owned() + MODULE_WASM_SUFFIX),
         )
         .expect("failed to build wasm module"),
-    )];
+    )]
+    .iter()
+    .cloned()
+    .collect();
 
     let configuration = oak_runtime::application_configuration(
         wasm,
