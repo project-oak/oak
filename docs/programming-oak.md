@@ -444,7 +444,7 @@ framework via the Oak Runtime:
 fn test_say_hello() {
     simple_logger::init().unwrap();
 
-    let configuration = oak_tests::test_configuration(
+    let configuration = oak_runtime::application_configuration(
         build_wasm().expect("failed to build wasm modules"),
         LOG_CONFIG_NAME,
         MODULE_CONFIG_NAME,
@@ -487,18 +487,18 @@ that makes use of the functionality of the Oak TCB.
 ### Testing Multi-Node Applications
 
 It's also possible to test an Oak Application that's built from multiple Nodes,
-using the `oak_tests::test_configuration` to create a configuration and then
-`oak_runtime::Runtime::configure_and_run(configuration)` to configure and run
-the runtime.
+using `oak_runtime::application_configuration` to create an application
+configuration and then `oak_runtime::Runtime::configure_and_run(configuration)`
+to configure and run the runtime.
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/abitest/tests/src/tests.rs Rust /^#\[test\]/ /oak_tests::test_configuration\(.*/)
+[embedmd]:# (../examples/abitest/tests/src/tests.rs Rust /^#\[test\]/ /oak_runtime::application_configuration\(.*/)
 ```Rust
 #[test]
 fn test_abi() {
     simple_logger::init().unwrap();
 
-    let configuration = oak_tests::test_configuration(
+    let configuration = oak_runtime::application_configuration(
 ```
 <!-- prettier-ignore-end -->
 
