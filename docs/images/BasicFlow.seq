@@ -1,11 +1,12 @@
 participant Client [fillcolor="green"]
-participant Oak Manager\n(untrusted) as Mgr [fillcolor="orange"]
+participant ISV [fillcolor="green"]
+participant Oak Loader\n(untrusted) as Loader [fillcolor="orange"]
 participant Oak Runtime\n(in Enclave) as Runtime [fillcolor="palegreen"]
 participant Oak Module\n(in Enclave) as Node [fillcolor="palegreen"]
 
-Client --> Mgr: CreateApplicationReq(.wasm data)
-Note over Mgr: load engine and\n.wasm into enclave [fillcolor="orange"]
-Mgr -->> Runtime: create
+ISV --> Loader: CreateApplication(.wasm data)
+Note over Loader: load engine and\n.wasm into enclave [fillcolor="orange"]
+Loader -->> Runtime: create
 Runtime -> Node: invoke oak_main()
 Node -> Runtime: oak.channel_find("grpc_in")
 Runtime -> Node: "grpc_in" => 1
@@ -13,7 +14,11 @@ Node -> Runtime: oak.channel_find("grpc_out")
 Runtime -> Node: "grpc_out" => 2
 Node -> Runtime: oak.wait_on_channels(1)
 
-Mgr --> Client: CreateApplicationRsp(port)
+Loader --> ISV: ApplicationCreationStatus(port)
+ISV --> Client: Publish(port)
+
+Note over ISV:  [color="white"]
+
 Client --> Runtime: GetAttestationReq()
 Runtime --> Client: GetAttestationRsp(key exchange)
 
@@ -31,12 +36,14 @@ Note over Node: serialize &\nencrypt response [fillcolor="palegreen"]
 Node -> Runtime: oak.channel_write(2, &rsp)
 Note over Runtime: encrypt & send\ngRPC response [fillcolor="palegreen"]
 Runtime -> Client: gRPC: DoSomethingResponse
-Node -> Runtime: oak.wait_on_channels(1)
 
+Note over ISV:  [color="white"]
+
+Node -> Runtime: oak.wait_on_channels(1)
 
 Note over Client: [color="white"]
 
-Client --> Mgr: TerminateApplication
-Mgr --> Runtime: destroy
+ISV --> Loader: TerminateApplication
+Loader --> Runtime: destroy
 Runtime -> Node: status=CHANNEL_CLOSED
 Note over Node: oak_main exits [fillcolor="palegreen"]
