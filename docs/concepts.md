@@ -1,17 +1,16 @@
 # Oak Concepts
 
-- [Oak Concepts](#oak-concepts)
-  - [Oak Runtime](#oak-runtime)
-  - [Oak Node](#oak-node)
-    - [WebAssembly](#webassembly)
-  - [Channels](#channels)
-  - [Pseudo-Nodes](#pseudo-nodes)
-  - [Oak Application](#oak-application)
-  - [Oak Runner](#oak-runner)
-    - [Workflow](#workflow)
-  - [Remote Attestation](#remote-attestation)
-  - [Oak Runtime Updates](#oak-runtime-updates)
-  - [Time](#time)
+- [Oak Runtime](#oak-runtime)
+- [Oak Node](#oak-node)
+  - [WebAssembly](#webassembly)
+- [Channels](#channels)
+- [Pseudo-Nodes](#pseudo-nodes)
+- [Oak Application](#oak-application)
+- [Oak Runner](#oak-runner)
+  - [Workflow](#workflow)
+- [Remote Attestation](#remote-attestation)
+- [Oak Runtime Updates](#oak-runtime-updates)
+- [Time](#time)
 
 ## Oak Runtime
 
