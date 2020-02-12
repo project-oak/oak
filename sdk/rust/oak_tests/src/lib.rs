@@ -46,6 +46,44 @@ pub fn compile_rust_wasm(cargo_path: &str, module_name: &str) -> std::io::Result
     std::fs::read(path)
 }
 
+const DEFAULT_LOG_CONFIG_NAME: &str = "log";
+const DEFAULT_ENTRYPOINT_NAME: &str = "oak_main";
+const DEFAULT_MODULE_MANIFEST: &str = "Cargo.toml";
+const MODULE_WASM_SUFFIX: &str = ".wasm";
+
+/// Convenience helper to build and run a single-Node Application with the
+/// given module name, using the default name "oak_main" for its entrypoint.
+pub fn run_single_module_default(
+    module_config_name: &str,
+) -> Result<(oak_runtime::RuntimeRef, oak_runtime::ChannelWriter), oak::OakStatus> {
+    run_single_module(module_config_name, DEFAULT_ENTRYPOINT_NAME)
+}
+
+/// Convenience helper to build and run a single-Node application with the
+/// given module name, using the provided entrypoint name.
+pub fn run_single_module(
+    module_config_name: &str,
+    entrypoint_name: &str,
+) -> Result<(oak_runtime::RuntimeRef, oak_runtime::ChannelWriter), oak::OakStatus> {
+    let wasm = vec![(
+        module_config_name.to_owned(),
+        compile_rust_wasm(
+            DEFAULT_MODULE_MANIFEST,
+            &(module_config_name.to_owned() + MODULE_WASM_SUFFIX),
+        )
+        .expect("failed to build wasm module"),
+    )];
+
+    let configuration = oak_runtime::application_configuration(
+        wasm,
+        DEFAULT_LOG_CONFIG_NAME,
+        module_config_name,
+        entrypoint_name,
+    );
+
+    oak_runtime::Runtime::configure_and_run(configuration)
+}
+
 // TODO(#543): move this to oak_runtime as it's not test-specific
 pub fn grpc_request<R, Q>(
     channel: &oak_runtime::ChannelWriter,
