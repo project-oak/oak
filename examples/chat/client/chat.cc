@@ -34,6 +34,8 @@
 #include "oak/common/nonce_generator.h"
 #include "oak/common/utils.h"
 
+ABSL_FLAG(bool, test, false,
+         "Run a non-interactive version of chat application for testing");
 ABSL_FLAG(std::string, manager_address, "127.0.0.1:8888",
           "Address of the Oak Manager to connect to");
 ABSL_FLAG(std::string, module, "", "File containing the compiled WebAssembly module");
@@ -250,29 +252,31 @@ int main(int argc, char** argv) {
     LOG(QFATAL) << "Failed to create application stub";
   }
 
-  RoomId room_id;
-  if (!absl::Base64Unescape(absl::GetFlag(FLAGS_room_id), &room_id)) {
-    LOG(QFATAL) << "Failed to parse --room_id as base 64";
-  }
-  std::unique_ptr<Room> room;
-  if (room_id.empty()) {
-    room = absl::make_unique<Room>(stub.get());
-    room_id = room->Id();
-    LOG(INFO) << "Join this room with --app_address=" << addr
-              << " --room_id=" << absl::Base64Escape(room_id);
-  }
+  if (!absl::GetFlag(FLAGS_test)) {
+    RoomId room_id;
+    if (!absl::Base64Unescape(absl::GetFlag(FLAGS_room_id), &room_id)) {
+      LOG(QFATAL) << "Failed to parse --room_id as base 64";
+    }
+    std::unique_ptr<Room> room;
+    if (room_id.empty()) {
+      room = absl::make_unique<Room>(stub.get());
+      room_id = room->Id();
+      LOG(INFO) << "Join this room with --app_address=" << addr
+                << " --room_id=" << absl::Base64Escape(room_id);
+    }
 
-  // Calculate a user handle.
-  std::string user_handle = absl::GetFlag(FLAGS_handle);
-  if (user_handle.empty()) {
-    user_handle = std::getenv("USER");
-  }
-  if (user_handle.empty()) {
-    user_handle = "<anonymous>";
-  }
+    // Calculate a user handle.
+    std::string user_handle = absl::GetFlag(FLAGS_handle);
+    if (user_handle.empty()) {
+      user_handle = std::getenv("USER");
+    }
+    if (user_handle.empty()) {
+      user_handle = "<anonymous>";
+    }
 
-  // Main chat loop.
-  Chat(stub.get(), room_id, user_handle);
+    // Main chat loop.
+    Chat(stub.get(), room_id, user_handle);
+  }
 
   return EXIT_SUCCESS;
 }
