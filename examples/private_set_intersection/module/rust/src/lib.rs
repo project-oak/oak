@@ -26,6 +26,8 @@
 //! intersection.
 
 mod proto;
+#[cfg(test)]
+mod tests;
 
 use oak::grpc;
 use oak::grpc::OakNode;
