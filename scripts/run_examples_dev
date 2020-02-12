@@ -16,7 +16,13 @@ SERVER_PID=$!
 # TODO(#594): Re-enable rustfmt when upstream rustc internal error is fixed.
 readonly RUST_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/rust$' | cut -d'/' -f2 | uniq | grep -v rustfmt)"
 for example in ${RUST_EXAMPLES}; do
-  "${SCRIPTS_DIR}/run_example" "${example}"
+  # Currently `chat` application starts an infinite loop, so `run_examples` just checks
+  # if the module can be loaded correctly.
+  if [[ "chat" == "${example}" ]]; then
+    "${SCRIPTS_DIR}/run_example" -C --test "${example}"
+  else
+    "${SCRIPTS_DIR}/run_example" "${example}"
+  fi
 done
 
 # Run C++-based Oak examples.

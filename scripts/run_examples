@@ -14,7 +14,13 @@ readonly RUST_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '
 for example in ${RUST_EXAMPLES}; do
   ./bazel-bin/oak/server/asylo/oak &
   SERVER_PID=$!
-  "${SCRIPTS_DIR}/run_example" "${example}"
+  # Currently `chat` application starts an infinite loop, so `run_examples` just checks
+  # if the module can be loaded correctly.
+  if [[ "chat" == "${example}" ]]; then
+    "${SCRIPTS_DIR}/run_example" -C --test "${example}"
+  else
+    "${SCRIPTS_DIR}/run_example" "${example}"
+  fi
   # TODO: Ensure that background processes are killed with something like `trap cleanup_fn EXIT`.
   kill -s SIGTERM "$SERVER_PID"
 done
