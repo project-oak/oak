@@ -13,6 +13,12 @@ oak = "=0.1.0"
 oak_derive = "*"
 protobuf = "*"
 
+[dev-dependencies]
+assert_matches = "*"
+oak_runtime = "=0.1.0"
+oak_tests = "=0.1.0"
+simple_logger = "*"
+
 [build-dependencies]
 oak_utils = "*"
 protoc-rust-grpc = { path = "../../../../third_party/grpc-rust/protoc-rust-grpc" }
