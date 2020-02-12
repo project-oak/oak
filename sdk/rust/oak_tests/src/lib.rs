@@ -28,7 +28,7 @@ use oak_runtime::proto::manager::{
     ApplicationConfiguration, LogConfiguration, NodeConfiguration, WebAssemblyConfiguration,
 };
 
-// TODO(#544)
+// TODO(#544): re-enable unit tests of SDK functionality
 
 /// Uses cargo to compile a Rust manifest to Wasm bytes. Compilation is performed in a temporary
 /// directory.
@@ -56,7 +56,7 @@ pub fn compile_rust_wasm(cargo_path: &str, module_name: &str) -> std::io::Result
 /// - logger_name: Node name to use for a logger configuration.
 /// - initial_node: Initial node to run on launch.
 /// - entrypoint: Entrypoint in the initial node to run on launch.
-// TODO(#563)
+// TODO(#563): move this somewhere generic as it's not test-specific
 pub fn test_configuration(
     module_name_wasm: Vec<(String, Vec<u8>)>,
     logger_name: &str,
@@ -92,7 +92,7 @@ pub fn test_configuration(
     config
 }
 
-// TODO(#543)
+// TODO(#543): move this to oak_runtime as it's not test-specific
 pub fn grpc_request<R, Q>(
     channel: &oak_runtime::ChannelWriter,
     method_name: &str,
