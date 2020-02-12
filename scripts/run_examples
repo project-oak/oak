@@ -8,11 +8,8 @@ source "$SCRIPTS_DIR/common"
 "$SCRIPTS_DIR/build_server_asylo"
 
 # Run Rust-based Oak examples, each with their own Oak server instance.
-# Note that the chat example cannot be run because the client is interactive.
-# TODO(#462): Re-enable chat example, even if it may be just loading the server-side code and not
-# interact with it.
 # TODO(#594): Re-enable rustfmt when upstream rustc internal error is fixed.
-readonly RUST_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/rust$' | cut -d'/' -f2 | uniq | grep -v chat | grep -v rustfmt)"
+readonly RUST_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/rust$' | cut -d'/' -f2 | uniq | grep -v rustfmt)"
 
 for example in ${RUST_EXAMPLES}; do
   ./bazel-bin/oak/server/asylo/oak &
