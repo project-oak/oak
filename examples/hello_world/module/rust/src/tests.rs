@@ -19,32 +19,13 @@ use assert_matches::assert_matches;
 use oak::grpc;
 
 const MODULE_CONFIG_NAME: &str = "hello_world";
-const LOG_CONFIG_NAME: &str = "log";
-const ENTRYPOINT_NAME: &str = "oak_main";
-
-const MODULE_MANIFEST: &str = "Cargo.toml";
-const MODULE_WASM_NAME: &str = "hello_world.wasm";
-
-fn build_wasm() -> std::io::Result<Vec<(String, Vec<u8>)>> {
-    Ok(vec![(
-        MODULE_CONFIG_NAME.to_owned(),
-        oak_tests::compile_rust_wasm(MODULE_MANIFEST, MODULE_WASM_NAME)?,
-    )])
-}
 
 // Test invoking the SayHello Node service method via the Oak runtime.
 #[test]
 fn test_say_hello() {
     simple_logger::init().unwrap();
 
-    let configuration = oak_runtime::application_configuration(
-        build_wasm().expect("failed to build wasm modules"),
-        LOG_CONFIG_NAME,
-        MODULE_CONFIG_NAME,
-        ENTRYPOINT_NAME,
-    );
-
-    let (runtime, entry_channel) = oak_runtime::Runtime::configure_and_run(configuration)
+    let (runtime, entry_channel) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
         .expect("Unable to configure runtime with test wasm!");
 
     let mut req = HelloRequest::new();
