@@ -1,16 +1,17 @@
 # Oak Concepts
 
-- [Oak Runtime](#oak-runtime)
-- [Oak Node](#oak-node)
-  - [WebAssembly](#webassembly)
-- [Channels](#channels)
-- [Pseudo-Nodes](#pseudo-nodes)
-- [Oak Application](#oak-application)
-- [Oak Runner](#oak-runner)
-  - [Workflow](#workflow)
-- [Remote Attestation](#remote-attestation)
-- [Oak Runtime Updates](#oak-runtime-updates)
-- [Time](#time)
+- [Oak Concepts](#oak-concepts)
+  - [Oak Runtime](#oak-runtime)
+  - [Oak Node](#oak-node)
+    - [WebAssembly](#webassembly)
+  - [Channels](#channels)
+  - [Pseudo-Nodes](#pseudo-nodes)
+  - [Oak Application](#oak-application)
+  - [Oak Runner](#oak-runner)
+    - [Workflow](#workflow)
+  - [Remote Attestation](#remote-attestation)
+  - [Oak Runtime Updates](#oak-runtime-updates)
+  - [Time](#time)
 
 ## Oak Runtime
 
@@ -140,8 +141,6 @@ remote enclave is indeed running a genuine Oak Runtime and will therefore obey
 the policies set on the Oak Node; the Oak Runtime itself may then optionally
 prove additional details about the Oak Module and its properties, which may
 require reasoning about its internal structure.
-
-In order to be executed by the server an Oak Application should be serialized ...
 
 ## Oak Runner
 
