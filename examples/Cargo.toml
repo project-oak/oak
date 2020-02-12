@@ -16,13 +16,6 @@ members = [
 ]
 
 [patch.crates-io]
-# TODO: Remove when https://github.com/soc/dirs-rs/pull/24 is published.
-dirs = { git = "https://github.com/soc/dirs-rs", rev = "910b3561557dfa8034d39e1462a6cedadbfb6b6e" }
-# TODO: Remove when a new version of the term crate is published. The one currently published
-# depends on dirs=1.0.2 which means that it does not pick up the fix above, which is done on
-# dirs=2.0.1.
-term = { git = "https://github.com/Stebalien/term", rev = "11e754980706a53dda998ba5791a203ab3a5f8fa" }
-
 # Patch dependencies on oak crates so that they refer to the versions within this same repository.
 oak = { path = "../sdk/rust/oak" }
 oak_abi = { path = "../oak/server/rust/oak_abi" }

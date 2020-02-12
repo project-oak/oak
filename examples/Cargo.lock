@@ -1793,16 +1793,6 @@ name = "winapi-x86_64-pc-windows-gnu"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
-[[patch.unused]]
-name = "dirs"
-version = "2.0.1"
-source = "git+https://github.com/soc/dirs-rs?rev=910b3561557dfa8034d39e1462a6cedadbfb6b6e#910b3561557dfa8034d39e1462a6cedadbfb6b6e"
-
-[[patch.unused]]
-name = "term"
-version = "0.5.2"
-source = "git+https://github.com/Stebalien/term?rev=11e754980706a53dda998ba5791a203ab3a5f8fa#11e754980706a53dda998ba5791a203ab3a5f8fa"
-
 [metadata]
 "checksum ahash 0.2.18 (registry+https://github.com/rust-lang/crates.io-index)" = "6f33b5018f120946c1dcf279194f238a9f146725593ead1c08fa47ff22b0b5d3"
 "checksum aho-corasick 0.7.8 (registry+https://github.com/rust-lang/crates.io-index)" = "743ad5a418686aad3b87fd14c43badd828cf26e214a00f92a384291cf22e1811"
