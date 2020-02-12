@@ -25,11 +25,13 @@ extern crate no_std_compat as std;
 pub mod proto;
 
 pub mod channel;
+pub mod config;
 pub mod message;
 pub mod node;
 pub mod runtime;
 
 pub use channel::{ChannelEither, ChannelReader, ChannelWriter};
+pub use config::application_configuration;
 pub use message::Message;
 pub use runtime::{Runtime, RuntimeRef};
 

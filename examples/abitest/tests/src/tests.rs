@@ -49,7 +49,7 @@ fn build_wasm() -> std::io::Result<Vec<(String, Vec<u8>)>> {
 fn test_abi() {
     simple_logger::init().unwrap();
 
-    let configuration = oak_tests::test_configuration(
+    let configuration = oak_runtime::application_configuration(
         build_wasm().expect("failed to build wasm modules"),
         LOG_CONFIG_NAME,
         FRONTEND_CONFIG_NAME,

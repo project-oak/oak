@@ -24,10 +24,6 @@ use protobuf::{Message, ProtobufEnum};
 use std::process::Command;
 use tempdir::TempDir;
 
-use oak_runtime::proto::manager::{
-    ApplicationConfiguration, LogConfiguration, NodeConfiguration, WebAssemblyConfiguration,
-};
-
 // TODO(#544): re-enable unit tests of SDK functionality
 
 /// Uses cargo to compile a Rust manifest to Wasm bytes. Compilation is performed in a temporary
@@ -48,48 +44,6 @@ pub fn compile_rust_wasm(cargo_path: &str, module_name: &str) -> std::io::Result
     path.push(module_name);
 
     std::fs::read(path)
-}
-
-/// Create a simple configuration with collection of Wasm nodes and a logger node.
-///
-/// - module_name_wasm: Node name and Wasm bytes.
-/// - logger_name: Node name to use for a logger configuration.
-/// - initial_node: Initial node to run on launch.
-/// - entrypoint: Entrypoint in the initial node to run on launch.
-// TODO(#563): move this somewhere generic as it's not test-specific
-pub fn test_configuration(
-    module_name_wasm: Vec<(String, Vec<u8>)>,
-    logger_name: &str,
-    initial_node: &str,
-    entrypoint: &str,
-) -> ApplicationConfiguration {
-    let mut nodes: Vec<NodeConfiguration> = module_name_wasm
-        .into_iter()
-        .map(|(name, wasm)| {
-            let mut node = NodeConfiguration::new();
-            node.set_name(name);
-            node.set_wasm_config({
-                let mut w = WebAssemblyConfiguration::new();
-                w.set_module_bytes(wasm);
-                w
-            });
-            node
-        })
-        .collect();
-
-    nodes.push({
-        let mut log_config = NodeConfiguration::new();
-        log_config.set_name(logger_name.to_string());
-        log_config.set_log_config(LogConfiguration::new());
-        log_config
-    });
-
-    let mut config = ApplicationConfiguration::new();
-    config.set_node_configs(protobuf::RepeatedField::from_vec(nodes));
-    config.set_initial_node_config_name(initial_node.to_string());
-    config.set_initial_entrypoint_name(entrypoint.to_string());
-
-    config
 }
 
 // TODO(#543): move this to oak_runtime as it's not test-specific
