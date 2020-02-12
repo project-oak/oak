@@ -447,8 +447,10 @@ fn test_say_hello() {
     let (runtime, entry_channel) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
         .expect("Unable to configure runtime with test wasm!");
 
-    let mut req = HelloRequest::new();
-    req.set_greeting("world".to_string());
+    let req = HelloRequest {
+        greeting: "world".into(),
+        ..Default::default()
+    };
     let result: grpc::Result<HelloResponse> = oak_tests::grpc_request(
         &entry_channel,
         "/oak.examples.hello_world.HelloWorld/SayHello",

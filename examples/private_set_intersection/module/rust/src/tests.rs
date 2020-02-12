@@ -18,7 +18,6 @@ use crate::proto::private_set_intersection::{GetIntersectionResponse, SubmitSetR
 use assert_matches::assert_matches;
 use oak::grpc;
 use protobuf::well_known_types::Empty;
-use protobuf::RepeatedField;
 use std::collections::HashSet;
 use std::iter::FromIterator;
 
@@ -31,8 +30,10 @@ fn test_set_intersection() {
     let (runtime, entry_channel) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
         .expect("Unable to configure runtime with test wasm!");
 
-    let mut req = SubmitSetRequest::new();
-    req.values = RepeatedField::from(vec!["a".to_string(), "b".to_string(), "c".to_string()]);
+    let req = SubmitSetRequest {
+        values: vec!["a".to_string(), "b".to_string(), "c".to_string()].into(),
+        ..Default::default()
+    };
     let result: grpc::Result<Empty> = oak_tests::grpc_request(
         &entry_channel,
         "/oak.examples.private_set_intersection.PrivateSetIntersection/SubmitSet",
@@ -40,8 +41,10 @@ fn test_set_intersection() {
     );
     assert_matches!(result, Ok(_));
 
-    let mut req = SubmitSetRequest::new();
-    req.values = RepeatedField::from(vec!["b".to_string(), "c".to_string(), "d".to_string()]);
+    let req = SubmitSetRequest {
+        values: vec!["b".to_string(), "c".to_string(), "d".to_string()].into(),
+        ..Default::default()
+    };
     let result: grpc::Result<Empty> = oak_tests::grpc_request(
         &entry_channel,
         "/oak.examples.private_set_intersection.PrivateSetIntersection/SubmitSet",
