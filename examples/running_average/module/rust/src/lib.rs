@@ -23,6 +23,8 @@
 //! to and including the value provided in the request.
 
 mod proto;
+#[cfg(test)]
+mod tests;
 
 use oak::grpc;
 use oak::grpc::OakNode;
