@@ -178,17 +178,17 @@ as a gRPC server:
 
 ## Starting an Oak Application
 
-In order run an Oak infrastructure ISV should compile an Oak application to a
-set of WebAssembly modules, serialize them into a binary application
-configuration file and pass it to the Oak Server.
+In order run an Oak application, the ISV compiles a set of WebAssembly modules,
+serializes them to a set of WebAssembly modules, serialize them into a binary
+application configuration file and pass it to the Oak Server.
 ISV should also publish a gRPC service endpoint (host:port) for a newly loaded
 Oak Application.
 
 ### Creating a Configuration File
 
-In order to load an Oak Application into the Oak Server its configuration should
+In order to load an Oak Application into the Oak Server its configuration must
 be serialized into a binary file.
-ISV first need to specify a configuration file:
+The ISV first needs to specify a configuration file:
 
 <!-- prettier-ignore-start -->
 [embedmd]:# (../examples/hello_world/config/config.textproto /node_configs.*/ /initial_entrypoint_name.*/)
@@ -233,7 +233,7 @@ ISV should run an Oak Application using the Oak Runner:
 
 <!-- prettier-ignore-start -->
 ```shell
-`./scripts/run_server_asylo --config="$PWD/config.bin"`
+`./scripts/run_server_asylo --application="$PWD/config.bin"`
 ```
 <!-- prettier-ignore-end -->
 
