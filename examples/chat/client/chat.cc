@@ -255,7 +255,7 @@ int main(int argc, char** argv) {
     // Disable interactive behaviour.
     return EXIT_SUCCESS;
   }
-  
+
   RoomId room_id;
   if (!absl::Base64Unescape(absl::GetFlag(FLAGS_room_id), &room_id)) {
     LOG(QFATAL) << "Failed to parse --room_id as base 64";
