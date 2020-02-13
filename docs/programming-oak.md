@@ -210,10 +210,10 @@ initial_entrypoint_name: "oak_main"
 <!-- prettier-ignore-end -->
 
 The `module_bytes: "<bytes>"` means that this value will be filled with
-WebAssembly module bytes after serialization.
+WebAssembly module bytes after serialization using the
+_Application Configuration Serializer_.
 
-Then ISV should serialize this configuration into a binary file using the
-_Application Configuration Serializer_:
+Serialization script looks like follows:
 
 <!-- prettier-ignore-start -->
 ```shell
@@ -225,7 +225,7 @@ _Application Configuration Serializer_:
 <!-- prettier-ignore-end -->
 
 All these steps are implemented as a part of the
-`./scripts/build_example hello_world`.
+`./scripts/build_example hello_world` script.
 
 ### Starting the Oak Application
 
@@ -243,6 +243,8 @@ configuration. Assuming everything is correct (e.g. the Nodes all have a main
 entrypoint and only expect to find the Oak
 [host functions](abi.md#host-functions)), the Oak Runtime opens up a port of its
 own and returns this to the caller in an `ApplicationCreationStatus`.
+This structure contains the `host:port` pair that the ISV should publish to
+make the Oak App available to the outside world.
 
 ## Using an Oak Application from a client
 

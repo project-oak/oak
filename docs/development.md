@@ -32,15 +32,20 @@ protocol compiler.
 
 The following command compiles the code for an example Oak Application from Rust
 to a WebAssembly module and then serializes it into a binary application
-configuration file `config.bin` to be loaded to the Oak Server.
+configuration file to be loaded to the Oak Server.
 
 `./scripts/build_example hello_world`
 
+This binary application configuration file includes the compiled Wasm code for
+the Oak Application, embedded in a serialized protocol buffer that also
+includes the Application's configuration.
+
 ### Run Server
 
-The following command builds and runs an Oak Server instance.
+The following command builds and runs an Oak Server instance that is running a
+specific Oak Application.
 
-`./scripts/docker_run ./scripts/run_server_asylo --config="$PWD/bazel-client-bin/examples/hello_world/config/config.bin"`
+`./scripts/docker_run ./scripts/run_server_asylo --config="${PWD}/bazel-client-bin/examples/hello_world/config/config.bin"`
 
 ### Run Development Server
 

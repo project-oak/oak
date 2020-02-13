@@ -14,8 +14,8 @@ Node -> Runtime: oak.channel_find("grpc_out")
 Runtime -> Node: "grpc_out" => 2
 Node -> Runtime: oak.wait_on_channels(1)
 
-Runner --> ISV: ApplicationCreationStatus(port)
-ISV --> Client: Publish(port)
+Runner --> ISV: ApplicationCreationStatus(host:port)
+ISV --> Client: Publish(host:port)
 
 Note over ISV:  [color="white"]
 
