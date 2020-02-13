@@ -16,7 +16,8 @@ oak_log = "=0.1.0"
 oak_runtime = "=0.1.0"
 protobuf = "*"
 rand = { version = "*" }
-tempdir = "*"
+serde = "*"
+serde_json = "*"
 
 [build-dependencies]
 protoc-rust = "*"
