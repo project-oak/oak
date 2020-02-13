@@ -8,16 +8,19 @@ source "$SCRIPTS_DIR/common"
 "$SCRIPTS_DIR/build_server_asylo"
 
 # Run Rust-based Oak examples, each with their own Oak server instance.
-# Note that the chat example cannot be run because the client is interactive.
-# TODO(#462): Re-enable chat example, even if it may be just loading the server-side code and not
-# interact with it.
 # TODO(#594): Re-enable rustfmt when upstream rustc internal error is fixed.
-readonly RUST_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/rust$' | cut -d'/' -f2 | uniq | grep -v chat | grep -v rustfmt)"
+readonly RUST_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/rust$' | cut -d'/' -f2 | uniq | grep -v rustfmt)"
 
 for example in ${RUST_EXAMPLES}; do
   ./bazel-bin/oak/server/asylo/oak &
   SERVER_PID=$!
-  "${SCRIPTS_DIR}/run_example" "${example}"
+  # Currently `chat` application starts an infinite loop, so `run_examples` just checks
+  # if the module can be loaded correctly.
+  if [[ "chat" == "${example}" ]]; then
+    "${SCRIPTS_DIR}/run_example" -C --test "${example}"
+  else
+    "${SCRIPTS_DIR}/run_example" "${example}"
+  fi
   # TODO: Ensure that background processes are killed with something like `trap cleanup_fn EXIT`.
   kill -s SIGTERM "$SERVER_PID"
 done
