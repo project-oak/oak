@@ -3,19 +3,23 @@ participant Oak Runtime\n(C++) as Runtime [fillcolor="palegreen"]
 participant Oak SDK\n(Wasm) as SDK [fillcolor="palegreen"]
 participant Oak Node\n(Wasm) as Node [fillcolor="palegreen"]
 
-Runtime -> SDK: oak_main()
-SDK -> Runtime: oak.wait_on_channels(1)
+Runtime -> SDK: oak_main(123)
+SDK -> Runtime: oak.wait_on_channels(123)
 
 
 Note over Client:  [color="white"]
 
 Client --> Runtime: gRPC: DoSomethingRequest
 Note over Runtime: encapsulate\ngRPC req [fillcolor="palegreen"]
-Note over Runtime: serialize\nto channel [fillcolor="palegreen"]
-Runtime -> SDK: channel 1 ready
+Note over Runtime: serialize\nto new channel [fillcolor="palegreen"]
+Note over Runtime: create new response channel [fillcolor="palegreen"]
+Note over Runtime: write new channel handles\nto invocation channel [fillcolor="palegreen"]
+Runtime -> SDK: channel 123 ready
 Note over SDK: (prepare linear memory\narea for receive) [fillcolor="palegreen"]
-SDK -> Runtime: oak.channel_read(1, &buf)
-Runtime -> SDK: serialized\ngRPC request
+SDK -> Runtime: oak.channel_read(123, _, &handles)
+Runtime -> SDK: (read, write) handles (234,345)
+SDK -> Runtime: oak_channel_read(234, &buf, _)
+Runtime -> SDK: serialized gRPC request
 Note over SDK: de-serialize\nrequest [fillcolor="palegreen"]
 SDK -> Node: OakNode::\ninvoke()
 Node -> SDK: dispatch()
@@ -23,7 +27,9 @@ SDK -> Node: node.\ndo_something(req)
 Note over Node: do something [fillcolor="palegreen"]
 Node -> SDK: return response
 Note over SDK: encapsulate\ngRPC rsp [fillcolor="palegreen"]
-SDK -> Runtime: oak.channel_write(2, &rsp)
+SDK -> Runtime: oak.channel_write(345, &rsp)
 Note over Runtime: de-serialize\nresponse [fillcolor="palegreen"]
 Runtime --> Client: gRPC: DoSomethingResponse
-SDK -> Runtime: oak.wait_on_channels(1)
+SDK -> Runtime: oak.channel_close(234)
+SDK -> Runtime: oak.channel_close(345)
+SDK -> Runtime: oak.wait_on_channels(123)

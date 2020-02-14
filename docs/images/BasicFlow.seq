@@ -7,12 +7,9 @@ participant Oak Module\n(in Enclave) as Node [fillcolor="palegreen"]
 ISV --> Runner: CreateApplication(.wasm data, host:port)
 Note over Runner: load engine and\n.wasm into enclave [fillcolor="orange"]
 Runner -->> Runtime: create
-Runtime -> Node: invoke oak_main()
-Node -> Runtime: oak.channel_find("grpc_in")
-Runtime -> Node: "grpc_in" => 1
-Node -> Runtime: oak.channel_find("grpc_out")
-Runtime -> Node: "grpc_out" => 2
-Node -> Runtime: oak.wait_on_channels(1)
+Note over Runtime: create gRPC invocation\nchannel and assign handle [fillcolor="palegreen"]
+Runtime -> Node: invoke oak_main(123)
+Node -> Runtime: oak.wait_on_channels(123)
 
 Runner --> ISV: Ack
 ISV --> Client: Publish(host:port)
@@ -25,23 +22,28 @@ Runtime --> Client: GetAttestationRsp(key exchange)
 Note over Client:  [color="white"]
 
 Client --> Runtime: gRPC: DoSomethingRequest
-Note over Runtime: decrypt & write\ngRPC req to channel [fillcolor="palegreen"]
-Runtime -> Node: channel 1 ready
+Note over Runtime: decrypt & write\ngRPC req to new channel [fillcolor="palegreen"]
+Note over Runtime: create new response channel [fillcolor="palegreen"]
+Note over Runtime: write new channel handles\nto invocation channel [fillcolor="palegreen"]
+Runtime -> Node: channel 123 ready
 Note over Node: (prepare linear memory\narea for receive) [fillcolor="palegreen"]
-Node -> Runtime: oak.channel_read(1, &buf)
-Runtime -> Node: encrypted, serialized\ngRPC request
-Note over Node: decrypt &\nunmarshal request [fillcolor="palegreen"]
+Node -> Runtime: oak.channel_read(123, _, &handles)
+Runtime -> Node: (read, write) handles (234,345)
+Node -> Runtime: oak.channel_read(234, &buf, _)
+Runtime -> Node: serialized gRPC request
+Note over Node: unmarshal request [fillcolor="palegreen"]
 Note over Node: do something [fillcolor="palegreen"]
-Note over Node: serialize &\nencrypt response [fillcolor="palegreen"]
-Node -> Runtime: oak.channel_write(2, &rsp)
+Note over Node: serialize response [fillcolor="palegreen"]
+Node -> Runtime: oak.channel_write(345, &rsp)
 Note over Runtime: encrypt & send\ngRPC response [fillcolor="palegreen"]
 Runtime -> Client: gRPC: DoSomethingResponse
-
-Note over ISV:  [color="white"]
-
-Node -> Runtime: oak.wait_on_channels(1)
+Node -> Runtime: oak.channel_close(234)
+Node -> Runtime: oak.channel_close(345)
+Node -> Runtime: oak.wait_on_channels(123)
 
 Note over Client: [color="white"]
+
+Note over ISV:  [color="white"]
 
 ISV --> Runner: TerminateApplication
 Runner --> Runtime: destroy
