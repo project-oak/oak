@@ -143,7 +143,8 @@ require reasoning about its internal structure.
 
 ## Oak Runner
 
-The **Oak Runner** creates an Oak Application running within a platform provider.
+The **Oak Runner** creates an Oak Application running within a platform
+provider.
 
 Note that the Oak Runner is not part of the TCB: the actual trusted attestation
 only happens between client and the Oak Application running in the enclave at
@@ -166,10 +167,10 @@ Sample flow:
 - ISV writes an Oak Module for the Oak Runtime using a high-level language,
   compiles it to WebAssembly and requests the creation of an Oak Node using the
   Oak Runner.
-- The Oak Runner creates a new enclave and initializes it with a fresh Oak
-  Node, and then seals the enclave. The Oak Node exposes a gRPC endpoint at a
-  newly allocated endpoint (host:port). The endpoint gets forwarded to the
-  client as part of the creation response.
+- The Oak Runner creates a new enclave and initializes it with a fresh Oak Node,
+  and then seals the enclave. The Oak Node exposes a gRPC endpoint at a newly
+  allocated endpoint (host:port). The endpoint gets forwarded to the client as
+  part of the creation response.
   - Note up to this point no sensitive data has been exchanged.
   - The client still has no guarantees that the endpoint is in fact running an
     Oak Runtime, as the Oak Runner is itself untrusted.

@@ -180,15 +180,14 @@ as a gRPC server:
 
 In order run an Oak application, the ISV compiles a set of WebAssembly modules,
 serializes them to a set of WebAssembly modules, serialize them into a binary
-application configuration file and pass it to the Oak Server.
-ISV should also publish a gRPC service endpoint (host:port) for a newly loaded
-Oak Application.
+application configuration file and pass it to the Oak Server. ISV should also
+publish a gRPC service endpoint (host:port) for a newly loaded Oak Application.
 
 ### Creating a Configuration File
 
 In order to load an Oak Application into the Oak Server its configuration must
-be serialized into a binary file.
-The ISV first needs to specify a configuration file:
+be serialized into a binary file. The ISV first needs to specify a configuration
+file:
 
 <!-- prettier-ignore-start -->
 [embedmd]:# (../examples/hello_world/config/config.textproto /node_configs.*/ /initial_entrypoint_name.*/)
@@ -210,8 +209,8 @@ initial_entrypoint_name: "oak_main"
 <!-- prettier-ignore-end -->
 
 The `module_bytes: "<bytes>"` means that this value will be filled with
-WebAssembly module bytes after serialization using the
-_Application Configuration Serializer_.
+WebAssembly module bytes after serialization using the _Application
+Configuration Serializer_.
 
 Serialization script looks like follows:
 
@@ -242,9 +241,9 @@ enclave, and this Runtime will check the provided Wasm module(s) and application
 configuration. Assuming everything is correct (e.g. the Nodes all have a main
 entrypoint and only expect to find the Oak
 [host functions](abi.md#host-functions)), the Oak Runtime opens up a port of its
-own and returns this to the caller in an `ApplicationCreationStatus`.
-This structure contains the `host:port` pair that the ISV should publish to
-make the Oak App available to the outside world.
+own and returns this to the caller in an `ApplicationCreationStatus`. This
+structure contains the `host:port` pair that the ISV should publish to make the
+Oak App available to the outside world.
 
 ## Using an Oak Application from a client
 

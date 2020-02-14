@@ -37,8 +37,8 @@ configuration file to be loaded to the Oak Server.
 `./scripts/build_example hello_world`
 
 This binary application configuration file includes the compiled Wasm code for
-the Oak Application, embedded in a serialized protocol buffer that also
-includes the Application's configuration.
+the Oak Application, embedded in a serialized protocol buffer that also includes
+the Application's configuration.
 
 ### Run Server
 
