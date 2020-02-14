@@ -180,8 +180,9 @@ as a gRPC server:
 
 In order run an Oak application, the ISV compiles a set of WebAssembly modules,
 serializes them to a set of WebAssembly modules, serialize them into a binary
-application configuration file and pass it to the Oak Server. ISV should also
-publish a gRPC service endpoint (host:port) for a newly loaded Oak Application.
+application configuration file and pass it to the Oak Server. The ISV should
+also publish a gRPC service endpoint (host:port) for a newly loaded Oak
+Application.
 
 ### Creating a Configuration File
 
@@ -228,7 +229,7 @@ All these steps are implemented as a part of the
 
 ### Starting the Oak Application
 
-ISV should run an Oak Application using the Oak Runner:
+The ISV should run an Oak Application using the Oak Runner:
 
 <!-- prettier-ignore-start -->
 ```shell
@@ -330,12 +331,11 @@ types cannot be added after the application starts; any Node that the
 Application might need has to be included in the original configuration.
 
 As before, each Node must include a main entrypoint with signature
-`fn(u64) -> ()`, but for an internal Node it's entirely up to the Application
-developer as to what channel handle gets passed to this entrypoint, and as to
-what messages are sent down that channel. The application may choose to use
-protobuf-encoded messages (as gRPC does) for its internal communications, or
-something else entirely (e.g. the
-[serde crate](https://crates.io/crates/serde)).
+`fn(u64) -> ()`, but for an internal Node it's entirely up to the ISV as to what
+channel handle gets passed to this entrypoint, and as to what messages are sent
+down that channel. The application may choose to use protobuf-encoded messages
+(as gRPC does) for its internal communications, or something else entirely (e.g.
+the [serde crate](https://crates.io/crates/serde)).
 
 Regardless of how the application communicates with the new Node, the typical
 pattern for the existing Node is to:

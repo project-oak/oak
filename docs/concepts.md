@@ -46,8 +46,9 @@ sufficiently anonymized form in subsequent invocations by other clients.
 
 The current version of the Oak Runtime supports
 [WebAssembly](https://webassembly.org) as the first-class target language for
-Oak Module development. Developers wishing to run their code as part of Project
-Oak need to be able to compile their code to WebAssembly.
+Oak Module development. Independent Software Vendor (ISVs) wishing to run their
+code as part of Project Oak need to be able to compile their code to
+WebAssembly.
 
 WebAssembly has a well-defined, unambiguous
 [formal specification](https://webassembly.github.io/spec/core/valid/instructions.html),
@@ -159,12 +160,12 @@ following system diagram.
 
 ### Workflow
 
-ISV runs an Oak Application using the Oak Runner and publishes details about the
-gRPC endpoint for a client to connect to.
+The ISV runs an Oak Application using the Oak Runner and publishes details about
+the gRPC endpoint for a client to connect to.
 
 Sample flow:
 
-- ISV writes an Oak Module for the Oak Runtime using a high-level language,
+- The ISV writes an Oak Module for the Oak Runtime using a high-level language,
   compiles it to WebAssembly and requests the creation of an Oak Node using the
   Oak Runner.
 - The Oak Runner creates a new enclave and initializes it with a fresh Oak Node,
