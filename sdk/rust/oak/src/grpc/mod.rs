@@ -122,16 +122,6 @@ impl ChannelResponseWriter {
 /// An `OakNode` instance is normally passed to [`oak::run_event_loop`], to
 /// allow repeated invocation of its `invoke()` method.
 pub trait OakNode {
-    /// Construct the (single) instance of the node.
-    ///
-    /// This method may choose to initialize logging by invoking
-    /// [`oak_log::init()`].
-    ///
-    /// [`oak_log::init()`]: ../../oak_log/fn.init.html
-    fn new() -> Self
-    where
-        Self: Sized;
-
     /// Process a single gRPC method invocation.
     ///
     /// The method name is provided by `method` and the incoming serialized gRPC
@@ -141,9 +131,6 @@ pub trait OakNode {
 }
 
 impl<T: OakNode> crate::Node<Invocation> for T {
-    fn new() -> Self {
-        T::new()
-    }
     /// Handle incoming gRPC events for an [`OakNode`].
     ///
     /// Invoking the given `node`'s [`invoke`] method for each incoming request that

@@ -30,22 +30,19 @@ mod proto;
 mod tests;
 
 use oak::grpc;
-use oak::grpc::OakNode;
-use oak_derive::OakExports;
 use proto::private_set_intersection::{GetIntersectionResponse, SubmitSetRequest};
 use proto::private_set_intersection_grpc::{dispatch, PrivateSetIntersection};
 use protobuf::well_known_types::Empty;
 use std::collections::HashSet;
 
-#[derive(Default, OakExports)]
+oak::entrypoint!(oak_main => Node::default());
+
+#[derive(Default)]
 struct Node {
     values: Option<HashSet<String>>,
 }
 
 impl oak::grpc::OakNode for Node {
-    fn new() -> Self {
-        Node::default()
-    }
     fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
         dispatch(self, method, req, writer)
     }

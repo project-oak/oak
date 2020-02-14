@@ -19,15 +19,10 @@ use crate::proto::chat::Message;
 use log::info;
 use oak::Node;
 
-#[no_mangle]
-pub extern "C" fn backend_oak_main(handle: u64) {
-    let _ = std::panic::catch_unwind(|| {
-        oak_log::init_default();
-        oak::set_panic_hook();
-        let room = Room::new();
-        oak::run_event_loop(room, handle);
-    });
-}
+oak::entrypoint!(backend_oak_main => {
+    oak_log::init_default();
+    Room::default()
+});
 
 #[derive(Default)]
 struct Room {
@@ -35,11 +30,7 @@ struct Room {
     clients: Vec<oak::grpc::ChannelResponseWriter>,
 }
 
-impl oak::Node<Command> for Room {
-    fn new() -> Self {
-        Room::default()
-    }
-
+impl Node<Command> for Room {
     fn handle_command(&mut self, command: Command) -> Result<(), oak::OakError> {
         match command {
             Command::Join(h) => {

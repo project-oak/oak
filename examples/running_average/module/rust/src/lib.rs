@@ -27,22 +27,19 @@ mod proto;
 mod tests;
 
 use oak::grpc;
-use oak::grpc::OakNode;
-use oak_derive::OakExports;
 use proto::running_average::{GetAverageResponse, SubmitSampleRequest};
 use proto::running_average_grpc::{dispatch, RunningAverage};
 use protobuf::well_known_types::Empty;
 
-#[derive(Default, OakExports)]
+oak::entrypoint!(oak_main => Node::default());
+
+#[derive(Default)]
 struct Node {
     sum: u64,
     count: u64,
 }
 
 impl oak::grpc::OakNode for Node {
-    fn new() -> Self {
-        Node::default()
-    }
     fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
         dispatch(self, method, req, writer)
     }

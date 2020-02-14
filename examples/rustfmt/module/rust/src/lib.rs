@@ -17,19 +17,17 @@
 mod proto;
 
 use oak::grpc;
-use oak::grpc::OakNode;
-use oak_derive::OakExports;
 use proto::rustfmt::{FormatRequest, FormatResponse};
 use proto::rustfmt_grpc::{dispatch, FormatService};
 
-#[derive(OakExports)]
+oak::entrypoint!(oak_main => {
+    oak_log::init_default();
+    Node
+});
+
 struct Node;
 
 impl oak::grpc::OakNode for Node {
-    fn new() -> Self {
-        oak_log::init_default();
-        Node
-    }
     fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
         dispatch(self, method, req, writer)
     }

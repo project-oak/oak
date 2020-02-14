@@ -11,7 +11,6 @@ crate-type = ["cdylib"]
 bincode = "*"
 log = "*"
 oak = "=0.1.0"
-oak_derive = "*"
 oak_log = "*"
 protobuf = "*"
 rand_core = "*"

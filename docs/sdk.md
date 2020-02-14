@@ -96,12 +96,3 @@ The [`oak_log`](https://project-oak.github.io/oak/sdk/oak_log/index.html) crate
 is a logging implementation for the Rust
 [log facade](https://crates.io/crates/log), which uses an channel to a
 freshly-created logging pseudo-Node as the underlying logging mechanism.
-
-## `oak_derive` Crate
-
-The [`oak_derive`](https://project-oak.github.io/oak/sdk/oak_derive/index.html)
-crate provides the
-[`OakExports`](https://project-oak.github.io/oak/sdk/oak_derive/index.html)
-[derive macro](https://doc.rust-lang.org/reference/procedural-macros.html#derive-macros).
-This macro annotates a `struct` that implements the `oak::grpc::OakNode` trait,
-so that it serves as the Node's overall main entrypoint, with name `oak_main`.
