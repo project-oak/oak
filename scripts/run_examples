@@ -15,7 +15,7 @@ for example in ${RUST_EXAMPLES}; do
   # Running `build_example` to compile application configurations before running the server.
   "${SCRIPTS_DIR}/build_example" "${example}"
   ./bazel-bin/oak/server/asylo/asylo_oak_runner \
-    --config="${PWD}/bazel-client-bin/examples/${example}/config/config.bin" &
+    --application="${PWD}/bazel-client-bin/examples/${example}/config/config.bin" &
   local rust_example_pid=$!
   sleep 2  # Wait for an application to start.
   # Currently `chat` application starts an infinite loop, so `run_examples` just checks
@@ -37,10 +37,10 @@ for example in ${CPP_EXAMPLES}; do
   # TensorFlow example is compiled with Emscripten and other examples with Clang.
   if [[ "tensorflow" == "${example}" ]]; then
     ./bazel-bin/oak/server/asylo/asylo_oak_runner \
-      --config="${PWD}/bazel-emscripten-bin/examples/${example}/config/config_cpp.bin" &
+      --application="${PWD}/bazel-emscripten-bin/examples/${example}/config/config_cpp.bin" &
   else
     ./bazel-bin/oak/server/asylo/asylo_oak_runner \
-      --config="${PWD}/bazel-wasm-bin/examples/${example}/config/config_cpp.bin" &
+      --application="${PWD}/bazel-wasm-bin/examples/${example}/config/config_cpp.bin" &
   fi
   cpp_example_pid=$!
   sleep 2  # Wait for an application to start.

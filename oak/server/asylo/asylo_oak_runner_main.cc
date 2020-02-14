@@ -32,7 +32,7 @@
 #include "oak/proto/manager.grpc.pb.h"
 #include "oak/server/asylo/asylo_oak_loader.h"
 
-ABSL_FLAG(std::string, config, "", "Application configuration file");
+ABSL_FLAG(std::string, application, "", "Application configuration file");
 ABSL_FLAG(std::string, enclave_path, "", "Path of the enclave to load");
 
 void sigint_handler(int param) {
@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
 
   // Load application configuration.
   std::unique_ptr<oak::ApplicationConfiguration> application_config =
-      oak::ReadConfigFromFile(absl::GetFlag(FLAGS_config));
+      oak::ReadConfigFromFile(absl::GetFlag(FLAGS_application));
 
   asylo::StatusOr<oak::CreateApplicationResponse> result =
       loader->CreateApplication(*application_config);
