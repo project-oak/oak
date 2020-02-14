@@ -12,4 +12,4 @@ bazel_build_flags+=(
 
 # Use a different output_base so that we don't lose incremental state.
 # See https://docs.bazel.build/versions/master/command-line-reference.html#flag--output_base.
-bazel --output_base="$CACHE_DIR/$CONFIG" build "${bazel_build_flags[@]}" //oak/server/dev:oak_runner
+bazel --output_base="$CACHE_DIR/$CONFIG" build "${bazel_build_flags[@]}" //oak/server/dev:dev_oak_runner
