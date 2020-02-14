@@ -1197,237 +1197,26 @@ impl ::protobuf::reflect::ProtobufValue for StorageProxyConfiguration {
 }
 
 #[derive(PartialEq,Clone,Default)]
-pub struct CreateApplicationRequest {
+pub struct ApplicationCreationStatus {
     // message fields
-    pub application_configuration: ::protobuf::SingularPtrField<ApplicationConfiguration>,
-    // special fields
-    pub unknown_fields: ::protobuf::UnknownFields,
-    pub cached_size: ::protobuf::CachedSize,
-}
-
-impl<'a> ::std::default::Default for &'a CreateApplicationRequest {
-    fn default() -> &'a CreateApplicationRequest {
-        <CreateApplicationRequest as ::protobuf::Message>::default_instance()
-    }
-}
-
-impl CreateApplicationRequest {
-    pub fn new() -> CreateApplicationRequest {
-        ::std::default::Default::default()
-    }
-
-    // .oak.ApplicationConfiguration application_configuration = 1;
-
-
-    pub fn get_application_configuration(&self) -> &ApplicationConfiguration {
-        self.application_configuration.as_ref().unwrap_or_else(|| ApplicationConfiguration::default_instance())
-    }
-    pub fn clear_application_configuration(&mut self) {
-        self.application_configuration.clear();
-    }
-
-    pub fn has_application_configuration(&self) -> bool {
-        self.application_configuration.is_some()
-    }
-
-    // Param is passed by value, moved
-    pub fn set_application_configuration(&mut self, v: ApplicationConfiguration) {
-        self.application_configuration = ::protobuf::SingularPtrField::some(v);
-    }
-
-    // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_application_configuration(&mut self) -> &mut ApplicationConfiguration {
-        if self.application_configuration.is_none() {
-            self.application_configuration.set_default();
-        }
-        self.application_configuration.as_mut().unwrap()
-    }
-
-    // Take field
-    pub fn take_application_configuration(&mut self) -> ApplicationConfiguration {
-        self.application_configuration.take().unwrap_or_else(|| ApplicationConfiguration::new())
-    }
-}
-
-impl ::protobuf::Message for CreateApplicationRequest {
-    fn is_initialized(&self) -> bool {
-        for v in &self.application_configuration {
-            if !v.is_initialized() {
-                return false;
-            }
-        };
-        true
-    }
-
-    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
-        while !is.eof()? {
-            let (field_number, wire_type) = is.read_tag_unpack()?;
-            match field_number {
-                1 => {
-                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.application_configuration)?;
-                },
-                _ => {
-                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
-                },
-            };
-        }
-        ::std::result::Result::Ok(())
-    }
-
-    // Compute sizes of nested messages
-    #[allow(unused_variables)]
-    fn compute_size(&self) -> u32 {
-        let mut my_size = 0;
-        if let Some(ref v) = self.application_configuration.as_ref() {
-            let len = v.compute_size();
-            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
-        }
-        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
-        self.cached_size.set(my_size);
-        my_size
-    }
-
-    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
-        if let Some(ref v) = self.application_configuration.as_ref() {
-            os.write_tag(1, ::protobuf::wire_format::WireTypeLengthDelimited)?;
-            os.write_raw_varint32(v.get_cached_size())?;
-            v.write_to_with_cached_sizes(os)?;
-        }
-        os.write_unknown_fields(self.get_unknown_fields())?;
-        ::std::result::Result::Ok(())
-    }
-
-    fn get_cached_size(&self) -> u32 {
-        self.cached_size.get()
-    }
-
-    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
-        &self.unknown_fields
-    }
-
-    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
-        &mut self.unknown_fields
-    }
-
-    fn as_any(&self) -> &dyn (::std::any::Any) {
-        self as &dyn (::std::any::Any)
-    }
-    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
-        self as &mut dyn (::std::any::Any)
-    }
-    fn into_any(self: Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
-        self
-    }
-
-    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
-        Self::descriptor_static()
-    }
-
-    fn new() -> CreateApplicationRequest {
-        CreateApplicationRequest::new()
-    }
-
-    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
-        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
-        };
-        unsafe {
-            descriptor.get(|| {
-                let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<ApplicationConfiguration>>(
-                    "application_configuration",
-                    |m: &CreateApplicationRequest| { &m.application_configuration },
-                    |m: &mut CreateApplicationRequest| { &mut m.application_configuration },
-                ));
-                ::protobuf::reflect::MessageDescriptor::new::<CreateApplicationRequest>(
-                    "CreateApplicationRequest",
-                    fields,
-                    file_descriptor_proto()
-                )
-            })
-        }
-    }
-
-    fn default_instance() -> &'static CreateApplicationRequest {
-        static mut instance: ::protobuf::lazy::Lazy<CreateApplicationRequest> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const CreateApplicationRequest,
-        };
-        unsafe {
-            instance.get(CreateApplicationRequest::new)
-        }
-    }
-}
-
-impl ::protobuf::Clear for CreateApplicationRequest {
-    fn clear(&mut self) {
-        self.application_configuration.clear();
-        self.unknown_fields.clear();
-    }
-}
-
-impl ::std::fmt::Debug for CreateApplicationRequest {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        ::protobuf::text_format::fmt(self, f)
-    }
-}
-
-impl ::protobuf::reflect::ProtobufValue for CreateApplicationRequest {
-    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
-        ::protobuf::reflect::ProtobufValueRef::Message(self)
-    }
-}
-
-#[derive(PartialEq,Clone,Default)]
-pub struct CreateApplicationResponse {
-    // message fields
-    pub application_id: ::std::string::String,
     pub grpc_port: i32,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
 }
 
-impl<'a> ::std::default::Default for &'a CreateApplicationResponse {
-    fn default() -> &'a CreateApplicationResponse {
-        <CreateApplicationResponse as ::protobuf::Message>::default_instance()
+impl<'a> ::std::default::Default for &'a ApplicationCreationStatus {
+    fn default() -> &'a ApplicationCreationStatus {
+        <ApplicationCreationStatus as ::protobuf::Message>::default_instance()
     }
 }
 
-impl CreateApplicationResponse {
-    pub fn new() -> CreateApplicationResponse {
+impl ApplicationCreationStatus {
+    pub fn new() -> ApplicationCreationStatus {
         ::std::default::Default::default()
     }
 
-    // string application_id = 1;
-
-
-    pub fn get_application_id(&self) -> &str {
-        &self.application_id
-    }
-    pub fn clear_application_id(&mut self) {
-        self.application_id.clear();
-    }
-
-    // Param is passed by value, moved
-    pub fn set_application_id(&mut self, v: ::std::string::String) {
-        self.application_id = v;
-    }
-
-    // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_application_id(&mut self) -> &mut ::std::string::String {
-        &mut self.application_id
-    }
-
-    // Take field
-    pub fn take_application_id(&mut self) -> ::std::string::String {
-        ::std::mem::replace(&mut self.application_id, ::std::string::String::new())
-    }
-
-    // int32 grpc_port = 2;
+    // int32 grpc_port = 1;
 
 
     pub fn get_grpc_port(&self) -> i32 {
@@ -1443,7 +1232,7 @@ impl CreateApplicationResponse {
     }
 }
 
-impl ::protobuf::Message for CreateApplicationResponse {
+impl ::protobuf::Message for ApplicationCreationStatus {
     fn is_initialized(&self) -> bool {
         true
     }
@@ -1453,9 +1242,6 @@ impl ::protobuf::Message for CreateApplicationResponse {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
-                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.application_id)?;
-                },
-                2 => {
                     if wire_type != ::protobuf::wire_format::WireTypeVarint {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     }
@@ -1474,11 +1260,8 @@ impl ::protobuf::Message for CreateApplicationResponse {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        if !self.application_id.is_empty() {
-            my_size += ::protobuf::rt::string_size(1, &self.application_id);
-        }
         if self.grpc_port != 0 {
-            my_size += ::protobuf::rt::value_size(2, self.grpc_port, ::protobuf::wire_format::WireTypeVarint);
+            my_size += ::protobuf::rt::value_size(1, self.grpc_port, ::protobuf::wire_format::WireTypeVarint);
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
@@ -1486,11 +1269,8 @@ impl ::protobuf::Message for CreateApplicationResponse {
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
-        if !self.application_id.is_empty() {
-            os.write_string(1, &self.application_id)?;
-        }
         if self.grpc_port != 0 {
-            os.write_int32(2, self.grpc_port)?;
+            os.write_int32(1, self.grpc_port)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -1522,8 +1302,8 @@ impl ::protobuf::Message for CreateApplicationResponse {
         Self::descriptor_static()
     }
 
-    fn new() -> CreateApplicationResponse {
-        CreateApplicationResponse::new()
+    fn new() -> ApplicationCreationStatus {
+        ApplicationCreationStatus::new()
     }
 
     fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
@@ -1534,18 +1314,13 @@ impl ::protobuf::Message for CreateApplicationResponse {
         unsafe {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
-                    "application_id",
-                    |m: &CreateApplicationResponse| { &m.application_id },
-                    |m: &mut CreateApplicationResponse| { &mut m.application_id },
-                ));
                 fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeInt32>(
                     "grpc_port",
-                    |m: &CreateApplicationResponse| { &m.grpc_port },
-                    |m: &mut CreateApplicationResponse| { &mut m.grpc_port },
+                    |m: &ApplicationCreationStatus| { &m.grpc_port },
+                    |m: &mut ApplicationCreationStatus| { &mut m.grpc_port },
                 ));
-                ::protobuf::reflect::MessageDescriptor::new::<CreateApplicationResponse>(
-                    "CreateApplicationResponse",
+                ::protobuf::reflect::MessageDescriptor::new::<ApplicationCreationStatus>(
+                    "ApplicationCreationStatus",
                     fields,
                     file_descriptor_proto()
                 )
@@ -1553,327 +1328,31 @@ impl ::protobuf::Message for CreateApplicationResponse {
         }
     }
 
-    fn default_instance() -> &'static CreateApplicationResponse {
-        static mut instance: ::protobuf::lazy::Lazy<CreateApplicationResponse> = ::protobuf::lazy::Lazy {
+    fn default_instance() -> &'static ApplicationCreationStatus {
+        static mut instance: ::protobuf::lazy::Lazy<ApplicationCreationStatus> = ::protobuf::lazy::Lazy {
             lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const CreateApplicationResponse,
+            ptr: 0 as *const ApplicationCreationStatus,
         };
         unsafe {
-            instance.get(CreateApplicationResponse::new)
+            instance.get(ApplicationCreationStatus::new)
         }
     }
 }
 
-impl ::protobuf::Clear for CreateApplicationResponse {
+impl ::protobuf::Clear for ApplicationCreationStatus {
     fn clear(&mut self) {
-        self.application_id.clear();
         self.grpc_port = 0;
         self.unknown_fields.clear();
     }
 }
 
-impl ::std::fmt::Debug for CreateApplicationResponse {
+impl ::std::fmt::Debug for ApplicationCreationStatus {
     fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
         ::protobuf::text_format::fmt(self, f)
     }
 }
 
-impl ::protobuf::reflect::ProtobufValue for CreateApplicationResponse {
-    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
-        ::protobuf::reflect::ProtobufValueRef::Message(self)
-    }
-}
-
-#[derive(PartialEq,Clone,Default)]
-pub struct TerminateApplicationRequest {
-    // message fields
-    pub application_id: ::std::string::String,
-    // special fields
-    pub unknown_fields: ::protobuf::UnknownFields,
-    pub cached_size: ::protobuf::CachedSize,
-}
-
-impl<'a> ::std::default::Default for &'a TerminateApplicationRequest {
-    fn default() -> &'a TerminateApplicationRequest {
-        <TerminateApplicationRequest as ::protobuf::Message>::default_instance()
-    }
-}
-
-impl TerminateApplicationRequest {
-    pub fn new() -> TerminateApplicationRequest {
-        ::std::default::Default::default()
-    }
-
-    // string application_id = 1;
-
-
-    pub fn get_application_id(&self) -> &str {
-        &self.application_id
-    }
-    pub fn clear_application_id(&mut self) {
-        self.application_id.clear();
-    }
-
-    // Param is passed by value, moved
-    pub fn set_application_id(&mut self, v: ::std::string::String) {
-        self.application_id = v;
-    }
-
-    // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_application_id(&mut self) -> &mut ::std::string::String {
-        &mut self.application_id
-    }
-
-    // Take field
-    pub fn take_application_id(&mut self) -> ::std::string::String {
-        ::std::mem::replace(&mut self.application_id, ::std::string::String::new())
-    }
-}
-
-impl ::protobuf::Message for TerminateApplicationRequest {
-    fn is_initialized(&self) -> bool {
-        true
-    }
-
-    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
-        while !is.eof()? {
-            let (field_number, wire_type) = is.read_tag_unpack()?;
-            match field_number {
-                1 => {
-                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.application_id)?;
-                },
-                _ => {
-                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
-                },
-            };
-        }
-        ::std::result::Result::Ok(())
-    }
-
-    // Compute sizes of nested messages
-    #[allow(unused_variables)]
-    fn compute_size(&self) -> u32 {
-        let mut my_size = 0;
-        if !self.application_id.is_empty() {
-            my_size += ::protobuf::rt::string_size(1, &self.application_id);
-        }
-        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
-        self.cached_size.set(my_size);
-        my_size
-    }
-
-    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
-        if !self.application_id.is_empty() {
-            os.write_string(1, &self.application_id)?;
-        }
-        os.write_unknown_fields(self.get_unknown_fields())?;
-        ::std::result::Result::Ok(())
-    }
-
-    fn get_cached_size(&self) -> u32 {
-        self.cached_size.get()
-    }
-
-    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
-        &self.unknown_fields
-    }
-
-    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
-        &mut self.unknown_fields
-    }
-
-    fn as_any(&self) -> &dyn (::std::any::Any) {
-        self as &dyn (::std::any::Any)
-    }
-    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
-        self as &mut dyn (::std::any::Any)
-    }
-    fn into_any(self: Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
-        self
-    }
-
-    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
-        Self::descriptor_static()
-    }
-
-    fn new() -> TerminateApplicationRequest {
-        TerminateApplicationRequest::new()
-    }
-
-    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
-        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
-        };
-        unsafe {
-            descriptor.get(|| {
-                let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
-                    "application_id",
-                    |m: &TerminateApplicationRequest| { &m.application_id },
-                    |m: &mut TerminateApplicationRequest| { &mut m.application_id },
-                ));
-                ::protobuf::reflect::MessageDescriptor::new::<TerminateApplicationRequest>(
-                    "TerminateApplicationRequest",
-                    fields,
-                    file_descriptor_proto()
-                )
-            })
-        }
-    }
-
-    fn default_instance() -> &'static TerminateApplicationRequest {
-        static mut instance: ::protobuf::lazy::Lazy<TerminateApplicationRequest> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const TerminateApplicationRequest,
-        };
-        unsafe {
-            instance.get(TerminateApplicationRequest::new)
-        }
-    }
-}
-
-impl ::protobuf::Clear for TerminateApplicationRequest {
-    fn clear(&mut self) {
-        self.application_id.clear();
-        self.unknown_fields.clear();
-    }
-}
-
-impl ::std::fmt::Debug for TerminateApplicationRequest {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        ::protobuf::text_format::fmt(self, f)
-    }
-}
-
-impl ::protobuf::reflect::ProtobufValue for TerminateApplicationRequest {
-    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
-        ::protobuf::reflect::ProtobufValueRef::Message(self)
-    }
-}
-
-#[derive(PartialEq,Clone,Default)]
-pub struct TerminateApplicationResponse {
-    // special fields
-    pub unknown_fields: ::protobuf::UnknownFields,
-    pub cached_size: ::protobuf::CachedSize,
-}
-
-impl<'a> ::std::default::Default for &'a TerminateApplicationResponse {
-    fn default() -> &'a TerminateApplicationResponse {
-        <TerminateApplicationResponse as ::protobuf::Message>::default_instance()
-    }
-}
-
-impl TerminateApplicationResponse {
-    pub fn new() -> TerminateApplicationResponse {
-        ::std::default::Default::default()
-    }
-}
-
-impl ::protobuf::Message for TerminateApplicationResponse {
-    fn is_initialized(&self) -> bool {
-        true
-    }
-
-    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
-        while !is.eof()? {
-            let (field_number, wire_type) = is.read_tag_unpack()?;
-            match field_number {
-                _ => {
-                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
-                },
-            };
-        }
-        ::std::result::Result::Ok(())
-    }
-
-    // Compute sizes of nested messages
-    #[allow(unused_variables)]
-    fn compute_size(&self) -> u32 {
-        let mut my_size = 0;
-        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
-        self.cached_size.set(my_size);
-        my_size
-    }
-
-    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
-        os.write_unknown_fields(self.get_unknown_fields())?;
-        ::std::result::Result::Ok(())
-    }
-
-    fn get_cached_size(&self) -> u32 {
-        self.cached_size.get()
-    }
-
-    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
-        &self.unknown_fields
-    }
-
-    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
-        &mut self.unknown_fields
-    }
-
-    fn as_any(&self) -> &dyn (::std::any::Any) {
-        self as &dyn (::std::any::Any)
-    }
-    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
-        self as &mut dyn (::std::any::Any)
-    }
-    fn into_any(self: Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
-        self
-    }
-
-    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
-        Self::descriptor_static()
-    }
-
-    fn new() -> TerminateApplicationResponse {
-        TerminateApplicationResponse::new()
-    }
-
-    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
-        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
-        };
-        unsafe {
-            descriptor.get(|| {
-                let fields = ::std::vec::Vec::new();
-                ::protobuf::reflect::MessageDescriptor::new::<TerminateApplicationResponse>(
-                    "TerminateApplicationResponse",
-                    fields,
-                    file_descriptor_proto()
-                )
-            })
-        }
-    }
-
-    fn default_instance() -> &'static TerminateApplicationResponse {
-        static mut instance: ::protobuf::lazy::Lazy<TerminateApplicationResponse> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const TerminateApplicationResponse,
-        };
-        unsafe {
-            instance.get(TerminateApplicationResponse::new)
-        }
-    }
-}
-
-impl ::protobuf::Clear for TerminateApplicationResponse {
-    fn clear(&mut self) {
-        self.unknown_fields.clear();
-    }
-}
-
-impl ::std::fmt::Debug for TerminateApplicationResponse {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        ::protobuf::text_format::fmt(self, f)
-    }
-}
-
-impl ::protobuf::reflect::ProtobufValue for TerminateApplicationResponse {
+impl ::protobuf::reflect::ProtobufValue for ApplicationCreationStatus {
     fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
         ::protobuf::reflect::ProtobufValueRef::Message(self)
     }
@@ -1893,16 +1372,8 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     ConfigB\r\n\x0bconfig_type\"=\n\x18WebAssemblyConfiguration\x12!\n\x0cmo\
     dule_bytes\x18\x01\x20\x01(\x0cR\x0bmoduleBytes\"\x12\n\x10LogConfigurat\
     ion\"5\n\x19StorageProxyConfiguration\x12\x18\n\x07address\x18\x01\x20\
-    \x01(\tR\x07address\"v\n\x18CreateApplicationRequest\x12Z\n\x19applicati\
-    on_configuration\x18\x01\x20\x01(\x0b2\x1d.oak.ApplicationConfigurationR\
-    \x18applicationConfiguration\"_\n\x19CreateApplicationResponse\x12%\n\
-    \x0eapplication_id\x18\x01\x20\x01(\tR\rapplicationId\x12\x1b\n\tgrpc_po\
-    rt\x18\x02\x20\x01(\x05R\x08grpcPort\"D\n\x1bTerminateApplicationRequest\
-    \x12%\n\x0eapplication_id\x18\x01\x20\x01(\tR\rapplicationId\"\x1e\n\x1c\
-    TerminateApplicationResponse2\xba\x01\n\x07Manager\x12R\n\x11CreateAppli\
-    cation\x12\x1d.oak.CreateApplicationRequest\x1a\x1e.oak.CreateApplicatio\
-    nResponse\x12[\n\x14TerminateApplication\x12\x20.oak.TerminateApplicatio\
-    nRequest\x1a!.oak.TerminateApplicationResponseb\x06proto3\
+    \x01(\tR\x07address\"8\n\x19ApplicationCreationStatus\x12\x1b\n\tgrpc_po\
+    rt\x18\x01\x20\x01(\x05R\x08grpcPortb\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {

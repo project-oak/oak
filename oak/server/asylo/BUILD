@@ -151,32 +151,12 @@ enclave_loader(
 container_image(
     name = "oak_docker",
     base = "@cc_image//image",
-    entrypoint = [
-        "./oak_host_loader",
-        "--enclave_path=oak_enclave_debug.so",
-        "--grpc_port=8888",
-    ],
     files = [
+        "asylo_oak_runner",
         "oak_enclave_debug.so",
-        "oak_host_loader",
     ],
     ports = [
         # https://github.com/project-oak/oak/blob/667b07c555cde0c4705e5f7533b101203cc01c12/oak/server/asylo/asylo_oak_manager.cc#L48
-        "8080/tcp",  # Oak Application gRPC port.
-        # https://github.com/project-oak/oak/blob/667b07c555cde0c4705e5f7533b101203cc01c12/oak/server/asylo/asylo_oak_main.cc#L33
-        "8888/tcp",  # Oak Manager gRPC port.
-    ],
-    repository = "gcr.io/oak-ci",
-)
-
-container_image(
-    name = "oak_app_docker",
-    base = "@cc_image//image",
-    files = [
-        "oak_app_host_loader",
-        "oak_enclave_debug.so",
-    ],
-    ports = [
         "8080/tcp",  # Oak Application gRPC port.
     ],
     repository = "gcr.io/oak-ci",
