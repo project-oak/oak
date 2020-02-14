@@ -19,7 +19,7 @@ The first client to run typically creates the Oak Application and a first chat
 room inside it:
 
 ```bash
-$ ./examples/chat/run
+./examples/chat/run
 ```
 
 This will emit a trace line that holds the information needed to:
@@ -34,7 +34,7 @@ This will emit a trace line that holds the information needed to:
 Another party can then join the same chat room by using these arguments:
 
 ```bash
-$ ./examples/chat/run -C --app_address=127.0.0.1:32889 --room_id=NKsceNlg69UbcvryfzmFGnMv9qnZ0DYh6u6gJxujnPPxvHsxMehoD368sumKawVaq9WaSkzrcStoNYLvVNdzhA==
+./examples/chat/run -C --app_address=127.0.0.1:32889 --room_id=NKsceNlg69UbcvryfzmFGnMv9qnZ0DYh6u6gJxujnPPxvHsxMehoD368sumKawVaq9WaSkzrcStoNYLvVNdzhA==
 ```
 
 Alternatively, another party can create a new chat room running on the same Oak
@@ -42,7 +42,7 @@ Application by just copying the `--app_address` argument, but specifying a new
 room name:
 
 ```bash
-$ ./examples/chat/run -C --app_address=127.0.0.1:32889
+./examples/chat/run -C --app_address=127.0.0.1:32889
 ```
 
 This will again emit a trace line with the information needed to join this new

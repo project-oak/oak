@@ -23,14 +23,20 @@ RUN shellcheck --version
 RUN node --version
 RUN npm --version
 
-# Install prettier (via Node.js).
+# Install prettier and markdownlint (via Node.js).
 # https://prettier.io/
-RUN npm install --global prettier
+# https://github.com/igorshubovych/markdownlint-cli
+ARG PRETTIER_VERSION=1.19.1
+ARG MARKDOWNLINT_VERSION=0.22.0
+RUN npm install --global \
+  prettier@${PRETTIER_VERSION} \
+  markdownlint-cli@${MARKDOWNLINT_VERSION}
 RUN prettier --version
+RUN markdownlint --version
 
 # Install buildifier.
-ARG BAZEL_TOOLS_VERSION=0.29.0
-ARG BUILDIFIER_SHA256=4c985c883eafdde9c0e8cf3c8595b8bfdf32e77571c369bf8ddae83b042028d6
+ARG BAZEL_TOOLS_VERSION=1.0.0
+ARG BUILDIFIER_SHA256=ec064a5edd2a2a210cf8162305869a27b3ed6c7e50caa70687bc9d72177f61f3
 ARG BUILDIFIER_DIR=/usr/local/buildifier/bin
 ARG BUILDIFIER_BIN=${BUILDIFIER_DIR}/buildifier
 RUN mkdir --parents ${BUILDIFIER_DIR}

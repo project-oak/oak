@@ -1,0 +1,26 @@
+# Line length
+#
+# `prettier` seems to have a different heuristic for splitting lines, and sometimes some long lines
+# are left around.
+#
+# https://github.com/DavidAnson/markdownlint/blob/master/doc/Rules.md#md013
+MD013: false
+
+# Fenced code blocks should be surrounded by blank lines
+#
+# This does not work well with embedmd, which requires comments around fenced code blocks.
+#
+# https://github.com/DavidAnson/markdownlint/blob/master/doc/Rules.md#md031
+MD031: false
+
+# Inline HTML
+#
+# https://github.com/DavidAnson/markdownlint/blob/master/doc/Rules.md#md033
+MD033:
+  allowed_elements:
+    - img
+
+# Bare URL used
+#
+# https://github.com/DavidAnson/markdownlint/blob/master/doc/Rules.md#md034
+MD034: false
