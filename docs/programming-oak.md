@@ -5,11 +5,12 @@ This document walks through the basics of programming in Oak.
 - [Writing an Oak Node](#writing-an-oak-node)
   - [Per-Node Boilerplate](#per-node-boilerplate)
   - [Generated gRPC service code](#generated-grpc-service-code)
-- [Using an Oak Application from a client](#using-an-oak-application-from-a-client)
-  - [Connecting to the Oak Manager](#connecting-to-the-oak-manager)
+- [Starting an Oak Application](#starting-an-oak-application)
+  - [Creating a Configuration File](#creating-a-configuration-file)
   - [Starting the Oak Application](#starting-the-oak-application)
+- [Using an Oak Application from a client](#using-an-oak-application-from-a-client)
+  - [Connecting the Oak Application](#connecting-the-oak-application)
 - [gRPC Request Processing Path](#grpc-request-processing-path)
-- [Node Termination](#node-termination)
 - [Nodes, Channels and Handles](#nodes-channels-and-handles)
 - [Persistent Storage](#persistent-storage)
 - [Testing](#testing)
@@ -175,116 +176,94 @@ as a gRPC server:
   of the Node, available because the Node `struct` implements the gRPC service
   trait.
 
-## Using an Oak Application from a client
+## Starting an Oak Application
 
-TODO(#431) Update documentation to use a single app oak server.
+In order run an Oak application, the ISV compiles a set of WebAssembly modules,
+serializes them to a set of WebAssembly modules, serialize them into a binary
+application configuration file and pass it to the Oak Server. The ISV should
+also publish a gRPC service endpoint (host:port) for a newly loaded Oak
+Application.
 
-A client that is outside of the Oak ecosystem can use an Oak Application by
-interacting with it as a gRPC service. However, this does involve a few
-additional complications beyond the normal gRPC boilerplate, which are described
-in this section.
+### Creating a Configuration File
 
-### Connecting to the Oak Manager
-
-Oak client code (in C++) first needs to connect to the
-[Oak Manager](concepts.md#oak-manager), as a normal gRPC client:
-
-<!-- prettier-ignore-start -->
-```C++
-  // Connect to the Oak Manager.
-  auto channel =
-      grpc::CreateChannel(absl::GetFlag(FLAGS_manager_address), grpc::InsecureChannelCredentials());
-  auto manager_stub = oak::Manager::NewStub(channel, grpc::StubOptions());
-```
-<!-- prettier-ignore-end -->
-
-This sets up a client for the `oak.Manager` service; this service allows the
-creation and termination of Oak Applications:
+In order to load an Oak Application into the Oak Server its configuration must
+be serialized into a binary file. The ISV first needs to specify a configuration
+file:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../oak/proto/manager.proto protobuf /^service Manager/ /^}/)
-```protobuf
-service Manager {
-  // Request the creation of a new Oak Application with the specified configuration.
-  //
-  // After the Oak Node is created, the client should connect to the returned
-  // endpoint via gRPC and perform a direct attestation against the Node itself,
-  // to verify that its configuration corresponds to what the client expects.
-  rpc CreateApplication(CreateApplicationRequest) returns (CreateApplicationResponse);
-
-  // Request that an Oak Application terminate.
-  rpc TerminateApplication(TerminateApplicationRequest) returns (TerminateApplicationResponse);
+[embedmd]:# (../examples/hello_world/config/config.textproto /node_configs.*/ /initial_entrypoint_name.*/)
+```textproto
+node_configs {
+  name: "app"
+  wasm_config {
+    module_bytes: "<bytes>"
+  }
 }
+node_configs {
+  name: "log"
+  log_config {}
+}
+grpc_port: 8080
+initial_node_config_name: "app"
+initial_entrypoint_name: "oak_main"
 ```
 <!-- prettier-ignore-end -->
 
-Alternatively, the manager client can also be wrapped up in a
-[helper library](../oak/client/manager_client.h), which will make application
-configuration (described in the next section) easier:
+The `module_bytes: "<bytes>"` means that this value will be filled with
+WebAssembly module bytes after serialization using the _Application
+Configuration Serializer_.
+
+Serialization script looks like follows:
 
 <!-- prettier-ignore-start -->
-```C++
-  // Connect to the Oak Manager.
-  std::unique_ptr<oak::ManagerClient> manager_client =
-      absl::make_unique<oak::ManagerClient>(grpc::CreateChannel(
-          absl::GetFlag(FLAGS_manager_address), grpc::InsecureChannelCredentials()));
+```shell
+./bazel-bin/oak/common/app_config_serializer \
+  --textproto=examples/hello_world/config/config.textproto \
+  --modules=app://examples/target/wasm32-unknown-unknown/release/hello_world.wasm \
+  --output_file=config.bin"
 ```
 <!-- prettier-ignore-end -->
+
+All these steps are implemented as a part of the
+`./scripts/build_example hello_world` script.
 
 ### Starting the Oak Application
 
-To use the `CreateApplication` method, the client needs to specify the
-_application configuration_; this describes the Nodes that make up the
-application, and the initial Node to start. However, for the simple case of a
-one-Node application the `oak::ManagerClient` helper takes care of this; the
-client just need to provide the code that is going to be run in the Node, as a
-Wasm module:
+The ISV should run an Oak Application using the Oak Runner:
 
 <!-- prettier-ignore-start -->
-```C++
-  std::string module_bytes = oak::utils::read_file(absl::GetFlag(FLAGS_module));
-  std::unique_ptr<oak::CreateApplicationResponse> create_application_response =
-      manager_client->CreateApplication(module_bytes);
-  if (create_application_response == nullptr) {
-    LOG(QFATAL) << "Failed to create application";
-  }
+```shell
+`./scripts/run_server_asylo --application="$PWD/config.bin"`
 ```
 <!-- prettier-ignore-end -->
 
-There's also a variant of `CreateApplication` that allows the client code to
-specify a storage provider to connect to, and to control whether logging is
-enabled:
-
-<!-- prettier-ignore-start -->
-```C++
-  std::string module_bytes = oak::utils::read_file(absl::GetFlag(FLAGS_module));
-  std::unique_ptr<oak::CreateApplicationResponse> create_application_response =
-      manager_client->CreateApplication(module_bytes, /* logging= */ true,
-                                        /* storage_address= */ "");
-  if (create_application_response == nullptr) {
-    LOG(QFATAL) << "Failed to create application";
-  }
-```
-<!-- prettier-ignore-end -->
-
-The Oak Manager will launch an [Oak Runtime](concepts.md#oak-vm) inside the
+The Oak Runner will launch an [Oak Runtime](concepts.md#oak-vm) inside the
 enclave, and this Runtime will check the provided Wasm module(s) and application
 configuration. Assuming everything is correct (e.g. the Nodes all have a main
 entrypoint and only expect to find the Oak
 [host functions](abi.md#host-functions)), the Oak Runtime opens up a port of its
-own and the `CreateApplication` returns this to the client.
+own and returns this to the caller in an `ApplicationCreationStatus`. This
+structure contains the `host:port` pair that the ISV should publish to make the
+Oak App available to the outside world.
 
-The client can now connect to this separate gRPC service, and send
-(Node-specific) gRPC requests to it, over a channel that has end-to-end
-encryption into the enclave:
+## Using an Oak Application from a client
+
+A client that is outside of the Oak ecosystem can use an Oak Application by
+interacting with it as a gRPC service using an endpoint (host:port) published by
+ISV.
+
+### Connecting the Oak Application
+
+The client can connect to a gRPC service, and send (Node-specific) gRPC requests
+to it, over a channel that has end-to-end encryption into the enclave:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/rustfmt/client/rustfmt.cc C++ /.*InitializeAssertionAuthorities/ /CreateChannel.*/)
+[embedmd]:# (../examples/hello_world/client/hello_world.cc C++ /.*InitializeAssertionAuthorities/ /CreateChannel.*/)
 ```C++
   oak::ApplicationClient::InitializeAssertionAuthorities();
 
   // Connect to the Oak Application.
-  auto stub = FormatService::NewStub(oak::ApplicationClient::CreateChannel(address));
+  auto stub = HelloWorld::NewStub(oak::ApplicationClient::CreateChannel(address));
 ```
 <!-- prettier-ignore-end -->
 
@@ -324,14 +303,6 @@ sections) would be as follows:
 <!-- From (Google-internal): http://go/sequencediagram/view/5741464478810112 -->
 <img src="images/SDKFlow.png" width="850">
 
-## Node Termination
-
-The client can also politely request that the Oak Application terminate, using
-the `TerminateApplication` method on the (outer) gRPC service. The Oak Manager
-passes this on to the Oak Runtime, which will then notify the running Nodes that
-termination has been requested (by returning `ERR_TERMINATED` on any current or
-future `oak.wait_on_channels()` invocations).
-
 ## Nodes, Channels and Handles
 
 So far, we've only discussed writing a single Node for an Oak Application. This
@@ -360,12 +331,11 @@ types cannot be added after the application starts; any Node that the
 Application might need has to be included in the original configuration.
 
 As before, each Node must include a main entrypoint with signature
-`fn(u64) -> ()`, but for an internal Node it's entirely up to the Application
-developer as to what channel handle gets passed to this entrypoint, and as to
-what messages are sent down that channel. The application may choose to use
-protobuf-encoded messages (as gRPC does) for its internal communications, or
-something else entirely (e.g. the
-[serde crate](https://crates.io/crates/serde)).
+`fn(u64) -> ()`, but for an internal Node it's entirely up to the ISV as to what
+channel handle gets passed to this entrypoint, and as to what messages are sent
+down that channel. The application may choose to use protobuf-encoded messages
+(as gRPC does) for its internal communications, or something else entirely (e.g.
+the [serde crate](https://crates.io/crates/serde)).
 
 Regardless of how the application communicates with the new Node, the typical
 pattern for the existing Node is to:
