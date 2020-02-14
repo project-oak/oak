@@ -72,8 +72,8 @@ message StorageProxyConfiguration {
   string address = 1;
 }
 
-// ApplicationCreationStatus the configuration of a successfully loaded Oak
-// application.
+// ApplicationCreationStatus describes the configuration of a successfully
+// loaded Oak application.
 message ApplicationCreationStatus {
   // The port on which the application is listening over gRPC.
   int32 grpc_port = 1;
