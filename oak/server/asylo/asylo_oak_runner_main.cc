@@ -47,7 +47,7 @@ int main(int argc, char* argv[]) {
   // does not seem to work.
   std::signal(SIGINT, sigint_handler);
 
-  // Create manager instance.
+  // Create loader instance.
   std::unique_ptr<oak::AsyloOakLoader> loader =
       absl::make_unique<oak::AsyloOakLoader>(absl::GetFlag(FLAGS_enclave_path));
 

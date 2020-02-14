@@ -26,9 +26,7 @@
 
 namespace oak {
 
-DevOakLoader::DevOakLoader() {
-  InitializeAssertionAuthorities();
-}
+DevOakLoader::DevOakLoader() { InitializeAssertionAuthorities(); }
 
 asylo::StatusOr<oak::ApplicationCreationStatus> DevOakLoader::CreateApplication(
     const oak::ApplicationConfiguration& application_configuration) {

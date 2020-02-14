@@ -24,8 +24,7 @@
 
 namespace oak {
 
-AsyloOakLoader::AsyloOakLoader(absl::string_view enclave_path)
-    : enclave_path_(enclave_path) {
+AsyloOakLoader::AsyloOakLoader(absl::string_view enclave_path) : enclave_path_(enclave_path) {
   InitializeEnclaveManager();
 }
 
