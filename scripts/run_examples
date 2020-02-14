@@ -16,7 +16,7 @@ for example in ${RUST_EXAMPLES}; do
   "${SCRIPTS_DIR}/build_example" "${example}"
   ./bazel-bin/oak/server/asylo/asylo_oak_runner \
     --application="${PWD}/bazel-client-bin/examples/${example}/config/config.bin" &
-  local rust_example_pid=$!
+  rust_example_pid=$!
   sleep 2  # Wait for an application to start.
   # Currently `chat` application starts an infinite loop, so `run_examples` just checks
   # if the module can be loaded correctly.
