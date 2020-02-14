@@ -22,24 +22,25 @@ use oak_runtime::ChannelEither;
 use protobuf::{Message, ProtobufEnum};
 use std::collections::HashMap;
 use std::process::Command;
-use tempdir::TempDir;
 
 // TODO(#544): re-enable unit tests of SDK functionality
 
-/// Uses cargo to compile a Rust manifest to Wasm bytes. Compilation is performed in a temporary
-/// directory.
+/// Uses cargo to compile a Rust manifest to Wasm bytes.
 pub fn compile_rust_wasm(cargo_path: &str, module_name: &str) -> std::io::Result<Vec<u8>> {
-    let temp_dir = TempDir::new("")?;
+    let mut cmd = cargo_metadata::MetadataCommand::new();
+    cmd.manifest_path(cargo_path);
+    let metadata = cmd.exec().unwrap();
+
     Command::new("cargo")
-        .args(&["build", "--target=wasm32-unknown-unknown"])
         .args(&[
-            format!("--manifest-path={}", cargo_path),
-            format!("--target-dir={}", temp_dir.path().display()),
+            "build",
+            "--target=wasm32-unknown-unknown",
+            &format!("--manifest-path={}", cargo_path),
         ])
         .spawn()?
         .wait()?;
 
-    let mut path = temp_dir.into_path();
+    let mut path = metadata.target_directory;
     path.push("wasm32-unknown-unknown/debug");
     path.push(module_name);
 
