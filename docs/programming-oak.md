@@ -192,7 +192,7 @@ file:
 
 <!-- prettier-ignore-start -->
 [embedmd]:# (../examples/hello_world/config/config.textproto /node_configs.*/ /initial_entrypoint_name.*/)
-```
+```textproto
 node_configs {
   name: "app"
   wasm_config {
@@ -262,7 +262,7 @@ to it, over a channel that has end-to-end encryption into the enclave:
 ```C++
   oak::ApplicationClient::InitializeAssertionAuthorities();
 
-  // Connect to the newly created Oak Application.
+  // Connect to the Oak Application.
   auto stub = HelloWorld::NewStub(oak::ApplicationClient::CreateChannel(address));
 ```
 <!-- prettier-ignore-end -->
