@@ -1,4 +1,4 @@
-### Checklist
+# Checklist
 
 - [ ] Pull request affects core Oak functionality (e.g. runtime, SDK, ABI)
   - [ ] I have written tests that cover the code changes.

@@ -12,7 +12,14 @@ steps:
     id: build_image
     waitFor: ['pull_image']
     timeout: 10m
-    args: ['build', '--pull', '--cache-from=gcr.io/oak-ci/oak:latest', '--tag=gcr.io/oak-ci/oak:latest', '.']
+    args:
+      [
+        'build',
+        '--pull',
+        '--cache-from=gcr.io/oak-ci/oak:latest',
+        '--tag=gcr.io/oak-ci/oak:latest',
+        '.',
+      ]
   # Run next build steps inside the newly created Docker image.
   # See: https://cloud.google.com/cloud-build/docs/create-custom-build-steps
   # Init .git repository used by check_generated
@@ -88,7 +95,11 @@ steps:
     waitFor: ['build_server_asylo']
     timeout: 5m
     entrypoint: 'cp'
-    args: ['./bazel-bin/oak/server/asylo/liboak_enclave_unsigned.so', './liboak_enclave_unsigned.so']
+    args:
+      [
+        './bazel-bin/oak/server/asylo/liboak_enclave_unsigned.so',
+        './liboak_enclave_unsigned.so',
+      ]
 
   # Pull Android Docker image.
   - name: 'gcr.io/cloud-builders/docker'
@@ -101,7 +112,15 @@ steps:
     id: build_android_image
     waitFor: ['pull_android_image']
     timeout: 30m
-    args: ['build', '--pull', '--cache-from=gcr.io/oak-ci/oak-android:latest', '--tag=gcr.io/oak-ci/oak-android:latest', '--file=android.Dockerfile', '.']
+    args:
+      [
+        'build',
+        '--pull',
+        '--cache-from=gcr.io/oak-ci/oak-android:latest',
+        '--tag=gcr.io/oak-ci/oak-android:latest',
+        '--file=android.Dockerfile',
+        '.',
+      ]
   # Build Android Hello-World application.
   - name: 'gcr.io/oak-ci/oak-android:latest'
     id: build_examples_android
@@ -124,11 +143,11 @@ artifacts:
 timeout: 2h
 
 options:
-  env: 
-  # This variable is only defined in the `merge` GCB trigger,
-  # and contains GCB credentials for updating the Bazel cache.
-  - 'BAZEL_GOOGLE_CREDENTIALS=$_BAZEL_GOOGLE_CREDENTIALS'
+  env:
+    # This variable is only defined in the `merge` GCB trigger,
+    # and contains GCB credentials for updating the Bazel cache.
+    - 'BAZEL_GOOGLE_CREDENTIALS=$_BAZEL_GOOGLE_CREDENTIALS'
   # See: https://cloud.google.com/cloud-build/docs/api/reference/rest/Shared.Types/MachineType
   machineType: 'N1_HIGHCPU_32'
   requestedVerifyOption: 'VERIFIED'
-  sourceProvenanceHash: [ 'SHA256' ]
+  sourceProvenanceHash: ['SHA256']

@@ -1,6 +1,6 @@
 # Oak Development
 
-### Prerequisites
+## Prerequisites
 
 We use Docker to install the base dependencies that need to exist at the system
 level, e.g. the Intel SGX SDK and the Rust compiler; these steps are detailed in
@@ -28,7 +28,7 @@ the server runs in the Docker container but the examples run on the host
 machine. This means you might be missing other dependencies like the `protoc`
 protocol compiler.
 
-### Build Application
+## Build Application
 
 The following command compiles the code for an example Oak Application from Rust
 to a WebAssembly module and then serializes it into a binary application
@@ -40,14 +40,14 @@ This binary application configuration file includes the compiled Wasm code for
 the Oak Application, embedded in a serialized protocol buffer that also includes
 the Application's configuration.
 
-### Run Server
+## Run Server
 
 The following command builds and runs an Oak Server instance that is running a
 specific Oak Application.
 
 `./scripts/docker_run ./scripts/run_server_asylo --application="${PWD}/bazel-client-bin/examples/hello_world/config/config.bin"`
 
-### Run Development Server
+## Run Development Server
 
 In addition to the Oak Server, we provide a "development" version of the server.
 It shares the same runtime as the Docker implementation, but it's built using
@@ -72,7 +72,7 @@ The following command builds and run Oak Local Server with tsan enabled. Replace
 
 `bazel build --config=tsan //oak/server/dev:dev_oak_runner`
 
-### Run Client
+## Run Client
 
 The following command (run in a separate terminal) compiles the code for an
 example Oak Node from Rust to a WebAssembly module, and sends it to the Oak

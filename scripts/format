@@ -41,10 +41,23 @@ find . \
     -not \( -path ./bazel-cache -prune \) -and \
     -not \( -path ./cargo-cache -prune \) -and \
     -not \( -path ./examples/target -prune \) -and \
+    -not \( -path ./oak/server/rust/target -prune \) -and \
+    -not \( -path ./sdk/rust/target -prune \) -and \
+    -not \( -path ./third_party -prune \) \
+    \( -type f -name '*.md' -or -name '*.yaml' \) \
+  \) -exec prettier --write {} +
+
+find . \
+  \(  \
+    -not \( -path ./.git -prune \) -and \
+    -not \( -path ./bazel-cache -prune \) -and \
+    -not \( -path ./cargo-cache -prune \) -and \
+    -not \( -path ./examples/target -prune \) -and \
+    -not \( -path ./oak/server/rust/target -prune \) -and \
     -not \( -path ./sdk/rust/target -prune \) -and \
     -not \( -path ./third_party -prune \) \
     \( -type f -name '*.md' \) \
-  \) -exec prettier --write {} +
+  \) -exec markdownlint --fix {} +
 
 # Update embedded code snippets
 grep --recursive --files-with-matches embedmd docs | while IFS= read -r file; do
