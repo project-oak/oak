@@ -23,22 +23,13 @@ use protobuf::{Message, ProtobufEnum};
 use std::collections::HashMap;
 use std::process::Command;
 
-use serde::Deserialize;
-
 // TODO(#544): re-enable unit tests of SDK functionality
 
-#[derive(Deserialize)]
-struct CargoMetadata {
-    target_directory: String,
-}
-
-/// Uses cargo to compile a Rust manifest to Wasm bytes. Compilation is performed in a temporary
-/// directory.
+/// Uses cargo to compile a Rust manifest to Wasm bytes.
 pub fn compile_rust_wasm(cargo_path: &str, module_name: &str) -> std::io::Result<Vec<u8>> {
-    let cargo_output = Command::new("cargo").arg("metadata").output()?;
-    let metadata_json =
-        std::str::from_utf8(&cargo_output.stdout).expect("cargo metadata returned non-utf8");
-    let target_directory = serde_json::from_str::<CargoMetadata>(metadata_json)?.target_directory;
+    let mut cmd = cargo_metadata::MetadataCommand::new();
+    cmd.manifest_path(cargo_path);
+    let metadata = cmd.exec().unwrap();
 
     Command::new("cargo")
         .args(&[
@@ -49,7 +40,7 @@ pub fn compile_rust_wasm(cargo_path: &str, module_name: &str) -> std::io::Result
         .spawn()?
         .wait()?;
 
-    let mut path = std::path::PathBuf::from(target_directory);
+    let mut path = metadata.target_directory;
     path.push("wasm32-unknown-unknown/debug");
     path.push(module_name);
 
