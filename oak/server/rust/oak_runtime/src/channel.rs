@@ -25,6 +25,8 @@ use core::sync::atomic::Ordering::SeqCst;
 
 use oak_abi::OakStatus;
 
+use log::debug;
+
 use crate::platform;
 use crate::{Message, RuntimeRef};
 
@@ -137,7 +139,12 @@ impl ChannelWriter {
             return Err(OakStatus::ERR_CHANNEL_CLOSED);
         }
 
-        let mut messages = self.messages.write().unwrap();
+        {
+            let mut messages = self.messages.write().unwrap();
+
+            messages.push_back(msg);
+        }
+
         let mut waiting_threads = self.waiting_threads.lock().unwrap();
 
         // Unpark all the waiting threads, that still have references
@@ -148,7 +155,6 @@ impl ChannelWriter {
         }
         *waiting_threads = HashMap::new();
 
-        messages.push_back(msg);
         Ok(())
     }
 }
@@ -296,7 +302,8 @@ pub fn readers_statuses(readers: &[Option<&ChannelReader>]) -> Vec<Result<bool, 
         .collect()
 }
 
-/// Block until the runtime is terminated, or the reader is orphaned or has a message.
+/// Block until the runtime is terminated, or the reader is orphaned or has a message. It is
+/// possible that this will unblock spuriously and return `Ok(())` without a message available.
 pub fn block_thread_on_channel(
     runtime: &RuntimeRef,
     reader: &ChannelReader,
@@ -315,6 +322,9 @@ pub fn block_thread_on_channel(
         return Ok(());
     }
 
+    // Since we added ourselves as a waiter before checking for a message
+    // even if a message is now added, `unpark` will have been called by the
+    // underlying channel. This will result in this `park` call returning immediately.
     platform::thread::park();
 
     Ok(())
@@ -360,9 +370,17 @@ pub fn wait_on_channels(
             return statuses;
         }
 
-        println!("Statuses not ready, parking thread");
+        debug!(
+            "wait_on_channels: channels not ready, parking thread {:?}",
+            platform::thread::current().id()
+        );
 
         platform::thread::park();
+
+        debug!(
+            "wait_on_channels: thread {:?} re-woken",
+            platform::thread::current().id()
+        );
     }
     vec![Err(OakStatus::ERR_TERMINATED); readers.len()]
 }
