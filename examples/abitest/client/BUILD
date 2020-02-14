@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+load("@rules_cc//cc:defs.bzl", "cc_binary")
 
 package(
     licenses = ["notice"],
@@ -24,22 +24,11 @@ cc_binary(
     name = "client",
     srcs = ["abitest.cc"],
     deps = [
-        ":client_config",
         "//examples/abitest/proto:abitest_cc_grpc",
         "//oak/client:application_client",
-        "//oak/common:app_config",
-        "//oak/common:utils",
-        "//oak/proto:manager_cc_grpc",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
-        "@com_google_absl//absl/memory",
-        "@com_google_absl//absl/strings",
         "@com_google_asylo//asylo/util:logging",
     ],
-)
-
-cc_library(
-    name = "client_config",
-    hdrs = ["config.h"],
 )

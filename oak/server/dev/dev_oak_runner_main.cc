@@ -24,7 +24,7 @@
 #include "asylo/util/logging.h"
 #include "oak/server/dev/dev_oak_loader.h"
 
-ABSL_FLAG(std::string, config, "", "Application configuration file");
+ABSL_FLAG(std::string, application, "", "Application configuration file");
 
 int main(int argc, char* argv[]) {
   absl::ParseCommandLine(argc, argv);
@@ -34,7 +34,7 @@ int main(int argc, char* argv[]) {
 
   // Load application configuration.
   std::unique_ptr<oak::ApplicationConfiguration> application_config =
-      oak::ReadConfigFromFile(absl::GetFlag(FLAGS_config));
+      oak::ReadConfigFromFile(absl::GetFlag(FLAGS_application));
 
   asylo::StatusOr<oak::CreateApplicationResponse> result =
       loader->CreateApplication(*application_config);

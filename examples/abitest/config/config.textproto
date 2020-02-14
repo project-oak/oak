@@ -1,0 +1,19 @@
+node_configs {
+  name: "frontend-config"
+  wasm_config {
+    module_bytes: "<bytes>"
+  }
+}
+node_configs {
+  name: "backend-config"
+  wasm_config {
+    module_bytes: "<bytes>"
+  }
+}
+node_configs {
+  name: "logging-config"
+  log_config {}
+}
+grpc_port: 8080
+initial_node_config_name: "frontend-config"
+initial_entrypoint_name: "frontend_oak_main"

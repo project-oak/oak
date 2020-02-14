@@ -14,24 +14,18 @@
 # limitations under the License.
 #
 
-load("@rules_cc//cc:defs.bzl", "cc_binary")
+load("//oak/common:app_config.bzl", "serialized_config")
 
 package(
     licenses = ["notice"],
 )
 
-cc_binary(
-    name = "client",
-    srcs = ["tensorflow.cc"],
-    deps = [
-        "//examples/tensorflow/proto:tensorflow_cc_grpc",
-        "//oak/client:application_client",
-        "@com_github_grpc_grpc//:grpc++",
-        "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/flags:parse",
-        "@com_google_asylo//asylo/util:logging",
-    ],
-)
+exports_files(srcs = glob(["*.textproto"]))
 
-# TODO: Create a new Bazel rule `oak_application_server_docker`, that encapsulates this logic.
-# https://github.com/project-oak/oak/issues/448
+serialized_config(
+    name = "config_cpp",
+    modules = {
+        "app": "//examples/tensorflow/module/cpp:tensorflow_micro.wasm",
+    },
+    textproto = ":config.textproto",
+)

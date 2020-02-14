@@ -177,6 +177,8 @@ as a gRPC server:
 
 ## Using an Oak Application from a client
 
+TODO(#431) Update documentation to use a single app oak server.
+
 A client that is outside of the Oak ecosystem can use an Oak Application by
 interacting with it as a gRPC service. However, this does involve a few
 additional complications beyond the normal gRPC boilerplate, which are described
@@ -188,7 +190,6 @@ Oak client code (in C++) first needs to connect to the
 [Oak Manager](concepts.md#oak-manager), as a normal gRPC client:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/abitest/client/abitest.cc C++ /.*Connect to the Oak Manager/ /NewStub.*;/)
 ```C++
   // Connect to the Oak Manager.
   auto channel =
@@ -222,7 +223,6 @@ Alternatively, the manager client can also be wrapped up in a
 configuration (described in the next section) easier:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/rustfmt/client/rustfmt.cc C++ /.*Connect to the Oak Manager/ /FLAGS_manager_address.*;/)
 ```C++
   // Connect to the Oak Manager.
   std::unique_ptr<oak::ManagerClient> manager_client =
@@ -241,7 +241,6 @@ client just need to provide the code that is going to be run in the Node, as a
 Wasm module:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/rustfmt/client/rustfmt.cc C++ /.*FLAGS_module/ /}/)
 ```C++
   std::string module_bytes = oak::utils::read_file(absl::GetFlag(FLAGS_module));
   std::unique_ptr<oak::CreateApplicationResponse> create_application_response =
@@ -257,7 +256,6 @@ specify a storage provider to connect to, and to control whether logging is
 enabled:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/translator/client/translator.cc C++ /.*FLAGS_module/ /}/)
 ```C++
   std::string module_bytes = oak::utils::read_file(absl::GetFlag(FLAGS_module));
   std::unique_ptr<oak::CreateApplicationResponse> create_application_response =
@@ -285,8 +283,8 @@ encryption into the enclave:
 ```C++
   oak::ApplicationClient::InitializeAssertionAuthorities();
 
-  // Connect to the newly created Oak Application.
-  auto stub = FormatService::NewStub(oak::ApplicationClient::CreateChannel(addr.str()));
+  // Connect to the Oak Application.
+  auto stub = FormatService::NewStub(oak::ApplicationClient::CreateChannel(address));
 ```
 <!-- prettier-ignore-end -->
 

@@ -14,22 +14,15 @@
  * limitations under the License.
  */
 
-#include <cstdlib>
-
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
-#include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
 #include "examples/rustfmt/proto/rustfmt.grpc.pb.h"
 #include "examples/rustfmt/proto/rustfmt.pb.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
-#include "oak/client/manager_client.h"
-#include "oak/common/utils.h"
 
-ABSL_FLAG(std::string, manager_address, "127.0.0.1:8888",
-          "Address of the Oak Manager to connect to");
-ABSL_FLAG(std::string, module, "", "File containing the compiled WebAssembly module");
+ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak application to connect to");
 
 using ::oak::examples::rustfmt::FormatRequest;
 using ::oak::examples::rustfmt::FormatResponse;
@@ -52,27 +45,13 @@ void format(FormatService::Stub* stub, std::string code) {
 int main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
 
-  // Connect to the Oak Manager.
-  std::unique_ptr<oak::ManagerClient> manager_client =
-      absl::make_unique<oak::ManagerClient>(grpc::CreateChannel(
-          absl::GetFlag(FLAGS_manager_address), grpc::InsecureChannelCredentials()));
-
-  // Load the Oak Module to execute. This needs to be compiled from Rust to WebAssembly separately.
-  std::string module_bytes = oak::utils::read_file(absl::GetFlag(FLAGS_module));
-  std::unique_ptr<oak::CreateApplicationResponse> create_application_response =
-      manager_client->CreateApplication(module_bytes);
-  if (create_application_response == nullptr) {
-    LOG(QFATAL) << "Failed to create application";
-  }
-
-  std::stringstream addr;
-  addr << "127.0.0.1:" << create_application_response->grpc_port();
-  LOG(INFO) << "Connecting to Oak Application: " << addr.str();
+  std::string address = absl::GetFlag(FLAGS_address);
+  LOG(INFO) << "Connecting to Oak Application: " << address;
 
   oak::ApplicationClient::InitializeAssertionAuthorities();
 
-  // Connect to the newly created Oak Application.
-  auto stub = FormatService::NewStub(oak::ApplicationClient::CreateChannel(addr.str()));
+  // Connect to the Oak Application.
+  auto stub = FormatService::NewStub(oak::ApplicationClient::CreateChannel(address));
 
   // Perform multiple invocations of the same Oak Application, with different parameters.
   format(stub.get(), "fn     main    ()     {     }");
