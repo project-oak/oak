@@ -45,7 +45,7 @@ container_image(
         "--grpc_port=8080",
     ],
     files = [
-        "//examples:target/wasm32-unknown-unknown/release/hello_world.wasm",
+        "//:target/wasm32-unknown-unknown/release/hello_world.wasm",
     ],
     ports = [
         "8080/tcp",  # Oak Application gRPC port.
