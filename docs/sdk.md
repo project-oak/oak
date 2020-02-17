@@ -8,6 +8,26 @@ This page gives a summary of the functionality available in this SDK; refer to
 the [generated documentation](https://project-oak.github.io/oak) for more
 detailed information.
 
+## `oak_abi` Crate
+
+The [`oak_abi`](https://project-oak.github.io/oak/server/oak_abi/index.html)
+crate provides Rust definitions that correspond to the [Oak ABI](abi.md). This
+includes:
+
+- `extern "C"` declarations of the low-level
+  [host functions](abi.md#host-functions) provided by the ABI; the `u32`, `u64`
+  and `usize` [integer types described in the Oak ABI](abi.md#integer-types)
+  definition are mapped to the Rust integer types with the same names.
+- A
+  [`Handle`](https://project-oak.github.io/oak/server/oak_abi/type.Handle.html)
+  type alias for `u64`.
+- Constants used on the ABI (such as the
+  [`INVALID_HANDLE`](https://project-oak.github.io/oak/server/oak_abi/constant.INVALID_HANDLE.html)
+  value).
+- Enum types (generated from the
+  [master protocol buffer definitions](../oak/proto/oak_api.proto)) for
+  [operation and channel status values](abi.md#integer-types).
+
 ## `oak` Crate
 
 The majority of the Oak Rust SDK is provided by the top-level `oak` crate. This
@@ -19,8 +39,6 @@ types for easier use.
   [`oak::OakStatus`](https://project-oak.github.io/oak/sdk/oak/enum.OakStatus.html)
   `enum` values rather than `i32` values.
 - Channel handles are held in the
-  [`Handle`](https://project-oak.github.io/oak/sdk/oak/type.Handle.html) type,
-  or in the
   [`ReadHandle`](https://project-oak.github.io/oak/sdk/oak/struct.ReadHandle.html)
   or
   [`WriteHandle`](https://project-oak.github.io/oak/sdk/oak/struct.WriteHandle.html)
@@ -34,26 +52,24 @@ The `oak` crate also provides the
 [`oak::set_panic_hook()`](https://project-oak.github.io/oak/sdk/oak/fn.set_panic_hook.html)
 helper, to ensure that Rust `panic`s are logged.
 
-### `oak::wasm` Module
-
-The lowest level of access to the [Oak ABI](abi.md) is provided by the
-[`oak::wasm`](https://project-oak.github.io/oak/sdk/oak/wasm/index.html) module.
-This module simply provides the Rust `extern "C"` declarations of the
-[host functions](abi.md#host-functions) provided by the ABI.
-
-The `u32`, `u64` and `usize` integer types described in the
-[Oak ABI](abi.md#integer-types) definition are mapped to the Rust integer types
-with the same names.
-
 ### `oak::io` Module
 
 The [`oak::io`](https://project-oak.github.io/oak/sdk/oak/io/index.html) module
-provides the
-[`oak::io::Channel`](https://project-oak.github.io/oak/sdk/oak/io/index.html)
-wrapper for an
-[`Oak::WriteHandle`](https://project-oak.github.io/oak/sdk/oak/struct.WriteHandle.html),
-to allow outbound channel use in situations where an implementation of the Rust
-`std::io::Write` trait is required.
+provides a higher level abstraction to allow Rust object to be communicated
+between Nodes.
+
+The
+[`oak::io::channel_create<T>`](https://project-oak.github.io/oak/sdk/oak/io/fn.channel_create.html)
+function creates
+[`oak::io::Sender`](https://project-oak.github.io/oak/sdk/oak/io/struct.Sender.html)
+and
+[`oak::io::Receiver`](https://project-oak.github.io/oak/sdk/oak/io/struct.Receiver.html)
+objects. These objects allow sending and receiving of values of type `T`,
+provided that `T` implements the
+[`oak::io::Encodable`](https://project-oak.github.io/oak/sdk/oak/io/trait.Encodable.html)
+and
+[`oak::io::Decodable`](https://project-oak.github.io/oak/sdk/oak/io/trait.Decodable.html)
+traits.
 
 ### `oak::rand` Module
 
@@ -71,10 +87,9 @@ that has a channel to the Application's initial Node.
 
 An Oak Node that interacts with gRPC typically implements the
 [`oak::grpc::OakNode`](https://project-oak.github.io/oak/sdk/oak/grpc/trait.OakNode.html)
-trait together with the
-[`oak::grpc::event_loop()`](https://project-oak.github.io/oak/sdk/oak/grpc/fn.event_loop.html)
-function; the latter services gRPC requests in a loop, invoking the former
-trait's
+trait, which is used with the
+[`oak::run_event_loop()`](https://project-oak.github.io/oak/sdk/oak/fn.run_event_loop.html)
+function to services gRPC requests in a loop, invoking the trait's
 [`invoke()`](https://project-oak.github.io/oak/sdk/oak/grpc/trait.OakNode.html#tymethod.invoke)
 method for each request.
 

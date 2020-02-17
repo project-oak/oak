@@ -13,7 +13,6 @@ These host functions provided by the Oak TCB revolve around the creation of
 other Nodes, and the use of [channels](concepts.md#channels) for inter-node
 communication. To communicate with the outside world beyond the Oak system, a
 Node may also create and communicate with
-[pre-defined channels](#pre-defined-channels) that are connected to
 [pseudo-Nodes](concepts.md#pseudo-nodes).
 
 Note also that the Oak ABI interactions are quite low-level; for example, they
@@ -57,7 +56,7 @@ Three specific sets of integer values are also used in the ABI:
 
 ## Exported Function
 
-Each Oak Module must expose a single **exported function** as a
+Each Oak Module must expose at least one **exported function** as a
 [WebAssembly export](https://webassembly.github.io/spec/core/syntax/modules.html#exports),
 with signature `fn(u64) -> ()`. This function is invoked when the Oak Manager
 executes the Oak Node; a handle for the read half of an initial channel is
@@ -66,7 +65,7 @@ provided as part of the Application configuration.
 
 The entrypoint function for each Node should perform its own event loop, reading
 incoming messages that arrive on the read halves of its channels, sending
-outgoing messages over the write halves of channels. The "oak_main" function is
+outgoing messages over the write halves of channels. The entrypoint function is
 generally expected to run forever, but may return if the Node choses to
 terminate (whether expectedly or unexpectedly).
 
@@ -151,7 +150,7 @@ functions** as
   running the Node configuration identified by args 0 and 1, using the
   entrypoint specified by args 2 and 3, passing in an initial handle to the read
   half of a channel identified by arg 4. The entrypoint name is ignored when
-  creating non-Wasm Nodes.
+  creating non-WebAssembly Nodes.
 
   - arg 0: Source buffer holding node configuration name
   - arg 1: Node configuration name size in bytes
