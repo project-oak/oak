@@ -23,6 +23,52 @@ RUN shellcheck --version
 RUN node --version
 RUN npm --version
 
+# Make sure Bazel is correctly initialized.
+RUN bazel version
+
+# Install the necessary binaries and SDKs, ordering them from the less frequently changed to the
+# more frequently changed.
+# See https://docs.docker.com/develop/develop-images/dockerfile_best-practices/#leverage-build-cache.
+
+# Install Emscripten.
+ARG EMSCRIPTEN_VERSION=1.39.6
+ARG EMSCRIPTEN_COMMIT=6bfbe2a7da68e650054af2d272d2b79307a6ad72
+ARG EMSCRIPTEN_SHA256=aa4c3b8f23fd26363f98207674bffcc138105c621c6c8bf12175f6aab1231357
+ARG EMSCRIPTEN_DIR=/usr/local/emsdk
+ARG EMSCRIPTEN_TEMP=/tmp/emscripten.zip
+RUN mkdir --parents ${EMSCRIPTEN_DIR}
+RUN curl --location https://github.com/emscripten-core/emsdk/archive/${EMSCRIPTEN_COMMIT}.tar.gz > ${EMSCRIPTEN_TEMP}
+RUN sha256sum --binary ${EMSCRIPTEN_TEMP} && echo "${EMSCRIPTEN_SHA256} *${EMSCRIPTEN_TEMP}" | sha256sum --check
+RUN tar --extract --gzip --file=${EMSCRIPTEN_TEMP} --directory=${EMSCRIPTEN_DIR} --strip-components=1
+RUN rm ${EMSCRIPTEN_TEMP}
+RUN cd ${EMSCRIPTEN_DIR} \
+  && ./emsdk install ${EMSCRIPTEN_VERSION} \
+  && ./emsdk activate --embedded ${EMSCRIPTEN_VERSION}
+ENV EMSDK "${EMSCRIPTEN_DIR}"
+ENV EM_CONFIG "${EMSCRIPTEN_DIR}/.emscripten"
+ENV EM_CACHE "${EMSCRIPTEN_DIR}/.emscripten_cache"
+# We need to allow a non-root Docker container to write into the `EM_CACHE` directory.
+RUN chmod --recursive go+wx "${EM_CACHE}"
+
+# Install Go.
+ARG GOLANG_VERSION=1.13.1
+ARG GOLANG_SHA256=94f874037b82ea5353f4061e543681a0e79657f787437974214629af8407d124
+ARG GOLANG_TEMP=/tmp/golang.tar.gz
+ENV GOROOT /usr/local/go
+ENV GOPATH ${HOME}/go
+RUN mkdir --parents ${GOROOT}
+RUN curl --location https://dl.google.com/go/go${GOLANG_VERSION}.linux-amd64.tar.gz > ${GOLANG_TEMP}
+RUN sha256sum --binary ${GOLANG_TEMP} && echo "${GOLANG_SHA256} *${GOLANG_TEMP}" | sha256sum --check
+RUN tar --extract --gzip --file=${GOLANG_TEMP} --directory=${GOROOT} --strip-components=1
+RUN rm ${GOLANG_TEMP}
+ENV PATH "${GOROOT}/bin:${PATH}"
+ENV PATH "${GOPATH}/bin:${PATH}"
+RUN go version
+
+# Install embedmd (via Go).
+RUN go get github.com/campoy/embedmd
+RUN embedmd -v
+
 # Install prettier and markdownlint (via Node.js).
 # https://prettier.io/
 # https://github.com/igorshubovych/markdownlint-cli
@@ -46,6 +92,7 @@ RUN curl --location https://github.com/bazelbuild/buildtools/releases/download/$
 RUN sha256sum --binary ${BUILDIFIER_BIN} && echo "${BUILDIFIER_SHA256} *${BUILDIFIER_BIN}" | sha256sum --check
 ENV PATH "${BUILDIFIER_DIR}:${PATH}"
 RUN chmod +x ${BUILDIFIER_BIN}
+RUN buildifier --version
 
 # Install Protobuf compiler.
 ARG PROTOBUF_VERSION=3.11.2
@@ -90,36 +137,3 @@ RUN rustup component add \
   rustfmt
 
 RUN cargo install cargo-deadlinks
-
-# Install embedmd (via Go).
-ARG GOLANG_VERSION=1.13.1
-ARG GOLANG_SHA256=94f874037b82ea5353f4061e543681a0e79657f787437974214629af8407d124
-ARG GOLANG_TEMP=/tmp/golang.tar.gz
-ENV GOROOT /usr/local/go
-ENV GOPATH ${HOME}/go
-RUN mkdir --parents ${GOROOT}
-RUN curl --location https://dl.google.com/go/go${GOLANG_VERSION}.linux-amd64.tar.gz > ${GOLANG_TEMP}
-RUN sha256sum --binary ${GOLANG_TEMP} && echo "${GOLANG_SHA256} *${GOLANG_TEMP}" | sha256sum --check
-RUN tar --extract --gzip --file=${GOLANG_TEMP} --directory=${GOROOT} --strip-components=1
-RUN rm ${GOLANG_TEMP}
-RUN ${GOROOT}/bin/go get github.com/campoy/embedmd
-
-# Install Emscripten.
-ARG EMSCRIPTEN_VERSION=1.39.6
-ARG EMSCRIPTEN_COMMIT=6bfbe2a7da68e650054af2d272d2b79307a6ad72
-ARG EMSCRIPTEN_SHA256=aa4c3b8f23fd26363f98207674bffcc138105c621c6c8bf12175f6aab1231357
-ARG EMSCRIPTEN_DIR=/usr/local/emsdk
-ARG EMSCRIPTEN_TEMP=/tmp/emscripten.zip
-RUN mkdir --parents ${EMSCRIPTEN_DIR}
-RUN curl --location https://github.com/emscripten-core/emsdk/archive/${EMSCRIPTEN_COMMIT}.tar.gz > ${EMSCRIPTEN_TEMP}
-RUN sha256sum --binary ${EMSCRIPTEN_TEMP} && echo "${EMSCRIPTEN_SHA256} *${EMSCRIPTEN_TEMP}" | sha256sum --check
-RUN tar --extract --gzip --file=${EMSCRIPTEN_TEMP} --directory=${EMSCRIPTEN_DIR} --strip-components=1
-RUN rm ${EMSCRIPTEN_TEMP}
-RUN cd ${EMSCRIPTEN_DIR} \
-  && ./emsdk install ${EMSCRIPTEN_VERSION} \
-  && ./emsdk activate --embedded ${EMSCRIPTEN_VERSION}
-ENV EMSDK "${EMSCRIPTEN_DIR}"
-ENV EM_CONFIG "${EMSCRIPTEN_DIR}/.emscripten"
-ENV EM_CACHE "${EMSCRIPTEN_DIR}/.emscripten_cache"
-# We need to allow a non-root Docker container to write into the `EM_CACHE` directory.
-RUN chmod -R go+wx "${EM_CACHE}"

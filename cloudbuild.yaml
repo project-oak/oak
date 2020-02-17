@@ -36,6 +36,8 @@ steps:
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/check_formatting']
+
+  # Run the various server builds in parallel, since they use different Bazel `output_base`.
   - name: 'gcr.io/oak-ci/oak:latest'
     id: build_server_asylo
     waitFor: ['build_image']
@@ -44,25 +46,32 @@ steps:
     args: ['./scripts/build_server_asylo']
   - name: 'gcr.io/oak-ci/oak:latest'
     id: build_server_dev
+    waitFor: ['build_image']
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/build_server_dev']
   - name: 'gcr.io/oak-ci/oak:latest'
     id: build_server_dev_arm
+    waitFor: ['build_image']
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/build_server_dev_arm']
+
+  # Package the Asylo Oak server in a Docker image.
   - name: 'gcr.io/oak-ci/oak:latest'
     id: build_server_docker
-    waitFor: ['build_server_dev']
+    waitFor: ['build_server_asylo']
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/build_server_docker']
+
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_tests
+    waitFor: ['build_server_asylo']
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/run_tests']
+
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_examples
     timeout: 30m
@@ -70,25 +79,34 @@ steps:
     args: ['./scripts/run_examples']
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_examples_asan
+    waitFor: ['run_examples']
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/run_examples_dev', '-a']
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_examples_tsan
+    waitFor: ['run_examples_asan']
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/run_examples_dev', '-t']
+
+  # Run clang-tidy after the examples finish running, since they share the same `output_base`.
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_clang_tidy
+    waitFor: ['run_examples']
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/run_clang_tidy']
+
+  # Check whether any of the previous steps resulted in file diffs that were not checked in or
+  # ignored by git.
   - name: 'gcr.io/oak-ci/oak:latest'
     id: git_check_diff
-    waitFor: ['git_init', 'run_clang_tidy']
+    waitFor: ['git_init', 'run_clang_tidy', 'run_tests', 'run_examples']
     timeout: 5m
     entrypoint: 'bash'
     args: ['./scripts/git_check_diff']
+
   # Copy compiled enclave binary to workspace so that it can be uploaded as artifact.
   - name: 'gcr.io/oak-ci/oak:latest'
     id: copy_artifacts

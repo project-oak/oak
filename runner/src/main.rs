@@ -151,13 +151,7 @@ fn run_embedmd() -> R {
         source_files()
             .filter(is_markdown_file)
             .map(to_string)
-            .map(|entry| {
-                step(
-                    &entry,
-                    &format!("{}/bin/embedmd", std::env::var("GOPATH").unwrap()),
-                    &["-d", &entry],
-                )
-            }),
+            .map(|entry| step(&entry, "embedmd", &["-d", &entry])),
     )
 }
 
