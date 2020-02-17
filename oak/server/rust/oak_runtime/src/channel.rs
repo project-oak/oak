@@ -31,6 +31,15 @@ use crate::platform;
 use crate::{Message, RuntimeRef};
 
 type Messages = VecDeque<Message>;
+
+/// We use a `HashMap` keyed by `ThreadId` to prevent build up of stale `Weak<Thread>`s.
+///
+/// That is: If a thread waiting/blocked on a channel is woken by a different channel, it's
+/// `Weak<Thread>` will remain in the first channel's waiting_thread member. If a thread keeps
+/// waiting on this first channel, and keeps being woken by other channels, it will keep re-adding
+/// itself. We use a `HashMap` and insert at the current `ThreadId` so that we replace any stale
+/// `Weak<Thread>`s which will have gone out of scope. (`wait_on_channels` drops the underlying arc
+/// as soon as it is resumed.)
 type WaitingThreads =
     platform::Mutex<HashMap<platform::thread::ThreadId, Weak<platform::thread::Thread>>>;
 
