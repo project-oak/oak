@@ -21,33 +21,26 @@
 #include "asylo/identity/descriptions.h"
 #include "asylo/identity/init.h"
 #include "asylo/util/logging.h"
-#include "asylo/util/statusor.h"
 #include "include/grpcpp/grpcpp.h"
 
 namespace oak {
 
 DevOakLoader::DevOakLoader() { InitializeAssertionAuthorities(); }
 
-asylo::StatusOr<oak::ApplicationCreationStatus> DevOakLoader::CreateApplication(
+grpc::Status DevOakLoader::CreateApplication(
     const oak::ApplicationConfiguration& application_configuration) {
   LOG(INFO) << "Creating an Oak application";
 
   auto runtime = absl::make_unique<OakRuntime>();
   auto status = runtime->Initialize(application_configuration);
   if (!status.ok()) {
-    return asylo::Status(status);
+    return status;
   }
 
   // Start the runtime.
-  runtime->Start();
-
-  int32_t port = runtime->GetPort();
-  LOG(INFO) << "gRPC server is listening on port: " << port;
+  auto result = runtime->Start();
   runtime_ = std::move(runtime);
-
-  oak::ApplicationCreationStatus app_status;
-  app_status.set_grpc_port(port);
-  return app_status;
+  return result;
 }
 
 grpc::Status DevOakLoader::TerminateApplication() {

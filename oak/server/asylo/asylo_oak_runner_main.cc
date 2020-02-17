@@ -29,7 +29,7 @@
 #include "include/grpcpp/server_builder.h"
 #include "oak/common/app_config.h"
 #include "oak/common/utils.h"
-#include "oak/proto/manager.grpc.pb.h"
+#include "oak/proto/application.grpc.pb.h"
 #include "oak/server/asylo/asylo_oak_loader.h"
 
 ABSL_FLAG(std::string, application, "", "Application configuration file");
@@ -55,15 +55,13 @@ int main(int argc, char* argv[]) {
   std::unique_ptr<oak::ApplicationConfiguration> application_config =
       oak::ReadConfigFromFile(absl::GetFlag(FLAGS_application));
 
-  asylo::StatusOr<oak::ApplicationCreationStatus> result =
-      loader->CreateApplication(*application_config);
-  if (!result.ok()) {
+  asylo::Status status = loader->CreateApplication(*application_config);
+  if (!status.ok()) {
     LOG(ERROR) << "Failed to create application";
     return 1;
   }
-  oak::ApplicationCreationStatus status = result.ValueOrDie();
   std::stringstream address;
-  address << "0.0.0.0:" << status.grpc_port();
+  address << "0.0.0.0:" << application_config->grpc_port();
   LOG(INFO) << "Oak Application: " << address.str();
 
   // Wait (same as `sleep(86400)`).

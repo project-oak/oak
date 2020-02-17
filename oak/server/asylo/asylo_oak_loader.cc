@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-#include "asylo_oak_loader.h"
-
+#include "oak/server/asylo/asylo_oak_loader.h"
 #include "absl/memory/memory.h"
 #include "asylo/identity/descriptions.h"
 #include "asylo/identity/enclave_assertion_authority_config.pb.h"
@@ -28,7 +27,7 @@ AsyloOakLoader::AsyloOakLoader(absl::string_view enclave_path) : enclave_path_(e
   InitializeEnclaveManager();
 }
 
-asylo::StatusOr<oak::ApplicationCreationStatus> AsyloOakLoader::CreateApplication(
+asylo::Status AsyloOakLoader::CreateApplication(
     const oak::ApplicationConfiguration& application_configuration) {
   LOG(INFO) << "Creating an Oak application";
 
@@ -36,14 +35,9 @@ asylo::StatusOr<oak::ApplicationCreationStatus> AsyloOakLoader::CreateApplicatio
   if (!status.ok()) {
     return status;
   }
+
   asylo::StatusOr<oak::InitializeOutput> result = GetEnclaveOutput();
-  if (!result.ok()) {
-    return result.status();
-  }
-  oak::InitializeOutput out = result.ValueOrDie();
-  oak::ApplicationCreationStatus app_status;
-  app_status.set_grpc_port(out.grpc_port());
-  return app_status;
+  return result.status();
 }
 
 asylo::Status AsyloOakLoader::TerminateApplication() {

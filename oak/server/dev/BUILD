@@ -31,7 +31,7 @@ cc_library(
     ],
     deps = [
         "//oak/proto:enclave_cc_proto",
-        "//oak/proto:manager_cc_grpc",
+        "//oak/proto:application_cc_grpc",
         "//oak/server:oak_runtime",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/memory",
@@ -39,7 +39,6 @@ cc_library(
         "@com_google_asylo//asylo/grpc/auth:null_credentials_options",
         "@com_google_asylo//asylo/identity:init",
         "@com_google_asylo//asylo/util:logging",
-        "@com_google_asylo//asylo/util:status",
     ],
 )
 

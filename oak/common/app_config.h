@@ -19,7 +19,7 @@
 
 #include <memory>
 
-#include "oak/proto/manager.pb.h"
+#include "oak/proto/application.pb.h"
 
 namespace oak {
 

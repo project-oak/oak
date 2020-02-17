@@ -19,7 +19,7 @@ syntax = "proto2";
 package oak;
 
 import "asylo/enclave.proto";
-import "oak/proto/manager.proto";
+import "oak/proto/application.proto";
 
 message InitializeInput {
   optional ApplicationConfiguration application_configuration = 1;

@@ -59,7 +59,7 @@ cc_library(
     ],
     deps = [
         "//oak/proto:enclave_cc_proto",
-        "//oak/proto:manager_cc_grpc",
+        "//oak/proto:application_cc_grpc",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/strings",

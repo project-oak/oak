@@ -64,7 +64,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "//oak/common:utils",
-        "//oak/proto:manager_cc_proto",
+        "//oak/proto:application_cc_proto",
         "@com_google_absl//absl/memory",
         "@com_google_asylo//asylo/util:logging",
     ],

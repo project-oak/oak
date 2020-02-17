@@ -21,7 +21,6 @@
 #include <unordered_map>
 
 #include "absl/memory/memory.h"
-#include "asylo/util/statusor.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/server/oak_runtime.h"
 
@@ -31,8 +30,7 @@ class DevOakLoader {
  public:
   DevOakLoader();
 
-  asylo::StatusOr<oak::ApplicationCreationStatus> CreateApplication(
-      const oak::ApplicationConfiguration& application_configuration);
+  grpc::Status CreateApplication(const oak::ApplicationConfiguration& application_configuration);
 
   grpc::Status TerminateApplication();
 

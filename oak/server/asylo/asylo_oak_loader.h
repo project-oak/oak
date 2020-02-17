@@ -24,7 +24,7 @@
 #include "asylo/grpc/util/enclave_server.pb.h"
 #include "asylo/util/logging.h"
 #include "oak/proto/enclave.pb.h"
-#include "oak/proto/manager.grpc.pb.h"
+#include "oak/proto/application.grpc.pb.h"
 
 namespace oak {
 
@@ -32,8 +32,7 @@ class AsyloOakLoader {
  public:
   explicit AsyloOakLoader(absl::string_view enclave_path);
 
-  asylo::StatusOr<oak::ApplicationCreationStatus> CreateApplication(
-      const oak::ApplicationConfiguration& application_configuration);
+  asylo::Status CreateApplication(const oak::ApplicationConfiguration& application_configuration);
 
   asylo::Status TerminateApplication();
 
