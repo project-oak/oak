@@ -153,7 +153,7 @@ impl ChannelWriter {
                 thread.unpark();
             }
         }
-        *waiting_threads = HashMap::new();
+        waiting_threads.clear();
 
         Ok(())
     }
