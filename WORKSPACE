@@ -376,7 +376,9 @@ http_archive(
 )
 
 load("@graknlabs_bazel_distribution//common:dependencies.bzl", "bazelbuild_rules_pkg")
+
 bazelbuild_rules_pkg()
 
 load("@graknlabs_bazel_distribution//packer:dependencies.bzl", "deploy_packer_dependencies")
+
 deploy_packer_dependencies()

@@ -15,7 +15,6 @@
 #
 
 load("@graknlabs_bazel_distribution//packer:rules.bzl", "assemble_packer", "deploy_packer")
-load("//oak/common:app_config.bzl", "serialized_config")
 
 package(
     licenses = ["notice"],
@@ -27,12 +26,12 @@ assemble_packer(
     name = "assemble-oak-gcp-hello-world",
     config = ":config.json",
     files = {
-        "//oak/server/dev:dev_oak_runner" : "dev_oak_runner",
-        "//examples/hello_world/config:config.bin" : "config.bin",
-    }
+        "//oak/server/dev:dev_oak_runner": "dev_oak_runner",
+        "//examples/hello_world/config:config.bin": "config.bin",
+    },
 )
 
 deploy_packer(
-     name = "deploy-oak-gcp-hello-world",
-     target = ":assemble-oak-gcp-hello-world",
+    name = "deploy-oak-gcp-hello-world",
+    target = ":assemble-oak-gcp-hello-world",
 )
