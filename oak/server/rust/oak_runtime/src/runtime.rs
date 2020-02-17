@@ -32,7 +32,7 @@ use crate::channel::{ChannelReader, ChannelWriter};
 use crate::node::{load_wasm, NodeConfiguration};
 use crate::platform;
 use crate::proto;
-use crate::proto::manager::NodeConfiguration_oneof_config_type;
+use crate::proto::application::NodeConfiguration_oneof_config_type;
 
 /// Runtime structure for configuring and running a set of Oak nodes.
 pub struct Runtime {
@@ -46,7 +46,7 @@ impl Runtime {
     /// `Runtime` calling `stop` will send termination signals to nodes and wait for them to
     /// terminate.
     pub fn configure_and_run(
-        app_config: proto::manager::ApplicationConfiguration,
+        app_config: proto::application::ApplicationConfiguration,
     ) -> Result<(RuntimeRef, ChannelWriter), OakStatus> {
         let mut runtime = Runtime {
             configurations: HashMap::new(),
@@ -66,7 +66,7 @@ impl Runtime {
                         NodeConfiguration::LogNode
                     }
                     Some(NodeConfiguration_oneof_config_type::wasm_config(
-                        proto::manager::WebAssemblyConfiguration { module_bytes, .. },
+                        proto::application::WebAssemblyConfiguration { module_bytes, .. },
                     )) => load_wasm(&module_bytes).map_err(|e| {
                         error!("Error loading Wasm module: {}", e);
                         OakStatus::ERR_INVALID_ARGS

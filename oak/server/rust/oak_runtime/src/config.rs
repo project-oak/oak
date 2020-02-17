@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::proto::manager::{
+use crate::proto::application::{
     ApplicationConfiguration, LogConfiguration, NodeConfiguration, WebAssemblyConfiguration,
 };
 use itertools::Itertools;
