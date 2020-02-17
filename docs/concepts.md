@@ -113,7 +113,7 @@ including an entry for them in its `ApplicationConfiguration`, and creating them
 at runtime (with `node_create()`).
 
 <!-- From: -->
-<!-- https://docs.google.com/drawings/d/1gRCOzXWCEhp1-GF6Rnd9N6be8hs1sENfleCzXdQMOsc-->
+<!-- https://docs.google.com/drawings/d/1gRCOzXWCEhp1-GF6Rnd9N6be8hs1sENfleCzXdQMOsc -->
 <img src="images/PseudoNodes.png" width="450">
 
 ## Oak Application
