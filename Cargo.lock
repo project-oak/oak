@@ -1196,6 +1196,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "runner"
+version = "0.1.0"
+dependencies = [
+ "colored 1.9.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "structopt 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
+ "walkdir 2.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "running_average"
 version = "0.1.0"
 dependencies = [
@@ -1902,10 +1911,6 @@ dependencies = [
 name = "winapi-x86_64-pc-windows-gnu"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-
-[[patch.unused]]
-name = "runner"
-version = "0.1.0"
 
 [metadata]
 "checksum ahash 0.2.18 (registry+https://github.com/rust-lang/crates.io-index)" = "6f33b5018f120946c1dcf279194f238a9f146725593ead1c08fa47ff22b0b5d3"

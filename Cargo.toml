@@ -17,6 +17,8 @@ members = [
     "oak/server/rust/oak_abi",
     "oak/server/rust/oak_runtime",
 
+    "runner",
+
     "sdk/rust/oak",
     "sdk/rust/oak_derive",
     "sdk/rust/oak_log",

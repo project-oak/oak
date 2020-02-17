@@ -29,7 +29,7 @@ find . \
     \( -type f -name '*.h' -or -name '*.cc' -or -name '*.proto' \) \
   \) -exec clang-format -i -style=file {} +
 
-cargo fmt --all --manifest-path ./Cargo.toml
+cargo fmt --all
 
 find . \
   \(  \

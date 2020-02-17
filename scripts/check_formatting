@@ -40,7 +40,7 @@ find scripts -type f -exec shellcheck {} +
 
 # Fortunately, rustfmt has the --check option that will make it exit with 1
 # if formatting has to be applied.
-cargo fmt --all --manifest-path ./Cargo.toml -- --check
+cargo fmt --all -- --check
 
 find . \
   \(  \
