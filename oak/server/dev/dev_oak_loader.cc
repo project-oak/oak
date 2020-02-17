@@ -21,50 +21,37 @@
 #include "asylo/identity/descriptions.h"
 #include "asylo/identity/init.h"
 #include "asylo/util/logging.h"
-#include "asylo/util/statusor.h"
 #include "include/grpcpp/grpcpp.h"
 
 namespace oak {
 
-DevOakLoader::DevOakLoader() : next_application_id_(0) { InitializeAssertionAuthorities(); }
+DevOakLoader::DevOakLoader() { InitializeAssertionAuthorities(); }
 
-asylo::StatusOr<oak::CreateApplicationResponse> DevOakLoader::CreateApplication(
+grpc::Status DevOakLoader::CreateApplication(
     const oak::ApplicationConfiguration& application_configuration) {
-  std::string application_id = NewApplicationId();
-  LOG(INFO) << "Creating application with ID" << application_id;
+  LOG(INFO) << "Creating an Oak application";
 
   auto runtime = absl::make_unique<OakRuntime>();
   auto status = runtime->Initialize(application_configuration);
   if (!status.ok()) {
-    return asylo::Status(status);
+    return status;
   }
 
   // Start the runtime.
-  runtime->Start();
-
-  int32_t port = runtime->GetPort();
-  LOG(INFO) << "gRPC server is listening on port: " << port;
-  runtimes_[application_id] = std::move(runtime);
-
-  oak::CreateApplicationResponse response;
-  response.set_application_id(application_id);
-  response.set_grpc_port(port);
-  return response;
+  auto result = runtime->Start();
+  runtime_ = std::move(runtime);
+  return result;
 }
 
-grpc::Status DevOakLoader::TerminateApplication(const std::string& application_id) {
-  LOG(INFO) << "Terminating application with ID " << application_id;
-
-  OakRuntime* runtime = runtimes_[application_id].get();
-  if (runtime == nullptr) {
-    LOG(ERROR) << "Unrecognized application ID";
-    return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Unknown application ID");
+grpc::Status DevOakLoader::TerminateApplication() {
+  if (runtime_ == nullptr) {
+    std::string error = "Terminating a non-existent application";
+    LOG(ERROR) << error;
+    return grpc::Status(grpc::StatusCode::INTERNAL, error);
   }
+  LOG(INFO) << "Terminating an Oak application";
 
-  runtime->Stop();
-  LOG(INFO) << "Application with ID " << application_id << " stopped";
-  runtimes_.erase(application_id);
-
+  runtime_->Stop();
   return grpc::Status::OK;
 }
 
@@ -84,14 +71,6 @@ void DevOakLoader::InitializeAssertionAuthorities() {
     LOG(QFATAL) << "Could not initialize assertion authorities";
   }
   LOG(INFO) << "Assertion authorities initialized";
-}
-
-std::string DevOakLoader::NewApplicationId() {
-  // For dev purposes, just increment a value.
-  std::stringstream id_str;
-  id_str << next_application_id_;
-  next_application_id_ += 1;
-  return id_str.str();
 }
 
 }  // namespace oak

@@ -23,8 +23,8 @@
 #include "asylo/client.h"
 #include "asylo/grpc/util/enclave_server.pb.h"
 #include "asylo/util/logging.h"
+#include "oak/proto/application.grpc.pb.h"
 #include "oak/proto/enclave.pb.h"
-#include "oak/proto/manager.grpc.pb.h"
 
 namespace oak {
 
@@ -32,29 +32,25 @@ class AsyloOakLoader {
  public:
   explicit AsyloOakLoader(absl::string_view enclave_path);
 
-  asylo::StatusOr<oak::CreateApplicationResponse> CreateApplication(
-      const oak::ApplicationConfiguration& application_configuration);
+  asylo::Status CreateApplication(const oak::ApplicationConfiguration& application_configuration);
 
-  asylo::Status TerminateApplication(const std::string& application_id);
+  asylo::Status TerminateApplication();
 
  private:
   void InitializeEnclaveManager();
 
-  asylo::Status CreateEnclave(const std::string& application_id,
-                              const oak::ApplicationConfiguration& application_configuration);
+  asylo::Status CreateEnclave(const oak::ApplicationConfiguration& application_configuration);
 
-  asylo::StatusOr<InitializeOutput> GetEnclaveOutput(const std::string& application_id);
+  asylo::StatusOr<InitializeOutput> GetEnclaveOutput();
 
-  std::string NewApplicationId();
-
-  void DestroyEnclave(const std::string& node_id);
+  void DestroyEnclave();
 
   asylo::EnclaveManager* enclave_manager_;
   // TODO: Use non-simulated loader.
   std::unique_ptr<asylo::SgxLoader> enclave_loader_;
   std::string enclave_path_;
 
-  uint64_t application_id_;
+  const std::string enclave_name_ = "oak";
 };
 
 }  // namespace oak

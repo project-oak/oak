@@ -8,4 +8,4 @@ bazel_build_flags+=(
     '--config=enc-sim'
 )
 
-bazel build "${bazel_build_flags[@]}" //oak/server/asylo:oak //oak/server/asylo:asylo_oak_runner
+bazel build "${bazel_build_flags[@]}" //oak/server/asylo:asylo_oak_runner

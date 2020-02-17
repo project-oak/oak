@@ -241,10 +241,9 @@ The Oak Runner will launch an [Oak Runtime](concepts.md#oak-vm) inside the
 enclave, and this Runtime will check the provided Wasm module(s) and application
 configuration. Assuming everything is correct (e.g. the Nodes all have a main
 entrypoint and only expect to find the Oak
-[host functions](abi.md#host-functions)), the Oak Runtime opens up a port of its
-own and returns this to the caller in an `ApplicationCreationStatus`. This
-structure contains the `host:port` pair that the ISV should publish to make the
-Oak App available to the outside world.
+[host functions](abi.md#host-functions)), the Oak Runtime opens up a gRPC port
+specified by ISV. This port is then used by clients to connect to the Oak
+Application.
 
 ## Using an Oak Application from a client
 

@@ -39,13 +39,12 @@ container_image(
     name = "client_docker",
     base = "//oak/server/asylo:oak_app_docker",
     entrypoint = [
-        "./oak_app_host_loader",
+        "./asylo_oak_runner",
+        "--application=config.bin",
         "--enclave_path=oak_enclave_debug.so",
-        "--module=hello_world.wasm",
-        "--grpc_port=8080",
     ],
     files = [
-        "//:target/wasm32-unknown-unknown/release/hello_world.wasm",
+        "//examples/hello_world/config/config.bin",
     ],
     ports = [
         "8080/tcp",  # Oak Application gRPC port.

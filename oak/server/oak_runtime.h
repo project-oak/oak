@@ -24,7 +24,7 @@
 #include "absl/base/thread_annotations.h"
 #include "include/grpcpp/security/server_credentials.h"
 #include "include/grpcpp/server.h"
-#include "oak/proto/manager.pb.h"
+#include "oak/proto/application.pb.h"
 #include "oak/proto/oak_api.pb.h"
 #include "oak/server/base_runtime.h"
 #include "oak/server/logging_node.h"

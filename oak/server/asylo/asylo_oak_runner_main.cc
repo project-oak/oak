@@ -29,7 +29,7 @@
 #include "include/grpcpp/server_builder.h"
 #include "oak/common/app_config.h"
 #include "oak/common/utils.h"
-#include "oak/proto/manager.grpc.pb.h"
+#include "oak/proto/application.grpc.pb.h"
 #include "oak/server/asylo/asylo_oak_loader.h"
 
 ABSL_FLAG(std::string, application, "", "Application configuration file");
@@ -47,7 +47,7 @@ int main(int argc, char* argv[]) {
   // does not seem to work.
   std::signal(SIGINT, sigint_handler);
 
-  // Create manager instance.
+  // Create loader instance.
   std::unique_ptr<oak::AsyloOakLoader> loader =
       absl::make_unique<oak::AsyloOakLoader>(absl::GetFlag(FLAGS_enclave_path));
 
@@ -55,21 +55,20 @@ int main(int argc, char* argv[]) {
   std::unique_ptr<oak::ApplicationConfiguration> application_config =
       oak::ReadConfigFromFile(absl::GetFlag(FLAGS_application));
 
-  asylo::StatusOr<oak::CreateApplicationResponse> result =
-      loader->CreateApplication(*application_config);
-  if (!result.ok()) {
-    LOG(QFATAL) << "Failed to create application";
+  asylo::Status status = loader->CreateApplication(*application_config);
+  if (!status.ok()) {
+    LOG(ERROR) << "Failed to create application";
     return 1;
   }
-  oak::CreateApplicationResponse response = result.ValueOrDie();
   std::stringstream address;
-  address << "0.0.0.0:" << response.grpc_port();
-  std::string application_id(response.application_id());
-  LOG(INFO) << "Oak Application id=" << application_id << ": " << address.str();
+  address << "0.0.0.0:" << application_config->grpc_port();
+  LOG(INFO) << "Oak Application: " << address.str();
 
   // Wait (same as `sleep(86400)`).
   absl::Notification server_timeout;
   server_timeout.WaitForNotificationWithTimeout(absl::Hours(24));
+
+  loader->TerminateApplication();
 
   return 0;
 }

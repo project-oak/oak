@@ -15,4 +15,4 @@
 //
 
 #[allow(clippy::all)]
-pub mod manager;
+pub mod application;
