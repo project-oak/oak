@@ -3,6 +3,8 @@
 readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
 source "$SCRIPTS_DIR/common"
 
+source "$SCRIPTS_DIR/gcp_common"
+
 # Prerequisites:
 # - Google Cloud SDK
 # - Environment variable GCP_PROJECT_ID: id of the GCP project to use (eg oak-vm-testing).
@@ -14,13 +16,15 @@ source "$SCRIPTS_DIR/common"
 #   - Service Account User 
 
 # Authenticate as the service account
-gcloud auth activate-service-account --project=$GCP_PROJECT_ID --key-file=$GCP_ACCOUNT_FILE
+gcloud auth activate-service-account \
+  --project="${GCP_PROJECT_ID}" \
+  --key-file="${GCP_ACCOUNT_FILE}"
 
 # Delete firewall rule that allows access to the hello world VM on port 8080
-gcloud compute firewall-rules delete oak-hello-world-access --quiet
+gcloud compute firewall-rules delete "${FIREWALL_RULE}" --quiet
 
 # Delete the Oak hello world VM instance and its associated disk.
-gcloud compute instances delete oak-hello-world-instance --zone=europe-west2-c --quiet
+gcloud compute instances delete "${INSTANCE_NAME}" --zone="${ZONE}" --quiet
 
 # Delete the hello world VM disk image.
-gcloud compute images delete oak-gcp-hello-world --quiet
+gcloud compute images delete "${IMAGE_NAME}" --quiet

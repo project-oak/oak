@@ -3,11 +3,9 @@
 readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
 source "$SCRIPTS_DIR/common"
 
-"$SCRIPTS_DIR/build_example" "hello_world"
+source "$SCRIPTS_DIR/gcp_common"
 
-bazel_build_flags+=(
-    '--config=clang'
-)
+"$SCRIPTS_DIR/build_example" "hello_world"
 
 # Prerequisites:
 # - Google Cloud SDK
@@ -19,24 +17,36 @@ bazel_build_flags+=(
 #   - Compute Security Admin
 #   - Service Account User 
 
-# Create a minimal ubuntu linux image on the GCP project.
+# Create a minimal Ubuntu linux image on the GCP project.
 # The image will be named oak-gcp-hello-world.
-bazel run "${bazel_build_flags[@]}" //examples/hello_world/gcp:deploy-oak-gcp-hello-world
+bazel run "${bazel_build_flags[@]}" "//examples/hello_world/gcp:deploy-${IMAGE_NAME}"
 
 # Authenticate as the service account
-gcloud auth activate-service-account --project=$GCP_PROJECT_ID --key-file=$GCP_ACCOUNT_FILE
+gcloud auth activate-service-account \
+  --project="${GCP_PROJECT_ID}" \
+  --key-file="${GCP_ACCOUNT_FILE}"
 
 # Create Oak hello world VM instance and starts the Oak app on it.
-gcloud beta compute instances create oak-hello-world-instance --zone=europe-west2-c \
-  --machine-type=n1-standard-1 --tags=oak-hello-world-network --image=oak-gcp-hello-world \
-  --boot-disk-size=16GB --boot-disk-type=pd-standard --boot-disk-device-name=oak-hello-world-disk \
-  --metadata startup-script='/opt/oak/dev_oak_runner --application=/opt/oak/config.bin'
+gcloud beta compute instances create "${INSTANCE_NAME}" \
+  --zone="${ZONE}" \
+  --machine-type=n1-standard-1 \
+  --tags="${NETWORK_TAG}" \
+  --image="${IMAGE_NAME}" \
+  --boot-disk-size=16GB \
+  --boot-disk-type=pd-standard \
+  --boot-disk-device-name="${DISK_NAME}" \
+  --metadata=startup-script='/opt/oak/dev_oak_runner --application=/opt/oak/config.bin'
 
 # Create a firewall rule to allow access to the hello world VM on port 8080
-gcloud compute firewall-rules create oak-hello-world-access \
-  --description='Access to Oak hello world sample app on port 8080' --direction=INGRESS \
-  --priority=1000 --network=default --action=ALLOW --rules=tcp:8080 --source-ranges=0.0.0.0/0 \
-  --target-tags=oak-hello-world-network
+gcloud compute firewall-rules create "${FIREWALL_RULE}" \
+  --description='Access to Oak hello world sample app on port 8080' \
+  --direction=INGRESS \
+  --priority=1000 \
+  --network=default \
+  --action=ALLOW \
+  --rules=tcp:8080 \
+  --source-ranges=0.0.0.0/0 \
+  --target-tags="${NETWORK_TAG}"
 
 # List instance details
-gcloud compute instances list --filter="name=('oak-hello-world-instance')"
+gcloud compute instances list --filter="name=('${INSTANCE_NAME}')"

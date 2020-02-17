@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+readonly IMAGE_NAME='oak-gcp-hello-world'
+readonly DISK_NAME='oak-hello-world-disk'
+readonly INSTANCE_NAME='oak-hello-world-instance'
+readonly NETWORK_TAG='oak-hello-world-network'
+readonly FIREWALL_RULE='oak-hello-world-access'
+readonly ZONE='europe-west2-c'
+
+if [[ -z "${GCP_PROJECT_ID:+''}" ]]; then
+  echo 'Required environment variable GCP_PROJECT_ID is not set.' 1>&2
+  exit 1
+fi
+
+if [[ -z "${GCP_ACCOUNT_FILE:+''}" ]]; then
+  echo 'Required environment variable GCP_ACCOUNT_FILE is not set.' 1>&2
+  exit 1
+fi
