@@ -58,8 +58,8 @@ cc_library(
         "asylo_oak_loader.h",
     ],
     deps = [
-        "//oak/proto:enclave_cc_proto",
         "//oak/proto:application_cc_grpc",
+        "//oak/proto:enclave_cc_proto",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/strings",

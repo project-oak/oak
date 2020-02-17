@@ -17,7 +17,7 @@
 #![allow(unsafe_code)]
 #![allow(unused_imports)]
 #![allow(unused_results)]
-//! Generated file from `manager.proto`
+//! Generated file from `application.proto`
 
 use protobuf::Message as Message_imported_for_functions;
 use protobuf::ProtobufEnum as ProtobufEnum_imported_for_functions;
@@ -1196,184 +1196,21 @@ impl ::protobuf::reflect::ProtobufValue for StorageProxyConfiguration {
     }
 }
 
-#[derive(PartialEq,Clone,Default)]
-pub struct ApplicationCreationStatus {
-    // message fields
-    pub grpc_port: i32,
-    // special fields
-    pub unknown_fields: ::protobuf::UnknownFields,
-    pub cached_size: ::protobuf::CachedSize,
-}
-
-impl<'a> ::std::default::Default for &'a ApplicationCreationStatus {
-    fn default() -> &'a ApplicationCreationStatus {
-        <ApplicationCreationStatus as ::protobuf::Message>::default_instance()
-    }
-}
-
-impl ApplicationCreationStatus {
-    pub fn new() -> ApplicationCreationStatus {
-        ::std::default::Default::default()
-    }
-
-    // int32 grpc_port = 1;
-
-
-    pub fn get_grpc_port(&self) -> i32 {
-        self.grpc_port
-    }
-    pub fn clear_grpc_port(&mut self) {
-        self.grpc_port = 0;
-    }
-
-    // Param is passed by value, moved
-    pub fn set_grpc_port(&mut self, v: i32) {
-        self.grpc_port = v;
-    }
-}
-
-impl ::protobuf::Message for ApplicationCreationStatus {
-    fn is_initialized(&self) -> bool {
-        true
-    }
-
-    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
-        while !is.eof()? {
-            let (field_number, wire_type) = is.read_tag_unpack()?;
-            match field_number {
-                1 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    let tmp = is.read_int32()?;
-                    self.grpc_port = tmp;
-                },
-                _ => {
-                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
-                },
-            };
-        }
-        ::std::result::Result::Ok(())
-    }
-
-    // Compute sizes of nested messages
-    #[allow(unused_variables)]
-    fn compute_size(&self) -> u32 {
-        let mut my_size = 0;
-        if self.grpc_port != 0 {
-            my_size += ::protobuf::rt::value_size(1, self.grpc_port, ::protobuf::wire_format::WireTypeVarint);
-        }
-        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
-        self.cached_size.set(my_size);
-        my_size
-    }
-
-    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
-        if self.grpc_port != 0 {
-            os.write_int32(1, self.grpc_port)?;
-        }
-        os.write_unknown_fields(self.get_unknown_fields())?;
-        ::std::result::Result::Ok(())
-    }
-
-    fn get_cached_size(&self) -> u32 {
-        self.cached_size.get()
-    }
-
-    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
-        &self.unknown_fields
-    }
-
-    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
-        &mut self.unknown_fields
-    }
-
-    fn as_any(&self) -> &dyn (::std::any::Any) {
-        self as &dyn (::std::any::Any)
-    }
-    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
-        self as &mut dyn (::std::any::Any)
-    }
-    fn into_any(self: Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
-        self
-    }
-
-    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
-        Self::descriptor_static()
-    }
-
-    fn new() -> ApplicationCreationStatus {
-        ApplicationCreationStatus::new()
-    }
-
-    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
-        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
-        };
-        unsafe {
-            descriptor.get(|| {
-                let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeInt32>(
-                    "grpc_port",
-                    |m: &ApplicationCreationStatus| { &m.grpc_port },
-                    |m: &mut ApplicationCreationStatus| { &mut m.grpc_port },
-                ));
-                ::protobuf::reflect::MessageDescriptor::new::<ApplicationCreationStatus>(
-                    "ApplicationCreationStatus",
-                    fields,
-                    file_descriptor_proto()
-                )
-            })
-        }
-    }
-
-    fn default_instance() -> &'static ApplicationCreationStatus {
-        static mut instance: ::protobuf::lazy::Lazy<ApplicationCreationStatus> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const ApplicationCreationStatus,
-        };
-        unsafe {
-            instance.get(ApplicationCreationStatus::new)
-        }
-    }
-}
-
-impl ::protobuf::Clear for ApplicationCreationStatus {
-    fn clear(&mut self) {
-        self.grpc_port = 0;
-        self.unknown_fields.clear();
-    }
-}
-
-impl ::std::fmt::Debug for ApplicationCreationStatus {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        ::protobuf::text_format::fmt(self, f)
-    }
-}
-
-impl ::protobuf::reflect::ProtobufValue for ApplicationCreationStatus {
-    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
-        ::protobuf::reflect::ProtobufValueRef::Message(self)
-    }
-}
-
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\rmanager.proto\x12\x03oak\"\xe3\x01\n\x18ApplicationConfiguration\x12\
-    9\n\x0cnode_configs\x18\x01\x20\x03(\x0b2\x16.oak.NodeConfigurationR\x0b\
-    nodeConfigs\x127\n\x18initial_node_config_name\x18\x02\x20\x01(\tR\x15in\
-    itialNodeConfigName\x126\n\x17initial_entrypoint_name\x18\x03\x20\x01(\t\
-    R\x15initialEntrypointName\x12\x1b\n\tgrpc_port\x18\x04\x20\x01(\x05R\
-    \x08grpcPort\"\xf9\x01\n\x11NodeConfiguration\x12\x12\n\x04name\x18\x01\
-    \x20\x01(\tR\x04name\x12@\n\x0bwasm_config\x18\x02\x20\x01(\x0b2\x1d.oak\
-    .WebAssemblyConfigurationH\0R\nwasmConfig\x126\n\nlog_config\x18\x03\x20\
-    \x01(\x0b2\x15.oak.LogConfigurationH\0R\tlogConfig\x12G\n\x0estorage_con\
-    fig\x18\x04\x20\x01(\x0b2\x1e.oak.StorageProxyConfigurationH\0R\rstorage\
-    ConfigB\r\n\x0bconfig_type\"=\n\x18WebAssemblyConfiguration\x12!\n\x0cmo\
-    dule_bytes\x18\x01\x20\x01(\x0cR\x0bmoduleBytes\"\x12\n\x10LogConfigurat\
-    ion\"5\n\x19StorageProxyConfiguration\x12\x18\n\x07address\x18\x01\x20\
-    \x01(\tR\x07address\"8\n\x19ApplicationCreationStatus\x12\x1b\n\tgrpc_po\
-    rt\x18\x01\x20\x01(\x05R\x08grpcPortb\x06proto3\
+    \n\x11application.proto\x12\x03oak\"\xe3\x01\n\x18ApplicationConfigurati\
+    on\x129\n\x0cnode_configs\x18\x01\x20\x03(\x0b2\x16.oak.NodeConfiguratio\
+    nR\x0bnodeConfigs\x127\n\x18initial_node_config_name\x18\x02\x20\x01(\tR\
+    \x15initialNodeConfigName\x126\n\x17initial_entrypoint_name\x18\x03\x20\
+    \x01(\tR\x15initialEntrypointName\x12\x1b\n\tgrpc_port\x18\x04\x20\x01(\
+    \x05R\x08grpcPort\"\xf9\x01\n\x11NodeConfiguration\x12\x12\n\x04name\x18\
+    \x01\x20\x01(\tR\x04name\x12@\n\x0bwasm_config\x18\x02\x20\x01(\x0b2\x1d\
+    .oak.WebAssemblyConfigurationH\0R\nwasmConfig\x126\n\nlog_config\x18\x03\
+    \x20\x01(\x0b2\x15.oak.LogConfigurationH\0R\tlogConfig\x12G\n\x0estorage\
+    _config\x18\x04\x20\x01(\x0b2\x1e.oak.StorageProxyConfigurationH\0R\rsto\
+    rageConfigB\r\n\x0bconfig_type\"=\n\x18WebAssemblyConfiguration\x12!\n\
+    \x0cmodule_bytes\x18\x01\x20\x01(\x0cR\x0bmoduleBytes\"\x12\n\x10LogConf\
+    iguration\"5\n\x19StorageProxyConfiguration\x12\x18\n\x07address\x18\x01\
+    \x20\x01(\tR\x07addressb\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {

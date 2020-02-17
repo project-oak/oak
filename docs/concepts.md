@@ -132,7 +132,7 @@ handles to either half of the channel may be passed between Nodes (over
 channels).
 
 The allowed contents of the Nodes, and the initial Node to run, are specified by
-an [Application Configuration](/oak/proto/manager.proto).
+an [Application Configuration](/oak/proto/application.proto).
 
 Once a new Oak Application is initialized and its endpoint available, clients
 may connect to it using individually end-to-end encrypted, authenticated and

@@ -23,8 +23,8 @@
 #include "asylo/client.h"
 #include "asylo/grpc/util/enclave_server.pb.h"
 #include "asylo/util/logging.h"
-#include "oak/proto/enclave.pb.h"
 #include "oak/proto/application.grpc.pb.h"
+#include "oak/proto/enclave.pb.h"
 
 namespace oak {
 
