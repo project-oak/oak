@@ -14,8 +14,7 @@ find . \
     -not \( -path ./.git -prune \) -and \
     -not \( -path ./bazel-cache -prune \) -and \
     -not \( -path ./cargo-cache -prune \) -and \
-    -not \( -path ./examples/target -prune \) -and \
-    -not \( -path ./sdk/rust/target -prune \) -and \
+    -not \( -path ./target -prune \) -and \
     -not \( -path ./third_party -prune \) \
     \( -type f -name BUILD -or -name WORKSPACE -or -name '*.bzl' \) \
   \) -exec buildifier -lint=warn -mode=fix {} +
@@ -25,24 +24,19 @@ find . \
     -not \( -path ./.git -prune \) -and \
     -not \( -path ./bazel-cache -prune \) -and \
     -not \( -path ./cargo-cache -prune \) -and \
-    -not \( -path ./examples/target -prune \) -and \
-    -not \( -path ./sdk/rust/target -prune \) -and \
+    -not \( -path ./target -prune \) -and \
     -not \( -path ./third_party -prune \) \
     \( -type f -name '*.h' -or -name '*.cc' -or -name '*.proto' \) \
   \) -exec clang-format -i -style=file {} +
 
-cargo fmt --all --manifest-path ./examples/Cargo.toml
-cargo fmt --all --manifest-path ./sdk/rust/Cargo.toml
-cargo fmt --all --manifest-path ./oak/server/rust/Cargo.toml
+cargo fmt --all
 
 find . \
   \(  \
     -not \( -path ./.git -prune \) -and \
     -not \( -path ./bazel-cache -prune \) -and \
     -not \( -path ./cargo-cache -prune \) -and \
-    -not \( -path ./examples/target -prune \) -and \
-    -not \( -path ./oak/server/rust/target -prune \) -and \
-    -not \( -path ./sdk/rust/target -prune \) -and \
+    -not \( -path ./target -prune \) -and \
     -not \( -path ./third_party -prune \) \
     \( -type f -name '*.md' -or -name '*.yaml' \) \
   \) -exec prettier --write {} +
@@ -52,9 +46,7 @@ find . \
     -not \( -path ./.git -prune \) -and \
     -not \( -path ./bazel-cache -prune \) -and \
     -not \( -path ./cargo-cache -prune \) -and \
-    -not \( -path ./examples/target -prune \) -and \
-    -not \( -path ./oak/server/rust/target -prune \) -and \
-    -not \( -path ./sdk/rust/target -prune \) -and \
+    -not \( -path ./target -prune \) -and \
     -not \( -path ./third_party -prune \) \
     \( -type f -name '*.md' \) \
   \) -exec markdownlint --fix {} +

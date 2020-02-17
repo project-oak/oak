@@ -219,7 +219,7 @@ Serialization script looks like follows:
 ```shell
 ./bazel-bin/oak/common/app_config_serializer \
   --textproto=examples/hello_world/config/config.textproto \
-  --modules=app://examples/target/wasm32-unknown-unknown/release/hello_world.wasm \
+  --modules=app://target/wasm32-unknown-unknown/release/hello_world.wasm \
   --output_file=config.bin"
 ```
 <!-- prettier-ignore-end -->

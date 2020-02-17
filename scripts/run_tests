@@ -13,17 +13,9 @@ source "$SCRIPTS_DIR/common"
 
 export RUST_BACKTRACE=1
 
-cargo test --all-targets --manifest-path=./sdk/rust/Cargo.toml
-cargo test --doc --manifest-path=./sdk/rust/Cargo.toml
-cargo clippy --all-targets --manifest-path=./sdk/rust/Cargo.toml -- --deny=warnings
-
-cargo test --all-targets --manifest-path=./examples/Cargo.toml -- --nocapture
-cargo test --doc --manifest-path=./examples/Cargo.toml
-cargo clippy --all-targets --manifest-path=./examples/Cargo.toml -- --deny=warnings
-
-cargo test --all-targets --manifest-path=./oak/server/rust/Cargo.toml
-cargo test --doc --manifest-path=./oak/server/rust/Cargo.toml
-cargo clippy --all-targets --manifest-path=./oak/server/rust/Cargo.toml -- --deny=warnings
+cargo test --all-targets
+cargo test --doc
+cargo clippy --all-targets -- --deny=warnings
 
 bazel_build_flags+=(
   '--keep_going'

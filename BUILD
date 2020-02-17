@@ -19,8 +19,12 @@
 # https://github.com/bazelbuild/bazel-gazelle/issues/609
 
 package(
+    default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
 
 # Export LICENSE file for projects that reference Oak in Bazel as an external dependency.
 exports_files(["LICENSE"])
+
+# These files are built via cargo outside of Bazel.
+exports_files(srcs = glob(["target/wasm32-unknown-unknown/release/*.wasm"]))

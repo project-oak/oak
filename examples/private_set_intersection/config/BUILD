@@ -25,7 +25,7 @@ exports_files(srcs = glob(["*.textproto"]))
 serialized_config(
     name = "config",
     modules = {
-        "app": "//examples:target/wasm32-unknown-unknown/release/private_set_intersection.wasm",
+        "app": "//:target/wasm32-unknown-unknown/release/private_set_intersection.wasm",
     },
     textproto = ":config.textproto",
 )

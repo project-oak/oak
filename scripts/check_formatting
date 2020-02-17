@@ -14,8 +14,7 @@ find . \
     -not \( -path ./.git -prune \) -and \
     -not \( -path ./bazel-cache -prune \) -and \
     -not \( -path ./cargo-cache -prune \) -and \
-    -not \( -path ./examples/target -prune \) -and \
-    -not \( -path ./sdk/rust/target -prune \) -and \
+    -not \( -path ./target -prune \) -and \
     -not \( -path ./third_party -prune \) \
     \( -type f -name BUILD -or -name WORKSPACE -or -name '*.bzl' \) \
   \) -exec buildifier -lint=warn -mode=check {} +
@@ -25,8 +24,7 @@ find . \
     -not \( -path ./.git -prune \) -and \
     -not \( -path ./bazel-cache -prune \) -and \
     -not \( -path ./cargo-cache -prune \) -and \
-    -not \( -path ./examples/target -prune \) -and \
-    -not \( -path ./sdk/rust/target -prune \) -and \
+    -not \( -path ./target -prune \) -and \
     -not \( -path ./third_party -prune \) \
     \( -type f -name BUILD \) \
   \) -exec grep --files-without-match '^    licenses = \["notice"\],$' {} + && (echo 'missing license directive in BUILD file'; exit 1)
@@ -42,18 +40,14 @@ find scripts -type f -exec shellcheck {} +
 
 # Fortunately, rustfmt has the --check option that will make it exit with 1
 # if formatting has to be applied.
-cargo fmt --all --manifest-path ./examples/Cargo.toml -- --check
-cargo fmt --all --manifest-path ./sdk/rust/Cargo.toml -- --check
-cargo fmt --all --manifest-path ./oak/server/rust/Cargo.toml -- --check
+cargo fmt --all -- --check
 
 find . \
   \(  \
     -not \( -path ./.git -prune \) -and \
     -not \( -path ./bazel-cache -prune \) -and \
     -not \( -path ./cargo-cache -prune \) -and \
-    -not \( -path ./examples/target -prune \) -and \
-    -not \( -path ./oak/server/rust/target -prune \) -and \
-    -not \( -path ./sdk/rust/target -prune \) -and \
+    -not \( -path ./target -prune \) -and \
     -not \( -path ./third_party -prune \) \
     \( -type f -name '*.md' -or -name '*.yaml' \) \
   \) -exec prettier --check {} +
@@ -63,9 +57,7 @@ find . \
     -not \( -path ./.git -prune \) -and \
     -not \( -path ./bazel-cache -prune \) -and \
     -not \( -path ./cargo-cache -prune \) -and \
-    -not \( -path ./examples/target -prune \) -and \
-    -not \( -path ./oak/server/rust/target -prune \) -and \
-    -not \( -path ./sdk/rust/target -prune \) -and \
+    -not \( -path ./target -prune \) -and \
     -not \( -path ./third_party -prune \) \
     \( -type f -name '*.md' \) \
   \) -exec markdownlint {} +
@@ -74,9 +66,7 @@ find . \
   \(  \
     -not \( -path ./bazel-cache -prune \) -and \
     -not \( -path ./cargo-cache -prune \) -and \
-    -not \( -path ./examples/target -prune \) -and \
-    -not \( -path ./oak/server/rust/target -prune \) -and \
-    -not \( -path ./sdk/rust/target -prune \) -and \
+    -not \( -path ./target -prune \) -and \
     -not \( -path ./third_party -prune \) \
     \( -type f \( -name '*.rs' -o -name '*.cc' \) \) \
   \) -exec ./scripts/check_license {} +

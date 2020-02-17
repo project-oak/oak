@@ -1,0 +1,64 @@
+[workspace]
+
+members = [
+    "examples/abitest/abitest_common",
+    "examples/abitest/module_0/rust",
+    "examples/abitest/module_1/rust",
+    "examples/abitest/tests",
+    "examples/chat/module/rust",
+    "examples/hello_world/module/rust",
+    "examples/machine_learning/module/rust",
+    "examples/private_set_intersection/module/rust",
+    "examples/running_average/module/rust",
+    "examples/rustfmt/module/rust",
+    "examples/translator/common",
+    "examples/translator/module/rust",
+
+    "oak/server/rust/oak_abi",
+    "oak/server/rust/oak_runtime",
+
+    "runner",
+
+    "sdk/rust/oak",
+    "sdk/rust/oak_derive",
+    "sdk/rust/oak_log",
+    "sdk/rust/oak_tests",
+    "sdk/rust/oak_utils",
+]
+
+# Patch dependencies on oak crates so that they refer to the versions within this same repository.
+#
+# From https://doc.rust-lang.org/book/ch14-03-cargo-workspaces.html :
+# > Cargo doesn’t assume that crates in a workspace will depend on each other, so we need to be
+# > explicit about the dependency relationships between the crates.
+[patch.crates-io]
+# Oak.
+asylo_rust = { path = "oak/asylo_rust" }
+oak = { path = "sdk/rust/oak" }
+oak_abi = { path = "oak/server/rust/oak_abi" }
+oak_derive = { path = "sdk/rust/oak_derive" }
+oak_log = { path = "sdk/rust/oak_log" }
+oak_runtime = { path = "oak/server/rust/oak_runtime" }
+oak_tests = { path = "sdk/rust/oak_tests" }
+oak_utils = { path = "sdk/rust/oak_utils" }
+runner = { path = "runner" }
+
+# Examples.
+abitest_common = { path = "examples/abitest/abitest_common" }
+abitest_0_frontend = { path = "examples/abitest/module_0/rust" }
+abitest_1_backend = { path = "examples/abitest/module_1/rust" }
+abitest_tests = { path = "examples/abitest/tests" }
+chat = { path = "examples/chat/module/rust" }
+hello_world = { path = "examples/hello_world/module/rust" }
+machine_learning = { path = "examples/machine_learning/module/rust" }
+private_set_intersection = { path = "examples/private_set_intersection/module/rust" }
+running_average = { path = "examples/running_average/module/rust" }
+rustfmt = { path = "examples/rustfmt/module/rust" }
+translator = { path = "examples/translator/module/rust" }
+translator_common = { path = "examples/translator/common" }
+
+# Third party.
+expect = { path = "third_party/expect" }
+grpc-compiler = { path = "third_party/grpc-rust/grpc-compiler" }
+protoc-rust-grpc = { path = "third_party/grpc-rust/protoc-rust-grpc" }
+rust = { path = "third_party/rust/src/libstd" }
