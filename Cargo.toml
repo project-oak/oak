@@ -20,7 +20,6 @@ members = [
     "runner",
 
     "sdk/rust/oak",
-    "sdk/rust/oak_derive",
     "sdk/rust/oak_log",
     "sdk/rust/oak_tests",
     "sdk/rust/oak_utils",
@@ -36,7 +35,6 @@ members = [
 asylo_rust = { path = "oak/asylo_rust" }
 oak = { path = "sdk/rust/oak" }
 oak_abi = { path = "oak/server/rust/oak_abi" }
-oak_derive = { path = "sdk/rust/oak_derive" }
 oak_log = { path = "sdk/rust/oak_log" }
 oak_runtime = { path = "oak/server/rust/oak_runtime" }
 oak_tests = { path = "sdk/rust/oak_tests" }

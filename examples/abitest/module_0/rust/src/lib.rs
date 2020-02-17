@@ -20,7 +20,6 @@ use abitest_common::{InternalMessage, LOG_CONFIG_NAME};
 use byteorder::WriteBytesExt;
 use expect::{expect, expect_eq};
 use log::info;
-use oak::grpc::OakNode;
 use oak::{grpc, ChannelReadStatus, OakStatus};
 use proto::abitest::{ABITestRequest, ABITestResponse, ABITestResponse_TestResult};
 use proto::abitest_grpc::{dispatch, OakABITestService};
@@ -38,17 +37,8 @@ struct FrontendNode {
     backend_in: Vec<oak::ReadHandle>,
 }
 
-#[no_mangle]
-pub extern "C" fn frontend_oak_main(in_handle: u64) {
-    let _ = std::panic::catch_unwind(|| {
-        oak::set_panic_hook();
-        let node = FrontendNode::new();
-        oak::run_event_loop(node, in_handle);
-    });
-}
-
-impl oak::grpc::OakNode for FrontendNode {
-    fn new() -> Self {
+impl FrontendNode {
+    pub fn new() -> Self {
         oak_log::init(log::Level::Debug, LOG_CONFIG_NAME)
             .expect("could not initialize logging node");
 
@@ -78,6 +68,18 @@ impl oak::grpc::OakNode for FrontendNode {
             backend_in,
         }
     }
+}
+
+#[no_mangle]
+pub extern "C" fn frontend_oak_main(in_handle: u64) {
+    let _ = std::panic::catch_unwind(|| {
+        oak::set_panic_hook();
+        let node = FrontendNode::new();
+        oak::run_event_loop(node, in_handle);
+    });
+}
+
+impl oak::grpc::OakNode for FrontendNode {
     fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
         dispatch(self, method, req, writer)
     }

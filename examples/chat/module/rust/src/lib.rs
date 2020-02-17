@@ -16,9 +16,7 @@
 
 use command::Command;
 use log::info;
-use oak::grpc;
-use oak::grpc::OakNode;
-use oak_derive::OakExports;
+use oak::grpc::{self, OakNode};
 use proto::chat::{CreateRoomRequest, DestroyRoomRequest, SendMessageRequest, SubscribeRequest};
 use proto::chat_grpc::{dispatch, Chat};
 use protobuf::well_known_types::Empty;
@@ -33,10 +31,15 @@ mod proto;
 type RoomId = Vec<u8>;
 type AdminToken = Vec<u8>;
 
-#[derive(OakExports, Default)]
+#[derive(Default)]
 struct Node {
     rooms: HashMap<RoomId, Room>,
 }
+
+oak::entrypoint!(oak_main => {
+    oak_log::init_default();
+    Node::default()
+});
 
 struct Room {
     sender: oak::io::Sender<Command>,
@@ -56,10 +59,6 @@ impl Room {
 }
 
 impl OakNode for Node {
-    fn new() -> Self {
-        oak_log::init_default();
-        Node::default()
-    }
     fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
         dispatch(self, method, req, writer)
     }

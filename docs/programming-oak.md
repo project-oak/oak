@@ -40,15 +40,17 @@ easier.
 To use these helpers, an Oak Node should be a `struct` of some kind to represent
 the internal state of the Node itself (which may be empty), implement the
 [`Node`](https://project-oak.github.io/oak/sdk/oak/trait.Node.html) trait for
-it, and then add the `derive(OakExports)` attribute (from the
-[`oak_derive`](https://project-oak.github.io/oak/sdk/oak_derive/index.html)
-crate):
+it, then define an
+[`entrypoint`](https://project-oak.github.io/oak/sdk/oak/macro.entrypoint.html)
+so the Oak SDK knows how to instantiate it:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/rustfmt/module/rust/src/lib.rs Rust /.*derive\(OakExports\).*]/ /;$/)
+[embedmd]:# (../examples/rustfmt/module/rust/src/lib.rs Rust /^oak::entrypoint.*/ /}\);$/)
 ```Rust
-#[derive(OakExports)]
-struct Node;
+oak::entrypoint!(oak_main => {
+    oak_log::init_default();
+    Node
+});
 ```
 <!-- prettier-ignore-end -->
 
@@ -57,9 +59,8 @@ store it. For example, the running average example has a `Node` `struct` with a
 running sum and count of samples:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/running_average/module/rust/src/lib.rs Rust /.*derive\(Default, OakExports\).*]/ /^}/)
+[embedmd]:# (../examples/running_average/module/rust/src/lib.rs Rust /.*struct Node {.*/ /^}/)
 ```Rust
-#[derive(Default, OakExports)]
 struct Node {
     sum: u64,
     count: u64,
@@ -68,13 +69,13 @@ struct Node {
 <!-- prettier-ignore-end -->
 
 Under the covers the
-[`derive(OakExports)`](https://project-oak.github.io/oak/sdk/oak_derive/derive.OakExports.html)
-macro implements a main function named `oak_main` for you, with the following
-default behaviour:
+[`entrypoint!`](https://project-oak.github.io/oak/sdk/oak/macro.entrypoint.html)
+macro implements a function identified by the name of the entrypoint for you,
+with the following default behaviour:
 
-- Create an instance of your Node `struct` (using the `new()` method from the
-  [`Node`](https://project-oak.github.io/oak/sdk/oak/trait.Node.html) trait.
-- Take the channel handle passed to `oak_main()` and use it for gRPC input.
+- Take the channel handle passed to the entrypoint and use it for gRPC input.
+- Create a new instance of the Node `struct` using the construction expression
+  provided in the macro.
 - Pass the Node `struct` and the channel handle to the
   [`run_event_loop()`](https://project-oak.github.io/oak/sdk/oak/fn.run_event_loop.html)
   function.
@@ -100,10 +101,6 @@ two methods:
 [embedmd]:# (../examples/rustfmt/module/rust/src/lib.rs Rust /impl oak::grpc::OakNode/ /^}/)
 ```Rust
 impl oak::grpc::OakNode for Node {
-    fn new() -> Self {
-        oak_log::init_default();
-        Node
-    }
     fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
         dispatch(self, method, req, writer)
     }

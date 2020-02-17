@@ -19,8 +19,6 @@
 
 use log::{error, info, warn};
 use oak::grpc;
-use oak::grpc::OakNode;
-use oak_derive::OakExports;
 use rand::prelude::*;
 use rand_distr::Distribution;
 use rand_distr::Normal;
@@ -146,7 +144,16 @@ struct Config {
     test_animals: Vec<Animal>,
 }
 
-#[derive(OakExports)]
+oak::entrypoint!(oak_main => {
+    oak_log::init_default();
+    Node {
+        training_set_size: 1000,
+        test_set_size: 1000,
+        config: None,
+        model: NaiveBayes::new(),
+    }
+});
+
 struct Node {
     training_set_size: usize,
     test_set_size: usize,
@@ -155,15 +162,6 @@ struct Node {
 }
 
 impl oak::grpc::OakNode for Node {
-    fn new() -> Self {
-        oak_log::init_default();
-        Node {
-            training_set_size: 1000,
-            test_set_size: 1000,
-            config: None,
-            model: NaiveBayes::new(),
-        }
-    }
     fn invoke(&mut self, method: &str, _req: &[u8], mut writer: grpc::ChannelResponseWriter) {
         match method {
             "/oak.examples.machine_learning.MachineLearning/Data" => {

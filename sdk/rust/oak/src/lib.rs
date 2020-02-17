@@ -402,7 +402,6 @@ pub fn set_panic_hook() {
 /// objects that are received via the single incoming channel handle which is passed in at node
 /// creation time. The return value is only used for logging in case of failure.
 pub trait Node<T: crate::io::Decodable> {
-    fn new() -> Self;
     fn handle_command(&mut self, command: T) -> Result<(), crate::OakError>;
 }
 
@@ -461,4 +460,87 @@ pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(mut node: N, in_handl
             }
         }
     }
+}
+
+/// Register a new node entrypoint.
+///
+/// This registers the entrypoint name and the expression used to construct the
+/// node instance. The returned object should implement the [`Node`](trait.Node.html) trait.
+///
+/// ```
+/// # struct DummyCommand;
+/// # impl oak::io::Decodable for DummyCommand {
+/// #     fn decode(message: &oak::io::Message) -> Result<Self, oak::OakError> {
+/// #         unimplemented!()
+/// #     }
+/// # }
+/// #
+/// #[derive(Default)]
+/// struct DummyNode;
+///
+/// impl oak::Node<DummyCommand> for DummyNode {
+///     // ...
+///     # fn handle_command(&mut self, command: DummyCommand) -> Result<(), oak::OakError> {
+///     #     unimplemented!()
+///     # }
+/// }
+///
+/// oak::entrypoint!(dummy => DummyNode::default());
+///
+/// # fn main() {}
+/// ```
+///
+/// Entrypoints need to be declared in the global scope (as opposed to for example
+/// in a function body). Is recommended but not required to define all entrypoints of your
+/// module in `lib.rs`.
+///
+/// If instantiating your node requires some setup, it is possible to do that in the node
+/// expression too:
+///
+/// ```
+/// # fn init_all_the_things() {}
+/// #
+/// # struct DummyCommand;
+/// # impl oak::io::Decodable for DummyCommand {
+/// #     fn decode(message: &oak::io::Message) -> Result<Self, oak::OakError> {
+/// #         unimplemented!()
+/// #     }
+/// # }
+/// #
+/// # #[derive(Default)]
+/// # struct DummyNode;
+/// #
+/// # impl oak::Node<DummyCommand> for DummyNode {
+/// #     fn handle_command(&mut self, command: DummyCommand) -> Result<(), oak::OakError> {
+/// #         unimplemented!()
+/// #     }
+/// # }
+/// #
+/// oak::entrypoint!(its_complicated => {
+///     init_all_the_things();
+///     DummyNode::default()
+/// });
+/// #
+/// # fn main() {}
+/// ```
+#[macro_export]
+macro_rules! entrypoint {
+    ($name:ident => $node:expr) => {
+        // Do not mangle these functions when running unit tests, because the Rust unit test
+        // framework will add a `pub extern "C" fn main()` containing the test runner. This can
+        // cause clashes when $name = main. We don't fully omit it in tests so that compile errors
+        // in the node creation expression are still caught, and unit tests can still refer to the
+        // symbol if they really want to.
+        #[cfg_attr(not(test), no_mangle)]
+        pub extern "C" fn $name(in_handle: u64) {
+            // A panic in the Rust module code cannot safely pass through the FFI
+            // boundary, so catch any panics here and drop them.
+            // https://doc.rust-lang.org/nomicon/ffi.html#ffi-and-panics
+            let _ = ::std::panic::catch_unwind(|| {
+                ::oak::set_panic_hook();
+
+                ::oak::run_event_loop($node, in_handle);
+            });
+        }
+    };
 }
