@@ -36,9 +36,9 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn root(opt: Opt) -> Self {
+    pub fn root(opt: &Opt) -> Self {
         Context {
-            opt,
+            opt: opt.clone(),
             prefix: "".to_string(),
         }
     }
@@ -51,15 +51,90 @@ impl Context {
     }
 }
 
+/// The outcome of an individual step of execution.
+#[derive(PartialEq, Eq)]
+pub enum StatusResultValue {
+    Ok,
+    Error,
+    Skipped,
+}
+
+pub struct SingleStatusResult {
+    value: StatusResultValue,
+    command: String,
+    logs: String,
+}
+
+pub struct MultipleStatusResult {
+    statuses: Vec<Status>,
+}
+
+/// The result of a step of execution which may itself be single or multiple.
+pub enum StatusResult {
+    Single(SingleStatusResult),
+    Multiple(MultipleStatusResult),
+}
+
+/// The result of executing a `Runnable` step.
+pub struct Status {
+    name: String,
+    status: StatusResult,
+}
+
+/// A runnable task, which may be implemented as a single or multiple steps.
 pub trait Runnable {
-    fn run(&self, context: &Context);
+    fn run(&self, opt: &Opt) -> Status;
 }
 
 /// Type alias for a boxed, dynamically dispatched `Runnable` instance.
 pub type R = Box<dyn Runnable>;
 
-pub fn run(runnable: R, opt: Opt) {
-    runnable.run(&Context::root(opt))
+/// Run the provided runnable, and print out a summary of the final status (including subtasks).
+pub fn run_all(runnable: R, opt: &Opt) {
+    let root = Context::root(&opt);
+    let status = runnable.run(&opt);
+    print_status(&root, &status);
+}
+
+/// Print the provided status to stderr, applying colors to output when possible.
+fn print_status(context: &Context, status: &Status) {
+    let context = context.child(&status.name);
+    match &status.status {
+        StatusResult::Single(SingleStatusResult {
+            value,
+            logs,
+            command,
+        }) => {
+            match value {
+                StatusResultValue::Ok => {
+                    eprintln!("{} ⊢ {}", context.prefix, "OK".bold().bright_green())
+                }
+                StatusResultValue::Error => {
+                    eprintln!("{} ⊢ {}", context.prefix, "ERROR".bold().bright_red());
+                }
+                StatusResultValue::Skipped => {
+                    eprintln!("{} ⊢ {}", context.prefix, "SKIPPED".bold().bright_yellow())
+                }
+            };
+            if context.opt.commands || context.opt.dry_run {
+                eprintln!("{} ⊢ [{}]", context.prefix, command);
+            };
+            if value == &StatusResultValue::Error || context.opt.logs {
+                eprintln!("{} {}", context.prefix, "╔════════════════════════".blue());
+                for line in logs.lines() {
+                    eprintln!("{} {} {}", context.prefix, "║".blue(), line);
+                }
+                eprintln!("{} {}", context.prefix, "╚════════════════════════".blue());
+            }
+        }
+        StatusResult::Multiple(MultipleStatusResult { statuses }) => {
+            eprintln!("{} {{", context.prefix);
+            for status in statuses.iter() {
+                print_status(&context, status);
+            }
+            eprintln!("{} }}", context.prefix);
+        }
+    }
 }
 
 /// A step executor, which pretty prints the current nesting level, and allows executing commands
@@ -90,20 +165,19 @@ impl Runnable for Step {
     /// TODO: Add ability to run commands in parallel.
     /// TODO: Return one of three results: pass, fail, or internal error (e.g. if the binary to run
     /// was not found).
-    fn run(&self, context: &Context) {
-        let context = context.child(&self.name);
+    fn run(&self, opt: &Opt) -> Status {
         // TODO: Measure and print elapsed time.
         // TODO: Add dry-run mode that only prints the commands but does not actually run them.
-        eprint!("{} ⊢ ", context.prefix);
         std::io::stderr().flush().expect("could not flush stderr");
         let mut cmd = Command::new(&self.executable);
         cmd.args(&self.args);
-        // `dry_run` implies `commands`, otherwise there is not much to see in the output.
-        if context.opt.commands || context.opt.dry_run {
-            eprint!("[{:?}] ", cmd);
-        }
-        if context.opt.dry_run {
-            eprintln!("{}", "SKIPPED".bold().bright_yellow());
+        let command_string = format!("{:?}", cmd);
+        let status = if opt.dry_run {
+            StatusResult::Single(SingleStatusResult {
+                value: StatusResultValue::Skipped,
+                command: command_string,
+                logs: "".to_string(),
+            })
         } else {
             let child = cmd
                 .stdout(std::process::Stdio::piped())
@@ -113,18 +187,28 @@ impl Runnable for Step {
             let output = child
                 .wait_with_output()
                 .expect("could not wait for command to terminate");
+            let logs = format!(
+                "\n{}\n----\n{}\n",
+                std::str::from_utf8(&output.stdout).expect("could not parse command output"),
+                std::str::from_utf8(&output.stderr).expect("could not parse command output"),
+            );
             if output.status.success() {
-                eprintln!("{}", "OK".bold().bright_green());
+                StatusResult::Single(SingleStatusResult {
+                    value: StatusResultValue::Ok,
+                    command: command_string,
+                    logs,
+                })
             } else {
-                eprintln!("{} ({})", "ERROR".bold().bright_red(), output.status);
+                StatusResult::Single(SingleStatusResult {
+                    value: StatusResultValue::Error,
+                    command: command_string,
+                    logs,
+                })
             }
-            if !output.status.success() || context.opt.logs {
-                eprintln!(
-                    "⬇⬇⬇⬇\n{}\n----\n{}\n⬆⬆⬆⬆",
-                    std::str::from_utf8(&output.stdout).expect("could not parse command output"),
-                    std::str::from_utf8(&output.stderr).expect("could not parse command output"),
-                );
-            }
+        };
+        Status {
+            name: self.name.clone(),
+            status,
         }
     }
 }
@@ -154,12 +238,11 @@ where
 }
 
 impl Runnable for Sequence {
-    fn run(&self, context: &Context) {
-        let context = context.child(&self.name);
-        eprintln!("{} {{", context.prefix);
-        for entry in &self.entries {
-            entry.run(&context);
+    fn run(&self, opt: &Opt) -> Status {
+        let statuses = self.entries.iter().map(|entry| entry.run(opt)).collect();
+        Status {
+            name: self.name.clone(),
+            status: StatusResult::Multiple(MultipleStatusResult { statuses }),
         }
-        eprintln!("{} }}", context.prefix);
     }
 }
