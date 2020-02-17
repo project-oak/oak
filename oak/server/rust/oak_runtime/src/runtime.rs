@@ -106,6 +106,11 @@ impl Runtime {
             std::mem::replace(&mut *node_threads, vec![])
         };
 
+        // Unpark any threads that are blocked waiting on channels.
+        for handle in handles.iter() {
+            handle.thread().unpark();
+        }
+
         for handle in handles {
             handle.join().expect("Failed to join handle");
         }

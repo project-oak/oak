@@ -46,10 +46,6 @@ mod platform {
     pub type RwLock<T> = std::sync::RwLock<T>;
     pub use std::thread;
     pub type JoinHandle = std::thread::JoinHandle<()>;
-
-    pub fn yield_thread() {
-        std::thread::sleep(std::time::Duration::from_millis(10));
-    }
 }
 
 use platform::*;

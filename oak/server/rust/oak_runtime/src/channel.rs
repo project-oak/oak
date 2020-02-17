@@ -16,8 +16,8 @@
 
 use std::prelude::v1::*;
 
-use std::collections::VecDeque;
-use std::sync::Arc;
+use std::collections::{HashMap, VecDeque};
+use std::sync::{Arc, Weak};
 use std::vec::Vec;
 
 use core::sync::atomic::AtomicUsize;
@@ -25,10 +25,23 @@ use core::sync::atomic::Ordering::SeqCst;
 
 use oak_abi::OakStatus;
 
+use log::debug;
+
 use crate::platform;
 use crate::{Message, RuntimeRef};
 
 type Messages = VecDeque<Message>;
+
+/// We use a `HashMap` keyed by `ThreadId` to prevent build up of stale `Weak<Thread>`s.
+///
+/// That is: If a thread waiting/blocked on a channel is woken by a different channel, it's
+/// `Weak<Thread>` will remain in the first channel's waiting_thread member. If a thread keeps
+/// waiting on this first channel, and keeps being woken by other channels, it will keep re-adding
+/// itself. We use a `HashMap` and insert at the current `ThreadId` so that we replace any stale
+/// `Weak<Thread>`s which will have gone out of scope. (`wait_on_channels` drops the underlying arc
+/// as soon as it is resumed.)
+type WaitingThreads =
+    platform::Mutex<HashMap<platform::thread::ThreadId, Weak<platform::thread::Thread>>>;
 
 /// The internal implementation of a channel representation backed by a `VecDeque<Message>`.
 /// Readers and writers to this channel must increment the reader/writer count. This is implemented
@@ -38,6 +51,13 @@ pub struct Channel {
     readers: AtomicUsize,
     writers: AtomicUsize,
     messages: platform::RwLock<Messages>,
+
+    /// A HashMap of `ThreadId`s to `Weak<Thread>`s. This allows threads to insert a weak reference
+    /// to themselves to be woken when a new message is available. Weak references are used so that
+    /// if the thread is woken by a different channel, it can deallocate the underlying `Arc`
+    /// instead of removing itself from all the `Channel`s it subscribed to.
+    /// Threads can be woken up spuriously without issue.
+    waiting_threads: WaitingThreads,
 }
 
 /// Reference to a `Channel` that is `Clone`able and can be passed across threads. Channels are
@@ -98,6 +118,7 @@ pub fn new() -> (ChannelWriter, ChannelReader) {
         readers: AtomicUsize::new(1),
         writers: AtomicUsize::new(1),
         messages: platform::RwLock::new(VecDeque::new()),
+        waiting_threads: platform::Mutex::new(HashMap::new()),
     });
     let writer = ChannelWriter(ChannelRef::from_arc(chan.clone()));
     let reader = ChannelReader(ChannelRef::from_arc(chan));
@@ -126,8 +147,23 @@ impl ChannelWriter {
         if self.is_orphan() {
             return Err(OakStatus::ERR_CHANNEL_CLOSED);
         }
-        let mut messages = self.messages.write().unwrap();
-        messages.push_back(msg);
+
+        {
+            let mut messages = self.messages.write().unwrap();
+
+            messages.push_back(msg);
+        }
+
+        let mut waiting_threads = self.waiting_threads.lock().unwrap();
+
+        // Unpark all the waiting threads, that still have references
+        for thread in waiting_threads.values() {
+            if let Some(thread) = thread.upgrade() {
+                thread.unpark();
+            }
+        }
+        waiting_threads.clear();
+
         Ok(())
     }
 }
@@ -230,6 +266,18 @@ impl ChannelReader {
             }
         }
     }
+
+    /// Insert the given `thread` reference into `thread_id` slot of the HashMap of waiting
+    /// channels attached to an underlying channel. This allows the channel to wake up any waiting
+    /// channels by calling `thread::unpark` on all the threads it knows about.
+    pub fn add_waiter(
+        &self,
+        thread_id: platform::thread::ThreadId,
+        thread: &Arc<platform::thread::Thread>,
+    ) {
+        let mut waiting_threads = self.waiting_threads.lock().unwrap();
+        waiting_threads.insert(thread_id, Arc::downgrade(thread));
+    }
 }
 
 impl std::ops::Deref for ChannelReader {
@@ -263,6 +311,34 @@ pub fn readers_statuses(readers: &[Option<&ChannelReader>]) -> Vec<Result<bool, 
         .collect()
 }
 
+/// Block until the runtime is terminated, or the reader is orphaned or has a message. It is
+/// possible that this will unblock spuriously and return `Ok(())` without a message available.
+pub fn block_thread_on_channel(
+    runtime: &RuntimeRef,
+    reader: &ChannelReader,
+) -> Result<(), OakStatus> {
+    if runtime.is_terminating() {
+        return Ok(());
+    }
+
+    let thread = platform::thread::current();
+    let thread_id = platform::thread::current().id();
+    let thread_ref = Arc::new(thread);
+
+    reader.add_waiter(thread_id, &thread_ref);
+
+    if reader.has_message()? {
+        return Ok(());
+    }
+
+    // Since we added ourselves as a waiter before checking for a message
+    // even if a message is now added, `unpark` will have been called by the
+    // underlying channel. This will result in this `park` call returning immediately.
+    platform::thread::park();
+
+    Ok(())
+}
+
 /// Waits on a slice of `Option<&ChannelReader>`s, blocking until one of the following conditions:
 /// - If the `Runtime` is terminating this will return immediately with an `ERR_TERMINATED` status
 ///   for each channel.
@@ -278,14 +354,42 @@ pub fn wait_on_channels(
     runtime: &RuntimeRef,
     readers: &[Option<&ChannelReader>],
 ) -> Vec<Result<bool, OakStatus>> {
+    let thread = platform::thread::current();
     while !runtime.is_terminating() {
+        // Create a new Arc each iteration to be dropped after `thread::park` e.g. when the thread
+        // is resumed. When the Arc is deallocated, any remaining `Weak` references in
+        // `Channel`s will be orphaned. This means thread::unpark will not be called multiple times.
+        // Even if thread unpark is called spuriously and we wake up early, no channel
+        // statuses will be ready and so we can just continue.
+        //
+        // Note we read statuses directly after adding waiters, before blocking to ensure that
+        // there are no messages, after we have been added as a waiter.
+
+        let thread_id = platform::thread::current().id();
+        let thread_ref = Arc::new(thread.clone());
+
+        for reader in readers {
+            if let Some(reader) = reader {
+                reader.add_waiter(thread_id, &thread_ref);
+            }
+        }
         let statuses = readers_statuses(readers);
 
         if statuses.iter().all(|s| s.is_err()) || statuses.iter().any(|s| s.unwrap_or(false)) {
             return statuses;
         }
 
-        crate::yield_thread();
+        debug!(
+            "wait_on_channels: channels not ready, parking thread {:?}",
+            platform::thread::current().id()
+        );
+
+        platform::thread::park();
+
+        debug!(
+            "wait_on_channels: thread {:?} re-woken",
+            platform::thread::current().id()
+        );
     }
     vec![Err(OakStatus::ERR_TERMINATED); readers.len()]
 }
