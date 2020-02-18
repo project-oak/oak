@@ -47,7 +47,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             run_bazel_test(),
         ],
     );
-    run(root, opt);
+    run_all(root, &opt);
     Ok(())
 }
 
