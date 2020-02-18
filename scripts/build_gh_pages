@@ -28,35 +28,23 @@ git clone git@github.com:project-oak/oak.git --branch=gh-pages --depth=1 "${TARG
 # everything within that directory.
 rm --recursive --force "${TARGET_DIR:?}"/*
 
-readonly SRC_SUBDIRS=(sdk/rust oak/server/rust)
-readonly DOC_SUBDIRS=(sdk server)
+# Remove previously generated artifacts, since `cargo doc` only regenerates new or modified
+# files, but does not remove artifacts generated from now-removed files.
+rm --recursive --force ./target/doc
+cargo doc --no-deps
+cargo deadlinks
+cp --recursive ./target/doc "${TARGET_DIR}"
 
-doc_gen() {
-  local srcdir=$1
-  local docdir=$2
-  (
-    cd "${srcdir}" || exit
-    # Remove previously generated artifacts, since `cargo doc` only regenerates new or modified
-    # files, but does not remove artifacts generated from now-removed files.
-    rm --recursive --force ./target/doc
-    cargo doc --no-deps
-    cargo deadlinks
-    cp --recursive ./target/doc "${TARGET_DIR}/${docdir}"
-  )
-}
-
-for ii in "${!SRC_SUBDIRS[@]}"; do
-  doc_gen "${SRC_SUBDIRS[$ii]}" "${DOC_SUBDIRS[$ii]}"
-done
-
+# The docs generated from the Cargo workspace do not include a workspace-level index, so we generate
+# one here and redirect to the Oak SDK documentation.
 cat <<-END > "${TARGET_DIR}/index.html"
 <!DOCTYPE html>
 <html>
   <head>
-    <meta http-equiv="Refresh" content="0; url=./sdk/oak/index.html" />
+    <meta http-equiv="Refresh" content="0; url=./doc/oak/index.html" />
   </head>
   <body>
-    <p><a href="./sdk/oak/index.html">Oak SDK main page</a></p>
+    <p><a href="./doc/oak/index.html">Oak SDK main page</a></p>
   </body>
 </html>
 END
