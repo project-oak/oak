@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["compile_rust_wasm","Uses cargo to compile a Rust manifest to Wasm bytes. Compilation is performed in a temporary directory."],["grpc_request",""],["test_configuration","Create a simple configuration with collection of Wasm nodes and a logger node."]]});

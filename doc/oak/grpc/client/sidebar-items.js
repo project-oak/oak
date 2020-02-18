@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Client","Client for a gRPC service in another Node."]]});

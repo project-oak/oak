@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["application_configuration","Create an application configuration."]]});

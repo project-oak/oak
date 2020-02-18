@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["abitest_common"] = [{"text":"impl <a class=\"trait\" href=\"oak/io/encodable/trait.Encodable.html\" title=\"trait oak::io::encodable::Encodable\">Encodable</a> for <a class=\"struct\" href=\"abitest_common/struct.InternalMessage.html\" title=\"struct abitest_common::InternalMessage\">InternalMessage</a>","synthetic":false,"types":["abitest_common::InternalMessage"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
