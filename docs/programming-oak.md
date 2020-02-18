@@ -33,15 +33,15 @@ An Oak Node needs to provide a single
 [main entrypoint](abi.md#exported-function), which is the point at which Node
 execution begins. However, Node authors don't _have_ to implement this function
 themselves; for a Node which receives messages (bytes + handles) that can be
-[decoded](https://project-oak.github.io/oak/sdk/oak/io/trait.Decodable.html)
+[decoded](https://project-oak.github.io/oak/doc/oak/io/trait.Decodable.html)
 into a Rust type, there are helper functions in the Oak SDK that make this
 easier.
 
 To use these helpers, an Oak Node should be a `struct` of some kind to represent
 the internal state of the Node itself (which may be empty), implement the
-[`Node`](https://project-oak.github.io/oak/sdk/oak/trait.Node.html) trait for
+[`Node`](https://project-oak.github.io/oak/doc/oak/trait.Node.html) trait for
 it, then define an
-[`entrypoint`](https://project-oak.github.io/oak/sdk/oak/macro.entrypoint.html)
+[`entrypoint`](https://project-oak.github.io/oak/doc/oak/macro.entrypoint.html)
 so the Oak SDK knows how to instantiate it:
 
 <!-- prettier-ignore-start -->
@@ -69,7 +69,7 @@ struct Node {
 <!-- prettier-ignore-end -->
 
 Under the covers the
-[`entrypoint!`](https://project-oak.github.io/oak/sdk/oak/macro.entrypoint.html)
+[`entrypoint!`](https://project-oak.github.io/oak/doc/oak/macro.entrypoint.html)
 macro implements a function identified by the name of the entrypoint for you,
 with the following default behaviour:
 
@@ -77,23 +77,23 @@ with the following default behaviour:
 - Create a new instance of the Node `struct` using the construction expression
   provided in the macro.
 - Pass the Node `struct` and the channel handle to the
-  [`run_event_loop()`](https://project-oak.github.io/oak/sdk/oak/fn.run_event_loop.html)
+  [`run_event_loop()`](https://project-oak.github.io/oak/doc/oak/fn.run_event_loop.html)
   function.
 
 For gRPC server nodes (the normal "front door" for an Oak application), the Node
 `struct` must implement the
-[`oak::grpc::OakNode`](https://project-oak.github.io/oak/sdk/oak/grpc/trait.OakNode.html)
+[`oak::grpc::OakNode`](https://project-oak.github.io/oak/doc/oak/grpc/trait.OakNode.html)
 trait (which provides an automatic implementation of the
-[`Node`](https://project-oak.github.io/oak/sdk/oak/trait.Node.html)). This has
+[`Node`](https://project-oak.github.io/oak/doc/oak/trait.Node.html)). This has
 two methods:
 
 - A
-  [`new()`](https://project-oak.github.io/oak/sdk/oak/grpc/trait.OakNode.html#tymethod.new)
+  [`new()`](https://project-oak.github.io/oak/doc/oak/grpc/trait.OakNode.html#tymethod.new)
   method to create an instance of the Node, and perform any one-off
   initialization. (A common initialization action is to enable logging for the
   Node, via the [`oak_log` crate](sdk.md#oak_log-crate).)
 - An
-  [`invoke()`](https://project-oak.github.io/oak/sdk/oak/grpc/trait.OakNode.html#tymethod.invoke)
+  [`invoke()`](https://project-oak.github.io/oak/doc/oak/grpc/trait.OakNode.html#tymethod.invoke)
   method that is called for each newly-arriving gRPC request from the outside
   world.
 
@@ -337,10 +337,10 @@ Regardless of how the application communicates with the new Node, the typical
 pattern for the existing Node is to:
 
 - Create a new channel with the
-  [`channel_create`](https://project-oak.github.io/oak/sdk/oak/fn.channel_create.html)
+  [`channel_create`](https://project-oak.github.io/oak/doc/oak/fn.channel_create.html)
   host function, receiving local handles for both halves of the channel.
 - Create a new Node instance with the
-  [`node_create`](https://project-oak.github.io/oak/sdk/oak/fn.node_create.html)
+  [`node_create`](https://project-oak.github.io/oak/doc/oak/fn.node_create.html)
   host function, passing in the handle for the read half of the new channel.
 - Afterwards, close the local handle for the read half, as it is no longer
   needed.
@@ -396,7 +396,7 @@ TODO: describe use of storage
 
 Regardless of how the code for an Oak Application is produced, it's always a
 good idea to write tests. The
-[oak_tests](https://project-oak.github.io/oak/sdk/oak_tests/index.html) crate
+[oak_tests](https://project-oak.github.io/oak/doc/oak_tests/index.html) crate
 allows node gRPC service methods to be tested with the [Oak SDK](sdk.md)
 framework via the Oak Runtime:
 
@@ -432,7 +432,7 @@ This has a little bit more boilerplate than testing a method directly:
 
 - After being configured, the runtime executes Nodes in separate threads
   (`oak_runtime::configure_and_run`). The `derive(OakExports)` macro (from the
-  [`oak_derive`](https://project-oak.github.io/oak/sdk/oak_derive/index.html)
+  [`oak_derive`](https://project-oak.github.io/oak/doc/oak_derive/index.html)
   crate) provides an entrypoint with a gRPC dispatch handler.
 - The injection of the gRPC request has to specify the method name (in
   `oak_tests::grpc_request`).
