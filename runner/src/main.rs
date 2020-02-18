@@ -47,7 +47,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             run_bazel_test(),
         ],
     );
-    run_all(root, &opt);
+    let status = root.run(&opt);
+    print_all(&opt, &status);
+
+    // If the overall status value is an error, terminate with a nonzero exit code.
+    if status.values().contains(&StatusResultValue::Error) {
+        std::process::exit(1);
+    }
+
     Ok(())
 }
 
