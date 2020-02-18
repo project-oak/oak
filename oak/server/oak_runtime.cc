@@ -156,7 +156,12 @@ bool OakRuntime::CreateAndRunNode(const std::string& config_name,
 }
 
 grpc::Status OakRuntime::Start() {
-  LOG(INFO) << "Starting runtime";
+  int random_nonsense;
+  char* x = (char*)malloc(10 * sizeof(char*));
+  free(x);
+  random_nonsense = x[5];
+
+  LOG(INFO) << "Starting runtime with " << random_nonsense;
   absl::MutexLock lock(&mu_);
 
   // Now all dependencies are running, start the Nodes running.
