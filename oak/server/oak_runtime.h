@@ -46,7 +46,7 @@ class OakRuntime : public BaseRuntime {
 
   // Initializes an OakRuntime with a user-provided ApplicationConfiguration. This
   // method should be called exactly once, before Start().
-  grpc::Status Initialize(const ApplicationConfiguration& config);
+  grpc::Status Initialize(const ApplicationConfiguration& config) LOCKS_EXCLUDED(mu_);
   grpc::Status Start();
   grpc::Status Stop();
 
@@ -60,10 +60,11 @@ class OakRuntime : public BaseRuntime {
  private:
   OakRuntime& operator=(const OakRuntime& other) = delete;
 
-  std::string NextNodeName(const std::string& config_name, const std::string& entrypoint_name);
+  std::string NextNodeName(const std::string& config_name, const std::string& entrypoint_name)
+      EXCLUSIVE_LOCKS_REQUIRED(mu_);
 
   OakNode* CreateNode(const std::string& config_name, const std::string& entrypoint_name,
-                      std::string* node_name);
+                      std::string* node_name) EXCLUSIVE_LOCKS_REQUIRED(mu_);
 
   // Information derived from ApplicationConfiguration; const after Initialize() called:
 
@@ -75,13 +76,14 @@ class OakRuntime : public BaseRuntime {
   std::map<std::string, std::unique_ptr<std::string>> storage_config_;
 
   // Next index for node name generation.
-  std::map<std::string, int> next_index_;
+  mutable absl::Mutex mu_;  // protects nodes_, next_index_;
+  std::map<std::string, int> next_index_ GUARDED_BY(mu_);
 
   std::atomic_bool termination_pending_;
 
   // Collection of running Nodes indexed by Node name.  Note that Node name is
   // unique but is not visible to the running Application in any way.
-  std::map<std::string, std::unique_ptr<OakNode>> nodes_;
+  std::map<std::string, std::unique_ptr<OakNode>> nodes_ GUARDED_BY(mu_);
 
   // Convenience (non-owning) reference to gRPC pseudo-node; const after Initialize() called.
   OakGrpcNode* grpc_node_;
