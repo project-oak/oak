@@ -41,7 +41,6 @@ grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
   if (!ValidApplicationConfig(config)) {
     return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid configuration");
   }
-  absl::MutexLock lock(&mu_);
 
   // Accumulate the various data structures indexed by config name.
   wasm_config_.clear();
@@ -141,7 +140,6 @@ bool OakRuntime::CreateAndRunNode(const std::string& config_name,
     return false;
   }
 
-  absl::MutexLock lock(&mu_);
   OakNode* node = CreateNode(config_name, entrypoint_name, node_name);
   if (node == nullptr) {
     return false;
@@ -157,7 +155,6 @@ bool OakRuntime::CreateAndRunNode(const std::string& config_name,
 
 grpc::Status OakRuntime::Start() {
   LOG(INFO) << "Starting runtime";
-  absl::MutexLock lock(&mu_);
 
   // Now all dependencies are running, start the Nodes running.
   for (auto& named_node : nodes_) {
@@ -177,7 +174,6 @@ grpc::Status OakRuntime::Stop() {
   // Take local ownership of all the nodes owned by the runtime.
   std::map<std::string, std::unique_ptr<OakNode>> nodes;
   {
-    absl::MutexLock lock(&mu_);
     grpc_node_ = nullptr;
     nodes = std::move(nodes_);
     nodes_.clear();
