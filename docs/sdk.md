@@ -10,19 +10,18 @@ detailed information.
 
 ## `oak_abi` Crate
 
-The [`oak_abi`](https://project-oak.github.io/oak/server/oak_abi/index.html)
-crate provides Rust definitions that correspond to the [Oak ABI](abi.md). This
+The [`oak_abi`](https://project-oak.github.io/oak/doc/oak_abi/index.html) crate
+provides Rust definitions that correspond to the [Oak ABI](abi.md). This
 includes:
 
 - `extern "C"` declarations of the low-level
   [host functions](abi.md#host-functions) provided by the ABI; the `u32`, `u64`
   and `usize` [integer types described in the Oak ABI](abi.md#integer-types)
   definition are mapped to the Rust integer types with the same names.
-- A
-  [`Handle`](https://project-oak.github.io/oak/server/oak_abi/type.Handle.html)
+- A [`Handle`](https://project-oak.github.io/oak/doc/oak_abi/type.Handle.html)
   type alias for `u64`.
 - Constants used on the ABI (such as the
-  [`INVALID_HANDLE`](https://project-oak.github.io/oak/server/oak_abi/constant.INVALID_HANDLE.html)
+  [`INVALID_HANDLE`](https://project-oak.github.io/oak/doc/oak_abi/constant.INVALID_HANDLE.html)
   value).
 - Enum types (generated from the
   [master protocol buffer definitions](../oak/proto/oak_api.proto)) for
@@ -36,12 +35,12 @@ includes wrapper functions for all of the
 types for easier use.
 
 - Status values are returned as
-  [`oak::OakStatus`](https://project-oak.github.io/oak/sdk/oak/enum.OakStatus.html)
+  [`oak::OakStatus`](https://project-oak.github.io/oak/doc/oak/enum.OakStatus.html)
   `enum` values rather than `i32` values.
 - Channel handles are held in the
-  [`ReadHandle`](https://project-oak.github.io/oak/sdk/oak/struct.ReadHandle.html)
+  [`ReadHandle`](https://project-oak.github.io/oak/doc/oak/struct.ReadHandle.html)
   or
-  [`WriteHandle`](https://project-oak.github.io/oak/sdk/oak/struct.WriteHandle.html)
+  [`WriteHandle`](https://project-oak.github.io/oak/doc/oak/struct.WriteHandle.html)
   wrapper `struct`s for handles whose directionality is known.
 - Read channel readiness is handled with `Vec<oak::ReadHandle>` types rather
   than raw memory.
@@ -49,26 +48,26 @@ types for easier use.
   contents of read messages.
 
 The `oak` crate also provides the
-[`oak::set_panic_hook()`](https://project-oak.github.io/oak/sdk/oak/fn.set_panic_hook.html)
+[`oak::set_panic_hook()`](https://project-oak.github.io/oak/doc/oak/fn.set_panic_hook.html)
 helper, to ensure that Rust `panic`s are logged.
 
 ### `oak::io` Module
 
-The [`oak::io`](https://project-oak.github.io/oak/sdk/oak/io/index.html) module
+The [`oak::io`](https://project-oak.github.io/oak/doc/oak/io/index.html) module
 provides a higher level abstraction to allow Rust object to be communicated
 between Nodes.
 
 The
-[`oak::io::channel_create<T>`](https://project-oak.github.io/oak/sdk/oak/io/fn.channel_create.html)
+[`oak::io::channel_create<T>`](https://project-oak.github.io/oak/doc/oak/io/fn.channel_create.html)
 function creates
-[`oak::io::Sender`](https://project-oak.github.io/oak/sdk/oak/io/struct.Sender.html)
+[`oak::io::Sender`](https://project-oak.github.io/oak/doc/oak/io/struct.Sender.html)
 and
-[`oak::io::Receiver`](https://project-oak.github.io/oak/sdk/oak/io/struct.Receiver.html)
+[`oak::io::Receiver`](https://project-oak.github.io/oak/doc/oak/io/struct.Receiver.html)
 objects. These objects allow sending and receiving of values of type `T`,
 provided that `T` implements the
-[`oak::io::Encodable`](https://project-oak.github.io/oak/sdk/oak/io/trait.Encodable.html)
+[`oak::io::Encodable`](https://project-oak.github.io/oak/doc/oak/io/trait.Encodable.html)
 and
-[`oak::io::Decodable`](https://project-oak.github.io/oak/sdk/oak/io/trait.Decodable.html)
+[`oak::io::Decodable`](https://project-oak.github.io/oak/doc/oak/io/trait.Decodable.html)
 traits.
 
 ### `oak::rand` Module
@@ -80,34 +79,34 @@ trait, to allow use of the
 
 ### `oak::grpc` Module
 
-The [`oak::grpc`](https://project-oak.github.io/oak/sdk/oak/grpc/index.html)
+The [`oak::grpc`](https://project-oak.github.io/oak/doc/oak/grpc/index.html)
 module holds functionality that is helpful for interacting with the outside
 world over gRPC, via the implicit [gRPC pseudo-Node](concepts.md#pseudo-nodes)
 that has a channel to the Application's initial Node.
 
 An Oak Node that interacts with gRPC typically implements the
-[`oak::grpc::OakNode`](https://project-oak.github.io/oak/sdk/oak/grpc/trait.OakNode.html)
+[`oak::grpc::OakNode`](https://project-oak.github.io/oak/doc/oak/grpc/trait.OakNode.html)
 trait, which is used with the
-[`oak::run_event_loop()`](https://project-oak.github.io/oak/sdk/oak/fn.run_event_loop.html)
+[`oak::run_event_loop()`](https://project-oak.github.io/oak/doc/oak/fn.run_event_loop.html)
 function to services gRPC requests in a loop, invoking the trait's
-[`invoke()`](https://project-oak.github.io/oak/sdk/oak/grpc/trait.OakNode.html#tymethod.invoke)
+[`invoke()`](https://project-oak.github.io/oak/doc/oak/grpc/trait.OakNode.html#tymethod.invoke)
 method for each request.
 
 ### `oak::storage` Module
 
 The
-[`oak::storage`](https://project-oak.github.io/oak/sdk/oak/storage/index.html)
+[`oak::storage`](https://project-oak.github.io/oak/doc/oak/storage/index.html)
 module holds functionality that is helpful for interacting with an external
 provider of persistent storage.
 
 ### `oak::proto` Module
 
-The [`oak::proto`](https://project-oak.github.io/oak/sdk/oak/proto/index.html)
+The [`oak::proto`](https://project-oak.github.io/oak/doc/oak/proto/index.html)
 module holds auto-generated submodules for dealing with protocol buffers.
 
 ## `oak_log` Crate
 
-The [`oak_log`](https://project-oak.github.io/oak/sdk/oak_log/index.html) crate
+The [`oak_log`](https://project-oak.github.io/oak/doc/oak_log/index.html) crate
 is a logging implementation for the Rust
 [log facade](https://crates.io/crates/log), which uses an channel to a
 freshly-created logging pseudo-Node as the underlying logging mechanism.
