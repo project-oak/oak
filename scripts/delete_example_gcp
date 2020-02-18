@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+
+readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
+# shellcheck source=scripts/common
+source "$SCRIPTS_DIR/common"
+
+# shellcheck source=scripts/gcp_common
+source "$SCRIPTS_DIR/gcp_common"
+
+# Prerequisites:
+# - Google Cloud SDK
+# - Environment variable GCP_PROJECT_ID: id of the GCP project to use (eg oak-vm-testing).
+# - Environment variable GCP_ACCOUNT_FILE: path to the exported key for the service
+#   account that will be used to connect to GCP.
+# - Service account must be in the following IAM roles:
+#   - Compute Instance Admin (v1)
+#   - Compute Security Admin
+#   - Service Account User 
+
+# Authenticate as the service account
+gcloud auth activate-service-account \
+  --project="${GCP_PROJECT_ID}" \
+  --key-file="${GCP_ACCOUNT_FILE}"
+
+# Delete firewall rule that allows access to the hello world VM on port 8080
+gcloud compute firewall-rules delete "${FIREWALL_RULE}" --quiet
+
+# Delete the Oak hello world VM instance and its associated disk.
+gcloud compute instances delete "${INSTANCE_NAME}" --zone="${ZONE}" --quiet
+
+# Delete the hello world VM disk image.
+gcloud compute images delete "${IMAGE_NAME}" --quiet

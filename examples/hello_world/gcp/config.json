@@ -1,0 +1,39 @@
+{
+  "variables": {
+    "gcp_account_file": "{{env `GCP_ACCOUNT_FILE`}}",
+    "gcp_project_id": "{{env `GCP_PROJECT_ID`}}"
+  },
+  "builders": [
+    {
+      "type": "googlecompute",
+      "account_file": "{{user `gcp_account_file`}}",
+      "project_id": "{{user `gcp_project_id`}}",
+      "source_image_family": "ubuntu-minimal-1910",
+      "zone": "europe-west2-c",
+      "ssh_username": "ubuntu",
+      "image_name": "oak-gcp-hello-world",
+      "disk_size": 16,
+      "state_timeout": "25m"
+    }
+  ],
+
+  "provisioners": [
+    {
+      "type": "shell",
+      "inline": [ "mkdir /tmp/deployment" ]
+    },
+    {
+      "type": "file",
+      "source": "files/",
+      "destination": "/tmp/deployment/"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "sudo mkdir /opt/oak", 
+        "sudo cp /tmp/deployment/* /opt/oak/", 
+        "sudo chmod +x /opt/oak/dev_oak_runner"
+      ]
+    }
+  ]
+}
