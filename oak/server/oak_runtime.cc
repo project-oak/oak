@@ -141,7 +141,7 @@ bool OakRuntime::CreateAndRunNode(const std::string& config_name,
     return false;
   }
 
-  // oops, forgot to lock: absl::MutexLock lock(&mu_);
+  absl::MutexLock lock(&mu_);
   OakNode* node = CreateNode(config_name, entrypoint_name, node_name);
   if (node == nullptr) {
     return false;
