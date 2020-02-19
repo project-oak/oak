@@ -27,6 +27,8 @@ namespace oak {
 
 namespace {
 
+constexpr int16_t kDefaultGrpcPort = 8080;
+
 // Conventional names for the configuration of Nodes.
 constexpr char kAppConfigName[] = "app";
 constexpr char kAppEntrypointName[] = "oak_main";
@@ -37,6 +39,7 @@ constexpr char kStorageConfigName[] = "storage";
 
 std::unique_ptr<ApplicationConfiguration> DefaultConfig(const std::string& module_bytes) {
   auto config = absl::make_unique<ApplicationConfiguration>();
+  config->set_grpc_port(kDefaultGrpcPort);
 
   config->set_initial_node_config_name(kAppConfigName);
   NodeConfiguration* node_config = config->add_node_configs();
@@ -75,11 +78,17 @@ void AddStorageToConfig(ApplicationConfiguration* config, const std::string& sto
   storage->set_address(storage_address);
 }
 
-void AddGrpcPortToConfig(ApplicationConfiguration* config, const int16_t grpc_port) {
+void SetGrpcPortInConfig(ApplicationConfiguration* config, const int16_t grpc_port) {
   config->set_grpc_port(grpc_port);
 }
 
 bool ValidApplicationConfig(const ApplicationConfiguration& config) {
+  // Check for valid port.
+  if (config.grpc_port() <= 1023) {
+    LOG(ERROR) << "Invalid gRPC port";
+    return false;
+  }
+
   // Check name uniqueness for NodeConfiguration.
   std::set<std::string> config_names;
   std::set<std::string> wasm_names;
