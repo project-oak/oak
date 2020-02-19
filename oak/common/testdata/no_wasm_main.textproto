@@ -18,3 +18,4 @@ node_configs {
   }
 }
 initial_node_config_name: "app"
+grpc_port: 8080

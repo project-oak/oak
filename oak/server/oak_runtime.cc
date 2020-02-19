@@ -63,9 +63,6 @@ grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
   // Create a gRPC pseudo-Node.
   const std::string grpc_name = kGrpcNodeName;
   const uint16_t grpc_port = config.grpc_port();
-  if (grpc_port <= 1023) {
-    return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid gRPC port");
-  }
   LOG(INFO) << "Create gRPC pseudo-Node named {" << grpc_name << "}";
   std::unique_ptr<OakGrpcNode> grpc_node = OakGrpcNode::Create(this, grpc_name, grpc_port);
   grpc_node_ = grpc_node.get();  // borrowed copy
