@@ -5,11 +5,10 @@ This document walks through the basics of programming in Oak.
 - [Writing an Oak Node](#writing-an-oak-node)
   - [Per-Node Boilerplate](#per-node-boilerplate)
   - [Generated gRPC service code](#generated-grpc-service-code)
-- [Starting an Oak Application](#starting-an-oak-application)
+- [Running an Oak Application](#running-an-oak-application)
   - [Creating a Configuration File](#creating-a-configuration-file)
   - [Starting the Oak Application](#starting-the-oak-application)
 - [Using an Oak Application from a client](#using-an-oak-application-from-a-client)
-  - [Connecting the Oak Application](#connecting-the-oak-application)
 - [gRPC Request Processing Path](#grpc-request-processing-path)
 - [Nodes, Channels and Handles](#nodes-channels-and-handles)
 - [Persistent Storage](#persistent-storage)
@@ -80,7 +79,7 @@ with the following default behaviour:
   [`run_event_loop()`](https://project-oak.github.io/oak/doc/oak/fn.run_event_loop.html)
   function.
 
-For gRPC server nodes (the normal "front door" for an Oak application), the Node
+For gRPC server nodes (the normal "front door" for an Oak Application), the Node
 `struct` must implement the
 [`oak::grpc::OakNode`](https://project-oak.github.io/oak/doc/oak/grpc/trait.OakNode.html)
 trait (which provides an automatic implementation of the
@@ -173,19 +172,24 @@ as a gRPC server:
   of the Node, available because the Node `struct` implements the gRPC service
   trait.
 
-## Starting an Oak Application
+## Running an Oak Application
 
-In order run an Oak application, the ISV compiles a set of WebAssembly modules,
-serializes them to a set of WebAssembly modules, serialize them into a binary
-application configuration file and pass it to the Oak Server. The ISV should
-also publish a gRPC service endpoint (host:port) for a newly loaded Oak
-Application.
+In order to run the Oak Application, each of the Nodes that comprise the
+Application must first be compiled into one or more WebAssembly modules, and
+these compiled WebAssembly modules are then assembled into an overall
+Application Configuration File.
+
+The Application Configuration also includes the port that the Oak Server should
+use for its gRPC service to appear on; the resulting (host:port) service
+endpoint is connected to by any clients of the Application.
+
+Each of these steps is described in the following sections.
 
 ### Creating a Configuration File
 
 In order to load an Oak Application into the Oak Server its configuration must
-be serialized into a binary file. The ISV first needs to specify a configuration
-file:
+be serialized into a binary file. The Application first needs to specify a
+template configuration file:
 
 <!-- prettier-ignore-start -->
 [embedmd]:# (../examples/hello_world/config/config.textproto /node_configs.*/ /initial_entrypoint_name.*/)
@@ -207,50 +211,44 @@ initial_entrypoint_name: "oak_main"
 <!-- prettier-ignore-end -->
 
 The `module_bytes: "<bytes>"` means that this value will be filled with
-WebAssembly module bytes after serialization using the _Application
-Configuration Serializer_.
+WebAssembly module bytes after serialization using the
+[_Application Configuration Serializer_](../oak/common/app_config_serializer.cc),
+as follows:
 
-Serialization script looks like follows:
-
-<!-- prettier-ignore-start -->
-```shell
+```bash
 ./bazel-bin/oak/common/app_config_serializer \
   --textproto=examples/hello_world/config/config.textproto \
   --modules=app://target/wasm32-unknown-unknown/release/hello_world.wasm \
   --output_file=config.bin"
 ```
-<!-- prettier-ignore-end -->
 
 All these steps are implemented as a part of the
 `./scripts/build_example hello_world` script.
 
 ### Starting the Oak Application
 
-The ISV should run an Oak Application using the Oak Runner:
+The Oak Application is then loaded using the Oak Runner:
 
-<!-- prettier-ignore-start -->
-```shell
-`./scripts/run_server_asylo --application="$PWD/config.bin"`
+```bash
+`./scripts/run_server_asylo --application="${PWD}/config.bin"`
 ```
-<!-- prettier-ignore-end -->
 
 The Oak Runner will launch an [Oak Runtime](concepts.md#oak-vm) inside the
 enclave, and this Runtime will check the provided Wasm module(s) and application
 configuration. Assuming everything is correct (e.g. the Nodes all have a main
 entrypoint and only expect to find the Oak
-[host functions](abi.md#host-functions)), the Oak Runtime opens up a gRPC port
-specified by ISV. This port is then used by clients to connect to the Oak
-Application.
+[host functions](abi.md#host-functions)), the Oak Runtime opens up the gRPC port
+specified by the Application Configuration. This port is then used by clients to
+connect to the Oak Application.
 
 ## Using an Oak Application from a client
 
 A client that is outside of the Oak ecosystem can use an Oak Application by
-interacting with it as a gRPC service using an endpoint (host:port) published by
-ISV.
+interacting with it as a gRPC service, using the endpoint (host:port) from the
+previous section (which would typically be published by the ISV providing the
+Oak Application).
 
-### Connecting the Oak Application
-
-The client can connect to a gRPC service, and send (Node-specific) gRPC requests
+The client connects to the gRPC service, and sends (Node-specific) gRPC requests
 to it, over a channel that has end-to-end encryption into the enclave:
 
 <!-- prettier-ignore-start -->
