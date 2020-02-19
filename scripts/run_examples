@@ -31,7 +31,7 @@ done
 
 # Run C++-based Oak examples.
 readonly CPP_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/cpp$' | cut -d'/' -f2 | uniq)"
- 
+
 for example in ${CPP_EXAMPLES}; do
   "${SCRIPTS_DIR}/build_example" "${example}"
   # TensorFlow example is compiled with Emscripten and other examples with Clang.
