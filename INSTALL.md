@@ -21,7 +21,7 @@ If `$USER` is logged in, you'll need to log out and log in again (so the group
 change takes effect).
 
 We use `rustup` rather than `apt install rustc` because we need `rustup` to add
-the webassembly target and it seems that is not in the rustc package.
+the WebAssembly target and it seems that is not in the rustc package.
 
 ```bash
 curl https://sh.rustup.rs -sSf > /tmp/rustup  # make sure you're happy to run
@@ -30,7 +30,7 @@ rustup target add wasm32-unknown-unknown
 source $HOME/.cargo/env
 cd $WHERE_YOU_LIKE_TO_KEEP_GIT_REPOS
 git clone https://github.com/project-oak/oak.git
-./scripts/docker_run ./scripts/run_server_asylo  # this may take some time
+./scripts/docker_run ./scripts/build_server_asylo  # this may take some time
 ```
 
 add `source \$HOME/.cargo/env` to your shell init script (e.g. `.bashrc` or
@@ -39,15 +39,27 @@ add `source \$HOME/.cargo/env` to your shell init script (e.g. `.bashrc` or
 While you're waiting for docker, you might want to take a look at what that
 script does. The one mystery you might run into is: what does Bazel build?
 
-This: `oak/server/BUILD`
+This: `oak/server/asylo/BUILD`
+
+Next, build one of the example Applications:
+
+```bash
+./scripts/docker_run ./scripts/build_example hello_world
+```
+
+After that has built, run the server side of the Application in the Oak Runtime:
+
+```bash
+./scripts/docker_run ./scripts/run_server_asylo --application=/opt/my-project/bazel-client-bin/examples/hello_world/config/config.bin
+```
 
 In the end, you should end up with an Oak server running.
 
 ```log
-2019-03-20 19:16:36  INFO  oak_driver.cc : 141 : gRPC server started on port 8888
+2020-02-19 10:50:05  INFO  logging_node.cc : 51 : LOG: INFO  sdk/rust/oak/src/lib.rs : 428 : starting event loop
 ```
 
-Then:
+Then run the client side of the example (in another terminal):
 
 ```bash
 ./examples/hello_world/run
@@ -56,7 +68,10 @@ Then:
 Which should result in some logs ending with:
 
 ```log
-2019-03-22 06:14:22  INFO  hello_world.cc : 73 : message 0: HELLO WORLD!
-2019-03-22 06:14:22  INFO  hello_world.cc : 76 : message 1: HELLO MONDO!
-2019-03-22 06:14:22  INFO  hello_world.cc : 79 : message 2: HELLO 世界!
+2020-02-19 10:53:40  INFO  hello_world.cc : 35 : Request: MONDE
+2020-02-19 10:53:40  INFO  hello_world.cc : 43 : Response: HELLO MONDE!
+2020-02-19 10:53:40  INFO  hello_world.cc : 50 : Request: WORLDS
+2020-02-19 10:53:40  INFO  hello_world.cc : 57 : Response: HELLO WORLDS!
+2020-02-19 10:53:40  INFO  hello_world.cc : 57 : Response: HELLO AGAIN <default>!
+
 ```

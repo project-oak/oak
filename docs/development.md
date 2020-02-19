@@ -45,7 +45,9 @@ the Application's configuration.
 The following command builds and runs an Oak Server instance that is running a
 specific Oak Application.
 
-`./scripts/docker_run ./scripts/run_server_asylo --application="${PWD}/bazel-client-bin/examples/hello_world/config/config.bin"`
+```bash
+./scripts/docker_run ./scripts/run_server_asylo --application="${PWD}/bazel-client-bin/examples/hello_world/config/config.bin"
+```
 
 ## Run Development Server
 
@@ -60,7 +62,9 @@ code as it can help with enabling a faster iteration.
 
 The following command builds and runs an Oak Development Server:
 
-`./scripts/run_server_dev --application="$PWD/bazel-client-bin/examples/hello_world/config/config.bin"`
+```bash
+./scripts/run_server_dev --application="${PWD}/bazel-client-bin/examples/hello_world/config/config.bin"
+```
 
 As this compiles using clang on your local machine, it can be easily build in
 debug mode, as well as use any of the Sanitizers clang supports (e.g. asan, tsan
