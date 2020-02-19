@@ -4,7 +4,7 @@ readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
 # shellcheck source=scripts/common
 source "$SCRIPTS_DIR/common"
 
-readonly GRPC_PORT="${GRPC_PORT:-8888}"
-
 "$SCRIPTS_DIR/build_server_asylo"
-./bazel-bin/oak/server/asylo/oak --grpc_port="${GRPC_PORT}"
+
+# Launching the server requires a `--application=<dir>/config.bin` flag.
+./bazel-bin/oak/server/asylo/asylo_oak_runner "$@"
