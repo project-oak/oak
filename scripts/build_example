@@ -75,10 +75,10 @@ if [[ -n "$CPP_FOLDER" ]]; then
     if [[ "tensorflow" == "$TARGET" ]]; then
         # TODO: Compile all examples in Emscripten when imports will be fixed.
         # https://github.com/project-oak/oak/issues/439
-        bazel build --config=emscripten "${BUILD_RULES[@]}"
+        bazel --output_base="${CACHE_DIR}/emscripten" build "${bazel_build_flags[@]}" --config=emscripten "${BUILD_RULES[@]}"
     else
         # TODO: support compilation mode wasm.
-        bazel build --config=wasm32 "${BUILD_RULES[@]}"
+        bazel --output_base="${CACHE_DIR}/wasm32" build "${bazel_build_flags[@]}" --config=wasm32 "${BUILD_RULES[@]}"
     fi
 fi
 

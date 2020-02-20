@@ -42,6 +42,11 @@ declare -a bazel_build_flags
 # See https://pantheon.corp.google.com/storage/browser/oak-bazel-cache?project=oak-ci
 bazel_build_flags+=(
     '--remote_cache=https://storage.googleapis.com/oak-bazel-cache'
+    # Fail immediately if the Bazel server lock cannot be acquired so that we can notice this in CI
+    # and avoid attempting to parallelize steps that are actually serialized by Bazel.
+    '--block_for_lock=false'
+    # Useful to determine how long individual steps are taking in CI.
+    '--show_timestamps'
 )
 
 # If we now have a key file, use it, otherwise disable uploading artifacts to remote cache.

@@ -53,5 +53,5 @@ find . \
 
 # Update embedded code snippets
 grep --recursive --files-with-matches embedmd docs | while IFS= read -r file; do
-  "$GOPATH/bin/embedmd" -w "$file"
+  embedmd -w "$file"
 done
