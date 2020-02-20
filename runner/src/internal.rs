@@ -15,6 +15,7 @@
 //
 
 use colored::*;
+use std::collections::HashSet;
 use std::io::Write;
 use std::process::Command;
 use structopt::StructOpt;
@@ -52,11 +53,21 @@ impl Context {
 }
 
 /// The outcome of an individual step of execution.
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Clone, Hash)]
 pub enum StatusResultValue {
     Ok,
     Error,
     Skipped,
+}
+
+impl std::fmt::Display for StatusResultValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match *self {
+            StatusResultValue::Ok => write!(f, "{}", "OK".bold().bright_green()),
+            StatusResultValue::Error => write!(f, "{}", "ERROR".bold().bright_red()),
+            StatusResultValue::Skipped => write!(f, "{}", "SKIPPED".bold().bright_yellow()),
+        }
+    }
 }
 
 pub struct SingleStatusResult {
@@ -81,6 +92,34 @@ pub struct Status {
     status: StatusResult,
 }
 
+impl Status {
+    pub fn values(&self) -> HashSet<StatusResultValue> {
+        match &self.status {
+            StatusResult::Single(r) => {
+                let mut values = HashSet::new();
+                values.insert(r.value.clone());
+                values
+            }
+            StatusResult::Multiple(r) => r.statuses.iter().map(Status::values).flatten().collect(),
+        }
+    }
+}
+
+fn values_to_string<T>(values: T) -> String
+where
+    T: IntoIterator,
+    T::Item: std::fmt::Display,
+{
+    format!(
+        "[{}]",
+        values
+            .into_iter()
+            .map(|v| v.to_string())
+            .collect::<Vec<_>>()
+            .join(",")
+    )
+}
+
 /// A runnable task, which may be implemented as a single or multiple steps.
 pub trait Runnable {
     fn run(&self, opt: &Opt) -> Status;
@@ -89,15 +128,14 @@ pub trait Runnable {
 /// Type alias for a boxed, dynamically dispatched `Runnable` instance.
 pub type R = Box<dyn Runnable>;
 
-/// Run the provided runnable, and print out a summary of the final status (including subtasks).
-pub fn run_all(runnable: R, opt: &Opt) {
+/// Print out a summary of the final status (including subtasks).
+pub fn print_all(opt: &Opt, status: &Status) {
     let root = Context::root(&opt);
-    let status = runnable.run(&opt);
     print_status(&root, &status);
 }
 
 /// Print the provided status to stderr, applying colors to output when possible.
-fn print_status(context: &Context, status: &Status) {
+pub fn print_status(context: &Context, status: &Status) {
     let context = context.child(&status.name);
     match &status.status {
         StatusResult::Single(SingleStatusResult {
@@ -105,17 +143,7 @@ fn print_status(context: &Context, status: &Status) {
             logs,
             command,
         }) => {
-            match value {
-                StatusResultValue::Ok => {
-                    eprintln!("{} ⊢ {}", context.prefix, "OK".bold().bright_green())
-                }
-                StatusResultValue::Error => {
-                    eprintln!("{} ⊢ {}", context.prefix, "ERROR".bold().bright_red());
-                }
-                StatusResultValue::Skipped => {
-                    eprintln!("{} ⊢ {}", context.prefix, "SKIPPED".bold().bright_yellow())
-                }
-            };
+            eprintln!("{} ⊢ {}", context.prefix, value);
             if context.opt.commands || context.opt.dry_run {
                 eprintln!("{} ⊢ [{}]", context.prefix, command);
             };
@@ -132,7 +160,11 @@ fn print_status(context: &Context, status: &Status) {
             for status in statuses.iter() {
                 print_status(&context, status);
             }
-            eprintln!("{} }}", context.prefix);
+            eprintln!(
+                "{} }} ⊢ {}",
+                context.prefix,
+                values_to_string(status.values())
+            );
         }
     }
 }
