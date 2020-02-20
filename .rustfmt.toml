@@ -1,5 +1,4 @@
 # See https://github.com/rust-lang/rustfmt/blob/master/Configurations.md
-
 comment_width = 100
 format_code_in_doc_comments = true
 max_width = 100

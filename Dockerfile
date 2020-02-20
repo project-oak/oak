@@ -27,9 +27,11 @@ RUN npm --version
 # https://prettier.io/
 # https://github.com/igorshubovych/markdownlint-cli
 ARG PRETTIER_VERSION=1.19.1
+ARG PRETTIER_PLUGIN_TOML_VERSION=0.3.1
 ARG MARKDOWNLINT_VERSION=0.22.0
 RUN npm install --global \
   prettier@${PRETTIER_VERSION} \
+  prettier-plugin-toml@${PRETTIER_PLUGIN_TOML_VERSION} \
   markdownlint-cli@${MARKDOWNLINT_VERSION}
 RUN prettier --version
 RUN markdownlint --version
