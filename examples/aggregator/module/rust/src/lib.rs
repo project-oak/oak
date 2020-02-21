@@ -29,6 +29,10 @@ mod service;
 mod tests;
 
 use aggregation::{Aggregation, Monoid};
+use itertools::{
+    EitherOrBoth::{Both, Left, Right},
+    Itertools,
+};
 use service::Serializable;
 
 const SAMPLE_THRESHOLD: u64 = 3;
@@ -42,12 +46,16 @@ oak::entrypoint!(oak_main => {
 
 impl Monoid for Data {
     fn identity() -> Self {
-        vec![0; 5]
+        vec![]
     }
     fn combine(&self, other: &Self) -> Self {
         self.iter()
-            .zip(other.iter())
-            .map(|(a, b)| a + b)
+            .zip_longest(other.iter())
+            .map(|p| match p {
+                Both(l, r) => *l + *r,
+                Left(l) => *l,
+                Right(r) => *r,
+            })
             .collect::<Vec<u64>>()
     }
 }

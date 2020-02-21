@@ -52,10 +52,12 @@ where
         match self.get() {
             Some(values) => {
                 info!("Aggregation: {:?}", values);
+                res.success = true;
                 res.values = values.serialize();
             }
             None => {
                 warn!("Not enough samples have been aggregated");
+                res.success = false;
             }
         };
         Ok(res)

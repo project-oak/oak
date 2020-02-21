@@ -25,7 +25,8 @@ message SubmitSampleRequest {
 }
 
 message GetAggregationResponse {
-  repeated uint64 values = 1;
+  bool success = 1;
+  repeated uint64 values = 2;
 }
 
 service Aggregator {

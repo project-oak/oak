@@ -197,6 +197,7 @@ impl ::protobuf::reflect::ProtobufValue for SubmitSampleRequest {
 #[derive(PartialEq,Clone,Default)]
 pub struct GetAggregationResponse {
     // message fields
+    pub success: bool,
     pub values: ::std::vec::Vec<u64>,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
@@ -214,7 +215,22 @@ impl GetAggregationResponse {
         ::std::default::Default::default()
     }
 
-    // repeated uint64 values = 1;
+    // bool success = 1;
+
+
+    pub fn get_success(&self) -> bool {
+        self.success
+    }
+    pub fn clear_success(&mut self) {
+        self.success = false;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_success(&mut self, v: bool) {
+        self.success = v;
+    }
+
+    // repeated uint64 values = 2;
 
 
     pub fn get_values(&self) -> &[u64] {
@@ -250,6 +266,13 @@ impl ::protobuf::Message for GetAggregationResponse {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_bool()?;
+                    self.success = tmp;
+                },
+                2 => {
                     ::protobuf::rt::read_repeated_uint64_into(wire_type, is, &mut self.values)?;
                 },
                 _ => {
@@ -264,8 +287,11 @@ impl ::protobuf::Message for GetAggregationResponse {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
+        if self.success != false {
+            my_size += 2;
+        }
         for value in &self.values {
-            my_size += ::protobuf::rt::value_size(1, *value, ::protobuf::wire_format::WireTypeVarint);
+            my_size += ::protobuf::rt::value_size(2, *value, ::protobuf::wire_format::WireTypeVarint);
         };
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
@@ -273,8 +299,11 @@ impl ::protobuf::Message for GetAggregationResponse {
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if self.success != false {
+            os.write_bool(1, self.success)?;
+        }
         for v in &self.values {
-            os.write_uint64(1, *v)?;
+            os.write_uint64(2, *v)?;
         };
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -318,6 +347,11 @@ impl ::protobuf::Message for GetAggregationResponse {
         unsafe {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBool>(
+                    "success",
+                    |m: &GetAggregationResponse| { &m.success },
+                    |m: &mut GetAggregationResponse| { &mut m.success },
+                ));
                 fields.push(::protobuf::reflect::accessor::make_vec_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
                     "values",
                     |m: &GetAggregationResponse| { &m.values },
@@ -345,6 +379,7 @@ impl ::protobuf::Message for GetAggregationResponse {
 
 impl ::protobuf::Clear for GetAggregationResponse {
     fn clear(&mut self) {
+        self.success = false;
         self.values.clear();
         self.unknown_fields.clear();
     }
@@ -365,11 +400,12 @@ impl ::protobuf::reflect::ProtobufValue for GetAggregationResponse {
 static file_descriptor_proto_data: &'static [u8] = b"\
     \n\x10aggregator.proto\x12\x17oak.examples.aggregator\x1a\x1bgoogle/prot\
     obuf/empty.proto\"-\n\x13SubmitSampleRequest\x12\x16\n\x06values\x18\x01\
-    \x20\x03(\x04R\x06values\"0\n\x16GetAggregationResponse\x12\x16\n\x06val\
-    ues\x18\x01\x20\x03(\x04R\x06values2\xbd\x01\n\nAggregator\x12T\n\x0cSub\
-    mitSample\x12,.oak.examples.aggregator.SubmitSampleRequest\x1a\x16.googl\
-    e.protobuf.Empty\x12Y\n\x0eGetAggregation\x12\x16.google.protobuf.Empty\
-    \x1a/.oak.examples.aggregator.GetAggregationResponseb\x06proto3\
+    \x20\x03(\x04R\x06values\"J\n\x16GetAggregationResponse\x12\x18\n\x07suc\
+    cess\x18\x01\x20\x01(\x08R\x07success\x12\x16\n\x06values\x18\x02\x20\
+    \x03(\x04R\x06values2\xbd\x01\n\nAggregator\x12T\n\x0cSubmitSample\x12,.\
+    oak.examples.aggregator.SubmitSampleRequest\x1a\x16.google.protobuf.Empt\
+    y\x12Y\n\x0eGetAggregation\x12\x16.google.protobuf.Empty\x1a/.oak.exampl\
+    es.aggregator.GetAggregationResponseb\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {

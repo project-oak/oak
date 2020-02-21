@@ -51,7 +51,7 @@ void get_aggregation(Aggregator::Stub* stub) {
     LOG(QFATAL) << "Could not retrieve aggregation: " << status.error_code() << ": "
                 << status.error_message();
   }
-  if (response.values().empty()) {
+  if (!response.success()) {
     LOG(WARNING) << "Not enough samples have been aggregated";
     return;
   }
