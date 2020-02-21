@@ -139,6 +139,7 @@ cc_library(
     ],
     deps = [
         ":base_runtime",
+        ":grpc_client_node",
         ":oak_grpc_node",
         ":wasm_node",
         "//oak/common:app_config",
@@ -204,6 +205,22 @@ cc_library(
         ":channel",
         ":node_thread",
         "//oak/common:handles",
+        "@com_google_absl//absl/memory",
+        "@com_google_asylo//asylo/util:logging",
+    ],
+)
+
+cc_library(
+    name = "grpc_client_node",
+    srcs = ["grpc_client_node.cc"],
+    hdrs = ["grpc_client_node.h"],
+    deps = [
+        ":base_runtime",
+        ":channel",
+        ":node_thread",
+        "//oak/common:handles",
+        "//oak/proto:grpc_encap_cc_proto",
+        "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/memory",
         "@com_google_asylo//asylo/util:logging",
     ],

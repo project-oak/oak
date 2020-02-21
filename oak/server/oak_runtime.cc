@@ -25,6 +25,9 @@
 #include "absl/strings/str_cat.h"
 #include "asylo/util/logging.h"
 #include "oak/common/app_config.h"
+#include "oak/server/grpc_client_node.h"
+#include "oak/server/logging_node.h"
+#include "oak/server/storage/storage_node.h"
 #include "oak/server/wasm_node.h"
 
 namespace oak {
@@ -57,6 +60,10 @@ grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
       const StorageProxyConfiguration& storage_config = node_config.storage_config();
       storage_config_[node_config.name()] =
           absl::make_unique<std::string>(storage_config.address());
+    } else if (node_config.has_grpc_client_config()) {
+      const GrpcClientConfiguration& grpc_config = node_config.grpc_client_config();
+      grpc_client_config_[node_config.name()] =
+          absl::make_unique<std::string>(grpc_config.address());
     }
   }
 
@@ -115,6 +122,10 @@ OakNode* OakRuntime::CreateNode(const std::string& config_name, const std::strin
     std::string address = *(storage_config_[config_name].get());
     LOG(INFO) << "Create storage proxy node named {" << name << "} connecting to " << address;
     node = absl::make_unique<StorageNode>(this, name, address);
+  } else if (grpc_client_config_.count(config_name) > 0) {
+    std::string address = *(grpc_client_config_[config_name].get());
+    LOG(INFO) << "Create gRPC client node named {" << name << "} connecting to " << address;
+    node = absl::make_unique<GrpcClientNode>(this, name, address);
   } else {
     LOG(ERROR) << "failed to find config with name " << config_name;
     return nullptr;
