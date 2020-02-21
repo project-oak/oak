@@ -32,16 +32,26 @@ pub trait Chat {
 }
 
 // Oak Node gRPC method dispatcher
-pub fn dispatch<T: Chat>(node: &mut T, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
-    match method {
-        "/oak.examples.chat.Chat/CreateRoom" => grpc::handle_req_rsp(|r| node.create_room(r), req, writer),
-        "/oak.examples.chat.Chat/DestroyRoom" => grpc::handle_req_rsp(|r| node.destroy_room(r), req, writer),
-        "/oak.examples.chat.Chat/Subscribe" => grpc::handle_req_stream(|r, w| node.subscribe(r, w), req, writer),
-        "/oak.examples.chat.Chat/SendMessage" => grpc::handle_req_rsp(|r| node.send_message(r), req, writer),
-        _ => {
-            panic!("unknown method name: {}", method);
-        }
-    };
+pub struct Dispatcher<T: Chat>(T);
+
+impl<T: Chat> Dispatcher<T> {
+    pub fn new(node: T) -> Dispatcher<T> {
+        Dispatcher(node)
+    }
+}
+
+impl<T: Chat> grpc::OakNode for Dispatcher<T> {
+    fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
+        match method {
+            "/oak.examples.chat.Chat/CreateRoom" => grpc::handle_req_rsp(|r| self.0.create_room(r), req, writer),
+            "/oak.examples.chat.Chat/DestroyRoom" => grpc::handle_req_rsp(|r| self.0.destroy_room(r), req, writer),
+            "/oak.examples.chat.Chat/Subscribe" => grpc::handle_req_stream(|r, w| self.0.subscribe(r, w), req, writer),
+            "/oak.examples.chat.Chat/SendMessage" => grpc::handle_req_rsp(|r| self.0.send_message(r), req, writer),
+            _ => {
+                panic!("unknown method name: {}", method);
+            }
+        };
+    }
 }
 
 // Client interface

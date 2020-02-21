@@ -32,16 +32,26 @@ pub trait HelloWorld {
 }
 
 // Oak Node gRPC method dispatcher
-pub fn dispatch<T: HelloWorld>(node: &mut T, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
-    match method {
-        "/oak.examples.hello_world.HelloWorld/SayHello" => grpc::handle_req_rsp(|r| node.say_hello(r), req, writer),
-        "/oak.examples.hello_world.HelloWorld/LotsOfReplies" => grpc::handle_req_stream(|r, w| node.lots_of_replies(r, w), req, writer),
-        "/oak.examples.hello_world.HelloWorld/LotsOfGreetings" => grpc::handle_stream_rsp(|rr| node.lots_of_greetings(rr), req, writer),
-        "/oak.examples.hello_world.HelloWorld/BidiHello" => grpc::handle_stream_stream(|rr, w| node.bidi_hello(rr, w), req, writer),
-        _ => {
-            panic!("unknown method name: {}", method);
-        }
-    };
+pub struct Dispatcher<T: HelloWorld>(T);
+
+impl<T: HelloWorld> Dispatcher<T> {
+    pub fn new(node: T) -> Dispatcher<T> {
+        Dispatcher(node)
+    }
+}
+
+impl<T: HelloWorld> grpc::OakNode for Dispatcher<T> {
+    fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
+        match method {
+            "/oak.examples.hello_world.HelloWorld/SayHello" => grpc::handle_req_rsp(|r| self.0.say_hello(r), req, writer),
+            "/oak.examples.hello_world.HelloWorld/LotsOfReplies" => grpc::handle_req_stream(|r, w| self.0.lots_of_replies(r, w), req, writer),
+            "/oak.examples.hello_world.HelloWorld/LotsOfGreetings" => grpc::handle_stream_rsp(|rr| self.0.lots_of_greetings(rr), req, writer),
+            "/oak.examples.hello_world.HelloWorld/BidiHello" => grpc::handle_stream_stream(|rr, w| self.0.bidi_hello(rr, w), req, writer),
+            _ => {
+                panic!("unknown method name: {}", method);
+            }
+        };
+    }
 }
 
 // Client interface

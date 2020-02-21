@@ -30,14 +30,24 @@ pub trait PrivateSetIntersection {
 }
 
 // Oak Node gRPC method dispatcher
-pub fn dispatch<T: PrivateSetIntersection>(node: &mut T, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
-    match method {
-        "/oak.examples.private_set_intersection.PrivateSetIntersection/SubmitSet" => grpc::handle_req_rsp(|r| node.submit_set(r), req, writer),
-        "/oak.examples.private_set_intersection.PrivateSetIntersection/GetIntersection" => grpc::handle_req_rsp(|r| node.get_intersection(r), req, writer),
-        _ => {
-            panic!("unknown method name: {}", method);
-        }
-    };
+pub struct Dispatcher<T: PrivateSetIntersection>(T);
+
+impl<T: PrivateSetIntersection> Dispatcher<T> {
+    pub fn new(node: T) -> Dispatcher<T> {
+        Dispatcher(node)
+    }
+}
+
+impl<T: PrivateSetIntersection> grpc::OakNode for Dispatcher<T> {
+    fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
+        match method {
+            "/oak.examples.private_set_intersection.PrivateSetIntersection/SubmitSet" => grpc::handle_req_rsp(|r| self.0.submit_set(r), req, writer),
+            "/oak.examples.private_set_intersection.PrivateSetIntersection/GetIntersection" => grpc::handle_req_rsp(|r| self.0.get_intersection(r), req, writer),
+            _ => {
+                panic!("unknown method name: {}", method);
+            }
+        };
+    }
 }
 
 // Client interface

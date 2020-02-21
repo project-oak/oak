@@ -30,14 +30,24 @@ pub trait RunningAverage {
 }
 
 // Oak Node gRPC method dispatcher
-pub fn dispatch<T: RunningAverage>(node: &mut T, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
-    match method {
-        "/oak.examples.running_average.RunningAverage/SubmitSample" => grpc::handle_req_rsp(|r| node.submit_sample(r), req, writer),
-        "/oak.examples.running_average.RunningAverage/GetAverage" => grpc::handle_req_rsp(|r| node.get_average(r), req, writer),
-        _ => {
-            panic!("unknown method name: {}", method);
-        }
-    };
+pub struct Dispatcher<T: RunningAverage>(T);
+
+impl<T: RunningAverage> Dispatcher<T> {
+    pub fn new(node: T) -> Dispatcher<T> {
+        Dispatcher(node)
+    }
+}
+
+impl<T: RunningAverage> grpc::OakNode for Dispatcher<T> {
+    fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
+        match method {
+            "/oak.examples.running_average.RunningAverage/SubmitSample" => grpc::handle_req_rsp(|r| self.0.submit_sample(r), req, writer),
+            "/oak.examples.running_average.RunningAverage/GetAverage" => grpc::handle_req_rsp(|r| self.0.get_average(r), req, writer),
+            _ => {
+                panic!("unknown method name: {}", method);
+            }
+        };
+    }
 }
 
 // Client interface
