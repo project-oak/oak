@@ -27,7 +27,6 @@
 #include "oak/proto/application.pb.h"
 #include "oak/proto/oak_api.pb.h"
 #include "oak/server/base_runtime.h"
-#include "oak/server/logging_node.h"
 #include "oak/server/oak_grpc_node.h"
 #include "oak/server/storage/storage_node.h"
 
@@ -74,6 +73,8 @@ class OakRuntime : public BaseRuntime {
   std::set<std::string> log_config_;
   // Config names that refer to a storage proxy node.
   std::map<std::string, std::unique_ptr<std::string>> storage_config_;
+  // Config names that refer to a gRPC client node.
+  std::map<std::string, std::unique_ptr<std::string>> grpc_client_config_;
 
   // Next index for node name generation.
   mutable absl::Mutex mu_;  // protects nodes_, next_index_;
