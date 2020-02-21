@@ -56,7 +56,7 @@ where
                 res.values = values.serialize();
             }
             None => {
-                warn!("Not enough samples have been aggregated");
+                info!("Not enough samples have been aggregated");
                 res.success = false;
             }
         };

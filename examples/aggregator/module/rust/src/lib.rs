@@ -16,8 +16,8 @@
 
 //! Aggregator example for Project Oak.
 //!
-//! This shows how an Oak Node can aggregate data samples and expose the aggregated data them only
-//! if there is enough data to hide individual users.
+//! This shows how an Oak Node can aggregate data samples and expose the aggregated data only if
+//! there are enough samples to hide individual contributors.
 //!
 //! Clients invoke the module by providing a vector of non-negative numbers, and get back an
 //! aggregated vector if an Oak Node has collected more samples than the predefined threshold.
