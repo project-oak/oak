@@ -86,6 +86,15 @@ TEST_F(ApplicationConfigurationTest, DefaultPlusStorage) {
   ASSERT_EQ(true, ValidApplicationConfig(*got));
 }
 
+TEST_F(ApplicationConfigurationTest, DefaultPlusGrpcClient) {
+  std::unique_ptr<ApplicationConfiguration> got = DefaultConfig("<bytes>");
+  AddGrpcClientToConfig(got.get(), "localhost:9999");
+  std::unique_ptr<ApplicationConfiguration> want =
+      ConfigFrom("oak/common/testdata/grpcclient.textproto");
+  ASSERT_EQ(want->DebugString(), got->DebugString());
+  ASSERT_EQ(true, ValidApplicationConfig(*got));
+}
+
 TEST_F(ApplicationConfigurationTest, DefaultPlusGrpcPort) {
   std::unique_ptr<ApplicationConfiguration> got = DefaultConfig("<bytes>");
   SetGrpcPortInConfig(got.get(), 8888);

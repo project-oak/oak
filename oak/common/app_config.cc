@@ -34,6 +34,7 @@ constexpr char kAppConfigName[] = "app";
 constexpr char kAppEntrypointName[] = "oak_main";
 constexpr char kLogConfigName[] = "log";
 constexpr char kStorageConfigName[] = "storage";
+constexpr char kGrpcClientConfigName[] = "grpc-client";
 
 }  // namespace
 
@@ -76,6 +77,13 @@ void AddStorageToConfig(ApplicationConfiguration* config, const std::string& sto
   node_config->set_name(kStorageConfigName);
   StorageProxyConfiguration* storage = node_config->mutable_storage_config();
   storage->set_address(storage_address);
+}
+
+void AddGrpcClientToConfig(ApplicationConfiguration* config, const std::string& grpc_address) {
+  NodeConfiguration* node_config = config->add_node_configs();
+  node_config->set_name(kGrpcClientConfigName);
+  GrpcClientConfiguration* grpc_config = node_config->mutable_grpc_client_config();
+  grpc_config->set_address(grpc_address);
 }
 
 void SetGrpcPortInConfig(ApplicationConfiguration* config, const int16_t grpc_port) {

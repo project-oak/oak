@@ -343,6 +343,7 @@ pub enum NodeConfiguration_oneof_config_type {
     wasm_config(WebAssemblyConfiguration),
     log_config(LogConfiguration),
     storage_config(StorageProxyConfiguration),
+    grpc_client_config(GrpcClientConfiguration),
 }
 
 impl NodeConfiguration {
@@ -522,6 +523,55 @@ impl NodeConfiguration {
             StorageProxyConfiguration::new()
         }
     }
+
+    // .oak.GrpcClientConfiguration grpc_client_config = 5;
+
+
+    pub fn get_grpc_client_config(&self) -> &GrpcClientConfiguration {
+        match self.config_type {
+            ::std::option::Option::Some(NodeConfiguration_oneof_config_type::grpc_client_config(ref v)) => v,
+            _ => GrpcClientConfiguration::default_instance(),
+        }
+    }
+    pub fn clear_grpc_client_config(&mut self) {
+        self.config_type = ::std::option::Option::None;
+    }
+
+    pub fn has_grpc_client_config(&self) -> bool {
+        match self.config_type {
+            ::std::option::Option::Some(NodeConfiguration_oneof_config_type::grpc_client_config(..)) => true,
+            _ => false,
+        }
+    }
+
+    // Param is passed by value, moved
+    pub fn set_grpc_client_config(&mut self, v: GrpcClientConfiguration) {
+        self.config_type = ::std::option::Option::Some(NodeConfiguration_oneof_config_type::grpc_client_config(v))
+    }
+
+    // Mutable pointer to the field.
+    pub fn mut_grpc_client_config(&mut self) -> &mut GrpcClientConfiguration {
+        if let ::std::option::Option::Some(NodeConfiguration_oneof_config_type::grpc_client_config(_)) = self.config_type {
+        } else {
+            self.config_type = ::std::option::Option::Some(NodeConfiguration_oneof_config_type::grpc_client_config(GrpcClientConfiguration::new()));
+        }
+        match self.config_type {
+            ::std::option::Option::Some(NodeConfiguration_oneof_config_type::grpc_client_config(ref mut v)) => v,
+            _ => panic!(),
+        }
+    }
+
+    // Take field
+    pub fn take_grpc_client_config(&mut self) -> GrpcClientConfiguration {
+        if self.has_grpc_client_config() {
+            match self.config_type.take() {
+                ::std::option::Option::Some(NodeConfiguration_oneof_config_type::grpc_client_config(v)) => v,
+                _ => panic!(),
+            }
+        } else {
+            GrpcClientConfiguration::new()
+        }
+    }
 }
 
 impl ::protobuf::Message for NodeConfiguration {
@@ -537,6 +587,11 @@ impl ::protobuf::Message for NodeConfiguration {
             }
         }
         if let Some(NodeConfiguration_oneof_config_type::storage_config(ref v)) = self.config_type {
+            if !v.is_initialized() {
+                return false;
+            }
+        }
+        if let Some(NodeConfiguration_oneof_config_type::grpc_client_config(ref v)) = self.config_type {
             if !v.is_initialized() {
                 return false;
             }
@@ -569,6 +624,12 @@ impl ::protobuf::Message for NodeConfiguration {
                     }
                     self.config_type = ::std::option::Option::Some(NodeConfiguration_oneof_config_type::storage_config(is.read_message()?));
                 },
+                5 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    self.config_type = ::std::option::Option::Some(NodeConfiguration_oneof_config_type::grpc_client_config(is.read_message()?));
+                },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
                 },
@@ -598,6 +659,10 @@ impl ::protobuf::Message for NodeConfiguration {
                     let len = v.compute_size();
                     my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
                 },
+                &NodeConfiguration_oneof_config_type::grpc_client_config(ref v) => {
+                    let len = v.compute_size();
+                    my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+                },
             };
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
@@ -623,6 +688,11 @@ impl ::protobuf::Message for NodeConfiguration {
                 },
                 &NodeConfiguration_oneof_config_type::storage_config(ref v) => {
                     os.write_tag(4, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+                    os.write_raw_varint32(v.get_cached_size())?;
+                    v.write_to_with_cached_sizes(os)?;
+                },
+                &NodeConfiguration_oneof_config_type::grpc_client_config(ref v) => {
+                    os.write_tag(5, ::protobuf::wire_format::WireTypeLengthDelimited)?;
                     os.write_raw_varint32(v.get_cached_size())?;
                     v.write_to_with_cached_sizes(os)?;
                 },
@@ -690,6 +760,11 @@ impl ::protobuf::Message for NodeConfiguration {
                     NodeConfiguration::has_storage_config,
                     NodeConfiguration::get_storage_config,
                 ));
+                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, GrpcClientConfiguration>(
+                    "grpc_client_config",
+                    NodeConfiguration::has_grpc_client_config,
+                    NodeConfiguration::get_grpc_client_config,
+                ));
                 ::protobuf::reflect::MessageDescriptor::new::<NodeConfiguration>(
                     "NodeConfiguration",
                     fields,
@@ -713,6 +788,7 @@ impl ::protobuf::Message for NodeConfiguration {
 impl ::protobuf::Clear for NodeConfiguration {
     fn clear(&mut self) {
         self.name.clear();
+        self.config_type = ::std::option::Option::None;
         self.config_type = ::std::option::Option::None;
         self.config_type = ::std::option::Option::None;
         self.config_type = ::std::option::Option::None;
@@ -1196,21 +1272,193 @@ impl ::protobuf::reflect::ProtobufValue for StorageProxyConfiguration {
     }
 }
 
+#[derive(PartialEq,Clone,Default)]
+pub struct GrpcClientConfiguration {
+    // message fields
+    pub address: ::std::string::String,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a GrpcClientConfiguration {
+    fn default() -> &'a GrpcClientConfiguration {
+        <GrpcClientConfiguration as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl GrpcClientConfiguration {
+    pub fn new() -> GrpcClientConfiguration {
+        ::std::default::Default::default()
+    }
+
+    // string address = 1;
+
+
+    pub fn get_address(&self) -> &str {
+        &self.address
+    }
+    pub fn clear_address(&mut self) {
+        self.address.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_address(&mut self, v: ::std::string::String) {
+        self.address = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_address(&mut self) -> &mut ::std::string::String {
+        &mut self.address
+    }
+
+    // Take field
+    pub fn take_address(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.address, ::std::string::String::new())
+    }
+}
+
+impl ::protobuf::Message for GrpcClientConfiguration {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.address)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if !self.address.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.address);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if !self.address.is_empty() {
+            os.write_string(1, &self.address)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> GrpcClientConfiguration {
+        GrpcClientConfiguration::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
+        };
+        unsafe {
+            descriptor.get(|| {
+                let mut fields = ::std::vec::Vec::new();
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                    "address",
+                    |m: &GrpcClientConfiguration| { &m.address },
+                    |m: &mut GrpcClientConfiguration| { &mut m.address },
+                ));
+                ::protobuf::reflect::MessageDescriptor::new::<GrpcClientConfiguration>(
+                    "GrpcClientConfiguration",
+                    fields,
+                    file_descriptor_proto()
+                )
+            })
+        }
+    }
+
+    fn default_instance() -> &'static GrpcClientConfiguration {
+        static mut instance: ::protobuf::lazy::Lazy<GrpcClientConfiguration> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const GrpcClientConfiguration,
+        };
+        unsafe {
+            instance.get(GrpcClientConfiguration::new)
+        }
+    }
+}
+
+impl ::protobuf::Clear for GrpcClientConfiguration {
+    fn clear(&mut self) {
+        self.address.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for GrpcClientConfiguration {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for GrpcClientConfiguration {
+    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
+        ::protobuf::reflect::ProtobufValueRef::Message(self)
+    }
+}
+
 static file_descriptor_proto_data: &'static [u8] = b"\
     \n\x11application.proto\x12\x03oak\"\xe3\x01\n\x18ApplicationConfigurati\
     on\x129\n\x0cnode_configs\x18\x01\x20\x03(\x0b2\x16.oak.NodeConfiguratio\
     nR\x0bnodeConfigs\x127\n\x18initial_node_config_name\x18\x02\x20\x01(\tR\
     \x15initialNodeConfigName\x126\n\x17initial_entrypoint_name\x18\x03\x20\
     \x01(\tR\x15initialEntrypointName\x12\x1b\n\tgrpc_port\x18\x04\x20\x01(\
-    \x05R\x08grpcPort\"\xf9\x01\n\x11NodeConfiguration\x12\x12\n\x04name\x18\
+    \x05R\x08grpcPort\"\xc7\x02\n\x11NodeConfiguration\x12\x12\n\x04name\x18\
     \x01\x20\x01(\tR\x04name\x12@\n\x0bwasm_config\x18\x02\x20\x01(\x0b2\x1d\
     .oak.WebAssemblyConfigurationH\0R\nwasmConfig\x126\n\nlog_config\x18\x03\
     \x20\x01(\x0b2\x15.oak.LogConfigurationH\0R\tlogConfig\x12G\n\x0estorage\
     _config\x18\x04\x20\x01(\x0b2\x1e.oak.StorageProxyConfigurationH\0R\rsto\
-    rageConfigB\r\n\x0bconfig_type\"=\n\x18WebAssemblyConfiguration\x12!\n\
-    \x0cmodule_bytes\x18\x01\x20\x01(\x0cR\x0bmoduleBytes\"\x12\n\x10LogConf\
-    iguration\"5\n\x19StorageProxyConfiguration\x12\x18\n\x07address\x18\x01\
-    \x20\x01(\tR\x07addressb\x06proto3\
+    rageConfig\x12L\n\x12grpc_client_config\x18\x05\x20\x01(\x0b2\x1c.oak.Gr\
+    pcClientConfigurationH\0R\x10grpcClientConfigB\r\n\x0bconfig_type\"=\n\
+    \x18WebAssemblyConfiguration\x12!\n\x0cmodule_bytes\x18\x01\x20\x01(\x0c\
+    R\x0bmoduleBytes\"\x12\n\x10LogConfiguration\"5\n\x19StorageProxyConfigu\
+    ration\x12\x18\n\x07address\x18\x01\x20\x01(\tR\x07address\"3\n\x17GrpcC\
+    lientConfiguration\x12\x18\n\x07address\x18\x01\x20\x01(\tR\x07addressb\
+    \x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {
