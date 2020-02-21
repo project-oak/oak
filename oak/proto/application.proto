@@ -47,6 +47,7 @@ message NodeConfiguration {
     WebAssemblyConfiguration wasm_config = 2;
     LogConfiguration log_config = 3;
     StorageProxyConfiguration storage_config = 4;
+    GrpcClientConfiguration grpc_client_config = 5;
   }
 }
 
@@ -69,5 +70,13 @@ message LogConfiguration {
 // storage provider.
 message StorageProxyConfiguration {
   // The address of the external storage provider.
+  string address = 1;
+}
+
+// GrpcClientConfiguration describes the configuration of a gRPC client
+// pseudo-Node (which is provided by the Oak Runtime), connected to a specific
+// external (non-Oak) gRPC service.
+message GrpcClientConfiguration {
+  // The endpoint address of the external gRPC service.
   string address = 1;
 }

@@ -39,7 +39,11 @@ void AddLoggingToConfig(ApplicationConfiguration* config);
 // Modify application configuration to make a storage proxy available.
 void AddStorageToConfig(ApplicationConfiguration* config, const std::string& storage_address);
 
-// Modify application configuration to make gRPC to use a specific, non-default, port.
+// Modify application configuration to make a gRPC client pseudo-Node available.
+void AddGrpcClientToConfig(ApplicationConfiguration* config, const std::string& grpc_address);
+
+// Modify application configuration to make the gRPC server use a specific,
+// non-default, port.
 void SetGrpcPortInConfig(ApplicationConfiguration* config, const int16_t grpc_port);
 
 // Checks whether the given ApplicationConfiguration is valid.
