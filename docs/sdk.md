@@ -84,7 +84,7 @@ module holds functionality that is helpful for interacting with the outside
 world over gRPC, via the implicit [gRPC pseudo-Node](concepts.md#pseudo-nodes)
 that has a channel to the Application's initial Node.
 
-An Oak Node that interacts with gRPC typically implements the
+An Oak Node that acts as a gRPC server typically implements the
 [`oak::grpc::OakNode`](https://project-oak.github.io/oak/doc/oak/grpc/trait.OakNode.html)
 trait, which is used with the
 [`oak::run_event_loop()`](https://project-oak.github.io/oak/doc/oak/fn.run_event_loop.html)
