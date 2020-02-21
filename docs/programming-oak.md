@@ -84,9 +84,9 @@ with the following default behaviour:
   [`run_event_loop()`](https://project-oak.github.io/oak/doc/oak/fn.run_event_loop.html)
   function.
 
-For gRPC server nodes (the normal "front door" for an Oak Application) the
-easiest way to use a gRPC service implementation is to wrap it with the
-automatically generated `Dispatcher`, as described in the next section.
+For Nodes that act as gRPC servers (the normal "front door" for an Oak
+Application), the easiest way to use a gRPC service implementation is to wrap it
+with the automatically generated `Dispatcher`, as described in the next section.
 
 <!-- prettier-ignore-start -->
 [embedmd]:# (../examples/rustfmt/module/rust/src/lib.rs Rust /oak::entrypoint!/ /^}/)

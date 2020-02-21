@@ -87,13 +87,14 @@ outside world.
 
 The available pseudo-Nodes are:
 
-- **gRPC pseudo-node**: Provides a 'front door' for external interaction with an
-  Oak Application, by implementing a gRPC service. The Oak Runtime automatically
-  creates a gRPC pseudo-Node at Application start-of-day (and so gRPC
-  pseudo-Nodes cannot be created with `node_create()`). External method
-  invocations of the Application's gRPC service are delivered to a channel that
-  connects from the pseudo-Node to the initial Node of the Application, as a
-  message no data bytes but with two attached handles (in the following order):
+- **gRPC server pseudo-node**: Provides a 'front door' for external interaction
+  with an Oak Application, by implementing a gRPC service. The Oak Runtime
+  automatically creates a gRPC server pseudo-Node at Application start-of-day
+  (and so gRPC server pseudo-Nodes cannot be created with `node_create()`).
+  External method invocations of the Application's gRPC service are delivered to
+  a channel that connects from the pseudo-Node to the initial Node of the
+  Application, as a message with no data bytes but with two attached handles (in
+  the following order):
   - A handle for the read half of a channel holding the inbound request, ready
     for the Node to read.
   - A handle for the write half of a channel that the Node should write the
@@ -102,6 +103,13 @@ The available pseudo-Nodes are:
   development by including a single inbound channel; anything received on the
   channel will be logged. This node should only be enabled during application
   development and debugging (due to the potential for information leakage).
+- **gRPC client pseudo-node**: Provides a mechanism for Oak Nodes to make use of
+  an external (non-Oak) gRPC service. Method invocations for the gRPC service
+  are sent on the channel to the gRPC client pseudo-Node, as a message with no
+  data bytes but with two attached handles (in the following order):
+  - A handle for the read half of a channel holding the outbound request.
+  - A handle for the write half of a channel that the corresponding response
+    message(s) should be written to.
 - **Storage pseudo-node**: Provides a proxy mechanism for access to a persistent
   storage mechanism. Nodes that require storage functionality write storage
   requests to a channel that reaches the storage pseudo-Node, then read the
