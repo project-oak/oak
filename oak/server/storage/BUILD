@@ -52,7 +52,6 @@ cc_library(
     ],
     deps = [
         ":storage_processor",
-        "//oak/common:app_config",
         "//oak/common:handles",
         "//oak/proto:grpc_encap_cc_proto",
         "//oak/proto:storage_channel_cc_proto",

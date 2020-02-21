@@ -18,7 +18,6 @@
 
 #include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
-#include "oak/common/app_config.h"
 
 namespace oak {
 

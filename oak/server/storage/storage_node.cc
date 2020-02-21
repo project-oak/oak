@@ -21,7 +21,6 @@
 #include "asylo/util/cleansing_types.h"
 #include "asylo/util/logging.h"
 #include "grpcpp/create_channel.h"
-#include "oak/common/app_config.h"
 #include "oak/proto/grpc_encap.pb.h"
 #include "oak/proto/storage_channel.pb.h"
 
