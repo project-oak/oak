@@ -21,9 +21,9 @@ use protobuf::well_known_types::Empty;
 
 const MODULE_CONFIG_NAME: &str = "aggregator";
 
-fn submit_sample(entry_channel: &oak_runtime::ChannelWriter, value: u64) {
+fn submit_sample(entry_channel: &oak_runtime::ChannelWriter, values: Vec<u64>) {
     let req = SubmitSampleRequest {
-        value,
+        values,
         ..Default::default()
     };
     let result: grpc::Result<Empty> = oak_tests::grpc_request(
@@ -41,17 +41,30 @@ fn test_aggregator() {
     let (runtime, entry_channel) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
         .expect("Unable to configure runtime with test wasm!");
 
-    submit_sample(&entry_channel, 100);
-    submit_sample(&entry_channel, 200);
+    submit_sample(&entry_channel, vec![0, 1, 0, 1, 0]);
+    submit_sample(&entry_channel, vec![1, 0, 1, 0, 1]);
+    {
+        let req = Empty::new();
+        let result: grpc::Result<GetAggregationResponse> = oak_tests::grpc_request(
+            &entry_channel,
+            "/oak.examples.aggregator.Aggregator/GetAggregation",
+            req,
+        );
+        assert_matches!(result, Ok(_));
+        assert_eq!(Vec::<u64>::new(), result.unwrap().values);
+    }
 
-    let req = Empty::new();
-    let result: grpc::Result<GetAggregationResponse> = oak_tests::grpc_request(
-        &entry_channel,
-        "/oak.examples.aggregator.Aggregator/GetAggregation",
-        req,
-    );
-    assert_matches!(result, Ok(_));
-    assert_eq!(150, result.unwrap().average);
+    submit_sample(&entry_channel, vec![1, 1, 1, 1, 1]);
+    {
+        let req = Empty::new();
+        let result: grpc::Result<GetAggregationResponse> = oak_tests::grpc_request(
+            &entry_channel,
+            "/oak.examples.aggregator.Aggregator/GetAggregation",
+            req,
+        );
+        assert_matches!(result, Ok(_));
+        assert_eq!(vec![2, 2, 2, 2, 2], result.unwrap().values);
+    }
 
     runtime.stop();
 }
