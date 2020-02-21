@@ -28,48 +28,53 @@ mod proto;
 mod tests;
 
 use aggregation::{Aggregation, Monoid};
-// use log::info;
+use log::{info, warn};
 use oak::grpc;
 // use oak::grpc::OakNode;
 use proto::aggregator::{GetAggregationResponse, SubmitSampleRequest};
 use proto::aggregator_grpc::{dispatch, Aggregator};
 use protobuf::well_known_types::Empty;
 
+const SAMPLE_THRESHOLD: u64 = 3;
+const DATA_SIZE: usize = 5;
+type Data = [u64; DATA_SIZE];
+
 oak::entrypoint!(oak_main => {
     oak_log::init_default();
     Node {
-        aggregation: Aggregation::new(3),
+        aggregation: Aggregation::new(SAMPLE_THRESHOLD),
     }
 });
 
-impl Monoid for [u64; 10] {
+impl Monoid for Data {
     fn identity() -> Self {
-        [0u64; 10]
+        [0u64; DATA_SIZE]
     }
 
     fn combine(&self, other: &Self) -> Self {
-        let mut array = [0; 10];
+        let mut array = Data::identity();
         let bytes = &self
             .iter()
             .zip(other.iter())
             .map(|(a, b)| a + b)
-            .collect::<Vec<u64>>()[0..10];
+            .collect::<Vec<u64>>()[0..DATA_SIZE];
         array.copy_from_slice(bytes);
         array
     }
 
     fn len() -> usize {
-        10
+        DATA_SIZE
     }
 }
 
 // #[derive(Default)]
 struct Node {
-    aggregation: Aggregation<[u64; 10]>,
+    aggregation: Aggregation<Data>,
 }
 
 impl grpc::OakNode for Node {
     fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
+        info!("INVOKE");
         dispatch(self, method, req, writer)
     }
 }
@@ -79,14 +84,14 @@ trait ProtoVec<T: Monoid> {
     fn deserialize(data: Vec<u64>) -> T;
 }
 
-impl ProtoVec<[u64; 10]> for Node {
-    fn serialize(data: [u64; 10]) -> Vec<u64> {
+impl ProtoVec<Data> for Node {
+    fn serialize(data: Data) -> Vec<u64> {
         data.to_vec()
     }
 
-    fn deserialize(data: Vec<u64>) -> [u64; 10] {
-        let mut array = [0; 10];
-        let bytes = &data[0..10];
+    fn deserialize(data: Vec<u64>) -> Data {
+        let mut array = Data::identity();
+        let bytes = &data[0..DATA_SIZE];
         array.copy_from_slice(bytes);
         array
     }
@@ -94,10 +99,12 @@ impl ProtoVec<[u64; 10]> for Node {
 
 impl Aggregator for Node {
     fn submit_sample(&mut self, req: SubmitSampleRequest) -> grpc::Result<Empty> {
-        if req.values.len() == 10 {
+        info!("Submit sample: {:?}", req.values);
+        if req.values.len() == Data::len() {
             self.aggregation.add(&Node::deserialize(req.values));
             Ok(Empty::new())
         } else {
+            warn!("Wrong vector size: {:?}", req.values);
             Err(grpc::build_status(
                 grpc::Code::INVALID_ARGUMENT,
                 "Wrong vector size",
@@ -106,16 +113,18 @@ impl Aggregator for Node {
     }
 
     fn get_aggregation(&mut self, _req: Empty) -> grpc::Result<GetAggregationResponse> {
+        info!("Get aggregation request");
         let mut res = GetAggregationResponse::new();
         match self.aggregation.get() {
             Some(values) => {
+                info!("Aggregation: {:?}", values);
                 res.values = Node::serialize(values);
                 Ok(res)
             }
-            None => Err(grpc::build_status(
-                grpc::Code::UNAVAILABLE,
-                "Not enough samples have been aggregated",
-            )),
+            None => {
+                warn!("Not enough samples have been aggregated");
+                Ok(res)
+            },
         }
     }
 }

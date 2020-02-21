@@ -40,6 +40,7 @@ impl<T: Monoid + Copy> Aggregation<T> {
 
     pub fn add(&mut self, sample: &T) {
         self.data = self.data.combine(sample);
+        self.sample_number += 1;
     }
 
     pub fn get(&self) -> Option<T> {

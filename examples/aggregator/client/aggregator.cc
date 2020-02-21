@@ -49,10 +49,14 @@ void get_aggregation(Aggregator::Stub* stub) {
   GetAggregationResponse response;
   grpc::Status status = stub->GetAggregation(&context, request, &response);
   if (!status.ok()) {
-    LOG(WARNING) << "Could not retrieve aggregation: " << status.error_code() << ": "
-                 << status.error_message();
+    LOG(QFATAL) << "Could not retrieve aggregation: " << status.error_code() << ": "
+                << status.error_message();
+  }
+  if (response.values().empty()) {
+    LOG(WARNING) << "Not enough samples have been aggregated";
     return;
   }
+
   LOG(INFO) << "Aggregation:";
   for (auto value : response.values()) {
     LOG(INFO) << "- " << value;
