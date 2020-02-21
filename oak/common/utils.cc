@@ -25,7 +25,7 @@ namespace utils {
 std::string read_file(const std::string& filename) {
   std::ifstream t(filename, std::ifstream::in);
   if (!t.is_open()) {
-    LOG(QFATAL) << "Could not open file " << filename;
+    LOG(QFATAL) << "Could not open file '" << filename << "'";
   }
   std::stringstream buffer;
   buffer << t.rdbuf();
@@ -35,7 +35,7 @@ std::string read_file(const std::string& filename) {
 void write_file(const std::string& data, const std::string& filename) {
   std::ofstream t(filename, std::ofstream::out);
   if (!t.is_open()) {
-    LOG(QFATAL) << "Could not open file " << filename;
+    LOG(QFATAL) << "Could not open file '" << filename << "'";
   }
   t << data;
   t.close();
