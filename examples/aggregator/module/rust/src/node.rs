@@ -14,10 +14,10 @@
 // limitations under the License.
 //
 
-use std::fmt::Debug;
 use crate::aggregation::{Aggregation, Monoid};
-use log::{info, warn, error};
+use log::{error, info, warn};
 use oak::grpc;
+use std::fmt::Debug;
 // use oak::grpc::OakNode;
 use crate::proto::aggregator::{GetAggregationResponse, SubmitSampleRequest};
 use crate::proto::aggregator_grpc::{dispatch, Aggregator};
@@ -61,7 +61,7 @@ impl<T: Monoid + Copy + Debug + Serializable> Aggregator for Aggregation<T> {
             None => {
                 warn!("Not enough samples have been aggregated");
                 Ok(res)
-            },
+            }
         }
     }
 }
