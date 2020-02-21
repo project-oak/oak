@@ -26,7 +26,6 @@ cc_binary(
     deps = [
         "//examples/aggregator/proto:aggregator_cc_grpc",
         "//oak/client:application_client",
-        "//oak/common:nonce_generator",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",

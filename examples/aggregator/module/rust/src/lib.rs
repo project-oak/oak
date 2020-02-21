@@ -14,36 +14,33 @@
 // limitations under the License.
 //
 
-//! Running average example for Project Oak.
+//! Aggregator example for Project Oak.
 //!
-//! This shows how an Oak Mode can maintain some internal state across multiple invocations.
+//! This shows how an Oak Node can aggregate data samples and expose the aggregated data them only
+//! if there is enough data to hide individual users.
 //!
-//! Clients invoke the module by providing a string representation of a non-negative number
-//! expressed in base 10, and get back a string representation of the accumulated average value up
-//! to and including the value provided in the request.
+//! Clients invoke the module by providing a vector of non-negative numbers, and get back an
+//! aggregated vector if an Oak Node has collected more samples than the predefined threshold.
+
+#![feature(associated_type_bounds)]
 
 mod aggregation;
+mod node;
 mod proto;
 #[cfg(test)]
 mod tests;
 
 use aggregation::{Aggregation, Monoid};
-use log::{info, warn};
-use oak::grpc;
-// use oak::grpc::OakNode;
-use proto::aggregator::{GetAggregationResponse, SubmitSampleRequest};
-use proto::aggregator_grpc::{dispatch, Aggregator};
-use protobuf::well_known_types::Empty;
+use node::Serializable;
 
 const SAMPLE_THRESHOLD: u64 = 3;
 const DATA_SIZE: usize = 5;
 type Data = [u64; DATA_SIZE];
+type Node = Aggregation<Data>;
 
 oak::entrypoint!(oak_main => {
     oak_log::init_default();
-    Node {
-        aggregation: Aggregation::new(SAMPLE_THRESHOLD),
-    }
+    Node::new(SAMPLE_THRESHOLD)
 });
 
 impl Monoid for Data {
@@ -67,64 +64,15 @@ impl Monoid for Data {
     }
 }
 
-// #[derive(Default)]
-struct Node {
-    aggregation: Aggregation<Data>,
-}
-
-impl grpc::OakNode for Node {
-    fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
-        info!("INVOKE");
-        dispatch(self, method, req, writer)
-    }
-}
-
-trait ProtoVec<T: Monoid> {
-    fn serialize(data: T) -> Vec<u64>;
-    fn deserialize(data: Vec<u64>) -> T;
-}
-
-impl ProtoVec<Data> for Node {
-    fn serialize(data: Data) -> Vec<u64> {
-        data.to_vec()
-    }
-
-    fn deserialize(data: Vec<u64>) -> Data {
+impl Serializable for Data {
+    fn deserialize(data: Vec<u64>) -> Self {
         let mut array = Data::identity();
         let bytes = &data[0..DATA_SIZE];
         array.copy_from_slice(bytes);
         array
     }
-}
 
-impl Aggregator for Node {
-    fn submit_sample(&mut self, req: SubmitSampleRequest) -> grpc::Result<Empty> {
-        info!("Submit sample: {:?}", req.values);
-        if req.values.len() == Data::len() {
-            self.aggregation.add(&Node::deserialize(req.values));
-            Ok(Empty::new())
-        } else {
-            warn!("Wrong vector size: {:?}", req.values);
-            Err(grpc::build_status(
-                grpc::Code::INVALID_ARGUMENT,
-                "Wrong vector size",
-            ))
-        }
-    }
-
-    fn get_aggregation(&mut self, _req: Empty) -> grpc::Result<GetAggregationResponse> {
-        info!("Get aggregation request");
-        let mut res = GetAggregationResponse::new();
-        match self.aggregation.get() {
-            Some(values) => {
-                info!("Aggregation: {:?}", values);
-                res.values = Node::serialize(values);
-                Ok(res)
-            }
-            None => {
-                warn!("Not enough samples have been aggregated");
-                Ok(res)
-            },
-        }
+    fn serialize(&self) -> Vec<u64> {
+        self.to_vec()
     }
 }
