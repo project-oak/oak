@@ -37,6 +37,13 @@ steps:
     entrypoint: 'bash'
     args: ['./scripts/check_formatting']
 
+  - name: 'gcr.io/oak-ci/oak:latest'
+    id: runner
+    waitFor: ['build_image']
+    timeout: 30m
+    entrypoint: 'bash'
+    args: ['./scripts/runner']
+
   # Run the various server builds in parallel, since they use different Bazel `output_base`.
   - name: 'gcr.io/oak-ci/oak:latest'
     id: build_server_asylo
