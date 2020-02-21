@@ -17,7 +17,7 @@
 use crate::aggregation::{Aggregation, Monoid};
 use crate::proto::aggregator::{GetAggregationResponse, SubmitSampleRequest};
 use crate::proto::aggregator_grpc::{dispatch, Aggregator};
-use log::{info, warn};
+use log::info;
 use oak::grpc;
 use protobuf::well_known_types::Empty;
 use std::fmt::Debug;
