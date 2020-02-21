@@ -183,7 +183,7 @@ be serialized into a binary file. The Application first needs to specify a
 template configuration file:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/hello_world/config/config.textproto /node_configs.*/ /initial_entrypoint_name.*/)
+[embedmd]:# (../examples/translator/config/config.textproto /node_configs.*/ /initial_entrypoint_name.*/)
 ```textproto
 node_configs {
   name: "app"

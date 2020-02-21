@@ -25,10 +25,17 @@ use proto::hello_world_grpc::{Dispatcher, HelloWorld};
 
 oak::entrypoint!(oak_main => {
     oak_log::init_default();
+
+    // Try to find a translation service, first as an Oak Node and failing that,
+    // as an external gRPC service
+    let mut translator_client = grpc::client::Client::new("translator", "oak_main");
+    if translator_client.is_none() {
+        translator_client = grpc::client::Client::new("translator-grpc", "unused-arg");
+    }
+
     let node = Node {
         storage: oak::storage::Storage::default(),
-        translator: grpc::client::Client::new("translator", "oak_main")
-            .map(translator_common::TranslatorClient),
+        translator: translator_client.map(translator_common::TranslatorClient),
     };
     Dispatcher::new(node)
 });
