@@ -22,8 +22,6 @@
 //! Clients invoke the module by providing a vector of non-negative numbers, and get back an
 //! aggregated vector if an Oak Node has collected more samples than the predefined threshold.
 
-#![feature(associated_type_bounds)]
-
 mod aggregation;
 mod proto;
 mod service;
