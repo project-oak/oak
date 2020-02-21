@@ -15,38 +15,35 @@
 //
 
 use crate::aggregation::{Aggregation, Monoid};
-use log::{error, info, warn};
-use oak::grpc;
-use std::fmt::Debug;
-// use oak::grpc::OakNode;
 use crate::proto::aggregator::{GetAggregationResponse, SubmitSampleRequest};
 use crate::proto::aggregator_grpc::{dispatch, Aggregator};
+use log::{info, warn};
+use oak::grpc;
 use protobuf::well_known_types::Empty;
-
-impl<T: Monoid + Copy + Debug + Serializable> grpc::OakNode for Aggregation<T> {
-    fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
-        dispatch(self, method, req, writer)
-    }
-}
+use std::fmt::Debug;
 
 pub trait Serializable {
     fn deserialize(data: Vec<u64>) -> Self;
     fn serialize(&self) -> Vec<u64>;
 }
 
-impl<T: Monoid + Copy + Debug + Serializable> Aggregator for Aggregation<T> {
+impl<T> grpc::OakNode for Aggregation<T>
+where
+    T: Monoid + Clone + Debug + Serializable,
+{
+    fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
+        dispatch(self, method, req, writer)
+    }
+}
+
+impl<T> Aggregator for Aggregation<T>
+where
+    T: Monoid + Clone + Debug + Serializable,
+{
     fn submit_sample(&mut self, req: SubmitSampleRequest) -> grpc::Result<Empty> {
         info!("Submit sample request: {:?}", req.values);
-        if req.values.len() == T::len() {
-            self.add(&T::deserialize(req.values));
-            Ok(Empty::new())
-        } else {
-            error!("Wrong vector size: {:?}", req.values);
-            Err(grpc::build_status(
-                grpc::Code::INVALID_ARGUMENT,
-                "Wrong vector size",
-            ))
-        }
+        self.add(&T::deserialize(req.values));
+        Ok(Empty::new())
     }
 
     fn get_aggregation(&mut self, _req: Empty) -> grpc::Result<GetAggregationResponse> {
@@ -56,12 +53,11 @@ impl<T: Monoid + Copy + Debug + Serializable> Aggregator for Aggregation<T> {
             Some(values) => {
                 info!("Aggregation: {:?}", values);
                 res.values = values.serialize();
-                Ok(res)
             }
             None => {
                 warn!("Not enough samples have been aggregated");
-                Ok(res)
             }
-        }
+        };
+        Ok(res)
     }
 }
