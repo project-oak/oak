@@ -17,7 +17,6 @@
 pub trait Monoid {
     fn identity() -> Self;
     fn combine(&self, other: &Self) -> Self;
-    fn len() -> usize;
 }
 
 pub struct Aggregation<T: Monoid> {
@@ -25,11 +24,11 @@ pub struct Aggregation<T: Monoid> {
     data: T,
     /// Number of contributed data samples.
     sample_number: u64,
-    /// Minimal allowed number of samples ... before realising the aggregation.
+    /// The number of samples that should be collected before for revealing the aggregation.
     sample_threshold: u64,
 }
 
-impl<T: Monoid + Copy> Aggregation<T> {
+impl<T: Monoid + Clone> Aggregation<T> {
     pub fn new(threshold: u64) -> Self {
         Aggregation {
             data: Monoid::identity(),
@@ -45,7 +44,7 @@ impl<T: Monoid + Copy> Aggregation<T> {
 
     pub fn get(&self) -> Option<T> {
         if self.sample_number >= self.sample_threshold {
-            Some(self.data)
+            Some(self.data.clone())
         } else {
             None
         }

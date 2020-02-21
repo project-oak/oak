@@ -73,9 +73,7 @@ int main(int argc, char** argv) {
   auto stub = Aggregator::NewStub(oak::ApplicationClient::CreateChannel(address));
 
   // Submit samples from different clients.
-  LOG(WARNING) << "Send 1";
   submit_sample(stub.get(), {0, 0, 10, 10, 0});
-  LOG(WARNING) << "Send 2";
   submit_sample(stub.get(), {10, 10, 0, 0, 10});
 
   // Try to retrieve aggregation.

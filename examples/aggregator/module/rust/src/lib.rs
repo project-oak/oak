@@ -25,17 +25,16 @@
 #![feature(associated_type_bounds)]
 
 mod aggregation;
-mod node;
 mod proto;
+mod service;
 #[cfg(test)]
 mod tests;
 
 use aggregation::{Aggregation, Monoid};
-use node::Serializable;
+use service::Serializable;
 
 const SAMPLE_THRESHOLD: u64 = 3;
-const DATA_SIZE: usize = 5;
-type Data = [u64; DATA_SIZE];
+type Data = Vec<u64>;
 type Node = Aggregation<Data>;
 
 oak::entrypoint!(oak_main => {
@@ -45,33 +44,20 @@ oak::entrypoint!(oak_main => {
 
 impl Monoid for Data {
     fn identity() -> Self {
-        [0u64; DATA_SIZE]
+        vec![0; 5]
     }
-
     fn combine(&self, other: &Self) -> Self {
-        let mut array = Data::identity();
-        let bytes = &self
-            .iter()
+        self.iter()
             .zip(other.iter())
             .map(|(a, b)| a + b)
-            .collect::<Vec<u64>>()[0..DATA_SIZE];
-        array.copy_from_slice(bytes);
-        array
-    }
-
-    fn len() -> usize {
-        DATA_SIZE
+            .collect::<Vec<u64>>()
     }
 }
 
 impl Serializable for Data {
     fn deserialize(data: Vec<u64>) -> Self {
-        let mut array = Data::identity();
-        let bytes = &data[0..DATA_SIZE];
-        array.copy_from_slice(bytes);
-        array
+        data
     }
-
     fn serialize(&self) -> Vec<u64> {
         self.to_vec()
     }

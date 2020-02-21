@@ -14,44 +14,44 @@
 // limitations under the License.
 //
 
-// use crate::proto::running_average::{GetAverageResponse, SubmitSampleRequest};
-// use assert_matches::assert_matches;
-// use oak::grpc;
-// use protobuf::well_known_types::Empty;
+use crate::proto::aggregator::{GetAggregationResponse, SubmitSampleRequest};
+use assert_matches::assert_matches;
+use oak::grpc;
+use protobuf::well_known_types::Empty;
 
-// const MODULE_CONFIG_NAME: &str = "running_average";
+const MODULE_CONFIG_NAME: &str = "aggregator";
 
-// fn submit_sample(entry_channel: &oak_runtime::ChannelWriter, value: u64) {
-//     let req = SubmitSampleRequest {
-//         value,
-//         ..Default::default()
-//     };
-//     let result: grpc::Result<Empty> = oak_tests::grpc_request(
-//         &entry_channel,
-//         "/oak.examples.running_average.RunningAverage/SubmitSample",
-//         req,
-//     );
-//     assert_matches!(result, Ok(_));
-// }
+fn submit_sample(entry_channel: &oak_runtime::ChannelWriter, value: u64) {
+    let req = SubmitSampleRequest {
+        value,
+        ..Default::default()
+    };
+    let result: grpc::Result<Empty> = oak_tests::grpc_request(
+        &entry_channel,
+        "/oak.examples.aggregator.Aggregator/SubmitSample",
+        req,
+    );
+    assert_matches!(result, Ok(_));
+}
 
-// #[test]
-// fn test_running_average() {
-//     simple_logger::init().unwrap();
+#[test]
+fn test_aggregator() {
+    simple_logger::init().unwrap();
 
-//     let (runtime, entry_channel) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
-//         .expect("Unable to configure runtime with test wasm!");
+    let (runtime, entry_channel) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
+        .expect("Unable to configure runtime with test wasm!");
 
-//     submit_sample(&entry_channel, 100);
-//     submit_sample(&entry_channel, 200);
+    submit_sample(&entry_channel, 100);
+    submit_sample(&entry_channel, 200);
 
-//     let req = Empty::new();
-//     let result: grpc::Result<GetAverageResponse> = oak_tests::grpc_request(
-//         &entry_channel,
-//         "/oak.examples.running_average.RunningAverage/GetAverage",
-//         req,
-//     );
-//     assert_matches!(result, Ok(_));
-//     assert_eq!(150, result.unwrap().average);
+    let req = Empty::new();
+    let result: grpc::Result<GetAggregationResponse> = oak_tests::grpc_request(
+        &entry_channel,
+        "/oak.examples.aggregator.Aggregator/GetAggregation",
+        req,
+    );
+    assert_matches!(result, Ok(_));
+    assert_eq!(150, result.unwrap().average);
 
-//     runtime.stop();
-// }
+    runtime.stop();
+}
