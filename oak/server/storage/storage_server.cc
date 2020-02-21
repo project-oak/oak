@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
   builder.AddListeningPort(server_address, credentials);
   builder.RegisterService(&storage_service);
 
-  LOG(INFO) << "Starting gRPC Storage Server";
+  LOG(INFO) << "Starting gRPC Storage Server on " << server_address;
   std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
   server->Wait();
 
