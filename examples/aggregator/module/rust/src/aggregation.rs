@@ -23,8 +23,8 @@ pub trait Monoid {
 }
 
 /// Generic data structure that can combine data values and count the number of provided data
-/// samples. It also can release an aggregated value only when there is enouth data samples
-/// (more that `sample_threshold`).
+/// samples. It also can reveal an aggregated value only when there is enouth data samples
+/// (more than `sample_threshold`).
 pub struct Aggregation<T: Monoid> {
     /// Current aggregated value.
     current_value: T,

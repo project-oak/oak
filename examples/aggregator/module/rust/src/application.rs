@@ -17,7 +17,7 @@
 use crate::aggregation::{Aggregation, Monoid};
 use crate::proto::aggregator::Vector;
 use crate::proto::aggregator_grpc::{dispatch, Aggregator};
-use log::info;
+use log::{info, warning};
 use oak::grpc;
 use protobuf::well_known_types::Empty;
 use std::fmt::Debug;
@@ -67,7 +67,7 @@ where
                 Ok(value.serialize())
             }
             None => {
-                info!("Not enough samples have been aggregated");
+                warning!("Not enough samples have been aggregated");
                 Err(grpc::build_status(
                     grpc::Code::PERMISSION_DENIED,
                     "Not enough samples have been aggregated",
