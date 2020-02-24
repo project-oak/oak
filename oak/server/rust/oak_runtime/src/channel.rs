@@ -23,7 +23,7 @@ use std::vec::Vec;
 use core::sync::atomic::AtomicUsize;
 use core::sync::atomic::Ordering::SeqCst;
 
-use oak_abi::{OakStatus, ChannelReadStatus};
+use oak_abi::{ChannelReadStatus, OakStatus};
 
 use log::debug;
 
@@ -317,7 +317,11 @@ impl Clone for ChannelReader {
 pub fn readers_statuses(readers: &[Option<&ChannelReader>]) -> Vec<ChannelReadStatus> {
     readers
         .iter()
-        .map(|chan| chan.map_or(ChannelReadStatus::INVALID_CHANNEL, |chan| chan.has_message()))
+        .map(|chan| {
+            chan.map_or(ChannelReadStatus::INVALID_CHANNEL, |chan| {
+                chan.has_message()
+            })
+        })
         .collect()
 }
 
@@ -355,8 +359,8 @@ pub fn block_thread_on_channel(
 /// - If all readers are in an erroneous status, e.g. when all `ChannelReaders` are orphaned, this
 ///   will immediately return the channels statuses.
 /// - If any of the channels is able to read a message, the corresponding element in the returned
-///   vector will be set to `Ok(READ_READY)`, with `Ok(NOT_READY)` signaling the channel has no message
-///   available
+///   vector will be set to `Ok(READ_READY)`, with `Ok(NOT_READY)` signaling the channel has no
+///   message available
 ///
 /// In particular, if there is at least one channel in good status and no messages on said channel
 /// available, `wait_on_channels` will continue to block until a message is available.
@@ -385,10 +389,11 @@ pub fn wait_on_channels(
         }
         let statuses = readers_statuses(readers);
 
-        if statuses.iter().all(|&s|
-            s == ChannelReadStatus::INVALID_CHANNEL
-            || s == ChannelReadStatus::ORPHANED
-            ) || statuses.iter().any(|&s| s == ChannelReadStatus::READ_READY) {
+        if statuses
+            .iter()
+            .all(|&s| s == ChannelReadStatus::INVALID_CHANNEL || s == ChannelReadStatus::ORPHANED)
+            || statuses.iter().any(|&s| s == ChannelReadStatus::READ_READY)
+        {
             return Ok(statuses);
         }
 
