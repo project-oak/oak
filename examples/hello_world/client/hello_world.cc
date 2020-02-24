@@ -38,6 +38,11 @@ void say_hello(HelloWorld::Stub* stub, std::string name) {
   if (!status.ok()) {
     LOG(WARNING) << "Could not call SayHello('" << name << "'): " << status.error_code() << ": "
                  << status.error_message();
+    // The server code includes a case with a deliberate error to check gRPC
+    // error code propagation; any other error should cause the client to fail.
+    if (status.error_code() != grpc::FAILED_PRECONDITION) {
+      LOG(QFATAL) << "Error code is not the deliberately-induced error!";
+    }
     return;
   }
   LOG(INFO) << "Response: " << response.reply();

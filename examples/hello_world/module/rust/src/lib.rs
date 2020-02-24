@@ -18,7 +18,7 @@ mod proto;
 #[cfg(test)]
 mod tests;
 
-use log::{info, warn};
+use log::{error, info, warn};
 use oak::grpc;
 use oak::grpc::OakNode;
 use proto::hello_world::{HelloRequest, HelloResponse};
@@ -57,8 +57,9 @@ impl OakNode for Node {
 impl HelloWorld for Node {
     fn say_hello(&mut self, req: HelloRequest) -> grpc::Result<HelloResponse> {
         if req.greeting == "Query-of-Error" {
+            error!("Return deliberate FAILED_PRECONDITION error!");
             return Err(grpc::build_status(
-                grpc::Code::INVALID_ARGUMENT,
+                grpc::Code::FAILED_PRECONDITION,
                 "Deliberate error",
             ));
         }
