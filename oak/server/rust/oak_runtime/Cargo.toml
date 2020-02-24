@@ -9,15 +9,15 @@ edition = "2018"
 license = "Apache-2.0"
 
 [features]
-std = ["no-std-compat/std"]
-no_std = []
+std = ["no-std-compat/std", "oak_abi/std"]
+no_std = ["oak_abi/no_std"]
 default = ["std"]
 
 [dependencies]
 byteorder = { version = "*", default-features = false }
 itertools = "*"
 log = { version = "*" }
-oak_abi = "=0.1.0"
+oak_abi = { version = "=0.1.0", default-features = false }
 protobuf = "*"
 rand = { version = "*" }
 wasmi = { version = "*", default-features = false, features = ["core"] }

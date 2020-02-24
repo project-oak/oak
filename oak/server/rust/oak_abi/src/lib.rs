@@ -16,10 +16,47 @@
 
 //! Type, constant and Wasm host function definitions for the Oak application binary interface.
 
-pub use proto::oak_api::ChannelReadStatus;
-pub use proto::oak_api::OakStatus;
-
+// TODO(#638): Generate from protobuf in a no_std compatible way
+#[cfg(feature = "std")]
 pub mod proto;
+#[cfg(feature = "std")]
+mod inner {
+    pub use super::proto::oak_api::{ChannelReadStatus, OakStatus};
+}
+
+#[cfg(feature = "no_std")]
+mod inner {
+    #![allow(dead_code)]
+    #![allow(missing_docs)]
+    #![allow(non_camel_case_types)]
+    #![allow(non_snake_case)]
+    #![allow(non_upper_case_globals)]
+
+    #[derive(Clone, PartialEq, Eq, Debug, Hash)]
+    pub enum OakStatus {
+        OAK_STATUS_UNSPECIFIED = 0,
+        OK = 1,
+        ERR_BAD_HANDLE = 2,
+        ERR_INVALID_ARGS = 3,
+        ERR_CHANNEL_CLOSED = 4,
+        ERR_BUFFER_TOO_SMALL = 5,
+        ERR_HANDLE_SPACE_TOO_SMALL = 6,
+        ERR_OUT_OF_RANGE = 7,
+        ERR_INTERNAL = 8,
+        ERR_TERMINATED = 9,
+        ERR_CHANNEL_EMPTY = 10,
+    }
+
+    #[derive(Clone, PartialEq, Eq, Debug, Hash)]
+    pub enum ChannelReadStatus {
+        NOT_READY = 0,
+        READ_READY = 1,
+        INVALID_CHANNEL = 2,
+        ORPHANED = 3,
+    }
+}
+
+pub use inner::*;
 
 /// Handle used to identify read or write channel halves.
 ///
