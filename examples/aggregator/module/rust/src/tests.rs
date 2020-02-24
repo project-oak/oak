@@ -14,16 +14,16 @@
 // limitations under the License.
 //
 
-use crate::proto::aggregator::{GetAggregationResponse, SubmitSampleRequest};
+use crate::proto::aggregator::Vector;
 use assert_matches::assert_matches;
 use oak::grpc;
 use protobuf::well_known_types::Empty;
 
 const MODULE_CONFIG_NAME: &str = "aggregator";
 
-fn submit_sample(entry_channel: &oak_runtime::ChannelWriter, values: Vec<u64>) {
-    let req = SubmitSampleRequest {
-        values,
+fn submit_sample(entry_channel: &oak_runtime::ChannelWriter, items: Vec<u64>) {
+    let req = Vector {
+        items,
         ..Default::default()
     };
     let result: grpc::Result<Empty> = oak_tests::grpc_request(
@@ -45,25 +45,25 @@ fn test_aggregator() {
     submit_sample(&entry_channel, vec![1, 0, 1, 0, 1]);
     {
         let req = Empty::new();
-        let result: grpc::Result<GetAggregationResponse> = oak_tests::grpc_request(
+        let result: grpc::Result<Vector> = oak_tests::grpc_request(
             &entry_channel,
-            "/oak.examples.aggregator.Aggregator/GetAggregation",
+            "/oak.examples.aggregator.Aggregator/GetCurrentValue",
             req,
         );
-        assert_matches!(result, Ok(_));
-        assert_eq!(Vec::<u64>::new(), result.unwrap().values);
+        assert_matches!(result, Err(_));
+        // assert_eq!(Vec::<u64>::new(), result.unwrap().items);
     }
 
     submit_sample(&entry_channel, vec![1, 1, 1, 1, 1]);
     {
         let req = Empty::new();
-        let result: grpc::Result<GetAggregationResponse> = oak_tests::grpc_request(
+        let result: grpc::Result<Vector> = oak_tests::grpc_request(
             &entry_channel,
-            "/oak.examples.aggregator.Aggregator/GetAggregation",
+            "/oak.examples.aggregator.Aggregator/GetCurrentValue",
             req,
         );
         assert_matches!(result, Ok(_));
-        assert_eq!(vec![2, 2, 2, 2, 2], result.unwrap().values);
+        assert_eq!(vec![2, 2, 2, 2, 2], result.unwrap().items);
     }
 
     runtime.stop();

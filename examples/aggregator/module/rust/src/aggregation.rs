@@ -49,7 +49,7 @@ impl<T: Monoid> Aggregation<T> {
         self.sample_count += 1;
     }
 
-    pub fn get<'a>(&'a self) -> Option<&'a T> {
+    pub fn get(&self) -> Option<&T> {
         if self.sample_count >= self.sample_threshold {
             Some(&self.current_value)
         } else {
