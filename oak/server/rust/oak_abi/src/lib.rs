@@ -18,16 +18,15 @@
 
 // TODO(#638): Generate from protobuf in a no_std compatible way
 #[cfg(feature = "std")]
-pub use proto::oak_api::ChannelReadStatus;
-#[cfg(feature = "std")]
-pub use proto::oak_api::OakStatus;
-
-#[cfg(feature = "std")]
 pub mod proto;
+#[cfg(feature = "std")]
+mod inner {
+    pub use super::proto::oak_api::ChannelReadStatus;
+    pub use super::proto::oak_api::OakStatus;
+}
 
-// TODO(#638): Generate from protobuf in a no_std compatible way
 #[cfg(feature = "no_std")]
-pub mod proto {
+mod inner {
     #![allow(dead_code)]
     #![allow(missing_docs)]
     #![allow(non_camel_case_types)]
@@ -58,8 +57,7 @@ pub mod proto {
     }
 }
 
-#[cfg(feature = "no_std")]
-pub use proto::{ChannelReadStatus, OakStatus};
+pub use inner::*;
 
 /// Handle used to identify read or write channel halves.
 ///
