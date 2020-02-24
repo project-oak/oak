@@ -21,8 +21,7 @@
 pub mod proto;
 #[cfg(feature = "std")]
 mod inner {
-    pub use super::proto::oak_api::ChannelReadStatus;
-    pub use super::proto::oak_api::OakStatus;
+    pub use super::proto::oak_api::{ChannelReadStatus, OakStatus};
 }
 
 #[cfg(feature = "no_std")]
