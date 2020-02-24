@@ -36,5 +36,10 @@ message GrpcRequest {
 message GrpcResponse {
   google.protobuf.Any rsp_msg = 1;
   google.rpc.Status status = 2;
+
+  // The last field indicates that this is definitely the final response for a
+  // method invocation. However, the converse is not true: the final response may
+  // have last=false, and the completion of the method invocation will then be
+  // indicated by the closure of the response channel.
   bool last = 3;
 }
