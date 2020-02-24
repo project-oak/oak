@@ -325,34 +325,6 @@ pub fn readers_statuses(readers: &[Option<&ChannelReader>]) -> Vec<ChannelReadSt
         .collect()
 }
 
-/// Block until the runtime is terminated, or the reader is orphaned or has a message. It is
-/// possible that this will unblock spuriously and return `Ok(())` without a message available.
-pub fn block_thread_on_channel(
-    runtime: &RuntimeRef,
-    reader: &ChannelReader,
-) -> Result<(), OakStatus> {
-    if runtime.is_terminating() {
-        return Ok(());
-    }
-
-    let thread = platform::thread::current();
-    let thread_id = platform::thread::current().id();
-    let thread_ref = Arc::new(thread);
-
-    reader.add_waiter(thread_id, &thread_ref);
-
-    if reader.has_message() == ChannelReadStatus::READ_READY {
-        return Ok(());
-    }
-
-    // Since we added ourselves as a waiter before checking for a message
-    // even if a message is now added, `unpark` will have been called by the
-    // underlying channel. This will result in this `park` call returning immediately.
-    platform::thread::park();
-
-    Ok(())
-}
-
 /// Waits on a slice of `Option<&ChannelReader>`s, blocking until one of the following conditions:
 /// - If the `Runtime` is terminating this will return immediately with an `ERR_TERMINATED` status
 ///   for each channel.

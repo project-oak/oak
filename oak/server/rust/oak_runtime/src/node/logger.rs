@@ -22,9 +22,24 @@ use log::info;
 
 use oak_abi::OakStatus;
 
-use crate::channel::{block_thread_on_channel, ChannelReader};
+use crate::channel::{wait_on_channels, ChannelReader};
 use crate::platform;
 use crate::RuntimeRef;
+
+/// A simple logger loop.
+pub fn logger(
+    pretty_name: &str,
+    runtime: RuntimeRef,
+    reader: ChannelReader,
+) -> Result<(), OakStatus> {
+    loop {
+        wait_on_channels(&runtime, &[Some(&reader)])?;
+        if let Some(message) = reader.read()? {
+            let message = String::from_utf8_lossy(&message.data);
+            info!("{} LOG: {}", pretty_name, message);
+        }
+    }
+}
 
 /// Create a new instance of a logger node.
 pub fn new_instance(
@@ -32,33 +47,9 @@ pub fn new_instance(
     runtime: RuntimeRef,
     initial_reader: ChannelReader,
 ) -> Result<crate::JoinHandle, OakStatus> {
-    let config_name = config_name.to_owned();
+    let pretty_name = format!("{}-{:?}:", config_name, platform::thread::current());
     Ok(platform::thread::spawn(move || {
-        let pretty_name = format!("{}-{:?}:", config_name, platform::thread::current().id());
-        loop {
-            match initial_reader.read() {
-                // Received message
-                Ok(Some(message)) => {
-                    let message = String::from_utf8_lossy(&message.data);
-                    info!("{} LOG: {}", pretty_name, message);
-                }
-                // No message ready
-                Ok(None) => {
-                    if let Err(e) = block_thread_on_channel(&runtime, &initial_reader) {
-                        info!(
-                            "{} LOG: exiting log thread, block_thread_on_channel returned {:?}",
-                            pretty_name, e
-                        );
-                        return;
-                    }
-                }
-                Err(OakStatus::ERR_CHANNEL_CLOSED) => {
-                    return;
-                }
-                Err(e) => {
-                    panic!("Unexpected error! {:?}", e);
-                }
-            }
-        }
+        let result = logger(&pretty_name, runtime, initial_reader);
+        info!("{} LOG: exiting log thread {:?}", pretty_name, result);
     }))
 }
