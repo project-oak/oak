@@ -34,7 +34,7 @@ type Messages = VecDeque<Message>;
 
 /// We use a `HashMap` keyed by `ThreadId` to prevent build up of stale `Weak<Thread>`s.
 ///
-/// That is: If a thread waiting/blocked on a channel is woken by a different channel, it's
+/// That is: If a thread waiting/blocked on a channel is woken by a different channel, its
 /// `Weak<Thread>` will remain in the first channel's waiting_thread member. If a thread keeps
 /// waiting on this first channel, and keeps being woken by other channels, it will keep re-adding
 /// itself. We use a `HashMap` and insert at the current `ThreadId` so that we replace any stale
@@ -156,7 +156,16 @@ impl ChannelWriter {
 
         let mut waiting_threads = self.waiting_threads.lock().unwrap();
 
-        // Unpark all the waiting threads, that still have references
+        // Unpark (wake up) all waiting threads that still have live references. The first thread
+        // woken can immediately read the message, and others might find `messages` is empty before
+        // they are even woken. This should not be an issue (being woken does not guarantee a
+        // message is available), but it could potentially result in some particular thread always
+        // getting first chance to read the message.
+        //
+        // If a thread is woken and finds no message it will take the `waiting_threads` lock and
+        // add itself again. Note that since that lock is currently held, the woken thread will add
+        // itself to waiting_threads *after* we call clear below as we release the lock implicilty
+        // on leaving this function.
         for thread in waiting_threads.values() {
             if let Some(thread) = thread.upgrade() {
                 thread.unpark();
@@ -381,14 +390,14 @@ pub fn wait_on_channels(
 
         debug!(
             "wait_on_channels: channels not ready, parking thread {:?}",
-            platform::thread::current().id()
+            platform::thread::current()
         );
 
         platform::thread::park();
 
         debug!(
             "wait_on_channels: thread {:?} re-woken",
-            platform::thread::current().id()
+            platform::thread::current()
         );
     }
     vec![Err(OakStatus::ERR_TERMINATED); readers.len()]
