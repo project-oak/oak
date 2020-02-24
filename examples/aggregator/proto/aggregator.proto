@@ -20,17 +20,11 @@ package oak.examples.aggregator;
 
 import "google/protobuf/empty.proto";
 
-// message GetCurrentValueResponse {
-//   bool success = 1;
-//   Vector value = 2;
-// }
-
 message Vector {
   repeated uint64 items = 1;
 }
 
 service Aggregator {
   rpc SubmitSample(Vector) returns (google.protobuf.Empty);
-  // rpc GetCurrentValue(google.protobuf.Empty) returns (GetCurrentValueResponse);
   rpc GetCurrentValue(google.protobuf.Empty) returns (Vector);
 }

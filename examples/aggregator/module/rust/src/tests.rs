@@ -51,7 +51,6 @@ fn test_aggregator() {
             req,
         );
         assert_matches!(result, Err(_));
-        // assert_eq!(Vec::<u64>::new(), result.unwrap().items);
     }
 
     submit_sample(&entry_channel, vec![1, 1, 1, 1, 1]);

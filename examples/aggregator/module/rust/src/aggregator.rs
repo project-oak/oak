@@ -22,33 +22,36 @@ pub trait Monoid {
     fn combine(&self, other: &Self) -> Self;
 }
 
-/// Generic data structure that can combine data values and count the number of provided data
-/// samples. It also can reveal an aggregated value only when there is enouth data samples
-/// (more than `sample_threshold`).
-pub struct Aggregation<T: Monoid> {
+/// Generic data structure that combines data values and count the number of provided data samples.
+/// It can also reveal an aggregated value only when there are enough data samples
+/// (more or equal to `sample_threshold`).
+pub struct ThresholdAggregator<T: Monoid> {
     /// Current aggregated value.
     current_value: T,
     /// Number of contributed data samples.
     sample_count: u64,
-    /// The number of samples (inclusive) that should be collected before revealing the
+    /// The minimal number of samples (inclusive) that should be collected before revealing the
     /// aggregation.
     sample_threshold: u64,
 }
 
-impl<T: Monoid> Aggregation<T> {
+impl<T: Monoid> ThresholdAggregator<T> {
     pub fn new(threshold: u64) -> Self {
-        Aggregation {
+        ThresholdAggregator {
             current_value: Monoid::identity(),
             sample_count: 0,
             sample_threshold: threshold,
         }
     }
 
+    /// Combines a new sample with current aggregated value.
     pub fn submit(&mut self, sample: &T) {
         self.current_value = self.current_value.combine(sample);
         self.sample_count += 1;
     }
 
+    /// Returns current aggregated value if the number of collected samples is at least
+    /// `sample_threshold`.
     pub fn get(&self) -> Option<&T> {
         if self.sample_count >= self.sample_threshold {
             Some(&self.current_value)

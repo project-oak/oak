@@ -19,28 +19,28 @@
 //! This shows how an Oak Node can aggregate data samples and expose the aggregated data only if
 //! there are enough samples to hide individual contributors.
 //!
-//! Clients invoke the module by providing a vector of non-negative numbers, and get back an
+//! Clients invoke the module by providing a vector of non-negative numbers and get back an
 //! aggregated vector if an Oak Node has collected more samples than the predefined threshold.
 
-mod aggregation;
-mod application;
+mod aggregator;
 mod proto;
 #[cfg(test)]
 mod tests;
 
-use aggregation::Monoid;
-use application::{Application, Serializable};
-use itertools::{
-    EitherOrBoth::{Both, Left, Right},
-    Itertools,
-};
+use aggregator::{Monoid, ThresholdAggregator};
+use log::{info, warn};
+use oak::grpc;
 use proto::aggregator::Vector;
+use proto::aggregator_grpc::{dispatch, Aggregator};
+use protobuf::well_known_types::Empty;
 
 const SAMPLE_THRESHOLD: u64 = 3;
 
 oak::entrypoint!(oak_main => {
     oak_log::init_default();
-    Application::<Vector>::new(SAMPLE_THRESHOLD)
+    AggregatorNode {
+        aggregator: ThresholdAggregator::<Vector>::new(SAMPLE_THRESHOLD),
+    }
 });
 
 impl Monoid for Vector {
@@ -49,8 +49,11 @@ impl Monoid for Vector {
     }
 
     /// Adds two non-negative integer vectors elementwise. If vectors have different lengths, then
-    /// appends the smallest vector with zeros.
+    /// pads the smallest vector with zeros.
     fn combine(&self, other: &Self) -> Self {
+        use itertools::EitherOrBoth::*;
+        use itertools::Itertools;
+
         let mut vector = Vector::new();
         vector.set_items(
             self.items
@@ -67,11 +70,39 @@ impl Monoid for Vector {
     }
 }
 
-impl Serializable<Vector> for Vector {
-    fn deserialize(proto: &Vector) -> Self {
-        proto.clone()
+/// Oak Node that collects aggregated data.
+pub struct AggregatorNode {
+    aggregator: ThresholdAggregator<Vector>,
+}
+
+impl grpc::OakNode for AggregatorNode {
+    fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
+        dispatch(self, method, req, writer)
     }
-    fn serialize(&self) -> Vector {
-        self.clone()
+}
+
+/// A gRPC service implementation for the Aggregator example.
+impl Aggregator for AggregatorNode {
+    fn submit_sample(&mut self, sample: Vector) -> grpc::Result<Empty> {
+        info!("Submitted sample: {:?}", sample);
+        self.aggregator.submit(&sample);
+        Ok(Empty::new())
+    }
+
+    fn get_current_value(&mut self, _: Empty) -> grpc::Result<Vector> {
+        info!("Get current value request");
+        match self.aggregator.get() {
+            Some(value) => {
+                info!("Aggregated value: {:?}", value);
+                Ok(value.clone())
+            }
+            None => {
+                warn!("Not enough samples have been aggregated");
+                Err(grpc::build_status(
+                    grpc::Code::PERMISSION_DENIED,
+                    "Not enough samples have been aggregated",
+                ))
+            }
+        }
     }
 }
