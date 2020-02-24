@@ -53,14 +53,16 @@ impl Monoid for Vector {
     fn combine(&self, other: &Self) -> Self {
         let mut vector = Vector::new();
         vector.set_items(
-            self.items.iter()
-                      .zip_longest(other.items.iter())
-                      .map(|p| match p {
-                          Both(l, r) => *l + *r,
-                          Left(l) => *l,
-                          Right(r) => *r,
-                      })
-                      .collect());
+            self.items
+                .iter()
+                .zip_longest(other.items.iter())
+                .map(|p| match p {
+                    Both(l, r) => *l + *r,
+                    Left(l) => *l,
+                    Right(r) => *r,
+                })
+                .collect(),
+        );
         vector
     }
 }
@@ -73,4 +75,3 @@ impl Serializable<Vector> for Vector {
         self.clone()
     }
 }
-

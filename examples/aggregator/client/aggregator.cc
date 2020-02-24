@@ -48,7 +48,7 @@ void get_aggregation(Aggregator::Stub* stub) {
   grpc::Status status = stub->GetCurrentValue(&context, request, &response);
   if (!status.ok()) {
     LOG(WARNING) << "Could not get current value: " << status.error_code() << ": "
-                << status.error_message();
+                 << status.error_message();
     return;
   }
 

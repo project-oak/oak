@@ -24,7 +24,7 @@ import "google/protobuf/empty.proto";
 //   bool success = 1;
 //   Vector value = 2;
 // }
-  
+
 message Vector {
   repeated uint64 items = 1;
 }
