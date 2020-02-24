@@ -260,10 +260,7 @@ where
         )
     })?;
     rsp_receiver.close().expect("failed to close channel");
-    let (rsp, last) = decap_response(grpc_rsp)?;
-    if !last {
-        panic!("Expected single final response");
-    }
+    let (rsp, _last) = decap_response(grpc_rsp)?;
 
     Ok(rsp)
 }
