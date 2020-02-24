@@ -33,7 +33,11 @@ pub fn logger(
     reader: ChannelReader,
 ) -> Result<(), OakStatus> {
     loop {
-        wait_on_channels(&runtime, &[Some(&reader)])?;
+        // An error indicates the runtime is terminating. We ignore it here and keep trying to read
+        // in case a Wasm node wants to emit remaining messages. We will return once the channel is
+        // closed.
+        let _ = wait_on_channels(&runtime, &[Some(&reader)]);
+
         if let Some(message) = reader.read()? {
             let message = String::from_utf8_lossy(&message.data);
             info!("{} LOG: {}", pretty_name, message);
