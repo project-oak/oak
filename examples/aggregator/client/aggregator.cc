@@ -25,14 +25,13 @@
 ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak application to connect to");
 
 using ::oak::examples::aggregator::Aggregator;
-using ::oak::examples::aggregator::GetAggregationResponse;
-using ::oak::examples::aggregator::SubmitSampleRequest;
+using ::oak::examples::aggregator::Vector;
 
 void submit_sample(Aggregator::Stub* stub, std::vector<uint64_t> values) {
   grpc::ClientContext context;
-  SubmitSampleRequest request;
+  Vector request;
   for (auto value : values) {
-    request.add_values(value);
+    request.add_items(value);
   }
   google::protobuf::Empty response;
   grpc::Status status = stub->SubmitSample(&context, request, &response);
@@ -45,19 +44,16 @@ void submit_sample(Aggregator::Stub* stub, std::vector<uint64_t> values) {
 void get_aggregation(Aggregator::Stub* stub) {
   grpc::ClientContext context;
   google::protobuf::Empty request;
-  GetAggregationResponse response;
-  grpc::Status status = stub->GetAggregation(&context, request, &response);
+  Vector response;
+  grpc::Status status = stub->GetCurrentValue(&context, request, &response);
   if (!status.ok()) {
-    LOG(QFATAL) << "Could not retrieve aggregation: " << status.error_code() << ": "
+    LOG(WARNING) << "Could not get current value: " << status.error_code() << ": "
                 << status.error_message();
-  }
-  if (!response.success()) {
-    LOG(WARNING) << "Not enough samples have been aggregated";
     return;
   }
 
   LOG(INFO) << "Aggregation:";
-  for (auto value : response.values()) {
+  for (auto value : response.items()) {
     LOG(INFO) << "- " << value;
   }
 }

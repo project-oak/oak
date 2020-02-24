@@ -23,48 +23,54 @@
 //! aggregated vector if an Oak Node has collected more samples than the predefined threshold.
 
 mod aggregation;
+mod application;
 mod proto;
-mod service;
 #[cfg(test)]
 mod tests;
 
-use aggregation::{Aggregation, Monoid};
+use aggregation::Monoid;
+use application::{Application, Serializable};
 use itertools::{
     EitherOrBoth::{Both, Left, Right},
     Itertools,
 };
-use service::Serializable;
+use proto::aggregator::Vector;
 
 const SAMPLE_THRESHOLD: u64 = 3;
-type Data = Vec<u64>;
-type Node = Aggregation<Data>;
 
 oak::entrypoint!(oak_main => {
     oak_log::init_default();
-    Node::new(SAMPLE_THRESHOLD)
+    Application::<Vector>::new(SAMPLE_THRESHOLD)
 });
 
-impl Monoid for Data {
+impl Monoid for Vector {
     fn identity() -> Self {
-        vec![]
+        Vector::new()
     }
+
+    /// Adds two non-negative integer vectors elementwise. If vectors have different lengths, then
+    /// appends the smallest vector with zeros.
     fn combine(&self, other: &Self) -> Self {
-        self.iter()
-            .zip_longest(other.iter())
-            .map(|p| match p {
-                Both(l, r) => *l + *r,
-                Left(l) => *l,
-                Right(r) => *r,
-            })
-            .collect::<Vec<u64>>()
+        let mut vector = Vector::new();
+        vector.set_items(
+            self.items.iter()
+                      .zip_longest(other.items.iter())
+                      .map(|p| match p {
+                          Both(l, r) => *l + *r,
+                          Left(l) => *l,
+                          Right(r) => *r,
+                      })
+                      .collect());
+        vector
     }
 }
 
-impl Serializable for Data {
-    fn deserialize(data: Vec<u64>) -> Self {
-        data
+impl Serializable<Vector> for Vector {
+    fn deserialize(proto: &Vector) -> Self {
+        proto.clone()
     }
-    fn serialize(&self) -> Vec<u64> {
-        self.to_vec()
+    fn serialize(&self) -> Vector {
+        self.clone()
     }
 }
+

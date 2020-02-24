@@ -14,37 +14,43 @@
 // limitations under the License.
 //
 
+/// Represents a data structure with a single associative binary operation (`combine`)
+/// and an `identity` element.
+/// https://en.wikipedia.org/wiki/Monoid
 pub trait Monoid {
     fn identity() -> Self;
     fn combine(&self, other: &Self) -> Self;
 }
 
+/// Generic data structure that can combine data values and count the number of provided data
+/// samples. It also can release an aggregated value only when there is enouth data samples
+/// (more that `sample_threshold`).
 pub struct Aggregation<T: Monoid> {
-    /// Aggregated data.
-    data: T,
+    /// Current aggregated value.
+    current_value: T,
     /// Number of contributed data samples.
-    sample_number: u64,
-    /// The number of samples that should be collected before for revealing the aggregation.
+    sample_count: u64,
+    /// The number of samples (inclusive) that should be collected before revealing the aggregation.
     sample_threshold: u64,
 }
 
-impl<T: Monoid + Clone> Aggregation<T> {
+impl<T: Monoid> Aggregation<T> {
     pub fn new(threshold: u64) -> Self {
         Aggregation {
-            data: Monoid::identity(),
-            sample_number: 0,
+            current_value: Monoid::identity(),
+            sample_count: 0,
             sample_threshold: threshold,
         }
     }
 
-    pub fn add(&mut self, sample: &T) {
-        self.data = self.data.combine(sample);
-        self.sample_number += 1;
+    pub fn submit(&mut self, sample: &T) {
+        self.current_value = self.current_value.combine(sample);
+        self.sample_count += 1;
     }
 
-    pub fn get(&self) -> Option<T> {
-        if self.sample_number >= self.sample_threshold {
-            Some(self.data.clone())
+    pub fn get<'a>(&'a self) -> Option<&'a T> {
+        if self.sample_count >= self.sample_threshold {
+            Some(&self.current_value)
         } else {
             None
         }
