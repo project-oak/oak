@@ -209,8 +209,10 @@ void ModuleInvocation::BlockingSendResponse() {
     stream_.Write(bb, options, callback);
   } else if (!grpc_response.has_rsp_msg()) {
     // Final iteration but no response, just Finish.
-    LOG(INFO) << "invocation#" << stream_id_ << " SendResponse: Final inner response empty";
-    FinishAndCleanUp(::grpc::Status::OK);
+    google::rpc::Status status = grpc_response.status();
+    LOG(INFO) << "invocation#" << stream_id_ << " SendResponse: Final inner response empty, status "
+              << status.code();
+    FinishAndCleanUp(grpc::Status(static_cast<grpc::StatusCode>(status.code()), status.message()));
   } else {
     // Final response, so WriteAndFinish.
     LOG(INFO) << "invocation#" << stream_id_ << " SendResponse: Final inner response of size "
