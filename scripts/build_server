@@ -35,7 +35,13 @@ while getopts ":s:h" opt; do
     tsan)
       server="dev"
       config="tsan";;
+    *)
+      echo "Invalid server: ${OPTARG}"
+      exit 1;;
     esac;;
+  *)
+    echo "Invalid argument: ${OPTARG}"
+    exit 1;;
   esac
 done
 

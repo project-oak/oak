@@ -33,10 +33,13 @@ while getopts ":s:l:Ch" opt; do
     case "${OPTARG}" in
     asylo|dev|asan|tsan|none)
       server="${OPTARG}";;
-    \?)
+    *)
       echo "Invalid server: ${OPTARG}"
       exit 1;;
     esac;;
+  *)
+    echo "Invalid argument: ${OPTARG}"
+    exit 1;;
   esac
 done
 
