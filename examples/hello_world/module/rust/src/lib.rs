@@ -18,7 +18,7 @@ mod proto;
 #[cfg(test)]
 mod tests;
 
-use log::{error, info, warn};
+use log::{info, warn};
 use oak::grpc;
 use proto::hello_world::{HelloRequest, HelloResponse};
 use proto::hello_world_grpc::{Dispatcher, HelloWorld};
@@ -57,13 +57,6 @@ const FIELD_NAME: &[u8] = b"last-greeting";
 
 impl HelloWorld for Node {
     fn say_hello(&mut self, req: HelloRequest) -> grpc::Result<HelloResponse> {
-        if req.greeting == "Query-of-Error" {
-            error!("Return deliberate FAILED_PRECONDITION error!");
-            return Err(grpc::build_status(
-                grpc::Code::FAILED_PRECONDITION,
-                "Deliberate error",
-            ));
-        }
         // Save the latest greeting to storage.
         if let Some(storage) = &mut self.storage {
             match storage.write(STORAGE_NAME, FIELD_NAME, req.greeting.as_bytes()) {
