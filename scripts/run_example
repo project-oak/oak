@@ -5,8 +5,8 @@ readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
 source "$SCRIPTS_DIR/common"
 
 readonly NAME="${1}"
-if [[ -z "$NAME" ]]; then
-  echo "Missing example name, use -h for help"
+if [[ -z "${NAME}" ]]; then
+  echo "Missing the example name, use -h for help"
   exit 1
 fi
 
@@ -15,61 +15,60 @@ server="asylo"
 while getopts ":s:l:Ch" opt; do
   case "${opt}" in
   h)
-      echo -e "Usage: ${0} example_name [-h] [-l rust|cpp] [-s asylo|dev|arm|asan|tsan] [-- ARGS]
+      echo -e "Usage: ${0} EXAMPLE_NAME [-h] [-l rust|cpp] [-s asylo|dev|asan|tsan|none] [-- CLIENT_ARGS]
   -l    Example application version:
           - rust (used by default)
           - cpp
-  -s    Server type used to run examples ('arm' is not supported):
+  -s    Server type used to run examples:
           - asylo: server based on the Asylo framework (used by default)
           - dev: development version of the server
           - asan: 'dev' server with address sanitizer
           - tsan: 'dev' server with thread santizer
-  -h    Print Help (this message) and exit
-  --    Pass subsequent arguments options to the example client"
+          - none: run an application client without a server
+  -h    Print Help (this message) and exit"
       exit 0;;
   l)
     language="${OPTARG}";;
   s)
-    server="${OPTARG}";;
+    case "${OPTARG}" in
+    asylo|dev|asan|tsan|none)
+      server="${OPTARG}";;
+    \?)
+      echo "Invalid server: ${OPTARG}"
+      exit 1;;
+    esac;;
   esac
 done
 
-# Choose server type.
-case "${server}" in
-asylo)
-  readonly SERVER="./bazel-bin/oak/server/asylo/asylo_oak_runner";;
-dev|asan|tsan)
-  readonly SERVER="./bazel-clang-bin/oak/server/dev/dev_oak_runner";;
-\?)
-  echo "Invalid application runner: ${server}"
-  exit 1;;
-esac
+if [[ "none" != "${server}" ]]; then
+  # Choose example application version.
+  case "${language}" in
+  rust)
+    readonly APPLICATION="${PWD}/bazel-client-bin/examples/${NAME}/config/config.bin";;
+  cpp)
+    # TensorFlow example is compiled with Emscripten and other examples with Clang.
+    if [[ "tensorflow" == "${NAME}" ]]; then
+      readonly APPLICATION="${PWD}/bazel-emscripten-bin/examples/tensorflow/config/config_cpp.bin"
+    else
+      readonly APPLICATION="${PWD}/bazel-wasm-bin/examples/${NAME}/config/config_cpp.bin"
+    fi;;
+  \?)
+    echo "Invalid example version: ${language}"
+    exit 1;;
+  esac
+  "${SCRIPTS_DIR}/build_example" "${NAME}"
 
-# Choose example application version.
-case "${language}" in
-rust)
-  readonly APPLICATION="${PWD}/bazel-client-bin/examples/${NAME}/config/config.bin";;
-cpp)
-  # TensorFlow example is compiled with Emscripten and other examples with Clang.
-  if [[ "tensorflow" == "${NAME}" ]]; then
-    readonly APPLICATION="${PWD}/bazel-emscripten-bin/examples/tensorflow/config/config_cpp.bin"
-  else
-    readonly APPLICATION="${PWD}/bazel-wasm-bin/examples/${NAME}/config/config_cpp.bin"
-  fi;;
-\?)
-  echo "Invalid example version: ${language}"
-  exit 1;;
-esac
-"${SCRIPTS_DIR}/build_example" "${NAME}"
-
-# Run the application.
-"${SERVER}" --application="${APPLICATION}" &
-readonly SERVER_PID=$!
-sleep 2  # Wait for an application to start.
+  # Run a server.
+  "$SCRIPTS_DIR/run_server" "${APPLICATION}" -s "${server}"
+  readonly SERVER_PID=$!
+  sleep 2  # Wait for an application to start.
+fi
 
 # Run the application client.
 readonly CLIENT_ARGS=("${@:3}")  # Choose client args without an example name and '--'.
 "./bazel-client-bin/examples/${NAME}/client/client" "${CLIENT_ARGS[@]}"
 
 # TODO: Ensure that background processes are killed with something like `trap cleanup_fn EXIT`.
-kill -s SIGTERM "${SERVER_PID}"
+if [[ "none" != "${server}" ]]; then
+  kill -s SIGTERM "${SERVER_PID}"
+fi
