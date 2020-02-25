@@ -38,7 +38,7 @@ impl<T: RunningAverage> Dispatcher<T> {
     }
 }
 
-impl<T: RunningAverage> grpc::OakNode for Dispatcher<T> {
+impl<T: RunningAverage> grpc::ServerNode for Dispatcher<T> {
     fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
         match method {
             "/oak.examples.running_average.RunningAverage/SubmitSample" => grpc::handle_req_rsp(|r| self.0.submit_sample(r), req, writer),

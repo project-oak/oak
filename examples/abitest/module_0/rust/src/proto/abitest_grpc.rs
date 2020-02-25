@@ -37,7 +37,7 @@ impl<T: OakABITestService> Dispatcher<T> {
     }
 }
 
-impl<T: OakABITestService> grpc::OakNode for Dispatcher<T> {
+impl<T: OakABITestService> grpc::ServerNode for Dispatcher<T> {
     fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
         match method {
             "/oak.examples.abitest.OakABITestService/RunTests" => grpc::handle_req_rsp(|r| self.0.run_tests(r), req, writer),

@@ -268,7 +268,7 @@ impl<'a> ServiceGen<'a> {
             },
         );
         w.write_line("");
-        w.expr_block(&format!("impl<T: {}> grpc::OakNode for Dispatcher<T>", self.server_intf_name()), |w| {
+        w.expr_block(&format!("impl<T: {}> grpc::ServerNode for Dispatcher<T>", self.server_intf_name()), |w| {
             w.def_fn("invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter)", |w| {
                 w.block("match method {", "};", |w| {
                     for method in &self.methods {

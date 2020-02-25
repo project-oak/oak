@@ -38,7 +38,7 @@ impl<T: Aggregator> Dispatcher<T> {
     }
 }
 
-impl<T: Aggregator> grpc::OakNode for Dispatcher<T> {
+impl<T: Aggregator> grpc::ServerNode for Dispatcher<T> {
     fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
         match method {
             "/oak.examples.aggregator.Aggregator/SubmitSample" => grpc::handle_req_rsp(|r| self.0.submit_sample(r), req, writer),

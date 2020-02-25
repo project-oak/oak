@@ -40,7 +40,7 @@ impl<T: HelloWorld> Dispatcher<T> {
     }
 }
 
-impl<T: HelloWorld> grpc::OakNode for Dispatcher<T> {
+impl<T: HelloWorld> grpc::ServerNode for Dispatcher<T> {
     fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
         match method {
             "/oak.examples.hello_world.HelloWorld/SayHello" => grpc::handle_req_rsp(|r| self.0.say_hello(r), req, writer),

@@ -85,11 +85,11 @@ world over gRPC, via the implicit [gRPC pseudo-Node](concepts.md#pseudo-nodes)
 that has a channel to the Application's initial Node.
 
 An Oak Node that acts as a gRPC server typically implements the
-[`oak::grpc::OakNode`](https://project-oak.github.io/oak/doc/oak/grpc/trait.OakNode.html)
+[`oak::grpc::ServerNode`](https://project-oak.github.io/oak/doc/oak/grpc/trait.ServerNode.html)
 trait, which is used with the
 [`oak::run_event_loop()`](https://project-oak.github.io/oak/doc/oak/fn.run_event_loop.html)
 function to services gRPC requests in a loop, invoking the trait's
-[`invoke()`](https://project-oak.github.io/oak/doc/oak/grpc/trait.OakNode.html#tymethod.invoke)
+[`invoke()`](https://project-oak.github.io/oak/doc/oak/grpc/trait.ServerNode.html#tymethod.invoke)
 method for each request.
 
 ### `oak::storage` Module
@@ -108,5 +108,5 @@ module holds auto-generated submodules for dealing with protocol buffers.
 
 The [`oak_log`](https://project-oak.github.io/oak/doc/oak_log/index.html) crate
 is a logging implementation for the Rust
-[log facade](https://crates.io/crates/log), which uses an channel to a
+[log facade](https://crates.io/crates/log), which uses a channel to a
 freshly-created logging pseudo-Node as the underlying logging mechanism.

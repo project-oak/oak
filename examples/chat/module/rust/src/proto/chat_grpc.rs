@@ -40,7 +40,7 @@ impl<T: Chat> Dispatcher<T> {
     }
 }
 
-impl<T: Chat> grpc::OakNode for Dispatcher<T> {
+impl<T: Chat> grpc::ServerNode for Dispatcher<T> {
     fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
         match method {
             "/oak.examples.chat.Chat/CreateRoom" => grpc::handle_req_rsp(|r| self.0.create_room(r), req, writer),
