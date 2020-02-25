@@ -23,7 +23,7 @@ use std::vec::Vec;
 use core::sync::atomic::AtomicUsize;
 use core::sync::atomic::Ordering::SeqCst;
 
-use oak_abi::OakStatus;
+use oak_abi::{ChannelReadStatus, OakStatus};
 
 use log::debug;
 
@@ -222,17 +222,18 @@ impl ChannelReader {
         }
     }
 
-    /// Thread safe. Returns `Ok(true)` if there is at least one message in the channel. Fails with
-    /// `OakStatus::ERR_CHANNEL_CLOSED` if the underlying channel has been orphaned _and_ is empty.
-    // TODO(#566)
-    pub fn has_message(&self) -> Result<bool, OakStatus> {
+    /// Thread safe. This function will return:
+    /// - `READ_READY` if there is at least one message in the channel.
+    /// - `ORPHANED` if there are no messages and there are no writers
+    /// - `NOT_READ` if there are no messages but there are some writers
+    pub fn status(&self) -> ChannelReadStatus {
         let messages = self.messages.read().unwrap();
         if messages.front().is_some() {
-            Ok(true)
+            ChannelReadStatus::READ_READY
         } else if self.is_orphan() {
-            Err(OakStatus::ERR_CHANNEL_CLOSED)
+            ChannelReadStatus::ORPHANED
         } else {
-            Ok(false)
+            ChannelReadStatus::NOT_READY
         }
     }
 
@@ -311,41 +312,13 @@ impl Clone for ChannelReader {
 }
 
 /// Reads the statuses from a slice of `Option<&ChannelReader>`s.
-/// `Err(OakStatus::ERR_INVALID_ARGS)` is set for `None` readers in the slice. For `Some(_)`
-/// readers, the corresponding `Result` is set from a call to `has_message`.
-pub fn readers_statuses(readers: &[Option<&ChannelReader>]) -> Vec<Result<bool, OakStatus>> {
+/// `ChannelReadStatus::INVALID_CHANNEL` is set for `None` readers in the slice. For `Some(_)`
+/// readers, the result is set from a call to `has_message`.
+pub fn readers_statuses(readers: &[Option<&ChannelReader>]) -> Vec<ChannelReadStatus> {
     readers
         .iter()
-        .map(|chan| chan.map_or(Err(OakStatus::ERR_INVALID_ARGS), |chan| chan.has_message()))
+        .map(|chan| chan.map_or(ChannelReadStatus::INVALID_CHANNEL, |chan| chan.status()))
         .collect()
-}
-
-/// Block until the runtime is terminated, or the reader is orphaned or has a message. It is
-/// possible that this will unblock spuriously and return `Ok(())` without a message available.
-pub fn block_thread_on_channel(
-    runtime: &RuntimeRef,
-    reader: &ChannelReader,
-) -> Result<(), OakStatus> {
-    if runtime.is_terminating() {
-        return Ok(());
-    }
-
-    let thread = platform::thread::current();
-    let thread_id = platform::thread::current().id();
-    let thread_ref = Arc::new(thread);
-
-    reader.add_waiter(thread_id, &thread_ref);
-
-    if reader.has_message()? {
-        return Ok(());
-    }
-
-    // Since we added ourselves as a waiter before checking for a message
-    // even if a message is now added, `unpark` will have been called by the
-    // underlying channel. This will result in this `park` call returning immediately.
-    platform::thread::park();
-
-    Ok(())
 }
 
 /// Waits on a slice of `Option<&ChannelReader>`s, blocking until one of the following conditions:
@@ -354,15 +327,15 @@ pub fn block_thread_on_channel(
 /// - If all readers are in an erroneous status, e.g. when all `ChannelReaders` are orphaned, this
 ///   will immediately return the channels statuses.
 /// - If any of the channels is able to read a message, the corresponding element in the returned
-///   vector will be set to `Ok(true)`, with `Ok(false)` signaling the channel has no message
-///   available
+///   vector will be set to `Ok(READ_READY)`, with `Ok(NOT_READY)` signaling the channel has no
+///   message available
 ///
 /// In particular, if there is at least one channel in good status and no messages on said channel
 /// available, `wait_on_channels` will continue to block until a message is available.
 pub fn wait_on_channels(
     runtime: &RuntimeRef,
     readers: &[Option<&ChannelReader>],
-) -> Vec<Result<bool, OakStatus>> {
+) -> Result<Vec<ChannelReadStatus>, OakStatus> {
     let thread = platform::thread::current();
     while !runtime.is_terminating() {
         // Create a new Arc each iteration to be dropped after `thread::park` e.g. when the thread
@@ -384,8 +357,13 @@ pub fn wait_on_channels(
         }
         let statuses = readers_statuses(readers);
 
-        if statuses.iter().all(|s| s.is_err()) || statuses.iter().any(|s| s.unwrap_or(false)) {
-            return statuses;
+        let all_unreadable = statuses
+            .iter()
+            .all(|&s| s == ChannelReadStatus::INVALID_CHANNEL || s == ChannelReadStatus::ORPHANED);
+        let any_ready = statuses.iter().any(|&s| s == ChannelReadStatus::READ_READY);
+
+        if all_unreadable || any_ready {
+            return Ok(statuses);
         }
 
         debug!(
@@ -400,5 +378,5 @@ pub fn wait_on_channels(
             platform::thread::current()
         );
     }
-    vec![Err(OakStatus::ERR_TERMINATED); readers.len()]
+    Err(OakStatus::ERR_TERMINATED)
 }

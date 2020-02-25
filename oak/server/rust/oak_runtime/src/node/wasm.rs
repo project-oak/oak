@@ -26,7 +26,7 @@ use byteorder::{ByteOrder, LittleEndian};
 use rand::RngCore;
 use wasmi::ValueType;
 
-use oak_abi::OakStatus;
+use oak_abi::{ChannelReadStatus, OakStatus};
 
 use crate::channel::{ChannelEither, ChannelReader, ChannelWriter, ReadStatus};
 use crate::platform;
@@ -443,37 +443,23 @@ impl WasmInterface {
             })
             .collect();
 
-        let result = crate::channel::wait_on_channels(&self.runtime, &channels);
+        let statuses = crate::channel::wait_on_channels(&self.runtime, &channels)?;
 
-        if result
-            .iter()
-            .all(|o| o.contains_err(&OakStatus::ERR_TERMINATED))
-        {
-            return Err(OakStatus::ERR_TERMINATED);
-        }
-
-        for (i, result) in result.iter().enumerate() {
-            let val: &[u8] = match result {
-                Ok(false) => &[oak_abi::ChannelReadStatus::NOT_READY as u8],
-                Ok(true) => &[oak_abi::ChannelReadStatus::READ_READY as u8],
-                Err(OakStatus::ERR_CHANNEL_CLOSED) => &[oak_abi::ChannelReadStatus::ORPHANED as u8],
-                Err(_) => &[oak_abi::ChannelReadStatus::INVALID_CHANNEL as u8],
-            };
+        for (i, &status) in statuses.iter().enumerate() {
             self.get_memory()
-                .set(status_buff + 8 + (i as u32 * 9), val)
+                .set_value(status_buff + 8 + (i as u32 * 9), status as u8)
                 .map_err(|err| {
                     error!(
                         "wait_on_channels: Unable to set status {} to {:?}: {:?}",
-                        i, val, err
+                        i, status, err
                     );
                     OakStatus::ERR_INVALID_ARGS
                 })?;
         }
 
-        if result
+        if statuses
             .iter()
-            .all(|o| o.contains_err(&OakStatus::ERR_CHANNEL_CLOSED))
-            || result.iter().all(|o| o.is_err())
+            .all(|&s| s == ChannelReadStatus::INVALID_CHANNEL || s == ChannelReadStatus::ORPHANED)
         {
             Err(OakStatus::ERR_BAD_HANDLE)
         } else {
