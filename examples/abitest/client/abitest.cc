@@ -24,7 +24,9 @@
 
 ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak application to connect to");
 ABSL_FLAG(std::string, test_include, "", "Filter indicating which tests to include");
-ABSL_FLAG(std::string, test_exclude, "", "Filter indicating tests to exclude (if nonempty)");
+// Exclude 'Storage' test by default because it requires an external storage server.
+ABSL_FLAG(std::string, test_exclude, "^Storage$",
+          "Filter indicating tests to exclude (if nonempty)");
 
 using ::oak::examples::abitest::ABITestRequest;
 using ::oak::examples::abitest::ABITestResponse;
