@@ -55,10 +55,14 @@ fn test_abi() {
     let (runtime, entry_channel) = oak_runtime::configure_and_run(configuration)
         .expect("unable to configure runtime with test wasm");
 
+    // TODO(#540): reinstate storage tests when Rust runtime supports the storage pseudo-Node.
+    let mut req = ABITestRequest::new();
+    req.exclude = "^Storage.*".to_string();
+
     let result: grpc::Result<ABITestResponse> = oak_tests::grpc_request(
         &entry_channel,
         "/oak.examples.abitest.OakABITestService/RunTests",
-        ABITestRequest::new(),
+        req,
     );
     assert_matches!(result, Ok(_));
 

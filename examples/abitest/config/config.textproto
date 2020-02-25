@@ -14,6 +14,18 @@ node_configs {
   name: "logging-config"
   log_config {}
 }
+node_configs {
+  name: "storage"
+  storage_config {
+    address: "localhost:7867"
+  }
+}
+node_configs {
+  name: "absent-storage"
+  storage_config {
+    address: "test.invalid:9999"
+  }
+}
 grpc_port: 8080
 initial_node_config_name: "frontend-config"
 initial_entrypoint_name: "frontend_oak_main"

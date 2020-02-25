@@ -11,6 +11,7 @@ crate-type = ["cdylib", "lib"]
 abitest_common = { path = "../../abitest_common" }
 byteorder = "*"
 expect = { path = "../../../../third_party/expect" }
+hex = "*"
 log = "*"
 oak = "=0.1.0"
 oak_abi = "=0.1.0"

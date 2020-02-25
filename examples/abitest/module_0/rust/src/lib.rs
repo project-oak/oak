@@ -18,7 +18,7 @@ pub mod proto;
 
 use abitest_common::{InternalMessage, LOG_CONFIG_NAME};
 use byteorder::WriteBytesExt;
-use expect::{expect, expect_eq};
+use expect::{expect, expect_eq, expect_matches};
 use log::{debug, info};
 use oak::{grpc, ChannelReadStatus, OakStatus};
 use proto::abitest::{ABITestRequest, ABITestResponse, ABITestResponse_TestResult};
@@ -31,10 +31,14 @@ const BACKEND_COUNT: usize = 3;
 
 const BACKEND_CONFIG_NAME: &str = "backend-config";
 const BACKEND_ENTRYPOINT_NAME: &str = "backend_oak_main";
+const STORAGE_NAME_PREFIX: &str = "abitest";
 
 struct FrontendNode {
     backend_out: Vec<oak::WriteHandle>,
     backend_in: Vec<oak::ReadHandle>,
+    storage: Option<oak::storage::Storage>,
+    absent_storage: Option<oak::storage::Storage>,
+    storage_name: Vec<u8>,
 }
 
 impl FrontendNode {
@@ -63,9 +67,18 @@ impl FrontendNode {
             backend_in.push(read_handle);
         }
 
+        // Build a unique storage name, so different test runs don't affect each other.
+        let mut nonce = [0; 16];
+        oak::random_get(&mut nonce).unwrap();
+        let storage_name = format!("{}-{}", STORAGE_NAME_PREFIX, hex::encode(nonce));
+        info!("Using storage name '{}' for storage tests", storage_name);
+
         FrontendNode {
             backend_out,
             backend_in,
+            storage: oak::storage::Storage::default(),
+            absent_storage: oak::storage::Storage::new("absent-storage"),
+            storage_name: storage_name.as_bytes().to_vec(),
         }
     }
 }
@@ -81,12 +94,12 @@ pub extern "C" fn frontend_oak_main(in_handle: u64) {
 }
 
 type TestResult = Result<(), Box<dyn std::error::Error>>;
-type TestFn = fn(&FrontendNode) -> TestResult;
+type TestFn = fn(&mut FrontendNode) -> TestResult;
 
 impl OakABITestService for FrontendNode {
     fn run_tests(&mut self, req: ABITestRequest) -> grpc::Result<ABITestResponse> {
         info!(
-            "Run tests matching {} except those matching {}",
+            "Run tests matching '{}' except those matching '{}'",
             req.include, req.exclude
         );
         let include = regex::Regex::new(&req.include).unwrap();
@@ -125,6 +138,9 @@ impl OakABITestService for FrontendNode {
         );
         tests.insert("DirectLog", FrontendNode::test_direct_log);
         tests.insert("BackendRoundtrip", FrontendNode::test_backend_roundtrip);
+        tests.insert("Storage", FrontendNode::test_storage);
+        // TODO(#650): fix storage to emit errors for all these operations
+        tests.insert("DISABLED_AbsentStorage", FrontendNode::test_absent_storage);
 
         for (&name, &testfn) in &tests {
             if !include.is_match(name) {
@@ -193,7 +209,7 @@ fn channel_create_raw() -> (u64, u64, u32) {
 }
 
 impl FrontendNode {
-    fn test_channel_create_raw(&self) -> TestResult {
+    fn test_channel_create_raw(&mut self) -> TestResult {
         let mut write = 0u64;
         let mut read = 0u64;
         unsafe {
@@ -209,7 +225,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_channel_create(&self) -> TestResult {
+    fn test_channel_create(&mut self) -> TestResult {
         let mut handles = Vec::<(oak::WriteHandle, oak::ReadHandle)>::new();
         const CHANNEL_COUNT: usize = 50;
         for _ in 0..CHANNEL_COUNT {
@@ -227,7 +243,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_channel_close_raw(&self) -> TestResult {
+    fn test_channel_close_raw(&mut self) -> TestResult {
         let (w, r, _) = channel_create_raw();
 
         unsafe {
@@ -245,7 +261,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_channel_close(&self) -> TestResult {
+    fn test_channel_close(&mut self) -> TestResult {
         let (w, r) = oak::channel_create().unwrap();
         expect_eq!(Ok(()), oak::channel_close(w.handle));
         expect_eq!(Ok(()), oak::channel_close(r.handle));
@@ -262,7 +278,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_channel_read_raw(&self) -> TestResult {
+    fn test_channel_read_raw(&mut self) -> TestResult {
         let (out_channel, in_channel, _) = channel_create_raw();
 
         let mut buf = Vec::<u8>::with_capacity(5);
@@ -345,7 +361,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_channel_read(&self) -> TestResult {
+    fn test_channel_read(&mut self) -> TestResult {
         let (out_channel, in_channel) = oak::channel_create().unwrap();
 
         // No message pending.
@@ -445,7 +461,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_channel_read_orphan(&self) -> TestResult {
+    fn test_channel_read_orphan(&mut self) -> TestResult {
         let (out_channel, in_channel) = oak::channel_create().unwrap();
 
         // Drop the only write handle for this channel.
@@ -463,7 +479,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_channel_write_raw(&self) -> TestResult {
+    fn test_channel_write_raw(&mut self) -> TestResult {
         let (out_channel, in_channel, _) = channel_create_raw();
 
         let buf = vec![0x01];
@@ -499,7 +515,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_channel_write(&self) -> TestResult {
+    fn test_channel_write(&mut self) -> TestResult {
         let (out_channel, in_channel) = oak::channel_create().unwrap();
 
         // Empty message.
@@ -528,7 +544,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_channel_write_orphan(&self) -> TestResult {
+    fn test_channel_write_orphan(&mut self) -> TestResult {
         let (out_channel, in_channel) = oak::channel_create().unwrap();
 
         // Close the only read handle for the channel.
@@ -545,7 +561,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_channel_wait_raw(&self) -> TestResult {
+    fn test_channel_wait_raw(&mut self) -> TestResult {
         let (out_channel, in_channel, _) = channel_create_raw();
         let (out_empty_channel, in_empty_channel, _) = channel_create_raw();
 
@@ -699,7 +715,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_channel_wait(&self) -> TestResult {
+    fn test_channel_wait(&mut self) -> TestResult {
         let (out1, in1) = oak::channel_create().unwrap();
         let (out2, in2) = oak::channel_create().unwrap();
 
@@ -792,7 +808,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_channel_wait_orphan(&self) -> TestResult {
+    fn test_channel_wait_orphan(&mut self) -> TestResult {
         // Use 2 channels so there's always a ready channel to prevent
         // wait_on_channels blocking.
         let (out1, in1) = oak::channel_create().unwrap();
@@ -835,7 +851,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_node_create_raw(&self) -> TestResult {
+    fn test_node_create_raw(&mut self) -> TestResult {
         let (_, in_channel, _) = channel_create_raw();
 
         let valid = "a_string";
@@ -887,7 +903,7 @@ impl FrontendNode {
         }
         Ok(())
     }
-    fn test_node_create(&self) -> TestResult {
+    fn test_node_create(&mut self) -> TestResult {
         expect_eq!(
             Err(OakStatus::ERR_INVALID_ARGS),
             oak::node_create(
@@ -937,7 +953,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_random_get_raw(&self) -> TestResult {
+    fn test_random_get_raw(&mut self) -> TestResult {
         unsafe {
             expect_eq!(
                 OakStatus::ERR_INVALID_ARGS.value() as u32,
@@ -947,7 +963,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_random_get(&self) -> TestResult {
+    fn test_random_get(&mut self) -> TestResult {
         let original = vec![0x01, 0x02, 0x03, 0x04];
         let mut data = original.clone();
         expect_eq!(Ok(()), oak::random_get(&mut data));
@@ -956,7 +972,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_random_rng(&self) -> TestResult {
+    fn test_random_rng(&mut self) -> TestResult {
         let mut rng = oak::rand::OakRng {};
         let x1 = rng.gen::<u64>();
         let x2 = rng.gen::<u64>();
@@ -964,7 +980,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_channel_handle_reuse(&self) -> TestResult {
+    fn test_channel_handle_reuse(&mut self) -> TestResult {
         // Set up a fresh channel with a pending message so wait_on_channels
         // doesn't block.
         let (out_handle, in_handle) = oak::channel_create().unwrap();
@@ -1013,7 +1029,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_direct_log(&self) -> TestResult {
+    fn test_direct_log(&mut self) -> TestResult {
         // Send a message directly to a fresh logging Node (not via the log facade).
         // Include some handles which will be ignored.
         let (logging_handle, read_handle) =
@@ -1036,7 +1052,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_backend_roundtrip(&self) -> TestResult {
+    fn test_backend_roundtrip(&mut self) -> TestResult {
         // Make a collection of new channels for the backend nodes to read from,
         // and send the read handles to each backend node.
         const CHANNEL_COUNT: usize = 3;
@@ -1122,4 +1138,76 @@ impl FrontendNode {
         }
         Ok(())
     }
+    fn test_storage(&mut self) -> TestResult {
+        let storage = match &mut self.storage {
+            Some(s) => s,
+            None => {
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "no storage channel available",
+                )));
+            }
+        };
+        let key = b"test-key-0";
+        let value = b"test-value-0";
+        storage
+            .write(&self.storage_name, key, value)
+            .map_err(from_proto)?;
+
+        let got = storage.read(&self.storage_name, key).map_err(from_proto)?;
+        expect_eq!(value.to_vec(), got);
+
+        let key2 = b"test-key-bogus";
+        let empty = Vec::<u8>::new();
+        let got = storage.read(&self.storage_name, key2).map_err(from_proto)?;
+        expect_eq!(empty, got);
+
+        let got = storage.read(&self.storage_name, key).map_err(from_proto)?;
+        expect_eq!(value.to_vec(), got);
+
+        storage
+            .delete(&self.storage_name, key)
+            .map_err(from_proto)?;
+
+        let got = storage.read(&self.storage_name, key).map_err(from_proto)?;
+        expect_eq!(empty, got);
+
+        storage
+            .delete(&self.storage_name, key)
+            .map_err(from_proto)?;
+        storage
+            .delete(&self.storage_name, key2)
+            .map_err(from_proto)?;
+
+        Ok(())
+    }
+    fn test_absent_storage(&mut self) -> TestResult {
+        // Expect to have a channel to a storage pseudo-Node, but the remote
+        // storage provider is unavailable.
+        let storage = match &mut self.absent_storage {
+            Some(s) => s,
+            None => {
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "no storage channel available",
+                )));
+            }
+        };
+        let key = b"a-test-key-0";
+        let value = b"a-test-value-0";
+
+        expect_matches!(storage.write(&self.storage_name, key, value), Err(_));
+        expect_matches!(storage.read(&self.storage_name, key), Err(_));
+        expect_matches!(storage.delete(&self.storage_name, key), Err(_));
+
+        Ok(())
+    }
+}
+
+// Helper for storage error conversion.
+fn from_proto(status: oak::proto::status::Status) -> Box<dyn std::error::Error> {
+    Box::new(std::io::Error::new(
+        std::io::ErrorKind::Other,
+        format!("status code {} message '{}'", status.code, status.message),
+    ))
 }
