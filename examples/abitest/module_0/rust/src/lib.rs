@@ -1094,6 +1094,15 @@ impl FrontendNode {
             // Drop the new read channel now we have got the response.
             expect_eq!(Ok(()), oak::channel_close(new_in_channel.handle));
         }
+
+        // Send a single byte to each backend Node, so they get woken up to detect
+        // orphaned channels.
+        for j in 0..BACKEND_COUNT {
+            expect_eq!(
+                Ok(()),
+                oak::channel_write(self.backend_out[j], &[0x00], &[])
+            );
+        }
         Ok(())
     }
 }

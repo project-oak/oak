@@ -16,6 +16,7 @@
 
 use abitest_common::{InternalMessage, LOG_CONFIG_NAME};
 use log::{error, info};
+use std::collections::HashSet;
 
 // Backend node for channel testing.  This node listens for read channel handles
 // arriving on the "from_frontend" channel, then in turn listens for JSON-serialized
@@ -76,8 +77,15 @@ fn inner_main(in_handle: u64) -> Result<(), oak::OakStatus> {
 
         // All other channels expect to receive Serde-JSON serialized
         // messages.
+        let mut orphaned_handles = HashSet::new();
         for i in 1..ready_status.len() {
             if ready_status[i] != oak::ChannelReadStatus::READ_READY {
+                if ready_status[i] == oak::ChannelReadStatus::ORPHANED {
+                    let orphan_handle = wait_handles[i].handle;
+                    orphaned_handles.insert(orphan_handle);
+                    info!("close orphaned channel[{}]={:?}", i, orphan_handle);
+                    oak::channel_close(orphan_handle)?;
+                }
                 continue;
             }
             info!(
@@ -129,6 +137,9 @@ fn inner_main(in_handle: u64) -> Result<(), oak::OakStatus> {
             oak::channel_write(out_channel, &[], &[new_read.handle])?;
             oak::channel_close(new_read.handle)?;
         }
+
+        // Drop any orphaned channels from the wait set now iteration is done.
+        wait_handles.retain(|&h| !orphaned_handles.contains(&h.handle));
     }
 }
 
