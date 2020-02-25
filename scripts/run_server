@@ -24,7 +24,13 @@ while getopts ":s:h" opt; do
   -h    Print Help (this message) and exit"
       exit 0;;
   s)
-    server="${OPTARG}";;
+    case "${OPTARG}" in
+    asylo|dev|arm|asan|tsan)
+      server="${OPTARG}";;
+    \?)
+      echo "Invalid server: ${OPTARG}"
+      exit 1;;
+    esac;;
   esac
 done
 
