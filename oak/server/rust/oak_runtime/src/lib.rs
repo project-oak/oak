@@ -33,7 +33,7 @@ pub mod runtime;
 #[cfg(test)]
 mod tests;
 
-pub use channel::{ChannelEither, ChannelReader, ChannelWriter};
+pub use runtime::{ChannelEither, ChannelEitherOwned, ChannelReader, ChannelWriter};
 pub use config::application_configuration;
 pub use message::Message;
 pub use runtime::{Runtime, RuntimeRef};

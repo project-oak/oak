@@ -21,7 +21,7 @@ use std::sync::Arc;
 
 use oak_abi::OakStatus;
 
-use crate::channel::ChannelReader;
+use crate::runtime::ChannelReader;
 use crate::RuntimeRef;
 
 mod logger;

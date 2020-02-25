@@ -14,11 +14,11 @@
 // limitations under the License.
 //
 
-pub use crate::channel::ChannelEither;
+pub use crate::runtime::ChannelEitherOwned;
 
 /// Encapsulates a message consisting of opaque data bytes and a vector of channels.
 /// The data bytes should not contain any pointers or handles.
 pub struct Message {
     pub data: Vec<u8>,
-    pub channels: Vec<ChannelEither>,
+    pub channels: Vec<ChannelEitherOwned>,
 }
