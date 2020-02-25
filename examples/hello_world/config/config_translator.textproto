@@ -15,12 +15,6 @@ node_configs {
   log_config {}
 }
 node_configs {
-  name: "storage"
-  storage_config {
-    address: "localhost:7867"
-  }
-}
-node_configs {
   name: "translator-grpc"
   grpc_client_config {
     address: "localhost:7770"
