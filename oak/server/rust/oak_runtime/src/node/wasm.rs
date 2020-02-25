@@ -445,7 +445,7 @@ impl WasmInterface {
 
         let statuses = crate::channel::wait_on_channels(&self.runtime, &channels)?;
 
-        for (i, &status) in status.iter().enumerate() {
+        for (i, &status) in statuses.iter().enumerate() {
             self.get_memory()
                 .set_value(status_buff + 8 + (i as u32 * 9), status as u8)
                 .map_err(|err| {
