@@ -18,6 +18,7 @@ use colored::*;
 use std::collections::HashSet;
 use std::io::Write;
 use std::process::Command;
+use std::time::Instant;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Clone)]
@@ -76,33 +77,17 @@ pub struct SingleStatusResult {
     logs: String,
 }
 
-pub struct MultipleStatusResult {
-    statuses: Vec<Status>,
-}
-
-/// The result of a step of execution which may itself be single or multiple.
-pub enum StatusResult {
-    Single(SingleStatusResult),
-    Multiple(MultipleStatusResult),
-}
-
-/// The result of executing a `Runnable` step.
-pub struct Status {
-    name: String,
-    status: StatusResult,
-}
-
-impl Status {
-    pub fn values(&self) -> HashSet<StatusResultValue> {
-        match &self.status {
-            StatusResult::Single(r) => {
-                let mut values = HashSet::new();
-                values.insert(r.value.clone());
-                values
-            }
-            StatusResult::Multiple(r) => r.statuses.iter().map(Status::values).flatten().collect(),
-        }
-    }
+/// An execution step, which may be a single (dynamically dispatched) `Runnable`, or a collection of
+/// sub-steps.
+pub enum Step {
+    Single {
+        name: String,
+        runnable: Box<dyn Runnable>,
+    },
+    Multiple {
+        name: String,
+        steps: Vec<Step>,
+    },
 }
 
 fn values_to_string<T>(values: T) -> String
@@ -120,96 +105,101 @@ where
     )
 }
 
-/// A runnable task, which may be implemented as a single or multiple steps.
+/// A runnable task which produces a single result.
 pub trait Runnable {
-    fn run(&self, opt: &Opt) -> Status;
+    fn run(&self, opt: &Opt) -> SingleStatusResult;
 }
 
-/// Type alias for a boxed, dynamically dispatched `Runnable` instance.
-pub type R = Box<dyn Runnable>;
+/// Run the provided step, printing out information about the execution, and returning a set of
+/// status results from the single or multiple steps that were executed.
+pub fn run_step(context: &Context, step: &Step) -> HashSet<StatusResultValue> {
+    match step {
+        Step::Single { name, runnable } => {
+            let context = context.child(name);
+            // Print three dots to indicate that a command is running, but no new line. The first
+            // log line below will complete the line.
+            eprint!("{} ... ", context.prefix);
 
-/// Print out a summary of the final status (including subtasks).
-pub fn print_all(opt: &Opt, status: &Status) {
-    let root = Context::root(&opt);
-    print_status(&root, &status);
-}
+            let start = Instant::now();
+            let status = runnable.run(&context.opt);
+            let end = Instant::now();
+            let elapsed = end.duration_since(start);
 
-/// Print the provided status to stderr, applying colors to output when possible.
-pub fn print_status(context: &Context, status: &Status) {
-    let context = context.child(&status.name);
-    match &status.status {
-        StatusResult::Single(SingleStatusResult {
-            value,
-            logs,
-            command,
-        }) => {
-            eprintln!("{} ⊢ {}", context.prefix, value);
+            eprintln!("{} [{:.0?}]", status.value, elapsed);
             if context.opt.commands || context.opt.dry_run {
-                eprintln!("{} ⊢ [{}]", context.prefix, command);
+                eprintln!("{} ⊢ [{}]", context.prefix, status.command);
             };
-            if value == &StatusResultValue::Error || context.opt.logs {
+            if status.value == StatusResultValue::Error || context.opt.logs {
                 eprintln!("{} {}", context.prefix, "╔════════════════════════".blue());
-                for line in logs.lines() {
+                for line in status.logs.lines() {
                     eprintln!("{} {} {}", context.prefix, "║".blue(), line);
                 }
                 eprintln!("{} {}", context.prefix, "╚════════════════════════".blue());
             }
+            let mut values = HashSet::new();
+            values.insert(status.value);
+            values
         }
-        StatusResult::Multiple(MultipleStatusResult { statuses }) => {
+        Step::Multiple { name, steps } => {
+            let context = context.child(name);
             eprintln!("{} {{", context.prefix);
-            for status in statuses.iter() {
-                print_status(&context, status);
-            }
+            let start = Instant::now();
+            let values = steps
+                .iter()
+                .map(|step| run_step(&context, step))
+                .flatten()
+                .collect();
+            let end = Instant::now();
+            let elapsed = end.duration_since(start);
             eprintln!(
-                "{} }} ⊢ {}",
+                "{} }} ⊢ {} [{:.0?}]",
                 context.prefix,
-                values_to_string(status.values())
+                values_to_string(&values),
+                elapsed
             );
+            values
         }
     }
 }
 
-/// A step executor, which pretty prints the current nesting level, and allows executing commands
-/// and reporting their result.
-struct Step {
-    name: String,
+/// A single command that implements the `Runnable` trait.
+struct Cmd {
     executable: String,
     args: Vec<String>,
 }
 
-impl Step {
-    /// Create the root step executor, of which there should only be one.
-    fn new(name: &str, executable: &str, args: &[&str]) -> Self {
-        Step {
-            name: name.to_string(),
+impl Cmd {
+    fn new(executable: &str, args: &[&str]) -> Self {
+        Cmd {
             executable: executable.to_string(),
             args: args.iter().cloned().map(|s| s.to_string()).collect(),
         }
     }
 }
 
-pub fn step(name: &str, executable: &str, args: &[&str]) -> R {
-    Box::new(Step::new(name, executable, args))
+/// Convenience constructor for a boxed `Cmd`.
+pub fn cmd(executable: &str, args: &[&str]) -> Box<dyn Runnable> {
+    Box::new(Cmd::new(executable, args))
 }
 
-impl Runnable for Step {
+impl Runnable for Cmd {
     /// Run the provided command, printing a status message with the current prefix.
     /// TODO: Add ability to run commands in parallel.
     /// TODO: Return one of three results: pass, fail, or internal error (e.g. if the binary to run
     /// was not found).
-    fn run(&self, opt: &Opt) -> Status {
+    fn run(&self, opt: &Opt) -> SingleStatusResult {
         // TODO: Measure and print elapsed time.
         // TODO: Add dry-run mode that only prints the commands but does not actually run them.
         std::io::stderr().flush().expect("could not flush stderr");
         let mut cmd = Command::new(&self.executable);
         cmd.args(&self.args);
         let command_string = format!("{:?}", cmd);
-        let status = if opt.dry_run {
-            StatusResult::Single(SingleStatusResult {
+        if opt.dry_run {
+            SingleStatusResult {
                 value: StatusResultValue::Skipped,
                 command: command_string,
                 logs: "".to_string(),
-            })
+            }
         } else {
             let child = cmd
                 .stdout(std::process::Stdio::piped())
@@ -225,56 +215,18 @@ impl Runnable for Step {
                 std::str::from_utf8(&output.stderr).expect("could not parse command output"),
             );
             if output.status.success() {
-                StatusResult::Single(SingleStatusResult {
+                SingleStatusResult {
                     value: StatusResultValue::Ok,
                     command: command_string,
                     logs,
-                })
+                }
             } else {
-                StatusResult::Single(SingleStatusResult {
+                SingleStatusResult {
                     value: StatusResultValue::Error,
                     command: command_string,
                     logs,
-                })
+                }
             }
-        };
-        Status {
-            name: self.name.clone(),
-            status,
-        }
-    }
-}
-
-struct Sequence {
-    name: String,
-    entries: Vec<R>,
-}
-
-impl Sequence {
-    fn new<E>(name: &str, entries: E) -> Self
-    where
-        E: IntoIterator<Item = R>,
-    {
-        Sequence {
-            name: name.to_string(),
-            entries: entries.into_iter().collect(),
-        }
-    }
-}
-
-pub fn sequence<E>(name: &str, entries: E) -> R
-where
-    E: IntoIterator<Item = R>,
-{
-    Box::new(Sequence::new(name, entries))
-}
-
-impl Runnable for Sequence {
-    fn run(&self, opt: &Opt) -> Status {
-        let statuses = self.entries.iter().map(|entry| entry.run(opt)).collect();
-        Status {
-            name: self.name.clone(),
-            status: StatusResult::Multiple(MultipleStatusResult { statuses }),
         }
     }
 }
