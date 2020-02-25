@@ -4,10 +4,8 @@ readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
 # shellcheck source=scripts/common
 source "${SCRIPTS_DIR}/common"
 
-# Default server type is `asylo`.
 server="asylo"
 config="enc-sim"
-
 while getopts ":s:h" opt; do
   case "${opt}" in
   h)
@@ -24,26 +22,20 @@ while getopts ":s:h" opt; do
     case "${OPTARG}" in
     asylo)
       server="asylo"
-      config="enc-sim"
-      ;;
+      config="enc-sim";;
     dev)
       server="dev"
-      config="clang"
-      ;;
+      config="clang";;
     arm)
       server="dev"
-      config="armv8"
-      ;;
+      config="armv8";;
     asan)
       server="dev"
-      config="asan"
-      ;;
+      config="asan";;
     tsan)
       server="dev"
-      config="tsan"
-      ;;
-    esac
-    ;;
+      config="tsan";;
+    esac;;
   esac
 done
 
