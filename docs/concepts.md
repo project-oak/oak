@@ -196,38 +196,48 @@ and an Oak Application.
 
 ## Remote Attestation
 
-Remote attestation is a core part of Project Oak. When a client connects to an
-Oak Node, the two first establish a fresh ephemeral session key, and then they
-provide assertions to each other over a channel encrypted with such key; the
-client relies on this assertion to determine whether it is connecting to a valid
-version of the Oak Runtime (see below for what constitutes a valid version). In
-particular, the attestation includes a _measurement_ (i.e. a hash) of the Oak
-Module running in the remote enclave, cryptographically bound to the session
-itself.
+Remote attestation is a core part of Project Oak.
 
-The client may then infer additional properties about the Oak Module running on
-the remote enclave, e.g. by means of "static attestation" certificates that are
-produced as a byproduct of compiling the Oak Module source code itself on an
-enclave and having the enclave sign a statement that binds the (hash of the)
-compiled Oak Module to some high-level properties of the source code.
+When a client connects to an Oak Application (currently via a gRPC connection),
+the two first establish a fresh ephemeral session key, and then they provide
+assertions to each other over a channel encrypted with that key; the client
+relies on this assertion to determine whether it is connecting to a valid
+version of the Oak Runtime. In particular, the attestation includes a
+_measurement_ (i.e. a hash) of the exact version of the Oak Runtime itself in
+the remote enclave, cryptographically bound to the gRPC session and signed by
+the hardware root of trust for the remote attestation (e.g. Intel in the case of
+SGX).
 
-TODO: Expand on this.
+This functionality is currently provided by the
+[Enclave Key Exchange Protocol (EKEP)](https://asylo.dev/docs/concepts/ekep.html)
+as part of the [Asylo](https://github.com/google/asylo) framework.
 
-## Oak Runtime Updates
+The client first validates the cryptographic integrity of the attestation
+received from the server, by checking whether the signature corresponds to a
+platform with the desired root of trust (e.g. Intel). At this point the client
+may also check for revocation of the key used to sign the attestation.
 
-Under normal circumstances, a client connecting to an Oak Node validates the
-attestation it receives from the Oak Node when establishing the connection
-channel. The measurement in the attestation report corresponds to the hash of
-the code loaded in enclave memory at the time the connection was established.
-Because the Oak Runtime changes relatively infrequently, the list of known
-measurements is small enough that the client is able to just check the inclusion
-of the received measurement in the list.
+The client then uses the details of the attestation to determine whether the
+specific instance of the Oak Runtime running on the server is trustworthy;
+currently this is done by the client providing a list of "known good"
+measurements to accept, but in the future this may involve more sophisticated
+logic including something along the lines of a Binary Transparency log based on
+[Google Trillian](https://github.com/google/trillian).
 
-Occasionally, a particular version of the Oak Runtime may be found to contain
-security vulnerabilities or bugs, and we would like to prevent further clients
-from connecting to servers using such versions.
+Once the client is satisfied with the remote attestation provided by the remote
+Oak Runtime instance, it may then send data over this channel, encrypting them
+with the key established as part of the initial key exchange protocol. This
+guarantees that the the data are end-to-end encrypted between the client and
+that particular enclave instance (i.e. the encryption is terminated _within_ the
+remotely attested enclave on the server side).
 
-TODO: Verifiable log of known versions, Binary Transparency, Key Transparency.
+Note that the measurement of the Oak Runtime does not include any details about
+the specific Oak Application that is running; the client only needs to be
+convinced of the fact that it is talking to a legitimate version of the Oak
+Runtime, and that this version of the Oak Runtime will correctly propagate
+labels (possibly related to declassification) that the client specifies,
+regardless of the Oak Application that it happens to be running (including
+future versions of the same or other Oak Applications).
 
 ## Time
 
