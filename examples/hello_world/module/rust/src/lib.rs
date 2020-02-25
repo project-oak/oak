@@ -18,7 +18,7 @@ mod proto;
 #[cfg(test)]
 mod tests;
 
-use log::{info, warn};
+use log::info;
 use oak::grpc;
 use proto::hello_world::{HelloRequest, HelloResponse};
 use proto::hello_world_grpc::{Dispatcher, HelloWorld};
@@ -34,14 +34,12 @@ oak::entrypoint!(oak_main => {
     }
 
     let node = Node {
-        storage: oak::storage::Storage::default(),
         translator: translator_client.map(translator_common::TranslatorClient),
     };
     Dispatcher::new(node)
 });
 
 struct Node {
-    storage: Option<oak::storage::Storage>,
     translator: Option<translator_common::TranslatorClient>,
 }
 
@@ -52,21 +50,8 @@ impl Node {
     }
 }
 
-const STORAGE_NAME: &[u8] = b"HelloWorld";
-const FIELD_NAME: &[u8] = b"last-greeting";
-
 impl HelloWorld for Node {
     fn say_hello(&mut self, req: HelloRequest) -> grpc::Result<HelloResponse> {
-        // Save the latest greeting to storage.
-        if let Some(storage) = &mut self.storage {
-            match storage.write(STORAGE_NAME, FIELD_NAME, req.greeting.as_bytes()) {
-                Ok(_) => {}
-                Err(status) => warn!(
-                    "failed to store last greeting: code={} {}",
-                    status.code, status.message
-                ),
-            }
-        }
         info!("Say hello to {}", req.greeting);
         let mut res = HelloResponse::new();
         res.reply = format!("HELLO {}!", req.greeting);
@@ -81,22 +66,6 @@ impl HelloWorld for Node {
             .write(&res1, grpc::WriteMode::KeepOpen)
             .expect("Failed to write response");
 
-        // Also generate a response with the last-stored value.
-        let previous = if let Some(storage) = &mut self.storage {
-            let result = storage.read(STORAGE_NAME, FIELD_NAME);
-            match result {
-                Ok(v) => String::from_utf8(v).unwrap(),
-                Err(status) => {
-                    warn!(
-                        "Failed to find previous value: code={} {}",
-                        status.code, status.message
-                    );
-                    "<default>".to_string()
-                }
-            }
-        } else {
-            "<default>".to_string()
-        };
         // Attempt to also generate a translated response.
         if let Some(salutation) = self.translate(&req.greeting, "en", "fr") {
             info!("Say bonjour to {}", salutation);
@@ -107,9 +76,9 @@ impl HelloWorld for Node {
                 .expect("Failed to write translated response");
         }
 
-        info!("Say hello again to {}", previous);
+        info!("Say hello again to {}", req.greeting);
         let mut res2 = HelloResponse::new();
-        res2.reply = format!("HELLO AGAIN {}!", previous);
+        res2.reply = format!("HELLO AGAIN {}!", req.greeting);
         writer
             .write(&res2, grpc::WriteMode::Close)
             .expect("Failed to write final response");
