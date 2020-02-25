@@ -27,11 +27,7 @@ use crate::platform;
 use crate::RuntimeRef;
 
 /// A simple logger loop.
-pub fn logger(
-    pretty_name: &str,
-    runtime: RuntimeRef,
-    reader: ChannelReader,
-) -> Result<(), OakStatus> {
+fn logger(pretty_name: &str, runtime: RuntimeRef, reader: ChannelReader) -> Result<(), OakStatus> {
     loop {
         // An error indicates the runtime is terminating. We ignore it here and keep trying to read
         // in case a Wasm node wants to emit remaining messages. We will return once the channel is

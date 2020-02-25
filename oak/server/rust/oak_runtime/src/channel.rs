@@ -226,7 +226,7 @@ impl ChannelReader {
     /// - `READ_READY` if there is at least one message in the channel.
     /// - `ORPHANED` if there are no messages and there are no writers
     /// - `NOT_READ` if there are no messages but there are some writers
-    pub fn has_message(&self) -> ChannelReadStatus {
+    pub fn status(&self) -> ChannelReadStatus {
         let messages = self.messages.read().unwrap();
         if messages.front().is_some() {
             ChannelReadStatus::READ_READY
@@ -317,11 +317,7 @@ impl Clone for ChannelReader {
 pub fn readers_statuses(readers: &[Option<&ChannelReader>]) -> Vec<ChannelReadStatus> {
     readers
         .iter()
-        .map(|chan| {
-            chan.map_or(ChannelReadStatus::INVALID_CHANNEL, |chan| {
-                chan.has_message()
-            })
-        })
+        .map(|chan| chan.map_or(ChannelReadStatus::INVALID_CHANNEL, |chan| chan.status()))
         .collect()
 }
 
@@ -361,11 +357,12 @@ pub fn wait_on_channels(
         }
         let statuses = readers_statuses(readers);
 
-        if statuses
+        let all_unreadable = statuses
             .iter()
-            .all(|&s| s == ChannelReadStatus::INVALID_CHANNEL || s == ChannelReadStatus::ORPHANED)
-            || statuses.iter().any(|&s| s == ChannelReadStatus::READ_READY)
-        {
+            .all(|&s| s == ChannelReadStatus::INVALID_CHANNEL || s == ChannelReadStatus::ORPHANED);
+        let any_ready = statuses.iter().any(|&s| s == ChannelReadStatus::READ_READY);
+
+        if all_unreadable || any_ready {
             return Ok(statuses);
         }
 

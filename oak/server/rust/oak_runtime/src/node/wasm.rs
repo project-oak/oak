@@ -443,21 +443,21 @@ impl WasmInterface {
             })
             .collect();
 
-        let result = crate::channel::wait_on_channels(&self.runtime, &channels)?;
+        let statuses = crate::channel::wait_on_channels(&self.runtime, &channels)?;
 
-        for (i, &result) in result.iter().enumerate() {
+        for (i, &status) in status.iter().enumerate() {
             self.get_memory()
-                .set_value(status_buff + 8 + (i as u32 * 9), result as u8)
+                .set_value(status_buff + 8 + (i as u32 * 9), status as u8)
                 .map_err(|err| {
                     error!(
                         "wait_on_channels: Unable to set status {} to {:?}: {:?}",
-                        i, result, err
+                        i, status, err
                     );
                     OakStatus::ERR_INVALID_ARGS
                 })?;
         }
 
-        if result
+        if statuses
             .iter()
             .all(|&s| s == ChannelReadStatus::INVALID_CHANNEL || s == ChannelReadStatus::ORPHANED)
         {
