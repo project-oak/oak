@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+#include <cassert>
+#include <optional>
+
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 #include "asylo/util/logging.h"
@@ -41,7 +44,8 @@ void submit_sample(Aggregator::Stub* stub, std::vector<uint64_t> values) {
   }
 }
 
-void get_aggregation(Aggregator::Stub* stub) {
+std::optional<std::vector<uint64_t>> get_aggregation(Aggregator::Stub* stub) {
+  std::vector<uint64_t> items;
   grpc::ClientContext context;
   google::protobuf::Empty request;
   Vector response;
@@ -49,13 +53,15 @@ void get_aggregation(Aggregator::Stub* stub) {
   if (!status.ok()) {
     LOG(WARNING) << "Could not get current value: " << status.error_code() << ": "
                  << status.error_message();
-    return;
+    return std::nullopt;
   }
 
   LOG(INFO) << "Aggregation:";
-  for (auto value : response.items()) {
-    LOG(INFO) << "- " << value;
+  for (auto item : response.items()) {
+    LOG(INFO) << "- " << item;
+    items.push_back(item);
   }
+  return items;
 }
 
 int main(int argc, char** argv) {
@@ -73,13 +79,15 @@ int main(int argc, char** argv) {
   submit_sample(stub.get(), {10, 10, 0, 0, 10});
 
   // Try to retrieve aggregation.
-  get_aggregation(stub.get());
+  auto first_result = get_aggregation(stub.get());
+  assert(!first_result);
 
   // Submit final sample.
   submit_sample(stub.get(), {10, 10, 10, 10, 10});
 
   // Retrieve aggregation.
-  get_aggregation(stub.get());
+  auto second_result = get_aggregation(stub.get());
+  assert(std::vector<uint64_t>(5, 20) == second_result);
 
   return EXIT_SUCCESS;
 }

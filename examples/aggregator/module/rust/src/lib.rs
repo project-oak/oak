@@ -28,7 +28,7 @@ mod proto;
 mod tests;
 
 use aggregator::{Monoid, ThresholdAggregator};
-use log::{info, warn};
+use log::info;
 use oak::grpc;
 use proto::aggregator::Vector;
 use proto::aggregator_grpc::{dispatch, Aggregator};
@@ -90,19 +90,15 @@ impl Aggregator for AggregatorNode {
     }
 
     fn get_current_value(&mut self, _: Empty) -> grpc::Result<Vector> {
-        info!("Get current value request");
-        match self.aggregator.get() {
-            Some(value) => {
-                info!("Aggregated value: {:?}", value);
-                Ok(value.clone())
-            }
-            None => {
-                warn!("Not enough samples have been aggregated");
-                Err(grpc::build_status(
-                    grpc::Code::PERMISSION_DENIED,
-                    "Not enough samples have been aggregated",
-                ))
-            }
-        }
+        let value = self
+            .aggregator
+            .get()
+            .map(|v| v.clone())
+            .ok_or(grpc::build_status(
+                grpc::Code::FAILED_PRECONDITION,
+                "Not enough samples have been aggregated",
+            ));
+        info!("Returning value: {:?}", value);
+        value
     }
 }
