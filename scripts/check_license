@@ -11,7 +11,7 @@ source "$SCRIPTS_DIR/common"
 check_license() {
   local path="$1"
 
-  if head -1 "$path" | grep -iq 'generated'; then
+  if head -1 "$path" | grep -iq -e 'generated' -e '::prost::message'; then
     return 0
   fi
 
