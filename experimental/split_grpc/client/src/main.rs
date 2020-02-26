@@ -14,6 +14,9 @@
 // limitations under the License.
 //
 
+#[macro_use]
+extern crate log;
+
 use proto::hello_world_client::HelloWorldClient;
 use proto::HelloRequest;
 
@@ -23,6 +26,8 @@ pub mod proto {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    env_logger::init();
+
     let mut client = HelloWorldClient::connect("http://[::1]:50051").await?;
 
     let request = tonic::Request::new(HelloRequest {
@@ -31,7 +36,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let response = client.say_hello(request).await?;
 
-    println!("RESPONSE={:?}", response);
+    info!("RESPONSE={:?}", response);
 
     Ok(())
 }

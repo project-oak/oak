@@ -17,6 +17,7 @@
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     tonic_build::configure()
         .build_client(false)
+        .build_server(true)
         .out_dir("src/proto")
         .compile(
             &["../../../examples/hello_world/proto/hello_world.proto"],

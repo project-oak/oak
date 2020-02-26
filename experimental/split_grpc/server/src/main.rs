@@ -18,18 +18,18 @@ use futures_core::Stream;
 use std::pin::Pin;
 use tonic::{transport::Server, Request, Response, Status, Streaming};
 
+use proto::hello_world_server::{HelloWorld, HelloWorldServer};
+use proto::{HelloRequest, HelloResponse};
+
 pub mod proto {
     include!("./proto/oak.examples.hello_world.rs");
 }
 
-use proto::hello_world_server::{HelloWorld, HelloWorldServer};
-use proto::{HelloRequest, HelloResponse};
-
 #[derive(Debug, Default)]
-pub struct HelloHandler {}
+pub struct HelloWorldHandler;
 
 #[tonic::async_trait]
-impl HelloWorld for HelloHandler {
+impl HelloWorld for HelloWorldHandler {
     async fn say_hello(
         &self,
         request: Request<HelloRequest>,
@@ -73,7 +73,7 @@ impl HelloWorld for HelloHandler {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = "[::1]:50051".parse()?;
-    let handler = HelloHandler::default();
+    let handler = HelloWorldHandler::default();
 
     Server::builder()
         .add_service(HelloWorldServer::new(handler))
