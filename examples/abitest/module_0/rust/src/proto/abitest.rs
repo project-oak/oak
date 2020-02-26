@@ -419,6 +419,7 @@ pub struct ABITestResponse_TestResult {
     pub name: ::std::string::String,
     pub success: bool,
     pub details: ::std::string::String,
+    pub disabled: bool,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -501,6 +502,21 @@ impl ABITestResponse_TestResult {
     pub fn take_details(&mut self) -> ::std::string::String {
         ::std::mem::replace(&mut self.details, ::std::string::String::new())
     }
+
+    // bool disabled = 4;
+
+
+    pub fn get_disabled(&self) -> bool {
+        self.disabled
+    }
+    pub fn clear_disabled(&mut self) {
+        self.disabled = false;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_disabled(&mut self, v: bool) {
+        self.disabled = v;
+    }
 }
 
 impl ::protobuf::Message for ABITestResponse_TestResult {
@@ -525,6 +541,13 @@ impl ::protobuf::Message for ABITestResponse_TestResult {
                 3 => {
                     ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.details)?;
                 },
+                4 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_bool()?;
+                    self.disabled = tmp;
+                },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
                 },
@@ -546,6 +569,9 @@ impl ::protobuf::Message for ABITestResponse_TestResult {
         if !self.details.is_empty() {
             my_size += ::protobuf::rt::string_size(3, &self.details);
         }
+        if self.disabled != false {
+            my_size += 2;
+        }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -560,6 +586,9 @@ impl ::protobuf::Message for ABITestResponse_TestResult {
         }
         if !self.details.is_empty() {
             os.write_string(3, &self.details)?;
+        }
+        if self.disabled != false {
+            os.write_bool(4, self.disabled)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -618,6 +647,11 @@ impl ::protobuf::Message for ABITestResponse_TestResult {
                     |m: &ABITestResponse_TestResult| { &m.details },
                     |m: &mut ABITestResponse_TestResult| { &mut m.details },
                 ));
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBool>(
+                    "disabled",
+                    |m: &ABITestResponse_TestResult| { &m.disabled },
+                    |m: &mut ABITestResponse_TestResult| { &mut m.disabled },
+                ));
                 ::protobuf::reflect::MessageDescriptor::new::<ABITestResponse_TestResult>(
                     "ABITestResponse_TestResult",
                     fields,
@@ -643,6 +677,7 @@ impl ::protobuf::Clear for ABITestResponse_TestResult {
         self.name.clear();
         self.success = false;
         self.details.clear();
+        self.disabled = false;
         self.unknown_fields.clear();
     }
 }
@@ -662,13 +697,14 @@ impl ::protobuf::reflect::ProtobufValue for ABITestResponse_TestResult {
 static file_descriptor_proto_data: &'static [u8] = b"\
     \n\rabitest.proto\x12\x14oak.examples.abitest\"D\n\x0eABITestRequest\x12\
     \x18\n\x07include\x18\x01\x20\x01(\tR\x07include\x12\x18\n\x07exclude\
-    \x18\x02\x20\x01(\tR\x07exclude\"\xb3\x01\n\x0fABITestResponse\x12J\n\
+    \x18\x02\x20\x01(\tR\x07exclude\"\xcf\x01\n\x0fABITestResponse\x12J\n\
     \x07results\x18\x01\x20\x03(\x0b20.oak.examples.abitest.ABITestResponse.\
-    TestResultR\x07results\x1aT\n\nTestResult\x12\x12\n\x04name\x18\x01\x20\
+    TestResultR\x07results\x1ap\n\nTestResult\x12\x12\n\x04name\x18\x01\x20\
     \x01(\tR\x04name\x12\x18\n\x07success\x18\x02\x20\x01(\x08R\x07success\
-    \x12\x18\n\x07details\x18\x03\x20\x01(\tR\x07details2l\n\x11OakABITestSe\
-    rvice\x12W\n\x08RunTests\x12$.oak.examples.abitest.ABITestRequest\x1a%.o\
-    ak.examples.abitest.ABITestResponseb\x06proto3\
+    \x12\x18\n\x07details\x18\x03\x20\x01(\tR\x07details\x12\x1a\n\x08disabl\
+    ed\x18\x04\x20\x01(\x08R\x08disabled2l\n\x11OakABITestService\x12W\n\x08\
+    RunTests\x12$.oak.examples.abitest.ABITestRequest\x1a%.oak.examples.abit\
+    est.ABITestResponseb\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {

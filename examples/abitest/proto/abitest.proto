@@ -32,6 +32,7 @@ message ABITestResponse {
     string name = 1;
     bool success = 2;
     string details = 3;
+    bool disabled = 4;
   }
   repeated TestResult results = 1;
 }

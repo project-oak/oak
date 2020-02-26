@@ -46,12 +46,20 @@ static bool run_tests(OakABITestService::Stub* stub, const std::string& include,
   }
 
   bool success = true;
+  int disabled = 0;
   for (const auto& result : response.results()) {
+    if (result.disabled()) {
+      disabled++;
+      continue;
+    }
     LOG(INFO) << "[ " << (result.success() ? " OK " : "FAIL") << " ] " << result.name();
     if (!result.success()) {
       success = false;
       LOG(INFO) << "    Details: " << result.details();
     }
+  }
+  if (disabled > 0) {
+    LOG(INFO) << " YOU HAVE " << disabled << " DISABLED TEST" << ((disabled > 1) ? "S" : "");
   }
   return success;
 }

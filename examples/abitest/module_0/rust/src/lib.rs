@@ -19,7 +19,7 @@ pub mod proto;
 use abitest_common::{InternalMessage, LOG_CONFIG_NAME};
 use byteorder::WriteBytesExt;
 use expect::{expect, expect_eq};
-use log::info;
+use log::{debug, info};
 use oak::{grpc, ChannelReadStatus, OakStatus};
 use proto::abitest::{ABITestRequest, ABITestResponse, ABITestResponse_TestResult};
 use proto::abitest_grpc::{Dispatcher, OakABITestService};
@@ -128,14 +128,30 @@ impl OakABITestService for FrontendNode {
 
         for (&name, &testfn) in &tests {
             if !include.is_match(name) {
+                debug!(
+                    "skip test '{}' as not included in '{}' include pattern",
+                    name, include
+                );
                 continue;
             }
             if !req.exclude.is_empty() && exclude.is_match(name) {
+                debug!(
+                    "skip test '{}' as included in '{}' exclude pattern",
+                    name, exclude
+                );
+                continue;
+            }
+            let mut result = ABITestResponse_TestResult::new();
+            result.set_name(name.to_string());
+            if name.starts_with("DISABLED_") {
+                debug!("skip test '{}' as marked as disabled", name);
+                result.set_disabled(true);
+                result.set_success(false);
+                result.set_details("Test disabled".to_string());
+                results.push(result);
                 continue;
             }
             info!("running test {}", name);
-            let mut result = ABITestResponse_TestResult::new();
-            result.set_name(name.to_string());
             match testfn(self) {
                 Ok(()) => result.set_success(true),
                 Err(err) => {
@@ -148,6 +164,7 @@ impl OakABITestService for FrontendNode {
 
         let mut res = ABITestResponse::new();
         res.set_results(results);
+
         Ok(res)
     }
 }
