@@ -20,7 +20,7 @@
 //! To invoke, run the following command from the root of the repository:
 //!
 //! ```
-//! cargo run --manifest-path=./runner/Cargo.toml
+//! cargo run --package=runner
 //! ```
 
 use std::io::Read;
@@ -33,9 +33,9 @@ use internal::*;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let opt = Opt::from_args();
     // TODO: Add support for running individual commands via command line flags.
-    let root = sequence(
-        "root",
-        vec![
+    let root = Step::Multiple {
+        name: "root".to_string(),
+        steps: vec![
             run_buildifier(),
             run_prettier(),
             run_embedmd(),
@@ -46,12 +46,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             run_bazel_build(),
             run_bazel_test(),
         ],
-    );
-    let status = root.run(&opt);
-    print_all(&opt, &status);
+    };
+    let statuses = run_step(&Context::root(&opt), &root);
 
     // If the overall status value is an error, terminate with a nonzero exit code.
-    if status.values().contains(&StatusResultValue::Error) {
+    if statuses.contains(&StatusResultValue::Error) {
         std::process::exit(1);
     }
 
@@ -125,125 +124,153 @@ fn is_cargo_workspace_file(path: &PathBuf) -> bool {
     contents.contains("[workspace]")
 }
 
-fn run_buildifier() -> R {
-    sequence(
-        "buildifier",
-        source_files()
+fn run_buildifier() -> Step {
+    Step::Multiple {
+        name: "buildifier".to_string(),
+        steps: source_files()
             .filter(is_bazel_file)
             .map(to_string)
-            .map(|entry| step(&entry, "buildifier", &["-lint=warn", "-mode=check", &entry])),
-    )
+            .map(|entry| Step::Single {
+                name: entry.clone(),
+                runnable: cmd("buildifier", &["-lint=warn", "-mode=check", &entry]),
+            })
+            .collect(),
+    }
 }
 
-fn run_prettier() -> R {
-    sequence(
-        "prettier",
-        source_files()
+fn run_prettier() -> Step {
+    Step::Multiple {
+        name: "prettier".to_string(),
+        steps: source_files()
             .filter(is_markdown_file)
             .map(to_string)
-            .map(|entry| step(&entry, "prettier", &["--check", &entry])),
-    )
+            .map(|entry| Step::Single {
+                name: entry.clone(),
+                runnable: cmd("prettier", &["--check", &entry]),
+            })
+            .collect(),
+    }
 }
 
-fn run_embedmd() -> R {
-    sequence(
-        "embedmd",
-        source_files()
+fn run_embedmd() -> Step {
+    Step::Multiple {
+        name: "embedmd".to_string(),
+        steps: source_files()
             .filter(is_markdown_file)
             .map(to_string)
-            .map(|entry| step(&entry, "embedmd", &["-d", &entry])),
-    )
+            .map(|entry| Step::Single {
+                name: entry.clone(),
+                runnable: cmd("embedmd", &["-d", &entry]),
+            })
+            .collect(),
+    }
 }
 
-fn run_cargo_fmt() -> R {
-    sequence(
-        "cargo fmt",
-        workspace_manifest_files().map(to_string).map(|entry| {
-            step(
-                &entry,
-                "cargo",
-                &[
-                    "fmt",
-                    "--all",
-                    &format!("--manifest-path={}", &entry),
-                    "--",
-                    "--check",
-                ],
-            )
-        }),
-    )
+fn run_cargo_fmt() -> Step {
+    Step::Multiple {
+        name: "cargo fmt".to_string(),
+        steps: workspace_manifest_files()
+            .map(to_string)
+            .map(|entry| Step::Single {
+                name: entry.clone(),
+                runnable: cmd(
+                    "cargo",
+                    &[
+                        "fmt",
+                        "--all",
+                        &format!("--manifest-path={}", &entry),
+                        "--",
+                        "--check",
+                    ],
+                ),
+            })
+            .collect(),
+    }
 }
 
-fn run_cargo_test() -> R {
-    sequence(
-        "cargo test",
-        workspace_manifest_files().map(to_string).map(|entry| {
-            step(
-                &entry,
-                "cargo",
-                &[
-                    "test",
-                    "--all-targets",
-                    &format!("--manifest-path={}", &entry),
-                ],
-            )
-        }),
-    )
+fn run_cargo_test() -> Step {
+    Step::Multiple {
+        name: "cargo test".to_string(),
+        steps: workspace_manifest_files()
+            .map(to_string)
+            .map(|entry| Step::Single {
+                name: entry.clone(),
+                runnable: cmd(
+                    "cargo",
+                    &[
+                        "test",
+                        "--all-targets",
+                        &format!("--manifest-path={}", &entry),
+                    ],
+                ),
+            })
+            .collect(),
+    }
 }
 
-fn run_cargo_doc_test() -> R {
-    sequence(
-        "cargo doc test",
-        workspace_manifest_files().map(to_string).map(|entry| {
-            step(
-                &entry,
-                "cargo",
-                &["test", "--doc", &format!("--manifest-path={}", &entry)],
-            )
-        }),
-    )
+fn run_cargo_doc_test() -> Step {
+    Step::Multiple {
+        name: "cargo doc test".to_string(),
+        steps: workspace_manifest_files()
+            .map(to_string)
+            .map(|entry| Step::Single {
+                name: entry.clone(),
+                runnable: cmd(
+                    "cargo",
+                    &["test", "--doc", &format!("--manifest-path={}", &entry)],
+                ),
+            })
+            .collect(),
+    }
 }
 
-fn run_cargo_clippy() -> R {
-    sequence(
-        "cargo clippy",
-        workspace_manifest_files().map(to_string).map(|entry| {
-            step(
-                &entry,
-                "cargo",
-                &[
-                    "clippy",
-                    "--all-targets",
-                    &format!("--manifest-path={}", &entry),
-                    "--",
-                    "--deny=warnings",
-                ],
-            )
-        }),
-    )
+fn run_cargo_clippy() -> Step {
+    Step::Multiple {
+        name: "cargo clippy".to_string(),
+        steps: workspace_manifest_files()
+            .map(to_string)
+            .map(|entry| Step::Single {
+                name: entry.clone(),
+                runnable: cmd(
+                    "cargo",
+                    &[
+                        "clippy",
+                        "--all-targets",
+                        &format!("--manifest-path={}", &entry),
+                        "--",
+                        "--deny=warnings",
+                    ],
+                ),
+            })
+            .collect(),
+    }
 }
 
-fn run_bazel_build() -> R {
-    step(
-        "non-Asylo targets",
-        "bazel",
-        &["build", "--", "//oak/...:all", "-//oak/server/asylo:all"],
-    )
+fn run_bazel_build() -> Step {
+    Step::Single {
+        name: "bazel build".to_string(),
+        runnable: cmd(
+            "bazel",
+            &["build", "--", "//oak/...:all", "-//oak/server/asylo:all"],
+        ),
+    }
 }
 
-fn run_bazel_test() -> R {
-    step(
-        "host targets",
-        "bazel",
-        // TODO: Extract these targets with `bazel query` at runtime, based on some label or
-        // attribute.
-        &[
-            "test",
-            "//oak/server:host_tests",
-            "//oak/server/storage:host_tests",
-            "//oak/common:host_tests",
-        ],
-    )
+fn run_bazel_test() -> Step {
+    Step::Single {
+        name: "bazel test".to_string(),
+        runnable: cmd(
+            "bazel",
+            // TODO: Extract these targets with `bazel query` at runtime, based on some label or
+            // attribute.
+            &[
+                "test",
+                "//oak/server:host_tests",
+                "//oak/server/storage:host_tests",
+                "//oak/common:host_tests",
+            ],
+        ),
+    }
 }
 
 pub fn to_string(path: PathBuf) -> String {
