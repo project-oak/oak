@@ -64,7 +64,12 @@ fn test_abi() {
 
     runtime.stop();
 
+    let mut disabled = 0;
     for result in result.unwrap().get_results() {
+        if result.disabled {
+            disabled += 1;
+            continue;
+        }
         info!(
             "[ {} ] {}",
             if result.success { " OK " } else { "FAIL" },
@@ -74,5 +79,8 @@ fn test_abi() {
             error!("Failure details: {}", result.details);
         }
         assert_eq!(true, result.success);
+    }
+    if disabled > 0 {
+        info!("YOU HAVE {} DISABLED TESTS", disabled);
     }
 }
