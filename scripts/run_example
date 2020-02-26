@@ -9,6 +9,7 @@ if [[ -z "${NAME}" ]]; then
   echo "Missing the example name, use -h for help"
   exit 1
 fi
+shift 1
 
 language="rust"
 server="asylo"
@@ -63,7 +64,7 @@ if [[ "none" != "${server}" ]]; then
   "${SCRIPTS_DIR}/build_example" "${NAME}"
 
   # Run a server.
-  "$SCRIPTS_DIR/run_server" "${APPLICATION}" -s "${server}" &
+  "${SCRIPTS_DIR}/run_server" "${APPLICATION}" -s "${server}" &
   readonly SERVER_PID=$!
   sleep 2  # Wait for an application to start.
 fi

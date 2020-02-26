@@ -37,7 +37,7 @@ while getopts "s:h" opt; do
   esac
 done
 
-"$SCRIPTS_DIR/build_server" -s "${server}"
+"${SCRIPTS_DIR}/build_server" -s "${server}"
 
 # Launching the server requires a `--application=<dir>/config.bin` flag.
 if [[ "asylo" == "${server}" ]]; then
