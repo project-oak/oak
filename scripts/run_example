@@ -12,7 +12,7 @@ fi
 
 language="rust"
 server="asylo"
-while getopts ":s:l:Ch" opt; do
+while getopts "s:l:Ch" opt; do
   case "${opt}" in
   h)
       echo -e "Usage: ${0} EXAMPLE_NAME [-h] [-l rust|cpp] [-s asylo|dev|asan|tsan|none] [-- CLIENT_ARGS]
@@ -42,6 +42,7 @@ while getopts ":s:l:Ch" opt; do
     exit 1;;
   esac
 done
+shift "$((OPTIND -1))"
 
 if [[ "none" != "${server}" ]]; then
   # Choose example application version.
@@ -55,20 +56,20 @@ if [[ "none" != "${server}" ]]; then
     else
       readonly APPLICATION="${PWD}/bazel-wasm-bin/examples/${NAME}/config/config_cpp.bin"
     fi;;
-  \?)
+  *)
     echo "Invalid example version: ${language}"
     exit 1;;
   esac
   "${SCRIPTS_DIR}/build_example" "${NAME}"
 
   # Run a server.
-  "$SCRIPTS_DIR/run_server" "${APPLICATION}" -s "${server}"
+  "$SCRIPTS_DIR/run_server" "${APPLICATION}" -s "${server}" &
   readonly SERVER_PID=$!
   sleep 2  # Wait for an application to start.
 fi
 
 # Run the application client.
-readonly CLIENT_ARGS=("${@:3}")  # Choose client args without an example name and '--'.
+readonly CLIENT_ARGS=("${@}")  # Choose client args provided after '--'.
 "./bazel-client-bin/examples/${NAME}/client/client" "${CLIENT_ARGS[@]}"
 
 # TODO: Ensure that background processes are killed with something like `trap cleanup_fn EXIT`.

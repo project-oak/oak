@@ -6,7 +6,7 @@ source "${SCRIPTS_DIR}/common"
 
 server="asylo"
 config="enc-sim"
-while getopts ":s:h" opt; do
+while getopts "s:h" opt; do
   case "${opt}" in
   h)
       echo -e "Usage: ${0} [ -s asylo|dev|arm|asan|tsan ]

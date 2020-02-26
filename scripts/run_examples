@@ -5,7 +5,7 @@ readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
 source "${SCRIPTS_DIR}/common"
 
 server="asylo"
-while getopts ":s:h" opt; do
+while getopts "s:h" opt; do
   case "${opt}" in
   h)
       echo -e "Usage: ${0} [ -s asylo|dev|asan|tsan ]

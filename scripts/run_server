@@ -11,7 +11,7 @@ if [[ -z "${APPLICATION}" ]]; then
 fi
 
 server="asylo"
-while getopts ":s:h" opt; do
+while getopts "s:h" opt; do
   case "${opt}" in
   h)
       echo -e "Usage: ${0} APPLICATION [ -s asylo|dev|arm|asan|tsan ]
