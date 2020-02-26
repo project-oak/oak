@@ -37,6 +37,26 @@ message ABITestResponse {
   repeated TestResult results = 1;
 }
 
+message GrpcTestRequest {
+  oneof method_result {
+    int32 err_code = 1;
+    string ok_text = 2;
+  }
+}
+
+message GrpcTestResponse {
+  string text = 1;
+}
+
 service OakABITestService {
   rpc RunTests(ABITestRequest) returns (ABITestResponse);
+
+  // The following methods allow testing of the gRPC connection to an Oak
+  // Application. Each method reflects back the contents of the incoming
+  // request, generating an error if `err_code` is set or an OK response
+  // containing the contents of `ok_text otherwise.
+  rpc UnaryMethod(GrpcTestRequest) returns (GrpcTestResponse);
+  rpc ServerStreamingMethod(GrpcTestRequest) returns (stream GrpcTestResponse);
+  rpc ClientStreamingMethod(stream GrpcTestRequest) returns (GrpcTestResponse);
+  rpc BidiStreamingMethod(stream GrpcTestRequest) returns (stream GrpcTestResponse);
 }

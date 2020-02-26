@@ -22,6 +22,7 @@ use expect::{expect, expect_eq, expect_matches};
 use log::{debug, info};
 use oak::{grpc, ChannelReadStatus, OakStatus};
 use proto::abitest::{ABITestRequest, ABITestResponse, ABITestResponse_TestResult};
+use proto::abitest::{GrpcTestRequest, GrpcTestResponse};
 use proto::abitest_grpc::{Dispatcher, OakABITestService};
 use protobuf::ProtobufEnum;
 use rand::Rng;
@@ -182,6 +183,94 @@ impl OakABITestService for FrontendNode {
         res.set_results(results);
 
         Ok(res)
+    }
+
+    // gRPC test methods.
+    fn unary_method(&mut self, req: GrpcTestRequest) -> grpc::Result<GrpcTestResponse> {
+        if req.has_err_code() {
+            info!("unary_method -> Err({})", req.get_err_code());
+            return Err(grpc::build_status(
+                grpc::Code::from_i32(req.get_err_code()).unwrap(),
+                "Deliberate error",
+            ));
+        }
+        info!("unary_method -> Ok({})", req.get_ok_text());
+        let mut rsp = GrpcTestResponse::new();
+        rsp.text = req.get_ok_text().to_string();
+        Ok(rsp)
+    }
+    fn server_streaming_method(
+        &mut self,
+        req: GrpcTestRequest,
+        mut writer: grpc::ChannelResponseWriter,
+    ) {
+        if req.has_err_code() {
+            info!("server_streaming_method -> Err({})", req.get_err_code());
+            let status = grpc::build_status(
+                grpc::Code::from_i32(req.get_err_code()).unwrap(),
+                "Deliberate error",
+            );
+            writer.close(Err(status)).expect("failed to close writer");
+            return;
+        }
+        // Write two responses to exercise streaming.
+        info!("server_streaming_method -> 2 x Ok({})", req.get_ok_text());
+        let mut rsp = GrpcTestResponse::new();
+        rsp.set_text(req.get_ok_text().to_string());
+        writer
+            .write(&rsp, grpc::WriteMode::KeepOpen)
+            .expect("Failed to write response");
+        rsp.set_text(req.get_ok_text().to_string());
+        writer
+            .write(&rsp, grpc::WriteMode::Close)
+            .expect("Failed to write response");
+    }
+    fn client_streaming_method(
+        &mut self,
+        reqs: Vec<GrpcTestRequest>,
+    ) -> grpc::Result<GrpcTestResponse> {
+        // If any request triggers an error, return it.
+        for req in &reqs {
+            if req.has_err_code() {
+                info!("client_streaming_method -> Err({})", req.get_err_code());
+                return Err(grpc::build_status(
+                    grpc::Code::from_i32(req.get_err_code()).unwrap(),
+                    "Deliberate error",
+                ));
+            }
+        }
+        // Otherwise return the text from all the requests combined.
+        let mut combined_text = String::new();
+        for req in &reqs {
+            combined_text.push_str(req.get_ok_text());
+        }
+        info!("client_streaming_method -> Ok({})", combined_text);
+        let mut rsp = GrpcTestResponse::new();
+        rsp.text = combined_text;
+        Ok(rsp)
+    }
+    fn bidi_streaming_method(
+        &mut self,
+        reqs: Vec<GrpcTestRequest>,
+        mut writer: grpc::ChannelResponseWriter,
+    ) {
+        for req in &reqs {
+            if req.has_err_code() {
+                info!("bidi_streaming_method -> Err({})", req.get_err_code());
+                let status = grpc::build_status(
+                    grpc::Code::from_i32(req.get_err_code()).unwrap(),
+                    "Deliberate error",
+                );
+                writer.close(Err(status)).expect("failed to close writer");
+                return;
+            }
+            info!("bidi_streaming_method -> Ok({})", req.get_ok_text());
+            let mut rsp = GrpcTestResponse::new();
+            rsp.set_text(req.get_ok_text().to_string());
+            writer
+                .write(&rsp, grpc::WriteMode::KeepOpen)
+                .expect("Failed to write response");
+        }
     }
 }
 

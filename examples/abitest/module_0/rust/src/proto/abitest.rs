@@ -694,6 +694,427 @@ impl ::protobuf::reflect::ProtobufValue for ABITestResponse_TestResult {
     }
 }
 
+#[derive(PartialEq,Clone,Default)]
+pub struct GrpcTestRequest {
+    // message oneof groups
+    pub method_result: ::std::option::Option<GrpcTestRequest_oneof_method_result>,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a GrpcTestRequest {
+    fn default() -> &'a GrpcTestRequest {
+        <GrpcTestRequest as ::protobuf::Message>::default_instance()
+    }
+}
+
+#[derive(Clone,PartialEq,Debug)]
+pub enum GrpcTestRequest_oneof_method_result {
+    err_code(i32),
+    ok_text(::std::string::String),
+}
+
+impl GrpcTestRequest {
+    pub fn new() -> GrpcTestRequest {
+        ::std::default::Default::default()
+    }
+
+    // int32 err_code = 1;
+
+
+    pub fn get_err_code(&self) -> i32 {
+        match self.method_result {
+            ::std::option::Option::Some(GrpcTestRequest_oneof_method_result::err_code(v)) => v,
+            _ => 0,
+        }
+    }
+    pub fn clear_err_code(&mut self) {
+        self.method_result = ::std::option::Option::None;
+    }
+
+    pub fn has_err_code(&self) -> bool {
+        match self.method_result {
+            ::std::option::Option::Some(GrpcTestRequest_oneof_method_result::err_code(..)) => true,
+            _ => false,
+        }
+    }
+
+    // Param is passed by value, moved
+    pub fn set_err_code(&mut self, v: i32) {
+        self.method_result = ::std::option::Option::Some(GrpcTestRequest_oneof_method_result::err_code(v))
+    }
+
+    // string ok_text = 2;
+
+
+    pub fn get_ok_text(&self) -> &str {
+        match self.method_result {
+            ::std::option::Option::Some(GrpcTestRequest_oneof_method_result::ok_text(ref v)) => v,
+            _ => "",
+        }
+    }
+    pub fn clear_ok_text(&mut self) {
+        self.method_result = ::std::option::Option::None;
+    }
+
+    pub fn has_ok_text(&self) -> bool {
+        match self.method_result {
+            ::std::option::Option::Some(GrpcTestRequest_oneof_method_result::ok_text(..)) => true,
+            _ => false,
+        }
+    }
+
+    // Param is passed by value, moved
+    pub fn set_ok_text(&mut self, v: ::std::string::String) {
+        self.method_result = ::std::option::Option::Some(GrpcTestRequest_oneof_method_result::ok_text(v))
+    }
+
+    // Mutable pointer to the field.
+    pub fn mut_ok_text(&mut self) -> &mut ::std::string::String {
+        if let ::std::option::Option::Some(GrpcTestRequest_oneof_method_result::ok_text(_)) = self.method_result {
+        } else {
+            self.method_result = ::std::option::Option::Some(GrpcTestRequest_oneof_method_result::ok_text(::std::string::String::new()));
+        }
+        match self.method_result {
+            ::std::option::Option::Some(GrpcTestRequest_oneof_method_result::ok_text(ref mut v)) => v,
+            _ => panic!(),
+        }
+    }
+
+    // Take field
+    pub fn take_ok_text(&mut self) -> ::std::string::String {
+        if self.has_ok_text() {
+            match self.method_result.take() {
+                ::std::option::Option::Some(GrpcTestRequest_oneof_method_result::ok_text(v)) => v,
+                _ => panic!(),
+            }
+        } else {
+            ::std::string::String::new()
+        }
+    }
+}
+
+impl ::protobuf::Message for GrpcTestRequest {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    self.method_result = ::std::option::Option::Some(GrpcTestRequest_oneof_method_result::err_code(is.read_int32()?));
+                },
+                2 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    self.method_result = ::std::option::Option::Some(GrpcTestRequest_oneof_method_result::ok_text(is.read_string()?));
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if let ::std::option::Option::Some(ref v) = self.method_result {
+            match v {
+                &GrpcTestRequest_oneof_method_result::err_code(v) => {
+                    my_size += ::protobuf::rt::value_size(1, v, ::protobuf::wire_format::WireTypeVarint);
+                },
+                &GrpcTestRequest_oneof_method_result::ok_text(ref v) => {
+                    my_size += ::protobuf::rt::string_size(2, &v);
+                },
+            };
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if let ::std::option::Option::Some(ref v) = self.method_result {
+            match v {
+                &GrpcTestRequest_oneof_method_result::err_code(v) => {
+                    os.write_int32(1, v)?;
+                },
+                &GrpcTestRequest_oneof_method_result::ok_text(ref v) => {
+                    os.write_string(2, v)?;
+                },
+            };
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> GrpcTestRequest {
+        GrpcTestRequest::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
+        };
+        unsafe {
+            descriptor.get(|| {
+                let mut fields = ::std::vec::Vec::new();
+                fields.push(::protobuf::reflect::accessor::make_singular_i32_accessor::<_>(
+                    "err_code",
+                    GrpcTestRequest::has_err_code,
+                    GrpcTestRequest::get_err_code,
+                ));
+                fields.push(::protobuf::reflect::accessor::make_singular_string_accessor::<_>(
+                    "ok_text",
+                    GrpcTestRequest::has_ok_text,
+                    GrpcTestRequest::get_ok_text,
+                ));
+                ::protobuf::reflect::MessageDescriptor::new::<GrpcTestRequest>(
+                    "GrpcTestRequest",
+                    fields,
+                    file_descriptor_proto()
+                )
+            })
+        }
+    }
+
+    fn default_instance() -> &'static GrpcTestRequest {
+        static mut instance: ::protobuf::lazy::Lazy<GrpcTestRequest> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const GrpcTestRequest,
+        };
+        unsafe {
+            instance.get(GrpcTestRequest::new)
+        }
+    }
+}
+
+impl ::protobuf::Clear for GrpcTestRequest {
+    fn clear(&mut self) {
+        self.method_result = ::std::option::Option::None;
+        self.method_result = ::std::option::Option::None;
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for GrpcTestRequest {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for GrpcTestRequest {
+    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
+        ::protobuf::reflect::ProtobufValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct GrpcTestResponse {
+    // message fields
+    pub text: ::std::string::String,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a GrpcTestResponse {
+    fn default() -> &'a GrpcTestResponse {
+        <GrpcTestResponse as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl GrpcTestResponse {
+    pub fn new() -> GrpcTestResponse {
+        ::std::default::Default::default()
+    }
+
+    // string text = 1;
+
+
+    pub fn get_text(&self) -> &str {
+        &self.text
+    }
+    pub fn clear_text(&mut self) {
+        self.text.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_text(&mut self, v: ::std::string::String) {
+        self.text = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_text(&mut self) -> &mut ::std::string::String {
+        &mut self.text
+    }
+
+    // Take field
+    pub fn take_text(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.text, ::std::string::String::new())
+    }
+}
+
+impl ::protobuf::Message for GrpcTestResponse {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.text)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if !self.text.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.text);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if !self.text.is_empty() {
+            os.write_string(1, &self.text)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> GrpcTestResponse {
+        GrpcTestResponse::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
+        };
+        unsafe {
+            descriptor.get(|| {
+                let mut fields = ::std::vec::Vec::new();
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                    "text",
+                    |m: &GrpcTestResponse| { &m.text },
+                    |m: &mut GrpcTestResponse| { &mut m.text },
+                ));
+                ::protobuf::reflect::MessageDescriptor::new::<GrpcTestResponse>(
+                    "GrpcTestResponse",
+                    fields,
+                    file_descriptor_proto()
+                )
+            })
+        }
+    }
+
+    fn default_instance() -> &'static GrpcTestResponse {
+        static mut instance: ::protobuf::lazy::Lazy<GrpcTestResponse> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const GrpcTestResponse,
+        };
+        unsafe {
+            instance.get(GrpcTestResponse::new)
+        }
+    }
+}
+
+impl ::protobuf::Clear for GrpcTestResponse {
+    fn clear(&mut self) {
+        self.text.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for GrpcTestResponse {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for GrpcTestResponse {
+    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
+        ::protobuf::reflect::ProtobufValueRef::Message(self)
+    }
+}
+
 static file_descriptor_proto_data: &'static [u8] = b"\
     \n\rabitest.proto\x12\x14oak.examples.abitest\"D\n\x0eABITestRequest\x12\
     \x18\n\x07include\x18\x01\x20\x01(\tR\x07include\x12\x18\n\x07exclude\
@@ -702,9 +1123,19 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     TestResultR\x07results\x1ap\n\nTestResult\x12\x12\n\x04name\x18\x01\x20\
     \x01(\tR\x04name\x12\x18\n\x07success\x18\x02\x20\x01(\x08R\x07success\
     \x12\x18\n\x07details\x18\x03\x20\x01(\tR\x07details\x12\x1a\n\x08disabl\
-    ed\x18\x04\x20\x01(\x08R\x08disabled2l\n\x11OakABITestService\x12W\n\x08\
-    RunTests\x12$.oak.examples.abitest.ABITestRequest\x1a%.oak.examples.abit\
-    est.ABITestResponseb\x06proto3\
+    ed\x18\x04\x20\x01(\x08R\x08disabled\"Z\n\x0fGrpcTestRequest\x12\x1b\n\
+    \x08err_code\x18\x01\x20\x01(\x05H\0R\x07errCode\x12\x19\n\x07ok_text\
+    \x18\x02\x20\x01(\tH\0R\x06okTextB\x0f\n\rmethod_result\"&\n\x10GrpcTest\
+    Response\x12\x12\n\x04text\x18\x01\x20\x01(\tR\x04text2\x88\x04\n\x11Oak\
+    ABITestService\x12W\n\x08RunTests\x12$.oak.examples.abitest.ABITestReque\
+    st\x1a%.oak.examples.abitest.ABITestResponse\x12\\\n\x0bUnaryMethod\x12%\
+    .oak.examples.abitest.GrpcTestRequest\x1a&.oak.examples.abitest.GrpcTest\
+    Response\x12h\n\x15ServerStreamingMethod\x12%.oak.examples.abitest.GrpcT\
+    estRequest\x1a&.oak.examples.abitest.GrpcTestResponse0\x01\x12h\n\x15Cli\
+    entStreamingMethod\x12%.oak.examples.abitest.GrpcTestRequest\x1a&.oak.ex\
+    amples.abitest.GrpcTestResponse(\x01\x12h\n\x13BidiStreamingMethod\x12%.\
+    oak.examples.abitest.GrpcTestRequest\x1a&.oak.examples.abitest.GrpcTestR\
+    esponse(\x010\x01b\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {
