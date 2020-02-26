@@ -74,7 +74,7 @@ void StorageNode::Run(Handle request_handle) {
     if (method_name == "/oak.StorageNode/Read") {
       StorageChannelReadRequest channel_read_request;
       if (!channel_request.req_msg().UnpackTo(&channel_read_request)) {
-        // TODO: Handle errors.
+        // TODO(650): Handle errors.
       }
       StorageChannelReadResponse channel_read_response;
       std::string value;
@@ -87,7 +87,7 @@ void StorageNode::Run(Handle request_handle) {
     } else if (method_name == "/oak.StorageNode/Write") {
       StorageChannelWriteRequest channel_write_request;
       if (!channel_request.req_msg().UnpackTo(&channel_write_request)) {
-        // TODO: Handle errors.
+        // TODO(#650): Handle errors.
       }
       // TODO(#449): Check integrity policy for item.
       std::string item;
@@ -98,7 +98,7 @@ void StorageNode::Run(Handle request_handle) {
     } else if (method_name == "/oak.StorageNode/Delete") {
       StorageChannelDeleteRequest channel_delete_request;
       if (!channel_request.req_msg().UnpackTo(&channel_delete_request)) {
-        // TODO: Handle errors.
+        // TODO(#650): Handle errors.
       }
       // TODO(#449): Check integrity policy for item.
       storage_processor_.Delete(channel_delete_request.storage_name(),
@@ -107,7 +107,7 @@ void StorageNode::Run(Handle request_handle) {
     } else if (method_name == "/oak.StorageNode/Begin") {
       StorageChannelBeginRequest channel_begin_request;
       if (!channel_request.req_msg().UnpackTo(&channel_begin_request)) {
-        // TODO: Handle errors.
+        // TODO(#650): Handle errors.
       }
       StorageChannelBeginResponse channel_begin_response;
       storage_processor_.Begin(channel_begin_request.storage_name(),
@@ -117,14 +117,14 @@ void StorageNode::Run(Handle request_handle) {
     } else if (method_name == "/oak.StorageNode/Commit") {
       StorageChannelCommitRequest channel_commit_request;
       if (!channel_request.req_msg().UnpackTo(&channel_commit_request)) {
-        // TODO: Handle errors.
+        // TODO(#650): Handle errors.
       }
       storage_processor_.Commit(channel_commit_request.storage_name(),
                                 channel_commit_request.transaction_id());
     } else if (method_name == "/oak.StorageNode/Rollback") {
       StorageChannelRollbackRequest channel_rollback_request;
       if (!channel_request.req_msg().UnpackTo(&channel_rollback_request)) {
-        // TODO: Handle errors.
+        // TODO(#650): Handle errors.
       }
       storage_processor_.Rollback(channel_rollback_request.storage_name(),
                                   channel_rollback_request.transaction_id());

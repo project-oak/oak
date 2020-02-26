@@ -119,14 +119,14 @@ void StorageProcessor::Read(const std::string& storage_name, const std::string& 
   if (!transaction_id.empty()) {
     read_request.set_transaction_id(transaction_id);
   }
-  // TODO: Propagate error status.
+  // TODO(650): Propagate error status.
   asylo::StatusOr<std::string> name_or = EncryptItem(item_name, ItemType::NAME);
   read_request.set_item_name(name_or.ValueOrDie());
 
   grpc::ClientContext context;
   StorageReadResponse read_response;
   grpc::Status status = storage_service_->Read(&context, read_request, &read_response);
-  // TODO: Propagate error status.
+  // TODO(650): Propagate error status.
   if (status.ok()) {
     asylo::StatusOr<std::string> value_or =
         DecryptItem(read_response.item_value(), ItemType::VALUE);
@@ -141,11 +141,11 @@ void StorageProcessor::Write(const std::string& storage_name, const std::string&
   if (!transaction_id.empty()) {
     write_request.set_transaction_id(transaction_id);
   }
-  // TODO: Propagate error status.
+  // TODO(650): Propagate error status.
   asylo::StatusOr<std::string> name_or = EncryptItem(item_name, ItemType::NAME);
   write_request.set_item_name(name_or.ValueOrDie());
 
-  // TODO: Propagate error status.
+  // TODO(650): Propagate error status.
   asylo::StatusOr<std::string> value_or = EncryptItem(item_value, ItemType::VALUE);
   write_request.set_item_value(value_or.ValueOrDie());
 
@@ -161,13 +161,13 @@ void StorageProcessor::Delete(const std::string& storage_name, const std::string
   if (!transaction_id.empty()) {
     delete_request.set_transaction_id(transaction_id);
   }
-  // TODO: Propagate error status.
+  // TODO(650): Propagate error status.
   asylo::StatusOr<std::string> name_or = EncryptItem(item_name, ItemType::NAME);
   delete_request.set_item_name(name_or.ValueOrDie());
 
   grpc::ClientContext context;
   StorageDeleteResponse delete_response;
-  // TODO: Propagate error status.
+  // TODO(#650): Propagate error status.
   grpc::Status status = storage_service_->Delete(&context, delete_request, &delete_response);
 }
 
@@ -179,7 +179,7 @@ void StorageProcessor::Begin(const std::string& storage_name, std::string* trans
 
   grpc::ClientContext context;
   StorageBeginResponse begin_response;
-  // TODO: Propagate error status.
+  // TODO(#650): Propagate error status.
   grpc::Status status = storage_service_->Begin(&context, begin_request, &begin_response);
   if (status.ok()) {
     *transaction_id = begin_response.transaction_id();
@@ -193,7 +193,7 @@ void StorageProcessor::Commit(const std::string& storage_name, const std::string
 
   grpc::ClientContext context;
   StorageCommitResponse commit_response;
-  // TODO: Propagate error status.
+  // TODO(#650): Propagate error status.
   grpc::Status status = storage_service_->Commit(&context, commit_request, &commit_response);
 }
 
@@ -205,7 +205,7 @@ void StorageProcessor::Rollback(const std::string& storage_name,
 
   grpc::ClientContext context;
   StorageRollbackResponse rollback_response;
-  // TODO: Propagate error status.
+  // TODO(#650): Propagate error status.
   grpc::Status status = storage_service_->Rollback(&context, rollback_request, &rollback_response);
 }
 
