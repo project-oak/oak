@@ -12,6 +12,8 @@ members = [
   "examples/rustfmt/module/rust",
   "examples/translator/common",
   "examples/translator/module/rust",
+  "experimental/split_grpc/client",
+  "experimental/split_grpc/server",
   "oak/server/rust/oak_abi",
   "oak/server/rust/oak_runtime",
   "runner",
@@ -49,6 +51,9 @@ running_average = { path = "examples/running_average/module/rust" }
 rustfmt = { path = "examples/rustfmt/module/rust" }
 translator = { path = "examples/translator/module/rust" }
 translator_common = { path = "examples/translator/common" }
+# Experimental
+split_grpc_client = { path = "experimental/split_grpc/client" }
+split_grpc_server = { path = "experimental/split_grpc/server" }
 # Third party.
 expect = { path = "third_party/expect" }
 grpc-compiler = { path = "third_party/grpc-rust/grpc-compiler" }
