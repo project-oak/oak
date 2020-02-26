@@ -26,6 +26,10 @@ use std::io::Write;
 // Oak Node server interface
 pub trait OakABITestService {
     fn run_tests(&mut self, req: super::abitest::ABITestRequest) -> grpc::Result<super::abitest::ABITestResponse>;
+    fn unary_method(&mut self, req: super::abitest::GrpcTestRequest) -> grpc::Result<super::abitest::GrpcTestResponse>;
+    fn server_streaming_method(&mut self, req: super::abitest::GrpcTestRequest, writer: grpc::ChannelResponseWriter);
+    fn client_streaming_method(&mut self, reqs: Vec<super::abitest::GrpcTestRequest>) -> grpc::Result<super::abitest::GrpcTestResponse>;
+    fn bidi_streaming_method(&mut self, reqs: Vec<super::abitest::GrpcTestRequest>, writer: grpc::ChannelResponseWriter);
 }
 
 // Oak Node gRPC method dispatcher
@@ -41,6 +45,10 @@ impl<T: OakABITestService> grpc::ServerNode for Dispatcher<T> {
     fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
         match method {
             "/oak.examples.abitest.OakABITestService/RunTests" => grpc::handle_req_rsp(|r| self.0.run_tests(r), req, writer),
+            "/oak.examples.abitest.OakABITestService/UnaryMethod" => grpc::handle_req_rsp(|r| self.0.unary_method(r), req, writer),
+            "/oak.examples.abitest.OakABITestService/ServerStreamingMethod" => grpc::handle_req_stream(|r, w| self.0.server_streaming_method(r, w), req, writer),
+            "/oak.examples.abitest.OakABITestService/ClientStreamingMethod" => grpc::handle_stream_rsp(|rr| self.0.client_streaming_method(rr), req, writer),
+            "/oak.examples.abitest.OakABITestService/BidiStreamingMethod" => grpc::handle_stream_stream(|rr, w| self.0.bidi_streaming_method(rr, w), req, writer),
             _ => {
                 panic!("unknown method name: {}", method);
             }
@@ -54,5 +62,11 @@ pub struct OakABITestServiceClient(pub oak::grpc::client::Client);
 impl OakABITestServiceClient {
     pub fn run_tests(&self, req: super::abitest::ABITestRequest) -> grpc::Result<super::abitest::ABITestResponse> {
         oak::grpc::invoke_grpc_method("/oak.examples.abitest.OakABITestService/RunTests", req, &self.0.invocation_sender)
+    }
+    pub fn unary_method(&self, req: super::abitest::GrpcTestRequest) -> grpc::Result<super::abitest::GrpcTestResponse> {
+        oak::grpc::invoke_grpc_method("/oak.examples.abitest.OakABITestService/UnaryMethod", req, &self.0.invocation_sender)
+    }
+    pub fn server_streaming_method(&self, req: super::abitest::GrpcTestRequest) -> grpc::Result<oak::io::Receiver<grpc::GrpcResponse>> {
+        oak::grpc::invoke_grpc_method_stream("/oak.examples.abitest.OakABITestService/ServerStreamingMethod", req, &self.0.invocation_sender)
     }
 }

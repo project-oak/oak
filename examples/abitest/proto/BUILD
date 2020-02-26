@@ -26,9 +26,6 @@ package(
 proto_library(
     name = "abitest_proto",
     srcs = ["abitest.proto"],
-    deps = [
-        "@com_google_protobuf//:empty_proto",
-    ],
 )
 
 cc_proto_library(
