@@ -22,7 +22,7 @@ use expect::{expect, expect_eq};
 use log::info;
 use oak::{grpc, ChannelReadStatus, OakStatus};
 use proto::abitest::{ABITestRequest, ABITestResponse, ABITestResponse_TestResult};
-use proto::abitest_grpc::{dispatch, OakABITestService};
+use proto::abitest_grpc::{Dispatcher, OakABITestService};
 use protobuf::ProtobufEnum;
 use rand::Rng;
 use std::collections::HashMap;
@@ -75,14 +75,9 @@ pub extern "C" fn frontend_oak_main(in_handle: u64) {
     let _ = std::panic::catch_unwind(|| {
         oak::set_panic_hook();
         let node = FrontendNode::new();
-        oak::run_event_loop(node, in_handle);
+        let dispatcher = Dispatcher::new(node);
+        oak::run_event_loop(dispatcher, in_handle);
     });
-}
-
-impl oak::grpc::OakNode for FrontendNode {
-    fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
-        dispatch(self, method, req, writer)
-    }
 }
 
 type TestResult = Result<(), Box<dyn std::error::Error>>;

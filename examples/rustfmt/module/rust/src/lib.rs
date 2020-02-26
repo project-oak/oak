@@ -18,20 +18,14 @@ mod proto;
 
 use oak::grpc;
 use proto::rustfmt::{FormatRequest, FormatResponse};
-use proto::rustfmt_grpc::{dispatch, FormatService};
+use proto::rustfmt_grpc::{Dispatcher, FormatService};
 
 oak::entrypoint!(oak_main => {
     oak_log::init_default();
-    Node
+    Dispatcher::new(Node)
 });
 
 struct Node;
-
-impl oak::grpc::OakNode for Node {
-    fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
-        dispatch(self, method, req, writer)
-    }
-}
 
 impl FormatService for Node {
     fn format(&mut self, req: FormatRequest) -> grpc::Result<FormatResponse> {

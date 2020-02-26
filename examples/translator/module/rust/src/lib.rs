@@ -19,22 +19,15 @@ mod tests;
 
 use log::info;
 use oak::grpc;
-use oak::grpc::OakNode;
 use translator_common::proto::translator::{TranslateRequest, TranslateResponse};
-use translator_common::proto::translator_grpc::{dispatch, Translator};
+use translator_common::proto::translator_grpc::{Dispatcher, Translator};
 
 oak::entrypoint!(oak_main => {
     oak_log::init_default();
-    Node
+    Dispatcher::new(Node)
 });
 
 struct Node;
-
-impl OakNode for Node {
-    fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
-        dispatch(self, method, req, writer)
-    }
-}
 
 impl Translator for Node {
     fn translate(&mut self, req: TranslateRequest) -> grpc::Result<TranslateResponse> {

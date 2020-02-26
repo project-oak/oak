@@ -31,21 +31,15 @@ mod tests;
 
 use oak::grpc;
 use proto::private_set_intersection::{GetIntersectionResponse, SubmitSetRequest};
-use proto::private_set_intersection_grpc::{dispatch, PrivateSetIntersection};
+use proto::private_set_intersection_grpc::{Dispatcher, PrivateSetIntersection};
 use protobuf::well_known_types::Empty;
 use std::collections::HashSet;
 
-oak::entrypoint!(oak_main => Node::default());
+oak::entrypoint!(oak_main => Dispatcher::new(Node::default()));
 
 #[derive(Default)]
 struct Node {
     values: Option<HashSet<String>>,
-}
-
-impl oak::grpc::OakNode for Node {
-    fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
-        dispatch(self, method, req, writer)
-    }
 }
 
 impl PrivateSetIntersection for Node {

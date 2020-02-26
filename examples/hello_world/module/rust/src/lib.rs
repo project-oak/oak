@@ -20,17 +20,17 @@ mod tests;
 
 use log::{error, info, warn};
 use oak::grpc;
-use oak::grpc::OakNode;
 use proto::hello_world::{HelloRequest, HelloResponse};
-use proto::hello_world_grpc::{dispatch, HelloWorld};
+use proto::hello_world_grpc::{Dispatcher, HelloWorld};
 
 oak::entrypoint!(oak_main => {
     oak_log::init_default();
-    Node {
+    let node = Node {
         storage: oak::storage::Storage::default(),
         translator: grpc::client::Client::new("translator", "oak_main")
             .map(translator_common::TranslatorClient),
-    }
+    };
+    Dispatcher::new(node)
 });
 
 struct Node {
@@ -47,12 +47,6 @@ impl Node {
 
 const STORAGE_NAME: &[u8] = b"HelloWorld";
 const FIELD_NAME: &[u8] = b"last-greeting";
-
-impl OakNode for Node {
-    fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
-        dispatch(self, method, req, writer)
-    }
-}
 
 impl HelloWorld for Node {
     fn say_hello(&mut self, req: HelloRequest) -> grpc::Result<HelloResponse> {

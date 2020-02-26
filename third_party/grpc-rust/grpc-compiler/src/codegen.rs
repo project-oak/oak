@@ -198,7 +198,7 @@ impl<'a> MethodGen<'a> {
             ("grpc::handle_req_rsp", "r")
         };
         format!(
-            "{}(|{}| node.{}({}), req, writer)",
+            "{}(|{}| self.0.{}({}), req, writer)",
             gen_fn,
             lambda_params,
             self.snake_name(),
@@ -254,13 +254,29 @@ impl<'a> ServiceGen<'a> {
     }
 
     fn write_dispatcher(&self, w: &mut CodeWriter) {
-        w.pub_fn(&format!("dispatch<T: {}>(node: &mut T, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter)", self.server_intf_name()), |w| {
-            w.block("match method {", "};", |w| {
-                for method in &self.methods {
-                    w.write_line(format!("\"{}\" => {},", method.full_path(), method.dispatch_method()));
-                }
-                w.block("_ => {", "}", |w| {
-                    w.write_line("panic!(\"unknown method name: {}\", method);");
+        w.write_line(&format!(
+            "pub struct Dispatcher<T: {}>(T);",
+            self.server_intf_name()
+        ));
+        w.write_line("");
+        w.expr_block(
+            &format!("impl<T: {}> Dispatcher<T>", self.server_intf_name()),
+            |w| {
+                w.pub_fn("new(node: T) -> Dispatcher<T>", |w| {
+                    w.write_line("Dispatcher(node)");
+                });
+            },
+        );
+        w.write_line("");
+        w.expr_block(&format!("impl<T: {}> grpc::OakNode for Dispatcher<T>", self.server_intf_name()), |w| {
+            w.def_fn("invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter)", |w| {
+                w.block("match method {", "};", |w| {
+                    for method in &self.methods {
+                        w.write_line(format!("\"{}\" => {},", method.full_path(), method.dispatch_method()));
+                    }
+                    w.block("_ => {", "}", |w| {
+                        w.write_line("panic!(\"unknown method name: {}\", method);");
+                    });
                 });
             });
         });

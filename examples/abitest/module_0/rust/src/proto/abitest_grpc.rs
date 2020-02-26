@@ -29,13 +29,23 @@ pub trait OakABITestService {
 }
 
 // Oak Node gRPC method dispatcher
-pub fn dispatch<T: OakABITestService>(node: &mut T, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
-    match method {
-        "/oak.examples.abitest.OakABITestService/RunTests" => grpc::handle_req_rsp(|r| node.run_tests(r), req, writer),
-        _ => {
-            panic!("unknown method name: {}", method);
-        }
-    };
+pub struct Dispatcher<T: OakABITestService>(T);
+
+impl<T: OakABITestService> Dispatcher<T> {
+    pub fn new(node: T) -> Dispatcher<T> {
+        Dispatcher(node)
+    }
+}
+
+impl<T: OakABITestService> grpc::OakNode for Dispatcher<T> {
+    fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
+        match method {
+            "/oak.examples.abitest.OakABITestService/RunTests" => grpc::handle_req_rsp(|r| self.0.run_tests(r), req, writer),
+            _ => {
+                panic!("unknown method name: {}", method);
+            }
+        };
+    }
 }
 
 // Client interface
