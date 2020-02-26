@@ -8,16 +8,16 @@ pub struct HelloResponse {
     #[prost(string, tag = "1")]
     pub reply: std::string::String,
 }
-#[doc = r" Generated client implementations."]
+/// Generated client implementations.
 pub mod hello_world_client {
     #![allow(unused_variables, dead_code, missing_docs)]
     use tonic::codegen::*;
-    #[doc = " As seen in https://grpc.io/docs/guides/concepts/."]
+    /// As seen in https://grpc.io/docs/guides/concepts/.
     pub struct HelloWorldClient<T> {
         inner: tonic::client::Grpc<T>,
     }
     impl HelloWorldClient<tonic::transport::Channel> {
-        #[doc = r" Attempt to create a new client by connecting to a given endpoint."]
+        /// Attempt to create a new client by connecting to a given endpoint.
         pub async fn connect<D>(dst: D) -> Result<Self, tonic::transport::Error>
         where
             D: std::convert::TryInto<tonic::transport::Endpoint>,

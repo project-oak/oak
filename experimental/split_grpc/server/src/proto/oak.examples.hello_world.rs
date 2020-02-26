@@ -8,18 +8,19 @@ pub struct HelloResponse {
     #[prost(string, tag = "1")]
     pub reply: std::string::String,
 }
-#[doc = r" Generated server implementations."]
+/// Generated server implementations.
 pub mod hello_world_server {
     #![allow(unused_variables, dead_code, missing_docs)]
     use tonic::codegen::*;
-    #[doc = "Generated trait containing gRPC methods that should be implemented for use with HelloWorldServer."]
+    ///Generated trait containing gRPC methods that should be implemented for use with
+    /// HelloWorldServer.
     #[async_trait]
     pub trait HelloWorld: Send + Sync + 'static {
         async fn say_hello(
             &self,
             request: tonic::Request<super::HelloRequest>,
         ) -> Result<tonic::Response<super::HelloResponse>, tonic::Status>;
-        #[doc = "Server streaming response type for the LotsOfReplies method."]
+        ///Server streaming response type for the LotsOfReplies method.
         type LotsOfRepliesStream: Stream<Item = Result<super::HelloResponse, tonic::Status>>
             + Send
             + Sync
@@ -32,7 +33,7 @@ pub mod hello_world_server {
             &self,
             request: tonic::Request<tonic::Streaming<super::HelloRequest>>,
         ) -> Result<tonic::Response<super::HelloResponse>, tonic::Status>;
-        #[doc = "Server streaming response type for the BidiHello method."]
+        ///Server streaming response type for the BidiHello method.
         type BidiHelloStream: Stream<Item = Result<super::HelloResponse, tonic::Status>>
             + Send
             + Sync
@@ -42,7 +43,7 @@ pub mod hello_world_server {
             request: tonic::Request<tonic::Streaming<super::HelloRequest>>,
         ) -> Result<tonic::Response<Self::BidiHelloStream>, tonic::Status>;
     }
-    #[doc = " As seen in https://grpc.io/docs/guides/concepts/."]
+    /// As seen in https://grpc.io/docs/guides/concepts/.
     #[derive(Debug)]
     #[doc(hidden)]
     pub struct HelloWorldServer<T: HelloWorld> {

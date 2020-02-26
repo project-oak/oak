@@ -35,7 +35,7 @@ impl HelloWorld for HelloWorldHandler {
         request: Request<HelloRequest>,
     ) -> Result<Response<HelloResponse>, Status> {
         let reply = HelloResponse {
-            reply: format!("Hello {}!", request.into_inner().greeting).into(),
+            reply: format!("Hello {}!", request.into_inner().greeting),
         };
 
         Ok(Response::new(reply))
