@@ -1,0 +1,25 @@
+[package]
+name = "aggregator"
+version = "0.1.0"
+authors = ["Ivan Petrov <ivanpetrov@google.com>"]
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+itertools = "*"
+log = "*"
+oak = "=0.1.0"
+oak_log = "*"
+protobuf = "*"
+
+[dev-dependencies]
+assert_matches = "*"
+oak_runtime = "=0.1.0"
+oak_tests = "=0.1.0"
+simple_logger = "*"
+
+[build-dependencies]
+oak_utils = "*"
+protoc-rust-grpc = { path = "../../../../third_party/grpc-rust/protoc-rust-grpc" }

@@ -1,6 +1,7 @@
 [package]
 name = "oak_utils"
 version = "0.1.0"
+authors = ["Ivan Petrov <ivanpetrov@google.com>"]
 edition = "2018"
 license = "Apache-2.0"
 
