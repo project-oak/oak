@@ -54,7 +54,7 @@ if [[ "asylo" == "${server}" ]]; then
 else
   # Use a different output_base so that we don't lose incremental state.
   # See https://docs.bazel.build/versions/master/command-line-reference.html#flag--output_base.
-  bazel --output_base="$CACHE_DIR/$config" build "${bazel_build_flags[@]}" \
+  bazel --output_base="${CACHE_DIR}/$config" build "${bazel_build_flags[@]}" \
     //oak/server/dev:dev_oak_runner \
     //oak/server/storage:storage_server
 fi 

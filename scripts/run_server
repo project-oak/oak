@@ -25,8 +25,21 @@ while getopts "s:h" opt; do
       exit 0;;
   s)
     case "${OPTARG}" in
-    asylo|dev|arm|asan|tsan)
-      server="${OPTARG}";;
+    asylo)
+      server="asylo"
+      config="enc-sim";;
+    dev)
+      server="dev"
+      config="clang";;
+    arm)
+      server="dev"
+      config="armv8";;
+    asan)
+      server="dev"
+      config="asan";;
+    tsan)
+      server="dev"
+      config="tsan";;
     *)
       echo "Invalid server: ${OPTARG}"
       exit 1;;
@@ -45,5 +58,5 @@ if [[ "asylo" == "${server}" ]]; then
   exec ./bazel-bin/oak/server/asylo/asylo_oak_runner --application="${APPLICATION}"
 else
   # We use a different symlink prefix for clang-based artifacts.
-  exec ./bazel-clang-bin/oak/server/dev/dev_oak_runner --application="${APPLICATION}"
+  exec ./bazel-"${config}"-bin/oak/server/dev/dev_oak_runner --application="${APPLICATION}"
 fi 
