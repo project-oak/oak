@@ -38,9 +38,10 @@ const SAMPLE_THRESHOLD: u64 = 3;
 
 oak::entrypoint!(oak_main => {
     oak_log::init_default();
-    AggregatorNode {
+    let node = AggregatorNode {
         aggregator: ThresholdAggregator::<Vector>::new(SAMPLE_THRESHOLD),
-    }
+    };
+    Dispatcher::new(node)
 });
 
 impl Monoid for Vector {
@@ -68,11 +69,6 @@ impl Monoid for Vector {
             ..Default::default()
         }
     }
-}
-
-/// Oak Node that collects aggregated data.
-pub struct AggregatorNode {
-    aggregator: ThresholdAggregator<Vector>,
 }
 
 impl grpc::OakNode for AggregatorNode {

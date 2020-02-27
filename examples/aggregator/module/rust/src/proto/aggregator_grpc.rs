@@ -30,14 +30,24 @@ pub trait Aggregator {
 }
 
 // Oak Node gRPC method dispatcher
-pub fn dispatch<T: Aggregator>(node: &mut T, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
-    match method {
-        "/oak.examples.aggregator.Aggregator/SubmitSample" => grpc::handle_req_rsp(|r| node.submit_sample(r), req, writer),
-        "/oak.examples.aggregator.Aggregator/GetCurrentValue" => grpc::handle_req_rsp(|r| node.get_current_value(r), req, writer),
-        _ => {
-            panic!("unknown method name: {}", method);
-        }
-    };
+pub struct Dispatcher<T: Aggregator>(T);
+
+impl<T: Aggregator> Dispatcher<T> {
+    pub fn new(node: T) -> Dispatcher<T> {
+        Dispatcher(node)
+    }
+}
+
+impl<T: Aggregator> grpc::OakNode for Dispatcher<T> {
+    fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
+        match method {
+            "/oak.examples.aggregator.Aggregator/SubmitSample" => grpc::handle_req_rsp(|r| self.0.submit_sample(r), req, writer),
+            "/oak.examples.aggregator.Aggregator/GetCurrentValue" => grpc::handle_req_rsp(|r| self.0.get_current_value(r), req, writer),
+            _ => {
+                panic!("unknown method name: {}", method);
+            }
+        };
+    }
 }
 
 // Client interface
