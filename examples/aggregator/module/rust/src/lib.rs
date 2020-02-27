@@ -31,7 +31,7 @@ use aggregator::{Monoid, ThresholdAggregator};
 use log::info;
 use oak::grpc;
 use proto::aggregator::Vector;
-use proto::aggregator_grpc::{dispatch, Aggregator};
+use proto::aggregator_grpc::{Dispatcher, Aggregator};
 use protobuf::well_known_types::Empty;
 
 const SAMPLE_THRESHOLD: u64 = 3;
@@ -71,10 +71,9 @@ impl Monoid for Vector {
     }
 }
 
-impl grpc::OakNode for AggregatorNode {
-    fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
-        dispatch(self, method, req, writer)
-    }
+/// Oak Node that collects aggregated data.
+pub struct AggregatorNode {
+    aggregator: ThresholdAggregator<Vector>,
 }
 
 /// A gRPC service implementation for the Aggregator example.
