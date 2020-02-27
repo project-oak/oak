@@ -90,10 +90,12 @@ impl Aggregator for AggregatorNode {
     }
 
     fn get_current_value(&mut self, _: Empty) -> grpc::Result<Vector> {
-        let value = self.aggregator.get().cloned().ok_or(grpc::build_status(
-            grpc::Code::FAILED_PRECONDITION,
-            "Not enough samples have been aggregated",
-        ));
+        let value = self.aggregator.get().cloned().ok_or_else(|| {
+            grpc::build_status(
+                grpc::Code::FAILED_PRECONDITION,
+                "Not enough samples have been aggregated",
+            )
+        });
         info!("Returning value: {:?}", value);
         value
     }
