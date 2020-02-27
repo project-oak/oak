@@ -54,19 +54,17 @@ impl Monoid for Vector {
         use itertools::EitherOrBoth::*;
         use itertools::Itertools;
 
-        let mut vector = Vector::new();
-        vector.set_items(
-            self.items
-                .iter()
-                .zip_longest(other.items.iter())
-                .map(|p| match p {
-                    Both(l, r) => *l + *r,
-                    Left(l) => *l,
-                    Right(r) => *r,
-                })
-                .collect(),
-        );
-        vector
+        Vector {
+            items: self.items.iter()
+                             .zip_longest(other.items.iter())
+                             .map(|p| match p {
+                                 Both(l, r) => *l + *r,
+                                 Left(l) => *l,
+                                 Right(r) => *r,
+                             })
+                             .collect(),
+            ..Default::default()
+        }
     }
 }
 
@@ -93,7 +91,7 @@ impl Aggregator for AggregatorNode {
         let value = self
             .aggregator
             .get()
-            .map(|v| v.clone())
+            .cloned()
             .ok_or(grpc::build_status(
                 grpc::Code::FAILED_PRECONDITION,
                 "Not enough samples have been aggregated",

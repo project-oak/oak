@@ -1,7 +1,5 @@
 # Copied from https://github.com/google/asylo/blob/v0.3.4/.bazelrc
 
-build --cxxopt="-std=c++17"
-
 build:asylo --crosstool_top=@com_google_asylo_toolchain//toolchain:crosstool
 build:asylo --dynamic_mode=off
 build:asylo --host_crosstool_top=@bazel_tools//tools/cpp:toolchain

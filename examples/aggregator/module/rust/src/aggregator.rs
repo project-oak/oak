@@ -30,7 +30,7 @@ pub struct ThresholdAggregator<T: Monoid> {
     current_value: T,
     /// Number of contributed data samples.
     sample_count: u64,
-    /// The minimal number of samples (inclusive) that should be collected before revealing the
+    /// The minimal number of samples (inclusive) that must be collected before revealing the
     /// aggregation.
     sample_threshold: u64,
 }

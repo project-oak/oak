@@ -15,10 +15,10 @@
  */
 
 #include <cassert>
-#include <optional>
 
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
+#include "absl/types/optional.h"
 #include "asylo/util/logging.h"
 #include "examples/aggregator/proto/aggregator.grpc.pb.h"
 #include "examples/aggregator/proto/aggregator.pb.h"
@@ -44,7 +44,7 @@ void submit_sample(Aggregator::Stub* stub, std::vector<uint64_t> values) {
   }
 }
 
-std::optional<std::vector<uint64_t>> get_aggregation(Aggregator::Stub* stub) {
+absl::optional<std::vector<uint64_t>> get_aggregation(Aggregator::Stub* stub) {
   std::vector<uint64_t> items;
   grpc::ClientContext context;
   google::protobuf::Empty request;
@@ -53,7 +53,7 @@ std::optional<std::vector<uint64_t>> get_aggregation(Aggregator::Stub* stub) {
   if (!status.ok()) {
     LOG(WARNING) << "Could not get current value: " << status.error_code() << ": "
                  << status.error_message();
-    return std::nullopt;
+    return absl::nullopt;
   }
 
   LOG(INFO) << "Aggregation:";
