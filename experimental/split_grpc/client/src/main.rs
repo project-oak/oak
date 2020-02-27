@@ -14,11 +14,10 @@
 // limitations under the License.
 //
 
-#[macro_use]
-extern crate log;
-
+use log::info;
 use proto::hello_world_client::HelloWorldClient;
 use proto::HelloRequest;
+use tonic::transport::{Certificate, Channel, ClientTlsConfig};
 
 pub mod proto {
     include!("./proto/oak.examples.hello_world.rs");
@@ -27,8 +26,18 @@ pub mod proto {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
+    let root_cert = tokio::fs::read("experimental/split_grpc/certs/ca.pem").await?;
+    let root_cert = Certificate::from_pem(root_cert);
+    let tls_config = ClientTlsConfig::new()
+        .ca_certificate(root_cert)
+        .domain_name("project-oak.local");
 
-    let mut client = HelloWorldClient::connect("http://[::1]:50051").await?;
+    let channel = Channel::from_static("https://[::1]:50051")
+        .tls_config(tls_config)
+        .connect()
+        .await?;
+
+    let mut client = HelloWorldClient::new(channel);
 
     let request = tonic::Request::new(HelloRequest {
         greeting: "World".into(),

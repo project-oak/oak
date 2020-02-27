@@ -16,7 +16,10 @@
 
 use futures_core::Stream;
 use std::pin::Pin;
-use tonic::{transport::Server, Request, Response, Status, Streaming};
+use tonic::{
+    transport::{Identity, Server, ServerTlsConfig},
+    Request, Response, Status, Streaming,
+};
 
 use proto::hello_world_server::{HelloWorld, HelloWorldServer};
 use proto::{HelloRequest, HelloResponse};
@@ -72,12 +75,16 @@ impl HelloWorld for HelloWorldHandler {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let addr = "[::1]:50051".parse()?;
+    let cert = tokio::fs::read("experimental/split_grpc/certs/local.pem").await?;
+    let key = tokio::fs::read("experimental/split_grpc/certs/local.key").await?;
+    let identity = Identity::from_pem(cert, key);
+    let address = "[::1]:50051".parse()?;
     let handler = HelloWorldHandler::default();
 
     Server::builder()
+        .tls_config(ServerTlsConfig::new().identity(identity))
         .add_service(HelloWorldServer::new(handler))
-        .serve(addr)
+        .serve(address)
         .await?;
 
     Ok(())
