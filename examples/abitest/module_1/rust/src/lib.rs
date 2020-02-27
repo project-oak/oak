@@ -86,7 +86,21 @@ fn inner_main(in_handle: u64) -> Result<(), oak::OakStatus> {
             );
             let mut buf = Vec::<u8>::with_capacity(1024);
             let mut handles = Vec::with_capacity(1);
-            oak::channel_read(wait_handles[i], &mut buf, &mut handles)?;
+
+            oak::channel_read(wait_handles[i], &mut buf, &mut handles).or_else(|err| {
+                if err == oak::OakStatus::ERR_CHANNEL_CLOSED
+                    || err == oak::OakStatus::ERR_CHANNEL_EMPTY
+                {
+                    // Multiple backend Nodes are attempting to read the message from
+                    // the channel, so it's entirely possible that one of them has
+                    // emptied the channel since the wait_on_channels() call (and that the frontend
+                    // Node has subsequently closed the channel).
+                    info!("message on channel {:?} stolen elsewhere!", wait_handles[i]);
+                    Ok(())
+                } else {
+                    Err(err)
+                }
+            })?;
             if buf.is_empty() {
                 info!("no pending message; poll again");
                 continue;
