@@ -161,7 +161,7 @@ struct Node {
     model: NaiveBayes<naive_bayes::Gaussian>,
 }
 
-impl oak::grpc::OakNode for Node {
+impl oak::grpc::ServerNode for Node {
     fn invoke(&mut self, method: &str, _req: &[u8], mut writer: grpc::ChannelResponseWriter) {
         match method {
             "/oak.examples.machine_learning.MachineLearning/Data" => {

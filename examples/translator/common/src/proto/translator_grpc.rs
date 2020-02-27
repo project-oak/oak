@@ -37,7 +37,7 @@ impl<T: Translator> Dispatcher<T> {
     }
 }
 
-impl<T: Translator> grpc::OakNode for Dispatcher<T> {
+impl<T: Translator> grpc::ServerNode for Dispatcher<T> {
     fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
         match method {
             "/oak.examples.translator.Translator/Translate" => grpc::handle_req_rsp(|r| self.0.translate(r), req, writer),

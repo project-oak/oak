@@ -38,7 +38,7 @@ impl<T: PrivateSetIntersection> Dispatcher<T> {
     }
 }
 
-impl<T: PrivateSetIntersection> grpc::OakNode for Dispatcher<T> {
+impl<T: PrivateSetIntersection> grpc::ServerNode for Dispatcher<T> {
     fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
         match method {
             "/oak.examples.private_set_intersection.PrivateSetIntersection/SubmitSet" => grpc::handle_req_rsp(|r| self.0.submit_set(r), req, writer),

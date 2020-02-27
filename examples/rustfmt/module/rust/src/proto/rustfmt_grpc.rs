@@ -37,7 +37,7 @@ impl<T: FormatService> Dispatcher<T> {
     }
 }
 
-impl<T: FormatService> grpc::OakNode for Dispatcher<T> {
+impl<T: FormatService> grpc::ServerNode for Dispatcher<T> {
     fn invoke(&mut self, method: &str, req: &[u8], writer: grpc::ChannelResponseWriter) {
         match method {
             "/oak.examples.rustfmt.FormatService/Format" => grpc::handle_req_rsp(|r| self.0.format(r), req, writer),
