@@ -71,8 +71,8 @@ the Application's configuration.
 #### Run Asylo Server
 
 The following command builds and runs an Oak Server instance that is running a
-specific Oak Application (this version of the server is based on the [Asylo](https://github.com/google/asylo)
-framework):
+specific Oak Application (this version of the server is based on the
+[Asylo](https://github.com/google/asylo) framework):
 
 ```bash
 ./scripts/run_server "${PWD}/bazel-client-bin/examples/hello_world/config/config.bin" -s asylo
