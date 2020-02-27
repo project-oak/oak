@@ -11,20 +11,33 @@ Inside Docker, we use Bazel to version, install and build dependencies and our
 own code. Dependencies are listed in [`WORKSPACE`](/WORKSPACE). See
 https://docs.bazel.build/versions/master/external.html for more information.
 
-- Docker: https://docs.docker.com/install
-- Bazel: https://docs.bazel.build/versions/master/install.html
-- Rust: https://rustup.rs/
-  - `curl https://sh.rustup.rs -sSf > /tmp/rustup`
-  - `less /tmp/rustup` (inspect downloaded script before running it)
-  - `sh /tmp/rustup` (follow on-screen instructions -- option 1 is fine to start
-    with)
-  - add `source $HOME/.cargo/env` to your shell init script (e.g. `.bashrc` or
-    `.zshrc`)
-  - `rustup target add wasm32-unknown-unknown`
+To set up your development environment, you need the following applications. For
+the accurate versions required for a successful build please consult the
+[`Dockerfile`](/Dockerfile).
 
-[Step by step instructions for installing Oak on Ubuntu 18.04](INSTALL.md) shows
-how to install the prerequisites starting off with a clean Ubuntu install. Note
-the server runs in the Docker container but the examples run on the host
+- Docker:
+  - Follow install instructions in https://docs.docker.com/install
+- Bazel:
+  - Follow install instructions in
+    https://docs.bazel.build/versions/master/install.html
+- Rust:
+  - Install instructions from https://rustup.rs/:
+    - `curl https://sh.rustup.rs -sSf > /tmp/rustup`
+    - `less /tmp/rustup` (inspect downloaded script before running it)
+    - `sh /tmp/rustup` (follow on-screen instructions -- option 1 is fine to
+      start with)
+    - add `source $HOME/.cargo/env` to your shell init script (e.g. `.bashrc` or
+      `.zshrc`)
+  - Add WebAssembly target to be able to compile to WebAssembly (see
+    [Rust Platform Support](https://forge.rust-lang.org/release/platform-support.html)):
+    - `rustup target add wasm32-unknown-unknown`
+- Protocol Buffers:
+  - Install protobuf-compiler: `apt install protobuf-compiler`
+
+[Step by step instructions for installing Oak on Ubuntu 18.04](/INSTALL.md)
+shows how to install the prerequisites starting off with a clean Ubuntu install.
+
+Note the server runs in the Docker container but the examples run on the host
 machine. This means you might be missing other dependencies like the `protoc`
 protocol compiler.
 

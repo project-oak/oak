@@ -7,13 +7,13 @@
 The goal of Project Oak is to create a specification and a reference
 implementation for the secure transfer, storage and processing of data.
 
-In traditional systems, data may be encrypted at rest and in transit, but they
-are exposed to any part of the system that needs to process them. Even if the
-application is securely designed and data are encrypted, the operating system
-kernel (and any component with privileged access to the machine that handles the
-data) has unrestricted access to the machine hardware resources, and can
-leverage that to bypass any security mechanism on the machine itself and extract
-secret keys and data.
+In present computing platforms (including virtualized, and cloud platforms),
+data may be encrypted at rest and in transit, but they are exposed to any part
+of the system that needs to process them. Even if the application is securely
+designed and data are encrypted, the operating system kernel (and any component
+with privileged access to the machine that handles the data) has unrestricted
+access to the machine hardware resources, and can leverage that to bypass any
+security mechanism on the machine itself and extract secret keys and data.
 
 As part of Project Oak, data are end-to-end encrypted between _enclaves_, which
 are isolated computation compartments that can be created on-demand, and provide
