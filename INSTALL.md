@@ -41,31 +41,20 @@ script does. The one mystery you might run into is: what does Bazel build?
 
 This: `oak/server/asylo/BUILD`
 
-Next, build one of the example Applications:
+Next, run one of the example Applications:
 
 ```bash
-./scripts/docker_run ./scripts/build_example hello_world
+./scripts/docker_run ./scripts/run_example hello_world
 ```
 
-After that has built, run the server side of the Application in the Oak Runtime:
-
-```bash
-./scripts/docker_run ./scripts/run_server_asylo --application=/opt/my-project/bazel-client-bin/examples/hello_world/config/config.bin
-```
-
-In the end, you should end up with an Oak server running.
+In the end, you should end up with an Oak server running in the background:
 
 ```log
 2020-02-19 10:50:05  INFO  logging_node.cc : 51 : LOG: INFO  sdk/rust/oak/src/lib.rs : 428 : starting event loop
 ```
 
-Then run the client side of the example (in another terminal):
-
-```bash
-./examples/hello_world/run
-```
-
-Which should result in some logs ending with:
+and an Oak example Application client connecting to the server, which should
+result in some logs ending with:
 
 ```log
 2020-02-19 10:53:40  INFO  hello_world.cc : 35 : Request: MONDE
@@ -73,5 +62,4 @@ Which should result in some logs ending with:
 2020-02-19 10:53:40  INFO  hello_world.cc : 50 : Request: WORLDS
 2020-02-19 10:53:40  INFO  hello_world.cc : 57 : Response: HELLO WORLDS!
 2020-02-19 10:53:40  INFO  hello_world.cc : 57 : Response: HELLO AGAIN <default>!
-
 ```

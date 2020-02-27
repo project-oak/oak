@@ -41,28 +41,44 @@ Note the server runs in the Docker container but the examples run on the host
 machine. This means you might be missing other dependencies like the `protoc`
 protocol compiler.
 
-## Build Application
+## Run Example Application
+
+The following command runs both an Oak server (as a background process) and an
+Oak application client:
+
+```bash
+./scripts/docker_run ./scripts/run_example hello_world
+```
+
+This command consists of the following steps performed inside Docker:
+
+### Build Application
 
 The following command compiles the code for an example Oak Application from Rust
 to a WebAssembly module and then serializes it into a binary application
-configuration file to be loaded to the Oak Server.
+configuration file to be loaded to the Oak Server:
 
-`./scripts/build_example hello_world`
+```bash
+./scripts/build_example hello_world
+```
 
 This binary application configuration file includes the compiled Wasm code for
 the Oak Application, embedded in a serialized protocol buffer that also includes
 the Application's configuration.
 
-## Run Server
+### Run Server
+
+#### Run Asylo Server
 
 The following command builds and runs an Oak Server instance that is running a
-specific Oak Application.
+specific Oak Application (this version of the server is based on the [Asylo](https://github.com/google/asylo)
+framework):
 
 ```bash
-./scripts/docker_run ./scripts/run_server_asylo --application="${PWD}/bazel-client-bin/examples/hello_world/config/config.bin"
+./scripts/run_server "${PWD}/bazel-client-bin/examples/hello_world/config/config.bin" -s asylo
 ```
 
-## Run Development Server
+#### Run Development Server
 
 In addition to the Oak Server, we provide a "development" version of the server.
 It shares the same runtime as the Docker implementation, but it's built using
@@ -76,7 +92,7 @@ code as it can help with enabling a faster iteration.
 The following command builds and runs an Oak Development Server:
 
 ```bash
-./scripts/run_server_dev --application="${PWD}/bazel-client-bin/examples/hello_world/config/config.bin"
+./scripts/run_server "${PWD}/bazel-client-bin/examples/hello_world/config/config.bin" -s dev
 ```
 
 As this compiles using clang on your local machine, it can be easily build in
@@ -85,14 +101,18 @@ etc.). Details about available sanitizers can be found in the
 [`.bazelrc`](/.bazelrc) file.
 
 The following command builds and run Oak Local Server with tsan enabled. Replace
-`tsan` with other configurations for different sanitisers.
+`tsan` with other configurations for different sanitisers:
 
-`bazel build --config=tsan //oak/server/dev:dev_oak_runner`
+```bash
+bazel build --config=tsan //oak/server/dev:dev_oak_runner
+```
 
-## Run Client
+### Run Client
 
 The following command (run in a separate terminal) compiles the code for an
 example Oak Node from Rust to a WebAssembly module, and sends it to the Oak
-Server running on the same machine. It works with both Servers (Docker and Dev).
+Server running on the same machine. It works with both Servers (Docker and Dev):
 
-`./examples/hello_world/run`
+```bash
+./examples/hello_world/run
+```

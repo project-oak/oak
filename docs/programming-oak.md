@@ -221,7 +221,7 @@ All these steps are implemented as a part of the
 The Oak Application is then loaded using the Oak Runner:
 
 ```bash
-`./scripts/run_server_asylo --application="${PWD}/config.bin"`
+./scripts/run_server "${PWD}/config.bin" -s asylo
 ```
 
 The Oak Runner will launch an [Oak Runtime](concepts.md#oak-vm) inside the
