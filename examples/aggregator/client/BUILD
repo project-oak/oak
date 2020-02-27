@@ -29,6 +29,7 @@ cc_binary(
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
+        "@com_google_absl//absl/types:optional",
         "@com_google_asylo//asylo/util:logging",
     ],
 )
