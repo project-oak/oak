@@ -55,14 +55,16 @@ impl Monoid for Vector {
         use itertools::Itertools;
 
         Vector {
-            items: self.items.iter()
-                             .zip_longest(other.items.iter())
-                             .map(|p| match p {
-                                 Both(l, r) => *l + *r,
-                                 Left(l) => *l,
-                                 Right(r) => *r,
-                             })
-                             .collect(),
+            items: self
+                .items
+                .iter()
+                .zip_longest(other.items.iter())
+                .map(|p| match p {
+                    Both(l, r) => *l + *r,
+                    Left(l) => *l,
+                    Right(r) => *r,
+                })
+                .collect(),
             ..Default::default()
         }
     }
@@ -88,14 +90,10 @@ impl Aggregator for AggregatorNode {
     }
 
     fn get_current_value(&mut self, _: Empty) -> grpc::Result<Vector> {
-        let value = self
-            .aggregator
-            .get()
-            .cloned()
-            .ok_or(grpc::build_status(
-                grpc::Code::FAILED_PRECONDITION,
-                "Not enough samples have been aggregated",
-            ));
+        let value = self.aggregator.get().cloned().ok_or(grpc::build_status(
+            grpc::Code::FAILED_PRECONDITION,
+            "Not enough samples have been aggregated",
+        ));
         info!("Returning value: {:?}", value);
         value
     }
