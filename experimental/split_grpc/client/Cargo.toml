@@ -8,8 +8,8 @@ edition = "2018"
 env_logger = "0.7"
 log = "0.4"
 prost = "0.6"
-tonic = "0.1"
-tokio = { version = "0.2", features = ["macros"] }
+tokio = { version = "0.2", features = ["fs", "macros"] }
+tonic = { version = "0.1", features = ["tls"] }
 
 [build-dependencies]
 tonic-build = "0.1"

@@ -8,8 +8,8 @@ edition = "2018"
 futures-core = "0.3"
 futures-util = "0.3"
 prost = "0.6"
-tokio = { version = "0.2", features = ["macros", "sync", "stream"] }
-tonic = "0.1"
+tokio = { version = "0.2", features = ["fs", "macros", "sync", "stream"] }
+tonic = { version = "0.1", features = ["tls"] }
 
 [build-dependencies]
 tonic-build = "0.1"
