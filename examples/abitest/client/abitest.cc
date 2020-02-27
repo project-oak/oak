@@ -22,6 +22,7 @@
 #include "absl/flags/parse.h"
 #include "absl/strings/match.h"
 #include "asylo/util/logging.h"
+#include "examples/abitest/client/grpc_test_server.h"
 #include "examples/abitest/client/grpctest.h"
 #include "examples/abitest/proto/abitest.grpc.pb.h"
 #include "examples/abitest/proto/abitest.pb.h"
@@ -33,6 +34,8 @@
 ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak application to connect to");
 ABSL_FLAG(int, storage_port, 7867,
           "Port on which the test Storage Server listens; set to zero to disable.");
+ABSL_FLAG(int, grpc_test_port, 7878,
+          "Port on which the test gRPC Server listens; set to zero to disable.");
 ABSL_FLAG(bool, test_abi, true, "Whether to perform ABI tests");
 ABSL_FLAG(bool, test_grpc, true, "Whether to perform gRPC tests");
 ABSL_FLAG(std::string, test_include, "", "Filter indicating which tests to include");
@@ -135,6 +138,23 @@ void run_storage_server(int storage_port, grpc::Server** storage_server) {
   LOG(INFO) << "Storage server done";
 }
 
+void run_grpc_test_server(int grpc_test_port, grpc::Server** grpc_test_server) {
+  LOG(INFO) << "Creating test gRPC service on :" << grpc_test_port;
+  grpc::ServerBuilder builder;
+  std::string server_address = absl::StrCat("[::]:", grpc_test_port);
+  std::shared_ptr<grpc::ServerCredentials> credentials = grpc::InsecureServerCredentials();
+  builder.AddListeningPort(server_address, credentials);
+
+  oak::test::GrpcTestServer grpc_test_service;
+  builder.RegisterService(&grpc_test_service);
+
+  LOG(INFO) << "Start test gRPC server";
+  std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
+  *grpc_test_server = server.get();
+  server->Wait();
+  LOG(INFO) << "Test gRPC server done";
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -146,6 +166,14 @@ int main(int argc, char** argv) {
   if (storage_port > 0) {
     storage_thread =
         absl::make_unique<std::thread>(run_storage_server, storage_port, &storage_server);
+  }
+
+  int grpc_test_port = absl::GetFlag(FLAGS_grpc_test_port);
+  std::unique_ptr<std::thread> grpc_test_thread;
+  grpc::Server* grpc_test_server;
+  if (grpc_test_port > 0) {
+    grpc_test_thread =
+        absl::make_unique<std::thread>(run_grpc_test_server, grpc_test_port, &grpc_test_server);
   }
 
   const std::string& include = absl::GetFlag(FLAGS_test_include);
@@ -175,6 +203,11 @@ int main(int argc, char** argv) {
   if (storage_thread != nullptr) {
     storage_server->Shutdown(std::chrono::system_clock::now() + std::chrono::milliseconds(100));
     storage_thread->join();
+  }
+
+  if (grpc_test_thread != nullptr) {
+    grpc_test_server->Shutdown(std::chrono::system_clock::now() + std::chrono::milliseconds(100));
+    grpc_test_thread->join();
   }
 
   return (success ? EXIT_SUCCESS : EXIT_FAILURE);
