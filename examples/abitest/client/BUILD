@@ -24,6 +24,7 @@ cc_binary(
     name = "client",
     srcs = ["abitest.cc"],
     deps = [
+        ":grpc_test_server",
         ":grpctest",
         "//examples/abitest/proto:abitest_cc_grpc",
         "//oak/client:application_client",
@@ -41,6 +42,17 @@ cc_library(
     name = "grpctest",
     srcs = ["grpctest.cc"],
     hdrs = ["grpctest.h"],
+    deps = [
+        "//examples/abitest/proto:abitest_cc_grpc",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_asylo//asylo/util:logging",
+    ],
+)
+
+cc_library(
+    name = "grpc_test_server",
+    srcs = ["grpc_test_server.cc"],
+    hdrs = ["grpc_test_server.h"],
     deps = [
         "//examples/abitest/proto:abitest_cc_grpc",
         "@com_github_grpc_grpc//:grpc++",
