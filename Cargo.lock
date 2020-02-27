@@ -1151,6 +1151,7 @@ dependencies = [
 name = "oak_abi"
 version = "0.1.0"
 dependencies = [
+ "hashbrown 0.6.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "oak_utils 0.1.0",
  "prost 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost-build 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",

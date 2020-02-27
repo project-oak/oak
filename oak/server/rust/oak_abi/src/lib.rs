@@ -18,6 +18,8 @@
 pub mod proto;
 pub use proto::*;
 
+pub mod label;
+
 /// Handle used to identify read or write channel halves.
 ///
 /// These handles are used for all host function calls.
