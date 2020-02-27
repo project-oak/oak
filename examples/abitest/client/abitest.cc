@@ -16,6 +16,7 @@
 
 #include <map>
 #include <regex>
+#include <thread>
 
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
@@ -26,14 +27,16 @@
 #include "examples/abitest/proto/abitest.pb.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
+#include "oak/server/storage/memory_provider.h"
+#include "oak/server/storage/storage_service.h"
 
 ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak application to connect to");
+ABSL_FLAG(int, storage_port, 7867,
+          "Port on which the test Storage Server listens; set to zero to disable.");
 ABSL_FLAG(bool, test_abi, true, "Whether to perform ABI tests");
 ABSL_FLAG(bool, test_grpc, true, "Whether to perform gRPC tests");
 ABSL_FLAG(std::string, test_include, "", "Filter indicating which tests to include");
-// Exclude 'Storage' test by default because it requires an external storage server.
-ABSL_FLAG(std::string, test_exclude, "^Storage$",
-          "Filter indicating tests to exclude (if nonempty)");
+ABSL_FLAG(std::string, test_exclude, "", "Filter indicating tests to exclude (if nonempty)");
 
 using ::oak::examples::abitest::ABITestRequest;
 using ::oak::examples::abitest::ABITestResponse;
@@ -116,10 +119,35 @@ bool run_grpc_tests(OakABITestService::Stub* stub, const std::string& include,
   return success;
 }
 
+void run_storage_server(int storage_port, grpc::Server** storage_server) {
+  LOG(INFO) << "Creating in-memory storage service on :" << storage_port;
+  grpc::ServerBuilder builder;
+  std::string server_address = absl::StrCat("[::]:", storage_port);
+  std::shared_ptr<grpc::ServerCredentials> credentials = grpc::InsecureServerCredentials();
+  builder.AddListeningPort(server_address, credentials);
+  oak::StorageService storage_service(new oak::MemoryProvider());
+  builder.RegisterService(&storage_service);
+
+  LOG(INFO) << "Start storage server";
+  std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
+  *storage_server = server.get();
+  server->Wait();
+  LOG(INFO) << "Storage server done";
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
+
+  int storage_port = absl::GetFlag(FLAGS_storage_port);
+  std::unique_ptr<std::thread> storage_thread;
+  grpc::Server* storage_server;
+  if (storage_port > 0) {
+    storage_thread =
+        absl::make_unique<std::thread>(run_storage_server, storage_port, &storage_server);
+  }
+
   const std::string& include = absl::GetFlag(FLAGS_test_include);
   const std::string& exclude = absl::GetFlag(FLAGS_test_exclude);
 
@@ -142,6 +170,11 @@ int main(int argc, char** argv) {
     if (!run_grpc_tests(stub.get(), include, exclude)) {
       success = false;
     }
+  }
+
+  if (storage_thread != nullptr) {
+    storage_server->Shutdown(std::chrono::system_clock::now() + std::chrono::milliseconds(100));
+    storage_thread->join();
   }
 
   return (success ? EXIT_SUCCESS : EXIT_FAILURE);
