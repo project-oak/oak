@@ -31,7 +31,7 @@ use aggregator::{Monoid, ThresholdAggregator};
 use log::info;
 use oak::grpc;
 use proto::aggregator::Vector;
-use proto::aggregator_grpc::{Dispatcher, Aggregator};
+use proto::aggregator_grpc::{Aggregator, Dispatcher};
 use protobuf::well_known_types::Empty;
 
 const SAMPLE_THRESHOLD: u64 = 3;
