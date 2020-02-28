@@ -91,8 +91,9 @@ bool GrpcClientNode::HandleInvocation(MessageChannelReadHalf* invocation_channel
 
   // Use a completion queue together with a generic client reader/writer to
   // perform the method invocation.  All steps are done in serial, so just use
-  // consecutive integer values for completion queue tags (there's no need to use the tag values for
-  // correlation).
+  // consecutive integer values for completion queue tags (there's no need to
+  // use the tag values for correlation). Inspired by:
+  // https://github.com/grpc/grpc/blob/master/test/cpp/util/cli_call.cc
   LOG(INFO) << "Invoke method " << method_name;
   grpc::ClientContext ctx;
   grpc::CompletionQueue cq;
