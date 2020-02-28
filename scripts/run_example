@@ -59,7 +59,10 @@ if [[ "${server}" != "none" ]]; then
   esac
   "${SCRIPTS_DIR}/build_example" -e "${EXAMPLE}"
 
-  # Run a server.
+  # Run a server in the background.
+  # The server is being built before running, so the build process will not happen in the
+  # background.
+  "${SCRIPTS_DIR}/build_server" -s "${server}"
   "${SCRIPTS_DIR}/run_server" -s "${server}" -a "${APPLICATION}" &
   readonly SERVER_PID=$!
   sleep 3  # Wait for the application to start.
