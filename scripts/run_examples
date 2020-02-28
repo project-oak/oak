@@ -8,7 +8,7 @@ server="asylo"
 while getopts "s:h" opt; do
   case "${opt}" in
   h)
-      echo -e "Usage: ${0} [ -s asylo|dev|asan|tsan ]
+      echo -e "Usage: ${0} [-s asylo|dev|asan|tsan]
   -s    Server type used to run exmples:
           - asylo: server based on the Asylo framework (used by default)
           - dev: development version of the server
@@ -21,7 +21,7 @@ while getopts "s:h" opt; do
     asylo|dev|asan|tsan)
       server="${OPTARG}";;
     *)
-      echo "Invalid server: ${OPTARG}"
+      echo "Invalid server type: ${OPTARG}"
       exit 1;;
     esac;;
   *)
@@ -39,9 +39,9 @@ for language in rust cpp; do
   examples="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/'"${language}"'$' | cut -d'/' -f2 | uniq | grep -v rustfmt)"
   for example in ${examples}; do
     client_args=()
-    if [[ "chat" == "${example}" ]]; then
+    if [[ "${example}" == "chat" ]]; then
       client_args+=("--test")
     fi
-    "${SCRIPTS_DIR}/run_example" "${example}" -l "${language}" -s "${server}" -- "${client_args[@]}"
+    "${SCRIPTS_DIR}/run_example" -s "${server}" -l "${language}" -e "${example}" -- "${client_args[@]}"
   done
 done

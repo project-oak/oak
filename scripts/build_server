@@ -9,7 +9,7 @@ config="enc-sim"
 while getopts "s:h" opt; do
   case "${opt}" in
   h)
-      echo -e "Usage: ${0} [ -s asylo|dev|arm|asan|tsan ]
+      echo -e "Usage: ${0} [-s asylo|dev|arm|asan|tsan]
   -s    Server type:
           - asylo: server based on the Asylo framework (used by default)
           - dev: development version of the server
@@ -36,7 +36,7 @@ while getopts "s:h" opt; do
       server="dev"
       config="tsan";;
     *)
-      echo "Invalid server: ${OPTARG}"
+      echo "Invalid server type: ${OPTARG}"
       exit 1;;
     esac;;
   *)
@@ -49,7 +49,7 @@ bazel_build_flags+=(
     "--config=${config}"
 )
 
-if [[ "asylo" == "${server}" ]]; then
+if [[ "${server}" == "asylo" ]]; then
   bazel build "${bazel_build_flags[@]}" //oak/server/asylo:asylo_oak_runner 
 else
   # Use a different output_base so that we don't lose incremental state.

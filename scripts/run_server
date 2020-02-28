@@ -4,25 +4,19 @@ readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
 # shellcheck source=scripts/common
 source "${SCRIPTS_DIR}/common"
 
-readonly APPLICATION="${1}"
-if [[ -z "${APPLICATION}" ]]; then
-  echo "Missing the application, use -h for help"
-  exit 1
-fi
-shift 1
-
 server="asylo"
 config="enc-sim"
-while getopts "s:h" opt; do
+while getopts "s:a:h" opt; do
   case "${opt}" in
   h)
-      echo -e "Usage: ${0} APPLICATION [ -s asylo|dev|arm|asan|tsan ]
+      echo -e "Usage: ${0} [-s asylo|dev|arm|asan|tsan] -a APPLICATION
   -s    Server type:
           - asylo: server based on the Asylo framework (used by default)
           - dev: development version of the server
           - arm: 'dev' server for ARM architecture
           - asan: 'dev' server with address sanitizer
           - tsan: 'dev' server with thread santizer
+  -a    Path to a serialized application configuration file
   -h    Print Help (this message) and exit"
       exit 0;;
   s)
@@ -43,9 +37,11 @@ while getopts "s:h" opt; do
       server="dev"
       config="tsan";;
     *)
-      echo "Invalid server: ${OPTARG}"
+      echo "Invalid server type: ${OPTARG}"
       exit 1;;
     esac;;
+  a)
+    readonly APPLICATION="${OPTARG}";;
   *)
     echo "Invalid argument: ${OPTARG}"
     exit 1;;
@@ -56,7 +52,7 @@ done
 
 # Launching the server requires a `--application=<dir>/config.bin` flag.
 # `exec` is necessary for the `run_example` script to be able to get a PID of a background server.
-if [[ "asylo" == "${server}" ]]; then
+if [[ "${server}" == "asylo" ]]; then
   exec ./bazel-bin/oak/server/asylo/asylo_oak_runner --application="${APPLICATION}"
 else
   # We use a different symlink prefix for clang-based artifacts.
