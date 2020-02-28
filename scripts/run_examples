@@ -30,9 +30,6 @@ while getopts "s:h" opt; do
   esac
 done
 
-# Build Oak server.
-"${SCRIPTS_DIR}/build_server" -s "${server}"
-
 # Run all examples.
 for language in rust cpp; do
   # TODO(#594): Re-enable rustfmt when upstream rustc internal error is fixed.
