@@ -26,6 +26,19 @@ node_configs {
     address: "test.invalid:9999"
   }
 }
+node_configs {
+  name: "grpc-client"
+  grpc_client_config {
+    address: "localhost:7878"
+  }
+}
+node_configs {
+  name: "absent-grpc-client"
+  grpc_client_config {
+    # TODO(google/asylo#NNN): use test.invalid when Asylo crash fixed.
+    address: "localhost:9999"
+  }
+}
 grpc_port: 8080
 initial_node_config_name: "frontend-config"
 initial_entrypoint_name: "frontend_oak_main"
