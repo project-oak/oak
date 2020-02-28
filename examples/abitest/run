@@ -1,2 +1,0 @@
-#!/bin/sh
-$PWD/scripts/run_example "$@" abitest

@@ -4,46 +4,41 @@ readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
 # shellcheck source=scripts/common
 source "${SCRIPTS_DIR}/common"
 
-# Build Oak server.
-"${SCRIPTS_DIR}/build_server_asylo"
-
-# Run Rust-based Oak examples, each with their own Oak server instance.
-# TODO(#594): Re-enable rustfmt when upstream rustc internal error is fixed.
-readonly RUST_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/rust$' | cut -d'/' -f2 | uniq | grep -v rustfmt)"
-
-for example in ${RUST_EXAMPLES}; do
-  # Running `build_example` to compile application configurations before running the server.
-  "${SCRIPTS_DIR}/build_example" "${example}"
-  ./bazel-bin/oak/server/asylo/asylo_oak_runner \
-    --application="${PWD}/bazel-client-bin/examples/${example}/config/config.bin" &
-  rust_example_pid=$!
-  sleep 2  # Wait for an application to start.
-  # Currently `chat` application starts an infinite loop, so `run_examples` just checks
-  # if the module can be loaded correctly.
-  if [[ "chat" == "${example}" ]]; then
-    "${SCRIPTS_DIR}/run_example" -C --test "${example}"
-  else
-    "${SCRIPTS_DIR}/run_example" "${example}"
-  fi
-  # TODO: Ensure that background processes are killed with something like `trap cleanup_fn EXIT`.
-  kill -s SIGTERM "${rust_example_pid}"
+server="asylo"
+while getopts "s:h" opt; do
+  case "${opt}" in
+  h)
+      echo -e "Usage: ${0} [-s asylo|dev|asan|tsan]
+  -s    Server type used to run exmples:
+          - asylo: server based on the Asylo framework (used by default)
+          - dev: development version of the server
+          - asan: 'dev' server with address sanitizer
+          - tsan: 'dev' server with thread santizer
+  -h    Print Help (this message) and exit"
+      exit 0;;
+  s)
+    case "${OPTARG}" in
+    asylo|dev|asan|tsan)
+      server="${OPTARG}";;
+    *)
+      echo "Invalid server type: ${OPTARG}"
+      exit 1;;
+    esac;;
+  *)
+    echo "Invalid argument: ${OPTARG}"
+    exit 1;;
+  esac
 done
 
-# Run C++-based Oak examples.
-readonly CPP_EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/cpp$' | cut -d'/' -f2 | uniq)"
-
-for example in ${CPP_EXAMPLES}; do
-  "${SCRIPTS_DIR}/build_example" "${example}"
-  # TensorFlow example is compiled with Emscripten and other examples with Clang.
-  if [[ "tensorflow" == "${example}" ]]; then
-    ./bazel-bin/oak/server/asylo/asylo_oak_runner \
-      --application="${PWD}/bazel-emscripten-bin/examples/${example}/config/config_cpp.bin" &
-  else
-    ./bazel-bin/oak/server/asylo/asylo_oak_runner \
-      --application="${PWD}/bazel-wasm-bin/examples/${example}/config/config_cpp.bin" &
-  fi
-  cpp_example_pid=$!
-  sleep 2  # Wait for an application to start.
-  "${SCRIPTS_DIR}/run_example" "${example}"
-  kill -s SIGTERM "${cpp_example_pid}"
+# Run all examples.
+for language in rust cpp; do
+  # TODO(#594): Re-enable rustfmt when upstream rustc internal error is fixed.
+  examples="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/'"${language}"'$' | cut -d'/' -f2 | uniq | grep -v rustfmt)"
+  for example in ${examples}; do
+    client_args=()
+    if [[ "${example}" == "chat" ]]; then
+      client_args+=("--test")
+    fi
+    "${SCRIPTS_DIR}/run_example" -s "${server}" -l "${language}" -e "${example}" -- "${client_args[@]}"
+  done
 done

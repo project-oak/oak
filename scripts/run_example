@@ -4,38 +4,75 @@ readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
 # shellcheck source=scripts/common
 source "$SCRIPTS_DIR/common"
 
-while getopts ":hC" opt; do
-    case "$opt" in
-    h)
-        echo -e "Usage: $0 [-c] [-h] [-C opts] example_name
-  -h    Print this message
-  -C    Pass subsequent options to example client"
-        exit 0
-        ;;
-    C)
-        echo "Passing remaining arguments to client"
-        break
-        ;;
-    \?)
-        echo "Invalid option -${OPTARG}"
-        exit 1
-        ;;
-    esac
+language="rust"
+server="asylo"
+while getopts "s:l:e:h" opt; do
+  case "${opt}" in
+  h)
+      echo -e "Usage: ${0} [-h] [-s asylo|dev|asan|tsan|none] [-l rust|cpp] -e EXAMPLE [-- CLIENT_ARGS]
+  -s    Server type used to run examples:
+          - asylo: server based on the Asylo framework (used by default)
+          - dev: development version of the server
+          - asan: 'dev' server with address sanitizer
+          - tsan: 'dev' server with thread santizer
+          - none: run an application client without a server
+  -l    Example application version:
+          - rust (used by default)
+          - cpp
+  -e    Example application name
+  -h    Print Help (this message) and exit"
+      exit 0;;
+  l)
+    language="${OPTARG}";;
+  s)
+    case "${OPTARG}" in
+    asylo|dev|asan|tsan|none)
+      server="${OPTARG}";;
+    *)
+      echo "Invalid server type: ${OPTARG}"
+      exit 1;;
+    esac;;
+  e)
+    readonly EXAMPLE="${OPTARG}";;
+  *)
+    echo "Invalid argument: ${OPTARG}"
+    exit 1;;
+  esac
 done
-shift $((OPTIND -1))
+shift "$((OPTIND -1))"
 
-readonly NAME="${*: -1}"
-if [[ -z "$NAME" ]]; then
-  echo "Missing example name, use -h for help"
-  exit 1
+if [[ "${server}" != "none" ]]; then
+  # Choose example application version.
+  case "${language}" in
+  rust)
+    readonly APPLICATION="${PWD}/bazel-client-bin/examples/${EXAMPLE}/config/config.bin";;
+  cpp)
+    # TensorFlow example is compiled with Emscripten and other examples with Clang.
+    if [[ "${EXAMPLE}" == "tensorflow" ]]; then
+      readonly APPLICATION="${PWD}/bazel-emscripten-bin/examples/tensorflow/config/config_cpp.bin"
+    else
+      readonly APPLICATION="${PWD}/bazel-wasm-bin/examples/${EXAMPLE}/config/config_cpp.bin"
+    fi;;
+  *)
+    echo "Invalid example version: ${language}"
+    exit 1;;
+  esac
+  "${SCRIPTS_DIR}/build_example" -e "${EXAMPLE}"
+
+  # Run a server in the background.
+  # The server is being built before running, so the build process will not happen in the
+  # background.
+  "${SCRIPTS_DIR}/build_server" -s "${server}"
+  "${SCRIPTS_DIR}/run_server" -s "${server}" -a "${APPLICATION}" &
+  readonly SERVER_PID=$!
+  sleep 3  # Wait for the application to start.
 fi
 
-readonly CLIENT_ARGS=("${@:1:$((${#@}-1))}")
+# Run the application client.
+readonly CLIENT_ARGS=("${@}")  # Choose client args provided after '--'.
+"./bazel-client-bin/examples/${EXAMPLE}/client/client" "${CLIENT_ARGS[@]}"
 
-readonly OAK_APPLICATION_ADDRESS="${OAK_APPLICATION_ADDRESS:-127.0.0.1:8080}"
-
-"$SCRIPTS_DIR/build_example" "$NAME"
-
-"./bazel-client-bin/examples/$NAME/client/client" \
-  --address="$OAK_APPLICATION_ADDRESS" \
-  "${CLIENT_ARGS[@]}"
+# TODO: Ensure that background processes are killed with something like `trap cleanup_fn EXIT`.
+if [[ "${server}" != "none" ]]; then
+  kill -s SIGTERM "${SERVER_PID}"
+fi

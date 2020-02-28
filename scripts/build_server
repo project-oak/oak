@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+
+readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
+# shellcheck source=scripts/common
+source "${SCRIPTS_DIR}/common"
+
+server="asylo"
+config="enc-sim"
+while getopts "s:h" opt; do
+  case "${opt}" in
+  h)
+      echo -e "Usage: ${0} [-s asylo|dev|arm|asan|tsan]
+  -s    Server type:
+          - asylo: server based on the Asylo framework (used by default)
+          - dev: development version of the server
+          - arm: 'dev' server for ARM architecture
+          - asan: 'dev' server with address sanitizer
+          - tsan: 'dev' server with thread santizer
+  -h    Print Help (this message) and exit"
+      exit 0;;
+  s)
+    case "${OPTARG}" in
+    asylo)
+      server="asylo"
+      config="enc-sim";;
+    dev)
+      server="dev"
+      config="clang";;
+    arm)
+      server="dev"
+      config="armv8";;
+    asan)
+      server="dev"
+      config="asan";;
+    tsan)
+      server="dev"
+      config="tsan";;
+    *)
+      echo "Invalid server type: ${OPTARG}"
+      exit 1;;
+    esac;;
+  *)
+    echo "Invalid argument: ${OPTARG}"
+    exit 1;;
+  esac
+done
+
+bazel_build_flags+=(
+    "--config=${config}"
+)
+
+if [[ "${server}" == "asylo" ]]; then
+  bazel build "${bazel_build_flags[@]}" //oak/server/asylo:asylo_oak_runner 
+else
+  # Use a different output_base so that we don't lose incremental state.
+  # See https://docs.bazel.build/versions/master/command-line-reference.html#flag--output_base.
+  bazel --output_base="${CACHE_DIR}/$config" build "${bazel_build_flags[@]}" \
+    //oak/server/dev:dev_oak_runner \
+    //oak/server/storage:storage_server
+fi 

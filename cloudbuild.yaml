@@ -43,19 +43,19 @@ steps:
     waitFor: ['build_image']
     timeout: 30m
     entrypoint: 'bash'
-    args: ['./scripts/build_server_asylo']
+    args: ['./scripts/build_server', '-s', 'asylo']
   - name: 'gcr.io/oak-ci/oak:latest'
     id: build_server_dev
     waitFor: ['build_image']
     timeout: 30m
     entrypoint: 'bash'
-    args: ['./scripts/build_server_dev']
+    args: ['./scripts/build_server', '-s', 'dev']
   - name: 'gcr.io/oak-ci/oak:latest'
-    id: build_server_dev_arm
+    id: build_server_arm
     waitFor: ['build_image']
     timeout: 30m
     entrypoint: 'bash'
-    args: ['./scripts/build_server_dev_arm']
+    args: ['./scripts/build_server', '-s', 'arm']
 
   # Package the Asylo Oak server in a Docker image.
   - name: 'gcr.io/oak-ci/oak:latest'
@@ -76,19 +76,19 @@ steps:
     id: run_examples
     timeout: 30m
     entrypoint: 'bash'
-    args: ['./scripts/run_examples']
+    args: ['./scripts/run_examples', '-s', 'asylo']
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_examples_asan
     waitFor: ['run_examples']
     timeout: 30m
     entrypoint: 'bash'
-    args: ['./scripts/run_examples_dev', '-a']
+    args: ['./scripts/run_examples', '-s', 'asan']
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_examples_tsan
     waitFor: ['run_examples_asan']
     timeout: 30m
     entrypoint: 'bash'
-    args: ['./scripts/run_examples_dev', '-t']
+    args: ['./scripts/run_examples', '-s', 'tsan']
 
   # Run clang-tidy after the examples finish running, since they share the same `output_base`.
   - name: 'gcr.io/oak-ci/oak:latest'
