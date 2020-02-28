@@ -5,7 +5,6 @@ readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
 source "${SCRIPTS_DIR}/common"
 
 server="asylo"
-config="enc-sim"
 while getopts "s:a:h" opt; do
   case "${opt}" in
   h)
@@ -21,21 +20,8 @@ while getopts "s:a:h" opt; do
       exit 0;;
   s)
     case "${OPTARG}" in
-    asylo)
-      server="asylo"
-      config="enc-sim";;
-    dev)
-      server="dev"
-      config="clang";;
-    arm)
-      server="dev"
-      config="armv8";;
-    asan)
-      server="dev"
-      config="asan";;
-    tsan)
-      server="dev"
-      config="tsan";;
+    asylo|dev|arm|asan|tsan)
+      server="${OPTARG}";;
     *)
       echo "Invalid server type: ${OPTARG}"
       exit 1;;
@@ -56,5 +42,5 @@ if [[ "${server}" == "asylo" ]]; then
   exec ./bazel-bin/oak/server/asylo/asylo_oak_runner --application="${APPLICATION}"
 else
   # We use a different symlink prefix for clang-based artifacts.
-  exec ./bazel-"${config}"-bin/oak/server/dev/dev_oak_runner --application="${APPLICATION}"
+  exec ./bazel-clang-bin/oak/server/dev/dev_oak_runner --application="${APPLICATION}"
 fi 
