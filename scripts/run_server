@@ -9,8 +9,10 @@ if [[ -z "${APPLICATION}" ]]; then
   echo "Missing the application, use -h for help"
   exit 1
 fi
+shift 1
 
 server="asylo"
+config="enc-sim"
 while getopts "s:h" opt; do
   case "${opt}" in
   h)
