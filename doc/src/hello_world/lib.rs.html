@@ -156,6 +156,8 @@
 <span id="156">156</span>
 <span id="157">157</span>
 <span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -177,19 +179,26 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span>;
 
-<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">info</span>, <span class="ident">warn</span>};
+<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">error</span>, <span class="ident">info</span>, <span class="ident">warn</span>};
 <span class="kw">use</span> <span class="ident">oak</span>::<span class="ident">grpc</span>;
-<span class="kw">use</span> <span class="ident">oak</span>::<span class="ident">grpc</span>::<span class="ident">OakNode</span>;
 <span class="kw">use</span> <span class="ident">proto</span>::<span class="ident">hello_world</span>::{<span class="ident">HelloRequest</span>, <span class="ident">HelloResponse</span>};
-<span class="kw">use</span> <span class="ident">proto</span>::<span class="ident">hello_world_grpc</span>::{<span class="ident">dispatch</span>, <span class="ident">HelloWorld</span>};
+<span class="kw">use</span> <span class="ident">proto</span>::<span class="ident">hello_world_grpc</span>::{<span class="ident">Dispatcher</span>, <span class="ident">HelloWorld</span>};
 
 <span class="ident">oak</span>::<span class="macro">entrypoint</span><span class="macro">!</span>(<span class="ident">oak_main</span> <span class="op">=</span><span class="op">&gt;</span> {
     <span class="ident">oak_log</span>::<span class="ident">init_default</span>();
-    <span class="ident">Node</span> {
-        <span class="ident">storage</span>: <span class="ident">oak</span>::<span class="ident">storage</span>::<span class="ident">Storage</span>::<span class="ident">default</span>(),
-        <span class="ident">translator</span>: <span class="ident">grpc</span>::<span class="ident">client</span>::<span class="ident">Client</span>::<span class="ident">new</span>(<span class="string">&quot;translator&quot;</span>, <span class="string">&quot;oak_main&quot;</span>)
-            .<span class="ident">map</span>(<span class="ident">translator_common</span>::<span class="ident">TranslatorClient</span>),
+
+    <span class="comment">// Try to find a translation service, first as an Oak Node and failing that,</span>
+    <span class="comment">// as an external gRPC service</span>
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">translator_client</span> <span class="op">=</span> <span class="ident">grpc</span>::<span class="ident">client</span>::<span class="ident">Client</span>::<span class="ident">new</span>(<span class="string">&quot;translator&quot;</span>, <span class="string">&quot;oak_main&quot;</span>);
+    <span class="kw">if</span> <span class="ident">translator_client</span>.<span class="ident">is_none</span>() {
+        <span class="ident">translator_client</span> <span class="op">=</span> <span class="ident">grpc</span>::<span class="ident">client</span>::<span class="ident">Client</span>::<span class="ident">new</span>(<span class="string">&quot;translator-grpc&quot;</span>, <span class="string">&quot;unused-arg&quot;</span>);
     }
+
+    <span class="kw">let</span> <span class="ident">node</span> <span class="op">=</span> <span class="ident">Node</span> {
+        <span class="ident">storage</span>: <span class="ident">oak</span>::<span class="ident">storage</span>::<span class="ident">Storage</span>::<span class="ident">default</span>(),
+        <span class="ident">translator</span>: <span class="ident">translator_client</span>.<span class="ident">map</span>(<span class="ident">translator_common</span>::<span class="ident">TranslatorClient</span>),
+    };
+    <span class="ident">Dispatcher</span>::<span class="ident">new</span>(<span class="ident">node</span>)
 });
 
 <span class="kw">struct</span> <span class="ident">Node</span> {
@@ -207,17 +216,12 @@
 <span class="kw">const</span> <span class="ident">STORAGE_NAME</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>] <span class="op">=</span> <span class="string">b&quot;HelloWorld&quot;</span>;
 <span class="kw">const</span> <span class="ident">FIELD_NAME</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>] <span class="op">=</span> <span class="string">b&quot;last-greeting&quot;</span>;
 
-<span class="kw">impl</span> <span class="ident">OakNode</span> <span class="kw">for</span> <span class="ident">Node</span> {
-    <span class="kw">fn</span> <span class="ident">invoke</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">method</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">req</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">writer</span>: <span class="ident">grpc</span>::<span class="ident">ChannelResponseWriter</span>) {
-        <span class="ident">dispatch</span>(<span class="self">self</span>, <span class="ident">method</span>, <span class="ident">req</span>, <span class="ident">writer</span>)
-    }
-}
-
 <span class="kw">impl</span> <span class="ident">HelloWorld</span> <span class="kw">for</span> <span class="ident">Node</span> {
     <span class="kw">fn</span> <span class="ident">say_hello</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">req</span>: <span class="ident">HelloRequest</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">HelloResponse</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="ident">req</span>.<span class="ident">greeting</span> <span class="op">=</span><span class="op">=</span> <span class="string">&quot;Query-of-Error&quot;</span> {
+            <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Return deliberate FAILED_PRECONDITION error!&quot;</span>);
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">grpc</span>::<span class="ident">build_status</span>(
-                <span class="ident">grpc</span>::<span class="ident">Code</span>::<span class="ident">INVALID_ARGUMENT</span>,
+                <span class="ident">grpc</span>::<span class="ident">Code</span>::<span class="ident">FAILED_PRECONDITION</span>,
                 <span class="string">&quot;Deliberate error&quot;</span>,
             ));
         }

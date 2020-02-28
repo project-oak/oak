@@ -141,12 +141,6 @@
 <span id="141">141</span>
 <span id="142">142</span>
 <span id="143">143</span>
-<span id="144">144</span>
-<span id="145">145</span>
-<span id="146">146</span>
-<span id="147">147</span>
-<span id="148">148</span>
-<span id="149">149</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -166,9 +160,9 @@
 
 <span class="kw">use</span> <span class="ident">command</span>::<span class="ident">Command</span>;
 <span class="kw">use</span> <span class="ident">log</span>::<span class="ident">info</span>;
-<span class="kw">use</span> <span class="ident">oak</span>::<span class="ident">grpc</span>::{<span class="self">self</span>, <span class="ident">OakNode</span>};
+<span class="kw">use</span> <span class="ident">oak</span>::<span class="ident">grpc</span>;
 <span class="kw">use</span> <span class="ident">proto</span>::<span class="ident">chat</span>::{<span class="ident">CreateRoomRequest</span>, <span class="ident">DestroyRoomRequest</span>, <span class="ident">SendMessageRequest</span>, <span class="ident">SubscribeRequest</span>};
-<span class="kw">use</span> <span class="ident">proto</span>::<span class="ident">chat_grpc</span>::{<span class="ident">dispatch</span>, <span class="ident">Chat</span>};
+<span class="kw">use</span> <span class="ident">proto</span>::<span class="ident">chat_grpc</span>::{<span class="ident">Chat</span>, <span class="ident">Dispatcher</span>};
 <span class="kw">use</span> <span class="ident">protobuf</span>::<span class="ident">well_known_types</span>::<span class="ident">Empty</span>;
 <span class="kw">use</span> <span class="ident">protobuf</span>::<span class="ident">Message</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">hash_map</span>::<span class="ident">Entry</span>;
@@ -188,7 +182,7 @@
 
 <span class="ident">oak</span>::<span class="macro">entrypoint</span><span class="macro">!</span>(<span class="ident">oak_main</span> <span class="op">=</span><span class="op">&gt;</span> {
     <span class="ident">oak_log</span>::<span class="ident">init_default</span>();
-    <span class="ident">Node</span>::<span class="ident">default</span>()
+    <span class="ident">Dispatcher</span>::<span class="ident">new</span>(<span class="ident">Node</span>::<span class="ident">default</span>())
 });
 
 <span class="kw">struct</span> <span class="ident">Room</span> {
@@ -205,12 +199,6 @@
             <span class="ident">sender</span>: <span class="ident">oak</span>::<span class="ident">io</span>::<span class="ident">Sender</span>::<span class="ident">new</span>(<span class="ident">wh</span>),
             <span class="ident">admin_token</span>,
         }
-    }
-}
-
-<span class="kw">impl</span> <span class="ident">OakNode</span> <span class="kw">for</span> <span class="ident">Node</span> {
-    <span class="kw">fn</span> <span class="ident">invoke</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">method</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">req</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">writer</span>: <span class="ident">grpc</span>::<span class="ident">ChannelResponseWriter</span>) {
-        <span class="ident">dispatch</span>(<span class="self">self</span>, <span class="ident">method</span>, <span class="ident">req</span>, <span class="ident">writer</span>)
     }
 }
 

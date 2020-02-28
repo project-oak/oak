@@ -380,19 +380,6 @@
 <span id="380">380</span>
 <span id="381">381</span>
 <span id="382">382</span>
-<span id="383">383</span>
-<span id="384">384</span>
-<span id="385">385</span>
-<span id="386">386</span>
-<span id="387">387</span>
-<span id="388">388</span>
-<span id="389">389</span>
-<span id="390">390</span>
-<span id="391">391</span>
-<span id="392">392</span>
-<span id="393">393</span>
-<span id="394">394</span>
-<span id="395">395</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -419,7 +406,7 @@
 <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">sync</span>::<span class="ident">atomic</span>::<span class="ident">AtomicUsize</span>;
 <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">sync</span>::<span class="ident">atomic</span>::<span class="ident">Ordering</span>::<span class="ident">SeqCst</span>;
 
-<span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">OakStatus</span>;
+<span class="kw">use</span> <span class="ident">oak_abi</span>::{<span class="ident">ChannelReadStatus</span>, <span class="ident">OakStatus</span>};
 
 <span class="kw">use</span> <span class="ident">log</span>::<span class="ident">debug</span>;
 
@@ -430,7 +417,7 @@
 
 <span class="doccomment">/// We use a `HashMap` keyed by `ThreadId` to prevent build up of stale `Weak&lt;Thread&gt;`s.</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// That is: If a thread waiting/blocked on a channel is woken by a different channel, it&#39;s</span>
+<span class="doccomment">/// That is: If a thread waiting/blocked on a channel is woken by a different channel, its</span>
 <span class="doccomment">/// `Weak&lt;Thread&gt;` will remain in the first channel&#39;s waiting_thread member. If a thread keeps</span>
 <span class="doccomment">/// waiting on this first channel, and keeps being woken by other channels, it will keep re-adding</span>
 <span class="doccomment">/// itself. We use a `HashMap` and insert at the current `ThreadId` so that we replace any stale</span>
@@ -552,7 +539,16 @@
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">waiting_threads</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">waiting_threads</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>();
 
-        <span class="comment">// Unpark all the waiting threads, that still have references</span>
+        <span class="comment">// Unpark (wake up) all waiting threads that still have live references. The first thread</span>
+        <span class="comment">// woken can immediately read the message, and others might find `messages` is empty before</span>
+        <span class="comment">// they are even woken. This should not be an issue (being woken does not guarantee a</span>
+        <span class="comment">// message is available), but it could potentially result in some particular thread always</span>
+        <span class="comment">// getting first chance to read the message.</span>
+        <span class="comment">//</span>
+        <span class="comment">// If a thread is woken and finds no message it will take the `waiting_threads` lock and</span>
+        <span class="comment">// add itself again. Note that since that lock is currently held, the woken thread will add</span>
+        <span class="comment">// itself to waiting_threads *after* we call clear below as we release the lock implicilty</span>
+        <span class="comment">// on leaving this function.</span>
         <span class="kw">for</span> <span class="ident">thread</span> <span class="kw">in</span> <span class="ident">waiting_threads</span>.<span class="ident">values</span>() {
             <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">thread</span>) <span class="op">=</span> <span class="ident">thread</span>.<span class="ident">upgrade</span>() {
                 <span class="ident">thread</span>.<span class="ident">unpark</span>();
@@ -609,17 +605,18 @@
         }
     }
 
-    <span class="doccomment">/// Thread safe. Returns `Ok(true)` if there is at least one message in the channel. Fails with</span>
-    <span class="doccomment">/// `OakStatus::ERR_CHANNEL_CLOSED` if the underlying channel has been orphaned _and_ is empty.</span>
-    <span class="comment">// TODO(#566)</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">has_message</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">bool</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Thread safe. This function will return:</span>
+    <span class="doccomment">/// - `READ_READY` if there is at least one message in the channel.</span>
+    <span class="doccomment">/// - `ORPHANED` if there are no messages and there are no writers</span>
+    <span class="doccomment">/// - `NOT_READ` if there are no messages but there are some writers</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">status</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">ChannelReadStatus</span> {
         <span class="kw">let</span> <span class="ident">messages</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">messages</span>.<span class="ident">read</span>().<span class="ident">unwrap</span>();
         <span class="kw">if</span> <span class="ident">messages</span>.<span class="ident">front</span>().<span class="ident">is_some</span>() {
-            <span class="prelude-val">Ok</span>(<span class="bool-val">true</span>)
+            <span class="ident">ChannelReadStatus</span>::<span class="ident">READ_READY</span>
         } <span class="kw">else</span> <span class="kw">if</span> <span class="self">self</span>.<span class="ident">is_orphan</span>() {
-            <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ERR_CHANNEL_CLOSED</span>)
+            <span class="ident">ChannelReadStatus</span>::<span class="ident">ORPHANED</span>
         } <span class="kw">else</span> {
-            <span class="prelude-val">Ok</span>(<span class="bool-val">false</span>)
+            <span class="ident">ChannelReadStatus</span>::<span class="ident">NOT_READY</span>
         }
     }
 
@@ -698,41 +695,13 @@
 }
 
 <span class="doccomment">/// Reads the statuses from a slice of `Option&lt;&amp;ChannelReader&gt;`s.</span>
-<span class="doccomment">/// `Err(OakStatus::ERR_INVALID_ARGS)` is set for `None` readers in the slice. For `Some(_)`</span>
-<span class="doccomment">/// readers, the corresponding `Result` is set from a call to `has_message`.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">readers_statuses</span>(<span class="ident">readers</span>: <span class="kw-2">&amp;</span>[<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">ChannelReader</span><span class="op">&gt;</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">bool</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+<span class="doccomment">/// `ChannelReadStatus::INVALID_CHANNEL` is set for `None` readers in the slice. For `Some(_)`</span>
+<span class="doccomment">/// readers, the result is set from a call to `has_message`.</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">readers_statuses</span>(<span class="ident">readers</span>: <span class="kw-2">&amp;</span>[<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">ChannelReader</span><span class="op">&gt;</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ChannelReadStatus</span><span class="op">&gt;</span> {
     <span class="ident">readers</span>
         .<span class="ident">iter</span>()
-        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">chan</span><span class="op">|</span> <span class="ident">chan</span>.<span class="ident">map_or</span>(<span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ERR_INVALID_ARGS</span>), <span class="op">|</span><span class="ident">chan</span><span class="op">|</span> <span class="ident">chan</span>.<span class="ident">has_message</span>()))
+        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">chan</span><span class="op">|</span> <span class="ident">chan</span>.<span class="ident">map_or</span>(<span class="ident">ChannelReadStatus</span>::<span class="ident">INVALID_CHANNEL</span>, <span class="op">|</span><span class="ident">chan</span><span class="op">|</span> <span class="ident">chan</span>.<span class="ident">status</span>()))
         .<span class="ident">collect</span>()
-}
-
-<span class="doccomment">/// Block until the runtime is terminated, or the reader is orphaned or has a message. It is</span>
-<span class="doccomment">/// possible that this will unblock spuriously and return `Ok(())` without a message available.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">block_thread_on_channel</span>(
-    <span class="ident">runtime</span>: <span class="kw-2">&amp;</span><span class="ident">RuntimeRef</span>,
-    <span class="ident">reader</span>: <span class="kw-2">&amp;</span><span class="ident">ChannelReader</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-    <span class="kw">if</span> <span class="ident">runtime</span>.<span class="ident">is_terminating</span>() {
-        <span class="kw">return</span> <span class="prelude-val">Ok</span>(());
-    }
-
-    <span class="kw">let</span> <span class="ident">thread</span> <span class="op">=</span> <span class="ident">platform</span>::<span class="ident">thread</span>::<span class="ident">current</span>();
-    <span class="kw">let</span> <span class="ident">thread_id</span> <span class="op">=</span> <span class="ident">platform</span>::<span class="ident">thread</span>::<span class="ident">current</span>().<span class="ident">id</span>();
-    <span class="kw">let</span> <span class="ident">thread_ref</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">thread</span>);
-
-    <span class="ident">reader</span>.<span class="ident">add_waiter</span>(<span class="ident">thread_id</span>, <span class="kw-2">&amp;</span><span class="ident">thread_ref</span>);
-
-    <span class="kw">if</span> <span class="ident">reader</span>.<span class="ident">has_message</span>()<span class="question-mark">?</span> {
-        <span class="kw">return</span> <span class="prelude-val">Ok</span>(());
-    }
-
-    <span class="comment">// Since we added ourselves as a waiter before checking for a message</span>
-    <span class="comment">// even if a message is now added, `unpark` will have been called by the</span>
-    <span class="comment">// underlying channel. This will result in this `park` call returning immediately.</span>
-    <span class="ident">platform</span>::<span class="ident">thread</span>::<span class="ident">park</span>();
-
-    <span class="prelude-val">Ok</span>(())
 }
 
 <span class="doccomment">/// Waits on a slice of `Option&lt;&amp;ChannelReader&gt;`s, blocking until one of the following conditions:</span>
@@ -741,15 +710,15 @@
 <span class="doccomment">/// - If all readers are in an erroneous status, e.g. when all `ChannelReaders` are orphaned, this</span>
 <span class="doccomment">///   will immediately return the channels statuses.</span>
 <span class="doccomment">/// - If any of the channels is able to read a message, the corresponding element in the returned</span>
-<span class="doccomment">///   vector will be set to `Ok(true)`, with `Ok(false)` signaling the channel has no message</span>
-<span class="doccomment">///   available</span>
+<span class="doccomment">///   vector will be set to `Ok(READ_READY)`, with `Ok(NOT_READY)` signaling the channel has no</span>
+<span class="doccomment">///   message available</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// In particular, if there is at least one channel in good status and no messages on said channel</span>
 <span class="doccomment">/// available, `wait_on_channels` will continue to block until a message is available.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">wait_on_channels</span>(
     <span class="ident">runtime</span>: <span class="kw-2">&amp;</span><span class="ident">RuntimeRef</span>,
     <span class="ident">readers</span>: <span class="kw-2">&amp;</span>[<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">ChannelReader</span><span class="op">&gt;</span>],
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">bool</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ChannelReadStatus</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">thread</span> <span class="op">=</span> <span class="ident">platform</span>::<span class="ident">thread</span>::<span class="ident">current</span>();
     <span class="kw">while</span> <span class="op">!</span><span class="ident">runtime</span>.<span class="ident">is_terminating</span>() {
         <span class="comment">// Create a new Arc each iteration to be dropped after `thread::park` e.g. when the thread</span>
@@ -771,23 +740,28 @@
         }
         <span class="kw">let</span> <span class="ident">statuses</span> <span class="op">=</span> <span class="ident">readers_statuses</span>(<span class="ident">readers</span>);
 
-        <span class="kw">if</span> <span class="ident">statuses</span>.<span class="ident">iter</span>().<span class="ident">all</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">is_err</span>()) <span class="op">|</span><span class="op">|</span> <span class="ident">statuses</span>.<span class="ident">iter</span>().<span class="ident">any</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">unwrap_or</span>(<span class="bool-val">false</span>)) {
-            <span class="kw">return</span> <span class="ident">statuses</span>;
+        <span class="kw">let</span> <span class="ident">all_unreadable</span> <span class="op">=</span> <span class="ident">statuses</span>
+            .<span class="ident">iter</span>()
+            .<span class="ident">all</span>(<span class="op">|</span><span class="kw-2">&amp;</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span> <span class="op">=</span><span class="op">=</span> <span class="ident">ChannelReadStatus</span>::<span class="ident">INVALID_CHANNEL</span> <span class="op">|</span><span class="op">|</span> <span class="ident">s</span> <span class="op">=</span><span class="op">=</span> <span class="ident">ChannelReadStatus</span>::<span class="ident">ORPHANED</span>);
+        <span class="kw">let</span> <span class="ident">any_ready</span> <span class="op">=</span> <span class="ident">statuses</span>.<span class="ident">iter</span>().<span class="ident">any</span>(<span class="op">|</span><span class="kw-2">&amp;</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span> <span class="op">=</span><span class="op">=</span> <span class="ident">ChannelReadStatus</span>::<span class="ident">READ_READY</span>);
+
+        <span class="kw">if</span> <span class="ident">all_unreadable</span> <span class="op">|</span><span class="op">|</span> <span class="ident">any_ready</span> {
+            <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">statuses</span>);
         }
 
         <span class="macro">debug</span><span class="macro">!</span>(
             <span class="string">&quot;wait_on_channels: channels not ready, parking thread {:?}&quot;</span>,
-            <span class="ident">platform</span>::<span class="ident">thread</span>::<span class="ident">current</span>().<span class="ident">id</span>()
+            <span class="ident">platform</span>::<span class="ident">thread</span>::<span class="ident">current</span>()
         );
 
         <span class="ident">platform</span>::<span class="ident">thread</span>::<span class="ident">park</span>();
 
         <span class="macro">debug</span><span class="macro">!</span>(
             <span class="string">&quot;wait_on_channels: thread {:?} re-woken&quot;</span>,
-            <span class="ident">platform</span>::<span class="ident">thread</span>::<span class="ident">current</span>().<span class="ident">id</span>()
+            <span class="ident">platform</span>::<span class="ident">thread</span>::<span class="ident">current</span>()
         );
     }
-    <span class="macro">vec</span><span class="macro">!</span>[<span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ERR_TERMINATED</span>); <span class="ident">readers</span>.<span class="ident">len</span>()]
+    <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ERR_TERMINATED</span>)
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "oak_runtime";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>

@@ -3,6 +3,7 @@ sourcesIndex["abitest_0_frontend"] = {"name":"","dirs":[{"name":"proto","files":
 sourcesIndex["abitest_1_backend"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["abitest_common"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["abitest_tests"] = {"name":"","files":["lib.rs"]};
+sourcesIndex["aggregator"] = {"name":"","dirs":[{"name":"proto","files":["aggregator.rs","aggregator_grpc.rs","mod.rs"]}],"files":["aggregator.rs","lib.rs"]};
 sourcesIndex["chat"] = {"name":"","dirs":[{"name":"proto","files":["chat.rs","chat_grpc.rs","mod.rs"]}],"files":["backend.rs","command.rs","lib.rs"]};
 sourcesIndex["expect"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["grpc_compiler"] = {"name":"","files":["codegen.rs","lib.rs"]};
@@ -20,6 +21,8 @@ sourcesIndex["protoc_rust_grpc"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["runner"] = {"name":"","files":["internal.rs","main.rs"]};
 sourcesIndex["running_average"] = {"name":"","dirs":[{"name":"proto","files":["mod.rs","running_average.rs","running_average_grpc.rs"]}],"files":["lib.rs"]};
 sourcesIndex["rustfmt"] = {"name":"","dirs":[{"name":"proto","files":["mod.rs","rustfmt.rs","rustfmt_grpc.rs"]}],"files":["lib.rs"]};
+sourcesIndex["split_grpc_client"] = {"name":"","dirs":[{"name":"proto","files":["oak.examples.hello_world.rs"]}],"files":["main.rs"]};
+sourcesIndex["split_grpc_server"] = {"name":"","dirs":[{"name":"proto","files":["oak.examples.hello_world.rs"]}],"files":["main.rs"]};
 sourcesIndex["translator"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["translator_common"] = {"name":"","dirs":[{"name":"proto","files":["mod.rs","translator.rs","translator_grpc.rs"]}],"files":["lib.rs"]};
 createSourceSidebar();

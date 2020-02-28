@@ -460,11 +460,14 @@
 
 <span class="doccomment">/// Trait for Oak Nodes that act as a gRPC services.</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// An `OakNode` instance is normally passed to [`oak::run_event_loop`], to</span>
+<span class="doccomment">/// A `ServerNode` instance is normally passed to [`oak::run_event_loop`], to</span>
 <span class="doccomment">/// allow repeated invocation of its `invoke()` method.</span>
 <span class="doccomment">///</span>
+<span class="doccomment">/// You can choose to implement this trait yourself, or use the convenient</span>
+<span class="doccomment">/// `Dispatcher` created by the gRPC code generator.</span>
+<span class="doccomment">///</span>
 <span class="doccomment">/// [`oak::run_event_loop`]: ../../oak/fn.run_event_loop.html</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">OakNode</span> {
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">ServerNode</span> {
     <span class="doccomment">/// Process a single gRPC method invocation.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// The method name is provided by `method` and the incoming serialized gRPC</span>
@@ -473,15 +476,15 @@
     <span class="kw">fn</span> <span class="ident">invoke</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">method</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">req</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">writer</span>: <span class="ident">ChannelResponseWriter</span>);
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">OakNode</span><span class="op">&gt;</span> <span class="kw">crate</span>::<span class="ident">Node</span><span class="op">&lt;</span><span class="ident">Invocation</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">T</span> {
-    <span class="doccomment">/// Handle incoming gRPC events for an [`OakNode`].</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">ServerNode</span><span class="op">&gt;</span> <span class="kw">crate</span>::<span class="ident">Node</span><span class="op">&lt;</span><span class="ident">Invocation</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">T</span> {
+    <span class="doccomment">/// Handle incoming gRPC events for an [`ServerNode`].</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Invoking the given `node`&#39;s [`invoke`] method for each incoming request that</span>
     <span class="doccomment">/// arrives on the inbound channel as a serialized [`Invocation`] object,</span>
     <span class="doccomment">/// giving the [`invoke`] method the outbound channel for encapsulated responses</span>
     <span class="doccomment">/// to be written to.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// [`invoke`]: OakNode::invoke</span>
+    <span class="doccomment">/// [`invoke`]: ServerNode::invoke</span>
     <span class="kw">fn</span> <span class="ident">handle_command</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">invocation</span>: <span class="ident">Invocation</span>,
@@ -598,10 +601,7 @@
         )
     })<span class="question-mark">?</span>;
     <span class="ident">rsp_receiver</span>.<span class="ident">close</span>().<span class="ident">expect</span>(<span class="string">&quot;failed to close channel&quot;</span>);
-    <span class="kw">let</span> (<span class="ident">rsp</span>, <span class="ident">last</span>) <span class="op">=</span> <span class="ident">decap_response</span>(<span class="ident">grpc_rsp</span>)<span class="question-mark">?</span>;
-    <span class="kw">if</span> <span class="op">!</span><span class="ident">last</span> {
-        <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Expected single final response&quot;</span>);
-    }
+    <span class="kw">let</span> (<span class="ident">rsp</span>, <span class="ident">_last</span>) <span class="op">=</span> <span class="ident">decap_response</span>(<span class="ident">grpc_rsp</span>)<span class="question-mark">?</span>;
 
     <span class="prelude-val">Ok</span>(<span class="ident">rsp</span>)
 }

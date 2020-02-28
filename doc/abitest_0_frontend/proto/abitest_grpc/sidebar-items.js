@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["dispatch",""]],"struct":[["OakABITestServiceClient",""]],"trait":[["OakABITestService",""]]});
+initSidebarItems({"struct":[["Dispatcher",""],["OakABITestServiceClient",""]],"trait":[["OakABITestService",""]]});
