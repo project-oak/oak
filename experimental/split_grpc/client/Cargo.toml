@@ -5,11 +5,11 @@ authors = ["Conrad Grobler <grobler@google.com>"]
 edition = "2018"
 
 [dependencies]
-env_logger = "0.7"
-log = "0.4"
-prost = "0.6"
-tokio = { version = "0.2", features = ["fs", "macros"] }
-tonic = { version = "0.1", features = ["tls"] }
+env_logger = "*"
+log = "*"
+prost = "*"
+tokio = { version = "*", features = ["fs", "macros"] }
+tonic = { version = "*", features = ["tls"] }
 
 [build-dependencies]
-tonic-build = "0.1"
+tonic-build = "*"
