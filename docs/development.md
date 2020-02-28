@@ -75,7 +75,7 @@ specific Oak Application (this version of the server is based on the
 [Asylo](https://github.com/google/asylo) framework):
 
 ```bash
-./scripts/run_server -s asylo -a "${PWD}/bazel-client-bin/examples/hello_world/config/config.bin" 
+./scripts/run_server -s asylo -a "${PWD}/bazel-client-bin/examples/hello_world/config/config.bin"
 ```
 
 #### Run Development Server
@@ -92,7 +92,7 @@ code as it can help with enabling a faster iteration.
 The following command builds and runs an Oak Development Server:
 
 ```bash
-./scripts/run_server -s dev -a "${PWD}/bazel-client-bin/examples/hello_world/config/config.bin" 
+./scripts/run_server -s dev -a "${PWD}/bazel-client-bin/examples/hello_world/config/config.bin"
 ```
 
 As this compiles using clang on your local machine, it can be easily build in

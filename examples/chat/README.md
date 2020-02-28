@@ -54,6 +54,6 @@ room (on the same server):
 
 ## CI Invocation
 
-Note that the normal/default invocation of this example
-(with `scripts/run_example -e chat`) just starts an instance of the application
-then immediately terminates it (this ensures that the CI runs work OK).
+Note that the normal/default invocation of this example (with
+`scripts/run_example -e chat`) just starts an instance of the application then
+immediately terminates it (this ensures that the CI runs work OK).
