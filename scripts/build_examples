@@ -7,5 +7,5 @@ source "$SCRIPTS_DIR/common"
 readonly EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type d -name module | cut -d'/' -f2)"
 
 for example in $EXAMPLES; do
-  "$SCRIPTS_DIR/build_example" "$example"
+  "$SCRIPTS_DIR/build_example" -e "$example"
 done

@@ -47,7 +47,7 @@ The following command runs both an Oak server (as a background process) and an
 Oak application client:
 
 ```bash
-./scripts/docker_run ./scripts/run_example hello_world
+./scripts/docker_run ./scripts/run_example -e hello_world
 ```
 
 This command consists of the following steps performed inside Docker:
@@ -59,7 +59,7 @@ to a WebAssembly module and then serializes it into a binary application
 configuration file to be loaded to the Oak Server:
 
 ```bash
-./scripts/build_example hello_world
+./scripts/build_example -e hello_world
 ```
 
 This binary application configuration file includes the compiled Wasm code for
@@ -75,7 +75,7 @@ specific Oak Application (this version of the server is based on the
 [Asylo](https://github.com/google/asylo) framework):
 
 ```bash
-./scripts/run_server "${PWD}/bazel-client-bin/examples/hello_world/config/config.bin" -s asylo
+./scripts/run_server -s asylo -a "${PWD}/bazel-client-bin/examples/hello_world/config/config.bin" 
 ```
 
 #### Run Development Server
@@ -92,7 +92,7 @@ code as it can help with enabling a faster iteration.
 The following command builds and runs an Oak Development Server:
 
 ```bash
-./scripts/run_server "${PWD}/bazel-client-bin/examples/hello_world/config/config.bin" -s dev
+./scripts/run_server -s dev -a "${PWD}/bazel-client-bin/examples/hello_world/config/config.bin" 
 ```
 
 As this compiles using clang on your local machine, it can be easily build in
@@ -114,5 +114,5 @@ example Oak Node from Rust to a WebAssembly module, and sends it to the Oak
 Server running on the same machine. It works with both Servers (Docker and Dev):
 
 ```bash
-./examples/hello_world/run
+./scripts/run_example -s none -e hello_world
 ```

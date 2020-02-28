@@ -19,7 +19,7 @@ The first client to run typically creates the Oak Application and a first chat
 room inside it:
 
 ```bash
-./examples/chat/run
+./scripts/run_example -s none -e chat
 ```
 
 This will emit a trace line that holds the information needed to:
@@ -34,7 +34,7 @@ This will emit a trace line that holds the information needed to:
 Another party can then join the same chat room by using these arguments:
 
 ```bash
-./examples/chat/run -C --app_address=127.0.0.1:32889 --room_id=NKsceNlg69UbcvryfzmFGnMv9qnZ0DYh6u6gJxujnPPxvHsxMehoD368sumKawVaq9WaSkzrcStoNYLvVNdzhA==
+./scripts/run_example -s none -e chat -- --address=127.0.0.1:32889 --room_id=NKsceNlg69UbcvryfzmFGnMv9qnZ0DYh6u6gJxujnPPxvHsxMehoD368sumKawVaq9WaSkzrcStoNYLvVNdzhA==
 ```
 
 Alternatively, another party can create a new chat room running on the same Oak
@@ -42,7 +42,7 @@ Application by just copying the `--app_address` argument, but specifying a new
 room name:
 
 ```bash
-./examples/chat/run -C --app_address=127.0.0.1:32889
+./scripts/run_example -s none -e chat -- --address=127.0.0.1:32889
 ```
 
 This will again emit a trace line with the information needed to join this new
@@ -54,6 +54,6 @@ room (on the same server):
 
 ## CI Invocation
 
-Note that the normal/default invocation of this example (with `./run` or
-`scripts/run_example chat`) just starts an instance of the application then
-immediately terminates it (this ensures that the CI runs work OK).
+Note that the normal/default invocation of this example
+(with `scripts/run_example -e chat`) just starts an instance of the application
+then immediately terminates it (this ensures that the CI runs work OK).
