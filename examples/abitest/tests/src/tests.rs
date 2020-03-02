@@ -52,7 +52,7 @@ fn test_abi() {
         FRONTEND_ENTRYPOINT_NAME,
     );
 
-    let (runtime, entry_channel) = oak_runtime::Runtime::configure_and_run(configuration)
+    let (runtime, entry_channel) = oak_runtime::configure_and_run(configuration)
         .expect("unable to configure runtime with test wasm");
 
     let result: grpc::Result<ABITestResponse> = oak_tests::grpc_request(

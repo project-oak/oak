@@ -15,10 +15,21 @@
 //
 
 use crate::proto::application::{
-    ApplicationConfiguration, LogConfiguration, NodeConfiguration, WebAssemblyConfiguration,
+    ApplicationConfiguration, LogConfiguration, NodeConfiguration,
+    NodeConfiguration_oneof_config_type, WebAssemblyConfiguration,
 };
 use itertools::Itertools;
 use std::collections::HashMap;
+
+use log::error;
+
+use oak_abi::OakStatus;
+
+use crate::channel::ChannelWriter;
+use crate::node;
+use crate::node::load_wasm;
+use crate::runtime;
+use crate::runtime::{Runtime, RuntimeRef};
 
 /// Create an application configuration.
 ///
@@ -62,4 +73,48 @@ pub fn application_configuration<S: ::std::hash::BuildHasher>(
         initial_entrypoint_name: entrypoint.into(),
         ..Default::default()
     }
+}
+
+pub fn from_protobuf(
+    app_config: ApplicationConfiguration,
+) -> Result<runtime::Configuration, OakStatus> {
+    let mut config = runtime::Configuration {
+        nodes: HashMap::new(),
+        entry_module: app_config.initial_node_config_name.clone(),
+        entrypoint: app_config.initial_entrypoint_name.clone(),
+    };
+
+    for node in app_config.get_node_configs() {
+        config.nodes.insert(
+            node.name.clone(),
+            match &node.config_type {
+                None => {
+                    error!("Node config {} with no type", node.name);
+                    return Err(OakStatus::ERR_INVALID_ARGS);
+                }
+                Some(NodeConfiguration_oneof_config_type::log_config(_)) => {
+                    node::Configuration::LogNode
+                }
+                Some(NodeConfiguration_oneof_config_type::wasm_config(
+                    WebAssemblyConfiguration { module_bytes, .. },
+                )) => load_wasm(&module_bytes).map_err(|e| {
+                    error!("Error loading Wasm module: {}", e);
+                    OakStatus::ERR_INVALID_ARGS
+                })?,
+                Some(_) => {
+                    error!("Pseudo-node not implemented!");
+                    return Err(OakStatus::ERR_INVALID_ARGS);
+                }
+            },
+        );
+    }
+
+    Ok(config)
+}
+
+pub fn configure_and_run(
+    app_config: ApplicationConfiguration,
+) -> Result<(RuntimeRef, ChannelWriter), OakStatus> {
+    let config = from_protobuf(app_config)?;
+    Runtime::configure_and_run(config)
 }

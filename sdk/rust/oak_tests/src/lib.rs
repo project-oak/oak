@@ -85,7 +85,7 @@ pub fn run_single_module(
         entrypoint_name,
     );
 
-    oak_runtime::Runtime::configure_and_run(configuration)
+    oak_runtime::configure_and_run(configuration)
 }
 
 // TODO(#543): move this to oak_runtime as it's not test-specific

@@ -27,9 +27,9 @@ use crate::RuntimeRef;
 mod logger;
 mod wasm;
 
-/// A `NodeConfiguration` corresponds to an entry from a `ApplicationConfiguration`. It is the
+/// A `Configuration` corresponds to an entry from a `ApplicationConfiguration`. It is the
 /// static implementation specific configuration shared between instances.
-pub enum NodeConfiguration {
+pub enum Configuration {
     /// The configuration for a logging pseudo node.
     LogNode,
 
@@ -41,7 +41,7 @@ pub enum NodeConfiguration {
     WasmNode { module: Arc<wasmi::Module> },
 }
 
-/// A enumeration for errors occuring when building `NodeConfiguration` from protobuf types.
+/// A enumeration for errors occuring when building `Configuration` from protobuf types.
 pub enum ConfigurationError {
     WasmiModuleInializationError(wasmi::Error),
 }
@@ -58,16 +58,16 @@ impl std::fmt::Display for ConfigurationError {
 
 /// Loads a Wasm module into a node configuration, returning an error if `wasmi` failed to load the
 /// module.
-pub fn load_wasm(wasm_bytes: &[u8]) -> Result<NodeConfiguration, ConfigurationError> {
+pub fn load_wasm(wasm_bytes: &[u8]) -> Result<Configuration, ConfigurationError> {
     let module = wasmi::Module::from_buffer(wasm_bytes)
         .map_err(ConfigurationError::WasmiModuleInializationError)?;
-    Ok(NodeConfiguration::WasmNode {
+    Ok(Configuration::WasmNode {
         module: Arc::new(module),
     })
 }
 
-impl NodeConfiguration {
-    /// Spawn a new node instance corresponding to the `NodeConfiguration` `self`. On success
+impl Configuration {
+    /// Spawn a new node instance corresponding to the `Configuration` `self`. On success
     /// returns a `JoinHandle` to allow waiting on the thread to finish.
     pub fn new_instance(
         &self,
@@ -77,10 +77,8 @@ impl NodeConfiguration {
         initial_reader: ChannelReader,
     ) -> Result<crate::JoinHandle, OakStatus> {
         match self {
-            NodeConfiguration::LogNode => {
-                logger::new_instance(config_name, runtime, initial_reader)
-            }
-            NodeConfiguration::WasmNode { module } => wasm::new_instance(
+            Configuration::LogNode => logger::new_instance(config_name, runtime, initial_reader),
+            Configuration::WasmNode { module } => wasm::new_instance(
                 config_name,
                 runtime,
                 module.clone(),

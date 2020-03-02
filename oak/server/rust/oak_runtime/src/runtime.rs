@@ -23,20 +23,22 @@ use std::sync::Arc;
 use core::sync::atomic::AtomicBool;
 use core::sync::atomic::Ordering::SeqCst;
 
-use log::error;
-
 use oak_abi::OakStatus;
 
 use crate::channel;
 use crate::channel::{ChannelReader, ChannelWriter};
-use crate::node::{load_wasm, NodeConfiguration};
+use crate::node;
 use crate::platform;
-use crate::proto;
-use crate::proto::application::NodeConfiguration_oneof_config_type;
+
+pub struct Configuration {
+    pub nodes: HashMap<String, node::Configuration>,
+    pub entry_module: String,
+    pub entrypoint: String,
+}
 
 /// Runtime structure for configuring and running a set of Oak nodes.
 pub struct Runtime {
-    configurations: HashMap<String, NodeConfiguration>,
+    configurations: HashMap<String, node::Configuration>,
     terminating: AtomicBool,
     node_threads: platform::Mutex<Vec<platform::JoinHandle>>,
 }
@@ -46,47 +48,18 @@ impl Runtime {
     /// `Runtime` calling `stop` will send termination signals to nodes and wait for them to
     /// terminate.
     pub fn configure_and_run(
-        app_config: proto::application::ApplicationConfiguration,
+        config: Configuration,
     ) -> Result<(RuntimeRef, ChannelWriter), OakStatus> {
-        let mut runtime = Runtime {
-            configurations: HashMap::new(),
+        let runtime = Runtime {
+            configurations: config.nodes,
             terminating: AtomicBool::new(false),
             node_threads: platform::Mutex::new(Vec::new()),
         };
 
-        for config in app_config.get_node_configs() {
-            runtime.configurations.insert(
-                config.name.clone(),
-                match &config.config_type {
-                    None => {
-                        error!("Node config {} with no type", config.name);
-                        return Err(OakStatus::ERR_INVALID_ARGS);
-                    }
-                    Some(NodeConfiguration_oneof_config_type::log_config(_)) => {
-                        NodeConfiguration::LogNode
-                    }
-                    Some(NodeConfiguration_oneof_config_type::wasm_config(
-                        proto::application::WebAssemblyConfiguration { module_bytes, .. },
-                    )) => load_wasm(&module_bytes).map_err(|e| {
-                        error!("Error loading Wasm module: {}", e);
-                        OakStatus::ERR_INVALID_ARGS
-                    })?,
-                    Some(_) => {
-                        error!("Pseudo-node not implemented!");
-                        return Err(OakStatus::ERR_INVALID_ARGS);
-                    }
-                },
-            );
-        }
-
         let runtime = RuntimeRef(Arc::new(runtime));
         let (chan_writer, chan_reader) = channel::new();
 
-        runtime.node_create(
-            &app_config.initial_node_config_name,
-            &app_config.initial_entrypoint_name,
-            chan_reader,
-        )?;
+        runtime.node_create(&config.entry_module, &config.entrypoint, chan_reader)?;
 
         Ok((runtime, chan_writer))
     }
