@@ -23,20 +23,9 @@ while getopts "de:h" opt; do
     esac
 done
 
-if [[ -z "${EXAMPLE}" ]]; then
-    readonly EXAMPLES="$(find examples -mindepth 2 -maxdepth 4 -type f -name Cargo.toml | cut -d'/' -f2)"
-    PS3='Choose example to build: '
-
-    readarray -t options <<< "$EXAMPLES"
-    select opt in "${options[@]}";
-    do
-        echo "Building ${opt}"
-        readonly TARGET="${opt}"
-        break
-    done
-else
-    echo "Building ${EXAMPLE}"
-    readonly TARGET="${EXAMPLE}"
+if [[ -z "${EXAMPLE+z}" ]]; then
+  echo "Missing required option: -e EXAMPLE"
+  exit 1
 fi
 
 bazel_build_flags+=(
@@ -44,14 +33,14 @@ bazel_build_flags+=(
     "--compilation_mode=${compilation_mode}"
 )
 
-readonly RUST_FOLDER="$(find examples/"${TARGET}" -type d -name rust)"
+readonly RUST_FOLDER="$(find examples/"${EXAMPLE}" -type d -name rust)"
 if [[ -n "${RUST_FOLDER}" ]]; then
-    for module in examples/"${TARGET}"/module*/rust/Cargo.toml; do
+    for module in examples/"${EXAMPLE}"/module*/rust/Cargo.toml; do
         cargo build --release --target=wasm32-unknown-unknown --manifest-path="${module}"
     done
 
     # Serialize application configuration for Rust module.
-    if [[ "${TARGET}" == "hello_world" ]]; then
+    if [[ "${EXAMPLE}" == "hello_world" ]]; then
         # `hello_world` example has an optional additional `translator` module.
         cargo build --release --target=wasm32-unknown-unknown --manifest-path="examples/translator/module/rust/Cargo.toml"
 
@@ -59,18 +48,18 @@ if [[ -n "${RUST_FOLDER}" ]]; then
             "//examples/hello_world/config:config" \
             "//examples/hello_world/config:config_translator"
     else
-        bazel --output_base="${CACHE_DIR}/client" build "${bazel_build_flags[@]}" "//examples/${TARGET}/config:config"
+        bazel --output_base="${CACHE_DIR}/client" build "${bazel_build_flags[@]}" "//examples/${EXAMPLE}/config:config"
     fi
 fi
 
-readonly CPP_FOLDER="$(find examples/"${TARGET}" -type d -name cpp)"
+readonly CPP_FOLDER="$(find examples/"${EXAMPLE}" -type d -name cpp)"
 if [[ -n "${CPP_FOLDER}" ]]; then
     # `config_cpp` depends on a Wasm module, so it should be built with `wasm32` or `emscripten`.
     readonly BUILD_RULES=(
-        "//examples/${TARGET}/module/cpp:all"
-        "//examples/${TARGET}/config:config_cpp"
+        "//examples/${EXAMPLE}/module/cpp:all"
+        "//examples/${EXAMPLE}/config:config_cpp"
     )
-    if [[ "${TARGET}" == "tensorflow" ]]; then
+    if [[ "${EXAMPLE}" == "tensorflow" ]]; then
         # TODO: Compile all examples in Emscripten when imports will be fixed.
         # https://github.com/project-oak/oak/issues/439
         bazel --output_base="${CACHE_DIR}/emscripten" build "${bazel_build_flags[@]}" --config=emscripten "${BUILD_RULES[@]}"
@@ -82,4 +71,4 @@ fi
 
 # Use a different output_base so that we don't lose incremental state.
 # See https://docs.bazel.build/versions/master/command-line-reference.html#flag--output_base.
-bazel --output_base="${CACHE_DIR}/client" build "${bazel_build_flags[@]}" "//examples/${TARGET}/client:client"
+bazel --output_base="${CACHE_DIR}/client" build "${bazel_build_flags[@]}" "//examples/${EXAMPLE}/client:client"
