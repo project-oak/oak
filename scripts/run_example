@@ -6,10 +6,11 @@ source "${SCRIPTS_DIR}/common"
 
 language="rust"
 server="asylo"
-while getopts "s:l:e:h" opt; do
+buildargs=""
+while getopts "s:l:de:h" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-h] [-s asylo|dev|asan|tsan|none] [-l rust|cpp] -e EXAMPLE [-- CLIENT_ARGS]
+      echo -e "Usage: ${0} [-h] [-s asylo|dev|asan|tsan|none] [-l rust|cpp] [-d] -e EXAMPLE [-- CLIENT_ARGS]
 
 Build and run the given example Oak Application and client.
 
@@ -19,8 +20,9 @@ Options:
           - asylo: server based on the Asylo framework (used by default)
           - dev: development version of the server
           - asan: 'dev' server with address sanitizer
-          - tsan: 'dev' server with thread santizer
+          - tsan: 'dev' server with thread sanitizer
           - none: run an application client without a server
+  -d    Build C++ code for example using debug mode
   -l    Example application variant:
           - rust (used by default)
           - cpp
@@ -37,6 +39,8 @@ Options after -- will be passed to the example client program."
           echo "Invalid server type: ${OPTARG}"
           exit 1;;
       esac;;
+    d)
+      buildargs='-d';;
     e)
       readonly EXAMPLE="${OPTARG}";;
     *)
@@ -67,7 +71,7 @@ if [[ "${server}" != "none" ]]; then
       echo "Invalid example variant: ${language}"
       exit 1;;
   esac
-  "${SCRIPTS_DIR}/build_example" -l "${language}" -e "${EXAMPLE}"
+  "${SCRIPTS_DIR}/build_example" ${buildargs} -l "${language}" -e "${EXAMPLE}"
 
   # Run a server in the background.
   # The server is being built before running, so the build process will not happen in the
