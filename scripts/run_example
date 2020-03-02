@@ -16,7 +16,7 @@ while getopts "s:l:e:h" opt; do
           - asan: 'dev' server with address sanitizer
           - tsan: 'dev' server with thread santizer
           - none: run an application client without a server
-  -l    Example application version:
+  -l    Example application variant:
           - rust (used by default)
           - cpp
   -e    Example application name
@@ -42,7 +42,7 @@ done
 shift "$((OPTIND -1))"
 
 if [[ "${server}" != "none" ]]; then
-  # Choose example application version.
+  # Choose example application variant.
   case "${language}" in
   rust)
     readonly APPLICATION="${PWD}/bazel-client-bin/examples/${EXAMPLE}/config/config.bin";;
@@ -54,7 +54,7 @@ if [[ "${server}" != "none" ]]; then
       readonly APPLICATION="${PWD}/bazel-wasm-bin/examples/${EXAMPLE}/config/config_cpp.bin"
     fi;;
   *)
-    echo "Invalid example version: ${language}"
+    echo "Invalid example variant: ${language}"
     exit 1;;
   esac
   "${SCRIPTS_DIR}/build_example" -e "${EXAMPLE}"
