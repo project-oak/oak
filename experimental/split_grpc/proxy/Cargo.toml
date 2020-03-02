@@ -1,0 +1,11 @@
+[package]
+name = "split_grpc_proxy"
+version = "0.1.0"
+authors = ["Conrad Grobler <grobler@google.com>"]
+edition = "2018"
+
+[dependencies]
+env_logger = "*"
+futures = "*"
+log = "*"
+tokio = { version = "*", features = ["full"] }
