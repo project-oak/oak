@@ -4,20 +4,31 @@ readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
 # shellcheck source=scripts/common
 source "${SCRIPTS_DIR}/common"
 
+language="rust"
 server="asylo"
-while getopts "s:a:h" opt; do
+while getopts "s:a:l:e:h" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-s asylo|dev|arm|asan|tsan] -a APPLICATION
-  -a    Path to a serialized application configuration file (required)
+      echo -e "Usage: ${0} [-s asylo|dev|arm|asan|tsan] [-l rust|cpp] (-a APPLICATION | -e EXAMPLE)
+
+Run a particular Oak Application in the Oak Runtime.
+Either the -a APPLICATION or the -e EXAMPLE option is required.
+
+  -a    Path to a serialized application configuration file
+  -e    Example application name
   -s    Server type:
           - asylo: server based on the Asylo framework (used by default)
           - dev: development version of the server
           - arm: 'dev' server for ARM architecture
           - asan: 'dev' server with address sanitizer
           - tsan: 'dev' server with thread santizer
+  -l    Example application variant (if -e specified):
+          - rust (used by default)
+          - cpp
   -h    Print Help (this message) and exit"
       exit 0;;
+    l)
+      language="${OPTARG}";;
     s)
       case "${OPTARG}" in
         asylo|dev|arm|asan|tsan)
@@ -28,14 +39,34 @@ while getopts "s:a:h" opt; do
       esac;;
     a)
       readonly APPLICATION="${OPTARG}";;
+    e)
+      readonly EXAMPLE="${OPTARG}";;
     *)
       echo "Invalid argument: ${OPTARG}"
       exit 1;;
   esac
 done
 
+if [[ -v EXAMPLE ]]; then
+  # Determine expected configuration file from example name and language variant.
+  case "${language}" in
+    rust)
+      readonly APPLICATION="${PWD}/bazel-client-bin/examples/${EXAMPLE}/config/config.bin";;
+    cpp)
+      # TensorFlow example is compiled with Emscripten and other examples with Clang.
+      if [[ "${EXAMPLE}" == "tensorflow" ]]; then
+        readonly APPLICATION="${PWD}/bazel-emscripten-bin/examples/tensorflow/config/config_cpp.bin"
+      else
+        readonly APPLICATION="${PWD}/bazel-wasm-bin/examples/${EXAMPLE}/config/config_cpp.bin"
+      fi;;
+    *)
+      echo "Invalid example variant: ${language}"
+      exit 1;;
+  esac
+fi
+
 if [[ -z "${APPLICATION+z}" ]]; then
-  echo "Missing required option: -a APPLICATION"
+  echo "Missing required option: -a APPLICATION or -e EXAMPLE"
   exit 1
 fi
 

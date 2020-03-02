@@ -56,28 +56,13 @@ if [[ -z "${EXAMPLE+z}" ]]; then
 fi
 
 if [[ "${server}" != "none" ]]; then
-  # Choose example application variant.
-  case "${language}" in
-    rust)
-      readonly APPLICATION="${PWD}/bazel-client-bin/examples/${EXAMPLE}/config/config.bin";;
-    cpp)
-      # TensorFlow example is compiled with Emscripten and other examples with Clang.
-      if [[ "${EXAMPLE}" == "tensorflow" ]]; then
-        readonly APPLICATION="${PWD}/bazel-emscripten-bin/examples/tensorflow/config/config_cpp.bin"
-      else
-        readonly APPLICATION="${PWD}/bazel-wasm-bin/examples/${EXAMPLE}/config/config_cpp.bin"
-      fi;;
-    *)
-      echo "Invalid example variant: ${language}"
-      exit 1;;
-  esac
   "${SCRIPTS_DIR}/build_example" ${buildargs} -l "${language}" -e "${EXAMPLE}"
 
   # Run a server in the background.
   # The server is being built before running, so the build process will not happen in the
   # background.
   "${SCRIPTS_DIR}/build_server" -s "${server}"
-  "${SCRIPTS_DIR}/run_server" -s "${server}" -a "${APPLICATION}" &
+  "${SCRIPTS_DIR}/run_server" -s "${server}" -l "${language}" -e "${EXAMPLE}" &
   readonly SERVER_PID=$!
   sleep 3  # Wait for the application to start.
 fi
