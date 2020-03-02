@@ -2,13 +2,13 @@
 
 readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
 # shellcheck source=scripts/common
-source "$SCRIPTS_DIR/common"
+source "${SCRIPTS_DIR}/common"
 
 language="rust"
 server="asylo"
 while getopts "s:l:e:h" opt; do
   case "${opt}" in
-  h)
+    h)
       echo -e "Usage: ${0} [-h] [-s asylo|dev|asan|tsan|none] [-l rust|cpp] -e EXAMPLE [-- CLIENT_ARGS]
 
 Build and run the given example Oak Application and client.
@@ -27,21 +27,21 @@ Options:
   -h    Print Help (this message) and exit
 Options after -- will be passed to the example client program."
       exit 0;;
-  l)
-    language="${OPTARG}";;
-  s)
-    case "${OPTARG}" in
-    asylo|dev|asan|tsan|none)
-      server="${OPTARG}";;
+    l)
+      language="${OPTARG}";;
+    s)
+      case "${OPTARG}" in
+        asylo|dev|asan|tsan|none)
+          server="${OPTARG}";;
+        *)
+          echo "Invalid server type: ${OPTARG}"
+          exit 1;;
+      esac;;
+    e)
+      readonly EXAMPLE="${OPTARG}";;
     *)
-      echo "Invalid server type: ${OPTARG}"
+      echo "Invalid argument: ${OPTARG}"
       exit 1;;
-    esac;;
-  e)
-    readonly EXAMPLE="${OPTARG}";;
-  *)
-    echo "Invalid argument: ${OPTARG}"
-    exit 1;;
   esac
 done
 shift "$((OPTIND -1))"
@@ -54,18 +54,18 @@ fi
 if [[ "${server}" != "none" ]]; then
   # Choose example application variant.
   case "${language}" in
-  rust)
-    readonly APPLICATION="${PWD}/bazel-client-bin/examples/${EXAMPLE}/config/config.bin";;
-  cpp)
-    # TensorFlow example is compiled with Emscripten and other examples with Clang.
-    if [[ "${EXAMPLE}" == "tensorflow" ]]; then
-      readonly APPLICATION="${PWD}/bazel-emscripten-bin/examples/tensorflow/config/config_cpp.bin"
-    else
-      readonly APPLICATION="${PWD}/bazel-wasm-bin/examples/${EXAMPLE}/config/config_cpp.bin"
-    fi;;
-  *)
-    echo "Invalid example variant: ${language}"
-    exit 1;;
+    rust)
+      readonly APPLICATION="${PWD}/bazel-client-bin/examples/${EXAMPLE}/config/config.bin";;
+    cpp)
+      # TensorFlow example is compiled with Emscripten and other examples with Clang.
+      if [[ "${EXAMPLE}" == "tensorflow" ]]; then
+        readonly APPLICATION="${PWD}/bazel-emscripten-bin/examples/tensorflow/config/config_cpp.bin"
+      else
+        readonly APPLICATION="${PWD}/bazel-wasm-bin/examples/${EXAMPLE}/config/config_cpp.bin"
+      fi;;
+    *)
+      echo "Invalid example variant: ${language}"
+      exit 1;;
   esac
   "${SCRIPTS_DIR}/build_example" -e "${EXAMPLE}"
 

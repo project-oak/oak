@@ -8,7 +8,7 @@ server="asylo"
 config="enc-sim"
 while getopts "s:h" opt; do
   case "${opt}" in
-  h)
+    h)
       echo -e "Usage: ${0} [-s asylo|dev|arm|asan|tsan]
 
 Build the specified version of the Oak Runtime server.
@@ -21,35 +21,35 @@ Build the specified version of the Oak Runtime server.
           - tsan: 'dev' server with thread santizer
   -h    Print Help (this message) and exit"
       exit 0;;
-  s)
-    case "${OPTARG}" in
-    asylo)
-      server="asylo"
-      config="enc-sim";;
-    dev)
-      server="dev"
-      config="clang";;
-    arm)
-      server="dev"
-      config="armv8";;
-    asan)
-      server="dev"
-      config="asan";;
-    tsan)
-      server="dev"
-      config="tsan";;
+    s)
+      case "${OPTARG}" in
+        asylo)
+          server="asylo"
+          config="enc-sim";;
+        dev)
+          server="dev"
+          config="clang";;
+        arm)
+          server="dev"
+          config="armv8";;
+        asan)
+          server="dev"
+          config="asan";;
+        tsan)
+          server="dev"
+          config="tsan";;
+        *)
+          echo "Invalid server type: ${OPTARG}"
+          exit 1;;
+      esac;;
     *)
-      echo "Invalid server type: ${OPTARG}"
+      echo "Invalid argument: ${OPTARG}"
       exit 1;;
-    esac;;
-  *)
-    echo "Invalid argument: ${OPTARG}"
-    exit 1;;
   esac
 done
 
 bazel_build_flags+=(
-    "--config=${config}"
+  "--config=${config}"
 )
 
 if [[ "${server}" == "asylo" ]]; then

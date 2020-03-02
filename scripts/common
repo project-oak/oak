@@ -24,16 +24,16 @@ readonly CACHE_DIR='bazel-cache'
 readonly OAK_REMOTE_CACHE_KEY='./.oak_remote_cache_key.json'
 
 (
-    # Disable xtrace to avoid leaking secrets in logs.
-    set +o xtrace;
-    # Do we have a JSON key for the remote cache.
-    # https://docs.bazel.build/versions/master/remote-caching.html#google-cloud-storage
-    if [[ ! -f "$OAK_REMOTE_CACHE_KEY" ]]; then
-        # Check if this exists in the environment and it is not empty.
-        if [[ -n "${BAZEL_GOOGLE_CREDENTIALS:-}" ]]; then
-            echo "$BAZEL_GOOGLE_CREDENTIALS" > "$OAK_REMOTE_CACHE_KEY"
-        fi
+  # Disable xtrace to avoid leaking secrets in logs.
+  set +o xtrace;
+  # Do we have a JSON key for the remote cache.
+  # https://docs.bazel.build/versions/master/remote-caching.html#google-cloud-storage
+  if [[ ! -f "$OAK_REMOTE_CACHE_KEY" ]]; then
+    # Check if this exists in the environment and it is not empty.
+    if [[ -n "${BAZEL_GOOGLE_CREDENTIALS:-}" ]]; then
+      echo "$BAZEL_GOOGLE_CREDENTIALS" > "$OAK_REMOTE_CACHE_KEY"
     fi
+  fi
 )
 
 declare -a bazel_build_flags
@@ -41,22 +41,22 @@ declare -a bazel_build_flags
 # Use the remote cache, assuming it is publicly readable.
 # See https://pantheon.corp.google.com/storage/browser/oak-bazel-cache?project=oak-ci
 bazel_build_flags+=(
-    '--remote_cache=https://storage.googleapis.com/oak-bazel-cache'
-    # Fail immediately if the Bazel server lock cannot be acquired so that we can notice this in CI
-    # and avoid attempting to parallelize steps that are actually serialized by Bazel.
-    '--block_for_lock=false'
-    # Useful to determine how long individual steps are taking in CI.
-    '--show_timestamps'
+  '--remote_cache=https://storage.googleapis.com/oak-bazel-cache'
+  # Fail immediately if the Bazel server lock cannot be acquired so that we can notice this in CI
+  # and avoid attempting to parallelize steps that are actually serialized by Bazel.
+  '--block_for_lock=false'
+  # Useful to determine how long individual steps are taking in CI.
+  '--show_timestamps'
 )
 
 # If we now have a key file, use it, otherwise disable uploading artifacts to remote cache.
 # Note that this is only needed to write to the cache, not to read from it.
 if [[ -f "$OAK_REMOTE_CACHE_KEY" ]]; then
-    bazel_build_flags+=(
-        "--google_credentials=$OAK_REMOTE_CACHE_KEY"
-    )
+  bazel_build_flags+=(
+    "--google_credentials=$OAK_REMOTE_CACHE_KEY"
+  )
 else
-    bazel_build_flags+=(
-        '--remote_upload_local_results=false'
-    )
+  bazel_build_flags+=(
+    '--remote_upload_local_results=false'
+  )
 fi

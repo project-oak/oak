@@ -5,7 +5,7 @@ readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
 source "$SCRIPTS_DIR/common"
 
 bazel_build_flags+=(
-    '--config=fuzz'
+  '--config=fuzz'
 )
 
 bazel build "${bazel_build_flags[@]}" //oak/server:wasm_node_fuzz
