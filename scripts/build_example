@@ -8,10 +8,13 @@ compilation_mode='fastbuild'
 while getopts "de:h" opt; do
     case "$opt" in
     h)
-        echo -e "Usage: $0 [-d] -e EXAMPLE
-  -d    Build using debug mode
-  -e    Example application name
-  -h    Print this message"
+        echo -e "Usage: $0 [-h] [-d] -e EXAMPLE
+
+Build the given example Oak Application and client.
+
+  -e    Example application name (required)
+  -d    Build C++ code for example using debug mode
+  -h    Print Help (this message) and exit"
         exit 0;;
     d)
         compilation_mode='dbg';;

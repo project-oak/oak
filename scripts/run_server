@@ -9,13 +9,13 @@ while getopts "s:a:h" opt; do
   case "${opt}" in
   h)
       echo -e "Usage: ${0} [-s asylo|dev|arm|asan|tsan] -a APPLICATION
+  -a    Path to a serialized application configuration file (required)
   -s    Server type:
           - asylo: server based on the Asylo framework (used by default)
           - dev: development version of the server
           - arm: 'dev' server for ARM architecture
           - asan: 'dev' server with address sanitizer
           - tsan: 'dev' server with thread santizer
-  -a    Path to a serialized application configuration file
   -h    Print Help (this message) and exit"
       exit 0;;
   s)
@@ -34,6 +34,11 @@ while getopts "s:a:h" opt; do
   esac
 done
 
+if [[ -z "${APPLICATION+z}" ]]; then
+  echo "Missing required option: -a APPLICATION"
+  exit 1
+fi
+
 "${SCRIPTS_DIR}/build_server" -s "${server}"
 
 # Launching the server requires a `--application=<dir>/config.bin` flag.
@@ -43,4 +48,4 @@ if [[ "${server}" == "asylo" ]]; then
 else
   # We use a different symlink prefix for clang-based artifacts.
   exec ./bazel-clang-bin/oak/server/dev/dev_oak_runner --application="${APPLICATION}"
-fi 
+fi
