@@ -75,6 +75,9 @@ pub fn application_configuration<S: ::std::hash::BuildHasher>(
     }
 }
 
+/// Load a `runtime::Configuration` from a protobuf `ApplicationConfiguration`.
+/// This can fail if an unsupported node is passed, or if a node was unable to be initialized with
+/// the given configuration.
 pub fn from_protobuf(
     app_config: ApplicationConfiguration,
 ) -> Result<runtime::Configuration, OakStatus> {
@@ -112,6 +115,7 @@ pub fn from_protobuf(
     Ok(config)
 }
 
+/// Configure a `Runtime` from the given protobuf `ApplicationConfiguration` and begin execution.
 pub fn configure_and_run(
     app_config: ApplicationConfiguration,
 ) -> Result<(RuntimeRef, ChannelWriter), OakStatus> {
