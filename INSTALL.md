@@ -30,7 +30,7 @@ rustup target add wasm32-unknown-unknown
 source $HOME/.cargo/env
 cd $WHERE_YOU_LIKE_TO_KEEP_GIT_REPOS
 git clone https://github.com/project-oak/oak.git
-./scripts/docker_run ./scripts/build_server_asylo  # this may take some time
+./scripts/docker_run ./scripts/build_server -s asylo  # this may take some time
 ```
 
 add `source \$HOME/.cargo/env` to your shell init script (e.g. `.bashrc` or
@@ -44,7 +44,7 @@ This: `oak/server/asylo/BUILD`
 Next, run one of the example Applications:
 
 ```bash
-./scripts/docker_run ./scripts/run_example hello_world
+./scripts/docker_run ./scripts/run_example -e hello_world
 ```
 
 In the end, you should end up with an Oak server running in the background:

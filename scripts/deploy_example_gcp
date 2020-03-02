@@ -7,7 +7,7 @@ source "$SCRIPTS_DIR/common"
 # shellcheck source=scripts/gcp_common
 source "$SCRIPTS_DIR/gcp_common"
 
-"$SCRIPTS_DIR/build_example" "hello_world"
+"$SCRIPTS_DIR/build_example" -e "hello_world"
 
 # Prerequisites:
 # - Google Cloud SDK
@@ -17,7 +17,7 @@ source "$SCRIPTS_DIR/gcp_common"
 # - Service account must be in the following IAM roles:
 #   - Compute Instance Admin (v1)
 #   - Compute Security Admin
-#   - Service Account User 
+#   - Service Account User
 
 # Create a minimal Ubuntu linux image on the GCP project.
 # The image will be named oak-gcp-hello-world.
