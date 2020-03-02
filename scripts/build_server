@@ -24,20 +24,20 @@ Build the specified version of the Oak Runtime server.
     s)
       case "${OPTARG}" in
         asylo)
-          server="asylo"
-          config="enc-sim";;
+          server='asylo'
+          config='enc-sim';;
         dev)
-          server="dev"
-          config="clang";;
+          server='dev'
+          config='clang';;
         arm)
-          server="dev"
-          config="armv8";;
+          server='dev'
+          config='armv8';;
         asan)
-          server="dev"
-          config="asan";;
+          server='dev'
+          config='asan';;
         tsan)
-          server="dev"
-          config="tsan";;
+          server='dev'
+          config='tsan';;
         *)
           echo "Invalid server type: ${OPTARG}"
           exit 1;;
