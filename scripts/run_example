@@ -10,6 +10,11 @@ while getopts "s:l:e:h" opt; do
   case "${opt}" in
   h)
       echo -e "Usage: ${0} [-h] [-s asylo|dev|asan|tsan|none] [-l rust|cpp] -e EXAMPLE [-- CLIENT_ARGS]
+
+Build and run the given example Oak Application and client.
+
+Options:
+  -e    Example application name (required)
   -s    Server type used to run examples:
           - asylo: server based on the Asylo framework (used by default)
           - dev: development version of the server
@@ -19,8 +24,8 @@ while getopts "s:l:e:h" opt; do
   -l    Example application variant:
           - rust (used by default)
           - cpp
-  -e    Example application name
-  -h    Print Help (this message) and exit"
+  -h    Print Help (this message) and exit
+Options after -- will be passed to the example client program."
       exit 0;;
   l)
     language="${OPTARG}";;
@@ -40,6 +45,11 @@ while getopts "s:l:e:h" opt; do
   esac
 done
 shift "$((OPTIND -1))"
+
+if [[ -z "${EXAMPLE+z}" ]]; then
+  echo "Missing required option: -e EXAMPLE"
+  exit 1
+fi
 
 if [[ "${server}" != "none" ]]; then
   # Choose example application variant.
