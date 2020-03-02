@@ -6,24 +6,24 @@ source "${SCRIPTS_DIR}/common"
 
 compilation_mode='fastbuild'
 while getopts "de:h" opt; do
-    case "$opt" in
+  case "$opt" in
     h)
-        echo -e "Usage: $0 [-h] [-d] -e EXAMPLE
+      echo -e "Usage: $0 [-h] [-d] -e EXAMPLE
 
 Build the given example Oak Application and client.
 
   -e    Example application name (required)
   -d    Build C++ code for example using debug mode
   -h    Print Help (this message) and exit"
-        exit 0;;
+      exit 0;;
     d)
-        compilation_mode='dbg';;
+      compilation_mode='dbg';;
     e)
-        readonly EXAMPLE="${OPTARG}";;
+      readonly EXAMPLE="${OPTARG}";;
     *)
-        echo "Invalid argument: ${OPTARG}"
-        exit 1;;
-    esac
+      echo "Invalid argument: ${OPTARG}"
+      exit 1;;
+  esac
 done
 
 if [[ -z "${EXAMPLE+z}" ]]; then
@@ -32,44 +32,44 @@ if [[ -z "${EXAMPLE+z}" ]]; then
 fi
 
 bazel_build_flags+=(
-    '--symlink_prefix=bazel-client-'
-    "--compilation_mode=${compilation_mode}"
+  '--symlink_prefix=bazel-client-'
+  "--compilation_mode=${compilation_mode}"
 )
 
 readonly RUST_FOLDER="$(find examples/"${EXAMPLE}" -type d -name rust)"
 if [[ -n "${RUST_FOLDER}" ]]; then
-    for module in examples/"${EXAMPLE}"/module*/rust/Cargo.toml; do
-        cargo build --release --target=wasm32-unknown-unknown --manifest-path="${module}"
-    done
+  for module in examples/"${EXAMPLE}"/module*/rust/Cargo.toml; do
+    cargo build --release --target=wasm32-unknown-unknown --manifest-path="${module}"
+  done
 
-    # Serialize application configuration for Rust module.
-    if [[ "${EXAMPLE}" == "hello_world" ]]; then
-        # `hello_world` example has an optional additional `translator` module.
-        cargo build --release --target=wasm32-unknown-unknown --manifest-path="examples/translator/module/rust/Cargo.toml"
+  # Serialize application configuration for Rust module.
+  if [[ "${EXAMPLE}" == "hello_world" ]]; then
+    # `hello_world` example has an optional additional `translator` module.
+    cargo build --release --target=wasm32-unknown-unknown --manifest-path="examples/translator/module/rust/Cargo.toml"
 
-        bazel --output_base="${CACHE_DIR}/client" build "${bazel_build_flags[@]}" \
-            "//examples/hello_world/config:config" \
-            "//examples/hello_world/config:config_translator"
-    else
-        bazel --output_base="${CACHE_DIR}/client" build "${bazel_build_flags[@]}" "//examples/${EXAMPLE}/config:config"
-    fi
+    bazel --output_base="${CACHE_DIR}/client" build "${bazel_build_flags[@]}" \
+      "//examples/hello_world/config:config" \
+      "//examples/hello_world/config:config_translator"
+  else
+    bazel --output_base="${CACHE_DIR}/client" build "${bazel_build_flags[@]}" "//examples/${EXAMPLE}/config:config"
+  fi
 fi
 
 readonly CPP_FOLDER="$(find examples/"${EXAMPLE}" -type d -name cpp)"
 if [[ -n "${CPP_FOLDER}" ]]; then
-    # `config_cpp` depends on a Wasm module, so it should be built with `wasm32` or `emscripten`.
-    readonly BUILD_RULES=(
-        "//examples/${EXAMPLE}/module/cpp:all"
-        "//examples/${EXAMPLE}/config:config_cpp"
-    )
-    if [[ "${EXAMPLE}" == "tensorflow" ]]; then
-        # TODO: Compile all examples in Emscripten when imports will be fixed.
-        # https://github.com/project-oak/oak/issues/439
-        bazel --output_base="${CACHE_DIR}/emscripten" build "${bazel_build_flags[@]}" --config=emscripten "${BUILD_RULES[@]}"
-    else
-        # TODO: support compilation mode wasm.
-        bazel --output_base="${CACHE_DIR}/wasm32" build "${bazel_build_flags[@]}" --config=wasm32 "${BUILD_RULES[@]}"
-    fi
+  # `config_cpp` depends on a Wasm module, so it should be built with `wasm32` or `emscripten`.
+  readonly BUILD_RULES=(
+    "//examples/${EXAMPLE}/module/cpp:all"
+    "//examples/${EXAMPLE}/config:config_cpp"
+  )
+  if [[ "${EXAMPLE}" == "tensorflow" ]]; then
+    # TODO: Compile all examples in Emscripten when imports will be fixed.
+    # https://github.com/project-oak/oak/issues/439
+    bazel --output_base="${CACHE_DIR}/emscripten" build "${bazel_build_flags[@]}" --config=emscripten "${BUILD_RULES[@]}"
+  else
+    # TODO: support compilation mode wasm.
+    bazel --output_base="${CACHE_DIR}/wasm32" build "${bazel_build_flags[@]}" --config=wasm32 "${BUILD_RULES[@]}"
+  fi
 fi
 
 # Use a different output_base so that we don't lose incremental state.

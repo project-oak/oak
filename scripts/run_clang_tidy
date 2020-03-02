@@ -5,17 +5,17 @@ readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
 source "$SCRIPTS_DIR/common"
 
 bazel_build_flags+=(
-    '--experimental_action_listener=@io_kythe//kythe/cxx/tools/generate_compile_commands:extract_json'
-    '--noshow_progress'
-    '--noshow_loading_progress'
+  '--experimental_action_listener=@io_kythe//kythe/cxx/tools/generate_compile_commands:extract_json'
+  '--noshow_progress'
+  '--noshow_loading_progress'
 )
 
 # Compilation database should be stored in the Bazel execution root.
 readonly BAZEL_ROOT=$(bazel info execution_root)
 readonly CLANG_TIDY_FLAGS=(
-    "-p=${BAZEL_ROOT}"
-    '-header-filter=-external'
-    '-warnings-as-errors=*'
+  "-p=${BAZEL_ROOT}"
+  '-header-filter=-external'
+  '-warnings-as-errors=*'
 )
 
 # Generate compilation database.

@@ -7,10 +7,10 @@ source "$SCRIPTS_DIR/common"
 COMPILATION_MODE='fastbuild'
 
 bazel_build_flags+=(
-    '--fat_apk_cpu=x86_64'
-    '--linkopt=-llog'
-    '--symlink_prefix=bazel-client-android-'
-    "--compilation_mode=$COMPILATION_MODE"
+  '--fat_apk_cpu=x86_64'
+  '--linkopt=-llog'
+  '--symlink_prefix=bazel-client-android-'
+  "--compilation_mode=$COMPILATION_MODE"
 )
 
 # Use a different output_base so that we don't lose incremental state.
