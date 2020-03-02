@@ -3,16 +3,18 @@
 ## Prerequisites
 
 We use Docker to install the base dependencies that need to exist at the system
-level, e.g. the Intel SGX SDK and the Rust compiler; these steps are detailed in
-[`Dockerfile`](/Dockerfile). See
+level, e.g. the [Intel SGX SDK](https://software.intel.com/en-us/sgx/sdk) and
+the [Rust compiler](https://www.rust-lang.org/tools/install); these steps are
+detailed in [`Dockerfile`](/Dockerfile). See
 https://docs.docker.com/engine/reference/builder/ for more information.
 
-Inside Docker, we use Bazel to version, install and build dependencies and our
-own code. Dependencies are listed in [`WORKSPACE`](/WORKSPACE). See
+Inside Docker, we use Bazel to version, install and build any non-Rust
+dependencies, including our own code. Dependencies are listed in
+[`WORKSPACE`](/WORKSPACE). See
 https://docs.bazel.build/versions/master/external.html for more information.
 
 To set up your development environment, you need the following applications. For
-the accurate versions required for a successful build please consult the
+the accurate versions required for a successful build please consult the current
 [`Dockerfile`](/Dockerfile).
 
 - Docker:
@@ -70,21 +72,22 @@ the Application's configuration.
 
 #### Run Asylo Server
 
-The following command builds and runs an Oak Server instance that is running a
-specific Oak Application (this version of the server is based on the
-[Asylo](https://github.com/google/asylo) framework):
+The following command builds and runs an Oak Server instance inside Docker,
+running a specific Oak Application. This version of the server is based on the
+[Asylo](https://github.com/google/asylo) framework, and uses an Asylo-specific
+toolchain to build the Oak Server.
 
 ```bash
-./scripts/run_server -s asylo -a "${PWD}/bazel-client-bin/examples/hello_world/config/config.bin"
+./scripts/docker_run ./scripts/run_server -s asylo -e hello_world
 ```
 
 #### Run Development Server
 
 In addition to the Oak Server, we provide a "development" version of the server.
-It shares the same runtime as the Docker implementation, but it's built using
-clang and it's a very lightweight wrapper around a simple gRPC client. It
-doesn't use Docker or any of the Asylo toolchains and it does not create an
-enclave.
+It shares the same Runtime code as the Asylo implementation, but it's built
+using [Clang](https://clang.llvm.org/) and is a very lightweight wrapper around
+a simple gRPC client. It doesn't use the Asylo toolchains and it does not create
+an enclave.
 
 As such, it can be used when working on the runtime, the client code or the Node
 code as it can help with enabling a faster iteration.
@@ -92,13 +95,14 @@ code as it can help with enabling a faster iteration.
 The following command builds and runs an Oak Development Server:
 
 ```bash
-./scripts/run_server -s dev -a "${PWD}/bazel-client-bin/examples/hello_world/config/config.bin"
+./scripts/run_server -s dev -e hello_world
 ```
 
-As this compiles using clang on your local machine, it can be easily build in
-debug mode, as well as use any of the Sanitizers clang supports (e.g. asan, tsan
-etc.). Details about available sanitizers can be found in the
-[`.bazelrc`](/.bazelrc) file.
+As this compiles using Clang on your local machine, it can be easily build in
+debug mode, as well as use any of the sanitizers Clang supports (e.g.
+[asan](https://clang.llvm.org/docs/AddressSanitizer.html),
+[tsan](https://clang.llvm.org/docs/ThreadSanitizer.html) etc.). Details about
+available sanitizers can be found in the [`.bazelrc`](/.bazelrc) file.
 
 The following command builds and run Oak Local Server with tsan enabled. Replace
 `tsan` with other configurations for different sanitisers:
@@ -109,9 +113,9 @@ bazel build --config=tsan //oak/server/dev:dev_oak_runner
 
 ### Run Client
 
-The following command (run in a separate terminal) compiles the code for an
-example Oak Node from Rust to a WebAssembly module, and sends it to the Oak
-Server running on the same machine. It works with both Servers (Docker and Dev):
+The following command (run in a separate terminal) compiles the code for the
+client of an example Oak Application, and runs it locally. It works with both
+Servers (Docker and Dev):
 
 ```bash
 ./scripts/run_example -s none -e hello_world
