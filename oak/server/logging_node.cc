@@ -47,7 +47,8 @@ void LoggingNode::Run(Handle handle) {
       if (result.msg == nullptr) {
         break;
       }
-      LOG(INFO) << "LOG: " << std::string(result.msg->data.data(), result.msg->data.size());
+      LOG(INFO) << "{" << name_ << "} "
+                << "LOG: " << std::string(result.msg->data.data(), result.msg->data.size());
       // Any channel references included with the message will be dropped.
     }
   }
