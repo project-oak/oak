@@ -26,8 +26,8 @@ fn main() {
 
     prost_build::Config::new()
         .out_dir("src/proto")
-        .compile_protos(&[&*oak_api_path],
-                        &[proto_dir]).unwrap();
+        .compile_protos(&[&*oak_api_path], &[proto_dir])
+        .unwrap();
 
     std::fs::write("src/proto/mod.rs", "pub mod oak;").unwrap();
 }

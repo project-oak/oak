@@ -241,9 +241,7 @@ pub fn channel_read(
                     }
                 }
 
-                OakStatus::ErrBufferTooSmall | OakStatus::ErrHandleSpaceTooSmall
-                    if !(*resized) =>
-                {
+                OakStatus::ErrBufferTooSmall | OakStatus::ErrHandleSpaceTooSmall if !(*resized) => {
                     // Extend the vectors to be large enough for the message
                     debug!(
                         "Got space for {} bytes, need {}",

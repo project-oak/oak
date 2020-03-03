@@ -96,8 +96,7 @@ fn inner_main(in_handle: u64) -> Result<(), oak::OakStatus> {
             let mut handles = Vec::with_capacity(1);
 
             oak::channel_read(wait_handles[i], &mut buf, &mut handles).or_else(|err| {
-                if err == oak::OakStatus::ErrChannelClosed
-                    || err == oak::OakStatus::ErrChannelEmpty
+                if err == oak::OakStatus::ErrChannelClosed || err == oak::OakStatus::ErrChannelEmpty
                 {
                     // Multiple backend Nodes are attempting to read the message from
                     // the channel, so it's entirely possible that one of them has

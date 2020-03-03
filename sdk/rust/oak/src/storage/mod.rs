@@ -102,10 +102,7 @@ impl Storage {
             Err(status) => {
                 return Err(grpc::build_status(
                     grpc::Code::INTERNAL,
-                    &format!(
-                        "failed to create storage response channel: {:?}",
-                        status
-                    ),
+                    &format!("failed to create storage response channel: {:?}", status),
                 ));
             }
         };

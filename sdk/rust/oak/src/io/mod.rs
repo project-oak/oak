@@ -67,8 +67,6 @@ pub fn error_from_nonok_status(status: OakStatus) -> io::Error {
         OakStatus::ErrOutOfRange => io::Error::new(io::ErrorKind::NotConnected, "Out of range"),
         OakStatus::ErrInternal => io::Error::new(io::ErrorKind::Other, "Internal error"),
         OakStatus::ErrTerminated => io::Error::new(io::ErrorKind::Other, "Node terminated"),
-        OakStatus::ErrChannelEmpty => {
-            io::Error::new(io::ErrorKind::UnexpectedEof, "Channel empty")
-        }
+        OakStatus::ErrChannelEmpty => io::Error::new(io::ErrorKind::UnexpectedEof, "Channel empty"),
     }
 }

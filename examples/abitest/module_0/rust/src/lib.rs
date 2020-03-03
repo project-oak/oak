@@ -338,10 +338,7 @@ impl FrontendNode {
         unsafe {
             expect_eq!(OakStatus::Ok as u32, oak_abi::channel_close(w));
             expect_eq!(OakStatus::Ok as u32, oak_abi::channel_close(r));
-            expect_eq!(
-                OakStatus::ErrBadHandle as u32,
-                oak_abi::channel_close(w)
-            );
+            expect_eq!(OakStatus::ErrBadHandle as u32, oak_abi::channel_close(w));
             expect_eq!(
                 OakStatus::ErrBadHandle as u32,
                 oak_abi::channel_close(9_999_999)
@@ -693,10 +690,7 @@ impl FrontendNode {
                 ChannelReadStatus::InvalidChannel as i32,
                 i32::from(space[8])
             );
-            expect_eq!(
-                ChannelReadStatus::ReadReady as i32,
-                i32::from(space[9 + 8])
-            );
+            expect_eq!(ChannelReadStatus::ReadReady as i32, i32::from(space[9 + 8]));
             expect_eq!(
                 ChannelReadStatus::NotReady as i32,
                 i32::from(space[9 + 9 + 8])
@@ -723,14 +717,8 @@ impl FrontendNode {
                 ChannelReadStatus::InvalidChannel as i32,
                 i32::from(space[8])
             );
-            expect_eq!(
-                ChannelReadStatus::ReadReady as i32,
-                i32::from(space[9 + 8])
-            );
-            expect_eq!(
-                OakStatus::Ok as u32,
-                oak_abi::channel_close(out_channel)
-            );
+            expect_eq!(ChannelReadStatus::ReadReady as i32, i32::from(space[9 + 8]));
+            expect_eq!(OakStatus::Ok as u32, oak_abi::channel_close(out_channel));
         }
 
         // Still a pending message on in_channel even though the only write half for
@@ -784,10 +772,7 @@ impl FrontendNode {
             );
             expect_eq!(ChannelReadStatus::Orphaned as i32, i32::from(space[8]));
 
-            expect_eq!(
-                OakStatus::Ok as u32,
-                oak_abi::channel_close(in_channel)
-            );
+            expect_eq!(OakStatus::Ok as u32, oak_abi::channel_close(in_channel));
         }
 
         unsafe {
