@@ -165,6 +165,22 @@ bool GrpcClientNode::HandleInvocation(MessageChannelReadHalf* invocation_channel
   if (!ok) {
     LOG(ERROR) << "Failed to finish gRPC method invocation";
   }
+  if (!status.ok()) {
+    // Final status includes an error, so pass it back on the response channel.
+    oak::GrpcResponse grpc_rsp;
+    grpc_rsp.set_last(true);
+    grpc_rsp.mutable_status()->set_code(status.error_code());
+    grpc_rsp.mutable_status()->set_message(status.error_message());
+
+    std::unique_ptr<Message> rsp_msg = absl::make_unique<Message>();
+    size_t serialized_size = grpc_rsp.ByteSizeLong();
+    rsp_msg->data.resize(serialized_size);
+    grpc_rsp.SerializeToArray(rsp_msg->data.data(), rsp_msg->data.size());
+
+    LOG(INFO) << "Write final gRPC status of (" << status.error_code() << ", '"
+              << status.error_message() << "') to response channel";
+    rsp_channel->Write(std::move(rsp_msg));
+  }
 
   // References to the per-invocation request/response channels will be dropped
   // on exit, orphaning them.
@@ -187,8 +203,7 @@ void GrpcClientNode::Run(Handle invocation_handle) {
     }
 
     if (!HandleInvocation(invocation_channel)) {
-      LOG(ERROR) << "Invocation processing failed";
-      return;
+      LOG(ERROR) << "Invocation processing failed!";
     }
   }
   // Drop reference to the invocation channel on exit.
