@@ -136,6 +136,7 @@ cc_library(
     deps = [
         ":storage_provider",
         "@com_google_absl//absl/strings",
+        "@com_google_asylo//asylo/util:logging",
     ],
 )
 
