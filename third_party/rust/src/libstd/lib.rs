@@ -1,5 +1,4 @@
 #![no_std]
-
 #![feature(lang_items)]
 #![feature(allocator_api)]
 #![feature(alloc_prelude)]
@@ -18,6 +17,6 @@ extern crate libc;
 
 pub use alloc::prelude::v1::*;
 
+pub mod asylo;
 pub mod error;
 pub mod io;
-pub mod asylo;

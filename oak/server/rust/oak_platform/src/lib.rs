@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-#![cfg_attr(feature="no_std", no_std)]
+#![cfg_attr(feature = "no_std", no_std)]
 
 #[cfg(feature = "asylo")]
 pub use oak_platform_asylo::*;
@@ -27,9 +27,9 @@ mod imp {
     pub type Thread = std::thread::Thread;
     pub type ThreadId = std::thread::ThreadId;
 
-    pub use std::thread::spawn;
     pub use std::thread::current as current_thread;
     pub use std::thread::park as park_thread;
+    pub use std::thread::spawn;
 }
 #[cfg(feature = "std")]
 pub use imp::*;

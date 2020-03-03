@@ -1,8 +1,8 @@
 // See https://github.com/rust-lang/rust/blob/6b561b4917e803c4be4ca44d8e552b680cb9e380/src/libstd/io/error.rs
 
+use alloc::boxed::*;
 use alloc::fmt;
 use core::result;
-use alloc::boxed::*;
 
 use crate::error;
 
@@ -488,10 +488,7 @@ impl fmt::Debug for Repr {
             //     .field("kind", &sys::decode_error_kind(code))
             //     .field("message", &sys::os::error_string(code))
             //     .finish(),
-            Repr::Os(code) => fmt
-                .debug_struct("Os")
-                .field("code", &code)
-                .finish(),
+            Repr::Os(code) => fmt.debug_struct("Os").field("code", &code).finish(),
             Repr::Custom(ref c) => fmt::Debug::fmt(&c, fmt),
             Repr::Simple(kind) => fmt.debug_tuple("Kind").field(&kind).finish(),
         }

@@ -17,7 +17,6 @@
 // TODO(#662): Should this crate be merged into oak_platform or third_party/rust?
 
 #![no_std]
-
 #![feature(lang_items)]
 #![feature(allocator_api)]
 #![feature(alloc_prelude)]
@@ -34,8 +33,8 @@ extern crate alloc;
 
 pub use alloc::prelude::v1::*;
 
-pub use rust_asylo::error as error;
-pub use rust_asylo::io as io;
+pub use rust_asylo::error;
+pub use rust_asylo::io;
 
 mod allocator;
 mod asylo;
@@ -43,11 +42,11 @@ mod asylo;
 #[global_allocator]
 static A: allocator::System = allocator::System;
 
-pub use rust_asylo::asylo::Mutex;
-pub use rust_asylo::asylo::RwLock;
 pub use rust_asylo::asylo::thread::JoinHandle;
 pub use rust_asylo::asylo::thread::Thread;
 pub use rust_asylo::asylo::thread::ThreadId;
+pub use rust_asylo::asylo::Mutex;
+pub use rust_asylo::asylo::RwLock;
 
 /// A safe function to spawn an enclave thread. At the moment, parameters cannot
 /// be passed in this function call, unlike the Rust standard library. (This can
@@ -58,9 +57,7 @@ where
     F: FnOnce() -> (),
     F: Send + 'static,
 {
-    unsafe {
-      Thread::new(Box::new(f))
-    }.expect("could not spawn thread!?")
+    unsafe { Thread::new(Box::new(f)) }.expect("could not spawn thread!?")
 }
 
 /// Provide the entrypoint needed by the compiler's failure mechanisms when
