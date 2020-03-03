@@ -20,6 +20,8 @@
 #include <string>
 #include <vector>
 
+#include "absl/debugging/stacktrace.h"
+#include "absl/debugging/symbolize.h"
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 #include "absl/synchronization/notification.h"
@@ -34,14 +36,37 @@
 
 ABSL_FLAG(std::string, application, "", "Application configuration file");
 ABSL_FLAG(std::string, enclave_path, "", "Path of the enclave to load");
+ABSL_FLAG(bool, debug, true, "Run in debug mode");
 
 void sigint_handler(int param) {
   LOG(QFATAL) << "SIGINT received";
   exit(1);
 }
 
+void crash_handler(int param) {
+  constexpr int kMaxStackDepth = 20;
+  void* result[kMaxStackDepth];
+  int depth = absl::GetStackTrace(result, kMaxStackDepth, 1);
+  for (int i = 0; i < depth; i++) {
+    char tmp[1024];
+    const char* symbol = "(unknown)";
+    if (absl::Symbolize(result[i], tmp, sizeof(tmp))) {
+      symbol = tmp;
+    }
+    LOG(ERROR) << "backtrace[" << i << "] = " << result[i] << " " << symbol;
+  }
+  LOG(QFATAL) << "Process crashed, signal " << param;
+}
+
 int main(int argc, char* argv[]) {
   absl::ParseCommandLine(argc, argv);
+
+  if (absl::GetFlag(FLAGS_debug)) {
+    absl::InitializeSymbolizer(argv[0]);
+    std::signal(SIGILL, crash_handler);
+    std::signal(SIGBUS, crash_handler);
+    std::signal(SIGSEGV, crash_handler);
+  }
 
   // We install an explicit SIGINT handler, as for some reason the default one
   // does not seem to work.

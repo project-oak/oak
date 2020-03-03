@@ -140,6 +140,8 @@ enclave_loader(
         "//oak/common:app_config",
         "//oak/common:utils",
         "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/debugging:stacktrace",
+        "@com_google_absl//absl/debugging:symbolize",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
         "@com_google_absl//absl/synchronization",

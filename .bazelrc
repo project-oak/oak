@@ -14,6 +14,7 @@ build:sgx --define=SGX_SIM=0
 build:sgx-sim --config=asylo
 build:sgx-sim --define=ASYLO_SGX=1
 build:sgx-sim --define=SGX_SIM=1
+build:sgx-sim --compilation_mode=dbg
 
 # The enclave simulation backend currently makes use of the SGX simulator.
 # However, this is subject to change and users of this config should not
