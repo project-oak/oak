@@ -30,7 +30,7 @@ pub extern "C" fn backend_oak_main(handle: u64) {
         oak::set_panic_hook();
 
         match inner_main(handle) {
-            Err(oak::OakStatus::ERR_TERMINATED) => {
+            Err(oak::OakStatus::ErrTerminated) => {
                 info!("node terminated");
             }
             Err(s) => {
@@ -53,7 +53,7 @@ fn inner_main(in_handle: u64) -> Result<(), oak::OakStatus> {
     let mut handles = Vec::with_capacity(2);
     oak::channel_read(in_channel, &mut buf, &mut handles)?;
     if handles.len() != 1 {
-        return Err(oak::OakStatus::ERR_INTERNAL);
+        return Err(oak::OakStatus::ErrInternal);
     }
     let out_handle = handles[0];
     info!("backend node: in={:?}, out={:?}", in_channel, out_handle);
@@ -65,7 +65,7 @@ fn inner_main(in_handle: u64) -> Result<(), oak::OakStatus> {
         let ready_status = oak::wait_on_channels(&wait_handles)?;
         // If there is a message on in_channel, it is expected to contain
         // a collection of read handles for future listening
-        if ready_status[0] == oak::ChannelReadStatus::READ_READY {
+        if ready_status[0] == oak::ChannelReadStatus::ReadReady {
             let mut buf = Vec::<u8>::with_capacity(16);
             let mut handles = Vec::with_capacity(5);
             oak::channel_read(in_channel, &mut buf, &mut handles)?;
@@ -79,8 +79,8 @@ fn inner_main(in_handle: u64) -> Result<(), oak::OakStatus> {
         // messages.
         let mut orphaned_handles = HashSet::new();
         for i in 1..ready_status.len() {
-            if ready_status[i] != oak::ChannelReadStatus::READ_READY {
-                if ready_status[i] == oak::ChannelReadStatus::ORPHANED {
+            if ready_status[i] != oak::ChannelReadStatus::ReadReady {
+                if ready_status[i] == oak::ChannelReadStatus::Orphaned {
                     let orphan_handle = wait_handles[i].handle;
                     orphaned_handles.insert(orphan_handle);
                     info!("close orphaned channel[{}]={:?}", i, orphan_handle);
@@ -96,8 +96,8 @@ fn inner_main(in_handle: u64) -> Result<(), oak::OakStatus> {
             let mut handles = Vec::with_capacity(1);
 
             oak::channel_read(wait_handles[i], &mut buf, &mut handles).or_else(|err| {
-                if err == oak::OakStatus::ERR_CHANNEL_CLOSED
-                    || err == oak::OakStatus::ERR_CHANNEL_EMPTY
+                if err == oak::OakStatus::ErrChannelClosed
+                    || err == oak::OakStatus::ErrChannelEmpty
                 {
                     // Multiple backend Nodes are attempting to read the message from
                     // the channel, so it's entirely possible that one of them has

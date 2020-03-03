@@ -93,7 +93,7 @@ pub fn from_protobuf(
             match &node.config_type {
                 None => {
                     error!("Node config {} with no type", node.name);
-                    return Err(OakStatus::ERR_INVALID_ARGS);
+                    return Err(OakStatus::ErrInvalidArgs);
                 }
                 Some(NodeConfiguration_oneof_config_type::log_config(_)) => {
                     node::Configuration::LogNode
@@ -102,11 +102,11 @@ pub fn from_protobuf(
                     WebAssemblyConfiguration { module_bytes, .. },
                 )) => load_wasm(&module_bytes).map_err(|e| {
                     error!("Error loading Wasm module: {}", e);
-                    OakStatus::ERR_INVALID_ARGS
+                    OakStatus::ErrInvalidArgs
                 })?,
                 Some(_) => {
                     error!("Pseudo-node not implemented!");
-                    return Err(OakStatus::ERR_INVALID_ARGS);
+                    return Err(OakStatus::ErrInvalidArgs);
                 }
             },
         );

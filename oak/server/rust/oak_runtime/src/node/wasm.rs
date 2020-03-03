@@ -118,7 +118,7 @@ impl WasmInterface {
         let byte_size: wasmi::memory_units::Bytes = self.get_memory().current_size().into();
 
         if byte_size < wasmi::memory_units::Bytes((addr as usize) + (offset as usize)) {
-            return Err(OakStatus::ERR_INVALID_ARGS);
+            return Err(OakStatus::ErrInvalidArgs);
         }
 
         Ok(())
@@ -159,12 +159,12 @@ impl WasmInterface {
                     "node_create: Unable to read name from guest memory: {:?}",
                     err
                 );
-                OakStatus::ERR_INVALID_ARGS
+                OakStatus::ErrInvalidArgs
             })?;
 
         let config_name = String::from_utf8(config_name).map_err(|err| {
             error!("node_create: Unable to parse config_name: {:?}", err);
-            OakStatus::ERR_INVALID_ARGS
+            OakStatus::ErrInvalidArgs
         })?;
 
         debug!(
@@ -180,12 +180,12 @@ impl WasmInterface {
                     "node_create: Unable to read entrypoint from guest memory: {:?}",
                     err
                 );
-                OakStatus::ERR_INVALID_ARGS
+                OakStatus::ErrInvalidArgs
             })?;
 
         let entrypoint = String::from_utf8(entrypoint).map_err(|err| {
             error!("node_create: Unable to parse entrypoint: {:?}", err);
-            OakStatus::ERR_INVALID_ARGS
+            OakStatus::ErrInvalidArgs
         })?;
 
         debug!(
@@ -195,7 +195,7 @@ impl WasmInterface {
 
         let channel_ref = self.readers.get(&initial_handle).ok_or(()).map_err(|_| {
             error!("node_create: Invalid handle");
-            OakStatus::ERR_BAD_HANDLE
+            OakStatus::ErrBadHandle
         })?;
 
         self.runtime
@@ -205,7 +205,7 @@ impl WasmInterface {
                     "node_create: Config \"{}\" entrypoint \"{}\" not found",
                     config_name, entrypoint
                 );
-                OakStatus::ERR_INVALID_ARGS
+                OakStatus::ErrInvalidArgs
             })
     }
 
@@ -230,7 +230,7 @@ impl WasmInterface {
                     "channel_create: Unable to write writer handle into guest memory: {:?}",
                     err
                 );
-                OakStatus::ERR_INVALID_ARGS
+                OakStatus::ErrInvalidArgs
             })?;
 
         self.get_memory()
@@ -240,7 +240,7 @@ impl WasmInterface {
                     "channel_create: Unable to write reader handle into guest memory: {:?}",
                     err
                 );
-                OakStatus::ERR_INVALID_ARGS
+                OakStatus::ErrInvalidArgs
             })
     }
 
@@ -256,7 +256,7 @@ impl WasmInterface {
     ) -> Result<(), OakStatus> {
         let writer = self.writers.get(&writer_handle).ok_or(()).map_err(|_| {
             error!("channel_write: No such handle");
-            OakStatus::ERR_BAD_HANDLE
+            OakStatus::ErrBadHandle
         })?;
 
         let data = self
@@ -267,7 +267,7 @@ impl WasmInterface {
                     "channel_write: Unable to read message data from guest memory: {:?}",
                     err
                 );
-                OakStatus::ERR_INVALID_ARGS
+                OakStatus::ErrInvalidArgs
             })?;
 
         let raw_handles = self
@@ -278,7 +278,7 @@ impl WasmInterface {
                     "channel_write: Unable to read handles from guest memory: {:?}",
                     err
                 );
-                OakStatus::ERR_INVALID_ARGS
+                OakStatus::ErrInvalidArgs
             })?;
 
         let handles: Vec<u64> = raw_handles
@@ -294,7 +294,7 @@ impl WasmInterface {
                     Some(channel) => Ok(ChannelEither::Reader(channel.clone())),
                     None => {
                         error!("channel_write: Can't find handle {} to send", handle);
-                        Err(OakStatus::ERR_BAD_HANDLE)
+                        Err(OakStatus::ErrBadHandle)
                     }
                 },
             })
@@ -327,7 +327,7 @@ impl WasmInterface {
     ) -> Result<(), OakStatus> {
         let reader = self.readers.get(&reader_handle).ok_or(()).map_err(|_| {
             error!("channel_read: No such handle");
-            OakStatus::ERR_BAD_HANDLE
+            OakStatus::ErrBadHandle
         })?;
 
         self.validate_ptr(dest, dest_capacity)?;
@@ -350,7 +350,7 @@ impl WasmInterface {
                     "channel_read: Unable to write actual length into guest memory: {:?}",
                     err
                 );
-                OakStatus::ERR_INVALID_ARGS
+                OakStatus::ErrInvalidArgs
             })?;
 
         let raw_writer = &mut [0; 4];
@@ -362,7 +362,7 @@ impl WasmInterface {
                     "channel_read: Unable to write actual handle count into guest memory: {:?}",
                     err
                 );
-                OakStatus::ERR_INVALID_ARGS
+                OakStatus::ErrInvalidArgs
             })?;
 
         match msg {
@@ -372,7 +372,7 @@ impl WasmInterface {
                         "channel_read: Unable to write destination buffer into guest memory: {:?}",
                         err
                     );
-                    OakStatus::ERR_INVALID_ARGS
+                    OakStatus::ErrInvalidArgs
                 })?;
 
                 let mut raw_writer: Vec<u8> = vec![0; actual_handle_count * 8];
@@ -389,15 +389,15 @@ impl WasmInterface {
                         "channel_read: Unable to write destination buffer into guest memory: {:?}",
                         err
                     );
-                        OakStatus::ERR_INVALID_ARGS
+                        OakStatus::ErrInvalidArgs
                     })
             }
-            None => Err(OakStatus::ERR_CHANNEL_EMPTY),
+            None => Err(OakStatus::ErrChannelEmpty),
             Some(ReadStatus::NeedsCapacity(x, _)) => {
                 if x > dest_capacity as usize {
-                    Err(OakStatus::ERR_BUFFER_TOO_SMALL)
+                    Err(OakStatus::ErrBufferTooSmall)
                 } else {
-                    Err(OakStatus::ERR_HANDLE_SPACE_TOO_SMALL)
+                    Err(OakStatus::ErrHandleSpaceTooSmall)
                 }
             }
         }
@@ -431,7 +431,7 @@ impl WasmInterface {
                     "wait_on_channels: Unable to read handles from guest memory: {:?}",
                     err
                 );
-                OakStatus::ERR_INVALID_ARGS
+                OakStatus::ErrInvalidArgs
             })?;
 
         let channels: Vec<Option<_>> = handles_raw
@@ -453,15 +453,15 @@ impl WasmInterface {
                         "wait_on_channels: Unable to set status {} to {:?}: {:?}",
                         i, status, err
                     );
-                    OakStatus::ERR_INVALID_ARGS
+                    OakStatus::ErrInvalidArgs
                 })?;
         }
 
         if statuses
             .iter()
-            .all(|&s| s == ChannelReadStatus::INVALID_CHANNEL || s == ChannelReadStatus::ORPHANED)
+            .all(|&s| s == ChannelReadStatus::InvalidChannel || s == ChannelReadStatus::Orphaned)
         {
-            Err(OakStatus::ERR_BAD_HANDLE)
+            Err(OakStatus::ErrBadHandle)
         } else {
             Ok(())
         }
@@ -472,14 +472,14 @@ impl WasmInterface {
 /// `wasmi` specific result type `Result<Option<wasmi::RuntimeValue>, wasmi::Trap>`.
 ///
 /// This maps`Result<(), OakStatus>` to `Ok(Some(<wasmi::RuntimeValue>))` where
-/// - `Ok(())` to `OakStatus::OK`
+/// - `Ok(())` to `OakStatus::Ok`
 /// - `Err(x)` to x
 fn map_host_errors(
     result: Result<(), OakStatus>,
 ) -> Result<Option<wasmi::RuntimeValue>, wasmi::Trap> {
     Ok(Some(wasmi::RuntimeValue::I32(result.map_or_else(
         |x: OakStatus| x as i32,
-        |_| OakStatus::OK as i32,
+        |_| OakStatus::Ok as i32,
     ))))
 }
 
@@ -517,7 +517,7 @@ impl wasmi::Externals for WasmInterface {
                 if self.runtime.is_terminating() {
                     debug!("{} returning terminated", self.pretty_name);
                     return Ok(Some(wasmi::RuntimeValue::I32(
-                        OakStatus::ERR_TERMINATED as i32,
+                        OakStatus::ErrTerminated as i32,
                     )));
                 }
 
@@ -548,9 +548,9 @@ impl wasmi::Externals for WasmInterface {
                     if self.readers.remove(&channel_id).is_some()
                         || self.writers.remove(&channel_id).is_some()
                     {
-                        OakStatus::OK as i32
+                        OakStatus::Ok as i32
                     } else {
-                        OakStatus::ERR_BAD_HANDLE as i32
+                        OakStatus::ErrBadHandle as i32
                     },
                 )))
             }
@@ -567,7 +567,7 @@ impl wasmi::Externals for WasmInterface {
                 if self.runtime.is_terminating() {
                     debug!("{} returning terminated", self.pretty_name);
                     return Ok(Some(wasmi::RuntimeValue::I32(
-                        OakStatus::ERR_TERMINATED as i32,
+                        OakStatus::ErrTerminated as i32,
                     )));
                 }
 
@@ -727,7 +727,7 @@ impl wasmi::ModuleImportResolver for WasmInterface {
 }
 
 /// Create a new instance of a Wasm node. If the entry point is not found,
-/// `ERR(OakStatus::ERR_INVALID_ARGS)` will be returned immediately.
+/// `ERR(OakStatus::ErrInvalidArgs)` will be returned immediately.
 pub fn new_instance(
     config_name: &str,
     runtime: RuntimeRef,
@@ -759,7 +759,7 @@ pub fn new_instance(
             .and_then(|e| e.as_func().map(|f| f.signature() != &entrypoint_sig))
             .unwrap_or(true)
         {
-            return Err(OakStatus::ERR_INVALID_ARGS);
+            return Err(OakStatus::ErrInvalidArgs);
         }
     }
 

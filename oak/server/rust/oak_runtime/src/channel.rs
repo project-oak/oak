@@ -141,11 +141,11 @@ impl std::ops::Deref for ChannelRef {
 }
 
 impl ChannelWriter {
-    /// Write a message to a channel. Fails with `OakStatus::ERR_CHANNEL_CLOSED` if the underlying
+    /// Write a message to a channel. Fails with `OakStatus::ErrChannelClosed` if the underlying
     /// channel has been orphaned.
     pub fn write(&self, msg: Message) -> Result<(), OakStatus> {
         if self.is_orphan() {
-            return Err(OakStatus::ERR_CHANNEL_CLOSED);
+            return Err(OakStatus::ErrChannelClosed);
         }
 
         {
@@ -206,7 +206,7 @@ pub enum ReadStatus {
 }
 
 impl ChannelReader {
-    /// Thread safe. Read a message from a channel. Fails with `OakStatus::ERR_CHANNEL_CLOSED` if
+    /// Thread safe. Read a message from a channel. Fails with `OakStatus::ErrChannelClosed` if
     /// the underlying channel is empty and has been orphaned.
     pub fn read(&self) -> Result<Option<Message>, OakStatus> {
         let mut messages = self.messages.write().unwrap();
@@ -214,7 +214,7 @@ impl ChannelReader {
             Some(m) => Ok(Some(m)),
             None => {
                 if self.is_orphan() {
-                    Err(OakStatus::ERR_CHANNEL_CLOSED)
+                    Err(OakStatus::ErrChannelClosed)
                 } else {
                     Ok(None)
                 }
@@ -223,22 +223,22 @@ impl ChannelReader {
     }
 
     /// Thread safe. This function will return:
-    /// - `READ_READY` if there is at least one message in the channel.
-    /// - `ORPHANED` if there are no messages and there are no writers
+    /// - `ReadReady` if there is at least one message in the channel.
+    /// - `Orphaned` if there are no messages and there are no writers
     /// - `NOT_READ` if there are no messages but there are some writers
     pub fn status(&self) -> ChannelReadStatus {
         let messages = self.messages.read().unwrap();
         if messages.front().is_some() {
-            ChannelReadStatus::READ_READY
+            ChannelReadStatus::ReadReady
         } else if self.is_orphan() {
-            ChannelReadStatus::ORPHANED
+            ChannelReadStatus::Orphaned
         } else {
-            ChannelReadStatus::NOT_READY
+            ChannelReadStatus::NotReady
         }
     }
 
     /// Thread safe. Reads a message from the channel if `bytes_capacity` and `handles_capacity` are
-    /// large enough to accept the message. Fails with `OakStatus::ERR_CHANNEL_CLOSED` if the
+    /// large enough to accept the message. Fails with `OakStatus::ErrChannelClosed` if the
     /// underlying channel has been orphaned _and_ is empty. If there was not enough
     /// `bytes_capacity` or `handles_capacity`, `try_read_message` will return
     /// `Some(ReadStatus::NeedsCapacity(needed_bytes_capacity,needed_handles_capacity))`. Does not
@@ -269,7 +269,7 @@ impl ChannelReader {
             }
             None => {
                 if self.is_orphan() {
-                    Err(OakStatus::ERR_CHANNEL_CLOSED)
+                    Err(OakStatus::ErrChannelClosed)
                 } else {
                     Ok(None)
                 }
@@ -312,22 +312,22 @@ impl Clone for ChannelReader {
 }
 
 /// Reads the statuses from a slice of `Option<&ChannelReader>`s.
-/// `ChannelReadStatus::INVALID_CHANNEL` is set for `None` readers in the slice. For `Some(_)`
+/// `ChannelReadStatus::InvalidChannel` is set for `None` readers in the slice. For `Some(_)`
 /// readers, the result is set from a call to `has_message`.
 pub fn readers_statuses(readers: &[Option<&ChannelReader>]) -> Vec<ChannelReadStatus> {
     readers
         .iter()
-        .map(|chan| chan.map_or(ChannelReadStatus::INVALID_CHANNEL, |chan| chan.status()))
+        .map(|chan| chan.map_or(ChannelReadStatus::InvalidChannel, |chan| chan.status()))
         .collect()
 }
 
 /// Waits on a slice of `Option<&ChannelReader>`s, blocking until one of the following conditions:
-/// - If the `Runtime` is terminating this will return immediately with an `ERR_TERMINATED` status
+/// - If the `Runtime` is terminating this will return immediately with an `ErrTerminated` status
 ///   for each channel.
 /// - If all readers are in an erroneous status, e.g. when all `ChannelReaders` are orphaned, this
 ///   will immediately return the channels statuses.
 /// - If any of the channels is able to read a message, the corresponding element in the returned
-///   vector will be set to `Ok(READ_READY)`, with `Ok(NOT_READY)` signaling the channel has no
+///   vector will be set to `Ok(ReadReady)`, with `Ok(NotReady)` signaling the channel has no
 ///   message available
 ///
 /// In particular, if there is at least one channel in good status and no messages on said channel
@@ -359,8 +359,8 @@ pub fn wait_on_channels(
 
         let all_unreadable = statuses
             .iter()
-            .all(|&s| s == ChannelReadStatus::INVALID_CHANNEL || s == ChannelReadStatus::ORPHANED);
-        let any_ready = statuses.iter().any(|&s| s == ChannelReadStatus::READ_READY);
+            .all(|&s| s == ChannelReadStatus::InvalidChannel || s == ChannelReadStatus::Orphaned);
+        let any_ready = statuses.iter().any(|&s| s == ChannelReadStatus::ReadReady);
 
         if all_unreadable || any_ready {
             return Ok(statuses);
@@ -378,5 +378,5 @@ pub fn wait_on_channels(
             platform::thread::current()
         );
     }
-    Err(OakStatus::ERR_TERMINATED)
+    Err(OakStatus::ErrTerminated)
 }

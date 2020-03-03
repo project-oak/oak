@@ -117,7 +117,7 @@ impl Storage {
         // Block until there is a response available.
         loop {
             let wait_result = crate::wait_on_channels(&[rsp_in]).unwrap();
-            if wait_result[0] == crate::ChannelReadStatus::READ_READY {
+            if wait_result[0] == crate::ChannelReadStatus::ReadReady {
                 break;
             }
         }
