@@ -12,6 +12,7 @@ edition = "2018"
 [lib]
 doctest = false
 test = false
+bench = false
 path = "lib.rs"
 
 [dependencies]

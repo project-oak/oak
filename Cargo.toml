@@ -18,7 +18,6 @@ members = [
   "experimental/split_grpc/server",
   "oak/server/rust/oak_abi",
   "oak/server/rust/oak_platform",
-  "oak/server/rust/oak_platform_asylo",
   "oak/server/rust/oak_runtime",
   "runner",
   "sdk/rust/oak",

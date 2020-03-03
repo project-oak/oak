@@ -14,4 +14,4 @@ no_std = []
 asylo = ["oak_platform_asylo", "no_std"]
 
 [dependencies]
-oak_platform_asylo = { optional = true }
+oak_platform_asylo = { version = "=0.1.0", optional = true }
