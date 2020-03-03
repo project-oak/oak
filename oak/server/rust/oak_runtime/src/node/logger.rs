@@ -21,9 +21,9 @@ use std::string::String;
 use log::info;
 
 use oak_abi::OakStatus;
+use oak_platform::{current_thread, spawn, JoinHandle};
 
 use crate::channel::{wait_on_channels, ChannelReader};
-use crate::platform;
 use crate::RuntimeRef;
 
 /// A simple logger loop.
@@ -46,9 +46,9 @@ pub fn new_instance(
     config_name: &str,
     runtime: RuntimeRef,
     initial_reader: ChannelReader,
-) -> Result<crate::JoinHandle, OakStatus> {
-    let pretty_name = format!("{}-{:?}:", config_name, platform::thread::current());
-    Ok(platform::thread::spawn(move || {
+) -> Result<JoinHandle, OakStatus> {
+    let pretty_name = format!("{}-{:?}:", config_name, current_thread());
+    Ok(spawn(move || {
         let result = logger(&pretty_name, runtime, initial_reader);
         info!("{} LOG: exiting log thread {:?}", pretty_name, result);
     }))

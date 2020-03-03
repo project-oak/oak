@@ -17,6 +17,8 @@ members = [
   "experimental/split_grpc/proxy",
   "experimental/split_grpc/server",
   "oak/server/rust/oak_abi",
+  "oak/server/rust/oak_platform",
+  "oak/server/rust/oak_platform_asylo",
   "oak/server/rust/oak_runtime",
   "runner",
   "sdk/rust/oak",
@@ -32,10 +34,11 @@ members = [
 # > explicit about the dependency relationships between the crates.
 [patch.crates-io]
 # Oak.
-asylo_rust = { path = "oak/asylo_rust" }
 oak = { path = "sdk/rust/oak" }
 oak_abi = { path = "oak/server/rust/oak_abi" }
 oak_log = { path = "sdk/rust/oak_log" }
+oak_platform = { path = "oak/server/rust/oak_platform" }
+oak_platform_asylo = { path = "oak/server/rust/oak_platform_asylo" }
 oak_runtime = { path = "oak/server/rust/oak_runtime" }
 oak_tests = { path = "sdk/rust/oak_tests" }
 oak_utils = { path = "sdk/rust/oak_utils" }
@@ -62,4 +65,4 @@ split_grpc_server = { path = "experimental/split_grpc/server" }
 expect = { path = "third_party/expect" }
 grpc-compiler = { path = "third_party/grpc-rust/grpc-compiler" }
 protoc-rust-grpc = { path = "third_party/grpc-rust/protoc-rust-grpc" }
-rust = { path = "third_party/rust/src/libstd" }
+rust_asylo = { path = "third_party/rust/src/libstd" }

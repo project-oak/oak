@@ -27,9 +27,9 @@ use rand::RngCore;
 use wasmi::ValueType;
 
 use oak_abi::{ChannelReadStatus, OakStatus};
+use oak_platform::{current_thread, spawn, JoinHandle};
 
 use crate::channel::{ChannelEither, ChannelReader, ChannelWriter, ReadStatus};
-use crate::platform;
 use crate::{Message, RuntimeRef};
 
 /// These number mappings are not exposed to the Wasm client, and are only used by `wasmi` to map
@@ -734,7 +734,7 @@ pub fn new_instance(
     module: Arc<wasmi::Module>,
     entrypoint: String,
     initial_reader: ChannelReader,
-) -> Result<crate::JoinHandle, OakStatus> {
+) -> Result<JoinHandle, OakStatus> {
     let config_name = config_name.to_owned();
 
     debug!("new_instance: discovering {} {}", config_name, entrypoint);
@@ -765,8 +765,8 @@ pub fn new_instance(
 
     debug!("new_instance: starting {} {}", config_name, entrypoint);
 
-    Ok(platform::thread::spawn(move || {
-        let pretty_name = format!("{}-{:?}:", config_name, platform::thread::current().id());
+    Ok(spawn(move || {
+        let pretty_name = format!("{}-{:?}:", config_name, current_thread());
         let (mut abi, initial_handle) = WasmInterface::new(pretty_name, runtime, initial_reader);
 
         let instance = wasmi::ModuleInstance::new(

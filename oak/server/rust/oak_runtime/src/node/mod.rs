@@ -75,7 +75,7 @@ impl Configuration {
         runtime: RuntimeRef,
         entrypoint: String,
         initial_reader: ChannelReader,
-    ) -> Result<crate::JoinHandle, OakStatus> {
+    ) -> Result<oak_platform::JoinHandle, OakStatus> {
         match self {
             Configuration::LogNode => logger::new_instance(config_name, runtime, initial_reader),
             Configuration::WasmNode { module } => wasm::new_instance(

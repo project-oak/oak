@@ -22,7 +22,7 @@ protobuf = "*"
 rand = { version = "*" }
 wasmi = { version = "*", default-features = false, features = ["core"] }
 no-std-compat = { version = "0.2.0", features = ["alloc", "compat_hash"] }
-asylo_rust = { version = "*", optional = true }
+oak_platform = { version = "=0.1.0" }
 
 [dev-dependencies]
 maplit = "*"

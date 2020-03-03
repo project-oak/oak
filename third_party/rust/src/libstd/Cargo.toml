@@ -1,5 +1,5 @@
 [package]
-name = "rust"
+name = "rust_asylo"
 version = "0.1.0"
 homepage = "https://github.com/rust-lang/rust"
 repository = "https://github.com/rust-lang/rust"

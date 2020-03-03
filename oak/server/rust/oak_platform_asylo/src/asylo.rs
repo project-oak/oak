@@ -17,9 +17,6 @@
 use core::alloc::Layout;
 use core::panic::PanicInfo;
 
-pub use rust::asylo::thread;
-pub use rust::asylo::mutex;
-
 #[link(name = "sgx_trts")]
 extern "C" {
     // SGX-enabled abort function that causes an undefined instruction (`UD2`) to be executed, which
