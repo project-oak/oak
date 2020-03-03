@@ -16,7 +16,6 @@
 
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use log::{debug, error, info};
-use protobuf::ProtobufEnum;
 use serde::{Deserialize, Serialize};
 
 // Re-export ABI constants that are also visible as part of the SDK API.

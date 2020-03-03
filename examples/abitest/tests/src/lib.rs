@@ -15,7 +15,6 @@
 //
 
 use log::error;
-use protobuf::ProtobufEnum;
 
 #[cfg(test)]
 mod tests;
@@ -23,5 +22,5 @@ mod tests;
 #[no_mangle]
 pub extern "C" fn oak_main(_handle: u64) -> i32 {
     error!("Dummy oak_main invoked");
-    oak::OakStatus::ErrTerminated.value()
+    oak::OakStatus::ErrTerminated as i32
 }

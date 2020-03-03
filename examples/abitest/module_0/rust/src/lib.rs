@@ -303,11 +303,11 @@ impl FrontendNode {
         let mut read = 0u64;
         unsafe {
             expect_eq!(
-                OakStatus::ErrInvalidArgs.value() as u32,
+                OakStatus::ErrInvalidArgs as u32,
                 oak_abi::channel_create(invalid_raw_offset(), &mut read as *mut u64)
             );
             expect_eq!(
-                OakStatus::ErrInvalidArgs.value() as u32,
+                OakStatus::ErrInvalidArgs as u32,
                 oak_abi::channel_create(&mut write as *mut u64, invalid_raw_offset())
             );
         }
@@ -336,14 +336,14 @@ impl FrontendNode {
         let (w, r, _) = channel_create_raw();
 
         unsafe {
-            expect_eq!(OakStatus::Ok.value() as u32, oak_abi::channel_close(w));
-            expect_eq!(OakStatus::Ok.value() as u32, oak_abi::channel_close(r));
+            expect_eq!(OakStatus::Ok as u32, oak_abi::channel_close(w));
+            expect_eq!(OakStatus::Ok as u32, oak_abi::channel_close(r));
             expect_eq!(
-                OakStatus::ErrBadHandle.value() as u32,
+                OakStatus::ErrBadHandle as u32,
                 oak_abi::channel_close(w)
             );
             expect_eq!(
-                OakStatus::ErrBadHandle.value() as u32,
+                OakStatus::ErrBadHandle as u32,
                 oak_abi::channel_close(9_999_999)
             );
         }
@@ -377,7 +377,7 @@ impl FrontendNode {
         unsafe {
             // Try invalid values for the 4 linear memory offset arguments.
             expect_eq!(
-                OakStatus::ErrInvalidArgs.value() as u32,
+                OakStatus::ErrInvalidArgs as u32,
                 oak_abi::channel_read(
                     in_channel,
                     invalid_raw_offset() as *mut u8,
@@ -389,7 +389,7 @@ impl FrontendNode {
                 )
             );
             expect_eq!(
-                OakStatus::ErrInvalidArgs.value() as u32,
+                OakStatus::ErrInvalidArgs as u32,
                 oak_abi::channel_read(
                     in_channel,
                     buf.as_mut_ptr(),
@@ -401,7 +401,7 @@ impl FrontendNode {
                 )
             );
             expect_eq!(
-                OakStatus::ErrInvalidArgs.value() as u32,
+                OakStatus::ErrInvalidArgs as u32,
                 oak_abi::channel_read(
                     in_channel,
                     buf.as_mut_ptr(),
@@ -413,7 +413,7 @@ impl FrontendNode {
                 )
             );
             expect_eq!(
-                OakStatus::ErrInvalidArgs.value() as u32,
+                OakStatus::ErrInvalidArgs as u32,
                 oak_abi::channel_read(
                     in_channel,
                     buf.as_mut_ptr(),
@@ -427,7 +427,7 @@ impl FrontendNode {
 
             // Valid case.
             expect_eq!(
-                OakStatus::ErrChannelEmpty.value() as u32,
+                OakStatus::ErrChannelEmpty as u32,
                 oak_abi::channel_read(
                     in_channel,
                     buf.as_mut_ptr(),
@@ -441,10 +441,10 @@ impl FrontendNode {
             expect_eq!(0, actual_size);
             expect_eq!(0, actual_handle_count);
         }
-        expect_eq!(OakStatus::Ok.value() as u32, unsafe {
+        expect_eq!(OakStatus::Ok as u32, unsafe {
             oak_abi::channel_close(out_channel)
         });
-        expect_eq!(OakStatus::Ok.value() as u32, unsafe {
+        expect_eq!(OakStatus::Ok as u32, unsafe {
             oak_abi::channel_close(in_channel)
         });
         Ok(())
@@ -575,7 +575,7 @@ impl FrontendNode {
         let handles = vec![in_channel];
         unsafe {
             expect_eq!(
-                OakStatus::ErrInvalidArgs.value() as u32,
+                OakStatus::ErrInvalidArgs as u32,
                 oak_abi::channel_write(
                     out_channel,
                     invalid_raw_offset() as *const u8,
@@ -585,7 +585,7 @@ impl FrontendNode {
                 )
             );
             expect_eq!(
-                OakStatus::ErrInvalidArgs.value() as u32,
+                OakStatus::ErrInvalidArgs as u32,
                 oak_abi::channel_write(
                     out_channel,
                     buf.as_ptr(),
@@ -595,10 +595,10 @@ impl FrontendNode {
                 )
             );
         }
-        expect_eq!(OakStatus::Ok.value() as u32, unsafe {
+        expect_eq!(OakStatus::Ok as u32, unsafe {
             oak_abi::channel_close(in_channel)
         });
-        expect_eq!(OakStatus::Ok.value() as u32, unsafe {
+        expect_eq!(OakStatus::Ok as u32, unsafe {
             oak_abi::channel_close(out_channel)
         });
         Ok(())
@@ -658,12 +658,12 @@ impl FrontendNode {
             // Write a message to the channel so wait operations don't block.
             let data = vec![0x01, 0x02, 0x03];
             expect_eq!(
-                OakStatus::Ok.value() as u32,
+                OakStatus::Ok as u32,
                 oak_abi::channel_write(out_channel, data.as_ptr(), data.len(), &[] as *const u8, 0)
             );
 
             expect_eq!(
-                OakStatus::ErrInvalidArgs.value() as u32,
+                OakStatus::ErrInvalidArgs as u32,
                 oak_abi::wait_on_channels(invalid_raw_offset() as *mut u8, 1)
             );
         }
@@ -686,19 +686,19 @@ impl FrontendNode {
             space.push(0x00);
 
             expect_eq!(
-                OakStatus::Ok.value() as u32,
+                OakStatus::Ok as u32,
                 oak_abi::wait_on_channels(space.as_mut_ptr(), COUNT as u32)
             );
             expect_eq!(
-                ChannelReadStatus::InvalidChannel.value(),
+                ChannelReadStatus::InvalidChannel as i32,
                 i32::from(space[8])
             );
             expect_eq!(
-                ChannelReadStatus::ReadReady.value(),
+                ChannelReadStatus::ReadReady as i32,
                 i32::from(space[9 + 8])
             );
             expect_eq!(
-                ChannelReadStatus::NotReady.value(),
+                ChannelReadStatus::NotReady as i32,
                 i32::from(space[9 + 9 + 8])
             );
         }
@@ -716,19 +716,19 @@ impl FrontendNode {
                 .unwrap();
             space.push(0x00);
             expect_eq!(
-                OakStatus::Ok.value() as u32,
+                OakStatus::Ok as u32,
                 oak_abi::wait_on_channels(space.as_mut_ptr(), COUNT as u32)
             );
             expect_eq!(
-                ChannelReadStatus::InvalidChannel.value(),
+                ChannelReadStatus::InvalidChannel as i32,
                 i32::from(space[8])
             );
             expect_eq!(
-                ChannelReadStatus::ReadReady.value(),
+                ChannelReadStatus::ReadReady as i32,
                 i32::from(space[9 + 8])
             );
             expect_eq!(
-                OakStatus::Ok.value() as u32,
+                OakStatus::Ok as u32,
                 oak_abi::channel_close(out_channel)
             );
         }
@@ -743,10 +743,10 @@ impl FrontendNode {
                 .unwrap();
             space.push(0x00);
             expect_eq!(
-                OakStatus::Ok.value() as u32,
+                OakStatus::Ok as u32,
                 oak_abi::wait_on_channels(space.as_mut_ptr(), COUNT as u32)
             );
-            expect_eq!(ChannelReadStatus::ReadReady.value(), i32::from(space[8]));
+            expect_eq!(ChannelReadStatus::ReadReady as i32, i32::from(space[8]));
         }
         // Consume the pending message.
         let mut buffer = Vec::with_capacity(5);
@@ -755,7 +755,7 @@ impl FrontendNode {
         let mut recv_handles = 0u32;
         unsafe {
             expect_eq!(
-                OakStatus::Ok.value() as u32,
+                OakStatus::Ok as u32,
                 oak_abi::channel_read(
                     in_channel,
                     buffer.as_mut_ptr() as *mut u8,
@@ -779,24 +779,24 @@ impl FrontendNode {
                 .unwrap();
             space.push(0x00);
             expect_eq!(
-                OakStatus::ErrBadHandle.value() as u32,
+                OakStatus::ErrBadHandle as u32,
                 oak_abi::wait_on_channels(space.as_mut_ptr(), COUNT as u32)
             );
-            expect_eq!(ChannelReadStatus::Orphaned.value(), i32::from(space[8]));
+            expect_eq!(ChannelReadStatus::Orphaned as i32, i32::from(space[8]));
 
             expect_eq!(
-                OakStatus::Ok.value() as u32,
+                OakStatus::Ok as u32,
                 oak_abi::channel_close(in_channel)
             );
         }
 
         unsafe {
             expect_eq!(
-                OakStatus::Ok.value() as u32,
+                OakStatus::Ok as u32,
                 oak_abi::channel_close(in_empty_channel)
             );
             expect_eq!(
-                OakStatus::Ok.value() as u32,
+                OakStatus::Ok as u32,
                 oak_abi::channel_close(out_empty_channel)
             );
         }
@@ -947,7 +947,7 @@ impl FrontendNode {
         let non_utf8_name: Vec<u8> = vec![0xc3, 0x28];
         unsafe {
             expect_eq!(
-                OakStatus::ErrInvalidArgs.value() as u32,
+                OakStatus::ErrInvalidArgs as u32,
                 oak_abi::node_create(
                     invalid_raw_offset() as *mut u8,
                     1,
@@ -958,7 +958,7 @@ impl FrontendNode {
             );
 
             expect_eq!(
-                OakStatus::ErrInvalidArgs.value() as u32,
+                OakStatus::ErrInvalidArgs as u32,
                 oak_abi::node_create(
                     non_utf8_name.as_ptr(),
                     non_utf8_name.len(),
@@ -969,7 +969,7 @@ impl FrontendNode {
             );
 
             expect_eq!(
-                OakStatus::ErrInvalidArgs.value() as u32,
+                OakStatus::ErrInvalidArgs as u32,
                 oak_abi::node_create(
                     valid.as_ptr(),
                     valid.len(),
@@ -980,7 +980,7 @@ impl FrontendNode {
             );
 
             expect_eq!(
-                OakStatus::ErrInvalidArgs.value() as u32,
+                OakStatus::ErrInvalidArgs as u32,
                 oak_abi::node_create(
                     valid.as_ptr(),
                     valid.len(),
@@ -1045,7 +1045,7 @@ impl FrontendNode {
     fn test_random_get_raw(&mut self) -> TestResult {
         unsafe {
             expect_eq!(
-                OakStatus::ErrInvalidArgs.value() as u32,
+                OakStatus::ErrInvalidArgs as u32,
                 oak_abi::random_get(invalid_raw_offset() as *mut u8, 1)
             );
         }
