@@ -24,10 +24,6 @@ fn main() {
     // https://doc.rust-lang.org/cargo/reference/build-scripts.html#rerun-if-changed
     println!("cargo:rerun-if-changed={:?}", oak_api_path);
 
-    prost_build::Config::new()
-        .out_dir("src/proto")
-        .compile_protos(&[&*oak_api_path], &[proto_dir])
+    prost_build::compile_protos(&[&*oak_api_path], &[proto_dir])
         .unwrap();
-
-    std::fs::write("src/proto/mod.rs", "pub mod oak;").unwrap();
 }

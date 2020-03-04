@@ -16,7 +16,7 @@
 
 //! Type, constant and Wasm host function definitions for the Oak application binary interface.
 pub mod proto;
-pub use proto::oak::*;
+pub use proto::*;
 
 /// Handle used to identify read or write channel halves.
 ///
