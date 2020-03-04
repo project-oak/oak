@@ -14,15 +14,22 @@
 // limitations under the License.
 //
 
+use std::path::Path;
+
+const PROTO_PATH: &'static str = "../../../examples/hello_world/proto/";
+const SOURCE_FILE: &'static str = "hello_world.proto";
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let file_path = std::format!("{}{}", PROTO_PATH, SOURCE_FILE);
     tonic_build::configure()
         .build_client(false)
         .build_server(true)
         .out_dir("src/proto")
-        .compile(
-            &["../../../examples/hello_world/proto/hello_world.proto"],
-            &["../../../examples/hello_world/proto/"],
-        )?;
-    println!("cargo:rerun-if-changed=../../../examples/hello_world/proto/hello_world.proto");
+        .compile(&[Path::new(&file_path)], &[Path::new(PROTO_PATH)])?;
+
+    // Tell cargo to not rerun this script unless the proto file has changed.
+    // This is required because the proto compiler is outputting the file into the source tree.
+    // https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath
+    println!("cargo:rerun-if-changed={}", file_path);
     Ok(())
 }
