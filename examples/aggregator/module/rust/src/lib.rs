@@ -37,7 +37,7 @@ use protobuf::well_known_types::Empty;
 const SAMPLE_THRESHOLD: u64 = 3;
 
 oak::entrypoint!(oak_main => {
-    oak_log::init_default();
+    oak::logger::init_default();
     let node = AggregatorNode {
         aggregator: ThresholdAggregator::<Vector>::new(SAMPLE_THRESHOLD),
     };

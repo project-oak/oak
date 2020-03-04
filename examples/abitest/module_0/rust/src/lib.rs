@@ -44,7 +44,7 @@ struct FrontendNode {
 
 impl FrontendNode {
     pub fn new() -> Self {
-        oak_log::init(log::Level::Debug, LOG_CONFIG_NAME)
+        oak::logger::init(log::Level::Debug, LOG_CONFIG_NAME)
             .expect("could not initialize logging node");
 
         // Create backend node instances.

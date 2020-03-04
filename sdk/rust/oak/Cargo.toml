@@ -9,7 +9,7 @@ license = "Apache-2.0"
 oak_abi = "=0.1.0"
 protobuf = "*"
 fmt = "*"
-log = "*"
+log = { version = "^0.4.0", features = ["std"] }
 byteorder = "*"
 rand_core = { version = "*", features = ["std"] }
 serde = { version = "*", features = ["derive"] }
@@ -21,6 +21,6 @@ protoc-rust = "*"
 [dev-dependencies]
 assert_matches = "*"
 oak_tests = "=0.1.0"
-serial_test = "*"
-serial_test_derive = "*"
+serial_test = "^0.2"
+serial_test_derive = "^0.2"
 serde_json = "*"

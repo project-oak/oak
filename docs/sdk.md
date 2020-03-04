@@ -104,9 +104,9 @@ provider of persistent storage.
 The [`oak::proto`](https://project-oak.github.io/oak/doc/oak/proto/index.html)
 module holds auto-generated submodules for dealing with protocol buffers.
 
-## `oak_log` Crate
+## `oak::logger` Crate
 
-The [`oak_log`](https://project-oak.github.io/oak/doc/oak_log/index.html) crate
+The [`oak::logger`](https://project-oak.github.io/oak/doc/oak/logger/index.html) crate
 is a logging implementation for the Rust
 [log facade](https://crates.io/crates/log), which uses a channel to a
 freshly-created logging pseudo-Node as the underlying logging mechanism.

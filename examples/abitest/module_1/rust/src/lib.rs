@@ -42,7 +42,7 @@ pub extern "C" fn backend_oak_main(handle: u64) {
 }
 
 fn inner_main(in_handle: u64) -> Result<(), oak::OakStatus> {
-    oak_log::init(log::Level::Debug, LOG_CONFIG_NAME).expect("Couldn't initialize logging node!");
+    oak::logger::init(log::Level::Debug, LOG_CONFIG_NAME).expect("Couldn't initialize logging node!");
     let in_channel = oak::ReadHandle {
         handle: oak::Handle::from_raw(in_handle),
     };

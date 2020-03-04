@@ -23,7 +23,7 @@ use translator_common::proto::translator::{TranslateRequest, TranslateResponse};
 use translator_common::proto::translator_grpc::{Dispatcher, Translator};
 
 oak::entrypoint!(oak_main => {
-    oak_log::init_default();
+    oak::logger::init_default();
     Dispatcher::new(Node)
 });
 
