@@ -24,6 +24,5 @@ fn main() {
     // https://doc.rust-lang.org/cargo/reference/build-scripts.html#rerun-if-changed
     println!("cargo:rerun-if-changed={:?}", oak_api_path);
 
-    prost_build::compile_protos(&[&*oak_api_path], &[proto_dir])
-        .unwrap();
+    prost_build::compile_protos(&[&*oak_api_path], &[proto_dir]).unwrap();
 }
