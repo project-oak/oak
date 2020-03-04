@@ -10,7 +10,6 @@ crate-type = ["cdylib"]
 [dependencies]
 log = "*"
 oak = "=0.1.0"
-oak_log = "=0.1.0"
 protobuf = "*"
 translator_common = "=0.1.0"
 

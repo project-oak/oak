@@ -9,7 +9,7 @@ license = "Apache-2.0"
 oak_abi = "=0.1.0"
 protobuf = "*"
 fmt = "*"
-log = "*"
+log = { version = "*", features = ["std"] }
 byteorder = "*"
 rand_core = { version = "*", features = ["std"] }
 serde = { version = "*", features = ["derive"] }

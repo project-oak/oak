@@ -26,6 +26,7 @@ pub use error::OakError;
 
 pub mod grpc;
 pub mod io;
+pub mod logger;
 pub mod proto;
 pub mod rand;
 pub mod storage;

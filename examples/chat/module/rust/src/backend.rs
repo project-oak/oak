@@ -20,7 +20,7 @@ use log::info;
 use oak::Node;
 
 oak::entrypoint!(backend_oak_main => {
-    oak_log::init_default();
+    oak::logger::init_default();
     Room::default()
 });
 
