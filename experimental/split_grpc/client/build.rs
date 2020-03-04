@@ -16,20 +16,19 @@
 
 use std::path::Path;
 
-const PROTO_PATH: &'static str = "../../../examples/hello_world/proto/";
-const SOURCE_FILE: &'static str = "hello_world.proto";
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let file_path = std::format!("{}{}", PROTO_PATH, SOURCE_FILE);
+    let proto_path = Path::new("../../../examples/hello_world/proto");
+    let file_name = Path::new("hello_world.proto");
+    let file_path = proto_path.join(file_name);
     tonic_build::configure()
         .build_client(true)
         .build_server(false)
         .out_dir("src/proto")
-        .compile(&[Path::new(&file_path)], &[Path::new(PROTO_PATH)])?;
+        .compile(&[file_path.as_path()], &[proto_path])?;
 
     // Tell cargo to not rerun this script unless the proto file has changed.
     // This is required because the proto compiler is outputting the file into the source tree.
     // https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath
-    println!("cargo:rerun-if-changed={}", file_path);
+    println!("cargo:rerun-if-changed={}", file_path.display());
     Ok(())
 }
