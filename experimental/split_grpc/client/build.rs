@@ -23,5 +23,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             &["../../../examples/hello_world/proto/hello_world.proto"],
             &["../../../examples/hello_world/proto/"],
         )?;
+    println!("cargo:rerun-if-changed=../../../examples/hello_world/proto/hello_world.proto");
     Ok(())
 }
