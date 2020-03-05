@@ -15,6 +15,10 @@ use core::ptr;
 
 use crate::io;
 
+// TODO(#659): Add/update primitives provided
+pub struct JoinHandle();
+pub struct ThreadId();
+
 #[allow(dead_code)]
 pub unsafe fn start_thread(main: *mut u8) {
     // TODO: FIXME: needed for oak ?

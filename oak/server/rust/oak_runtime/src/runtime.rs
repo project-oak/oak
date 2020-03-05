@@ -24,11 +24,11 @@ use core::sync::atomic::AtomicBool;
 use core::sync::atomic::Ordering::SeqCst;
 
 use oak_abi::OakStatus;
+use oak_platform::{JoinHandle, Mutex};
 
 use crate::channel;
 use crate::channel::{ChannelReader, ChannelWriter};
 use crate::node;
-use crate::platform;
 
 pub struct Configuration {
     pub nodes: HashMap<String, node::Configuration>,
@@ -40,7 +40,7 @@ pub struct Configuration {
 pub struct Runtime {
     configurations: HashMap<String, node::Configuration>,
     terminating: AtomicBool,
-    node_threads: platform::Mutex<Vec<platform::JoinHandle>>,
+    node_threads: Mutex<Vec<JoinHandle>>,
 }
 
 impl Runtime {
@@ -53,7 +53,7 @@ impl Runtime {
         let runtime = Runtime {
             configurations: config.nodes,
             terminating: AtomicBool::new(false),
-            node_threads: platform::Mutex::new(Vec::new()),
+            node_threads: Mutex::new(Vec::new()),
         };
 
         let runtime = RuntimeRef(Arc::new(runtime));

@@ -14,8 +14,9 @@
 // limitations under the License.
 //
 
-#![no_std]
+// TODO(#662): Should this crate be merged into oak_platform or third_party/rust?
 
+#![no_std]
 #![feature(lang_items)]
 #![feature(allocator_api)]
 #![feature(alloc_prelude)]
@@ -29,41 +30,34 @@
 #![feature(char_error_internals)]
 
 extern crate alloc;
-extern crate core;
-extern crate libc;
-
-extern crate rust;
 
 pub use alloc::prelude::v1::*;
 
-pub use rust::error as error;
-pub use rust::io as io;
+pub use rust_asylo::error;
+pub use rust_asylo::io;
 
 mod allocator;
 mod asylo;
-pub use self::asylo::*;
 
 #[global_allocator]
 static A: allocator::System = allocator::System;
 
-// TODO: Enclave backend that provides:
-// - Allocator
-// - Threads
-// - Mutexes
-// - TODO: Channel with automatic remote attestation
+pub use rust_asylo::asylo::thread::JoinHandle;
+pub use rust_asylo::asylo::thread::Thread;
+pub use rust_asylo::asylo::thread::ThreadId;
+pub use rust_asylo::asylo::Mutex;
+pub use rust_asylo::asylo::RwLock;
 
 /// A safe function to spawn an enclave thread. At the moment, parameters cannot
 /// be passed in this function call, unlike the Rust standard library. (This can
 /// be achieved by moving values into closures and spawning threads with said
 /// closures)
-pub fn spawn<F>(f: F) -> io::Result<thread::Thread>
+pub fn spawn<F>(f: F) -> Thread
 where
     F: FnOnce() -> (),
     F: Send + 'static,
 {
-    unsafe {
-      thread::Thread::new(Box::new(f))
-    }
+    unsafe { Thread::new(Box::new(f)) }.expect("could not spawn thread!?")
 }
 
 /// Provide the entrypoint needed by the compiler's failure mechanisms when
@@ -71,27 +65,3 @@ where
 /// stdlib" documentation](https://doc.rust-lang.org/1.2.0/book/no-stdlib.html).
 #[lang = "eh_personality"]
 pub extern "C" fn eh_personality() {}
-
-/// For testing externally linked code, see `add_magic_number`
-fn thread_test(x: i32) -> io::Result<i32> {
-  use alloc::sync::Arc;
-  use core::sync::atomic::{AtomicI32, Ordering};
-  let val = Arc::new(AtomicI32::new(x));
-
-  let other = {
-    let val = Arc::clone(&val);
-    move || {
-      val.fetch_add(42, Ordering::SeqCst);
-    }
-  };
-
-  spawn(box other)?.join();
-
-  Ok(val.load(Ordering::SeqCst))
-}
-
-/// An exported placeholder function to check that linking against C++ is successful.
-#[no_mangle]
-pub extern "C" fn add_magic_number(x: i32) -> i32 {
-    thread_test(x).unwrap_or(0)
-}

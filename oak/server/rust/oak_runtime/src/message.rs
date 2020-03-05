@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+use std::prelude::v1::*;
+
 pub use crate::channel::ChannelEither;
 
 /// Encapsulates a message consisting of opaque data bytes and a vector of channels.

@@ -14,12 +14,9 @@
 // limitations under the License.
 //
 
-// TODO(#546): fix no_std
 #![feature(result_contains_err)]
-// #![deny(missing_docs)]
-#![cfg_attr(not(feature = "std"), no_std)]
-#![cfg_attr(not(feature = "std"), feature(alloc))]
 
+#[cfg(feature = "no_std")]
 extern crate no_std_compat as std;
 
 #[cfg(feature = "std")]
@@ -43,15 +40,3 @@ pub use config::configure_and_run;
 pub use channel::{ChannelEither, ChannelReader, ChannelWriter};
 pub use message::Message;
 pub use runtime::{Runtime, RuntimeRef};
-
-/// TODO(#546): Items here are not provided by `no-std-compat`. These need to be provided
-/// by an external dependency i.e. asylo_rust when targeting asylo.
-#[cfg(feature = "std")]
-mod platform {
-    pub type Mutex<T> = std::sync::Mutex<T>;
-    pub type RwLock<T> = std::sync::RwLock<T>;
-    pub use std::thread;
-    pub type JoinHandle = std::thread::JoinHandle<()>;
-}
-
-use platform::*;

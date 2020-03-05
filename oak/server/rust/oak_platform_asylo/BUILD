@@ -17,13 +17,13 @@
 load("@io_bazel_rules_rust//rust:rust.bzl", "rust_library")
 
 package(
-    default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
 
 rust_library(
-    name = "rust_asylo",
-    srcs = glob(["**/*.rs"]),
-    crate_type = "lib",
+    name = "oak_platform_asylo",
+    srcs = glob(["src/**/*.rs"]),
+    crate_type = "staticlib",
     edition = "2018",
+    deps = ["//third_party/rust/src/libstd:rust_asylo"],
 )

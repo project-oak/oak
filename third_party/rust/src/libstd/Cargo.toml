@@ -1,5 +1,5 @@
 [package]
-name = "rust"
+name = "rust_asylo"
 version = "0.1.0"
 homepage = "https://github.com/rust-lang/rust"
 repository = "https://github.com/rust-lang/rust"
@@ -12,6 +12,7 @@ edition = "2018"
 [lib]
 doctest = false
 test = false
+bench = false
 path = "lib.rs"
 
 [dependencies]
