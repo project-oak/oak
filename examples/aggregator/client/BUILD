@@ -22,9 +22,9 @@ package(
 
 cc_binary(
     name = "client",
-    srcs = ["aggregator.cc"],
+    srcs = ["aggregator_test.cc"],
     deps = [
-        "//examples/aggregator/proto:aggregator_cc_grpc",
+        "//examples/aggregator/proto:aggregator_test_cc_grpc",
         "//oak/client:application_client",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/flags:flag",

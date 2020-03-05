@@ -20,15 +20,15 @@
 #include "absl/flags/parse.h"
 #include "absl/types/optional.h"
 #include "asylo/util/logging.h"
-#include "examples/aggregator/proto/aggregator.grpc.pb.h"
-#include "examples/aggregator/proto/aggregator.pb.h"
+#include "examples/aggregator/proto/aggregator_test.grpc.pb.h"
+#include "examples/aggregator/proto/aggregator_test.pb.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
 
 ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak application to connect to");
 
-using ::oak::examples::aggregator::Aggregator;
-using ::oak::examples::aggregator::Vector;
+using ::oak::examples::aggregator_test::Aggregator;
+using ::oak::examples::aggregator_test::Vector;
 
 void submit_sample(Aggregator::Stub* stub, std::vector<uint64_t> values) {
   grpc::ClientContext context;

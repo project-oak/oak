@@ -17,7 +17,7 @@
 #![allow(unsafe_code)]
 #![allow(unused_imports)]
 #![allow(unused_results)]
-//! Generated file from `aggregator.proto`
+//! Generated file from `aggregator_test.proto`
 
 use protobuf::Message as Message_imported_for_functions;
 use protobuf::ProtobufEnum as ProtobufEnum_imported_for_functions;
@@ -195,12 +195,12 @@ impl ::protobuf::reflect::ProtobufValue for Vector {
 }
 
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\x10aggregator.proto\x12\x17oak.examples.aggregator\x1a\x1bgoogle/prot\
-    obuf/empty.proto\"\x1e\n\x06Vector\x12\x14\n\x05items\x18\x01\x20\x03(\
-    \x04R\x05items2\xa1\x01\n\nAggregator\x12G\n\x0cSubmitSample\x12\x1f.oak\
-    .examples.aggregator.Vector\x1a\x16.google.protobuf.Empty\x12J\n\x0fGetC\
-    urrentValue\x12\x16.google.protobuf.Empty\x1a\x1f.oak.examples.aggregato\
-    r.Vectorb\x06proto3\
+    \n\x15aggregator_test.proto\x12\x1coak.examples.aggregator_test\x1a\x1bg\
+    oogle/protobuf/empty.proto\"\x1e\n\x06Vector\x12\x14\n\x05items\x18\x01\
+    \x20\x03(\x04R\x05items2\xab\x01\n\nAggregator\x12L\n\x0cSubmitSample\
+    \x12$.oak.examples.aggregator_test.Vector\x1a\x16.google.protobuf.Empty\
+    \x12O\n\x0fGetCurrentValue\x12\x16.google.protobuf.Empty\x1a$.oak.exampl\
+    es.aggregator_test.Vectorb\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {

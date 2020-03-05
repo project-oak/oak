@@ -14,5 +14,5 @@
 // limitations under the License.
 //
 
-pub mod aggregator;
-pub mod aggregator_grpc;
+pub mod aggregator_test;
+pub mod aggregator_test_grpc;

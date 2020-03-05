@@ -16,7 +16,7 @@
 
 syntax = "proto3";
 
-package oak.examples.aggregator;
+package oak.examples.aggregator_test;
 
 import "google/protobuf/empty.proto";
 

@@ -22,16 +22,15 @@
 //! Clients invoke the module by providing a vector of non-negative numbers and get back an
 //! aggregated vector if an Oak Node has collected more samples than the predefined threshold.
 
-mod aggregator;
 mod proto;
 #[cfg(test)]
 mod tests;
 
-use aggregator::{Monoid, ThresholdAggregator};
+use aggregator_common::{Monoid, ThresholdAggregator};
 use log::info;
 use oak::grpc;
-use proto::aggregator::Vector;
-use proto::aggregator_grpc::{Aggregator, Dispatcher};
+use proto::aggregator_test::Vector;
+use proto::aggregator_test_grpc::{Aggregator, Dispatcher};
 use protobuf::well_known_types::Empty;
 
 const SAMPLE_THRESHOLD: u64 = 3;

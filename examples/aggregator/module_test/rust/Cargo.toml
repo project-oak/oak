@@ -1,5 +1,5 @@
 [package]
-name = "aggregator"
+name = "aggregator_test"
 version = "0.1.0"
 authors = ["Ivan Petrov <ivanpetrov@google.com>"]
 edition = "2018"
@@ -8,6 +8,7 @@ edition = "2018"
 crate-type = ["cdylib"]
 
 [dependencies]
+aggregator_common = { path = "../../common" }
 itertools = "*"
 log = "*"
 oak = "=0.1.0"

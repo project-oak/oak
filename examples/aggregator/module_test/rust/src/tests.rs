@@ -14,12 +14,12 @@
 // limitations under the License.
 //
 
-use crate::proto::aggregator::Vector;
+use crate::proto::aggregator_test::Vector;
 use assert_matches::assert_matches;
 use oak::grpc;
 use protobuf::well_known_types::Empty;
 
-const MODULE_CONFIG_NAME: &str = "aggregator";
+const MODULE_CONFIG_NAME: &str = "aggregator_test";
 
 fn submit_sample(
     runtime: &oak_runtime::RuntimeRef,
@@ -33,8 +33,13 @@ fn submit_sample(
     let result: grpc::Result<Empty> = oak_tests::grpc_request(
         runtime,
         &entry_channel,
+<<<<<<< HEAD:examples/aggregator/module/rust/src/tests.rs
         "/oak.examples.aggregator.Aggregator/SubmitSample",
         &req,
+=======
+        "/oak.examples.aggregator_test.Aggregator/SubmitSample",
+        req,
+>>>>>>> Rename aggregator 'module' to 'module_test':examples/aggregator/module_test/rust/src/tests.rs
     );
     assert_matches!(result, Ok(_));
 }
@@ -53,8 +58,8 @@ fn test_aggregator() {
         let result: grpc::Result<Vector> = oak_tests::grpc_request(
             &runtime,
             &entry_channel,
-            "/oak.examples.aggregator.Aggregator/GetCurrentValue",
-            &req,
+            "/oak.examples.aggregator_test.Aggregator/GetCurrentValue",
+            req,
         );
         assert_matches!(result, Err(_));
     }
@@ -65,8 +70,8 @@ fn test_aggregator() {
         let result: grpc::Result<Vector> = oak_tests::grpc_request(
             &runtime,
             &entry_channel,
-            "/oak.examples.aggregator.Aggregator/GetCurrentValue",
-            &req,
+            "/oak.examples.aggregator_test.Aggregator/GetCurrentValue",
+            req,
         );
         assert_matches!(result, Ok(_));
         assert_eq!(vec![2, 2, 2, 2, 2], result.unwrap().items);
