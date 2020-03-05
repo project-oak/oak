@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["oak_api","Generated file from `oak_api.proto`"]]});
+initSidebarItems({"enum":[["ChannelReadStatus","Single byte values used to indicate the read status of a channel on the `oak.wait_on_channels` host function."],["OakStatus","Status values exchanged as i32 values across the Node Wasm interface."]]});

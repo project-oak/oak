@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["application_configuration","Create an application configuration."]]});
+initSidebarItems({"fn":[["application_configuration","Create an application configuration."],["configure_and_run","Configure a `Runtime` from the given protobuf `ApplicationConfiguration` and begin execution."],["from_protobuf","Load a `runtime::Configuration` from a protobuf `ApplicationConfiguration`. This can fail if an unsupported node is passed, or if a node was unable to be initialized with the given configuration."]]});

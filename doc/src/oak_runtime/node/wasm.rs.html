@@ -821,9 +821,9 @@
 <span class="kw">use</span> <span class="ident">wasmi</span>::<span class="ident">ValueType</span>;
 
 <span class="kw">use</span> <span class="ident">oak_abi</span>::{<span class="ident">ChannelReadStatus</span>, <span class="ident">OakStatus</span>};
+<span class="kw">use</span> <span class="ident">oak_platform</span>::{<span class="ident">current_thread</span>, <span class="ident">spawn</span>, <span class="ident">JoinHandle</span>};
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">channel</span>::{<span class="ident">ChannelEither</span>, <span class="ident">ChannelReader</span>, <span class="ident">ChannelWriter</span>, <span class="ident">ReadStatus</span>};
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">platform</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">Message</span>, <span class="ident">RuntimeRef</span>};
 
 <span class="doccomment">/// These number mappings are not exposed to the Wasm client, and are only used by `wasmi` to map</span>
@@ -912,7 +912,7 @@
         <span class="kw">let</span> <span class="ident">byte_size</span>: <span class="ident">wasmi</span>::<span class="ident">memory_units</span>::<span class="ident">Bytes</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_memory</span>().<span class="ident">current_size</span>().<span class="ident">into</span>();
 
         <span class="kw">if</span> <span class="ident">byte_size</span> <span class="op">&lt;</span> <span class="ident">wasmi</span>::<span class="ident">memory_units</span>::<span class="ident">Bytes</span>((<span class="ident">addr</span> <span class="kw">as</span> <span class="ident">usize</span>) <span class="op">+</span> (<span class="ident">offset</span> <span class="kw">as</span> <span class="ident">usize</span>)) {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ERR_INVALID_ARGS</span>);
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>);
         }
 
         <span class="prelude-val">Ok</span>(())
@@ -953,12 +953,12 @@
                     <span class="string">&quot;node_create: Unable to read name from guest memory: {:?}&quot;</span>,
                     <span class="ident">err</span>
                 );
-                <span class="ident">OakStatus</span>::<span class="ident">ERR_INVALID_ARGS</span>
+                <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
             })<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">config_name</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">from_utf8</span>(<span class="ident">config_name</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
             <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;node_create: Unable to parse config_name: {:?}&quot;</span>, <span class="ident">err</span>);
-            <span class="ident">OakStatus</span>::<span class="ident">ERR_INVALID_ARGS</span>
+            <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
         })<span class="question-mark">?</span>;
 
         <span class="macro">debug</span><span class="macro">!</span>(
@@ -974,12 +974,12 @@
                     <span class="string">&quot;node_create: Unable to read entrypoint from guest memory: {:?}&quot;</span>,
                     <span class="ident">err</span>
                 );
-                <span class="ident">OakStatus</span>::<span class="ident">ERR_INVALID_ARGS</span>
+                <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
             })<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">entrypoint</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">from_utf8</span>(<span class="ident">entrypoint</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
             <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;node_create: Unable to parse entrypoint: {:?}&quot;</span>, <span class="ident">err</span>);
-            <span class="ident">OakStatus</span>::<span class="ident">ERR_INVALID_ARGS</span>
+            <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
         })<span class="question-mark">?</span>;
 
         <span class="macro">debug</span><span class="macro">!</span>(
@@ -989,7 +989,7 @@
 
         <span class="kw">let</span> <span class="ident">channel_ref</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">readers</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">initial_handle</span>).<span class="ident">ok_or</span>(()).<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
             <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;node_create: Invalid handle&quot;</span>);
-            <span class="ident">OakStatus</span>::<span class="ident">ERR_BAD_HANDLE</span>
+            <span class="ident">OakStatus</span>::<span class="ident">ErrBadHandle</span>
         })<span class="question-mark">?</span>;
 
         <span class="self">self</span>.<span class="ident">runtime</span>
@@ -999,7 +999,7 @@
                     <span class="string">&quot;node_create: Config \&quot;{}\&quot; entrypoint \&quot;{}\&quot; not found&quot;</span>,
                     <span class="ident">config_name</span>, <span class="ident">entrypoint</span>
                 );
-                <span class="ident">OakStatus</span>::<span class="ident">ERR_INVALID_ARGS</span>
+                <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
             })
     }
 
@@ -1024,7 +1024,7 @@
                     <span class="string">&quot;channel_create: Unable to write writer handle into guest memory: {:?}&quot;</span>,
                     <span class="ident">err</span>
                 );
-                <span class="ident">OakStatus</span>::<span class="ident">ERR_INVALID_ARGS</span>
+                <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
             })<span class="question-mark">?</span>;
 
         <span class="self">self</span>.<span class="ident">get_memory</span>()
@@ -1034,7 +1034,7 @@
                     <span class="string">&quot;channel_create: Unable to write reader handle into guest memory: {:?}&quot;</span>,
                     <span class="ident">err</span>
                 );
-                <span class="ident">OakStatus</span>::<span class="ident">ERR_INVALID_ARGS</span>
+                <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
             })
     }
 
@@ -1050,7 +1050,7 @@
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">writer</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">writers</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">writer_handle</span>).<span class="ident">ok_or</span>(()).<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
             <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;channel_write: No such handle&quot;</span>);
-            <span class="ident">OakStatus</span>::<span class="ident">ERR_BAD_HANDLE</span>
+            <span class="ident">OakStatus</span>::<span class="ident">ErrBadHandle</span>
         })<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">data</span> <span class="op">=</span> <span class="self">self</span>
@@ -1061,7 +1061,7 @@
                     <span class="string">&quot;channel_write: Unable to read message data from guest memory: {:?}&quot;</span>,
                     <span class="ident">err</span>
                 );
-                <span class="ident">OakStatus</span>::<span class="ident">ERR_INVALID_ARGS</span>
+                <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
             })<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">raw_handles</span> <span class="op">=</span> <span class="self">self</span>
@@ -1072,7 +1072,7 @@
                     <span class="string">&quot;channel_write: Unable to read handles from guest memory: {:?}&quot;</span>,
                     <span class="ident">err</span>
                 );
-                <span class="ident">OakStatus</span>::<span class="ident">ERR_INVALID_ARGS</span>
+                <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
             })<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">handles</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">raw_handles</span>
@@ -1088,7 +1088,7 @@
                     <span class="prelude-val">Some</span>(<span class="ident">channel</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">ChannelEither</span>::<span class="ident">Reader</span>(<span class="ident">channel</span>.<span class="ident">clone</span>())),
                     <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
                         <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;channel_write: Can&#39;t find handle {} to send&quot;</span>, <span class="ident">handle</span>);
-                        <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ERR_BAD_HANDLE</span>)
+                        <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrBadHandle</span>)
                     }
                 },
             })
@@ -1121,7 +1121,7 @@
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">reader</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">readers</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">reader_handle</span>).<span class="ident">ok_or</span>(()).<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
             <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;channel_read: No such handle&quot;</span>);
-            <span class="ident">OakStatus</span>::<span class="ident">ERR_BAD_HANDLE</span>
+            <span class="ident">OakStatus</span>::<span class="ident">ErrBadHandle</span>
         })<span class="question-mark">?</span>;
 
         <span class="self">self</span>.<span class="ident">validate_ptr</span>(<span class="ident">dest</span>, <span class="ident">dest_capacity</span>)<span class="question-mark">?</span>;
@@ -1144,7 +1144,7 @@
                     <span class="string">&quot;channel_read: Unable to write actual length into guest memory: {:?}&quot;</span>,
                     <span class="ident">err</span>
                 );
-                <span class="ident">OakStatus</span>::<span class="ident">ERR_INVALID_ARGS</span>
+                <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
             })<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">raw_writer</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> [<span class="number">0</span>; <span class="number">4</span>];
@@ -1156,7 +1156,7 @@
                     <span class="string">&quot;channel_read: Unable to write actual handle count into guest memory: {:?}&quot;</span>,
                     <span class="ident">err</span>
                 );
-                <span class="ident">OakStatus</span>::<span class="ident">ERR_INVALID_ARGS</span>
+                <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
             })<span class="question-mark">?</span>;
 
         <span class="kw">match</span> <span class="ident">msg</span> {
@@ -1166,7 +1166,7 @@
                         <span class="string">&quot;channel_read: Unable to write destination buffer into guest memory: {:?}&quot;</span>,
                         <span class="ident">err</span>
                     );
-                    <span class="ident">OakStatus</span>::<span class="ident">ERR_INVALID_ARGS</span>
+                    <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
                 })<span class="question-mark">?</span>;
 
                 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">raw_writer</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="number">0</span>; <span class="ident">actual_handle_count</span> <span class="op">*</span> <span class="number">8</span>];
@@ -1183,15 +1183,15 @@
                         <span class="string">&quot;channel_read: Unable to write destination buffer into guest memory: {:?}&quot;</span>,
                         <span class="ident">err</span>
                     );
-                        <span class="ident">OakStatus</span>::<span class="ident">ERR_INVALID_ARGS</span>
+                        <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
                     })
             }
-            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ERR_CHANNEL_EMPTY</span>),
+            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrChannelEmpty</span>),
             <span class="prelude-val">Some</span>(<span class="ident">ReadStatus</span>::<span class="ident">NeedsCapacity</span>(<span class="ident">x</span>, <span class="kw">_</span>)) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">if</span> <span class="ident">x</span> <span class="op">&gt;</span> <span class="ident">dest_capacity</span> <span class="kw">as</span> <span class="ident">usize</span> {
-                    <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ERR_BUFFER_TOO_SMALL</span>)
+                    <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrBufferTooSmall</span>)
                 } <span class="kw">else</span> {
-                    <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ERR_HANDLE_SPACE_TOO_SMALL</span>)
+                    <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrHandleSpaceTooSmall</span>)
                 }
             }
         }
@@ -1225,7 +1225,7 @@
                     <span class="string">&quot;wait_on_channels: Unable to read handles from guest memory: {:?}&quot;</span>,
                     <span class="ident">err</span>
                 );
-                <span class="ident">OakStatus</span>::<span class="ident">ERR_INVALID_ARGS</span>
+                <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
             })<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">channels</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">handles_raw</span>
@@ -1247,15 +1247,15 @@
                         <span class="string">&quot;wait_on_channels: Unable to set status {} to {:?}: {:?}&quot;</span>,
                         <span class="ident">i</span>, <span class="ident">status</span>, <span class="ident">err</span>
                     );
-                    <span class="ident">OakStatus</span>::<span class="ident">ERR_INVALID_ARGS</span>
+                    <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
                 })<span class="question-mark">?</span>;
         }
 
         <span class="kw">if</span> <span class="ident">statuses</span>
             .<span class="ident">iter</span>()
-            .<span class="ident">all</span>(<span class="op">|</span><span class="kw-2">&amp;</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span> <span class="op">=</span><span class="op">=</span> <span class="ident">ChannelReadStatus</span>::<span class="ident">INVALID_CHANNEL</span> <span class="op">|</span><span class="op">|</span> <span class="ident">s</span> <span class="op">=</span><span class="op">=</span> <span class="ident">ChannelReadStatus</span>::<span class="ident">ORPHANED</span>)
+            .<span class="ident">all</span>(<span class="op">|</span><span class="kw-2">&amp;</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span> <span class="op">=</span><span class="op">=</span> <span class="ident">ChannelReadStatus</span>::<span class="ident">InvalidChannel</span> <span class="op">|</span><span class="op">|</span> <span class="ident">s</span> <span class="op">=</span><span class="op">=</span> <span class="ident">ChannelReadStatus</span>::<span class="ident">Orphaned</span>)
         {
-            <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ERR_BAD_HANDLE</span>)
+            <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrBadHandle</span>)
         } <span class="kw">else</span> {
             <span class="prelude-val">Ok</span>(())
         }
@@ -1266,14 +1266,14 @@
 <span class="doccomment">/// `wasmi` specific result type `Result&lt;Option&lt;wasmi::RuntimeValue&gt;, wasmi::Trap&gt;`.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// This maps`Result&lt;(), OakStatus&gt;` to `Ok(Some(&lt;wasmi::RuntimeValue&gt;))` where</span>
-<span class="doccomment">/// - `Ok(())` to `OakStatus::OK`</span>
+<span class="doccomment">/// - `Ok(())` to `OakStatus::Ok`</span>
 <span class="doccomment">/// - `Err(x)` to x</span>
 <span class="kw">fn</span> <span class="ident">map_host_errors</span>(
     <span class="ident">result</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">wasmi</span>::<span class="ident">RuntimeValue</span><span class="op">&gt;</span>, <span class="ident">wasmi</span>::<span class="ident">Trap</span><span class="op">&gt;</span> {
     <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">wasmi</span>::<span class="ident">RuntimeValue</span>::<span class="ident">I32</span>(<span class="ident">result</span>.<span class="ident">map_or_else</span>(
         <span class="op">|</span><span class="ident">x</span>: <span class="ident">OakStatus</span><span class="op">|</span> <span class="ident">x</span> <span class="kw">as</span> <span class="ident">i32</span>,
-        <span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">OakStatus</span>::<span class="ident">OK</span> <span class="kw">as</span> <span class="ident">i32</span>,
+        <span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">OakStatus</span>::<span class="prelude-val">Ok</span> <span class="kw">as</span> <span class="ident">i32</span>,
     ))))
 }
 
@@ -1311,7 +1311,7 @@
                 <span class="kw">if</span> <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">is_terminating</span>() {
                     <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{} returning terminated&quot;</span>, <span class="self">self</span>.<span class="ident">pretty_name</span>);
                     <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">wasmi</span>::<span class="ident">RuntimeValue</span>::<span class="ident">I32</span>(
-                        <span class="ident">OakStatus</span>::<span class="ident">ERR_TERMINATED</span> <span class="kw">as</span> <span class="ident">i32</span>,
+                        <span class="ident">OakStatus</span>::<span class="ident">ErrTerminated</span> <span class="kw">as</span> <span class="ident">i32</span>,
                     )));
                 }
 
@@ -1342,9 +1342,9 @@
                     <span class="kw">if</span> <span class="self">self</span>.<span class="ident">readers</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">channel_id</span>).<span class="ident">is_some</span>()
                         <span class="op">|</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">writers</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">channel_id</span>).<span class="ident">is_some</span>()
                     {
-                        <span class="ident">OakStatus</span>::<span class="ident">OK</span> <span class="kw">as</span> <span class="ident">i32</span>
+                        <span class="ident">OakStatus</span>::<span class="prelude-val">Ok</span> <span class="kw">as</span> <span class="ident">i32</span>
                     } <span class="kw">else</span> {
-                        <span class="ident">OakStatus</span>::<span class="ident">ERR_BAD_HANDLE</span> <span class="kw">as</span> <span class="ident">i32</span>
+                        <span class="ident">OakStatus</span>::<span class="ident">ErrBadHandle</span> <span class="kw">as</span> <span class="ident">i32</span>
                     },
                 )))
             }
@@ -1361,7 +1361,7 @@
                 <span class="kw">if</span> <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">is_terminating</span>() {
                     <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{} returning terminated&quot;</span>, <span class="self">self</span>.<span class="ident">pretty_name</span>);
                     <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">wasmi</span>::<span class="ident">RuntimeValue</span>::<span class="ident">I32</span>(
-                        <span class="ident">OakStatus</span>::<span class="ident">ERR_TERMINATED</span> <span class="kw">as</span> <span class="ident">i32</span>,
+                        <span class="ident">OakStatus</span>::<span class="ident">ErrTerminated</span> <span class="kw">as</span> <span class="ident">i32</span>,
                     )));
                 }
 
@@ -1521,14 +1521,14 @@
 }
 
 <span class="doccomment">/// Create a new instance of a Wasm node. If the entry point is not found,</span>
-<span class="doccomment">/// `ERR(OakStatus::ERR_INVALID_ARGS)` will be returned immediately.</span>
+<span class="doccomment">/// `ERR(OakStatus::ErrInvalidArgs)` will be returned immediately.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_instance</span>(
     <span class="ident">config_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">runtime</span>: <span class="ident">RuntimeRef</span>,
     <span class="ident">module</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">wasmi</span>::<span class="ident">Module</span><span class="op">&gt;</span>,
     <span class="ident">entrypoint</span>: <span class="ident">String</span>,
     <span class="ident">initial_reader</span>: <span class="ident">ChannelReader</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw">crate</span>::<span class="ident">JoinHandle</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">JoinHandle</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">config_name</span> <span class="op">=</span> <span class="ident">config_name</span>.<span class="ident">to_owned</span>();
 
     <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;new_instance: discovering {} {}&quot;</span>, <span class="ident">config_name</span>, <span class="ident">entrypoint</span>);
@@ -1553,14 +1553,14 @@
             .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">e</span>.<span class="ident">as_func</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">f</span><span class="op">|</span> <span class="ident">f</span>.<span class="ident">signature</span>() <span class="op">!</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">entrypoint_sig</span>))
             .<span class="ident">unwrap_or</span>(<span class="bool-val">true</span>)
         {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ERR_INVALID_ARGS</span>);
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>);
         }
     }
 
     <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;new_instance: starting {} {}&quot;</span>, <span class="ident">config_name</span>, <span class="ident">entrypoint</span>);
 
-    <span class="prelude-val">Ok</span>(<span class="ident">platform</span>::<span class="ident">thread</span>::<span class="ident">spawn</span>(<span class="kw">move</span> <span class="op">|</span><span class="op">|</span> {
-        <span class="kw">let</span> <span class="ident">pretty_name</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}-{:?}:&quot;</span>, <span class="ident">config_name</span>, <span class="ident">platform</span>::<span class="ident">thread</span>::<span class="ident">current</span>().<span class="ident">id</span>());
+    <span class="prelude-val">Ok</span>(<span class="ident">spawn</span>(<span class="kw">move</span> <span class="op">|</span><span class="op">|</span> {
+        <span class="kw">let</span> <span class="ident">pretty_name</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}-{:?}:&quot;</span>, <span class="ident">config_name</span>, <span class="ident">current_thread</span>());
         <span class="kw">let</span> (<span class="kw-2">mut</span> <span class="ident">abi</span>, <span class="ident">initial_handle</span>) <span class="op">=</span> <span class="ident">WasmInterface</span>::<span class="ident">new</span>(<span class="ident">pretty_name</span>, <span class="ident">runtime</span>, <span class="ident">initial_reader</span>);
 
         <span class="kw">let</span> <span class="ident">instance</span> <span class="op">=</span> <span class="ident">wasmi</span>::<span class="ident">ModuleInstance</span>::<span class="ident">new</span>(

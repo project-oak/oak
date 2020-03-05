@@ -541,9 +541,6 @@
 <span id="541">541</span>
 <span id="542">542</span>
 <span id="543">543</span>
-<span id="544">544</span>
-<span id="545">545</span>
-<span id="546">546</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -563,7 +560,6 @@
 
 <span class="kw">use</span> <span class="ident">byteorder</span>::{<span class="ident">ReadBytesExt</span>, <span class="ident">WriteBytesExt</span>};
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">error</span>, <span class="ident">info</span>};
-<span class="kw">use</span> <span class="ident">protobuf</span>::<span class="ident">ProtobufEnum</span>;
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 
 <span class="comment">// Re-export ABI constants that are also visible as part of the SDK API.</span>
@@ -727,7 +723,7 @@
                 .<span class="ident">and_then</span>(<span class="ident">ChannelReadStatus</span>::<span class="ident">from_i32</span>)
             {
                 <span class="prelude-val">Some</span>(<span class="ident">status</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">results</span>.<span class="ident">push</span>(<span class="ident">status</span>),
-                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">OAK_STATUS_UNSPECIFIED</span>),
+                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">Unspecified</span>),
             }
         }
         <span class="prelude-val">Ok</span>(<span class="ident">results</span>)
@@ -771,7 +767,7 @@
 
         <span class="kw">match</span> <span class="ident">status</span> {
             <span class="prelude-val">Some</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">s</span> {
-                <span class="ident">OakStatus</span>::<span class="ident">OK</span> <span class="op">|</span> <span class="ident">OakStatus</span>::<span class="ident">ERR_CHANNEL_EMPTY</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="ident">OakStatus</span>::<span class="prelude-val">Ok</span> <span class="op">|</span> <span class="ident">OakStatus</span>::<span class="ident">ErrChannelEmpty</span> <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="kw">unsafe</span> {
                         <span class="comment">// The read operation succeeded, and overwrote some fraction</span>
                         <span class="comment">// of the vectors&#39; available capacity with returned data (possibly</span>
@@ -782,16 +778,14 @@
                         <span class="ident">handles_buf</span>.<span class="ident">set_len</span>(<span class="ident">actual_handle_count</span> <span class="kw">as</span> <span class="ident">usize</span> <span class="op">*</span> <span class="number">8</span>);
                     }
                     <span class="ident">Handle</span>::<span class="ident">unpack</span>(<span class="kw-2">&amp;</span><span class="ident">handles_buf</span>, <span class="ident">actual_handle_count</span>, <span class="ident">handles</span>);
-                    <span class="kw">if</span> <span class="ident">s</span> <span class="op">=</span><span class="op">=</span> <span class="ident">OakStatus</span>::<span class="ident">OK</span> {
+                    <span class="kw">if</span> <span class="ident">s</span> <span class="op">=</span><span class="op">=</span> <span class="ident">OakStatus</span>::<span class="prelude-val">Ok</span> {
                         <span class="kw">return</span> <span class="prelude-val">Ok</span>(());
                     } <span class="kw">else</span> {
                         <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">s</span>);
                     }
                 }
 
-                <span class="ident">OakStatus</span>::<span class="ident">ERR_BUFFER_TOO_SMALL</span> <span class="op">|</span> <span class="ident">OakStatus</span>::<span class="ident">ERR_HANDLE_SPACE_TOO_SMALL</span>
-                    <span class="kw">if</span> <span class="op">!</span>(<span class="kw-2">*</span><span class="ident">resized</span>) <span class="op">=</span><span class="op">&gt;</span>
-                {
+                <span class="ident">OakStatus</span>::<span class="ident">ErrBufferTooSmall</span> <span class="op">|</span> <span class="ident">OakStatus</span>::<span class="ident">ErrHandleSpaceTooSmall</span> <span class="kw">if</span> <span class="op">!</span>(<span class="kw-2">*</span><span class="ident">resized</span>) <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="comment">// Extend the vectors to be large enough for the message</span>
                     <span class="macro">debug</span><span class="macro">!</span>(
                         <span class="string">&quot;Got space for {} bytes, need {}&quot;</span>,
@@ -822,12 +816,12 @@
                 }
             },
             <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ERR_INTERNAL</span>);
+                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>);
             }
         }
     }
     <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;unreachable code reached&quot;</span>);
-    <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ERR_INTERNAL</span>)
+    <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>)
 }
 
 <span class="doccomment">/// Write a message to a channel.</span>
@@ -908,9 +902,9 @@
 <span class="doccomment">/// system, so these values would usually be converted (via a cast) to `i32` by callers.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">result_from_status</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="ident">status</span>: <span class="ident">i32</span>, <span class="ident">val</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
     <span class="kw">match</span> <span class="ident">OakStatus</span>::<span class="ident">from_i32</span>(<span class="ident">status</span>) {
-        <span class="prelude-val">Some</span>(<span class="ident">OakStatus</span>::<span class="ident">OK</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">val</span>),
+        <span class="prelude-val">Some</span>(<span class="ident">OakStatus</span>::<span class="prelude-val">Ok</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">val</span>),
         <span class="prelude-val">Some</span>(<span class="ident">status</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">status</span>),
-        <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">OAK_STATUS_UNSPECIFIED</span>),
+        <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">Unspecified</span>),
     }
 }
 
@@ -975,7 +969,7 @@
     <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;starting event loop&quot;</span>);
     <span class="kw">loop</span> {
         <span class="comment">// First wait until a message is available. If the node was terminated while waiting, this</span>
-        <span class="comment">// will return `ERR_TERMINATED`, which indicates that the event loop should be terminated.</span>
+        <span class="comment">// will return `ErrTerminated`, which indicates that the event loop should be terminated.</span>
         <span class="comment">// For any other error raised while waiting is logged, we try and determine whether it is</span>
         <span class="comment">// transient or not, and then continue or terminate the event loop, respectively.</span>
         <span class="kw">match</span> <span class="ident">receiver</span>.<span class="ident">wait</span>() {
@@ -983,7 +977,7 @@
                 <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;error waiting for command: {:?}&quot;</span>, <span class="ident">status</span>);
                 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">OakStatus</span>::<span class="kw-2">*</span>;
                 <span class="kw">match</span> <span class="ident">status</span> {
-                    <span class="ident">ERR_TERMINATED</span> <span class="op">|</span> <span class="ident">ERR_BAD_HANDLE</span> <span class="op">|</span> <span class="ident">ERR_CHANNEL_CLOSED</span> <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="ident">ErrTerminated</span> <span class="op">|</span> <span class="ident">ErrBadHandle</span> <span class="op">|</span> <span class="ident">ErrChannelClosed</span> <span class="op">=</span><span class="op">&gt;</span> {
                         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;non-transient error: terminating event loop&quot;</span>);
                         <span class="kw">return</span>;
                     }

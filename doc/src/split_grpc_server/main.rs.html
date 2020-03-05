@@ -117,7 +117,7 @@
 <span class="kw">use</span> <span class="ident">proto</span>::{<span class="ident">HelloRequest</span>, <span class="ident">HelloResponse</span>};
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">proto</span> {
-    <span class="macro">include</span><span class="macro">!</span>(<span class="string">&quot;./proto/oak.examples.hello_world.rs&quot;</span>);
+    <span class="ident">tonic</span>::<span class="macro">include_proto</span><span class="macro">!</span>(<span class="string">&quot;oak.examples.hello_world&quot;</span>);
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Default</span>)]</span>
@@ -170,7 +170,7 @@
     <span class="kw">let</span> <span class="ident">cert</span> <span class="op">=</span> <span class="ident">tokio</span>::<span class="ident">fs</span>::<span class="ident">read</span>(<span class="string">&quot;experimental/split_grpc/certs/local.pem&quot;</span>).<span class="kw">await</span><span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">key</span> <span class="op">=</span> <span class="ident">tokio</span>::<span class="ident">fs</span>::<span class="ident">read</span>(<span class="string">&quot;experimental/split_grpc/certs/local.key&quot;</span>).<span class="kw">await</span><span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">identity</span> <span class="op">=</span> <span class="ident">Identity</span>::<span class="ident">from_pem</span>(<span class="ident">cert</span>, <span class="ident">key</span>);
-    <span class="kw">let</span> <span class="ident">address</span> <span class="op">=</span> <span class="string">&quot;[::1]:50051&quot;</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">address</span> <span class="op">=</span> <span class="string">&quot;[::1]:50052&quot;</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">handler</span> <span class="op">=</span> <span class="ident">HelloWorldHandler</span>::<span class="ident">default</span>();
 
     <span class="ident">Server</span>::<span class="ident">builder</span>()

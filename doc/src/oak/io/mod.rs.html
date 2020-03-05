@@ -70,8 +70,6 @@
 <span id="70">70</span>
 <span id="71">71</span>
 <span id="72">72</span>
-<span id="73">73</span>
-<span id="74">74</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -119,32 +117,30 @@
 
 <span class="doccomment">/// Map a non-OK [`OakStatus`] value to the nearest available [`std::io::Error`].</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// Panics if passed an `OakStatus::OK` value.</span>
+<span class="doccomment">/// Panics if passed an `OakStatus::Ok` value.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">error_from_nonok_status</span>(<span class="ident">status</span>: <span class="ident">OakStatus</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="ident">Error</span> {
     <span class="kw">match</span> <span class="ident">status</span> {
-        <span class="ident">OakStatus</span>::<span class="ident">OAK_STATUS_UNSPECIFIED</span> <span class="op">=</span><span class="op">&gt;</span> {
+        <span class="ident">OakStatus</span>::<span class="ident">Unspecified</span> <span class="op">=</span><span class="op">&gt;</span> {
             <span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">Other</span>, <span class="string">&quot;Unspecified Oak status value&quot;</span>)
         }
-        <span class="ident">OakStatus</span>::<span class="ident">OK</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;OK status found&quot;</span>),
-        <span class="ident">OakStatus</span>::<span class="ident">ERR_BAD_HANDLE</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">NotConnected</span>, <span class="string">&quot;Bad handle&quot;</span>),
-        <span class="ident">OakStatus</span>::<span class="ident">ERR_INVALID_ARGS</span> <span class="op">=</span><span class="op">&gt;</span> {
+        <span class="ident">OakStatus</span>::<span class="prelude-val">Ok</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;OK status found&quot;</span>),
+        <span class="ident">OakStatus</span>::<span class="ident">ErrBadHandle</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">NotConnected</span>, <span class="string">&quot;Bad handle&quot;</span>),
+        <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span> <span class="op">=</span><span class="op">&gt;</span> {
             <span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">InvalidInput</span>, <span class="string">&quot;Invalid arguments&quot;</span>)
         }
-        <span class="ident">OakStatus</span>::<span class="ident">ERR_CHANNEL_CLOSED</span> <span class="op">=</span><span class="op">&gt;</span> {
+        <span class="ident">OakStatus</span>::<span class="ident">ErrChannelClosed</span> <span class="op">=</span><span class="op">&gt;</span> {
             <span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">ConnectionReset</span>, <span class="string">&quot;Channel closed&quot;</span>)
         }
-        <span class="ident">OakStatus</span>::<span class="ident">ERR_BUFFER_TOO_SMALL</span> <span class="op">=</span><span class="op">&gt;</span> {
+        <span class="ident">OakStatus</span>::<span class="ident">ErrBufferTooSmall</span> <span class="op">=</span><span class="op">&gt;</span> {
             <span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">UnexpectedEof</span>, <span class="string">&quot;Buffer too small&quot;</span>)
         }
-        <span class="ident">OakStatus</span>::<span class="ident">ERR_HANDLE_SPACE_TOO_SMALL</span> <span class="op">=</span><span class="op">&gt;</span> {
+        <span class="ident">OakStatus</span>::<span class="ident">ErrHandleSpaceTooSmall</span> <span class="op">=</span><span class="op">&gt;</span> {
             <span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">UnexpectedEof</span>, <span class="string">&quot;Handle space too small&quot;</span>)
         }
-        <span class="ident">OakStatus</span>::<span class="ident">ERR_OUT_OF_RANGE</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">NotConnected</span>, <span class="string">&quot;Out of range&quot;</span>),
-        <span class="ident">OakStatus</span>::<span class="ident">ERR_INTERNAL</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">Other</span>, <span class="string">&quot;Internal error&quot;</span>),
-        <span class="ident">OakStatus</span>::<span class="ident">ERR_TERMINATED</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">Other</span>, <span class="string">&quot;Node terminated&quot;</span>),
-        <span class="ident">OakStatus</span>::<span class="ident">ERR_CHANNEL_EMPTY</span> <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">UnexpectedEof</span>, <span class="string">&quot;Channel empty&quot;</span>)
-        }
+        <span class="ident">OakStatus</span>::<span class="ident">ErrOutOfRange</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">NotConnected</span>, <span class="string">&quot;Out of range&quot;</span>),
+        <span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">Other</span>, <span class="string">&quot;Internal error&quot;</span>),
+        <span class="ident">OakStatus</span>::<span class="ident">ErrTerminated</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">Other</span>, <span class="string">&quot;Node terminated&quot;</span>),
+        <span class="ident">OakStatus</span>::<span class="ident">ErrChannelEmpty</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">UnexpectedEof</span>, <span class="string">&quot;Channel empty&quot;</span>),
     }
 }
 </pre></div>
