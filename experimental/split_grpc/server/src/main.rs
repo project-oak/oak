@@ -25,7 +25,7 @@ use proto::hello_world_server::{HelloWorld, HelloWorldServer};
 use proto::{HelloRequest, HelloResponse};
 
 pub mod proto {
-    include!("./proto/oak.examples.hello_world.rs");
+    tonic::include_proto!("oak.examples.hello_world");
 }
 
 #[derive(Debug, Default)]
