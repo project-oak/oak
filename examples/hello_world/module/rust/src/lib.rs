@@ -24,7 +24,7 @@ use proto::hello_world::{HelloRequest, HelloResponse};
 use proto::hello_world_grpc::{Dispatcher, HelloWorld};
 
 oak::entrypoint!(oak_main => {
-    oak_log::init_default();
+    oak::logger::init_default();
 
     // Try to find a translation service, first as an Oak Node and failing that,
     // as an external gRPC service

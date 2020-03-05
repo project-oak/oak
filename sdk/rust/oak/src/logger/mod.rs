@@ -24,7 +24,7 @@
 use log::{Level, Log, Metadata, Record, SetLoggerError};
 
 struct OakChannelLogger {
-    channel: oak::io::Sender<LogEntry>,
+    channel: crate::io::Sender<LogEntry>,
 }
 
 /// An object representing a log entry. Currently just a wrapper around a string, but it may be
@@ -37,11 +37,11 @@ struct LogEntry {
 
 /// Trivial implementation of [`oak::io::Encodable`], just converting the log entry message to bytes
 /// and no handles.
-impl oak::io::Encodable for LogEntry {
-    fn encode(&self) -> Result<oak::io::Message, oak::OakError> {
+impl crate::io::Encodable for LogEntry {
+    fn encode(&self) -> Result<crate::io::Message, crate::OakError> {
         let bytes = self.message.as_bytes().into();
         let handles = vec![];
-        Ok(oak::io::Message { bytes, handles })
+        Ok(crate::io::Message { bytes, handles })
     }
 }
 
@@ -65,7 +65,7 @@ impl Log for OakChannelLogger {
         };
         match self.channel.send(&log_entry) {
             Ok(()) => (),
-            Err(oak::OakError::OakStatus(oak::OakStatus::ErrTerminated)) => (),
+            Err(crate::OakError::OakStatus(crate::OakStatus::ErrTerminated)) => (),
             Err(e) => panic!("could not send log message over log channel: {}", e),
         }
     }
@@ -98,12 +98,12 @@ pub fn init_default() {
 /// An error is returned if a logger has already been set.
 pub fn init(level: Level, config: &str) -> Result<(), SetLoggerError> {
     // Create a channel and pass the read half to a fresh logging Node.
-    let (write_handle, read_handle) = oak::channel_create().expect("could not create channel");
-    oak::node_create(config, "oak_main", read_handle).expect("could not create node");
-    oak::channel_close(read_handle.handle).expect("could not close channel");
+    let (write_handle, read_handle) = crate::channel_create().expect("could not create channel");
+    crate::node_create(config, "oak_main", read_handle).expect("could not create node");
+    crate::channel_close(read_handle.handle).expect("could not close channel");
 
     log::set_boxed_logger(Box::new(OakChannelLogger {
-        channel: oak::io::Sender::new(write_handle),
+        channel: crate::io::Sender::new(write_handle),
     }))?;
     log::set_max_level(level.to_level_filter());
     Ok(())

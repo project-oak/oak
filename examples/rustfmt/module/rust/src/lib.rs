@@ -21,7 +21,7 @@ use proto::rustfmt::{FormatRequest, FormatResponse};
 use proto::rustfmt_grpc::{Dispatcher, FormatService};
 
 oak::entrypoint!(oak_main => {
-    oak_log::init_default();
+    oak::logger::init_default();
     Dispatcher::new(Node)
 });
 

@@ -145,7 +145,7 @@ struct Config {
 }
 
 oak::entrypoint!(oak_main => {
-    oak_log::init_default();
+    oak::logger::init_default();
     Node {
         training_set_size: 1000,
         test_set_size: 1000,

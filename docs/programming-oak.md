@@ -47,7 +47,7 @@ so the Oak SDK knows how to instantiate it:
 [embedmd]:# (../examples/machine_learning/module/rust/src/lib.rs Rust /^oak::entrypoint.*/ /}\);$/)
 ```Rust
 oak::entrypoint!(oak_main => {
-    oak_log::init_default();
+    oak::logger::init_default();
     Node {
         training_set_size: 1000,
         test_set_size: 1000,
@@ -92,7 +92,7 @@ with the automatically generated `Dispatcher`, as described in the next section.
 [embedmd]:# (../examples/rustfmt/module/rust/src/lib.rs Rust /oak::entrypoint!/ /^}/)
 ```Rust
 oak::entrypoint!(oak_main => {
-    oak_log::init_default();
+    oak::logger::init_default();
     Dispatcher::new(Node)
 }
 ```

@@ -21,7 +21,6 @@ members = [
   "oak/server/rust/oak_runtime",
   "runner",
   "sdk/rust/oak",
-  "sdk/rust/oak_log",
   "sdk/rust/oak_tests",
   "sdk/rust/oak_utils",
 ]
@@ -35,7 +34,6 @@ members = [
 # Oak.
 oak = { path = "sdk/rust/oak" }
 oak_abi = { path = "oak/server/rust/oak_abi" }
-oak_log = { path = "sdk/rust/oak_log" }
 oak_platform = { path = "oak/server/rust/oak_platform" }
 oak_platform_asylo = { path = "oak/server/rust/oak_platform_asylo" }
 oak_runtime = { path = "oak/server/rust/oak_runtime" }
