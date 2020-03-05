@@ -20,7 +20,7 @@ use proto::HelloRequest;
 use tonic::transport::{Certificate, Channel, ClientTlsConfig};
 
 pub mod proto {
-    include!("./proto/oak.examples.hello_world.rs");
+    tonic::include_proto!("oak.examples.hello_world");
 }
 
 #[tokio::main]
