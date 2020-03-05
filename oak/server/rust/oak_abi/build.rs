@@ -18,11 +18,11 @@ use std::path;
 
 fn main() {
     let proto_dir = path::Path::new("../../../../oak/proto/");
-    let oak_api_path = proto_dir.join("oak_api.proto");
+    let oak_api_path = &*proto_dir.join("oak_api.proto");
 
     // Tell Cargo that if the given file changes, to rerun this build script.
     // https://doc.rust-lang.org/cargo/reference/build-scripts.html#rerun-if-changed
-    println!("cargo:rerun-if-changed={:?}", oak_api_path);
+    println!("cargo:rerun-if-changed={}", oak_api_path.to_str().unwrap());
 
-    prost_build::compile_protos(&[&*oak_api_path], &[proto_dir]).unwrap();
+    prost_build::compile_protos(&[oak_api_path], &[proto_dir]).unwrap();
 }
