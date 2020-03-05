@@ -62,10 +62,14 @@ int main(int argc, char* argv[]) {
   absl::ParseCommandLine(argc, argv);
 
   if (absl::GetFlag(FLAGS_debug)) {
+#if defined(NDEBUG)
+    LOG(ERROR) << "Debug mode not available in non-debug build!";
+#else
     absl::InitializeSymbolizer(argv[0]);
     std::signal(SIGILL, crash_handler);
     std::signal(SIGBUS, crash_handler);
     std::signal(SIGSEGV, crash_handler);
+#endif
   }
 
   // We install an explicit SIGINT handler, as for some reason the default one
