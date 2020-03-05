@@ -65,7 +65,7 @@ impl Log for OakChannelLogger {
         };
         match self.channel.send(&log_entry) {
             Ok(()) => (),
-            Err(oak::OakError::OakStatus(oak::OakStatus::ERR_TERMINATED)) => (),
+            Err(oak::OakError::OakStatus(oak::OakStatus::ErrTerminated)) => (),
             Err(e) => panic!("could not send log message over log channel: {}", e),
         }
     }

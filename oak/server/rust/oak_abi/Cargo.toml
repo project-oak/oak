@@ -5,14 +5,9 @@ authors = ["David Drysdale <drysdale@google.com>"]
 edition = "2018"
 license = "Apache-2.0"
 
-[features]
-std = ["protobuf"]
-no_std = []
-default = ["std"]
-
 [dependencies]
-protobuf = { version = "*", optional = true }
+prost = "*"
 
 [build-dependencies]
 oak_utils = "*"
-protoc-rust = "*"
+prost-build = "*"

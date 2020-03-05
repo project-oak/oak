@@ -36,7 +36,7 @@ pub enum Command {
 impl oak::io::Encodable for Command {
     fn encode(&self) -> Result<oak::io::Message, oak::OakError> {
         // TODO: Propagate more details about the source error.
-        let bytes = bincode::serialize(self).map_err(|_| oak::OakStatus::ERR_INVALID_ARGS)?;
+        let bytes = bincode::serialize(self).map_err(|_| oak::OakStatus::ErrInvalidArgs)?;
         // Serialize handles separately.
         let handles = match self {
             Command::Join(h) => vec![h.handle],
@@ -51,7 +51,7 @@ impl oak::io::Decodable for Command {
     fn decode(message: &oak::io::Message) -> Result<Self, oak::OakError> {
         // TODO: Propagate more details about the source error.
         let command: Command =
-            bincode::deserialize(&message.bytes).map_err(|_| oak::OakStatus::ERR_INVALID_ARGS)?;
+            bincode::deserialize(&message.bytes).map_err(|_| oak::OakStatus::ErrInvalidArgs)?;
         // Restore handles in the received message.
         let command = match command {
             Command::Join(_) => Command::Join(oak::WriteHandle {

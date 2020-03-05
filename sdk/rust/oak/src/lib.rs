@@ -16,7 +16,6 @@
 
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use log::{debug, error, info};
-use protobuf::ProtobufEnum;
 use serde::{Deserialize, Serialize};
 
 // Re-export ABI constants that are also visible as part of the SDK API.
@@ -180,7 +179,7 @@ pub fn wait_on_channels(handles: &[ReadHandle]) -> Result<Vec<ChannelReadStatus>
                 .and_then(ChannelReadStatus::from_i32)
             {
                 Some(status) => results.push(status),
-                None => return Err(OakStatus::OAK_STATUS_UNSPECIFIED),
+                None => return Err(OakStatus::Unspecified),
             }
         }
         Ok(results)
@@ -224,7 +223,7 @@ pub fn channel_read(
 
         match status {
             Some(s) => match s {
-                OakStatus::OK | OakStatus::ERR_CHANNEL_EMPTY => {
+                OakStatus::Ok | OakStatus::ErrChannelEmpty => {
                     unsafe {
                         // The read operation succeeded, and overwrote some fraction
                         // of the vectors' available capacity with returned data (possibly
@@ -235,16 +234,14 @@ pub fn channel_read(
                         handles_buf.set_len(actual_handle_count as usize * 8);
                     }
                     Handle::unpack(&handles_buf, actual_handle_count, handles);
-                    if s == OakStatus::OK {
+                    if s == OakStatus::Ok {
                         return Ok(());
                     } else {
                         return Err(s);
                     }
                 }
 
-                OakStatus::ERR_BUFFER_TOO_SMALL | OakStatus::ERR_HANDLE_SPACE_TOO_SMALL
-                    if !(*resized) =>
-                {
+                OakStatus::ErrBufferTooSmall | OakStatus::ErrHandleSpaceTooSmall if !(*resized) => {
                     // Extend the vectors to be large enough for the message
                     debug!(
                         "Got space for {} bytes, need {}",
@@ -275,12 +272,12 @@ pub fn channel_read(
                 }
             },
             None => {
-                return Err(OakStatus::ERR_INTERNAL);
+                return Err(OakStatus::ErrInternal);
             }
         }
     }
     error!("unreachable code reached");
-    Err(OakStatus::ERR_INTERNAL)
+    Err(OakStatus::ErrInternal)
 }
 
 /// Write a message to a channel.
@@ -361,9 +358,9 @@ pub fn random_get(buf: &mut [u8]) -> Result<(), OakStatus> {
 /// system, so these values would usually be converted (via a cast) to `i32` by callers.
 pub fn result_from_status<T>(status: i32, val: T) -> Result<T, OakStatus> {
     match OakStatus::from_i32(status) {
-        Some(OakStatus::OK) => Ok(val),
+        Some(OakStatus::Ok) => Ok(val),
         Some(status) => Err(status),
-        None => Err(OakStatus::OAK_STATUS_UNSPECIFIED),
+        None => Err(OakStatus::Unspecified),
     }
 }
 
@@ -428,7 +425,7 @@ pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(mut node: N, in_handl
     info!("starting event loop");
     loop {
         // First wait until a message is available. If the node was terminated while waiting, this
-        // will return `ERR_TERMINATED`, which indicates that the event loop should be terminated.
+        // will return `ErrTerminated`, which indicates that the event loop should be terminated.
         // For any other error raised while waiting is logged, we try and determine whether it is
         // transient or not, and then continue or terminate the event loop, respectively.
         match receiver.wait() {
@@ -436,7 +433,7 @@ pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(mut node: N, in_handl
                 error!("error waiting for command: {:?}", status);
                 use crate::OakStatus::*;
                 match status {
-                    ERR_TERMINATED | ERR_BAD_HANDLE | ERR_CHANNEL_CLOSED => {
+                    ErrTerminated | ErrBadHandle | ErrChannelClosed => {
                         info!("non-transient error: terminating event loop");
                         return;
                     }

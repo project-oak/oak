@@ -44,31 +44,29 @@ pub struct Message {
 
 /// Map a non-OK [`OakStatus`] value to the nearest available [`std::io::Error`].
 ///
-/// Panics if passed an `OakStatus::OK` value.
+/// Panics if passed an `OakStatus::Ok` value.
 pub fn error_from_nonok_status(status: OakStatus) -> io::Error {
     match status {
-        OakStatus::OAK_STATUS_UNSPECIFIED => {
+        OakStatus::Unspecified => {
             io::Error::new(io::ErrorKind::Other, "Unspecified Oak status value")
         }
-        OakStatus::OK => panic!("OK status found"),
-        OakStatus::ERR_BAD_HANDLE => io::Error::new(io::ErrorKind::NotConnected, "Bad handle"),
-        OakStatus::ERR_INVALID_ARGS => {
+        OakStatus::Ok => panic!("OK status found"),
+        OakStatus::ErrBadHandle => io::Error::new(io::ErrorKind::NotConnected, "Bad handle"),
+        OakStatus::ErrInvalidArgs => {
             io::Error::new(io::ErrorKind::InvalidInput, "Invalid arguments")
         }
-        OakStatus::ERR_CHANNEL_CLOSED => {
+        OakStatus::ErrChannelClosed => {
             io::Error::new(io::ErrorKind::ConnectionReset, "Channel closed")
         }
-        OakStatus::ERR_BUFFER_TOO_SMALL => {
+        OakStatus::ErrBufferTooSmall => {
             io::Error::new(io::ErrorKind::UnexpectedEof, "Buffer too small")
         }
-        OakStatus::ERR_HANDLE_SPACE_TOO_SMALL => {
+        OakStatus::ErrHandleSpaceTooSmall => {
             io::Error::new(io::ErrorKind::UnexpectedEof, "Handle space too small")
         }
-        OakStatus::ERR_OUT_OF_RANGE => io::Error::new(io::ErrorKind::NotConnected, "Out of range"),
-        OakStatus::ERR_INTERNAL => io::Error::new(io::ErrorKind::Other, "Internal error"),
-        OakStatus::ERR_TERMINATED => io::Error::new(io::ErrorKind::Other, "Node terminated"),
-        OakStatus::ERR_CHANNEL_EMPTY => {
-            io::Error::new(io::ErrorKind::UnexpectedEof, "Channel empty")
-        }
+        OakStatus::ErrOutOfRange => io::Error::new(io::ErrorKind::NotConnected, "Out of range"),
+        OakStatus::ErrInternal => io::Error::new(io::ErrorKind::Other, "Internal error"),
+        OakStatus::ErrTerminated => io::Error::new(io::ErrorKind::Other, "Node terminated"),
+        OakStatus::ErrChannelEmpty => io::Error::new(io::ErrorKind::UnexpectedEof, "Channel empty"),
     }
 }

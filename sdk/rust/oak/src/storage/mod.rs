@@ -23,7 +23,7 @@ use crate::proto::storage_channel::{
     StorageChannelReadResponse, StorageChannelWriteRequest, StorageChannelWriteResponse,
 };
 use log::{info, warn};
-use protobuf::{Message, ProtobufEnum};
+use protobuf::Message;
 
 /// Default name for predefined node config that corresponds to a storage
 /// pseudo-Node.
@@ -102,10 +102,7 @@ impl Storage {
             Err(status) => {
                 return Err(grpc::build_status(
                     grpc::Code::INTERNAL,
-                    &format!(
-                        "failed to create storage response channel: {}",
-                        status.value()
-                    ),
+                    &format!("failed to create storage response channel: {:?}", status),
                 ));
             }
         };
@@ -117,7 +114,7 @@ impl Storage {
         // Block until there is a response available.
         loop {
             let wait_result = crate::wait_on_channels(&[rsp_in]).unwrap();
-            if wait_result[0] == crate::ChannelReadStatus::READ_READY {
+            if wait_result[0] == crate::ChannelReadStatus::ReadReady {
                 break;
             }
         }

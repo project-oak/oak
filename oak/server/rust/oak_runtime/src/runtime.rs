@@ -108,19 +108,19 @@ impl RuntimeRef {
         reader: ChannelReader,
     ) -> Result<(), OakStatus> {
         if self.is_terminating() {
-            return Err(OakStatus::ERR_TERMINATED);
+            return Err(OakStatus::ErrTerminated);
         }
 
         let mut node_threads = self.node_threads.lock().unwrap();
 
         if self.is_terminating() {
-            return Err(OakStatus::ERR_TERMINATED);
+            return Err(OakStatus::ErrTerminated);
         }
 
         let join_handle = self
             .configurations
             .get(module_name)
-            .ok_or(OakStatus::ERR_INVALID_ARGS)
+            .ok_or(OakStatus::ErrInvalidArgs)
             .and_then(|conf| {
                 conf.new_instance(module_name, self.clone(), entrypoint.to_owned(), reader)
             })?;

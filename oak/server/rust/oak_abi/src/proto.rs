@@ -14,5 +14,4 @@
 // limitations under the License.
 //
 
-#[allow(clippy::all)]
-pub mod oak_api;
+include!(concat!(env!("OUT_DIR"), "/oak.rs"));
