@@ -113,13 +113,6 @@
 <span id="113">113</span>
 <span id="114">114</span>
 <span id="115">115</span>
-<span id="116">116</span>
-<span id="117">117</span>
-<span id="118">118</span>
-<span id="119">119</span>
-<span id="120">120</span>
-<span id="121">121</span>
-<span id="122">122</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -147,17 +140,10 @@
 <span class="kw">use</span> <span class="ident">proto</span>::<span class="ident">hello_world_grpc</span>::{<span class="ident">Dispatcher</span>, <span class="ident">HelloWorld</span>};
 
 <span class="ident">oak</span>::<span class="macro">entrypoint</span><span class="macro">!</span>(<span class="ident">oak_main</span> <span class="op">=</span><span class="op">&gt;</span> {
-    <span class="ident">oak_log</span>::<span class="ident">init_default</span>();
-
-    <span class="comment">// Try to find a translation service, first as an Oak Node and failing that,</span>
-    <span class="comment">// as an external gRPC service</span>
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">translator_client</span> <span class="op">=</span> <span class="ident">grpc</span>::<span class="ident">client</span>::<span class="ident">Client</span>::<span class="ident">new</span>(<span class="string">&quot;translator&quot;</span>, <span class="string">&quot;oak_main&quot;</span>);
-    <span class="kw">if</span> <span class="ident">translator_client</span>.<span class="ident">is_none</span>() {
-        <span class="ident">translator_client</span> <span class="op">=</span> <span class="ident">grpc</span>::<span class="ident">client</span>::<span class="ident">Client</span>::<span class="ident">new</span>(<span class="string">&quot;translator-grpc&quot;</span>, <span class="string">&quot;unused-arg&quot;</span>);
-    }
-
+    <span class="ident">oak</span>::<span class="ident">logger</span>::<span class="ident">init_default</span>();
     <span class="kw">let</span> <span class="ident">node</span> <span class="op">=</span> <span class="ident">Node</span> {
-        <span class="ident">translator</span>: <span class="ident">translator_client</span>.<span class="ident">map</span>(<span class="ident">translator_common</span>::<span class="ident">TranslatorClient</span>),
+        <span class="ident">translator</span>: <span class="ident">grpc</span>::<span class="ident">client</span>::<span class="ident">Client</span>::<span class="ident">new</span>(<span class="string">&quot;translator&quot;</span>, <span class="string">&quot;oak_main&quot;</span>)
+            .<span class="ident">map</span>(<span class="ident">translator_common</span>::<span class="ident">TranslatorClient</span>),
     };
     <span class="ident">Dispatcher</span>::<span class="ident">new</span>(<span class="ident">node</span>)
 });

@@ -98,7 +98,7 @@
 <span class="kw">use</span> <span class="ident">translator_common</span>::<span class="ident">proto</span>::<span class="ident">translator_grpc</span>::{<span class="ident">Dispatcher</span>, <span class="ident">Translator</span>};
 
 <span class="ident">oak</span>::<span class="macro">entrypoint</span><span class="macro">!</span>(<span class="ident">oak_main</span> <span class="op">=</span><span class="op">&gt;</span> {
-    <span class="ident">oak_log</span>::<span class="ident">init_default</span>();
+    <span class="ident">oak</span>::<span class="ident">logger</span>::<span class="ident">init_default</span>();
     <span class="ident">Dispatcher</span>::<span class="ident">new</span>(<span class="ident">Node</span>)
 });
 

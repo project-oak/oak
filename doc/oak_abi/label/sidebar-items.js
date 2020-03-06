@@ -1,0 +1,1 @@
+initSidebarItems({"trait":[["Label","A trait representing a label as part of a lattice."]]});
