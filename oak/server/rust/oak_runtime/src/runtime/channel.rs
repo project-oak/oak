@@ -18,7 +18,6 @@ use std::prelude::v1::*;
 
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Weak};
-use std::vec::Vec;
 
 use core::sync::atomic::AtomicUsize;
 use core::sync::atomic::Ordering::SeqCst;
@@ -26,9 +25,7 @@ use core::sync::atomic::Ordering::SeqCst;
 use oak_abi::{ChannelReadStatus, OakStatus};
 use oak_platform::{Mutex, RwLock, Thread, ThreadId};
 
-use log::debug;
-
-use crate::{Message, RuntimeRef};
+use crate::Message;
 
 type Messages = VecDeque<Message>;
 
@@ -58,6 +55,7 @@ pub struct Channel {
     /// Threads can be woken up spuriously without issue.
     waiting_threads: WaitingThreads,
 }
+
 
 /// Reference to a `Channel` that is `Clone`able and can be passed across threads. Channels are
 /// multi-writer mult-reader.
@@ -112,7 +110,7 @@ impl Channel {
 }
 
 /// Creates a new `ChannelWriter` and `ChannelReader` that reference the same underlying `Channel`.
-pub fn new() -> (ChannelWriter, ChannelReader) {
+pub fn new() -> (Arc<Channel>, ChannelWriter, ChannelReader) {
     let chan = Arc::new(Channel {
         readers: AtomicUsize::new(1),
         writers: AtomicUsize::new(1),
@@ -120,8 +118,8 @@ pub fn new() -> (ChannelWriter, ChannelReader) {
         waiting_threads: Mutex::new(HashMap::new()),
     });
     let writer = ChannelWriter(ChannelRef::from_arc(chan.clone()));
-    let reader = ChannelReader(ChannelRef::from_arc(chan));
-    (writer, reader)
+    let reader = ChannelReader(ChannelRef::from_arc(chan.clone()));
+    (chan, writer, reader)
 }
 
 impl ChannelRef {
@@ -304,74 +302,4 @@ impl Clone for ChannelReader {
         self.0.add_reader();
         ChannelReader(self.0.clone())
     }
-}
-
-/// Reads the statuses from a slice of `Option<&ChannelReader>`s.
-/// `ChannelReadStatus::InvalidChannel` is set for `None` readers in the slice. For `Some(_)`
-/// readers, the result is set from a call to `has_message`.
-pub fn readers_statuses(readers: &[Option<&ChannelReader>]) -> Vec<ChannelReadStatus> {
-    readers
-        .iter()
-        .map(|chan| chan.map_or(ChannelReadStatus::InvalidChannel, |chan| chan.status()))
-        .collect()
-}
-
-/// Waits on a slice of `Option<&ChannelReader>`s, blocking until one of the following conditions:
-/// - If the `Runtime` is terminating this will return immediately with an `ErrTerminated` status
-///   for each channel.
-/// - If all readers are in an erroneous status, e.g. when all `ChannelReaders` are orphaned, this
-///   will immediately return the channels statuses.
-/// - If any of the channels is able to read a message, the corresponding element in the returned
-///   vector will be set to `Ok(ReadReady)`, with `Ok(NotReady)` signaling the channel has no
-///   message available
-///
-/// In particular, if there is at least one channel in good status and no messages on said channel
-/// available, `wait_on_channels` will continue to block until a message is available.
-pub fn wait_on_channels(
-    runtime: &RuntimeRef,
-    readers: &[Option<&ChannelReader>],
-) -> Result<Vec<ChannelReadStatus>, OakStatus> {
-    let thread = oak_platform::current_thread();
-    while !runtime.is_terminating() {
-        // Create a new Arc each iteration to be dropped after `thread::park` e.g. when the thread
-        // is resumed. When the Arc is deallocated, any remaining `Weak` references in
-        // `Channel`s will be orphaned. This means thread::unpark will not be called multiple times.
-        // Even if thread unpark is called spuriously and we wake up early, no channel
-        // statuses will be ready and so we can just continue.
-        //
-        // Note we read statuses directly after adding waiters, before blocking to ensure that
-        // there are no messages, after we have been added as a waiter.
-
-        let thread_id = oak_platform::current_thread().id();
-        let thread_ref = Arc::new(thread.clone());
-
-        for reader in readers {
-            if let Some(reader) = reader {
-                reader.add_waiter(thread_id, &thread_ref);
-            }
-        }
-        let statuses = readers_statuses(readers);
-
-        let all_unreadable = statuses
-            .iter()
-            .all(|&s| s == ChannelReadStatus::InvalidChannel || s == ChannelReadStatus::Orphaned);
-        let any_ready = statuses.iter().any(|&s| s == ChannelReadStatus::ReadReady);
-
-        if all_unreadable || any_ready {
-            return Ok(statuses);
-        }
-
-        debug!(
-            "wait_on_channels: channels not ready, parking thread {:?}",
-            oak_platform::current_thread().id()
-        );
-
-        oak_platform::park_thread();
-
-        debug!(
-            "wait_on_channels: thread {:?} re-woken",
-            oak_platform::current_thread().id()
-        );
-    }
-    Err(OakStatus::ErrTerminated)
 }

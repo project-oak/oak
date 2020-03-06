@@ -18,29 +18,36 @@ use std::prelude::v1::*;
 
 use std::collections::HashMap;
 use std::string::String;
-use std::sync::Arc;
+use std::sync::{Arc, Weak};
 
 use core::sync::atomic::AtomicBool;
 use core::sync::atomic::Ordering::SeqCst;
 
-use oak_abi::OakStatus;
+use oak_abi::{ChannelReadStatus, OakStatus};
 use oak_platform::{JoinHandle, Mutex};
 
-use crate::channel;
-use crate::channel::{ChannelReader, ChannelWriter};
+use log::debug;
+
 use crate::node;
 
+mod channel;
+pub use channel::{ChannelEither, ChannelWriter, ChannelReader, ReadStatus};
+
+type Channels = Vec<Weak<channel::Channel>>;
+
 pub struct Configuration {
-    pub nodes: HashMap<String, node::Configuration>,
+    pub nodes:        HashMap<String, node::Configuration>,
     pub entry_module: String,
-    pub entrypoint: String,
+    pub entrypoint:   String,
 }
 
 /// Runtime structure for configuring and running a set of Oak nodes.
 pub struct Runtime {
     configurations: HashMap<String, node::Configuration>,
-    terminating: AtomicBool,
-    node_threads: Mutex<Vec<JoinHandle>>,
+    terminating:    AtomicBool,
+    channels:       Mutex<Channels>,
+    // nodes:          Nodes,
+    node_threads:   Mutex<Vec<JoinHandle>>,
 }
 
 impl Runtime {
@@ -53,11 +60,13 @@ impl Runtime {
         let runtime = Runtime {
             configurations: config.nodes,
             terminating: AtomicBool::new(false),
+            channels: Mutex::new(Vec::new()),
             node_threads: Mutex::new(Vec::new()),
         };
 
         let runtime = RuntimeRef(Arc::new(runtime));
-        let (chan_writer, chan_reader) = channel::new();
+
+        let (chan_writer, chan_reader) = runtime.new_channel();
 
         runtime.node_create(&config.entry_module, &config.entrypoint, chan_reader)?;
 
@@ -87,6 +96,84 @@ impl Runtime {
         for handle in handles {
             handle.join().expect("Failed to join handle");
         }
+    }
+
+    pub fn new_channel(&self) -> (ChannelWriter, ChannelReader) {
+        // TODO: channel::new could take id or pretty name here
+        let (c,w,r) = channel::new();
+        let mut channels = self.channels.lock().unwrap();
+        channels.push(Arc::downgrade(&c));
+        (w,r)
+    }
+
+    /// Reads the statuses from a slice of `Option<&ChannelReader>`s.
+    /// `ChannelReadStatus::InvalidChannel` is set for `None` readers in the slice. For `Some(_)`
+    /// readers, the result is set from a call to `has_message`.
+    fn readers_statuses(readers: &[Option<&ChannelReader>]) -> Vec<ChannelReadStatus> {
+        readers
+            .iter()
+            .map(|chan| chan.map_or(ChannelReadStatus::InvalidChannel, |chan| chan.status()))
+            .collect()
+    }
+
+    /// Waits on a slice of `Option<&ChannelReader>`s, blocking until one of the following conditions:
+    /// - If the `Runtime` is terminating this will return immediately with an `ErrTerminated` status
+    ///   for each channel.
+    /// - If all readers are in an erroneous status, e.g. when all `ChannelReaders` are orphaned, this
+    ///   will immediately return the channels statuses.
+    /// - If any of the channels is able to read a message, the corresponding element in the returned
+    ///   vector will be set to `Ok(ReadReady)`, with `Ok(NotReady)` signaling the channel has no
+    ///   message available
+    ///
+    /// In particular, if there is at least one channel in good status and no messages on said channel
+    /// available, `wait_on_channels` will continue to block until a message is available.
+    pub fn wait_on_channels(
+        &self,
+        readers: &[Option<&ChannelReader>],
+    ) -> Result<Vec<ChannelReadStatus>, OakStatus> {
+        let thread = oak_platform::current_thread();
+        while !self.is_terminating() {
+            // Create a new Arc each iteration to be dropped after `thread::park` e.g. when the thread
+            // is resumed. When the Arc is deallocated, any remaining `Weak` references in
+            // `Channel`s will be orphaned. This means thread::unpark will not be called multiple times.
+            // Even if thread unpark is called spuriously and we wake up early, no channel
+            // statuses will be ready and so we can just continue.
+            //
+            // Note we read statuses directly after adding waiters, before blocking to ensure that
+            // there are no messages, after we have been added as a waiter.
+
+            let thread_id = oak_platform::current_thread().id();
+            let thread_ref = Arc::new(thread.clone());
+
+            for reader in readers {
+                if let Some(reader) = reader {
+                    reader.add_waiter(thread_id, &thread_ref);
+                }
+            }
+            let statuses = Runtime::readers_statuses(readers);
+
+            let all_unreadable = statuses
+                .iter()
+                .all(|&s| s == ChannelReadStatus::InvalidChannel || s == ChannelReadStatus::Orphaned);
+            let any_ready = statuses.iter().any(|&s| s == ChannelReadStatus::ReadReady);
+
+            if all_unreadable || any_ready {
+                return Ok(statuses);
+            }
+
+            debug!(
+                "wait_on_channels: channels not ready, parking thread {:?}",
+                oak_platform::current_thread().id()
+            );
+
+            oak_platform::park_thread();
+
+            debug!(
+                "wait_on_channels: thread {:?} re-woken",
+                oak_platform::current_thread().id()
+            );
+        }
+        Err(OakStatus::ErrTerminated)
     }
 }
 

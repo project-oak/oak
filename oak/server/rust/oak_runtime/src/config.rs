@@ -25,11 +25,10 @@ use log::error;
 
 use oak_abi::OakStatus;
 
-use crate::channel::ChannelWriter;
 use crate::node;
 use crate::node::load_wasm;
 use crate::runtime;
-use crate::runtime::{Runtime, RuntimeRef};
+use crate::runtime::{Runtime, RuntimeRef, ChannelWriter};
 
 /// Create an application configuration.
 ///

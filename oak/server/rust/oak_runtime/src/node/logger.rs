@@ -23,7 +23,7 @@ use log::info;
 use oak_abi::OakStatus;
 use oak_platform::{current_thread, spawn, JoinHandle};
 
-use crate::channel::{wait_on_channels, ChannelReader};
+use crate::runtime::ChannelReader;
 use crate::RuntimeRef;
 
 /// A simple logger loop.
@@ -32,7 +32,7 @@ fn logger(pretty_name: &str, runtime: RuntimeRef, reader: ChannelReader) -> Resu
         // An error indicates the runtime is terminating. We ignore it here and keep trying to read
         // in case a Wasm node wants to emit remaining messages. We will return once the channel is
         // closed.
-        let _ = wait_on_channels(&runtime, &[Some(&reader)]);
+        let _ = runtime.wait_on_channels(&[Some(&reader)]);
 
         if let Some(message) = reader.read()? {
             let message = String::from_utf8_lossy(&message.data);

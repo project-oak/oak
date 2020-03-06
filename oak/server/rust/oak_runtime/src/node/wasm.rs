@@ -29,7 +29,7 @@ use wasmi::ValueType;
 use oak_abi::{ChannelReadStatus, OakStatus};
 use oak_platform::{current_thread, spawn, JoinHandle};
 
-use crate::channel::{ChannelEither, ChannelReader, ChannelWriter, ReadStatus};
+use crate::runtime::{ChannelEither, ChannelReader, ChannelWriter, ReadStatus};
 use crate::{Message, RuntimeRef};
 
 /// These number mappings are not exposed to the Wasm client, and are only used by `wasmi` to map
@@ -215,7 +215,7 @@ impl WasmInterface {
         write_addr: AbiPointer,
         read_addr: AbiPointer,
     ) -> Result<(), OakStatus> {
-        let (writer, reader) = crate::channel::new();
+        let (writer, reader) = self.runtime.new_channel();
 
         self.validate_ptr(write_addr, 8)?;
         self.validate_ptr(read_addr, 8)?;
@@ -443,7 +443,7 @@ impl WasmInterface {
             })
             .collect();
 
-        let statuses = crate::channel::wait_on_channels(&self.runtime, &channels)?;
+        let statuses = self.runtime.wait_on_channels(&channels)?;
 
         for (i, &status) in statuses.iter().enumerate() {
             self.get_memory()
