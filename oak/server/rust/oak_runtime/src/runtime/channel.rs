@@ -56,7 +56,6 @@ pub struct Channel {
     pub waiting_threads: WaitingThreads,
 }
 
-
 /// Reference to a `Channel` that is `Clone`able and can be passed across threads. Channels are
 /// multi-writer mult-reader.
 #[derive(Clone)]

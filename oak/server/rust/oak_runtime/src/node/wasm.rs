@@ -333,7 +333,11 @@ impl WasmInterface {
         self.validate_ptr(dest, dest_capacity)?;
         self.validate_ptr(handles_dest, handles_capcity * 8)?;
 
-        let msg = self.runtime.channel_try_read_message(reader, dest_capacity as usize, handles_capcity as usize)?;
+        let msg = self.runtime.channel_try_read_message(
+            reader,
+            dest_capacity as usize,
+            handles_capcity as usize,
+        )?;
 
         let (actual_length, actual_handle_count) = match &msg {
             None => (0, 0),

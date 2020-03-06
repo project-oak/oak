@@ -38,4 +38,4 @@ pub use config::application_configuration;
 pub use config::configure_and_run;
 
 pub use message::Message;
-pub use runtime::{Runtime, RuntimeRef, ChannelEither, ChannelReader, ChannelWriter};
+pub use runtime::{ChannelEither, ChannelReader, ChannelWriter, Runtime, RuntimeRef};

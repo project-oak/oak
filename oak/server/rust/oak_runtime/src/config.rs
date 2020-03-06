@@ -28,7 +28,7 @@ use oak_abi::OakStatus;
 use crate::node;
 use crate::node::load_wasm;
 use crate::runtime;
-use crate::runtime::{Runtime, RuntimeRef, ChannelWriter};
+use crate::runtime::{ChannelWriter, Runtime, RuntimeRef};
 
 /// Create an application configuration.
 ///
