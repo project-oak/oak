@@ -21,11 +21,11 @@
 #include "asylo/grpc/auth/null_credentials_options.h"
 #include "asylo/identity/descriptions.h"
 #include "asylo/identity/init.h"
-#include "asylo/util/logging.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/authorization_bearer_token_metadata.h"
 #include "oak/client/policy_metadata.h"
 #include "oak/common/hmac.h"
+#include "oak/common/logging.h"
 #include "oak/common/nonce_generator.h"
 #include "oak/common/policy.h"
 #include "oak/proto/policy.pb.h"
@@ -126,7 +126,7 @@ class ApplicationClient {
   // This method sets up the necessary global state for Asylo to be able to validate authorities
   // (e.g. root CAs, remote attestation endpoints, etc.).
   static void InitializeAssertionAuthorities() {
-    LOG(INFO) << "Initializing assertion authorities";
+    OAK_LOG(INFO) << "Initializing assertion authorities";
 
     // TODO: Provide a list of non-null Assertion Authorities when available.
     std::vector<asylo::EnclaveAssertionAuthorityConfig> configs = {
@@ -136,10 +136,10 @@ class ApplicationClient {
     asylo::Status status =
         asylo::InitializeEnclaveAssertionAuthorities(configs.begin(), configs.end());
     if (!status.ok()) {
-      LOG(QFATAL) << "Could not initialize assertion authorities";
+      OAK_LOG(QFATAL) << "Could not initialize assertion authorities";
     }
 
-    LOG(INFO) << "Assertion authorities initialized";
+    OAK_LOG(INFO) << "Assertion authorities initialized";
   }
 };
 

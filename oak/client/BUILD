@@ -29,11 +29,11 @@ cc_library(
         ":policy_metadata",
         "//oak/common:app_config",
         "//oak/common:hmac",
+        "//oak/common:logging",
         "//oak/common:nonce_generator",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_asylo//asylo/grpc/auth:null_credentials_options",
         "@com_google_asylo//asylo/identity:init",
-        "@com_google_asylo//asylo/util:logging",
     ],
 )
 
@@ -59,6 +59,5 @@ cc_library(
         "//oak/common:policy",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/base",
-        "@com_google_asylo//asylo/util:logging",
     ],
 )
