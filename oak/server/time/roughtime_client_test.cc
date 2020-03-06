@@ -18,8 +18,8 @@
 
 #include <chrono>
 
-#include "asylo/util/logging.h"
 #include "gtest/gtest.h"
+#include "oak/common/logging.h"
 
 namespace oak {
 
@@ -33,9 +33,9 @@ TEST(RoughtimeClient, TestGetRoughTimeLive) {
   ASSERT_TRUE(time_or_status.ok());
   auto time = time_or_status.ValueOrDie();
 
-  LOG(INFO) << "System time: " << current << "μs from the epoch.";
-  LOG(INFO) << "Roughtime: " << time << "μs from the epoch.";
-  LOG(INFO) << "Difference: " << time - current << "μs.";
+  OAK_LOG(INFO) << "System time: " << current << "μs from the epoch.";
+  OAK_LOG(INFO) << "Roughtime: " << time << "μs from the epoch.";
+  OAK_LOG(INFO) << "Difference: " << time - current << "μs.";
 
   ASSERT_LE(current - 60000000, time);
   ASSERT_GE(current + 60000000, time);
