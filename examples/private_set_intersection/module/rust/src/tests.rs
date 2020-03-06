@@ -35,6 +35,7 @@ fn test_set_intersection() {
         ..Default::default()
     };
     let result: grpc::Result<Empty> = oak_tests::grpc_request(
+        &runtime,
         &entry_channel,
         "/oak.examples.private_set_intersection.PrivateSetIntersection/SubmitSet",
         req,
@@ -46,6 +47,7 @@ fn test_set_intersection() {
         ..Default::default()
     };
     let result: grpc::Result<Empty> = oak_tests::grpc_request(
+        &runtime,
         &entry_channel,
         "/oak.examples.private_set_intersection.PrivateSetIntersection/SubmitSet",
         req,
@@ -54,6 +56,7 @@ fn test_set_intersection() {
 
     let req = Empty::new();
     let result: grpc::Result<GetIntersectionResponse> = oak_tests::grpc_request(
+        &runtime,
         &entry_channel,
         "/oak.examples.private_set_intersection.PrivateSetIntersection/GetIntersection",
         req,

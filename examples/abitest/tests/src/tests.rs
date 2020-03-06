@@ -60,6 +60,7 @@ fn test_abi() {
     req.exclude = "(^Storage.*|GrpcClient)".to_string();
 
     let result: grpc::Result<ABITestResponse> = oak_tests::grpc_request(
+        &runtime,
         &entry_channel,
         "/oak.examples.abitest.OakABITestService/RunTests",
         req,
