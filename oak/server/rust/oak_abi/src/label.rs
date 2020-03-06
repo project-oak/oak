@@ -40,21 +40,6 @@ pub trait Label: Sized {
     fn can_flow_to(&self, other: &Self) -> bool;
 }
 
-// Implement the necessary traits on `Tag` so that it may be used in `HashSet`.
-
-impl Eq for crate::proto::policy::Tag {}
-
-#[allow(clippy::derive_hash_xor_eq)]
-impl std::hash::Hash for crate::proto::policy::Tag {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        // As a quick solution, we simply serialize the message and hash the resulting `Vec`.
-        let mut bytes = Vec::new();
-        self.encode(&mut bytes)
-            .expect("could not serialize to bytes");
-        bytes.hash(state);
-    }
-}
-
 impl Label for crate::proto::policy::Label {
     fn serialize(&self) -> Vec<u8> {
         let mut bytes = Vec::new();
