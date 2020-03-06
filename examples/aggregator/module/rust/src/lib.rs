@@ -40,7 +40,7 @@ use std::convert::{From, TryFrom};
 /// Currently threshold value is hardcoded.
 const SAMPLE_THRESHOLD: u64 = 5;
 
-type ThresholdAggregatorMap = HashMap<String, ThresholdAggregator<SparseVector>>;
+type ThresholdAggregatorMap = HashMap<String, Option<ThresholdAggregator<SparseVector>>>;
 
 /// Oak Node that collects aggregated data.
 pub struct AggregatorNode {
@@ -48,24 +48,74 @@ pub struct AggregatorNode {
 }
 
 impl AggregatorNode {
-    fn submit_sparse_vector(&mut self, bucket: &String, svec: &SparseVector) {
-        let aggregator = self.aggregators
-            .entry(bucket.to_string())
-            .and_modify(|aggregator| {
-                aggregator.submit(svec);
-            })
-            .or_insert({
+    fn submit_sparse_vector(
+        &mut self,
+        bucket: &String,
+        svec: &SparseVector,
+    ) -> Result<(), String> {
+        // let mut aggregator = self.aggregators.entry(bucket.to_string()).map_or(
+        //     Err("Outdated bucket: {}", bucket),
+        //     |entry| {
+        //         entry
+        //             .and_modify(|aggregator| {
+        //                 aggregator.submit(svec);
+        //             })
+        //             .or_insert({
+        //                 let mut aggregator =
+        //                     ThresholdAggregator::<SparseVector>::new(SAMPLE_THRESHOLD);
+        //                 aggregator.submit(svec);
+        //                 aggregator
+        //             })
+        //     },
+        // );
+        // if let Some(aggregated_data) = aggregator.take() {
+        //     aggregator = None;
+        //     self.send_aggregated_data(&bucket, aggregated_data);
+        // }
+
+
+
+        // self.aggregators
+        //     .entry(bucket.to_string())
+        //     .and_modify(|aggregator| {
+        //         aggregator.map_or()
+        //         aggregator.submit(svec);
+
+        //         if let Some(aggregated_data) = aggregator.take() {
+        //             aggregator = None;
+        //             self.send_aggregated_data(&bucket, aggregated_data);
+        //         }
+        //     })
+        //     .or_insert({
+        //         let mut aggregator =
+        //             ThresholdAggregator::<SparseVector>::new(SAMPLE_THRESHOLD);
+        //         aggregator.submit(svec);
+        //         aggregator
+        //     })
+
+        match self.aggregators.get(bucket) {
+            Some(entry) => {
+                match entry {
+                    Some(aggregator) => {
+                        aggregator.submit(svec);
+                        if let Some(aggregated_data) = aggregator.take() {
+                            *entry = None;
+                            self.send_aggregated_data(&bucket, aggregated_data);
+                        }
+                    },
+                    None => Err(format!("Outdated bucket: {}", bucket))?
+                }
+            },
+            None => {
                 let mut aggregator = ThresholdAggregator::<SparseVector>::new(SAMPLE_THRESHOLD);
                 aggregator.submit(svec);
-                aggregator
-            });
-        // TODO: Use Option for ThresholdAggregator
-        if let Some(aggregated_data) = aggregator.take() {
-            self.send_aggregated_data(&bucket, aggregated_data);
+                self.aggregators.insert(*bucket, Some(aggregator));
+            }
         }
+        Ok(())
     }
 
-    fn send_aggregated_data(&mut self, bucket: &String, svec: SparseVector) {
+    fn send_aggregated_data(&self, bucket: &String, svec: SparseVector) {
         debug!(
             "Sending aggregated data: bucket {}, sparse vector: {:?}",
             bucket, svec
@@ -77,26 +127,29 @@ impl AggregatorNode {
 impl Aggregator for AggregatorNode {
     fn submit_sample(&mut self, sample: Sample) -> grpc::Result<Empty> {
         match sample.data.into_option() {
-            Some(data) => {
-                match SparseVector::try_from(data) {
-                    Ok(svec) => {
-                        debug!(
-                            "Submitted data: bucket {}, sparse vector: {:?}",
-                            sample.bucket, svec
-                        );
-                        self.submit_sparse_vector(&sample.bucket, &svec);
-                        Ok(Empty::new())
+            Some(data) => match SparseVector::try_from(data) {
+                Ok(svec) => {
+                    debug!(
+                        "Submitted data: bucket {}, sparse vector: {:?}",
+                        sample.bucket, svec
+                    );
+                    match self.submit_sparse_vector(&sample.bucket, &svec) {
+                        Ok(_) => Ok(Empty::new()),
+                        Err(err) => {
+                            error!("Sparse Vector submission error: {}", err);
+                            Err(grpc::build_status(grpc::Code::INVALID_ARGUMENT, &err))
+                        }
                     }
-                    Err(err) => {
-                        error!("Data deserialization error: {}", err);
-                        Err(grpc::build_status(grpc::Code::INVALID_ARGUMENT, err))
-                    }
+                }
+                Err(err) => {
+                    error!("Data deserialization error: {}", err);
+                    Err(grpc::build_status(grpc::Code::INVALID_ARGUMENT, &err))
                 }
             },
             None => {
                 let err = "No data specified";
                 error!("{}", err);
-                Err(grpc::build_status(grpc::Code::INVALID_ARGUMENT, err))
+                Err(grpc::build_status(grpc::Code::INVALID_ARGUMENT, &err))
             }
         }
     }

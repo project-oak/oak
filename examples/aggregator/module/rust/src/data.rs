@@ -20,7 +20,7 @@ use std::collections::HashMap;
 use std::convert::{From, TryFrom};
 
 // Sparce Vectors are stored as Hash Maps.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct SparseVector {
     map: HashMap<u32, f32>,
 }
@@ -28,13 +28,13 @@ pub struct SparseVector {
 // Deserializes a Protobuf message into an internal Sparce Vector implementation.
 // If a Protobuf message has duplicated indices, returns an `Error`.
 impl TryFrom<SerializedSparseVector> for SparseVector {
-    type Error = &'static str;
+    type Error = String;
 
     fn try_from(src: SerializedSparseVector) -> Result<Self, Self::Error> {
         src.indices.iter().zip(src.values.iter()).try_fold(
             SparseVector::identity(),
             |mut svec, (&i, &v)| match svec.map.get(&i) {
-                Some(_) => Err("Duplicated index"),
+                Some(_) => Err(format!("Duplicated index: {}", i)),
                 None => Ok({
                     svec.map.insert(i, v);
                     svec
@@ -64,16 +64,11 @@ impl Monoid for SparseVector {
         }
     }
 
-    /// ...
+    /// Combines two Sparse Vectors by adding up values corresponding to the same keys.
     fn combine(&self, other: &Self) -> Self {
-        // other.map.iter().fold(*self.clone(), |mut svec, (&i, &v)| {
-        //     *svec.map.entry(i).or_insert(v) += v;
-        //     svec
-        // })
-        other.map
-            .iter()
-            .for_each(|(&i, &v)| {
-                self.map.entry(i).or_insert(v) += v;
-            })
+        other.map.iter().fold(self.clone(), |mut svec, (&i, &v)| {
+            *svec.map.entry(i).or_insert(v) += v;
+            svec
+        })
     }
 }
