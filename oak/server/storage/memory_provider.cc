@@ -18,7 +18,7 @@
 
 #include "absl/strings/escaping.h"
 #include "absl/strings/str_cat.h"
-#include "asylo/util/logging.h"
+#include "oak/common/logging.h"
 
 namespace oak {
 
@@ -34,18 +34,18 @@ grpc::Status MemoryProvider::Read(const StorageReadRequest* req, StorageReadResp
         grpc::StatusCode::NOT_FOUND,
         absl::StrCat("No value found for ", absl::BytesToHexString(req->item_name())));
   }
-  LOG(INFO) << "READ   store[" << req->storage_id() << "]: ["
-            << absl::BytesToHexString(req->item_name())
-            << "] = " << absl::BytesToHexString(kv->second);
+  OAK_LOG(INFO) << "READ   store[" << req->storage_id() << "]: ["
+                << absl::BytesToHexString(req->item_name())
+                << "] = " << absl::BytesToHexString(kv->second);
   rsp->set_item_value(kv->second);
 
   return grpc::Status::OK;
 }
 
 grpc::Status MemoryProvider::Write(const StorageWriteRequest* req, StorageWriteResponse*) {
-  LOG(INFO) << "WRITE  store[" << req->storage_id() << "]: ["
-            << absl::BytesToHexString(req->item_name())
-            << "] = " << absl::BytesToHexString(req->item_value());
+  OAK_LOG(INFO) << "WRITE  store[" << req->storage_id() << "]: ["
+                << absl::BytesToHexString(req->item_name())
+                << "] = " << absl::BytesToHexString(req->item_value());
   stores_[req->storage_id()][req->item_name()] = req->item_value();
   return grpc::Status::OK;
 }
@@ -56,8 +56,8 @@ grpc::Status MemoryProvider::Delete(const StorageDeleteRequest* req, StorageDele
     return grpc::Status(grpc::StatusCode::NOT_FOUND,
                         absl::StrCat("No store found for storage ID ", req->storage_id()));
   }
-  LOG(INFO) << "DELETE store[" << req->storage_id() << "]: ["
-            << absl::BytesToHexString(req->item_name()) << "]";
+  OAK_LOG(INFO) << "DELETE store[" << req->storage_id() << "]: ["
+                << absl::BytesToHexString(req->item_name()) << "]";
   store->second.erase(req->item_name());
   return grpc::Status::OK;
 }

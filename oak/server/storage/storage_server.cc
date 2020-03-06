@@ -17,7 +17,6 @@
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 #include "absl/strings/str_cat.h"
-#include "asylo/util/logging.h"
 #include "grpc/grpc.h"
 #include "grpcpp/channel.h"
 #include "grpcpp/create_channel.h"
@@ -25,6 +24,7 @@
 #include "grpcpp/security/server_credentials.h"
 #include "grpcpp/server.h"
 #include "grpcpp/server_builder.h"
+#include "oak/common/logging.h"
 #include "oak/server/storage/memory_provider.h"
 //#include "spanner_provider.h"
 #include "storage_service.h"
@@ -34,7 +34,7 @@ ABSL_FLAG(std::string, port, "7867", "Port on which the Storage Server listens."
 int main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
 
-  LOG(INFO) << "Creating service";
+  OAK_LOG(INFO) << "Creating service";
   //  oak::StorageService storage_service(new oak::SpannerProvider(
   //      grpc::CreateChannel("localhost:9999", grpc::InsecureChannelCredentials())));
   oak::StorageService storage_service(new oak::MemoryProvider());
@@ -42,12 +42,12 @@ int main(int argc, char** argv) {
   std::string server_address = absl::StrCat("[::]:", absl::GetFlag(FLAGS_port));
   std::shared_ptr<grpc::ServerCredentials> credentials = grpc::InsecureServerCredentials();
 
-  LOG(INFO) << "Creating server";
+  OAK_LOG(INFO) << "Creating server";
   grpc::ServerBuilder builder;
   builder.AddListeningPort(server_address, credentials);
   builder.RegisterService(&storage_service);
 
-  LOG(INFO) << "Starting gRPC Storage Server on " << server_address;
+  OAK_LOG(INFO) << "Starting gRPC Storage Server on " << server_address;
   std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
   server->Wait();
 
