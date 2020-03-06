@@ -52,6 +52,11 @@ void LoggingNode::Run(Handle handle) {
       // Any channel references included with the message will be dropped.
     }
   }
+  if (CloseChannel(handle)) {
+    LOG(INFO) << "{" << name_ << "} Closed channel handle: " << handle;
+  } else {
+    LOG(WARNING) << "{" << name_ << "} Invalid channel handle: " << handle;
+  }
 }
 
 }  // namespace oak
