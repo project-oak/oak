@@ -33,8 +33,8 @@
 #include "absl/status/status.h"
 #include "absl/strings/escaping.h"
 #include "absl/strings/str_format.h"
-#include "asylo/util/logging.h"
 #include "client.h"
+#include "oak/common/logging.h"
 #include "oak/common/nonce_generator.h"
 #include "oak/server/time/roughtime_util.h"
 #include "third_party/asylo/status_macros.h"
@@ -194,8 +194,8 @@ StatusOr<RoughtimeInterval> GetIntervalFromServer(const RoughtimeServerSpec& ser
                                   server.name.c_str(), timestamp_microseconds));
   }
 
-  LOG(INFO) << "Time from " << server.name << ": " << timestamp_microseconds << " +/- "
-            << radius_microseconds;
+  OAK_LOG(INFO) << "Time from " << server.name << ": " << timestamp_microseconds << " +/- "
+                << radius_microseconds;
   return RoughtimeInterval{(timestamp_microseconds - radius_microseconds),
                            (timestamp_microseconds + radius_microseconds)};
 }
@@ -207,8 +207,8 @@ StatusOr<roughtime::rough_time_t> RoughtimeClient::GetRoughTime() {
     if (interval_or_status.ok()) {
       valid_intervals.push_back(interval_or_status.ValueOrDie());
     } else {
-      LOG(WARNING) << "Could not get status from " << server.name << ":"
-                   << interval_or_status.status();
+      OAK_LOG(WARNING) << "Could not get status from " << server.name << ":"
+                       << interval_or_status.status();
     }
   }
 
