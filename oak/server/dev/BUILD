@@ -33,6 +33,7 @@ cc_library(
         "dev_oak_loader.h",
     ],
     deps = [
+        "//oak/common:logging",
         "//oak/proto:application_cc_grpc",
         "//oak/proto:enclave_cc_proto",
         "//oak/server:oak_runtime",
@@ -40,7 +41,6 @@ cc_library(
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/strings",
         "@com_google_asylo//asylo/identity:init",
-        "@com_google_asylo//asylo/util:logging",
     ],
 )
 
@@ -50,6 +50,7 @@ cc_binary(
     deps = [
         ":dev_oak_loader",
         "//oak/common:app_config",
+        "//oak/common:logging",
         "//oak/common:utils",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/flags:flag",
@@ -57,6 +58,5 @@ cc_binary(
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/synchronization",
         "@com_google_absl//absl/time",
-        "@com_google_asylo//asylo/util:logging",
     ],
 )

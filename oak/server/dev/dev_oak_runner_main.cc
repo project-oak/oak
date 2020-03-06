@@ -21,7 +21,7 @@
 #include "absl/flags/parse.h"
 #include "absl/synchronization/notification.h"
 #include "absl/time/time.h"
-#include "asylo/util/logging.h"
+#include "oak/common/logging.h"
 #include "oak/server/dev/dev_oak_loader.h"
 
 ABSL_FLAG(std::string, application, "", "Application configuration file");
@@ -38,12 +38,12 @@ int main(int argc, char* argv[]) {
 
   grpc::Status status = loader->CreateApplication(*application_config);
   if (!status.ok()) {
-    LOG(ERROR) << "Failed to create application";
+    OAK_LOG(ERROR) << "Failed to create application";
     return 1;
   }
   std::stringstream address;
   address << "0.0.0.0:" << application_config->grpc_port();
-  LOG(INFO) << "Oak Application: " << address.str();
+  OAK_LOG(INFO) << "Oak Application: " << address.str();
 
   // Wait (same as `sleep(86400)`).
   absl::Notification server_timeout;
