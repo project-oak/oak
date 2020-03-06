@@ -1139,6 +1139,7 @@ impl FrontendNode {
 
         expect_eq!(Ok(()), oak::channel_close(out_handle.handle));
         expect_eq!(Ok(()), oak::channel_close(in_handle.handle));
+        expect_eq!(Ok(()), oak::channel_close(logging_handle.handle));
         Ok(())
     }
 
@@ -1356,6 +1357,7 @@ impl FrontendNode {
             }
         }
         expect_eq!(2, count);
+        receiver.close().expect("failed to close receiver");
 
         // Errored server-streaming method invocation of external service via
         // gRPC client pseudo-Node.
@@ -1382,6 +1384,7 @@ impl FrontendNode {
             }
         }
         expect!(seen_err_code);
+        receiver.close().expect("failed to close receiver");
         Ok(())
     }
     fn test_absent_grpc_client(&mut self) -> TestResult {
@@ -1417,6 +1420,7 @@ impl FrontendNode {
                 Err(e) => return Err(Box::new(e)),
             }
         }
+        receiver.close().expect("failed to close receiver");
 
         Ok(())
     }
