@@ -16,11 +16,11 @@
 
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
-#include "asylo/util/logging.h"
 #include "examples/translator/proto/translator.grpc.pb.h"
 #include "examples/translator/proto/translator.pb.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
+#include "oak/common/logging.h"
 
 ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak application to connect to");
 
@@ -36,22 +36,22 @@ void translate(Translator::Stub* stub, const std::string& text, const std::strin
   request.set_from_lang(from_lang);
   request.set_to_lang(to_lang);
 
-  LOG(INFO) << "Translate '" << request.text() << "' from " << from_lang << " to " << to_lang;
+  OAK_LOG(INFO) << "Translate '" << request.text() << "' from " << from_lang << " to " << to_lang;
   TranslateResponse response;
   grpc::Status status = stub->Translate(&context, request, &response);
   if (!status.ok()) {
-    LOG(WARNING) << "Could not perform Translate('" << text << "', " << from_lang << "=>" << to_lang
-                 << "): " << status.error_code() << ": " << status.error_message();
+    OAK_LOG(WARNING) << "Could not perform Translate('" << text << "', " << from_lang << "=>"
+                     << to_lang << "): " << status.error_code() << ": " << status.error_message();
     return;
   }
-  LOG(INFO) << "Response: " << response.translated_text();
+  OAK_LOG(INFO) << "Response: " << response.translated_text();
 }
 
 int main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
 
   std::string address = absl::GetFlag(FLAGS_address);
-  LOG(INFO) << "Connecting to Oak Application: " << address;
+  OAK_LOG(INFO) << "Connecting to Oak Application: " << address;
 
   oak::ApplicationClient::InitializeAssertionAuthorities();
 

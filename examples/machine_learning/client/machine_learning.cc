@@ -16,11 +16,11 @@
 
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
-#include "asylo/util/logging.h"
 #include "examples/machine_learning/proto/machine_learning.grpc.pb.h"
 #include "examples/machine_learning/proto/machine_learning.pb.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
+#include "oak/common/logging.h"
 
 ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak application to connect to");
 
@@ -37,8 +37,8 @@ std::string send_data(MachineLearning::Stub* stub) {
   MLResponse response;
   ::grpc::Status status = stub->Data(&context, data, &response);
   if (!status.ok()) {
-    LOG(QFATAL) << "Could not submit data: " << status.error_code() << ": "
-                << status.error_message();
+    OAK_LOG(QFATAL) << "Could not submit data: " << status.error_code() << ": "
+                    << status.error_message();
   }
   return response.message();
 }
@@ -49,7 +49,7 @@ std::string learn(MachineLearning::Stub* stub) {
   MLResponse response;
   ::grpc::Status status = stub->Learn(&context, learn, &response);
   if (!status.ok()) {
-    LOG(QFATAL) << "Could not learn: " << status.error_code() << ": " << status.error_message();
+    OAK_LOG(QFATAL) << "Could not learn: " << status.error_code() << ": " << status.error_message();
   }
   return response.message();
 }
@@ -60,7 +60,8 @@ std::string predict(MachineLearning::Stub* stub) {
   MLResponse response;
   ::grpc::Status status = stub->Predict(&context, predict, &response);
   if (!status.ok()) {
-    LOG(QFATAL) << "Could not predict: " << status.error_code() << ": " << status.error_message();
+    OAK_LOG(QFATAL) << "Could not predict: " << status.error_code() << ": "
+                    << status.error_message();
   }
   return response.message();
 }
@@ -69,7 +70,7 @@ int main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
 
   std::string address = absl::GetFlag(FLAGS_address);
-  LOG(INFO) << "Connecting to Oak Application: " << address;
+  OAK_LOG(INFO) << "Connecting to Oak Application: " << address;
 
   // Connect to the Oak Application.
   auto stub = MachineLearning::NewStub(oak::ApplicationClient::CreateChannel(address));
@@ -78,13 +79,13 @@ int main(int argc, char** argv) {
 
   // Perform multiple invocations of the same Oak Application, with different parameters.
   auto message_0 = send_data(stub.get());
-  LOG(INFO) << "data response: " << message_0;
+  OAK_LOG(INFO) << "data response: " << message_0;
 
   auto message_1 = learn(stub.get());
-  LOG(INFO) << "learn response: " << message_1;
+  OAK_LOG(INFO) << "learn response: " << message_1;
 
   auto message_2 = predict(stub.get());
-  LOG(INFO) << "predict response: " << message_2;
+  OAK_LOG(INFO) << "predict response: " << message_2;
 
   return EXIT_SUCCESS;
 }

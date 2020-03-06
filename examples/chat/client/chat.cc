@@ -20,11 +20,11 @@
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 #include "absl/synchronization/mutex.h"
-#include "asylo/util/logging.h"
 #include "examples/chat/proto/chat.grpc.pb.h"
 #include "examples/chat/proto/chat.pb.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
+#include "oak/common/logging.h"
 #include "oak/common/nonce_generator.h"
 
 ABSL_FLAG(bool, test, false, "Run a non-interactive version of chat application for testing");
@@ -71,7 +71,7 @@ void ListenLoop(Chat::Stub* stub, const RoomId& room_id, const std::string& user
   req.set_room_id(room_id);
   auto reader = stub->Subscribe(&context, req);
   if (reader == nullptr) {
-    LOG(QFATAL) << "Could not call Subscribe";
+    OAK_LOG(QFATAL) << "Could not call Subscribe";
   }
   Message msg;
   while (reader->Read(&msg)) {
@@ -105,8 +105,8 @@ void SendLoop(Chat::Stub* stub, const RoomId& room_id, const std::string& user_h
     msg->set_text(text);
     grpc::Status status = stub->SendMessage(&context, req, &rsp);
     if (!status.ok()) {
-      LOG(WARNING) << "Could not SendMessage(): " << status.error_code() << ": "
-                   << status.error_message();
+      OAK_LOG(WARNING) << "Could not SendMessage(): " << status.error_code() << ": "
+                       << status.error_message();
       break;
     }
     Prompt(user_handle);
@@ -121,9 +121,9 @@ void Chat(Chat::Stub* stub, const RoomId& room_id, const std::string& user_handl
 
   // Start a separate thread for incoming messages.
   std::thread listener([stub, room_id, &user_handle, done] {
-    LOG(INFO) << "New thread for incoming messages in room ID " << absl::Base64Escape(room_id);
+    OAK_LOG(INFO) << "New thread for incoming messages in room ID " << absl::Base64Escape(room_id);
     ListenLoop(stub, room_id, user_handle, done);
-    LOG(INFO) << "Incoming message thread done";
+    OAK_LOG(INFO) << "Incoming message thread done";
   });
   listener.detach();
 
@@ -147,20 +147,20 @@ class Room {
     google::protobuf::Empty rsp;
     grpc::Status status = stub_->CreateRoom(&context, req_, &rsp);
     if (!status.ok()) {
-      LOG(QFATAL) << "Could not CreateRoom('" << absl::Base64Escape(room_id_string)
-                  << "'): " << status.error_code() << ": " << status.error_message();
+      OAK_LOG(QFATAL) << "Could not CreateRoom('" << absl::Base64Escape(room_id_string)
+                      << "'): " << status.error_code() << ": " << status.error_message();
     }
   }
   ~Room() {
-    LOG(INFO) << "Destroying room";
+    OAK_LOG(INFO) << "Destroying room";
     grpc::ClientContext context;
     DestroyRoomRequest req;
     req.set_admin_token(req_.admin_token());
     google::protobuf::Empty rsp;
     grpc::Status status = stub_->DestroyRoom(&context, req, &rsp);
     if (!status.ok()) {
-      LOG(WARNING) << "Could not DestroyRoom(): " << status.error_code() << ": "
-                   << status.error_message();
+      OAK_LOG(WARNING) << "Could not DestroyRoom(): " << status.error_code() << ": "
+                       << status.error_message();
     }
   }
   const RoomId& Id() const { return req_.room_id(); }
@@ -174,7 +174,7 @@ int main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
 
   std::string address = absl::GetFlag(FLAGS_address);
-  LOG(INFO) << "Connecting to Oak Application: " << address;
+  OAK_LOG(INFO) << "Connecting to Oak Application: " << address;
 
   oak::ApplicationClient::InitializeAssertionAuthorities();
 
@@ -182,7 +182,7 @@ int main(int argc, char** argv) {
   // TODO(#488): Use the token provided on command line for authorization and labelling of data.
   auto stub = Chat::NewStub(oak::ApplicationClient::CreateChannel(address));
   if (stub == nullptr) {
-    LOG(QFATAL) << "Failed to create application stub";
+    OAK_LOG(QFATAL) << "Failed to create application stub";
   }
 
   if (absl::GetFlag(FLAGS_test)) {
@@ -192,14 +192,14 @@ int main(int argc, char** argv) {
 
   RoomId room_id;
   if (!absl::Base64Unescape(absl::GetFlag(FLAGS_room_id), &room_id)) {
-    LOG(QFATAL) << "Failed to parse --room_id as base 64";
+    OAK_LOG(QFATAL) << "Failed to parse --room_id as base 64";
   }
   std::unique_ptr<Room> room;
   if (room_id.empty()) {
     room = absl::make_unique<Room>(stub.get());
     room_id = room->Id();
-    LOG(INFO) << "Join this room with --app_address=" << address
-              << " --room_id=" << absl::Base64Escape(room_id);
+    OAK_LOG(INFO) << "Join this room with --app_address=" << address
+                  << " --room_id=" << absl::Base64Escape(room_id);
   }
   // Calculate a user handle.
   std::string user_handle = absl::GetFlag(FLAGS_handle);

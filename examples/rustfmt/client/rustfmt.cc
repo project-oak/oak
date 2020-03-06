@@ -16,11 +16,11 @@
 
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
-#include "asylo/util/logging.h"
 #include "examples/rustfmt/proto/rustfmt.grpc.pb.h"
 #include "examples/rustfmt/proto/rustfmt.pb.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
+#include "oak/common/logging.h"
 
 ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak application to connect to");
 
@@ -31,22 +31,22 @@ using ::oak::examples::rustfmt::FormatService;
 void format(FormatService::Stub* stub, std::string code) {
   FormatRequest request;
   request.set_code(code);
-  LOG(INFO) << "Request: " << request.code();
+  OAK_LOG(INFO) << "Request: " << request.code();
   grpc::ClientContext context;
   FormatResponse response;
   grpc::Status status = stub->Format(&context, request, &response);
   if (!status.ok()) {
-    LOG(QFATAL) << "Could not call Format: " << status.error_code() << ": "
-                << status.error_message();
+    OAK_LOG(QFATAL) << "Could not call Format: " << status.error_code() << ": "
+                    << status.error_message();
   }
-  LOG(INFO) << "Response: " << response.code();
+  OAK_LOG(INFO) << "Response: " << response.code();
 }
 
 int main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
 
   std::string address = absl::GetFlag(FLAGS_address);
-  LOG(INFO) << "Connecting to Oak Application: " << address;
+  OAK_LOG(INFO) << "Connecting to Oak Application: " << address;
 
   oak::ApplicationClient::InitializeAssertionAuthorities();
 

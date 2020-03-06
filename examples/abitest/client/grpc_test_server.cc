@@ -16,7 +16,7 @@
 
 #include "examples/abitest/client/grpc_test_server.h"
 
-#include "asylo/util/logging.h"
+#include "oak/common/logging.h"
 
 using ::oak::examples::abitest::GrpcTestRequest;
 using ::oak::examples::abitest::GrpcTestResponse;
@@ -34,11 +34,11 @@ grpc::Status GrpcTestServer::RunTests(grpc::ServerContext* context,
 grpc::Status GrpcTestServer::UnaryMethod(grpc::ServerContext* context, const GrpcTestRequest* req,
                                          GrpcTestResponse* rsp) {
   if (req->method_result_case() == GrpcTestRequest::kErrCode) {
-    LOG(INFO) << "UnaryMethod -> Err(" << req->err_code() << ")";
+    OAK_LOG(INFO) << "UnaryMethod -> Err(" << req->err_code() << ")";
     return grpc::Status(static_cast<grpc::StatusCode>(req->err_code()), "Deliberate error");
   }
   rsp->set_text(req->ok_text());
-  LOG(INFO) << "UnaryMethod -> Ok('" << rsp->text() << "')";
+  OAK_LOG(INFO) << "UnaryMethod -> Ok('" << rsp->text() << "')";
   return grpc::Status::OK;
 }
 
@@ -46,18 +46,18 @@ grpc::Status GrpcTestServer::ServerStreamingMethod(grpc::ServerContext* context,
                                                    const GrpcTestRequest* req,
                                                    grpc::ServerWriter<GrpcTestResponse>* writer) {
   if (req->method_result_case() == GrpcTestRequest::kErrCode) {
-    LOG(INFO) << "ServerStreamingMethod -> Err(" << req->err_code() << ")";
+    OAK_LOG(INFO) << "ServerStreamingMethod -> Err(" << req->err_code() << ")";
     return grpc::Status(static_cast<grpc::StatusCode>(req->err_code()), "Deliberate error");
   }
 
   // Write two responses to exercise streaming.
   GrpcTestResponse rsp;
   rsp.set_text(req->ok_text());
-  LOG(INFO) << "ServerStreamingMethod -> '" << req->ok_text() << "'";
+  OAK_LOG(INFO) << "ServerStreamingMethod -> '" << req->ok_text() << "'";
   writer->Write(rsp);
-  LOG(INFO) << "ServerStreamingMethod -> '" << req->ok_text() << "'";
+  OAK_LOG(INFO) << "ServerStreamingMethod -> '" << req->ok_text() << "'";
   writer->Write(rsp);
-  LOG(INFO) << "ServerStreamingMethod -> OK";
+  OAK_LOG(INFO) << "ServerStreamingMethod -> OK";
   return grpc::Status::OK;
 }
 
@@ -69,13 +69,13 @@ grpc::Status GrpcTestServer::ClientStreamingMethod(grpc::ServerContext* context,
   GrpcTestRequest req;
   while (reader->Read(&req)) {
     if (req.method_result_case() == GrpcTestRequest::kErrCode) {
-      LOG(INFO) << "ClientStreamingMethod -> Err(" << req.err_code() << ")";
+      OAK_LOG(INFO) << "ClientStreamingMethod -> Err(" << req.err_code() << ")";
       return grpc::Status(static_cast<grpc::StatusCode>(req.err_code()), "Deliberate error");
     }
     combined_text += req.ok_text();
   }
   rsp->set_text(combined_text);
-  LOG(INFO) << "ClientStreamingMethod -> OK('" << rsp->text() << "')";
+  OAK_LOG(INFO) << "ClientStreamingMethod -> OK('" << rsp->text() << "')";
   return grpc::Status::OK;
 }
 
@@ -85,15 +85,15 @@ grpc::Status GrpcTestServer::BidiStreamingMethod(
   GrpcTestRequest req;
   while (stream->Read(&req)) {
     if (req.method_result_case() == GrpcTestRequest::kErrCode) {
-      LOG(INFO) << "BidiStreamingMethod -> Err(" << req.err_code() << ")";
+      OAK_LOG(INFO) << "BidiStreamingMethod -> Err(" << req.err_code() << ")";
       return grpc::Status(static_cast<grpc::StatusCode>(req.err_code()), "Deliberate error");
     }
     GrpcTestResponse rsp;
     rsp.set_text(req.ok_text());
-    LOG(INFO) << "BidiStreamingMethod -> '" << rsp.text() << "'";
+    OAK_LOG(INFO) << "BidiStreamingMethod -> '" << rsp.text() << "'";
     stream->Write(rsp);
   }
-  LOG(INFO) << "BidiStreamingMethod -> OK";
+  OAK_LOG(INFO) << "BidiStreamingMethod -> OK";
   return grpc::Status::OK;
 }
 

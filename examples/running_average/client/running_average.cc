@@ -16,11 +16,11 @@
 
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
-#include "asylo/util/logging.h"
 #include "examples/running_average/proto/running_average.grpc.pb.h"
 #include "examples/running_average/proto/running_average.pb.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
+#include "oak/common/logging.h"
 #include "oak/common/nonce_generator.h"
 
 ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak application to connect to");
@@ -36,8 +36,8 @@ void submit_sample(RunningAverage::Stub* stub, int sample_value) {
   google::protobuf::Empty response;
   grpc::Status status = stub->SubmitSample(&context, request, &response);
   if (!status.ok()) {
-    LOG(QFATAL) << "Could not submit sample: " << status.error_code() << ": "
-                << status.error_message();
+    OAK_LOG(QFATAL) << "Could not submit sample: " << status.error_code() << ": "
+                    << status.error_message();
   }
 }
 
@@ -47,8 +47,8 @@ int retrieve_average(RunningAverage::Stub* stub) {
   GetAverageResponse response;
   grpc::Status status = stub->GetAverage(&context, request, &response);
   if (!status.ok()) {
-    LOG(QFATAL) << "Could not retrieve average: " << status.error_code() << ": "
-                << status.error_message();
+    OAK_LOG(QFATAL) << "Could not retrieve average: " << status.error_code() << ": "
+                    << status.error_message();
   }
   return response.average();
 }
@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
 
   std::string address = absl::GetFlag(FLAGS_address);
-  LOG(INFO) << "Connecting to Oak Application: " << address;
+  OAK_LOG(INFO) << "Connecting to Oak Application: " << address;
 
   oak::ApplicationClient::InitializeAssertionAuthorities();
 
@@ -81,10 +81,10 @@ int main(int argc, char** argv) {
 
   // Retrieve average.
   int average_0 = retrieve_average(stub_0.get());
-  LOG(INFO) << "client 0 average: " << average_0;
+  OAK_LOG(INFO) << "client 0 average: " << average_0;
 
   int average_1 = retrieve_average(stub_1.get());
-  LOG(INFO) << "client 1 average: " << average_1;
+  OAK_LOG(INFO) << "client 1 average: " << average_1;
 
   return EXIT_SUCCESS;
 }
