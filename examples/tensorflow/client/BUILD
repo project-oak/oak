@@ -26,10 +26,10 @@ cc_binary(
     deps = [
         "//examples/tensorflow/proto:tensorflow_cc_grpc",
         "//oak/client:application_client",
+        "//oak/common:logging",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
-        "@com_google_asylo//asylo/util:logging",
     ],
 )
 

@@ -26,9 +26,9 @@ cc_binary(
     deps = [
         "//examples/machine_learning/proto:machine_learning_cc_grpc",
         "//oak/client:application_client",
+        "//oak/common:logging",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
-        "@com_google_asylo//asylo/util:logging",
     ],
 )

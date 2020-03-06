@@ -16,11 +16,11 @@
 
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
-#include "asylo/util/logging.h"
 #include "examples/tensorflow/proto/tensorflow.grpc.pb.h"
 #include "examples/tensorflow/proto/tensorflow.pb.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
+#include "oak/common/logging.h"
 
 ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak application to connect to");
 
@@ -34,17 +34,17 @@ void init_tensorflow(Tensorflow::Stub* stub) {
   InitResponse response;
   grpc::Status status = stub->InitTensorflow(&context, request, &response);
   if (!status.ok()) {
-    LOG(WARNING) << "Error: " << status.error_code() << ": " << status.error_message();
+    OAK_LOG(WARNING) << "Error: " << status.error_code() << ": " << status.error_message();
     return;
   }
-  LOG(INFO) << "Status: " << response.status();
+  OAK_LOG(INFO) << "Status: " << response.status();
 }
 
 int main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
 
   std::string address = absl::GetFlag(FLAGS_address);
-  LOG(INFO) << "Connecting to Oak Application: " << address;
+  OAK_LOG(INFO) << "Connecting to Oak Application: " << address;
 
   oak::ApplicationClient::InitializeAssertionAuthorities();
 
