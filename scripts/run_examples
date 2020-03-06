@@ -30,13 +30,6 @@ while getopts "s:h" opt; do
   esac
 done
 
-if [[ "${server}" == "tsan" ]]; then
-  # Set flags for TSAN runs (https://github.com/google/sanitizers/wiki/ThreadSanitizerFlags):
-  #  - exit on error
-  #  - don't check atomics (false positive on absl::MutexLock, github.com/google/sanitizers/issues/953)
-  export TSAN_OPTIONS="halt_on_error=1 report_atomic_races=0"
-fi
-
 # Run all examples.
 for language in rust cpp; do
   # TODO(#594): Re-enable rustfmt when upstream rustc internal error is fixed.
