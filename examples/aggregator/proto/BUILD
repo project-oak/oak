@@ -27,6 +27,26 @@ package(
 )
 
 proto_library(
+    name = "aggregator_proto",
+    srcs = ["aggregator.proto"],
+    deps = ["@com_google_protobuf//:empty_proto"],
+)
+
+cc_proto_library(
+    name = "aggregator_cc_proto",
+    deps = [":aggregator_proto"],
+)
+
+cc_grpc_library(
+    name = "aggregator_cc_grpc",
+    srcs = [":aggregator_proto"],
+    grpc_only = True,
+    well_known_protos = True,
+    deps = [":aggregator_cc_proto"],
+)
+
+# Test proto.
+proto_library(
     name = "aggregator_test_proto",
     srcs = ["aggregator_test.proto"],
     deps = ["@com_google_protobuf//:empty_proto"],

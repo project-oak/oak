@@ -5,6 +5,7 @@ members = [
   "examples/abitest/module_1/rust",
   "examples/abitest/tests",
   "examples/aggregator/common",
+  "examples/aggregator/module/rust",
   "examples/aggregator/module_test/rust",
   "examples/chat/module/rust",
   "examples/hello_world/module/rust",
@@ -46,6 +47,7 @@ abitest_common = { path = "examples/abitest/abitest_common" }
 abitest_0_frontend = { path = "examples/abitest/module_0/rust" }
 abitest_1_backend = { path = "examples/abitest/module_1/rust" }
 abitest_tests = { path = "examples/abitest/tests" }
+aggregator = { path = "examples/aggregator/module/rust" }
 aggregator_common = { path = "examples/aggregator/common" }
 aggregator_test = { path = "examples/aggregator/module_test/rust" }
 chat = { path = "examples/chat/module/rust" }

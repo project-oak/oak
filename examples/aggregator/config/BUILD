@@ -23,9 +23,18 @@ package(
 exports_files(srcs = glob(["*.textproto"]))
 
 serialized_config(
+    name = "config_poc",
+    modules = {
+        "app": "//:target/wasm32-unknown-unknown/release/aggregator.wasm",
+    },
+    textproto = ":config.textproto",
+)
+
+# Test config.
+serialized_config(
     name = "config",
     modules = {
         "app": "//:target/wasm32-unknown-unknown/release/aggregator_test.wasm",
     },
-    textproto = ":config.textproto",
+    textproto = ":config_test.textproto",
 )
