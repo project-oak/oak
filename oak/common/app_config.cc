@@ -15,13 +15,13 @@
  */
 
 #include "oak/common/app_config.h"
-#include "oak/common/utils.h"
 
 #include <set>
 #include <utility>
 
 #include "absl/memory/memory.h"
-#include "asylo/util/logging.h"
+#include "oak/common/logging.h"
+#include "oak/common/utils.h"
 
 namespace oak {
 
@@ -93,7 +93,7 @@ void SetGrpcPortInConfig(ApplicationConfiguration* config, const int16_t grpc_po
 bool ValidApplicationConfig(const ApplicationConfiguration& config) {
   // Check for valid port.
   if (config.grpc_port() <= 1023) {
-    LOG(ERROR) << "Invalid gRPC port";
+    OAK_LOG(ERROR) << "Invalid gRPC port";
     return false;
   }
 
@@ -102,7 +102,7 @@ bool ValidApplicationConfig(const ApplicationConfiguration& config) {
   std::set<std::string> wasm_names;
   for (const auto& node_config : config.node_configs()) {
     if (config_names.count(node_config.name()) > 0) {
-      LOG(ERROR) << "duplicate node config name " << node_config.name();
+      OAK_LOG(ERROR) << "duplicate node config name " << node_config.name();
       return false;
     }
     config_names.insert(node_config.name());
@@ -114,11 +114,11 @@ bool ValidApplicationConfig(const ApplicationConfiguration& config) {
   // Check name for the config of the initial node is present and is a Web
   // Assembly variant.
   if (wasm_names.count(config.initial_node_config_name()) == 0) {
-    LOG(ERROR) << "config of the initial node is not present in Wasm";
+    OAK_LOG(ERROR) << "config of the initial node is not present in Wasm";
     return false;
   }
   if (config.initial_entrypoint_name().empty()) {
-    LOG(ERROR) << "missing entrypoint name";
+    OAK_LOG(ERROR) << "missing entrypoint name";
     return false;
   }
   return true;

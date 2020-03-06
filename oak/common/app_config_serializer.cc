@@ -22,9 +22,9 @@
 #include "absl/flags/parse.h"
 #include "absl/memory/memory.h"
 #include "absl/strings/str_split.h"
-#include "asylo/util/logging.h"
 #include "google/protobuf/text_format.h"
 #include "oak/common/app_config.h"
+#include "oak/common/logging.h"
 #include "oak/common/utils.h"
 
 ABSL_FLAG(
@@ -40,15 +40,15 @@ int main(int argc, char* argv[]) {
   absl::ParseCommandLine(argc, argv);
   std::string textproto = absl::GetFlag(FLAGS_textproto);
   if (textproto.empty()) {
-    LOG(QFATAL) << "Textproto file is not specified";
+    OAK_LOG(QFATAL) << "Textproto file is not specified";
   }
   std::vector<std::string> modules = absl::GetFlag(FLAGS_modules);
   if (modules.empty()) {
-    LOG(QFATAL) << "Wasm modules are not specified";
+    OAK_LOG(QFATAL) << "Wasm modules are not specified";
   }
   std::string output_file = absl::GetFlag(FLAGS_output_file);
   if (output_file.empty()) {
-    LOG(QFATAL) << "Output file is not specified";
+    OAK_LOG(QFATAL) << "Output file is not specified";
   }
 
   // Parse module names.
@@ -56,7 +56,7 @@ int main(int argc, char* argv[]) {
   for (const std::string& module : absl::GetFlag(FLAGS_modules)) {
     std::vector<std::string> module_info = absl::StrSplit(module, ':');
     if (module_info.size() != 2) {
-      LOG(QFATAL) << "Incorrect module specification: " << module;
+      OAK_LOG(QFATAL) << "Incorrect module specification: " << module;
     }
     module_map.emplace(module_info.front(), module_info.back());
   }
@@ -74,18 +74,18 @@ int main(int argc, char* argv[]) {
       if (it != module_map.end()) {
         std::string module_bytes = oak::utils::read_file(it->second);
         if (module_bytes.empty()) {
-          LOG(QFATAL) << "Empty Wasm module:" << module_name;
+          OAK_LOG(QFATAL) << "Empty Wasm module:" << module_name;
         }
         node_config.mutable_wasm_config()->set_module_bytes(module_bytes);
       } else {
-        LOG(QFATAL) << "Module path for " << module_name << " is not specified";
+        OAK_LOG(QFATAL) << "Module path for " << module_name << " is not specified";
       }
     }
   }
 
   // Check application configuration validity.
   if (!oak::ValidApplicationConfig(*config)) {
-    LOG(QFATAL) << "Application config is not valid";
+    OAK_LOG(QFATAL) << "Application config is not valid";
   }
 
   oak::WriteConfigToFile(config.get(), output_file);

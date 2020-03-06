@@ -73,10 +73,10 @@ cc_library(
     hdrs = ["app_config.h"],
     visibility = ["//visibility:public"],
     deps = [
+        ":logging",
         "//oak/common:utils",
         "//oak/proto:application_cc_proto",
         "@com_google_absl//absl/memory",
-        "@com_google_asylo//asylo/util:logging",
     ],
 )
 
@@ -128,7 +128,7 @@ cc_library(
     hdrs = ["utils.h"],
     visibility = ["//visibility:public"],
     deps = [
-        "@com_google_asylo//asylo/util:logging",
+        ":logging",
     ],
 )
 
@@ -137,13 +137,13 @@ cc_binary(
     srcs = ["app_config_serializer.cc"],
     visibility = ["//visibility:public"],
     deps = [
+        ":logging",
         "//oak/common:app_config",
         "//oak/common:utils",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/strings",
-        "@com_google_asylo//asylo/util:logging",
         "@com_google_protobuf//:protobuf",
     ],
 )
