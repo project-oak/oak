@@ -34,7 +34,7 @@ fn logger(pretty_name: &str, runtime: RuntimeRef, reader: ChannelReader) -> Resu
         // closed.
         let _ = runtime.wait_on_channels(&[Some(&reader)]);
 
-        if let Some(message) = reader.read()? {
+        if let Some(message) = runtime.channel_read(&reader)? {
             let message = String::from_utf8_lossy(&message.data);
             info!("{} LOG: {}", pretty_name, message);
         }

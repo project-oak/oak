@@ -22,7 +22,6 @@ use std::sync::{Arc, Weak};
 use core::sync::atomic::AtomicUsize;
 use core::sync::atomic::Ordering::SeqCst;
 
-use oak_abi::{ChannelReadStatus, OakStatus};
 use oak_platform::{Mutex, RwLock, Thread, ThreadId};
 
 use crate::Message;
@@ -46,14 +45,15 @@ type WaitingThreads = Mutex<HashMap<ThreadId, Weak<Thread>>>;
 pub struct Channel {
     readers: AtomicUsize,
     writers: AtomicUsize,
-    messages: RwLock<Messages>,
+
+    pub messages: RwLock<Messages>,
 
     /// A HashMap of `ThreadId`s to `Weak<Thread>`s. This allows threads to insert a weak reference
     /// to themselves to be woken when a new message is available. Weak references are used so that
     /// if the thread is woken by a different channel, it can deallocate the underlying `Arc`
     /// instead of removing itself from all the `Channel`s it subscribed to.
     /// Threads can be woken up spuriously without issue.
-    waiting_threads: WaitingThreads,
+    pub waiting_threads: WaitingThreads,
 }
 
 
@@ -80,8 +80,16 @@ pub enum ChannelEither {
 impl Channel {
     /// Thread safe method that returns true when there is no longer at least one reader and one
     /// writer.
-    fn is_orphan(&self) -> bool {
+    pub fn is_orphan(&self) -> bool {
         self.readers.load(SeqCst) == 0 || self.writers.load(SeqCst) == 0
+    }
+
+    /// Insert the given `thread` reference into `thread_id` slot of the HashMap of waiting
+    /// channels attached to an underlying channel. This allows the channel to wake up any waiting
+    /// channels by calling `thread::unpark` on all the threads it knows about.
+    pub fn add_waiter(&self, thread_id: ThreadId, thread: &Arc<Thread>) {
+        let mut waiting_threads = self.waiting_threads.lock().unwrap();
+        waiting_threads.insert(thread_id, Arc::downgrade(thread));
     }
 
     /// Decrement the `Channel` writer counter.
@@ -137,43 +145,6 @@ impl std::ops::Deref for ChannelRef {
     }
 }
 
-impl ChannelWriter {
-    /// Write a message to a channel. Fails with `OakStatus::ErrChannelClosed` if the underlying
-    /// channel has been orphaned.
-    pub fn write(&self, msg: Message) -> Result<(), OakStatus> {
-        if self.is_orphan() {
-            return Err(OakStatus::ErrChannelClosed);
-        }
-
-        {
-            let mut messages = self.messages.write().unwrap();
-
-            messages.push_back(msg);
-        }
-
-        let mut waiting_threads = self.waiting_threads.lock().unwrap();
-
-        // Unpark (wake up) all waiting threads that still have live references. The first thread
-        // woken can immediately read the message, and others might find `messages` is empty before
-        // they are even woken. This should not be an issue (being woken does not guarantee a
-        // message is available), but it could potentially result in some particular thread always
-        // getting first chance to read the message.
-        //
-        // If a thread is woken and finds no message it will take the `waiting_threads` lock and
-        // add itself again. Note that since that lock is currently held, the woken thread will add
-        // itself to waiting_threads *after* we call clear below as we release the lock implicilty
-        // on leaving this function.
-        for thread in waiting_threads.values() {
-            if let Some(thread) = thread.upgrade() {
-                thread.unpark();
-            }
-        }
-        waiting_threads.clear();
-
-        Ok(())
-    }
-}
-
 impl std::ops::Deref for ChannelWriter {
     type Target = Channel;
 
@@ -200,87 +171,6 @@ impl Clone for ChannelWriter {
 pub enum ReadStatus {
     Success(Message),
     NeedsCapacity(usize, usize),
-}
-
-impl ChannelReader {
-    /// Thread safe. Read a message from a channel. Fails with `OakStatus::ErrChannelClosed` if
-    /// the underlying channel is empty and has been orphaned.
-    pub fn read(&self) -> Result<Option<Message>, OakStatus> {
-        let mut messages = self.messages.write().unwrap();
-        match messages.pop_front() {
-            Some(m) => Ok(Some(m)),
-            None => {
-                if self.is_orphan() {
-                    Err(OakStatus::ErrChannelClosed)
-                } else {
-                    Ok(None)
-                }
-            }
-        }
-    }
-
-    /// Thread safe. This function will return:
-    /// - `ReadReady` if there is at least one message in the channel.
-    /// - `Orphaned` if there are no messages and there are no writers
-    /// - `NOT_READ` if there are no messages but there are some writers
-    pub fn status(&self) -> ChannelReadStatus {
-        let messages = self.messages.read().unwrap();
-        if messages.front().is_some() {
-            ChannelReadStatus::ReadReady
-        } else if self.is_orphan() {
-            ChannelReadStatus::Orphaned
-        } else {
-            ChannelReadStatus::NotReady
-        }
-    }
-
-    /// Thread safe. Reads a message from the channel if `bytes_capacity` and `handles_capacity` are
-    /// large enough to accept the message. Fails with `OakStatus::ErrChannelClosed` if the
-    /// underlying channel has been orphaned _and_ is empty. If there was not enough
-    /// `bytes_capacity` or `handles_capacity`, `try_read_message` will return
-    /// `Some(ReadStatus::NeedsCapacity(needed_bytes_capacity,needed_handles_capacity))`. Does not
-    /// guarantee that the next call will succeed after capacity adjustments as another thread may
-    /// have read the original message.
-    pub fn try_read_message(
-        &self,
-        bytes_capacity: usize,
-        handles_capacity: usize,
-    ) -> Result<Option<ReadStatus>, OakStatus> {
-        let mut messages = self.messages.write().unwrap();
-        match messages.front() {
-            Some(front) => {
-                let req_bytes_capacity = front.data.len();
-                let req_handles_capacity = front.channels.len();
-
-                Ok(Some(
-                    if req_bytes_capacity > bytes_capacity
-                        || req_handles_capacity > handles_capacity
-                    {
-                        ReadStatus::NeedsCapacity(req_bytes_capacity, req_handles_capacity)
-                    } else {
-                        ReadStatus::Success(messages.pop_front().expect(
-                            "Front element disappeared while we were holding the write lock!",
-                        ))
-                    },
-                ))
-            }
-            None => {
-                if self.is_orphan() {
-                    Err(OakStatus::ErrChannelClosed)
-                } else {
-                    Ok(None)
-                }
-            }
-        }
-    }
-
-    /// Insert the given `thread` reference into `thread_id` slot of the HashMap of waiting
-    /// channels attached to an underlying channel. This allows the channel to wake up any waiting
-    /// channels by calling `thread::unpark` on all the threads it knows about.
-    pub fn add_waiter(&self, thread_id: ThreadId, thread: &Arc<Thread>) {
-        let mut waiting_threads = self.waiting_threads.lock().unwrap();
-        waiting_threads.insert(thread_id, Arc::downgrade(thread));
-    }
 }
 
 impl std::ops::Deref for ChannelReader {

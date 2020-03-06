@@ -29,6 +29,7 @@ use oak_platform::{JoinHandle, Mutex};
 use log::debug;
 
 use crate::node;
+use crate::message::Message;
 
 mod channel;
 pub use channel::{ChannelEither, ChannelWriter, ChannelReader, ReadStatus};
@@ -109,10 +110,10 @@ impl Runtime {
     /// Reads the statuses from a slice of `Option<&ChannelReader>`s.
     /// `ChannelReadStatus::InvalidChannel` is set for `None` readers in the slice. For `Some(_)`
     /// readers, the result is set from a call to `has_message`.
-    fn readers_statuses(readers: &[Option<&ChannelReader>]) -> Vec<ChannelReadStatus> {
+    fn readers_statuses(&self, readers: &[Option<&ChannelReader>]) -> Vec<ChannelReadStatus> {
         readers
             .iter()
-            .map(|chan| chan.map_or(ChannelReadStatus::InvalidChannel, |chan| chan.status()))
+            .map(|chan| chan.map_or(ChannelReadStatus::InvalidChannel, |chan| self.channel_status(chan)))
             .collect()
     }
 
@@ -150,7 +151,7 @@ impl Runtime {
                     reader.add_waiter(thread_id, &thread_ref);
                 }
             }
-            let statuses = Runtime::readers_statuses(readers);
+            let statuses = self.readers_statuses(readers);
 
             let all_unreadable = statuses
                 .iter()
@@ -174,6 +175,113 @@ impl Runtime {
             );
         }
         Err(OakStatus::ErrTerminated)
+    }
+
+   /// Write a message to a channel. Fails with `OakStatus::ErrChannelClosed` if the underlying
+   /// channel has been orphaned.
+   pub fn channel_write(&self, channel: &ChannelWriter, msg: Message) -> Result<(), OakStatus> {
+       if channel.is_orphan() {
+           return Err(OakStatus::ErrChannelClosed);
+       }
+
+       {
+           let mut messages = channel.messages.write().unwrap();
+
+           messages.push_back(msg);
+       }
+
+       let mut waiting_threads = channel.waiting_threads.lock().unwrap();
+
+       // Unpark (wake up) all waiting threads that still have live references. The first thread
+       // woken can immediately read the message, and others might find `messages` is empty before
+       // they are even woken. This should not be an issue (being woken does not guarantee a
+       // message is available), but it could potentially result in some particular thread always
+       // getting first chance to read the message.
+       //
+       // If a thread is woken and finds no message it will take the `waiting_threads` lock and
+       // add itself again. Note that since that lock is currently held, the woken thread will add
+       // itself to waiting_threads *after* we call clear below as we release the lock implicilty
+       // on leaving this function.
+       for thread in waiting_threads.values() {
+           if let Some(thread) = thread.upgrade() {
+               thread.unpark();
+           }
+       }
+       waiting_threads.clear();
+
+       Ok(())
+   }
+
+    /// Thread safe. Read a message from a channel. Fails with `OakStatus::ErrChannelClosed` if
+    /// the underlying channel is empty and has been orphaned.
+    pub fn channel_read(&self, channel: &ChannelReader) -> Result<Option<Message>, OakStatus> {
+        let mut messages = channel.messages.write().unwrap();
+        match messages.pop_front() {
+            Some(m) => Ok(Some(m)),
+            None => {
+                if channel.is_orphan() {
+                    Err(OakStatus::ErrChannelClosed)
+                } else {
+                    Ok(None)
+                }
+            }
+        }
+    }
+
+    /// Thread safe. This function will return:
+    /// - `ReadReady` if there is at least one message in the channel.
+    /// - `Orphaned` if there are no messages and there are no writers
+    /// - `NOT_READ` if there are no messages but there are some writers
+    pub fn channel_status(&self, channel: &ChannelReader) -> ChannelReadStatus {
+        let messages = channel.messages.read().unwrap();
+        if messages.front().is_some() {
+            ChannelReadStatus::ReadReady
+        } else if channel.is_orphan() {
+            ChannelReadStatus::Orphaned
+        } else {
+            ChannelReadStatus::NotReady
+        }
+    }
+
+    /// Thread safe. Reads a message from the channel if `bytes_capacity` and `handles_capacity` are
+    /// large enough to accept the message. Fails with `OakStatus::ErrChannelClosed` if the
+    /// underlying channel has been orphaned _and_ is empty. If there was not enough
+    /// `bytes_capacity` or `handles_capacity`, `try_read_message` will return
+    /// `Some(ReadStatus::NeedsCapacity(needed_bytes_capacity,needed_handles_capacity))`. Does not
+    /// guarantee that the next call will succeed after capacity adjustments as another thread may
+    /// have read the original message.
+    pub fn channel_try_read_message(
+        &self,
+        channel: &ChannelReader,
+        bytes_capacity: usize,
+        handles_capacity: usize,
+    ) -> Result<Option<ReadStatus>, OakStatus> {
+        let mut messages = channel.messages.write().unwrap();
+        match messages.front() {
+            Some(front) => {
+                let req_bytes_capacity = front.data.len();
+                let req_handles_capacity = front.channels.len();
+
+                Ok(Some(
+                    if req_bytes_capacity > bytes_capacity
+                        || req_handles_capacity > handles_capacity
+                    {
+                        ReadStatus::NeedsCapacity(req_bytes_capacity, req_handles_capacity)
+                    } else {
+                        ReadStatus::Success(messages.pop_front().expect(
+                            "Front element disappeared while we were holding the write lock!",
+                        ))
+                    },
+                ))
+            }
+            None => {
+                if channel.is_orphan() {
+                    Err(OakStatus::ErrChannelClosed)
+                } else {
+                    Ok(None)
+                }
+            }
+        }
     }
 }
 
