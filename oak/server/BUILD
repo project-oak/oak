@@ -38,8 +38,8 @@ cc_library(
         ":base_runtime",
         ":channel",
         "//oak/common:handles",
+        "//oak/common:logging",
         "@com_google_absl//absl/synchronization",
-        "@com_google_asylo//asylo/util:logging",
     ],
 )
 
@@ -56,6 +56,7 @@ cc_library(
     deps = [
         ":channel",
         "//oak/common:handles",
+        "//oak/common:logging",
         "//oak/proto:grpc_encap_cc_proto",
         "//oak/proto:oak_api_cc_proto",
         "//oak/server:node_thread",
@@ -63,7 +64,6 @@ cc_library(
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/time",
         "@com_google_absl//absl/types:span",
-        "@com_google_asylo//asylo/util:logging",
         "@wabt",
     ],
 )
@@ -120,6 +120,7 @@ cc_library(
         ":channel",
         ":oak_node",
         "//oak/common:app_config",
+        "//oak/common:logging",
         "//oak/common:policy",
         "//oak/proto:enclave_cc_proto",
         "//oak/proto:grpc_encap_cc_proto",
@@ -127,7 +128,6 @@ cc_library(
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/synchronization",
         "@com_google_asylo//asylo/grpc/auth:null_credentials_options",
-        "@com_google_asylo//asylo/util:logging",
     ],
 )
 
@@ -143,6 +143,7 @@ cc_library(
         ":oak_grpc_node",
         ":wasm_node",
         "//oak/common:app_config",
+        "//oak/common:logging",
         "//oak/proto:enclave_cc_proto",
         "//oak/proto:oak_api_cc_proto",
         "//oak/server:logging_node",
@@ -150,7 +151,6 @@ cc_library(
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/synchronization",
-        "@com_google_asylo//asylo/util:logging",
     ],
 )
 
@@ -168,12 +168,12 @@ cc_library(
     hdrs = ["channel.h"],
     deps = [
         ":notification",
+        "//oak/common:logging",
         "//oak/proto:oak_api_cc_proto",
         "//oak/proto:policy_cc_proto",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/synchronization",
         "@com_google_absl//absl/types:variant",
-        "@com_google_asylo//asylo/util:logging",
     ],
 )
 
@@ -194,7 +194,7 @@ cc_library(
     hdrs = ["node_thread.h"],
     deps = [
         ":oak_node",
-        "@com_google_asylo//asylo/util:logging",
+        "//oak/common:logging",
     ],
 )
 
@@ -206,9 +206,9 @@ cc_library(
         ":channel",
         ":node_thread",
         "//oak/common:handles",
+        "//oak/common:logging",
         "//oak/proto:log_cc_proto",
         "@com_google_absl//absl/memory",
-        "@com_google_asylo//asylo/util:logging",
     ],
 )
 
@@ -218,8 +218,8 @@ cc_library(
     hdrs = ["invocation.h"],
     deps = [
         ":channel",
+        "//oak/common:logging",
         "@com_google_absl//absl/memory",
-        "@com_google_asylo//asylo/util:logging",
     ],
 )
 
@@ -233,10 +233,10 @@ cc_library(
         ":invocation",
         ":node_thread",
         "//oak/common:handles",
+        "//oak/common:logging",
         "//oak/proto:grpc_encap_cc_proto",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/memory",
-        "@com_google_asylo//asylo/util:logging",
     ],
 )
 
@@ -257,8 +257,8 @@ cc_test(
     deps = [
         ":channel",
         ":notification",
+        "//oak/common:logging",
         "@com_google_absl//absl/memory",
-        "@com_google_asylo//asylo/util:logging",
         "@gtest//:gtest_main",
     ],
 )

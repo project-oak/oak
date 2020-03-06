@@ -23,8 +23,8 @@
 
 #include "absl/memory/memory.h"
 #include "absl/strings/str_cat.h"
-#include "asylo/util/logging.h"
 #include "oak/common/app_config.h"
+#include "oak/common/logging.h"
 #include "oak/server/grpc_client_node.h"
 #include "oak/server/logging_node.h"
 #include "oak/server/storage/storage_node.h"
@@ -40,7 +40,7 @@ constexpr char kGrpcNodeName[] = "grpc";
 }  // namespace
 
 grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
-  LOG(INFO) << "Initializing Oak Runtime";
+  OAK_LOG(INFO) << "Initializing Oak Runtime";
   if (!ValidApplicationConfig(config)) {
     return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid configuration");
   }
@@ -70,7 +70,7 @@ grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
   // Create a gRPC pseudo-Node.
   const std::string grpc_name = kGrpcNodeName;
   const uint16_t grpc_port = config.grpc_port();
-  LOG(INFO) << "Create gRPC pseudo-Node named {" << grpc_name << "}";
+  OAK_LOG(INFO) << "Create gRPC pseudo-Node named {" << grpc_name << "}";
   std::unique_ptr<OakGrpcNode> grpc_node = OakGrpcNode::Create(this, grpc_name, grpc_port);
   grpc_node_ = grpc_node.get();  // borrowed copy
   nodes_[grpc_name] = std::move(grpc_node);
@@ -82,7 +82,7 @@ grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
   if (app_node == nullptr) {
     return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Failed to create initial Oak Node");
   }
-  LOG(INFO) << "Created Wasm node named {" << node_name << "}";
+  OAK_LOG(INFO) << "Created Wasm node named {" << node_name << "}";
 
   // Create an initial channel from gRPC pseudo-Node to Application Node.
   // Both of the initial nodes have exactly one registered handle.
@@ -90,8 +90,8 @@ grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
   Handle grpc_handle =
       grpc_node_->AddChannel(absl::make_unique<ChannelHalf>(std::move(halves.write)));
   Handle app_handle = app_node->AddChannel(absl::make_unique<ChannelHalf>(std::move(halves.read)));
-  LOG(INFO) << "Created initial channel from Wasm node {" << grpc_name << "}." << grpc_handle
-            << " to {" << node_name << "}." << app_handle;
+  OAK_LOG(INFO) << "Created initial channel from Wasm node {" << grpc_name << "}." << grpc_handle
+                << " to {" << node_name << "}." << app_handle;
 
   return grpc::Status::OK;
 }
@@ -112,22 +112,22 @@ OakNode* OakRuntime::CreateNode(const std::string& config_name, const std::strin
   std::unique_ptr<OakNode> node;
 
   if (wasm_config_.count(config_name) > 0) {
-    LOG(INFO) << "Create Wasm node named {" << name << "}";
+    OAK_LOG(INFO) << "Create Wasm node named {" << name << "}";
     const WebAssemblyConfiguration* wasm_cfg = wasm_config_[config_name].get();
     node = WasmNode::Create(this, name, wasm_cfg->module_bytes(), entrypoint_name);
   } else if (log_config_.count(config_name) > 0) {
-    LOG(INFO) << "Create log node named {" << name << "}";
+    OAK_LOG(INFO) << "Create log node named {" << name << "}";
     node = absl::make_unique<LoggingNode>(this, name);
   } else if (storage_config_.count(config_name) > 0) {
     std::string address = *(storage_config_[config_name].get());
-    LOG(INFO) << "Create storage proxy node named {" << name << "} connecting to " << address;
+    OAK_LOG(INFO) << "Create storage proxy node named {" << name << "} connecting to " << address;
     node = absl::make_unique<StorageNode>(this, name, address);
   } else if (grpc_client_config_.count(config_name) > 0) {
     std::string address = *(grpc_client_config_[config_name].get());
-    LOG(INFO) << "Create gRPC client node named {" << name << "} connecting to " << address;
+    OAK_LOG(INFO) << "Create gRPC client node named {" << name << "} connecting to " << address;
     node = absl::make_unique<GrpcClientNode>(this, name, address);
   } else {
-    LOG(ERROR) << "failed to find config with name " << config_name;
+    OAK_LOG(ERROR) << "failed to find config with name " << config_name;
     return nullptr;
   }
 
@@ -136,7 +136,7 @@ OakNode* OakRuntime::CreateNode(const std::string& config_name, const std::strin
     nodes_[name] = std::move(node);
     *node_name = name;
   } else {
-    LOG(ERROR) << "failed to create Node with config of name " << config_name;
+    OAK_LOG(ERROR) << "failed to create Node with config of name " << config_name;
   }
   return result;
 }
@@ -145,7 +145,7 @@ bool OakRuntime::CreateAndRunNode(const std::string& config_name,
                                   const std::string& entrypoint_name,
                                   std::unique_ptr<ChannelHalf> half, std::string* node_name) {
   if (TerminationPending()) {
-    LOG(WARNING) << "Runtime is pending termination, fail node creation";
+    OAK_LOG(WARNING) << "Runtime is pending termination, fail node creation";
     return false;
   }
 
@@ -158,18 +158,18 @@ bool OakRuntime::CreateAndRunNode(const std::string& config_name,
   // Add the given channel as the Node's single available handle.
   Handle handle = node->AddChannel(std::move(half));
 
-  LOG(INFO) << "Start node named {" << *node_name << "} with initial handle " << handle;
+  OAK_LOG(INFO) << "Start node named {" << *node_name << "} with initial handle " << handle;
   node->Start();
   return true;
 }
 
 grpc::Status OakRuntime::Start() {
-  LOG(INFO) << "Starting runtime";
+  OAK_LOG(INFO) << "Starting runtime";
   absl::MutexLock lock(&mu_);
 
   // Now all dependencies are running, start the Nodes running.
   for (auto& named_node : nodes_) {
-    LOG(INFO) << "Starting node " << named_node.first;
+    OAK_LOG(INFO) << "Starting node " << named_node.first;
     named_node.second->Start();
   }
 
@@ -179,7 +179,7 @@ grpc::Status OakRuntime::Start() {
 int32_t OakRuntime::GetPort() { return grpc_node_->GetPort(); }
 
 grpc::Status OakRuntime::Stop() {
-  LOG(INFO) << "Stopping runtime...";
+  OAK_LOG(INFO) << "Stopping runtime...";
   termination_pending_ = true;
 
   // Take local ownership of all the nodes owned by the runtime.
@@ -195,7 +195,7 @@ grpc::Status OakRuntime::Stop() {
   // in case any of the per-Node threads happens to try an operation
   // (e.g. node_create) that needs the lock.
   for (auto& named_node : nodes) {
-    LOG(INFO) << "Stopping node " << named_node.first;
+    OAK_LOG(INFO) << "Stopping node " << named_node.first;
     named_node.second->Stop();
   }
 

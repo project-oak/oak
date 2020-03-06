@@ -16,7 +16,7 @@
 
 #include "oak/server/node_thread.h"
 
-#include "asylo/util/logging.h"
+#include "oak/common/logging.h"
 
 namespace oak {
 
@@ -24,11 +24,11 @@ NodeThread::~NodeThread() { StopThread(); }
 
 void NodeThread::Start() {
   if (thread_.joinable()) {
-    LOG(ERROR) << "Attempt to Start() an already-running NodeThread";
+    OAK_LOG(ERROR) << "Attempt to Start() an already-running NodeThread";
     return;
   }
   if (runtime_->TerminationPending()) {
-    LOG(ERROR) << "Attempt to Start() an already-terminated NodeThread";
+    OAK_LOG(ERROR) << "Attempt to Start() an already-terminated NodeThread";
     return;
   }
 
@@ -36,22 +36,22 @@ void NodeThread::Start() {
   // passed to the Run() method.
   Handle handle = SingleHandle();
 
-  LOG(INFO) << "Executing new {" << name_ << "} node thread with handle " << handle;
+  OAK_LOG(INFO) << "Executing new {" << name_ << "} node thread with handle " << handle;
   thread_ = std::thread(&oak::NodeThread::Run, this, handle);
-  LOG(INFO) << "Started {" << name_ << "} node thread";
+  OAK_LOG(INFO) << "Started {" << name_ << "} node thread";
 }
 
 void NodeThread::Stop() {
-  LOG(INFO) << "Stopping node {" << name_ << "}";
+  OAK_LOG(INFO) << "Stopping node {" << name_ << "}";
   StopThread();
 }
 
 void NodeThread::StopThread() {
-  LOG(INFO) << "Termination pending for {" << name_ << "}";
+  OAK_LOG(INFO) << "Termination pending for {" << name_ << "}";
   if (thread_.joinable()) {
-    LOG(INFO) << "Waiting for completion of {" << name_ << "} node thread";
+    OAK_LOG(INFO) << "Waiting for completion of {" << name_ << "} node thread";
     thread_.join();
-    LOG(INFO) << "Completed {" << name_ << "} node thread";
+    OAK_LOG(INFO) << "Completed {" << name_ << "} node thread";
   }
 }
 

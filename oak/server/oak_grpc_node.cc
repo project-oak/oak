@@ -19,9 +19,9 @@
 #include "absl/memory/memory.h"
 #include "asylo/grpc/auth/enclave_server_credentials.h"
 #include "asylo/grpc/auth/null_credentials_options.h"
-#include "asylo/util/logging.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/common/app_config.h"
+#include "oak/common/logging.h"
 #include "oak/server/module_invocation.h"
 
 namespace oak {
@@ -49,7 +49,7 @@ std::unique_ptr<OakGrpcNode> OakGrpcNode::Create(BaseRuntime* runtime, const std
 
   node->server_ = builder.BuildAndStart();
   if (!node->server_) {
-    LOG(QFATAL) << "Failed to start gRPC server";
+    OAK_LOG(QFATAL) << "Failed to start gRPC server";
     return nullptr;
   }
 
@@ -62,7 +62,7 @@ void OakGrpcNode::Start() {
 }
 
 void OakGrpcNode::CompletionQueueLoop() {
-  LOG(INFO) << "{" << name_ << "} Starting gRPC completion queue loop";
+  OAK_LOG(INFO) << "{" << name_ << "} Starting gRPC completion queue loop";
 
   // The stream object will delete itself when finished with the request,
   // after creating a new stream object for the next request.
@@ -73,10 +73,10 @@ void OakGrpcNode::CompletionQueueLoop() {
     void* tag;
     if (!completion_queue_->Next(&tag, &ok)) {
       if (!runtime_->TerminationPending()) {
-        LOG(FATAL) << "{" << name_ << "} Failure reading from completion queue";
+        OAK_LOG(FATAL) << "{" << name_ << "} Failure reading from completion queue";
       }
-      LOG(INFO) << "{" << name_
-                << "} No Next event on completion queue, stopping gRPC completion queue loop";
+      OAK_LOG(INFO) << "{" << name_
+                    << "} No Next event on completion queue, stopping gRPC completion queue loop";
       return;
     }
     auto callback = static_cast<std::function<void(bool)>*>(tag);
@@ -87,17 +87,17 @@ void OakGrpcNode::CompletionQueueLoop() {
 
 void OakGrpcNode::Stop() {
   if (server_) {
-    LOG(INFO) << "{" << name_ << "} Shutting down gRPC server...";
+    OAK_LOG(INFO) << "{" << name_ << "} Shutting down gRPC server...";
     server_->Shutdown();
   }
   if (completion_queue_ != nullptr) {
-    LOG(INFO) << "{" << name_ << "} Shutting down completion queue...";
+    OAK_LOG(INFO) << "{" << name_ << "} Shutting down completion queue...";
     completion_queue_->Shutdown();
   }
   if (queue_thread_.joinable()) {
-    LOG(INFO) << "{" << name_ << "} Waiting for completion of completion queue thread";
+    OAK_LOG(INFO) << "{" << name_ << "} Waiting for completion of completion queue thread";
     queue_thread_.join();
-    LOG(INFO) << "{" << name_ << "} Completed queue thread";
+    OAK_LOG(INFO) << "{" << name_ << "} Completed queue thread";
   }
   // Now there is no separate thread running it's safe to drop the gRPC objects.
   server_ = nullptr;

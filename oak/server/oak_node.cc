@@ -16,7 +16,7 @@
 
 #include "oak/server/oak_node.h"
 
-#include "asylo/util/logging.h"
+#include "oak/common/logging.h"
 #include "oak/server/notification.h"
 
 namespace oak {
@@ -98,7 +98,8 @@ bool OakNode::WaitOnChannels(std::vector<std::unique_ptr<ChannelStatus>>* status
       uint64_t handle = (*statuses)[ii]->handle;
       MessageChannelReadHalf* channel = BorrowReadChannel(handle);
       if (channel == nullptr) {
-        LOG(WARNING) << "{" << name_ << "} Waiting on non-existent read channel handle " << handle;
+        OAK_LOG(WARNING) << "{" << name_ << "} Waiting on non-existent read channel handle "
+                         << handle;
         (*statuses)[ii]->status = ChannelReadStatus::INVALID_CHANNEL;
         continue;
       }
@@ -107,31 +108,32 @@ bool OakNode::WaitOnChannels(std::vector<std::unique_ptr<ChannelStatus>>* status
       (*statuses)[ii]->status = status;
       switch (status) {
         case ChannelReadStatus::READ_READY:
-          LOG(INFO) << "{" << name_ << "} Message available on handle " << handle;
+          OAK_LOG(INFO) << "{" << name_ << "} Message available on handle " << handle;
           found_ready = true;
           break;
         case ChannelReadStatus::ORPHANED:
-          LOG(INFO) << "{" << name_ << "} Handle " << handle << " is orphaned (no extant writers)";
+          OAK_LOG(INFO) << "{" << name_ << "} Handle " << handle
+                        << " is orphaned (no extant writers)";
           break;
         case ChannelReadStatus::NOT_READY:
           found_readable = true;
           break;
         default:
-          LOG(ERROR) << "{" << name_ << "} Unexpected channel read status: " << status;
+          OAK_LOG(ERROR) << "{" << name_ << "} Unexpected channel read status: " << status;
           return false;
           break;
       }
     }
 
     if (runtime_->TerminationPending()) {
-      LOG(WARNING) << "{" << name_ << "} Node is pending termination";
+      OAK_LOG(WARNING) << "{" << name_ << "} Node is pending termination";
       return false;
     }
     if (found_ready) {
       return true;
     }
     if (!found_readable) {
-      LOG(WARNING) << "{" << name_ << "} No read-capable channels found";
+      OAK_LOG(WARNING) << "{" << name_ << "} No read-capable channels found";
       return false;
     }
 
