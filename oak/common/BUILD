@@ -28,6 +28,15 @@ test_suite(
 )
 
 cc_library(
+    name = "logging",
+    hdrs = ["logging.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_google_asylo//asylo/util:logging",
+    ],
+)
+
+cc_library(
     name = "handles",
     srcs = ["handles.cc"],
     hdrs = ["handles.h"],
