@@ -252,14 +252,15 @@ where
 {
     let rsp_receiver = invoke_grpc_method_stream(method_name, req, invocation_channel)?;
     // Read a single encapsulated response.
-    let grpc_rsp = rsp_receiver.receive().map_err(|status| {
+    let result = rsp_receiver.receive();
+    rsp_receiver.close().expect("failed to close channel");
+    let grpc_rsp = result.map_err(|status| {
         error!("failed to receive response: {:?}", status);
         build_status(
             Code::INTERNAL,
             &format!("failed to receive gRPC response: {:?}", status),
         )
     })?;
-    rsp_receiver.close().expect("failed to close channel");
     let (rsp, _last) = decap_response(grpc_rsp)?;
 
     Ok(rsp)
