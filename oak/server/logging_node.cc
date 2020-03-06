@@ -17,7 +17,7 @@
 #include "oak/server/logging_node.h"
 
 #include "absl/memory/memory.h"
-#include "asylo/util/logging.h"
+#include "oak/common/logging.h"
 #include "oak/proto/log.pb.h"
 
 namespace oak {
@@ -26,7 +26,7 @@ void LoggingNode::Run(Handle handle) {
   // Borrow pointer to the channel half.
   MessageChannelReadHalf* channel = BorrowReadChannel(handle);
   if (channel == nullptr) {
-    LOG(ERROR) << "{" << name_ << "} No channel available!";
+    OAK_LOG(ERROR) << "{" << name_ << "} No channel available!";
     return;
   }
   std::vector<std::unique_ptr<ChannelStatus>> status;
@@ -34,15 +34,15 @@ void LoggingNode::Run(Handle handle) {
   bool done = false;
   while (!done) {
     if (!WaitOnChannels(&status)) {
-      LOG(WARNING) << "{" << name_ << "} Node termination requested, " << channel->Count()
-                   << " log messages pending";
+      OAK_LOG(WARNING) << "{" << name_ << "} Node termination requested, " << channel->Count()
+                       << " log messages pending";
       done = true;
     }
     ReadResult result;
     while (true) {
       result = channel->Read(INT_MAX, INT_MAX);
       if (result.required_size > 0) {
-        LOG(ERROR) << "{" << name_ << "} Message size too large: " << result.required_size;
+        OAK_LOG(ERROR) << "{" << name_ << "} Message size too large: " << result.required_size;
         return;
       }
       if (result.msg == nullptr) {
@@ -52,19 +52,22 @@ void LoggingNode::Run(Handle handle) {
       bool successful_parse =
           log_msg.ParseFromArray(result.msg->data.data(), result.msg->data.size());
       if (successful_parse) {
-        LOG(INFO) << "{" << name_ << "} "
-                  << "LOG: " << oak::log::Level_Name(log_msg.level()) << " " << log_msg.file()
-                  << ":" << log_msg.line() << ": " << log_msg.message();
+        // TODO(#630): when information flow control is implemented, this
+        // logging should be governed by that (rather than by the compile-time
+        // OAK_DEBUG flag).
+        OAK_LOG(INFO) << "{" << name_ << "} "
+                      << "LOG: " << oak::log::Level_Name(log_msg.level()) << " " << log_msg.file()
+                      << ":" << log_msg.line() << ": " << log_msg.message();
       } else {
-        LOG(ERROR) << "{" << name_ << "} Could not parse LogMessage.";
+        OAK_LOG(ERROR) << "{" << name_ << "} Could not parse LogMessage.";
       }
       // Any channel references included with the message will be dropped.
     }
   }
   if (CloseChannel(handle)) {
-    LOG(INFO) << "{" << name_ << "} Closed channel handle: " << handle;
+    OAK_LOG(INFO) << "{" << name_ << "} Closed channel handle: " << handle;
   } else {
-    LOG(WARNING) << "{" << name_ << "} Invalid channel handle: " << handle;
+    OAK_LOG(WARNING) << "{" << name_ << "} Invalid channel handle: " << handle;
   }
 }
 

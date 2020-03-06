@@ -17,7 +17,7 @@
 #include "oak/server/invocation.h"
 
 #include "absl/memory/memory.h"
-#include "asylo/util/logging.h"
+#include "oak/common/logging.h"
 
 namespace oak {
 
@@ -30,30 +30,30 @@ std::unique_ptr<Invocation> Invocation::ReceiveFromChannel(
   //    serialized as a GrpcResponse.
   ReadResult invocation = invocation_channel->Read(INT_MAX, INT_MAX);
   if (invocation.required_size > 0) {
-    LOG(ERROR) << "Message size too large: " << invocation.required_size;
+    OAK_LOG(ERROR) << "Message size too large: " << invocation.required_size;
     return nullptr;
   }
   if (invocation.msg->data.size() != 0) {
-    LOG(ERROR) << "Unexpectedly received data in invocation";
+    OAK_LOG(ERROR) << "Unexpectedly received data in invocation";
     return nullptr;
   }
   if (invocation.msg->channels.size() != 2) {
-    LOG(ERROR) << "Wrong number of channels " << invocation.msg->channels.size()
-               << " in invocation";
+    OAK_LOG(ERROR) << "Wrong number of channels " << invocation.msg->channels.size()
+                   << " in invocation";
     return nullptr;
   }
 
   std::unique_ptr<ChannelHalf> half0 = std::move(invocation.msg->channels[0]);
   auto channel0 = absl::get_if<std::unique_ptr<MessageChannelReadHalf>>(half0.get());
   if (channel0 == nullptr) {
-    LOG(ERROR) << "First channel accompanying invocation is write-direction";
+    OAK_LOG(ERROR) << "First channel accompanying invocation is write-direction";
     return nullptr;
   }
 
   std::unique_ptr<ChannelHalf> half1 = std::move(invocation.msg->channels[1]);
   auto channel1 = absl::get_if<std::unique_ptr<MessageChannelWriteHalf>>(half1.get());
   if (channel1 == nullptr) {
-    LOG(ERROR) << "Second channel accompanying invocation is read-direction";
+    OAK_LOG(ERROR) << "Second channel accompanying invocation is read-direction";
     return nullptr;
   }
   return absl::make_unique<Invocation>(std::move(*channel0), std::move(*channel1));

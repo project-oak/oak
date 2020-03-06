@@ -19,8 +19,8 @@
 #include <thread>
 #include <vector>
 
-#include "asylo/util/logging.h"
 #include "gtest/gtest.h"
+#include "oak/common/logging.h"
 #include "oak/server/channel.h"
 
 namespace oak {
@@ -39,12 +39,12 @@ TEST(Notification, MultipleNotify) {
 
   std::vector<std::thread> waiters;
   for (int wait = 0; wait < kWaiterCount; wait++) {
-    LOG(INFO) << "start new waiter thread " << wait;
+    OAK_LOG(INFO) << "start new waiter thread " << wait;
     waiters.push_back(std::thread([wait, &channels, &mu, &waiting_count] {
-      LOG(INFO) << "new waiter thread " << wait;
+      OAK_LOG(INFO) << "new waiter thread " << wait;
       auto notify = std::make_shared<Notification>();
       for (int chan = 0; chan < kChannelCount; chan++) {
-        LOG(INFO) << "register notification for waiter " << wait << " with channel " << chan;
+        OAK_LOG(INFO) << "register notification for waiter " << wait << " with channel " << chan;
         channels[chan].read->ReadStatus(std::weak_ptr<Notification>(notify));
       }
 
@@ -52,9 +52,9 @@ TEST(Notification, MultipleNotify) {
       waiting_count++;
       mu.Unlock();
 
-      LOG(INFO) << "waiter thread " << wait << " awaiting...";
+      OAK_LOG(INFO) << "waiter thread " << wait << " awaiting...";
       notify->WaitForNotification();
-      LOG(INFO) << "waiter thread " << wait << " awaiting...done";
+      OAK_LOG(INFO) << "waiter thread " << wait << " awaiting...done";
     }));
   }
 
@@ -70,9 +70,9 @@ TEST(Notification, MultipleNotify) {
   }
 
   for (int wait = 0; wait < kWaiterCount; wait++) {
-    LOG(INFO) << "await completion of waiter thread " << wait;
+    OAK_LOG(INFO) << "await completion of waiter thread " << wait;
     waiters[wait].join();
-    LOG(INFO) << "await completion of waiter thread " << wait << " done";
+    OAK_LOG(INFO) << "await completion of waiter thread " << wait << " done";
   }
 }
 

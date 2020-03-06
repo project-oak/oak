@@ -17,8 +17,8 @@
 #include "oak/server/grpc_client_node.h"
 
 #include "absl/memory/memory.h"
-#include "asylo/util/logging.h"
 #include "grpcpp/create_channel.h"
+#include "oak/common/logging.h"
 #include "oak/proto/grpc_encap.pb.h"
 #include "oak/server/invocation.h"
 
@@ -34,13 +34,13 @@ GrpcClientNode::GrpcClientNode(BaseRuntime* runtime, const std::string& name,
     : NodeThread(runtime, name),
       channel_(grpc::CreateChannel(grpc_address, grpc::InsecureChannelCredentials())),
       stub_(new grpc::GenericStub(channel_)) {
-  LOG(INFO) << "Created gRPC client node for " << grpc_address;
+  OAK_LOG(INFO) << "Created gRPC client node for " << grpc_address;
 }
 
 bool GrpcClientNode::HandleInvocation(MessageChannelReadHalf* invocation_channel) {
   std::unique_ptr<Invocation> invocation(Invocation::ReceiveFromChannel(invocation_channel));
   if (invocation == nullptr) {
-    LOG(ERROR) << "Failed to create invocation";
+    OAK_LOG(ERROR) << "Failed to create invocation";
     return false;
   }
 
@@ -48,11 +48,11 @@ bool GrpcClientNode::HandleInvocation(MessageChannelReadHalf* invocation_channel
   // TODO(#97): support client-side streaming
   ReadResult req_result = invocation->req_channel->Read(INT_MAX, INT_MAX);
   if (req_result.required_size > 0) {
-    LOG(ERROR) << "Message size too large: " << req_result.required_size;
+    OAK_LOG(ERROR) << "Message size too large: " << req_result.required_size;
     return false;
   }
   if (req_result.msg->channels.size() != 0) {
-    LOG(ERROR) << "Unexpectedly received channel handles in request channel";
+    OAK_LOG(ERROR) << "Unexpectedly received channel handles in request channel";
     return false;
   }
   GrpcRequest grpc_req;
@@ -65,7 +65,7 @@ bool GrpcClientNode::HandleInvocation(MessageChannelReadHalf* invocation_channel
   // consecutive integer values for completion queue tags (there's no need to
   // use the tag values for correlation). Inspired by:
   // https://github.com/grpc/grpc/blob/master/test/cpp/util/cli_call.cc
-  LOG(INFO) << "Invoke method " << method_name;
+  OAK_LOG(INFO) << "Invoke method " << method_name;
   grpc::ClientContext ctx;
   grpc::CompletionQueue cq;
   std::unique_ptr<grpc::GenericClientAsyncReaderWriter> call =
@@ -76,7 +76,7 @@ bool GrpcClientNode::HandleInvocation(MessageChannelReadHalf* invocation_channel
   bool ok;
   cq.Next(&got_tag, &ok);
   if (!ok) {
-    LOG(ERROR) << "Failed to start gRPC method call";
+    OAK_LOG(ERROR) << "Failed to start gRPC method call";
     return false;
   }
 
@@ -86,13 +86,13 @@ bool GrpcClientNode::HandleInvocation(MessageChannelReadHalf* invocation_channel
   call->Write(send_bb, tag(2));
   cq.Next(&got_tag, &ok);
   if (!ok) {
-    LOG(ERROR) << "Failed to send gRPC request";
+    OAK_LOG(ERROR) << "Failed to send gRPC request";
     return false;
   }
   call->WritesDone(tag(3));
   cq.Next(&got_tag, &ok);
   if (!ok) {
-    LOG(ERROR) << "Failed to close gRPC request";
+    OAK_LOG(ERROR) << "Failed to close gRPC request";
     return false;
   }
 
@@ -102,7 +102,7 @@ bool GrpcClientNode::HandleInvocation(MessageChannelReadHalf* invocation_channel
     grpc::ByteBuffer recv_bb;
     call->Read(&recv_bb, tag(4));
     if (!cq.Next(&got_tag, &ok) || !ok) {
-      LOG(INFO) << "No next gRPC response";
+      OAK_LOG(INFO) << "No next gRPC response";
       break;
     }
     std::vector<grpc::Slice> rsp_slices;
@@ -125,16 +125,16 @@ bool GrpcClientNode::HandleInvocation(MessageChannelReadHalf* invocation_channel
     grpc_rsp.SerializeToArray(rsp_msg->data.data(), rsp_msg->data.size());
 
     // Write the encapsulated response Message to the response channel.
-    LOG(INFO) << "Write gRPC response message to response channel";
+    OAK_LOG(INFO) << "Write gRPC response message to response channel";
     invocation->rsp_channel->Write(std::move(rsp_msg));
   }
 
-  LOG(INFO) << "Finish invocation method " << method_name;
+  OAK_LOG(INFO) << "Finish invocation method " << method_name;
   grpc::Status status;
   call->Finish(&status, tag(5));
   cq.Next(&got_tag, &ok);
   if (!ok) {
-    LOG(ERROR) << "Failed to finish gRPC method invocation";
+    OAK_LOG(ERROR) << "Failed to finish gRPC method invocation";
   }
   if (!status.ok()) {
     // Final status includes an error, so pass it back on the response channel.
@@ -148,8 +148,8 @@ bool GrpcClientNode::HandleInvocation(MessageChannelReadHalf* invocation_channel
     rsp_msg->data.resize(serialized_size);
     grpc_rsp.SerializeToArray(rsp_msg->data.data(), rsp_msg->data.size());
 
-    LOG(INFO) << "Write final gRPC status of (" << status.error_code() << ", '"
-              << status.error_message() << "') to response channel";
+    OAK_LOG(INFO) << "Write final gRPC status of (" << status.error_code() << ", '"
+                  << status.error_message() << "') to response channel";
     invocation->rsp_channel->Write(std::move(rsp_msg));
   }
 
@@ -162,19 +162,19 @@ void GrpcClientNode::Run(Handle invocation_handle) {
   // Borrow a pointer to the relevant channel half.
   MessageChannelReadHalf* invocation_channel = BorrowReadChannel(invocation_handle);
   if (invocation_channel == nullptr) {
-    LOG(ERROR) << "Required channel not available; handle: " << invocation_handle;
+    OAK_LOG(ERROR) << "Required channel not available; handle: " << invocation_handle;
     return;
   }
   std::vector<std::unique_ptr<ChannelStatus>> channel_status;
   channel_status.push_back(absl::make_unique<ChannelStatus>(invocation_handle));
   while (true) {
     if (!WaitOnChannels(&channel_status)) {
-      LOG(WARNING) << "Node termination requested";
+      OAK_LOG(WARNING) << "Node termination requested";
       return;
     }
 
     if (!HandleInvocation(invocation_channel)) {
-      LOG(ERROR) << "Invocation processing failed!";
+      OAK_LOG(ERROR) << "Invocation processing failed!";
     }
   }
   // Drop reference to the invocation channel on exit.

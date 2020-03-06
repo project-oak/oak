@@ -17,7 +17,7 @@
 #include "oak/server/module_invocation.h"
 
 #include "absl/memory/memory.h"
-#include "asylo/util/logging.h"
+#include "oak/common/logging.h"
 #include "oak/common/policy.h"
 #include "oak/proto/grpc_encap.pb.h"
 #include "oak/proto/policy.pb.h"
@@ -32,7 +32,7 @@ std::unique_ptr<Message> Unwrap(const grpc::ByteBuffer& buffer) {
   std::vector<::grpc::Slice> slices;
   grpc::Status status = buffer.Dump(&slices);
   if (!status.ok()) {
-    LOG(QFATAL) << "Could not unwrap buffer";
+    OAK_LOG(QFATAL) << "Could not unwrap buffer";
   }
   auto msg = absl::make_unique<Message>();
   for (const auto& slice : slices) {
@@ -46,39 +46,40 @@ std::unique_ptr<Message> Unwrap(const grpc::ByteBuffer& buffer) {
 void ModuleInvocation::Start() {
   auto callback = new std::function<void(bool)>(
       std::bind(&ModuleInvocation::ReadRequest, this, std::placeholders::_1));
-  LOG(INFO) << "invocation#" << stream_id_ << " Start: request service->RequestCall => ReadRequest";
+  OAK_LOG(INFO) << "invocation#" << stream_id_
+                << " Start: request service->RequestCall => ReadRequest";
   service_->RequestCall(&context_, &stream_, queue_, queue_, callback);
 }
 
 void ModuleInvocation::ReadRequest(bool ok) {
   if (!ok) {
-    LOG(INFO) << "invocation#" << stream_id_ << " ReadRequest: not OK, terminating";
+    OAK_LOG(INFO) << "invocation#" << stream_id_ << " ReadRequest: not OK, terminating";
     delete this;
     return;
   }
-  LOG(INFO) << "invocation#" << stream_id_
-            << " ReadRequest: request stream->Read => ProcessRequest";
+  OAK_LOG(INFO) << "invocation#" << stream_id_
+                << " ReadRequest: request stream->Read => ProcessRequest";
   auto callback = new std::function<void(bool)>(
       std::bind(&ModuleInvocation::ProcessRequest, this, std::placeholders::_1));
   stream_.Read(&request_, callback);
 
   // Now that processing of this request has started, start watching out for the
   // next request.
-  LOG(INFO) << "invocation#" << stream_id_ << " start next invocation";
+  OAK_LOG(INFO) << "invocation#" << stream_id_ << " start next invocation";
   auto next_invocation = new ModuleInvocation(service_, queue_, grpc_node_);
   next_invocation->Start();
 }
 
 void ModuleInvocation::ProcessRequest(bool ok) {
   if (!ok) {
-    LOG(INFO) << "invocation#" << stream_id_ << " ProcessRequest: not OK, terminating";
+    OAK_LOG(INFO) << "invocation#" << stream_id_ << " ProcessRequest: not OK, terminating";
     delete this;
     return;
   }
   std::unique_ptr<Message> request_msg = Unwrap(request_);
 
-  LOG(INFO) << "invocation#" << stream_id_
-            << " ProcessRequest: handling gRPC call: " << context_.method();
+  OAK_LOG(INFO) << "invocation#" << stream_id_
+                << " ProcessRequest: handling gRPC call: " << context_.method();
   for (auto entry : context_.client_metadata()) {
     auto key = entry.first;
     auto value = entry.second;
@@ -86,8 +87,8 @@ void ModuleInvocation::ProcessRequest(bool ok) {
     if (key == kOakAuthorizationBearerTokenGrpcMetadataKey) {
       value = "<redacted>";
     }
-    LOG(INFO) << "invocation#" << stream_id_ << " gRPC client metadata: [" << key << "] -> ["
-              << value << "]";
+    OAK_LOG(INFO) << "invocation#" << stream_id_ << " gRPC client metadata: [" << key << "] -> ["
+                  << value << "]";
   }
 
   // Build an encapsulation of the gRPC request invocation and put it in a Message.
@@ -112,7 +113,7 @@ void ModuleInvocation::ProcessRequest(bool ok) {
       // unauthorized parties. For now we are fine with this, eventually bearer tokens will be
       // removed and replaced by public key assertions, in which case it will always be safe to log
       // policies.
-      LOG(INFO) << "invocation#" << stream_id_ << " Oak policy: " << policy.DebugString();
+      OAK_LOG(INFO) << "invocation#" << stream_id_ << " Oak policy: " << policy.DebugString();
       req_msg->label = policy;
     }
   }
@@ -122,7 +123,7 @@ void ModuleInvocation::ProcessRequest(bool ok) {
         context_.client_metadata().equal_range(kOakAuthorizationBearerTokenGrpcMetadataKey);
     for (auto entry = range.first; entry != range.second; ++entry) {
       // Redact authorization bearer tokens.
-      LOG(INFO) << "invocation#" << stream_id_ << " Oak Authorization Token: <redacted>";
+      OAK_LOG(INFO) << "invocation#" << stream_id_ << " Oak Authorization Token: <redacted>";
     }
   }
 
@@ -142,15 +143,15 @@ void ModuleInvocation::ProcessRequest(bool ok) {
 
   // Write the request message to the just-created request channel.
   req_half_->Write(std::move(req_msg));
-  LOG(INFO) << "invocation#" << stream_id_
-            << " ProcessRequest: Wrote encapsulated request to new gRPC request channel";
+  OAK_LOG(INFO) << "invocation#" << stream_id_
+                << " ProcessRequest: Wrote encapsulated request to new gRPC request channel";
 
   // Write the notification message to the gRPC input channel, which the runtime
   // connected to the Node.
   MessageChannelWriteHalf* notify_half = grpc_node_->BorrowWriteChannel();
   notify_half->Write(std::move(notify_msg));
-  LOG(INFO) << "invocation#" << stream_id_
-            << " ProcessRequest: Wrote notification request to gRPC input channel";
+  OAK_LOG(INFO) << "invocation#" << stream_id_
+                << " ProcessRequest: Wrote notification request to gRPC input channel";
 
   // Move straight onto sending first response.
   SendResponse(true);
@@ -158,7 +159,7 @@ void ModuleInvocation::ProcessRequest(bool ok) {
 
 void ModuleInvocation::SendResponse(bool ok) {
   if (!ok) {
-    LOG(INFO) << "invocation#" << stream_id_ << " SendResponse: not OK, terminating";
+    OAK_LOG(INFO) << "invocation#" << stream_id_ << " SendResponse: not OK, terminating";
     delete this;
     return;
   }
@@ -174,22 +175,23 @@ void ModuleInvocation::BlockingSendResponse() {
   ReadResult rsp_result;
   // Block until we can read a single queued GrpcResponse message (in serialized form) from the
   // gRPC output channel.
-  LOG(INFO) << "invocation#" << stream_id_ << " SendResponse: do blocking-read on grpc channel";
+  OAK_LOG(INFO) << "invocation#" << stream_id_ << " SendResponse: do blocking-read on grpc channel";
   rsp_result = rsp_half_->BlockingRead(INT_MAX, INT_MAX);
   if (rsp_result.required_size > 0) {
-    LOG(ERROR) << "invocation#" << stream_id_
-               << " SendResponse: Message size too large: " << rsp_result.required_size;
+    OAK_LOG(ERROR) << "invocation#" << stream_id_
+                   << " SendResponse: Message size too large: " << rsp_result.required_size;
     FinishAndCleanUp(grpc::Status(grpc::StatusCode::INTERNAL, "Message size too large"));
     return;
   }
 
-  LOG(INFO) << "invocation#" << stream_id_ << " SendResponse: Read encapsulated message of size "
-            << rsp_result.msg->data.size() << " from gRPC output channel";
+  OAK_LOG(INFO) << "invocation#" << stream_id_
+                << " SendResponse: Read encapsulated message of size "
+                << rsp_result.msg->data.size() << " from gRPC output channel";
   oak::GrpcResponse grpc_response;
   if (!grpc_response.ParseFromString(
           std::string(rsp_result.msg->data.data(), rsp_result.msg->data.size()))) {
-    LOG(ERROR) << "invocation#" << stream_id_
-               << " SendResponse: failed to parse encapsulated message";
+    OAK_LOG(ERROR) << "invocation#" << stream_id_
+                   << " SendResponse: failed to parse encapsulated message";
     FinishAndCleanUp(grpc::Status(grpc::StatusCode::INTERNAL, "Message failed to parse"));
     return;
   }
@@ -202,21 +204,22 @@ void ModuleInvocation::BlockingSendResponse() {
   grpc::WriteOptions options;
   if (!grpc_response.last()) {
     // More response data is expected, so queue up another SendResponse action.
-    LOG(INFO) << "invocation#" << stream_id_ << " SendResponse: Non-final inner response of size "
-              << inner_msg.size() << ", request stream->Write => SendResponse";
+    OAK_LOG(INFO) << "invocation#" << stream_id_
+                  << " SendResponse: Non-final inner response of size " << inner_msg.size()
+                  << ", request stream->Write => SendResponse";
     auto callback = new std::function<void(bool)>(
         std::bind(&ModuleInvocation::SendResponse, this, std::placeholders::_1));
     stream_.Write(bb, options, callback);
   } else if (!grpc_response.has_rsp_msg()) {
     // Final iteration but no response, just Finish.
     google::rpc::Status status = grpc_response.status();
-    LOG(INFO) << "invocation#" << stream_id_ << " SendResponse: Final inner response empty, status "
-              << status.code();
+    OAK_LOG(INFO) << "invocation#" << stream_id_
+                  << " SendResponse: Final inner response empty, status " << status.code();
     FinishAndCleanUp(grpc::Status(static_cast<grpc::StatusCode>(status.code()), status.message()));
   } else {
     // Final response, so WriteAndFinish.
-    LOG(INFO) << "invocation#" << stream_id_ << " SendResponse: Final inner response of size "
-              << inner_msg.size() << ", request stream->WriteAndFinish => CleanUp";
+    OAK_LOG(INFO) << "invocation#" << stream_id_ << " SendResponse: Final inner response of size "
+                  << inner_msg.size() << ", request stream->WriteAndFinish => CleanUp";
     options.set_last_message();
     auto callback = new std::function<void(bool)>(
         std::bind(&ModuleInvocation::CleanUp, this, std::placeholders::_1));
@@ -225,14 +228,14 @@ void ModuleInvocation::BlockingSendResponse() {
 }
 
 void ModuleInvocation::CleanUp(bool /*ok*/) {
-  LOG(INFO) << "invocation#" << stream_id_ << " CleanUp: delete self";
+  OAK_LOG(INFO) << "invocation#" << stream_id_ << " CleanUp: delete self";
   delete this;
 }
 
 void ModuleInvocation::FinishAndCleanUp(const grpc::Status& status) {
   // Finish the current invocation (which triggers self-destruction).
-  LOG(INFO) << "invocation#" << stream_id_
-            << " FinishAndCleanUp: request stream->Finish => CleanUp";
+  OAK_LOG(INFO) << "invocation#" << stream_id_
+                << " FinishAndCleanUp: request stream->Finish => CleanUp";
   auto callback = new std::function<void(bool)>(
       std::bind(&ModuleInvocation::CleanUp, this, std::placeholders::_1));
   stream_.Finish(status, callback);

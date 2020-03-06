@@ -17,7 +17,7 @@
 #include "oak/server/channel.h"
 
 #include "absl/memory/memory.h"
-#include "asylo/util/logging.h"
+#include "oak/common/logging.h"
 
 namespace oak {
 
@@ -36,13 +36,13 @@ int channel_count;
 MessageChannel::MessageChannel() : reader_count_(0), writer_count_(0) {
   absl::MutexLock lock(&channel_count_mu);
   channel_count++;
-  LOG(INFO) << "Channel created, extant count now " << channel_count;
+  OAK_LOG(INFO) << "Channel created, extant count now " << channel_count;
 }
 
 MessageChannel::~MessageChannel() {
   absl::MutexLock lock(&channel_count_mu);
   channel_count--;
-  LOG(INFO) << "Channel destroyed, extant count now " << channel_count;
+  OAK_LOG(INFO) << "Channel destroyed, extant count now " << channel_count;
 }
 
 ChannelReadStatus MessageChannel::ReadStatus(std::weak_ptr<Notification> notify) {
@@ -64,13 +64,13 @@ size_t MessageChannel::Count() const {
 
 void MessageChannel::Write(std::unique_ptr<Message> msg) {
   if (msg == nullptr) {
-    LOG(WARNING) << "Ignoring attempt to write null message";
+    OAK_LOG(WARNING) << "Ignoring attempt to write null message";
     return;
   }
   {
     absl::MutexLock lock(&mu_);
-    LOG(INFO) << "Add message with data size " << msg->data.size() << " and "
-              << msg->channels.size() << " channels";
+    OAK_LOG(INFO) << "Add message with data size " << msg->data.size() << " and "
+                  << msg->channels.size() << " channels";
     msgs_.push_back(std::move(msg));
   }
   TriggerNotifications();
@@ -90,17 +90,17 @@ ReadResult MessageChannel::ReadLocked(uint32_t max_size, uint32_t max_channels) 
   size_t actual_size = next_msg->data.size();
   size_t actual_count = next_msg->channels.size();
   if (actual_size > max_size || actual_count > max_channels) {
-    LOG(INFO) << "Next message of size " << actual_size << " with " << actual_count
-              << " channels, read limited to size " << max_size << " and " << max_channels
-              << " channels";
+    OAK_LOG(INFO) << "Next message of size " << actual_size << " with " << actual_count
+                  << " channels, read limited to size " << max_size << " and " << max_channels
+                  << " channels";
     result.required_size = actual_size;
     result.required_channels = actual_count;
     return result;
   }
   result.msg = std::move(msgs_.front());
   msgs_.pop_front();
-  LOG(INFO) << "Read message of size " << result.msg->data.size() << " with " << actual_count
-            << " channels from channel";
+  OAK_LOG(INFO) << "Read message of size " << result.msg->data.size() << " with " << actual_count
+                << " channels from channel";
   return result;
 }
 
