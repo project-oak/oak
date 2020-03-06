@@ -43,7 +43,7 @@ cc_binary(
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
         "@com_google_absl//absl/strings",
-        "@com_google_asylo//asylo/util:logging",
+        "//oak/common:logging",
     ],
 )
 
@@ -56,6 +56,7 @@ cc_library(
     deps = [
         ":storage_processor",
         "//oak/common:handles",
+        "//oak/common:logging",
         "//oak/proto:grpc_encap_cc_proto",
         "//oak/proto:storage_channel_cc_proto",
         "//oak/server:channel",
@@ -65,7 +66,6 @@ cc_library(
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/status",
-        "@com_google_asylo//asylo/util:logging",
     ],
 )
 
@@ -74,6 +74,7 @@ cc_library(
     srcs = ["storage_processor.cc"],
     hdrs = ["storage_processor.h"],
     deps = [
+        "//oak/common:logging",
         "//oak/proto:storage_cc_grpc",
         "//oak/proto:storage_channel_cc_proto",
         "//third_party/asylo:status_macros",
@@ -107,9 +108,9 @@ cc_library(
     ],
     deps = [
         ":storage_provider",
+        "//oak/common:logging",
         "//oak/proto:storage_cc_grpc",
         "@com_github_grpc_grpc//:grpc++",
-        "@com_google_asylo//asylo/util:logging",
     ],
 )
 
@@ -124,8 +125,8 @@ cc_library(
 #    ],
 #    deps = [
 #        ":storage_provider",
+#        "//oak/common:logging",
 #        "@com_github_grpc_grpc//:grpc++",
-#        "@com_google_asylo//asylo/util:logging",
 #        # TODO: Fix grpc::Status.
 #        #        "@com_google_googleapis//google/spanner/v1:spanner_cc_grpc",
 #    ],
@@ -137,8 +138,8 @@ cc_library(
     hdrs = ["memory_provider.h"],
     deps = [
         ":storage_provider",
+        "//oak/common:logging",
         "@com_google_absl//absl/strings",
-        "@com_google_asylo//asylo/util:logging",
     ],
 )
 

@@ -19,8 +19,8 @@
 #include "absl/memory/memory.h"
 #include "absl/strings/escaping.h"
 #include "asylo/util/cleansing_types.h"
-#include "asylo/util/logging.h"
 #include "grpcpp/create_channel.h"
+#include "oak/common/logging.h"
 #include "oak/proto/grpc_encap.pb.h"
 #include "oak/proto/storage_channel.pb.h"
 #include "oak/server/invocation.h"
@@ -36,31 +36,31 @@ void StorageNode::Run(Handle invocation_handle) {
   // Borrow a pointer to the relevant channel half.
   MessageChannelReadHalf* invocation_channel = BorrowReadChannel(invocation_handle);
   if (invocation_channel == nullptr) {
-    LOG(ERROR) << "Required channel not available; handle: " << invocation_handle;
+    OAK_LOG(ERROR) << "Required channel not available; handle: " << invocation_handle;
     return;
   }
   std::vector<std::unique_ptr<ChannelStatus>> channel_status;
   channel_status.push_back(absl::make_unique<ChannelStatus>(invocation_handle));
   while (true) {
     if (!WaitOnChannels(&channel_status)) {
-      LOG(WARNING) << "Node termination requested";
+      OAK_LOG(WARNING) << "Node termination requested";
       return;
     }
 
     std::unique_ptr<Invocation> invocation(Invocation::ReceiveFromChannel(invocation_channel));
     if (invocation == nullptr) {
-      LOG(ERROR) << "Failed to create invocation";
+      OAK_LOG(ERROR) << "Failed to create invocation";
       return;
     }
 
     // Expect to read a single request out of the request channel.
     ReadResult req_result = invocation->req_channel->Read(INT_MAX, INT_MAX);
     if (req_result.required_size > 0) {
-      LOG(ERROR) << "Message size too large: " << req_result.required_size;
+      OAK_LOG(ERROR) << "Message size too large: " << req_result.required_size;
       return;
     }
     if (req_result.msg->channels.size() != 0) {
-      LOG(ERROR) << "Unexpectedly received channel handles in request channel";
+      OAK_LOG(ERROR) << "Unexpectedly received channel handles in request channel";
       return;
     }
     GrpcRequest grpc_req;
@@ -69,8 +69,8 @@ void StorageNode::Run(Handle invocation_handle) {
     std::unique_ptr<GrpcResponse> grpc_rsp;
     oak::StatusOr<std::unique_ptr<GrpcResponse>> rsp_or = ProcessMethod(&grpc_req);
     if (!rsp_or.ok()) {
-      LOG(ERROR) << "Failed to perform " << grpc_req.method_name() << ": " << rsp_or.status().code()
-                 << ", '" << rsp_or.status().message() << "'";
+      OAK_LOG(ERROR) << "Failed to perform " << grpc_req.method_name() << ": "
+                     << rsp_or.status().code() << ", '" << rsp_or.status().message() << "'";
       grpc_rsp = absl::make_unique<GrpcResponse>();
       grpc_rsp->mutable_status()->set_code(static_cast<int>(rsp_or.status().code()));
       grpc_rsp->mutable_status()->set_message(std::string(rsp_or.status().message()));
@@ -155,7 +155,7 @@ oak::StatusOr<std::unique_ptr<GrpcResponse>> StorageNode::ProcessMethod(GrpcRequ
     OAK_RETURN_IF_ERROR(
         storage_processor_.Rollback(rollback_req.storage_name(), rollback_req.transaction_id()));
   } else {
-    LOG(ERROR) << "unknown operation " << method_name;
+    OAK_LOG(ERROR) << "unknown operation " << method_name;
     return absl::Status(absl::StatusCode::kInvalidArgument, "Unknown operation request method.");
   }
   return std::move(grpc_rsp);

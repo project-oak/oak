@@ -26,6 +26,7 @@
 #include "asylo/crypto/nonce_generator.h"
 #include "asylo/util/cleansing_types.h"
 #include "grpcpp/create_channel.h"
+#include "oak/common/logging.h"
 #include "third_party/asylo/status_macros.h"
 
 namespace oak {
