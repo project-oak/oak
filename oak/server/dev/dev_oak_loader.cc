@@ -15,12 +15,13 @@
  */
 
 #include "oak/server/dev/dev_oak_loader.h"
+
 #include "absl/memory/memory.h"
 #include "asylo/grpc/auth/enclave_server_credentials.h"
 #include "asylo/identity/descriptions.h"
 #include "asylo/identity/init.h"
-#include "asylo/util/logging.h"
 #include "include/grpcpp/grpcpp.h"
+#include "oak/common/logging.h"
 
 namespace oak {
 
@@ -28,7 +29,7 @@ DevOakLoader::DevOakLoader() { InitializeAssertionAuthorities(); }
 
 grpc::Status DevOakLoader::CreateApplication(
     const oak::ApplicationConfiguration& application_configuration) {
-  LOG(INFO) << "Creating an Oak application";
+  OAK_LOG(INFO) << "Creating an Oak application";
 
   auto runtime = absl::make_unique<OakRuntime>();
   auto status = runtime->Initialize(application_configuration);
@@ -45,10 +46,10 @@ grpc::Status DevOakLoader::CreateApplication(
 grpc::Status DevOakLoader::TerminateApplication() {
   if (runtime_ == nullptr) {
     std::string error = "Terminating a non-existent application";
-    LOG(ERROR) << error;
+    OAK_LOG(ERROR) << error;
     return grpc::Status(grpc::StatusCode::INTERNAL, error);
   }
-  LOG(INFO) << "Terminating an Oak application";
+  OAK_LOG(INFO) << "Terminating an Oak application";
 
   runtime_->Stop();
   return grpc::Status::OK;
@@ -58,7 +59,7 @@ grpc::Status DevOakLoader::TerminateApplication() {
 // This allows us to use the same client code to connect to the runtime, and it will potentially
 // allow us to use non-enclave identities in the future.
 void DevOakLoader::InitializeAssertionAuthorities() {
-  LOG(INFO) << "Initializing assertion authorities";
+  OAK_LOG(INFO) << "Initializing assertion authorities";
   asylo::EnclaveAssertionAuthorityConfig null_config;
   asylo::SetNullAssertionDescription(null_config.mutable_description());
   std::vector<asylo::EnclaveAssertionAuthorityConfig> configs = {
@@ -67,9 +68,9 @@ void DevOakLoader::InitializeAssertionAuthorities() {
   asylo::Status status =
       asylo::InitializeEnclaveAssertionAuthorities(configs.begin(), configs.end());
   if (!status.ok()) {
-    LOG(QFATAL) << "Could not initialize assertion authorities";
+    OAK_LOG(QFATAL) << "Could not initialize assertion authorities";
   }
-  LOG(INFO) << "Assertion authorities initialized";
+  OAK_LOG(INFO) << "Assertion authorities initialized";
 }
 
 }  // namespace oak
