@@ -22,7 +22,6 @@ extern crate no_std_compat as std;
 #[cfg(feature = "std")]
 pub mod proto;
 
-// pub mod channel;
 #[cfg(feature = "std")]
 pub mod config;
 pub mod message;

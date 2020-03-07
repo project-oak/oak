@@ -47,7 +47,6 @@ pub struct Runtime {
     configurations: HashMap<String, node::Configuration>,
     terminating: AtomicBool,
     channels: Mutex<Channels>,
-    // nodes:          Nodes,
     node_threads: Mutex<Vec<JoinHandle>>,
 }
 
@@ -99,8 +98,8 @@ impl Runtime {
         }
     }
 
+    /// Creates a new channel.
     pub fn new_channel(&self) -> (ChannelWriter, ChannelReader) {
-        // TODO: channel::new could take id or pretty name here
         let (c, w, r) = channel::new();
         let mut channels = self.channels.lock().unwrap();
         channels.push(Arc::downgrade(&c));
@@ -108,7 +107,7 @@ impl Runtime {
     }
 
     /// Reads the statuses from a slice of `Option<&ChannelReader>`s.
-    /// `ChannelReadStatus::InvalidChannel` is set for `None` readers in the slice. For `Some(_)`
+    /// [`ChannelReadStatus::InvalidChannel`] is set for `None` readers in the slice. For `Some(_)`
     /// readers, the result is set from a call to `has_message`.
     fn readers_statuses(&self, readers: &[Option<&ChannelReader>]) -> Vec<ChannelReadStatus> {
         readers
@@ -184,7 +183,7 @@ impl Runtime {
         Err(OakStatus::ErrTerminated)
     }
 
-    /// Write a message to a channel. Fails with `OakStatus::ErrChannelClosed` if the underlying
+    /// Write a message to a channel. Fails with [`OakStatus::ErrChannelClosed`] if the underlying
     /// channel has been orphaned.
     pub fn channel_write(&self, channel: &ChannelWriter, msg: Message) -> Result<(), OakStatus> {
         if channel.is_orphan() {
@@ -219,7 +218,7 @@ impl Runtime {
         Ok(())
     }
 
-    /// Thread safe. Read a message from a channel. Fails with `OakStatus::ErrChannelClosed` if
+    /// Thread safe. Read a message from a channel. Fails with [`OakStatus::ErrChannelClosed`] if
     /// the underlying channel is empty and has been orphaned.
     pub fn channel_read(&self, channel: &ChannelReader) -> Result<Option<Message>, OakStatus> {
         let mut messages = channel.messages.write().unwrap();
@@ -236,9 +235,9 @@ impl Runtime {
     }
 
     /// Thread safe. This function will return:
-    /// - `ReadReady` if there is at least one message in the channel.
-    /// - `Orphaned` if there are no messages and there are no writers
-    /// - `NOT_READ` if there are no messages but there are some writers
+    /// - [`ChannelReadStatus::ReadReady`] if there is at least one message in the channel.
+    /// - [`ChannelReadStatus::Orphaned`] if there are no messages and there are no writers
+    /// - [`ChannelReadStatus::NotReady`] if there are no messages but there are some writers
     pub fn channel_status(&self, channel: &ChannelReader) -> ChannelReadStatus {
         let messages = channel.messages.read().unwrap();
         if messages.front().is_some() {
