@@ -55,6 +55,13 @@ if [[ -z "${EXAMPLE+z}" ]]; then
   exit 1
 fi
 
+if [[ "${server}" == "tsan" ]]; then
+  # Set flags for TSAN runs (https://github.com/google/sanitizers/wiki/ThreadSanitizerFlags):
+  #  - exit on error
+  #  - don't check atomics (false positive on absl::MutexLock, github.com/google/sanitizers/issues/953)
+  export TSAN_OPTIONS="halt_on_error=1 report_atomic_races=0"
+fi
+
 if [[ "${server}" != "none" ]]; then
   "${SCRIPTS_DIR}/build_example" ${buildargs} -l "${language}" -e "${EXAMPLE}"
 
