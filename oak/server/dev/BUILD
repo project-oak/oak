@@ -39,7 +39,6 @@ cc_library(
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/strings",
-        "@com_google_asylo//asylo/grpc/auth:null_credentials_options",
         "@com_google_asylo//asylo/identity:init",
         "@com_google_asylo//asylo/util:logging",
     ],
