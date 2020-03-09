@@ -23,8 +23,8 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":cleanup",
+        "//oak/common:logging",
         "@com_google_absl//absl/status",
-        "@com_google_asylo//asylo/util:logging",
     ],
 )
 
