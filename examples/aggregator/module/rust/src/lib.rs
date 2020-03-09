@@ -48,68 +48,23 @@ pub struct AggregatorNode {
 }
 
 impl AggregatorNode {
-    fn submit_sparse_vector(
-        &mut self,
-        bucket: &String,
-        svec: &SparseVector,
-    ) -> Result<(), String> {
-        // let mut aggregator = self.aggregators.entry(bucket.to_string()).map_or(
-        //     Err("Outdated bucket: {}", bucket),
-        //     |entry| {
-        //         entry
-        //             .and_modify(|aggregator| {
-        //                 aggregator.submit(svec);
-        //             })
-        //             .or_insert({
-        //                 let mut aggregator =
-        //                     ThresholdAggregator::<SparseVector>::new(SAMPLE_THRESHOLD);
-        //                 aggregator.submit(svec);
-        //                 aggregator
-        //             })
-        //     },
-        // );
-        // if let Some(aggregated_data) = aggregator.take() {
-        //     aggregator = None;
-        //     self.send_aggregated_data(&bucket, aggregated_data);
-        // }
-
-
-
-        // self.aggregators
-        //     .entry(bucket.to_string())
-        //     .and_modify(|aggregator| {
-        //         aggregator.map_or()
-        //         aggregator.submit(svec);
-
-        //         if let Some(aggregated_data) = aggregator.take() {
-        //             aggregator = None;
-        //             self.send_aggregated_data(&bucket, aggregated_data);
-        //         }
-        //     })
-        //     .or_insert({
-        //         let mut aggregator =
-        //             ThresholdAggregator::<SparseVector>::new(SAMPLE_THRESHOLD);
-        //         aggregator.submit(svec);
-        //         aggregator
-        //     })
-
-        match self.aggregators.get(bucket) {
-            Some(entry) => {
-                match entry {
-                    Some(aggregator) => {
-                        aggregator.submit(svec);
-                        if let Some(aggregated_data) = aggregator.take() {
-                            *entry = None;
-                            self.send_aggregated_data(&bucket, aggregated_data);
-                        }
-                    },
-                    None => Err(format!("Outdated bucket: {}", bucket))?
+    fn submit_sparse_vector(&mut self, bucket: &String, svec: &SparseVector) -> Result<(), String> {
+        match self.aggregators.get_mut(bucket) {
+            Some(entry) => match *entry {
+                Some(ref mut aggregator) => {
+                    aggregator.submit(svec);
+                    if let Some(aggregated_data) = aggregator.take() {
+                        *entry = None;
+                        self.send_aggregated_data(&bucket, aggregated_data);
+                    }
                 }
+                None => Err(format!("Outdated bucket: {}", bucket))?,
             },
             None => {
                 let mut aggregator = ThresholdAggregator::<SparseVector>::new(SAMPLE_THRESHOLD);
                 aggregator.submit(svec);
-                self.aggregators.insert(*bucket, Some(aggregator));
+                self.aggregators
+                    .insert(bucket.to_string(), Some(aggregator));
             }
         }
         Ok(())
