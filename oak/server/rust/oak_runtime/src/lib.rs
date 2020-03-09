@@ -22,7 +22,6 @@ extern crate no_std_compat as std;
 #[cfg(feature = "std")]
 pub mod proto;
 
-pub mod channel;
 #[cfg(feature = "std")]
 pub mod config;
 pub mod message;
@@ -37,6 +36,5 @@ pub use config::application_configuration;
 #[cfg(feature = "std")]
 pub use config::configure_and_run;
 
-pub use channel::{ChannelEither, ChannelReader, ChannelWriter};
 pub use message::Message;
-pub use runtime::{Runtime, RuntimeRef};
+pub use runtime::{ChannelEither, ChannelReader, ChannelWriter, Runtime, RuntimeRef};

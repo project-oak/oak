@@ -21,12 +21,17 @@ use protobuf::well_known_types::Empty;
 
 const MODULE_CONFIG_NAME: &str = "aggregator";
 
-fn submit_sample(entry_channel: &oak_runtime::ChannelWriter, items: Vec<u64>) {
+fn submit_sample(
+    runtime: &oak_runtime::RuntimeRef,
+    entry_channel: &oak_runtime::ChannelWriter,
+    items: Vec<u64>,
+) {
     let req = Vector {
         items,
         ..Default::default()
     };
     let result: grpc::Result<Empty> = oak_tests::grpc_request(
+        runtime,
         &entry_channel,
         "/oak.examples.aggregator.Aggregator/SubmitSample",
         req,
@@ -41,11 +46,12 @@ fn test_aggregator() {
     let (runtime, entry_channel) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
         .expect("Unable to configure runtime with test wasm!");
 
-    submit_sample(&entry_channel, vec![0, 1, 0, 1, 0]);
-    submit_sample(&entry_channel, vec![1, 0, 1, 0, 1]);
+    submit_sample(&runtime, &entry_channel, vec![0, 1, 0, 1, 0]);
+    submit_sample(&runtime, &entry_channel, vec![1, 0, 1, 0, 1]);
     {
         let req = Empty::new();
         let result: grpc::Result<Vector> = oak_tests::grpc_request(
+            &runtime,
             &entry_channel,
             "/oak.examples.aggregator.Aggregator/GetCurrentValue",
             req,
@@ -53,10 +59,11 @@ fn test_aggregator() {
         assert_matches!(result, Err(_));
     }
 
-    submit_sample(&entry_channel, vec![1, 1, 1, 1, 1]);
+    submit_sample(&runtime, &entry_channel, vec![1, 1, 1, 1, 1]);
     {
         let req = Empty::new();
         let result: grpc::Result<Vector> = oak_tests::grpc_request(
+            &runtime,
             &entry_channel,
             "/oak.examples.aggregator.Aggregator/GetCurrentValue",
             req,

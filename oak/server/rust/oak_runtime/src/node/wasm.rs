@@ -29,7 +29,7 @@ use wasmi::ValueType;
 use oak_abi::{ChannelReadStatus, OakStatus};
 use oak_platform::{current_thread, spawn, JoinHandle};
 
-use crate::channel::{ChannelEither, ChannelReader, ChannelWriter, ReadStatus};
+use crate::runtime::{ChannelEither, ChannelReader, ChannelWriter, ReadStatus};
 use crate::{Message, RuntimeRef};
 
 /// These number mappings are not exposed to the Wasm client, and are only used by `wasmi` to map
@@ -215,7 +215,7 @@ impl WasmInterface {
         write_addr: AbiPointer,
         read_addr: AbiPointer,
     ) -> Result<(), OakStatus> {
-        let (writer, reader) = crate::channel::new();
+        let (writer, reader) = self.runtime.new_channel();
 
         self.validate_ptr(write_addr, 8)?;
         self.validate_ptr(read_addr, 8)?;
@@ -305,7 +305,7 @@ impl WasmInterface {
             channels: channels?,
         };
 
-        writer.write(msg)?;
+        self.runtime.channel_write(writer, msg)?;
 
         Ok(())
     }
@@ -333,7 +333,11 @@ impl WasmInterface {
         self.validate_ptr(dest, dest_capacity)?;
         self.validate_ptr(handles_dest, handles_capcity * 8)?;
 
-        let msg = reader.try_read_message(dest_capacity as usize, handles_capcity as usize)?;
+        let msg = self.runtime.channel_try_read_message(
+            reader,
+            dest_capacity as usize,
+            handles_capcity as usize,
+        )?;
 
         let (actual_length, actual_handle_count) = match &msg {
             None => (0, 0),
@@ -443,7 +447,7 @@ impl WasmInterface {
             })
             .collect();
 
-        let statuses = crate::channel::wait_on_channels(&self.runtime, &channels)?;
+        let statuses = self.runtime.wait_on_channels(&channels)?;
 
         for (i, &status) in statuses.iter().enumerate() {
             self.get_memory()

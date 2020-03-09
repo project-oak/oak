@@ -34,6 +34,7 @@ fn test_translate() {
         ..Default::default()
     };
     let result: grpc::Result<TranslateResponse> = oak_tests::grpc_request(
+        &runtime,
         &entry_channel,
         "/oak.examples.translator.Translator/Translate",
         req,

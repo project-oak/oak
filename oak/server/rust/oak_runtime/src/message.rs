@@ -16,7 +16,7 @@
 
 use std::prelude::v1::*;
 
-pub use crate::channel::ChannelEither;
+pub use crate::runtime::ChannelEither;
 
 /// Encapsulates a message consisting of opaque data bytes and a vector of channels.
 /// The data bytes should not contain any pointers or handles.
