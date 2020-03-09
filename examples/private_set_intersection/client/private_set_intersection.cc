@@ -38,8 +38,8 @@ void SubmitSet(PrivateSetIntersection::Stub* stub, std::vector<std::string> set)
   google::protobuf::Empty response;
   grpc::Status status = stub->SubmitSet(&context, request, &response);
   if (!status.ok()) {
-    OAK_LOG(QFATAL) << "Could not submit set: " << status.error_code() << ": "
-                    << status.error_message();
+    OAK_LOG(FATAL) << "Could not submit set: " << status.error_code() << ": "
+                   << status.error_message();
   }
 }
 
@@ -50,8 +50,8 @@ std::vector<std::string> RetrieveIntersection(PrivateSetIntersection::Stub* stub
   GetIntersectionResponse response;
   grpc::Status status = stub->GetIntersection(&context, request, &response);
   if (!status.ok()) {
-    OAK_LOG(QFATAL) << "Could not retrieve intersection: " << status.error_code() << ": "
-                    << status.error_message();
+    OAK_LOG(FATAL) << "Could not retrieve intersection: " << status.error_code() << ": "
+                   << status.error_message();
   }
   for (auto item : response.values()) {
     values.push_back(item);

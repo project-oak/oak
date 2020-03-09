@@ -77,18 +77,18 @@ int main(int argc, char** argv) {
   for (const std::string& item : absl::GetFlag(FLAGS_data)) {
     std::vector<std::string> item_pair = absl::StrSplit(item, ':');
     if (item_pair.size() != 2) {
-      OAK_LOG(QFATAL) << "Incorrect data specification: " << item;
+      OAK_LOG(FATAL) << "Incorrect data specification: " << item;
     }
 
     uint32_t index;
     if (!absl::SimpleAtoi(item_pair.front(), &index)) {
-      OAK_LOG(QFATAL) << "Incorrect index: " << item_pair.front();
+      OAK_LOG(FATAL) << "Incorrect index: " << item_pair.front();
     }
     indices.push_back(index);
 
     float value;
     if (!absl::SimpleAtof(item_pair.back(), &value)) {
-      OAK_LOG(QFATAL) << "Incorrect value: " << item_pair.back();
+      OAK_LOG(FATAL) << "Incorrect value: " << item_pair.back();
     }
     values.push_back(value);
   }

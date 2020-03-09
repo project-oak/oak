@@ -32,7 +32,7 @@ std::unique_ptr<Message> Unwrap(const grpc::ByteBuffer& buffer) {
   std::vector<::grpc::Slice> slices;
   grpc::Status status = buffer.Dump(&slices);
   if (!status.ok()) {
-    OAK_LOG(QFATAL) << "Could not unwrap buffer";
+    OAK_LOG(FATAL) << "Could not unwrap buffer";
   }
   auto msg = absl::make_unique<Message>();
   for (const auto& slice : slices) {
