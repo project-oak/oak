@@ -29,6 +29,8 @@ use prost::Message;
 use hashbrown::HashSet;
 
 /// A trait representing a label as part of a lattice.
+///
+/// See https://github.com/project-oak/oak/blob/master/docs/concepts.md#labels
 pub trait Label: Sized {
     /// Convert the label to bytes.
     fn serialize(&self) -> Vec<u8>;
@@ -37,7 +39,7 @@ pub trait Label: Sized {
     fn deserialize(bytes: &[u8]) -> Option<Self>;
 
     /// Compare two labels according to the lattice structure: L_0 ⊑ L_1.
-    fn can_flow_to(&self, other: &Self) -> bool;
+    fn flows_to(&self, other: &Self) -> bool;
 }
 
 impl Label for crate::proto::policy::Label {
@@ -51,7 +53,7 @@ impl Label for crate::proto::policy::Label {
         Self::decode(bytes).ok()
     }
 
-    fn can_flow_to(&self, other: &Self) -> bool {
+    fn flows_to(&self, other: &Self) -> bool {
         #![allow(clippy::mutable_key_type)]
 
         let self_secrecy_tags: HashSet<_> = self.secrecy_tags.iter().collect();
@@ -177,37 +179,37 @@ mod tests {
         //          public_trusted
 
         // Data with any label can flow to the same label.
-        assert_eq!(true, public_trusted.can_flow_to(&public_trusted));
-        assert_eq!(true, label_0.can_flow_to(&label_0));
-        assert_eq!(true, label_1.can_flow_to(&label_1));
-        assert_eq!(true, label_0_1.can_flow_to(&label_0_1));
-        assert_eq!(true, label_1_0.can_flow_to(&label_1_0));
+        assert_eq!(true, public_trusted.flows_to(&public_trusted));
+        assert_eq!(true, label_0.flows_to(&label_0));
+        assert_eq!(true, label_1.flows_to(&label_1));
+        assert_eq!(true, label_0_1.flows_to(&label_0_1));
+        assert_eq!(true, label_1_0.flows_to(&label_1_0));
 
         // label_0_1 and label_1_0 are effectively the same label, since the order of tags does not
         // matter.
-        assert_eq!(true, label_0_1.can_flow_to(&label_1_0));
-        assert_eq!(true, label_1_0.can_flow_to(&label_0_1));
+        assert_eq!(true, label_0_1.flows_to(&label_1_0));
+        assert_eq!(true, label_1_0.flows_to(&label_0_1));
 
         // public_trusted data can flow to more private data;
-        assert_eq!(true, public_trusted.can_flow_to(&label_0));
-        assert_eq!(true, public_trusted.can_flow_to(&label_1));
-        assert_eq!(true, public_trusted.can_flow_to(&label_0_1));
+        assert_eq!(true, public_trusted.flows_to(&label_0));
+        assert_eq!(true, public_trusted.flows_to(&label_1));
+        assert_eq!(true, public_trusted.flows_to(&label_0_1));
 
         // Private data cannot flow to public_trusted.
-        assert_eq!(false, label_0.can_flow_to(&public_trusted));
-        assert_eq!(false, label_1.can_flow_to(&public_trusted));
-        assert_eq!(false, label_0_1.can_flow_to(&public_trusted));
+        assert_eq!(false, label_0.flows_to(&public_trusted));
+        assert_eq!(false, label_1.flows_to(&public_trusted));
+        assert_eq!(false, label_0_1.flows_to(&public_trusted));
 
         // Private data with non-comparable labels cannot flow to each other.
-        assert_eq!(false, label_0.can_flow_to(&label_1));
-        assert_eq!(false, label_1.can_flow_to(&label_0));
+        assert_eq!(false, label_0.flows_to(&label_1));
+        assert_eq!(false, label_1.flows_to(&label_0));
 
         // Private data can flow to even more private data.
-        assert_eq!(true, label_0.can_flow_to(&label_0_1));
-        assert_eq!(true, label_1.can_flow_to(&label_0_1));
+        assert_eq!(true, label_0.flows_to(&label_0_1));
+        assert_eq!(true, label_1.flows_to(&label_0_1));
 
         // And vice versa.
-        assert_eq!(false, label_0_1.can_flow_to(&label_0));
-        assert_eq!(false, label_0_1.can_flow_to(&label_1));
+        assert_eq!(false, label_0_1.flows_to(&label_0));
+        assert_eq!(false, label_0_1.flows_to(&label_1));
     }
 }
