@@ -36,8 +36,8 @@ void format(FormatService::Stub* stub, std::string code) {
   FormatResponse response;
   grpc::Status status = stub->Format(&context, request, &response);
   if (!status.ok()) {
-    OAK_LOG(QFATAL) << "Could not call Format: " << status.error_code() << ": "
-                    << status.error_message();
+    OAK_LOG(FATAL) << "Could not call Format: " << status.error_code() << ": "
+                   << status.error_message();
   }
   OAK_LOG(INFO) << "Response: " << response.code();
 }

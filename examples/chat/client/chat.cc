@@ -71,7 +71,7 @@ void ListenLoop(Chat::Stub* stub, const RoomId& room_id, const std::string& user
   req.set_room_id(room_id);
   auto reader = stub->Subscribe(&context, req);
   if (reader == nullptr) {
-    OAK_LOG(QFATAL) << "Could not call Subscribe";
+    OAK_LOG(FATAL) << "Could not call Subscribe";
   }
   Message msg;
   while (reader->Read(&msg)) {
@@ -147,8 +147,8 @@ class Room {
     google::protobuf::Empty rsp;
     grpc::Status status = stub_->CreateRoom(&context, req_, &rsp);
     if (!status.ok()) {
-      OAK_LOG(QFATAL) << "Could not CreateRoom('" << absl::Base64Escape(room_id_string)
-                      << "'): " << status.error_code() << ": " << status.error_message();
+      OAK_LOG(FATAL) << "Could not CreateRoom('" << absl::Base64Escape(room_id_string)
+                     << "'): " << status.error_code() << ": " << status.error_message();
     }
   }
   ~Room() {
@@ -182,7 +182,7 @@ int main(int argc, char** argv) {
   // TODO(#488): Use the token provided on command line for authorization and labelling of data.
   auto stub = Chat::NewStub(oak::ApplicationClient::CreateChannel(address));
   if (stub == nullptr) {
-    OAK_LOG(QFATAL) << "Failed to create application stub";
+    OAK_LOG(FATAL) << "Failed to create application stub";
   }
 
   if (absl::GetFlag(FLAGS_test)) {
@@ -192,7 +192,7 @@ int main(int argc, char** argv) {
 
   RoomId room_id;
   if (!absl::Base64Unescape(absl::GetFlag(FLAGS_room_id), &room_id)) {
-    OAK_LOG(QFATAL) << "Failed to parse --room_id as base 64";
+    OAK_LOG(FATAL) << "Failed to parse --room_id as base 64";
   }
   std::unique_ptr<Room> room;
   if (room_id.empty()) {

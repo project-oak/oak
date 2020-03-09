@@ -610,7 +610,7 @@ wabt::interp::HostFunc::Callback WasmNode::WasiPlaceholder() {
   return [this](const wabt::interp::HostFunc* func, const wabt::interp::FuncSignature*,
                 const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
     LogHostFunctionCall(name_, func, args);
-    OAK_LOG(QFATAL) << "{" << name_ << "} WASI is not implemented";
+    OAK_LOG(FATAL) << "{" << name_ << "} WASI is not implemented";
     results[0].set_i32(OakStatus::ERR_INTERNAL);
     return wabt::interp::Result::TrapUnreachable;
   };

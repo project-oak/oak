@@ -36,8 +36,8 @@ void submit_sample(RunningAverage::Stub* stub, int sample_value) {
   google::protobuf::Empty response;
   grpc::Status status = stub->SubmitSample(&context, request, &response);
   if (!status.ok()) {
-    OAK_LOG(QFATAL) << "Could not submit sample: " << status.error_code() << ": "
-                    << status.error_message();
+    OAK_LOG(FATAL) << "Could not submit sample: " << status.error_code() << ": "
+                   << status.error_message();
   }
 }
 
@@ -47,8 +47,8 @@ int retrieve_average(RunningAverage::Stub* stub) {
   GetAverageResponse response;
   grpc::Status status = stub->GetAverage(&context, request, &response);
   if (!status.ok()) {
-    OAK_LOG(QFATAL) << "Could not retrieve average: " << status.error_code() << ": "
-                    << status.error_message();
+    OAK_LOG(FATAL) << "Could not retrieve average: " << status.error_code() << ": "
+                   << status.error_message();
   }
   return response.average();
 }

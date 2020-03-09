@@ -49,7 +49,7 @@ std::unique_ptr<OakGrpcNode> OakGrpcNode::Create(BaseRuntime* runtime, const std
 
   node->server_ = builder.BuildAndStart();
   if (!node->server_) {
-    OAK_LOG(QFATAL) << "Failed to start gRPC server";
+    OAK_LOG(FATAL) << "Failed to start gRPC server";
     return nullptr;
   }
 

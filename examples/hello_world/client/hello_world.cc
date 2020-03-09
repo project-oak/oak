@@ -36,8 +36,8 @@ void say_hello(HelloWorld::Stub* stub, std::string name) {
   HelloResponse response;
   grpc::Status status = stub->SayHello(&context, request, &response);
   if (!status.ok()) {
-    OAK_LOG(QFATAL) << "Could not call SayHello('" << name << "'): " << status.error_code() << ": "
-                    << status.error_message();
+    OAK_LOG(FATAL) << "Could not call SayHello('" << name << "'): " << status.error_code() << ": "
+                   << status.error_message();
   }
   OAK_LOG(INFO) << "Response: " << response.reply();
 }
@@ -49,7 +49,7 @@ void lots_of_replies(HelloWorld::Stub* stub, std::string name) {
   OAK_LOG(INFO) << "Request: " << request.greeting();
   auto reader = stub->LotsOfReplies(&context, request);
   if (reader == nullptr) {
-    OAK_LOG(QFATAL) << "Could not call LotsOfReplies";
+    OAK_LOG(FATAL) << "Could not call LotsOfReplies";
   }
   HelloResponse response;
   while (reader->Read(&response)) {

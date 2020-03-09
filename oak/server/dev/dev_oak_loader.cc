@@ -68,7 +68,7 @@ void DevOakLoader::InitializeAssertionAuthorities() {
   asylo::Status status =
       asylo::InitializeEnclaveAssertionAuthorities(configs.begin(), configs.end());
   if (!status.ok()) {
-    OAK_LOG(QFATAL) << "Could not initialize assertion authorities";
+    OAK_LOG(FATAL) << "Could not initialize assertion authorities";
   }
   OAK_LOG(INFO) << "Assertion authorities initialized";
 }
