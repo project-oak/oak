@@ -28,20 +28,22 @@ class StorageProcessor {
  public:
   explicit StorageProcessor(const std::string& storage_address);
 
-  void Read(const std::string& storage_name, const std::string& item_name,
-            const std::string& transaction_id, std::string* item_value);
+  // Returns item value on success.
+  asylo::StatusOr<std::string> Read(const std::string& storage_name, const std::string& item_name,
+                                    const std::string& transaction_id);
 
-  void Write(const std::string& storage_name, const std::string& item_name,
-             const std::string& item_value, const std::string& transaction_id);
+  asylo::Status Write(const std::string& storage_name, const std::string& item_name,
+                      const std::string& item_value, const std::string& transaction_id);
 
-  void Delete(const std::string& storage_name, const std::string& item_name,
-              const std::string& transaction_id);
+  asylo::Status Delete(const std::string& storage_name, const std::string& item_name,
+                       const std::string& transaction_id);
 
-  void Begin(const std::string& storage_name, std::string* transaction_id);
+  // Returns transaction ID on success.
+  asylo::StatusOr<std::string> Begin(const std::string& storage_name);
 
-  void Commit(const std::string& storage_name, const std::string& transaction_id);
+  asylo::Status Commit(const std::string& storage_name, const std::string& transaction_id);
 
-  void Rollback(const std::string& storage_name, const std::string& transaction_id);
+  asylo::Status Rollback(const std::string& storage_name, const std::string& transaction_id);
 
  private:
   enum class ItemType : int { NAME, VALUE };

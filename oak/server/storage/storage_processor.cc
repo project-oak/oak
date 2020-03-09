@@ -34,6 +34,18 @@ namespace {
 
 constexpr size_t kMaxMessageSize = 1 << 16;
 
+// If a gRPC client method returns an error, convert it to an asylo::Status
+// and return it. Analogous to the ASYLO_RETURN_IF_ERROR macro from
+// asylo/util/status_macros.h, but copes with a grpc::Status instead of an
+// asylo::Status.
+#define RETURN_IF_GRPC_ERROR(expr)                         \
+  do {                                                     \
+    auto _oak_status_to_verify = (expr);                   \
+    if (ABSL_PREDICT_FALSE(!_oak_status_to_verify.ok())) { \
+      return asylo::Status(_oak_status_to_verify);         \
+    }                                                      \
+  } while (false)
+
 std::string GetStorageId(const std::string& storage_name) {
   // TODO: Generate name-based UUID.
   return storage_name;
@@ -137,103 +149,92 @@ const asylo::StatusOr<std::string> StorageProcessor::DecryptItem(const std::stri
   return std::string(item_decrypted.data(), item_decrypted.size());
 }
 
-void StorageProcessor::Read(const std::string& storage_name, const std::string& item_name,
-                            const std::string& transaction_id, std::string* item_value) {
-  CHECK(item_value != nullptr);
-
+asylo::StatusOr<std::string> StorageProcessor::Read(const std::string& storage_name,
+                                                    const std::string& item_name,
+                                                    const std::string& transaction_id) {
   StorageReadRequest read_request;
   read_request.set_storage_id(GetStorageId(storage_name));
   if (!transaction_id.empty()) {
     read_request.set_transaction_id(transaction_id);
   }
-  // TODO(650): Propagate error status.
-  asylo::StatusOr<std::string> name_or = EncryptItem(item_name, ItemType::NAME);
-  read_request.set_item_name(name_or.ValueOrDie());
+  std::string name;
+  ASYLO_ASSIGN_OR_RETURN(name, EncryptItem(item_name, ItemType::NAME));
+  read_request.set_item_name(name);
 
   grpc::ClientContext context;
   StorageReadResponse read_response;
-  grpc::Status status = storage_service_->Read(&context, read_request, &read_response);
-  // TODO(650): Propagate error status.
-  if (status.ok()) {
-    asylo::StatusOr<std::string> value_or =
-        DecryptItem(read_response.item_value(), ItemType::VALUE);
-    *item_value = value_or.ValueOrDie();
-  }
+  RETURN_IF_GRPC_ERROR(storage_service_->Read(&context, read_request, &read_response));
+  return DecryptItem(read_response.item_value(), ItemType::VALUE);
 }
 
-void StorageProcessor::Write(const std::string& storage_name, const std::string& item_name,
-                             const std::string& item_value, const std::string& transaction_id) {
+asylo::Status StorageProcessor::Write(const std::string& storage_name, const std::string& item_name,
+                                      const std::string& item_value,
+                                      const std::string& transaction_id) {
   StorageWriteRequest write_request;
   write_request.set_storage_id(GetStorageId(storage_name));
   if (!transaction_id.empty()) {
     write_request.set_transaction_id(transaction_id);
   }
-  // TODO(650): Propagate error status.
-  asylo::StatusOr<std::string> name_or = EncryptItem(item_name, ItemType::NAME);
-  write_request.set_item_name(name_or.ValueOrDie());
+  std::string name;
+  ASYLO_ASSIGN_OR_RETURN(name, EncryptItem(item_name, ItemType::NAME));
+  write_request.set_item_name(name);
 
-  // TODO(650): Propagate error status.
-  asylo::StatusOr<std::string> value_or = EncryptItem(item_value, ItemType::VALUE);
-  write_request.set_item_value(value_or.ValueOrDie());
+  std::string value;
+  ASYLO_ASSIGN_OR_RETURN(value, EncryptItem(item_value, ItemType::VALUE));
+  write_request.set_item_value(value);
 
   grpc::ClientContext context;
   StorageWriteResponse write_response;
-  grpc::Status status = storage_service_->Write(&context, write_request, &write_response);
+  return asylo::Status(storage_service_->Write(&context, write_request, &write_response));
 }
 
-void StorageProcessor::Delete(const std::string& storage_name, const std::string& item_name,
-                              const std::string& transaction_id) {
+asylo::Status StorageProcessor::Delete(const std::string& storage_name,
+                                       const std::string& item_name,
+                                       const std::string& transaction_id) {
   StorageDeleteRequest delete_request;
   delete_request.set_storage_id(GetStorageId(storage_name));
   if (!transaction_id.empty()) {
     delete_request.set_transaction_id(transaction_id);
   }
-  // TODO(650): Propagate error status.
-  asylo::StatusOr<std::string> name_or = EncryptItem(item_name, ItemType::NAME);
-  delete_request.set_item_name(name_or.ValueOrDie());
+  std::string name;
+  ASYLO_ASSIGN_OR_RETURN(name, EncryptItem(item_name, ItemType::NAME));
+  delete_request.set_item_name(name);
 
   grpc::ClientContext context;
   StorageDeleteResponse delete_response;
-  // TODO(#650): Propagate error status.
-  grpc::Status status = storage_service_->Delete(&context, delete_request, &delete_response);
+  return asylo::Status(storage_service_->Delete(&context, delete_request, &delete_response));
 }
 
-void StorageProcessor::Begin(const std::string& storage_name, std::string* transaction_id) {
-  CHECK(transaction_id != nullptr);
-
+asylo::StatusOr<std::string> StorageProcessor::Begin(const std::string& storage_name) {
   StorageBeginRequest begin_request;
   begin_request.set_storage_id(GetStorageId(storage_name));
 
   grpc::ClientContext context;
   StorageBeginResponse begin_response;
-  // TODO(#650): Propagate error status.
-  grpc::Status status = storage_service_->Begin(&context, begin_request, &begin_response);
-  if (status.ok()) {
-    *transaction_id = begin_response.transaction_id();
-  }
+  RETURN_IF_GRPC_ERROR(storage_service_->Begin(&context, begin_request, &begin_response));
+  return asylo::StatusOr<std::string>(begin_response.transaction_id());
 }
 
-void StorageProcessor::Commit(const std::string& storage_name, const std::string& transaction_id) {
+asylo::Status StorageProcessor::Commit(const std::string& storage_name,
+                                       const std::string& transaction_id) {
   StorageCommitRequest commit_request;
   commit_request.set_storage_id(GetStorageId(storage_name));
   commit_request.set_transaction_id(transaction_id);
 
   grpc::ClientContext context;
   StorageCommitResponse commit_response;
-  // TODO(#650): Propagate error status.
-  grpc::Status status = storage_service_->Commit(&context, commit_request, &commit_response);
+  return asylo::Status(storage_service_->Commit(&context, commit_request, &commit_response));
 }
 
-void StorageProcessor::Rollback(const std::string& storage_name,
-                                const std::string& transaction_id) {
+asylo::Status StorageProcessor::Rollback(const std::string& storage_name,
+                                         const std::string& transaction_id) {
   StorageRollbackRequest rollback_request;
   rollback_request.set_storage_id(GetStorageId(storage_name));
   rollback_request.set_transaction_id(transaction_id);
 
   grpc::ClientContext context;
   StorageRollbackResponse rollback_response;
-  // TODO(#650): Propagate error status.
-  grpc::Status status = storage_service_->Rollback(&context, rollback_request, &rollback_response);
+  return asylo::Status(storage_service_->Rollback(&context, rollback_request, &rollback_response));
 }
 
 }  // namespace oak

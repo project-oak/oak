@@ -17,9 +17,12 @@
 #ifndef OAK_SERVER_STORAGE_NODE_H_
 #define OAK_SERVER_STORAGE_NODE_H_
 
+#include <memory>
 #include <string>
 #include <thread>
 
+#include "asylo/util/statusor.h"
+#include "oak/proto/grpc_encap.pb.h"
 #include "oak/server/node_thread.h"
 #include "oak/server/storage/storage_processor.h"
 
@@ -31,6 +34,7 @@ class StorageNode final : public NodeThread {
 
  private:
   void Run(Handle handle) override;
+  asylo::StatusOr<std::unique_ptr<GrpcResponse>> ProcessMethod(GrpcRequest* channel_request);
 
   StorageProcessor storage_processor_;
 };
