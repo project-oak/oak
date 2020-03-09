@@ -167,6 +167,7 @@ cc_library(
     srcs = ["channel.cc"],
     hdrs = ["channel.h"],
     deps = [
+        ":notification",
         "//oak/proto:oak_api_cc_proto",
         "//oak/proto:policy_cc_proto",
         "@com_google_absl//absl/memory",
@@ -223,5 +224,28 @@ cc_library(
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/memory",
         "@com_google_asylo//asylo/util:logging",
+    ],
+)
+
+cc_library(
+    name = "notification",
+    srcs = ["notification.cc"],
+    hdrs = ["notification.h"],
+    deps = [
+        "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/synchronization",
+    ],
+)
+
+cc_test(
+    name = "notification_test",
+    srcs = ["notification_test.cc"],
+    tags = ["host"],
+    deps = [
+        ":channel",
+        ":notification",
+        "@com_google_absl//absl/memory",
+        "@com_google_asylo//asylo/util:logging",
+        "@gtest//:gtest_main",
     ],
 )

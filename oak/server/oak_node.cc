@@ -17,6 +17,7 @@
 #include "oak/server/oak_node.h"
 
 #include "asylo/util/logging.h"
+#include "oak/server/notification.h"
 
 namespace oak {
 
@@ -92,6 +93,7 @@ bool OakNode::WaitOnChannels(std::vector<std::unique_ptr<ChannelStatus>>* status
   while (true) {
     bool found_ready = false;
     bool found_readable = false;
+    auto notify = std::make_shared<Notification>();
     for (uint32_t ii = 0; ii < statuses->size(); ii++) {
       uint64_t handle = (*statuses)[ii]->handle;
       MessageChannelReadHalf* channel = BorrowReadChannel(handle);
@@ -100,16 +102,24 @@ bool OakNode::WaitOnChannels(std::vector<std::unique_ptr<ChannelStatus>>* status
         (*statuses)[ii]->status = ChannelReadStatus::INVALID_CHANNEL;
         continue;
       }
-      if (channel->CanRead()) {
-        LOG(INFO) << "{" << name_ << "} Message available on handle " << handle;
-        found_ready = true;
-        (*statuses)[ii]->status = ChannelReadStatus::READ_READY;
-      } else if (channel->Orphaned()) {
-        LOG(INFO) << "{" << name_ << "} Handle " << handle << " is orphaned (no extant writers)";
-        (*statuses)[ii]->status = ChannelReadStatus::ORPHANED;
-      } else {
-        found_readable = true;
-        (*statuses)[ii]->status = ChannelReadStatus::NOT_READY;
+
+      ChannelReadStatus status = channel->ReadStatus(std::weak_ptr<Notification>(notify));
+      (*statuses)[ii]->status = status;
+      switch (status) {
+        case ChannelReadStatus::READ_READY:
+          LOG(INFO) << "{" << name_ << "} Message available on handle " << handle;
+          found_ready = true;
+          break;
+        case ChannelReadStatus::ORPHANED:
+          LOG(INFO) << "{" << name_ << "} Handle " << handle << " is orphaned (no extant writers)";
+          break;
+        case ChannelReadStatus::NOT_READY:
+          found_readable = true;
+          break;
+        default:
+          LOG(ERROR) << "{" << name_ << "} Unexpected channel read status: " << status;
+          return false;
+          break;
       }
     }
 
@@ -125,8 +135,13 @@ bool OakNode::WaitOnChannels(std::vector<std::unique_ptr<ChannelStatus>>* status
       return false;
     }
 
-    // TODO: get rid of polling wait
-    absl::SleepFor(absl::Milliseconds(100));
+    // Wait with a timeout to make end-of-day shutdown easier: this means that a
+    // node with no pending work will still check termination_pending_
+    // occasionally.
+    notify->WaitForNotificationWithTimeout(absl::Seconds(1));
+
+    // The only shared_ptr to the Notification object will be dropped here, at
+    // which point any still-existing weak_ptr instances will no longer resolve.
   }
 }
 
