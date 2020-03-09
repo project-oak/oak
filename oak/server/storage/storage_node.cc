@@ -20,6 +20,7 @@
 #include "absl/strings/escaping.h"
 #include "asylo/util/cleansing_types.h"
 #include "asylo/util/logging.h"
+#include "asylo/util/status_macros.h"
 #include "grpcpp/create_channel.h"
 #include "oak/proto/grpc_encap.pb.h"
 #include "oak/proto/storage_channel.pb.h"
@@ -67,88 +68,100 @@ void StorageNode::Run(Handle request_handle) {
     GrpcRequest channel_request;
     channel_request.ParseFromString(std::string(result.msg->data.data(), result.msg->data.size()));
 
-    GrpcResponse channel_response;
-    grpc::Status status;
-    std::string method_name = channel_request.method_name();
-
-    if (method_name == "/oak.StorageNode/Read") {
-      StorageChannelReadRequest channel_read_request;
-      if (!channel_request.req_msg().UnpackTo(&channel_read_request)) {
-        // TODO(650): Handle errors.
-      }
-      StorageChannelReadResponse channel_read_response;
-      std::string value;
-      storage_processor_.Read(channel_read_request.storage_name(),
-                              channel_read_request.item().name(),
-                              channel_read_request.transaction_id(), &value);
-      channel_read_response.mutable_item()->ParseFromString(value);
-      // TODO(#449): Check security policy for item.
-      channel_response.mutable_rsp_msg()->PackFrom(channel_read_response);
-    } else if (method_name == "/oak.StorageNode/Write") {
-      StorageChannelWriteRequest channel_write_request;
-      if (!channel_request.req_msg().UnpackTo(&channel_write_request)) {
-        // TODO(#650): Handle errors.
-      }
-      // TODO(#449): Check integrity policy for item.
-      std::string item;
-      channel_write_request.item().SerializeToString(&item);
-      storage_processor_.Write(channel_write_request.storage_name(),
-                               channel_write_request.item().name(), item,
-                               channel_write_request.transaction_id());
-    } else if (method_name == "/oak.StorageNode/Delete") {
-      StorageChannelDeleteRequest channel_delete_request;
-      if (!channel_request.req_msg().UnpackTo(&channel_delete_request)) {
-        // TODO(#650): Handle errors.
-      }
-      // TODO(#449): Check integrity policy for item.
-      storage_processor_.Delete(channel_delete_request.storage_name(),
-                                channel_delete_request.item().name(),
-                                channel_delete_request.transaction_id());
-    } else if (method_name == "/oak.StorageNode/Begin") {
-      StorageChannelBeginRequest channel_begin_request;
-      if (!channel_request.req_msg().UnpackTo(&channel_begin_request)) {
-        // TODO(#650): Handle errors.
-      }
-      StorageChannelBeginResponse channel_begin_response;
-      storage_processor_.Begin(channel_begin_request.storage_name(),
-                               channel_begin_response.mutable_transaction_id());
-
-      channel_response.mutable_rsp_msg()->PackFrom(channel_begin_response);
-    } else if (method_name == "/oak.StorageNode/Commit") {
-      StorageChannelCommitRequest channel_commit_request;
-      if (!channel_request.req_msg().UnpackTo(&channel_commit_request)) {
-        // TODO(#650): Handle errors.
-      }
-      storage_processor_.Commit(channel_commit_request.storage_name(),
-                                channel_commit_request.transaction_id());
-    } else if (method_name == "/oak.StorageNode/Rollback") {
-      StorageChannelRollbackRequest channel_rollback_request;
-      if (!channel_request.req_msg().UnpackTo(&channel_rollback_request)) {
-        // TODO(#650): Handle errors.
-      }
-      storage_processor_.Rollback(channel_rollback_request.storage_name(),
-                                  channel_rollback_request.transaction_id());
+    std::unique_ptr<GrpcResponse> channel_response;
+    asylo::StatusOr<std::unique_ptr<GrpcResponse>> rsp_or = ProcessMethod(&channel_request);
+    if (!rsp_or.ok()) {
+      LOG(ERROR) << "Failed to perform " << channel_request.method_name() << ": "
+                 << rsp_or.status().error_code() << ", '" << rsp_or.status().error_message() << "'";
+      channel_response = absl::make_unique<GrpcResponse>();
+      channel_response->mutable_status()->set_code(rsp_or.status().error_code());
+      channel_response->mutable_status()->set_message(std::string(rsp_or.status().error_message()));
     } else {
-      LOG(ERROR) << "unknown operation";
-      status =
-          grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Unknown operation request method.");
+      channel_response = std::move(rsp_or).ValueOrDie();
     }
-    if (!status.ok()) {
-      LOG(ERROR) << "operation failed: " << status.error_code() << " " << status.error_message();
-    }
-    channel_response.mutable_status()->set_code(status.error_code());
-    channel_response.mutable_status()->set_message(status.error_message());
 
     std::string response_data;
-    channel_response.SerializeToString(&response_data);
+    channel_response->SerializeToString(&response_data);
     // TODO: figure out a way to avoid the extra copy (into then out of
     // std::string)
     std::unique_ptr<Message> response_message = absl::make_unique<Message>();
     response_message->data.insert(response_message->data.end(), response_data.begin(),
                                   response_data.end());
     response_channel->Write(std::move(response_message));
+
+    // The response channel reference is dropped here.
   }
-  // Drop the response channel on exit.
+}
+
+asylo::StatusOr<std::unique_ptr<GrpcResponse>> StorageNode::ProcessMethod(
+    GrpcRequest* channel_request) {
+  auto channel_response = absl::make_unique<GrpcResponse>();
+  grpc::Status status;
+  std::string method_name = channel_request->method_name();
+  if (method_name == "/oak.StorageNode/Read") {
+    StorageChannelReadRequest channel_read_request;
+    if (!channel_request->req_msg().UnpackTo(&channel_read_request)) {
+      return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT, "Failed to unpack request");
+    }
+    StorageChannelReadResponse channel_read_response;
+    std::string value;
+    ASYLO_ASSIGN_OR_RETURN(value, storage_processor_.Read(channel_read_request.storage_name(),
+                                                          channel_read_request.item().name(),
+                                                          channel_read_request.transaction_id()));
+    channel_read_response.mutable_item()->ParseFromString(value);
+    // TODO(#449): Check security policy for item.
+    channel_response->mutable_rsp_msg()->PackFrom(channel_read_response);
+  } else if (method_name == "/oak.StorageNode/Write") {
+    StorageChannelWriteRequest channel_write_request;
+    if (!channel_request->req_msg().UnpackTo(&channel_write_request)) {
+      return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT, "Failed to unpack request");
+    }
+    // TODO(#449): Check integrity policy for item.
+    std::string item;
+    channel_write_request.item().SerializeToString(&item);
+    ASYLO_RETURN_IF_ERROR(storage_processor_.Write(channel_write_request.storage_name(),
+                                                   channel_write_request.item().name(), item,
+                                                   channel_write_request.transaction_id()));
+  } else if (method_name == "/oak.StorageNode/Delete") {
+    StorageChannelDeleteRequest channel_delete_request;
+    if (!channel_request->req_msg().UnpackTo(&channel_delete_request)) {
+      return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT, "Failed to unpack request");
+    }
+    // TODO(#449): Check integrity policy for item.
+    ASYLO_RETURN_IF_ERROR(storage_processor_.Delete(channel_delete_request.storage_name(),
+                                                    channel_delete_request.item().name(),
+                                                    channel_delete_request.transaction_id()));
+  } else if (method_name == "/oak.StorageNode/Begin") {
+    StorageChannelBeginRequest channel_begin_request;
+    if (!channel_request->req_msg().UnpackTo(&channel_begin_request)) {
+      return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT, "Failed to unpack request");
+    }
+    StorageChannelBeginResponse channel_begin_response;
+    std::string transaction_id;
+    ASYLO_ASSIGN_OR_RETURN(transaction_id,
+                           storage_processor_.Begin(channel_begin_request.storage_name()));
+    channel_begin_response.set_transaction_id(transaction_id);
+    channel_response->mutable_rsp_msg()->PackFrom(channel_begin_response);
+  } else if (method_name == "/oak.StorageNode/Commit") {
+    StorageChannelCommitRequest channel_commit_request;
+    if (!channel_request->req_msg().UnpackTo(&channel_commit_request)) {
+      return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT, "Failed to unpack request");
+    }
+    ASYLO_RETURN_IF_ERROR(storage_processor_.Commit(channel_commit_request.storage_name(),
+                                                    channel_commit_request.transaction_id()));
+  } else if (method_name == "/oak.StorageNode/Rollback") {
+    StorageChannelRollbackRequest channel_rollback_request;
+    if (!channel_request->req_msg().UnpackTo(&channel_rollback_request)) {
+      return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT, "Failed to unpack request");
+    }
+    ASYLO_RETURN_IF_ERROR(storage_processor_.Rollback(channel_rollback_request.storage_name(),
+                                                      channel_rollback_request.transaction_id()));
+  } else {
+    LOG(ERROR) << "unknown operation " << method_name;
+    return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT,
+                         "Unknown operation request method.");
+  }
+  return std::move(channel_response);
 }
 
 }  // namespace oak
