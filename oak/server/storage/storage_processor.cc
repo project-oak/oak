@@ -16,10 +16,15 @@
 
 #include "oak/server/storage/storage_processor.h"
 
+#include <openssl/sha.h>
+
+#include <algorithm>
+
 #include "absl/memory/memory.h"
 #include "absl/strings/escaping.h"
+#include "asylo/crypto/aes_gcm_siv.h"
+#include "asylo/crypto/nonce_generator.h"
 #include "asylo/util/cleansing_types.h"
-#include "asylo/util/logging.h"
 #include "asylo/util/status_macros.h"
 #include "grpcpp/create_channel.h"
 
@@ -41,13 +46,45 @@ asylo::CleansingVector<uint8_t> GetStorageEncryptionKey(const std::string& /*sto
   return asylo::CleansingVector<uint8_t>(encryption_key.begin(), encryption_key.end());
 }
 
+constexpr size_t kAesGcmSivNonceSize = 12;
+using NonceGenerator = asylo::NonceGenerator<kAesGcmSivNonceSize>;
+
+// Produces fixed nonces using the storage encryption key and item name to
+// allow deterministic encryption of the item name.
+class FixedNonceGenerator : public NonceGenerator {
+ public:
+  FixedNonceGenerator(const std::string& item_name) : item_name_(item_name) {}
+
+  // Called by asylo::AesGcmSiv::Seal.
+  asylo::Status NextNonce(const std::vector<uint8_t>& key_id,
+                          asylo::UnsafeBytes<kAesGcmSivNonceSize>* nonce) override {
+    if (nonce == nullptr) {
+      return asylo::Status(asylo::error::GoogleError::INTERNAL, "No output field provided");
+    }
+
+    // Generates a digest of the inputs to extract a fixed-size nonce.
+    SHA256_CTX context;
+    SHA256_Init(&context);
+    SHA256_Update(&context, item_name_.data(), item_name_.size());
+    SHA256_Update(&context, key_id.data(), key_id.size());
+    std::vector<uint8_t> digest(SHA256_DIGEST_LENGTH);
+    SHA256_Final(digest.data(), &context);
+    std::copy_n(digest.begin(), kAesGcmSivNonceSize, nonce->begin());
+
+    return asylo::Status::OkStatus();
+  }
+
+  // Causes asylo::AesGcmSiv::Seal to encrypt the nonce before use.
+  bool uses_key_id() override { return true; }
+
+ private:
+  const std::string item_name_;
+};
+
 }  // namespace
 
 StorageProcessor::StorageProcessor(const std::string& storage_address)
-    : fixed_nonce_generator_(new oak::FixedNonceGenerator()),
-      item_name_cryptor_(kMaxMessageSize, fixed_nonce_generator_),
-      item_value_cryptor_(kMaxMessageSize, new asylo::AesGcmSivNonceGenerator()),
-      storage_service_(oak::Storage::NewStub(
+    : storage_service_(oak::Storage::NewStub(
           grpc::CreateChannel(storage_address, grpc::InsecureChannelCredentials()))) {}
 
 const asylo::StatusOr<std::string> StorageProcessor::EncryptItem(const std::string& item,
@@ -57,27 +94,26 @@ const asylo::StatusOr<std::string> StorageProcessor::EncryptItem(const std::stri
   asylo::CleansingString additional_authenticated_data;
   asylo::CleansingString nonce;
   asylo::CleansingString item_encrypted;
-  asylo::AesGcmSivCryptor* cryptor = nullptr;
 
+  NonceGenerator* nonce_generator;
   switch (item_type) {
-    case ItemType::NAME: {
-      fixed_nonce_generator_->set_item_name(item);
-      cryptor = &item_name_cryptor_;
+    case ItemType::NAME:
+      nonce_generator = new FixedNonceGenerator(item);
       break;
-    };
-    case ItemType::VALUE: {
-      cryptor = &item_value_cryptor_;
+    case ItemType::VALUE:
+      nonce_generator = new asylo::AesGcmSivNonceGenerator();
       break;
-    };
-  };
+  }
+  // Create a cryptor, passing ownership of the nonce generator to it.
+  asylo::AesGcmSivCryptor cryptor(kMaxMessageSize, nonce_generator);
   ASYLO_RETURN_IF_ERROR(
-      cryptor->Seal(key, additional_authenticated_data, item, &nonce, &item_encrypted));
+      cryptor.Seal(key, additional_authenticated_data, item, &nonce, &item_encrypted));
 
   return absl::StrCat(nonce, item_encrypted);
 }
 
 const asylo::StatusOr<std::string> StorageProcessor::DecryptItem(const std::string& input,
-                                                                 ItemType item_type) {
+                                                                 ItemType) {
   asylo::CleansingString input_clean(input.data(), input.size());
 
   if (input_clean.size() < kAesGcmSivNonceSize) {
@@ -92,20 +128,11 @@ const asylo::StatusOr<std::string> StorageProcessor::DecryptItem(const std::stri
   asylo::CleansingString nonce = input_clean.substr(0, kAesGcmSivNonceSize);
   asylo::CleansingString item_encrypted = input_clean.substr(kAesGcmSivNonceSize);
   asylo::CleansingString item_decrypted;
-  asylo::AesGcmSivCryptor* cryptor = nullptr;
 
-  switch (item_type) {
-    case ItemType::NAME: {
-      cryptor = &item_name_cryptor_;
-      break;
-    };
-    case ItemType::VALUE: {
-      cryptor = &item_value_cryptor_;
-      break;
-    };
-  };
+  // The nonce generator is not used for decryption.
+  asylo::AesGcmSivCryptor cryptor(kMaxMessageSize, nullptr);
   ASYLO_RETURN_IF_ERROR(
-      cryptor->Open(key, additional_authenticated_data, item_encrypted, nonce, &item_decrypted));
+      cryptor.Open(key, additional_authenticated_data, item_encrypted, nonce, &item_decrypted));
 
   return std::string(item_decrypted.data(), item_decrypted.size());
 }

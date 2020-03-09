@@ -19,10 +19,8 @@
 
 #include <memory>
 
-#include "asylo/crypto/aes_gcm_siv.h"
 #include "asylo/util/statusor.h"
 #include "oak/proto/storage.grpc.pb.h"
-#include "oak/server/storage/fixed_nonce_generator.h"
 
 namespace oak {
 
@@ -60,14 +58,6 @@ class StorageProcessor {
   // Decrypts `input` which must be a kAesGcmSivNonceSize-byte nonce followed by
   // the encrypted item.
   const asylo::StatusOr<std::string> DecryptItem(const std::string& input, ItemType item_type);
-
-  // Fixed nonce generator owned by item_name_cryptor_.
-  FixedNonceGenerator* fixed_nonce_generator_;
-
-  // Cryptor that uses a fixed nonce for deterministic encryption of item names.
-  asylo::AesGcmSivCryptor item_name_cryptor_;
-  // Cryptor that uses a random nonce for encryption of item values.
-  asylo::AesGcmSivCryptor item_value_cryptor_;
 
   std::unique_ptr<oak::Storage::Stub> storage_service_;
 };
