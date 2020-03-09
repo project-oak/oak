@@ -234,7 +234,7 @@ impl Runtime {
         }
     }
 
-    /// Thread safe. This function will return:
+    /// Thread safe. This function returns:
     /// - [`ChannelReadStatus::ReadReady`] if there is at least one message in the channel.
     /// - [`ChannelReadStatus::Orphaned`] if there are no messages and there are no writers
     /// - [`ChannelReadStatus::NotReady`] if there are no messages but there are some writers
@@ -252,7 +252,7 @@ impl Runtime {
     /// Thread safe. Reads a message from the channel if `bytes_capacity` and `handles_capacity` are
     /// large enough to accept the message. Fails with `OakStatus::ErrChannelClosed` if the
     /// underlying channel has been orphaned _and_ is empty. If there was not enough
-    /// `bytes_capacity` or `handles_capacity`, `try_read_message` will return
+    /// `bytes_capacity` or `handles_capacity`, `try_read_message` returns
     /// `Some(ReadStatus::NeedsCapacity(needed_bytes_capacity,needed_handles_capacity))`. Does not
     /// guarantee that the next call will succeed after capacity adjustments as another thread may
     /// have read the original message.
