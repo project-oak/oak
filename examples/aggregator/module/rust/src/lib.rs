@@ -31,8 +31,8 @@ use aggregator_common::ThresholdAggregator;
 use data::SparseVector;
 use log::{debug, error};
 use oak::grpc;
-use proto::aggregator::Sample;
-use proto::aggregator_grpc::{Aggregator, Dispatcher};
+use proto::aggregator::{Sample, SerializedSparseVector};
+use proto::aggregator_grpc::{Aggregator, AggregatorClient, Dispatcher};
 use protobuf::well_known_types::Empty;
 use std::collections::HashMap;
 use std::convert::{From, TryFrom};
@@ -45,17 +45,28 @@ type ThresholdAggregatorMap = HashMap<String, Option<ThresholdAggregator<SparseV
 /// Oak Node that collects aggregated data.
 pub struct AggregatorNode {
     aggregators: ThresholdAggregatorMap,
+    grpc_client: AggregatorClient,
 }
 
 impl AggregatorNode {
-    fn submit_sparse_vector(&mut self, bucket: &String, svec: &SparseVector) -> Result<(), String> {
-        match self.aggregators.get_mut(bucket) {
+    fn new() -> Result<Self, &'static str> {
+        match oak::grpc::client::Client::new("grpc-client", "ignored").map(AggregatorClient) {
+            Some(grpc_client) => Ok(AggregatorNode {
+                aggregators: ThresholdAggregatorMap::new(),
+                grpc_client: grpc_client,
+            }),
+            None => Err("Could not create a gRPC client"),
+        }
+    }
+
+    fn submit_sparse_vector(&mut self, bucket: String, svec: &SparseVector) -> Result<(), String> {
+        match self.aggregators.get_mut(&bucket) {
             Some(entry) => match *entry {
                 Some(ref mut aggregator) => {
                     aggregator.submit(svec);
                     if let Some(aggregated_data) = aggregator.take() {
                         *entry = None;
-                        self.send_aggregated_data(&bucket, aggregated_data);
+                        self.send_aggregated_data(bucket, aggregated_data);
                     }
                 }
                 None => Err(format!("Outdated bucket: {}", bucket))?,
@@ -63,18 +74,25 @@ impl AggregatorNode {
             None => {
                 let mut aggregator = ThresholdAggregator::<SparseVector>::new(SAMPLE_THRESHOLD);
                 aggregator.submit(svec);
-                self.aggregators
-                    .insert(bucket.to_string(), Some(aggregator));
+                self.aggregators.insert(bucket, Some(aggregator));
             }
         }
         Ok(())
     }
 
-    fn send_aggregated_data(&self, bucket: &String, svec: SparseVector) {
+    fn send_aggregated_data(&self, bucket: String, svec: SparseVector) {
         debug!(
             "Sending aggregated data: bucket {}, sparse vector: {:?}",
             bucket, svec
         );
+        // Currently the Node panics if it couldn't send a gRPC request.
+        self.grpc_client
+            .submit_sample(Sample {
+                bucket: bucket,
+                data: ::protobuf::SingularPtrField::some(SerializedSparseVector::from(svec)),
+                ..Default::default()
+            })
+            .unwrap();
     }
 }
 
@@ -88,7 +106,7 @@ impl Aggregator for AggregatorNode {
                         "Submitted data: bucket {}, sparse vector: {:?}",
                         sample.bucket, svec
                     );
-                    match self.submit_sparse_vector(&sample.bucket, &svec) {
+                    match self.submit_sparse_vector(sample.bucket, &svec) {
                         Ok(_) => Ok(Empty::new()),
                         Err(err) => {
                             error!("Sparse Vector submission error: {}", err);
@@ -111,9 +129,8 @@ impl Aggregator for AggregatorNode {
 }
 
 oak::entrypoint!(oak_main => {
-    oak_log::init_default();
-    let node = AggregatorNode {
-        aggregators: ThresholdAggregatorMap::new(),
-    };
+    oak::logger::init_default();
+    // Currently the Node panics if it couldn't create a gRPC client.
+    let node = AggregatorNode::new().unwrap();
     Dispatcher::new(node)
 });

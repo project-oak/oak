@@ -12,7 +12,6 @@ aggregator_common = { path = "../../common" }
 itertools = "*"
 log = "*"
 oak = "=0.1.0"
-oak_log = "*"
 protobuf = "*"
 
 [dev-dependencies]
