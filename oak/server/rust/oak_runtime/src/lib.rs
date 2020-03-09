@@ -19,10 +19,8 @@
 #[cfg(feature = "no_std")]
 extern crate no_std_compat as std;
 
-#[cfg(feature = "std")]
 pub mod proto;
 
-#[cfg(feature = "std")]
 pub mod config;
 pub mod message;
 pub mod node;
@@ -31,9 +29,7 @@ pub mod runtime;
 #[cfg(test)]
 mod tests;
 
-#[cfg(feature = "std")]
 pub use config::application_configuration;
-#[cfg(feature = "std")]
 pub use config::configure_and_run;
 
 pub use message::Message;

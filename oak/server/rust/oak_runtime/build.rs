@@ -14,12 +14,20 @@
 // limitations under the License.
 //
 
+use std::path;
+
 fn main() {
-    oak_utils::run_protoc_rust(protoc_rust::Args {
-        out_dir: "src/proto",
-        input: &["../../../../oak/proto/application.proto"],
-        includes: &["../../../../oak/proto"],
-        customize: protoc_rust::Customize::default(),
-    })
-    .expect("protoc");
+    let proto_dir = path::Path::new("../../../../oak/proto/");
+    let application_path = &*proto_dir.join("application.proto");
+
+    // Tell Cargo that if the given file changes, to rerun this build script.
+    // https://doc.rust-lang.org/cargo/reference/build-scripts.html#rerun-if-changed
+    println!(
+        "cargo:rerun-if-changed={}",
+        application_path.to_str().unwrap()
+    );
+
+    prost_build::Config::new()
+        .compile_protos(&[application_path], &[proto_dir])
+        .unwrap();
 }

@@ -16,6 +16,11 @@
 
 use maplit::hashmap;
 
+use crate::proto::{
+    node_configuration::ConfigType::{LogConfig, WasmConfig},
+    ApplicationConfiguration, LogConfiguration, NodeConfiguration, WebAssemblyConfiguration,
+};
+
 #[test]
 fn test_app_config() {
     let cfg = crate::application_configuration(
@@ -24,9 +29,26 @@ fn test_app_config() {
         "node",
         "main",
     );
-    let got = format!("{:?}", cfg);
     assert_eq!(
-        "node_configs {name: \"node\" wasm_config {module_bytes: \"\\000\\001\"}} node_configs {name: \"lumberjack\" log_config {}} initial_node_config_name: \"node\" initial_entrypoint_name: \"main\"", got);
+        ApplicationConfiguration {
+            node_configs: vec![
+                NodeConfiguration {
+                    name: "node".to_string(),
+                    config_type: Some(WasmConfig(WebAssemblyConfiguration {
+                        module_bytes: vec![0, 1]
+                    }))
+                },
+                NodeConfiguration {
+                    name: "lumberjack".to_string(),
+                    config_type: Some(LogConfig(LogConfiguration {}))
+                }
+            ],
+            initial_node_config_name: "node".to_string(),
+            initial_entrypoint_name: "main".to_string(),
+            grpc_port: 0
+        },
+        cfg
+    );
 }
 
 #[test]
@@ -40,9 +62,32 @@ fn test_app_config_multi() {
         "node",
         "main",
     );
-    let got = format!("{:?}", cfg);
     assert_eq!(
-        "node_configs {name: \"another_node\" wasm_config {module_bytes: \"\\002\\003\"}} node_configs {name: \"node\" wasm_config {module_bytes: \"\\000\\001\"}} node_configs {name: \"lumberjack\" log_config {}} initial_node_config_name: \"node\" initial_entrypoint_name: \"main\"", got);
+        ApplicationConfiguration {
+            node_configs: vec![
+                NodeConfiguration {
+                    name: "another_node".to_string(),
+                    config_type: Some(WasmConfig(WebAssemblyConfiguration {
+                        module_bytes: vec![2, 3]
+                    }))
+                },
+                NodeConfiguration {
+                    name: "node".to_string(),
+                    config_type: Some(WasmConfig(WebAssemblyConfiguration {
+                        module_bytes: vec![0, 1]
+                    }))
+                },
+                NodeConfiguration {
+                    name: "lumberjack".to_string(),
+                    config_type: Some(LogConfig(LogConfiguration {}))
+                }
+            ],
+            initial_node_config_name: "node".to_string(),
+            initial_entrypoint_name: "main".to_string(),
+            grpc_port: 0
+        },
+        cfg
+    );
 }
 
 #[test]
@@ -53,7 +98,18 @@ fn test_app_config_no_logger() {
         "node",
         "main",
     );
-    let got = format!("{:?}", cfg);
     assert_eq!(
-        "node_configs {name: \"node\" wasm_config {module_bytes: \"\\000\\001\"}} initial_node_config_name: \"node\" initial_entrypoint_name: \"main\"", got);
+        ApplicationConfiguration {
+            node_configs: vec![NodeConfiguration {
+                name: "node".to_string(),
+                config_type: Some(WasmConfig(WebAssemblyConfiguration {
+                    module_bytes: vec![0, 1]
+                }))
+            },],
+            initial_node_config_name: "node".to_string(),
+            initial_entrypoint_name: "main".to_string(),
+            grpc_port: 0
+        },
+        cfg
+    );
 }

@@ -18,7 +18,7 @@ byteorder = { version = "*", default-features = false }
 itertools = "*"
 log = { version = "*" }
 oak_abi = "=0.1.0"
-protobuf = "*"
+prost = "*"
 rand = { version = "*" }
 wasmi = { version = "*", default-features = false, features = ["core"] }
 no-std-compat = { version = "0.2.0", features = ["alloc", "compat_hash"] }
@@ -29,4 +29,4 @@ maplit = "*"
 
 [build-dependencies]
 oak_utils = "*"
-protoc-rust = "*"
+prost-build = "*"

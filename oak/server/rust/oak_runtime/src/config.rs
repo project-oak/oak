@@ -14,9 +14,11 @@
 // limitations under the License.
 //
 
-use crate::proto::application::{
-    ApplicationConfiguration, LogConfiguration, NodeConfiguration,
-    NodeConfiguration_oneof_config_type, WebAssemblyConfiguration,
+use std::prelude::v1::*;
+
+use crate::proto::{
+    node_configuration::ConfigType, ApplicationConfiguration, LogConfiguration, NodeConfiguration,
+    WebAssemblyConfiguration,
 };
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -45,29 +47,23 @@ pub fn application_configuration<S: ::std::hash::BuildHasher>(
     let mut nodes: Vec<NodeConfiguration> = module_name_wasm
         .into_iter()
         .sorted()
-        .map(|(name, wasm)| {
-            let mut node = NodeConfiguration::new();
-            node.set_name(name);
-            node.set_wasm_config({
-                let mut w = WebAssemblyConfiguration::new();
-                w.set_module_bytes(wasm);
-                w
-            });
-            node
+        .map(|(name, wasm)| NodeConfiguration {
+            name,
+            config_type: Some(ConfigType::WasmConfig(WebAssemblyConfiguration {
+                module_bytes: wasm,
+            })),
         })
         .collect();
 
     if !logger_name.is_empty() {
-        nodes.push({
-            let mut log_config = NodeConfiguration::new();
-            log_config.set_name(logger_name.to_string());
-            log_config.set_log_config(LogConfiguration::new());
-            log_config
+        nodes.push(NodeConfiguration {
+            name: logger_name.to_string(),
+            config_type: Some(ConfigType::LogConfig(LogConfiguration {})),
         });
     }
 
     ApplicationConfiguration {
-        node_configs: nodes.into(),
+        node_configs: nodes,
         initial_node_config_name: initial_node.into(),
         initial_entrypoint_name: entrypoint.into(),
         ..Default::default()
@@ -86,7 +82,7 @@ pub fn from_protobuf(
         entrypoint: app_config.initial_entrypoint_name.clone(),
     };
 
-    for node in app_config.get_node_configs() {
+    for node in app_config.node_configs {
         config.nodes.insert(
             node.name.clone(),
             match &node.config_type {
@@ -94,15 +90,13 @@ pub fn from_protobuf(
                     error!("Node config {} with no type", node.name);
                     return Err(OakStatus::ErrInvalidArgs);
                 }
-                Some(NodeConfiguration_oneof_config_type::log_config(_)) => {
-                    node::Configuration::LogNode
+                Some(ConfigType::LogConfig(_)) => node::Configuration::LogNode,
+                Some(ConfigType::WasmConfig(WebAssemblyConfiguration { module_bytes, .. })) => {
+                    load_wasm(&module_bytes).map_err(|e| {
+                        error!("Error loading Wasm module: {}", e);
+                        OakStatus::ErrInvalidArgs
+                    })?
                 }
-                Some(NodeConfiguration_oneof_config_type::wasm_config(
-                    WebAssemblyConfiguration { module_bytes, .. },
-                )) => load_wasm(&module_bytes).map_err(|e| {
-                    error!("Error loading Wasm module: {}", e);
-                    OakStatus::ErrInvalidArgs
-                })?,
                 Some(_) => {
                     error!("Pseudo-node not implemented!");
                     return Err(OakStatus::ErrInvalidArgs);
