@@ -27,6 +27,7 @@ use oak_abi::{ChannelReadStatus, OakStatus};
 use oak_platform::{JoinHandle, Mutex};
 
 use log::debug;
+use rand::RngCore;
 
 use crate::message::Message;
 use crate::node;
@@ -35,6 +36,15 @@ mod channel;
 pub use channel::{ChannelEither, ChannelReader, ChannelWriter, ReadStatus};
 
 type Channels = Vec<Weak<channel::Channel>>;
+
+#[derive(Debug)]
+struct Node {
+    reference: NodeRef,
+    join_handle: Option<JoinHandle>,
+}
+
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
+pub struct NodeRef(u64);
 
 pub struct Configuration {
     pub nodes: HashMap<String, node::Configuration>,
@@ -47,7 +57,7 @@ pub struct Runtime {
     configurations: HashMap<String, node::Configuration>,
     terminating: AtomicBool,
     channels: Mutex<Channels>,
-    node_threads: Mutex<Vec<JoinHandle>>,
+    nodes: Mutex<HashMap<NodeRef, Node>>,
 }
 
 impl Runtime {
@@ -61,7 +71,7 @@ impl Runtime {
             configurations: config.nodes,
             terminating: AtomicBool::new(false),
             channels: Mutex::new(Vec::new()),
-            node_threads: Mutex::new(Vec::new()),
+            nodes: Mutex::new(HashMap::new()),
         };
 
         let runtime = RuntimeRef(Arc::new(runtime));
@@ -81,20 +91,28 @@ impl Runtime {
     /// Thread safe method for signaling termination to a `Runtime` and waiting for its node
     /// threads to terminate.
     pub fn stop(&self) {
-        let handles = {
-            let mut node_threads = self.node_threads.lock().unwrap();
+        {
+            let nodes = self.nodes.lock().unwrap();
+            debug!("nodes: {:?}", nodes);
+        }
+        let mut threads = {
+            let mut nodes = self.nodes.lock().unwrap();
             self.terminating.store(true, SeqCst);
 
-            std::mem::replace(&mut *node_threads, vec![])
+            std::mem::replace(&mut *nodes, HashMap::new())
         };
 
         // Unpark any threads that are blocked waiting on channels.
-        for handle in handles.iter() {
-            handle.thread().unpark();
+        for thread in threads.values() {
+            thread.join_handle.as_ref().unwrap().thread().unpark();
         }
 
-        for handle in handles {
-            handle.join().expect("Failed to join handle");
+        for (_, thread) in threads.drain() {
+            thread
+                .join_handle
+                .unwrap()
+                .join()
+                .expect("Failed to join handle");
         }
     }
 
@@ -289,6 +307,31 @@ impl Runtime {
             }
         }
     }
+
+    /// Assigns a randomized reference to a [`Node`].
+    fn new_node_handle(&self) -> NodeRef {
+        let mut handle;
+
+        loop {
+            handle = NodeRef(rand::thread_rng().next_u64());
+
+            let mut nodes = self.nodes.lock().unwrap();
+            if nodes.contains_key(&handle) {
+                continue;
+            }
+
+            nodes.insert(
+                handle,
+                Node {
+                    reference: handle,
+                    join_handle: None,
+                },
+            );
+            break;
+        }
+
+        handle
+    }
 }
 
 /// A reference to a `Runtime`
@@ -312,20 +355,30 @@ impl RuntimeRef {
             return Err(OakStatus::ErrTerminated);
         }
 
-        let mut node_threads = self.node_threads.lock().unwrap();
+        let reference = self.new_node_handle();
+        let mut nodes = self.nodes.lock().unwrap();
 
-        if self.is_terminating() {
-            return Err(OakStatus::ErrTerminated);
-        }
-
-        let join_handle = self
+        match self
             .configurations
             .get(module_name)
             .ok_or(OakStatus::ErrInvalidArgs)
             .and_then(|conf| {
-                conf.new_instance(module_name, self.clone(), entrypoint.to_owned(), reader)
-            })?;
-        node_threads.push(join_handle);
+                conf.new_instance(
+                    module_name,
+                    self.clone(),
+                    reference,
+                    entrypoint.to_owned(),
+                    reader,
+                )
+            }) {
+            Ok(join_handle) => {
+                nodes.get_mut(&reference).unwrap().join_handle = Some(join_handle);
+            }
+            Err(e) => {
+                nodes.remove(&reference);
+                return Err(e);
+            }
+        }
 
         Ok(())
     }

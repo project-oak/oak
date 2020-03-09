@@ -19,7 +19,7 @@ itertools = "*"
 log = { version = "*" }
 oak_abi = "=0.1.0"
 prost = "*"
-rand = { version = "*" }
+rand = { version = "*", default-features = false, features = ["alloc"] }
 wasmi = { version = "*", default-features = false, features = ["core"] }
 no-std-compat = { version = "0.2.0", features = ["alloc", "compat_hash"] }
 oak_platform = { version = "=0.1.0" }
