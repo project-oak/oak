@@ -21,11 +21,9 @@
 
 #ifdef OAK_DEBUG
 
-// Forward on to Asylo logging for the time being. Depends on some internal
-// details of Asylo logging (and so may need updating for new versions of
-// Asylo).
-#include "asylo/util/logging.h"
-#define OAK_LOG(severity) COMPACT_ASYLO_LOG_##severity.stream()
+// Forward on to gLog.
+#include "glog/logging.h"
+#define OAK_LOG(severity) COMPACT_GOOGLE_LOG_##severity.stream()
 
 #else
 
