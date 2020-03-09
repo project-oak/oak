@@ -1177,8 +1177,8 @@ dependencies = [
  "oak_abi 0.1.0",
  "oak_platform 0.1.0",
  "oak_utils 0.1.0",
- "protobuf 2.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "protoc-rust 2.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost-build 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "wasmi 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
