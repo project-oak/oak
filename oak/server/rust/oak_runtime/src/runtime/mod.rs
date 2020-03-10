@@ -20,8 +20,8 @@ use std::collections::HashMap;
 use std::string::String;
 use std::sync::{Arc, Weak};
 
-use core::sync::atomic::AtomicBool;
 use core::sync::atomic::Ordering::SeqCst;
+use core::sync::atomic::{AtomicBool, AtomicU64};
 
 use oak_abi::{ChannelReadStatus, OakStatus};
 use oak_platform::{JoinHandle, Mutex};
@@ -58,6 +58,7 @@ pub struct Runtime {
     terminating: AtomicBool,
     channels: Mutex<Channels>,
     nodes: Mutex<HashMap<NodeRef, Node>>,
+    next_node: AtomicU64,
 }
 
 impl Runtime {
@@ -72,6 +73,7 @@ impl Runtime {
             terminating: AtomicBool::new(false),
             channels: Mutex::new(Vec::new()),
             nodes: Mutex::new(HashMap::new()),
+            next_node: AtomicU64::new(0),
         };
 
         let runtime = RuntimeRef(Arc::new(runtime));
@@ -91,10 +93,6 @@ impl Runtime {
     /// Thread safe method for signaling termination to a `Runtime` and waiting for its node
     /// threads to terminate.
     pub fn stop(&self) {
-        {
-            let nodes = self.nodes.lock().unwrap();
-            debug!("nodes: {:?}", nodes);
-        }
         let mut threads = {
             let mut nodes = self.nodes.lock().unwrap();
             self.terminating.store(true, SeqCst);
@@ -307,31 +305,6 @@ impl Runtime {
             }
         }
     }
-
-    /// Assigns a randomized reference to a [`Node`].
-    fn new_node_handle(&self) -> NodeRef {
-        let mut handle;
-
-        loop {
-            handle = NodeRef(rand::thread_rng().next_u64());
-
-            let mut nodes = self.nodes.lock().unwrap();
-            if nodes.contains_key(&handle) {
-                continue;
-            }
-
-            nodes.insert(
-                handle,
-                Node {
-                    reference: handle,
-                    join_handle: None,
-                },
-            );
-            break;
-        }
-
-        handle
-    }
 }
 
 /// A reference to a `Runtime`
@@ -355,7 +328,7 @@ impl RuntimeRef {
             return Err(OakStatus::ErrTerminated);
         }
 
-        let reference = self.new_node_handle();
+        let reference = NodeRef(self.next_node.fetch_add(1, SeqCst));
         let mut nodes = self.nodes.lock().unwrap();
 
         match self
