@@ -20,8 +20,8 @@ use std::collections::HashMap;
 use std::string::String;
 use std::sync::{Arc, Weak};
 
-use core::sync::atomic::AtomicBool;
 use core::sync::atomic::Ordering::SeqCst;
+use core::sync::atomic::{AtomicBool, AtomicU64};
 
 use oak_abi::{ChannelReadStatus, OakStatus};
 use oak_platform::{JoinHandle, Mutex};
@@ -36,6 +36,15 @@ pub use channel::{ChannelEither, ChannelReader, ChannelWriter, ReadStatus};
 
 type Channels = Vec<Weak<channel::Channel>>;
 
+#[derive(Debug)]
+struct Node {
+    reference: NodeRef,
+    join_handle: JoinHandle,
+}
+
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
+pub struct NodeRef(u64);
+
 pub struct Configuration {
     pub nodes: HashMap<String, node::Configuration>,
     pub entry_module: String,
@@ -47,7 +56,8 @@ pub struct Runtime {
     configurations: HashMap<String, node::Configuration>,
     terminating: AtomicBool,
     channels: Mutex<Channels>,
-    node_threads: Mutex<Vec<JoinHandle>>,
+    nodes: Mutex<HashMap<NodeRef, Node>>,
+    next_node_reference: AtomicU64,
 }
 
 impl Runtime {
@@ -61,7 +71,8 @@ impl Runtime {
             configurations: config.nodes,
             terminating: AtomicBool::new(false),
             channels: Mutex::new(Vec::new()),
-            node_threads: Mutex::new(Vec::new()),
+            nodes: Mutex::new(HashMap::new()),
+            next_node_reference: AtomicU64::new(0),
         };
 
         let runtime = RuntimeRef(Arc::new(runtime));
@@ -81,20 +92,20 @@ impl Runtime {
     /// Thread safe method for signaling termination to a `Runtime` and waiting for its node
     /// threads to terminate.
     pub fn stop(&self) {
-        let handles = {
-            let mut node_threads = self.node_threads.lock().unwrap();
+        let mut threads = {
+            let mut nodes = self.nodes.lock().unwrap();
             self.terminating.store(true, SeqCst);
 
-            std::mem::replace(&mut *node_threads, vec![])
+            std::mem::replace(&mut *nodes, HashMap::new())
         };
 
         // Unpark any threads that are blocked waiting on channels.
-        for handle in handles.iter() {
-            handle.thread().unpark();
+        for thread in threads.values() {
+            thread.join_handle.thread().unpark();
         }
 
-        for handle in handles {
-            handle.join().expect("Failed to join handle");
+        for (_, thread) in threads.drain() {
+            thread.join_handle.join().expect("Failed to join handle");
         }
     }
 
@@ -289,6 +300,11 @@ impl Runtime {
             }
         }
     }
+
+    /// Create a fresh NodeReference.
+    fn new_node_reference(&self) -> NodeRef {
+        NodeRef(self.next_node_reference.fetch_add(1, SeqCst))
+    }
 }
 
 /// A reference to a `Runtime`
@@ -312,20 +328,36 @@ impl RuntimeRef {
             return Err(OakStatus::ErrTerminated);
         }
 
-        let mut node_threads = self.node_threads.lock().unwrap();
+        let mut nodes = self.nodes.lock().unwrap();
+        let reference = self.new_node_reference();
 
-        if self.is_terminating() {
-            return Err(OakStatus::ErrTerminated);
-        }
-
-        let join_handle = self
+        match self
             .configurations
             .get(module_name)
             .ok_or(OakStatus::ErrInvalidArgs)
             .and_then(|conf| {
-                conf.new_instance(module_name, self.clone(), entrypoint.to_owned(), reader)
-            })?;
-        node_threads.push(join_handle);
+                conf.new_instance(
+                    module_name,
+                    self.clone(),
+                    reference,
+                    entrypoint.to_owned(),
+                    reader,
+                )
+            }) {
+            Ok(join_handle) => {
+                nodes.insert(
+                    reference,
+                    Node {
+                        reference,
+                        join_handle,
+                    },
+                );
+            }
+            Err(e) => {
+                nodes.remove(&reference);
+                return Err(e);
+            }
+        }
 
         Ok(())
     }

@@ -21,8 +21,7 @@ use std::sync::Arc;
 
 use oak_abi::OakStatus;
 
-use crate::runtime::ChannelReader;
-use crate::RuntimeRef;
+use crate::{ChannelReader, NodeRef, RuntimeRef};
 
 mod logger;
 mod wasm;
@@ -73,6 +72,7 @@ impl Configuration {
         &self,
         config_name: &str, // Used for pretty debugging
         runtime: RuntimeRef,
+        _noderef: NodeRef,
         entrypoint: String,
         initial_reader: ChannelReader,
     ) -> Result<oak_platform::JoinHandle, OakStatus> {
