@@ -23,7 +23,8 @@ node_configs {
 node_configs {
   name: "absent-storage"
   storage_config {
-    address: "test.invalid:9999"
+    # TODO(google/asylo#NNN): use test.invalid when Asylo crash fixed.
+    address: "localhost:9999"
   }
 }
 node_configs {

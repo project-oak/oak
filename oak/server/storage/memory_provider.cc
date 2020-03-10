@@ -30,8 +30,9 @@ grpc::Status MemoryProvider::Read(const StorageReadRequest* req, StorageReadResp
   }
   auto kv = store->second.find(req->item_name());
   if (kv == store->second.end()) {
-    return grpc::Status(grpc::StatusCode::NOT_FOUND,
-                        absl::StrCat("No value found for ", req->item_name()));
+    return grpc::Status(
+        grpc::StatusCode::NOT_FOUND,
+        absl::StrCat("No value found for ", absl::BytesToHexString(req->item_name())));
   }
   LOG(INFO) << "READ   store[" << req->storage_id() << "]: ["
             << absl::BytesToHexString(req->item_name())

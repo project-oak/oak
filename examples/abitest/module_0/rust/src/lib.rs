@@ -147,8 +147,7 @@ impl OakABITestService for FrontendNode {
         tests.insert("DirectLog", FrontendNode::test_direct_log);
         tests.insert("BackendRoundtrip", FrontendNode::test_backend_roundtrip);
         tests.insert("Storage", FrontendNode::test_storage);
-        // TODO(#650): fix storage to emit errors for all these operations
-        tests.insert("DISABLED_AbsentStorage", FrontendNode::test_absent_storage);
+        tests.insert("AbsentStorage", FrontendNode::test_absent_storage);
         tests.insert(
             "GrpcClientUnaryMethod",
             FrontendNode::test_grpc_client_unary_method,
@@ -1245,9 +1244,9 @@ impl FrontendNode {
         expect_eq!(value.to_vec(), got);
 
         let key2 = b"test-key-bogus";
-        let empty = Vec::<u8>::new();
-        let got = storage.read(&self.storage_name, key2).map_err(from_proto)?;
-        expect_eq!(empty, got);
+        let got = storage.read(&self.storage_name, key2);
+        expect_matches!(got, Err(_));
+        expect_eq!(grpc::Code::NOT_FOUND.value(), got.unwrap_err().get_code());
 
         let got = storage.read(&self.storage_name, key).map_err(from_proto)?;
         expect_eq!(value.to_vec(), got);
@@ -1256,8 +1255,9 @@ impl FrontendNode {
             .delete(&self.storage_name, key)
             .map_err(from_proto)?;
 
-        let got = storage.read(&self.storage_name, key).map_err(from_proto)?;
-        expect_eq!(empty, got);
+        let got = storage.read(&self.storage_name, key);
+        expect_matches!(got, Err(_));
+        expect_eq!(grpc::Code::NOT_FOUND.value(), got.unwrap_err().get_code());
 
         storage
             .delete(&self.storage_name, key)
@@ -1280,9 +1280,15 @@ impl FrontendNode {
         let key = b"a-test-key-0";
         let value = b"a-test-value-0";
 
-        expect_matches!(storage.write(&self.storage_name, key, value), Err(_));
-        expect_matches!(storage.read(&self.storage_name, key), Err(_));
-        expect_matches!(storage.delete(&self.storage_name, key), Err(_));
+        let got = storage.write(&self.storage_name, key, value);
+        expect_matches!(got, Err(_));
+        expect_eq!(grpc::Code::UNAVAILABLE.value(), got.unwrap_err().get_code());
+        let got = storage.read(&self.storage_name, key);
+        expect_matches!(got, Err(_));
+        expect_eq!(grpc::Code::UNAVAILABLE.value(), got.unwrap_err().get_code());
+        let got = storage.delete(&self.storage_name, key);
+        expect_matches!(got, Err(_));
+        expect_eq!(grpc::Code::UNAVAILABLE.value(), got.unwrap_err().get_code());
 
         Ok(())
     }
