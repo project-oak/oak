@@ -24,25 +24,7 @@
 use log::{Level, Log, Metadata, Record, SetLoggerError};
 
 struct OakChannelLogger {
-    channel: crate::io::Sender<LogEntry>,
-}
-
-/// An object representing a log entry. Currently just a wrapper around a string, but it may be
-/// extended in the future with additional fields, e.g. level or file / line information, though
-/// that would probably require defining a cross-language schema such as protobuf or FIDL for it,
-/// rather than just a Rust struct.
-struct LogEntry {
-    message: String,
-}
-
-/// Trivial implementation of [`oak::io::Encodable`], just converting the log entry message to bytes
-/// and no handles.
-impl crate::io::Encodable for LogEntry {
-    fn encode(&self) -> Result<crate::io::Message, crate::OakError> {
-        let bytes = self.message.as_bytes().into();
-        let handles = vec![];
-        Ok(crate::io::Message { bytes, handles })
-    }
+    channel: crate::io::Sender<crate::proto::log::LogMessage>,
 }
 
 impl Log for OakChannelLogger {
@@ -53,23 +35,30 @@ impl Log for OakChannelLogger {
         if !self.enabled(record.metadata()) {
             return;
         }
-        let log_entry = LogEntry {
-            // We add a newline to the message to force flushing when printed by the host.
-            message: format!(
-                "{}  {} : {} : {}\n",
-                record.level(),
-                record.file().unwrap_or_default(),
-                record.line().unwrap_or_default(),
-                record.args()
-            ),
+        let log_msg = crate::proto::log::LogMessage {
+            file: record.file().unwrap_or("<unknown-file>").to_string(),
+            line: record.line().unwrap_or_default(),
+            level: map_level(record.level()),
+            message: format!("{}", record.args()),
+            ..Default::default()
         };
-        match self.channel.send(&log_entry) {
+        match self.channel.send(&log_msg) {
             Ok(()) => (),
             Err(crate::OakError::OakStatus(crate::OakStatus::ErrTerminated)) => (),
             Err(e) => panic!("could not send log message over log channel: {}", e),
         }
     }
     fn flush(&self) {}
+}
+
+fn map_level(level: Level) -> crate::proto::log::Level {
+    match level {
+        Level::Error => crate::proto::log::Level::ERROR,
+        Level::Warn => crate::proto::log::Level::WARN,
+        Level::Info => crate::proto::log::Level::INFO,
+        Level::Debug => crate::proto::log::Level::DEBUG,
+        Level::Trace => crate::proto::log::Level::TRACE,
+    }
 }
 
 /// Default name for predefined node configuration that corresponds to a logging

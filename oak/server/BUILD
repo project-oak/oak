@@ -206,6 +206,7 @@ cc_library(
         ":channel",
         ":node_thread",
         "//oak/common:handles",
+        "//oak/proto:log_cc_proto",
         "@com_google_absl//absl/memory",
         "@com_google_asylo//asylo/util:logging",
     ],
