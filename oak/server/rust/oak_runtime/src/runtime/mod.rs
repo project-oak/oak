@@ -57,7 +57,7 @@ pub struct Runtime {
     terminating: AtomicBool,
     channels: Mutex<Channels>,
     nodes: Mutex<HashMap<NodeRef, Node>>,
-    next_node: AtomicU64,
+    next_node_reference: AtomicU64,
 }
 
 impl Runtime {
@@ -72,7 +72,7 @@ impl Runtime {
             terminating: AtomicBool::new(false),
             channels: Mutex::new(Vec::new()),
             nodes: Mutex::new(HashMap::new()),
-            next_node: AtomicU64::new(0),
+            next_node_reference: AtomicU64::new(0),
         };
 
         let runtime = RuntimeRef(Arc::new(runtime));
@@ -300,6 +300,11 @@ impl Runtime {
             }
         }
     }
+
+    /// Create a fresh NodeReference.
+    fn new_node_reference(&self) -> NodeRef {
+        NodeRef(self.next_node_reference.fetch_add(1, SeqCst))
+    }
 }
 
 /// A reference to a `Runtime`
@@ -323,8 +328,8 @@ impl RuntimeRef {
             return Err(OakStatus::ErrTerminated);
         }
 
-        let reference = NodeRef(self.next_node.fetch_add(1, SeqCst));
         let mut nodes = self.nodes.lock().unwrap();
+        let reference = self.new_node_reference();
 
         match self
             .configurations
