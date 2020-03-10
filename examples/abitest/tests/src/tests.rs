@@ -57,7 +57,7 @@ fn test_abi() {
 
     // TODO(#540): reinstate storage and gRPC client tests when Rust runtime supports them.
     let mut req = ABITestRequest::new();
-    req.exclude = "(^Storage.*|GrpcClient)".to_string();
+    req.exclude = "(Storage|GrpcClient)".to_string();
 
     let result: grpc::Result<ABITestResponse> = oak_tests::grpc_request(
         &runtime,
