@@ -27,7 +27,6 @@ use oak_abi::{ChannelReadStatus, OakStatus};
 use oak_platform::{JoinHandle, Mutex};
 
 use log::debug;
-use rand::RngCore;
 
 use crate::message::Message;
 use crate::node;
@@ -40,7 +39,7 @@ type Channels = Vec<Weak<channel::Channel>>;
 #[derive(Debug)]
 struct Node {
     reference: NodeRef,
-    join_handle: Option<JoinHandle>,
+    join_handle: JoinHandle,
 }
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
@@ -102,15 +101,11 @@ impl Runtime {
 
         // Unpark any threads that are blocked waiting on channels.
         for thread in threads.values() {
-            thread.join_handle.as_ref().unwrap().thread().unpark();
+            thread.join_handle.thread().unpark();
         }
 
         for (_, thread) in threads.drain() {
-            thread
-                .join_handle
-                .unwrap()
-                .join()
-                .expect("Failed to join handle");
+            thread.join_handle.join().expect("Failed to join handle");
         }
     }
 
@@ -345,7 +340,13 @@ impl RuntimeRef {
                 )
             }) {
             Ok(join_handle) => {
-                nodes.get_mut(&reference).unwrap().join_handle = Some(join_handle);
+                nodes.insert(
+                    reference,
+                    Node {
+                        reference,
+                        join_handle,
+                    },
+                );
             }
             Err(e) => {
                 nodes.remove(&reference);
