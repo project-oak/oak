@@ -28,32 +28,35 @@ use prost::Message;
 // We use `hashbrown` since it is `no_std` compatible.
 use hashbrown::HashSet;
 
-/// A trait representing a label as part of a lattice.
-///
-/// See https://github.com/project-oak/oak/blob/master/docs/concepts.md#labels
-pub trait Label: Sized {
+pub use crate::proto::policy::*;
+
+/// A proto message representing a label as part of a lattice.
+impl crate::proto::policy::Label {
     /// Convert the label to bytes.
-    fn serialize(&self) -> Vec<u8>;
-
-    /// Build the label from bytes.
-    fn deserialize(bytes: &[u8]) -> Option<Self>;
-
-    /// Compare two labels according to the lattice structure: L_0 ⊑ L_1.
-    fn flows_to(&self, other: &Self) -> bool;
-}
-
-impl Label for crate::proto::policy::Label {
-    fn serialize(&self) -> Vec<u8> {
+    pub fn serialize(&self) -> Vec<u8> {
         let mut bytes = Vec::new();
         self.encode(&mut bytes)
             .expect("could not serialize to bytes");
         bytes
     }
-    fn deserialize(bytes: &[u8]) -> Option<Self> {
+
+    /// Build the label from bytes.
+    pub fn deserialize(bytes: &[u8]) -> Option<Self> {
         Self::decode(bytes).ok()
     }
 
-    fn flows_to(&self, other: &Self) -> bool {
+    // Return the least privileged label.
+    //
+    // A node or channel with this label has only observed public data and is trusted by no one.
+    pub fn public_trusted() -> Self {
+        Label {
+            secrecy_tags: vec![],
+            integrity_tags: vec![],
+        }
+    }
+
+    /// Compare two labels according to the lattice structure: L_0 ⊑ L_1.
+    pub fn flows_to(&self, other: &Self) -> bool {
         #![allow(clippy::mutable_key_type)]
 
         let self_secrecy_tags: HashSet<_> = self.secrecy_tags.iter().collect();
@@ -73,30 +76,26 @@ impl Label for crate::proto::policy::Label {
 mod tests {
     use super::*;
 
-    fn authorization_bearer_token_hmac_tag(
-        authorization_bearer_token_hmac: &[u8],
-    ) -> crate::proto::policy::Tag {
-        crate::proto::policy::Tag {
-            tag: Option::Some(crate::proto::policy::tag::Tag::GrpcTag(
-                crate::proto::policy::GrpcTag {
-                    authorization_bearer_token_hmac: authorization_bearer_token_hmac.into(),
-                },
-            )),
+    fn authorization_bearer_token_hmac_tag(authorization_bearer_token_hmac: &[u8]) -> Tag {
+        Tag {
+            tag: Option::Some(tag::Tag::GrpcTag(GrpcTag {
+                authorization_bearer_token_hmac: authorization_bearer_token_hmac.into(),
+            })),
         }
     }
 
     #[test]
     fn serialize_deserialize() {
         let labels = vec![
-            crate::proto::policy::Label {
+            Label {
                 secrecy_tags: vec![],
                 integrity_tags: vec![],
             },
-            crate::proto::policy::Label {
+            Label {
                 secrecy_tags: vec![authorization_bearer_token_hmac_tag(&[0, 0, 0])],
                 integrity_tags: vec![authorization_bearer_token_hmac_tag(&[1, 1, 1])],
             },
-            crate::proto::policy::Label {
+            Label {
                 secrecy_tags: vec![
                     authorization_bearer_token_hmac_tag(&[0, 0, 0]),
                     authorization_bearer_token_hmac_tag(&[0, 0, 0]),
@@ -106,7 +105,7 @@ mod tests {
                     authorization_bearer_token_hmac_tag(&[1, 1, 1]),
                 ],
             },
-            crate::proto::policy::Label {
+            Label {
                 secrecy_tags: vec![
                     authorization_bearer_token_hmac_tag(&[0, 0, 0]),
                     authorization_bearer_token_hmac_tag(&[1, 1, 1]),
@@ -119,7 +118,7 @@ mod tests {
         ];
         for label in labels.iter() {
             let bytes = label.serialize();
-            let deserialized = crate::proto::policy::Label::deserialize(&bytes).unwrap();
+            let deserialized = Label::deserialize(&bytes).unwrap();
             assert_eq!(*label, deserialized);
         }
     }
@@ -129,18 +128,12 @@ mod tests {
         let tag_0 = authorization_bearer_token_hmac_tag(&[0, 0, 0]);
         let tag_1 = authorization_bearer_token_hmac_tag(&[1, 1, 1]);
 
-        // The least privileged label.
-        //
-        // A node or channel with this label has only observed public data.
-        let public_trusted = crate::proto::policy::Label {
-            secrecy_tags: vec![],
-            integrity_tags: vec![],
-        };
+        let public_trusted = Label::public_trusted();
 
         // A label that corresponds to the secrecy of tag_0.
         //
         // A node or channel with this label may have observed data related to tag_0.
-        let label_0 = crate::proto::policy::Label {
+        let label_0 = Label {
             secrecy_tags: vec![tag_0.clone()],
             integrity_tags: vec![],
         };
@@ -148,7 +141,7 @@ mod tests {
         // A label that corresponds to the secrecy of tag_1.
         //
         // A node or channel with this label may have observed data related to tag_1.
-        let label_1 = crate::proto::policy::Label {
+        let label_1 = Label {
             secrecy_tags: vec![tag_1.clone()],
             integrity_tags: vec![],
         };
@@ -156,14 +149,14 @@ mod tests {
         // A label that corresponds to the combined secrecy of both tag_0 and tag_1.
         //
         // A node or channel with this label may have observed data related to tag_0 and tag_1.
-        let label_0_1 = crate::proto::policy::Label {
+        let label_0_1 = Label {
             secrecy_tags: vec![tag_0.clone(), tag_1.clone()],
             integrity_tags: vec![],
         };
 
         // A label identical to `label_0_1`, but in which tags appear in a different order. This
         // should not make any difference in terms of what the label actually represent.
-        let label_1_0 = crate::proto::policy::Label {
+        let label_1_0 = Label {
             secrecy_tags: vec![tag_1, tag_0],
             integrity_tags: vec![],
         };

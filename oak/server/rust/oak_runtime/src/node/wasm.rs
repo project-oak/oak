@@ -200,7 +200,14 @@ impl WasmInterface {
         })?;
 
         self.runtime
-            .node_create(&config_name, &entrypoint, channel_ref.clone())
+            .node_create(
+                &config_name,
+                &entrypoint,
+                // TODO(#630): Let caller provide this label via the Wasm ABI.
+                // TODO(#630): Check whether the label of the caller "flows to" the provided label.
+                &oak_abi::label::Label::public_trusted(),
+                channel_ref.clone(),
+            )
             .map_err(|_| {
                 error!(
                     "node_create: Config \"{}\" entrypoint \"{}\" not found",

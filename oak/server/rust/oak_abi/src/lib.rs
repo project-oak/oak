@@ -15,7 +15,7 @@
 //
 
 //! Type, constant and Wasm host function definitions for the Oak application binary interface.
-pub mod proto;
+mod proto;
 pub use proto::*;
 
 pub mod label;
