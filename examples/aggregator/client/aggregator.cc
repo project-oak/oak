@@ -37,12 +37,18 @@ using ::oak::examples::aggregator::SerializedSparseVector;
 void submit_sample(Aggregator::Stub* stub, std::string& bucket, std::vector<uint32_t>& indices,
                    std::vector<float>& values) {
   grpc::ClientContext context;
+  LOG(INFO) << "Submitting sample:";
   Sample request;
+  LOG(INFO) << "  bucket: " << bucket;
   request.set_bucket(bucket);
+  LOG(INFO) << "  indices:";
   for (auto index : indices) {
+    LOG(INFO) << "    - " << index;
     request.mutable_data()->add_indices(index);
   }
+  LOG(INFO) << "  values:";
   for (auto value : values) {
+    LOG(INFO) << "    - " << value;
     request.mutable_data()->add_values(value);
   }
   google::protobuf::Empty response;

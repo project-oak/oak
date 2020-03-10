@@ -38,7 +38,7 @@ use std::collections::HashMap;
 use std::convert::{From, TryFrom};
 
 /// Currently threshold value is hardcoded.
-const SAMPLE_THRESHOLD: u64 = 5;
+const SAMPLE_THRESHOLD: u64 = 2;
 
 type ThresholdAggregatorMap = HashMap<String, Option<ThresholdAggregator<SparseVector>>>;
 
