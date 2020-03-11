@@ -21,6 +21,7 @@ use crate::proto::grpc_encap::{GrpcRequest, GrpcResponse};
 use crate::proto::storage_channel::{
     StorageChannelDeleteRequest, StorageChannelDeleteResponse, StorageChannelReadRequest,
     StorageChannelReadResponse, StorageChannelWriteRequest, StorageChannelWriteResponse,
+    StorageItem,
 };
 use log::{info, warn};
 use protobuf::Message;
@@ -147,9 +148,14 @@ impl Storage {
     /// Read the value associated with the given `name` from the storage
     /// instance identified by `name`.
     pub fn read(&mut self, storage_name: &[u8], name: &[u8]) -> grpc::Result<Vec<u8>> {
-        let mut read_request = StorageChannelReadRequest::new();
-        read_request.storage_name = storage_name.to_owned();
-        read_request.mut_item().set_name(name.to_owned());
+        let read_request = StorageChannelReadRequest {
+            storage_name: storage_name.to_owned(),
+            item: protobuf::SingularPtrField::some(StorageItem {
+                name: name.to_owned(),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
 
         // TODO: Automatically generate boilerplate from the proto definition.
         self.execute_operation::<StorageChannelReadRequest, StorageChannelReadResponse>(
@@ -162,11 +168,16 @@ impl Storage {
     /// Set the value associated with the given `name` from the storage instance
     /// identified by `name`.
     pub fn write(&mut self, storage_name: &[u8], name: &[u8], value: &[u8]) -> grpc::Result<()> {
-        let mut write_request = StorageChannelWriteRequest::new();
         // TODO: Set policy for item.
-        write_request.storage_name = storage_name.to_owned();
-        write_request.mut_item().set_name(name.to_owned());
-        write_request.mut_item().set_value(value.to_owned());
+        let write_request = StorageChannelWriteRequest {
+            storage_name: storage_name.to_owned(),
+            item: protobuf::SingularPtrField::some(StorageItem {
+                name: name.to_owned(),
+                value: value.to_owned(),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
 
         // TODO: Automatically generate boilerplate from the proto definition.
         self.execute_operation::<StorageChannelWriteRequest, StorageChannelWriteResponse>(
@@ -179,9 +190,14 @@ impl Storage {
     /// Delete the value associated with the given `name` from the storage
     /// instance identified by `name`.
     pub fn delete(&mut self, storage_name: &[u8], name: &[u8]) -> grpc::Result<()> {
-        let mut delete_request = StorageChannelDeleteRequest::new();
-        delete_request.storage_name = storage_name.to_owned();
-        delete_request.mut_item().set_name(name.to_owned());
+        let delete_request = StorageChannelDeleteRequest {
+            storage_name: storage_name.to_owned(),
+            item: protobuf::SingularPtrField::some(StorageItem {
+                name: name.to_owned(),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
 
         // TODO: Automatically generate boilerplate from the proto definition.
         self.execute_operation::<StorageChannelDeleteRequest, StorageChannelDeleteResponse>(
