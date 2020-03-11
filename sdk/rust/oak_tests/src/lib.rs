@@ -100,7 +100,8 @@ where
     Q: protobuf::Message,
 {
     // Put the request in a GrpcRequest wrapper and serialize into a message.
-    let grpc_req = oak::grpc::encap_request(req, method_name).expect("failed to build GrpcRequest");
+    let grpc_req =
+        oak::grpc::encap_request(req, None, method_name).expect("failed to build GrpcRequest");
     let mut req_msg = oak_runtime::Message {
         data: vec![],
         channels: vec![],
