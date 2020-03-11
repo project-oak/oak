@@ -17,6 +17,7 @@
 load("//oak/common:app_config.bzl", "serialized_config")
 
 package(
+    default_visibility = ["//examples:__subpackages__"],
     licenses = ["notice"],
 )
 

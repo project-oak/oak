@@ -53,6 +53,6 @@ pub struct AggregatorClient(pub oak::grpc::client::Client);
 
 impl AggregatorClient {
     pub fn submit_sample(&self, req: super::aggregator::Sample) -> grpc::Result<protobuf::well_known_types::Empty> {
-        oak::grpc::invoke_grpc_method("/oak.examples.aggregator.Aggregator/SubmitSample", req, &self.0.invocation_sender)
+        oak::grpc::invoke_grpc_method("/oak.examples.aggregator.Aggregator/SubmitSample", &req, Some("type.googleapis.com/oak.examples.aggregator.Sample"), &self.0.invocation_sender)
     }
 }

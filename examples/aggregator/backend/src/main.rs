@@ -39,7 +39,7 @@ impl Aggregator for AggregatorBackend {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let address = "[::]:8888".parse()?;
+    let address = "127.0.0.1:8888".parse()?;
     let handler = AggregatorBackend::default();
 
     println!("Starting the backend server at {:?}", address);
