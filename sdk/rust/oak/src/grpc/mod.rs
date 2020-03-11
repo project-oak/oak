@@ -168,7 +168,11 @@ impl<T: ServerNode> crate::Node<Invocation> for T {
 
 /// Encapsulate a protocol buffer message in a GrpcRequest wrapper using the
 /// given method name.
-pub fn encap_request<T: protobuf::Message>(req: T, method_name: &str) -> Option<GrpcRequest> {
+pub fn encap_request<T: protobuf::Message>(
+    req: T,
+    req_type_url: Option<&str>,
+    method_name: &str,
+) -> Option<GrpcRequest> {
     // Put the request in a GrpcRequest wrapper and serialize it.
     let mut grpc_req = GrpcRequest::new();
     grpc_req.set_method_name(method_name.to_string());
@@ -177,6 +181,9 @@ pub fn encap_request<T: protobuf::Message>(req: T, method_name: &str) -> Option<
         warn!("failed to serialize gRPC request: {}", e);
         return None;
     };
+    if let Some(type_url) = req_type_url {
+        any.set_type_url(type_url.to_string());
+    }
     grpc_req.set_req_msg(any);
     grpc_req.set_last(true);
     Some(grpc_req)
@@ -204,6 +211,7 @@ pub fn decap_response<T: protobuf::Message>(mut grpc_rsp: GrpcResponse) -> Resul
 pub fn invoke_grpc_method_stream<R>(
     method_name: &str,
     req: R,
+    req_type_url: Option<&str>,
     invocation_channel: &crate::io::Sender<Invocation>,
 ) -> Result<crate::io::Receiver<GrpcResponse>>
 where
@@ -215,7 +223,8 @@ where
 
     // Put the request in a GrpcRequest wrapper and send it into the request
     // message channel.
-    let req = encap_request(req, method_name).expect("failed to serialize GrpcRequest");
+    let req =
+        encap_request(req, req_type_url, method_name).expect("failed to serialize GrpcRequest");
     req_sender.send(&req).expect("failed to write to channel");
     req_sender.close().expect("failed to close channel");
 
@@ -244,13 +253,15 @@ where
 pub fn invoke_grpc_method<R, Q>(
     method_name: &str,
     req: R,
+    req_type_url: Option<&str>,
     invocation_channel: &crate::io::Sender<Invocation>,
 ) -> Result<Q>
 where
     R: protobuf::Message,
     Q: protobuf::Message,
 {
-    let rsp_receiver = invoke_grpc_method_stream(method_name, req, invocation_channel)?;
+    let rsp_receiver =
+        invoke_grpc_method_stream(method_name, req, req_type_url, invocation_channel)?;
     // Read a single encapsulated response.
     let result = rsp_receiver.receive();
     rsp_receiver.close().expect("failed to close channel");

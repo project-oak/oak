@@ -172,13 +172,16 @@ impl<'a> MethodGen<'a> {
         if let Some(sig) = self.client_sig() {
             w.pub_fn(&sig, |w| {
                 w.write_line(format!(
-                    "oak::grpc::{}(\"{}\", req, &self.0.invocation_sender)",
+                    "oak::grpc::{}(\"{}\", req, Some(\"type.googleapis.com/{}\"), &self.0.invocation_sender)",
                     if self.proto.get_server_streaming() {
                         "invoke_grpc_method_stream"
                     } else {
                         "invoke_grpc_method"
                     },
-                    self.full_path()
+                    self.full_path(),
+                    // Lose any leading dot to make the package name look
+                    // sensible ("oak.Thing" rather than ".oak.Thing").
+                    self.proto.get_input_type().trim_start_matches('.')
                 ));
             });
         }

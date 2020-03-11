@@ -55,9 +55,9 @@ pub struct PrivateSetIntersectionClient(pub oak::grpc::client::Client);
 
 impl PrivateSetIntersectionClient {
     pub fn submit_set(&self, req: super::private_set_intersection::SubmitSetRequest) -> grpc::Result<protobuf::well_known_types::Empty> {
-        oak::grpc::invoke_grpc_method("/oak.examples.private_set_intersection.PrivateSetIntersection/SubmitSet", req, &self.0.invocation_sender)
+        oak::grpc::invoke_grpc_method("/oak.examples.private_set_intersection.PrivateSetIntersection/SubmitSet", req, Some("type.googleapis.com/oak.examples.private_set_intersection.SubmitSetRequest"), &self.0.invocation_sender)
     }
     pub fn get_intersection(&self, req: protobuf::well_known_types::Empty) -> grpc::Result<super::private_set_intersection::GetIntersectionResponse> {
-        oak::grpc::invoke_grpc_method("/oak.examples.private_set_intersection.PrivateSetIntersection/GetIntersection", req, &self.0.invocation_sender)
+        oak::grpc::invoke_grpc_method("/oak.examples.private_set_intersection.PrivateSetIntersection/GetIntersection", req, Some("type.googleapis.com/google.protobuf.Empty"), &self.0.invocation_sender)
     }
 }
