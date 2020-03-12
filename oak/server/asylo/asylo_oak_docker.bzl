@@ -14,12 +14,13 @@
 # limitations under the License.
 #
 
-"""Rule for generating an Oak application Docker image."""
+"""Rule for generating an Oak application Docker image based on the Asylo server."""
 
 load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 
 def asylo_oak_docker(name, application, ports):
-    """Generates an Oak application Docker image.
+    """Generates an Oak application Docker image based on the Asylo server.
+    An image contains an Asylo runner, an enclave library and an application configuration file.
 
     Implicit output targets:
         name.tar: A TAR file with an archived Docker image.

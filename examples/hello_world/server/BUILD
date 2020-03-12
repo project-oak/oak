@@ -21,7 +21,7 @@ package(
 )
 
 asylo_oak_docker(
-    name = "docker_image",
+    name = "hello_world_image",
     application = "//examples/hello_world/config:config",
     ports = [
         "8080/tcp",  # Oak Application gRPC port.

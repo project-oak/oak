@@ -87,19 +87,17 @@ esac
 
 if [[ "${docker_image}" == true ]]; then
   if [[ "${language}" != "rust" ]]; then
-    echo "Docker images are only supported to Rust modules"
+    echo "Docker images are only supported for Rust modules"
     exit 1
   fi
 
-  # Docker images only support the Asylo server.
-  "${SCRIPTS_DIR}/build_server" -s asylo
-
   readonly DOCKER_BAZEL_BUILD_FLAGS=(
-    "--config=enc-sim"
     '--symlink_prefix=bazel-docker-'
+    # Docker images only support the Asylo server.
+    "--config=enc-sim"
   )
   bazel --output_base="${CACHE_DIR}/docker" build "${DOCKER_BAZEL_BUILD_FLAGS[@]}" \
-    "//examples/${EXAMPLE}/server:docker_image.tar"
+    "//examples/${EXAMPLE}/server:${EXAMPLE}_image.tar"
 fi
 
 # Build the client with a different output_base so that we don't lose incremental state.
