@@ -1,5 +1,5 @@
 #
-# Copyright 2019 The Project Oak Authors
+# Copyright 2020 The Project Oak Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,22 +14,17 @@
 # limitations under the License.
 #
 
-load("@io_bazel_rules_docker//container:container.bzl", "container_image")
-load("@rules_cc//cc:defs.bzl", "cc_binary")
+load("//oak/server/asylo:asylo_oak_docker.bzl", "asylo_oak_docker")
 
 package(
     licenses = ["notice"],
 )
 
-cc_binary(
-    name = "client",
-    srcs = ["hello_world.cc"],
-    deps = [
-        "//examples/hello_world/proto:hello_world_cc_grpc",
-        "//oak/client:application_client",
-        "@com_github_grpc_grpc//:grpc++",
-        "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/flags:parse",
-        "@com_google_asylo//asylo/util:logging",
+asylo_oak_docker(
+    name = "docker_image",
+    application = "//examples/hello_world/config:config",
+    ports = [
+        "8080/tcp",  # Oak Application gRPC port.
     ],
 )
+
