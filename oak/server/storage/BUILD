@@ -59,6 +59,7 @@ cc_library(
         "//oak/proto:grpc_encap_cc_proto",
         "//oak/proto:storage_channel_cc_proto",
         "//oak/server:channel",
+        "//oak/server:invocation",
         "//oak/server:node_thread",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/memory",
