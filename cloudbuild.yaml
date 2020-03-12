@@ -57,13 +57,13 @@ steps:
     entrypoint: 'bash'
     args: ['./scripts/build_server', '-s', 'arm']
 
-  # Package the Asylo Oak server in a Docker image.
+  # Package the Hello World application in a Docker image.
   - name: 'gcr.io/oak-ci/oak:latest'
     id: build_server_docker
     waitFor: ['build_server_asylo']
     timeout: 30m
     entrypoint: 'bash'
-    args: ['./scripts/build_server_docker']
+    args: ['./scripts/build_example -e hello_world -i']
 
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_tests
