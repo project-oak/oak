@@ -20,6 +20,7 @@
 #include "asylo/util/logging.h"
 #include "grpcpp/create_channel.h"
 #include "oak/proto/grpc_encap.pb.h"
+#include "oak/server/invocation.h"
 
 namespace oak {
 
@@ -37,45 +38,15 @@ GrpcClientNode::GrpcClientNode(BaseRuntime* runtime, const std::string& name,
 }
 
 bool GrpcClientNode::HandleInvocation(MessageChannelReadHalf* invocation_channel) {
-  // Expect to receive a pair of handles:
-  //  - Handle to the read half of a channel that holds the request, serialized
-  //    as a GrpcRequest.
-  //  - Handle to the write half of a channel to send responses down, each
-  //    serialized as a GrpcResponse.
-  ReadResult invocation = invocation_channel->Read(INT_MAX, INT_MAX);
-  if (invocation.required_size > 0) {
-    LOG(ERROR) << "Message size too large: " << invocation.required_size;
+  std::unique_ptr<Invocation> invocation(Invocation::ReceiveFromChannel(invocation_channel));
+  if (invocation == nullptr) {
+    LOG(ERROR) << "Failed to create invocation";
     return false;
   }
-  if (invocation.msg->data.size() != 0) {
-    LOG(ERROR) << "Unexpectedly received data in invocation";
-    return false;
-  }
-  if (invocation.msg->channels.size() != 2) {
-    LOG(ERROR) << "Wrong number of channels " << invocation.msg->channels.size()
-               << " in invocation";
-    return false;
-  }
-
-  std::unique_ptr<ChannelHalf> half0 = std::move(invocation.msg->channels[0]);
-  auto channel0 = absl::get_if<std::unique_ptr<MessageChannelReadHalf>>(half0.get());
-  if (channel0 == nullptr) {
-    LOG(ERROR) << "First channel accompanying invocation is write-direction";
-    return false;
-  }
-  std::unique_ptr<MessageChannelReadHalf> req_channel = std::move(*channel0);
-
-  std::unique_ptr<ChannelHalf> half1 = std::move(invocation.msg->channels[1]);
-  auto channel1 = absl::get_if<std::unique_ptr<MessageChannelWriteHalf>>(half1.get());
-  if (channel1 == nullptr) {
-    LOG(ERROR) << "Second channel accompanying invocation is read-direction";
-    return false;
-  }
-  std::unique_ptr<MessageChannelWriteHalf> rsp_channel = std::move(*channel1);
 
   // Expect to read a single request out of the request channel.
   // TODO(#97): support client-side streaming
-  ReadResult req_result = req_channel->Read(INT_MAX, INT_MAX);
+  ReadResult req_result = invocation->req_channel->Read(INT_MAX, INT_MAX);
   if (req_result.required_size > 0) {
     LOG(ERROR) << "Message size too large: " << req_result.required_size;
     return false;
@@ -155,7 +126,7 @@ bool GrpcClientNode::HandleInvocation(MessageChannelReadHalf* invocation_channel
 
     // Write the encapsulated response Message to the response channel.
     LOG(INFO) << "Write gRPC response message to response channel";
-    rsp_channel->Write(std::move(rsp_msg));
+    invocation->rsp_channel->Write(std::move(rsp_msg));
   }
 
   LOG(INFO) << "Finish invocation method " << method_name;
@@ -179,7 +150,7 @@ bool GrpcClientNode::HandleInvocation(MessageChannelReadHalf* invocation_channel
 
     LOG(INFO) << "Write final gRPC status of (" << status.error_code() << ", '"
               << status.error_message() << "') to response channel";
-    rsp_channel->Write(std::move(rsp_msg));
+    invocation->rsp_channel->Write(std::move(rsp_msg));
   }
 
   // References to the per-invocation request/response channels will be dropped

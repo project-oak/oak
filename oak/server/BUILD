@@ -212,12 +212,24 @@ cc_library(
 )
 
 cc_library(
+    name = "invocation",
+    srcs = ["invocation.cc"],
+    hdrs = ["invocation.h"],
+    deps = [
+        ":channel",
+        "@com_google_absl//absl/memory",
+        "@com_google_asylo//asylo/util:logging",
+    ],
+)
+
+cc_library(
     name = "grpc_client_node",
     srcs = ["grpc_client_node.cc"],
     hdrs = ["grpc_client_node.h"],
     deps = [
         ":base_runtime",
         ":channel",
+        ":invocation",
         ":node_thread",
         "//oak/common:handles",
         "//oak/proto:grpc_encap_cc_proto",
