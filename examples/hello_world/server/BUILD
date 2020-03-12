@@ -27,4 +27,3 @@ asylo_oak_docker(
         "8080/tcp",  # Oak Application gRPC port.
     ],
 )
-
