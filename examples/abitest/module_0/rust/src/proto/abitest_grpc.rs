@@ -61,12 +61,12 @@ pub struct OakABITestServiceClient(pub oak::grpc::client::Client);
 
 impl OakABITestServiceClient {
     pub fn run_tests(&self, req: super::abitest::ABITestRequest) -> grpc::Result<super::abitest::ABITestResponse> {
-        oak::grpc::invoke_grpc_method("/oak.examples.abitest.OakABITestService/RunTests", req, Some("type.googleapis.com/oak.examples.abitest.ABITestRequest"), &self.0.invocation_sender)
+        oak::grpc::invoke_grpc_method("/oak.examples.abitest.OakABITestService/RunTests", &req, Some("type.googleapis.com/oak.examples.abitest.ABITestRequest"), &self.0.invocation_sender)
     }
     pub fn unary_method(&self, req: super::abitest::GrpcTestRequest) -> grpc::Result<super::abitest::GrpcTestResponse> {
-        oak::grpc::invoke_grpc_method("/oak.examples.abitest.OakABITestService/UnaryMethod", req, Some("type.googleapis.com/oak.examples.abitest.GrpcTestRequest"), &self.0.invocation_sender)
+        oak::grpc::invoke_grpc_method("/oak.examples.abitest.OakABITestService/UnaryMethod", &req, Some("type.googleapis.com/oak.examples.abitest.GrpcTestRequest"), &self.0.invocation_sender)
     }
     pub fn server_streaming_method(&self, req: super::abitest::GrpcTestRequest) -> grpc::Result<oak::io::Receiver<grpc::GrpcResponse>> {
-        oak::grpc::invoke_grpc_method_stream("/oak.examples.abitest.OakABITestService/ServerStreamingMethod", req, Some("type.googleapis.com/oak.examples.abitest.GrpcTestRequest"), &self.0.invocation_sender)
+        oak::grpc::invoke_grpc_method_stream("/oak.examples.abitest.OakABITestService/ServerStreamingMethod", &req, Some("type.googleapis.com/oak.examples.abitest.GrpcTestRequest"), &self.0.invocation_sender)
     }
 }

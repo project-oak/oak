@@ -36,7 +36,7 @@ fn test_say_hello() {
         &runtime,
         &entry_channel,
         "/oak.examples.hello_world.HelloWorld/SayHello",
-        req,
+        &req,
     );
     assert_matches!(result, Ok(_));
     assert_eq!("HELLO world!", result.unwrap().reply);

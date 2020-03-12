@@ -63,7 +63,7 @@ fn test_abi() {
         &runtime,
         &entry_channel,
         "/oak.examples.abitest.OakABITestService/RunTests",
-        req,
+        &req,
     );
     assert_matches!(result, Ok(_));
 

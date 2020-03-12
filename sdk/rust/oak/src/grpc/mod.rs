@@ -169,7 +169,7 @@ impl<T: ServerNode> crate::Node<Invocation> for T {
 /// Encapsulate a protocol buffer message in a GrpcRequest wrapper using the
 /// given method name.
 pub fn encap_request<T: protobuf::Message>(
-    req: T,
+    req: &T,
     req_type_url: Option<&str>,
     method_name: &str,
 ) -> Option<GrpcRequest> {
@@ -210,7 +210,7 @@ pub fn decap_response<T: protobuf::Message>(mut grpc_rsp: GrpcResponse) -> Resul
 /// reading responses from.
 pub fn invoke_grpc_method_stream<R>(
     method_name: &str,
-    req: R,
+    req: &R,
     req_type_url: Option<&str>,
     invocation_channel: &crate::io::Sender<Invocation>,
 ) -> Result<crate::io::Receiver<GrpcResponse>>
@@ -252,7 +252,7 @@ where
 /// response.
 pub fn invoke_grpc_method<R, Q>(
     method_name: &str,
-    req: R,
+    req: &R,
     req_type_url: Option<&str>,
     invocation_channel: &crate::io::Sender<Invocation>,
 ) -> Result<Q>

@@ -34,7 +34,7 @@ fn submit_sample(
         runtime,
         &entry_channel,
         "/oak.examples.aggregator.Aggregator/SubmitSample",
-        req,
+        &req,
     );
     assert_matches!(result, Ok(_));
 }
@@ -54,7 +54,7 @@ fn test_aggregator() {
             &runtime,
             &entry_channel,
             "/oak.examples.aggregator.Aggregator/GetCurrentValue",
-            req,
+            &req,
         );
         assert_matches!(result, Err(_));
     }
@@ -66,7 +66,7 @@ fn test_aggregator() {
             &runtime,
             &entry_channel,
             "/oak.examples.aggregator.Aggregator/GetCurrentValue",
-            req,
+            &req,
         );
         assert_matches!(result, Ok(_));
         assert_eq!(vec![2, 2, 2, 2, 2], result.unwrap().items);

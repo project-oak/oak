@@ -53,6 +53,6 @@ pub struct TranslatorClient(pub oak::grpc::client::Client);
 
 impl TranslatorClient {
     pub fn translate(&self, req: super::translator::TranslateRequest) -> grpc::Result<super::translator::TranslateResponse> {
-        oak::grpc::invoke_grpc_method("/oak.examples.translator.Translator/Translate", req, Some("type.googleapis.com/oak.examples.translator.TranslateRequest"), &self.0.invocation_sender)
+        oak::grpc::invoke_grpc_method("/oak.examples.translator.Translator/Translate", &req, Some("type.googleapis.com/oak.examples.translator.TranslateRequest"), &self.0.invocation_sender)
     }
 }
