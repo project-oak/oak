@@ -6,15 +6,17 @@ source "${SCRIPTS_DIR}/common"
 
 language="rust"
 compilation_mode='fastbuild'
-while getopts "l:de:h" opt; do
+docker_image=false
+while getopts "l:ide:h" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-h] [-l rust|cpp] [-d] -e EXAMPLE
+      echo -e "Usage: ${0} [-h] [-l rust|cpp] [-i] [-d] -e EXAMPLE
 
 Build the given example Oak Application and client.
 
 Options:
   -e    Example application name (required)
+  -i    Package application in a Docker image
   -d    Build C++ code for example using debug mode
   -l    Example application variant:
           - rust (used by default)
@@ -23,6 +25,8 @@ Options:
       exit 0;;
     l)
       language="${OPTARG}";;
+    i)
+      docker_image=true;;
     d)
       compilation_mode='dbg';;
     e)
@@ -81,6 +85,20 @@ case "${language}" in
     exit 1;;
 esac
 
+if [[ "${docker_image}" == true ]]; then
+  if [[ "${language}" != "rust" ]]; then
+    echo "Docker images are only supported for Rust modules"
+    exit 1
+  fi
+
+  docker_bazel_build_flags=("${bazel_build_flags[@]}")
+  # Docker images only support the Asylo server.
+  docker_bazel_build_flags+=(
+    "--config=enc-sim"
+  )
+  bazel build "${docker_bazel_build_flags[@]}" "//examples/${EXAMPLE}/server:${EXAMPLE}_image.tar"
+fi
+
 # Build the client with a different output_base so that we don't lose incremental state.
 # See https://docs.bazel.build/versions/master/command-line-reference.html#flag--output_base.
-bazel --output_base="${CACHE_DIR}/client" build "${bazel_build_flags[@]}" "//examples/${EXAMPLE}/client:client"
+bazel --output_base="${CACHE_DIR}/client" build "${bazel_build_flags[@]}" "//examples/${EXAMPLE}/client:all"

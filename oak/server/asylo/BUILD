@@ -154,8 +154,8 @@ container_image(
     name = "oak_docker",
     base = "@cc_image//image",
     files = [
-        "asylo_oak_runner",
-        "oak_enclave_debug.so",
+        "asylo_oak_runner_host_loader",
+        ":oak_enclave_debug.so",
     ],
     ports = [
         # https://github.com/project-oak/oak/blob/667b07c555cde0c4705e5f7533b101203cc01c12/oak/server/asylo/asylo_oak_manager.cc#L48
