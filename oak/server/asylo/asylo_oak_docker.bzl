@@ -20,6 +20,7 @@ load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 
 def asylo_oak_docker(name, application, ports):
     """Generates an Oak application Docker image based on the Asylo server.
+
     An image contains an Asylo runner, an enclave library and an application configuration file.
 
     Implicit output targets:
@@ -40,7 +41,7 @@ def asylo_oak_docker(name, application, ports):
             "--application={}".format(application_file),
             "--enclave_path=oak_enclave_debug.so",
         ],
-        # Files should contain full file paths with extensions.
+        # `files` must contain full file paths with extensions.
         files = [application_path],
         ports = ports,
     )

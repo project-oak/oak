@@ -91,13 +91,11 @@ if [[ "${docker_image}" == true ]]; then
     exit 1
   fi
 
+  # Docker images only support the Asylo server.
   readonly DOCKER_BAZEL_BUILD_FLAGS=(
-    '--symlink_prefix=bazel-docker-'
-    # Docker images only support the Asylo server.
     "--config=enc-sim"
   )
-  bazel --output_base="${CACHE_DIR}/docker" build "${DOCKER_BAZEL_BUILD_FLAGS[@]}" \
-    "//examples/${EXAMPLE}/server:${EXAMPLE}_image.tar"
+  bazel build "${DOCKER_BAZEL_BUILD_FLAGS[@]}" "//examples/${EXAMPLE}/server:${EXAMPLE}_image.tar"
 fi
 
 # Build the client with a different output_base so that we don't lose incremental state.
