@@ -172,7 +172,7 @@ impl<'a> MethodGen<'a> {
         if let Some(sig) = self.client_sig() {
             w.pub_fn(&sig, |w| {
                 w.write_line(format!(
-                    "oak::grpc::{}(\"{}\", req, Some(\"type.googleapis.com/{}\"), &self.0.invocation_sender)",
+                    "oak::grpc::{}(\"{}\", &req, Some(\"type.googleapis.com/{}\"), &self.0.invocation_sender)",
                     if self.proto.get_server_streaming() {
                         "invoke_grpc_method_stream"
                     } else {

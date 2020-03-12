@@ -53,6 +53,6 @@ pub struct FormatServiceClient(pub oak::grpc::client::Client);
 
 impl FormatServiceClient {
     pub fn format(&self, req: super::rustfmt::FormatRequest) -> grpc::Result<super::rustfmt::FormatResponse> {
-        oak::grpc::invoke_grpc_method("/oak.examples.rustfmt.FormatService/Format", req, Some("type.googleapis.com/oak.examples.rustfmt.FormatRequest"), &self.0.invocation_sender)
+        oak::grpc::invoke_grpc_method("/oak.examples.rustfmt.FormatService/Format", &req, Some("type.googleapis.com/oak.examples.rustfmt.FormatRequest"), &self.0.invocation_sender)
     }
 }

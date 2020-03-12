@@ -38,7 +38,7 @@ fn test_set_intersection() {
         &runtime,
         &entry_channel,
         "/oak.examples.private_set_intersection.PrivateSetIntersection/SubmitSet",
-        req,
+        &req,
     );
     assert_matches!(result, Ok(_));
 
@@ -50,7 +50,7 @@ fn test_set_intersection() {
         &runtime,
         &entry_channel,
         "/oak.examples.private_set_intersection.PrivateSetIntersection/SubmitSet",
-        req,
+        &req,
     );
     assert_matches!(result, Ok(_));
 
@@ -59,7 +59,7 @@ fn test_set_intersection() {
         &runtime,
         &entry_channel,
         "/oak.examples.private_set_intersection.PrivateSetIntersection/GetIntersection",
-        req,
+        &req,
     );
     assert_matches!(result, Ok(_));
     let got = HashSet::<String>::from_iter(result.unwrap().values.to_vec());

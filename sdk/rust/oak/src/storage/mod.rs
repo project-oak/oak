@@ -63,7 +63,7 @@ impl Storage {
             String::from("type.googleapis.com/") + operation_request.descriptor().full_name();
         crate::grpc::invoke_grpc_method(
             grpc_method_name,
-            operation_request,
+            &operation_request,
             Some(&type_url),
             &self.client.invocation_sender,
         )

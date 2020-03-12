@@ -34,7 +34,7 @@ fn submit_sample(
         runtime,
         &entry_channel,
         "/oak.examples.running_average.RunningAverage/SubmitSample",
-        req,
+        &req,
     );
     assert_matches!(result, Ok(_));
 }
@@ -54,7 +54,7 @@ fn test_running_average() {
         &runtime,
         &entry_channel,
         "/oak.examples.running_average.RunningAverage/GetAverage",
-        req,
+        &req,
     );
     assert_matches!(result, Ok(_));
     assert_eq!(150, result.unwrap().average);

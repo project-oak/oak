@@ -93,7 +93,7 @@ pub fn grpc_request<R, Q>(
     runtime: &oak_runtime::RuntimeRef,
     channel: &oak_runtime::ChannelWriter,
     method_name: &str,
-    req: R,
+    req: &R,
 ) -> oak::grpc::Result<Q>
 where
     R: protobuf::Message,

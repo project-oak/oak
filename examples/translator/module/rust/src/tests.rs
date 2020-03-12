@@ -37,7 +37,7 @@ fn test_translate() {
         &runtime,
         &entry_channel,
         "/oak.examples.translator.Translator/Translate",
-        req,
+        &req,
     );
     assert_matches!(result, Ok(_));
     assert_eq!("MONDI", result.unwrap().translated_text);

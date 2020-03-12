@@ -59,9 +59,9 @@ pub struct HelloWorldClient(pub oak::grpc::client::Client);
 
 impl HelloWorldClient {
     pub fn say_hello(&self, req: super::hello_world::HelloRequest) -> grpc::Result<super::hello_world::HelloResponse> {
-        oak::grpc::invoke_grpc_method("/oak.examples.hello_world.HelloWorld/SayHello", req, Some("type.googleapis.com/oak.examples.hello_world.HelloRequest"), &self.0.invocation_sender)
+        oak::grpc::invoke_grpc_method("/oak.examples.hello_world.HelloWorld/SayHello", &req, Some("type.googleapis.com/oak.examples.hello_world.HelloRequest"), &self.0.invocation_sender)
     }
     pub fn lots_of_replies(&self, req: super::hello_world::HelloRequest) -> grpc::Result<oak::io::Receiver<grpc::GrpcResponse>> {
-        oak::grpc::invoke_grpc_method_stream("/oak.examples.hello_world.HelloWorld/LotsOfReplies", req, Some("type.googleapis.com/oak.examples.hello_world.HelloRequest"), &self.0.invocation_sender)
+        oak::grpc::invoke_grpc_method_stream("/oak.examples.hello_world.HelloWorld/LotsOfReplies", &req, Some("type.googleapis.com/oak.examples.hello_world.HelloRequest"), &self.0.invocation_sender)
     }
 }

@@ -55,9 +55,9 @@ pub struct RunningAverageClient(pub oak::grpc::client::Client);
 
 impl RunningAverageClient {
     pub fn submit_sample(&self, req: super::running_average::SubmitSampleRequest) -> grpc::Result<protobuf::well_known_types::Empty> {
-        oak::grpc::invoke_grpc_method("/oak.examples.running_average.RunningAverage/SubmitSample", req, Some("type.googleapis.com/oak.examples.running_average.SubmitSampleRequest"), &self.0.invocation_sender)
+        oak::grpc::invoke_grpc_method("/oak.examples.running_average.RunningAverage/SubmitSample", &req, Some("type.googleapis.com/oak.examples.running_average.SubmitSampleRequest"), &self.0.invocation_sender)
     }
     pub fn get_average(&self, req: protobuf::well_known_types::Empty) -> grpc::Result<super::running_average::GetAverageResponse> {
-        oak::grpc::invoke_grpc_method("/oak.examples.running_average.RunningAverage/GetAverage", req, Some("type.googleapis.com/google.protobuf.Empty"), &self.0.invocation_sender)
+        oak::grpc::invoke_grpc_method("/oak.examples.running_average.RunningAverage/GetAverage", &req, Some("type.googleapis.com/google.protobuf.Empty"), &self.0.invocation_sender)
     }
 }
