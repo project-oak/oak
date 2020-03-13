@@ -35,7 +35,7 @@ namespace oak {
 namespace {
 // Name to use for the (sole) gRPC pseudo-Node.  This will not clash with any
 // dynamically created Node names because they are all of the form
-// "<config>-<number>".
+// "<config>-<number>-<entrypoint>".
 constexpr char kGrpcNodeName[] = "grpc";
 }  // namespace
 
