@@ -158,6 +158,8 @@ impl OakABITestService for FrontendNode {
         );
         tests.insert("AbsentGrpcClient", FrontendNode::test_absent_grpc_client);
 
+        tests.insert("ChannelInvite", FrontendNode::test_channel_invite);
+
         for (&name, &testfn) in &tests {
             if !include.is_match(name) {
                 debug!(
@@ -1427,6 +1429,27 @@ impl FrontendNode {
             }
         }
         receiver.close().expect("failed to close receiver");
+
+        Ok(())
+    }
+
+    fn test_channel_invite(&mut self) -> TestResult {
+        let (writer, reader) = oak::channel_create().expect("Failed to create channel");
+
+        let invite = reader
+            .handle
+            .create_invite()
+            .expect("Failed to create invite");
+        let reader = oak::ReadHandle {
+            handle: oak::Handle::from_invite(invite).expect("Failed to create handle from invite"),
+        };
+
+        oak::channel_write(writer, &[1, 2, 3, 4], &[]).expect("Failed to write to channel");
+        let mut receive_buffer = Vec::new();
+        oak::channel_read(reader, &mut receive_buffer, &mut Vec::new())
+            .expect("Failed to read from channel");
+
+        assert_eq!(vec![1, 2, 3, 4], receive_buffer);
 
         Ok(())
     }

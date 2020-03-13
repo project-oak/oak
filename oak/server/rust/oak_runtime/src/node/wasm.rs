@@ -42,6 +42,9 @@ use crate::{Message, RuntimeRef};
 /// - 4: channel_write: (u64, usize, usize, usize, u32) -> u32
 /// - 5: channel_read: (u64, usize, usize, usize, usize, u32, usize) -> u32
 /// - 6: wait_on_channels: (usize, u32) -> u32
+///
+/// - 7: create_invite(u64, usize) -> u32
+/// - 8: exchange_token(u64, usize) -> u32
 
 const NODE_CREATE: usize = 0;
 const RANDOM_GET: usize = 1;
@@ -51,9 +54,14 @@ const CHANNEL_WRITE: usize = 4;
 const CHANNEL_READ: usize = 5;
 const WAIT_ON_CHANNELS: usize = 6;
 
+const CREATE_INVITE: usize = 7;
+const EXCHANGE_TOKEN: usize = 8;
+
 type AbiHandle = u64;
 type AbiPointer = u32;
 type AbiPointerOffset = u32;
+
+type AbiToken = u64;
 
 const ABI_U32: ValueType = ValueType::I32;
 const ABI_U64: ValueType = ValueType::I64;
@@ -470,6 +478,57 @@ impl WasmInterface {
             Ok(())
         }
     }
+
+    pub fn create_invite(
+        &mut self,
+        handle: AbiHandle,
+        invite_token_target_ptr: AbiPointer,
+    ) -> Result<(), OakStatus> {
+        let handle = self
+            .readers
+            .get(&handle)
+            .cloned()
+            .map(ChannelEither::Reader)
+            .or_else(|| {
+                self.writers
+                    .get(&handle)
+                    .cloned()
+                    .map(ChannelEither::Writer)
+            })
+            .ok_or(OakStatus::ErrBadHandle)?;
+
+        let invite_token = self.runtime.add_invite(handle);
+
+        let mut invite_token_buffer = [0u8; 8];
+        LittleEndian::write_u64(&mut invite_token_buffer, invite_token);
+        self.get_memory()
+            .set(invite_token_target_ptr, &invite_token_buffer)
+            .map_err(|err| {
+                error!("create_invite: Unable to set invite token: {:?}", err);
+                OakStatus::ErrInvalidArgs
+            })
+    }
+
+    pub fn exchange_token(
+        &mut self,
+        invite_token: AbiToken,
+        handle_target_ptr: AbiPointer,
+    ) -> Result<(), OakStatus> {
+        let channel_either = self
+            .runtime
+            .exchange_token(invite_token)
+            .ok_or(OakStatus::ErrInvalidArgs)?;
+        let handle = self.allocate_new_handle(channel_either);
+
+        let mut handle_buffer = [0u8; 8];
+        LittleEndian::write_u64(&mut handle_buffer, handle);
+        self.get_memory()
+            .set(handle_target_ptr, &handle_buffer)
+            .map_err(|err| {
+                error!("exchange_token: Unable to set handle: {:?}", err);
+                OakStatus::ErrInvalidArgs
+            })
+    }
 }
 
 /// A helper function to move between our specific result type `Result<(), OakStatus>` and the
@@ -645,6 +704,30 @@ impl wasmi::Externals for WasmInterface {
                 map_host_errors(self.wait_on_channels(status_buff, handles_count))
             }
 
+            CREATE_INVITE => {
+                let handle: u64 = args.nth_checked(0)?;
+                let invite_token_target_ptr: u32 = args.nth_checked(1)?;
+
+                debug!(
+                    "{} create_invite: {} {}",
+                    self.pretty_name, handle, invite_token_target_ptr,
+                );
+
+                map_host_errors(self.create_invite(handle, invite_token_target_ptr))
+            }
+
+            EXCHANGE_TOKEN => {
+                let token: u64 = args.nth_checked(0)?;
+                let handle_target_ptr: u32 = args.nth_checked(1)?;
+
+                debug!(
+                    "{} exchange_token: {} {}",
+                    self.pretty_name, token, handle_target_ptr,
+                );
+
+                map_host_errors(self.exchange_token(token, handle_target_ptr))
+            }
+
             _ => panic!("Unimplemented function at {}", index),
         }
     }
@@ -711,6 +794,16 @@ impl wasmi::ModuleImportResolver for WasmInterface {
                 WAIT_ON_CHANNELS,
                 wasmi::Signature::new(&[ABI_USIZE, ABI_U32][..], Some(ABI_U32)),
             ),
+
+            "create_invite" => (
+                CREATE_INVITE,
+                wasmi::Signature::new(&[ABI_U64, ABI_USIZE][..], Some(ABI_U32)),
+            ),
+            "exchange_token" => (
+                EXCHANGE_TOKEN,
+                wasmi::Signature::new(&[ABI_U64, ABI_USIZE][..], Some(ABI_U32)),
+            ),
+
             _ => {
                 return Err(wasmi::Error::Instantiation(format!(
                     "Export {} not found",

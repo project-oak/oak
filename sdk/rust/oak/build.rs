@@ -24,6 +24,7 @@ fn main() {
             "../../../oak/proto/policy.proto",
             "../../../oak/proto/storage.proto",
             "../../../oak/proto/storage_channel.proto",
+            "../../../oak/proto/handle_invite.proto",
         ],
         includes: &["../../.."],
         customize: protoc_rust::Customize::default(),

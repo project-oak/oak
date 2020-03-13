@@ -31,6 +31,8 @@ use log::debug;
 use crate::message::Message;
 use crate::node;
 
+use rand::RngCore;
+
 mod channel;
 pub use channel::{ChannelEither, ChannelReader, ChannelWriter, ReadStatus};
 
@@ -58,6 +60,8 @@ pub struct Runtime {
     channels: Mutex<Channels>,
     nodes: Mutex<HashMap<NodeRef, Node>>,
     next_node_reference: AtomicU64,
+
+    invites_to_handles: Mutex<HashMap<u64, ChannelEither>>,
 }
 
 impl Runtime {
@@ -73,6 +77,8 @@ impl Runtime {
             channels: Mutex::new(Vec::new()),
             nodes: Mutex::new(HashMap::new()),
             next_node_reference: AtomicU64::new(0),
+
+            invites_to_handles: Mutex::new(HashMap::new()),
         };
 
         let runtime = RuntimeRef(Arc::new(runtime));
@@ -360,6 +366,19 @@ impl RuntimeRef {
         }
 
         Ok(())
+    }
+
+    pub fn add_invite(&self, handle: ChannelEither) -> u64 {
+        let token = rand::thread_rng().next_u64();
+        self.invites_to_handles
+            .lock()
+            .unwrap()
+            .insert(token, handle);
+        token
+    }
+
+    pub fn exchange_token(&self, token: u64) -> Option<ChannelEither> {
+        self.invites_to_handles.lock().unwrap().remove(&token)
     }
 }
 

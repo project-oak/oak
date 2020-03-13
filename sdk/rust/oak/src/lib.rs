@@ -98,6 +98,32 @@ impl Handle {
         }
     }
 
+    pub fn create_invite(&self) -> Result<u64, OakStatus> {
+        let mut invite_token = 0u64;
+        let status =
+            OakStatus::from_i32(
+                unsafe { oak_abi::create_invite(self.id, &mut invite_token) } as i32,
+            );
+        match status {
+            Some(OakStatus::Ok) => Ok(invite_token),
+            Some(x) => Err(x),
+            None => Err(OakStatus::ErrInternal),
+        }
+    }
+
+    pub fn from_invite(invite_token: u64) -> Result<Handle, OakStatus> {
+        let mut handle = Handle::invalid();
+        let status =
+            OakStatus::from_i32(
+                unsafe { oak_abi::exchange_token(invite_token, &mut handle.id) } as i32,
+            );
+        match status {
+            Some(OakStatus::Ok) => Ok(handle),
+            Some(x) => Err(x),
+            None => Err(OakStatus::ErrInternal),
+        }
+    }
+
     /// Pack a slice of `Handles` into the Wasm host ABI format.
     fn pack(handles: &[Handle]) -> Vec<u8> {
         let mut packed = Vec::with_capacity(handles.len() * 8);

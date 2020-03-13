@@ -146,4 +146,7 @@ extern "C" {
     ///
     /// [`OakStatus`]: crate::OakStatus
     pub fn random_get(buf: *mut u8, len: usize) -> u32;
+
+    pub fn create_invite(handle: u64, invite_token: *mut u64) -> u32;
+    pub fn exchange_token(invite_token: u64, handle: *mut u64) -> u32;
 }
