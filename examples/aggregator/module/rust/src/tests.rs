@@ -14,24 +14,36 @@
 // limitations under the License.
 //
 
-use crate::proto::aggregator_test::Vector;
+use crate::proto::aggregator::{Sample, SerializedSparseVector};
+use crate::SAMPLE_THRESHOLD;
 use assert_matches::assert_matches;
 use oak::grpc;
 use protobuf::well_known_types::Empty;
 
-const MODULE_CONFIG_NAME: &str = "aggregator_test";
+const MODULE_CONFIG_NAME: &str = "aggregator";
 
-fn submit_sample(entry_channel: &oak_runtime::ChannelWriter, items: Vec<u64>) {
-    let req = Vector {
-        items,
+fn submit_sample(
+    runtime: &oak_runtime::RuntimeRef,
+    entry_channel: &oak_runtime::ChannelWriter,
+    bucket: &str,
+    indices: Vec<u32>,
+    values: Vec<f32>,
+) -> grpc::Result<Empty> {
+    let req = Sample {
+        bucket: bucket.to_string(),
+        data: ::protobuf::SingularPtrField::some(SerializedSparseVector {
+            indices: indices,
+            values: values,
+            ..Default::default()
+        }),
         ..Default::default()
     };
-    let result: grpc::Result<Empty> = oak_tests::grpc_request(
+    oak_tests::grpc_request(
+        &runtime,
         &entry_channel,
-        "/oak.examples.aggregator_test.Aggregator/SubmitSample",
-        req,
-    );
-    assert_matches!(result, Ok(_));
+        "/oak.examples.aggregator.Aggregator/SubmitSample",
+        &req,
+    )
 }
 
 #[test]
@@ -41,29 +53,29 @@ fn test_aggregator() {
     let (runtime, entry_channel) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
         .expect("Unable to configure runtime with test wasm!");
 
-    submit_sample(&entry_channel, vec![0, 1, 0, 1, 0]);
-    submit_sample(&entry_channel, vec![1, 0, 1, 0, 1]);
-    {
-        let req = Empty::new();
-        let result: grpc::Result<Vector> = oak_tests::grpc_request(
-            &entry_channel,
-            "/oak.examples.aggregator_test.Aggregator/GetCurrentValue",
-            req,
+    for i in 0..SAMPLE_THRESHOLD as u32 {
+        assert_matches!(
+            submit_sample(
+                &runtime,
+                &entry_channel,
+                "test",
+                vec![i, i + 1, i + 2],
+                vec![10.0, 20.0, 30.0]
+            ),
+            Ok(_)
         );
-        assert_matches!(result, Err(_));
     }
-
-    submit_sample(&entry_channel, vec![1, 1, 1, 1, 1]);
-    {
-        let req = Empty::new();
-        let result: grpc::Result<Vector> = oak_tests::grpc_request(
+    // After sending the `SAMPLE_THRESHOLD` of samples, it's not possible to use the same `bucket`.
+    assert_matches!(
+        submit_sample(
+            &runtime,
             &entry_channel,
-            "/oak.examples.aggregator_test.Aggregator/GetCurrentValue",
-            req,
-        );
-        assert_matches!(result, Ok(_));
-        assert_eq!(vec![2, 2, 2, 2, 2], result.unwrap().items);
-    }
+            "test",
+            vec![1, 2, 3],
+            vec![10.0, 20.0, 30.0]
+        ),
+        Err(_)
+    );
 
     runtime.stop();
 }

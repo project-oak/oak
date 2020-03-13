@@ -45,17 +45,12 @@ type ThresholdAggregatorMap = HashMap<String, Option<ThresholdAggregator<SparseV
 /// Oak Node that collects aggregated data.
 pub struct AggregatorNode {
     aggregators: ThresholdAggregatorMap,
-    grpc_client: AggregatorClient,
 }
 
 impl AggregatorNode {
-    fn new() -> Result<Self, &'static str> {
-        match oak::grpc::client::Client::new("grpc-client", "ignored").map(AggregatorClient) {
-            Some(grpc_client) => Ok(AggregatorNode {
-                aggregators: ThresholdAggregatorMap::new(),
-                grpc_client: grpc_client,
-            }),
-            None => Err("Could not create a gRPC client"),
+    fn new() -> Self {
+        AggregatorNode {
+            aggregators: ThresholdAggregatorMap::new(),
         }
     }
 
@@ -85,14 +80,22 @@ impl AggregatorNode {
             "Sending aggregated data: bucket {}, sparse vector: {:?}",
             bucket, svec
         );
-        // Currently the Node panics if it couldn't send a gRPC request.
-        self.grpc_client
-            .submit_sample(Sample {
-                bucket: bucket,
-                data: ::protobuf::SingularPtrField::some(SerializedSparseVector::from(svec)),
-                ..Default::default()
-            })
-            .unwrap();
+
+        match oak::grpc::client::Client::new("grpc-client", "ignored").map(AggregatorClient) {
+            Some(grpc_client) => {
+                // Currently the Node panics if it couldn't send a gRPC request.
+                grpc_client
+                    .submit_sample(Sample {
+                        bucket: bucket,
+                        data: ::protobuf::SingularPtrField::some(SerializedSparseVector::from(
+                            svec,
+                        )),
+                        ..Default::default()
+                    })
+                    .unwrap();
+            }
+            None => error!("Could not create a gRPC client"),
+        }
     }
 }
 
@@ -130,7 +133,6 @@ impl Aggregator for AggregatorNode {
 
 oak::entrypoint!(oak_main => {
     oak::logger::init_default();
-    // Currently the Node panics if it couldn't create a gRPC client.
-    let node = AggregatorNode::new().unwrap();
+    let node = AggregatorNode::new();
     Dispatcher::new(node)
 });
