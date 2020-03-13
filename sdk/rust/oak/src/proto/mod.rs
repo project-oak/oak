@@ -21,3 +21,4 @@ pub mod policy;
 pub mod status;
 pub mod storage;
 pub mod storage_channel;
+pub mod log;

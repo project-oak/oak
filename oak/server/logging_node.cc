@@ -18,6 +18,7 @@
 
 #include "absl/memory/memory.h"
 #include "asylo/util/logging.h"
+#include "oak/proto/log.pb.h"
 
 namespace oak {
 
@@ -47,8 +48,16 @@ void LoggingNode::Run(Handle handle) {
       if (result.msg == nullptr) {
         break;
       }
-      LOG(INFO) << "{" << name_ << "} "
-                << "LOG: " << std::string(result.msg->data.data(), result.msg->data.size());
+      oak::log::LogMessage log_msg;
+      bool successful_parse =
+          log_msg.ParseFromArray(result.msg->data.data(), result.msg->data.size());
+      if (successful_parse) {
+        LOG(INFO) << "{" << name_ << "} "
+                  << "LOG: " << oak::log::Level_Name(log_msg.level()) << " " << log_msg.file()
+                  << ":" << log_msg.line() << ": " << log_msg.message();
+      } else {
+        LOG(ERROR) << "{" << name_ << "} Could not parse LogMessage.";
+      }
       // Any channel references included with the message will be dropped.
     }
   }

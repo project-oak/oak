@@ -91,6 +91,17 @@ cc_proto_library(
 )
 
 proto_library(
+    name = "log_proto",
+    srcs = ["log.proto"],
+    deps = [],
+)
+
+cc_proto_library(
+    name = "log_cc_proto",
+    deps = [":log_proto"],
+)
+
+proto_library(
     name = "storage_channel_proto",
     srcs = ["storage_channel.proto"],
     deps = [
