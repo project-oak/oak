@@ -7,7 +7,6 @@ members = [
   "examples/aggregator/backend",
   "examples/aggregator/common",
   "examples/aggregator/module/rust",
-  "examples/aggregator/module_test/rust",
   "examples/chat/module/rust",
   "examples/hello_world/module/rust",
   "examples/machine_learning/module/rust",
@@ -51,7 +50,6 @@ abitest_tests = { path = "examples/abitest/tests" }
 aggregator = { path = "examples/aggregator/module/rust" }
 aggregator_backend = { path = "examples/aggregator/backend" }
 aggregator_common = { path = "examples/aggregator/common" }
-aggregator_test = { path = "examples/aggregator/module_test/rust" }
 chat = { path = "examples/chat/module/rust" }
 hello_world = { path = "examples/hello_world/module/rust" }
 machine_learning = { path = "examples/machine_learning/module/rust" }

@@ -61,11 +61,6 @@ case "${language}" in
       bazel --output_base="${CACHE_DIR}/client" build "${bazel_build_flags[@]}" \
         "//examples/hello_world/config:config" \
         "//examples/hello_world/config:config_translator"
-    elif [[ "${EXAMPLE}" == "aggregator" ]]; then
-      # Aggregator example has an additional Proof-of-concept implementation.
-      bazel --output_base="${CACHE_DIR}/client" build "${bazel_build_flags[@]}" \
-        "//examples/aggregator/config:config" \
-        "//examples/aggregator/config:config_poc"
     else
       bazel --output_base="${CACHE_DIR}/client" build "${bazel_build_flags[@]}" "//examples/${EXAMPLE}/config:config"
     fi

@@ -28,4 +28,5 @@ exports_files(["LICENSE"])
 
 # These files are built via cargo outside of Bazel.
 exports_files(srcs = glob(["target/wasm32-unknown-unknown/release/*.wasm"]))
-exports_files(srcs = glob(["target/release/aggregator_backend"]))
+
+exports_files(srcs = glob(["target/release/aggregator_*"]))

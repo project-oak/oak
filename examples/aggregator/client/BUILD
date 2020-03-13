@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 load("@rules_cc//cc:defs.bzl", "cc_binary")
 
 package(
@@ -22,7 +21,7 @@ package(
 )
 
 cc_binary(
-    name = "client_poc",
+    name = "client",
     srcs = ["aggregator.cc"],
     deps = [
         "//examples/aggregator/proto:aggregator_cc_grpc",
@@ -31,21 +30,6 @@ cc_binary(
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
         "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/types:optional",
-        "@com_google_asylo//asylo/util:logging",
-    ],
-)
-
-# Test client.
-cc_binary(
-    name = "client",
-    srcs = ["aggregator_test.cc"],
-    deps = [
-        "//examples/aggregator/proto:aggregator_test_cc_grpc",
-        "//oak/client:application_client",
-        "@com_github_grpc_grpc//:grpc++",
-        "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/flags:parse",
         "@com_google_absl//absl/types:optional",
         "@com_google_asylo//asylo/util:logging",
     ],
