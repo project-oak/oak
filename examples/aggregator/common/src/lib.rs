@@ -62,10 +62,11 @@ impl<T: Monoid> ThresholdAggregator<T> {
         }
     }
 
-    /// Deletes current aggregated value and returns it if the number of collected samples is at
-    /// least `sample_threshold`.
+    /// If the number of current samples is at least `sample_threshold`, then returns the current
+    /// aggregated value and resets it; otherwise, returns `None` and leaves the internal state unchanged.
     pub fn take(&mut self) -> Option<T> {
         if self.sample_count >= self.sample_threshold {
+            self.sample_count = 0;
             Some(replace(&mut self.current_value, Monoid::identity()))
         } else {
             None

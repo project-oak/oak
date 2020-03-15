@@ -20,6 +20,7 @@ package oak.examples.aggregator;
 
 import "google/protobuf/empty.proto";
 
+// Data provided by clients is represented by Sparse Vectors: dictionaries with integer keys.
 message SerializedSparseVector {
   repeated uint32 indices = 1;
   repeated float values = 2;
@@ -27,7 +28,8 @@ message SerializedSparseVector {
 
 // Message sent by clients.
 message Sample {
-  // Data with different Bucket IDs should not be mixed (aggregated).
+  // Data with different Bucket IDs is not mixed and aggregated in different instances of the
+  // Aggregator, and each has its own minimal data sample threshold.
   string bucket = 1;
   SerializedSparseVector data = 2;
 }

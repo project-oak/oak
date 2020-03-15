@@ -5,8 +5,10 @@ authors = ["Ivan Petrov <ivanpetrov@google.com>"]
 edition = "2018"
 
 [dependencies]
+env_logger = "*"
 futures-core = "*"
 futures-util = "*"
+log = "*"
 prost = "*"
 protobuf = "*"
 tokio = { version = "*", features = ["fs", "macros", "sync", "stream"] }

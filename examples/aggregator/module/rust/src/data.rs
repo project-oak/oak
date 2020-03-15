@@ -19,10 +19,10 @@ use aggregator_common::Monoid;
 use std::collections::HashMap;
 use std::convert::{From, TryFrom};
 
-// Sparce Vectors are stored as Hash Maps.
+// Sparse Vectors are stored as Hash Maps.
 #[derive(Clone, Debug)]
 pub struct SparseVector {
-    map: HashMap<u32, f32>,
+    entries: HashMap<u32, f32>,
 }
 
 // Deserializes a Protobuf message into an internal Sparce Vector implementation.
@@ -33,10 +33,10 @@ impl TryFrom<SerializedSparseVector> for SparseVector {
     fn try_from(src: SerializedSparseVector) -> Result<Self, Self::Error> {
         src.indices.iter().zip(src.values.iter()).try_fold(
             SparseVector::identity(),
-            |mut svec, (&i, &v)| match svec.map.get(&i) {
+            |mut svec, (&i, &v)| match svec.entries.get(&i) {
                 Some(_) => Err(format!("Duplicated index: {}", i)),
                 None => Ok({
-                    svec.map.insert(i, v);
+                    svec.entries.insert(i, v);
                     svec
                 }),
             },
@@ -47,7 +47,7 @@ impl TryFrom<SerializedSparseVector> for SparseVector {
 // Serializes an internal Sparce Vector implementation into a Protobuf message.
 impl From<SparseVector> for SerializedSparseVector {
     fn from(src: SparseVector) -> Self {
-        src.map
+        src.entries
             .iter()
             .fold(SerializedSparseVector::new(), |mut vec, (&i, &v)| {
                 vec.indices.push(i);
@@ -60,14 +60,14 @@ impl From<SparseVector> for SerializedSparseVector {
 impl Monoid for SparseVector {
     fn identity() -> Self {
         SparseVector {
-            map: HashMap::new(),
+            entries: HashMap::new(),
         }
     }
 
     /// Combines two Sparse Vectors by adding up values corresponding to the same keys.
     fn combine(&self, other: &Self) -> Self {
-        other.map.iter().fold(self.clone(), |mut svec, (&i, &v)| {
-            *svec.map.entry(i).or_insert(v) += v;
+        other.entries.iter().fold(self.clone(), |mut svec, (&i, &v)| {
+            *svec.entries.entry(i).or_insert(v) += v;
             svec
         })
     }

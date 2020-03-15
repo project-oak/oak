@@ -40,17 +40,19 @@ use std::convert::{From, TryFrom};
 /// Currently threshold value is hardcoded.
 const SAMPLE_THRESHOLD: u64 = 2;
 
-type ThresholdAggregatorMap = HashMap<String, Option<ThresholdAggregator<SparseVector>>>;
-
-/// Oak Node that collects aggregated data.
+/// Oak Node that collects and aggregates data.
+/// Data is collected in the `aggregators` map where keys are buckets and values are instances of a 
+/// `ThresholdAggregator`. `Option` is used to keep note of the outdated buckets: once an
+/// Aggregator has sent its data to the Backend, it's replaced with `None` and all subsequent client
+/// requests corresponding to its bucket are discarded.
 pub struct AggregatorNode {
-    aggregators: ThresholdAggregatorMap,
+    aggregators: HashMap<String, Option<ThresholdAggregator<SparseVector>>>,
 }
 
 impl AggregatorNode {
     fn new() -> Self {
         AggregatorNode {
-            aggregators: ThresholdAggregatorMap::new(),
+            aggregators: HashMap<String, Option<ThresholdAggregator<SparseVector>>>::new(),
         }
     }
 
@@ -106,7 +108,7 @@ impl Aggregator for AggregatorNode {
             Some(data) => match SparseVector::try_from(data) {
                 Ok(svec) => {
                     debug!(
-                        "Submitted data: bucket {}, sparse vector: {:?}",
+                        "Received data: bucket {}, sparse vector: {:?}",
                         sample.bucket, svec
                     );
                     match self.submit_sparse_vector(sample.bucket, &svec) {

@@ -18,6 +18,7 @@ pub mod proto {
     tonic::include_proto!("oak.examples.aggregator");
 }
 
+use log::info;
 use proto::aggregator_server::{Aggregator, AggregatorServer};
 use proto::Sample;
 use tonic::{transport::Server, Request, Response, Status};
@@ -29,8 +30,8 @@ pub struct AggregatorBackend;
 impl Aggregator for AggregatorBackend {
     async fn submit_sample(&self, req: Request<Sample>) -> Result<Response<()>, Status> {
         let sample = req.into_inner();
-        println!(
-            "Aggregation: bucket={}, data={:?}",
+        info!(
+            "Received sample: bucket={}, data={:?}",
             sample.bucket, sample.data
         );
         Ok(Response::new(()))
@@ -39,10 +40,11 @@ impl Aggregator for AggregatorBackend {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    env_logger::init();
     let address = "127.0.0.1:8888".parse()?;
     let handler = AggregatorBackend::default();
 
-    println!("Starting the backend server at {:?}", address);
+    info!("Starting the backend server at {:?}", address);
 
     Server::builder()
         .add_service(AggregatorServer::new(handler))
