@@ -13,6 +13,7 @@ listens for samples provided by the Aggregator and prints them into the standard
 output.
 
 Build and run the Backend with the following command:
+
 ```bash
 cargo run --release --manifest-path=examples/aggregator/backend/Cargo.toml
 ```
@@ -24,6 +25,7 @@ Backend code is in the `backend` directory.
 Simple client that connects to the Aggregator and sends a data sample with gRPC.
 
 Build and run the Client with the following command:
+
 ```bash
 ./scripts/build_example -e aggregator
 ./bazel-client-bin/examples/aggregator/client/client --address=127.0.0.1 --bucket=test --data=1:10,2:20,3:30
@@ -39,10 +41,11 @@ This application shows how an Oak Node can aggregate data samples and report
 aggregated values if there are enough samples to hide individual contributors
 (enforces k-anonymity).
 
-Clients invoke the module by providing data samples that contain a bucket ID
-and a Sparse Vector - a dictionary with integer keys.
+Clients invoke the module by providing data samples that contain a bucket ID and
+a Sparse Vector - a dictionary with integer keys.
 
 Build and run the Aggregator with the following command:
+
 ```bash
 ./scripts/build_server -s asylo
 ./bazel-bin/oak/server/asylo/asylo_oak_runner --application=./bazel-client-bin/examples/aggregator/config/config.bin

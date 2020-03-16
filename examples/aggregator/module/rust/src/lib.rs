@@ -56,7 +56,11 @@ impl AggregatorNode {
         }
     }
 
-    fn try_report_aggregation(&mut self, bucket: String, svec: &SparseVector) -> Result<(), String> {
+    fn try_report_aggregation(
+        &mut self,
+        bucket: String,
+        svec: &SparseVector,
+    ) -> Result<(), String> {
         match self.aggregators.get_mut(&bucket) {
             Some(entry) => match *entry {
                 Some(ref mut aggregator) => {
