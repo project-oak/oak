@@ -14,6 +14,11 @@
 // limitations under the License.
 //
 
+//! Backend server for the Aggregator example.
+//!
+//! Backend is used in tests/experiments and is represented as a gRPC server that listens for
+//! samples provided by the Aggregator and prints them into the standard output.
+
 pub mod proto {
     tonic::include_proto!("oak.examples.aggregator");
 }

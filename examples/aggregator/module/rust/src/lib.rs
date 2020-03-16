@@ -16,11 +16,11 @@
 
 //! Aggregator example for Project Oak.
 //!
-//! This shows how an Oak Node can aggregate data samples and expose the aggregated data only if
-//! there are enough samples to hide individual contributors.
+//! This shows how an Oak Node can aggregate data samples and report aggregated values if there are
+//! enough samples to hide individual contributors (enforces k-anonymity).
 //!
-//! Clients invoke the module by providing a vector of non-negative numbers and get back an
-//! aggregated vector if an Oak Node has collected more samples than the predefined threshold.
+//! Clients invoke the module by providing data samples that contain a bucket ID
+//! and a Sparse Vector - a dictionary with integer keys.
 
 mod data;
 mod proto;
@@ -38,10 +38,10 @@ use std::collections::HashMap;
 use std::convert::{From, TryFrom};
 
 /// Currently threshold value is hardcoded.
-const SAMPLE_THRESHOLD: u64 = 2;
+const SAMPLE_THRESHOLD: u64 = 5;
 
 /// Oak Node that collects and aggregates data.
-/// Data is collected in the `aggregators` map where keys are buckets and values are instances of a 
+/// Data is collected in the `aggregators` map where keys are buckets and values are instances of a
 /// `ThresholdAggregator`. `Option` is used to keep note of the outdated buckets: once an
 /// Aggregator has sent its data to the Backend, it's replaced with `None` and all subsequent client
 /// requests corresponding to its bucket are discarded.
@@ -52,18 +52,18 @@ pub struct AggregatorNode {
 impl AggregatorNode {
     fn new() -> Self {
         AggregatorNode {
-            aggregators: HashMap<String, Option<ThresholdAggregator<SparseVector>>>::new(),
+            aggregators: HashMap::<String, Option<ThresholdAggregator<SparseVector>>>::new(),
         }
     }
 
-    fn submit_sparse_vector(&mut self, bucket: String, svec: &SparseVector) -> Result<(), String> {
+    fn try_report_aggregation(&mut self, bucket: String, svec: &SparseVector) -> Result<(), String> {
         match self.aggregators.get_mut(&bucket) {
             Some(entry) => match *entry {
                 Some(ref mut aggregator) => {
                     aggregator.submit(svec);
                     if let Some(aggregated_data) = aggregator.take() {
                         *entry = None;
-                        self.send_aggregated_data(bucket, aggregated_data);
+                        self.report(bucket, aggregated_data);
                     }
                 }
                 None => Err(format!("Outdated bucket: {}", bucket))?,
@@ -77,24 +77,22 @@ impl AggregatorNode {
         Ok(())
     }
 
-    fn send_aggregated_data(&self, bucket: String, svec: SparseVector) {
+    fn report(&self, bucket: String, svec: SparseVector) {
         debug!(
-            "Sending aggregated data: bucket {}, sparse vector: {:?}",
+            "Reporting data to the backend: bucket {}, sparse vector: {:?}",
             bucket, svec
         );
 
-        match oak::grpc::client::Client::new("grpc-client", "ignored").map(AggregatorClient) {
+        match oak::grpc::client::Client::new("grpc-client", "").map(AggregatorClient) {
             Some(grpc_client) => {
-                // Currently the Node panics if it couldn't send a gRPC request.
-                grpc_client
-                    .submit_sample(Sample {
-                        bucket: bucket,
-                        data: ::protobuf::SingularPtrField::some(SerializedSparseVector::from(
-                            svec,
-                        )),
-                        ..Default::default()
-                    })
-                    .unwrap();
+                let res = grpc_client.submit_sample(Sample {
+                    bucket: bucket,
+                    data: ::protobuf::SingularPtrField::some(svec.into()),
+                    ..Default::default()
+                });
+                if let Err(err) = res {
+                    error!("gRPC send error: {:?}", err);
+                }
             }
             None => error!("Could not create a gRPC client"),
         }
@@ -111,22 +109,19 @@ impl Aggregator for AggregatorNode {
                         "Received data: bucket {}, sparse vector: {:?}",
                         sample.bucket, svec
                     );
-                    match self.submit_sparse_vector(sample.bucket, &svec) {
-                        Ok(_) => Ok(Empty::new()),
-                        Err(err) => {
-                            error!("Sparse Vector submission error: {}", err);
-                            Err(grpc::build_status(grpc::Code::INVALID_ARGUMENT, &err))
-                        }
+                    if let Err(err) = self.try_report_aggregation(sample.bucket, &svec) {
+                        let err = format!("Backend report error: {}", err);
+                        error!("{:?}", err);
                     }
+                    Ok(Empty::new())
                 }
                 Err(err) => {
-                    error!("Data deserialization error: {}", err);
+                    let err = format!("Data deserialization error: {}", err);
                     Err(grpc::build_status(grpc::Code::INVALID_ARGUMENT, &err))
                 }
             },
             None => {
                 let err = "No data specified";
-                error!("{}", err);
                 Err(grpc::build_status(grpc::Code::INVALID_ARGUMENT, &err))
             }
         }

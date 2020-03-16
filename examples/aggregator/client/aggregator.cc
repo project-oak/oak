@@ -27,8 +27,9 @@
 
 ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak application to connect to");
 ABSL_FLAG(std::string, bucket, "", "Bucket under which to aggregate samples");
-ABSL_FLAG(std::vector<std::string>, data, std::vector<std::string>{},
-          "A comma-separated list of `index:value` entries that represent a single sparse vector sample");
+ABSL_FLAG(
+    std::vector<std::string>, data, std::vector<std::string>{},
+    "A comma-separated list of `index:value` entries that represent a single sparse vector sample");
 
 using ::oak::examples::aggregator::Aggregator;
 using ::oak::examples::aggregator::Sample;

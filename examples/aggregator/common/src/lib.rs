@@ -63,7 +63,8 @@ impl<T: Monoid> ThresholdAggregator<T> {
     }
 
     /// If the number of current samples is at least `sample_threshold`, then returns the current
-    /// aggregated value and resets it; otherwise, returns `None` and leaves the internal state unchanged.
+    /// aggregated value and resets it; otherwise, returns `None` and leaves the internal state
+    /// unchanged.
     pub fn take(&mut self) -> Option<T> {
         if self.sample_count >= self.sample_threshold {
             self.sample_count = 0;

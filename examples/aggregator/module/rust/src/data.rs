@@ -66,9 +66,12 @@ impl Monoid for SparseVector {
 
     /// Combines two Sparse Vectors by adding up values corresponding to the same keys.
     fn combine(&self, other: &Self) -> Self {
-        other.entries.iter().fold(self.clone(), |mut svec, (&i, &v)| {
-            *svec.entries.entry(i).or_insert(v) += v;
-            svec
-        })
+        other
+            .entries
+            .iter()
+            .fold(self.clone(), |mut svec, (&i, &v)| {
+                *svec.entries.entry(i).or_insert(v) += v;
+                svec
+            })
     }
 }
