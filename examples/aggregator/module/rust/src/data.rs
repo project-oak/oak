@@ -27,7 +27,7 @@ pub struct SparseVector {
 
 impl SparseVector {
     pub fn new(entries: HashMap<u32, f32>) -> Self {
-        SparseVector { entries: entries }
+        SparseVector { entries }
     }
 }
 

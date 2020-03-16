@@ -37,8 +37,8 @@ fn submit_sample(
     let req = Sample {
         bucket: bucket.to_string(),
         data: ::protobuf::SingularPtrField::some(SerializedSparseVector {
-            indices: indices,
-            values: values,
+            indices,
+            values,
             ..Default::default()
         }),
         ..Default::default()

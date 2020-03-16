@@ -73,7 +73,7 @@ impl AggregatorNode {
                         }
                     }
                 }
-                None => Err(format!("Outdated bucket: {}", bucket))?,
+                None => return Err(format!("Outdated bucket: {}", bucket)),
             },
             None => {
                 let mut aggregator = ThresholdAggregator::<SparseVector>::new(SAMPLE_THRESHOLD);
@@ -95,7 +95,7 @@ impl AggregatorNode {
         match oak::grpc::client::Client::new("grpc-client", "").map(AggregatorClient) {
             Some(grpc_client) => {
                 let res = grpc_client.submit_sample(Sample {
-                    bucket: bucket,
+                    bucket,
                     data: ::protobuf::SingularPtrField::some(svec.into()),
                     ..Default::default()
                 });
