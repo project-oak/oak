@@ -17,16 +17,19 @@
 use std::path;
 
 fn main() {
-    let proto_dir = path::Path::new("../../../../oak/proto/");
-    let oak_api_path = &*proto_dir.join("oak_api.proto");
-    let policy_path = &*proto_dir.join("policy.proto");
+    let proto_files = vec!["oak_api.proto", "policy.proto"];
 
-    // Tell Cargo that if the given file changes, to rerun this build script.
+    let proto_dir = path::Path::new("../../../../oak/proto/").to_path_buf();
+    let proto_paths: Vec<path::PathBuf> = proto_files.iter().map(|f| proto_dir.join(f)).collect();
+
+    // Tell Cargo that if any of the given files change, to rerun this build script.
     // https://doc.rust-lang.org/cargo/reference/build-scripts.html#rerun-if-changed
-    println!("cargo:rerun-if-changed={}", oak_api_path.to_str().unwrap());
+    for path in &proto_paths {
+        println!("cargo:rerun-if-changed={}", path.to_str().unwrap());
+    }
 
     prost_build::Config::new()
         .type_attribute(".oak.policy", "#[derive(Eq,Hash)]")
-        .compile_protos(&[oak_api_path, policy_path], &[proto_dir])
+        .compile_protos(&proto_paths, &[proto_dir])
         .unwrap();
 }
