@@ -11,6 +11,7 @@ crate-type = ["cdylib"]
 aggregator_common = { path = "../../common" }
 itertools = "*"
 log = "*"
+maplit = "*"
 oak = "=0.1.0"
 protobuf = "*"
 

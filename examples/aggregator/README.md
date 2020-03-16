@@ -15,14 +15,14 @@ output.
 Build and run the Backend with the following command:
 
 ```bash
-cargo run --release --manifest-path=examples/aggregator/backend/Cargo.toml
+cargo run --release --package=aggregator_backend
 ```
 
 Backend code is in the `backend` directory.
 
 ### Client
 
-Simple client that connects to the Aggregator and sends a data sample with gRPC.
+Simple client that connects to the Aggregator and sends a data sample via gRPC.
 
 Build and run the Client with the following command:
 

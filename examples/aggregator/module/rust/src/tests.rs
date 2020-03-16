@@ -14,11 +14,16 @@
 // limitations under the License.
 //
 
+use crate::data::SparseVector;
 use crate::proto::aggregator::{Sample, SerializedSparseVector};
 use crate::SAMPLE_THRESHOLD;
+use aggregator_common::Monoid;
 use assert_matches::assert_matches;
+use maplit::hashmap;
 use oak::grpc;
 use protobuf::well_known_types::Empty;
+use std::collections::HashMap;
+use std::convert::{From, TryFrom};
 
 const MODULE_CONFIG_NAME: &str = "aggregator";
 
@@ -78,4 +83,78 @@ fn test_aggregator() {
     );
 
     runtime.stop();
+}
+
+fn check_combine(src1: HashMap<u32, f32>, src2: HashMap<u32, f32>, dst: HashMap<u32, f32>) -> bool {
+    let src = SparseVector::new(src1).combine(&SparseVector::new(src2));
+    src == SparseVector::new(dst)
+}
+
+#[test]
+fn test_combine() {
+    assert!(check_combine(hashmap! {}, hashmap! {}, hashmap! {},));
+    assert!(check_combine(
+        hashmap! {},
+        hashmap! {1 => 10.0},
+        hashmap! {1 => 10.0},
+    ));
+    assert!(check_combine(
+        hashmap! {1 => 10.0},
+        hashmap! {2 => 20.0},
+        hashmap! {1 => 10.0, 2 => 20.0},
+    ));
+    assert!(check_combine(
+        hashmap! {1 => 10.0},
+        hashmap! {2 => 20.0, 3 => 30.0},
+        hashmap! {1 => 10.0, 2 => 20.0, 3 => 30.0},
+    ));
+    assert!(check_combine(
+        hashmap! {1 => 10.0, 2 => 20.0, 3 => 30.0},
+        hashmap! {2 => 20.0, 3 => 30.0},
+        hashmap! {1 => 10.0, 2 => 40.0, 3 => 60.0},
+    ));
+}
+
+#[test]
+fn test_serialize() {
+    assert_eq!(
+        SerializedSparseVector::from(SparseVector::new(hashmap! {1 => 10.0})),
+        SerializedSparseVector {
+            indices: vec![1],
+            values: vec![10.0],
+            ..Default::default()
+        }
+    );
+    assert_eq!(
+        SparseVector::try_from(&SerializedSparseVector {
+            indices: vec![1, 2],
+            values: vec![10.0, 20.0],
+            ..Default::default()
+        }),
+        Ok(SparseVector::new(hashmap! {1 => 10.0, 2 => 20.0}))
+    );
+    assert_matches!(
+        SparseVector::try_from(&SerializedSparseVector {
+            indices: vec![1, 1], // Duplicated indices are not allowed.
+            values: vec![10.0, 20.0],
+            ..Default::default()
+        }),
+        Err(_)
+    );
+    assert_matches!(
+        SparseVector::try_from(&SerializedSparseVector {
+            indices: vec![1],
+            values: vec![10.0, 20.0],
+            ..Default::default()
+        }),
+        Err(_)
+    );
+    assert_matches!(
+        SparseVector::try_from(&SerializedSparseVector {
+            indices: vec![1, 2],
+            values: vec![10.0],
+            ..Default::default()
+        }),
+        Err(_)
+    );
 }

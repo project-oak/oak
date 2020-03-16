@@ -31,11 +31,11 @@ use aggregator_common::ThresholdAggregator;
 use data::SparseVector;
 use log::{debug, error};
 use oak::grpc;
-use proto::aggregator::{Sample, SerializedSparseVector};
+use proto::aggregator::Sample;
 use proto::aggregator_grpc::{Aggregator, AggregatorClient, Dispatcher};
 use protobuf::well_known_types::Empty;
 use std::collections::HashMap;
-use std::convert::{From, TryFrom};
+use std::convert::TryFrom;
 
 /// Currently threshold value is hardcoded.
 const SAMPLE_THRESHOLD: u64 = 5;
@@ -52,22 +52,25 @@ pub struct AggregatorNode {
 impl AggregatorNode {
     fn new() -> Self {
         AggregatorNode {
-            aggregators: HashMap::<String, Option<ThresholdAggregator<SparseVector>>>::new(),
+            aggregators: HashMap::new(),
         }
     }
 
-    fn try_report_aggregation(
-        &mut self,
-        bucket: String,
-        svec: &SparseVector,
-    ) -> Result<(), String> {
+    /// Submit a data sample (Sparse Vector `svec`) to an Aggregator corresponding to the `bucket`.
+    /// If the Aggregator has enough data samples, then report the aggregated value to the backend
+    /// server and replace the Aggregator with `None`, so all subsequent client requests
+    /// corresponding to the `bucket` will be discarded.
+    fn submit(&mut self, bucket: String, svec: &SparseVector) -> Result<(), String> {
         match self.aggregators.get_mut(&bucket) {
             Some(entry) => match *entry {
                 Some(ref mut aggregator) => {
                     aggregator.submit(svec);
                     if let Some(aggregated_data) = aggregator.take() {
                         *entry = None;
-                        self.report(bucket, aggregated_data);
+                        if let Err(err) = self.report(bucket, aggregated_data) {
+                            // Backend report errors are not returned to the clients.
+                            error!("Backend report error: {:?}", err);
+                        }
                     }
                 }
                 None => Err(format!("Outdated bucket: {}", bucket))?,
@@ -81,7 +84,9 @@ impl AggregatorNode {
         Ok(())
     }
 
-    fn report(&self, bucket: String, svec: SparseVector) {
+    /// Try to report the aggregated value to the backend server via gRPC.
+    /// Return an error if the backend server is not available.
+    fn report(&self, bucket: String, svec: SparseVector) -> Result<(), String> {
         debug!(
             "Reporting data to the backend: bucket {}, sparse vector: {:?}",
             bucket, svec
@@ -94,11 +99,12 @@ impl AggregatorNode {
                     data: ::protobuf::SingularPtrField::some(svec.into()),
                     ..Default::default()
                 });
-                if let Err(err) = res {
-                    error!("gRPC send error: {:?}", err);
+                match res {
+                    Ok(_) => Ok(()),
+                    Err(err) => Err(format!("gRPC send error: {:?}", err)),
                 }
             }
-            None => error!("Could not create a gRPC client"),
+            None => Err("Could not create a gRPC client".to_string()),
         }
     }
 }
@@ -107,17 +113,19 @@ impl AggregatorNode {
 impl Aggregator for AggregatorNode {
     fn submit_sample(&mut self, sample: Sample) -> grpc::Result<Empty> {
         match sample.data.into_option() {
-            Some(data) => match SparseVector::try_from(data) {
+            Some(data) => match SparseVector::try_from(&data) {
                 Ok(svec) => {
                     debug!(
                         "Received data: bucket {}, sparse vector: {:?}",
                         sample.bucket, svec
                     );
-                    if let Err(err) = self.try_report_aggregation(sample.bucket, &svec) {
-                        let err = format!("Backend report error: {}", err);
-                        error!("{:?}", err);
+                    match self.submit(sample.bucket, &svec) {
+                        Ok(_) => Ok(Empty::new()),
+                        Err(err) => {
+                            let err = format!("Submit sample error: {}", err);
+                            Err(grpc::build_status(grpc::Code::INVALID_ARGUMENT, &err))
+                        }
                     }
-                    Ok(Empty::new())
                 }
                 Err(err) => {
                     let err = format!("Data deserialization error: {}", err);

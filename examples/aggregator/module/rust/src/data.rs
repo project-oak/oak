@@ -20,31 +20,45 @@ use std::collections::HashMap;
 use std::convert::{From, TryFrom};
 
 // Sparse Vectors are stored as Hash Maps.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SparseVector {
     entries: HashMap<u32, f32>,
 }
 
-// Deserializes a Protobuf message into an internal Sparce Vector implementation.
-// If a Protobuf message has duplicated indices, returns an `Error`.
-impl TryFrom<SerializedSparseVector> for SparseVector {
-    type Error = String;
-
-    fn try_from(src: SerializedSparseVector) -> Result<Self, Self::Error> {
-        src.indices.iter().zip(src.values.iter()).try_fold(
-            SparseVector::identity(),
-            |mut svec, (&i, &v)| match svec.entries.get(&i) {
-                Some(_) => Err(format!("Duplicated index: {}", i)),
-                None => Ok({
-                    svec.entries.insert(i, v);
-                    svec
-                }),
-            },
-        )
+impl SparseVector {
+    pub fn new(entries: HashMap<u32, f32>) -> Self {
+        SparseVector { entries: entries }
     }
 }
 
-// Serializes an internal Sparce Vector implementation into a Protobuf message.
+// Deserializes a Protobuf message into an internal Sparse Vector implementation.
+// If a Protobuf message has duplicated indices, returns an `Error`.
+impl TryFrom<&SerializedSparseVector> for SparseVector {
+    type Error = String;
+
+    fn try_from(src: &SerializedSparseVector) -> Result<Self, Self::Error> {
+        if src.indices.len() == src.values.len() {
+            src.indices.iter().zip(src.values.iter()).try_fold(
+                SparseVector::identity(),
+                |mut svec, (&i, &v)| match svec.entries.get(&i) {
+                    Some(_) => Err(format!("Duplicated index: {}", i)),
+                    None => Ok({
+                        svec.entries.insert(i, v);
+                        svec
+                    }),
+                },
+            )
+        } else {
+            Err(format!(
+                "Indices and values have different lengths: {} and {}",
+                src.indices.len(),
+                src.values.len()
+            ))
+        }
+    }
+}
+
+// Serializes an internal Sparse Vector implementation into a Protobuf message.
 impl From<SparseVector> for SerializedSparseVector {
     fn from(src: SparseVector) -> Self {
         src.entries
@@ -59,9 +73,7 @@ impl From<SparseVector> for SerializedSparseVector {
 
 impl Monoid for SparseVector {
     fn identity() -> Self {
-        SparseVector {
-            entries: HashMap::new(),
-        }
+        SparseVector::new(HashMap::new())
     }
 
     /// Combines two Sparse Vectors by adding up values corresponding to the same keys.
@@ -70,7 +82,7 @@ impl Monoid for SparseVector {
             .entries
             .iter()
             .fold(self.clone(), |mut svec, (&i, &v)| {
-                *svec.entries.entry(i).or_insert(v) += v;
+                *svec.entries.entry(i).or_insert(0.0) += v;
                 svec
             })
     }

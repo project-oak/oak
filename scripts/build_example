@@ -60,7 +60,7 @@ case "${language}" in
       bazel --output_base="${CACHE_DIR}/client" build "${bazel_build_flags[@]}" "//examples/hello_world/config:config_translator"
     elif [[ "${EXAMPLE}" == "aggregator" ]]; then
       # `aggregator` example has an additional Backend Docker image
-      cargo build --release --manifest-path='examples/aggregator/backend/Cargo.toml'
+      cargo build --release --package=aggregator_backend
     fi
     bazel --output_base="${CACHE_DIR}/client" build "${bazel_build_flags[@]}" "//examples/${EXAMPLE}/config:config"
     ;;
