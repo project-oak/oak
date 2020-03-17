@@ -9,8 +9,6 @@ source "${GLOBAL_SCRIPTS_DIR}/common"
 "${GLOBAL_SCRIPTS_DIR}/build_example" -e aggregator
 
 # Build Server.
-# Output base is initialized, so it would be possible to push built Docker images outside the Docker
-# environment.
 bazel build --config=enc-sim '//examples/aggregator/server:aggregator_image.tar'
 
 # Build Backend.

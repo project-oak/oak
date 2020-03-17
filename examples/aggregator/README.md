@@ -57,9 +57,12 @@ a generic Aggregator data structure).
 ## Deployment
 
 The Aggregator example contains a `gcp/pod.yaml` file which is a config for
-Google Cloud deployment. The deployment consists of an Aggregator Oak
-application and a Backend server that are deployed as Docker containers using
-Kubernetes.
+Google Cloud deployment.
+
+An Aggregator deployment consists of a single pod with two running containers
+(an Aggregator Oak application and a Backend server) and a service with a TCP
+Load Balancer and an assigned static IP `35.246.87.178` that listens on the port
+`8080`. Aggregator is deployed using [Kubernetes](https://kubernetes.io/).
 
 In order to deploy the Aggregator example - run:
 
@@ -74,8 +77,9 @@ follows:
 ./examples/aggregator/scripts/undeploy
 ```
 
-Deployment requires Docker images to be uploaded to the Cloud Container Registry
-(requires write-access) with the following command:
+Deployment requires Docker images to be uploaded to the
+[Cloud Container Registry](gcr.io/oak-ci/) (requires write-access) with the
+following command:
 
 ```bash
 ./examples/aggregator/scripts/docker_push
