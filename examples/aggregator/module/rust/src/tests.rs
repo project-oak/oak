@@ -85,34 +85,42 @@ fn test_aggregator() {
     runtime.stop();
 }
 
-fn check_combine(src1: HashMap<u32, f32>, src2: HashMap<u32, f32>, dst: HashMap<u32, f32>) -> bool {
-    let src = SparseVector::new(src1).combine(&SparseVector::new(src2));
-    src == SparseVector::new(dst)
-}
-
 #[test]
 fn test_combine() {
-    assert!(check_combine(hashmap! {}, hashmap! {}, hashmap! {},));
-    assert!(check_combine(
-        hashmap! {},
-        hashmap! {1 => 10.0},
-        hashmap! {1 => 10.0},
-    ));
-    assert!(check_combine(
-        hashmap! {1 => 10.0},
-        hashmap! {2 => 20.0},
-        hashmap! {1 => 10.0, 2 => 20.0},
-    ));
-    assert!(check_combine(
-        hashmap! {1 => 10.0},
-        hashmap! {2 => 20.0, 3 => 30.0},
-        hashmap! {1 => 10.0, 2 => 20.0, 3 => 30.0},
-    ));
-    assert!(check_combine(
-        hashmap! {1 => 10.0, 2 => 20.0, 3 => 30.0},
-        hashmap! {2 => 20.0, 3 => 30.0},
-        hashmap! {1 => 10.0, 2 => 40.0, 3 => 60.0},
-    ));
+    type Map = HashMap<u32, f32>;
+    struct Test {
+        in_0: Map,
+        in_1: Map,
+        out: Map,
+    }
+    let tests = vec![
+        Test {
+            in_0: hashmap! {},
+            in_1: hashmap! { 1 => 10.0 },
+            out: hashmap! { 1 => 10.0 },
+        },
+        Test {
+            in_0: hashmap! {1 => 10.0},
+            in_1: hashmap! {2 => 20.0},
+            out: hashmap! {1 => 10.0, 2 => 20.0},
+        },
+        Test {
+            in_0: hashmap! {1 => 10.0},
+            in_1: hashmap! {2 => 20.0, 3 => 30.0},
+            out: hashmap! {1 => 10.0, 2 => 20.0, 3 => 30.0},
+        },
+        Test {
+            in_0: hashmap! {1 => 10.0, 2 => 20.0, 3 => 30.0},
+            in_1: hashmap! {2 => 20.0, 3 => 30.0},
+            out: hashmap! {1 => 10.0, 2 => 40.0, 3 => 60.0},
+        },
+    ];
+    for test in tests {
+        assert_eq!(
+            SparseVector::new(test.in_0).combine(&SparseVector::new(test.in_1)),
+            SparseVector::new(test.out)
+        );
+    }
 }
 
 #[test]
