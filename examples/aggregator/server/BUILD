@@ -14,23 +14,31 @@
 # limitations under the License.
 #
 
-load("@rules_cc//cc:defs.bzl", "cc_binary")
+load("@io_bazel_rules_docker//container:container.bzl", "container_image")
+load("//oak/server/asylo:asylo_oak_docker.bzl", "asylo_oak_docker")
 
 package(
     licenses = ["notice"],
 )
 
-cc_binary(
-    name = "client",
-    srcs = ["aggregator.cc"],
-    deps = [
-        "//examples/aggregator/proto:aggregator_cc_grpc",
-        "//oak/client:application_client",
-        "@com_github_grpc_grpc//:grpc++",
-        "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/flags:parse",
-        "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/types:optional",
-        "@com_google_asylo//asylo/util:logging",
+asylo_oak_docker(
+    name = "aggregator_image",
+    application = "//examples/aggregator/config:config",
+    ports = [
+        "8080/tcp",  # Oak Application gRPC port.
+    ],
+)
+
+container_image(
+    name = "aggregator_backend_image",
+    base = "@cc_image//image",
+    entrypoint = [
+        "./aggregator_backend",
+    ],
+    files = [
+        "//:target/release/aggregator_backend",
+    ],
+    ports = [
+        "8888/tcp",  # Backend gRPC port.
     ],
 )

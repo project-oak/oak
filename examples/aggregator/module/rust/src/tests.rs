@@ -14,29 +14,41 @@
 // limitations under the License.
 //
 
-use crate::proto::aggregator::Vector;
+use crate::data::SparseVector;
+use crate::proto::aggregator::{Sample, SerializedSparseVector};
+use crate::SAMPLE_THRESHOLD;
+use aggregator_common::Monoid;
 use assert_matches::assert_matches;
+use maplit::hashmap;
 use oak::grpc;
 use protobuf::well_known_types::Empty;
+use std::collections::HashMap;
+use std::convert::{From, TryFrom};
 
 const MODULE_CONFIG_NAME: &str = "aggregator";
 
 fn submit_sample(
     runtime: &oak_runtime::RuntimeRef,
     entry_channel: &oak_runtime::ChannelWriter,
-    items: Vec<u64>,
-) {
-    let req = Vector {
-        items,
+    bucket: &str,
+    indices: Vec<u32>,
+    values: Vec<f32>,
+) -> grpc::Result<Empty> {
+    let req = Sample {
+        bucket: bucket.to_string(),
+        data: ::protobuf::SingularPtrField::some(SerializedSparseVector {
+            indices,
+            values,
+            ..Default::default()
+        }),
         ..Default::default()
     };
-    let result: grpc::Result<Empty> = oak_tests::grpc_request(
-        runtime,
+    oak_tests::grpc_request(
+        &runtime,
         &entry_channel,
         "/oak.examples.aggregator.Aggregator/SubmitSample",
         &req,
-    );
-    assert_matches!(result, Ok(_));
+    )
 }
 
 #[test]
@@ -46,31 +58,111 @@ fn test_aggregator() {
     let (runtime, entry_channel) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
         .expect("Unable to configure runtime with test wasm!");
 
-    submit_sample(&runtime, &entry_channel, vec![0, 1, 0, 1, 0]);
-    submit_sample(&runtime, &entry_channel, vec![1, 0, 1, 0, 1]);
-    {
-        let req = Empty::new();
-        let result: grpc::Result<Vector> = oak_tests::grpc_request(
+    for i in 0..SAMPLE_THRESHOLD as u32 {
+        assert_matches!(
+            submit_sample(
+                &runtime,
+                &entry_channel,
+                "test",
+                vec![i, i + 1, i + 2],
+                vec![10.0, 20.0, 30.0]
+            ),
+            Ok(_)
+        );
+    }
+    // After sending the `SAMPLE_THRESHOLD` of samples, it's not possible to use the same `bucket`.
+    assert_matches!(
+        submit_sample(
             &runtime,
             &entry_channel,
-            "/oak.examples.aggregator.Aggregator/GetCurrentValue",
-            &req,
-        );
-        assert_matches!(result, Err(_));
-    }
-
-    submit_sample(&runtime, &entry_channel, vec![1, 1, 1, 1, 1]);
-    {
-        let req = Empty::new();
-        let result: grpc::Result<Vector> = oak_tests::grpc_request(
-            &runtime,
-            &entry_channel,
-            "/oak.examples.aggregator.Aggregator/GetCurrentValue",
-            &req,
-        );
-        assert_matches!(result, Ok(_));
-        assert_eq!(vec![2, 2, 2, 2, 2], result.unwrap().items);
-    }
+            "test",
+            vec![1, 2, 3],
+            vec![10.0, 20.0, 30.0]
+        ),
+        Err(_)
+    );
 
     runtime.stop();
+}
+
+#[test]
+fn test_combine() {
+    type Map = HashMap<u32, f32>;
+    struct Test {
+        in_0: Map,
+        in_1: Map,
+        out: Map,
+    }
+    let tests = vec![
+        Test {
+            in_0: hashmap! {},
+            in_1: hashmap! { 1 => 10.0 },
+            out: hashmap! { 1 => 10.0 },
+        },
+        Test {
+            in_0: hashmap! {1 => 10.0},
+            in_1: hashmap! {2 => 20.0},
+            out: hashmap! {1 => 10.0, 2 => 20.0},
+        },
+        Test {
+            in_0: hashmap! {1 => 10.0},
+            in_1: hashmap! {2 => 20.0, 3 => 30.0},
+            out: hashmap! {1 => 10.0, 2 => 20.0, 3 => 30.0},
+        },
+        Test {
+            in_0: hashmap! {1 => 10.0, 2 => 20.0, 3 => 30.0},
+            in_1: hashmap! {2 => 20.0, 3 => 30.0},
+            out: hashmap! {1 => 10.0, 2 => 40.0, 3 => 60.0},
+        },
+    ];
+    for test in tests {
+        assert_eq!(
+            SparseVector::new(test.in_0).combine(&SparseVector::new(test.in_1)),
+            SparseVector::new(test.out)
+        );
+    }
+}
+
+#[test]
+fn test_serialize() {
+    assert_eq!(
+        SerializedSparseVector::from(SparseVector::new(hashmap! {1 => 10.0})),
+        SerializedSparseVector {
+            indices: vec![1],
+            values: vec![10.0],
+            ..Default::default()
+        }
+    );
+    assert_eq!(
+        SparseVector::try_from(&SerializedSparseVector {
+            indices: vec![1, 2],
+            values: vec![10.0, 20.0],
+            ..Default::default()
+        }),
+        Ok(SparseVector::new(hashmap! {1 => 10.0, 2 => 20.0}))
+    );
+    assert_matches!(
+        SparseVector::try_from(&SerializedSparseVector {
+            indices: vec![1, 1], // Duplicated indices are not allowed.
+            values: vec![10.0, 20.0],
+            ..Default::default()
+        }),
+        Err(_)
+    );
+    assert_matches!(
+        SparseVector::try_from(&SerializedSparseVector {
+            indices: vec![1],
+            values: vec![10.0, 20.0],
+            ..Default::default()
+        }),
+        Err(_)
+    );
+    assert_matches!(
+        SparseVector::try_from(&SerializedSparseVector {
+            indices: vec![1, 2],
+            values: vec![10.0],
+            ..Default::default()
+        }),
+        Err(_)
+    );
 }

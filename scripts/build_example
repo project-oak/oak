@@ -57,13 +57,12 @@ case "${language}" in
     if [[ "${EXAMPLE}" == "hello_world" ]]; then
       # `hello_world` example has an optional additional `translator` module.
       cargo build --release --target=wasm32-unknown-unknown --manifest-path="examples/translator/module/rust/Cargo.toml"
-
-      bazel --output_base="${CACHE_DIR}/client" build "${bazel_build_flags[@]}" \
-        "//examples/hello_world/config:config" \
-        "//examples/hello_world/config:config_translator"
-    else
-      bazel --output_base="${CACHE_DIR}/client" build "${bazel_build_flags[@]}" "//examples/${EXAMPLE}/config:config"
+      bazel --output_base="${CACHE_DIR}/client" build "${bazel_build_flags[@]}" "//examples/hello_world/config:config_translator"
+    elif [[ "${EXAMPLE}" == "aggregator" ]]; then
+      # `aggregator` example has an additional Backend Docker image
+      cargo build --release --package=aggregator_backend
     fi
+    bazel --output_base="${CACHE_DIR}/client" build "${bazel_build_flags[@]}" "//examples/${EXAMPLE}/config:config"
     ;;
   cpp)
     # `config_cpp` depends on a Wasm module, so it should be built with `wasm32` or `emscripten`.
@@ -97,6 +96,12 @@ if [[ "${docker_image}" == true ]]; then
     "--config=enc-sim"
   )
   bazel build "${docker_bazel_build_flags[@]}" "//examples/${EXAMPLE}/server:${EXAMPLE}_image.tar"
+
+  # `aggregator` example has an additional Backend Docker image.
+  if [[ "${EXAMPLE}" == "aggregator" ]]; then
+    # Backend doesn't require `enc-sim` since it isn't an Oak application.
+    bazel build "${bazel_build_flags[@]}" "//examples/aggregator/server:aggregator_backend_image.tar"
+  fi
 fi
 
 # Build the client with a different output_base so that we don't lose incremental state.

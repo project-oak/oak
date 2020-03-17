@@ -16,82 +16,132 @@
 
 //! Aggregator example for Project Oak.
 //!
-//! This shows how an Oak Node can aggregate data samples and expose the aggregated data only if
-//! there are enough samples to hide individual contributors.
+//! This shows how an Oak Node can aggregate data samples and report aggregated values if there are
+//! enough samples to hide individual contributors (enforces k-anonymity).
 //!
-//! Clients invoke the module by providing a vector of non-negative numbers and get back an
-//! aggregated vector if an Oak Node has collected more samples than the predefined threshold.
+//! Clients invoke the module by providing data samples that contain a bucket ID
+//! and a Sparse Vector - a dictionary with integer keys.
 
-mod aggregator;
+mod data;
 mod proto;
 #[cfg(test)]
 mod tests;
 
-use aggregator::{Monoid, ThresholdAggregator};
-use log::info;
+use aggregator_common::ThresholdAggregator;
+use data::SparseVector;
+use log::{debug, error};
 use oak::grpc;
-use proto::aggregator::Vector;
-use proto::aggregator_grpc::{Aggregator, Dispatcher};
+use proto::aggregator::Sample;
+use proto::aggregator_grpc::{Aggregator, AggregatorClient, Dispatcher};
 use protobuf::well_known_types::Empty;
+use std::collections::HashMap;
+use std::convert::TryFrom;
 
-const SAMPLE_THRESHOLD: u64 = 3;
+/// Currently threshold value is hardcoded.
+const SAMPLE_THRESHOLD: u64 = 5;
 
-oak::entrypoint!(oak_main => {
-    oak::logger::init_default();
-    let node = AggregatorNode {
-        aggregator: ThresholdAggregator::<Vector>::new(SAMPLE_THRESHOLD),
-    };
-    Dispatcher::new(node)
-});
+/// Oak Node that collects and aggregates data.
+/// Data is collected in the `aggregators` map where keys are buckets and values are instances of a
+/// `ThresholdAggregator`. `Option` is used to keep note of the outdated buckets: once an
+/// Aggregator has sent its data to the Backend, it's replaced with `None` and all subsequent client
+/// requests corresponding to its bucket are discarded.
+pub struct AggregatorNode {
+    aggregators: HashMap<String, Option<ThresholdAggregator<SparseVector>>>,
+}
 
-impl Monoid for Vector {
-    fn identity() -> Self {
-        Vector::new()
+impl AggregatorNode {
+    fn new() -> Self {
+        AggregatorNode {
+            aggregators: HashMap::new(),
+        }
     }
 
-    /// Adds two non-negative integer vectors elementwise. If vectors have different lengths, then
-    /// pads the smallest vector with zeros.
-    fn combine(&self, other: &Self) -> Self {
-        use itertools::EitherOrBoth::*;
-        use itertools::Itertools;
+    /// Submit a data sample (Sparse Vector `svec`) to an Aggregator corresponding to the `bucket`.
+    /// If the Aggregator has enough data samples, then report the aggregated value to the backend
+    /// server and replace the Aggregator with `None`, so all subsequent client requests
+    /// corresponding to the `bucket` will be discarded.
+    fn submit(&mut self, bucket: String, svec: &SparseVector) -> Result<(), String> {
+        match self.aggregators.get_mut(&bucket) {
+            Some(entry) => match *entry {
+                Some(ref mut aggregator) => {
+                    aggregator.submit(svec);
+                    if let Some(aggregated_data) = aggregator.take() {
+                        *entry = None;
+                        if let Err(err) = self.report(bucket, aggregated_data) {
+                            // Backend report errors are not returned to the clients.
+                            error!("Backend report error: {:?}", err);
+                        }
+                    }
+                }
+                None => return Err(format!("Outdated bucket: {}", bucket)),
+            },
+            None => {
+                let mut aggregator = ThresholdAggregator::<SparseVector>::new(SAMPLE_THRESHOLD);
+                aggregator.submit(svec);
+                self.aggregators.insert(bucket, Some(aggregator));
+            }
+        }
+        Ok(())
+    }
 
-        Vector {
-            items: self
-                .items
-                .iter()
-                .zip_longest(other.items.iter())
-                .map(|p| match p {
-                    Both(l, r) => *l + *r,
-                    Left(l) => *l,
-                    Right(r) => *r,
-                })
-                .collect(),
-            ..Default::default()
+    /// Try to report the aggregated value to the backend server via gRPC.
+    /// Return an error if the backend server is not available.
+    fn report(&self, bucket: String, svec: SparseVector) -> Result<(), String> {
+        debug!(
+            "Reporting data to the backend: bucket {}, sparse vector: {:?}",
+            bucket, svec
+        );
+
+        match oak::grpc::client::Client::new("grpc-client", "").map(AggregatorClient) {
+            Some(grpc_client) => {
+                let res = grpc_client.submit_sample(Sample {
+                    bucket,
+                    data: ::protobuf::SingularPtrField::some(svec.into()),
+                    ..Default::default()
+                });
+                match res {
+                    Ok(_) => Ok(()),
+                    Err(err) => Err(format!("gRPC send error: {:?}", err)),
+                }
+            }
+            None => Err("Could not create a gRPC client".to_string()),
         }
     }
 }
 
-/// Oak Node that collects aggregated data.
-pub struct AggregatorNode {
-    aggregator: ThresholdAggregator<Vector>,
-}
-
 /// A gRPC service implementation for the Aggregator example.
 impl Aggregator for AggregatorNode {
-    fn submit_sample(&mut self, sample: Vector) -> grpc::Result<Empty> {
-        info!("Submitted sample: {:?}", sample);
-        self.aggregator.submit(&sample);
-        Ok(Empty::new())
-    }
-
-    fn get_current_value(&mut self, _: Empty) -> grpc::Result<Vector> {
-        let value = self.aggregator.get().cloned().ok_or_else(|| {
-            grpc::build_status(
-                grpc::Code::FAILED_PRECONDITION,
-                "Not enough samples have been aggregated",
-            )
-        });
-        info!("Returning value: {:?}", value);
-        value
+    fn submit_sample(&mut self, sample: Sample) -> grpc::Result<Empty> {
+        match sample.data.into_option() {
+            Some(data) => match SparseVector::try_from(&data) {
+                Ok(svec) => {
+                    debug!(
+                        "Received data: bucket {}, sparse vector: {:?}",
+                        sample.bucket, svec
+                    );
+                    match self.submit(sample.bucket, &svec) {
+                        Ok(_) => Ok(Empty::new()),
+                        Err(err) => {
+                            let err = format!("Submit sample error: {}", err);
+                            Err(grpc::build_status(grpc::Code::INVALID_ARGUMENT, &err))
+                        }
+                    }
+                }
+                Err(err) => {
+                    let err = format!("Data deserialization error: {}", err);
+                    Err(grpc::build_status(grpc::Code::INVALID_ARGUMENT, &err))
+                }
+            },
+            None => {
+                let err = "No data specified";
+                Err(grpc::build_status(grpc::Code::INVALID_ARGUMENT, &err))
+            }
+        }
     }
 }
+
+oak::entrypoint!(oak_main => {
+    oak::logger::init_default();
+    let node = AggregatorNode::new();
+    Dispatcher::new(node)
+});

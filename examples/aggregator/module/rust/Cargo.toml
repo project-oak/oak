@@ -8,6 +8,7 @@ edition = "2018"
 crate-type = ["cdylib"]
 
 [dependencies]
+aggregator_common = { path = "../../common" }
 itertools = "*"
 log = "*"
 oak = "=0.1.0"
@@ -17,6 +18,7 @@ protobuf = "*"
 assert_matches = "*"
 oak_runtime = "=0.1.0"
 oak_tests = "=0.1.0"
+maplit = "*"
 simple_logger = "*"
 
 [build-dependencies]

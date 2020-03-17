@@ -27,52 +27,78 @@ use protobuf::ProtobufEnum as ProtobufEnum_imported_for_functions;
 // const _PROTOBUF_VERSION_CHECK: () = ::protobuf::VERSION_2_10_1;
 
 #[derive(PartialEq,Clone,Default)]
-pub struct Vector {
+pub struct SerializedSparseVector {
     // message fields
-    pub items: ::std::vec::Vec<u64>,
+    pub indices: ::std::vec::Vec<u32>,
+    pub values: ::std::vec::Vec<f32>,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
 }
 
-impl<'a> ::std::default::Default for &'a Vector {
-    fn default() -> &'a Vector {
-        <Vector as ::protobuf::Message>::default_instance()
+impl<'a> ::std::default::Default for &'a SerializedSparseVector {
+    fn default() -> &'a SerializedSparseVector {
+        <SerializedSparseVector as ::protobuf::Message>::default_instance()
     }
 }
 
-impl Vector {
-    pub fn new() -> Vector {
+impl SerializedSparseVector {
+    pub fn new() -> SerializedSparseVector {
         ::std::default::Default::default()
     }
 
-    // repeated uint64 items = 1;
+    // repeated uint32 indices = 1;
 
 
-    pub fn get_items(&self) -> &[u64] {
-        &self.items
+    pub fn get_indices(&self) -> &[u32] {
+        &self.indices
     }
-    pub fn clear_items(&mut self) {
-        self.items.clear();
+    pub fn clear_indices(&mut self) {
+        self.indices.clear();
     }
 
     // Param is passed by value, moved
-    pub fn set_items(&mut self, v: ::std::vec::Vec<u64>) {
-        self.items = v;
+    pub fn set_indices(&mut self, v: ::std::vec::Vec<u32>) {
+        self.indices = v;
     }
 
     // Mutable pointer to the field.
-    pub fn mut_items(&mut self) -> &mut ::std::vec::Vec<u64> {
-        &mut self.items
+    pub fn mut_indices(&mut self) -> &mut ::std::vec::Vec<u32> {
+        &mut self.indices
     }
 
     // Take field
-    pub fn take_items(&mut self) -> ::std::vec::Vec<u64> {
-        ::std::mem::replace(&mut self.items, ::std::vec::Vec::new())
+    pub fn take_indices(&mut self) -> ::std::vec::Vec<u32> {
+        ::std::mem::replace(&mut self.indices, ::std::vec::Vec::new())
+    }
+
+    // repeated float values = 2;
+
+
+    pub fn get_values(&self) -> &[f32] {
+        &self.values
+    }
+    pub fn clear_values(&mut self) {
+        self.values.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_values(&mut self, v: ::std::vec::Vec<f32>) {
+        self.values = v;
+    }
+
+    // Mutable pointer to the field.
+    pub fn mut_values(&mut self) -> &mut ::std::vec::Vec<f32> {
+        &mut self.values
+    }
+
+    // Take field
+    pub fn take_values(&mut self) -> ::std::vec::Vec<f32> {
+        ::std::mem::replace(&mut self.values, ::std::vec::Vec::new())
     }
 }
 
-impl ::protobuf::Message for Vector {
+impl ::protobuf::Message for SerializedSparseVector {
     fn is_initialized(&self) -> bool {
         true
     }
@@ -82,7 +108,10 @@ impl ::protobuf::Message for Vector {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
-                    ::protobuf::rt::read_repeated_uint64_into(wire_type, is, &mut self.items)?;
+                    ::protobuf::rt::read_repeated_uint32_into(wire_type, is, &mut self.indices)?;
+                },
+                2 => {
+                    ::protobuf::rt::read_repeated_float_into(wire_type, is, &mut self.values)?;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -96,17 +125,21 @@ impl ::protobuf::Message for Vector {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        for value in &self.items {
+        for value in &self.indices {
             my_size += ::protobuf::rt::value_size(1, *value, ::protobuf::wire_format::WireTypeVarint);
         };
+        my_size += 5 * self.values.len() as u32;
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
-        for v in &self.items {
-            os.write_uint64(1, *v)?;
+        for v in &self.indices {
+            os.write_uint32(1, *v)?;
+        };
+        for v in &self.values {
+            os.write_float(2, *v)?;
         };
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -138,8 +171,8 @@ impl ::protobuf::Message for Vector {
         Self::descriptor_static()
     }
 
-    fn new() -> Vector {
-        Vector::new()
+    fn new() -> SerializedSparseVector {
+        SerializedSparseVector::new()
     }
 
     fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
@@ -150,13 +183,18 @@ impl ::protobuf::Message for Vector {
         unsafe {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_vec_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
-                    "items",
-                    |m: &Vector| { &m.items },
-                    |m: &mut Vector| { &mut m.items },
+                fields.push(::protobuf::reflect::accessor::make_vec_accessor::<_, ::protobuf::types::ProtobufTypeUint32>(
+                    "indices",
+                    |m: &SerializedSparseVector| { &m.indices },
+                    |m: &mut SerializedSparseVector| { &mut m.indices },
                 ));
-                ::protobuf::reflect::MessageDescriptor::new::<Vector>(
-                    "Vector",
+                fields.push(::protobuf::reflect::accessor::make_vec_accessor::<_, ::protobuf::types::ProtobufTypeFloat>(
+                    "values",
+                    |m: &SerializedSparseVector| { &m.values },
+                    |m: &mut SerializedSparseVector| { &mut m.values },
+                ));
+                ::protobuf::reflect::MessageDescriptor::new::<SerializedSparseVector>(
+                    "SerializedSparseVector",
                     fields,
                     file_descriptor_proto()
                 )
@@ -164,31 +202,258 @@ impl ::protobuf::Message for Vector {
         }
     }
 
-    fn default_instance() -> &'static Vector {
-        static mut instance: ::protobuf::lazy::Lazy<Vector> = ::protobuf::lazy::Lazy {
+    fn default_instance() -> &'static SerializedSparseVector {
+        static mut instance: ::protobuf::lazy::Lazy<SerializedSparseVector> = ::protobuf::lazy::Lazy {
             lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const Vector,
+            ptr: 0 as *const SerializedSparseVector,
         };
         unsafe {
-            instance.get(Vector::new)
+            instance.get(SerializedSparseVector::new)
         }
     }
 }
 
-impl ::protobuf::Clear for Vector {
+impl ::protobuf::Clear for SerializedSparseVector {
     fn clear(&mut self) {
-        self.items.clear();
+        self.indices.clear();
+        self.values.clear();
         self.unknown_fields.clear();
     }
 }
 
-impl ::std::fmt::Debug for Vector {
+impl ::std::fmt::Debug for SerializedSparseVector {
     fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
         ::protobuf::text_format::fmt(self, f)
     }
 }
 
-impl ::protobuf::reflect::ProtobufValue for Vector {
+impl ::protobuf::reflect::ProtobufValue for SerializedSparseVector {
+    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
+        ::protobuf::reflect::ProtobufValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct Sample {
+    // message fields
+    pub bucket: ::std::string::String,
+    pub data: ::protobuf::SingularPtrField<SerializedSparseVector>,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a Sample {
+    fn default() -> &'a Sample {
+        <Sample as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl Sample {
+    pub fn new() -> Sample {
+        ::std::default::Default::default()
+    }
+
+    // string bucket = 1;
+
+
+    pub fn get_bucket(&self) -> &str {
+        &self.bucket
+    }
+    pub fn clear_bucket(&mut self) {
+        self.bucket.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_bucket(&mut self, v: ::std::string::String) {
+        self.bucket = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_bucket(&mut self) -> &mut ::std::string::String {
+        &mut self.bucket
+    }
+
+    // Take field
+    pub fn take_bucket(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.bucket, ::std::string::String::new())
+    }
+
+    // .oak.examples.aggregator.SerializedSparseVector data = 2;
+
+
+    pub fn get_data(&self) -> &SerializedSparseVector {
+        self.data.as_ref().unwrap_or_else(|| SerializedSparseVector::default_instance())
+    }
+    pub fn clear_data(&mut self) {
+        self.data.clear();
+    }
+
+    pub fn has_data(&self) -> bool {
+        self.data.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_data(&mut self, v: SerializedSparseVector) {
+        self.data = ::protobuf::SingularPtrField::some(v);
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_data(&mut self) -> &mut SerializedSparseVector {
+        if self.data.is_none() {
+            self.data.set_default();
+        }
+        self.data.as_mut().unwrap()
+    }
+
+    // Take field
+    pub fn take_data(&mut self) -> SerializedSparseVector {
+        self.data.take().unwrap_or_else(|| SerializedSparseVector::new())
+    }
+}
+
+impl ::protobuf::Message for Sample {
+    fn is_initialized(&self) -> bool {
+        for v in &self.data {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.bucket)?;
+                },
+                2 => {
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.data)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if !self.bucket.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.bucket);
+        }
+        if let Some(ref v) = self.data.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if !self.bucket.is_empty() {
+            os.write_string(1, &self.bucket)?;
+        }
+        if let Some(ref v) = self.data.as_ref() {
+            os.write_tag(2, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> Sample {
+        Sample::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
+        };
+        unsafe {
+            descriptor.get(|| {
+                let mut fields = ::std::vec::Vec::new();
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                    "bucket",
+                    |m: &Sample| { &m.bucket },
+                    |m: &mut Sample| { &mut m.bucket },
+                ));
+                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<SerializedSparseVector>>(
+                    "data",
+                    |m: &Sample| { &m.data },
+                    |m: &mut Sample| { &mut m.data },
+                ));
+                ::protobuf::reflect::MessageDescriptor::new::<Sample>(
+                    "Sample",
+                    fields,
+                    file_descriptor_proto()
+                )
+            })
+        }
+    }
+
+    fn default_instance() -> &'static Sample {
+        static mut instance: ::protobuf::lazy::Lazy<Sample> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const Sample,
+        };
+        unsafe {
+            instance.get(Sample::new)
+        }
+    }
+}
+
+impl ::protobuf::Clear for Sample {
+    fn clear(&mut self) {
+        self.bucket.clear();
+        self.data.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for Sample {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for Sample {
     fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
         ::protobuf::reflect::ProtobufValueRef::Message(self)
     }
@@ -196,11 +461,12 @@ impl ::protobuf::reflect::ProtobufValue for Vector {
 
 static file_descriptor_proto_data: &'static [u8] = b"\
     \n\x10aggregator.proto\x12\x17oak.examples.aggregator\x1a\x1bgoogle/prot\
-    obuf/empty.proto\"\x1e\n\x06Vector\x12\x14\n\x05items\x18\x01\x20\x03(\
-    \x04R\x05items2\xa1\x01\n\nAggregator\x12G\n\x0cSubmitSample\x12\x1f.oak\
-    .examples.aggregator.Vector\x1a\x16.google.protobuf.Empty\x12J\n\x0fGetC\
-    urrentValue\x12\x16.google.protobuf.Empty\x1a\x1f.oak.examples.aggregato\
-    r.Vectorb\x06proto3\
+    obuf/empty.proto\"J\n\x16SerializedSparseVector\x12\x18\n\x07indices\x18\
+    \x01\x20\x03(\rR\x07indices\x12\x16\n\x06values\x18\x02\x20\x03(\x02R\
+    \x06values\"e\n\x06Sample\x12\x16\n\x06bucket\x18\x01\x20\x01(\tR\x06buc\
+    ket\x12C\n\x04data\x18\x02\x20\x01(\x0b2/.oak.examples.aggregator.Serial\
+    izedSparseVectorR\x04data2U\n\nAggregator\x12G\n\x0cSubmitSample\x12\x1f\
+    .oak.examples.aggregator.Sample\x1a\x16.google.protobuf.Emptyb\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {

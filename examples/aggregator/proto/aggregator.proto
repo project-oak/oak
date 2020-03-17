@@ -20,11 +20,20 @@ package oak.examples.aggregator;
 
 import "google/protobuf/empty.proto";
 
-message Vector {
-  repeated uint64 items = 1;
+// Data provided by clients is represented by Sparse Vectors: dictionaries with integer keys.
+message SerializedSparseVector {
+  repeated uint32 indices = 1;
+  repeated float values = 2;
+}
+
+// Message sent by clients.
+message Sample {
+  // Data with different Bucket IDs is not mixed and aggregated in different instances of the
+  // Aggregator, and each has its own minimal data sample threshold.
+  string bucket = 1;
+  SerializedSparseVector data = 2;
 }
 
 service Aggregator {
-  rpc SubmitSample(Vector) returns (google.protobuf.Empty);
-  rpc GetCurrentValue(google.protobuf.Empty) returns (Vector);
+  rpc SubmitSample(Sample) returns (google.protobuf.Empty);
 }

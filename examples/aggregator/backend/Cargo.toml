@@ -1,0 +1,18 @@
+[package]
+name = "aggregator_backend"
+version = "0.1.0"
+authors = ["Ivan Petrov <ivanpetrov@google.com>"]
+edition = "2018"
+
+[dependencies]
+env_logger = "*"
+futures-core = "*"
+futures-util = "*"
+log = "*"
+prost = "*"
+protobuf = "*"
+tokio = { version = "*", features = ["fs", "macros", "sync", "stream"] }
+tonic = { version = "*", features = ["tls"] }
+
+[build-dependencies]
+tonic-build = "*"

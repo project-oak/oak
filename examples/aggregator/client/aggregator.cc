@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-#include <cassert>
-
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
+#include "absl/strings/numbers.h"
+#include "absl/strings/str_split.h"
 #include "absl/types/optional.h"
 #include "asylo/util/logging.h"
 #include "examples/aggregator/proto/aggregator.grpc.pb.h"
@@ -26,42 +26,38 @@
 #include "oak/client/application_client.h"
 
 ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak application to connect to");
+ABSL_FLAG(std::string, bucket, "", "Bucket under which to aggregate samples");
+ABSL_FLAG(
+    std::vector<std::string>, data, std::vector<std::string>{},
+    "A comma-separated list of `index:value` entries that represent a single sparse vector sample");
 
 using ::oak::examples::aggregator::Aggregator;
-using ::oak::examples::aggregator::Vector;
+using ::oak::examples::aggregator::Sample;
+using ::oak::examples::aggregator::SerializedSparseVector;
 
-void submit_sample(Aggregator::Stub* stub, std::vector<uint64_t> values) {
+void submit_sample(Aggregator::Stub* stub, std::string& bucket, std::vector<uint32_t>& indices,
+                   std::vector<float>& values) {
   grpc::ClientContext context;
-  Vector request;
+  LOG(INFO) << "Submitting sample:";
+  Sample request;
+  LOG(INFO) << "  bucket: " << bucket;
+  request.set_bucket(bucket);
+  LOG(INFO) << "  indices:";
+  for (auto index : indices) {
+    LOG(INFO) << "    - " << index;
+    request.mutable_data()->add_indices(index);
+  }
+  LOG(INFO) << "  values:";
   for (auto value : values) {
-    request.add_items(value);
+    LOG(INFO) << "    - " << value;
+    request.mutable_data()->add_values(value);
   }
   google::protobuf::Empty response;
   grpc::Status status = stub->SubmitSample(&context, request, &response);
   if (!status.ok()) {
-    LOG(QFATAL) << "Could not submit sample: " << status.error_code() << ": "
-                << status.error_message();
+    LOG(ERROR) << "Could not submit sample: " << status.error_code() << ": "
+               << status.error_message();
   }
-}
-
-absl::optional<std::vector<uint64_t>> get_aggregation(Aggregator::Stub* stub) {
-  std::vector<uint64_t> items;
-  grpc::ClientContext context;
-  google::protobuf::Empty request;
-  Vector response;
-  grpc::Status status = stub->GetCurrentValue(&context, request, &response);
-  if (!status.ok()) {
-    LOG(WARNING) << "Could not get current value: " << status.error_code() << ": "
-                 << status.error_message();
-    return absl::nullopt;
-  }
-
-  LOG(INFO) << "Aggregation:";
-  for (auto item : response.items()) {
-    LOG(INFO) << "- " << item;
-    items.push_back(item);
-  }
-  return items;
 }
 
 int main(int argc, char** argv) {
@@ -74,20 +70,31 @@ int main(int argc, char** argv) {
 
   auto stub = Aggregator::NewStub(oak::ApplicationClient::CreateChannel(address));
 
-  // Submit initial samples.
-  submit_sample(stub.get(), {0, 0, 10, 10, 0});
-  submit_sample(stub.get(), {10, 10, 0, 0, 10});
+  // Parse arguments.
+  auto bucket = absl::GetFlag(FLAGS_bucket);
+  std::vector<uint32_t> indices;
+  std::vector<float> values;
+  for (const std::string& item : absl::GetFlag(FLAGS_data)) {
+    std::vector<std::string> item_pair = absl::StrSplit(item, ':');
+    if (item_pair.size() != 2) {
+      LOG(QFATAL) << "Incorrect data specification: " << item;
+    }
 
-  // Try to retrieve aggregation.
-  auto first_result = get_aggregation(stub.get());
-  assert(!first_result);
+    uint32_t index;
+    if (!absl::SimpleAtoi(item_pair.front(), &index)) {
+      LOG(QFATAL) << "Incorrect index: " << item_pair.front();
+    }
+    indices.push_back(index);
 
-  // Submit final sample.
-  submit_sample(stub.get(), {10, 10, 10, 10, 10});
+    float value;
+    if (!absl::SimpleAtof(item_pair.back(), &value)) {
+      LOG(QFATAL) << "Incorrect value: " << item_pair.back();
+    }
+    values.push_back(value);
+  }
 
-  // Retrieve aggregation.
-  auto second_result = get_aggregation(stub.get());
-  assert(std::vector<uint64_t>(5, 20) == second_result);
+  // Submit data sample.
+  submit_sample(stub.get(), bucket, indices, values);
 
   return EXIT_SUCCESS;
 }

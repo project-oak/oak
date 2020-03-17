@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+use std::mem::replace;
+
 /// Represents a data structure with a single associative binary operation (`combine`)
 /// and an `identity` element.
 /// https://en.wikipedia.org/wiki/Monoid
@@ -55,6 +57,18 @@ impl<T: Monoid> ThresholdAggregator<T> {
     pub fn get(&self) -> Option<&T> {
         if self.sample_count >= self.sample_threshold {
             Some(&self.current_value)
+        } else {
+            None
+        }
+    }
+
+    /// If the number of current samples is at least `sample_threshold`, then returns the current
+    /// aggregated value and resets it; otherwise, returns `None` and leaves the internal state
+    /// unchanged.
+    pub fn take(&mut self) -> Option<T> {
+        if self.sample_count >= self.sample_threshold {
+            self.sample_count = 0;
+            Some(replace(&mut self.current_value, Monoid::identity()))
         } else {
             None
         }
