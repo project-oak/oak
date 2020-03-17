@@ -55,7 +55,7 @@ void submit_sample(Aggregator::Stub* stub, std::string& bucket, std::vector<uint
   google::protobuf::Empty response;
   grpc::Status status = stub->SubmitSample(&context, request, &response);
   if (!status.ok()) {
-    LOG(QFATAL) << "Could not submit sample: " << status.error_code() << ": "
+    LOG(ERROR) << "Could not submit sample: " << status.error_code() << ": "
                 << status.error_message();
   }
 }
