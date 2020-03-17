@@ -56,7 +56,7 @@ void submit_sample(Aggregator::Stub* stub, std::string& bucket, std::vector<uint
   grpc::Status status = stub->SubmitSample(&context, request, &response);
   if (!status.ok()) {
     LOG(ERROR) << "Could not submit sample: " << status.error_code() << ": "
-                << status.error_message();
+               << status.error_message();
   }
 }
 
