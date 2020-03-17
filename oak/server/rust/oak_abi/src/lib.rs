@@ -123,7 +123,8 @@ extern "C" {
     pub fn channel_close(handle: u64) -> u32;
 
     /// Create a new Node instance running code identified by configuration
-    /// name and entrypoint.
+    /// name and entrypoint; the entrypoint is only used when creating a
+    /// WebAssembly Node; it is ignored when creating a pseudo-Node.
     ///
     /// The configuration name is provided in the memory area given by
     /// `config_buf` and `config_len`; the entrypoint name is provided in the
