@@ -24,6 +24,7 @@ Options:
 done
 
 bazel_build_flags+=(
+  # '--fat_apk_cpu=armeabi-v7a'
   '--fat_apk_cpu=x86_64'
   '--linkopt=-llog'
   '--symlink_prefix=bazel-client-android-'

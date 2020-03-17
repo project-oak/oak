@@ -46,6 +46,25 @@ public class MainActivity extends Activity {
     Button submitButton = findViewById(R.id.submitButton);
     submitButton.setOnClickListener(v -> onClick());
 
+    // Set default values.
+    EditText bucketInput = findViewById(R.id.bucketInput);
+    bucketInput.setText("android-test");
+
+    EditText firstKeyInput = findViewById(R.id.firstKeyInput);
+    firstKeyInput.setText("1");
+    EditText firstValueInput = findViewById(R.id.firstValueInput);
+    firstValueInput.setText("10");
+
+    EditText secondKeyInput = findViewById(R.id.secondKeyInput);
+    secondKeyInput.setText("2");
+    EditText secondValueInput = findViewById(R.id.secondValueInput);
+    secondValueInput.setText("20");
+
+    EditText thirdKeyInput = findViewById(R.id.thirdKeyInput);
+    thirdKeyInput.setText("3");
+    EditText thirdValueInput = findViewById(R.id.thirdValueInput);
+    thirdValueInput.setText("30");
+
     // Set default address (static IP of the Aggregator in Google Cloud).
     // https://developer.android.com/studio/run/emulator-networking
     EditText addressInput = findViewById(R.id.addressInput);

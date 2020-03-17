@@ -14,44 +14,64 @@
         android:hint="@string/bucket">
     </EditText>
 
-    <!-- First value. -->
-    <EditText
-        android:id="@+id/firstKeyInput"
-        android:inputType="number"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content">
-    </EditText>
-    <EditText
-        android:id="@+id/firstValueInput"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content">
-    </EditText>
+    <TableLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:id="@+id/tableLayout1">
+    <TableRow 
+        android:id="@+id/tableRow1" 
+        android:layout_width="match_parent" 
+        android:layout_height="match_parent">
+        <!-- First value. -->
+        <EditText
+            android:id="@+id/firstKeyInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+        </EditText>
+        <EditText
+            android:id="@+id/firstValueInput"
+            android:layout_toRightOf="@+id/firstKeyInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+        </EditText>
+    </TableRow>
 
-    <!-- Second value. -->
-    <EditText
-        android:id="@+id/secondKeyInput"
-        android:inputType="number"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content">
-    </EditText>
-    <EditText
-        android:id="@+id/secondValueInput"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content">
-    </EditText>
+    <TableRow 
+        android:id="@+id/tableRow2" 
+        android:layout_width="match_parent" 
+        android:layout_height="match_parent">
+        <!-- Second value. -->
+        <EditText
+            android:id="@+id/secondKeyInput"
+            android:inputType="number"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+        </EditText>
+        <EditText
+            android:id="@+id/secondValueInput"
+            android:layout_toRightOf="@+id/secondKeyInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+        </EditText>
+    </TableRow>
 
-    <!-- Third value. -->
-    <EditText
-        android:id="@+id/thirdKeyInput"
-        android:inputType="number"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content">
-    </EditText>
-    <EditText
-        android:id="@+id/thirdValueInput"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content">
-    </EditText>
+    <TableRow 
+        android:id="@+id/tableRow3" 
+        android:layout_width="match_parent" 
+        android:layout_height="match_parent">
+
+        <!-- Third value. -->
+        <EditText
+            android:id="@+id/thirdKeyInput"
+            android:inputType="number"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+        </EditText>
+        <EditText
+            android:id="@+id/thirdValueInput"
+            android:layout_toRightOf="@+id/thirdKeyInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+        </EditText>
+    </TableRow>
+    </TableLayout>
 
     <!-- Address. -->
     <EditText
