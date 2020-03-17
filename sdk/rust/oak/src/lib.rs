@@ -324,7 +324,8 @@ pub fn channel_close(handle: Handle) -> Result<(), OakStatus> {
 
 /// Create a new Node running the configuration identified by `config_name`,
 /// running the entrypoint identified by `entrypoint_name` (for a Web Assembly
-/// Node), passing it the given handle.
+/// Node; this parameter is ignored when creating a pseudo-Node), passing it the
+/// given handle.
 pub fn node_create(
     config_name: &str,
     entrypoint_name: &str,
