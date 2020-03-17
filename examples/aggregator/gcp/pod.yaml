@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: aggregator
+  labels:
+    app: aggregator
+spec:
+  containers:
+    - name: enclave
+      image: gcr.io/oak-ci/oak-aggregator:latest
+      ports:
+        - containerPort: 8080
+    - name: backend
+      image: gcr.io/oak-ci/oak-aggregator-backend:latest
+      env:
+        - name: RUST_LOG
+          value: 'info'
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aggregator
+  labels:
+    app: aggregator
+spec:
+  selector:
+    app: aggregator
+  ports:
+    - port: 8080
+  type: LoadBalancer
+  loadBalancerIP: '35.246.87.178'

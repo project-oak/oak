@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+readonly GLOBAL_SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")/../../../scripts/"
+readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
+# shellcheck source=scripts/common
+source "${GLOBAL_SCRIPTS_DIR}/common"
+
+readonly AGGREGATOR_DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak-aggregator'
+readonly BACKEND_DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak-aggregator-backend'
+
+readonly IMAGES="$(find ./bazel-cache -name aggregator_image.tar)"
+readonly BACKEND_IMAGES="$(find ./bazel-cache -name aggregator_backend_image.tar)"
+if [[ -z ${IMAGES} || -z ${BACKEND_IMAGES} ]]; then
+  echo "Docker images have not been built, run './examples/aggregator/scripts/build_all' inside Oak Docker"
+  exit 1
+fi
+
+# Push Oak application server Docker image.
+docker load -i "./${IMAGES:1}"
+docker tag 'bazel/examples/aggregator/server:aggregator_image' "${AGGREGATOR_DOCKER_IMAGE_NAME}":latest
+docker push "${AGGREGATOR_DOCKER_IMAGE_NAME}":latest
+
+# Push Backend Docker image.
+docker load -i "./${BACKEND_IMAGES:1}"
+docker tag 'bazel/examples/aggregator/server:aggregator_backend_image' "${BACKEND_DOCKER_IMAGE_NAME}":latest
+docker push "${BACKEND_DOCKER_IMAGE_NAME}":latest

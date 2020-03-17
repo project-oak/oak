@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+readonly GLOBAL_SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")/../../../scripts/"
+readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
+# shellcheck source=scripts/common
+source "${GLOBAL_SCRIPTS_DIR}/common"
+
+# Build Client.
+"${GLOBAL_SCRIPTS_DIR}/build_example" -e aggregator
+
+# Build Server.
+# Output base is initialized, so it would be possible to push built Docker images outside the Docker
+# environment.
+bazel build --config=enc-sim '//examples/aggregator/server:aggregator_image.tar'
+
+# Build Backend.
+cargo build --release --package=aggregator
+bazel build '//examples/aggregator/server:aggregator_backend_image.tar'
