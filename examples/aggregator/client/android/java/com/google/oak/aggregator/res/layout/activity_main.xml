@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:padding="16dp"
+    android:orientation="vertical"
+    android:gravity="center_vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Bucket. -->
+    <EditText
+        android:id="@+id/bucketInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/bucket">
+    </EditText>
+
+    <!-- First value. -->
+    <EditText
+        android:id="@+id/firstKeyInput"
+        android:inputType="number"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+    </EditText>
+    <EditText
+        android:id="@+id/firstValueInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+    </EditText>
+
+    <!-- Second value. -->
+    <EditText
+        android:id="@+id/secondKeyInput"
+        android:inputType="number"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+    </EditText>
+    <EditText
+        android:id="@+id/secondValueInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+    </EditText>
+
+    <!-- Third value. -->
+    <EditText
+        android:id="@+id/thirdKeyInput"
+        android:inputType="number"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+    </EditText>
+    <EditText
+        android:id="@+id/thirdValueInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+    </EditText>
+
+    <!-- Address. -->
+    <EditText
+        android:id="@+id/addressInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/address">
+    </EditText>
+
+    <Button
+        android:id="@+id/submitButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:background="@color/green"
+        android:textColor="@color/white"
+        android:layout_marginTop="16dp"
+        android:text="@string/submit_button"/>
+
+</LinearLayout>
