@@ -40,12 +40,15 @@ impl TryFrom<&SerializedSparseVector> for SparseVector {
         if src.indices.len() == src.values.len() {
             src.indices.iter().zip(src.values.iter()).try_fold(
                 SparseVector::identity(),
-                |mut svec, (&i, &v)| match svec.entries.get(&i) {
-                    Some(_) => Err(format!("Duplicated index: {}", i)),
-                    None => Ok({
-                        svec.entries.insert(i, v);
-                        svec
-                    }),
+                |mut svec, (&i, &v)| {
+                    use std::collections::hash_map::Entry;
+                    match svec.entries.entry(i) {
+                        Entry::Occupied(_) => Err(format!("Duplicated index: {}", i)),
+                        Entry::Vacant(entry) => {
+                            entry.insert(v);
+                            Ok(svec)
+                        }
+                    }
                 },
             )
         } else {
