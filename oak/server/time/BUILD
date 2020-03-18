@@ -27,8 +27,9 @@ cc_library(
     hdrs = ["roughtime_util.h"],
     visibility = ["//oak/server/time:__pkg__"],
     deps = [
+        "//third_party/asylo:statusor",
+        "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
-        "@com_google_asylo//asylo/util:status",
         "@roughtime//:protocol",
     ],
 )
@@ -40,10 +41,12 @@ cc_library(
     deps = [
         ":roughtime_util",
         "//oak/common:nonce_generator",
+        "//third_party/asylo:status_macros",
+        "//third_party/asylo:statusor",
         "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
         "@com_google_asylo//asylo/util:logging",
-        "@com_google_asylo//asylo/util:status",
         "@roughtime//:client",
     ],
 )
