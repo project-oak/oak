@@ -38,33 +38,6 @@ cc_library(
 )
 
 cc_library(
-    name = "sgx_application_client",
-    srcs = ["sgx_application_client.cc"],
-    hdrs = ["sgx_application_client.h"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":authorization_bearer_token_metadata",
-        ":policy_metadata",
-        "//oak/common:app_config",
-        "//oak/common:nonce_generator",
-        "@com_github_grpc_grpc//:grpc++",
-        "@com_google_asylo//asylo/grpc/auth:grpc++_security_enclave",
-        "@com_google_asylo//asylo/grpc/auth:null_credentials_options",
-        # TODO: Uncomment when Asylo will release remote attestation.
-        # https://github.com/project-oak/oak/issues/119
-        #"@com_google_asylo//asylo/grpc/auth:sgx_remote_credentials_options",
-        "@com_google_asylo//asylo/identity:enclave_assertion_authority_configs",
-        "@com_google_asylo//asylo/identity:descriptions",
-        "@com_google_asylo//asylo/identity:init",
-        "@com_google_asylo//asylo/identity/sgx:sgx_identity_cc_proto",
-        "@com_google_asylo//asylo/identity/sgx:sgx_identity_util",
-        "@com_google_asylo//asylo/identity/util:sha256_hash_cc_proto",
-        "@com_google_asylo//asylo/util:logging",
-        "@com_google_asylo//asylo/util:status",
-    ],
-)
-
-cc_library(
     name = "policy_metadata",
     srcs = ["policy_metadata.cc"],
     hdrs = ["policy_metadata.h"],
