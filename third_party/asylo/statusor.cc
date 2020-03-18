@@ -16,9 +16,9 @@
  *
  */
 
-#include "asylo/util/statusor.h"
+#include "third_party/asylo/statusor.h"
 
-namespace asylo {
+namespace oak {
 
 #ifdef NDEBUG
 const char kValueMoveConstructorMsg[] = "";
@@ -38,4 +38,4 @@ const char kStatusMoveAssignmentMsg[] =
     "Status moved by StatusOr move assignment";
 #endif
 
-}  // namespace asylo
+}  // namespace oak

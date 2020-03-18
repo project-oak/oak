@@ -16,14 +16,14 @@
  *
  */
 
-#include "asylo/util/cleanup.h"
+#include "third_party/asylo/cleanup.h"
 
 #include <functional>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-namespace asylo {
+namespace oak {
 namespace {
 
 TEST(CleanupTest, EmptyCleanupDoesNotThrowExceptions) { Cleanup do_nothing; }
@@ -57,4 +57,4 @@ TEST(CleanupTest, ReleasePreventsDestructorCleanupFunctionCall) {
 }
 
 }  // namespace
-}  // namespace asylo
+}  // namespace oak
