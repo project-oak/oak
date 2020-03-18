@@ -14,17 +14,15 @@
 // limitations under the License.
 //
 
-use std::prelude::v1::*;
-
 use std::collections::HashMap;
 use std::string::String;
-use std::sync::{Arc, Weak};
+use std::sync::{Arc, Mutex, Weak};
+use std::{thread, thread::JoinHandle};
 
 use core::sync::atomic::Ordering::SeqCst;
 use core::sync::atomic::{AtomicBool, AtomicU64};
 
 use oak_abi::{ChannelReadStatus, OakStatus};
-use oak_platform::{JoinHandle, Mutex};
 
 use log::debug;
 
@@ -39,7 +37,7 @@ type Channels = Vec<Weak<channel::Channel>>;
 #[derive(Debug)]
 struct Node {
     reference: NodeRef,
-    join_handle: JoinHandle,
+    join_handle: JoinHandle<()>,
 }
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
@@ -148,7 +146,7 @@ impl Runtime {
         &self,
         readers: &[Option<&ChannelReader>],
     ) -> Result<Vec<ChannelReadStatus>, OakStatus> {
-        let thread = oak_platform::current_thread();
+        let thread = thread::current();
         while !self.is_terminating() {
             // Create a new Arc each iteration to be dropped after `thread::park` e.g. when the
             // thread is resumed. When the Arc is deallocated, any remaining `Weak`
@@ -160,7 +158,7 @@ impl Runtime {
             // Note we read statuses directly after adding waiters, before blocking to ensure that
             // there are no messages, after we have been added as a waiter.
 
-            let thread_id = oak_platform::current_thread().id();
+            let thread_id = thread::current().id();
             let thread_ref = Arc::new(thread.clone());
 
             for reader in readers {
@@ -181,15 +179,12 @@ impl Runtime {
 
             debug!(
                 "wait_on_channels: channels not ready, parking thread {:?}",
-                oak_platform::current_thread().id()
+                thread::current()
             );
 
-            oak_platform::park_thread();
+            thread::park();
 
-            debug!(
-                "wait_on_channels: thread {:?} re-woken",
-                oak_platform::current_thread().id()
-            );
+            debug!("wait_on_channels: thread {:?} re-woken", thread::current());
         }
         Err(OakStatus::ErrTerminated)
     }

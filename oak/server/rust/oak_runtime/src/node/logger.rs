@@ -14,14 +14,15 @@
 // limitations under the License.
 //
 
-use std::prelude::v1::*;
-
 use std::string::String;
 
 use log::info;
 
 use oak_abi::OakStatus;
-use oak_platform::{current_thread, spawn, JoinHandle};
+use std::{
+    thread,
+    thread::{spawn, JoinHandle},
+};
 
 use crate::runtime::ChannelReader;
 use crate::RuntimeRef;
@@ -46,8 +47,8 @@ pub fn new_instance(
     config_name: &str,
     runtime: RuntimeRef,
     initial_reader: ChannelReader,
-) -> Result<JoinHandle, OakStatus> {
-    let pretty_name = format!("{}-{:?}:", config_name, current_thread());
+) -> Result<JoinHandle<()>, OakStatus> {
+    let pretty_name = format!("{}-{:?}:", config_name, thread::current());
     Ok(spawn(move || {
         let result = logger(&pretty_name, runtime, initial_reader);
         info!("{} LOG: exiting log thread {:?}", pretty_name, result);

@@ -14,10 +14,9 @@
 // limitations under the License.
 //
 
-use std::prelude::v1::*;
-
 use std::string::String;
 use std::sync::Arc;
+use std::thread::JoinHandle;
 
 use oak_abi::OakStatus;
 
@@ -75,7 +74,7 @@ impl Configuration {
         _noderef: NodeRef,
         entrypoint: String,
         initial_reader: ChannelReader,
-    ) -> Result<oak_platform::JoinHandle, OakStatus> {
+    ) -> Result<JoinHandle<()>, OakStatus> {
         match self {
             Configuration::LogNode => logger::new_instance(config_name, runtime, initial_reader),
             Configuration::WasmNode { module } => wasm::new_instance(
