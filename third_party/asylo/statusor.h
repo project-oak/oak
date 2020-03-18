@@ -16,19 +16,19 @@
  *
  */
 
-#ifndef ASYLO_UTIL_STATUSOR_H_
-#define ASYLO_UTIL_STATUSOR_H_
+#ifndef THIRD_PARTY_ASYLO_STATUSOR_H_
+#define THIRD_PARTY_ASYLO_STATUSOR_H_
 
 #include <type_traits>
 
 #include "absl/base/attributes.h"
 #include "absl/meta/type_traits.h"
+#include "absl/status/status.h"
+// TODO(#709): migrate to gLog
 #include "asylo/util/logging.h"
-#include "asylo/util/cleanup.h"
-#include "asylo/util/status.h"
-#include "asylo/util/status_error_space.h"
+#include "third_party/asylo/cleanup.h"
 
-namespace asylo {
+namespace oak {
 
 #ifdef NDEBUG
 ABSL_CONST_INIT extern const char kValueMoveConstructorMsg[];
@@ -120,8 +120,7 @@ class StatusOr {
   /// an empty vector, it will actually invoke the default constructor of
   /// StatusOr.
   explicit StatusOr()
-      : variant_(Status(error::GoogleError::UNKNOWN, "Unknown error")),
-        has_value_(false) {}
+      : variant_(absl::Status(absl::StatusCode::kUnknown, "Unknown error")), has_value_(false) {}
 
   ~StatusOr() {
     if (has_value_) {
@@ -141,7 +140,7 @@ class StatusOr {
   /// convenience.
   ///
   /// \param status The non-OK Status object to initalize to.
-  StatusOr(const Status &status) : variant_(status), has_value_(false) {
+  StatusOr(const absl::Status &status) : variant_(status), has_value_(false) {
     if (status.ok()) {
       LOG(FATAL) << "Cannot instantiate StatusOr with Status::OkStatus()";
     }
@@ -171,7 +170,7 @@ class StatusOr {
                 is_implicitly_constructible<T, U>::value &&
                 !std::is_same<typename std::remove_reference<
                                   typename std::remove_cv<U>::type>::type,
-                              Status>::value>::type>
+                              absl::Status>::value>::type>
   StatusOr(U &&value) : variant_(std::forward<U>(value)), has_value_(true) {}
 
   /// Copy constructor.
@@ -241,15 +240,14 @@ class StatusOr {
     if (has_value_) {
       new (&variant_) variant(std::move(other.variant_.value_));
       other.OverwriteValueWithStatus(
-          Status(error::StatusError::MOVED, kValueMoveConstructorMsg));
+        absl::Status(absl::StatusCode::kInternal, kValueMoveConstructorMsg));
     } else {
       new (&variant_) variant(std::move(other.variant_.status_));
 #ifndef NDEBUG
       // The other.variant_.status_ gets moved and invalidated with a Status-
       // specific error message above. To aid debugging, set the status to a
       // StatusOr-specific error message.
-      other.variant_.status_ =
-          Status(error::StatusError::MOVED, kStatusMoveConstructorMsg);
+      other.variant_.status_ = absl::Status(absl::StatusCode::kInternal, kStatusMoveConstructorMsg);
 #endif
     }
   }
@@ -271,15 +269,14 @@ class StatusOr {
     if (other.has_value_) {
       AssignValue(std::move(other.variant_.value_));
       other.OverwriteValueWithStatus(
-          Status(error::StatusError::MOVED, kValueMoveAssignmentMsg));
+          absl::Status(absl::StatusCode::kInternal, kValueMoveAssignmentMsg));
     } else {
       AssignStatus(std::move(other.variant_.status_));
 #ifndef NDEBUG
       // The other.variant_.status_ gets moved and invalidated with a Status-
       // specific error message above. To aid debugging, set the status to a
       // StatusOr-specific error message.
-      other.variant_.status_ =
-          Status(error::StatusError::MOVED, kStatusMoveAssignmentMsg);
+      other.variant_.status_ = absl::Status(absl::StatusCode::kInternal, kStatusMoveAssignmentMsg);
 #endif
     }
 
@@ -297,7 +294,7 @@ class StatusOr {
   ///
   /// \return The stored non-OK status object, or an OK status if this object
   ///         has a value.
-  Status status() const { return ok() ? Status::OkStatus() : variant_.status_; }
+  absl::Status status() const { return ok() ? absl::OkStatus() : variant_.status_; }
 
   /// Gets the stored `T` value.
   ///
@@ -346,8 +343,7 @@ class StatusOr {
 
     // Invalidate this StatusOr object before returning control to caller.
     Cleanup set_moved_status([this] {
-      OverwriteValueWithStatus(
-          Status(error::StatusError::MOVED, kValueOrDieMovedMsg));
+      OverwriteValueWithStatus(absl::Status(absl::StatusCode::kInternal, kValueOrDieMovedMsg));
     });
     return std::move(variant_.value_);
   }
@@ -396,16 +392,16 @@ class StatusOr {
 
   union variant {
     // A non-OK status.
-    Status status_;
+    absl::Status status_;
 
     // An element of type T.
     T value_;
 
     variant() {}
 
-    variant(const Status &status) : status_(status) {}
+    variant(const absl::Status &status) : status_(status) {}
 
-    variant(Status &&status) : status_(std::move(status)) {}
+    variant(absl::Status &&status) : status_(std::move(status)) {}
 
     template <typename U, typename E = typename std::enable_if<
                               is_implicitly_constructible<T, U>::value>::type>
@@ -428,6 +424,6 @@ class StatusOr {
   bool has_value_;
 };
 
-}  // namespace asylo
+}  // namespace oak
 
-#endif  // ASYLO_UTIL_STATUSOR_H_
+#endif  // THIRD_PARTY_ASYLO_STATUSOR_H_

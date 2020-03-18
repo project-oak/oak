@@ -16,8 +16,8 @@
  *
  */
 
-#ifndef ASYLO_UTIL_STATUS_MACROS_H_
-#define ASYLO_UTIL_STATUS_MACROS_H_
+#ifndef THIRD_PARTY_ASYLO_STATUS_MACROS_H_
+#define THIRD_PARTY_ASYLO_STATUS_MACROS_H_
 
 #include "absl/base/optimization.h"
 
@@ -27,19 +27,19 @@
 ///
 /// Example:
 /// ```
-///   ::asylo::Status MultiStepFunction() {
-///     ASYLO_RETURN_IF_ERROR(Function(args...));
-///     ASYLO_RETURN_IF_ERROR(foo.Method(args...));
-///     return ::asylo::Status::OkStatus();
+///   ::absl::Status MultiStepFunction() {
+///     OAK_RETURN_IF_ERROR(Function(args...));
+///     OAK_RETURN_IF_ERROR(foo.Method(args...));
+///     return ::absl::OkStatus();
 ///   }
 /// ```
-#define ASYLO_RETURN_IF_ERROR(expr)                        \
-do {                                                       \
-  const auto _asylo_status_to_verify = (expr);             \
-  if (ABSL_PREDICT_FALSE(!_asylo_status_to_verify.ok())) { \
-    return _asylo_status_to_verify;                        \
-  }                                                        \
-} while (false)
+#define OAK_RETURN_IF_ERROR(expr)                          \
+  do {                                                     \
+    const auto _oak_status_to_verify = (expr);             \
+    if (ABSL_PREDICT_FALSE(!_oak_status_to_verify.ok())) { \
+      return _oak_status_to_verify;                        \
+    }                                                      \
+  } while (false)
 
 /// Evaluates an expression `rexpr` that returns a `StatusOr`-like
 /// object with `.ok()`, `.status()`, and `.ValueOrDie()` methods.  If
@@ -52,34 +52,34 @@ do {                                                       \
 ///
 /// Interface:
 /// ```
-///   ASYLO_ASSIGN_OR_RETURN(lhs, rexpr)
+///   OAK_ASSIGN_OR_RETURN(lhs, rexpr)
 /// ```
 ///
 /// Example: Assigning to an existing variable:
 /// ```
 ///   ValueType value;
-///   ASYLO_ASSIGN_OR_RETURN(value, MaybeGetValue(arg));
+///   OAK_ASSIGN_OR_RETURN(value, MaybeGetValue(arg));
 /// ```
 ///
 /// Example: Assigning to an expression with side effects:
 /// ```
 ///   MyProto data;
-///   ASYLO_ASSIGN_OR_RETURN(*data.mutable_str(), MaybeGetValue(arg));
+///   OAK_ASSIGN_OR_RETURN(*data.mutable_str(), MaybeGetValue(arg));
 ///   // No field "str" is added on error.
 /// ```
 ///
 /// Example: Assigning to a `std::unique_ptr`.
 /// ```
 ///   std::unique_ptr<T> ptr;
-///   ASYLO_ASSIGN_OR_RETURN(ptr, MaybeGetPtr(arg));
+///   OAK_ASSIGN_OR_RETURN(ptr, MaybeGetPtr(arg));
 /// ```
-#define ASYLO_ASSIGN_OR_RETURN(lhs, rexpr)                \
-do {                                                      \
-  auto _asylo_status_or_value = (rexpr);                  \
-  if (ABSL_PREDICT_FALSE(!_asylo_status_or_value.ok())) { \
-    return _asylo_status_or_value.status();               \
-  }                                                       \
-  lhs = std::move(_asylo_status_or_value).ValueOrDie();   \
-} while (false)
+#define OAK_ASSIGN_OR_RETURN(lhs, rexpr)                  \
+  do {                                                    \
+    auto _oak_status_or_value = (rexpr);                  \
+    if (ABSL_PREDICT_FALSE(!_oak_status_or_value.ok())) { \
+      return _oak_status_or_value.status();               \
+    }                                                     \
+    lhs = std::move(_oak_status_or_value).ValueOrDie();   \
+  } while (false)
 
 #endif  // ASYLO_UTIL_STATUS_MACROS_H_

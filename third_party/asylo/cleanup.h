@@ -16,13 +16,13 @@
  *
  */
 
-#ifndef ASYLO_UTIL_CLEANUP_H_
-#define ASYLO_UTIL_CLEANUP_H_
+#ifndef THIRD_PARTY_ASYLO_CLEANUP_H_
+#define THIRD_PARTY_ASYLO_CLEANUP_H_
 
 #include <functional>
 #include <utility>
 
-namespace asylo {
+namespace oak {
 
 // A cleanup utility. Takes a function in its constructor and calls that
 // function in its destructor.
@@ -88,6 +88,6 @@ class Cleanup {
   std::function<void()> cleanup_function_;
 };
 
-}  // namespace asylo
+}  // namespace oak
 
-#endif  // ASYLO_UTIL_CLEANUP_H_
+#endif  // THIRD_PARTY_ASYLO_CLEANUP_H_
