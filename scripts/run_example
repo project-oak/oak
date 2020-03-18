@@ -72,20 +72,13 @@ if [[ "${server}" != "none" ]]; then
   "${SCRIPTS_DIR}/run_server" -s "${server}" -l "${language}" -e "${EXAMPLE}" &
   readonly SERVER_PID=$!
   sleep 3  # Wait for the application to start.
+
+  function stop_server {
+    kill -s SIGTERM "${SERVER_PID}"
+  }
+  trap stop_server EXIT
 fi
 
 # Run the application client.
 readonly CLIENT_ARGS=("${@}")  # Choose client args provided after '--'.
-
-# Temporary disable `errexit` in order to be able to stop the Oak server in any scenario.
-set +o errexit
 "./bazel-client-bin/examples/${EXAMPLE}/client/client" "${CLIENT_ARGS[@]}"
-readonly RESULT="$?"  # Get the error code returned by the client.
-set -o errexit
-
-# TODO: Ensure that background processes are killed with something like `trap cleanup_fn EXIT`.
-if [[ "${server}" != "none" ]]; then
-  kill -s SIGTERM "${SERVER_PID}"
-fi
-
-exit "${RESULT}"
