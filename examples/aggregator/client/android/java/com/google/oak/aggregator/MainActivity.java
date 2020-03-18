@@ -28,7 +28,7 @@ import android.widget.TextView;
 import com.google.oak.aggregator.R;
 
 /*
- * Main class for the Oak Android "Hello, World" app.
+ * Main class for the Oak Android "Aggregator" application.
  */
 public class MainActivity extends Activity {
   static {
@@ -109,11 +109,11 @@ public class MainActivity extends Activity {
     EditText thirdValueInput = findViewById(R.id.thirdValueInput);
     values.add(Float.parseFloat(thirdValueInput.getText().toString()));
 
-    String responce = submitSample(bucket, indices, values);
+    submitSample(bucket, indices, values);
   }
 
   private native void createChannel(String address);
-  private native String submitSample(
+  private native void submitSample(
       String bucket, ArrayList<Integer> indices, ArrayList<Float> values);
 
   private String rpcAddress;

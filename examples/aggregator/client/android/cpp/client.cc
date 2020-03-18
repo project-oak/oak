@@ -40,8 +40,9 @@ JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
 }
 
 // Create gRPC channel to the `jaddress`.
-JNIEXPORT void JNICALL Java_com_google_oak_aggregator_MainActivity_createChannel(
-    JNIEnv* env, jobject /*this*/, jstring jaddress) {
+JNIEXPORT void JNICALL Java_com_google_oak_aggregator_MainActivity_createChannel(JNIEnv* env,
+                                                                                 jobject /*this*/,
+                                                                                 jstring jaddress) {
   oak::ApplicationClient::InitializeAssertionAuthorities();
 
   auto address = env->GetStringUTFChars(jaddress, 0);
@@ -51,24 +52,17 @@ JNIEXPORT void JNICALL Java_com_google_oak_aggregator_MainActivity_createChannel
 
 // Send data sample to the gRPC channel `kChannel`.
 JNIEXPORT void JNICALL Java_com_google_oak_aggregator_MainActivity_submitSample(
-  JNIEnv* env, jobject /*this*/, jstring jbucket, jobject jindices, jobject jvalues) {
-
+    JNIEnv* env, jobject /*this*/, jstring jbucket, jobject jindices, jobject jvalues) {
   // Get Java classes and methods.
-  jclass ArrayListClass = (*env).FindClass("java/util/ArrayList");
-  if (ArrayListClass == nullptr) {
-    JNI_LOG("ArrayList class not found");
-    return;
-  }
+  jclass ArrayListClass = env->FindClass("java/util/ArrayList");
   jmethodID GetMethod = env->GetMethodID(ArrayListClass, "get", "(I)Ljava/lang/Object;");
-  if (GetMethod == nullptr) {
-    JNI_LOG("Get method not found");
-    return;
-  }
   jmethodID SizeMethod = env->GetMethodID(ArrayListClass, "size", "()I");
-  if (SizeMethod == nullptr) {
-    JNI_LOG("Size method not found");
-    return;
-  }
+
+  jclass IntegerClass = env->FindClass("java/lang/Integer");
+  jmethodID IntValueMethod = env->GetMethodID(IntegerClass, "intValue", "()I");
+
+  jclass FloatClass = env->FindClass("java/lang/Float");
+  jmethodID FloatValueMethod = env->GetMethodID(FloatClass, "floatValue", "()F");
 
   // Create a gRPC message.
   grpc::ClientContext context;
@@ -85,18 +79,22 @@ JNIEXPORT void JNICALL Java_com_google_oak_aggregator_MainActivity_submitSample(
   JNI_LOG("  indices:");
   size_t indices_size = static_cast<size_t>(env->CallIntMethod(jindices, SizeMethod));
   for (size_t index_key = 0; index_key < indices_size; index_key++) {
-    uint32_t index = static_cast<uint32_t>(env->CallIntMethod(jindices, GetMethod, index_key));
+    jobject jindex = env->CallObjectMethod(jindices, GetMethod, index_key);
+    int index = env->CallIntMethod(jindex, IntValueMethod);
     JNI_LOG("    - %d", index);
     request.mutable_data()->add_indices(index);
+    env->DeleteLocalRef(jindex);
   }
 
   // Get values
   JNI_LOG("  values:");
   size_t values_size = static_cast<size_t>(env->CallIntMethod(jvalues, SizeMethod));
   for (size_t value_key = 0; value_key < values_size; value_key++) {
-    float value = static_cast<float>(env->CallFloatMethod(jvalues, GetMethod, value_key));
+    jobject jvalue = env->CallObjectMethod(jvalues, GetMethod, value_key);
+    float value = env->CallFloatMethod(jvalue, FloatValueMethod);
     JNI_LOG("    - %.2f", value);
     request.mutable_data()->add_values(value);
+    env->DeleteLocalRef(jvalue);
   }
 
   // Submit sample.
@@ -104,11 +102,14 @@ JNIEXPORT void JNICALL Java_com_google_oak_aggregator_MainActivity_submitSample(
   if (status.ok()) {
     JNI_LOG("Sample has been submitted");
   } else {
-    JNI_LOG("Could not submit sample: %d : %s", status.error_code(), status.error_message().c_str());
+    JNI_LOG("Could not submit sample: %d : %s", status.error_code(),
+            status.error_message().c_str());
   }
 
   // Clear class references.
   env->DeleteLocalRef(ArrayListClass);
+  env->DeleteLocalRef(IntegerClass);
+  env->DeleteLocalRef(FloatClass);
 }
 
 }  // extern "C"
