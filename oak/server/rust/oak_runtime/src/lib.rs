@@ -14,8 +14,6 @@
 // limitations under the License.
 //
 
-// #![feature(result_contains_err)]
-
 pub mod proto;
 
 pub mod config;
