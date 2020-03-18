@@ -61,10 +61,11 @@ cc_library(
         "//oak/server:channel",
         "//oak/server:invocation",
         "//oak/server:node_thread",
+        "//third_party/asylo:statusor",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/status",
         "@com_google_asylo//asylo/util:logging",
-        "@com_google_asylo//asylo/util:status",
     ],
 )
 
@@ -75,11 +76,13 @@ cc_library(
     deps = [
         "//oak/proto:storage_cc_grpc",
         "//oak/proto:storage_channel_cc_proto",
+        "//third_party/asylo:status_macros",
+        "//third_party/asylo:statusor",
         "@boringssl//:crypto",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/status",
         "@com_google_asylo//asylo/crypto:aes_gcm_siv",
-        "@com_google_asylo//asylo/util:status",
     ],
 )
 

@@ -25,8 +25,8 @@
 #include "asylo/crypto/aes_gcm_siv.h"
 #include "asylo/crypto/nonce_generator.h"
 #include "asylo/util/cleansing_types.h"
-#include "asylo/util/status_macros.h"
 #include "grpcpp/create_channel.h"
+#include "third_party/asylo/status_macros.h"
 
 namespace oak {
 
@@ -34,16 +34,30 @@ namespace {
 
 constexpr size_t kMaxMessageSize = 1 << 16;
 
-// If a gRPC client method returns an error, convert it to an asylo::Status
-// and return it. Analogous to the ASYLO_RETURN_IF_ERROR macro from
-// asylo/util/status_macros.h, but copes with a grpc::Status instead of an
-// asylo::Status.
-#define RETURN_IF_GRPC_ERROR(expr)                         \
-  do {                                                     \
-    auto _oak_status_to_verify = (expr);                   \
-    if (ABSL_PREDICT_FALSE(!_oak_status_to_verify.ok())) { \
-      return asylo::Status(_oak_status_to_verify);         \
-    }                                                      \
+absl::Status FromGrpcStatus(grpc::Status grpc_status) {
+  return absl::Status(static_cast<absl::StatusCode>(grpc_status.error_code()),
+                      grpc_status.error_message());
+}
+
+// If a gRPC client method returns a grpc::Status error, convert it to an
+// absl::Status and return it.
+#define RETURN_IF_GRPC_ERROR(expr)                          \
+  do {                                                      \
+    auto _grpc_status_to_verify = (expr);                   \
+    if (ABSL_PREDICT_FALSE(!_grpc_status_to_verify.ok())) { \
+      return FromGrpcStatus(_grpc_status_to_verify);        \
+    }                                                       \
+  } while (false)
+
+// If a gRPC client method returns an asylo::Status error, convert it to an
+// absl::Status and return it.
+#define RETURN_IF_ASYLO_ERROR(expr)                                                               \
+  do {                                                                                            \
+    auto _asylo_status_to_verify = (expr);                                                        \
+    if (ABSL_PREDICT_FALSE(!_asylo_status_to_verify.ok())) {                                      \
+      return absl::Status(static_cast<absl::StatusCode>(_asylo_status_to_verify.CanonicalCode()), \
+                          _asylo_status_to_verify.error_message());                               \
+    }                                                                                             \
   } while (false)
 
 std::string GetStorageId(const std::string& storage_name) {
@@ -99,8 +113,8 @@ StorageProcessor::StorageProcessor(const std::string& storage_address)
     : storage_service_(oak::Storage::NewStub(
           grpc::CreateChannel(storage_address, grpc::InsecureChannelCredentials()))) {}
 
-const asylo::StatusOr<std::string> StorageProcessor::EncryptItem(const std::string& item,
-                                                                 ItemType item_type) {
+const oak::StatusOr<std::string> StorageProcessor::EncryptItem(const std::string& item,
+                                                               ItemType item_type) {
   // TODO: Replace "foo" with identifier for the encryption key.
   asylo::CleansingVector<uint8_t> key = GetStorageEncryptionKey("foo");
   asylo::CleansingString additional_authenticated_data;
@@ -118,20 +132,19 @@ const asylo::StatusOr<std::string> StorageProcessor::EncryptItem(const std::stri
   }
   // Create a cryptor, passing ownership of the nonce generator to it.
   asylo::AesGcmSivCryptor cryptor(kMaxMessageSize, nonce_generator);
-  ASYLO_RETURN_IF_ERROR(
+  RETURN_IF_ASYLO_ERROR(
       cryptor.Seal(key, additional_authenticated_data, item, &nonce, &item_encrypted));
 
   return absl::StrCat(nonce, item_encrypted);
 }
 
-const asylo::StatusOr<std::string> StorageProcessor::DecryptItem(const std::string& input,
-                                                                 ItemType) {
+const oak::StatusOr<std::string> StorageProcessor::DecryptItem(const std::string& input, ItemType) {
   asylo::CleansingString input_clean(input.data(), input.size());
 
   if (input_clean.size() < kAesGcmSivNonceSize) {
-    return asylo::Status(asylo::error::GoogleError::INVALID_ARGUMENT,
-                         absl::StrCat("Input too short: expected at least ", kAesGcmSivNonceSize,
-                                      " bytes, got ", input_clean.size()));
+    return absl::Status(absl::StatusCode::kInvalidArgument,
+                        absl::StrCat("Input too short: expected at least ", kAesGcmSivNonceSize,
+                                     " bytes, got ", input_clean.size()));
   }
 
   // TODO: Replace "foo" with identifier for the encryption key.
@@ -143,15 +156,15 @@ const asylo::StatusOr<std::string> StorageProcessor::DecryptItem(const std::stri
 
   // The nonce generator is not used for decryption.
   asylo::AesGcmSivCryptor cryptor(kMaxMessageSize, nullptr);
-  ASYLO_RETURN_IF_ERROR(
+  RETURN_IF_ASYLO_ERROR(
       cryptor.Open(key, additional_authenticated_data, item_encrypted, nonce, &item_decrypted));
 
   return std::string(item_decrypted.data(), item_decrypted.size());
 }
 
-asylo::StatusOr<std::string> StorageProcessor::Read(const std::string& storage_name,
-                                                    const std::string& item_name,
-                                                    const std::string& transaction_id) {
+oak::StatusOr<std::string> StorageProcessor::Read(const std::string& storage_name,
+                                                  const std::string& item_name,
+                                                  const std::string& transaction_id) {
   StorageReadRequest read_request;
   read_request.set_storage_id(GetStorageId(storage_name));
   if (!transaction_id.empty()) {
@@ -167,9 +180,9 @@ asylo::StatusOr<std::string> StorageProcessor::Read(const std::string& storage_n
   return DecryptItem(read_response.item_value(), ItemType::VALUE);
 }
 
-asylo::Status StorageProcessor::Write(const std::string& storage_name, const std::string& item_name,
-                                      const std::string& item_value,
-                                      const std::string& transaction_id) {
+absl::Status StorageProcessor::Write(const std::string& storage_name, const std::string& item_name,
+                                     const std::string& item_value,
+                                     const std::string& transaction_id) {
   StorageWriteRequest write_request;
   write_request.set_storage_id(GetStorageId(storage_name));
   if (!transaction_id.empty()) {
@@ -185,12 +198,11 @@ asylo::Status StorageProcessor::Write(const std::string& storage_name, const std
 
   grpc::ClientContext context;
   StorageWriteResponse write_response;
-  return asylo::Status(storage_service_->Write(&context, write_request, &write_response));
+  return FromGrpcStatus(storage_service_->Write(&context, write_request, &write_response));
 }
 
-asylo::Status StorageProcessor::Delete(const std::string& storage_name,
-                                       const std::string& item_name,
-                                       const std::string& transaction_id) {
+absl::Status StorageProcessor::Delete(const std::string& storage_name, const std::string& item_name,
+                                      const std::string& transaction_id) {
   StorageDeleteRequest delete_request;
   delete_request.set_storage_id(GetStorageId(storage_name));
   if (!transaction_id.empty()) {
@@ -202,39 +214,39 @@ asylo::Status StorageProcessor::Delete(const std::string& storage_name,
 
   grpc::ClientContext context;
   StorageDeleteResponse delete_response;
-  return asylo::Status(storage_service_->Delete(&context, delete_request, &delete_response));
+  return FromGrpcStatus(storage_service_->Delete(&context, delete_request, &delete_response));
 }
 
-asylo::StatusOr<std::string> StorageProcessor::Begin(const std::string& storage_name) {
+oak::StatusOr<std::string> StorageProcessor::Begin(const std::string& storage_name) {
   StorageBeginRequest begin_request;
   begin_request.set_storage_id(GetStorageId(storage_name));
 
   grpc::ClientContext context;
   StorageBeginResponse begin_response;
   RETURN_IF_GRPC_ERROR(storage_service_->Begin(&context, begin_request, &begin_response));
-  return asylo::StatusOr<std::string>(begin_response.transaction_id());
+  return oak::StatusOr<std::string>(begin_response.transaction_id());
 }
 
-asylo::Status StorageProcessor::Commit(const std::string& storage_name,
-                                       const std::string& transaction_id) {
+absl::Status StorageProcessor::Commit(const std::string& storage_name,
+                                      const std::string& transaction_id) {
   StorageCommitRequest commit_request;
   commit_request.set_storage_id(GetStorageId(storage_name));
   commit_request.set_transaction_id(transaction_id);
 
   grpc::ClientContext context;
   StorageCommitResponse commit_response;
-  return asylo::Status(storage_service_->Commit(&context, commit_request, &commit_response));
+  return FromGrpcStatus(storage_service_->Commit(&context, commit_request, &commit_response));
 }
 
-asylo::Status StorageProcessor::Rollback(const std::string& storage_name,
-                                         const std::string& transaction_id) {
+absl::Status StorageProcessor::Rollback(const std::string& storage_name,
+                                        const std::string& transaction_id) {
   StorageRollbackRequest rollback_request;
   rollback_request.set_storage_id(GetStorageId(storage_name));
   rollback_request.set_transaction_id(transaction_id);
 
   grpc::ClientContext context;
   StorageRollbackResponse rollback_response;
-  return asylo::Status(storage_service_->Rollback(&context, rollback_request, &rollback_response));
+  return FromGrpcStatus(storage_service_->Rollback(&context, rollback_request, &rollback_response));
 }
 
 }  // namespace oak

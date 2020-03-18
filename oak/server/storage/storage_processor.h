@@ -19,8 +19,9 @@
 
 #include <memory>
 
-#include "asylo/util/statusor.h"
+#include "absl/status/status.h"
 #include "oak/proto/storage.grpc.pb.h"
+#include "third_party/asylo/statusor.h"
 
 namespace oak {
 
@@ -29,21 +30,21 @@ class StorageProcessor {
   explicit StorageProcessor(const std::string& storage_address);
 
   // Returns item value on success.
-  asylo::StatusOr<std::string> Read(const std::string& storage_name, const std::string& item_name,
-                                    const std::string& transaction_id);
+  oak::StatusOr<std::string> Read(const std::string& storage_name, const std::string& item_name,
+                                  const std::string& transaction_id);
 
-  asylo::Status Write(const std::string& storage_name, const std::string& item_name,
-                      const std::string& item_value, const std::string& transaction_id);
+  absl::Status Write(const std::string& storage_name, const std::string& item_name,
+                     const std::string& item_value, const std::string& transaction_id);
 
-  asylo::Status Delete(const std::string& storage_name, const std::string& item_name,
-                       const std::string& transaction_id);
+  absl::Status Delete(const std::string& storage_name, const std::string& item_name,
+                      const std::string& transaction_id);
 
   // Returns transaction ID on success.
-  asylo::StatusOr<std::string> Begin(const std::string& storage_name);
+  oak::StatusOr<std::string> Begin(const std::string& storage_name);
 
-  asylo::Status Commit(const std::string& storage_name, const std::string& transaction_id);
+  absl::Status Commit(const std::string& storage_name, const std::string& transaction_id);
 
-  asylo::Status Rollback(const std::string& storage_name, const std::string& transaction_id);
+  absl::Status Rollback(const std::string& storage_name, const std::string& transaction_id);
 
  private:
   enum class ItemType : int { NAME, VALUE };
@@ -55,11 +56,11 @@ class StorageProcessor {
   // Returns the concatenation of the kAesGcmSivNonceSize-byte nonce followed by
   // the encrypted item.
   // TODO: Convert this to a serialized protocol message.
-  const asylo::StatusOr<std::string> EncryptItem(const std::string& item, ItemType item_type);
+  const oak::StatusOr<std::string> EncryptItem(const std::string& item, ItemType item_type);
 
   // Decrypts `input` which must be a kAesGcmSivNonceSize-byte nonce followed by
   // the encrypted item.
-  const asylo::StatusOr<std::string> DecryptItem(const std::string& input, ItemType item_type);
+  const oak::StatusOr<std::string> DecryptItem(const std::string& input, ItemType item_type);
 
   std::unique_ptr<oak::Storage::Stub> storage_service_;
 };
