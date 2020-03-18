@@ -24,13 +24,6 @@ package(
     licenses = ["notice"],
 )
 
-# Mark tests that can be run on the host system (i.e. with a normal
-# compiler, not the Asylo toolchain) with 'host' tag.
-test_suite(
-    name = "host_tests",
-    tags = ["host"],
-)
-
 cc_binary(
     name = "storage_server",
     srcs = ["storage_server.cc"],
@@ -146,7 +139,6 @@ cc_library(
 cc_test(
     name = "memory_provider_test",
     srcs = ["memory_provider_test.cc"],
-    tags = ["host"],
     deps = [
         ":memory_provider",
         "@gtest//:gtest_main",
