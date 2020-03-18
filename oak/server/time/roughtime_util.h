@@ -17,8 +17,10 @@
 #ifndef OAK_SERVER_TIME_ROUGHTIME_UTIL_H_
 #define OAK_SERVER_TIME_ROUGHTIME_UTIL_H_
 
-#include "asylo/util/statusor.h"
+#include <vector>
+
 #include "protocol.h"
+#include "third_party/asylo/statusor.h"
 
 namespace oak {
 
@@ -32,8 +34,8 @@ struct RoughtimeInterval {
 // Finds the first min_overlap overlapping intervals from a vector of intervals and returns the
 // intersection of these overlapping intervals. An error status will be returned if there are not
 // min_overlap overlapping intervals.
-asylo::StatusOr<RoughtimeInterval> FindOverlap(const std::vector<RoughtimeInterval>& intervals,
-                                               const int min_overlap);
+oak::StatusOr<RoughtimeInterval> FindOverlap(const std::vector<RoughtimeInterval>& intervals,
+                                             const int min_overlap);
 
 }  // namespace oak
 

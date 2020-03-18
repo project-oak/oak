@@ -17,8 +17,8 @@
 #ifndef OAK_SERVER_TIME_ROUGHTIME_CLIENT_H_
 #define OAK_SERVER_TIME_ROUGHTIME_CLIENT_H_
 
-#include "asylo/util/statusor.h"
 #include "protocol.h"
+#include "third_party/asylo/statusor.h"
 
 namespace oak {
 
@@ -28,7 +28,7 @@ namespace oak {
 // and https://roughtime.googlesource.com/roughtime/+/refs/heads/master/go/client/client.go
 class RoughtimeClient {
  public:
-  static asylo::StatusOr<roughtime::rough_time_t> GetRoughTime();
+  static oak::StatusOr<roughtime::rough_time_t> GetRoughTime();
 };
 
 }  // namespace oak

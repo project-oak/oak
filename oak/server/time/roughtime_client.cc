@@ -23,23 +23,24 @@
 #include <netinet/udp.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <unistd.h>
 
 #include <array>
 #include <string>
 #include <vector>
 
 #include "absl/memory/memory.h"
+#include "absl/status/status.h"
 #include "absl/strings/escaping.h"
 #include "absl/strings/str_format.h"
 #include "asylo/util/logging.h"
-#include "asylo/util/status.h"
-#include "asylo/util/status_macros.h"
 #include "client.h"
 #include "oak/common/nonce_generator.h"
 #include "oak/server/time/roughtime_util.h"
+#include "third_party/asylo/status_macros.h"
 
-using ::asylo::Status;
-using ::asylo::StatusOr;
+using ::absl::Status;
+using ::oak::StatusOr;
 
 namespace oak {
 
@@ -92,18 +93,18 @@ StatusOr<int> CreateSocket(const std::string& host, const std::string& port) {
   addrinfo* address;
   int error = getaddrinfo(host.c_str(), port.c_str(), &hints, &address);
   if (error != 0) {
-    return Status(asylo::error::GoogleError::INVALID_ARGUMENT,
+    return Status(absl::StatusCode::kInvalidArgument,
                   absl::StrFormat("Could not resolve %s: %s", host.c_str(), gai_strerror(error)));
   }
   int handle = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
   if (handle < 0) {
     freeaddrinfo(address);
-    return Status(asylo::error::GoogleError::INTERNAL, "Failed to create UDP socket.");
+    return Status(absl::StatusCode::kInternal, "Failed to create UDP socket.");
   }
   if (connect(handle, address->ai_addr, address->ai_addrlen)) {
     freeaddrinfo(address);
     close(handle);
-    return Status(asylo::error::GoogleError::INTERNAL, "Failed to open UDP socket.");
+    return Status(absl::StatusCode::kInternal, "Failed to open UDP socket.");
   }
   freeaddrinfo(address);
   return handle;
@@ -119,7 +120,7 @@ StatusOr<std::string> SendRequest(const RoughtimeServerSpec& server,
   } while (!create_socket_result.ok() && attempts <= kServerRetries);
 
   if (!create_socket_result.ok()) {
-    return Status(asylo::error::GoogleError::INTERNAL,
+    return Status(absl::StatusCode::kInternal,
                   "Exceeded maximum retries while attempting to connect to " + server.name);
   }
 
@@ -136,7 +137,7 @@ StatusOr<std::string> SendRequest(const RoughtimeServerSpec& server,
   } while (send_size == -1 && errno == EINTR);
   if (send_size != static_cast<ssize_t>(request.size())) {
     close(handle);
-    return Status(asylo::error::GoogleError::INTERNAL,
+    return Status(absl::StatusCode::kInternal,
                   "Network error on sending request to " + server.name);
   }
 
@@ -148,9 +149,9 @@ StatusOr<std::string> SendRequest(const RoughtimeServerSpec& server,
   close(handle);
   if (receive_size == -1) {
     if (errno == EINTR) {
-      return Status(asylo::error::GoogleError::INTERNAL, "Request timed out for " + server.name);
+      return Status(absl::StatusCode::kInternal, "Request timed out for " + server.name);
     }
-    return Status(asylo::error::GoogleError::INTERNAL, "No response received from " + server.name);
+    return Status(absl::StatusCode::kInternal, "No response received from " + server.name);
   }
 
   return std::string(receive_buffer, static_cast<size_t>(receive_size));
@@ -159,7 +160,7 @@ StatusOr<std::string> SendRequest(const RoughtimeServerSpec& server,
 StatusOr<RoughtimeInterval> GetIntervalFromServer(const RoughtimeServerSpec& server) {
   std::string public_key;
   if (!absl::Base64Unescape(server.public_key_base64, &public_key)) {
-    return Status(asylo::error::GoogleError::INVALID_ARGUMENT,
+    return Status(absl::StatusCode::kInvalidArgument,
                   absl::StrFormat("Public key for server %s is not a valid base64 encoding.",
                                   server.name.c_str()));
   }
@@ -167,7 +168,7 @@ StatusOr<RoughtimeInterval> GetIntervalFromServer(const RoughtimeServerSpec& ser
   oak::NonceGenerator<roughtime::kNonceLength> generator;
   Nonce<roughtime::kNonceLength> nonce = generator.NextNonce();
   std::string response;
-  ASYLO_ASSIGN_OR_RETURN(response, SendRequest(server, nonce));
+  OAK_ASSIGN_OR_RETURN(response, SendRequest(server, nonce));
 
   roughtime::rough_time_t timestamp_microseconds;
   uint32_t radius_microseconds;
@@ -176,19 +177,19 @@ StatusOr<RoughtimeInterval> GetIntervalFromServer(const RoughtimeServerSpec& ser
                                 reinterpret_cast<const uint8_t*>(public_key.data()),
                                 reinterpret_cast<const uint8_t*>(response.data()), response.size(),
                                 nonce.data())) {
-    return Status(asylo::error::GoogleError::INTERNAL,
+    return Status(absl::StatusCode::kInternal,
                   absl::StrFormat("Response from %s could not be parsed: %s", server.name.c_str(),
                                   error.c_str()));
   }
 
   if (radius_microseconds > kMaxRadiusMicroseconds) {
-    return Status(asylo::error::GoogleError::INTERNAL,
+    return Status(absl::StatusCode::kInternal,
                   absl::StrFormat("Radius from %s is too large: %" PRIu32 "", server.name.c_str(),
                                   radius_microseconds));
   }
 
   if (radius_microseconds > timestamp_microseconds) {
-    return Status(asylo::error::GoogleError::INTERNAL,
+    return Status(absl::StatusCode::kInternal,
                   absl::StrFormat("Timestamp from %s is too small: %" PRIu64 "",
                                   server.name.c_str(), timestamp_microseconds));
   }
@@ -212,7 +213,7 @@ StatusOr<roughtime::rough_time_t> RoughtimeClient::GetRoughTime() {
   }
 
   RoughtimeInterval interval;
-  ASYLO_ASSIGN_OR_RETURN(interval, FindOverlap(valid_intervals, kMinOverlappingTimeIntervals));
+  OAK_ASSIGN_OR_RETURN(interval, FindOverlap(valid_intervals, kMinOverlappingTimeIntervals));
   return (interval.min + interval.max) / 2;
 }
 

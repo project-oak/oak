@@ -18,11 +18,12 @@
 
 #include <vector>
 
+#include "absl/status/status.h"
 #include "absl/strings/str_format.h"
-#include "asylo/util/status.h"
+#include "third_party/asylo/statusor.h"
 
-using ::asylo::Status;
-using ::asylo::StatusOr;
+using ::absl::Status;
+using ::oak::StatusOr;
 
 namespace oak {
 
@@ -49,8 +50,8 @@ StatusOr<RoughtimeInterval> FindOverlap(const std::vector<RoughtimeInterval>& in
     }
   }
 
-  return Status(asylo::error::GoogleError::INTERNAL,
-                absl::StrFormat("Could not find %d overlapping intervals.", min_overlap));
+  return absl::Status(absl::StatusCode::kInternal,
+                      absl::StrFormat("Could not find %d overlapping intervals.", min_overlap));
 }
 
 }  // namespace oak
