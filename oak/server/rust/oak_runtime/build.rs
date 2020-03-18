@@ -17,7 +17,7 @@
 use std::path;
 
 fn main() {
-    let proto_files = vec!["application.proto"];
+    let proto_files = vec!["application.proto", "log.proto"];
 
     let proto_dir = path::Path::new("../../../../oak/proto/").to_path_buf();
     let proto_paths: Vec<path::PathBuf> = proto_files.iter().map(|f| proto_dir.join(f)).collect();

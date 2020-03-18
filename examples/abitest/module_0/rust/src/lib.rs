@@ -25,7 +25,7 @@ use proto::abitest::GrpcTestRequest_oneof_method_result::{err_code, ok_text};
 use proto::abitest::{ABITestRequest, ABITestResponse, ABITestResponse_TestResult};
 use proto::abitest::{GrpcTestRequest, GrpcTestResponse};
 use proto::abitest_grpc::{Dispatcher, OakABITestService, OakABITestServiceClient};
-use protobuf::ProtobufEnum;
+use protobuf::{Message, ProtobufEnum};
 use rand::Rng;
 use std::collections::HashMap;
 
@@ -1131,7 +1131,21 @@ impl FrontendNode {
 
         oak::channel_write(
             logging_handle,
-            "message sent direct to logging channel".as_bytes(),
+            "Malformed message sent direct to logging channel!".as_bytes(),
+            &[in_handle.handle, out_handle.handle],
+        )
+        .expect("could not write to channel");
+
+        oak::channel_write(
+            logging_handle,
+            &oak::proto::log::LogMessage {
+                level: oak::proto::log::Level::INFO,
+                file: "abitest".to_string(),
+                message: "Wellformed message sent direct to logging channel!".to_string(),
+                ..Default::default()
+            }
+            .write_to_bytes()
+            .unwrap()[..],
             &[in_handle.handle, out_handle.handle],
         )
         .expect("could not write to channel");
