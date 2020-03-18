@@ -40,13 +40,13 @@ steps:
   - name: 'gcr.io/oak-ci/oak:latest'
     id: build_server_dev
     waitFor: ['build_image']
-    timeout: 30m
+    timeout: 60m
     entrypoint: 'bash'
     args: ['./scripts/build_server', '-s', 'dev']
   - name: 'gcr.io/oak-ci/oak:latest'
     id: build_server_arm
     waitFor: ['build_image']
-    timeout: 30m
+    timeout: 60m
     entrypoint: 'bash'
     args: ['./scripts/build_server', '-s', 'arm']
 
@@ -54,32 +54,32 @@ steps:
   - name: 'gcr.io/oak-ci/oak:latest'
     id: build_server_docker
     waitFor: ['build_server_dev']
-    timeout: 30m
+    timeout: 60m
     entrypoint: 'bash'
     args: ['./scripts/build_example', '-e', 'hello_world', '-i']
 
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_tests
     waitFor: ['build_server_dev']
-    timeout: 30m
+    timeout: 60m
     entrypoint: 'bash'
     args: ['./scripts/run_tests']
 
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_examples
-    timeout: 30m
+    timeout: 60m
     entrypoint: 'bash'
     args: ['./scripts/run_examples', '-s', 'dev']
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_examples_asan
     waitFor: ['run_examples']
-    timeout: 30m
+    timeout: 60m
     entrypoint: 'bash'
     args: ['./scripts/run_examples', '-s', 'asan']
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_examples_tsan
     waitFor: ['run_examples_asan']
-    timeout: 30m
+    timeout: 60m
     entrypoint: 'bash'
     args: ['./scripts/run_examples', '-s', 'tsan']
 
@@ -110,7 +110,7 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     id: build_android_image
     waitFor: ['pull_android_image']
-    timeout: 30m
+    timeout: 60m
     args:
       [
         'build',
@@ -124,7 +124,7 @@ steps:
   - name: 'gcr.io/oak-ci/oak-android:latest'
     id: build_examples_android
     waitFor: ['build_android_image']
-    timeout: 30m
+    timeout: 60m
     entrypoint: 'bash'
     args: ['./scripts/build_examples_android']
 
