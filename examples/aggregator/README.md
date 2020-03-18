@@ -82,5 +82,6 @@ Deployment requires Docker images to be uploaded to the
 following command:
 
 ```bash
+./examples/aggregator/scripts/build_docker_images
 ./examples/aggregator/scripts/docker_push
 ```
