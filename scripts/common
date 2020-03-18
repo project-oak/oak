@@ -8,7 +8,6 @@ set -o xtrace
 readonly DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak'
 readonly SERVER_DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak-server'
 
-readonly BIN_DIR='bazel-bin'
 readonly CACHE_DIR='bazel-cache'
 
 # To set up remote cache write credentials:

@@ -37,13 +37,6 @@ steps:
     entrypoint: 'bash'
     args: ['./scripts/check_formatting']
 
-  # Run the various server builds in parallel, since they use different Bazel `output_base`.
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: build_server_asylo
-    waitFor: ['build_image']
-    timeout: 30m
-    entrypoint: 'bash'
-    args: ['./scripts/build_server', '-s', 'asylo']
   - name: 'gcr.io/oak-ci/oak:latest'
     id: build_server_dev
     waitFor: ['build_image']
@@ -60,14 +53,14 @@ steps:
   # Package the Hello World application in a Docker image.
   - name: 'gcr.io/oak-ci/oak:latest'
     id: build_server_docker
-    waitFor: ['build_server_asylo']
+    waitFor: ['build_server_dev']
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/build_example', '-e', 'hello_world', '-i']
 
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_tests
-    waitFor: ['build_server_asylo']
+    waitFor: ['build_server_dev']
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/run_tests']
@@ -76,7 +69,7 @@ steps:
     id: run_examples
     timeout: 30m
     entrypoint: 'bash'
-    args: ['./scripts/run_examples', '-s', 'asylo']
+    args: ['./scripts/run_examples', '-s', 'dev']
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_examples_asan
     waitFor: ['run_examples']
@@ -106,18 +99,6 @@ steps:
     timeout: 5m
     entrypoint: 'bash'
     args: ['./scripts/git_check_diff']
-
-  # Copy compiled enclave binary to workspace so that it can be uploaded as artifact.
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: copy_artifacts
-    waitFor: ['build_server_asylo']
-    timeout: 5m
-    entrypoint: 'cp'
-    args:
-      [
-        './bazel-bin/oak/server/asylo/liboak_enclave_unsigned.so',
-        './liboak_enclave_unsigned.so',
-      ]
 
   # Pull Android Docker image.
   - name: 'gcr.io/cloud-builders/docker'
@@ -152,11 +133,12 @@ steps:
 # - https://pantheon.corp.google.com/storage/browser/artifacts.oak-ci.appspot.com/test/?project=oak-ci
 # - https://cloud.google.com/cloud-build/docs/configuring-builds/store-images-artifacts#storing_artifacts_in
 # TODO: Finalize artifact location.
-artifacts:
-  objects:
-    location: gs://artifacts.oak-ci.appspot.com/test
-    paths:
-      - ./liboak_enclave_unsigned.so
+# TODO(#709): get example Docker image working with dev server
+#artifacts:
+#  objects:
+#    location: gs://artifacts.oak-ci.appspot.com/test
+#    paths:
+#      - ./liboak_enclave_unsigned.so
 
 timeout: 2h
 
