@@ -65,11 +65,11 @@ http_archive(
 
 http_archive(
     name = "com_google_absl",
-    sha256 = "27184e97131edb9a289b1c2cd404c234afa5ceaae44c5eb6713138cb674535aa",
-    strip_prefix = "abseil-cpp-ac78ffc3bc0a8b295cab9a03817760fd460df2a1",
+    sha256 = "eb44e45b9b53b506658861f734ca743346ec792732b063a5b43c96751ccd90c7",
+    strip_prefix = "abseil-cpp-7853a7586c492ce8905c9e49f8679dada6354f2c",
     urls = [
-        # Head commit on 2019-09-12.
-        "https://github.com/abseil/abseil-cpp/archive/ac78ffc3bc0a8b295cab9a03817760fd460df2a1.zip",
+        # Head commit on 2020-03-16.
+        "https://github.com/abseil/abseil-cpp/archive/7853a7586c492ce8905c9e49f8679dada6354f2c.zip",
     ],
 )
 
