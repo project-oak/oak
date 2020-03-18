@@ -14,8 +14,6 @@
 // limitations under the License.
 //
 
-use std::prelude::v1::*;
-
 use std::string::String;
 
 use log::info;

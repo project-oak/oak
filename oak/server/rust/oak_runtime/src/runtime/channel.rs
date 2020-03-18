@@ -14,8 +14,6 @@
 // limitations under the License.
 //
 
-use std::prelude::v1::*;
-
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex, RwLock, Weak};
 use std::thread::{Thread, ThreadId};

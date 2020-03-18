@@ -14,10 +14,7 @@
 // limitations under the License.
 //
 
-#![feature(result_contains_err)]
-
-#[cfg(feature = "no_std")]
-extern crate no_std_compat as std;
+// #![feature(result_contains_err)]
 
 pub mod proto;
 

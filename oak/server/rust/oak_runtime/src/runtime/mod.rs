@@ -14,8 +14,6 @@
 // limitations under the License.
 //
 
-use std::prelude::v1::*;
-
 use std::collections::HashMap;
 use std::string::String;
 use std::sync::{Arc, Mutex, Weak};

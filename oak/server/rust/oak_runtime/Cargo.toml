@@ -8,10 +8,6 @@ authors = [
 edition = "2018"
 license = "Apache-2.0"
 
-[features]
-std = ["no-std-compat/std"]
-default = ["std"]
-
 [dependencies]
 byteorder = { version = "*", default-features = false }
 itertools = "*"
@@ -20,7 +16,6 @@ oak_abi = "=0.1.0"
 prost = "*"
 rand = { version = "*", default-features = false, features = ["alloc"] }
 wasmi = { version = "*", default-features = false, features = ["core"] }
-no-std-compat = { version = "0.2.0", features = ["alloc", "compat_hash"] }
 
 [dev-dependencies]
 maplit = "*"

@@ -14,8 +14,6 @@
 // limitations under the License.
 //
 
-use std::prelude::v1::*;
-
 use crate::proto::{
     node_configuration::ConfigType, ApplicationConfiguration, LogConfiguration, NodeConfiguration,
     WebAssemblyConfiguration,
