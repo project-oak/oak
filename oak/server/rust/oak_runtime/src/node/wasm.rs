@@ -19,6 +19,10 @@ use std::prelude::v1::*;
 use std::collections::HashMap;
 use std::string::String;
 use std::sync::Arc;
+use std::{
+    thread,
+    thread::{spawn, JoinHandle},
+};
 
 use log::{debug, error};
 
@@ -27,7 +31,6 @@ use rand::RngCore;
 use wasmi::ValueType;
 
 use oak_abi::{ChannelReadStatus, OakStatus};
-use oak_platform::{current_thread, spawn, JoinHandle};
 
 use crate::runtime::{ChannelEither, ChannelReader, ChannelWriter, ReadStatus};
 use crate::{Message, RuntimeRef};
@@ -738,7 +741,7 @@ pub fn new_instance(
     module: Arc<wasmi::Module>,
     entrypoint: String,
     initial_reader: ChannelReader,
-) -> Result<JoinHandle, OakStatus> {
+) -> Result<JoinHandle<()>, OakStatus> {
     let config_name = config_name.to_owned();
 
     debug!("new_instance: discovering {} {}", config_name, entrypoint);
@@ -770,7 +773,7 @@ pub fn new_instance(
     debug!("new_instance: starting {} {}", config_name, entrypoint);
 
     Ok(spawn(move || {
-        let pretty_name = format!("{}-{:?}:", config_name, current_thread());
+        let pretty_name = format!("{}-{:?}:", config_name, thread::current());
         let (mut abi, initial_handle) = WasmInterface::new(pretty_name, runtime, initial_reader);
 
         let instance = wasmi::ModuleInstance::new(

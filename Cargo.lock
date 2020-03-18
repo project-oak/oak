@@ -1172,21 +1172,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_platform"
-version = "0.1.0"
-dependencies = [
- "oak_platform_asylo 0.1.0",
-]
-
-[[package]]
-name = "oak_platform_asylo"
-version = "0.1.0"
-dependencies = [
- "libc 0.2.66 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust_asylo 0.1.0",
-]
-
-[[package]]
 name = "oak_runtime"
 version = "0.1.0"
 dependencies = [
@@ -1196,7 +1181,6 @@ dependencies = [
  "maplit 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "no-std-compat 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "oak_abi 0.1.0",
- "oak_platform 0.1.0",
  "oak_utils 0.1.0",
  "prost 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost-build 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1690,13 +1674,6 @@ dependencies = [
  "blake2b_simd 0.5.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "constant_time_eq 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "crossbeam-utils 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "rust_asylo"
-version = "0.1.0"
-dependencies = [
- "libc 0.2.66 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

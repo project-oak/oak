@@ -17,12 +17,11 @@
 use std::prelude::v1::*;
 
 use std::collections::{HashMap, VecDeque};
-use std::sync::{Arc, Weak};
+use std::sync::{Arc, Mutex, RwLock, Weak};
+use std::thread::{Thread, ThreadId};
 
 use core::sync::atomic::AtomicUsize;
 use core::sync::atomic::Ordering::SeqCst;
-
-use oak_platform::{Mutex, RwLock, Thread, ThreadId};
 
 use crate::Message;
 
