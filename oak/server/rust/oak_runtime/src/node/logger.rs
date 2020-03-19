@@ -16,7 +16,7 @@
 
 use std::string::String;
 
-use log::info;
+use log::{error, info};
 
 use oak_abi::OakStatus;
 use std::{
@@ -24,8 +24,10 @@ use std::{
     thread::{spawn, JoinHandle},
 };
 
+use crate::proto::log::{Level, LogMessage};
 use crate::runtime::ChannelReader;
 use crate::RuntimeRef;
+use prost::Message;
 
 /// A simple logger loop.
 fn logger(pretty_name: &str, runtime: RuntimeRef, reader: ChannelReader) -> Result<(), OakStatus> {
@@ -36,10 +38,27 @@ fn logger(pretty_name: &str, runtime: RuntimeRef, reader: ChannelReader) -> Resu
         let _ = runtime.wait_on_channels(&[Some(&reader)]);
 
         if let Some(message) = runtime.channel_read(&reader)? {
-            let message = String::from_utf8_lossy(&message.data);
-            info!("{} LOG: {}", pretty_name, message);
+            match LogMessage::decode(&*message.data) {
+                Ok(msg) => info!(
+                    "{} LOG: {} {}:{}: {}",
+                    pretty_name,
+                    to_level_name(msg.level),
+                    msg.file,
+                    msg.line,
+                    msg.message
+                ),
+                Err(error) => error!("{} Could not parse LogMessage: {}", pretty_name, error),
+            }
         }
     }
+}
+
+fn to_level_name(level: i32) -> String {
+    format!(
+        "{:?}",
+        Level::from_i32(level).unwrap_or(Level::UnknownLevel)
+    )
+    .to_ascii_uppercase()
 }
 
 /// Create a new instance of a logger node.
