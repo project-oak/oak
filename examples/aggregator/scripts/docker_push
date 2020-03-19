@@ -16,11 +16,11 @@ if [[ -z ${IMAGES} || -z ${BACKEND_IMAGES} ]]; then
 fi
 
 # Push Oak application server Docker image.
-docker load -i "./${IMAGES:1}"
+docker load --input="./${IMAGES}"
 docker tag 'bazel/examples/aggregator/server:aggregator_image' "${AGGREGATOR_DOCKER_IMAGE_NAME}":latest
 docker push "${AGGREGATOR_DOCKER_IMAGE_NAME}":latest
 
 # Push Backend Docker image.
-docker load -i "./${BACKEND_IMAGES:1}"
+docker load --input="./${BACKEND_IMAGES}"
 docker tag 'bazel/examples/aggregator/server:aggregator_backend_image' "${BACKEND_DOCKER_IMAGE_NAME}":latest
 docker push "${BACKEND_DOCKER_IMAGE_NAME}":latest

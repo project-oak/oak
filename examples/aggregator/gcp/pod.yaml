@@ -6,7 +6,7 @@ metadata:
     app: aggregator
 spec:
   containers:
-    - name: enclave
+    - name: oak_application
       image: gcr.io/oak-ci/oak-aggregator:latest
       ports:
         - containerPort: 8080
@@ -28,4 +28,7 @@ spec:
   ports:
     - port: 8080
   type: LoadBalancer
+  # This IP address was reserved it Google Cloud. New IP addresses can be reserved at:
+  # https://pantheon.corp.google.com/networking/addresses/list?project=oak-ci
+  # IP that is used here must not be used anywhere else.
   loadBalancerIP: '35.246.87.178'

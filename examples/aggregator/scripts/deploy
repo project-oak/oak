@@ -6,4 +6,4 @@ readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
 source "${GLOBAL_SCRIPTS_DIR}/common"
 
 gcloud container clusters get-credentials aggregator
-kubectl apply -f examples/aggregator/gcp/pod.yaml
+kubectl apply --filename=examples/aggregator/gcp/pod.yaml

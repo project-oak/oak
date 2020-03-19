@@ -61,8 +61,8 @@ Google Cloud deployment.
 
 An Aggregator deployment consists of a single pod with two running containers
 (an Aggregator Oak application and a Backend server) and a service with a TCP
-Load Balancer and an assigned static IP `35.246.87.178` that listens on the port
-`8080`. Aggregator is deployed using [Kubernetes](https://kubernetes.io/).
+Load Balancer and an assigned static IP that listens on the port `8080`.
+Aggregator is deployed using [Kubernetes](https://kubernetes.io/).
 
 In order to deploy the Aggregator example - run:
 
