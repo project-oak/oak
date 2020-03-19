@@ -5,20 +5,19 @@ readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
 source "${SCRIPTS_DIR}/common"
 
 language="rust"
-server="asylo"
+server="dev"
 buildargs=""
 while getopts "s:l:de:h" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-h] [-s asylo|dev|asan|tsan|none] [-l rust|cpp] [-d] -e EXAMPLE [-- CLIENT_ARGS]
+      echo -e "Usage: ${0} [-h] [-s dev|asan|tsan|none] [-l rust|cpp] [-d] -e EXAMPLE [-- CLIENT_ARGS]
 
 Build and run the given example Oak Application and client.
 
 Options:
   -e    Example application name (required)
   -s    Server type used to run examples:
-          - asylo: server based on the Asylo framework (used by default)
-          - dev: development version of the server
+          - dev: development version of the server (default)
           - asan: 'dev' server with address sanitizer
           - tsan: 'dev' server with thread sanitizer
           - none: run an application client without a server
@@ -33,7 +32,7 @@ Options after -- will be passed to the example client program."
       language="${OPTARG}";;
     s)
       case "${OPTARG}" in
-        asylo|dev|asan|tsan|none)
+        dev|asan|tsan|none)
           server="${OPTARG}";;
         *)
           echo "Invalid server type: ${OPTARG}"
