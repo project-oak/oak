@@ -14,11 +14,12 @@
 // limitations under the License.
 //
 
-pub use crate::runtime::ChannelEither;
+pub use crate::ChannelRef;
 
 /// Encapsulates a message consisting of opaque data bytes and a vector of channels.
 /// The data bytes should not contain any pointers or handles.
+#[derive(Debug)]
 pub struct Message {
     pub data: Vec<u8>,
-    pub channels: Vec<ChannelEither>,
+    pub channels: Vec<ChannelRef>,
 }

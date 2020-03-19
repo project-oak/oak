@@ -25,12 +25,12 @@ use std::{
 };
 
 use crate::proto::log::{Level, LogMessage};
-use crate::runtime::ChannelReader;
+use crate::runtime::ChannelRef;
 use crate::RuntimeRef;
 use prost::Message;
 
 /// A simple logger loop.
-fn logger(pretty_name: &str, runtime: RuntimeRef, reader: ChannelReader) -> Result<(), OakStatus> {
+fn logger(pretty_name: &str, runtime: RuntimeRef, reader: ChannelRef) -> Result<(), OakStatus> {
     loop {
         // An error indicates the runtime is terminating. We ignore it here and keep trying to read
         // in case a Wasm node wants to emit remaining messages. We will return once the channel is
@@ -65,7 +65,7 @@ fn to_level_name(level: i32) -> String {
 pub fn new_instance(
     config_name: &str,
     runtime: RuntimeRef,
-    initial_reader: ChannelReader,
+    initial_reader: ChannelRef,
 ) -> Result<JoinHandle<()>, OakStatus> {
     let pretty_name = format!("{}-{:?}:", config_name, thread::current());
     Ok(spawn(move || {

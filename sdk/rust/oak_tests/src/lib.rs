@@ -18,7 +18,6 @@
 
 use log::info;
 
-use oak_runtime::ChannelEither;
 use protobuf::{Message, ProtobufEnum};
 use std::collections::HashMap;
 use std::process::Command;
@@ -56,7 +55,7 @@ const MODULE_WASM_SUFFIX: &str = ".wasm";
 /// given module name, using the default name "oak_main" for its entrypoint.
 pub fn run_single_module_default(
     module_config_name: &str,
-) -> Result<(oak_runtime::RuntimeRef, oak_runtime::ChannelWriter), oak::OakStatus> {
+) -> Result<(oak_runtime::RuntimeRef, oak_runtime::ChannelRef), oak::OakStatus> {
     run_single_module(module_config_name, DEFAULT_ENTRYPOINT_NAME)
 }
 
@@ -65,7 +64,7 @@ pub fn run_single_module_default(
 pub fn run_single_module(
     module_config_name: &str,
     entrypoint_name: &str,
-) -> Result<(oak_runtime::RuntimeRef, oak_runtime::ChannelWriter), oak::OakStatus> {
+) -> Result<(oak_runtime::RuntimeRef, oak_runtime::ChannelRef), oak::OakStatus> {
     let wasm: HashMap<String, Vec<u8>> = [(
         module_config_name.to_owned(),
         compile_rust_wasm(
@@ -91,7 +90,7 @@ pub fn run_single_module(
 // TODO(#543): move this to oak_runtime as it's not test-specific
 pub fn grpc_request<R, Q>(
     runtime: &oak_runtime::RuntimeRef,
-    channel: &oak_runtime::ChannelWriter,
+    channel: &oak_runtime::ChannelRef,
     method_name: &str,
     req: &R,
 ) -> oak::grpc::Result<Q>
@@ -124,8 +123,8 @@ where
     let notify_msg = oak_runtime::Message {
         data: vec![],
         channels: vec![
-            ChannelEither::Reader(req_read_half),
-            ChannelEither::Writer(rsp_write_half),
+            req_read_half,
+            rsp_write_half,
         ],
     };
 

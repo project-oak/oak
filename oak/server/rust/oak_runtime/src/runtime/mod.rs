@@ -16,7 +16,7 @@
 
 use std::collections::HashMap;
 use std::string::String;
-use std::sync::{Arc, Mutex, Weak};
+use std::sync::{Arc, Mutex};
 use std::{thread, thread::JoinHandle};
 
 use core::sync::atomic::Ordering::SeqCst;
@@ -30,9 +30,7 @@ use crate::message::Message;
 use crate::node;
 
 mod channel;
-pub use channel::{ChannelEither, ChannelReader, ChannelWriter, ReadStatus};
-
-type Channels = Vec<Weak<channel::Channel>>;
+pub use channel::ChannelRef;
 
 #[derive(Debug)]
 struct Node {
@@ -50,11 +48,20 @@ pub struct Configuration {
     pub entrypoint: String,
 }
 
+/// A helper type to determine if `try_read_message` was called with not enough `bytes_capacity`
+/// and/or `handles_capacity`.
+pub enum ReadStatus {
+    Success(Message),
+    NeedsCapacity(usize, usize),
+}
+
 /// Runtime structure for configuring and running a set of Oak nodes.
 pub struct Runtime {
     configurations: HashMap<String, node::Configuration>,
     terminating: AtomicBool,
-    channels: Mutex<Channels>,
+
+    channels: channel::ChannelMapping,
+
     nodes: Mutex<HashMap<NodeRef, Node>>,
     next_node_reference: AtomicU64,
 }
@@ -65,11 +72,11 @@ impl Runtime {
     /// them to terminate.
     pub fn configure_and_run(
         config: Configuration,
-    ) -> Result<(RuntimeRef, ChannelWriter), OakStatus> {
+    ) -> Result<(RuntimeRef, ChannelRef), OakStatus> {
         let runtime = Runtime {
             configurations: config.nodes,
             terminating: AtomicBool::new(false),
-            channels: Mutex::new(Vec::new()),
+            channels: channel::ChannelMapping::new(),
             nodes: Mutex::new(HashMap::new()),
             next_node_reference: AtomicU64::new(0),
         };
@@ -85,6 +92,8 @@ impl Runtime {
             &oak_abi::label::Label::public_trusted(),
             chan_reader,
         )?;
+
+        runtime.channel_close(&chan_reader)?;
 
         Ok((runtime, chan_writer))
     }
@@ -115,22 +124,22 @@ impl Runtime {
     }
 
     /// Creates a new channel.
-    pub fn new_channel(&self) -> (ChannelWriter, ChannelReader) {
-        let (c, w, r) = channel::new();
-        let mut channels = self.channels.lock().unwrap();
-        channels.push(Arc::downgrade(&c));
-        (w, r)
+    pub fn new_channel(&self) -> (ChannelRef, ChannelRef) {
+        self.channels.make_channel()
     }
 
     /// Reads the statuses from a slice of `Option<&ChannelReader>`s.
     /// [`ChannelReadStatus::InvalidChannel`] is set for `None` readers in the slice. For `Some(_)`
     /// readers, the result is set from a call to `has_message`.
-    fn readers_statuses(&self, readers: &[Option<&ChannelReader>]) -> Vec<ChannelReadStatus> {
+    fn readers_statuses(&self, readers: &[Option<&ChannelRef>]) -> Vec<ChannelReadStatus> {
         readers
             .iter()
             .map(|chan| {
                 chan.map_or(ChannelReadStatus::InvalidChannel, |chan| {
-                    self.channel_status(chan)
+                    match self.channel_status(chan) {
+                        Ok(s) => s,
+                        Err(_) => ChannelReadStatus::InvalidChannel,
+                    }
                 })
             })
             .collect()
@@ -151,7 +160,7 @@ impl Runtime {
     /// available.
     pub fn wait_on_channels(
         &self,
-        readers: &[Option<&ChannelReader>],
+        readers: &[Option<&ChannelRef>],
     ) -> Result<Vec<ChannelReadStatus>, OakStatus> {
         let thread = thread::current();
         while !self.is_terminating() {
@@ -170,7 +179,10 @@ impl Runtime {
 
             for reader in readers {
                 if let Some(reader) = reader {
-                    reader.add_waiter(thread_id, &thread_ref);
+                    self.channels
+                        .with_channel(self.channels.get_reader_channel(reader)?, |channel| {
+                            Ok(channel.add_waiter(thread_id, &thread_ref))
+                        })?;
                 }
             }
             let statuses = self.readers_statuses(readers);
@@ -198,12 +210,36 @@ impl Runtime {
 
     /// Write a message to a channel. Fails with [`OakStatus::ErrChannelClosed`] if the underlying
     /// channel has been orphaned.
-    pub fn channel_write(&self, channel: &ChannelWriter, msg: Message) -> Result<(), OakStatus> {
+    pub fn channel_write(&self, reference: &ChannelRef, msg: Message) -> Result<(), OakStatus> {
+        self.channels.with_channel(self.channels.get_writer_channel(reference)?, |channel|{
+
         if channel.is_orphan() {
             return Err(OakStatus::ErrChannelClosed);
         }
 
         {
+            let mut new_references = Vec::with_capacity(msg.channels.len());
+            let mut failure = None;
+
+            for reference in msg.channels.iter() {
+                match self.channels.duplicate_reference(reference) {
+                    Err(e) => {
+                        failure = Some(e);
+                        break;
+                    }
+                    Ok(reference) => new_references.push(reference),
+                }
+            }
+
+            if let Some(err) = failure {
+                for reference in new_references {
+                    self.channels.remove_reference(&reference).expect("channel_write: Failed to deallocate channel references during backtracking from error during channel reference copying");
+                }
+                return Err(err);
+            }
+
+            let msg = Message { channels: new_references, ..msg };
+
             let mut messages = channel.messages.write().unwrap();
 
             messages.push_back(msg);
@@ -229,37 +265,44 @@ impl Runtime {
         waiting_threads.clear();
 
         Ok(())
+        })
     }
 
     /// Thread safe. Read a message from a channel. Fails with [`OakStatus::ErrChannelClosed`] if
     /// the underlying channel is empty and has been orphaned.
-    pub fn channel_read(&self, channel: &ChannelReader) -> Result<Option<Message>, OakStatus> {
-        let mut messages = channel.messages.write().unwrap();
-        match messages.pop_front() {
-            Some(m) => Ok(Some(m)),
-            None => {
-                if channel.is_orphan() {
-                    Err(OakStatus::ErrChannelClosed)
-                } else {
-                    Ok(None)
+    pub fn channel_read(&self, reference: &ChannelRef) -> Result<Option<Message>, OakStatus> {
+        self.channels
+            .with_channel(self.channels.get_reader_channel(reference)?, |channel| {
+                let mut messages = channel.messages.write().unwrap();
+                match messages.pop_front() {
+                    Some(m) => Ok(Some(m)),
+                    None => {
+                        if channel.is_orphan() {
+                            Err(OakStatus::ErrChannelClosed)
+                        } else {
+                            Ok(None)
+                        }
+                    }
                 }
-            }
-        }
+            })
     }
 
     /// Thread safe. This function returns:
     /// - [`ChannelReadStatus::ReadReady`] if there is at least one message in the channel.
     /// - [`ChannelReadStatus::Orphaned`] if there are no messages and there are no writers
     /// - [`ChannelReadStatus::NotReady`] if there are no messages but there are some writers
-    pub fn channel_status(&self, channel: &ChannelReader) -> ChannelReadStatus {
-        let messages = channel.messages.read().unwrap();
-        if messages.front().is_some() {
-            ChannelReadStatus::ReadReady
-        } else if channel.is_orphan() {
-            ChannelReadStatus::Orphaned
-        } else {
-            ChannelReadStatus::NotReady
-        }
+    pub fn channel_status(&self, reference: &ChannelRef) -> Result<ChannelReadStatus, OakStatus> {
+        self.channels
+            .with_channel(self.channels.get_reader_channel(reference)?, |channel| {
+                let messages = channel.messages.read().unwrap();
+                Ok(if messages.front().is_some() {
+                    ChannelReadStatus::ReadReady
+                } else if channel.is_orphan() {
+                    ChannelReadStatus::Orphaned
+                } else {
+                    ChannelReadStatus::NotReady
+                })
+            })
     }
 
     /// Thread safe. Reads a message from the channel if `bytes_capacity` and `handles_capacity` are
@@ -271,36 +314,48 @@ impl Runtime {
     /// have read the original message.
     pub fn channel_try_read_message(
         &self,
-        channel: &ChannelReader,
+        reference: &ChannelRef,
         bytes_capacity: usize,
         handles_capacity: usize,
     ) -> Result<Option<ReadStatus>, OakStatus> {
-        let mut messages = channel.messages.write().unwrap();
-        match messages.front() {
-            Some(front) => {
-                let req_bytes_capacity = front.data.len();
-                let req_handles_capacity = front.channels.len();
+        self.channels
+            .with_channel(self.channels.get_reader_channel(reference)?, |channel| {
+                let mut messages = channel.messages.write().unwrap();
+                match messages.front() {
+                    Some(front) => {
+                        let req_bytes_capacity = front.data.len();
+                        let req_handles_capacity = front.channels.len();
 
-                Ok(Some(
-                    if req_bytes_capacity > bytes_capacity
-                        || req_handles_capacity > handles_capacity
-                    {
-                        ReadStatus::NeedsCapacity(req_bytes_capacity, req_handles_capacity)
-                    } else {
-                        ReadStatus::Success(messages.pop_front().expect(
+                        Ok(Some(
+                            if req_bytes_capacity > bytes_capacity
+                                || req_handles_capacity > handles_capacity
+                            {
+                                ReadStatus::NeedsCapacity(req_bytes_capacity, req_handles_capacity)
+                            } else {
+                                ReadStatus::Success(messages.pop_front().expect(
                             "Front element disappeared while we were holding the write lock!",
                         ))
-                    },
-                ))
-            }
-            None => {
-                if channel.is_orphan() {
-                    Err(OakStatus::ErrChannelClosed)
-                } else {
-                    Ok(None)
+                            },
+                        ))
+                    }
+                    None => {
+                        if channel.is_orphan() {
+                            Err(OakStatus::ErrChannelClosed)
+                        } else {
+                            Ok(None)
+                        }
+                    }
                 }
-            }
-        }
+            })
+    }
+
+    pub fn channel_is_reader(&self, reference: &ChannelRef) -> bool {
+        let readers = self.channels.readers.read().unwrap();
+        readers.contains_key(reference)
+    }
+
+    pub fn channel_close(&self, reference: &ChannelRef) -> Result<(), OakStatus> {
+        self.channels.remove_reference(reference)
     }
 
     /// Create a fresh NodeReference.
@@ -330,7 +385,7 @@ impl RuntimeRef {
         module_name: &str,
         entrypoint: &str,
         label: &oak_abi::label::Label,
-        reader: ChannelReader,
+        reader: ChannelRef,
     ) -> Result<(), OakStatus> {
         if self.is_terminating() {
             return Err(OakStatus::ErrTerminated);
@@ -342,6 +397,8 @@ impl RuntimeRef {
 
         let mut nodes = self.nodes.lock().unwrap();
         let reference = self.new_node_reference();
+
+        let reader = self.channels.duplicate_reference(&reader)?;
 
         match self
             .configurations

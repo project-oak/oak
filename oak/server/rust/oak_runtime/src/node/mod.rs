@@ -20,7 +20,7 @@ use std::thread::JoinHandle;
 
 use oak_abi::OakStatus;
 
-use crate::{ChannelReader, NodeRef, RuntimeRef};
+use crate::{ChannelRef, NodeRef, RuntimeRef};
 
 mod logger;
 mod wasm;
@@ -73,7 +73,7 @@ impl Configuration {
         runtime: RuntimeRef,
         _noderef: NodeRef,
         entrypoint: String,
-        initial_reader: ChannelReader,
+        initial_reader: ChannelRef,
     ) -> Result<JoinHandle<()>, OakStatus> {
         match self {
             Configuration::LogNode => logger::new_instance(config_name, runtime, initial_reader),
