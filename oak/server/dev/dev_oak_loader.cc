@@ -17,9 +17,6 @@
 #include "oak/server/dev/dev_oak_loader.h"
 
 #include "absl/memory/memory.h"
-#include "asylo/grpc/auth/enclave_server_credentials.h"
-#include "asylo/identity/descriptions.h"
-#include "asylo/identity/init.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/common/logging.h"
 

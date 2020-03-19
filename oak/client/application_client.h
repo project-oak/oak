@@ -17,10 +17,6 @@
 #ifndef OAK_CLIENT_APPLICATION_CLIENT_H_
 #define OAK_CLIENT_APPLICATION_CLIENT_H_
 
-#include "asylo/grpc/auth/enclave_channel_credentials.h"
-#include "asylo/grpc/auth/null_credentials_options.h"
-#include "asylo/identity/descriptions.h"
-#include "asylo/identity/init.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/authorization_bearer_token_metadata.h"
 #include "oak/client/policy_metadata.h"
