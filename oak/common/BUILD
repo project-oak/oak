@@ -20,13 +20,6 @@ package(
     licenses = ["notice"],
 )
 
-# Mark tests that can be run on the host system (i.e. with a normal
-# compiler, not the Asylo toolchain) with 'host' tag.
-test_suite(
-    name = "host_tests",
-    tags = ["host"],
-)
-
 cc_library(
     name = "logging",
     hdrs = ["logging.h"],
@@ -84,7 +77,6 @@ cc_test(
     name = "app_config_test",
     srcs = ["app_config_test.cc"],
     data = [":testdata"],
-    tags = ["host"],
     deps = [
         ":app_config",
         "@com_google_absl//absl/memory",

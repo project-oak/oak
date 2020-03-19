@@ -56,11 +56,6 @@ test_suite(
     tags = ["local"],
 )
 
-test_suite(
-    name = "host_tests",
-    tags = ["host"],
-)
-
 cc_test(
     name = "roughtime_client_test",
     srcs = [
@@ -79,7 +74,6 @@ cc_test(
     srcs = [
         "roughtime_util_test.cc",
     ],
-    tags = ["host"],
     deps = [
         ":roughtime_util",
         "@gtest//:gtest_main",

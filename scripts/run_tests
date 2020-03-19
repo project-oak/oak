@@ -23,9 +23,4 @@ bazel_build_flags+=(
 
 bazel build "${bazel_build_flags[@]}" -- //oak/...:all
 
-# Run tests that are suitable for running on the host system (rather than the target).
-bazel test "${bazel_build_flags[@]}" \
-  //oak/server:host_tests \
-  //oak/server/storage:host_tests \
-  //oak/server/time:host_tests \
-  //oak/common:host_tests
+bazel test "${bazel_build_flags[@]}" -- //oak/...:all
