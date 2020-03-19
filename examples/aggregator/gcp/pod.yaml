@@ -6,7 +6,7 @@ metadata:
     app: aggregator
 spec:
   containers:
-    - name: oak_application
+    - name: oak-application
       image: gcr.io/oak-ci/oak-aggregator:latest
       ports:
         - containerPort: 8080
