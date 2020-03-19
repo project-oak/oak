@@ -38,6 +38,7 @@ type Channels = Vec<Weak<channel::Channel>>;
 struct Node {
     reference: NodeRef,
     join_handle: JoinHandle<()>,
+    label: oak_abi::label::Label,
 }
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
@@ -59,9 +60,9 @@ pub struct Runtime {
 }
 
 impl Runtime {
-    /// Configure and run the protobuf specified `ApplicationConfiguration`. After creating a
-    /// `Runtime` calling `stop` will send termination signals to nodes and wait for them to
-    /// terminate.
+    /// Configure and run the protobuf specified Application [`Configuration`]. After creating a
+    /// [`Runtime`], calling [`Runtime::stop`] will send termination signals to nodes and wait for
+    /// them to terminate.
     pub fn configure_and_run(
         config: Configuration,
     ) -> Result<(RuntimeRef, ChannelWriter), OakStatus> {
@@ -77,17 +78,23 @@ impl Runtime {
 
         let (chan_writer, chan_reader) = runtime.new_channel();
 
-        runtime.node_create(&config.entry_module, &config.entrypoint, chan_reader)?;
+        runtime.node_create(
+            &config.entry_module,
+            &config.entrypoint,
+            // When first starting, we assign the least privileged label to the entry point node.
+            &oak_abi::label::Label::public_trusted(),
+            chan_reader,
+        )?;
 
         Ok((runtime, chan_writer))
     }
 
-    /// Thread safe method for determining if the `Runtime` is terminating.
+    /// Thread safe method for determining if the [`Runtime`] is terminating.
     pub fn is_terminating(&self) -> bool {
         self.terminating.load(SeqCst)
     }
 
-    /// Thread safe method for signaling termination to a `Runtime` and waiting for its node
+    /// Thread safe method for signaling termination to a [`Runtime`] and waiting for its node
     /// threads to terminate.
     pub fn stop(&self) {
         let mut threads = {
@@ -131,16 +138,16 @@ impl Runtime {
 
     /// Waits on a slice of `Option<&ChannelReader>`s, blocking until one of the following
     /// conditions:
-    /// - If the `Runtime` is terminating this will return immediately with an `ErrTerminated`
+    /// - If the [`Runtime`] is terminating this will return immediately with an `ErrTerminated`
     ///   status for each channel.
-    /// - If all readers are in an erroneous status, e.g. when all `ChannelReaders` are orphaned,
+    /// - If all readers are in an erroneous status, e.g. when all [`ChannelReader`]s are orphaned,
     ///   this will immediately return the channels statuses.
     /// - If any of the channels is able to read a message, the corresponding element in the
     ///   returned vector will be set to `Ok(ReadReady)`, with `Ok(NotReady)` signaling the channel
     ///   has no message available
     ///
     /// In particular, if there is at least one channel in good status and no messages on said
-    /// channel available, `wait_on_channels` will continue to block until a message is
+    /// channel available, [`Runtime::wait_on_channels`] will continue to block until a message is
     /// available.
     pub fn wait_on_channels(
         &self,
@@ -302,26 +309,36 @@ impl Runtime {
     }
 }
 
-/// A reference to a `Runtime`
+/// A reference to a [`Runtime`].
 #[derive(Clone)]
 pub struct RuntimeRef(Arc<Runtime>);
 
 impl RuntimeRef {
-    /// Thread safe method that attempts to create a node within the `Runtime` corresponding to a
+    /// Thread safe method that attempts to create a node within the [`Runtime`] corresponding to a
     /// given module name and entrypoint. The `reader: ChannelReader` is passed to the newly
     /// created node.
     ///
-    /// `node_create` is a method of `RuntimeRef` and not `Runtime`, so that the underlying
-    /// `Arc<Runtime>` can be passed to `conf.new_instance` and given to a new node thread.
+    /// The caller also specifies a [`oak_abi::label::Label`], which is assigned to the newly
+    /// created node. See <https://github.com/project-oak/oak/blob/master/docs/concepts.md#labels>
+    /// for more information on labels.
+    ///
+    /// [`RuntimeRef::node_create`] is a method of [`RuntimeRef`] and not [`Runtime`], so that the
+    /// underlying `Arc<Runtime>` can be passed to [`crate::node::Configuration::new_instance`]
+    /// and given to a new node thread.
     pub fn node_create(
         &self,
         module_name: &str,
         entrypoint: &str,
+        label: &oak_abi::label::Label,
         reader: ChannelReader,
     ) -> Result<(), OakStatus> {
         if self.is_terminating() {
             return Err(OakStatus::ErrTerminated);
         }
+
+        // TODO(#630): Check whether the label of the caller "flows to" the provided label. In order
+        // to do that we first need to provide a reference to the caller node as a parameter to this
+        // function.
 
         let mut nodes = self.nodes.lock().unwrap();
         let reference = self.new_node_reference();
@@ -345,6 +362,7 @@ impl RuntimeRef {
                     Node {
                         reference,
                         join_handle,
+                        label: label.clone(),
                     },
                 );
             }
