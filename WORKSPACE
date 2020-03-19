@@ -73,6 +73,17 @@ http_archive(
     ],
 )
 
+# BoringSSL
+http_archive(
+    name = "boringssl",
+    sha256 = "37fabee8aa25d4a7f4eb05071b2c1929991c272cc2cb1cb33305163faea3c668",
+    strip_prefix = "boringssl-6a47fc1adc71998756d275050351346e4fb4e2d5",
+    # Commit from 2019-12-13
+    urls = [
+        "https://github.com/google/boringssl/archive/6a47fc1adc71998756d275050351346e4fb4e2d5.tar.gz",
+    ],
+)
+
 # Asylo Framework.
 http_archive(
     name = "com_google_asylo",

@@ -16,15 +16,15 @@
 
 #include "oak/server/storage/storage_processor.h"
 
+#include <openssl/evp.h>
+#include <openssl/rand.h>
 #include <openssl/sha.h>
 
 #include <algorithm>
+#include <array>
 
 #include "absl/memory/memory.h"
 #include "absl/strings/escaping.h"
-#include "asylo/crypto/aes_gcm_siv.h"
-#include "asylo/crypto/nonce_generator.h"
-#include "asylo/util/cleansing_types.h"
 #include "grpcpp/create_channel.h"
 #include "oak/common/logging.h"
 #include "third_party/asylo/status_macros.h"
@@ -50,63 +50,43 @@ absl::Status FromGrpcStatus(grpc::Status grpc_status) {
     }                                                       \
   } while (false)
 
-// If a gRPC client method returns an asylo::Status error, convert it to an
-// absl::Status and return it.
-#define RETURN_IF_ASYLO_ERROR(expr)                                                               \
-  do {                                                                                            \
-    auto _asylo_status_to_verify = (expr);                                                        \
-    if (ABSL_PREDICT_FALSE(!_asylo_status_to_verify.ok())) {                                      \
-      return absl::Status(static_cast<absl::StatusCode>(_asylo_status_to_verify.CanonicalCode()), \
-                          _asylo_status_to_verify.error_message());                               \
-    }                                                                                             \
-  } while (false)
-
 std::string GetStorageId(const std::string& storage_name) {
   // TODO: Generate name-based UUID.
   return storage_name;
 }
 
-asylo::CleansingVector<uint8_t> GetStorageEncryptionKey(const std::string& /*storage_name*/) {
+std::vector<uint8_t> GetStorageEncryptionKey(const std::string& /*storage_name*/) {
   // TODO: Request encryption key from escrow service.
   std::string encryption_key =
       absl::HexStringToBytes("c0dedeadc0dedeadc0dedeadc0dedeadc0dedeadc0dedeadc0dedeadc0dedead");
-  return asylo::CleansingVector<uint8_t>(encryption_key.begin(), encryption_key.end());
+  return std::vector<uint8_t>(encryption_key.begin(), encryption_key.end());
 }
 
 constexpr size_t kAesGcmSivNonceSize = 12;
-using NonceGenerator = asylo::NonceGenerator<kAesGcmSivNonceSize>;
+
+/// A 96-bit nonce generator that returns a uniformly distributed random nonce.
+absl::Status RandomNonce(std::array<uint8_t, kAesGcmSivNonceSize>* nonce) {
+  if (RAND_bytes(nonce->data(), nonce->size()) != 1) {
+    return absl::Status(absl::StatusCode::kInternal, "RAND_bytes failed");
+  }
+  return absl::OkStatus();
+}
 
 // Produces fixed nonces using the storage encryption key and item name to
 // allow deterministic encryption of the item name.
-class FixedNonceGenerator : public NonceGenerator {
- public:
-  FixedNonceGenerator(const std::string& item_name) : item_name_(item_name) {}
+absl::Status DeterministicNonce(const std::vector<uint8_t>& key_id, const std::string& item_name,
+                                std::array<uint8_t, kAesGcmSivNonceSize>* nonce) {
+  // Generates a digest of the inputs to extract a fixed-size nonce.
+  SHA256_CTX context;
+  SHA256_Init(&context);
+  SHA256_Update(&context, item_name.data(), item_name.size());
+  SHA256_Update(&context, key_id.data(), key_id.size());
+  std::vector<uint8_t> digest(SHA256_DIGEST_LENGTH);
+  SHA256_Final(digest.data(), &context);
+  std::copy_n(digest.begin(), kAesGcmSivNonceSize, nonce->begin());
 
-  // Called by asylo::AesGcmSiv::Seal.
-  asylo::Status NextNonce(const std::vector<uint8_t>& key_id,
-                          asylo::UnsafeBytes<kAesGcmSivNonceSize>* nonce) override {
-    if (nonce == nullptr) {
-      return asylo::Status(asylo::error::GoogleError::INTERNAL, "No output field provided");
-    }
-
-    // Generates a digest of the inputs to extract a fixed-size nonce.
-    SHA256_CTX context;
-    SHA256_Init(&context);
-    SHA256_Update(&context, item_name_.data(), item_name_.size());
-    SHA256_Update(&context, key_id.data(), key_id.size());
-    std::vector<uint8_t> digest(SHA256_DIGEST_LENGTH);
-    SHA256_Final(digest.data(), &context);
-    std::copy_n(digest.begin(), kAesGcmSivNonceSize, nonce->begin());
-
-    return asylo::Status::OkStatus();
-  }
-
-  // Causes asylo::AesGcmSiv::Seal to encrypt the nonce before use.
-  bool uses_key_id() override { return true; }
-
- private:
-  const std::string item_name_;
-};
+  return absl::OkStatus();
+}
 
 }  // namespace
 
@@ -114,53 +94,96 @@ StorageProcessor::StorageProcessor(const std::string& storage_address)
     : storage_service_(oak::Storage::NewStub(
           grpc::CreateChannel(storage_address, grpc::InsecureChannelCredentials()))) {}
 
-const oak::StatusOr<std::string> StorageProcessor::EncryptItem(const std::string& item,
+const oak::StatusOr<std::string> StorageProcessor::EncryptItem(const std::string& plaintext,
                                                                ItemType item_type) {
   // TODO: Replace "foo" with identifier for the encryption key.
-  asylo::CleansingVector<uint8_t> key = GetStorageEncryptionKey("foo");
-  asylo::CleansingString additional_authenticated_data;
-  asylo::CleansingString nonce;
-  asylo::CleansingString item_encrypted;
+  std::vector<uint8_t> key = GetStorageEncryptionKey("foo");
+  std::vector<uint8_t> additional_data;
+  std::vector<uint8_t> ciphertext;
 
-  NonceGenerator* nonce_generator;
+  std::array<uint8_t, kAesGcmSivNonceSize> nonce;
   switch (item_type) {
-    case ItemType::NAME:
-      nonce_generator = new FixedNonceGenerator(item);
+    case ItemType::NAME: {
+      std::vector<uint8_t> key_id(SHA256_DIGEST_LENGTH);
+      SHA256(key.data(), key.size(), key_id.data());
+      OAK_RETURN_IF_ERROR(DeterministicNonce(key_id, plaintext, &nonce));
       break;
+    }
     case ItemType::VALUE:
-      nonce_generator = new asylo::AesGcmSivNonceGenerator();
+      OAK_RETURN_IF_ERROR(RandomNonce(&nonce));
       break;
   }
-  // Create a cryptor, passing ownership of the nonce generator to it.
-  asylo::AesGcmSivCryptor cryptor(kMaxMessageSize, nonce_generator);
-  RETURN_IF_ASYLO_ERROR(
-      cryptor.Seal(key, additional_authenticated_data, item, &nonce, &item_encrypted));
 
-  return absl::StrCat(nonce, item_encrypted);
+  if (additional_data.size() + plaintext.size() > kMaxMessageSize) {
+    return absl::Status(absl::StatusCode::kInvalidArgument, "Message size is too large");
+  }
+
+  // Initialize the AEAD context.
+  EVP_AEAD const* const aead = EVP_aead_aes_256_gcm_siv();
+  EVP_AEAD_CTX context;
+  if (EVP_AEAD_CTX_init(&context, aead, key.data(), key.size(), EVP_AEAD_max_tag_len(aead),
+                        nullptr) != 1) {
+    return absl::Status(absl::StatusCode::kInternal, "EVP_AEAD_CTX_init failed");
+  }
+
+  // Create temporary storage for generating the ciphertext.
+  size_t max_ciphertext_length = plaintext.size() + EVP_AEAD_max_overhead(aead);
+  ciphertext.resize(max_ciphertext_length);
+
+  // Perform actual encryption.
+  size_t ciphertext_length = 0;
+  if (EVP_AEAD_CTX_seal(
+          &context, ciphertext.data(), &ciphertext_length, ciphertext.size(), nonce.data(),
+          nonce.size(), reinterpret_cast<const uint8_t*>(plaintext.data()), plaintext.size(),
+          reinterpret_cast<const uint8_t*>(additional_data.data()), additional_data.size()) != 1) {
+    EVP_AEAD_CTX_cleanup(&context);
+    return absl::Status(absl::StatusCode::kInternal, "EVP_AEAD_CTX_seal failed");
+  }
+  ciphertext.resize(ciphertext_length);
+
+  EVP_AEAD_CTX_cleanup(&context);
+  std::string result(nonce.begin(), nonce.end());
+  result.insert(result.end(), ciphertext.begin(), ciphertext.end());
+  return result;
 }
 
 const oak::StatusOr<std::string> StorageProcessor::DecryptItem(const std::string& input, ItemType) {
-  asylo::CleansingString input_clean(input.data(), input.size());
-
-  if (input_clean.size() < kAesGcmSivNonceSize) {
+  if (input.size() < kAesGcmSivNonceSize) {
     return absl::Status(absl::StatusCode::kInvalidArgument,
                         absl::StrCat("Input too short: expected at least ", kAesGcmSivNonceSize,
-                                     " bytes, got ", input_clean.size()));
+                                     " bytes, got ", input.size()));
   }
 
   // TODO: Replace "foo" with identifier for the encryption key.
-  asylo::CleansingVector<uint8_t> key(GetStorageEncryptionKey("foo"));
-  asylo::CleansingString additional_authenticated_data;
-  asylo::CleansingString nonce = input_clean.substr(0, kAesGcmSivNonceSize);
-  asylo::CleansingString item_encrypted = input_clean.substr(kAesGcmSivNonceSize);
-  asylo::CleansingString item_decrypted;
+  std::vector<uint8_t> key = GetStorageEncryptionKey("foo");
+  std::vector<uint8_t> additional_data;
+  std::vector<uint8_t> nonce(input.begin(), input.begin() + kAesGcmSivNonceSize);
+  std::vector<uint8_t> ciphertext(input.begin() + kAesGcmSivNonceSize, input.end());
+  // TODO: use a cleansing RAII type for the plaintext.
+  std::vector<uint8_t> plaintext;
+  plaintext.resize(ciphertext.size());
 
-  // The nonce generator is not used for decryption.
-  asylo::AesGcmSivCryptor cryptor(kMaxMessageSize, nullptr);
-  RETURN_IF_ASYLO_ERROR(
-      cryptor.Open(key, additional_authenticated_data, item_encrypted, nonce, &item_decrypted));
+  // Initialize the AEAD context.
+  EVP_AEAD const* const aead = EVP_aead_aes_256_gcm_siv();
+  EVP_AEAD_CTX context;
+  if (EVP_AEAD_CTX_init(&context, aead, key.data(), key.size(), EVP_AEAD_max_tag_len(aead),
+                        nullptr) != 1) {
+    return absl::Status(absl::StatusCode::kInternal, "EVP_AEAD_CTX_init failed");
+  }
 
-  return std::string(item_decrypted.data(), item_decrypted.size());
+  // Perform the actual decryption.
+  size_t plaintext_length = 0;
+  if (EVP_AEAD_CTX_open(&context, plaintext.data(), &plaintext_length, plaintext.size(),
+                        nonce.data(), nonce.size(), ciphertext.data(), ciphertext.size(),
+                        additional_data.data(), additional_data.size()) != 1) {
+    EVP_AEAD_CTX_cleanup(&context);
+    return absl::Status(absl::StatusCode::kInternal, "EVP_AEAD_CTX_open failed");
+  }
+  plaintext.resize(plaintext_length);
+
+  EVP_AEAD_CTX_cleanup(&context);
+
+  return std::string(plaintext.begin(), plaintext.end());
 }
 
 oak::StatusOr<std::string> StorageProcessor::Read(const std::string& storage_name,
@@ -172,7 +195,7 @@ oak::StatusOr<std::string> StorageProcessor::Read(const std::string& storage_nam
     read_request.set_transaction_id(transaction_id);
   }
   std::string name;
-  ASYLO_ASSIGN_OR_RETURN(name, EncryptItem(item_name, ItemType::NAME));
+  OAK_ASSIGN_OR_RETURN(name, EncryptItem(item_name, ItemType::NAME));
   read_request.set_item_name(name);
 
   grpc::ClientContext context;
@@ -190,11 +213,11 @@ absl::Status StorageProcessor::Write(const std::string& storage_name, const std:
     write_request.set_transaction_id(transaction_id);
   }
   std::string name;
-  ASYLO_ASSIGN_OR_RETURN(name, EncryptItem(item_name, ItemType::NAME));
+  OAK_ASSIGN_OR_RETURN(name, EncryptItem(item_name, ItemType::NAME));
   write_request.set_item_name(name);
 
   std::string value;
-  ASYLO_ASSIGN_OR_RETURN(value, EncryptItem(item_value, ItemType::VALUE));
+  OAK_ASSIGN_OR_RETURN(value, EncryptItem(item_value, ItemType::VALUE));
   write_request.set_item_value(value);
 
   grpc::ClientContext context;
@@ -210,7 +233,7 @@ absl::Status StorageProcessor::Delete(const std::string& storage_name, const std
     delete_request.set_transaction_id(transaction_id);
   }
   std::string name;
-  ASYLO_ASSIGN_OR_RETURN(name, EncryptItem(item_name, ItemType::NAME));
+  OAK_ASSIGN_OR_RETURN(name, EncryptItem(item_name, ItemType::NAME));
   delete_request.set_item_name(name);
 
   grpc::ClientContext context;
