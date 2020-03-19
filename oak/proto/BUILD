@@ -24,20 +24,6 @@ package(
 )
 
 proto_library(
-    name = "enclave_proto",
-    srcs = ["enclave.proto"],
-    deps = [
-        ":application_proto",
-        "@com_google_asylo//asylo:enclave_proto",
-    ],
-)
-
-cc_proto_library(
-    name = "enclave_cc_proto",
-    deps = [":enclave_proto"],
-)
-
-proto_library(
     name = "application_proto",
     srcs = ["application.proto"],
 )
