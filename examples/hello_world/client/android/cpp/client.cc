@@ -45,7 +45,6 @@ JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
 // https://stackoverflow.com/questions/16069209/invoking-jni-functions-in-android-package-name-containing-underscore
 JNIEXPORT void JNICALL Java_com_google_oak_hello_1world_MainActivity_createChannel(
     JNIEnv* env, jobject /*this*/, jstring jaddress) {
-
   auto address = env->GetStringUTFChars(jaddress, 0);
   // TODO(#722): Add support for specifying a CA cert.
   kChannel = HelloWorld::NewStub(oak::ApplicationClient::CreateTlsChannel(address));
