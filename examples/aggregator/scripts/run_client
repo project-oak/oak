@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+readonly GLOBAL_SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")/../../../scripts/"
+readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
+# shellcheck source=scripts/common
+source "${GLOBAL_SCRIPTS_DIR}/common"
+
+"${GLOBAL_SCRIPTS_DIR}/build_example" -e aggregator
+
+# Run the application client.
+"./bazel-client-bin/examples/aggregator/client/client" "${@}"

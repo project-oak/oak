@@ -53,3 +53,35 @@ Build and run the Aggregator with the following command:
 
 Aggregator code is in `common` and `module` directories (where `common` defines
 a generic Aggregator data structure).
+
+## Deployment
+
+The Aggregator example contains a `gcp/pod.yaml` file which is a config for
+Google Cloud deployment.
+
+An Aggregator deployment consists of a single pod with two running containers
+(an Aggregator Oak application and a Backend server) and a service with a TCP
+Load Balancer and an assigned static IP that listens on the port `8080`.
+Aggregator is deployed using [Kubernetes](https://kubernetes.io/).
+
+In order to deploy the Aggregator example - run:
+
+```bash
+./examples/aggregator/scripts/deploy
+```
+
+And the command for deleting the Aggregator example from Google Cloud looks as
+follows:
+
+```bash
+./examples/aggregator/scripts/undeploy
+```
+
+Deployment requires Docker images to be uploaded to the
+[Cloud Container Registry](gcr.io/oak-ci/) (requires write-access) with the
+following command:
+
+```bash
+./examples/aggregator/scripts/build_docker_images
+./examples/aggregator/scripts/docker_push
+```
