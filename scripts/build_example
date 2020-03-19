@@ -94,8 +94,7 @@ if [[ "${docker_image}" == true ]]; then
     exit 1
   fi
 
-  docker_bazel_build_flags=("${bazel_build_flags[@]}")
-  bazel build "${docker_bazel_build_flags[@]}" "//examples/${EXAMPLE}/server:${EXAMPLE}_image.tar"
+  bazel build "${bazel_build_flags[@]}" "//examples/${EXAMPLE}/server:${EXAMPLE}_image.tar"
 
   # `aggregator` example has an additional Backend Docker image.
   if [[ "${EXAMPLE}" == "aggregator" ]]; then
