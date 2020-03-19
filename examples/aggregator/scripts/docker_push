@@ -8,19 +8,24 @@ source "${GLOBAL_SCRIPTS_DIR}/common"
 readonly AGGREGATOR_DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak-aggregator'
 readonly BACKEND_DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak-aggregator-backend'
 
-readonly IMAGES="$(find ./bazel-cache -name aggregator_image.tar)"
-readonly BACKEND_IMAGES="$(find ./bazel-cache -name aggregator_backend_image.tar)"
-if [[ -z ${IMAGES} || -z ${BACKEND_IMAGES} ]]; then
-  echo "Docker images have not been built, run './examples/aggregator/scripts/build_all' inside Oak Docker"
+declare -a image backend_image
+image="$(find ./bazel-cache -name aggregator_image.tar)"
+backend_image="$(find ./bazel-cache -name aggregator_backend_image.tar)"
+if [[ -z ${image} || -z ${backend_image} ]]; then
+  echo "Docker images have not been built, run './examples/aggregator/scripts/build_docker_images' inside Oak Docker"
   exit 1
+fi
+if [[ ${#image[@]} > 1 || ${#backend_image[@]} > 1 ]]; then
+  echo "Too many Docker images: ${image}, ${backend_image}"
+  exit 0
 fi
 
 # Push Oak application server Docker image.
-docker load --input="./${IMAGES}"
+docker load --input="./${image}"
 docker tag 'bazel/examples/aggregator/server:aggregator_image' "${AGGREGATOR_DOCKER_IMAGE_NAME}":latest
 docker push "${AGGREGATOR_DOCKER_IMAGE_NAME}":latest
 
 # Push Backend Docker image.
-docker load --input="./${BACKEND_IMAGES}"
+docker load --input="./${backend_image}"
 docker tag 'bazel/examples/aggregator/server:aggregator_backend_image' "${BACKEND_DOCKER_IMAGE_NAME}":latest
 docker push "${BACKEND_DOCKER_IMAGE_NAME}":latest
