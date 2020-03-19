@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="empty"></string>
+  <string name="address">IP address : TCP port</string>
+  <string name="bucket">Bucket ID</string>
+  <string name="submit_button">Submit Sample</string>
+</resources>
