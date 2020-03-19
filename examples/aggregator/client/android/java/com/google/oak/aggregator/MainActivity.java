@@ -68,12 +68,9 @@ public class MainActivity extends Activity {
     // Set default address (static IP of the Aggregator in Google Cloud).
     // https://developer.android.com/studio/run/emulator-networking
     EditText addressInput = findViewById(R.id.addressInput);
+    // IP address was reserved on Google Cloud:
+    // https://pantheon.corp.google.com/networking/addresses/list?project=oak-ci
     addressInput.setText("35.246.87.178:8080");
-  }
-
-  @Override
-  public void onDestroy() {
-    super.onDestroy();
   }
 
   public void onClick() {
@@ -112,6 +109,7 @@ public class MainActivity extends Activity {
     submitSample(bucket, indices, values);
   }
 
+  // TODO(#717): Use Java version of gRPC without invoking JNI.
   private native void createChannel(String address);
   private native void submitSample(
       String bucket, ArrayList<Integer> indices, ArrayList<Float> values);
