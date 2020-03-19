@@ -32,6 +32,7 @@ ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak applicatio
 ABSL_FLAG(std::string, room_id, "",
           "Base64-encoded room ID to join (only used if room_name is blank)");
 ABSL_FLAG(std::string, handle, "", "User handle to display");
+ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate");
 
 // RoomId type holds binary data (non-UTF-8, may have embedded NULs).
 using RoomId = std::string;
@@ -174,13 +175,12 @@ int main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
 
   std::string address = absl::GetFlag(FLAGS_address);
+  std::string ca_cert = oak::ApplicationClient::LoadRootCert(absl::GetFlag(FLAGS_ca_cert));
   OAK_LOG(INFO) << "Connecting to Oak Application: " << address;
-
-  oak::ApplicationClient::InitializeAssertionAuthorities();
 
   // Connect to the Oak Application.
   // TODO(#488): Use the token provided on command line for authorization and labelling of data.
-  auto stub = Chat::NewStub(oak::ApplicationClient::CreateChannel(address));
+  auto stub = Chat::NewStub(oak::ApplicationClient::CreateTlsChannel(address, ca_cert));
   if (stub == nullptr) {
     OAK_LOG(FATAL) << "Failed to create application stub";
   }

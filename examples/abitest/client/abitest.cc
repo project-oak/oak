@@ -32,6 +32,7 @@
 #include "oak/server/storage/storage_service.h"
 
 ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak application to connect to");
+ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate");
 ABSL_FLAG(int, storage_port, 7867,
           "Port on which the test Storage Server listens; set to zero to disable.");
 ABSL_FLAG(int, grpc_test_port, 7878,
@@ -183,9 +184,11 @@ int main(int argc, char** argv) {
 
   // Connect to the Oak Application.
   std::string address = absl::GetFlag(FLAGS_address);
+  std::string ca_cert = oak::ApplicationClient::LoadRootCert(absl::GetFlag(FLAGS_ca_cert));
   OAK_LOG(INFO) << "Connecting to Oak Application: " << address;
-  oak::ApplicationClient::InitializeAssertionAuthorities();
-  auto stub = OakABITestService::NewStub(oak::ApplicationClient::CreateChannel(address));
+
+  auto stub =
+      OakABITestService::NewStub(oak::ApplicationClient::CreateTlsChannel(address, ca_cert));
 
   bool success = true;
   if (absl::GetFlag(FLAGS_test_abi)) {

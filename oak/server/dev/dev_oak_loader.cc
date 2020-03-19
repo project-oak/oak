@@ -25,14 +25,15 @@
 
 namespace oak {
 
-DevOakLoader::DevOakLoader() { InitializeAssertionAuthorities(); }
+DevOakLoader::DevOakLoader() {}
 
 grpc::Status DevOakLoader::CreateApplication(
-    const oak::ApplicationConfiguration& application_configuration) {
+    const oak::ApplicationConfiguration& application_configuration,
+    std::shared_ptr<grpc::ServerCredentials> grpc_credentials) {
   OAK_LOG(INFO) << "Creating an Oak application";
 
   auto runtime = absl::make_unique<OakRuntime>();
-  auto status = runtime->Initialize(application_configuration);
+  auto status = runtime->Initialize(application_configuration, grpc_credentials);
   if (!status.ok()) {
     return status;
   }
@@ -53,24 +54,6 @@ grpc::Status DevOakLoader::TerminateApplication() {
 
   runtime_->Stop();
   return grpc::Status::OK;
-}
-
-// Even if we are not running in an enclave, we are still relying on Asylo assertion authorities.
-// This allows us to use the same client code to connect to the runtime, and it will potentially
-// allow us to use non-enclave identities in the future.
-void DevOakLoader::InitializeAssertionAuthorities() {
-  OAK_LOG(INFO) << "Initializing assertion authorities";
-  asylo::EnclaveAssertionAuthorityConfig null_config;
-  asylo::SetNullAssertionDescription(null_config.mutable_description());
-  std::vector<asylo::EnclaveAssertionAuthorityConfig> configs = {
-      null_config,
-  };
-  asylo::Status status =
-      asylo::InitializeEnclaveAssertionAuthorities(configs.begin(), configs.end());
-  if (!status.ok()) {
-    OAK_LOG(FATAL) << "Could not initialize assertion authorities";
-  }
-  OAK_LOG(INFO) << "Assertion authorities initialized";
 }
 
 }  // namespace oak

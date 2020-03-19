@@ -81,4 +81,10 @@ fi
 
 # Run the application client.
 readonly CLIENT_ARGS=("${@}")  # Choose client args provided after '--'.
-"./bazel-client-bin/examples/${EXAMPLE}/client/client" "${CLIENT_ARGS[@]}"
+"./bazel-client-bin/examples/${EXAMPLE}/client/client" "${CLIENT_ARGS[@]}" \
+  --ca_cert=./examples/certs/ca.pem
+
+# TODO: Ensure that background processes are killed with something like `trap cleanup_fn EXIT`.
+if [[ "${server}" != "none" ]]; then
+  kill -s SIGTERM "${SERVER_PID}"
+fi

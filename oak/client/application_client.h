@@ -28,6 +28,7 @@
 #include "oak/common/logging.h"
 #include "oak/common/nonce_generator.h"
 #include "oak/common/policy.h"
+#include "oak/common/utils.h"
 #include "oak/proto/policy.pb.h"
 
 namespace oak {
@@ -48,10 +49,6 @@ const std::string kBearerTokenHmacData{"oak-grpc-bearer-token-1"};
 // instantiate.
 class ApplicationClient {
  public:
-  ApplicationClient(const std::shared_ptr<grpc::ChannelInterface>& channel) {
-    InitializeAssertionAuthorities();
-  }
-
   // Creates gRPC channel credentials by using the provided (secret) token to authenticate, and the
   // derived (public) token HMAC to set a corresponding label on any data sent over the call.
   static std::shared_ptr<grpc::CallCredentials> authorization_bearer_token_call_credentials(
@@ -91,7 +88,7 @@ class ApplicationClient {
 
   // Returns a grpc Channel connecting to the specified address initialised with the following
   // composite channel credentials:
-  // - Asylo channel credentials, possibly attesting the entire channel to the remote enclave
+  // - Channel credentials, which should usually be TLS credentials
   // - Oak Policy call credentials, possibly attaching a specific Oak Policy to each call
   //
   // Note that composite channel credentials are really channel credentials, plus a generator object
@@ -100,46 +97,49 @@ class ApplicationClient {
   //
   // See https://grpc.io/docs/guides/auth/.
   static std::shared_ptr<grpc::Channel> CreateChannel(
-      std::string addr, std::shared_ptr<grpc::CallCredentials> call_credentials) {
-    auto channel_credentials =
-        asylo::EnclaveChannelCredentials(asylo::BidirectionalNullCredentialsOptions());
-
+      std::string addr, std::shared_ptr<grpc::ChannelCredentials> channel_credentials,
+      std::shared_ptr<grpc::CallCredentials> call_credentials) {
     auto composite_credentials =
         grpc::CompositeChannelCredentials(channel_credentials, call_credentials);
 
     return grpc::CreateChannel(addr, composite_credentials);
   }
 
-  // Returns a gRPC Channel initialized with a private authorization bearer token.
+  // Returns a gRPC Channel initialized with TLS channel credentials and a private authorization
+  // bearer token.
   //
   // See `private_authorization_bearer_token_call_credentials`.
-  static std::shared_ptr<grpc::Channel> CreateChannel(std::string addr) {
-    return CreateChannel(addr, private_authorization_bearer_token_call_credentials());
+  static std::shared_ptr<grpc::Channel> CreateTlsChannel(std::string addr) {
+    return CreateChannel(addr, GetTlsChannelCredentials(),
+                         private_authorization_bearer_token_call_credentials());
   }
 
-  static asylo::EnclaveAssertionAuthorityConfig GetNullAssertionAuthorityConfig() {
-    asylo::EnclaveAssertionAuthorityConfig test_config;
-    asylo::SetNullAssertionDescription(test_config.mutable_description());
-    return test_config;
+  // Returns a gRPC Channel initialized with Tls channel credentials and a non-default PEM-encoded
+  // CA root certificate, and a private authorization bearer token.
+  //
+  // See `private_authorization_bearer_token_call_credentials`.
+  static std::shared_ptr<grpc::Channel> CreateTlsChannel(std::string addr, std::string ca_cert) {
+    return CreateChannel(addr, GetTlsChannelCredentials(ca_cert),
+                         private_authorization_bearer_token_call_credentials());
   }
 
-  // This method sets up the necessary global state for Asylo to be able to validate authorities
-  // (e.g. root CAs, remote attestation endpoints, etc.).
-  static void InitializeAssertionAuthorities() {
-    OAK_LOG(INFO) << "Initializing assertion authorities";
+  // Gets TLS channel credentials with default options.
+  static std::shared_ptr<grpc::ChannelCredentials> GetTlsChannelCredentials() {
+    return grpc::SslCredentials(grpc::SslCredentialsOptions());
+  }
 
-    // TODO: Provide a list of non-null Assertion Authorities when available.
-    std::vector<asylo::EnclaveAssertionAuthorityConfig> configs = {
-        GetNullAssertionAuthorityConfig(),
-    };
+  // Gets TLS channel credentials with the specified PEM-encoded CA root certificate.
+  static std::shared_ptr<grpc::ChannelCredentials> GetTlsChannelCredentials(
+      std::string pem_root_certs) {
+    return grpc::SslCredentials(grpc::SslCredentialsOptions{.pem_root_certs = pem_root_certs});
+  }
 
-    asylo::Status status =
-        asylo::InitializeEnclaveAssertionAuthorities(configs.begin(), configs.end());
-    if (!status.ok()) {
-      OAK_LOG(FATAL) << "Could not initialize assertion authorities";
+  // Loads the CA PEM-encoded non-default CA root certificate.
+  static std::string LoadRootCert(std::string root_cert_path) {
+    if (root_cert_path.empty()) {
+      return "";
     }
-
-    OAK_LOG(INFO) << "Assertion authorities initialized";
+    return utils::read_file(root_cert_path);
   }
 };
 
