@@ -30,7 +30,7 @@ rustup target add wasm32-unknown-unknown
 source $HOME/.cargo/env
 cd $WHERE_YOU_LIKE_TO_KEEP_GIT_REPOS
 git clone https://github.com/project-oak/oak.git
-./scripts/docker_run ./scripts/build_server -s asylo  # this may take some time
+./scripts/docker_run ./scripts/build_server  # this may take some time
 ```
 
 add `source \$HOME/.cargo/env` to your shell init script (e.g. `.bashrc` or
@@ -39,7 +39,7 @@ add `source \$HOME/.cargo/env` to your shell init script (e.g. `.bashrc` or
 While you're waiting for docker, you might want to take a look at what that
 script does. The one mystery you might run into is: what does Bazel build?
 
-This: `oak/server/asylo/BUILD`
+This: `oak/server/dev/BUILD`
 
 Next, run one of the example Applications:
 
@@ -61,5 +61,5 @@ result in some logs ending with:
 2020-02-19 10:53:40  INFO  hello_world.cc : 43 : Response: HELLO MONDE!
 2020-02-19 10:53:40  INFO  hello_world.cc : 50 : Request: WORLDS
 2020-02-19 10:53:40  INFO  hello_world.cc : 57 : Response: HELLO WORLDS!
-2020-02-19 10:53:40  INFO  hello_world.cc : 57 : Response: HELLO AGAIN <default>!
+2020-02-19 10:53:40  INFO  hello_world.cc : 57 : Response: BONJOUR MONDES!
 ```

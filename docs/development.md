@@ -70,36 +70,15 @@ the Application's configuration.
 
 ### Run Server
 
-#### Run Asylo Server
-
 The following command builds and runs an Oak Server instance inside Docker,
-running a specific Oak Application. This version of the server is based on the
-[Asylo](https://github.com/google/asylo) framework, and uses an Asylo-specific
-toolchain to build the Oak Server.
+running a specific Oak Application.
 
 ```bash
-./scripts/docker_run ./scripts/run_server -s asylo -e hello_world
+./scripts/run_server -e hello_world
 ```
 
-#### Run Development Server
-
-In addition to the Oak Server, we provide a "development" version of the server.
-It shares the same Runtime code as the Asylo implementation, but it's built
-using [Clang](https://clang.llvm.org/) and is a very lightweight wrapper around
-a simple gRPC client. It doesn't use the Asylo toolchains and it does not create
-an enclave.
-
-As such, it can be used when working on the runtime, the client code or the Node
-code as it can help with enabling a faster iteration.
-
-The following command builds and runs an Oak Development Server:
-
-```bash
-./scripts/run_server -s dev -e hello_world
-```
-
-As this compiles using Clang on your local machine, it can be easily build in
-debug mode, as well as use any of the sanitizers Clang supports (e.g.
+The Oak Server can also be built in debug mode, as well as using any of the
+sanitizers Clang supports (e.g.
 [asan](https://clang.llvm.org/docs/AddressSanitizer.html),
 [tsan](https://clang.llvm.org/docs/ThreadSanitizer.html) etc.). Details about
 available sanitizers can be found in the [`.bazelrc`](/.bazelrc) file.
@@ -108,7 +87,7 @@ The following command builds and run Oak Local Server with tsan enabled. Replace
 `tsan` with other configurations for different sanitisers:
 
 ```bash
-bazel build --config=tsan //oak/server/dev:dev_oak_runner
+./scripts/run_server -s tsan -e hello_world
 ```
 
 ### Run Client
