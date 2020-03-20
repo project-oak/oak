@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 
 package(
@@ -58,4 +59,16 @@ cc_binary(
         "@com_google_absl//absl/synchronization",
         "@com_google_absl//absl/time",
     ],
+)
+
+container_image(
+    name = "oak_docker",
+    base = "@cc_image//image",
+    files = [
+        "dev_oak_runner",
+    ],
+    ports = [
+        "8080/tcp",  # Oak Application gRPC port.
+    ],
+    repository = "gcr.io/oak-ci",
 )

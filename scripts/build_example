@@ -42,11 +42,6 @@ if [[ -z "${EXAMPLE+z}" ]]; then
   exit 1
 fi
 
-bazel_build_flags+=(
-  '--symlink_prefix=bazel-client-'
-  "--compilation_mode=${compilation_mode}"
-)
-
 case "${language}" in
   rust)
     for module in examples/"${EXAMPLE}"/module*/rust/Cargo.toml; do
@@ -85,10 +80,6 @@ case "${language}" in
 esac
 
 if [[ "${docker_image}" == true ]]; then
-  # TODO(#709): get example Docker image working with dev server
-  echo "Docker image building currently disabled!"
-  exit 0  # so CI builds succeed
-
   if [[ "${language}" != "rust" ]]; then
     echo "Docker images are only supported for Rust modules"
     exit 1
@@ -101,6 +92,11 @@ if [[ "${docker_image}" == true ]]; then
     bazel build "${bazel_build_flags[@]}" "//examples/aggregator/server:aggregator_backend_image.tar"
   fi
 fi
+
+bazel_build_flags+=(
+  '--symlink_prefix=bazel-client-'
+  "--compilation_mode=${compilation_mode}"
+)
 
 # Build the client with a different output_base so that we don't lose incremental state.
 # See https://docs.bazel.build/versions/master/command-line-reference.html#flag--output_base.

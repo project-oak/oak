@@ -12,7 +12,7 @@ declare -a image backend_image
 image="$(find ./bazel-cache -name aggregator_image.tar)"
 backend_image="$(find ./bazel-cache -name aggregator_backend_image.tar)"
 if [[ -z ${image} || -z ${backend_image} ]]; then
-  echo "Docker images have not been built, run './examples/aggregator/scripts/build_docker_images' inside Oak Docker"
+  echo "Docker images have not been built, run './scripts/build_example -e aggregator -i'"
   exit 1
 fi
 if [[ ${#image[@]} > 1 || ${#backend_image[@]} > 1 ]]; then
