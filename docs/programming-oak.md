@@ -221,16 +221,15 @@ All these steps are implemented as a part of the
 The Oak Application is then loaded using the Oak Runner:
 
 ```bash
-./scripts/run_server -s asylo -a "${PWD}/config.bin"
+./scripts/run_server -a "${PWD}/config.bin"
 ```
 
-The Oak Runner will launch an [Oak Runtime](concepts.md#oak-vm) inside the
-enclave, and this Runtime will check the provided Wasm module(s) and application
-configuration. Assuming everything is correct (e.g. the Nodes all have a main
-entrypoint and only expect to find the Oak
-[host functions](abi.md#host-functions)), the Oak Runtime opens up the gRPC port
-specified by the Application Configuration. This port is then used by clients to
-connect to the Oak Application.
+The Oak Runner will launch an [Oak Runtime](concepts.md#oak-vm), and this
+Runtime will check the provided Wasm module(s) and application configuration.
+Assuming everything is correct (e.g. the Nodes all have a main entrypoint and
+only expect to find the Oak [host functions](abi.md#host-functions)), the Oak
+Runtime opens up the gRPC port specified by the Application Configuration. This
+port is then used by clients to connect to the Oak Application.
 
 ## Using an Oak Application from a client
 
@@ -240,7 +239,7 @@ previous section (which would typically be published by the ISV providing the
 Oak Application).
 
 The client connects to the gRPC service, and sends (Node-specific) gRPC requests
-to it, over a channel that has end-to-end encryption into the enclave:
+to it, over a channel that has end-to-end encryption into the runtime instance:
 
 <!-- prettier-ignore-start -->
 [embedmd]:# (../examples/hello_world/client/hello_world.cc C++ /.*Connect to the/ /CreateTlsChannel.*/)
@@ -256,14 +255,13 @@ At this point, the client code can interact with the Node code via gRPC. A
 typical sequence for this (using the various helpers described in previous
 sections) would be as follows:
 
-- The Node code (Wasm code running in a Wasm interpreter, running in an enclave)
-  is blocked inside a call to the `oak.wait_on_channels()` host function from
-  the `oak::grpc::event_loop` helper function.
+- The Node code (Wasm code running in a Wasm interpreter, running in the Oak
+  Runtime) is blocked inside a call to the `oak.wait_on_channels()` host
+  function from the `oak::grpc::event_loop` helper function.
   - `event_loop()` was invoked directly from the auto-generated `oak_main()`
     exported function.
 - The client C++ code builds a gRPC request and sends it to the Oak Runtime.
-  - This connection is end-to-end encrypted using the Asylo key exchange
-    mechanism.
+  - This connection is end-to-end encrypted using TLS.
 - The Oak Runtime receives the message and encapsulates it in a `GrpcRequest`
   wrapper message.
 - The Oak Runtime serializes the `GrpcRequest` and writes it to the gRPC-in
