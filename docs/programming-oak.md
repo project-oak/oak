@@ -243,12 +243,10 @@ The client connects to the gRPC service, and sends (Node-specific) gRPC requests
 to it, over a channel that has end-to-end encryption into the enclave:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/hello_world/client/hello_world.cc C++ /.*InitializeAssertionAuthorities/ /CreateChannel.*/)
+[embedmd]:# (../examples/hello_world/client/hello_world.cc C++ /.*Connect to the/ /CreateTlsChannel.*/)
 ```C++
-  oak::ApplicationClient::InitializeAssertionAuthorities();
-
   // Connect to the Oak Application.
-  auto stub = HelloWorld::NewStub(oak::ApplicationClient::CreateChannel(address));
+  auto stub = HelloWorld::NewStub(oak::ApplicationClient::CreateTlsChannel(address, ca_cert));
 ```
 <!-- prettier-ignore-end -->
 

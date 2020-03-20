@@ -39,7 +39,8 @@ namespace {
 constexpr char kGrpcNodeName[] = "grpc";
 }  // namespace
 
-grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
+grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config,
+                                    std::shared_ptr<grpc::ServerCredentials> grpc_credentials) {
   OAK_LOG(INFO) << "Initializing Oak Runtime";
   if (!ValidApplicationConfig(config)) {
     return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid configuration");
@@ -71,7 +72,8 @@ grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config) {
   const std::string grpc_name = kGrpcNodeName;
   const uint16_t grpc_port = config.grpc_port();
   OAK_LOG(INFO) << "Create gRPC pseudo-Node named {" << grpc_name << "}";
-  std::unique_ptr<OakGrpcNode> grpc_node = OakGrpcNode::Create(this, grpc_name, grpc_port);
+  std::unique_ptr<OakGrpcNode> grpc_node =
+      OakGrpcNode::Create(this, grpc_name, grpc_credentials, grpc_port);
   grpc_node_ = grpc_node.get();  // borrowed copy
   nodes_[grpc_name] = std::move(grpc_node);
 

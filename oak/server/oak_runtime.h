@@ -45,7 +45,9 @@ class OakRuntime : public BaseRuntime {
 
   // Initializes an OakRuntime with a user-provided ApplicationConfiguration. This
   // method should be called exactly once, before Start().
-  grpc::Status Initialize(const ApplicationConfiguration& config) LOCKS_EXCLUDED(mu_);
+  grpc::Status Initialize(const ApplicationConfiguration& config,
+                          std::shared_ptr<grpc::ServerCredentials> grpc_credentials)
+      LOCKS_EXCLUDED(mu_);
   grpc::Status Start();
   grpc::Status Stop();
 

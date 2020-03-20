@@ -23,6 +23,7 @@
 #include "oak/common/logging.h"
 
 ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak application to connect to");
+ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate");
 
 using ::oak::examples::hello_world::HelloRequest;
 using ::oak::examples::hello_world::HelloResponse;
@@ -61,12 +62,11 @@ int main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
 
   std::string address = absl::GetFlag(FLAGS_address);
+  std::string ca_cert = oak::ApplicationClient::LoadRootCert(absl::GetFlag(FLAGS_ca_cert));
   OAK_LOG(INFO) << "Connecting to Oak Application: " << address;
 
-  oak::ApplicationClient::InitializeAssertionAuthorities();
-
   // Connect to the Oak Application.
-  auto stub = HelloWorld::NewStub(oak::ApplicationClient::CreateChannel(address));
+  auto stub = HelloWorld::NewStub(oak::ApplicationClient::CreateTlsChannel(address, ca_cert));
 
   // Perform multiple invocations of the same Oak Application, with different parameters.
   say_hello(stub.get(), "WORLD");

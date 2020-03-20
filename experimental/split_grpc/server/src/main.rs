@@ -75,8 +75,8 @@ impl HelloWorld for HelloWorldHandler {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let cert = tokio::fs::read("experimental/split_grpc/certs/local.pem").await?;
-    let key = tokio::fs::read("experimental/split_grpc/certs/local.key").await?;
+    let cert = tokio::fs::read("examples/certs/local.pem").await?;
+    let key = tokio::fs::read("examples/certs/local.key").await?;
     let identity = Identity::from_pem(cert, key);
     let address = "[::1]:50052".parse()?;
     let handler = HelloWorldHandler::default();

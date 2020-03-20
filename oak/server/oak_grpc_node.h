@@ -31,8 +31,9 @@ class OakGrpcNode final : public OakNode {
  public:
   // Create an Oak node with the `name` and gRPC `port`.
   // If `port` equals 0, then gRPC port is assigned automatically.
-  static std::unique_ptr<OakGrpcNode> Create(BaseRuntime* runtime, const std::string& name,
-                                             const uint16_t port = 0);
+  static std::unique_ptr<OakGrpcNode> Create(
+      BaseRuntime* runtime, const std::string& name,
+      std::shared_ptr<grpc::ServerCredentials> grpc_credentials, const uint16_t port = 0);
   virtual ~OakGrpcNode(){};
 
   void Start() override;

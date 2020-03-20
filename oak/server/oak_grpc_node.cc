@@ -17,8 +17,6 @@
 #include "oak/server/oak_grpc_node.h"
 
 #include "absl/memory/memory.h"
-#include "asylo/grpc/auth/enclave_server_credentials.h"
-#include "asylo/grpc/auth/null_credentials_options.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/common/app_config.h"
 #include "oak/common/logging.h"
@@ -26,8 +24,9 @@
 
 namespace oak {
 
-std::unique_ptr<OakGrpcNode> OakGrpcNode::Create(BaseRuntime* runtime, const std::string& name,
-                                                 const uint16_t port) {
+std::unique_ptr<OakGrpcNode> OakGrpcNode::Create(
+    BaseRuntime* runtime, const std::string& name,
+    std::shared_ptr<grpc::ServerCredentials> grpc_credentials, const uint16_t port) {
   std::unique_ptr<OakGrpcNode> node = absl::WrapUnique(new OakGrpcNode(runtime, name));
 
   // Build Server
@@ -36,9 +35,7 @@ std::unique_ptr<OakGrpcNode> OakGrpcNode::Create(BaseRuntime* runtime, const std
   // The default value is "[::]:0", that is used to listen on a free port.
   std::stringstream address;
   address << "[::]:" << port;
-  builder.AddListeningPort(
-      address.str(), asylo::EnclaveServerCredentials(asylo::BidirectionalNullCredentialsOptions()),
-      &node->port_);
+  builder.AddListeningPort(address.str(), grpc_credentials, &node->port_);
 
   // Add a completion queue and a generic service, in order to proxy incoming RPCs to the Oak Node.
   node->completion_queue_ = builder.AddCompletionQueue();

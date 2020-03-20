@@ -30,6 +30,7 @@ ABSL_FLAG(std::string, bucket, "", "Bucket under which to aggregate samples");
 ABSL_FLAG(
     std::vector<std::string>, data, std::vector<std::string>{},
     "A comma-separated list of `index:value` entries that represent a single sparse vector sample");
+ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate");
 
 using ::oak::examples::aggregator::Aggregator;
 using ::oak::examples::aggregator::Sample;
@@ -64,11 +65,10 @@ int main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
 
   std::string address = absl::GetFlag(FLAGS_address);
+  std::string ca_cert = oak::ApplicationClient::LoadRootCert(absl::GetFlag(FLAGS_ca_cert));
   OAK_LOG(INFO) << "Connecting to Oak Application: " << address;
 
-  oak::ApplicationClient::InitializeAssertionAuthorities();
-
-  auto stub = Aggregator::NewStub(oak::ApplicationClient::CreateChannel(address));
+  auto stub = Aggregator::NewStub(oak::ApplicationClient::CreateTlsChannel(address, ca_cert));
 
   // Parse arguments.
   auto bucket = absl::GetFlag(FLAGS_bucket);

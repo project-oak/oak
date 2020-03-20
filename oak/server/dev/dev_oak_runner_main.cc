@@ -22,9 +22,23 @@
 #include "absl/synchronization/notification.h"
 #include "absl/time/time.h"
 #include "oak/common/logging.h"
+#include "oak/common/utils.h"
 #include "oak/server/dev/dev_oak_loader.h"
 
 ABSL_FLAG(std::string, application, "", "Application configuration file");
+ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate");
+ABSL_FLAG(std::string, private_key, "", "Path to the private key");
+ABSL_FLAG(std::string, cert_chain, "", "Path to the PEM-encoded certificate chain");
+
+std::shared_ptr<grpc::ServerCredentials> BuildTlsCredentials(std::string pem_root_certs,
+                                                             std::string private_key,
+                                                             std::string cert_chain) {
+  grpc::SslServerCredentialsOptions::PemKeyCertPair key_cert_pair = {private_key, cert_chain};
+  grpc::SslServerCredentialsOptions options;
+  options.pem_root_certs = pem_root_certs;
+  options.pem_key_cert_pairs.push_back(key_cert_pair);
+  return grpc::SslServerCredentials(options);
+}
 
 int main(int argc, char* argv[]) {
   absl::ParseCommandLine(argc, argv);
@@ -36,7 +50,23 @@ int main(int argc, char* argv[]) {
   std::unique_ptr<oak::ApplicationConfiguration> application_config =
       oak::ReadConfigFromFile(absl::GetFlag(FLAGS_application));
 
-  grpc::Status status = loader->CreateApplication(*application_config);
+  std::string private_key_path = absl::GetFlag(FLAGS_private_key);
+  std::string cert_chain_path = absl::GetFlag(FLAGS_cert_chain);
+  if (private_key_path.empty()) {
+    OAK_LOG(FATAL) << "No private key file specified.";
+  }
+  if (cert_chain_path.empty()) {
+    OAK_LOG(FATAL) << "No certificate chain file specified.";
+  }
+  std::string private_key = oak::utils::read_file(private_key_path);
+  std::string cert_chain = oak::utils::read_file(cert_chain_path);
+  std::string ca_cert_path = absl::GetFlag(FLAGS_ca_cert);
+  std::string ca_cert = ca_cert_path == "" ? "" : oak::utils::read_file(ca_cert_path);
+
+  std::shared_ptr<grpc::ServerCredentials> grpc_credentials =
+      BuildTlsCredentials(ca_cert, private_key, cert_chain);
+
+  grpc::Status status = loader->CreateApplication(*application_config, grpc_credentials);
   if (!status.ok()) {
     OAK_LOG(ERROR) << "Failed to create application";
     return 1;

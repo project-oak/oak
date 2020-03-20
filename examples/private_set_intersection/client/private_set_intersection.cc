@@ -24,6 +24,7 @@
 #include "oak/common/nonce_generator.h"
 
 ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak application to connect to");
+ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate");
 
 using ::oak::examples::private_set_intersection::GetIntersectionResponse;
 using ::oak::examples::private_set_intersection::PrivateSetIntersection;
@@ -63,21 +64,22 @@ int main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
 
   std::string address = absl::GetFlag(FLAGS_address);
+  std::string ca_cert = oak::ApplicationClient::LoadRootCert(absl::GetFlag(FLAGS_ca_cert));
   OAK_LOG(INFO) << "Connecting to Oak Application: " << address;
-
-  oak::ApplicationClient::InitializeAssertionAuthorities();
 
   // Connect to the Oak Application from different clients sharing the same access token.
   oak::NonceGenerator<oak::kPerChannelNonceSizeBytes> nonce_generator;
   std::string authorization_bearer_token = oak::NonceToBytes(nonce_generator.NextNonce());
 
   auto stub_0 = PrivateSetIntersection::NewStub(oak::ApplicationClient::CreateChannel(
-      address, oak::ApplicationClient::authorization_bearer_token_call_credentials(
-                   authorization_bearer_token)));
+      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert),
+      oak::ApplicationClient::authorization_bearer_token_call_credentials(
+          authorization_bearer_token)));
 
   auto stub_1 = PrivateSetIntersection::NewStub(oak::ApplicationClient::CreateChannel(
-      address, oak::ApplicationClient::authorization_bearer_token_call_credentials(
-                   authorization_bearer_token)));
+      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert),
+      oak::ApplicationClient::authorization_bearer_token_call_credentials(
+          authorization_bearer_token)));
 
   // Submit sets from different clients.
   std::vector<std::string> set_0{"a", "b", "c"};
