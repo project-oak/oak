@@ -5,7 +5,7 @@ readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
 # shellcheck source=scripts/common
 source "${GLOBAL_SCRIPTS_DIR}/common"
 
-"${GLOBAL_SCRIPTS_DIR}/build_server" -s asylo
+"${GLOBAL_SCRIPTS_DIR}/build_server" -s dev
 
 readonly APPLICATION="${PWD}/bazel-client-bin/examples/aggregator/config/config.bin"
-exec ./bazel-bin/oak/server/asylo/asylo_oak_runner --application="${APPLICATION}"
+exec ./bazel-bin/oak/server/dev/dev_oak_runner --application="${APPLICATION}"

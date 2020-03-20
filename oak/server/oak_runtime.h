@@ -35,8 +35,7 @@ namespace oak {
 // Initializing and Running a gRPC server, creating the nodes and channels and keeping track of
 // the connectivity. For now, it only supports one node.
 //
-// It can run in its own enclave, but this is optional. See /asylo/ for how to use it with an
-// enclave
+// It can run in its own enclave, but this is optional.
 
 class OakRuntime : public BaseRuntime {
  public:

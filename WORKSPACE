@@ -339,7 +339,7 @@ load("@io_bazel_rules_closure//closure:defs.bzl", "closure_repositories")
 
 closure_repositories()
 
-# Do not use `tf_workspace()` - it interferes with Cares in gRPC loaded and patched by Asylo
+# Do not use `tf_workspace()` - it interferes with c-ares in gRPC loaded and patched
 # and causes missing `ares.h` error.
 # https://github.com/tensorflow/tensorflow/blob/25a06bc503c7d07ffc5480ac107e3c8681937971/tensorflow/workspace.bzl#L970-L975
 load("@org_tensorflow//tensorflow:workspace.bzl", "tf_repositories")

@@ -73,13 +73,6 @@ class WasmNode final : public NodeThread {
 
   wabt::interp::Environment env_;
 
-  // When running under the Intel Linux SGX stack, std::random_device will pull
-  // from /dev/urandom:
-  //   https://github.com/intel/linux-sgx/blob/master/sdk/tlibcxx/include/random#L3499
-  // Asylo intercepts /dev/[u]random:
-  //   https://github.com/google/asylo/blob/master/asylo/platform/posix/io/random_devices.cc
-  // and pulls from the RDRAND instruction:
-  //   https://github.com/google/asylo/blob/master/asylo/platform/primitives/sgx/hardware_random_sgx_hw.cc
   std::random_device prng_engine_;
 };
 
