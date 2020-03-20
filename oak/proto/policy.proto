@@ -43,10 +43,6 @@ message Tag {
 
 // Policies related to gRPC communication, referring to the native gRPC node within the TCB.
 message GrpcTag {
-  // TODO: Add identity assertions based on public keys when Asylo supports it.
-  // See
-  // https://github.com/google/asylo/blob/3158887cb768112516424b3e65046f3946eb4465/asylo/identity/identity.proto#L40.
-
   // In order for a client to be authorized to fulfill a tag with (public)
   // `authorization_bearer_token_hmac` value h, the client needs to provide a (secret) bearer token
   // s such that h = HMAC-SHA256(s, "oak-grpc-bearer-token-1").

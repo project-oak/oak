@@ -23,8 +23,7 @@ node_configs {
 node_configs {
   name: "absent-storage"
   storage_config {
-    # TODO(google/asylo#NNN): use test.invalid when Asylo crash fixed.
-    address: "localhost:9999"
+    address: "test.invalid:9999"
   }
 }
 node_configs {
@@ -36,8 +35,7 @@ node_configs {
 node_configs {
   name: "absent-grpc-client"
   grpc_client_config {
-    # TODO(google/asylo#NNN): use test.invalid when Asylo crash fixed.
-    address: "localhost:9999"
+    address: "test.invalid:9999"
   }
 }
 grpc_port: 8080

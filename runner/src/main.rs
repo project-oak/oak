@@ -249,10 +249,7 @@ fn run_cargo_clippy() -> Step {
 fn run_bazel_build() -> Step {
     Step::Single {
         name: "bazel build".to_string(),
-        runnable: cmd(
-            "bazel",
-            &["build", "--", "//oak/...:all", "-//oak/server/asylo:all"],
-        ),
+        runnable: cmd("bazel", &["build", "--", "//oak/...:all"]),
     }
 }
 

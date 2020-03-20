@@ -31,7 +31,6 @@ build:clang --cxxopt="-Werror"
 build:clang --cxxopt="-Wno-unused-parameter"
 # https://stackoverflow.com/questions/1538943
 build:clang --cxxopt="-Wno-missing-field-initializers"
-# Latest Asylo update
 build:clang --cxxopt="-Wno-error=sign-compare"
 # Use a different symlink prefix for clang-based artifacts.
 build:clang --symlink_prefix=bazel-clang-
