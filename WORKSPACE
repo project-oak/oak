@@ -106,9 +106,9 @@ http_archive(
         # https://github.com/grpc/grpc/issues/21437
         "//third_party/google/rpc:Add-ares-android.patch",
     ],
-    sha256 = "ffbe61269160ea745e487f79b0fd06b6edd3d50c6d9123f053b5634737cf2f69",
-    strip_prefix = "grpc-1.25.0",
-    urls = ["https://github.com/grpc/grpc/archive/v1.25.0.tar.gz"],
+    sha256 = "c2ab8a42a0d673c1acb596d276055adcc074c1116e427f118415da3e79e52969",
+    strip_prefix = "grpc-1.27.3",
+    urls = ["https://github.com/grpc/grpc/archive/v1.27.3.tar.gz"],
 )
 
 # Google Test
@@ -312,6 +312,10 @@ sgx_deps()
 load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
 
 grpc_deps()
+
+load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
+
+grpc_extra_deps()
 
 load("@io_grpc_grpc_java//:repositories.bzl", "grpc_java_repositories")
 
