@@ -3,45 +3,38 @@
 ARG debian_snapshot=buster-20191118
 FROM debian/snapshot:${debian_snapshot}
 
+RUN apt-get --yes update && \
+    apt-get install --no-install-recommends --yes \
+  build-essential \
+  clang-format \
+  clang-tidy \
+  curl \
+  default-jdk-headless \
+  git \
+  libfl2 \
+  libncurses5 \
+  libssl-dev \
+  pkg-config \
+  python-dev \
+  python2.7-dev \
+  python3-dev \
+  python3-six \
+  shellcheck \
+  vim \
+  wget \
+  xml2
+
 # Use a fixed version of Bazel.
 ARG bazel_version=1.2.1
 ARG bazel_sha=4bbb2718d451db5922223fda3aed3810c4ca50f431481e86a7fec4c585f18b1f
 ARG bazel_url=https://storage.googleapis.com/bazel-apt/pool/jdk1.8/b/bazel/bazel_${bazel_version}_amd64.deb
 
-RUN apt-get --yes update && \
-    apt-get install --yes wget && \
-    wget "${bazel_url}" -nv -o- -O bazel.deb && \
+RUN wget "${bazel_url}" --no-verbose --output-file=- --output-document=bazel.deb && \
     echo "${bazel_sha}  bazel.deb" > bazel.sha256 && \
     sha256sum --check bazel.sha256 && \
-    apt-get install -y \
-        ./bazel.deb \
-        bash-completion \
-        build-essential \
-        default-jdk-headless \
-        git \
-        libfl2 \
-        ocaml-nox \
-        ocamlbuild \
-        python-dev \
-        python2.7-dev \
-        python3-dev \
-        vim \
-        && \
+    apt-get install --yes ./bazel.deb && \
     rm bazel.deb bazel.sha256 && \
-    apt-get clean && \
-    echo ". /etc/bash_completion" >> /root/.bashrc
-
-RUN apt-get --yes update && apt-get install --no-install-recommends --yes \
-  clang-format \
-  clang-tidy \
-  curl \
-  git \
-  libncurses5 \
-  libssl-dev \
-  pkg-config \
-  python3-six \
-  shellcheck \
-  xml2
+    apt-get clean
 
 # Install Node.js and npm.
 RUN curl --location https://deb.nodesource.com/setup_12.x | bash -
