@@ -19,6 +19,7 @@ members = [
   "experimental/split_grpc/proxy",
   "experimental/split_grpc/server",
   "oak/server/rust/oak_abi",
+  "oak/server/rust/oak_glue",
   "oak/server/rust/oak_loader",
   "oak/server/rust/oak_runtime",
   "runner",
