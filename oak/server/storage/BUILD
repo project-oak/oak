@@ -76,7 +76,6 @@ cc_library(
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/status",
-        "@com_google_asylo//asylo/crypto:aes_gcm_siv",
     ],
 )
 

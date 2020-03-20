@@ -18,7 +18,6 @@
 
 #include "absl/memory/memory.h"
 #include "absl/strings/escaping.h"
-#include "asylo/util/cleansing_types.h"
 #include "grpcpp/create_channel.h"
 #include "oak/common/logging.h"
 #include "oak/proto/grpc_encap.pb.h"
