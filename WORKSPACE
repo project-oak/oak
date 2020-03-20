@@ -84,24 +84,12 @@ http_archive(
     ],
 )
 
-# Asylo Framework.
-http_archive(
-    name = "com_google_asylo",
-    sha256 = "7a32cb64b3f5cb2f2716eef063db0caccf7bafd9c771183b3e0146df2bc1697d",
-    strip_prefix = "asylo-0.5.2",
-    urls = [
-        # Head commit on 2020-01-16 (v0.5.2).
-        "https://github.com/google/asylo/archive/v0.5.2.tar.gz",
-    ],
-)
-
 # Patch gRPC ares BUILD file.
-# TODO: Remove when gRPC will fix Ares Android build and Asylo will update gRPC version.
+# TODO: Remove when gRPC will fix Ares Android build
 # https://github.com/grpc/grpc/pull/21463
 http_archive(
     name = "com_github_grpc_grpc",
     patches = [
-        "@com_google_asylo//asylo/distrib:grpc_1_25_0.patch",
         # This patch adds `ares_android.h` dependency in the Ares BUILD file.
         # https://github.com/grpc/grpc/issues/21437
         "//third_party/google/rpc:Add-ares-android.patch",
@@ -251,7 +239,6 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_rust",
-    repo_mapping = {"@bazel_version": "@bazel_version_rust"},
     sha256 = "69b67e19532b12da3edccda404772e85a788d16ae739343f5338dd340a0fba2e",
     strip_prefix = "rules_rust-ec436b5ff2ab1ddeba6f27a7a1a5d263812981a6",
     urls = [
@@ -261,6 +248,9 @@ http_archive(
 )
 
 load("@io_bazel_rules_rust//rust:repositories.bzl", "rust_repository_set")
+load("@io_bazel_rules_rust//:workspace.bzl", "bazel_version")
+
+bazel_version(name = "bazel_version")
 
 # Make sure to update Dockerfile too, e.g. when updating nightly version
 rust_repository_set(
@@ -270,13 +260,6 @@ rust_repository_set(
     iso_date = "2020-02-06",
     version = "nightly",
 )
-
-load("@io_bazel_rules_rust//:workspace.bzl", "bazel_version")
-
-# We need to alias this with a different name so it does not conflict with an existing rule imported
-# from Asylo.
-# See https://github.com/google/asylo/issues/44.
-bazel_version(name = "bazel_version_rust")
 
 # Bazel rules for Android applications.
 http_archive(
@@ -298,16 +281,6 @@ android_ndk_repository(
     name = "androidndk",
     api_level = 28,
 )
-
-load("@com_google_asylo//asylo/bazel:asylo_deps.bzl", "asylo_deps", "asylo_go_deps")
-
-asylo_deps()
-
-asylo_go_deps()
-
-load("@com_google_asylo//asylo/bazel:sgx_deps.bzl", "sgx_deps")
-
-sgx_deps()
 
 load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
 
