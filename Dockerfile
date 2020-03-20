@@ -1,4 +1,35 @@
-FROM gcr.io/asylo-framework/asylo:buildenv-v0.5.2
+# Use fixed snapshot of Debian to create a deterministic environment.
+# Snapshot tags can be found at https://hub.docker.com/r/debian/snapshot/tags
+ARG debian_snapshot=buster-20191118
+FROM debian/snapshot:${debian_snapshot}
+
+# Use a fixed version of Bazel.
+ARG bazel_version=1.2.1
+ARG bazel_sha=4bbb2718d451db5922223fda3aed3810c4ca50f431481e86a7fec4c585f18b1f
+ARG bazel_url=https://storage.googleapis.com/bazel-apt/pool/jdk1.8/b/bazel/bazel_${bazel_version}_amd64.deb
+
+RUN apt-get --yes update && \
+    apt-get install --yes wget && \
+    wget "${bazel_url}" -nv -o- -O bazel.deb && \
+    echo "${bazel_sha}  bazel.deb" > bazel.sha256 && \
+    sha256sum --check bazel.sha256 && \
+    apt-get install -y \
+        ./bazel.deb \
+        bash-completion \
+        build-essential \
+        default-jdk-headless \
+        git \
+        libfl2 \
+        ocaml-nox \
+        ocamlbuild \
+        python-dev \
+        python2.7-dev \
+        python3-dev \
+        vim \
+        && \
+    rm bazel.deb bazel.sha256 && \
+    apt-get clean && \
+    echo ". /etc/bash_completion" >> /root/.bashrc
 
 RUN apt-get --yes update && apt-get install --no-install-recommends --yes \
   clang-format \
