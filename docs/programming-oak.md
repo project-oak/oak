@@ -239,7 +239,7 @@ previous section (which would typically be published by the ISV providing the
 Oak Application).
 
 The client connects to the gRPC service, and sends (Node-specific) gRPC requests
-to it, over a channel that has end-to-end encryption into the runtime instance:
+to it, over a channel that has end-to-end encryption into the Runtime instance:
 
 <!-- prettier-ignore-start -->
 [embedmd]:# (../examples/hello_world/client/hello_world.cc C++ /.*Connect to the/ /CreateTlsChannel.*/)
@@ -265,7 +265,7 @@ sections) would be as follows:
 - The Oak Runtime receives the message and encapsulates it in a `GrpcRequest`
   wrapper message.
 - The Oak Runtime serializes the `GrpcRequest` and writes it to the gRPC-in
-  channel for the node. It also creates a new channel for any responses, and
+  channel for the Node. It also creates a new channel for any responses, and
   passes a handle for this response channel alongside the request.
 - This unblocks the Node code, and `oak::grpc::event_loop` reads and
   deserializes the incoming gRPC request. It then calls the `Dispatcher`'s
@@ -379,7 +379,7 @@ TODO: describe use of storage
 Regardless of how the code for an Oak Application is produced, it's always a
 good idea to write tests. The
 [oak_tests](https://project-oak.github.io/oak/doc/oak_tests/index.html) crate
-allows node gRPC service methods to be tested with the [Oak SDK](sdk.md)
+allows Node gRPC service methods to be tested with the [Oak SDK](sdk.md)
 framework via the Oak Runtime:
 
 <!-- prettier-ignore-start -->
@@ -411,15 +411,17 @@ fn test_say_hello() {
 ```
 <!-- prettier-ignore-end -->
 
-This has a little bit more boilerplate than testing a method directly:
+This has a little bit of boilerplate to explain:
 
-- After being configured, the runtime executes Nodes in separate threads
-  (`oak_runtime::configure_and_run`). The `derive(OakExports)` macro (from the
-  [`oak_derive`](https://project-oak.github.io/oak/doc/oak_derive/index.html)
-  crate) provides an entrypoint with a gRPC dispatch handler.
+- The `oak_tests` crate provides a `run_single_module_default` method that is
+  designed for use with single-Node Applications. It assumes that the Node has a
+  main entrypoint called `oak_main`, which is runs in a separate thread. (This
+  entrypoint would typically be set up by the
+  [`oak::entrypoint!`](https://project-oak.github.io/oak/doc/oak/macro.entrypoint.html)
+  macro [described above](#per-node-boilerplate)).
 - The injection of the gRPC request has to specify the method name (in
   `oak_tests::grpc_request`).
-- The per-Node threads needs to be stopped at the end of the test
+- The per-Node thread needs to be stopped at the end of the test
   (`oak_runtime::stop`).
 
 However, this extra complication does allow the Node to be tested in a way that
@@ -431,16 +433,19 @@ that makes use of the functionality of the Oak TCB.
 It's also possible to test an Oak Application that's built from multiple Nodes,
 using `oak_runtime::application_configuration` to create an application
 configuration and then `oak_runtime::Runtime::configure_and_run(configuration)`
-to configure and run the runtime.
+to configure and run the Runtime.
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/abitest/tests/src/tests.rs Rust /^#\[test\]/ /oak_runtime::application_configuration\(.*/)
+[embedmd]:# (../examples/abitest/tests/src/tests.rs Rust / +let configuration =/ /configure_and_run.*/)
 ```Rust
-#[test]
-fn test_abi() {
-    simple_logger::init().unwrap();
-
     let configuration = oak_runtime::application_configuration(
+        build_wasm().expect("failed to build wasm modules"),
+        LOG_CONFIG_NAME,
+        FRONTEND_CONFIG_NAME,
+        FRONTEND_ENTRYPOINT_NAME,
+    );
+
+    let (runtime, entry_channel) = oak_runtime::configure_and_run(configuration)
 ```
 <!-- prettier-ignore-end -->
 
@@ -451,10 +456,16 @@ performed for you. To implement this manually you can use the method
 the Rust standard library:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/abitest/module_0/rust/src/lib.rs Rust /^#.*no_mangle.*/ /let _ = std::panic::catch_unwind.*/)
+[embedmd]:# (../examples/abitest/module_0/rust/src/lib.rs Rust /^#.*no_mangle.*/ /^}/)
 ```Rust
 #[no_mangle]
 pub extern "C" fn frontend_oak_main(in_handle: u64) {
     let _ = std::panic::catch_unwind(|| {
+        oak::set_panic_hook();
+        let node = FrontendNode::new();
+        let dispatcher = Dispatcher::new(node);
+        oak::run_event_loop(dispatcher, in_handle);
+    });
+}
 ```
 <!-- prettier-ignore-end -->

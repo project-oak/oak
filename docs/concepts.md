@@ -200,13 +200,13 @@ represented by a message containing two Channels handles:
   - a secrecy component explicitly specified by the caller as gRPC request
     metadata; this represents the secrecy guarantees that the caller wants to
     impose on the request message.
-  - an integrity component implicitly set by the gRPC pseudo-node based on some
+  - an integrity component implicitly set by the gRPC pseudo-Node based on some
     trusted authentication mechanism that is performed as part of the gRPC
     connection itself; this represents the actual authority of the caller.
 
 - a "response sender" write handle to a Channel, whose Label has:
 
-  - a secrecy component implicitly set by the gRPC pseudo-node based on some
+  - a secrecy component implicitly set by the gRPC pseudo-Node based on some
     trusted authentication mechanism that is performed as part of the gRPC
     connection itself; this represents the actual authority of the caller.
   - an empty integrity component.
@@ -231,7 +231,7 @@ outside world.
 
 The available pseudo-Nodes are:
 
-- **gRPC server pseudo-node**: Provides a 'front door' for external interaction
+- **gRPC server pseudo-Node**: Provides a 'front door' for external interaction
   with an Oak Application, by implementing a gRPC service. The Oak Runtime
   automatically creates a gRPC server pseudo-Node at Application start-of-day
   (and so gRPC server pseudo-Nodes cannot be created with `node_create()`).
@@ -243,18 +243,18 @@ The available pseudo-Nodes are:
     for the Node to read.
   - A handle for the write half of a channel that the Node should write the
     corresponding response message(s) to.
-- **Logging pseudo-node**: Provides a logging mechanism for Nodes under
+- **Logging pseudo-Node**: Provides a logging mechanism for Nodes under
   development by including a single inbound channel; anything received on the
-  channel will be logged. This node should only be enabled during application
+  channel will be logged. This Node should only be enabled during application
   development and debugging (due to the potential for information leakage).
-- **gRPC client pseudo-node**: Provides a mechanism for Oak Nodes to make use of
+- **gRPC client pseudo-Node**: Provides a mechanism for Oak Nodes to make use of
   an external (non-Oak) gRPC service. Method invocations for the gRPC service
   are sent on the channel to the gRPC client pseudo-Node, as a message with no
   data bytes but with two attached handles (in the following order):
   - A handle for the read half of a channel holding the outbound request.
   - A handle for the write half of a channel that the corresponding response
     message(s) should be written to.
-- **Storage pseudo-node**: Provides a proxy mechanism for access to a persistent
+- **Storage pseudo-Node**: Provides a proxy mechanism for access to a persistent
   storage mechanism. Nodes that require storage functionality write storage
   requests to a channel that reaches the storage pseudo-Node, then read the
   associated responses from a corresponding outbound channel from the storage
