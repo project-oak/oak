@@ -55,7 +55,7 @@ fn map_level(level: Level) -> oak_abi::proto::oak::log::Level {
         Level::Error => oak_abi::proto::oak::log::Level::Error,
         Level::Warn => oak_abi::proto::oak::log::Level::Warn,
         Level::Info => oak_abi::proto::oak::log::Level::Info,
-        Level::Debug => oak_abi::proto::oak::log::Level::Debug,
+        Level::Debug => oak_abi::proto::oak::log::Level::Debugging,
         Level::Trace => oak_abi::proto::oak::log::Level::Trace,
     }
 }
