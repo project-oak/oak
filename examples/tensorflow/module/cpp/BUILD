@@ -46,7 +46,7 @@ cc_binary(
     deps = [
         "//oak/module:defines",
         "//oak/module:placeholders",
-        # TODO: Sort out inclusion of protobuf files
+        # TODO(#422): Sort out inclusion of protobuf files
         # "//oak/proto:oak_api_cc_proto",
         "@org_tensorflow//tensorflow/lite:framework",
         "@org_tensorflow//tensorflow/lite/kernels:builtin_ops",
@@ -79,7 +79,7 @@ cc_binary(
     deps = [
         "//oak/module:defines",
         "//oak/module:placeholders",
-        # TODO: Sort out inclusion of protobuf files
+        # TODO(#422): Sort out inclusion of protobuf files
         # "//oak/proto:oak_api_cc_proto",
         "@org_tensorflow//tensorflow/lite/micro:micro_framework",
         "@org_tensorflow//tensorflow/lite/micro/kernels:all_ops_resolver",

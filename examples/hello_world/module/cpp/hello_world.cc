@@ -19,7 +19,7 @@
 
 #include "oak/module/defines.h"  // for imports and exports
 
-// TODO: Sort out inclusion of protobuf files
+// TODO(#422): Sort out inclusion of protobuf files
 // #include "oak/proto/oak_api.pb.h"
 
 // Local copy of oak_api.pb.h contents for now.
