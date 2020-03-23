@@ -2,6 +2,13 @@
 
 # This script should be used by logged-in users with write access to the Google Container Registry
 # to push a new version of the image.
+#
+# In order to set up the necessary credentials:
+#
+# - Install `gcloud`: https://cloud.google.com/sdk/docs/downloads-interactive
+# - `gcloud auth login`
+# - `gcloud config set project oak-ci`
+# - `gcloud auth configure-docker`
 
 readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
 # shellcheck source=scripts/common
