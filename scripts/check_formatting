@@ -71,6 +71,15 @@ find . \
     \( -type f \( -name '*.rs' -o -name '*.cc' \) \) \
   \) -exec ./scripts/check_license {} +
 
+find . \
+  \(  \
+    -not \( -path ./bazel-cache -prune \) -and \
+    -not \( -path ./cargo-cache -prune \) -and \
+    -not \( -path ./target -prune \) -and \
+    -not \( -path ./third_party -prune \) \
+    \( -type f \( -name '*.rs' -o -name '*.cc' -o -name '*.h' \) \) \
+  \) -exec ./scripts/check_todo {} +
+
 # Check embedded code snippets are up-to-date.
 grep --recursive --files-with-matches embedmd docs | while IFS= read -r file; do
   embedmd -d "$file"
