@@ -61,7 +61,7 @@ fn test_abi() {
 
     let result: grpc::Result<ABITestResponse> = oak_tests::grpc_request(
         &runtime,
-        &entry_channel,
+        entry_channel,
         "/oak.examples.abitest.OakABITestService/RunTests",
         &req,
     );

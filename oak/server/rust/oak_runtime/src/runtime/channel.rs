@@ -165,17 +165,17 @@ impl ChannelMapping {
         (self.new_writer(channel_id), self.new_reader(channel_id))
     }
 
-    pub fn get_reader_channel(&self, reference: &ChannelRef) -> Result<ChannelId, OakStatus> {
+    pub fn get_reader_channel(&self, reference: ChannelRef) -> Result<ChannelId, OakStatus> {
         let readers = self.readers.read().unwrap();
         readers
-            .get(reference)
+            .get(&reference)
             .map_or(Err(OakStatus::ErrBadHandle), |id| Ok(*id))
     }
 
-    pub fn get_writer_channel(&self, reference: &ChannelRef) -> Result<ChannelId, OakStatus> {
+    pub fn get_writer_channel(&self, reference: ChannelRef) -> Result<ChannelId, OakStatus> {
         let writers = self.writers.read().unwrap();
         writers
-            .get(reference)
+            .get(&reference)
             .map_or(Err(OakStatus::ErrBadHandle), |id| Ok(*id))
     }
 
@@ -189,25 +189,25 @@ impl ChannelMapping {
         f(channel)
     }
 
-    pub fn remove_reference(&self, reference: &ChannelRef) -> Result<(), OakStatus> {
+    pub fn remove_reference(&self, reference: ChannelRef) -> Result<(), OakStatus> {
         if let Ok(channel_id) = self.get_writer_channel(reference) {
             self.with_channel(channel_id, |channel| Ok(channel.remove_writer()))?;
 
             let mut writers = self.writers.write().unwrap();
-            writers.remove(reference);
+            writers.remove(&reference);
         }
 
         if let Ok(channel_id) = self.get_reader_channel(reference) {
             self.with_channel(channel_id, |channel| Ok(channel.remove_reader()))?;
 
             let mut readers = self.readers.write().unwrap();
-            readers.remove(reference);
+            readers.remove(&reference);
         }
 
         Ok(())
     }
 
-    pub fn duplicate_reference(&self, reference: &ChannelRef) -> Result<ChannelRef, OakStatus> {
+    pub fn duplicate_reference(&self, reference: ChannelRef) -> Result<ChannelRef, OakStatus> {
         if let Ok(channel_id) = self.get_writer_channel(reference) {
             self.with_channel(channel_id, |channel| Ok(channel.add_writer()))?;
 

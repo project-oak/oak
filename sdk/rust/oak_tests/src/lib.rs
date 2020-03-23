@@ -90,7 +90,7 @@ pub fn run_single_module(
 // TODO(#543): move this to oak_runtime as it's not test-specific
 pub fn grpc_request<R, Q>(
     runtime: &oak_runtime::RuntimeRef,
-    channel: &oak_runtime::ChannelRef,
+    channel: oak_runtime::ChannelRef,
     method_name: &str,
     req: &R,
 ) -> oak::grpc::Result<Q>
@@ -113,7 +113,7 @@ where
     // Create a new channel to hold the request message.
     let (req_write_half, req_read_half) = runtime.new_channel();
     runtime
-        .channel_write(&req_write_half, req_msg)
+        .channel_write(req_write_half, req_msg)
         .expect("could not write message");
 
     // Create a new channel for responses to arrive on and also attach that to the message.
@@ -122,10 +122,7 @@ where
     // Create a notification message and attach the method-invocation specific channels to it.
     let notify_msg = oak_runtime::Message {
         data: vec![],
-        channels: vec![
-            req_read_half,
-            rsp_write_half,
-        ],
+        channels: vec![req_read_half, rsp_write_half],
     };
 
     // Send the notification message (with attached handles) into the Node under test.
@@ -135,7 +132,7 @@ where
 
     // Read the serialized, encapsulated response.
     loop {
-        let rsp = match runtime.channel_read(&rsp_read_half) {
+        let rsp = match runtime.channel_read(rsp_read_half) {
             Ok(Some(r)) => r,
             Ok(None) => {
                 info!("no pending gRPC response message; poll again soon");

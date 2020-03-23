@@ -294,9 +294,9 @@ impl WasmInterface {
         let channels: Result<Vec<ChannelRef>, _> = handles
             .iter()
             .map(|handle| match self.writers.get(handle) {
-                Some(channel) => Ok(channel.clone()),
+                Some(channel) => Ok(*channel),
                 None => match self.readers.get(handle) {
-                    Some(channel) => Ok(channel.clone()),
+                    Some(channel) => Ok(*channel),
                     None => {
                         error!("channel_write: Can't find handle {} to send", handle);
                         Err(OakStatus::ErrBadHandle)
@@ -310,7 +310,7 @@ impl WasmInterface {
             channels: channels?,
         };
 
-        self.runtime.channel_write(writer, msg)?;
+        self.runtime.channel_write(*writer, msg)?;
 
         Ok(())
     }
@@ -339,7 +339,7 @@ impl WasmInterface {
         self.validate_ptr(handles_dest, handles_capcity * 8)?;
 
         let msg = self.runtime.channel_try_read_message(
-            reader,
+            *reader,
             dest_capacity as usize,
             handles_capcity as usize,
         )?;
@@ -387,8 +387,8 @@ impl WasmInterface {
                 let mut raw_writer: Vec<u8> = vec![0; actual_handle_count * 8];
 
                 for (i, chan) in msg.channels.iter().enumerate() {
-                    let handle = self
-                        .allocate_new_handle(chan.to_owned(), self.runtime.channel_is_reader(chan));
+                    let handle =
+                        self.allocate_new_handle(*chan, self.runtime.channel_is_reader(*chan));
                     LittleEndian::write_u64(&mut raw_writer[i * 8..(i + 1) * 8], handle);
                 }
 
@@ -449,7 +449,7 @@ impl WasmInterface {
             .map(|bytes| {
                 let handle = LittleEndian::read_u64(bytes);
 
-                self.readers.get(&handle)
+                self.readers.get(&handle).map(|x| *x)
             })
             .collect();
 
@@ -556,11 +556,15 @@ impl wasmi::Externals for WasmInterface {
 
                 let result = if let Some(reference) = self.readers.get(&channel_id).cloned() {
                     self.readers.remove(&channel_id);
-                    self.runtime.channel_close(&reference).expect("Wasm CHANNEL_CLOSE: Channel reference inconsistency!");
+                    self.runtime
+                        .channel_close(reference)
+                        .expect("Wasm CHANNEL_CLOSE: Channel reference inconsistency!");
                     OakStatus::Ok as i32
                 } else if let Some(reference) = self.writers.get(&channel_id).cloned() {
                     self.writers.remove(&channel_id);
-                    self.runtime.channel_close(&reference).expect("Wasm CHANNEL_CLOSE: Channel reference inconsistency!");
+                    self.runtime
+                        .channel_close(reference)
+                        .expect("Wasm CHANNEL_CLOSE: Channel reference inconsistency!");
                     OakStatus::Ok as i32
                 } else {
                     OakStatus::ErrBadHandle as i32
@@ -757,8 +761,7 @@ pub fn new_instance(
     // the entrypoint could be anything. We do it before spawning the child thread so that we can
     // return an error code immediately if appropriate.
     {
-        let (abi, _) =
-            WasmInterface::new(config_name.clone(), runtime.clone(), initial_reader.clone());
+        let (abi, _) = WasmInterface::new(config_name.clone(), runtime.clone(), initial_reader);
         let instance = wasmi::ModuleInstance::new(
             &module,
             &wasmi::ImportsBuilder::new().with_resolver("oak", &abi),

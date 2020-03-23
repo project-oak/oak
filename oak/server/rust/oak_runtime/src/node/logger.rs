@@ -35,9 +35,13 @@ fn logger(pretty_name: &str, runtime: RuntimeRef, reader: ChannelRef) -> Result<
         // An error indicates the runtime is terminating. We ignore it here and keep trying to read
         // in case a Wasm node wants to emit remaining messages. We will return once the channel is
         // closed.
-        let _ = runtime.wait_on_channels(&[Some(&reader)]);
 
-        if let Some(message) = runtime.channel_read(&reader)? {
+        // TODO(#646): Temporarily don't wait for messages when terminating. Renable when channels
+        // track their channels and make sure all channels are closed.
+        // let _ = runtime.wait_on_channels(&[Some(&reader)]);
+        runtime.wait_on_channels(&[Some(reader)])?;
+
+        if let Some(message) = runtime.channel_read(reader)? {
             match LogMessage::decode(&*message.data) {
                 Ok(msg) => info!(
                     "{} LOG: {} {}:{}: {}",
