@@ -22,6 +22,10 @@ Each Oak Runtime instance lives in its own dedicated enclave and is isolated
 from both the host as well as other enclaves and Oak Runtime instances on the
 same machine.
 
+<!-- From: -->
+<!-- https://docs.google.com/drawings/d/1YJ8Rt-nunZ7NJ9diQswbwjEMAtGfzjGVY9ogwhA7hsI -->
+<img src="images/SystemDiagram.png" width="850">
+
 ## Nodes
 
 The unit of execution in Oak is an **Oak Node**. The code for an Oak Node is a
@@ -293,58 +297,6 @@ remote enclave is indeed running a genuine Oak Runtime and will therefore obey
 the policies set on the Oak Node; the Oak Runtime itself may then optionally
 prove additional details about the Oak Module and its properties, which may
 require reasoning about its internal structure.
-
-## Oak Runner
-
-The **Oak Runner** creates an Oak Application running within a platform
-provider.
-
-Note that the Oak Runner is not part of the TCB: the actual trusted attestation
-only happens between client and the Oak Application running in the enclave at
-execution time.
-
-The particular case where the TEE is provided by Intel SGX is shown in the
-following system diagram.
-
-<!-- From: -->
-<!-- https://docs.google.com/drawings/d/1YJ8Rt-nunZ7NJ9diQswbwjEMAtGfzjGVY9ogwhA7hsI -->
-<img src="images/SystemDiagram.png" width="850">
-
-### Workflow
-
-The ISV runs an Oak Application using the Oak Runner and publishes details about
-the gRPC endpoint for a client to connect to.
-
-Sample flow:
-
-- The ISV writes an Oak Module for the Oak Runtime using a high-level language,
-  compiles it to WebAssembly and requests the creation of an Oak Node using the
-  Oak Runner.
-- The Oak Runner creates a new enclave and initializes it with a fresh Oak Node,
-  and then seals the enclave. The Oak Node exposes a gRPC endpoint at a newly
-  allocated endpoint (host:port). The endpoint gets forwarded to the client as
-  part of the creation response.
-  - Note up to this point no sensitive data has been exchanged.
-  - The client still has no guarantees that the endpoint is in fact running an
-    Oak Runtime, as the Oak Runner is itself untrusted.
-- The client connects to the Oak Node endpoint, and exchanges keys using the
-  [Asylo assertion framework](https://asylo.dev/docs/reference/proto/identity/asylo.identity.v1.html).
-  - This allows the client to verify the integrity of the Oak Node and the fact
-    that it is indeed running an actual Oak Runtime, and optionally also
-    asserting further properties about the remote system (e.g. possession of
-    additional secret keys, etc.).
-  - If the client is satisfied with the attestation, it continues with the rest
-    of the exchange, otherwise it aborts immediately.
-- The client sends its (potentially sensitive) data to the Oak Node, alongside
-  one or more policies that it requires the Oak Node to enforce on the data.
-- The Oak Node receives the data and performs the desired (and pre-determined)
-  computation on top of them, and sends the results back to the client.
-
-The following sequence diagram shows a basic flow of requests between a client
-and an Oak Application.
-
-<!-- From (Google-internal): http://go/sequencediagram/view/5170404486283264 -->
-<img src="images/BasicFlow.png" width="850">
 
 ## Remote Attestation
 
