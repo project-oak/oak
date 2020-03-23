@@ -92,7 +92,7 @@ impl Storage {
     /// Set the value associated with the given `name` from the storage instance
     /// identified by `name`.
     pub fn write(&mut self, storage_name: &[u8], name: &[u8], value: &[u8]) -> grpc::Result<()> {
-        // TODO: Set policy for item.
+        // TODO(#449): Set policy for item.
         let write_request = StorageChannelWriteRequest {
             storage_name: storage_name.to_owned(),
             item: protobuf::SingularPtrField::some(StorageItem {
