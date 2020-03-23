@@ -81,7 +81,8 @@ impl Storage {
             ..Default::default()
         };
 
-        // TODO: Automatically generate boilerplate from the proto definition.
+        // TODO(#757): Automatically generate boilerplate from the proto
+        // definition.
         self.execute_operation::<StorageChannelReadRequest, StorageChannelReadResponse>(
             "/oak.StorageNode/Read",
             read_request,
@@ -103,7 +104,7 @@ impl Storage {
             ..Default::default()
         };
 
-        // TODO: Automatically generate boilerplate from the proto definition.
+        // TODO(#757): Automatically generate boilerplate from the proto definition.
         self.execute_operation::<StorageChannelWriteRequest, StorageChannelWriteResponse>(
             "/oak.StorageNode/Write",
             write_request,
@@ -123,7 +124,7 @@ impl Storage {
             ..Default::default()
         };
 
-        // TODO: Automatically generate boilerplate from the proto definition.
+        // TODO(#757): Automatically generate boilerplate from the proto definition.
         self.execute_operation::<StorageChannelDeleteRequest, StorageChannelDeleteResponse>(
             "/oak.StorageNode/Delete",
             delete_request,

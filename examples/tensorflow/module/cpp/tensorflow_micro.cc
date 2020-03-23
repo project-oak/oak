@@ -120,7 +120,7 @@ uint32_t channel_write(uint64_t handle, uint8_t* buff, size_t usize, uint8_t* ha
 WASM_IMPORT("oak") uint32_t channel_close(uint64_t handle);
 
 WASM_EXPORT void oak_main(uint64_t grpc_in_handle) {
-  // TODO: Add C++ helpers for dealing with handle notification space.
+  // TODO(#744): Add C++ helpers for dealing with handle notification space.
   uint8_t handle_space[9] = {
       static_cast<uint8_t>(grpc_in_handle & 0xff),
       static_cast<uint8_t>((grpc_in_handle >> 8) & 0xff),

@@ -74,7 +74,7 @@ struct ReadResult {
 // Each channel may be connected to a built-in component, or to a local or
 // (in future) remote Oak Node.
 //
-// TODO: Add a hard limit for message size.
+// TODO(#753): Add a hard limit for message size.
 // TODO: Add a unique identifier for each channel (independent of the potentially multiple handles
 // that may be pointing to it).
 class MessageChannel {

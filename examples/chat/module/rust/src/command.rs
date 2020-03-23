@@ -36,7 +36,7 @@ pub enum Command {
 // https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/garnet/public/lib/fidl/rust/fidl/src/encoding.rs.
 impl oak::io::Encodable for Command {
     fn encode(&self) -> Result<oak::io::Message, oak::OakError> {
-        // TODO: Propagate more details about the source error.
+        // TODO(#746): Propagate more details about the source error.
         let bytes = bincode::serialize(self).map_err(|_| oak::OakStatus::ErrInvalidArgs)?;
         // Serialize handles separately.
         let handles = match self {
@@ -50,7 +50,7 @@ impl oak::io::Encodable for Command {
 // TODO(#389): Automatically generate this code.
 impl oak::io::Decodable for Command {
     fn decode(message: &oak::io::Message) -> Result<Self, oak::OakError> {
-        // TODO: Propagate more details about the source error.
+        // TODO(#746): Propagate more details about the source error.
         let command: Command =
             bincode::deserialize(&message.bytes).map_err(|_| oak::OakStatus::ErrInvalidArgs)?;
         // Restore handles in the received message.

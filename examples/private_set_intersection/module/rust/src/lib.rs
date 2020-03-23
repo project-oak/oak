@@ -21,8 +21,8 @@
 //!
 //! The (common) intersection can then be retrieved by each client by a separate invocation.
 //!
-//! TODO: Limit number of clients / sets that may contribute to the intersection.
-//! TODO: Consider stopping accepting contributions after the first client retrieves the
+//! TODO(#747): Limit number of clients / sets that may contribute to the intersection.
+//! TODO(#747): Consider stopping accepting contributions after the first client retrieves the
 //! intersection.
 
 mod proto;

@@ -51,12 +51,12 @@ absl::Status FromGrpcStatus(grpc::Status grpc_status) {
   } while (false)
 
 std::string GetStorageId(const std::string& storage_name) {
-  // TODO: Generate name-based UUID.
+  // TODO(#745): Generate name-based UUID.
   return storage_name;
 }
 
 std::vector<uint8_t> GetStorageEncryptionKey(const std::string& /*storage_name*/) {
-  // TODO: Request encryption key from escrow service.
+  // TODO(#745): Request encryption key from escrow service.
   std::string encryption_key =
       absl::HexStringToBytes("c0dedeadc0dedeadc0dedeadc0dedeadc0dedeadc0dedeadc0dedeadc0dedead");
   return std::vector<uint8_t>(encryption_key.begin(), encryption_key.end());
@@ -96,7 +96,7 @@ StorageProcessor::StorageProcessor(const std::string& storage_address)
 
 const oak::StatusOr<std::string> StorageProcessor::EncryptItem(const std::string& plaintext,
                                                                ItemType item_type) {
-  // TODO: Replace "foo" with identifier for the encryption key.
+  // TODO(#745): Replace "foo" with identifier for the encryption key.
   std::vector<uint8_t> key = GetStorageEncryptionKey("foo");
   std::vector<uint8_t> additional_data;
   std::vector<uint8_t> ciphertext;
@@ -154,12 +154,12 @@ const oak::StatusOr<std::string> StorageProcessor::DecryptItem(const std::string
                                      " bytes, got ", input.size()));
   }
 
-  // TODO: Replace "foo" with identifier for the encryption key.
+  // TODO(#745): Replace "foo" with identifier for the encryption key.
   std::vector<uint8_t> key = GetStorageEncryptionKey("foo");
   std::vector<uint8_t> additional_data;
   std::vector<uint8_t> nonce(input.begin(), input.begin() + kAesGcmSivNonceSize);
   std::vector<uint8_t> ciphertext(input.begin() + kAesGcmSivNonceSize, input.end());
-  // TODO: use a cleansing RAII type for the plaintext.
+  // TODO(#748): use a cleansing RAII type for the plaintext.
   std::vector<uint8_t> plaintext;
   plaintext.resize(ciphertext.size());
 
