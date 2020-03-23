@@ -106,7 +106,11 @@ pub fn from_protobuf(
     Ok(config)
 }
 
-/// Configure a `Runtime` from the given protobuf `ApplicationConfiguration` and begin execution.
+/// Configure a [`Runtime`] from the given protobuf [`ApplicationConfiguration`] and begin
+/// execution. This returns a [`RuntimeRef`] reference to the created runtime, and a
+/// writeable [`Handle`] to send messages into the runtime. Creating a new
+/// channel and passing the write [`Handle`] into the runtime will enable messages to be
+/// read back out from the [`Runtime`].
 pub fn configure_and_run(
     app_config: ApplicationConfiguration,
 ) -> Result<(RuntimeRef, Handle), OakStatus> {
