@@ -55,11 +55,13 @@ pub struct Channel {
     pub waiting_threads: WaitingThreads,
 }
 
+/// A reference to a [`Channel`] with an implicit direction.
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct ChannelRef(u64);
 
 type ChannelId = u64;
 
+/// Ownership and mapping of [`Channel`]s to [`ChannelRef`]s.
 #[derive(Debug)]
 pub struct ChannelMapping {
     pub channels: RwLock<HashMap<ChannelId, Channel>>,
@@ -73,6 +75,8 @@ pub struct ChannelMapping {
 }
 
 impl Channel {
+    /// Create a new channel with the assumption there is currently one active reader and one active
+    /// writer references.
     pub fn new() -> Channel {
         Channel {
             messages: RwLock::new(Messages::new()),
@@ -96,32 +100,33 @@ impl Channel {
         waiting_threads.insert(thread_id, Arc::downgrade(thread));
     }
 
-    /// Decrement the `Channel` writer counter.
+    /// Decrement the [`Channel`] writer counter.
     pub fn remove_writer(&self) {
         if self.writers.fetch_sub(1, SeqCst) == 0 {
             panic!("remove_reader: Writer count was already 0, something is very wrong!")
         }
     }
 
-    /// Decrement the `Channel` reader counter.
+    /// Decrement the [`Channel`] reader counter.
     pub fn remove_reader(&self) {
         if self.readers.fetch_sub(1, SeqCst) == 0 {
             panic!("remove_reader: Reader count was already 0, something is very wrong!")
         }
     }
 
-    /// Increment the `Channel` writer counter.
+    /// Increment the [`Channel`] writer counter.
     pub fn add_writer(&self) -> u64 {
         self.writers.fetch_add(1, SeqCst)
     }
 
-    /// Increment the `Channel` reader counter.
+    /// Increment the [`Channel`] reader counter.
     pub fn add_reader(&self) -> u64 {
         self.readers.fetch_add(1, SeqCst)
     }
 }
 
 impl ChannelMapping {
+    /// Create a new empty [`ChannelMapping`].
     pub fn new() -> ChannelMapping {
         ChannelMapping {
             channels: RwLock::new(HashMap::new()),
@@ -135,17 +140,20 @@ impl ChannelMapping {
         }
     }
 
-    fn new_channel(&self) -> ChannelId {
-        let id = self.next_channel.fetch_add(1, SeqCst);
+    /// Create a new [`Channel`] and return a `(writer reference, reader reference)` pair.
+    pub fn new_channel(&self) -> (ChannelRef, ChannelRef) {
+        let channel_id = self.next_channel.fetch_add(1, SeqCst);
         let mut channels = self.channels.write().unwrap();
-        channels.insert(id, Channel::new());
-        id
+        channels.insert(channel_id, Channel::new());
+        (self.new_writer(channel_id), self.new_reader(channel_id))
     }
 
+    /// Get a new free reference that is not used by any readers or writers.
     fn new_reference(&self) -> ChannelRef {
         ChannelRef(self.next_reference.fetch_add(1, SeqCst))
     }
 
+    /// Create a new writer reference.
     fn new_writer(&self, channel: ChannelId) -> ChannelRef {
         let reference = self.new_reference();
         let mut writers = self.writers.write().unwrap();
@@ -153,6 +161,7 @@ impl ChannelMapping {
         reference
     }
 
+    /// Create a new reader reference.
     fn new_reader(&self, channel: ChannelId) -> ChannelRef {
         let reference = self.new_reference();
         let mut readers = self.readers.write().unwrap();
@@ -160,11 +169,7 @@ impl ChannelMapping {
         reference
     }
 
-    pub fn make_channel(&self) -> (ChannelRef, ChannelRef) {
-        let channel_id = self.new_channel();
-        (self.new_writer(channel_id), self.new_reader(channel_id))
-    }
-
+    /// Attempt to retrieve the [`ChannelId`] associated with a reader [`ChannelRef`].
     pub fn get_reader_channel(&self, reference: ChannelRef) -> Result<ChannelId, OakStatus> {
         let readers = self.readers.read().unwrap();
         readers
@@ -172,6 +177,7 @@ impl ChannelMapping {
             .map_or(Err(OakStatus::ErrBadHandle), |id| Ok(*id))
     }
 
+    /// Attempt to retrieve the [`ChannelId`] associated with a writer [`ChannelRef`].
     pub fn get_writer_channel(&self, reference: ChannelRef) -> Result<ChannelId, OakStatus> {
         let writers = self.writers.read().unwrap();
         writers
@@ -179,6 +185,7 @@ impl ChannelMapping {
             .map_or(Err(OakStatus::ErrBadHandle), |id| Ok(*id))
     }
 
+    /// Perform an operation on a [`Channel`] associated with some [`ChannelId`].
     pub fn with_channel<U, F: FnOnce(&Channel) -> Result<U, OakStatus>>(
         &self,
         channel_id: ChannelId,
@@ -189,6 +196,8 @@ impl ChannelMapping {
         f(channel)
     }
 
+    /// Deallocate a [`ChannelRef`] reference. The reference will no longer be usable in
+    /// operations, and the underlying [`Channel`] may become orphaned.
     pub fn remove_reference(&self, reference: ChannelRef) -> Result<(), OakStatus> {
         if let Ok(channel_id) = self.get_writer_channel(reference) {
             self.with_channel(channel_id, |channel| {
@@ -213,6 +222,9 @@ impl ChannelMapping {
         Ok(())
     }
 
+    /// Duplicate a [`ChannelRef`] reference. This new reference and when it is closed will be
+    /// tracked separately from the first [`ChannelRef`]. For instance this is used by the
+    /// [`oak_runtime::Runtime`] to encode [`Channel`]s in messages.
     pub fn duplicate_reference(&self, reference: ChannelRef) -> Result<ChannelRef, OakStatus> {
         if let Ok(channel_id) = self.get_writer_channel(reference) {
             self.with_channel(channel_id, |channel| Ok(channel.add_writer()))?;

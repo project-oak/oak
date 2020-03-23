@@ -123,7 +123,7 @@ impl Runtime {
 
     /// Creates a new channel.
     pub fn new_channel(&self) -> (ChannelRef, ChannelRef) {
-        self.channels.make_channel()
+        self.channels.new_channel()
     }
 
     /// Reads the statuses from a slice of `Option<&ChannelReader>`s.
@@ -350,16 +350,19 @@ impl Runtime {
             })
     }
 
+    /// Check if a [`ChannelRef`] is implicitly a reader reference. This is useful when reading
+    /// [`Messages`] which contain [`ChannelRef`]'s.
     pub fn channel_is_reader(&self, reference: ChannelRef) -> bool {
         let readers = self.channels.readers.read().unwrap();
         readers.contains_key(&reference)
     }
 
+    /// Close a [`ChannelRef`], potentially orphaning the underlying [`channel::Channel`].
     pub fn channel_close(&self, reference: ChannelRef) -> Result<(), OakStatus> {
         self.channels.remove_reference(reference)
     }
 
-    /// Create a fresh NodeReference.
+    /// Create a fresh [`NodeRef`].
     fn new_node_reference(&self) -> NodeRef {
         NodeRef(self.next_node_reference.fetch_add(1, SeqCst))
     }
