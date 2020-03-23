@@ -22,6 +22,8 @@ use serde::{Deserialize, Serialize};
 pub use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
 
 mod error;
+#[cfg(target_os = "macos")]
+mod stubs;
 pub use error::OakError;
 
 pub mod grpc;
