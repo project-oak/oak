@@ -45,7 +45,7 @@ impl Node<Command> for Room {
                 self.messages.push(message.clone());
                 info!("fan out message to {} clients", self.clients.len());
                 for writer in &mut self.clients {
-                    // TODO: Improve error handling.
+                    // TODO(#746): Improve error handling.
                     writer
                         .write(&message, oak::grpc::WriteMode::KeepOpen)
                         .expect("could not write to channel");

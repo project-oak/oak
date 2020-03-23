@@ -117,7 +117,7 @@ void SendLoop(Chat::Stub* stub, const RoomId& room_id, const std::string& user_h
 }
 
 void Chat(Chat::Stub* stub, const RoomId& room_id, const std::string& user_handle) {
-  // TODO: make both loops notice immediately when done is true.
+  // TODO(#746): make both loops notice immediately when done is true.
   auto done = std::make_shared<Safe<bool>>(false);
 
   // Start a separate thread for incoming messages.
