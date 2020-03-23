@@ -66,6 +66,13 @@ steps:
     args: ['./scripts/run_tests']
 
   - name: 'gcr.io/oak-ci/oak:latest'
+    id: build_examples
+    waitFor: ['build_server_dev']
+    timeout: 60m
+    entrypoint: 'bash'
+    args: ['./scripts/build_examples']
+
+  - name: 'gcr.io/oak-ci/oak:latest'
     id: run_examples
     timeout: 60m
     entrypoint: 'bash'
