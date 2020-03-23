@@ -40,9 +40,6 @@ const std::string kBearerTokenHmacData{"oak-grpc-bearer-token-1"};
 // It allows invoking the Oak Application as specified by the Oak Application policies.
 //
 // TODO(#752): Verify remote attestations.
-// TODO: Make this class take ownership of the gRPC channel (e.g. via a unique_ptr), and force
-// clients to instantiate gRPC stubs via it, or parametrize this class with the type of the stub to
-// instantiate.
 class ApplicationClient {
  public:
   // Creates gRPC channel credentials by using the provided (secret) token to authenticate, and the

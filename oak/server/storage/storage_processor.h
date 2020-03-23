@@ -55,7 +55,6 @@ class StorageProcessor {
   // Item values are encrypted with item_value_cryptor_, using a random nonce.
   // Returns the concatenation of the kAesGcmSivNonceSize-byte nonce followed by
   // the encrypted item.
-  // TODO: Convert this to a serialized protocol message.
   const oak::StatusOr<std::string> EncryptItem(const std::string& item, ItemType item_type);
 
   // Decrypts `input` which must be a kAesGcmSivNonceSize-byte nonce followed by
