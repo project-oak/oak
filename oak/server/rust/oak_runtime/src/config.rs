@@ -28,7 +28,7 @@ use oak_abi::OakStatus;
 use crate::node;
 use crate::node::load_wasm;
 use crate::runtime;
-use crate::runtime::{ChannelRef, Runtime, RuntimeRef};
+use crate::runtime::{Handle, Runtime, RuntimeRef};
 
 /// Create an application configuration.
 ///
@@ -109,7 +109,7 @@ pub fn from_protobuf(
 /// Configure a `Runtime` from the given protobuf `ApplicationConfiguration` and begin execution.
 pub fn configure_and_run(
     app_config: ApplicationConfiguration,
-) -> Result<(RuntimeRef, ChannelRef), OakStatus> {
+) -> Result<(RuntimeRef, Handle), OakStatus> {
     let config = from_protobuf(app_config)?;
     Runtime::configure_and_run(config)
 }

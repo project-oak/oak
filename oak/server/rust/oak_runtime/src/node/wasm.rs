@@ -30,7 +30,7 @@ use wasmi::ValueType;
 
 use oak_abi::{ChannelReadStatus, OakStatus};
 
-use crate::runtime::{ChannelRef, ReadStatus};
+use crate::runtime::{Handle, HandleDirection, ReadStatus};
 use crate::{Message, RuntimeRef};
 
 /// These number mappings are not exposed to the Wasm client, and are only used by `wasmi` to map
@@ -62,7 +62,7 @@ const ABI_USIZE: ValueType = ValueType::I32;
 
 /// `WasmInterface` holds runtime values for a particular execution instance of Wasm. This includes
 /// the host ABI function mapping between the runtime and a Wasm instance, and the handle mapping
-/// between the instance and the runtime `ChannelRef`s.
+/// between the instance and the runtime `Handle`s.
 ///
 /// Any handle from `readers` or `writers` is unique to all handles in both `readers` and
 /// `writers`.
@@ -74,9 +74,9 @@ struct WasmInterface {
     runtime: RuntimeRef,
 
     /// Reader channel mappings to unique u64 handles
-    readers: HashMap<AbiHandle, ChannelRef>,
+    readers: HashMap<AbiHandle, Handle>,
     /// Writer channel mappings to unique u64 handles
-    writers: HashMap<AbiHandle, ChannelRef>,
+    writers: HashMap<AbiHandle, Handle>,
 
     /// A reference to the memory used by the `wasmi` interpreter. Host ABI functions using Wasm
     /// relative addresses will perform reads/writes against this reference.
@@ -86,7 +86,7 @@ struct WasmInterface {
 impl WasmInterface {
     /// Generate a randomized handle. Handles are random to prevent accidental dependency on
     /// particular values or sequence. See https://github.com/project-oak/oak/pull/347
-    fn allocate_new_handle(&mut self, channel: ChannelRef, is_reader: bool) -> AbiHandle {
+    fn allocate_new_handle(&mut self, channel: Handle, direction: HandleDirection) -> AbiHandle {
         loop {
             let handle = rand::thread_rng().next_u64();
 
@@ -94,7 +94,7 @@ impl WasmInterface {
                 continue;
             }
 
-            if is_reader {
+            if direction == HandleDirection::Read {
                 self.readers.insert(handle, channel);
             } else {
                 self.writers.insert(handle, channel);
@@ -126,7 +126,7 @@ impl WasmInterface {
     pub fn new(
         pretty_name: String,
         runtime: RuntimeRef,
-        initial_reader: ChannelRef,
+        initial_reader: Handle,
     ) -> (WasmInterface, AbiHandle) {
         let mut interface = WasmInterface {
             pretty_name,
@@ -135,7 +135,7 @@ impl WasmInterface {
             writers: HashMap::new(),
             memory: None,
         };
-        let handle = interface.allocate_new_handle(initial_reader, true);
+        let handle = interface.allocate_new_handle(initial_reader, HandleDirection::Read);
         (interface, handle)
     }
 
@@ -225,8 +225,8 @@ impl WasmInterface {
         self.validate_ptr(write_addr, 8)?;
         self.validate_ptr(read_addr, 8)?;
 
-        let write_handle = self.allocate_new_handle(writer, false);
-        let read_handle = self.allocate_new_handle(reader, true);
+        let write_handle = self.allocate_new_handle(writer, HandleDirection::Write);
+        let read_handle = self.allocate_new_handle(reader, HandleDirection::Read);
 
         self.get_memory()
             .set_value(write_addr, write_handle as i64)
@@ -291,7 +291,7 @@ impl WasmInterface {
             .map(|bytes| LittleEndian::read_u64(bytes))
             .collect();
 
-        let channels: Result<Vec<ChannelRef>, _> = handles
+        let channels: Result<Vec<Handle>, _> = handles
             .iter()
             .map(|handle| match self.writers.get(handle) {
                 Some(channel) => Ok(*channel),
@@ -388,7 +388,7 @@ impl WasmInterface {
 
                 for (i, chan) in msg.channels.iter().enumerate() {
                     let handle =
-                        self.allocate_new_handle(*chan, self.runtime.channel_is_reader(*chan));
+                        self.allocate_new_handle(*chan, self.runtime.channel_get_direction(*chan)?);
                     LittleEndian::write_u64(&mut raw_writer[i * 8..(i + 1) * 8], handle);
                 }
 
@@ -751,7 +751,7 @@ pub fn new_instance(
     runtime: RuntimeRef,
     module: Arc<wasmi::Module>,
     entrypoint: String,
-    initial_reader: ChannelRef,
+    initial_reader: Handle,
 ) -> Result<JoinHandle<()>, OakStatus> {
     let config_name = config_name.to_owned();
 

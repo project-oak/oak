@@ -30,7 +30,7 @@ use crate::message::Message;
 use crate::node;
 
 mod channel;
-pub use channel::ChannelRef;
+pub use channel::{Handle, HandleDirection};
 
 #[derive(Debug)]
 struct Node {
@@ -69,8 +69,11 @@ pub struct Runtime {
 impl Runtime {
     /// Configure and run the protobuf specified Application [`Configuration`]. After creating a
     /// [`Runtime`], calling [`Runtime::stop`] will send termination signals to nodes and wait for
-    /// them to terminate.
-    pub fn configure_and_run(config: Configuration) -> Result<(RuntimeRef, ChannelRef), OakStatus> {
+    /// them to terminate. This returns a [`RuntimeRef`] reference to the created runtime, and a
+    /// writeable [`Handle`] to send messages into the runtime. To receive messages, creating a new
+    /// channel and passing the write [`Handle`] into the runtime will enable messages to be
+    /// read back out.
+    pub fn configure_and_run(config: Configuration) -> Result<(RuntimeRef, Handle), OakStatus> {
         let runtime = Runtime {
             configurations: config.nodes,
             terminating: AtomicBool::new(false),
@@ -122,22 +125,20 @@ impl Runtime {
     }
 
     /// Creates a new channel.
-    pub fn new_channel(&self) -> (ChannelRef, ChannelRef) {
+    pub fn new_channel(&self) -> (Handle, Handle) {
         self.channels.new_channel()
     }
 
     /// Reads the statuses from a slice of `Option<&ChannelReader>`s.
     /// [`ChannelReadStatus::InvalidChannel`] is set for `None` readers in the slice. For `Some(_)`
     /// readers, the result is set from a call to `has_message`.
-    fn readers_statuses(&self, readers: &[Option<ChannelRef>]) -> Vec<ChannelReadStatus> {
+    fn readers_statuses(&self, readers: &[Option<Handle>]) -> Vec<ChannelReadStatus> {
         readers
             .iter()
             .map(|chan| {
                 chan.map_or(ChannelReadStatus::InvalidChannel, |chan| {
-                    match self.channel_status(chan) {
-                        Ok(s) => s,
-                        Err(_) => ChannelReadStatus::InvalidChannel,
-                    }
+                    self.channel_status(chan)
+                        .unwrap_or(ChannelReadStatus::InvalidChannel)
                 })
             })
             .collect()
@@ -158,7 +159,7 @@ impl Runtime {
     /// available.
     pub fn wait_on_channels(
         &self,
-        readers: &[Option<ChannelRef>],
+        readers: &[Option<Handle>],
     ) -> Result<Vec<ChannelReadStatus>, OakStatus> {
         let thread = thread::current();
         while !self.is_terminating() {
@@ -211,7 +212,7 @@ impl Runtime {
 
     /// Write a message to a channel. Fails with [`OakStatus::ErrChannelClosed`] if the underlying
     /// channel has been orphaned.
-    pub fn channel_write(&self, reference: ChannelRef, msg: Message) -> Result<(), OakStatus> {
+    pub fn channel_write(&self, reference: Handle, msg: Message) -> Result<(), OakStatus> {
         self.channels.with_channel(self.channels.get_writer_channel(reference)?, |channel|{
 
         if channel.is_orphan() {
@@ -271,7 +272,7 @@ impl Runtime {
 
     /// Thread safe. Read a message from a channel. Fails with [`OakStatus::ErrChannelClosed`] if
     /// the underlying channel is empty and has been orphaned.
-    pub fn channel_read(&self, reference: ChannelRef) -> Result<Option<Message>, OakStatus> {
+    pub fn channel_read(&self, reference: Handle) -> Result<Option<Message>, OakStatus> {
         self.channels
             .with_channel(self.channels.get_reader_channel(reference)?, |channel| {
                 let mut messages = channel.messages.write().unwrap();
@@ -292,7 +293,7 @@ impl Runtime {
     /// - [`ChannelReadStatus::ReadReady`] if there is at least one message in the channel.
     /// - [`ChannelReadStatus::Orphaned`] if there are no messages and there are no writers
     /// - [`ChannelReadStatus::NotReady`] if there are no messages but there are some writers
-    pub fn channel_status(&self, reference: ChannelRef) -> Result<ChannelReadStatus, OakStatus> {
+    pub fn channel_status(&self, reference: Handle) -> Result<ChannelReadStatus, OakStatus> {
         self.channels
             .with_channel(self.channels.get_reader_channel(reference)?, |channel| {
                 let messages = channel.messages.read().unwrap();
@@ -315,7 +316,7 @@ impl Runtime {
     /// have read the original message.
     pub fn channel_try_read_message(
         &self,
-        reference: ChannelRef,
+        reference: Handle,
         bytes_capacity: usize,
         handles_capacity: usize,
     ) -> Result<Option<ReadStatus>, OakStatus> {
@@ -350,15 +351,26 @@ impl Runtime {
             })
     }
 
-    /// Check if a [`ChannelRef`] is implicitly a reader reference. This is useful when reading
-    /// [`Messages`] which contain [`ChannelRef`]'s.
-    pub fn channel_is_reader(&self, reference: ChannelRef) -> bool {
-        let readers = self.channels.readers.read().unwrap();
-        readers.contains_key(&reference)
+    /// Return the direction of a [`Handle`]. This is useful when reading
+    /// [`Messages`] which contain [`Handle`]'s.
+    pub fn channel_get_direction(&self, reference: Handle) -> Result<HandleDirection, OakStatus> {
+        {
+            let readers = self.channels.readers.read().unwrap();
+            if readers.contains_key(&reference) {
+                return Ok(HandleDirection::Read);
+            }
+        }
+        {
+            let writers = self.channels.writers.read().unwrap();
+            if writers.contains_key(&reference) {
+                return Ok(HandleDirection::Write);
+            }
+        }
+        return Err(OakStatus::ErrBadHandle);
     }
 
-    /// Close a [`ChannelRef`], potentially orphaning the underlying [`channel::Channel`].
-    pub fn channel_close(&self, reference: ChannelRef) -> Result<(), OakStatus> {
+    /// Close a [`Handle`], potentially orphaning the underlying [`channel::Channel`].
+    pub fn channel_close(&self, reference: Handle) -> Result<(), OakStatus> {
         self.channels.remove_reference(reference)
     }
 
@@ -389,7 +401,7 @@ impl RuntimeRef {
         module_name: &str,
         entrypoint: &str,
         label: &oak_abi::label::Label,
-        reader: ChannelRef,
+        reader: Handle,
     ) -> Result<(), OakStatus> {
         if self.is_terminating() {
             return Err(OakStatus::ErrTerminated);

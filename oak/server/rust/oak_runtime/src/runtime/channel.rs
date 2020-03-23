@@ -14,11 +14,13 @@
 // limitations under the License.
 //
 
-use core::sync::atomic::Ordering::SeqCst;
 use std::collections::{HashMap, VecDeque};
 use std::sync::atomic::AtomicU64;
+use std::sync::atomic::Ordering::SeqCst;
 use std::sync::{Arc, Mutex, RwLock, Weak};
 use std::thread::{Thread, ThreadId};
+
+use rand::RngCore;
 
 use oak_abi::OakStatus;
 
@@ -55,23 +57,32 @@ pub struct Channel {
     pub waiting_threads: WaitingThreads,
 }
 
-/// A reference to a [`Channel`] with an implicit direction.
+/// A reference to a [`Channel`]. Each [`Handle`] has an implicit direction such that it is only
+/// possible to read or write to a [`Handle`] (exclusive or).
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
-pub struct ChannelRef(u64);
+pub struct Handle(oak_abi::Handle);
 
+/// The direction of a [`Handle`] can be discovered by querying the associated
+/// [`oak_runtime::Runtime`] [`oak_runtime::Runtime::channel_get_direction`].
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
+pub enum HandleDirection {
+    Read,
+    Write,
+}
+
+/// An internal identifier to track a [`Channel`]. This is implementation specific and should not
+/// be visible outside the internals of [`Runtime`].
 type ChannelId = u64;
 
-/// Ownership and mapping of [`Channel`]s to [`ChannelRef`]s.
+/// Ownership and mapping of [`Channel`]s to [`Handle`]s.
 #[derive(Debug)]
 pub struct ChannelMapping {
     pub channels: RwLock<HashMap<ChannelId, Channel>>,
 
-    pub next_channel: AtomicU64,
+    pub next_channel_id: AtomicU64,
 
-    pub readers: RwLock<HashMap<ChannelRef, ChannelId>>,
-    pub writers: RwLock<HashMap<ChannelRef, ChannelId>>,
-
-    pub next_reference: AtomicU64,
+    pub readers: RwLock<HashMap<Handle, ChannelId>>,
+    pub writers: RwLock<HashMap<Handle, ChannelId>>,
 }
 
 impl Channel {
@@ -131,30 +142,39 @@ impl ChannelMapping {
         ChannelMapping {
             channels: RwLock::new(HashMap::new()),
 
-            next_channel: AtomicU64::new(0),
+            next_channel_id: AtomicU64::new(0),
 
             readers: RwLock::new(HashMap::new()),
             writers: RwLock::new(HashMap::new()),
-
-            next_reference: AtomicU64::new(0),
         }
     }
 
-    /// Create a new [`Channel`] and return a `(writer reference, reader reference)` pair.
-    pub fn new_channel(&self) -> (ChannelRef, ChannelRef) {
-        let channel_id = self.next_channel.fetch_add(1, SeqCst);
+    /// Create a new [`Channel`] and return a `(writer handle, reader handle)` pair.
+    pub fn new_channel(&self) -> (Handle, Handle) {
+        let channel_id = self.next_channel_id.fetch_add(1, SeqCst);
         let mut channels = self.channels.write().unwrap();
         channels.insert(channel_id, Channel::new());
         (self.new_writer(channel_id), self.new_reader(channel_id))
     }
 
-    /// Get a new free reference that is not used by any readers or writers.
-    fn new_reference(&self) -> ChannelRef {
-        ChannelRef(self.next_reference.fetch_add(1, SeqCst))
+    /// Get a new free random [`Handle`] that is not used by any readers or writers.
+    fn new_reference(&self) -> Handle {
+        loop {
+            let handle = Handle(rand::thread_rng().next_u64());
+
+            let exists_reader = self.readers.read().unwrap().get(&handle).is_some();
+            let exists_writer = self.writers.read().unwrap().get(&handle).is_some();
+
+            if exists_reader || exists_writer {
+                continue;
+            }
+
+            return handle;
+        }
     }
 
     /// Create a new writer reference.
-    fn new_writer(&self, channel: ChannelId) -> ChannelRef {
+    fn new_writer(&self, channel: ChannelId) -> Handle {
         let reference = self.new_reference();
         let mut writers = self.writers.write().unwrap();
         writers.insert(reference, channel);
@@ -162,23 +182,23 @@ impl ChannelMapping {
     }
 
     /// Create a new reader reference.
-    fn new_reader(&self, channel: ChannelId) -> ChannelRef {
+    fn new_reader(&self, channel: ChannelId) -> Handle {
         let reference = self.new_reference();
         let mut readers = self.readers.write().unwrap();
         readers.insert(reference, channel);
         reference
     }
 
-    /// Attempt to retrieve the [`ChannelId`] associated with a reader [`ChannelRef`].
-    pub fn get_reader_channel(&self, reference: ChannelRef) -> Result<ChannelId, OakStatus> {
+    /// Attempt to retrieve the [`ChannelId`] associated with a reader [`Handle`].
+    pub fn get_reader_channel(&self, reference: Handle) -> Result<ChannelId, OakStatus> {
         let readers = self.readers.read().unwrap();
         readers
             .get(&reference)
             .map_or(Err(OakStatus::ErrBadHandle), |id| Ok(*id))
     }
 
-    /// Attempt to retrieve the [`ChannelId`] associated with a writer [`ChannelRef`].
-    pub fn get_writer_channel(&self, reference: ChannelRef) -> Result<ChannelId, OakStatus> {
+    /// Attempt to retrieve the [`ChannelId`] associated with a writer [`Handle`].
+    pub fn get_writer_channel(&self, reference: Handle) -> Result<ChannelId, OakStatus> {
         let writers = self.writers.read().unwrap();
         writers
             .get(&reference)
@@ -196,9 +216,9 @@ impl ChannelMapping {
         f(channel)
     }
 
-    /// Deallocate a [`ChannelRef`] reference. The reference will no longer be usable in
+    /// Deallocate a [`Handle`] reference. The reference will no longer be usable in
     /// operations, and the underlying [`Channel`] may become orphaned.
-    pub fn remove_reference(&self, reference: ChannelRef) -> Result<(), OakStatus> {
+    pub fn remove_reference(&self, reference: Handle) -> Result<(), OakStatus> {
         if let Ok(channel_id) = self.get_writer_channel(reference) {
             self.with_channel(channel_id, |channel| {
                 channel.remove_writer();
@@ -222,10 +242,10 @@ impl ChannelMapping {
         Ok(())
     }
 
-    /// Duplicate a [`ChannelRef`] reference. This new reference and when it is closed will be
-    /// tracked separately from the first [`ChannelRef`]. For instance this is used by the
+    /// Duplicate a [`Handle`] reference. This new reference and when it is closed will be
+    /// tracked separately from the first [`Handle`]. For instance this is used by the
     /// [`oak_runtime::Runtime`] to encode [`Channel`]s in messages.
-    pub fn duplicate_reference(&self, reference: ChannelRef) -> Result<ChannelRef, OakStatus> {
+    pub fn duplicate_reference(&self, reference: Handle) -> Result<Handle, OakStatus> {
         if let Ok(channel_id) = self.get_writer_channel(reference) {
             self.with_channel(channel_id, |channel| Ok(channel.add_writer()))?;
 
