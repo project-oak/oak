@@ -3,9 +3,9 @@
 ## Prerequisites
 
 We use Docker to install the base dependencies that need to exist at the system
-level, e.g. the [Intel SGX SDK](https://software.intel.com/en-us/sgx/sdk) and
-the [Rust compiler](https://www.rust-lang.org/tools/install); these steps are
-detailed in [`Dockerfile`](/Dockerfile). See
+level, e.g. the [Rust compiler](https://www.rust-lang.org/tools/install) and the
+[Bazel build system](https://bazel.build); these steps are detailed in
+[`Dockerfile`](/Dockerfile). See
 https://docs.docker.com/engine/reference/builder/ for more information.
 
 Inside Docker, we use Bazel to version, install and build any non-Rust
@@ -17,13 +17,12 @@ To set up your development environment, you need the following applications. For
 the accurate versions required for a successful build please consult the current
 [`Dockerfile`](/Dockerfile).
 
-- Docker:
-  - Follow install instructions in https://docs.docker.com/install
-- Bazel:
-  - Follow install instructions in
-    https://docs.bazel.build/versions/master/install.html
-- Rust:
-  - Install instructions from https://rustup.rs/:
+- **Docker**: follow
+  [Docker install instructions](https://docs.docker.com/install)
+- **Bazel**: follow
+  [Bazel install instructions](https://docs.bazel.build/versions/master/install.html)
+- **Rust**:
+  - Follow install instructions from https://rustup.rs/:
     - `curl https://sh.rustup.rs -sSf > /tmp/rustup`
     - `less /tmp/rustup` (inspect downloaded script before running it)
     - `sh /tmp/rustup` (follow on-screen instructions -- option 1 is fine to
@@ -33,15 +32,11 @@ the accurate versions required for a successful build please consult the current
   - Add WebAssembly target to be able to compile to WebAssembly (see
     [Rust Platform Support](https://forge.rust-lang.org/release/platform-support.html)):
     - `rustup target add wasm32-unknown-unknown`
-- Protocol Buffers:
-  - Install protobuf-compiler: `apt install protobuf-compiler`
+- **Protocol Buffers**: install the protobuf compiler with:
+  `apt install protobuf-compiler`
 
 [Step by step instructions for installing Oak on Ubuntu 18.04](/INSTALL.md)
 shows how to install the prerequisites starting off with a clean Ubuntu install.
-
-Note the server runs in the Docker container but the examples run on the host
-machine. This means you might be missing other dependencies like the `protoc`
-protocol compiler.
 
 ## Run Example Application
 
@@ -52,7 +47,8 @@ Oak application client:
 ./scripts/docker_run ./scripts/run_example -e hello_world
 ```
 
-This command consists of the following steps performed inside Docker:
+This command consists of steps described in the following subsections, all
+performed inside Docker.
 
 ### Build Application
 
@@ -81,10 +77,10 @@ The Oak Server can also be built in debug mode, as well as using any of the
 sanitizers Clang supports (e.g.
 [asan](https://clang.llvm.org/docs/AddressSanitizer.html),
 [tsan](https://clang.llvm.org/docs/ThreadSanitizer.html) etc.). Details about
-available sanitizers can be found in the [`.bazelrc`](/.bazelrc) file.
+available build variants can be found in the [`.bazelrc`](/.bazelrc) file.
 
-The following command builds and run Oak Local Server with tsan enabled. Replace
-`tsan` with other configurations for different sanitisers:
+For example, the following command builds and run Oak Local Server with TSAN
+enabled. Replace `tsan` with other configurations for different sanitisers:
 
 ```bash
 ./scripts/run_server -s tsan -e hello_world
@@ -93,8 +89,7 @@ The following command builds and run Oak Local Server with tsan enabled. Replace
 ### Run Client
 
 The following command (run in a separate terminal) compiles the code for the
-client of an example Oak Application, and runs it locally. It works with both
-Servers (Docker and Dev):
+client of an example Oak Application, and runs it locally.
 
 ```bash
 ./scripts/run_example -s none -e hello_world

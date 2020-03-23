@@ -81,8 +81,10 @@ trait, to allow use of the
 
 The [`oak::grpc`](https://project-oak.github.io/oak/doc/oak/grpc/index.html)
 module holds functionality that is helpful for interacting with the outside
-world over gRPC, via the implicit [gRPC pseudo-Node](concepts.md#pseudo-nodes)
-that has a channel to the Application's initial Node.
+world over gRPC, either via the implicit
+[gRPC server pseudo-Node](concepts.md#pseudo-nodes) that has a channel to the
+Application's initial Node, or via an explicitly created gRPC client
+pseudo-Node.
 
 An Oak Node that acts as a gRPC server typically implements the
 [`oak::grpc::ServerNode`](https://project-oak.github.io/oak/doc/oak/grpc/trait.ServerNode.html)
