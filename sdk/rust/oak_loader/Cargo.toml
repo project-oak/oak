@@ -1,0 +1,18 @@
+[package]
+name = "oak_loader"
+version = "0.1.0"
+authors = ["Ivan Petrov <ivanpetrov@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+bytes = "*"
+clap = "*"
+env_logger = "*"
+log = "*"
+oak_runtime = "=0.1.0"
+prost = "*"
+
+[dev-dependencies]
+
+[build-dependencies]
