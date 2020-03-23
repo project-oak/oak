@@ -36,7 +36,7 @@ std::string SerializePolicy(const oak::policy::Label& policy_proto) {
 
 oak::policy::Label DeserializePolicy(const std::string& policy_bytes) {
   oak::policy::Label policy_proto;
-  // TODO: Check errors.
+  // TODO(#488): Check errors.
   policy_proto.ParseFromString(policy_bytes);
   return policy_proto;
 }

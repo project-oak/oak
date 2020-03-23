@@ -19,8 +19,9 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize)]
 pub enum Command {
     Join(oak::WriteHandle),
-    // TODO: Embed native Message struct here when we support proto serialization via Serde.
-    // See https://github.com/stepancheg/rust-protobuf#serde_derive-support
+    // TODO(#426): Embed native Message struct here when we support proto
+    // serialization via Serde.  See
+    // https://github.com/stepancheg/rust-protobuf#serde_derive-support
     SendMessage(Vec<u8>),
 }
 

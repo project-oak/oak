@@ -45,7 +45,8 @@ using ChannelHalf = absl::variant<std::unique_ptr<MessageChannelReadHalf>,
 struct Message {
   std::vector<char> data;
   std::vector<std::unique_ptr<ChannelHalf>> channels;
-  // TODO: Consider using a native struct here instead of the proto representation.
+  // TODO(#603): Consider using a native struct here instead of the proto
+  // representation.
   oak::policy::Label label;
 };
 

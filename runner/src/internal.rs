@@ -184,12 +184,13 @@ pub fn cmd(executable: &str, args: &[&str]) -> Box<dyn Runnable> {
 
 impl Runnable for Cmd {
     /// Run the provided command, printing a status message with the current prefix.
-    /// TODO: Add ability to run commands in parallel.
-    /// TODO: Return one of three results: pass, fail, or internal error (e.g. if the binary to run
-    /// was not found).
+    /// TODO(#396): Add ability to run commands in parallel.
+    /// TODO(#396): Return one of three results: pass, fail, or internal error (e.g. if the binary
+    /// to run was not found).
     fn run(&self, opt: &Opt) -> SingleStatusResult {
-        // TODO: Measure and print elapsed time.
-        // TODO: Add dry-run mode that only prints the commands but does not actually run them.
+        // TODO(#396): Measure and print elapsed time.
+        // TODO(#396): Add dry-run mode that only prints the commands but does not actually run
+        // them.
         std::io::stderr().flush().expect("could not flush stderr");
         let mut cmd = Command::new(&self.executable);
         cmd.args(&self.args);

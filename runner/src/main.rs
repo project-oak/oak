@@ -32,7 +32,7 @@ use internal::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let opt = Opt::from_args();
-    // TODO: Add support for running individual commands via command line flags.
+    // TODO(#396): Add support for running individual commands via command line flags.
     let root = Step::Multiple {
         name: "root".to_string(),
         steps: vec![
@@ -258,8 +258,8 @@ fn run_bazel_test() -> Step {
         name: "bazel test".to_string(),
         runnable: cmd(
             "bazel",
-            // TODO: Extract these targets with `bazel query` at runtime, based on some label or
-            // attribute.
+            // TODO(#396): Extract these targets with `bazel query` at runtime,
+            // based on some label or attribute.
             &[
                 "test",
                 "//oak/server:host_tests",
