@@ -191,14 +191,20 @@ impl ChannelMapping {
 
     pub fn remove_reference(&self, reference: ChannelRef) -> Result<(), OakStatus> {
         if let Ok(channel_id) = self.get_writer_channel(reference) {
-            self.with_channel(channel_id, |channel| Ok(channel.remove_writer()))?;
+            self.with_channel(channel_id, |channel| {
+                channel.remove_writer();
+                Ok(())
+            })?;
 
             let mut writers = self.writers.write().unwrap();
             writers.remove(&reference);
         }
 
         if let Ok(channel_id) = self.get_reader_channel(reference) {
-            self.with_channel(channel_id, |channel| Ok(channel.remove_reader()))?;
+            self.with_channel(channel_id, |channel| {
+                channel.remove_reader();
+                Ok(())
+            })?;
 
             let mut readers = self.readers.write().unwrap();
             readers.remove(&reference);

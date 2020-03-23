@@ -449,7 +449,7 @@ impl WasmInterface {
             .map(|bytes| {
                 let handle = LittleEndian::read_u64(bytes);
 
-                self.readers.get(&handle).map(|x| *x)
+                self.readers.get(&handle).copied()
             })
             .collect();
 
