@@ -91,8 +91,8 @@ status byte. Invalid handles will have an `INVALID_CHANNEL` status, but
 `wait_on_channels` return value will only fail for internal errors or if _all_
 channels are invalid.
 
-- arg0: Address of handle status buffer
-- arg1: Count N of handles provided
+- arg 0: Address of handle status buffer
+- arg 1: Count N of handles provided
 - return 0: Status of operation
 
 ### channel_read
