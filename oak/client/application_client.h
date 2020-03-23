@@ -71,9 +71,10 @@ class ApplicationClient {
   // accessible any more, since a new channel will be required, which will be associated with a
   // different token.
   //
-  // TODO: Consider introducing a server-side garbage collection mechanism so that inaccessible data
-  // may be deleted. If this is not feasible, perhaps it may be based on access time only, or based
-  // on additional metadata or specific time-related policies.
+  // TODO(#306): Consider introducing a server-side garbage collection mechanism so
+  // that inaccessible data may be deleted. If this is not feasible, perhaps it
+  // may be based on access time only, or based on additional metadata or
+  // specific time-related policies.
   static std::shared_ptr<grpc::CallCredentials>
   private_authorization_bearer_token_call_credentials() {
     NonceGenerator<kPerChannelNonceSizeBytes> nonce_generator;

@@ -30,8 +30,7 @@
 // When Emscripten generates a Wasm file from TensorFlow, it leaves unresolved symbols
 // (imported functions), and these symbols prevend running TensorFlow in the Oak Runtime.
 // So we currently patch these unresolved symbols with non-functional implementations.
-// TODO: These placeholders should be deleted after resolving:
-// https://github.com/project-oak/oak/issues/482
+// TODO(#482): these placeholders should be deleted.
 #define PLACEHOLDER(ret, func, ...) \
   ret func(__VA_ARGS__) { abort(); }
 
