@@ -8,20 +8,20 @@ config="clang"
 while getopts "s:h" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-s x64|arm|asan|tsan]
+      echo -e "Usage: ${0} [-s base|arm|asan|tsan]
 
 Build the specified version of the Oak Runtime server.
 
   -s    Server type:
-          - x64: x64 version of the server (default)
+          - base: base version of the server (default)
           - arm: server for ARM architecture
-          - asan: x64 server with address sanitizer
-          - tsan: x64 server with thread santizer
+          - asan: server with address sanitizer
+          - tsan: server with thread santizer
   -h    Print Help (this message) and exit"
       exit 0;;
     s)
       case "${OPTARG}" in
-        x64)
+        base)
           config='clang';;
         arm)
           config='armv8';;

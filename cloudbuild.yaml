@@ -42,7 +42,7 @@ steps:
     waitFor: ['build_image']
     timeout: 60m
     entrypoint: 'bash'
-    args: ['./scripts/build_server', '-s', 'x64']
+    args: ['./scripts/build_server', '-s', 'base']
   - name: 'gcr.io/oak-ci/oak:latest'
     id: build_server_arm
     waitFor: ['build_image']
@@ -69,7 +69,7 @@ steps:
     id: run_examples
     timeout: 60m
     entrypoint: 'bash'
-    args: ['./scripts/run_examples', '-s', 'x64']
+    args: ['./scripts/run_examples', '-s', 'base']
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_examples_asan
     waitFor: ['run_examples']

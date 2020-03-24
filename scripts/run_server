@@ -5,11 +5,11 @@ readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
 source "${SCRIPTS_DIR}/common"
 
 language="rust"
-server="x64"
+server="base"
 while getopts "s:a:l:e:h" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-s x64|arm|asan|tsan] [-l rust|cpp] (-a APPLICATION | -e EXAMPLE)
+      echo -e "Usage: ${0} [-s base|arm|asan|tsan] [-l rust|cpp] (-a APPLICATION | -e EXAMPLE)
 
 Run a particular Oak Application in the Oak Runtime.
 Either the -a APPLICATION or the -e EXAMPLE option is required.
@@ -17,10 +17,10 @@ Either the -a APPLICATION or the -e EXAMPLE option is required.
   -a    Path to a serialized application configuration file
   -e    Example application name
   -s    Server type:
-          - x64: x64 version of the server (default)
+          - base: base version of the server (default)
           - arm: server for ARM architecture
-          - asan: x64 server with address sanitizer
-          - tsan: x64 server with thread santizer
+          - asan: server with address sanitizer
+          - tsan: server with thread santizer
   -l    Example application variant (if -e specified):
           - rust (used by default)
           - cpp
@@ -30,7 +30,7 @@ Either the -a APPLICATION or the -e EXAMPLE option is required.
       language="${OPTARG}";;
     s)
       case "${OPTARG}" in
-        x64|arm|asan|tsan)
+        base|arm|asan|tsan)
           server="${OPTARG}";;
         *)
           echo "Invalid server type: ${OPTARG}"

@@ -47,7 +47,7 @@ a Sparse Vector - a dictionary with integer keys.
 Build and run the Aggregator with the following command:
 
 ```bash
-./scripts/build_server -s x64
+./scripts/build_server -s base
 ./bazel-bin/oak/server/loader/oak_runner --application=./bazel-client-bin/examples/aggregator/config/config.bin
 ```
 
