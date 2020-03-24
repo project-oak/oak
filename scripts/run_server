@@ -5,11 +5,11 @@ readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
 source "${SCRIPTS_DIR}/common"
 
 language="rust"
-server="dev"
+server="x64"
 while getopts "s:a:l:e:h" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-s dev|arm|asan|tsan] [-l rust|cpp] (-a APPLICATION | -e EXAMPLE)
+      echo -e "Usage: ${0} [-s x64|arm|asan|tsan] [-l rust|cpp] (-a APPLICATION | -e EXAMPLE)
 
 Run a particular Oak Application in the Oak Runtime.
 Either the -a APPLICATION or the -e EXAMPLE option is required.
@@ -17,10 +17,10 @@ Either the -a APPLICATION or the -e EXAMPLE option is required.
   -a    Path to a serialized application configuration file
   -e    Example application name
   -s    Server type:
-          - dev: development version of the server (default)
-          - arm: 'dev' server for ARM architecture
-          - asan: 'dev' server with address sanitizer
-          - tsan: 'dev' server with thread santizer
+          - x64: x64 version of the server (default)
+          - arm: server for ARM architecture
+          - asan: x64 server with address sanitizer
+          - tsan: x64 server with thread santizer
   -l    Example application variant (if -e specified):
           - rust (used by default)
           - cpp
@@ -30,7 +30,7 @@ Either the -a APPLICATION or the -e EXAMPLE option is required.
       language="${OPTARG}";;
     s)
       case "${OPTARG}" in
-        dev|arm|asan|tsan)
+        x64|arm|asan|tsan)
           server="${OPTARG}";;
         *)
           echo "Invalid server type: ${OPTARG}"
@@ -74,7 +74,7 @@ fi
 # Launching the server requires a `--application=<dir>/config.bin` flag.
 # `exec` is necessary for the `run_example` script to be able to get a PID of a background server.
 # We use a different symlink prefix for clang-based artifacts.
-exec ./bazel-clang-bin/oak/server/dev/dev_oak_runner \
+exec ./bazel-clang-bin/oak/server/loader/oak_runner \
   --application="${APPLICATION}" \
   --ca_cert="${SCRIPTS_DIR}/../examples/certs/ca.pem" \
   --cert_chain="${SCRIPTS_DIR}/../examples/certs/local.pem" \

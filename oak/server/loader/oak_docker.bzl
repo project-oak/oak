@@ -18,7 +18,7 @@
 
 load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 
-def dev_oak_docker(name, application, ports):
+def oak_docker(name, application, ports):
     """Generates an Oak application Docker image.
 
     An image contains an server runner and an application configuration file.
@@ -35,9 +35,9 @@ def dev_oak_docker(name, application, ports):
     application_file = application_path.split(":")[-1]
     container_image(
         name = name,
-        base = "//oak/server/dev:oak_docker",
+        base = "//oak/server/loader:oak_docker",
         entrypoint = [
-            "./dev_oak_runner",
+            "./oak_runner",
             "--application={}".format(application_file),
         ],
         # `files` must contain full file paths with extensions.

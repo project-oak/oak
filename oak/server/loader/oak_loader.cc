@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "oak/server/dev/dev_oak_loader.h"
+#include "oak/server/loader/oak_loader.h"
 
 #include "absl/memory/memory.h"
 #include "include/grpcpp/grpcpp.h"
@@ -22,9 +22,9 @@
 
 namespace oak {
 
-DevOakLoader::DevOakLoader() {}
+OakLoader::OakLoader() {}
 
-grpc::Status DevOakLoader::CreateApplication(
+grpc::Status OakLoader::CreateApplication(
     const oak::ApplicationConfiguration& application_configuration,
     std::shared_ptr<grpc::ServerCredentials> grpc_credentials) {
   OAK_LOG(INFO) << "Creating an Oak application";
@@ -41,7 +41,7 @@ grpc::Status DevOakLoader::CreateApplication(
   return result;
 }
 
-grpc::Status DevOakLoader::TerminateApplication() {
+grpc::Status OakLoader::TerminateApplication() {
   if (runtime_ == nullptr) {
     std::string error = "Terminating a non-existent application";
     OAK_LOG(ERROR) << error;

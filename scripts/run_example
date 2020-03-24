@@ -5,21 +5,21 @@ readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
 source "${SCRIPTS_DIR}/common"
 
 language="rust"
-server="dev"
+server="x64"
 buildargs=""
 while getopts "s:l:de:h" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-h] [-s dev|asan|tsan|none] [-l rust|cpp] [-d] -e EXAMPLE [-- CLIENT_ARGS]
+      echo -e "Usage: ${0} [-h] [-s x64|asan|tsan|none] [-l rust|cpp] [-d] -e EXAMPLE [-- CLIENT_ARGS]
 
 Build and run the given example Oak Application and client.
 
 Options:
   -e    Example application name (required)
   -s    Server type used to run examples:
-          - dev: development version of the server (default)
-          - asan: 'dev' server with address sanitizer
-          - tsan: 'dev' server with thread sanitizer
+          - x64: x64 version of the server (default)
+          - asan: x64 server with address sanitizer
+          - tsan: x64 server with thread sanitizer
           - none: run an application client without a server
   -d    Build C++ code for example using debug mode
   -l    Example application variant:
@@ -32,7 +32,7 @@ Options after -- will be passed to the example client program."
       language="${OPTARG}";;
     s)
       case "${OPTARG}" in
-        dev|asan|tsan|none)
+        x64|asan|tsan|none)
           server="${OPTARG}";;
         *)
           echo "Invalid server type: ${OPTARG}"

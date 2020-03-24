@@ -15,13 +15,13 @@
 #
 
 load("@io_bazel_rules_docker//container:container.bzl", "container_image")
-load("//oak/server/dev:dev_oak_docker.bzl", "dev_oak_docker")
+load("//oak/server/loader:oak_docker.bzl", "oak_docker")
 
 package(
     licenses = ["notice"],
 )
 
-dev_oak_docker(
+oak_docker(
     name = "aggregator_image",
     application = "//examples/aggregator/config:config",
     ports = [

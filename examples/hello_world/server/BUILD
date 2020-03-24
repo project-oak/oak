@@ -14,13 +14,13 @@
 # limitations under the License.
 #
 
-load("//oak/server/dev:dev_oak_docker.bzl", "dev_oak_docker")
+load("//oak/server/loader:oak_docker.bzl", "oak_docker")
 
 package(
     licenses = ["notice"],
 )
 
-dev_oak_docker(
+oak_docker(
     name = "hello_world_image",
     application = "//examples/hello_world/config:config",
     ports = [
