@@ -22,6 +22,7 @@
 //! cargo run --package=oak_loader -- --application=<APP_CONFIG_PATH>
 //! ```
 
+use log::info;
 use clap::{App, Arg, ArgMatches};
 use oak_runtime::configure_and_run;
 use oak_runtime::proto::ApplicationConfiguration;
@@ -65,6 +66,12 @@ fn get_arguments() -> ArgMatches<'static> {
         .get_matches()
 }
 
+fn read_file(filename: &str) -> Result<Vec<u8>, String> {
+    let mut file = File::open(filename).or_else(|e| format);
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer)?;
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
 
@@ -74,12 +81,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .expect("Application configuration file is not specified");
 
     let app_config = {
-        let mut file = File::open(app_config_path)?;
+        let mut file = File::open(app_config_path).expect("Config file not found");
         let mut buffer = Vec::new();
         file.read_to_end(&mut buffer)?;
         ApplicationConfiguration::decode(&buffer[..])?
     };
-
+    
+    // TODO(#751): Implement TLS credentials for Rust Oak Runtime.
     configure_and_run(app_config).expect("Runtime error");
 
     Ok(())
