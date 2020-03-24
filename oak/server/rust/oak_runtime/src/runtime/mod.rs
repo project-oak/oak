@@ -36,6 +36,12 @@ pub use channel::{Handle, HandleDirection};
 struct Node {
     reference: NodeRef,
     join_handle: JoinHandle<()>,
+
+    /// The Label associated with this node.
+    ///
+    /// This is set at node creation time and does not change after that.
+    ///
+    /// See https://github.com/project-oak/oak/blob/master/docs/concepts.md#labels
     label: oak_abi::label::Label,
 }
 
@@ -84,7 +90,10 @@ impl Runtime {
 
         let runtime = RuntimeRef(Arc::new(runtime));
 
-        let (chan_writer, chan_reader) = runtime.new_channel();
+        // When first starting, we assign the least privileged label to the channel connecting the
+        // outside world to the entry point node.
+        let (chan_writer, chan_reader) =
+            runtime.new_channel(&oak_abi::label::Label::public_trusted());
 
         runtime.node_create(
             &config.entry_module,
@@ -125,8 +134,8 @@ impl Runtime {
     }
 
     /// Creates a new channel.
-    pub fn new_channel(&self) -> (Handle, Handle) {
-        self.channels.new_channel()
+    pub fn new_channel(&self, label: &oak_abi::label::Label) -> (Handle, Handle) {
+        self.channels.new_channel(label)
     }
 
     /// Reads the statuses from a slice of `Option<&ChannelReader>`s.

@@ -55,6 +55,13 @@ pub struct Channel {
     /// instead of removing itself from all the `Channel`s it subscribed to.
     /// Threads can be woken up spuriously without issue.
     pub waiting_threads: WaitingThreads,
+
+    /// The Label associated with this channel.
+    ///
+    /// This is set at channel creation time and does not change after that.
+    ///
+    /// See https://github.com/project-oak/oak/blob/master/docs/concepts.md#labels
+    label: oak_abi::label::Label,
 }
 
 /// A reference to a [`Channel`]. Each [`Handle`] has an implicit direction such that it is only
@@ -88,12 +95,13 @@ pub struct ChannelMapping {
 impl Channel {
     /// Create a new channel with the assumption there is currently one active reader and one active
     /// writer references.
-    pub fn new() -> Channel {
+    pub fn new(label: &oak_abi::label::Label) -> Channel {
         Channel {
             messages: RwLock::new(Messages::new()),
             writers: AtomicU64::new(1),
             readers: AtomicU64::new(1),
             waiting_threads: Mutex::new(HashMap::new()),
+            label: label.clone(),
         }
     }
 
@@ -150,10 +158,10 @@ impl ChannelMapping {
     }
 
     /// Create a new [`Channel`] and return a `(writer handle, reader handle)` pair.
-    pub fn new_channel(&self) -> (Handle, Handle) {
+    pub fn new_channel(&self, label: &oak_abi::label::Label) -> (Handle, Handle) {
         let channel_id = self.next_channel_id.fetch_add(1, SeqCst);
         let mut channels = self.channels.write().unwrap();
-        channels.insert(channel_id, Channel::new());
+        channels.insert(channel_id, Channel::new(label));
         (self.new_writer(channel_id), self.new_reader(channel_id))
     }
 
