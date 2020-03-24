@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef OAK_SERVER_DEV_DEV_OAK_LOADER_H_
-#define OAK_SERVER_DEV_DEV_OAK_LOADER_H_
+#ifndef OAK_SERVER_LOADER_OAK_LOADER_H_
+#define OAK_SERVER_LOADER_OAK_LOADER_H_
 
 #include <string>
 #include <unordered_map>
@@ -26,9 +26,9 @@
 
 namespace oak {
 
-class DevOakLoader {
+class OakLoader {
  public:
-  DevOakLoader();
+  OakLoader();
 
   grpc::Status CreateApplication(const oak::ApplicationConfiguration& application_configuration,
                                  std::shared_ptr<grpc::ServerCredentials> grpc_credentials);
@@ -44,4 +44,4 @@ class DevOakLoader {
 
 }  // namespace oak
 
-#endif  // OAK_SERVER_DEV_DEV_OAK_LOADER_H_
+#endif  // OAK_SERVER_LOADER_OAK_LOADER_H_

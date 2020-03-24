@@ -4,20 +4,20 @@ readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
 # shellcheck source=scripts/common
 source "${SCRIPTS_DIR}/common"
 
-server="dev"
+server="base"
 while getopts "s:h" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-s dev|asan|tsan]
+      echo -e "Usage: ${0} [-s base|asan|tsan]
   -s    Server type used to run exmples:
-          - dev: development version of the server (default)
-          - asan: 'dev' server with address sanitizer
-          - tsan: 'dev' server with thread santizer
+          - base: base version of the server (default)
+          - asan: server with address sanitizer
+          - tsan: server with thread santizer
   -h    Print Help (this message) and exit"
       exit 0;;
     s)
       case "${OPTARG}" in
-        dev|asan|tsan)
+        base|asan|tsan)
           server="${OPTARG}";;
         *)
           echo "Invalid server type: ${OPTARG}"

@@ -39,7 +39,7 @@ add `source \$HOME/.cargo/env` to your shell init script (e.g. `.bashrc` or
 While you're waiting for docker, you might want to take a look at what that
 script does. The one mystery you might run into is: what does Bazel build?
 
-This: `oak/server/dev/BUILD`
+This: `oak/server/loader/BUILD`
 
 Next, run one of the example Applications:
 

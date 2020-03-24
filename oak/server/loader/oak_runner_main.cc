@@ -23,7 +23,7 @@
 #include "absl/time/time.h"
 #include "oak/common/logging.h"
 #include "oak/common/utils.h"
-#include "oak/server/dev/dev_oak_loader.h"
+#include "oak/server/loader/oak_loader.h"
 
 ABSL_FLAG(std::string, application, "", "Application configuration file");
 ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate");
@@ -44,7 +44,7 @@ int main(int argc, char* argv[]) {
   absl::ParseCommandLine(argc, argv);
 
   // Create loader instance.
-  std::unique_ptr<oak::DevOakLoader> loader = absl::make_unique<oak::DevOakLoader>();
+  std::unique_ptr<oak::OakLoader> loader = absl::make_unique<oak::OakLoader>();
 
   // Load application configuration.
   std::unique_ptr<oak::ApplicationConfiguration> application_config =

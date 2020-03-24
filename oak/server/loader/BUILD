@@ -26,12 +26,12 @@ package(
 )
 
 cc_library(
-    name = "dev_oak_loader",
+    name = "oak_loader",
     srcs = [
-        "dev_oak_loader.cc",
+        "oak_loader.cc",
     ],
     hdrs = [
-        "dev_oak_loader.h",
+        "oak_loader.h",
     ],
     deps = [
         "//oak/common:logging",
@@ -44,10 +44,10 @@ cc_library(
 )
 
 cc_binary(
-    name = "dev_oak_runner",
-    srcs = ["dev_oak_runner_main.cc"],
+    name = "oak_runner",
+    srcs = ["oak_runner_main.cc"],
     deps = [
-        ":dev_oak_loader",
+        ":oak_loader",
         "//oak/common:app_config",
         "//oak/common:logging",
         "//oak/common:utils",
@@ -64,7 +64,7 @@ container_image(
     name = "oak_docker",
     base = "@cc_image//image",
     files = [
-        "dev_oak_runner",
+        "oak_runner",
     ],
     ports = [
         "8080/tcp",  # Oak Application gRPC port.

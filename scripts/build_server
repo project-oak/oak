@@ -8,20 +8,20 @@ config="clang"
 while getopts "s:h" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-s dev|arm|asan|tsan]
+      echo -e "Usage: ${0} [-s base|arm|asan|tsan]
 
 Build the specified version of the Oak Runtime server.
 
   -s    Server type:
-          - dev: development version of the server (default)
-          - arm: 'dev' server for ARM architecture
-          - asan: 'dev' server with address sanitizer
-          - tsan: 'dev' server with thread santizer
+          - base: base version of the server (default)
+          - arm: server for ARM architecture
+          - asan: server with address sanitizer
+          - tsan: server with thread santizer
   -h    Print Help (this message) and exit"
       exit 0;;
     s)
       case "${OPTARG}" in
-        dev)
+        base)
           config='clang';;
         arm)
           config='armv8';;
@@ -46,5 +46,5 @@ bazel_build_flags+=(
 # Use a different output_base so that we don't lose incremental state.
 # See https://docs.bazel.build/versions/master/command-line-reference.html#flag--output_base.
 bazel --output_base="${CACHE_DIR}/$config" build "${bazel_build_flags[@]}" \
-  //oak/server/dev:dev_oak_runner \
+  //oak/server/loader:oak_runner \
   //oak/server/storage:storage_server

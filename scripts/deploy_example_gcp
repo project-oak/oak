@@ -37,7 +37,7 @@ gcloud beta compute instances create "${INSTANCE_NAME}" \
   --boot-disk-size=16GB \
   --boot-disk-type=pd-standard \
   --boot-disk-device-name="${DISK_NAME}" \
-  --metadata=startup-script='/opt/oak/dev_oak_runner --application=/opt/oak/config.bin'
+  --metadata=startup-script='/opt/oak/oak_runner --application=/opt/oak/config.bin'
 
 # Create a firewall rule to allow access to the hello world VM on port 8080
 gcloud compute firewall-rules create "${FIREWALL_RULE}" \
