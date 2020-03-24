@@ -17,7 +17,7 @@
 use std::collections::HashMap;
 use std::string::String;
 use std::sync::{Arc, Mutex};
-use std::{thread, thread::JoinHandle};
+use std::thread;
 
 use core::sync::atomic::Ordering::SeqCst;
 use core::sync::atomic::{AtomicBool, AtomicU64};
@@ -32,16 +32,17 @@ use crate::node;
 mod channel;
 pub use channel::{Handle, HandleDirection};
 
-#[derive(Debug)]
 struct Node {
+    #[allow(dead_code)]
     reference: NodeRef,
-    join_handle: JoinHandle<()>,
-
+    instance: Box<dyn crate::node::Node>,
     /// The Label associated with this node.
     ///
     /// This is set at node creation time and does not change after that.
     ///
     /// See https://github.com/project-oak/oak/blob/master/docs/concepts.md#labels
+    // TODO(#630): Remove exception when label tracking is implemented.
+    #[allow(dead_code)]
     label: oak_abi::label::Label,
 }
 
@@ -63,7 +64,7 @@ pub enum ReadStatus {
 
 /// Runtime structure for configuring and running a set of Oak nodes.
 pub struct Runtime {
-    configurations: HashMap<String, node::Configuration>,
+    configuration: Configuration,
     terminating: AtomicBool,
 
     channels: channel::ChannelMapping,
@@ -73,39 +74,56 @@ pub struct Runtime {
 }
 
 impl Runtime {
-    /// Configure and run the protobuf specified Application [`Configuration`]. After creating a
-    /// [`Runtime`], calling [`Runtime::stop`] will send termination signals to nodes and wait for
-    /// them to terminate. This returns a [`RuntimeRef`] reference to the created runtime, and a
-    /// writeable [`Handle`] to send messages into the runtime. To receive messages, creating a new
-    /// channel and passing the write [`Handle`] into the runtime will enable messages to be
-    /// read back out.
-    pub fn configure_and_run(config: Configuration) -> Result<(RuntimeRef, Handle), OakStatus> {
-        let runtime = Runtime {
-            configurations: config.nodes,
+    /// Creates a [`Runtime`] instance but does not start executing any node.
+    pub fn create(configuration: Configuration) -> Self {
+        Self {
+            configuration,
             terminating: AtomicBool::new(false),
             channels: channel::ChannelMapping::new(),
             nodes: Mutex::new(HashMap::new()),
             next_node_reference: AtomicU64::new(0),
-        };
+        }
+    }
 
-        let runtime = RuntimeRef(Arc::new(runtime));
+    /// Converts a [`Runtime`] instance into a [`RuntimeRef`].
+    pub fn into_ref(self) -> RuntimeRef {
+        RuntimeRef(Arc::new(self))
+    }
+
+    /// Configures and runs the protobuf specified Application [`Configuration`].
+    ///
+    /// After starting a [`Runtime`], calling [`Runtime::stop`] will send termination signals to
+    /// nodes and wait for them to terminate.
+    ///
+    /// Returns a [`RuntimeRef`] reference to the created runtime, and a writeable [`Handle`] to
+    /// send messages into the runtime. To receive messages, creating a new channel and passing
+    /// the write [`Handle`] into the runtime will enable messages to be read back out.
+    pub fn run(self) -> Result<(RuntimeRef, Handle), OakStatus> {
+        let module_name = self.configuration.entry_module.clone();
+        let entrypoint = self.configuration.entrypoint.clone();
+
+        let runtime_ref = self.into_ref();
 
         // When first starting, we assign the least privileged label to the channel connecting the
         // outside world to the entry point node.
         let (chan_writer, chan_reader) =
-            runtime.new_channel(&oak_abi::label::Label::public_trusted());
+            runtime_ref.new_channel(&oak_abi::label::Label::public_trusted());
 
-        runtime.node_create(
-            &config.entry_module,
-            &config.entrypoint,
+        runtime_ref.node_create(
+            &module_name,
+            &entrypoint,
             // When first starting, we assign the least privileged label to the entry point node.
             &oak_abi::label::Label::public_trusted(),
             chan_reader,
         )?;
 
-        runtime.channel_close(chan_reader)?;
+        // We call `expect` here because this should never fail, since the channel was just created
+        // and guaranteed not to have already been closed.
+        runtime_ref
+            .channel_close(chan_reader)
+            .expect("could not close channel");
 
-        Ok((runtime, chan_writer))
+        Ok((runtime_ref, chan_writer))
     }
 
     /// Thread safe method for determining if the [`Runtime`] is terminating.
@@ -151,12 +169,12 @@ impl Runtime {
         // for any additional work to be finished here. This may take an arbitrary amount of time,
         // depending on the work that the node thread has to perform, but at least we know that the
         // it will not be able to enter again in a blocking state.
-        for (_, node) in nodes.drain() {
-            node.join_handle.join().expect("Failed to join handle");
+        for (_, mut node) in nodes.drain() {
+            node.instance.stop();
         }
     }
 
-    /// Creates a new channel.
+    /// Creates a new [`Channel`] and returns a `(writer handle, reader handle)` pair.
     pub fn new_channel(&self, label: &oak_abi::label::Label) -> (Handle, Handle) {
         self.channels.new_channel(label)
     }
@@ -448,34 +466,36 @@ impl RuntimeRef {
 
         let reader = self.channels.duplicate_reference(reader)?;
 
-        match self
-            .configurations
+        let mut instance = self
+            .configuration
+            .nodes
             .get(module_name)
             .ok_or(OakStatus::ErrInvalidArgs)
-            .and_then(|conf| {
-                conf.new_instance(
+            .map(|conf| {
+                // This only creates a node instance, but does not start it.
+                conf.create_node(
                     module_name,
                     self.clone(),
                     reference,
                     entrypoint.to_owned(),
                     reader,
                 )
-            }) {
-            Ok(join_handle) => {
-                nodes.insert(
-                    reference,
-                    Node {
-                        reference,
-                        join_handle,
-                        label: label.clone(),
-                    },
-                );
-            }
-            Err(e) => {
-                nodes.remove(&reference);
-                return Err(e);
-            }
-        }
+            })?;
+
+        // Try starting the node instance first. If this fails, then directly return the error to
+        // the caller.
+        instance.start()?;
+
+        // If the node was successfully started, insert it in the list of currently running
+        // nodes.
+        nodes.insert(
+            reference,
+            Node {
+                reference,
+                instance,
+                label: label.clone(),
+            },
+        );
 
         Ok(())
     }

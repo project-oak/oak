@@ -16,7 +16,6 @@
 
 use std::string::String;
 use std::sync::Arc;
-use std::thread::JoinHandle;
 
 use oak_abi::OakStatus;
 
@@ -24,6 +23,23 @@ use crate::{Handle, NodeRef, RuntimeRef};
 
 mod logger;
 mod wasm;
+
+/// A trait implemented by every node and pseudo-node.
+///
+/// Nodes must not do any work until the [`Node::start`] method is invoked.
+pub trait Node: Send + Sync {
+    /// Starts executing the node.
+    fn start(&mut self) -> Result<(), OakStatus>;
+
+    /// Stops executing the node.
+    ///
+    /// This method may block while the node terminates any outstanding work, but the node
+    /// implementation must guarantee that it eventually returns.
+    ///
+    /// Internally, a node may implement this by first attempting to gracefully terminate, and then
+    /// if that fails, continue trying with increasing level of aggressiveness.
+    fn stop(&mut self);
+}
 
 /// A `Configuration` corresponds to an entry from a `ApplicationConfiguration`. It is the
 /// static implementation specific configuration shared between instances.
@@ -65,25 +81,29 @@ pub fn load_wasm(wasm_bytes: &[u8]) -> Result<Configuration, ConfigurationError>
 }
 
 impl Configuration {
-    /// Spawn a new node instance corresponding to the `Configuration` `self`. On success
-    /// returns a `JoinHandle` to allow waiting on the thread to finish.
-    pub fn new_instance(
+    /// Creates a new node instance corresponding to the [`Configuration`] `self`.
+    ///
+    /// On success returns a boxed [`Node`] that may be started by invoking the [`Node::start`]
+    /// method.
+    pub fn create_node(
         &self,
         config_name: &str, // Used for pretty debugging
         runtime: RuntimeRef,
-        _noderef: NodeRef,
+        _node_ref: NodeRef,
         entrypoint: String,
         initial_reader: Handle,
-    ) -> Result<JoinHandle<()>, OakStatus> {
+    ) -> Box<dyn Node> {
         match self {
-            Configuration::LogNode => logger::new_instance(config_name, runtime, initial_reader),
-            Configuration::WasmNode { module } => wasm::new_instance(
+            Configuration::LogNode => {
+                Box::new(logger::LogNode::new(config_name, runtime, initial_reader))
+            }
+            Configuration::WasmNode { module } => Box::new(wasm::WasmNode::new(
                 config_name,
                 runtime,
                 module.clone(),
                 entrypoint,
                 initial_reader,
-            ),
+            )),
         }
     }
 }

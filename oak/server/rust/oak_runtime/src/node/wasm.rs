@@ -746,67 +746,144 @@ impl wasmi::ModuleImportResolver for WasmInterface {
     }
 }
 
-/// Create a new instance of a Wasm node. If the entry point is not found,
-/// `ERR(OakStatus::ErrInvalidArgs)` will be returned immediately.
-pub fn new_instance(
-    config_name: &str,
+pub struct WasmNode {
+    config_name: String,
     runtime: RuntimeRef,
     module: Arc<wasmi::Module>,
     entrypoint: String,
-    initial_reader: Handle,
-) -> Result<JoinHandle<()>, OakStatus> {
-    let config_name = config_name.to_owned();
+    reader: Handle,
+    thread_handle: Option<JoinHandle<()>>,
+}
 
-    debug!("new_instance: discovering {} {}", config_name, entrypoint);
-
-    // wasmi can't enumerate exports at creation, so we have to do it here per instance spawned as
-    // the entrypoint could be anything. We do it before spawning the child thread so that we can
-    // return an error code immediately if appropriate.
-    {
-        let (abi, _) = WasmInterface::new(config_name.clone(), runtime.clone(), initial_reader);
-        let instance = wasmi::ModuleInstance::new(
-            &module,
-            &wasmi::ImportsBuilder::new().with_resolver("oak", &abi),
-        )
-        .expect("failed to instantiate wasm module")
-        .assert_no_start();
-
-        let entrypoint_sig = wasmi::Signature::new(&[ABI_U64][..], None);
-
-        if instance
-            .export_by_name(&entrypoint)
-            .and_then(|e| e.as_func().map(|f| f.signature() != &entrypoint_sig))
-            .unwrap_or(true)
-        {
-            return Err(OakStatus::ErrInvalidArgs);
+impl WasmNode {
+    /// Creates a new [`WasmNode`] instance, but does not start it.
+    pub fn new(
+        config_name: &str,
+        runtime: RuntimeRef,
+        module: Arc<wasmi::Module>,
+        entrypoint: String,
+        reader: Handle,
+    ) -> Self {
+        Self {
+            config_name: config_name.to_string(),
+            runtime,
+            module,
+            entrypoint,
+            reader,
+            thread_handle: None,
         }
     }
+}
 
-    debug!("new_instance: starting {} {}", config_name, entrypoint);
+impl super::Node for WasmNode {
+    /// Starts this instance of a Wasm node.
+    ///
+    /// If the entry point is not found, returns `Err(OakStatus::ErrInvalidArgs)` immediately.
+    fn start(&mut self) -> Result<(), OakStatus> {
+        debug!(
+            "new_instance: discovering {} {}",
+            self.config_name, self.entrypoint
+        );
 
-    Ok(spawn(move || {
-        let pretty_name = format!("{}-{:?}:", config_name, thread::current());
-        let (mut abi, initial_handle) = WasmInterface::new(pretty_name, runtime, initial_reader);
-
-        let instance = wasmi::ModuleInstance::new(
-            &module,
-            &wasmi::ImportsBuilder::new().with_resolver("oak", &abi),
-        )
-        .expect("failed to instantiate wasm module")
-        .assert_no_start();
-
-        abi.memory = instance
-            .export_by_name("memory")
-            .unwrap()
-            .as_memory()
-            .cloned();
-
-        instance
-            .invoke_export(
-                &entrypoint,
-                &[wasmi::RuntimeValue::I64(initial_handle as i64)],
-                &mut abi,
+        // wasmi can't enumerate exports at creation, so we have to do it here per instance spawned
+        // as the entrypoint could be anything. We do it before spawning the child thread so
+        // that we can return an error code immediately if appropriate.
+        {
+            let (abi, _) =
+                WasmInterface::new(self.config_name.clone(), self.runtime.clone(), self.reader);
+            let instance = wasmi::ModuleInstance::new(
+                &self.module,
+                &wasmi::ImportsBuilder::new().with_resolver("oak", &abi),
             )
-            .expect("failed to execute export");
-    }))
+            .expect("failed to instantiate wasm module")
+            .assert_no_start();
+
+            let entrypoint_sig = wasmi::Signature::new(&[ABI_U64][..], None);
+
+            if instance
+                .export_by_name(&self.entrypoint)
+                .and_then(|e| e.as_func().map(|f| f.signature() != &entrypoint_sig))
+                .unwrap_or(true)
+            {
+                return Err(OakStatus::ErrInvalidArgs);
+            }
+        }
+
+        debug!(
+            "new_instance: starting {} {}",
+            self.config_name, self.entrypoint
+        );
+
+        // Clone or copy all the captured values and move them into the closure, for simplicity.
+        let config_name = self.config_name.clone();
+        let reader = self.reader;
+        let runtime = self.runtime.clone();
+        let module = self.module.clone();
+        let entrypoint = self.entrypoint.clone();
+        // TODO(#770): Use `std::thread::Builder` and give a name to this thread.
+        let thread_handle = spawn(move || {
+            let pretty_name = format!("{}-{:?}:", config_name, thread::current());
+            let (mut abi, initial_handle) = WasmInterface::new(pretty_name, runtime, reader);
+
+            let instance = wasmi::ModuleInstance::new(
+                &module,
+                &wasmi::ImportsBuilder::new().with_resolver("oak", &abi),
+            )
+            .expect("failed to instantiate wasm module")
+            .assert_no_start();
+
+            abi.memory = instance
+                .export_by_name("memory")
+                .unwrap()
+                .as_memory()
+                .cloned();
+
+            instance
+                .invoke_export(
+                    &entrypoint,
+                    &[wasmi::RuntimeValue::I64(initial_handle as i64)],
+                    &mut abi,
+                )
+                .expect("failed to execute export");
+        });
+        self.thread_handle = Some(thread_handle);
+        Ok(())
+    }
+    fn stop(&mut self) {
+        if let Some(join_handle) = self.thread_handle.take() {
+            if let Err(err) = join_handle.join() {
+                error!("error while stopping Wasm node: {:?}", err);
+            }
+        }
+    }
+}
+
+#[test]
+fn wasm_invalid_args() {
+    use super::Node;
+    let configuration = crate::runtime::Configuration {
+        nodes: HashMap::new(),
+        entry_module: "test_module".to_string(),
+        entrypoint: "test_function".to_string(),
+    };
+    let runtime_ref = crate::runtime::Runtime::create(configuration).into_ref();
+    let (_, reader_handle) = runtime_ref.new_channel(&oak_abi::label::Label::public_trusted());
+
+    // From https://docs.rs/wasmi/0.6.2/wasmi/struct.Module.html#method.from_buffer:
+    // Minimal module:
+    // \0asm - magic
+    // 0x01 - version (in little-endian)
+    let module =
+        wasmi::Module::from_buffer(vec![0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]).unwrap();
+
+    let mut node = WasmNode::new(
+        "test",
+        runtime_ref,
+        Arc::new(module),
+        "test_function".to_string(),
+        reader_handle,
+    );
+
+    // The minimal module does not have the necessary entry point, so it should fail immediately.
+    assert_eq!(Err(OakStatus::ErrInvalidArgs), node.start());
 }

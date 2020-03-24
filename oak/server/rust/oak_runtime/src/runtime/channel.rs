@@ -157,7 +157,7 @@ impl ChannelMapping {
         }
     }
 
-    /// Create a new [`Channel`] and return a `(writer handle, reader handle)` pair.
+    /// Creates a new [`Channel`] and returns a `(writer handle, reader handle)` pair.
     pub fn new_channel(&self, label: &oak_abi::label::Label) -> (Handle, Handle) {
         let channel_id = self.next_channel_id.fetch_add(1, SeqCst);
         let mut channels = self.channels.write().unwrap();

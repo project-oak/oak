@@ -29,7 +29,49 @@ use crate::runtime::Handle;
 use crate::RuntimeRef;
 use prost::Message;
 
-/// A simple logger loop.
+pub struct LogNode {
+    config_name: String,
+    runtime: RuntimeRef,
+    reader: Handle,
+    thread_handle: Option<JoinHandle<()>>,
+}
+
+impl LogNode {
+    /// Creates a new [`LogNode`] instance, but does not start it.
+    pub fn new(config_name: &str, runtime: RuntimeRef, reader: Handle) -> Self {
+        Self {
+            config_name: config_name.to_string(),
+            runtime,
+            reader,
+            thread_handle: None,
+        }
+    }
+}
+
+impl super::Node for LogNode {
+    fn start(&mut self) -> Result<(), OakStatus> {
+        // Clone or copy all the captured values and move them into the closure, for simplicity.
+        let config_name = self.config_name.clone();
+        let runtime = self.runtime.clone();
+        let reader = self.reader;
+        // TODO(#770): Use `std::thread::Builder` and give a name to this thread.
+        let thread_handle = spawn(move || {
+            let pretty_name = format!("{}-{:?}:", config_name, thread::current());
+            let result = logger(&pretty_name, runtime, reader);
+            info!("{} LOG: exiting log thread {:?}", pretty_name, result);
+        });
+        self.thread_handle = Some(thread_handle);
+        Ok(())
+    }
+    fn stop(&mut self) {
+        if let Some(join_handle) = self.thread_handle.take() {
+            if let Err(err) = join_handle.join() {
+                error!("error while stopping log node: {:?}", err);
+            }
+        }
+    }
+}
+
 fn logger(pretty_name: &str, runtime: RuntimeRef, reader: Handle) -> Result<(), OakStatus> {
     loop {
         // An error indicates the runtime is terminating. We ignore it here and keep trying to read
@@ -63,17 +105,4 @@ fn to_level_name(level: i32) -> String {
         Level::from_i32(level).unwrap_or(Level::UnknownLevel)
     )
     .to_ascii_uppercase()
-}
-
-/// Create a new instance of a logger node.
-pub fn new_instance(
-    config_name: &str,
-    runtime: RuntimeRef,
-    initial_reader: Handle,
-) -> Result<JoinHandle<()>, OakStatus> {
-    let pretty_name = format!("{}-{:?}:", config_name, thread::current());
-    Ok(spawn(move || {
-        let result = logger(&pretty_name, runtime, initial_reader);
-        info!("{} LOG: exiting log thread {:?}", pretty_name, result);
-    }))
 }
