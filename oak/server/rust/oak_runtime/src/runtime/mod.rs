@@ -366,7 +366,7 @@ impl Runtime {
                 return Ok(HandleDirection::Write);
             }
         }
-        return Err(OakStatus::ErrBadHandle);
+        Err(OakStatus::ErrBadHandle)
     }
 
     /// Close a [`Handle`], potentially orphaning the underlying [`channel::Channel`].
