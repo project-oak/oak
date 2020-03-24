@@ -23,7 +23,7 @@ const MODULE_CONFIG_NAME: &str = "running_average";
 
 fn submit_sample(
     runtime: &oak_runtime::RuntimeRef,
-    entry_channel: &oak_runtime::ChannelWriter,
+    entry_channel: oak_runtime::Handle,
     value: u64,
 ) {
     let req = SubmitSampleRequest {
@@ -32,7 +32,7 @@ fn submit_sample(
     };
     let result: grpc::Result<Empty> = oak_tests::grpc_request(
         runtime,
-        &entry_channel,
+        entry_channel,
         "/oak.examples.running_average.RunningAverage/SubmitSample",
         &req,
     );
@@ -46,13 +46,13 @@ fn test_running_average() {
     let (runtime, entry_channel) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
         .expect("Unable to configure runtime with test wasm!");
 
-    submit_sample(&runtime, &entry_channel, 100);
-    submit_sample(&runtime, &entry_channel, 200);
+    submit_sample(&runtime, entry_channel, 100);
+    submit_sample(&runtime, entry_channel, 200);
 
     let req = Empty::new();
     let result: grpc::Result<GetAverageResponse> = oak_tests::grpc_request(
         &runtime,
-        &entry_channel,
+        entry_channel,
         "/oak.examples.running_average.RunningAverage/GetAverage",
         &req,
     );

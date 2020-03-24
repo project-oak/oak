@@ -28,7 +28,7 @@ use oak_abi::OakStatus;
 use crate::node;
 use crate::node::load_wasm;
 use crate::runtime;
-use crate::runtime::{ChannelWriter, Runtime, RuntimeRef};
+use crate::runtime::{Handle, Runtime, RuntimeRef};
 
 /// Create an application configuration.
 ///
@@ -106,10 +106,14 @@ pub fn from_protobuf(
     Ok(config)
 }
 
-/// Configure a `Runtime` from the given protobuf `ApplicationConfiguration` and begin execution.
+/// Configure a [`Runtime`] from the given protobuf [`ApplicationConfiguration`] and begin
+/// execution. This returns a [`RuntimeRef`] reference to the created runtime, and a
+/// writeable [`Handle`] to send messages into the runtime. Creating a new
+/// channel and passing the write [`Handle`] into the runtime will enable messages to be
+/// read back out from the [`Runtime`].
 pub fn configure_and_run(
     app_config: ApplicationConfiguration,
-) -> Result<(RuntimeRef, ChannelWriter), OakStatus> {
+) -> Result<(RuntimeRef, Handle), OakStatus> {
     let config = from_protobuf(app_config)?;
     Runtime::configure_and_run(config)
 }

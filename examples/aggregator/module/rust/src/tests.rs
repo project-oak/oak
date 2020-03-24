@@ -29,7 +29,7 @@ const MODULE_CONFIG_NAME: &str = "aggregator";
 
 fn submit_sample(
     runtime: &oak_runtime::RuntimeRef,
-    entry_channel: &oak_runtime::ChannelWriter,
+    entry_channel: oak_runtime::Handle,
     bucket: &str,
     indices: Vec<u32>,
     values: Vec<f32>,
@@ -45,7 +45,7 @@ fn submit_sample(
     };
     oak_tests::grpc_request(
         &runtime,
-        &entry_channel,
+        entry_channel,
         "/oak.examples.aggregator.Aggregator/SubmitSample",
         &req,
     )
@@ -62,7 +62,7 @@ fn test_aggregator() {
         assert_matches!(
             submit_sample(
                 &runtime,
-                &entry_channel,
+                entry_channel,
                 "test",
                 vec![i, i + 1, i + 2],
                 vec![10.0, 20.0, 30.0]
@@ -74,7 +74,7 @@ fn test_aggregator() {
     assert_matches!(
         submit_sample(
             &runtime,
-            &entry_channel,
+            entry_channel,
             "test",
             vec![1, 2, 3],
             vec![10.0, 20.0, 30.0]

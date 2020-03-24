@@ -25,19 +25,23 @@ use std::{
 };
 
 use crate::proto::log::{Level, LogMessage};
-use crate::runtime::ChannelReader;
+use crate::runtime::Handle;
 use crate::RuntimeRef;
 use prost::Message;
 
 /// A simple logger loop.
-fn logger(pretty_name: &str, runtime: RuntimeRef, reader: ChannelReader) -> Result<(), OakStatus> {
+fn logger(pretty_name: &str, runtime: RuntimeRef, reader: Handle) -> Result<(), OakStatus> {
     loop {
         // An error indicates the runtime is terminating. We ignore it here and keep trying to read
         // in case a Wasm node wants to emit remaining messages. We will return once the channel is
         // closed.
-        let _ = runtime.wait_on_channels(&[Some(&reader)]);
 
-        if let Some(message) = runtime.channel_read(&reader)? {
+        // TODO(#646): Temporarily don't wait for messages when terminating. Renable when channels
+        // track their channels and make sure all channels are closed.
+        // let _ = runtime.wait_on_channels(&[Some(&reader)]);
+        runtime.wait_on_channels(&[Some(reader)])?;
+
+        if let Some(message) = runtime.channel_read(reader)? {
             match LogMessage::decode(&*message.data) {
                 Ok(msg) => info!(
                     "{} LOG: {} {}:{}: {}",
@@ -65,7 +69,7 @@ fn to_level_name(level: i32) -> String {
 pub fn new_instance(
     config_name: &str,
     runtime: RuntimeRef,
-    initial_reader: ChannelReader,
+    initial_reader: Handle,
 ) -> Result<JoinHandle<()>, OakStatus> {
     let pretty_name = format!("{}-{:?}:", config_name, thread::current());
     Ok(spawn(move || {

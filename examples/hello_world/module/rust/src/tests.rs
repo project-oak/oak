@@ -34,7 +34,7 @@ fn test_say_hello() {
     };
     let result: grpc::Result<HelloResponse> = oak_tests::grpc_request(
         &runtime,
-        &entry_channel,
+        entry_channel,
         "/oak.examples.hello_world.HelloWorld/SayHello",
         &req,
     );
