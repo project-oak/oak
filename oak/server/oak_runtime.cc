@@ -79,9 +79,9 @@ grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config,
 
   // Create the initial Application Node.
   std::string node_name;
-  OakNode* app_node =
+  app_node_ =
       CreateNode(config.initial_node_config_name(), config.initial_entrypoint_name(), &node_name);
-  if (app_node == nullptr) {
+  if (app_node_ == nullptr) {
     return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Failed to create initial Oak Node");
   }
   OAK_LOG(INFO) << "Created Wasm node named {" << node_name << "}";
@@ -89,11 +89,10 @@ grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config,
   // Create an initial channel from gRPC pseudo-Node to Application Node.
   // Both of the initial nodes have exactly one registered handle.
   MessageChannel::ChannelHalves halves = MessageChannel::Create();
-  Handle grpc_handle =
-      grpc_node_->AddChannel(absl::make_unique<ChannelHalf>(std::move(halves.write)));
-  Handle app_handle = app_node->AddChannel(absl::make_unique<ChannelHalf>(std::move(halves.read)));
-  OAK_LOG(INFO) << "Created initial channel from Wasm node {" << grpc_name << "}." << grpc_handle
-                << " to {" << node_name << "}." << app_handle;
+  grpc_handle_ = grpc_node_->AddChannel(absl::make_unique<ChannelHalf>(std::move(halves.write)));
+  app_handle_ = app_node_->AddChannel(absl::make_unique<ChannelHalf>(std::move(halves.read)));
+  OAK_LOG(INFO) << "Created initial channel from Wasm node {" << grpc_name << "}." << grpc_handle_
+                << " to {" << node_name << "}." << app_handle_;
 
   return grpc::Status::OK;
 }
@@ -161,19 +160,16 @@ bool OakRuntime::CreateAndRunNode(const std::string& config_name,
   Handle handle = node->AddChannel(std::move(half));
 
   OAK_LOG(INFO) << "Start node named {" << *node_name << "} with initial handle " << handle;
-  node->Start();
+  node->Start(handle);
   return true;
 }
 
 grpc::Status OakRuntime::Start() {
   OAK_LOG(INFO) << "Starting runtime";
-  absl::MutexLock lock(&mu_);
 
-  // Now all dependencies are running, start the Nodes running.
-  for (auto& named_node : nodes_) {
-    OAK_LOG(INFO) << "Starting node " << named_node.first;
-    named_node.second->Start();
-  }
+  // Now all dependencies are running, start the initial pair of Nodes running.
+  grpc_node_->Start(grpc_handle_);
+  app_node_->Start(app_handle_);
 
   return grpc::Status::OK;
 }

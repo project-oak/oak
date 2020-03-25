@@ -39,7 +39,12 @@ namespace oak {
 
 class OakRuntime : public BaseRuntime {
  public:
-  OakRuntime() : termination_pending_(false), grpc_node_(nullptr) {}
+  OakRuntime()
+      : grpc_node_(nullptr),
+        grpc_handle_(kInvalidHandle),
+        app_node_(nullptr),
+        app_handle_(kInvalidHandle),
+        termination_pending_(false) {}
   virtual ~OakRuntime() = default;
 
   // Initializes an OakRuntime with a user-provided ApplicationConfiguration. This
@@ -77,6 +82,17 @@ class OakRuntime : public BaseRuntime {
   // Config names that refer to a gRPC client node.
   std::map<std::string, std::unique_ptr<std::string>> grpc_client_config_;
 
+  // Convenience (non-owning) reference to gRPC pseudo-node.
+  OakGrpcNode* grpc_node_;
+  // Handle for the write half of the gRPC server notification channel, relative
+  // to the gRPC server pseudo-Node
+  Handle grpc_handle_;
+  // Convenience (non-owning) reference to initial Application Wasm node;
+  OakNode* app_node_;
+  // Handle for the read half of the gRPC server notification channel, relative
+  // to the initial Application Wasm Node.
+  Handle app_handle_;
+
   // Next index for node name generation.
   mutable absl::Mutex mu_;  // protects nodes_, next_index_;
   std::map<std::string, int> next_index_ GUARDED_BY(mu_);
@@ -87,8 +103,6 @@ class OakRuntime : public BaseRuntime {
   // unique but is not visible to the running Application in any way.
   std::map<std::string, std::unique_ptr<OakNode>> nodes_ GUARDED_BY(mu_);
 
-  // Convenience (non-owning) reference to gRPC pseudo-node; const after Initialize() called.
-  OakGrpcNode* grpc_node_;
 };  // class OakRuntime
 
 }  // namespace oak
