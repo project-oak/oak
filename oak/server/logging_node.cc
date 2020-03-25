@@ -63,7 +63,7 @@ void LoggingNode::Run(Handle handle) {
       // Any channel references included with the message will be dropped.
     }
   }
-  if (CloseChannel(handle)) {
+  if (ChannelClose(handle) == OakStatus::OK) {
     OAK_LOG(INFO) << "{" << name_ << "} Closed channel handle: " << handle;
   } else {
     OAK_LOG(WARNING) << "{" << name_ << "} Invalid channel handle: " << handle;
