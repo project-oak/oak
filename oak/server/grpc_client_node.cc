@@ -119,7 +119,7 @@ bool GrpcClientNode::HandleInvocation(Handle invocation_handle) {
     any->set_value(rsp_data.data(), rsp_data.size());
     grpc_rsp.set_allocated_rsp_msg(any);
 
-    std::unique_ptr<Message> rsp_msg = absl::make_unique<Message>();
+    auto rsp_msg = absl::make_unique<NodeMessage>();
     size_t serialized_size = grpc_rsp.ByteSizeLong();
     rsp_msg->data.resize(serialized_size);
     grpc_rsp.SerializeToArray(rsp_msg->data.data(), rsp_msg->data.size());
@@ -143,7 +143,7 @@ bool GrpcClientNode::HandleInvocation(Handle invocation_handle) {
     grpc_rsp.mutable_status()->set_code(status.error_code());
     grpc_rsp.mutable_status()->set_message(status.error_message());
 
-    std::unique_ptr<Message> rsp_msg = absl::make_unique<Message>();
+    auto rsp_msg = absl::make_unique<NodeMessage>();
     size_t serialized_size = grpc_rsp.ByteSizeLong();
     rsp_msg->data.resize(serialized_size);
     grpc_rsp.SerializeToArray(rsp_msg->data.data(), rsp_msg->data.size());

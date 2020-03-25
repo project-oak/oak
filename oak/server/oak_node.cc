@@ -60,7 +60,7 @@ NodeReadResult OakNode::ChannelRead(Handle handle, uint32_t max_size, uint32_t m
   return result;
 }
 
-OakStatus OakNode::ChannelWrite(Handle handle, std::unique_ptr<Message> msg) {
+OakStatus OakNode::ChannelWrite(Handle handle, std::unique_ptr<NodeMessage> msg) {
   // Borrowing a reference to the channel is safe because the Node is single
   // threaded and so cannot invoke channel_close while channel_write is
   // ongoing.
@@ -74,7 +74,19 @@ OakStatus OakNode::ChannelWrite(Handle handle, std::unique_ptr<Message> msg) {
     OAK_LOG(INFO) << "{" << name_ << "} channel_write[" << handle << "]: no readers left";
     return OakStatus::ERR_CHANNEL_CLOSED;
   }
-  channel->Write(std::move(msg));
+  auto msg_internal = absl::make_unique<Message>();
+  msg_internal->data = std::move(msg->data);
+  msg_internal->label = std::move(msg->label);
+  for (Handle h : msg->handles) {
+    ChannelHalf* half = BorrowChannel(h);
+    if (half == nullptr) {
+      OAK_LOG(WARNING) << "{" << name_ << "} Invalid transferred channel handle: " << h;
+      return OakStatus::ERR_BAD_HANDLE;
+    }
+    msg_internal->channels.push_back(CloneChannelHalf(half));
+  }
+
+  channel->Write(std::move(msg_internal));
   return OakStatus::OK;
 }
 

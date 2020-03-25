@@ -70,7 +70,7 @@ class OakNode {
 
   // ChannelWrite passes ownership of a message to the channel identified by the
   // handle.
-  OakStatus ChannelWrite(Handle handle, std::unique_ptr<Message> msg);
+  OakStatus ChannelWrite(Handle handle, std::unique_ptr<NodeMessage> msg);
 
   // Close the given channel half.
   OakStatus ChannelClose(Handle handle) LOCKS_EXCLUDED(mu_);
