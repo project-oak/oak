@@ -47,8 +47,8 @@ bool GrpcClientNode::HandleInvocation(MessageChannelReadHalf* invocation_channel
   // Expect to read a single request out of the request channel.
   // TODO(#97): support client-side streaming
   ReadResult req_result = invocation->req_channel->Read(INT_MAX, INT_MAX);
-  if (req_result.required_size > 0) {
-    OAK_LOG(ERROR) << "Message size too large: " << req_result.required_size;
+  if (req_result.status != OakStatus::OK) {
+    OAK_LOG(ERROR) << "Failed to read invocation message: " << req_result.status;
     return false;
   }
   if (req_result.msg->channels.size() != 0) {

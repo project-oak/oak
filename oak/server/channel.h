@@ -50,16 +50,16 @@ struct Message {
   oak::policy::Label label;
 };
 
-// Result of a read operation. If the operation would have produced a message
-// bigger than the requested maximum size, then |required_size| will be non-zero
-// and indicates the required size for the message.  If the operation would have
-// been accompanied by more than the requested maximum channel count, then
-// |required_channels| will be non-zero and indicates the required channel count
-// for the message. Otherwise, |required_size| and |required_channels| will be
-// zero and |data| holds the message (transferring ownership).
+// Result of a read operation.
 struct ReadResult {
+  explicit ReadResult(OakStatus s) : status(s), required_size(0), required_channels(0) {}
+  OakStatus status;
+  // The following fields are filled in if the status is ERR_BUFFER_TOO_SMALL
+  // or ERR_HANDLE_SPACE_TOO_SMALL, indicating the required size and number
+  // of handles needed to read the message.
   uint32_t required_size;
   uint32_t required_channels;
+  // The following field is filled in if the status is OK.
   std::unique_ptr<Message> msg;
 };
 
@@ -99,7 +99,7 @@ class MessageChannel {
   // Count indicates the number of pending messages.
   size_t Count() const LOCKS_EXCLUDED(mu_);
 
-  // Read returns the first message on the channel, subject to |max_size| checks.
+  // Read returns the first message on the channel, subject to size checks.
   ReadResult Read(uint32_t max_size, uint32_t max_channels) LOCKS_EXCLUDED(mu_);
 
   // BlockingRead behaves like Read but blocks until a message is available.

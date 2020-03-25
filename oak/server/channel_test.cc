@@ -43,10 +43,12 @@ TEST(MessageChannel, BasicOperation) {
   ASSERT_EQ(true, read_half->CanRead());
 
   ReadResult result1 = read_half->Read(1, 0);  // too small
+  ASSERT_EQ(OakStatus::ERR_BUFFER_TOO_SMALL, result1.status);
   ASSERT_EQ(3, result1.required_size);
   ASSERT_EQ(nullptr, result1.msg);
 
   ReadResult result2 = read_half->Read(3, 0);  // just right
+  ASSERT_EQ(OakStatus::OK, result2.status);
   EXPECT_NE(result2.msg, nullptr);
   ASSERT_EQ(3, result2.msg->data.size());
   ASSERT_EQ(0x01, (result2.msg->data)[0]);
@@ -54,6 +56,7 @@ TEST(MessageChannel, BasicOperation) {
   ASSERT_EQ(false, read_half->CanRead());
 
   ReadResult result3 = read_half->Read(10000, 0);
+  ASSERT_EQ(OakStatus::OK, result3.status);
   ASSERT_EQ(nullptr, result3.msg);
   ASSERT_EQ(0, result3.required_size);
 
@@ -65,15 +68,18 @@ TEST(MessageChannel, BasicOperation) {
   ASSERT_EQ(true, read_half->CanRead());
 
   ReadResult result4 = read_half->Read(3000, 0);
+  ASSERT_EQ(OakStatus::OK, result4.status);
   EXPECT_NE(result4.msg, nullptr);
   ASSERT_EQ(3, result4.msg->data.size());
   ASSERT_EQ(0x11, (result4.msg->data)[0]);
 
   ReadResult result5 = read_half->Read(0, 0);
+  ASSERT_EQ(OakStatus::ERR_BUFFER_TOO_SMALL, result5.status);
   ASSERT_EQ(3, result5.required_size);
   ASSERT_EQ(nullptr, result5.msg);
 
   ReadResult result6 = read_half->Read(10, 0);
+  ASSERT_EQ(OakStatus::OK, result6.status);
   EXPECT_NE(result6.msg, nullptr);
   ASSERT_EQ(3, result6.msg->data.size());
   ASSERT_EQ(0x21, (result6.msg->data)[0]);
@@ -94,11 +100,13 @@ TEST(MessageChannel, ChannelTransfer) {
   ASSERT_EQ(true, read_half->CanRead());
 
   ReadResult result1 = read_half->Read(1000, 0);  // no space for channels
+  ASSERT_EQ(OakStatus::ERR_HANDLE_SPACE_TOO_SMALL, result1.status);
   ASSERT_EQ(3, result1.required_size);
   ASSERT_EQ(1, result1.required_channels);
   ASSERT_EQ(nullptr, result1.msg);
 
   ReadResult result2 = read_half->Read(1000, 1);  // just right
+  ASSERT_EQ(OakStatus::OK, result2.status);
   EXPECT_NE(result2.msg, nullptr);
   ASSERT_EQ(3, result2.msg->data.size());
   ASSERT_EQ(0x01, (result2.msg->data)[0]);
@@ -107,6 +115,7 @@ TEST(MessageChannel, ChannelTransfer) {
   ASSERT_EQ(false, read_half->CanRead());
 
   ReadResult result3 = read_half->Read(10000, 10);
+  ASSERT_EQ(OakStatus::OK, result3.status);
   ASSERT_EQ(nullptr, result3.msg);
   ASSERT_EQ(0, result3.required_size);
   ASSERT_EQ(0, result3.required_channels);
@@ -124,17 +133,20 @@ TEST(MessageChannel, ChannelTransfer) {
   ASSERT_EQ(true, read_half->CanRead());
 
   ReadResult result4 = read_half->Read(3000, 10);
+  ASSERT_EQ(OakStatus::OK, result4.status);
   EXPECT_NE(result4.msg, nullptr);
   ASSERT_EQ(3, result4.msg->data.size());
   ASSERT_EQ(0x11, (result4.msg->data)[0]);
   ASSERT_EQ(2, result4.msg->channels.size());
 
   ReadResult result5 = read_half->Read(100, 0);
+  ASSERT_EQ(OakStatus::ERR_HANDLE_SPACE_TOO_SMALL, result5.status);
   ASSERT_EQ(3, result5.required_size);
   ASSERT_EQ(3, result5.required_channels);
   ASSERT_EQ(nullptr, result5.msg);
 
   ReadResult result6 = read_half->Read(10, 10);
+  ASSERT_EQ(OakStatus::OK, result6.status);
   EXPECT_NE(result6.msg, nullptr);
   ASSERT_EQ(3, result6.msg->data.size());
   ASSERT_EQ(0x21, (result6.msg->data)[0]);

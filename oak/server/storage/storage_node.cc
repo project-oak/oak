@@ -54,8 +54,8 @@ void StorageNode::Run(Handle invocation_handle) {
 
     // Expect to read a single request out of the request channel.
     ReadResult req_result = invocation->req_channel->Read(INT_MAX, INT_MAX);
-    if (req_result.required_size > 0) {
-      OAK_LOG(ERROR) << "Message size too large: " << req_result.required_size;
+    if (req_result.status != OakStatus::OK) {
+      OAK_LOG(ERROR) << "Failed to read message: " << req_result.status;
       return;
     }
     if (req_result.msg->channels.size() != 0) {

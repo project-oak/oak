@@ -29,8 +29,8 @@ std::unique_ptr<Invocation> Invocation::ReceiveFromChannel(
   //  - Reference to the write half of a channel to send responses down, each
   //    serialized as a GrpcResponse.
   ReadResult invocation = invocation_channel->Read(INT_MAX, INT_MAX);
-  if (invocation.required_size > 0) {
-    OAK_LOG(ERROR) << "Message size too large: " << invocation.required_size;
+  if (invocation.status != OakStatus::OK) {
+    OAK_LOG(ERROR) << "Failed to read invocation message: " << invocation.status;
     return nullptr;
   }
   if (invocation.msg->data.size() != 0) {
