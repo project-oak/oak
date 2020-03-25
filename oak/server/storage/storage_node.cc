@@ -32,12 +32,6 @@ StorageNode::StorageNode(BaseRuntime* runtime, const std::string& name,
     : NodeThread(runtime, name), storage_processor_(storage_address) {}
 
 void StorageNode::Run(Handle invocation_handle) {
-  // Borrow a pointer to the relevant channel half.
-  MessageChannelReadHalf* invocation_channel = BorrowReadChannel(invocation_handle);
-  if (invocation_channel == nullptr) {
-    OAK_LOG(ERROR) << "Required channel not available; handle: " << invocation_handle;
-    return;
-  }
   std::vector<std::unique_ptr<ChannelStatus>> channel_status;
   channel_status.push_back(absl::make_unique<ChannelStatus>(invocation_handle));
   while (true) {
@@ -46,19 +40,19 @@ void StorageNode::Run(Handle invocation_handle) {
       return;
     }
 
-    std::unique_ptr<Invocation> invocation(Invocation::ReceiveFromChannel(invocation_channel));
+    std::unique_ptr<Invocation> invocation(Invocation::ReceiveFromChannel(this, invocation_handle));
     if (invocation == nullptr) {
       OAK_LOG(ERROR) << "Failed to create invocation";
       return;
     }
 
     // Expect to read a single request out of the request channel.
-    ReadResult req_result = invocation->req_channel->Read(INT_MAX, INT_MAX);
+    NodeReadResult req_result = ChannelRead(invocation->req_handle.get(), INT_MAX, INT_MAX);
     if (req_result.status != OakStatus::OK) {
       OAK_LOG(ERROR) << "Failed to read message: " << req_result.status;
       return;
     }
-    if (req_result.msg->channels.size() != 0) {
+    if (req_result.msg->handles.size() != 0) {
       OAK_LOG(ERROR) << "Unexpectedly received channel handles in request channel";
       return;
     }
@@ -82,7 +76,7 @@ void StorageNode::Run(Handle invocation_handle) {
     size_t serialized_size = grpc_rsp->ByteSizeLong();
     rsp_msg->data.resize(serialized_size);
     grpc_rsp->SerializeToArray(rsp_msg->data.data(), rsp_msg->data.size());
-    invocation->rsp_channel->Write(std::move(rsp_msg));
+    ChannelWrite(invocation->rsp_handle.get(), std::move(rsp_msg));
 
     // The response channel reference is dropped here.
   }

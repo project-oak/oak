@@ -212,7 +212,9 @@ cc_library(
     srcs = ["invocation.cc"],
     hdrs = ["invocation.h"],
     deps = [
-        ":channel",
+        ":handle_closer",
+        ":oak_node",
+        "//oak/common:handles",
         "//oak/common:logging",
         "@com_google_absl//absl/memory",
     ],
@@ -224,7 +226,6 @@ cc_library(
     hdrs = ["grpc_client_node.h"],
     deps = [
         ":base_runtime",
-        ":channel",
         ":invocation",
         ":node_thread",
         "//oak/common:handles",

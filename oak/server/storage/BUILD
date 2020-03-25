@@ -52,7 +52,6 @@ cc_library(
         "//oak/common:logging",
         "//oak/proto:grpc_encap_cc_proto",
         "//oak/proto:storage_channel_cc_proto",
-        "//oak/server:channel",
         "//oak/server:invocation",
         "//oak/server:node_thread",
         "//third_party/asylo:statusor",
