@@ -22,7 +22,6 @@
 #include "absl/synchronization/mutex.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/common/app_config.h"
-#include "oak/server/channel.h"
 #include "oak/server/oak_node.h"
 
 namespace oak {
@@ -53,10 +52,6 @@ class OakGrpcNode final : public OakNode {
       : OakNode(runtime, name), next_stream_id_(1), handle_(kInvalidHandle) {}
   OakGrpcNode(const OakGrpcNode&) = delete;
   OakGrpcNode& operator=(const OakGrpcNode&) = delete;
-
-  MessageChannelWriteHalf* BorrowWriteChannel() const {
-    return OakNode::BorrowWriteChannel(handle_);
-  }
 
   // Consumes gRPC events from the completion queue in an infinite loop.
   void CompletionQueueLoop();

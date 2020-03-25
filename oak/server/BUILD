@@ -115,9 +115,9 @@ cc_library(
         "oak_grpc_node.h",
     ],
     deps = [
-        ":channel",
         ":oak_node",
         "//oak/common:app_config",
+        "//oak/common:handles",
         "//oak/common:logging",
         "//oak/common:policy",
         "//oak/proto:grpc_encap_cc_proto",

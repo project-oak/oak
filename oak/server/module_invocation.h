@@ -21,7 +21,7 @@
 
 #include "include/grpcpp/generic/async_generic_service.h"
 #include "include/grpcpp/grpcpp.h"
-#include "oak/server/channel.h"
+#include "oak/common/handles.h"
 #include "oak/server/oak_grpc_node.h"
 
 namespace oak {
@@ -41,7 +41,10 @@ class ModuleInvocation {
         stream_id_(grpc_node_->NextStreamID()) {}
 
   // This object deletes itself.
-  ~ModuleInvocation() = default;
+  ~ModuleInvocation() {
+    grpc_node_->ChannelClose(req_handle_);
+    grpc_node_->ChannelClose(rsp_handle_);
+  }
 
   // Starts the asynchronous gRPC flow, which calls ReadRequest when the next
   // Oak Module invocation request arrives.
@@ -75,10 +78,10 @@ class ModuleInvocation {
   // Borrowed references to gRPC Node that this invocation is on behalf of.
   OakGrpcNode* grpc_node_;
 
-  // Channel references for the two channels that are used for communication
+  // Channel handles for the two channels that are used for communication
   // related to this method invocation.
-  std::unique_ptr<MessageChannelWriteHalf> req_half_;
-  std::unique_ptr<MessageChannelReadHalf> rsp_half_;
+  Handle req_handle_;
+  Handle rsp_handle_;
 
   grpc::GenericServerContext context_;
   grpc::GenericServerAsyncReaderWriter stream_;
