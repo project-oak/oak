@@ -21,6 +21,16 @@
 
 namespace oak {
 
+OakStatus OakNode::ChannelClose(Handle handle) {
+  absl::MutexLock lock(&mu_);
+  auto it = channel_halves_.find(handle);
+  if (it == channel_halves_.end()) {
+    return OakStatus::ERR_BAD_HANDLE;
+  }
+  channel_halves_.erase(it);
+  return OakStatus::OK;
+}
+
 Handle OakNode::NextHandle() {
   std::uniform_int_distribution<Handle> distribution;
   while (true) {
@@ -40,16 +50,6 @@ Handle OakNode::AddChannel(std::unique_ptr<ChannelHalf> half) {
   Handle handle = NextHandle();
   channel_halves_[handle] = std::move(half);
   return handle;
-}
-
-bool OakNode::CloseChannel(Handle handle) {
-  absl::MutexLock lock(&mu_);
-  auto it = channel_halves_.find(handle);
-  if (it == channel_halves_.end()) {
-    return false;
-  }
-  channel_halves_.erase(it);
-  return true;
 }
 
 ChannelHalf* OakNode::BorrowChannel(Handle handle) const {

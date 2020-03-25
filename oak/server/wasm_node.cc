@@ -508,14 +508,10 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelClose(wabt::interp::Environ
     LogHostFunctionCall(name_, func, args);
 
     Handle channel_handle = args[0].get_i64();
-
-    if (CloseChannel(channel_handle)) {
-      OAK_LOG(INFO) << "{" << name_ << "} Closed channel handle: " << channel_handle;
-      results[0].set_i32(OakStatus::OK);
-    } else {
-      OAK_LOG(WARNING) << "{" << name_ << "} Invalid channel handle: " << channel_handle;
-      results[0].set_i32(OakStatus::ERR_BAD_HANDLE);
-    }
+    OakStatus status = ChannelClose(channel_handle);
+    OAK_LOG(INFO) << "{" << name_ << "} Close channel handle " << channel_handle << " status "
+                  << status;
+    results[0].set_i32(status);
     return wabt::interp::Result::Ok;
   };
 }
