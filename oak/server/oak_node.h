@@ -83,10 +83,6 @@ class OakNode {
   OakStatus NodeCreate(Handle handle, const std::string& config_name,
                        const std::string& entrypoint_name);
 
-  // Take ownership of the given channel half, returning a channel handle that
-  // the node can use to refer to it in future.
-  Handle AddChannel(std::unique_ptr<ChannelHalf> half) LOCKS_EXCLUDED(mu_);
-
   // Return a borrowed reference to the channel half identified by the given
   // handle (or nullptr if the handle is not recognized).  Caller is responsible
   // for ensuring that the borrowed reference does not out-live the owned
@@ -116,6 +112,13 @@ class OakNode {
   const std::string name_;
 
  private:
+  // Allow the Runtime to use internal methods.
+  friend class OakRuntime;
+
+  // Take ownership of the given channel half, returning a channel handle that
+  // the Node can use to refer to it in future.
+  Handle AddChannel(std::unique_ptr<ChannelHalf> half) LOCKS_EXCLUDED(mu_);
+
   Handle NextHandle() EXCLUSIVE_LOCKS_REQUIRED(mu_);
 
   using ChannelHalfTable = std::unordered_map<Handle, std::unique_ptr<ChannelHalf>>;
