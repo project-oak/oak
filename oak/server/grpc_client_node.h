@@ -24,7 +24,6 @@
 #include "include/grpcpp/grpcpp.h"
 #include "oak/common/handles.h"
 #include "oak/server/base_runtime.h"
-#include "oak/server/channel.h"
 #include "oak/server/node_thread.h"
 
 namespace oak {
@@ -34,7 +33,7 @@ class GrpcClientNode final : public NodeThread {
   GrpcClientNode(BaseRuntime* runtime, const std::string& name, const std::string& grpc_address);
 
  private:
-  bool HandleInvocation(MessageChannelReadHalf* invocation_channel);
+  bool HandleInvocation(Handle invocation_handle);
   void Run(Handle handle) override;
 
   std::shared_ptr<grpc::ChannelInterface> channel_;

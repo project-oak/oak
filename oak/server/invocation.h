@@ -20,22 +20,23 @@
 #include <memory>
 #include <string>
 
-#include "oak/server/channel.h"
+#include "oak/common/handles.h"
+#include "oak/server/handle_closer.h"
+#include "oak/server/oak_node.h"
 
 namespace oak {
 
-// An Invocation holds the channel references used in gRPC method invocation
+// An Invocation holds the channel handles used in gRPC method invocation
 // processing.
 struct Invocation {
   // Build an Invocation from the data arriving on the given channel.
-  static std::unique_ptr<Invocation> ReceiveFromChannel(MessageChannelReadHalf* invocation_channel);
+  static std::unique_ptr<Invocation> ReceiveFromChannel(OakNode* node, Handle invocation_handle);
 
-  Invocation(std::unique_ptr<MessageChannelReadHalf> req,
-             std::unique_ptr<MessageChannelWriteHalf> rsp)
-      : req_channel(std::move(req)), rsp_channel(std::move(rsp)) {}
+  Invocation(OakNode* node, Handle req, Handle rsp)
+      : req_handle(node, req), rsp_handle(node, rsp) {}
 
-  std::unique_ptr<MessageChannelReadHalf> req_channel;
-  std::unique_ptr<MessageChannelWriteHalf> rsp_channel;
+  HandleCloser req_handle;
+  HandleCloser rsp_handle;
 };
 
 }  // namespace oak

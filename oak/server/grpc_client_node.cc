@@ -37,8 +37,8 @@ GrpcClientNode::GrpcClientNode(BaseRuntime* runtime, const std::string& name,
   OAK_LOG(INFO) << "Created gRPC client node for " << grpc_address;
 }
 
-bool GrpcClientNode::HandleInvocation(MessageChannelReadHalf* invocation_channel) {
-  std::unique_ptr<Invocation> invocation(Invocation::ReceiveFromChannel(invocation_channel));
+bool GrpcClientNode::HandleInvocation(Handle invocation_handle) {
+  std::unique_ptr<Invocation> invocation(Invocation::ReceiveFromChannel(this, invocation_handle));
   if (invocation == nullptr) {
     OAK_LOG(ERROR) << "Failed to create invocation";
     return false;
@@ -46,12 +46,12 @@ bool GrpcClientNode::HandleInvocation(MessageChannelReadHalf* invocation_channel
 
   // Expect to read a single request out of the request channel.
   // TODO(#97): support client-side streaming
-  ReadResult req_result = invocation->req_channel->Read(INT_MAX, INT_MAX);
+  NodeReadResult req_result = ChannelRead(invocation->req_handle.get(), INT_MAX, INT_MAX);
   if (req_result.status != OakStatus::OK) {
     OAK_LOG(ERROR) << "Failed to read invocation message: " << req_result.status;
     return false;
   }
-  if (req_result.msg->channels.size() != 0) {
+  if (req_result.msg->handles.size() != 0) {
     OAK_LOG(ERROR) << "Unexpectedly received channel handles in request channel";
     return false;
   }
@@ -126,7 +126,7 @@ bool GrpcClientNode::HandleInvocation(MessageChannelReadHalf* invocation_channel
 
     // Write the encapsulated response Message to the response channel.
     OAK_LOG(INFO) << "Write gRPC response message to response channel";
-    invocation->rsp_channel->Write(std::move(rsp_msg));
+    ChannelWrite(invocation->rsp_handle.get(), std::move(rsp_msg));
   }
 
   OAK_LOG(INFO) << "Finish invocation method " << method_name;
@@ -150,7 +150,7 @@ bool GrpcClientNode::HandleInvocation(MessageChannelReadHalf* invocation_channel
 
     OAK_LOG(INFO) << "Write final gRPC status of (" << status.error_code() << ", '"
                   << status.error_message() << "') to response channel";
-    invocation->rsp_channel->Write(std::move(rsp_msg));
+    ChannelWrite(invocation->rsp_handle.get(), std::move(rsp_msg));
   }
 
   // References to the per-invocation request/response channels will be dropped
@@ -159,12 +159,6 @@ bool GrpcClientNode::HandleInvocation(MessageChannelReadHalf* invocation_channel
 }
 
 void GrpcClientNode::Run(Handle invocation_handle) {
-  // Borrow a pointer to the relevant channel half.
-  MessageChannelReadHalf* invocation_channel = BorrowReadChannel(invocation_handle);
-  if (invocation_channel == nullptr) {
-    OAK_LOG(ERROR) << "Required channel not available; handle: " << invocation_handle;
-    return;
-  }
   std::vector<std::unique_ptr<ChannelStatus>> channel_status;
   channel_status.push_back(absl::make_unique<ChannelStatus>(invocation_handle));
   while (true) {
@@ -173,11 +167,10 @@ void GrpcClientNode::Run(Handle invocation_handle) {
       return;
     }
 
-    if (!HandleInvocation(invocation_channel)) {
+    if (!HandleInvocation(invocation_handle)) {
       OAK_LOG(ERROR) << "Invocation processing failed!";
     }
   }
-  // Drop reference to the invocation channel on exit.
 }
 
 }  // namespace oak
