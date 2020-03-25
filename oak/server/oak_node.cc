@@ -21,6 +21,28 @@
 
 namespace oak {
 
+ReadResult OakNode::ChannelRead(Handle handle, uint32_t max_size, uint32_t max_channels) {
+  // Borrowing a reference to the channel is safe because the node is single
+  // threaded and so cannot invoke channel_close while channel_read is
+  // ongoing.
+  MessageChannelReadHalf* channel = BorrowReadChannel(handle);
+  if (channel == nullptr) {
+    OAK_LOG(WARNING) << "{" << name_ << "} Invalid channel handle: " << handle;
+    return ReadResult(OakStatus::ERR_BAD_HANDLE);
+  }
+  ReadResult result = channel->Read(max_size, max_channels);
+  if ((result.status == OakStatus::OK) && (result.msg == nullptr)) {
+    // Nothing available to read.
+    if (channel->Orphaned()) {
+      OAK_LOG(INFO) << "{" << name_ << "} channel_read[" << handle << "]: no writers left";
+      result.status = OakStatus::ERR_CHANNEL_CLOSED;
+    } else {
+      result.status = OakStatus::ERR_CHANNEL_EMPTY;
+    }
+  }
+  return result;
+}
+
 OakStatus OakNode::ChannelClose(Handle handle) {
   absl::MutexLock lock(&mu_);
   auto it = channel_halves_.find(handle);

@@ -40,6 +40,10 @@ class OakNode {
   virtual void Start() = 0;
   virtual void Stop() = 0;
 
+  // ChannelRead returns the first message on the channel identified by the
+  // handle, subject to size checks.
+  ReadResult ChannelRead(Handle handle, uint32_t max_size, uint32_t max_channels);
+
   // Close the given channel half.
   OakStatus ChannelClose(Handle handle) LOCKS_EXCLUDED(mu_);
 
