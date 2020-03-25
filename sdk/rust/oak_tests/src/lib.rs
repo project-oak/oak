@@ -111,13 +111,21 @@ where
         .expect("failed to serialize GrpcRequest message");
 
     // Create a new channel to hold the request message.
-    let (req_write_half, req_read_half) = runtime.new_channel();
+    //
+    // In most cases we do not care about labels, so we use the least privileged label for this
+    // channel.
+    let (req_write_half, req_read_half) =
+        runtime.new_channel(&oak_abi::label::Label::public_trusted());
     runtime
         .channel_write(req_write_half, req_msg)
         .expect("could not write message");
 
     // Create a new channel for responses to arrive on and also attach that to the message.
-    let (rsp_write_half, rsp_read_half) = runtime.new_channel();
+    //
+    // In most cases we do not care about labels, so we use the least privileged label for this
+    // channel.
+    let (rsp_write_half, rsp_read_half) =
+        runtime.new_channel(&oak_abi::label::Label::public_trusted());
 
     // Create a notification message and attach the method-invocation specific channels to it.
     let notify_msg = oak_runtime::Message {

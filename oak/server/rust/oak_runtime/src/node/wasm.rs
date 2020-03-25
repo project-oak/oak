@@ -201,7 +201,6 @@ impl WasmInterface {
                 &config_name,
                 &entrypoint,
                 // TODO(#630): Let caller provide this label via the Wasm ABI.
-                // TODO(#630): Check whether the label of the caller "flows to" the provided label.
                 &oak_abi::label::Label::public_trusted(),
                 channel_ref.clone(),
             )
@@ -220,7 +219,10 @@ impl WasmInterface {
         write_addr: AbiPointer,
         read_addr: AbiPointer,
     ) -> Result<(), OakStatus> {
-        let (writer, reader) = self.runtime.new_channel();
+        let (writer, reader) = self
+            .runtime
+            // TODO(#630): Let caller provide this label via the Wasm ABI.
+            .new_channel(&oak_abi::label::Label::public_trusted());
 
         self.validate_ptr(write_addr, 8)?;
         self.validate_ptr(read_addr, 8)?;
