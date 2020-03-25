@@ -37,6 +37,12 @@ cc_library(
 )
 
 cc_library(
+    name = "handle_closer",
+    hdrs = ["handle_closer.h"],
+    deps = [":oak_node"],
+)
+
+cc_library(
     name = "wasm_node",
     srcs = [
         "wabt_output.cc",
@@ -192,6 +198,7 @@ cc_library(
     hdrs = ["logging_node.h"],
     deps = [
         ":channel",
+        ":handle_closer",
         ":node_thread",
         "//oak/common:handles",
         "//oak/common:logging",
