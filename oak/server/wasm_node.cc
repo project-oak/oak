@@ -29,7 +29,6 @@
 #include "oak/common/logging.h"
 #include "oak/proto/oak_api.pb.h"
 #include "oak/server/base_runtime.h"
-#include "oak/server/channel.h"
 #include "oak/server/wabt_output.h"
 #include "src/binary-reader.h"
 #include "src/error-formatter.h"
@@ -488,35 +487,13 @@ wabt::interp::HostFunc::Callback WasmNode::OakNodeCreate(wabt::interp::Environme
       results[0].set_i32(OakStatus::ERR_INVALID_ARGS);
       return wabt::interp::Result::Ok;
     }
-
-    // Check that the handle identifies the read half of a channel.
-    ChannelHalf* borrowed_half = BorrowChannel(channel_handle);
-    if (borrowed_half == nullptr) {
-      OAK_LOG(WARNING) << "{" << name_ << "} Invalid channel handle: " << channel_handle;
-      results[0].set_i32(OakStatus::ERR_BAD_HANDLE);
-      return wabt::interp::Result::Ok;
-    }
-    if (!absl::holds_alternative<std::unique_ptr<MessageChannelReadHalf>>(*borrowed_half)) {
-      OAK_LOG(WARNING) << "{" << name_ << "} Wrong direction channel handle: " << channel_handle;
-      results[0].set_i32(OakStatus::ERR_BAD_HANDLE);
-      return wabt::interp::Result::Ok;
-    }
-    std::unique_ptr<ChannelHalf> half = CloneChannelHalf(borrowed_half);
-
     auto config_base = env->GetMemory(0)->data.begin() + config_offset;
     std::string config_name(config_base, config_base + config_size);
     auto entrypoint_base = env->GetMemory(0)->data.begin() + entrypoint_offset;
     std::string entrypoint_name(entrypoint_base, entrypoint_base + entrypoint_size);
-    OAK_LOG(INFO) << "Create a new node with config '" << config_name << "' and entrypoint '"
-                  << entrypoint_name << "'";
 
-    std::string node_name;
-    if (!runtime_->CreateAndRunNode(config_name, entrypoint_name, std::move(half), &node_name)) {
-      results[0].set_i32(OakStatus::ERR_INVALID_ARGS);
-    } else {
-      OAK_LOG(INFO) << "Created new node named {" << node_name << "}";
-      results[0].set_i32(OakStatus::OK);
-    }
+    OakStatus status = NodeCreate(channel_handle, config_name, entrypoint_name);
+    results[0].set_i32(status);
     return wabt::interp::Result::Ok;
   };
 }

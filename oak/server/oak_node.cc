@@ -100,6 +100,32 @@ OakStatus OakNode::ChannelClose(Handle handle) {
   return OakStatus::OK;
 }
 
+OakStatus OakNode::NodeCreate(Handle handle, const std::string& config_name,
+                              const std::string& entrypoint_name) {
+  // Check that the handle identifies the read half of a channel.
+  ChannelHalf* borrowed_half = BorrowChannel(handle);
+  if (borrowed_half == nullptr) {
+    OAK_LOG(WARNING) << "{" << name_ << "} Invalid channel handle: " << handle;
+    return OakStatus::ERR_BAD_HANDLE;
+  }
+  if (!absl::holds_alternative<std::unique_ptr<MessageChannelReadHalf>>(*borrowed_half)) {
+    OAK_LOG(WARNING) << "{" << name_ << "} Wrong direction channel handle: " << handle;
+    return OakStatus::ERR_BAD_HANDLE;
+  }
+  std::unique_ptr<ChannelHalf> half = CloneChannelHalf(borrowed_half);
+
+  OAK_LOG(INFO) << "Create a new node with config '" << config_name << "' and entrypoint '"
+                << entrypoint_name << "'";
+
+  std::string node_name;
+  if (!runtime_->CreateAndRunNode(config_name, entrypoint_name, std::move(half), &node_name)) {
+    return OakStatus::ERR_INVALID_ARGS;
+  } else {
+    OAK_LOG(INFO) << "Created new node named {" << node_name << "}";
+    return OakStatus::OK;
+  }
+}
+
 Handle OakNode::NextHandle() {
   std::uniform_int_distribution<Handle> distribution;
   while (true) {
