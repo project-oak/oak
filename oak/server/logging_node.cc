@@ -19,10 +19,12 @@
 #include "absl/memory/memory.h"
 #include "oak/common/logging.h"
 #include "oak/proto/log.pb.h"
+#include "oak/server/handle_closer.h"
 
 namespace oak {
 
 void LoggingNode::Run(Handle handle) {
+  HandleCloser handle_closer(this, handle);
   std::vector<std::unique_ptr<ChannelStatus>> status;
   status.push_back(absl::make_unique<ChannelStatus>(handle));
   bool done = false;
@@ -55,11 +57,6 @@ void LoggingNode::Run(Handle handle) {
       }
       // Any channel references included with the message will be dropped.
     }
-  }
-  if (ChannelClose(handle) == OakStatus::OK) {
-    OAK_LOG(INFO) << "{" << name_ << "} Closed channel handle: " << handle;
-  } else {
-    OAK_LOG(WARNING) << "{" << name_ << "} Invalid channel handle: " << handle;
   }
 }
 
