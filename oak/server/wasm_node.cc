@@ -361,7 +361,7 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelWrite(wabt::interp::Environ
 
     // Copy the data from the Wasm linear memory.
     absl::Span<const char> origin = ReadMemory(env, offset, size);
-    auto msg = absl::make_unique<Message>();
+    auto msg = absl::make_unique<NodeMessage>();
     msg->data.insert(msg->data.end(), origin.begin(), origin.end());
     OAK_LOG(INFO) << "{" << name_ << "} channel_write[" << channel_handle
                   << "]: write message of size " << size;
@@ -372,13 +372,7 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelWrite(wabt::interp::Environ
     for (uint32_t ii = 0; ii < handle_count; ii++) {
       Handle handle = ReadU64(env, handle_offset + (ii * sizeof(Handle)));
       OAK_LOG(INFO) << "{" << name_ << "} Transfer channel handle " << handle;
-      ChannelHalf* half = BorrowChannel(handle);
-      if (half == nullptr) {
-        OAK_LOG(WARNING) << "{" << name_ << "} Invalid transferred channel handle: " << handle;
-        results[0].set_i32(OakStatus::ERR_BAD_HANDLE);
-        return wabt::interp::Result::Ok;
-      }
-      msg->channels.push_back(CloneChannelHalf(half));
+      msg->handles.push_back(handle);
     }
     OakStatus status = ChannelWrite(channel_handle, std::move(msg));
     results[0].set_i32(status);

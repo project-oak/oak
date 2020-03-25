@@ -72,7 +72,7 @@ void StorageNode::Run(Handle invocation_handle) {
     }
 
     grpc_rsp->set_last(true);
-    std::unique_ptr<Message> rsp_msg = absl::make_unique<Message>();
+    auto rsp_msg = absl::make_unique<NodeMessage>();
     size_t serialized_size = grpc_rsp->ByteSizeLong();
     rsp_msg->data.resize(serialized_size);
     grpc_rsp->SerializeToArray(rsp_msg->data.data(), rsp_msg->data.size());
