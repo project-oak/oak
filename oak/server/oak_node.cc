@@ -90,6 +90,15 @@ OakStatus OakNode::ChannelWrite(Handle handle, std::unique_ptr<NodeMessage> msg)
   return OakStatus::OK;
 }
 
+std::pair<Handle, Handle> OakNode::ChannelCreate() {
+  MessageChannel::ChannelHalves halves = MessageChannel::Create();
+  Handle write_handle = AddChannel(absl::make_unique<ChannelHalf>(std::move(halves.write)));
+  Handle read_handle = AddChannel(absl::make_unique<ChannelHalf>(std::move(halves.read)));
+  OAK_LOG(INFO) << "{" << name_ << "} Created new channel with handles write=" << write_handle
+                << ", read=" << read_handle;
+  return std::pair<Handle, Handle>(write_handle, read_handle);
+}
+
 OakStatus OakNode::ChannelClose(Handle handle) {
   absl::MutexLock lock(&mu_);
   auto it = channel_halves_.find(handle);

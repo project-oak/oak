@@ -439,14 +439,9 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelCreate(wabt::interp::Enviro
       return wabt::interp::Result::Ok;
     }
 
-    MessageChannel::ChannelHalves halves = MessageChannel::Create();
-    Handle write_handle = AddChannel(absl::make_unique<ChannelHalf>(std::move(halves.write)));
-    Handle read_handle = AddChannel(absl::make_unique<ChannelHalf>(std::move(halves.read)));
-    OAK_LOG(INFO) << "{" << name_ << "} Created new channel with handles write=" << write_handle
-                  << ", read=" << read_handle;
-
-    WriteU64(env, write_half_offset, write_handle);
-    WriteU64(env, read_half_offset, read_handle);
+    std::pair<Handle, Handle> handles = ChannelCreate();
+    WriteU64(env, write_half_offset, handles.first);
+    WriteU64(env, read_half_offset, handles.second);
 
     results[0].set_i32(OakStatus::OK);
     return wabt::interp::Result::Ok;

@@ -21,6 +21,7 @@
 #include <memory>
 #include <random>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "absl/base/thread_annotations.h"
@@ -71,6 +72,9 @@ class OakNode {
   // ChannelWrite passes ownership of a message to the channel identified by the
   // handle.
   OakStatus ChannelWrite(Handle handle, std::unique_ptr<NodeMessage> msg);
+
+  // Create a channel and return the (write, read) handles for it.
+  std::pair<Handle, Handle> ChannelCreate();
 
   // Close the given channel half.
   OakStatus ChannelClose(Handle handle) LOCKS_EXCLUDED(mu_);
