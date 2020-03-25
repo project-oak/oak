@@ -27,7 +27,7 @@ void NodeThread::Start() {
     OAK_LOG(ERROR) << "Attempt to Start() an already-running NodeThread";
     return;
   }
-  if (runtime_->TerminationPending()) {
+  if (TerminationPending()) {
     OAK_LOG(ERROR) << "Attempt to Start() an already-terminated NodeThread";
     return;
   }

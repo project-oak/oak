@@ -161,7 +161,6 @@ std::unique_ptr<WasmNode> WasmNode::Create(BaseRuntime* runtime, const std::stri
 
   std::unique_ptr<WasmNode> node = absl::WrapUnique(new WasmNode(runtime, name, main_entrypoint));
   node->InitEnvironment(&node->env_);
-  OAK_LOG(INFO) << "Runtime at: " << (void*)node->runtime_;
   OAK_LOG(INFO) << "Host func count: " << node->env_.GetFuncCount();
 
   wabt::Errors errors;
@@ -416,7 +415,7 @@ wabt::interp::HostFunc::Callback WasmNode::OakWaitOnChannels(wabt::interp::Envir
     }
     if (wait_success) {
       results[0].set_i32(OakStatus::OK);
-    } else if (runtime_->TerminationPending()) {
+    } else if (TerminationPending()) {
       results[0].set_i32(OakStatus::ERR_TERMINATED);
     } else {
       results[0].set_i32(OakStatus::ERR_BAD_HANDLE);

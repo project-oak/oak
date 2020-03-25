@@ -59,7 +59,7 @@ struct NodeReadResult {
 class OakNode {
  public:
   OakNode(BaseRuntime* runtime, const std::string& name)
-      : runtime_(runtime), name_(name), prng_engine_() {}
+      : name_(name), runtime_(runtime), prng_engine_() {}
   virtual ~OakNode() {}
 
   virtual void Start() = 0;
@@ -111,8 +111,7 @@ class OakNode {
   // parameter to the Node's oak_main() entrypoint.
   Handle SingleHandle() const LOCKS_EXCLUDED(mu_);
 
-  // Runtime instance that owns this Node.
-  BaseRuntime* const runtime_;
+  bool TerminationPending() const { return runtime_->TerminationPending(); }
 
   const std::string name_;
 
@@ -120,6 +119,9 @@ class OakNode {
   Handle NextHandle() EXCLUSIVE_LOCKS_REQUIRED(mu_);
 
   using ChannelHalfTable = std::unordered_map<Handle, std::unique_ptr<ChannelHalf>>;
+
+  // Runtime instance that owns this Node.
+  BaseRuntime* const runtime_;
 
   mutable absl::Mutex mu_;  // protects prng_engine_, channel_halves_
 

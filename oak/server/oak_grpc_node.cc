@@ -69,7 +69,7 @@ void OakGrpcNode::CompletionQueueLoop() {
     bool ok;
     void* tag;
     if (!completion_queue_->Next(&tag, &ok)) {
-      if (!runtime_->TerminationPending()) {
+      if (!TerminationPending()) {
         OAK_LOG(FATAL) << "{" << name_ << "} Failure reading from completion queue";
       }
       OAK_LOG(INFO) << "{" << name_
