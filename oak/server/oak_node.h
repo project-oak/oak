@@ -44,6 +44,10 @@ class OakNode {
   // handle, subject to size checks.
   ReadResult ChannelRead(Handle handle, uint32_t max_size, uint32_t max_channels);
 
+  // ChannelWrite passes ownership of a message to the channel identified by the
+  // handle.
+  OakStatus ChannelWrite(Handle handle, std::unique_ptr<Message> msg);
+
   // Close the given channel half.
   OakStatus ChannelClose(Handle handle) LOCKS_EXCLUDED(mu_);
 

@@ -360,22 +360,6 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelWrite(wabt::interp::Environ
       return wabt::interp::Result::Ok;
     }
 
-    // Borrowing a reference to the channel is safe because the Node is single
-    // threaded and so cannot invoke channel_close while channel_write is
-    // ongoing.
-    MessageChannelWriteHalf* channel = BorrowWriteChannel(channel_handle);
-    if (channel == nullptr) {
-      OAK_LOG(WARNING) << "{" << name_ << "} Invalid channel handle: " << channel_handle;
-      results[0].set_i32(OakStatus::ERR_BAD_HANDLE);
-      return wabt::interp::Result::Ok;
-    }
-
-    if (channel->Orphaned()) {
-      OAK_LOG(INFO) << "{" << name_ << "} channel_write[" << channel_handle << "]: no readers left";
-      results[0].set_i32(OakStatus::ERR_CHANNEL_CLOSED);
-      return wabt::interp::Result::Ok;
-    }
-
     // Copy the data from the Wasm linear memory.
     absl::Span<const char> origin = ReadMemory(env, offset, size);
     auto msg = absl::make_unique<Message>();
@@ -383,7 +367,7 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelWrite(wabt::interp::Environ
     OAK_LOG(INFO) << "{" << name_ << "} channel_write[" << channel_handle
                   << "]: write message of size " << size;
 
-    // Find any handles and clone the corresponding write channels.
+    // Find any handles and clone the corresponding channels.
     std::vector<Handle> handles;
     handles.reserve(handle_count);
     for (uint32_t ii = 0; ii < handle_count; ii++) {
@@ -397,9 +381,8 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelWrite(wabt::interp::Environ
       }
       msg->channels.push_back(CloneChannelHalf(half));
     }
-    channel->Write(std::move(msg));
-
-    results[0].set_i32(OakStatus::OK);
+    OakStatus status = ChannelWrite(channel_handle, std::move(msg));
+    results[0].set_i32(status);
     return wabt::interp::Result::Ok;
   };
 }
