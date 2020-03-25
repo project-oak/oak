@@ -251,12 +251,4 @@ bool OakNode::WaitOnChannels(std::vector<std::unique_ptr<ChannelStatus>>* status
   }
 }
 
-Handle OakNode::SingleHandle() const {
-  absl::ReaderMutexLock lock(&mu_);
-  if (channel_halves_.size() != 1) {
-    return kInvalidHandle;
-  }
-  return channel_halves_.begin()->first;
-}
-
 }  // namespace oak

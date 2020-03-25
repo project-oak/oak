@@ -62,7 +62,7 @@ class OakNode {
       : name_(name), runtime_(runtime), prng_engine_() {}
   virtual ~OakNode() {}
 
-  virtual void Start() = 0;
+  virtual void Start(Handle handle) = 0;
   virtual void Stop() = 0;
 
   // ChannelRead returns the first message on the channel identified by the
@@ -100,13 +100,6 @@ class OakNode {
   bool WaitOnChannels(std::vector<std::unique_ptr<ChannelStatus>>* statuses) const;
 
  protected:
-  // If the Node has a single registered handle, return it; otherwise, return
-  // kInvalidHandle. This is a convenience method for initial execution of a
-  // Node, which should always start with exactly one handle (for a read half)
-  // registered in its channel_halves_ table; this handle is passed as the
-  // parameter to the Node's oak_main() entrypoint.
-  Handle SingleHandle() const LOCKS_EXCLUDED(mu_);
-
   bool TerminationPending() const { return runtime_->TerminationPending(); }
 
   const std::string name_;

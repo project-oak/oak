@@ -36,7 +36,7 @@ class OakGrpcNode final : public OakNode {
       std::shared_ptr<grpc::ServerCredentials> grpc_credentials, const uint16_t port = 0);
   virtual ~OakGrpcNode(){};
 
-  void Start() override;
+  void Start(Handle handle) override;
   void Stop() override;
 
   int GetPort() { return port_; };
@@ -50,12 +50,12 @@ class OakGrpcNode final : public OakNode {
   friend class ModuleInvocation;
 
   OakGrpcNode(BaseRuntime* runtime, const std::string& name)
-      : OakNode(runtime, name), next_stream_id_(1) {}
+      : OakNode(runtime, name), next_stream_id_(1), handle_(kInvalidHandle) {}
   OakGrpcNode(const OakGrpcNode&) = delete;
   OakGrpcNode& operator=(const OakGrpcNode&) = delete;
 
   MessageChannelWriteHalf* BorrowWriteChannel() const {
-    return OakNode::BorrowWriteChannel(SingleHandle());
+    return OakNode::BorrowWriteChannel(handle_);
   }
 
   // Consumes gRPC events from the completion queue in an infinite loop.
@@ -74,6 +74,7 @@ class OakGrpcNode final : public OakNode {
 
   absl::Mutex id_mu_;  // protects next_stream_id_
   int32_t next_stream_id_ GUARDED_BY(id_mu_);
+  Handle handle_;  // const after Start()
 };
 
 }  // namespace oak
