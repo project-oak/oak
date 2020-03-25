@@ -54,7 +54,6 @@ cc_library(
         "wasm_node.h",
     ],
     deps = [
-        ":channel",
         "//oak/common:handles",
         "//oak/common:logging",
         "//oak/proto:grpc_encap_cc_proto",

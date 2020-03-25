@@ -75,6 +75,10 @@ class OakNode {
   // Close the given channel half.
   OakStatus ChannelClose(Handle handle) LOCKS_EXCLUDED(mu_);
 
+  // Create a new Node.
+  OakStatus NodeCreate(Handle handle, const std::string& config_name,
+                       const std::string& entrypoint_name);
+
   // Take ownership of the given channel half, returning a channel handle that
   // the node can use to refer to it in future.
   Handle AddChannel(std::unique_ptr<ChannelHalf> half) LOCKS_EXCLUDED(mu_);
