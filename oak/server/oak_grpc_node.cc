@@ -55,6 +55,7 @@ std::unique_ptr<OakGrpcNode> OakGrpcNode::Create(
 
 void OakGrpcNode::Start(Handle handle) {
   handle_ = handle;
+  OAK_LOG(INFO) << "{" << name_ << "} Using handle " << handle_ << " for sending invocations";
   // Start a new thread to process the gRPC completion queue.
   queue_thread_ = std::thread(&OakGrpcNode::CompletionQueueLoop, this);
 }

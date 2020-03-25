@@ -27,14 +27,14 @@ namespace oak {
 
 namespace {
 
-// Copy the data from a gRPC ByteBuffer into a Message.
-std::unique_ptr<Message> Unwrap(const grpc::ByteBuffer& buffer) {
+// Copy the data from a gRPC ByteBuffer into a NodeMessage.
+std::unique_ptr<NodeMessage> Unwrap(const grpc::ByteBuffer& buffer) {
   std::vector<::grpc::Slice> slices;
   grpc::Status status = buffer.Dump(&slices);
   if (!status.ok()) {
     OAK_LOG(FATAL) << "Could not unwrap buffer";
   }
-  auto msg = absl::make_unique<Message>();
+  auto msg = absl::make_unique<NodeMessage>();
   for (const auto& slice : slices) {
     msg->data.insert(msg->data.end(), slice.begin(), slice.end());
   }
@@ -76,7 +76,7 @@ void ModuleInvocation::ProcessRequest(bool ok) {
     delete this;
     return;
   }
-  std::unique_ptr<Message> request_msg = Unwrap(request_);
+  std::unique_ptr<NodeMessage> request_msg = Unwrap(request_);
 
   OAK_LOG(INFO) << "invocation#" << stream_id_
                 << " ProcessRequest: handling gRPC call: " << context_.method();
@@ -99,7 +99,7 @@ void ModuleInvocation::ProcessRequest(bool ok) {
   grpc_request.set_allocated_req_msg(any);
   grpc_request.set_last(true);
 
-  std::unique_ptr<Message> req_msg = absl::make_unique<Message>();
+  auto req_msg = absl::make_unique<NodeMessage>();
   size_t serialized_size = grpc_request.ByteSizeLong();
   req_msg->data.resize(serialized_size);
   grpc_request.SerializeToArray(req_msg->data.data(), req_msg->data.size());
@@ -131,28 +131,31 @@ void ModuleInvocation::ProcessRequest(bool ok) {
   // Create a pair of channels for communication corresponding to this
   // particular method invocation, one for sending in requests, and one for
   // receiving responses.
-  MessageChannel::ChannelHalves req_halves = MessageChannel::Create();
-  req_half_ = std::move(req_halves.write);
-  MessageChannel::ChannelHalves rsp_halves = MessageChannel::Create();
-  rsp_half_ = std::move(rsp_halves.read);
+  std::pair<Handle, Handle> req_handles = grpc_node_->ChannelCreate();
+  req_handle_ = req_handles.first;
+  std::pair<Handle, Handle> rsp_handles = grpc_node_->ChannelCreate();
+  rsp_handle_ = rsp_handles.second;
 
   // Build a notification message that just holds references to these two
   // newly-created channels.
-  std::unique_ptr<Message> notify_msg = absl::make_unique<Message>();
-  notify_msg->channels.push_back(absl::make_unique<ChannelHalf>(std::move(req_halves.read)));
-  notify_msg->channels.push_back(absl::make_unique<ChannelHalf>(std::move(rsp_halves.write)));
+  auto notify_msg = absl::make_unique<NodeMessage>();
+  notify_msg->handles.push_back(req_handles.second);
+  notify_msg->handles.push_back(rsp_handles.first);
 
   // Write the request message to the just-created request channel.
-  req_half_->Write(std::move(req_msg));
+  grpc_node_->ChannelWrite(req_handle_, std::move(req_msg));
   OAK_LOG(INFO) << "invocation#" << stream_id_
-                << " ProcessRequest: Wrote encapsulated request to new gRPC request channel";
+                << " ProcessRequest: Wrote encapsulated request to new gRPC request channel "
+                << req_handle_;
 
-  // Write the notification message to the gRPC input channel, which the runtime
-  // connected to the Node.
-  MessageChannelWriteHalf* notify_half = grpc_node_->BorrowWriteChannel();
-  notify_half->Write(std::move(notify_msg));
+  // Write the notification message to the gRPC notification channel, then close
+  // our copy of the transferred handles.
+  grpc_node_->ChannelWrite(grpc_node_->handle_, std::move(notify_msg));
   OAK_LOG(INFO) << "invocation#" << stream_id_
-                << " ProcessRequest: Wrote notification request to gRPC input channel";
+                << " ProcessRequest: Wrote notification request to gRPC notification handle "
+                << grpc_node_->handle_;
+  grpc_node_->ChannelClose(req_handles.second);
+  grpc_node_->ChannelClose(rsp_handles.first);
 
   // Move straight onto sending first response.
   SendResponse(true);
@@ -176,11 +179,19 @@ void ModuleInvocation::BlockingSendResponse() {
   // Block until we can read a single queued GrpcResponse message (in serialized form) from the
   // gRPC output channel.
   OAK_LOG(INFO) << "invocation#" << stream_id_ << " SendResponse: do blocking-read on grpc channel";
-  ReadResult rsp_result = rsp_half_->BlockingRead(INT_MAX, INT_MAX);
+
+  std::vector<std::unique_ptr<ChannelStatus>> status;
+  status.push_back(absl::make_unique<ChannelStatus>(rsp_handle_));
+  if (!grpc_node_->WaitOnChannels(&status)) {
+    OAK_LOG(ERROR) << "invocation#" << stream_id_ << " SendResponse: Failed to wait for message";
+    FinishAndCleanUp(grpc::Status(grpc::StatusCode::INTERNAL, "Message wait failed"));
+    return;
+  }
+  NodeReadResult rsp_result = grpc_node_->ChannelRead(rsp_handle_, INT_MAX, INT_MAX);
   if (rsp_result.status != OakStatus::OK) {
     OAK_LOG(ERROR) << "invocation#" << stream_id_
                    << " SendResponse: Failed to read message: " << rsp_result.status;
-    FinishAndCleanUp(grpc::Status(grpc::StatusCode::INTERNAL, "Message size too large"));
+    FinishAndCleanUp(grpc::Status(grpc::StatusCode::INTERNAL, "Failed to read response message"));
     return;
   }
 
