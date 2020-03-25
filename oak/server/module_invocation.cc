@@ -173,14 +173,13 @@ void ModuleInvocation::SendResponse(bool ok) {
 }
 
 void ModuleInvocation::BlockingSendResponse() {
-  ReadResult rsp_result;
   // Block until we can read a single queued GrpcResponse message (in serialized form) from the
   // gRPC output channel.
   OAK_LOG(INFO) << "invocation#" << stream_id_ << " SendResponse: do blocking-read on grpc channel";
-  rsp_result = rsp_half_->BlockingRead(INT_MAX, INT_MAX);
-  if (rsp_result.required_size > 0) {
+  ReadResult rsp_result = rsp_half_->BlockingRead(INT_MAX, INT_MAX);
+  if (rsp_result.status != OakStatus::OK) {
     OAK_LOG(ERROR) << "invocation#" << stream_id_
-                   << " SendResponse: Message size too large: " << rsp_result.required_size;
+                   << " SendResponse: Failed to read message: " << rsp_result.status;
     FinishAndCleanUp(grpc::Status(grpc::StatusCode::INTERNAL, "Message size too large"));
     return;
   }

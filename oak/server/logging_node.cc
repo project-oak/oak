@@ -38,11 +38,10 @@ void LoggingNode::Run(Handle handle) {
                        << " log messages pending";
       done = true;
     }
-    ReadResult result;
     while (true) {
-      result = channel->Read(INT_MAX, INT_MAX);
-      if (result.required_size > 0) {
-        OAK_LOG(ERROR) << "{" << name_ << "} Message size too large: " << result.required_size;
+      ReadResult result = channel->Read(INT_MAX, INT_MAX);
+      if (result.status != OakStatus::OK) {
+        OAK_LOG(ERROR) << "{" << name_ << "} Failed to read message: " << result.status;
         return;
       }
       if (result.msg == nullptr) {

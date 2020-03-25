@@ -79,24 +79,33 @@ void MessageChannel::Write(std::unique_ptr<Message> msg) {
 ReadResult MessageChannel::Read(uint32_t max_size, uint32_t max_channels) {
   absl::MutexLock lock(&mu_);
   if (msgs_.empty()) {
-    return ReadResult{0};
+    ReadResult result(OakStatus::OK);
+    return result;
   }
   return ReadLocked(max_size, max_channels);
 }
 
 ReadResult MessageChannel::ReadLocked(uint32_t max_size, uint32_t max_channels) {
-  ReadResult result = {0};
   Message* next_msg = msgs_.front().get();
   size_t actual_size = next_msg->data.size();
   size_t actual_count = next_msg->channels.size();
-  if (actual_size > max_size || actual_count > max_channels) {
-    OAK_LOG(INFO) << "Next message of size " << actual_size << " with " << actual_count
-                  << " channels, read limited to size " << max_size << " and " << max_channels
-                  << " channels";
+  if (actual_size > max_size) {
+    OAK_LOG(INFO) << "Next message of size " << actual_size << ", read limited to size "
+                  << max_size;
+    ReadResult result(OakStatus::ERR_BUFFER_TOO_SMALL);
     result.required_size = actual_size;
     result.required_channels = actual_count;
     return result;
   }
+  if (actual_count > max_channels) {
+    OAK_LOG(INFO) << "Next message with " << actual_count << " handles, read limited to "
+                  << max_channels << " handles";
+    ReadResult result(OakStatus::ERR_HANDLE_SPACE_TOO_SMALL);
+    result.required_size = actual_size;
+    result.required_channels = actual_count;
+    return result;
+  }
+  ReadResult result(OakStatus::OK);
   result.msg = std::move(msgs_.front());
   msgs_.pop_front();
   OAK_LOG(INFO) << "Read message of size " << result.msg->data.size() << " with " << actual_count
