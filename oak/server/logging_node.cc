@@ -34,7 +34,7 @@ void LoggingNode::Run(Handle handle) {
       done = true;
     }
     while (true) {
-      ReadResult result = ChannelRead(handle, INT_MAX, INT_MAX);
+      NodeReadResult result = ChannelRead(handle, INT_MAX, INT_MAX);
       if (result.status == OakStatus::ERR_CHANNEL_EMPTY) {
         break;
       }
@@ -55,7 +55,10 @@ void LoggingNode::Run(Handle handle) {
       } else {
         OAK_LOG(ERROR) << "{" << name_ << "} Could not parse LogMessage.";
       }
-      // Any channel references included with the message will be dropped.
+      // Drop any handles that erroneously came along with the message.
+      for (Handle handle : result.msg->handles) {
+        ChannelClose(handle);
+      }
     }
   }
 }

@@ -313,7 +313,7 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelRead(wabt::interp::Environm
       return wabt::interp::Result::Ok;
     }
 
-    ReadResult result = ChannelRead(channel_handle, size, handle_space_count);
+    NodeReadResult result = ChannelRead(channel_handle, size, handle_space_count);
     OAK_LOG(INFO) << "{" << name_ << "} channel_read[" << channel_handle
                   << "]: gives status: " << result.status << " with required size "
                   << result.required_size << ", count " << result.required_channels;
@@ -325,15 +325,14 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelRead(wabt::interp::Environm
       // Transfer message and handles to Node.
       OAK_LOG(INFO) << "{" << name_ << "} channel_read[" << channel_handle
                     << "]: read message of size " << result.msg->data.size() << " with "
-                    << result.msg->channels.size() << " attached channels";
+                    << result.msg->handles.size() << " attached handles";
       WriteI32(env, size_offset, result.msg->data.size());
       WriteMemory(env, offset, absl::Span<char>(result.msg->data.data(), result.msg->data.size()));
-      WriteI32(env, handle_count_offset, result.msg->channels.size());
 
-      // Convert any accompanying channels into handles relative to the receiving node.
-      for (size_t ii = 0; ii < result.msg->channels.size(); ii++) {
-        Handle handle = AddChannel(std::move(result.msg->channels[ii]));
-        OAK_LOG(INFO) << "{" << name_ << "} Transferred channel has new handle " << handle;
+      WriteI32(env, handle_count_offset, result.msg->handles.size());
+      for (size_t ii = 0; ii < result.msg->handles.size(); ii++) {
+        Handle handle = result.msg->handles[ii];
+        OAK_LOG(INFO) << "{" << name_ << "} Transferred new handle " << handle;
         WriteU64(env, handle_space_offset + ii * sizeof(Handle), handle);
       }
     }

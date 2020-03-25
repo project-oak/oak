@@ -32,6 +32,7 @@ cc_library(
         ":channel",
         "//oak/common:handles",
         "//oak/common:logging",
+        "@com_google_absl//absl/memory",
         "@com_google_absl//absl/synchronization",
     ],
 )
@@ -197,7 +198,6 @@ cc_library(
     srcs = ["logging_node.cc"],
     hdrs = ["logging_node.h"],
     deps = [
-        ":channel",
         ":handle_closer",
         ":node_thread",
         "//oak/common:handles",

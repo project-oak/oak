@@ -31,6 +31,30 @@
 
 namespace oak {
 
+// Representation of a message transferred over a channel, relative to
+// a particular Node.  This is equivalent to the Message object, but
+// using channel handles (which are relative to a particular OakNode) rather
+// than raw channel references.
+struct NodeMessage {
+  std::vector<char> data;
+  std::vector<Handle> handles;
+  oak::policy::Label label;
+};
+
+// Result of a read operation relative to a Node. Equivalent to ReadResult but
+// holds a NodeMessage rather than a Message.
+struct NodeReadResult {
+  explicit NodeReadResult(OakStatus s) : status(s), required_size(0), required_channels(0) {}
+  OakStatus status;
+  // The following fields are filled in if the status is ERR_BUFFER_TOO_SMALL
+  // or ERR_HANDLE_SPACE_TOO_SMALL, indicating the required size and number
+  // of handles needed to read the message.
+  uint32_t required_size;
+  uint32_t required_channels;
+  // The following field is filled in if the status is OK.
+  std::unique_ptr<NodeMessage> msg;
+};
+
 class OakNode {
  public:
   OakNode(BaseRuntime* runtime, const std::string& name)
@@ -42,7 +66,7 @@ class OakNode {
 
   // ChannelRead returns the first message on the channel identified by the
   // handle, subject to size checks.
-  ReadResult ChannelRead(Handle handle, uint32_t max_size, uint32_t max_channels);
+  NodeReadResult ChannelRead(Handle handle, uint32_t max_size, uint32_t max_channels);
 
   // ChannelWrite passes ownership of a message to the channel identified by the
   // handle.

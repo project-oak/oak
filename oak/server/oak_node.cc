@@ -16,28 +16,45 @@
 
 #include "oak/server/oak_node.h"
 
+#include "absl/memory/memory.h"
 #include "oak/common/logging.h"
 #include "oak/server/notification.h"
 
 namespace oak {
 
-ReadResult OakNode::ChannelRead(Handle handle, uint32_t max_size, uint32_t max_channels) {
+NodeReadResult OakNode::ChannelRead(Handle handle, uint32_t max_size, uint32_t max_channels) {
   // Borrowing a reference to the channel is safe because the node is single
   // threaded and so cannot invoke channel_close while channel_read is
   // ongoing.
   MessageChannelReadHalf* channel = BorrowReadChannel(handle);
   if (channel == nullptr) {
     OAK_LOG(WARNING) << "{" << name_ << "} Invalid channel handle: " << handle;
-    return ReadResult(OakStatus::ERR_BAD_HANDLE);
+    return NodeReadResult(OakStatus::ERR_BAD_HANDLE);
   }
-  ReadResult result = channel->Read(max_size, max_channels);
-  if ((result.status == OakStatus::OK) && (result.msg == nullptr)) {
-    // Nothing available to read.
-    if (channel->Orphaned()) {
-      OAK_LOG(INFO) << "{" << name_ << "} channel_read[" << handle << "]: no writers left";
-      result.status = OakStatus::ERR_CHANNEL_CLOSED;
+  ReadResult result_internal = channel->Read(max_size, max_channels);
+  NodeReadResult result(result_internal.status);
+  result.required_size = result_internal.required_size;
+  result.required_channels = result_internal.required_channels;
+  if (result.status == OakStatus::OK) {
+    if (result_internal.msg != nullptr) {
+      // Move data and label across into Node-relative message.
+      result.msg = absl::make_unique<NodeMessage>();
+      result.msg->data = std::move(result_internal.msg->data);
+      result.msg->label = std::move(result_internal.msg->label);
+      // Transmute channel references to handles in this Node's handle space.
+      for (size_t ii = 0; ii < result_internal.msg->channels.size(); ii++) {
+        Handle handle = AddChannel(std::move(result_internal.msg->channels[ii]));
+        OAK_LOG(INFO) << "{" << name_ << "} Transferred channel has new handle " << handle;
+        result.msg->handles.push_back(handle);
+      }
     } else {
-      result.status = OakStatus::ERR_CHANNEL_EMPTY;
+      // Nothing available to read.
+      if (channel->Orphaned()) {
+        OAK_LOG(INFO) << "{" << name_ << "} channel_read[" << handle << "]: no writers left";
+        result.status = OakStatus::ERR_CHANNEL_CLOSED;
+      } else {
+        result.status = OakStatus::ERR_CHANNEL_EMPTY;
+      }
     }
   }
   return result;
