@@ -116,20 +116,43 @@ impl Runtime {
     /// Thread safe method for signaling termination to a [`Runtime`] and waiting for its node
     /// threads to terminate.
     pub fn stop(&self) {
-        let mut threads = {
+        // Take the list of nodes out of the runtime instance, and set the terminating flag; this
+        // will prevent additional nodes from starting to wait again, because `wait_on_channels`
+        // will return immediately with `OakStatus::ErrTerminated`.
+        let mut nodes = {
             let mut nodes = self.nodes.lock().unwrap();
             self.terminating.store(true, SeqCst);
 
             std::mem::replace(&mut *nodes, HashMap::new())
         };
 
-        // Unpark any threads that are blocked waiting on channels.
-        for thread in threads.values() {
-            thread.join_handle.thread().unpark();
+        // Unpark any threads that are blocked waiting on any channels.
+        for channel in self
+            .channels
+            .channels
+            .read()
+            .expect("could not acquire channel mapping")
+            .values()
+        {
+            for thread in channel
+                .waiting_threads
+                .lock()
+                .expect("could not acquire waiting threads for channel")
+                .values()
+            {
+                if let Some(thread) = thread.upgrade() {
+                    thread.unpark();
+                }
+            }
         }
 
-        for (_, thread) in threads.drain() {
-            thread.join_handle.join().expect("Failed to join handle");
+        // Wait for the main thread of each node to finish. Any thread that was blocked on
+        // `wait_on_channels` is now unblocked and received `OakStatus::ErrTerminated`, so we wait
+        // for any additional work to be finished here. This may take an arbitrary amount of time,
+        // depending on the work that the node thread has to perform, but at least we know that the
+        // it will not be able to enter again in a blocking state.
+        for (_, node) in nodes.drain() {
+            node.join_handle.join().expect("Failed to join handle");
         }
     }
 
@@ -182,7 +205,7 @@ impl Runtime {
             // Note we read statuses directly after adding waiters, before blocking to ensure that
             // there are no messages, after we have been added as a waiter.
 
-            let thread_id = thread::current().id();
+            let thread_id = thread.id();
             let thread_ref = Arc::new(thread.clone());
 
             for reader in readers {
