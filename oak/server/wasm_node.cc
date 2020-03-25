@@ -313,53 +313,29 @@ wabt::interp::HostFunc::Callback WasmNode::OakChannelRead(wabt::interp::Environm
       return wabt::interp::Result::Ok;
     }
 
-    // Borrowing a reference to the channel is safe because the node is single
-    // threaded and so cannot invoke channel_close while channel_read is
-    // ongoing.
-    MessageChannelReadHalf* channel = BorrowReadChannel(channel_handle);
-    if (channel == nullptr) {
-      OAK_LOG(WARNING) << "{" << name_ << "} Invalid channel handle: " << channel_handle;
-      results[0].set_i32(OakStatus::ERR_BAD_HANDLE);
-      return wabt::interp::Result::Ok;
-    }
-
-    ReadResult result = channel->Read(size, handle_space_count);
+    ReadResult result = ChannelRead(channel_handle, size, handle_space_count);
     OAK_LOG(INFO) << "{" << name_ << "} channel_read[" << channel_handle
                   << "]: gives status: " << result.status << " with required size "
                   << result.required_size << ", count " << result.required_channels;
     WriteI32(env, size_offset, result.required_size);
     WriteI32(env, handle_count_offset, result.required_channels);
+    results[0].set_i32(result.status);
 
-    if (result.status == OakStatus::OK) {
-      if (result.msg == nullptr) {
-        // Nothing available to read.
-        if (channel->Orphaned()) {
-          OAK_LOG(INFO) << "{" << name_ << "} channel_read[" << channel_handle
-                        << "]: no writers left";
-          results[0].set_i32(OakStatus::ERR_CHANNEL_CLOSED);
-        } else {
-          results[0].set_i32(OakStatus::ERR_CHANNEL_EMPTY);
-        }
-      } else {
-        // Transfer message and handles to Node.
-        results[0].set_i32(OakStatus::OK);
-        OAK_LOG(INFO) << "{" << name_ << "} channel_read[" << channel_handle
-                      << "]: read message of size " << result.msg->data.size() << " with "
-                      << result.msg->channels.size() << " attached channels";
-        WriteI32(env, size_offset, result.msg->data.size());
-        WriteMemory(env, offset,
-                    absl::Span<char>(result.msg->data.data(), result.msg->data.size()));
-        WriteI32(env, handle_count_offset, result.msg->channels.size());
+    if ((result.status == OakStatus::OK) && (result.msg != nullptr)) {
+      // Transfer message and handles to Node.
+      OAK_LOG(INFO) << "{" << name_ << "} channel_read[" << channel_handle
+                    << "]: read message of size " << result.msg->data.size() << " with "
+                    << result.msg->channels.size() << " attached channels";
+      WriteI32(env, size_offset, result.msg->data.size());
+      WriteMemory(env, offset, absl::Span<char>(result.msg->data.data(), result.msg->data.size()));
+      WriteI32(env, handle_count_offset, result.msg->channels.size());
 
-        // Convert any accompanying channels into handles relative to the receiving node.
-        for (size_t ii = 0; ii < result.msg->channels.size(); ii++) {
-          Handle handle = AddChannel(std::move(result.msg->channels[ii]));
-          OAK_LOG(INFO) << "{" << name_ << "} Transferred channel has new handle " << handle;
-          WriteU64(env, handle_space_offset + ii * sizeof(Handle), handle);
-        }
+      // Convert any accompanying channels into handles relative to the receiving node.
+      for (size_t ii = 0; ii < result.msg->channels.size(); ii++) {
+        Handle handle = AddChannel(std::move(result.msg->channels[ii]));
+        OAK_LOG(INFO) << "{" << name_ << "} Transferred channel has new handle " << handle;
+        WriteU64(env, handle_space_offset + ii * sizeof(Handle), handle);
       }
-    } else {
-      results[0].set_i32(result.status);
     }
     return wabt::interp::Result::Ok;
   };

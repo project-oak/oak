@@ -23,29 +23,22 @@
 namespace oak {
 
 void LoggingNode::Run(Handle handle) {
-  // Borrow pointer to the channel half.
-  MessageChannelReadHalf* channel = BorrowReadChannel(handle);
-  if (channel == nullptr) {
-    OAK_LOG(ERROR) << "{" << name_ << "} No channel available!";
-    return;
-  }
   std::vector<std::unique_ptr<ChannelStatus>> status;
   status.push_back(absl::make_unique<ChannelStatus>(handle));
   bool done = false;
   while (!done) {
     if (!WaitOnChannels(&status)) {
-      OAK_LOG(WARNING) << "{" << name_ << "} Node termination requested, " << channel->Count()
-                       << " log messages pending";
+      OAK_LOG(WARNING) << "{" << name_ << "} Node termination requested";
       done = true;
     }
     while (true) {
-      ReadResult result = channel->Read(INT_MAX, INT_MAX);
+      ReadResult result = ChannelRead(handle, INT_MAX, INT_MAX);
+      if (result.status == OakStatus::ERR_CHANNEL_EMPTY) {
+        break;
+      }
       if (result.status != OakStatus::OK) {
         OAK_LOG(ERROR) << "{" << name_ << "} Failed to read message: " << result.status;
         return;
-      }
-      if (result.msg == nullptr) {
-        break;
       }
       oak::log::LogMessage log_msg;
       bool successful_parse =
