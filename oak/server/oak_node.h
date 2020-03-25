@@ -83,14 +83,6 @@ class OakNode {
   OakStatus NodeCreate(Handle handle, const std::string& config_name,
                        const std::string& entrypoint_name);
 
-  // Return a borrowed reference to the channel half identified by the given
-  // handle (or nullptr if the handle is not recognized).  Caller is responsible
-  // for ensuring that the borrowed reference does not out-live the owned
-  // channel.
-  ChannelHalf* BorrowChannel(Handle handle) const LOCKS_EXCLUDED(mu_);
-  MessageChannelReadHalf* BorrowReadChannel(Handle handle) const LOCKS_EXCLUDED(mu_);
-  MessageChannelWriteHalf* BorrowWriteChannel(Handle handle) const LOCKS_EXCLUDED(mu_);
-
   // Wait on the given channel handles, modifying the contents of the passed-in
   // vector.  Returns a boolean indicating whether the wait finished due to a
   // channel being ready (true), or a failure (false, indicating either node
@@ -113,6 +105,14 @@ class OakNode {
   Handle AddChannel(std::unique_ptr<ChannelHalf> half) LOCKS_EXCLUDED(mu_);
 
   Handle NextHandle() EXCLUSIVE_LOCKS_REQUIRED(mu_);
+
+  // Return a borrowed reference to the channel half identified by the given
+  // handle (or nullptr if the handle is not recognized).  Caller is responsible
+  // for ensuring that the borrowed reference does not out-live the owned
+  // channel.
+  ChannelHalf* BorrowChannel(Handle handle) const LOCKS_EXCLUDED(mu_);
+  MessageChannelReadHalf* BorrowReadChannel(Handle handle) const LOCKS_EXCLUDED(mu_);
+  MessageChannelWriteHalf* BorrowWriteChannel(Handle handle) const LOCKS_EXCLUDED(mu_);
 
   using ChannelHalfTable = std::unordered_map<Handle, std::unique_ptr<ChannelHalf>>;
 
