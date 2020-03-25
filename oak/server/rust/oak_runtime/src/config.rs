@@ -114,6 +114,7 @@ pub fn from_protobuf(
 pub fn configure_and_run(
     app_config: ApplicationConfiguration,
 ) -> Result<(RuntimeRef, Handle), OakStatus> {
-    let config = from_protobuf(app_config)?;
-    Runtime::configure_and_run(config)
+    let configuration = from_protobuf(app_config)?;
+    let runtime = Runtime::create(configuration);
+    runtime.run()
 }
