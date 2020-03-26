@@ -14,6 +14,7 @@ find . \
     -not \( -path ./.git -prune \) -and \
     -not \( -path ./bazel-cache -prune \) -and \
     -not \( -path ./cargo-cache -prune \) -and \
+    -not \( -path ./cargo -prune \) -and \
     -not \( -path ./target -prune \) -and \
     -not \( -path ./third_party -prune \) \
     \( -type f -name BUILD -or -name WORKSPACE -or -name '*.bzl' \) \

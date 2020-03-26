@@ -161,3 +161,4 @@ RUN rustup component add \
   rustfmt
 
 RUN cargo install cargo-deadlinks
+RUN cargo install cargo-raze

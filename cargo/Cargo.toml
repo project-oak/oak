@@ -1,0 +1,49 @@
+[package]
+name = "cargo_under_bazel"
+version = "0.0.0"
+
+# Mandatory (or Cargo tooling is unhappy)
+[lib]
+path = "fake_lib.rs"
+
+[dependencies]
+byteorder = "*"
+hashbrown = "*"
+http = "*"
+hyper = "*"
+# Versions 1.3.x of indexmap have a "clever" feature that auto-detects whether a
+# build is `std` or not, and sets an internal/inaccessible `has_std` flag
+# accordingly.  Without this flag, indexmap is not back-compatible and things
+# fail to build (because the second default type argument to indexmap types are
+# no longer provided).  Force use of an earlier version of indexmap to avoid
+# this.
+indexmap = "=1.0.2"
+itertools = "*"
+lazy_static = "*"
+log = { version = "*", features = ["std"] }
+prost = "*"
+prost-types = "*"
+rand = "*"
+simple_logger = "*"
+tokio = { version = "*", features = ["rt-core"] }
+wasmi = { version = "*", default-features = false, features = ["core"] }
+
+[raze]
+genmode = "Remote"
+# The WORKSPACE relative path to the Cargo.toml working directory.
+workspace_path = "//cargo"
+# The target to generate BUILD rules for.
+target = "x86_64-unknown-linux-gnu"
+
+# Turn on proc_macro support in proc-macro2. Used by syn which is used by
+# cargo-raze itself; see:
+# https://github.com/google/cargo-raze/issues/64#issuecomment-431687016
+[raze.crates.proc-macro2.'1.0.10']
+additional_flags = ["--cfg=use_proc_macro"]
+
+# Set the atomic_cas config when building log, see:
+# https://github.com/google/cargo-raze/issues/110
+[raze.crates.log.'0.4.8']
+additional_flags = ["--cfg=atomic_cas"]
+
+[workspace]
