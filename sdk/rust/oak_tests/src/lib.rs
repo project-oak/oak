@@ -22,6 +22,8 @@ use protobuf::{Message, ProtobufEnum};
 use std::collections::HashMap;
 use std::process::Command;
 
+use oak_runtime::runtime::TEST_NODE_ID;
+
 // TODO(#544): re-enable unit tests of SDK functionality
 
 /// Uses cargo to compile a Rust manifest to Wasm bytes.
@@ -115,9 +117,9 @@ where
     // In most cases we do not care about labels, so we use the least privileged label for this
     // channel.
     let (req_write_half, req_read_half) =
-        runtime.new_channel(&oak_abi::label::Label::public_trusted());
+        runtime.new_channel(TEST_NODE_ID, &oak_abi::label::Label::public_trusted());
     runtime
-        .channel_write(req_write_half, req_msg)
+        .channel_write(TEST_NODE_ID, req_write_half, req_msg)
         .expect("could not write message");
 
     // Create a new channel for responses to arrive on and also attach that to the message.
@@ -125,7 +127,7 @@ where
     // In most cases we do not care about labels, so we use the least privileged label for this
     // channel.
     let (rsp_write_half, rsp_read_half) =
-        runtime.new_channel(&oak_abi::label::Label::public_trusted());
+        runtime.new_channel(TEST_NODE_ID, &oak_abi::label::Label::public_trusted());
 
     // Create a notification message and attach the method-invocation specific channels to it.
     let notify_msg = oak_runtime::Message {
@@ -135,12 +137,12 @@ where
 
     // Send the notification message (with attached handles) into the Node under test.
     runtime
-        .channel_write(channel, notify_msg)
+        .channel_write(TEST_NODE_ID, channel, notify_msg)
         .expect("could not write message");
 
     // Read the serialized, encapsulated response.
     loop {
-        let rsp = match runtime.channel_read(rsp_read_half) {
+        let rsp = match runtime.channel_read(TEST_NODE_ID, rsp_read_half) {
             Ok(Some(r)) => r,
             Ok(None) => {
                 info!("no pending gRPC response message; poll again soon");

@@ -8,6 +8,10 @@ authors = [
 edition = "2018"
 license = "Apache-2.0"
 
+[features]
+test_build = []
+default = []
+
 [dependencies]
 byteorder = { version = "*", default-features = false }
 itertools = "*"
