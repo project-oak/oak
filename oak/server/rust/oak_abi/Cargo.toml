@@ -6,6 +6,9 @@ edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
+# Note that if new dependencies are added here:
+#  - they need to be synced to //cargo/Cargo.toml
+#  - `cd cargo && cargo raze` needs re-running, and the results checked in
 hashbrown = "*"
 log = "*"
 prost = "*"
