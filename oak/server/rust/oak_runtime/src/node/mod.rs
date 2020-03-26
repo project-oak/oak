@@ -94,10 +94,12 @@ impl Configuration {
         initial_reader: Handle,
     ) -> Box<dyn Node> {
         match self {
-
-            Configuration::LogNode => {
-                Box::new(logger::LogNode::new(config_name, runtime, node_id, initial_reader))
-            }
+            Configuration::LogNode => Box::new(logger::LogNode::new(
+                config_name,
+                runtime,
+                node_id,
+                initial_reader,
+            )),
             Configuration::WasmNode { module } => Box::new(wasm::WasmNode::new(
                 config_name,
                 runtime,

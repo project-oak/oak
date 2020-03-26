@@ -46,14 +46,19 @@ struct Node {
     #[allow(dead_code)]
     label: oak_abi::label::Label,
 
+    /// A [`HashSet`] containing all the handles associated with this Node.
     handles: Mutex<HashSet<Handle>>,
 }
 
+/// An identifier for a [`Node`] that is opauqe. This provides type safety and a very weak
+/// protection against node identifier forgery.
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct NodeId(u64);
 
+/// A node identifier reserved for the runtime that allows access to all handles and channels.
 const RUNTIME_NODE_ID: NodeId = NodeId(0);
-#[cfg(feature = "test_build")]
+/// For testing use the same reserved identifier to allow manipulation of all handles and channels.
+#[cfg(any(feature = "test_build", test))]
 pub const TEST_NODE_ID: NodeId = NodeId(0);
 
 pub struct Configuration {
@@ -129,7 +134,8 @@ impl Runtime {
 
         // We call `expect` here because this should never fail, since the channel was just created
         // and guaranteed not to have already been closed.
-        runtime_ref.channel_close(RUNTIME_NODE_ID, chan_reader)
+        runtime_ref
+            .channel_close(RUNTIME_NODE_ID, chan_reader)
             .expect("could not close channel");
 
         Ok((runtime_ref, chan_writer))
@@ -150,7 +156,10 @@ impl Runtime {
             let mut nodes = self.nodes.write().unwrap();
             self.terminating.store(true, SeqCst);
 
-            nodes.values_mut().filter_map(|n| std::mem::replace(&mut n.instance, None)).collect()
+            nodes
+                .values_mut()
+                .filter_map(|n| std::mem::replace(&mut n.instance, None))
+                .collect()
         };
 
         // Unpark any threads that are blocked waiting on any channels.
@@ -183,6 +192,8 @@ impl Runtime {
         }
     }
 
+    /// Allow the corresponding [`Node`] to use the [`Handle`]s passed via the iterator.
+    /// This is achieved by adding the [`Handle`]s to the [`Node`]s [`HashMap`] of [`Handle`]s.
     fn track_handles_in_node<'a, I: Iterator<Item = &'a Handle>>(
         &self,
         node_id: NodeId,
@@ -201,14 +212,20 @@ impl Runtime {
         }
     }
 
+    /// Replace [`Handle`] with [`None`] if the [`NodeId`] does not have access to the [`Handle`].
     fn filter_handle(&self, node_id: NodeId, handle: Handle) -> Option<Handle> {
+        // Allow RUNTIME_NODE_ID access to all handles.
         if node_id == RUNTIME_NODE_ID {
             return Some(handle);
         }
 
         let nodes = self.nodes.read().unwrap();
+        // Lookup the node_id in the runtime's nodes hashmap
         if let Some(node) = nodes.get(&node_id) {
             let tracked_handles = node.handles.lock().unwrap();
+
+            // Check the handle exists in the handless associated with a node, otherwise
+            // return None.
             if tracked_handles.contains(&handle) {
                 Some(handle)
             } else {
@@ -224,22 +241,31 @@ impl Runtime {
         }
     }
 
+    /// Replace [`Handle`]s with [`None`] if the [`NodeId`] does not have access to the [`Handle`]s.
+    /// Any iterator is accepted, but a Vec<Option<Handle>> is returned so as not to hold
+    /// underlying Mutexes open.
     fn filter_optional_handles<'a, I: Iterator<Item = &'a Option<Handle>>>(
         &self,
         node_id: NodeId,
         handles: I,
     ) -> Vec<Option<Handle>> {
+        // Allow RUNTIME_NODE_ID access to all handles.
         if node_id == RUNTIME_NODE_ID {
             return handles.copied().collect();
         }
 
         let nodes = self.nodes.read().unwrap();
+        // Lookup the node_id in the runtime's nodes hashmap
         if let Some(node) = nodes.get(&node_id) {
             let tracked_handles = node.handles.lock().unwrap();
 
+            // Map the handles iterator which contains Option<Handle>
             handles
                 .map(|optional_handle| {
+                    // Map only Some(handle)s, leaving 'None's inplace
                     optional_handle.and_then(|handle| {
+                        // Check the handle exists in the handless associated with a node, otherwise
+                        // return None.
                         if tracked_handles.contains(&handle) {
                             Some(handle)
                         } else {

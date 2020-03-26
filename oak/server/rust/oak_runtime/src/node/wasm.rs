@@ -800,8 +800,12 @@ impl super::Node for WasmNode {
         // as the entrypoint could be anything. We do it before spawning the child thread so
         // that we can return an error code immediately if appropriate.
         {
-            let (abi, _) =
-                WasmInterface::new(self.config_name.clone(), self.runtime.clone(), self.node_id, self.reader);
+            let (abi, _) = WasmInterface::new(
+                self.config_name.clone(),
+                self.runtime.clone(),
+                self.node_id,
+                self.reader,
+            );
             let instance = wasmi::ModuleInstance::new(
                 &self.module,
                 &wasmi::ImportsBuilder::new().with_resolver("oak", &abi),
@@ -835,7 +839,8 @@ impl super::Node for WasmNode {
         // TODO(#770): Use `std::thread::Builder` and give a name to this thread.
         let thread_handle = spawn(move || {
             let pretty_name = format!("{}-{:?}:", config_name, thread::current());
-            let (mut abi, initial_handle) = WasmInterface::new(pretty_name, runtime, node_id, reader);
+            let (mut abi, initial_handle) =
+                WasmInterface::new(pretty_name, runtime, node_id, reader);
 
             let instance = wasmi::ModuleInstance::new(
                 &module,
@@ -880,7 +885,8 @@ fn wasm_invalid_args() {
         entrypoint: "test_function".to_string(),
     };
     let runtime_ref = crate::runtime::Runtime::create(configuration).into_ref();
-    let (_, reader_handle) = runtime_ref.new_channel(TEST_NODE_ID, &oak_abi::label::Label::public_trusted());
+    let (_, reader_handle) =
+        runtime_ref.new_channel(TEST_NODE_ID, &oak_abi::label::Label::public_trusted());
 
     // From https://docs.rs/wasmi/0.6.2/wasmi/struct.Module.html#method.from_buffer:
     // Minimal module:

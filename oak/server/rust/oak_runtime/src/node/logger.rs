@@ -75,7 +75,12 @@ impl super::Node for LogNode {
     }
 }
 
-fn logger(pretty_name: &str, runtime: RuntimeRef, node_id: NodeId, reader: Handle) -> Result<(), OakStatus> {
+fn logger(
+    pretty_name: &str,
+    runtime: RuntimeRef,
+    node_id: NodeId,
+    reader: Handle,
+) -> Result<(), OakStatus> {
     loop {
         // An error indicates the runtime is terminating. We ignore it here and keep trying to read
         // in case a Wasm node wants to emit remaining messages. We will return once the channel is
