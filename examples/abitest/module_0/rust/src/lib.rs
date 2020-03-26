@@ -126,6 +126,10 @@ impl OakABITestService for FrontendNode {
         tests.insert("ChannelWriteRaw", FrontendNode::test_channel_write_raw);
         tests.insert("ChannelWrite", FrontendNode::test_channel_write);
         tests.insert(
+            "ChannelWriteHandle",
+            FrontendNode::test_channel_write_handle,
+        );
+        tests.insert(
             "ChannelWriteOrphan",
             FrontendNode::test_channel_write_orphan,
         );
@@ -639,6 +643,32 @@ impl FrontendNode {
             Err(OakStatus::ErrBadHandle),
             oak::channel_write(bogus_channel, &data, &[])
         );
+
+        expect_eq!(Ok(()), oak::channel_close(in_channel.handle));
+        expect_eq!(Ok(()), oak::channel_close(out_channel.handle));
+        Ok(())
+    }
+
+    fn test_channel_write_handle(&mut self) -> TestResult {
+        let (out_channel, in_channel) = oak::channel_create().unwrap();
+
+        // Send a single handle.
+        let empty = vec![];
+        expect_eq!(
+            Ok(()),
+            oak::channel_write(out_channel, &empty, &[in_channel.handle])
+        );
+
+        let mut buffer = Vec::<u8>::with_capacity(5);
+        let mut handles = Vec::with_capacity(1);
+        expect_eq!(
+            Ok(()),
+            oak::channel_read(in_channel, &mut buffer, &mut handles)
+        );
+        expect_eq!(0, buffer.len());
+        expect_eq!(1, handles.len());
+        // The transferred handle has a new value.
+        expect!(handles[0] != in_channel.handle);
 
         expect_eq!(Ok(()), oak::channel_close(in_channel.handle));
         expect_eq!(Ok(()), oak::channel_close(out_channel.handle));
