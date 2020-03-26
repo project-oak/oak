@@ -21,7 +21,7 @@ log = { version = "*" }
 oak_abi = "=0.1.0"
 prost = "*"
 prost-types = "*"
-rand = { version = "*", default-features = false, features = ["alloc"] }
+rand = "*"
 tokio = { version = "*", features = ["rt-core"] }
 wasmi = { version = "*", default-features = false, features = ["core"] }
 
