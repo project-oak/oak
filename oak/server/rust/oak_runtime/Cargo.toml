@@ -14,10 +14,16 @@ default = []
 
 [dependencies]
 byteorder = { version = "*", default-features = false }
+bytes = "*"
+futures-executor = "*"
+http = "*"
+hyper = "*"
 itertools = "*"
 log = { version = "*" }
+oak = "0.1.0"
 oak_abi = "=0.1.0"
 prost = "*"
+protobuf = "*"
 rand = { version = "*", default-features = false, features = ["alloc"] }
 wasmi = { version = "*", default-features = false, features = ["core"] }
 

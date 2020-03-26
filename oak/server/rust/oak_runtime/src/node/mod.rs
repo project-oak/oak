@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+use std::net::SocketAddr;
 use std::string::String;
 use std::sync::Arc;
 
@@ -22,6 +23,7 @@ use oak_abi::OakStatus;
 use crate::runtime::RuntimeProxy;
 use crate::Handle;
 
+mod grpc_server;
 mod logger;
 mod wasm;
 
@@ -52,6 +54,9 @@ pub enum Configuration {
     /// The configuration for a logging pseudo node.
     LogNode,
 
+    /// The configuration for a gRPC server pseudo node that contains an `address` to listen on.
+    GrpcServerNode { address: SocketAddr },
+
     /// The configuration for a Wasm node.
     // It would be better to store a list of exported methods and copyable Wasm interpreter
     // instance, but wasmi doesn't allow this. We make do with having a copyable
@@ -62,6 +67,7 @@ pub enum Configuration {
 
 /// A enumeration for errors occuring when building `Configuration` from protobuf types.
 pub enum ConfigurationError {
+    AddressParsingError(String),
     WasmiModuleInializationError(wasmi::Error),
 }
 
@@ -85,6 +91,22 @@ pub fn load_wasm(wasm_bytes: &[u8]) -> Result<Configuration, ConfigurationError>
     })
 }
 
+/// Parses an `address` and checks if it's correct: TCP port should greater than 1023.
+pub fn parse_server_address(address: &str) -> Result<SocketAddr, ConfigurationError> {
+    address
+        .parse()
+        .map_err(|e| ConfigurationError::AddressParsingError(format!("{}", e)))
+        .and_then(|parsed_address: SocketAddr| {
+            if parsed_address.port() > 1023 {
+                Ok(parsed_address)
+            } else {
+                Err(ConfigurationError::AddressParsingError(
+                    "Server TCP port is <= 1023".to_string(),
+                ))
+            }
+        })
+}
+
 impl Configuration {
     /// Creates a new node instance corresponding to the [`Configuration`] `self`.
     ///
@@ -95,18 +117,22 @@ impl Configuration {
         config_name: &str, // Used for pretty debugging
         runtime: RuntimeProxy,
         entrypoint: String,
-        initial_reader: Handle,
+        reader: Handle,
+        writer: Handle,
     ) -> Box<dyn Node> {
         match self {
             Configuration::LogNode => {
-                Box::new(logger::LogNode::new(config_name, runtime, initial_reader))
+                Box::new(logger::LogNode::new(config_name, runtime, reader))
             }
+            Configuration::GrpcServerNode { address } => Box::new(
+                grpc_server::GrpcServerNode::new(config_name, runtime, node_id, writer, *address),
+            ),
             Configuration::WasmNode { module } => Box::new(wasm::WasmNode::new(
                 config_name,
                 runtime,
                 module.clone(),
                 entrypoint,
-                initial_reader,
+                reader,
             )),
         }
     }
