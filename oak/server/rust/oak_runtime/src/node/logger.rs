@@ -87,10 +87,7 @@ fn logger(
         // in case a Wasm node wants to emit remaining messages. We will return once the channel is
         // closed.
 
-        // TODO(#646): Temporarily don't wait for messages when terminating. Renable when channels
-        // track their channels and make sure all channels are closed.
-        // let _ = runtime.wait_on_channels(&[Some(&reader)]);
-        runtime.wait_on_channels(node_id, &[Some(reader)])?;
+        let _ = runtime.wait_on_channels(node_id, &[Some(reader)]);
 
         if let Some(message) = runtime.channel_read(node_id, reader)? {
             match LogMessage::decode(&*message.data) {
