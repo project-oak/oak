@@ -20,6 +20,7 @@ use std::sync::atomic::Ordering::SeqCst;
 use std::sync::{Arc, Mutex, RwLock, Weak};
 use std::thread::{Thread, ThreadId};
 
+use log::debug;
 use rand::RngCore;
 
 use oak_abi::OakStatus;
@@ -109,6 +110,12 @@ impl Channel {
     /// writer.
     pub fn is_orphan(&self) -> bool {
         self.readers.load(SeqCst) == 0 || self.writers.load(SeqCst) == 0
+    }
+
+    /// Thread safe method that returns true when there is no longer at least one reader or
+    /// writer.
+    pub fn has_no_reference(&self) -> bool {
+        self.readers.load(SeqCst) == 0 && self.writers.load(SeqCst) == 0
     }
 
     /// Insert the given `thread` reference into `thread_id` slot of the HashMap of waiting
@@ -228,23 +235,41 @@ impl ChannelMapping {
     /// operations, and the underlying [`Channel`] may become orphaned.
     pub fn remove_reference(&self, reference: Handle) -> Result<(), OakStatus> {
         if let Ok(channel_id) = self.get_writer_channel(reference) {
-            self.with_channel(channel_id, |channel| {
+            {
+                let mut channels = self.channels.write().unwrap();
+                let channel = channels
+                    .get(&channel_id)
+                    .expect("remove_reference: Handle is invalid!");
                 channel.remove_writer();
-                Ok(())
-            })?;
+                if channel.has_no_reference() {
+                    channels.remove(&channel_id);
+                    debug!("remove_reference: deallocating channel {:?}", channel_id);
+                }
+            }
 
-            let mut writers = self.writers.write().unwrap();
-            writers.remove(&reference);
+            {
+                let mut writers = self.writers.write().unwrap();
+                writers.remove(&reference);
+            }
         }
 
         if let Ok(channel_id) = self.get_reader_channel(reference) {
-            self.with_channel(channel_id, |channel| {
+            {
+                let mut channels = self.channels.write().unwrap();
+                let channel = channels
+                    .get(&channel_id)
+                    .expect("remove_reference: Handle is invalid!");
                 channel.remove_reader();
-                Ok(())
-            })?;
+                if channel.has_no_reference() {
+                    channels.remove(&channel_id);
+                    debug!("remove_reference: deallocating channel {:?}", channel_id);
+                }
+            }
 
-            let mut readers = self.readers.write().unwrap();
-            readers.remove(&reference);
+            {
+                let mut readers = self.readers.write().unwrap();
+                readers.remove(&reference);
+            }
         }
 
         Ok(())
