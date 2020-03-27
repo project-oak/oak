@@ -20,6 +20,7 @@ use std::sync::atomic::Ordering::SeqCst;
 use std::sync::{Arc, Mutex, RwLock, Weak};
 use std::thread::{Thread, ThreadId};
 
+use log::debug;
 use rand::RngCore;
 
 use oak_abi::OakStatus;
@@ -242,6 +243,7 @@ impl ChannelMapping {
                 channel.remove_writer();
                 if channel.has_no_reference() {
                     channels.remove(&channel_id);
+                    debug!("remove_reference: deallocating channel {:?}", channel_id);
                 }
             }
 
@@ -260,6 +262,7 @@ impl ChannelMapping {
                 channel.remove_reader();
                 if channel.has_no_reference() {
                     channels.remove(&channel_id);
+                    debug!("remove_reference: deallocating channel {:?}", channel_id);
                 }
             }
 

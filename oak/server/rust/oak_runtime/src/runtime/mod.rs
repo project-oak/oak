@@ -559,6 +559,15 @@ impl Runtime {
     /// Close a [`Handle`], potentially orphaning the underlying [`channel::Channel`].
     pub fn channel_close(&self, node_id: NodeId, reference: Handle) -> Result<(), OakStatus> {
         self.validate_handle_access(node_id, reference)?;
+
+        if node_id != RUNTIME_NODE_ID {
+            // Remove handle from the nodes available handles
+            let nodes = self.nodes.read().unwrap();
+            let node = nodes.get(&node_id).expect("channel_close: No such node_id");
+            let mut handles = node.handles.lock().unwrap();
+            handles.remove(&reference);
+        }
+
         self.channels.remove_reference(reference)
     }
 
@@ -569,8 +578,32 @@ impl Runtime {
 
     /// Remove a [`Node`] by [`NodeId`] from the [`Runtime`].
     pub fn remove_node_id(&self, node_id: NodeId) {
+        {
+            // Close any remaining handles
+            let remaining_handles: Vec<_> = {
+                let nodes = self.nodes.read().unwrap();
+                let node = nodes
+                    .get(&node_id)
+                    .expect("remove_node_id: No such node_id");
+                let handles = node.handles.lock().unwrap();
+                handles.iter().copied().collect()
+            };
+
+            debug!(
+                "remove_node_id: node_id {:?} had open channels on exit: {:?}",
+                node_id, remaining_handles
+            );
+
+            for handle in remaining_handles {
+                self.channel_close(node_id, handle)
+                    .expect("remove_node_id: Unable to close hanging channel!");
+            }
+        }
+
         let mut nodes = self.nodes.write().unwrap();
-        nodes.remove(&node_id);
+        nodes
+            .remove(&node_id)
+            .expect("remove_node_id: Node didn't exist!");
     }
 }
 
