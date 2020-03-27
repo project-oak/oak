@@ -502,7 +502,7 @@ impl Runtime {
         handles_capacity: usize,
     ) -> Result<Option<ReadStatus>, OakStatus> {
         self.validate_handle_access(node_id, reference)?;
-        self.channels
+        let result = self.channels
             .with_channel(self.channels.get_reader_channel(reference)?, |channel| {
                 let mut messages = channel.messages.write().unwrap();
                 match messages.front() {
@@ -517,7 +517,6 @@ impl Runtime {
                                 ReadStatus::NeedsCapacity(req_bytes_capacity, req_handles_capacity)
                             } else {
                                 let msg = messages.pop_front().expect( "Front element disappeared while we were holding the write lock!");
-                                self.track_handles_in_node(node_id, msg.channels.clone());
                                 ReadStatus::Success(msg)
                             },
                         ))
@@ -530,7 +529,11 @@ impl Runtime {
                         }
                     }
                 }
-            })
+            });
+        if let Ok(Some(ReadStatus::Success(ref msg))) = result {
+            self.track_handles_in_node(node_id, msg.channels.clone());
+        }
+        result
     }
 
     /// Return the direction of a [`Handle`]. This is useful when reading
@@ -606,11 +609,11 @@ impl RuntimeRef {
         // to do that we first need to provide a reference to the caller node as a parameter to this
         // function.
 
-        let mut nodes = self.nodes.write().unwrap();
         let reference = self.new_node_reference();
 
         let reader = self.channels.duplicate_reference(reader)?;
 
+        let mut nodes = self.nodes.write().unwrap();
         let mut instance = self
             .configuration
             .nodes
