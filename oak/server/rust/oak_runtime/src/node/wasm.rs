@@ -840,7 +840,7 @@ impl super::Node for WasmNode {
         let thread_handle = spawn(move || {
             let pretty_name = format!("{}-{:?}:", config_name, thread::current());
             let (mut abi, initial_handle) =
-                WasmInterface::new(pretty_name, runtime, node_id, reader);
+                WasmInterface::new(pretty_name, runtime.clone(), node_id, reader);
 
             let instance = wasmi::ModuleInstance::new(
                 &module,
@@ -862,6 +862,8 @@ impl super::Node for WasmNode {
                     &mut abi,
                 )
                 .expect("failed to execute export");
+
+            runtime.remove_node_id(node_id);
         });
         self.thread_handle = Some(thread_handle);
         Ok(())

@@ -60,8 +60,9 @@ impl super::Node for LogNode {
         // TODO(#770): Use `std::thread::Builder` and give a name to this thread.
         let thread_handle = spawn(move || {
             let pretty_name = format!("{}-{:?}:", config_name, thread::current());
-            let result = logger(&pretty_name, runtime, node_id, reader);
+            let result = logger(&pretty_name, runtime.clone(), node_id, reader);
             info!("{} LOG: exiting log thread {:?}", pretty_name, result);
+            runtime.remove_node_id(node_id);
         });
         self.thread_handle = Some(thread_handle);
         Ok(())

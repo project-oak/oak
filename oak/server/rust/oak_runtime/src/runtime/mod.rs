@@ -36,6 +36,8 @@ pub use channel::{Handle, HandleDirection};
 struct Node {
     #[allow(dead_code)]
     reference: NodeId,
+
+    // An option type allows the instance to be swapped out during `runtime.stop`
     instance: Option<Box<dyn crate::node::Node>>,
     /// The Label associated with this node.
     ///
@@ -47,11 +49,11 @@ struct Node {
     label: oak_abi::label::Label,
 
     /// A [`HashSet`] containing all the handles associated with this Node.
+    // TODO(#777): this overlaps ChannelMapping.{reader,writer}
     handles: Mutex<HashSet<Handle>>,
 }
 
-/// An identifier for a [`Node`] that is opauqe. This provides type safety and a very weak
-/// protection against node identifier forgery.
+/// An identifier for a [`Node`] that is opaque for type safety,
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct NodeId(u64);
 
@@ -152,13 +154,13 @@ impl Runtime {
         // Take the list of nodes out of the runtime instance, and set the terminating flag; this
         // will prevent additional nodes from starting to wait again, because `wait_on_channels`
         // will return immediately with `OakStatus::ErrTerminated`.
-        let mut instances: Vec<_> = {
+        let instances: Vec<_> = {
             let mut nodes = self.nodes.write().unwrap();
             self.terminating.store(true, SeqCst);
 
             nodes
                 .values_mut()
-                .filter_map(|n| std::mem::replace(&mut n.instance, None))
+                .filter_map(|n| n.instance.take())
                 .collect()
         };
 
@@ -187,107 +189,97 @@ impl Runtime {
         // for any additional work to be finished here. This may take an arbitrary amount of time,
         // depending on the work that the node thread has to perform, but at least we know that the
         // it will not be able to enter again in a blocking state.
-        for mut instance in instances.drain(..) {
+        // for mut instance in instances.drain(..) {
+        for mut instance in instances {
             instance.stop();
         }
     }
 
     /// Allow the corresponding [`Node`] to use the [`Handle`]s passed via the iterator.
     /// This is achieved by adding the [`Handle`]s to the [`Node`]s [`HashMap`] of [`Handle`]s.
-    fn track_handles_in_node<'a, I: Iterator<Item = &'a Handle>>(
-        &self,
-        node_id: NodeId,
-        handles: I,
-    ) {
+    fn track_handles_in_node<I>(&self, node_id: NodeId, handles: I)
+    where
+        I: IntoIterator<Item = Handle>,
+    {
         if node_id == RUNTIME_NODE_ID {
             return;
         }
 
         let nodes = self.nodes.read().unwrap();
-        if let Some(node) = nodes.get(&node_id) {
-            let mut tracked_handles = node.handles.lock().unwrap();
-            for handle in handles {
-                tracked_handles.insert(*handle);
-            }
+        let node = nodes
+            .get(&node_id)
+            .expect("Invalid node_id passed into track_handles_in_node!");
+
+        let mut tracked_handles = node.handles.lock().unwrap();
+        for handle in handles {
+            tracked_handles.insert(handle);
         }
     }
 
     /// Replace [`Handle`] with [`None`] if the [`NodeId`] does not have access to the [`Handle`].
-    fn filter_handle(&self, node_id: NodeId, handle: Handle) -> Option<Handle> {
+    fn validate_handle_access(&self, node_id: NodeId, handle: Handle) -> Result<(), OakStatus> {
         // Allow RUNTIME_NODE_ID access to all handles.
         if node_id == RUNTIME_NODE_ID {
-            return Some(handle);
+            return Ok(());
         }
 
         let nodes = self.nodes.read().unwrap();
         // Lookup the node_id in the runtime's nodes hashmap
-        if let Some(node) = nodes.get(&node_id) {
-            let tracked_handles = node.handles.lock().unwrap();
+        let node = nodes
+            .get(&node_id)
+            .expect("Invalid node_id passed into validate_handle_access!");
+        let tracked_handles = node.handles.lock().unwrap();
 
-            // Check the handle exists in the handless associated with a node, otherwise
-            // return None.
-            if tracked_handles.contains(&handle) {
-                Some(handle)
-            } else {
-                error!(
-                    "filter_handle: handle {:?} not found in node {:?}",
-                    handle, node_id
-                );
-                None
-            }
+        // Check the handle exists in the handles associated with a node, otherwise
+        // return None.
+        if tracked_handles.contains(&handle) {
+            Ok(())
         } else {
-            error!("filter_handle: node {:?} not found", node_id);
-            None
+            error!(
+                "validate_handle_access: handle {:?} not found in node {:?}",
+                handle, node_id
+            );
+            Err(OakStatus::ErrBadHandle)
         }
     }
 
     /// Replace [`Handle`]s with [`None`] if the [`NodeId`] does not have access to the [`Handle`]s.
     /// Any iterator is accepted, but a Vec<Option<Handle>> is returned so as not to hold
     /// underlying Mutexes open.
-    fn filter_optional_handles<'a, I: Iterator<Item = &'a Option<Handle>>>(
-        &self,
-        node_id: NodeId,
-        handles: I,
-    ) -> Vec<Option<Handle>> {
+    fn validate_handles_access<'a, I>(&self, node_id: NodeId, handles: I) -> Result<(), OakStatus>
+    where
+        I: Iterator<Item = &'a Option<Handle>>,
+    {
         // Allow RUNTIME_NODE_ID access to all handles.
         if node_id == RUNTIME_NODE_ID {
-            return handles.copied().collect();
+            return Ok(());
         }
 
         let nodes = self.nodes.read().unwrap();
-        // Lookup the node_id in the runtime's nodes hashmap
-        if let Some(node) = nodes.get(&node_id) {
-            let tracked_handles = node.handles.lock().unwrap();
+        let node = nodes
+            .get(&node_id)
+            .expect("Invalid node_id passed into filter_optional_handles!");
 
-            // Map the handles iterator which contains Option<Handle>
-            handles
-                .map(|optional_handle| {
-                    // Map only Some(handle)s, leaving 'None's inplace
-                    optional_handle.and_then(|handle| {
-                        // Check the handle exists in the handless associated with a node, otherwise
-                        // return None.
-                        if tracked_handles.contains(&handle) {
-                            Some(handle)
-                        } else {
-                            error!(
-                                "filter_optional_handles: handle {:?} not found in node {:?}",
-                                handle, node_id
-                            );
-                            None
-                        }
-                    })
-                })
-                .collect()
-        } else {
-            error!("filter_optional_handles: node {:?} not found", node_id);
-            handles.map(|_| None).collect()
+        let tracked_handles = node.handles.lock().unwrap();
+        for optional_handle in handles {
+            if let Some(handle) = optional_handle {
+                // Check handle is accessible by the node.
+                if !tracked_handles.contains(&handle) {
+                    error!(
+                        "filter_optional_handles: handle {:?} not found in node {:?}",
+                        handle, node_id
+                    );
+                    return Err(OakStatus::ErrBadHandle);
+                }
+            }
         }
+        Ok(())
     }
 
     /// Creates a new [`Channel`] and returns a `(writer handle, reader handle)` pair.
     pub fn new_channel(&self, node_id: NodeId, label: &oak_abi::label::Label) -> (Handle, Handle) {
         let (writer, reader) = self.channels.new_channel(label);
-        self.track_handles_in_node(node_id, vec![writer, reader].iter());
+        self.track_handles_in_node(node_id, vec![writer, reader]);
         (writer, reader)
     }
 
@@ -299,7 +291,6 @@ impl Runtime {
         node_id: NodeId,
         readers: &[Option<Handle>],
     ) -> Vec<ChannelReadStatus> {
-        let readers = self.filter_optional_handles(node_id, readers.iter());
         readers
             .iter()
             .map(|chan| {
@@ -326,10 +317,10 @@ impl Runtime {
     /// available.
     pub fn wait_on_channels(
         &self,
-        node: NodeId,
+        node_id: NodeId,
         readers: &[Option<Handle>],
     ) -> Result<Vec<ChannelReadStatus>, OakStatus> {
-        let readers = self.filter_optional_handles(node, readers.iter());
+        self.validate_handles_access(node_id, readers.iter())?;
 
         let thread = thread::current();
         while !self.is_terminating() {
@@ -346,7 +337,7 @@ impl Runtime {
             let thread_id = thread.id();
             let thread_ref = Arc::new(thread.clone());
 
-            for reader in &readers {
+            for reader in readers {
                 if let Some(reader) = reader {
                     self.channels.with_channel(
                         self.channels.get_reader_channel(*reader)?,
@@ -357,7 +348,7 @@ impl Runtime {
                     )?;
                 }
             }
-            let statuses = self.readers_statuses(node, &readers);
+            let statuses = self.readers_statuses(node_id, &readers);
 
             let all_unreadable = statuses.iter().all(|&s| {
                 s == ChannelReadStatus::InvalidChannel || s == ChannelReadStatus::Orphaned
@@ -388,9 +379,7 @@ impl Runtime {
         reference: Handle,
         msg: Message,
     ) -> Result<(), OakStatus> {
-        let reference = self
-            .filter_handle(node_id, reference)
-            .ok_or(OakStatus::ErrBadHandle)?;
+        self.validate_handle_access(node_id, reference)?;
         self.channels.with_channel(self.channels.get_writer_channel(reference)?, |channel|{
 
         if channel.is_orphan() {
@@ -455,15 +444,13 @@ impl Runtime {
         node_id: NodeId,
         reference: Handle,
     ) -> Result<Option<Message>, OakStatus> {
-        let reference = self
-            .filter_handle(node_id, reference)
-            .ok_or(OakStatus::ErrBadHandle)?;
+        self.validate_handle_access(node_id, reference)?;
         self.channels
             .with_channel(self.channels.get_reader_channel(reference)?, |channel| {
                 let mut messages = channel.messages.write().unwrap();
                 match messages.pop_front() {
                     Some(m) => {
-                        self.track_handles_in_node(node_id, vec![reference].iter());
+                        self.track_handles_in_node(node_id, vec![reference]);
                         Ok(Some(m))
                     }
                     None => {
@@ -486,9 +473,7 @@ impl Runtime {
         node_id: NodeId,
         reference: Handle,
     ) -> Result<ChannelReadStatus, OakStatus> {
-        let reference = self
-            .filter_handle(node_id, reference)
-            .ok_or(OakStatus::ErrBadHandle)?;
+        self.validate_handle_access(node_id, reference)?;
         self.channels
             .with_channel(self.channels.get_reader_channel(reference)?, |channel| {
                 let messages = channel.messages.read().unwrap();
@@ -516,9 +501,7 @@ impl Runtime {
         bytes_capacity: usize,
         handles_capacity: usize,
     ) -> Result<Option<ReadStatus>, OakStatus> {
-        let reference = self
-            .filter_handle(node_id, reference)
-            .ok_or(OakStatus::ErrBadHandle)?;
+        self.validate_handle_access(node_id, reference)?;
         self.channels
             .with_channel(self.channels.get_reader_channel(reference)?, |channel| {
                 let mut messages = channel.messages.write().unwrap();
@@ -534,7 +517,7 @@ impl Runtime {
                                 ReadStatus::NeedsCapacity(req_bytes_capacity, req_handles_capacity)
                             } else {
                                 let msg = messages.pop_front().expect( "Front element disappeared while we were holding the write lock!");
-                                self.track_handles_in_node(node_id, msg.channels.iter());
+                                self.track_handles_in_node(node_id, msg.channels.clone());
                                 ReadStatus::Success(msg)
                             },
                         ))
@@ -557,9 +540,7 @@ impl Runtime {
         node_id: NodeId,
         reference: Handle,
     ) -> Result<HandleDirection, OakStatus> {
-        let reference = self
-            .filter_handle(node_id, reference)
-            .ok_or(OakStatus::ErrBadHandle)?;
+        self.validate_handle_access(node_id, reference)?;
         {
             let readers = self.channels.readers.read().unwrap();
             if readers.contains_key(&reference) {
@@ -577,15 +558,19 @@ impl Runtime {
 
     /// Close a [`Handle`], potentially orphaning the underlying [`channel::Channel`].
     pub fn channel_close(&self, node_id: NodeId, reference: Handle) -> Result<(), OakStatus> {
-        let reference = self
-            .filter_handle(node_id, reference)
-            .ok_or(OakStatus::ErrBadHandle)?;
+        self.validate_handle_access(node_id, reference)?;
         self.channels.remove_reference(reference)
     }
 
     /// Create a fresh [`NodeId`].
     fn new_node_reference(&self) -> NodeId {
         NodeId(self.next_node_id.fetch_add(1, SeqCst))
+    }
+
+    /// Remove a [`Node`] by [`NodeId`] from the [`Runtime`].
+    pub fn remove_node_id(&self, node_id: NodeId) {
+        let mut nodes = self.nodes.write().unwrap();
+        nodes.remove(&node_id);
     }
 }
 
