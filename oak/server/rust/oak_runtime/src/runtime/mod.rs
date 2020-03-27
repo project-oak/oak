@@ -583,6 +583,11 @@ impl Runtime {
     /// Remove a [`Node`] by [`NodeId`] from the [`Runtime`].
     pub fn remove_node_id(&self, node_id: NodeId) {
         {
+            // Do not remove the node if it is RUNTIME_NODE_ID
+            if node_id == RUNTIME_NODE_ID {
+                return;
+            }
+
             // Close any remaining handles
             let remaining_handles: Vec<_> = {
                 let nodes = self.nodes.read().unwrap();

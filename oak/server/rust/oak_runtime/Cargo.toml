@@ -23,6 +23,7 @@ wasmi = { version = "*", default-features = false, features = ["core"] }
 
 [dev-dependencies]
 maplit = "*"
+wat = "*"
 
 [build-dependencies]
 oak_utils = "*"
