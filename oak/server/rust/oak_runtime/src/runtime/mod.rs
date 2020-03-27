@@ -15,8 +15,9 @@
 //
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::string::String;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
 use std::thread;
 
 use core::sync::atomic::Ordering::SeqCst;
@@ -24,7 +25,7 @@ use core::sync::atomic::{AtomicBool, AtomicU64};
 
 use oak_abi::{ChannelReadStatus, OakStatus};
 
-use log::debug;
+use log::{debug, error};
 
 use crate::message::Message;
 use crate::node;
@@ -34,8 +35,10 @@ pub use channel::{Handle, HandleDirection};
 
 struct Node {
     #[allow(dead_code)]
-    reference: NodeRef,
-    instance: Box<dyn crate::node::Node>,
+    reference: NodeId,
+
+    // An option type allows the instance to be swapped out during `runtime.stop`
+    instance: Option<Box<dyn crate::node::Node>>,
     /// The Label associated with this node.
     ///
     /// This is set at node creation time and does not change after that.
@@ -44,10 +47,21 @@ struct Node {
     // TODO(#630): Remove exception when label tracking is implemented.
     #[allow(dead_code)]
     label: oak_abi::label::Label,
+
+    /// A [`HashSet`] containing all the handles associated with this Node.
+    // TODO(#777): this overlaps ChannelMapping.{reader,writer}
+    handles: Mutex<HashSet<Handle>>,
 }
 
+/// An identifier for a [`Node`] that is opaque for type safety,
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
-pub struct NodeRef(u64);
+pub struct NodeId(u64);
+
+/// A node identifier reserved for the runtime that allows access to all handles and channels.
+const RUNTIME_NODE_ID: NodeId = NodeId(0);
+/// For testing use the same reserved identifier to allow manipulation of all handles and channels.
+#[cfg(any(feature = "test_build", test))]
+pub const TEST_NODE_ID: NodeId = NodeId(0);
 
 pub struct Configuration {
     pub nodes: HashMap<String, node::Configuration>,
@@ -69,8 +83,8 @@ pub struct Runtime {
 
     channels: channel::ChannelMapping,
 
-    nodes: Mutex<HashMap<NodeRef, Node>>,
-    next_node_reference: AtomicU64,
+    nodes: RwLock<HashMap<NodeId, Node>>,
+    next_node_id: AtomicU64,
 }
 
 impl Runtime {
@@ -80,8 +94,10 @@ impl Runtime {
             configuration,
             terminating: AtomicBool::new(false),
             channels: channel::ChannelMapping::new(),
-            nodes: Mutex::new(HashMap::new()),
-            next_node_reference: AtomicU64::new(0),
+            nodes: RwLock::new(HashMap::new()),
+
+            // NodeId(0) reserved for RUNTIME_NODE_ID
+            next_node_id: AtomicU64::new(1),
         }
     }
 
@@ -107,9 +123,10 @@ impl Runtime {
         // When first starting, we assign the least privileged label to the channel connecting the
         // outside world to the entry point node.
         let (chan_writer, chan_reader) =
-            runtime_ref.new_channel(&oak_abi::label::Label::public_trusted());
+            runtime_ref.new_channel(RUNTIME_NODE_ID, &oak_abi::label::Label::public_trusted());
 
         runtime_ref.node_create(
+            RUNTIME_NODE_ID,
             &module_name,
             &entrypoint,
             // When first starting, we assign the least privileged label to the entry point node.
@@ -120,7 +137,7 @@ impl Runtime {
         // We call `expect` here because this should never fail, since the channel was just created
         // and guaranteed not to have already been closed.
         runtime_ref
-            .channel_close(chan_reader)
+            .channel_close(RUNTIME_NODE_ID, chan_reader)
             .expect("could not close channel");
 
         Ok((runtime_ref, chan_writer))
@@ -137,11 +154,14 @@ impl Runtime {
         // Take the list of nodes out of the runtime instance, and set the terminating flag; this
         // will prevent additional nodes from starting to wait again, because `wait_on_channels`
         // will return immediately with `OakStatus::ErrTerminated`.
-        let mut nodes = {
-            let mut nodes = self.nodes.lock().unwrap();
+        let instances: Vec<_> = {
+            let mut nodes = self.nodes.write().unwrap();
             self.terminating.store(true, SeqCst);
 
-            std::mem::replace(&mut *nodes, HashMap::new())
+            nodes
+                .values_mut()
+                .filter_map(|n| n.instance.take())
+                .collect()
         };
 
         // Unpark any threads that are blocked waiting on any channels.
@@ -169,25 +189,113 @@ impl Runtime {
         // for any additional work to be finished here. This may take an arbitrary amount of time,
         // depending on the work that the node thread has to perform, but at least we know that the
         // it will not be able to enter again in a blocking state.
-        for (_, mut node) in nodes.drain() {
-            node.instance.stop();
+        // for mut instance in instances.drain(..) {
+        for mut instance in instances {
+            instance.stop();
         }
     }
 
+    /// Allow the corresponding [`Node`] to use the [`Handle`]s passed via the iterator.
+    /// This is achieved by adding the [`Handle`]s to the [`Node`]s [`HashMap`] of [`Handle`]s.
+    fn track_handles_in_node<I>(&self, node_id: NodeId, handles: I)
+    where
+        I: IntoIterator<Item = Handle>,
+    {
+        if node_id == RUNTIME_NODE_ID {
+            return;
+        }
+
+        let nodes = self.nodes.read().unwrap();
+        let node = nodes
+            .get(&node_id)
+            .expect("Invalid node_id passed into track_handles_in_node!");
+
+        let mut tracked_handles = node.handles.lock().unwrap();
+        for handle in handles {
+            tracked_handles.insert(handle);
+        }
+    }
+
+    /// Replace [`Handle`] with [`None`] if the [`NodeId`] does not have access to the [`Handle`].
+    fn validate_handle_access(&self, node_id: NodeId, handle: Handle) -> Result<(), OakStatus> {
+        // Allow RUNTIME_NODE_ID access to all handles.
+        if node_id == RUNTIME_NODE_ID {
+            return Ok(());
+        }
+
+        let nodes = self.nodes.read().unwrap();
+        // Lookup the node_id in the runtime's nodes hashmap
+        let node = nodes
+            .get(&node_id)
+            .expect("Invalid node_id passed into validate_handle_access!");
+        let tracked_handles = node.handles.lock().unwrap();
+
+        // Check the handle exists in the handles associated with a node, otherwise
+        // return None.
+        if tracked_handles.contains(&handle) {
+            Ok(())
+        } else {
+            error!(
+                "validate_handle_access: handle {:?} not found in node {:?}",
+                handle, node_id
+            );
+            Err(OakStatus::ErrBadHandle)
+        }
+    }
+
+    /// Replace [`Handle`]s with [`None`] if the [`NodeId`] does not have access to the [`Handle`]s.
+    /// Any iterator is accepted, but a Vec<Option<Handle>> is returned so as not to hold
+    /// underlying Mutexes open.
+    fn validate_handles_access<'a, I>(&self, node_id: NodeId, handles: I) -> Result<(), OakStatus>
+    where
+        I: Iterator<Item = &'a Option<Handle>>,
+    {
+        // Allow RUNTIME_NODE_ID access to all handles.
+        if node_id == RUNTIME_NODE_ID {
+            return Ok(());
+        }
+
+        let nodes = self.nodes.read().unwrap();
+        let node = nodes
+            .get(&node_id)
+            .expect("Invalid node_id passed into filter_optional_handles!");
+
+        let tracked_handles = node.handles.lock().unwrap();
+        for optional_handle in handles {
+            if let Some(handle) = optional_handle {
+                // Check handle is accessible by the node.
+                if !tracked_handles.contains(&handle) {
+                    error!(
+                        "filter_optional_handles: handle {:?} not found in node {:?}",
+                        handle, node_id
+                    );
+                    return Err(OakStatus::ErrBadHandle);
+                }
+            }
+        }
+        Ok(())
+    }
+
     /// Creates a new [`Channel`] and returns a `(writer handle, reader handle)` pair.
-    pub fn new_channel(&self, label: &oak_abi::label::Label) -> (Handle, Handle) {
-        self.channels.new_channel(label)
+    pub fn new_channel(&self, node_id: NodeId, label: &oak_abi::label::Label) -> (Handle, Handle) {
+        let (writer, reader) = self.channels.new_channel(label);
+        self.track_handles_in_node(node_id, vec![writer, reader]);
+        (writer, reader)
     }
 
     /// Reads the statuses from a slice of `Option<&ChannelReader>`s.
     /// [`ChannelReadStatus::InvalidChannel`] is set for `None` readers in the slice. For `Some(_)`
     /// readers, the result is set from a call to `has_message`.
-    fn readers_statuses(&self, readers: &[Option<Handle>]) -> Vec<ChannelReadStatus> {
+    fn readers_statuses(
+        &self,
+        node_id: NodeId,
+        readers: &[Option<Handle>],
+    ) -> Vec<ChannelReadStatus> {
         readers
             .iter()
             .map(|chan| {
                 chan.map_or(ChannelReadStatus::InvalidChannel, |chan| {
-                    self.channel_status(chan)
+                    self.channel_status(node_id, chan)
                         .unwrap_or(ChannelReadStatus::InvalidChannel)
                 })
             })
@@ -209,8 +317,11 @@ impl Runtime {
     /// available.
     pub fn wait_on_channels(
         &self,
+        node_id: NodeId,
         readers: &[Option<Handle>],
     ) -> Result<Vec<ChannelReadStatus>, OakStatus> {
+        self.validate_handles_access(node_id, readers.iter())?;
+
         let thread = thread::current();
         while !self.is_terminating() {
             // Create a new Arc each iteration to be dropped after `thread::park` e.g. when the
@@ -237,7 +348,7 @@ impl Runtime {
                     )?;
                 }
             }
-            let statuses = self.readers_statuses(readers);
+            let statuses = self.readers_statuses(node_id, &readers);
 
             let all_unreadable = statuses.iter().all(|&s| {
                 s == ChannelReadStatus::InvalidChannel || s == ChannelReadStatus::Orphaned
@@ -262,7 +373,13 @@ impl Runtime {
 
     /// Write a message to a channel. Fails with [`OakStatus::ErrChannelClosed`] if the underlying
     /// channel has been orphaned.
-    pub fn channel_write(&self, reference: Handle, msg: Message) -> Result<(), OakStatus> {
+    pub fn channel_write(
+        &self,
+        node_id: NodeId,
+        reference: Handle,
+        msg: Message,
+    ) -> Result<(), OakStatus> {
+        self.validate_handle_access(node_id, reference)?;
         self.channels.with_channel(self.channels.get_writer_channel(reference)?, |channel|{
 
         if channel.is_orphan() {
@@ -322,12 +439,20 @@ impl Runtime {
 
     /// Thread safe. Read a message from a channel. Fails with [`OakStatus::ErrChannelClosed`] if
     /// the underlying channel is empty and has been orphaned.
-    pub fn channel_read(&self, reference: Handle) -> Result<Option<Message>, OakStatus> {
+    pub fn channel_read(
+        &self,
+        node_id: NodeId,
+        reference: Handle,
+    ) -> Result<Option<Message>, OakStatus> {
+        self.validate_handle_access(node_id, reference)?;
         self.channels
             .with_channel(self.channels.get_reader_channel(reference)?, |channel| {
                 let mut messages = channel.messages.write().unwrap();
                 match messages.pop_front() {
-                    Some(m) => Ok(Some(m)),
+                    Some(m) => {
+                        self.track_handles_in_node(node_id, vec![reference]);
+                        Ok(Some(m))
+                    }
                     None => {
                         if channel.is_orphan() {
                             Err(OakStatus::ErrChannelClosed)
@@ -343,7 +468,12 @@ impl Runtime {
     /// - [`ChannelReadStatus::ReadReady`] if there is at least one message in the channel.
     /// - [`ChannelReadStatus::Orphaned`] if there are no messages and there are no writers
     /// - [`ChannelReadStatus::NotReady`] if there are no messages but there are some writers
-    pub fn channel_status(&self, reference: Handle) -> Result<ChannelReadStatus, OakStatus> {
+    pub fn channel_status(
+        &self,
+        node_id: NodeId,
+        reference: Handle,
+    ) -> Result<ChannelReadStatus, OakStatus> {
+        self.validate_handle_access(node_id, reference)?;
         self.channels
             .with_channel(self.channels.get_reader_channel(reference)?, |channel| {
                 let messages = channel.messages.read().unwrap();
@@ -366,10 +496,12 @@ impl Runtime {
     /// have read the original message.
     pub fn channel_try_read_message(
         &self,
+        node_id: NodeId,
         reference: Handle,
         bytes_capacity: usize,
         handles_capacity: usize,
     ) -> Result<Option<ReadStatus>, OakStatus> {
+        self.validate_handle_access(node_id, reference)?;
         self.channels
             .with_channel(self.channels.get_reader_channel(reference)?, |channel| {
                 let mut messages = channel.messages.write().unwrap();
@@ -384,9 +516,9 @@ impl Runtime {
                             {
                                 ReadStatus::NeedsCapacity(req_bytes_capacity, req_handles_capacity)
                             } else {
-                                ReadStatus::Success(messages.pop_front().expect(
-                            "Front element disappeared while we were holding the write lock!",
-                        ))
+                                let msg = messages.pop_front().expect( "Front element disappeared while we were holding the write lock!");
+                                self.track_handles_in_node(node_id, msg.channels.clone());
+                                ReadStatus::Success(msg)
                             },
                         ))
                     }
@@ -403,7 +535,12 @@ impl Runtime {
 
     /// Return the direction of a [`Handle`]. This is useful when reading
     /// [`Messages`] which contain [`Handle`]'s.
-    pub fn channel_get_direction(&self, reference: Handle) -> Result<HandleDirection, OakStatus> {
+    pub fn channel_get_direction(
+        &self,
+        node_id: NodeId,
+        reference: Handle,
+    ) -> Result<HandleDirection, OakStatus> {
+        self.validate_handle_access(node_id, reference)?;
         {
             let readers = self.channels.readers.read().unwrap();
             if readers.contains_key(&reference) {
@@ -420,13 +557,20 @@ impl Runtime {
     }
 
     /// Close a [`Handle`], potentially orphaning the underlying [`channel::Channel`].
-    pub fn channel_close(&self, reference: Handle) -> Result<(), OakStatus> {
+    pub fn channel_close(&self, node_id: NodeId, reference: Handle) -> Result<(), OakStatus> {
+        self.validate_handle_access(node_id, reference)?;
         self.channels.remove_reference(reference)
     }
 
-    /// Create a fresh [`NodeRef`].
-    fn new_node_reference(&self) -> NodeRef {
-        NodeRef(self.next_node_reference.fetch_add(1, SeqCst))
+    /// Create a fresh [`NodeId`].
+    fn new_node_reference(&self) -> NodeId {
+        NodeId(self.next_node_id.fetch_add(1, SeqCst))
+    }
+
+    /// Remove a [`Node`] by [`NodeId`] from the [`Runtime`].
+    pub fn remove_node_id(&self, node_id: NodeId) {
+        let mut nodes = self.nodes.write().unwrap();
+        nodes.remove(&node_id);
     }
 }
 
@@ -448,6 +592,7 @@ impl RuntimeRef {
     /// and given to a new node thread.
     pub fn node_create(
         &self,
+        _node_id: NodeId,
         module_name: &str,
         entrypoint: &str,
         label: &oak_abi::label::Label,
@@ -461,7 +606,7 @@ impl RuntimeRef {
         // to do that we first need to provide a reference to the caller node as a parameter to this
         // function.
 
-        let mut nodes = self.nodes.lock().unwrap();
+        let mut nodes = self.nodes.write().unwrap();
         let reference = self.new_node_reference();
 
         let reader = self.channels.duplicate_reference(reader)?;
@@ -492,8 +637,9 @@ impl RuntimeRef {
             reference,
             Node {
                 reference,
-                instance,
+                instance: Some(instance),
                 label: label.clone(),
+                handles: Mutex::new(vec![reader].into_iter().collect()),
             },
         );
 

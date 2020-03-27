@@ -19,7 +19,7 @@ use std::sync::Arc;
 
 use oak_abi::OakStatus;
 
-use crate::{Handle, NodeRef, RuntimeRef};
+use crate::{Handle, NodeId, RuntimeRef};
 
 mod logger;
 mod wasm;
@@ -89,17 +89,21 @@ impl Configuration {
         &self,
         config_name: &str, // Used for pretty debugging
         runtime: RuntimeRef,
-        _node_ref: NodeRef,
+        node_id: NodeId,
         entrypoint: String,
         initial_reader: Handle,
     ) -> Box<dyn Node> {
         match self {
-            Configuration::LogNode => {
-                Box::new(logger::LogNode::new(config_name, runtime, initial_reader))
-            }
+            Configuration::LogNode => Box::new(logger::LogNode::new(
+                config_name,
+                runtime,
+                node_id,
+                initial_reader,
+            )),
             Configuration::WasmNode { module } => Box::new(wasm::WasmNode::new(
                 config_name,
                 runtime,
+                node_id,
                 module.clone(),
                 entrypoint,
                 initial_reader,

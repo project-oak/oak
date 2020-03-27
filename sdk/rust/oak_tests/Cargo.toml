@@ -11,7 +11,7 @@ lazy_static = "*"
 log = { version = "*", features = ["std"] }
 oak = "=0.1.0"
 oak_abi = "=0.1.0"
-oak_runtime = "=0.1.0"
+oak_runtime = { version = "=0.1.0", features = ["test_build"] }
 protobuf = "*"
 rand = { version = "*" }
 cargo_metadata = "*"
