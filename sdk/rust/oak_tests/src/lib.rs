@@ -36,6 +36,7 @@ pub fn compile_rust_wasm(cargo_path: &str, module_name: &str) -> std::io::Result
             "--target=wasm32-unknown-unknown",
             &format!("--manifest-path={}", cargo_path),
         ])
+        .env_remove("RUSTFLAGS")
         .spawn()?
         .wait()?;
 
