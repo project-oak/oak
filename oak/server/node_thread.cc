@@ -33,7 +33,7 @@ void NodeThread::Start(Handle handle) {
   }
 
   OAK_LOG(INFO) << "Executing new {" << name_ << "} node thread with handle " << handle;
-  thread_ = std::thread(&oak::NodeThread::Run, this, handle);
+  thread_ = std::thread(&oak::NodeThread::RunAndCleanup, this, handle);
   OAK_LOG(INFO) << "Started {" << name_ << "} node thread";
 }
 
@@ -49,6 +49,12 @@ void NodeThread::StopThread() {
     thread_.join();
     OAK_LOG(INFO) << "Completed {" << name_ << "} node thread";
   }
+}
+
+void NodeThread::RunAndCleanup(Handle handle) {
+  Run(handle);
+  OAK_LOG(INFO) << "Node's Run() method completed, clear handle table";
+  ClearHandles();
 }
 
 }  // namespace oak
