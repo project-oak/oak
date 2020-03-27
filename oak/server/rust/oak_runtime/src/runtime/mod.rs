@@ -19,9 +19,6 @@ use std::string::String;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use core::sync::atomic::Ordering::SeqCst;
-use core::sync::atomic::{AtomicBool, AtomicU64};
-
 use oak_abi::{ChannelReadStatus, OakStatus};
 
 use log::debug;
@@ -65,12 +62,12 @@ pub enum ReadStatus {
 /// Runtime structure for configuring and running a set of Oak nodes.
 pub struct Runtime {
     configuration: Configuration,
-    terminating: AtomicBool,
+    terminating: bool,
 
     channels: channel::ChannelMapping,
 
-    nodes: Mutex<HashMap<NodeRef, Node>>,
-    next_node_reference: AtomicU64,
+    nodes: HashMap<NodeRef, Node>,
+    next_node_reference: u64,
 }
 
 impl Runtime {
@@ -78,71 +75,36 @@ impl Runtime {
     pub fn create(configuration: Configuration) -> Self {
         Self {
             configuration,
-            terminating: AtomicBool::new(false),
+            terminating: false,
             channels: channel::ChannelMapping::new(),
-            nodes: Mutex::new(HashMap::new()),
-            next_node_reference: AtomicU64::new(0),
+            nodes: HashMap::new(),
+            next_node_reference: 0,
         }
     }
 
     /// Converts a [`Runtime`] instance into a [`RuntimeRef`].
     pub fn into_ref(self) -> RuntimeRef {
-        RuntimeRef(Arc::new(self))
-    }
-
-    /// Configures and runs the protobuf specified Application [`Configuration`].
-    ///
-    /// After starting a [`Runtime`], calling [`Runtime::stop`] will send termination signals to
-    /// nodes and wait for them to terminate.
-    ///
-    /// Returns a [`RuntimeRef`] reference to the created runtime, and a writeable [`Handle`] to
-    /// send messages into the runtime. To receive messages, creating a new channel and passing
-    /// the write [`Handle`] into the runtime will enable messages to be read back out.
-    pub fn run(self) -> Result<(RuntimeRef, Handle), OakStatus> {
-        let module_name = self.configuration.entry_module.clone();
-        let entrypoint = self.configuration.entrypoint.clone();
-
-        let runtime_ref = self.into_ref();
-
-        // When first starting, we assign the least privileged label to the channel connecting the
-        // outside world to the entry point node.
-        let (chan_writer, chan_reader) =
-            runtime_ref.new_channel(&oak_abi::label::Label::public_trusted());
-
-        runtime_ref.node_create(
-            &module_name,
-            &entrypoint,
-            // When first starting, we assign the least privileged label to the entry point node.
-            &oak_abi::label::Label::public_trusted(),
-            chan_reader,
-        )?;
-
-        // We call `expect` here because this should never fail, since the channel was just created
-        // and guaranteed not to have already been closed.
-        runtime_ref
-            .channel_close(chan_reader)
-            .expect("could not close channel");
-
-        Ok((runtime_ref, chan_writer))
+        RuntimeRef(Arc::new(Mutex::new(self)))
     }
 
     /// Thread safe method for determining if the [`Runtime`] is terminating.
     pub fn is_terminating(&self) -> bool {
-        self.terminating.load(SeqCst)
+        self.terminating
     }
 
     /// Thread safe method for signaling termination to a [`Runtime`] and waiting for its node
     /// threads to terminate.
-    pub fn stop(&self) {
+    pub fn stop(&mut self) {
+        self.terminating = true;
+
         // Take the list of nodes out of the runtime instance, and set the terminating flag; this
         // will prevent additional nodes from starting to wait again, because `wait_on_channels`
         // will return immediately with `OakStatus::ErrTerminated`.
-        let mut nodes = {
-            let mut nodes = self.nodes.lock().unwrap();
-            self.terminating.store(true, SeqCst);
+        // let mut nodes = {
+        //     let mut nodes = self.nodes;
 
-            std::mem::replace(&mut *nodes, HashMap::new())
-        };
+        //     std::mem::replace(&mut *nodes, HashMap::new())
+        // };
 
         // Unpark any threads that are blocked waiting on any channels.
         for channel in self
@@ -169,7 +131,7 @@ impl Runtime {
         // for any additional work to be finished here. This may take an arbitrary amount of time,
         // depending on the work that the node thread has to perform, but at least we know that the
         // it will not be able to enter again in a blocking state.
-        for (_, mut node) in nodes.drain() {
+        for (_, mut node) in self.nodes.drain() {
             node.instance.stop();
         }
     }
@@ -212,7 +174,7 @@ impl Runtime {
         readers: &[Option<Handle>],
     ) -> Result<Vec<ChannelReadStatus>, OakStatus> {
         let thread = thread::current();
-        while !self.is_terminating() {
+        while !self.terminating {
             // Create a new Arc each iteration to be dropped after `thread::park` e.g. when the
             // thread is resumed. When the Arc is deallocated, any remaining `Weak`
             // references in `Channel`s will be orphaned. This means thread::unpark will
@@ -425,16 +387,53 @@ impl Runtime {
     }
 
     /// Create a fresh [`NodeRef`].
-    fn new_node_reference(&self) -> NodeRef {
-        NodeRef(self.next_node_reference.fetch_add(1, SeqCst))
+    fn new_node_reference(&mut self) -> NodeRef {
+        let node_ref = NodeRef(self.next_node_reference);
+        self.next_node_reference += 1;
+        node_ref
     }
 }
 
 /// A reference to a [`Runtime`].
 #[derive(Clone)]
-pub struct RuntimeRef(Arc<Runtime>);
+pub struct RuntimeRef(Arc<Mutex<Runtime>>);
 
 impl RuntimeRef {
+    /// Configures and runs the protobuf specified Application [`Configuration`].
+    ///
+    /// After starting a [`Runtime`], calling [`Runtime::stop`] will send termination signals to
+    /// nodes and wait for them to terminate.
+    ///
+    /// Returns a [`RuntimeRef`] reference to the created runtime, and a writeable [`Handle`] to
+    /// send messages into the runtime. To receive messages, creating a new channel and passing
+    /// the write [`Handle`] into the runtime will enable messages to be read back out.
+    pub fn run(&self) -> Result<Handle, OakStatus> {
+        let mut runtime = self.lock();
+
+        let module_name = runtime.configuration.entry_module.clone();
+        let entrypoint = runtime.configuration.entrypoint.clone();
+
+        // When first starting, we assign the least privileged label to the channel connecting the
+        // outside world to the entry point node.
+        let (chan_writer, chan_reader) =
+            runtime.new_channel(&oak_abi::label::Label::public_trusted());
+
+        self.node_create(
+            &module_name,
+            &entrypoint,
+            // When first starting, we assign the least privileged label to the entry point node.
+            &oak_abi::label::Label::public_trusted(),
+            chan_reader,
+        )?;
+
+        // We call `expect` here because this should never fail, since the channel was just created
+        // and guaranteed not to have already been closed.
+        runtime
+            .channel_close(chan_reader)
+            .expect("could not close channel");
+
+        Ok(chan_writer)
+    }
     /// Thread safe method that attempts to create a node within the [`Runtime`] corresponding to a
     /// given module name and entrypoint. The `reader: ChannelReader` is passed to the newly
     /// created node.
@@ -453,7 +452,8 @@ impl RuntimeRef {
         label: &oak_abi::label::Label,
         reader: Handle,
     ) -> Result<(), OakStatus> {
-        if self.is_terminating() {
+        let runtime = self.lock();
+        if runtime.is_terminating() {
             return Err(OakStatus::ErrTerminated);
         }
 
@@ -461,12 +461,11 @@ impl RuntimeRef {
         // to do that we first need to provide a reference to the caller node as a parameter to this
         // function.
 
-        let mut nodes = self.nodes.lock().unwrap();
-        let reference = self.new_node_reference();
+        let reference = runtime.new_node_reference();
 
-        let reader = self.channels.duplicate_reference(reader)?;
+        let reader = runtime.channels.duplicate_reference(reader)?;
 
-        let mut instance = self
+        let mut instance = runtime
             .configuration
             .nodes
             .get(module_name)
@@ -488,7 +487,7 @@ impl RuntimeRef {
 
         // If the node was successfully started, insert it in the list of currently running
         // nodes.
-        nodes.insert(
+        runtime.nodes.insert(
             reference,
             Node {
                 reference,
@@ -499,13 +498,66 @@ impl RuntimeRef {
 
         Ok(())
     }
-}
 
-impl std::ops::Deref for RuntimeRef {
-    type Target = Runtime;
+    pub fn wait_on_channels(
+        &self,
+        readers: &[Option<Handle>],
+    ) -> Result<Vec<ChannelReadStatus>, OakStatus> {
+        let thread = thread::current();
+        loop {
+            {
+                let runtime = self.lock();
+                if runtime.is_terminating() {
+                    return Err(OakStatus::ErrTerminated);
+                }
 
-    #[inline]
-    fn deref(&self) -> &Runtime {
-        &self.0
+                // Create a new Arc each iteration to be dropped after `thread::park` e.g. when the
+                // thread is resumed. When the Arc is deallocated, any remaining `Weak`
+                // references in `Channel`s will be orphaned. This means thread::unpark will
+                // not be called multiple times. Even if thread unpark is called spuriously
+                // and we wake up early, no channel statuses will be ready and so we can
+                // just continue.
+                //
+                // Note we read statuses directly after adding waiters, before blocking to ensure
+                // that there are no messages, after we have been added as a waiter.
+
+                let thread_id = thread.id();
+                let thread_ref = Arc::new(thread.clone());
+
+                for reader in readers {
+                    if let Some(reader) = reader {
+                        runtime.channels.with_channel(
+                            runtime.channels.get_reader_channel(*reader)?,
+                            |channel| {
+                                channel.add_waiter(thread_id, &thread_ref);
+                                Ok(())
+                            },
+                        )?;
+                    }
+                }
+                let statuses = runtime.readers_statuses(readers);
+
+                let all_unreadable = statuses.iter().all(|&s| {
+                    s == ChannelReadStatus::InvalidChannel || s == ChannelReadStatus::Orphaned
+                });
+                let any_ready = statuses.iter().any(|&s| s == ChannelReadStatus::ReadReady);
+
+                if all_unreadable || any_ready {
+                    return Ok(statuses);
+                }
+
+                debug!(
+                    "wait_on_channels: channels not ready, parking thread {:?}",
+                    thread
+                );
+            }
+            // Make sure we park the thread **after** releasing the Runtime lock.
+            thread::park();
+            debug!("wait_on_channels: thread {:?} re-woken", thread);
+        }
+    }
+
+    pub fn lock(&self) -> &mut Runtime {
+        &mut *self.0.lock().expect("could not acquire Runtime lock")
     }
 }

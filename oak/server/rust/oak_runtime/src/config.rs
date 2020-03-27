@@ -111,10 +111,8 @@ pub fn from_protobuf(
 /// writeable [`Handle`] to send messages into the runtime. Creating a new
 /// channel and passing the write [`Handle`] into the runtime will enable messages to be
 /// read back out from the [`Runtime`].
-pub fn configure_and_run(
-    app_config: ApplicationConfiguration,
-) -> Result<(RuntimeRef, Handle), OakStatus> {
+pub fn configure_and_run(app_config: ApplicationConfiguration) -> Result<Handle, OakStatus> {
     let configuration = from_protobuf(app_config)?;
-    let runtime = Runtime::create(configuration);
+    let runtime = Runtime::create(configuration).into_ref();
     runtime.run()
 }

@@ -219,8 +219,8 @@ impl WasmInterface {
         write_addr: AbiPointer,
         read_addr: AbiPointer,
     ) -> Result<(), OakStatus> {
-        let (writer, reader) = self
-            .runtime
+        let runtime = self.runtime.lock();
+        let (writer, reader) = runtime
             // TODO(#630): Let caller provide this label via the Wasm ABI.
             .new_channel(&oak_abi::label::Label::public_trusted());
 
@@ -312,7 +312,7 @@ impl WasmInterface {
             channels: channels?,
         };
 
-        self.runtime.channel_write(*writer, msg)?;
+        self.runtime.lock().channel_write(*writer, msg)?;
 
         Ok(())
     }
@@ -340,7 +340,9 @@ impl WasmInterface {
         self.validate_ptr(dest, dest_capacity)?;
         self.validate_ptr(handles_dest, handles_capcity * 8)?;
 
-        let msg = self.runtime.channel_try_read_message(
+        let runtime = self.runtime.lock();
+
+        let msg = runtime.channel_try_read_message(
             *reader,
             dest_capacity as usize,
             handles_capcity as usize,
@@ -390,7 +392,7 @@ impl WasmInterface {
 
                 for (i, chan) in msg.channels.iter().enumerate() {
                     let handle =
-                        self.allocate_new_handle(*chan, self.runtime.channel_get_direction(*chan)?);
+                        self.allocate_new_handle(*chan, runtime.channel_get_direction(*chan)?);
                     LittleEndian::write_u64(&mut raw_writer[i * 8..(i + 1) * 8], handle);
                 }
 
@@ -507,6 +509,7 @@ impl wasmi::Externals for WasmInterface {
         args: wasmi::RuntimeArgs,
     ) -> Result<Option<wasmi::RuntimeValue>, wasmi::Trap> {
         debug!("{} invoke_index: {} {:?}", self.pretty_name, index, args);
+        let runtime = self.runtime.lock();
 
         match index {
             NODE_CREATE => {
@@ -526,7 +529,7 @@ impl wasmi::Externals for WasmInterface {
                     initial_handle
                 );
 
-                if self.runtime.is_terminating() {
+                if runtime.is_terminating() {
                     debug!("{} returning terminated", self.pretty_name);
                     return Ok(Some(wasmi::RuntimeValue::I32(
                         OakStatus::ErrTerminated as i32,
@@ -558,13 +561,13 @@ impl wasmi::Externals for WasmInterface {
 
                 let result = if let Some(reference) = self.readers.get(&channel_id).cloned() {
                     self.readers.remove(&channel_id);
-                    self.runtime
+                    runtime
                         .channel_close(reference)
                         .expect("Wasm CHANNEL_CLOSE: Channel reference inconsistency!");
                     OakStatus::Ok as i32
                 } else if let Some(reference) = self.writers.get(&channel_id).cloned() {
                     self.writers.remove(&channel_id);
-                    self.runtime
+                    runtime
                         .channel_close(reference)
                         .expect("Wasm CHANNEL_CLOSE: Channel reference inconsistency!");
                     OakStatus::Ok as i32
@@ -584,7 +587,7 @@ impl wasmi::Externals for WasmInterface {
                     self.pretty_name, write_addr, read_addr
                 );
 
-                if self.runtime.is_terminating() {
+                if runtime.is_terminating() {
                     debug!("{} returning terminated", self.pretty_name);
                     return Ok(Some(wasmi::RuntimeValue::I32(
                         OakStatus::ErrTerminated as i32,

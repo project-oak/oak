@@ -82,7 +82,7 @@ fn logger(pretty_name: &str, runtime: RuntimeRef, reader: Handle) -> Result<(), 
         // track their channels and make sure all channels are closed.
         // let _ = runtime.wait_on_channels(&[Some(&reader)]);
         runtime.wait_on_channels(&[Some(reader)])?;
-
+        let runtime = runtime.lock();
         if let Some(message) = runtime.channel_read(reader)? {
             match LogMessage::decode(&*message.data) {
                 Ok(msg) => info!(
