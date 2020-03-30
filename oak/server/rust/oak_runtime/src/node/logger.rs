@@ -20,18 +20,19 @@ use log::{error, info};
 
 use oak_abi::OakStatus;
 use std::{
+    sync::Arc,
     thread,
     thread::{spawn, JoinHandle},
 };
 
 use crate::proto::log::{Level, LogMessage};
 use crate::runtime::Handle;
-use crate::{NodeId, RuntimeRef};
+use crate::{NodeId, Runtime};
 use prost::Message;
 
 pub struct LogNode {
     config_name: String,
-    runtime: RuntimeRef,
+    runtime: Arc<Runtime>,
     node_id: NodeId,
     reader: Handle,
     thread_handle: Option<JoinHandle<()>>,
@@ -39,7 +40,7 @@ pub struct LogNode {
 
 impl LogNode {
     /// Creates a new [`LogNode`] instance, but does not start it.
-    pub fn new(config_name: &str, runtime: RuntimeRef, node_id: NodeId, reader: Handle) -> Self {
+    pub fn new(config_name: &str, runtime: Arc<Runtime>, node_id: NodeId, reader: Handle) -> Self {
         Self {
             config_name: config_name.to_string(),
             runtime,
@@ -78,7 +79,7 @@ impl super::Node for LogNode {
 
 fn logger(
     pretty_name: &str,
-    runtime: RuntimeRef,
+    runtime: Arc<Runtime>,
     node_id: NodeId,
     reader: Handle,
 ) -> Result<(), OakStatus> {

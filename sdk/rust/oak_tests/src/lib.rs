@@ -21,6 +21,7 @@ use log::info;
 use protobuf::{Message, ProtobufEnum};
 use std::collections::HashMap;
 use std::process::Command;
+use std::sync::Arc;
 
 use oak_runtime::runtime::TEST_NODE_ID;
 
@@ -58,7 +59,7 @@ const MODULE_WASM_SUFFIX: &str = ".wasm";
 /// given module name, using the default name "oak_main" for its entrypoint.
 pub fn run_single_module_default(
     module_config_name: &str,
-) -> Result<(oak_runtime::RuntimeRef, oak_runtime::Handle), oak::OakStatus> {
+) -> Result<(Arc<oak_runtime::Runtime>, oak_runtime::Handle), oak::OakStatus> {
     run_single_module(module_config_name, DEFAULT_ENTRYPOINT_NAME)
 }
 
@@ -67,7 +68,7 @@ pub fn run_single_module_default(
 pub fn run_single_module(
     module_config_name: &str,
     entrypoint_name: &str,
-) -> Result<(oak_runtime::RuntimeRef, oak_runtime::Handle), oak::OakStatus> {
+) -> Result<(Arc<oak_runtime::Runtime>, oak_runtime::Handle), oak::OakStatus> {
     let wasm: HashMap<String, Vec<u8>> = [(
         module_config_name.to_owned(),
         compile_rust_wasm(
@@ -92,7 +93,7 @@ pub fn run_single_module(
 
 // TODO(#543): move this to oak_runtime as it's not test-specific
 pub fn grpc_request<R, Q>(
-    runtime: &oak_runtime::RuntimeRef,
+    runtime: &oak_runtime::Runtime,
     channel: oak_runtime::Handle,
     method_name: &str,
     req: &R,

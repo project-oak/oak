@@ -31,7 +31,7 @@ use wasmi::ValueType;
 use oak_abi::{ChannelReadStatus, OakStatus};
 
 use crate::runtime::{Handle, HandleDirection, NodeId, ReadStatus};
-use crate::{Message, RuntimeRef};
+use crate::{Message, Runtime};
 
 /// These number mappings are not exposed to the Wasm client, and are only used by `wasmi` to map
 /// import names to host functions. See https://docs.rs/wasmi/0.6.2/wasmi/trait.Externals.html
@@ -71,7 +71,7 @@ struct WasmInterface {
     pretty_name: String,
 
     /// A reference to the `Runtime` is needed to execute the host ABI functions.
-    runtime: RuntimeRef,
+    runtime: Arc<Runtime>,
 
     /// Reader channel mappings to unique u64 handles
     readers: HashMap<AbiHandle, Handle>,
@@ -127,7 +127,7 @@ impl WasmInterface {
     /// Creates a new `WasmInterface` structure.
     pub fn new(
         pretty_name: String,
-        runtime: RuntimeRef,
+        runtime: Arc<crate::Runtime>,
         node_id: NodeId,
         initial_reader: Handle,
     ) -> (WasmInterface, AbiHandle) {
@@ -201,6 +201,7 @@ impl WasmInterface {
         })?;
 
         self.runtime
+            .clone()
             .node_create(
                 self.node_id,
                 &config_name,
@@ -756,7 +757,7 @@ impl wasmi::ModuleImportResolver for WasmInterface {
 
 pub struct WasmNode {
     config_name: String,
-    runtime: RuntimeRef,
+    runtime: Arc<Runtime>,
     node_id: NodeId,
     module: Arc<wasmi::Module>,
     entrypoint: String,
@@ -768,7 +769,7 @@ impl WasmNode {
     /// Creates a new [`WasmNode`] instance, but does not start it.
     pub fn new(
         config_name: &str,
-        runtime: RuntimeRef,
+        runtime: Arc<Runtime>,
         node_id: NodeId,
         module: Arc<wasmi::Module>,
         entrypoint: String,
@@ -890,7 +891,7 @@ mod tests {
             entry_module: "test_module".to_string(),
             entrypoint: entrypoint.to_string(),
         };
-        let runtime_ref = crate::runtime::Runtime::create(configuration).into_ref();
+        let runtime_ref = Arc::new(Runtime::create(configuration));
         let (_, reader_handle) =
             runtime_ref.new_channel(TEST_NODE_ID, &oak_abi::label::Label::public_trusted());
 
@@ -975,7 +976,7 @@ mod tests {
         let wat = r#"
         (module
             (type (;0;) (func (param i64) (result i32)))
-            (func $oak_main (type 0) 
+            (func $oak_main (type 0)
               i32.const 42)
             (memory (;0;) 18)
             (export "memory" (memory 0))

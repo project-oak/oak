@@ -28,7 +28,7 @@ use std::convert::{From, TryFrom};
 const MODULE_CONFIG_NAME: &str = "aggregator";
 
 fn submit_sample(
-    runtime: &oak_runtime::RuntimeRef,
+    runtime: &oak_runtime::Runtime,
     entry_channel: oak_runtime::Handle,
     bucket: &str,
     indices: Vec<u32>,
