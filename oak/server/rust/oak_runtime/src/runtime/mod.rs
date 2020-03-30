@@ -50,10 +50,11 @@ struct NodeInfo {
 
 /// An identifier for a Node that is opaque for type safety.
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
-pub struct NodeId(u64);
+pub struct NodeId(pub u64);
 
 /// A Node identifier reserved for the Runtime that allows access to all handles and channels.
-const RUNTIME_NODE_ID: NodeId = NodeId(0);
+// TODO(#724): make private once main() is in Rust not C++
+pub const RUNTIME_NODE_ID: NodeId = NodeId(0);
 /// For testing use the same reserved identifier to allow manipulation of all handles and channels.
 #[cfg(any(feature = "test_build", test))]
 pub const TEST_NODE_ID: NodeId = NodeId(0);
@@ -902,8 +903,8 @@ impl Drop for Runtime {
 /// partially applying the first argument.
 #[derive(Clone)]
 pub struct RuntimeProxy {
-    runtime: Arc<Runtime>,
-    node_id: NodeId,
+    pub runtime: Arc<Runtime>,
+    pub node_id: NodeId,
 }
 
 impl RuntimeProxy {

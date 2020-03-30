@@ -71,7 +71,7 @@ pub struct Channel {
 /// A reference to a [`Channel`]. Each [`Handle`] has an implicit direction such that it is only
 /// possible to read or write to a [`Handle`] (exclusive or).
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
-pub struct Handle(oak_abi::Handle);
+pub struct Handle(pub oak_abi::Handle);
 
 /// The direction of a [`Handle`] can be discovered by querying the associated
 /// [`Runtime`] [`Runtime::channel_get_direction`].
