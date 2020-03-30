@@ -72,17 +72,20 @@ impl crate::proto::policy::Label {
     }
 }
 
+/// Creates a [`Tag`] having as principal the provided authorization bearer token.
+///
+/// See https://github.com/project-oak/oak/blob/master/oak/proto/policy.proto
+pub fn authorization_bearer_token_hmac_tag(authorization_bearer_token_hmac: &[u8]) -> Tag {
+    Tag {
+        tag: Some(tag::Tag::GrpcTag(GrpcTag {
+            authorization_bearer_token_hmac: authorization_bearer_token_hmac.into(),
+        })),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn authorization_bearer_token_hmac_tag(authorization_bearer_token_hmac: &[u8]) -> Tag {
-        Tag {
-            tag: Option::Some(tag::Tag::GrpcTag(GrpcTag {
-                authorization_bearer_token_hmac: authorization_bearer_token_hmac.into(),
-            })),
-        }
-    }
 
     #[test]
     fn serialize_deserialize() {

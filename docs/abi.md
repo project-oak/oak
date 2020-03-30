@@ -1,4 +1,4 @@
-# Oak ABI
+# Oak WebAssembly ABI
 
 Oak [Nodes](concepts.md#oak-node) are implemented as WebAssembly modules, and so
 can only interact with things outside of the WebAssembly environment through
@@ -91,6 +91,10 @@ status byte. Invalid handles will have an `INVALID_CHANNEL` status, but
 `wait_on_channels` return value will only fail for internal errors or if _all_
 channels are invalid.
 
+If reading from any of the specified (valid) channels would violate
+[information flow control](/docs/concepts.md#labels), returns
+`PERMISSION_DENIED`.
+
 - arg 0: Address of handle status buffer
 - arg 1: Count N of handles provided
 - return 0: Status of operation
@@ -100,12 +104,19 @@ channels are invalid.
 `channel_read(u64, usize, usize, usize, usize, u32, usize) -> u32` reads a
 single message and associated channel handles from the specified channel,
 setting the size of the data in the location provided by arg 3, and the count of
-returned handles in the location provided by arg 6. If the provided spaces for
-data (args 1 and 2) or handles (args 4 and 5) are not large enough for the read
-operation, then no data will be returned and either `BUFFER_TOO_SMALL` or
-`HANDLE_SPACE_TOO_SMALL` will be returned; in either case, the required sizes
-will be returned in the spaces provided by args 3 and 6. If no messages are
-available on the channel, `CHANNEL_EMPTY` will be returned.
+returned handles in the location provided by arg 6.
+
+If the provided spaces for data (args 1 and 2) or handles (args 4 and 5) are not
+large enough for the read operation, then no data is written to the destination
+buffers, and the function returns either `BUFFER_TOO_SMALL` or
+`HANDLE_SPACE_TOO_SMALL`; in either case, the required sizes is written in the
+spaces provided by args 3 and 6.
+
+If no messages are available on the channel, returns `CHANNEL_EMPTY`.
+
+If reading from the specified channel would violate
+[information flow control](/docs/concepts.md#labels), returns
+`PERMISSION_DENIED`.
 
 - arg 0: Handle to channel receive half
 - arg 1: Destination buffer address
@@ -126,6 +137,10 @@ in Fuchsia.
 
 `channel_write: (u64, usize, usize, usize, u32) -> u32` writes a single message
 to the specified channel, together with any associated handles.
+
+If writing to the specified channel would violate
+[information flow control](/docs/concepts.md#labels), returns
+`PERMISSION_DENIED`.
 
 - arg 0: Handle to channel send half
 - arg 1: Source buffer address holding message
@@ -163,6 +178,10 @@ running the Node configuration identified by args 0 and 1, using the entrypoint
 specified by args 2 and 3, passing in an initial handle to the read half of a
 channel identified by arg 4. The entrypoint name is ignored when creating
 non-WebAssembly Nodes.
+
+If creating the specified node would violate
+[information flow control](/docs/concepts.md#labels), returns
+`PERMISSION_DENIED`.
 
 - arg 0: Source buffer holding node configuration name
 - arg 1: Node configuration name size in bytes
