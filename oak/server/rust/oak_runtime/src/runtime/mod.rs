@@ -53,7 +53,7 @@ struct Node {
     handles: Mutex<HashSet<Handle>>,
 }
 
-/// An identifier for a [`Node`] that is opaque for type safety,
+/// An identifier for a [`Node`] that is opaque for type safety.
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct NodeId(u64);
 
@@ -96,7 +96,7 @@ impl Runtime {
             channels: channel::ChannelMapping::new(),
             nodes: RwLock::new(HashMap::new()),
 
-            // NodeId(0) reserved for RUNTIME_NODE_ID
+            // NodeId(0) reserved for RUNTIME_NODE_ID.
             next_node_id: AtomicU64::new(1),
         }
     }
@@ -189,7 +189,6 @@ impl Runtime {
         // for any additional work to be finished here. This may take an arbitrary amount of time,
         // depending on the work that the node thread has to perform, but at least we know that the
         // it will not be able to enter again in a blocking state.
-        // for mut instance in instances.drain(..) {
         for mut instance in instances {
             instance.stop();
         }
@@ -216,7 +215,8 @@ impl Runtime {
         }
     }
 
-    /// Replace [`Handle`] with [`None`] if the [`NodeId`] does not have access to the [`Handle`].
+    /// Validate the [`NodeId`] has access to [`Handle`], returning `Err(OakStatus::ErrBadHandle)`
+    /// if access is not allowed.
     fn validate_handle_access(&self, node_id: NodeId, handle: Handle) -> Result<(), OakStatus> {
         // Allow RUNTIME_NODE_ID access to all handles.
         if node_id == RUNTIME_NODE_ID {
@@ -224,14 +224,14 @@ impl Runtime {
         }
 
         let nodes = self.nodes.read().unwrap();
-        // Lookup the node_id in the runtime's nodes hashmap
+        // Lookup the node_id in the runtime's nodes hashmap.
         let node = nodes
             .get(&node_id)
             .expect("Invalid node_id passed into validate_handle_access!");
         let tracked_handles = node.handles.lock().unwrap();
 
         // Check the handle exists in the handles associated with a node, otherwise
-        // return None.
+        // return ErrBadHandle.
         if tracked_handles.contains(&handle) {
             Ok(())
         } else {
@@ -243,12 +243,11 @@ impl Runtime {
         }
     }
 
-    /// Replace [`Handle`]s with [`None`] if the [`NodeId`] does not have access to the [`Handle`]s.
-    /// Any iterator is accepted, but a Vec<Option<Handle>> is returned so as not to hold
-    /// underlying Mutexes open.
+    /// Validate the [`NodeId`] has access to all [`Handle`]'s passed in the iterator, returning
+    /// `Err(OakStatus::ErrBadHandle)` if access is not allowed.
     fn validate_handles_access<'a, I>(&self, node_id: NodeId, handles: I) -> Result<(), OakStatus>
     where
-        I: Iterator<Item = &'a Option<Handle>>,
+        I: IntoIterator<Item = &'a Handle>,
     {
         // Allow RUNTIME_NODE_ID access to all handles.
         if node_id == RUNTIME_NODE_ID {
@@ -261,16 +260,14 @@ impl Runtime {
             .expect("Invalid node_id passed into filter_optional_handles!");
 
         let tracked_handles = node.handles.lock().unwrap();
-        for optional_handle in handles {
-            if let Some(handle) = optional_handle {
-                // Check handle is accessible by the node.
-                if !tracked_handles.contains(&handle) {
-                    error!(
-                        "filter_optional_handles: handle {:?} not found in node {:?}",
-                        handle, node_id
-                    );
-                    return Err(OakStatus::ErrBadHandle);
-                }
+        for handle in handles {
+            // Check handle is accessible by the node.
+            if !tracked_handles.contains(&handle) {
+                error!(
+                    "filter_optional_handles: handle {:?} not found in node {:?}",
+                    handle, node_id
+                );
+                return Err(OakStatus::ErrBadHandle);
             }
         }
         Ok(())
@@ -320,7 +317,7 @@ impl Runtime {
         node_id: NodeId,
         readers: &[Option<Handle>],
     ) -> Result<Vec<ChannelReadStatus>, OakStatus> {
-        self.validate_handles_access(node_id, readers.iter())?;
+        self.validate_handles_access(node_id, readers.iter().filter_map(|x| x.as_ref()))?;
 
         let thread = thread::current();
         while !self.is_terminating() {
