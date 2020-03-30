@@ -342,7 +342,7 @@ impl Runtime {
                     self.channels.with_channel(
                         self.channels.get_reader_channel(*reader)?,
                         |channel| {
-                            channel.add_waiter(thread_id, thread_ref.clone());
+                            channel.add_waiter(thread_id, &thread_ref);
                             Ok(())
                         },
                     )?;
