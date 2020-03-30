@@ -22,6 +22,7 @@
 use oak::grpc;
 use protobuf::Message;
 use std::io::Write;
+use log::error;
 
 // Oak Node server interface
 pub trait PrivateSetIntersection {
@@ -44,7 +45,7 @@ impl<T: PrivateSetIntersection> grpc::ServerNode for Dispatcher<T> {
             "/oak.examples.private_set_intersection.PrivateSetIntersection/SubmitSet" => grpc::handle_req_rsp(|r| self.0.submit_set(r), req, writer),
             "/oak.examples.private_set_intersection.PrivateSetIntersection/GetIntersection" => grpc::handle_req_rsp(|r| self.0.get_intersection(r), req, writer),
             _ => {
-                panic!("unknown method name: {}", method);
+                error!("unknown method name: {}", method);
             }
         };
     }

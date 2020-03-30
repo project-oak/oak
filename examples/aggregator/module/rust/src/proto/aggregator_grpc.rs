@@ -22,6 +22,7 @@
 use oak::grpc;
 use protobuf::Message;
 use std::io::Write;
+use log::error;
 
 // Oak Node server interface
 pub trait Aggregator {
@@ -42,7 +43,7 @@ impl<T: Aggregator> grpc::ServerNode for Dispatcher<T> {
         match method {
             "/oak.examples.aggregator.Aggregator/SubmitSample" => grpc::handle_req_rsp(|r| self.0.submit_sample(r), req, writer),
             _ => {
-                panic!("unknown method name: {}", method);
+                error!("unknown method name: {}", method);
             }
         };
     }

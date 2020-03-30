@@ -278,7 +278,7 @@ impl<'a> ServiceGen<'a> {
                         w.write_line(format!("\"{}\" => {},", method.full_path(), method.dispatch_method()));
                     }
                     w.block("_ => {", "}", |w| {
-                        w.write_line("panic!(\"unknown method name: {}\", method);");
+                        w.write_line("error!(\"unknown method name: {}\", method);");
                     });
                 });
             });
@@ -307,6 +307,7 @@ impl<'a> ServiceGen<'a> {
         w.write_line("use oak::grpc;");
         w.write_line("use protobuf::Message;");
         w.write_line("use std::io::Write;");
+        w.write_line("use log::error;");
         w.write_line("");
         w.comment("Oak Node server interface");
         self.write_server_intf(w);

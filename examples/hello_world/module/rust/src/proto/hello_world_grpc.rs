@@ -22,6 +22,7 @@
 use oak::grpc;
 use protobuf::Message;
 use std::io::Write;
+use log::error;
 
 // Oak Node server interface
 pub trait HelloWorld {
@@ -48,7 +49,7 @@ impl<T: HelloWorld> grpc::ServerNode for Dispatcher<T> {
             "/oak.examples.hello_world.HelloWorld/LotsOfGreetings" => grpc::handle_stream_rsp(|rr| self.0.lots_of_greetings(rr), req, writer),
             "/oak.examples.hello_world.HelloWorld/BidiHello" => grpc::handle_stream_stream(|rr, w| self.0.bidi_hello(rr, w), req, writer),
             _ => {
-                panic!("unknown method name: {}", method);
+                error!("unknown method name: {}", method);
             }
         };
     }
