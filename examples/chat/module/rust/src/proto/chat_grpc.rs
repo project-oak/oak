@@ -22,6 +22,7 @@
 use oak::grpc;
 use protobuf::Message;
 use std::io::Write;
+use log::error;
 
 // Oak Node server interface
 pub trait Chat {
@@ -48,7 +49,7 @@ impl<T: Chat> grpc::ServerNode for Dispatcher<T> {
             "/oak.examples.chat.Chat/Subscribe" => grpc::handle_req_stream(|r, w| self.0.subscribe(r, w), req, writer),
             "/oak.examples.chat.Chat/SendMessage" => grpc::handle_req_rsp(|r| self.0.send_message(r), req, writer),
             _ => {
-                panic!("unknown method name: {}", method);
+                error!("unknown method name: {}", method);
             }
         };
     }

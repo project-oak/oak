@@ -22,6 +22,7 @@
 use oak::grpc;
 use protobuf::Message;
 use std::io::Write;
+use log::error;
 
 // Oak Node server interface
 pub trait FormatService {
@@ -42,7 +43,7 @@ impl<T: FormatService> grpc::ServerNode for Dispatcher<T> {
         match method {
             "/oak.examples.rustfmt.FormatService/Format" => grpc::handle_req_rsp(|r| self.0.format(r), req, writer),
             _ => {
-                panic!("unknown method name: {}", method);
+                error!("unknown method name: {}", method);
             }
         };
     }

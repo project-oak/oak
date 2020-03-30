@@ -22,6 +22,7 @@
 use oak::grpc;
 use protobuf::Message;
 use std::io::Write;
+use log::error;
 
 // Oak Node server interface
 pub trait OakABITestService {
@@ -50,7 +51,7 @@ impl<T: OakABITestService> grpc::ServerNode for Dispatcher<T> {
             "/oak.examples.abitest.OakABITestService/ClientStreamingMethod" => grpc::handle_stream_rsp(|rr| self.0.client_streaming_method(rr), req, writer),
             "/oak.examples.abitest.OakABITestService/BidiStreamingMethod" => grpc::handle_stream_stream(|rr, w| self.0.bidi_streaming_method(rr, w), req, writer),
             _ => {
-                panic!("unknown method name: {}", method);
+                error!("unknown method name: {}", method);
             }
         };
     }
