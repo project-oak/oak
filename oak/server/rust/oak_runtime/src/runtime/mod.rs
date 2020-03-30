@@ -530,9 +530,13 @@ impl Runtime {
                     }
                 }
             });
+
+        // Add handles outside the channels lock so we don't hold the node lock inside the channel
+        // lock.
         if let Ok(Some(ReadStatus::Success(ref msg))) = result {
             self.track_handles_in_node(node_id, msg.channels.clone());
         }
+
         result
     }
 
@@ -613,7 +617,6 @@ impl RuntimeRef {
 
         let reader = self.channels.duplicate_reference(reader)?;
 
-        let mut nodes = self.nodes.write().unwrap();
         let mut instance = self
             .configuration
             .nodes
@@ -635,7 +638,9 @@ impl RuntimeRef {
         instance.start()?;
 
         // If the node was successfully started, insert it in the list of currently running
-        // nodes.
+        // nodes. Scope the lock as small as possible and inparticular don't hold it during the
+        // duplicate_reference call which opens a temporary lock on channels.
+        let mut nodes = self.nodes.write().unwrap();
         nodes.insert(
             reference,
             Node {
