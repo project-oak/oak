@@ -224,7 +224,7 @@ impl Runtime {
         }
 
         let nodes = self.nodes.read().unwrap();
-        // Lookup the node_id in the runtime's nodes hashmap
+        // Lookup the node_id in the runtime's nodes hashmap.
         let node = nodes
             .get(&node_id)
             .expect("Invalid node_id passed into validate_handle_access!");
@@ -247,7 +247,7 @@ impl Runtime {
     /// `Err(OakStatus::ErrBadHandle)` if access is not allowed.
     fn validate_handles_access<'a, I>(&self, node_id: NodeId, handles: I) -> Result<(), OakStatus>
     where
-        I: Iterator<Item = &'a Handle>,
+        I: IntoIterator<Item = &'a Handle>,
     {
         // Allow RUNTIME_NODE_ID access to all handles.
         if node_id == RUNTIME_NODE_ID {
