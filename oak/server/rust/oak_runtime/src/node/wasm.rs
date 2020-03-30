@@ -30,8 +30,8 @@ use wasmi::ValueType;
 
 use oak_abi::{ChannelReadStatus, OakStatus};
 
-use crate::runtime::{Handle, HandleDirection, NodeId, ReadStatus};
-use crate::{Message, Runtime};
+use crate::runtime::{Handle, HandleDirection, ReadStatus, RuntimeProxy};
+use crate::Message;
 
 /// These number mappings are not exposed to the Wasm client, and are only used by `wasmi` to map
 /// import names to host functions. See https://docs.rs/wasmi/0.6.2/wasmi/trait.Externals.html
@@ -70,9 +70,6 @@ struct WasmInterface {
     /// A configuration and thread specific name for pretty printing.
     pretty_name: String,
 
-    /// A reference to the `Runtime` is needed to execute the host ABI functions.
-    runtime: Arc<Runtime>,
-
     /// Reader channel mappings to unique u64 handles
     readers: HashMap<AbiHandle, Handle>,
     /// Writer channel mappings to unique u64 handles
@@ -82,7 +79,7 @@ struct WasmInterface {
     /// relative addresses will perform reads/writes against this reference.
     memory: Option<wasmi::MemoryRef>,
 
-    node_id: NodeId,
+    runtime: RuntimeProxy,
 }
 
 impl WasmInterface {
@@ -127,17 +124,15 @@ impl WasmInterface {
     /// Creates a new `WasmInterface` structure.
     pub fn new(
         pretty_name: String,
-        runtime: Arc<crate::Runtime>,
-        node_id: NodeId,
+        runtime: RuntimeProxy,
         initial_reader: Handle,
     ) -> (WasmInterface, AbiHandle) {
         let mut interface = WasmInterface {
             pretty_name,
-            runtime,
             readers: HashMap::new(),
             writers: HashMap::new(),
             memory: None,
-            node_id,
+            runtime,
         };
         let handle = interface.allocate_new_handle(initial_reader, HandleDirection::Read);
         (interface, handle)
@@ -203,7 +198,6 @@ impl WasmInterface {
         self.runtime
             .clone()
             .node_create(
-                self.node_id,
                 &config_name,
                 &entrypoint,
                 // TODO(#630): Let caller provide this label via the Wasm ABI.
@@ -228,7 +222,7 @@ impl WasmInterface {
         let (writer, reader) = self
             .runtime
             // TODO(#630): Let caller provide this label via the Wasm ABI.
-            .new_channel(self.node_id, &oak_abi::label::Label::public_trusted());
+            .channel_create(&oak_abi::label::Label::public_trusted());
 
         self.validate_ptr(write_addr, 8)?;
         self.validate_ptr(read_addr, 8)?;
@@ -318,7 +312,7 @@ impl WasmInterface {
             channels: channels?,
         };
 
-        self.runtime.channel_write(self.node_id, *writer, msg)?;
+        self.runtime.channel_write(*writer, msg)?;
 
         Ok(())
     }
@@ -347,7 +341,6 @@ impl WasmInterface {
         self.validate_ptr(handles_dest, handles_capcity * 8)?;
 
         let msg = self.runtime.channel_try_read_message(
-            self.node_id,
             *reader,
             dest_capacity as usize,
             handles_capcity as usize,
@@ -396,10 +389,8 @@ impl WasmInterface {
                 let mut raw_writer: Vec<u8> = vec![0; actual_handle_count * 8];
 
                 for (i, chan) in msg.channels.iter().enumerate() {
-                    let handle = self.allocate_new_handle(
-                        *chan,
-                        self.runtime.channel_get_direction(self.node_id, *chan)?,
-                    );
+                    let handle =
+                        self.allocate_new_handle(*chan, self.runtime.channel_get_direction(*chan)?);
                     LittleEndian::write_u64(&mut raw_writer[i * 8..(i + 1) * 8], handle);
                 }
 
@@ -464,7 +455,7 @@ impl WasmInterface {
             })
             .collect();
 
-        let statuses = self.runtime.wait_on_channels(self.node_id, &channels)?;
+        let statuses = self.runtime.wait_on_channels(&channels)?;
 
         for (i, &status) in statuses.iter().enumerate() {
             self.get_memory()
@@ -568,13 +559,13 @@ impl wasmi::Externals for WasmInterface {
                 let result = if let Some(reference) = self.readers.get(&channel_id).cloned() {
                     self.readers.remove(&channel_id);
                     self.runtime
-                        .channel_close(self.node_id, reference)
+                        .channel_close(reference)
                         .expect("Wasm CHANNEL_CLOSE: Channel reference inconsistency!");
                     OakStatus::Ok as i32
                 } else if let Some(reference) = self.writers.get(&channel_id).cloned() {
                     self.writers.remove(&channel_id);
                     self.runtime
-                        .channel_close(self.node_id, reference)
+                        .channel_close(reference)
                         .expect("Wasm CHANNEL_CLOSE: Channel reference inconsistency!");
                     OakStatus::Ok as i32
                 } else {
@@ -757,8 +748,7 @@ impl wasmi::ModuleImportResolver for WasmInterface {
 
 pub struct WasmNode {
     config_name: String,
-    runtime: Arc<Runtime>,
-    node_id: NodeId,
+    runtime: RuntimeProxy,
     module: Arc<wasmi::Module>,
     entrypoint: String,
     reader: Handle,
@@ -769,8 +759,7 @@ impl WasmNode {
     /// Creates a new [`WasmNode`] instance, but does not start it.
     pub fn new(
         config_name: &str,
-        runtime: Arc<Runtime>,
-        node_id: NodeId,
+        runtime: RuntimeProxy,
         module: Arc<wasmi::Module>,
         entrypoint: String,
         reader: Handle,
@@ -778,7 +767,6 @@ impl WasmNode {
         Self {
             config_name: config_name.to_string(),
             runtime,
-            node_id,
             module,
             entrypoint,
             reader,
@@ -801,12 +789,8 @@ impl super::Node for WasmNode {
         // as the entrypoint could be anything. We do it before spawning the child thread so
         // that we can return an error code immediately if appropriate.
         {
-            let (abi, _) = WasmInterface::new(
-                self.config_name.clone(),
-                self.runtime.clone(),
-                self.node_id,
-                self.reader,
-            );
+            let (abi, _) =
+                WasmInterface::new(self.config_name.clone(), self.runtime.clone(), self.reader);
             let instance = wasmi::ModuleInstance::new(
                 &self.module,
                 &wasmi::ImportsBuilder::new().with_resolver("oak", &abi),
@@ -834,14 +818,13 @@ impl super::Node for WasmNode {
         let config_name = self.config_name.clone();
         let reader = self.reader;
         let runtime = self.runtime.clone();
-        let node_id = self.node_id;
         let module = self.module.clone();
         let entrypoint = self.entrypoint.clone();
         // TODO(#770): Use `std::thread::Builder` and give a name to this thread.
         let thread_handle = spawn(move || {
             let pretty_name = format!("{}-{:?}:", config_name, thread::current());
             let (mut abi, initial_handle) =
-                WasmInterface::new(pretty_name, runtime.clone(), node_id, reader);
+                WasmInterface::new(pretty_name, runtime.clone(), reader);
 
             let instance = wasmi::ModuleInstance::new(
                 &module,
@@ -864,7 +847,7 @@ impl super::Node for WasmNode {
                 )
                 .expect("failed to execute export");
 
-            runtime.remove_node_id(node_id);
+            runtime.exit_node();
         });
         self.thread_handle = Some(thread_handle);
         Ok(())
@@ -882,7 +865,7 @@ impl super::Node for WasmNode {
 mod tests {
     use super::*;
     use crate::node::Node;
-    use crate::runtime::TEST_NODE_ID;
+    use crate::runtime::{Runtime, TEST_NODE_ID};
     use wat::{parse_file, parse_str};
 
     fn setup_node<S: AsRef<[u8]>>(buffer: S, entrypoint: &str) -> Box<dyn Node> {
@@ -895,12 +878,13 @@ mod tests {
         let (_, reader_handle) =
             runtime_ref.new_channel(TEST_NODE_ID, &oak_abi::label::Label::public_trusted());
 
+        let runtime_proxy = runtime_ref.new_runtime_proxy();
+
         let module = wasmi::Module::from_buffer(buffer).unwrap();
 
         Box::new(WasmNode::new(
             "test",
-            runtime_ref,
-            TEST_NODE_ID,
+            runtime_proxy,
             Arc::new(module),
             entrypoint.to_string(),
             reader_handle,
