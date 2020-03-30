@@ -579,6 +579,13 @@ impl Runtime {
         let mut nodes = self.nodes.write().unwrap();
         nodes.remove(&node_id);
     }
+
+    /// Add an [`NodeId`] [`Node`] pair to the [`Runtime`]. This method temporarily holds the node
+    /// write lock.
+    fn add_running_node(&self, reference: NodeId, node: Node) {
+        let mut nodes = self.nodes.write().unwrap();
+        nodes.insert(reference, node);
+    }
 }
 
 /// A reference to a [`Runtime`].
@@ -638,10 +645,8 @@ impl RuntimeRef {
         instance.start()?;
 
         // If the node was successfully started, insert it in the list of currently running
-        // nodes. Scope the lock as small as possible and inparticular don't hold it during the
-        // duplicate_reference call which opens a temporary lock on channels.
-        let mut nodes = self.nodes.write().unwrap();
-        nodes.insert(
+        // nodes.
+        self.add_running_node(
             reference,
             Node {
                 reference,
