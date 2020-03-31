@@ -20,6 +20,7 @@ byteorder = { version = "*", default-features = false }
 http = "*"
 hyper = "*"
 itertools = "*"
+lazy_static = "*"
 log = { version = "*" }
 oak_abi = "=0.1.0"
 prost = "*"

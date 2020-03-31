@@ -24,6 +24,7 @@ use oak_abi::OakStatus;
 
 use crate::{runtime::RuntimeProxy, Handle};
 
+pub mod external;
 mod grpc_server;
 mod logger;
 mod wasm;
@@ -66,6 +67,9 @@ pub enum Configuration {
     // `Arc<wasmi::Module>` that we pass to new Nodes, and clone to to spawn new
     // `wasmi::ModuleInstances`.
     WasmNode { module: Arc<wasmi::Module> },
+
+    /// The configuration for an externally provided pseudo-Node.
+    External,
 }
 
 /// A enumeration for errors occuring when building `Configuration` from protobuf types.
@@ -139,6 +143,11 @@ impl Configuration {
                 runtime,
                 module.clone(),
                 entrypoint,
+                initial_reader,
+            )),
+            Configuration::External => Box::new(external::PseudoNode::new(
+                config_name,
+                runtime,
                 initial_reader,
             )),
         }
