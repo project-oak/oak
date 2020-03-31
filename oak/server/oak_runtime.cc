@@ -69,18 +69,20 @@ grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config,
   }
 
   // Create a gRPC pseudo-Node.
+  NodeId grpc_node_id = NextNodeId();
   const std::string grpc_name = kGrpcNodeName;
   const uint16_t grpc_port = config.grpc_port();
   OAK_LOG(INFO) << "Create gRPC pseudo-Node named {" << grpc_name << "}";
   std::unique_ptr<OakGrpcNode> grpc_node =
-      OakGrpcNode::Create(this, grpc_name, grpc_credentials, grpc_port);
+      OakGrpcNode::Create(this, grpc_name, grpc_node_id, grpc_credentials, grpc_port);
   grpc_node_ = grpc_node.get();  // borrowed copy
   nodes_[grpc_name] = std::move(grpc_node);
 
   // Create the initial Application Node.
+  NodeId app_node_id = NextNodeId();
   std::string node_name;
-  app_node_ =
-      CreateNode(config.initial_node_config_name(), config.initial_entrypoint_name(), &node_name);
+  app_node_ = CreateNode(config.initial_node_config_name(), config.initial_entrypoint_name(),
+                         app_node_id, &node_name);
   if (app_node_ == nullptr) {
     return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Failed to create initial Oak Node");
   }
@@ -105,28 +107,30 @@ std::string OakRuntime::NextNodeName(const std::string& config_name,
   return absl::StrCat(config_name, "-", index, "-", entrypoint_name);
 }
 
+NodeId OakRuntime::NextNodeId() { return next_node_id_++; }
+
 // Create (but don't start) a new Node instance.  Return a borrowed pointer to
 // the new Node (or nullptr on failure).
 OakNode* OakRuntime::CreateNode(const std::string& config_name, const std::string& entrypoint_name,
-                                std::string* node_name) {
+                                NodeId node_id, std::string* node_name) {
   std::string name = NextNodeName(config_name, entrypoint_name);
   std::unique_ptr<OakNode> node;
 
   if (wasm_config_.count(config_name) > 0) {
     OAK_LOG(INFO) << "Create Wasm node named {" << name << "}";
     const WebAssemblyConfiguration* wasm_cfg = wasm_config_[config_name].get();
-    node = WasmNode::Create(this, name, wasm_cfg->module_bytes(), entrypoint_name);
+    node = WasmNode::Create(this, name, node_id, wasm_cfg->module_bytes(), entrypoint_name);
   } else if (log_config_.count(config_name) > 0) {
     OAK_LOG(INFO) << "Create log node named {" << name << "}";
-    node = absl::make_unique<LoggingNode>(this, name);
+    node = absl::make_unique<LoggingNode>(this, name, node_id);
   } else if (storage_config_.count(config_name) > 0) {
     std::string address = *(storage_config_[config_name].get());
     OAK_LOG(INFO) << "Create storage proxy node named {" << name << "} connecting to " << address;
-    node = absl::make_unique<StorageNode>(this, name, address);
+    node = absl::make_unique<StorageNode>(this, name, node_id, address);
   } else if (grpc_client_config_.count(config_name) > 0) {
     std::string address = *(grpc_client_config_[config_name].get());
     OAK_LOG(INFO) << "Create gRPC client node named {" << name << "} connecting to " << address;
-    node = absl::make_unique<GrpcClientNode>(this, name, address);
+    node = absl::make_unique<GrpcClientNode>(this, name, node_id, address);
   } else {
     OAK_LOG(ERROR) << "failed to find config with name " << config_name;
     return nullptr;
@@ -151,7 +155,8 @@ bool OakRuntime::CreateAndRunNode(const std::string& config_name,
   }
 
   absl::MutexLock lock(&mu_);
-  OakNode* node = CreateNode(config_name, entrypoint_name, node_name);
+  NodeId node_id = NextNodeId();
+  OakNode* node = CreateNode(config_name, entrypoint_name, node_id, node_name);
   if (node == nullptr) {
     return false;
   }

@@ -44,6 +44,7 @@ class OakRuntime : public BaseRuntime {
         grpc_handle_(kInvalidHandle),
         app_node_(nullptr),
         app_handle_(kInvalidHandle),
+        next_node_id_(0),
         termination_pending_(false) {}
   virtual ~OakRuntime() = default;
 
@@ -67,9 +68,10 @@ class OakRuntime : public BaseRuntime {
 
   std::string NextNodeName(const std::string& config_name, const std::string& entrypoint_name)
       EXCLUSIVE_LOCKS_REQUIRED(mu_);
+  NodeId NextNodeId() EXCLUSIVE_LOCKS_REQUIRED(mu_);
 
   OakNode* CreateNode(const std::string& config_name, const std::string& entrypoint_name,
-                      std::string* node_name) EXCLUSIVE_LOCKS_REQUIRED(mu_);
+                      NodeId node_id, std::string* node_name) EXCLUSIVE_LOCKS_REQUIRED(mu_);
 
   // Information derived from ApplicationConfiguration; const after Initialize() called:
 
@@ -93,15 +95,16 @@ class OakRuntime : public BaseRuntime {
   // to the initial Application Wasm Node.
   Handle app_handle_;
 
-  // Next index for node name generation.
-  mutable absl::Mutex mu_;  // protects nodes_, next_index_;
+  // Next indexes for node name/ID generation.
+  mutable absl::Mutex mu_;  // protects nodes_, next_index_, next_node_id_;
   std::map<std::string, int> next_index_ GUARDED_BY(mu_);
-
-  std::atomic_bool termination_pending_;
+  NodeId next_node_id_ GUARDED_BY(mu_);
 
   // Collection of running Nodes indexed by Node name.  Note that Node name is
   // unique but is not visible to the running Application in any way.
   std::map<std::string, std::unique_ptr<OakNode>> nodes_ GUARDED_BY(mu_);
+
+  std::atomic_bool termination_pending_;
 
 };  // class OakRuntime
 

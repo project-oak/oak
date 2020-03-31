@@ -31,9 +31,9 @@ namespace {
 void* tag(int i) { return (void*)static_cast<intptr_t>(i); }
 }  // namespace
 
-GrpcClientNode::GrpcClientNode(BaseRuntime* runtime, const std::string& name,
+GrpcClientNode::GrpcClientNode(BaseRuntime* runtime, const std::string& name, NodeId node_id,
                                const std::string& grpc_address)
-    : NodeThread(runtime, name),
+    : NodeThread(runtime, name, node_id),
       channel_(grpc::CreateChannel(grpc_address, grpc::InsecureChannelCredentials())),
       stub_(new grpc::GenericStub(channel_)) {
   OAK_LOG(INFO) << "Created gRPC client node for " << grpc_address;

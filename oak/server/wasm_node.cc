@@ -152,16 +152,17 @@ static bool CheckModuleExport(wabt::interp::Environment* env, wabt::interp::Modu
   return true;
 }
 
-WasmNode::WasmNode(BaseRuntime* runtime, const std::string& name,
+WasmNode::WasmNode(BaseRuntime* runtime, const std::string& name, NodeId node_id,
                    const std::string& main_entrypoint)
-    : NodeThread(runtime, name), main_entrypoint_(main_entrypoint), prng_engine_() {}
+    : NodeThread(runtime, name, node_id), main_entrypoint_(main_entrypoint), prng_engine_() {}
 
 std::unique_ptr<WasmNode> WasmNode::Create(BaseRuntime* runtime, const std::string& name,
-                                           const std::string& module,
+                                           NodeId node_id, const std::string& module,
                                            const std::string& main_entrypoint) {
   OAK_LOG(INFO) << "Creating Wasm Node";
 
-  std::unique_ptr<WasmNode> node = absl::WrapUnique(new WasmNode(runtime, name, main_entrypoint));
+  std::unique_ptr<WasmNode> node =
+      absl::WrapUnique(new WasmNode(runtime, name, node_id, main_entrypoint));
   node->InitEnvironment(&node->env_);
   OAK_LOG(INFO) << "Host func count: " << node->env_.GetFuncCount();
 

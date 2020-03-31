@@ -30,7 +30,8 @@ namespace oak {
 
 class StorageNode final : public NodeThread {
  public:
-  StorageNode(BaseRuntime* runtime, const std::string& name, const std::string& storage_address);
+  StorageNode(BaseRuntime* runtime, const std::string& name, NodeId node_id,
+              const std::string& storage_address);
 
  private:
   void Run(Handle handle) override;

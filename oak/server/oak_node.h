@@ -17,6 +17,8 @@
 #ifndef OAK_SERVER_NODE_H_
 #define OAK_SERVER_NODE_H_
 
+#include <stdint.h>
+
 #include <atomic>
 #include <memory>
 #include <random>
@@ -57,10 +59,12 @@ struct NodeReadResult {
   std::unique_ptr<NodeMessage> msg;
 };
 
+using NodeId = uint64_t;
+
 class OakNode {
  public:
-  OakNode(BaseRuntime* runtime, const std::string& name)
-      : name_(name), runtime_(runtime), prng_engine_() {}
+  OakNode(BaseRuntime* runtime, const std::string& name, NodeId node_id)
+      : name_(name), node_id_(node_id), runtime_(runtime), prng_engine_() {}
   virtual ~OakNode() {}
 
   virtual void Start(Handle handle) = 0;
@@ -98,6 +102,7 @@ class OakNode {
   void ClearHandles() LOCKS_EXCLUDED(mu_);
 
   const std::string name_;
+  const NodeId node_id_;
 
  private:
   // Allow the Runtime to use internal methods.

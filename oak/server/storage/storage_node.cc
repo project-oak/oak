@@ -29,9 +29,9 @@ using ::oak_abi::OakStatus;
 
 namespace oak {
 
-StorageNode::StorageNode(BaseRuntime* runtime, const std::string& name,
+StorageNode::StorageNode(BaseRuntime* runtime, const std::string& name, NodeId node_id,
                          const std::string& storage_address)
-    : NodeThread(runtime, name), storage_processor_(storage_address) {}
+    : NodeThread(runtime, name, node_id), storage_processor_(storage_address) {}
 
 void StorageNode::Run(Handle invocation_handle) {
   std::vector<std::unique_ptr<ChannelStatus>> channel_status;
