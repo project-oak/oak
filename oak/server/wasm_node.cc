@@ -64,11 +64,11 @@ static void WriteMemory(wabt::interp::Environment* env, const uint32_t offset,
 }
 
 static void WriteI32(wabt::interp::Environment* env, const uint32_t offset, const int32_t value) {
-  return absl::little_endian::Store32(env->GetMemory(0)->data.data() + offset, value);
+  absl::little_endian::Store32(env->GetMemory(0)->data.data() + offset, value);
 }
 
 static void WriteU64(wabt::interp::Environment* env, const uint32_t offset, const uint64_t v) {
-  return absl::little_endian::Store64(env->GetMemory(0)->data.data() + offset, v);
+  absl::little_endian::Store64(env->GetMemory(0)->data.data() + offset, v);
 }
 
 static uint64_t ReadU64(wabt::interp::Environment* env, const uint32_t offset) {
