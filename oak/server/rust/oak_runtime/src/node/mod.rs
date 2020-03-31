@@ -29,6 +29,10 @@ mod wasm;
 /// Nodes must not do any work until the [`Node::start`] method is invoked.
 pub trait Node: Send + Sync {
     /// Starts executing the node.
+    ///
+    /// This method will be invoked in a blocking fashion by the [`Runtime`], therefore node
+    /// implementations should make sure that they create separate background threads to execute
+    /// actual work, and wait on them to terminate when [`Node::stop`] is called.
     fn start(&mut self) -> Result<(), OakStatus>;
 
     /// Stops executing the node.

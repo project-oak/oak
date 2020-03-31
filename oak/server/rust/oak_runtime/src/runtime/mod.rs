@@ -33,12 +33,7 @@ use crate::node;
 mod channel;
 pub use channel::{Handle, HandleDirection};
 
-struct Node {
-    #[allow(dead_code)]
-    reference: NodeId,
-
-    // An option type allows the instance to be swapped out during `runtime.stop`
-    instance: Option<Box<dyn crate::node::Node>>,
+struct NodeInfo {
     /// The Label associated with this node.
     ///
     /// This is set at node creation time and does not change after that.
@@ -83,7 +78,11 @@ pub struct Runtime {
 
     channels: channel::ChannelMapping,
 
-    nodes: RwLock<HashMap<NodeId, Node>>,
+    /// Runtime-specific state for each node instance.
+    node_infos: RwLock<HashMap<NodeId, NodeInfo>>,
+
+    /// Currently running node instances, so that [`Runtime::stop`] can terminate all of them.
+    node_instances: Mutex<HashMap<NodeId, Box<dyn crate::node::Node>>>,
     next_node_id: AtomicU64,
 }
 
@@ -94,7 +93,9 @@ impl Runtime {
             configuration,
             terminating: AtomicBool::new(false),
             channels: channel::ChannelMapping::new(),
-            nodes: RwLock::new(HashMap::new()),
+
+            node_infos: RwLock::new(HashMap::new()),
+            node_instances: Mutex::new(HashMap::new()),
 
             // NodeId(0) reserved for RUNTIME_NODE_ID.
             next_node_id: AtomicU64::new(1),
@@ -143,18 +144,9 @@ impl Runtime {
     /// Thread safe method for signaling termination to a [`Runtime`] and waiting for its node
     /// threads to terminate.
     pub fn stop(&self) {
-        // Take the list of nodes out of the runtime instance, and set the terminating flag; this
-        // will prevent additional nodes from starting to wait again, because `wait_on_channels`
-        // will return immediately with `OakStatus::ErrTerminated`.
-        let instances: Vec<_> = {
-            let mut nodes = self.nodes.write().unwrap();
-            self.terminating.store(true, SeqCst);
-
-            nodes
-                .values_mut()
-                .filter_map(|n| n.instance.take())
-                .collect()
-        };
+        // Set the terminating flag; this will prevent additional nodes from starting to wait again,
+        // because `wait_on_channels` will return immediately with `OakStatus::ErrTerminated`.
+        self.terminating.store(true, SeqCst);
 
         // Unpark any threads that are blocked waiting on any channels.
         for channel in self
@@ -181,7 +173,12 @@ impl Runtime {
         // for any additional work to be finished here. This may take an arbitrary amount of time,
         // depending on the work that the node thread has to perform, but at least we know that the
         // it will not be able to enter again in a blocking state.
-        for mut instance in instances {
+        for instance in self
+            .node_instances
+            .lock()
+            .expect("could not acquire lock on node_instances")
+            .values_mut()
+        {
             instance.stop();
         }
     }
@@ -196,12 +193,12 @@ impl Runtime {
             return;
         }
 
-        let nodes = self.nodes.read().unwrap();
-        let node = nodes
+        let node_infos = self.node_infos.read().unwrap();
+        let node_info = node_infos
             .get(&node_id)
             .expect("Invalid node_id passed into track_handles_in_node!");
 
-        let mut tracked_handles = node.handles.lock().unwrap();
+        let mut tracked_handles = node_info.handles.lock().unwrap();
         for handle in handles {
             tracked_handles.insert(handle);
         }
@@ -215,12 +212,12 @@ impl Runtime {
             return Ok(());
         }
 
-        let nodes = self.nodes.read().unwrap();
+        let node_infos = self.node_infos.read().unwrap();
         // Lookup the node_id in the runtime's nodes hashmap.
-        let node = nodes
+        let node_info = node_infos
             .get(&node_id)
             .expect("Invalid node_id passed into validate_handle_access!");
-        let tracked_handles = node.handles.lock().unwrap();
+        let tracked_handles = node_info.handles.lock().unwrap();
 
         // Check the handle exists in the handles associated with a node, otherwise
         // return ErrBadHandle.
@@ -246,12 +243,12 @@ impl Runtime {
             return Ok(());
         }
 
-        let nodes = self.nodes.read().unwrap();
-        let node = nodes
+        let node_infos = self.node_infos.read().unwrap();
+        let node_info = node_infos
             .get(&node_id)
             .expect("Invalid node_id passed into filter_optional_handles!");
 
-        let tracked_handles = node.handles.lock().unwrap();
+        let tracked_handles = node_info.handles.lock().unwrap();
         for handle in handles {
             // Check handle is accessible by the node.
             if !tracked_handles.contains(&handle) {
@@ -558,9 +555,11 @@ impl Runtime {
 
         if node_id != RUNTIME_NODE_ID {
             // Remove handle from the nodes available handles
-            let nodes = self.nodes.read().unwrap();
-            let node = nodes.get(&node_id).expect("channel_close: No such node_id");
-            let mut handles = node.handles.lock().unwrap();
+            let node_infos = self.node_infos.read().unwrap();
+            let node_info = node_infos
+                .get(&node_id)
+                .expect("channel_close: No such node_id");
+            let mut handles = node_info.handles.lock().unwrap();
             handles.remove(&reference);
         }
 
@@ -582,11 +581,11 @@ impl Runtime {
 
             // Close any remaining handles
             let remaining_handles: Vec<_> = {
-                let nodes = self.nodes.read().unwrap();
-                let node = nodes
+                let node_infos = self.node_infos.read().unwrap();
+                let node_info = node_infos
                     .get(&node_id)
                     .expect("remove_node_id: No such node_id");
-                let handles = node.handles.lock().unwrap();
+                let handles = node_info.handles.lock().unwrap();
                 handles.iter().copied().collect()
             };
 
@@ -601,17 +600,28 @@ impl Runtime {
             }
         }
 
-        let mut nodes = self.nodes.write().unwrap();
-        nodes
+        let mut node_infos = self.node_infos.write().unwrap();
+        node_infos
             .remove(&node_id)
             .expect("remove_node_id: Node didn't exist!");
     }
 
-    /// Add an [`NodeId`] [`Node`] pair to the [`Runtime`]. This method temporarily holds the node
-    /// write lock.
-    fn add_running_node(&self, reference: NodeId, node: Node) {
-        let mut nodes = self.nodes.write().unwrap();
-        nodes.insert(reference, node);
+    /// Add an [`NodeId`] [`NodeInfo`] pair to the [`Runtime`]. This method temporarily holds the
+    /// [`Runtime::node_infos`] write lock.
+    fn add_node_info(&self, reference: NodeId, node_info: NodeInfo) {
+        self.node_infos
+            .write()
+            .expect("could not acquire lock on node_infos")
+            .insert(reference, node_info);
+    }
+
+    /// Add an [`NodeId`] [`crate::node::Node`] pair to the [`Runtime`]. This method temporarily
+    /// holds the [`Runtime::node_instances`] lock.
+    fn add_node_instance(&self, node_reference: NodeId, node_instance: Box<dyn crate::node::Node>) {
+        self.node_instances
+            .lock()
+            .expect("could not acquire lock on node_instances")
+            .insert(node_reference, node_instance);
     }
 
     /// Thread safe method that attempts to create a node within the [`Runtime`] corresponding to a
@@ -645,7 +655,7 @@ impl Runtime {
 
         let reader = self.channels.duplicate_reference(reader)?;
 
-        let mut instance = self
+        let instance = self
             .configuration
             .nodes
             .get(module_name)
@@ -661,22 +671,103 @@ impl Runtime {
                 )
             })?;
 
-        // Try starting the node instance first. If this fails, then directly return the error to
-        // the caller.
-        instance.start()?;
-
-        // If the node was successfully started, insert it in the list of currently running
-        // nodes.
-        self.add_running_node(
-            reference,
-            Node {
-                reference,
-                instance: Some(instance),
-                label: label.clone(),
-                handles: Mutex::new(vec![reader].into_iter().collect()),
-            },
-        );
+        self.node_start_instance(reference, instance, label, vec![reader])?;
 
         Ok(())
     }
+
+    /// Starts a newly created node instance, by first initializing the necessary [`NodeInfo`] data
+    /// structure in [`Runtime`], allowing it to access the provided [`Handle`]s, then calling
+    /// [`Node::start`] on the instance, and finally storing a reference to the running instance
+    /// in [`Runtime::node_instances`] so that it can later be terminated.
+    fn node_start_instance<I>(
+        &self,
+        node_reference: NodeId,
+        mut node_instance: Box<dyn crate::node::Node>,
+        label: &oak_abi::label::Label,
+        initial_handles: I,
+    ) -> Result<(), OakStatus>
+    where
+        I: IntoIterator<Item = Handle>,
+    {
+        // First create the necessary info data structure in the Runtime, otherwise calls that the
+        // node makes to the Runtime during `Node::start` (synchronously or asynchronously) may
+        // fail.
+        self.add_node_info(
+            node_reference,
+            NodeInfo {
+                label: label.clone(),
+                handles: Mutex::new(HashSet::new()),
+            },
+        );
+
+        // Make sure that the provided initial handles are tracked in the newly created node from
+        // the start.
+        self.track_handles_in_node(node_reference, initial_handles);
+
+        // Try to start the node instance, and store the result in a temporary variable to be
+        // returned later.
+        //
+        // In order for this to work correctly, the `NodeInfo` entry must already exist in
+        // `Runtime`, which is why we could not start this instance before the call to
+        // `Runtime::add_node_info` above.
+        //
+        // On the other hand, we also cannot start it after the call to `Runtime::add_node_instance`
+        // below, because that takes ownership of the instance itself.
+        //
+        // We also want no locks to be held while the instance is starting.
+        let result = node_instance.start();
+
+        // Regardless of the result of `Node::start`, insert the now running instance to the list of
+        // running instances (by moving it), so that `Node::stop` will be called on it eventually.
+        self.add_node_instance(node_reference, node_instance);
+
+        // Return the result of `Node::start`.
+        result
+    }
+}
+
+#[test]
+fn create_channel() {
+    let configuration = crate::runtime::Configuration {
+        nodes: HashMap::new(),
+        entry_module: "test_module".to_string(),
+        entrypoint: "test_function".to_string(),
+    };
+    let runtime = Arc::new(crate::runtime::Runtime::create(configuration));
+
+    // Define a node implementation for test that exercises parts of the [`Runtime`] ABI.
+    struct TestNode {
+        node_id: NodeId,
+        runtime: Arc<Runtime>,
+    };
+
+    impl crate::node::Node for TestNode {
+        fn start(&mut self) -> Result<(), OakStatus> {
+            // Attempt to perform an operation that requires the [`Runtime`] to have created an
+            // appropriate [`NodeInfo`] instanace.
+            let (_write_handle, _read_handle) = self
+                .runtime
+                .new_channel(self.node_id, &oak_abi::label::Label::public_trusted());
+            Ok(())
+        }
+        fn stop(&mut self) {}
+    }
+
+    // Manually allocate a new [`NodeId`].
+    let node_reference = runtime.new_node_reference();
+
+    // Create an instance of [`TestNode`] without starting it.
+    let node_instance = TestNode {
+        node_id: node_reference,
+        runtime: runtime.clone(),
+    };
+
+    let result = runtime.node_start_instance(
+        node_reference,
+        Box::new(node_instance),
+        &oak_abi::label::Label::public_trusted(),
+        vec![],
+    );
+    assert_eq!(Ok(()), result);
 }
