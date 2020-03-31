@@ -21,7 +21,7 @@ use crate::proto::{
 use itertools::Itertools;
 use std::{collections::HashMap, net::AddrParseError, sync::Arc};
 
-use log::error;
+use log::{error, warn};
 
 use oak_abi::OakStatus;
 
@@ -106,9 +106,12 @@ pub fn from_protobuf(
                         OakStatus::ErrInvalidArgs
                     })?
                 }
-                Some(_) => {
-                    error!("Pseudo-node not implemented!");
-                    return Err(OakStatus::ErrInvalidArgs);
+                Some(node_config) => {
+                    warn!(
+                        "Assuming pseudo-Node of type {:?} implemented externally!",
+                        node_config
+                    );
+                    node::Configuration::External
                 }
             },
         );
