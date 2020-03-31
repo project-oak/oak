@@ -20,6 +20,7 @@ use crate::proto::{
 };
 use itertools::Itertools;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use log::error;
 
@@ -28,7 +29,7 @@ use oak_abi::OakStatus;
 use crate::node;
 use crate::node::load_wasm;
 use crate::runtime;
-use crate::runtime::{Handle, Runtime, RuntimeRef};
+use crate::runtime::{Handle, Runtime};
 
 /// Create an application configuration.
 ///
@@ -113,8 +114,9 @@ pub fn from_protobuf(
 /// read back out from the [`Runtime`].
 pub fn configure_and_run(
     app_config: ApplicationConfiguration,
-) -> Result<(RuntimeRef, Handle), OakStatus> {
+) -> Result<(Arc<Runtime>, Handle), OakStatus> {
     let configuration = from_protobuf(app_config)?;
-    let runtime = Runtime::create(configuration);
-    runtime.run()
+    let runtime = Arc::new(Runtime::create(configuration));
+    let handle = runtime.clone().run()?;
+    Ok((runtime, handle))
 }

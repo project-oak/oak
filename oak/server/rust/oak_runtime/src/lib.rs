@@ -28,4 +28,4 @@ pub use config::application_configuration;
 pub use config::configure_and_run;
 
 pub use message::Message;
-pub use runtime::{Handle, NodeId, Runtime, RuntimeRef};
+pub use runtime::{Handle, NodeId, Runtime};

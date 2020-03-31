@@ -101,11 +101,6 @@ impl Runtime {
         }
     }
 
-    /// Converts a [`Runtime`] instance into a [`RuntimeRef`].
-    pub fn into_ref(self) -> RuntimeRef {
-        RuntimeRef(Arc::new(self))
-    }
-
     /// Configures and runs the protobuf specified Application [`Configuration`].
     ///
     /// After starting a [`Runtime`], calling [`Runtime::stop`] will send termination signals to
@@ -114,18 +109,16 @@ impl Runtime {
     /// Returns a [`RuntimeRef`] reference to the created runtime, and a writeable [`Handle`] to
     /// send messages into the runtime. To receive messages, creating a new channel and passing
     /// the write [`Handle`] into the runtime will enable messages to be read back out.
-    pub fn run(self) -> Result<(RuntimeRef, Handle), OakStatus> {
+    pub fn run(self: Arc<Self>) -> Result<Handle, OakStatus> {
         let module_name = self.configuration.entry_module.clone();
         let entrypoint = self.configuration.entrypoint.clone();
-
-        let runtime_ref = self.into_ref();
 
         // When first starting, we assign the least privileged label to the channel connecting the
         // outside world to the entry point node.
         let (chan_writer, chan_reader) =
-            runtime_ref.new_channel(RUNTIME_NODE_ID, &oak_abi::label::Label::public_trusted());
+            self.new_channel(RUNTIME_NODE_ID, &oak_abi::label::Label::public_trusted());
 
-        runtime_ref.node_create(
+        self.clone().node_create(
             RUNTIME_NODE_ID,
             &module_name,
             &entrypoint,
@@ -136,11 +129,10 @@ impl Runtime {
 
         // We call `expect` here because this should never fail, since the channel was just created
         // and guaranteed not to have already been closed.
-        runtime_ref
-            .channel_close(RUNTIME_NODE_ID, chan_reader)
+        self.channel_close(RUNTIME_NODE_ID, chan_reader)
             .expect("could not close channel");
 
-        Ok((runtime_ref, chan_writer))
+        Ok(chan_writer)
     }
 
     /// Thread safe method for determining if the [`Runtime`] is terminating.
@@ -621,13 +613,7 @@ impl Runtime {
         let mut nodes = self.nodes.write().unwrap();
         nodes.insert(reference, node);
     }
-}
 
-/// A reference to a [`Runtime`].
-#[derive(Clone)]
-pub struct RuntimeRef(Arc<Runtime>);
-
-impl RuntimeRef {
     /// Thread safe method that attempts to create a node within the [`Runtime`] corresponding to a
     /// given module name and entrypoint. The `reader: ChannelReader` is passed to the newly
     /// created node.
@@ -640,7 +626,7 @@ impl RuntimeRef {
     /// underlying `Arc<Runtime>` can be passed to [`crate::node::Configuration::new_instance`]
     /// and given to a new node thread.
     pub fn node_create(
-        &self,
+        self: Arc<Self>,
         _node_id: NodeId,
         module_name: &str,
         entrypoint: &str,
@@ -692,14 +678,5 @@ impl RuntimeRef {
         );
 
         Ok(())
-    }
-}
-
-impl std::ops::Deref for RuntimeRef {
-    type Target = Runtime;
-
-    #[inline]
-    fn deref(&self) -> &Runtime {
-        &self.0
     }
 }

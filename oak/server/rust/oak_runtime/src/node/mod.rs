@@ -19,7 +19,7 @@ use std::sync::Arc;
 
 use oak_abi::OakStatus;
 
-use crate::{Handle, NodeId, RuntimeRef};
+use crate::{Handle, NodeId, Runtime};
 
 mod logger;
 mod wasm;
@@ -88,7 +88,7 @@ impl Configuration {
     pub fn create_node(
         &self,
         config_name: &str, // Used for pretty debugging
-        runtime: RuntimeRef,
+        runtime: Arc<Runtime>,
         node_id: NodeId,
         entrypoint: String,
         initial_reader: Handle,
