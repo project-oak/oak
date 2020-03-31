@@ -652,6 +652,10 @@ impl Runtime {
         // function.
 
         let reference = self.new_node_reference();
+        let runtime_proxy = RuntimeProxy {
+            runtime: self.clone(),
+            node_id: reference,
+        };
 
         let reader = self.channels.duplicate_reference(reader)?;
 
@@ -662,13 +666,7 @@ impl Runtime {
             .ok_or(OakStatus::ErrInvalidArgs)
             .map(|conf| {
                 // This only creates a node instance, but does not start it.
-                conf.create_node(
-                    module_name,
-                    self.clone(),
-                    reference,
-                    entrypoint.to_owned(),
-                    reader,
-                )
+                conf.create_node(module_name, runtime_proxy, entrypoint.to_owned(), reader)
             })?;
 
         self.node_start_instance(reference, instance, label, vec![reader])?;
@@ -724,6 +722,119 @@ impl Runtime {
 
         // Return the result of `Node::start`.
         result
+    }
+
+    pub fn new_runtime_proxy(self: Arc<Self>) -> RuntimeProxy {
+        RuntimeProxy {
+            runtime: self.clone(),
+            node_id: self.new_node_reference(),
+        }
+    }
+}
+
+/// A proxy object that binds together a reference to the underlying [`Runtime`] with a single
+/// [`NodeId`].
+///
+/// This can be considered as the interface to the [`Runtime`] that node and pseudo-node
+/// implementations have access to.
+///
+/// Each [`RuntimeProxy`] instance is used by an individual node or pseudo-node instance to
+/// communicate with the [`Runtime`]. Nodes do not have direct access to the [`Runtime`] apart from
+/// through [`RuntimeProxy`], which exposes a more limited API, and ensures that nodes cannot
+/// impersonate each other.
+///
+/// Individual methods simply forward to corresponding methods on the underlying [`Runtime`], by
+/// partially applying the first argument.
+#[derive(Clone)]
+pub struct RuntimeProxy {
+    runtime: Arc<Runtime>,
+    node_id: NodeId,
+}
+
+impl RuntimeProxy {
+    /// See [`Runtime::is_terminating`].
+    pub fn is_terminating(&self) -> bool {
+        self.runtime.is_terminating()
+    }
+
+    /// See [`Runtime::remove_node_id`].
+    pub fn exit_node(&self) {
+        self.runtime.remove_node_id(self.node_id)
+    }
+
+    /// See [`Runtime::node_create`].
+    pub fn node_create(
+        &self,
+        module_name: &str,
+        entrypoint: &str,
+        label: &oak_abi::label::Label,
+        channel_read_handle: Handle,
+    ) -> Result<(), OakStatus> {
+        self.runtime.clone().node_create(
+            self.node_id,
+            module_name,
+            entrypoint,
+            label,
+            channel_read_handle,
+        )
+    }
+
+    /// See [`Runtime::new_channel`].
+    pub fn channel_create(&self, label: &oak_abi::label::Label) -> (Handle, Handle) {
+        self.runtime.new_channel(self.node_id, label)
+    }
+
+    /// See [`Runtime::channel_close`].
+    pub fn channel_close(&self, channel_handle: Handle) -> Result<(), OakStatus> {
+        self.runtime.channel_close(self.node_id, channel_handle)
+    }
+
+    /// See [`Runtime::wait_on_channels`].
+    pub fn wait_on_channels(
+        &self,
+        channel_read_handles: &[Option<Handle>],
+    ) -> Result<Vec<ChannelReadStatus>, OakStatus> {
+        self.runtime
+            .wait_on_channels(self.node_id, channel_read_handles)
+    }
+
+    /// See [`Runtime::channel_write`].
+    pub fn channel_write(
+        &self,
+        channel_write_handle: Handle,
+        msg: Message,
+    ) -> Result<(), OakStatus> {
+        self.runtime
+            .channel_write(self.node_id, channel_write_handle, msg)
+    }
+
+    /// See [`Runtime::channel_read`].
+    pub fn channel_read(&self, channel_read_handle: Handle) -> Result<Option<Message>, OakStatus> {
+        self.runtime.channel_read(self.node_id, channel_read_handle)
+    }
+
+    /// See [`Runtime::channel_try_read_message`].
+    pub fn channel_try_read_message(
+        &self,
+        channel_read_handle: Handle,
+        bytes_capacity: usize,
+        handles_capacity: usize,
+    ) -> Result<Option<ReadStatus>, OakStatus> {
+        self.runtime.channel_try_read_message(
+            self.node_id,
+            channel_read_handle,
+            bytes_capacity,
+            handles_capacity,
+        )
+    }
+
+    /// See [`Runtime::channel_get_direction`].
+    pub fn channel_get_direction(
+        &self,
+        channel_handle: Handle,
+    ) -> Result<HandleDirection, OakStatus> {
+        self.runtime
+            .channel_get_direction(self.node_id, channel_handle)
     }
 }
 
