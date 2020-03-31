@@ -30,22 +30,32 @@ steps:
     waitFor: ['build_image']
     timeout: 5m
     args: ['./scripts/git_init']
+
+  # Make sure that the Bazel server is unpacked and initialized, by calling `bazel info` (any other
+  # Bazel command would probably do).
+  - name: 'gcr.io/oak-ci/oak:latest'
+    id: bazel_init
+    entrypoint: 'bazel'
+    waitFor: ['build_image']
+    timeout: 5m
+    args: ['info']
+
   - name: 'gcr.io/oak-ci/oak:latest'
     id: check_formatting
-    waitFor: ['build_image']
+    waitFor: ['bazel_init']
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/check_formatting']
 
   - name: 'gcr.io/oak-ci/oak:latest'
     id: build_server
-    waitFor: ['build_image']
+    waitFor: ['bazel_init']
     timeout: 60m
     entrypoint: 'bash'
     args: ['./scripts/build_server', '-s', 'base']
   - name: 'gcr.io/oak-ci/oak:latest'
     id: build_server_arm
-    waitFor: ['build_image']
+    waitFor: ['bazel_init']
     timeout: 60m
     entrypoint: 'bash'
     args: ['./scripts/build_server', '-s', 'arm']
