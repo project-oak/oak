@@ -25,9 +25,9 @@
 namespace oak {
 
 std::unique_ptr<OakGrpcNode> OakGrpcNode::Create(
-    BaseRuntime* runtime, const std::string& name,
+    BaseRuntime* runtime, const std::string& name, NodeId node_id,
     std::shared_ptr<grpc::ServerCredentials> grpc_credentials, const uint16_t port) {
-  std::unique_ptr<OakGrpcNode> node = absl::WrapUnique(new OakGrpcNode(runtime, name));
+  std::unique_ptr<OakGrpcNode> node = absl::WrapUnique(new OakGrpcNode(runtime, name, node_id));
 
   // Build Server
   grpc::ServerBuilder builder;

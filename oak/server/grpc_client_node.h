@@ -30,7 +30,8 @@ namespace oak {
 
 class GrpcClientNode final : public NodeThread {
  public:
-  GrpcClientNode(BaseRuntime* runtime, const std::string& name, const std::string& grpc_address);
+  GrpcClientNode(BaseRuntime* runtime, const std::string& name, NodeId node_id,
+                 const std::string& grpc_address);
 
  private:
   bool HandleInvocation(Handle invocation_handle);

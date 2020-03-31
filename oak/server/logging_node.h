@@ -29,7 +29,8 @@ namespace oak {
 // Pseudo-node to perform logging.
 class LoggingNode final : public NodeThread {
  public:
-  explicit LoggingNode(BaseRuntime* runtime, const std::string& name) : NodeThread(runtime, name) {}
+  explicit LoggingNode(BaseRuntime* runtime, const std::string& name, NodeId node_id)
+      : NodeThread(runtime, name, node_id) {}
 
  private:
   void Run(Handle handle) override;

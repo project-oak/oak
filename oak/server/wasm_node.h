@@ -29,12 +29,13 @@ class WasmNode final : public NodeThread {
  public:
   // Creates a Wasm Node by loading the Wasm module code.
   static std::unique_ptr<WasmNode> Create(BaseRuntime* runtime, const std::string& name,
-                                          const std::string& module,
+                                          NodeId node_id, const std::string& module,
                                           const std::string& main_entrypoint);
 
  private:
   // Clients should construct WasmNode instances with Create() (which can fail).
-  WasmNode(BaseRuntime* runtime, const std::string& name, const std::string& main_entrypoint);
+  WasmNode(BaseRuntime* runtime, const std::string& name, NodeId node_id,
+           const std::string& main_entrypoint);
 
   void InitEnvironment(wabt::interp::Environment* env);
 
