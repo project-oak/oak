@@ -29,6 +29,7 @@ use log::{debug, error};
 
 use crate::message::Message;
 use crate::node;
+use crate::pretty_name_for_thread;
 
 mod channel;
 pub use channel::{Handle, HandleDirection};
@@ -346,13 +347,16 @@ impl Runtime {
             }
 
             debug!(
-                "wait_on_channels: channels not ready, parking thread {:?}",
-                thread::current()
+                "wait_on_channels: channels not ready, parking thread {}",
+                pretty_name_for_thread(&thread::current())
             );
 
             thread::park();
 
-            debug!("wait_on_channels: thread {:?} re-woken", thread::current());
+            debug!(
+                "wait_on_channels: thread {} re-woken",
+                pretty_name_for_thread(&thread::current())
+            );
         }
         Err(OakStatus::ErrTerminated)
     }
