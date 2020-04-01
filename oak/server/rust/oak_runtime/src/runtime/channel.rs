@@ -62,7 +62,7 @@ pub struct Channel {
     /// This is set at channel creation time and does not change after that.
     ///
     /// See https://github.com/project-oak/oak/blob/master/docs/concepts.md#labels
-    label: oak_abi::label::Label,
+    pub label: oak_abi::label::Label,
 }
 
 /// A reference to a [`Channel`]. Each [`Handle`] has an implicit direction such that it is only

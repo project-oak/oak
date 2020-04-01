@@ -23,7 +23,7 @@ use std::thread;
 use core::sync::atomic::Ordering::SeqCst;
 use core::sync::atomic::{AtomicBool, AtomicU64};
 
-use oak_abi::{ChannelReadStatus, OakStatus};
+use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
 
 use log::{debug, error};
 
@@ -40,9 +40,7 @@ struct NodeInfo {
     /// This is set at node creation time and does not change after that.
     ///
     /// See https://github.com/project-oak/oak/blob/master/docs/concepts.md#labels
-    // TODO(#630): Remove exception when label tracking is implemented.
-    #[allow(dead_code)]
-    label: oak_abi::label::Label,
+    label: Label,
 
     /// A [`HashSet`] containing all the handles associated with this Node.
     // TODO(#777): this overlaps ChannelMapping.{reader,writer}
@@ -118,14 +116,14 @@ impl Runtime {
         // When first starting, we assign the least privileged label to the channel connecting the
         // outside world to the entry point node.
         let (chan_writer, chan_reader) =
-            self.new_channel(RUNTIME_NODE_ID, &oak_abi::label::Label::public_trusted());
+            self.new_channel(RUNTIME_NODE_ID, &Label::public_trusted());
 
         self.clone().node_create(
             RUNTIME_NODE_ID,
             &module_name,
             &entrypoint,
             // When first starting, we assign the least privileged label to the entry point node.
-            &oak_abi::label::Label::public_trusted(),
+            &Label::public_trusted(),
             chan_reader,
         )?;
 
@@ -233,9 +231,9 @@ impl Runtime {
 
     /// Validate the [`NodeId`] has access to all [`Handle`]'s passed in the iterator, returning
     /// `Err(OakStatus::ErrBadHandle)` if access is not allowed.
-    fn validate_handles_access<'a, I>(&self, node_id: NodeId, handles: I) -> Result<(), OakStatus>
+    fn validate_handles_access<I>(&self, node_id: NodeId, handles: I) -> Result<(), OakStatus>
     where
-        I: IntoIterator<Item = &'a Handle>,
+        I: IntoIterator<Item = Handle>,
     {
         // Allow RUNTIME_NODE_ID access to all handles.
         if node_id == RUNTIME_NODE_ID {
@@ -260,8 +258,135 @@ impl Runtime {
         Ok(())
     }
 
+    /// Returns a clone of the [`Label`] associated with the provided `node_id`, in order to limit
+    /// the scope of holding the lock on [`Runtime::node_infos`].
+    ///
+    /// Panics if `node_id` is invalid.
+    fn get_node_label(&self, node_id: NodeId) -> Label {
+        let node_infos = self
+            .node_infos
+            .read()
+            .expect("could not acquire lock on node_infos");
+        let node_info = node_infos.get(&node_id).expect("invalid node_id");
+        node_info.label.clone()
+    }
+
+    /// Returns a clone of the [`Label`] associated with the provided reader `channel_handle`, in
+    /// order to limit the scope of holding the lock on [`ChannelMapping::channels`].
+    ///
+    /// Returns an error if `channel_handle` is invalid.
+    fn get_reader_channel_label(&self, channel_handle: Handle) -> Result<Label, OakStatus> {
+        self.channels.with_channel(
+            self.channels.get_reader_channel(channel_handle)?,
+            |channel| Ok(channel.label.clone()),
+        )
+    }
+
+    /// Returns a clone of the [`Label`] associated with the provided writer `channel_handle`, in
+    /// order to limit the scope of holding the lock on [`ChannelMapping::channels`].
+    ///
+    /// Returns an error if `channel_handle` is invalid.
+    fn get_writer_channel_label(&self, channel_handle: Handle) -> Result<Label, OakStatus> {
+        self.channels.with_channel(
+            self.channels.get_writer_channel(channel_handle)?,
+            |channel| Ok(channel.label.clone()),
+        )
+    }
+
+    /// Returns whether the calling node is allowed to read from the provided channel, according to
+    /// their respective [`Label`]s.
+    fn validate_can_read_from_channel(
+        &self,
+        node_id: NodeId,
+        channel_handle: Handle,
+    ) -> Result<(), OakStatus> {
+        debug!(
+            "validating whether node {:?} can read from channel {:?}",
+            node_id, channel_handle
+        );
+
+        // Allow RUNTIME_NODE_ID access to all handles.
+        if node_id == RUNTIME_NODE_ID {
+            return Ok(());
+        }
+
+        let node_label = self.get_node_label(node_id);
+        let channel_label = self.get_reader_channel_label(channel_handle)?;
+        if channel_label.flows_to(&node_label) {
+            debug!(
+                "node {:?} can read from channel {:?}",
+                node_id, channel_handle
+            );
+            Ok(())
+        } else {
+            debug!(
+                "node {:?} cannot read from channel {:?}",
+                node_id, channel_handle
+            );
+            Err(OakStatus::ErrPermissionDenied)
+        }
+    }
+
+    /// Returns whether the calling node is allowed to read from all the provided channels,
+    /// according to their respective [`Label`]s.
+    fn validate_can_read_from_channels<I>(
+        &self,
+        node_id: NodeId,
+        channel_handles: I,
+    ) -> Result<(), OakStatus>
+    where
+        I: IntoIterator<Item = Handle>,
+    {
+        let all_channel_handles_ok = channel_handles.into_iter().all(|channel_handle| {
+            self.validate_can_read_from_channel(node_id, channel_handle)
+                .is_ok()
+        });
+        if all_channel_handles_ok {
+            Ok(())
+        } else {
+            Err(OakStatus::ErrPermissionDenied)
+        }
+    }
+
+    /// Returns whether the calling node is allowed to write to the provided channel, according to
+    /// their respective [`Label`]s.
+    fn validate_can_write_to_channel(
+        &self,
+        node_id: NodeId,
+        channel_handle: Handle,
+    ) -> Result<(), OakStatus> {
+        debug!(
+            "validating whether node {:?} can write to channel {:?}",
+            node_id, channel_handle
+        );
+
+        // Allow RUNTIME_NODE_ID access to all handles.
+        if node_id == RUNTIME_NODE_ID {
+            return Ok(());
+        }
+
+        let node_label = self.get_node_label(node_id);
+        debug!("node label: {:?}", node_label);
+        let channel_label = self.get_writer_channel_label(channel_handle)?;
+        debug!("channel label: {:?}", node_label);
+        if node_label.flows_to(&channel_label) {
+            debug!(
+                "node {:?} can write to channel {:?}",
+                node_id, channel_handle
+            );
+            Ok(())
+        } else {
+            debug!(
+                "node {:?} cannot write to channel {:?}",
+                node_id, channel_handle
+            );
+            Err(OakStatus::ErrPermissionDenied)
+        }
+    }
+
     /// Creates a new [`Channel`] and returns a `(writer handle, reader handle)` pair.
-    pub fn new_channel(&self, node_id: NodeId, label: &oak_abi::label::Label) -> (Handle, Handle) {
+    pub fn new_channel(&self, node_id: NodeId, label: &Label) -> (Handle, Handle) {
+        // TODO(#630): Check whether the calling node can create a node with the specified label.
         let (writer, reader) = self.channels.new_channel(label);
         self.track_handles_in_node(node_id, vec![writer, reader]);
         (writer, reader)
@@ -304,7 +429,8 @@ impl Runtime {
         node_id: NodeId,
         readers: &[Option<Handle>],
     ) -> Result<Vec<ChannelReadStatus>, OakStatus> {
-        self.validate_handles_access(node_id, readers.iter().filter_map(|x| x.as_ref()))?;
+        self.validate_handles_access(node_id, readers.iter().filter_map(|x| *x))?;
+        self.validate_can_read_from_channels(node_id, readers.iter().filter_map(|x| *x))?;
 
         let thread = thread::current();
         while !self.is_terminating() {
@@ -367,6 +493,7 @@ impl Runtime {
         msg: Message,
     ) -> Result<(), OakStatus> {
         self.validate_handle_access(node_id, reference)?;
+        self.validate_can_write_to_channel(node_id, reference)?;
         self.channels.with_channel(self.channels.get_writer_channel(reference)?, |channel|{
 
         if channel.is_orphan() {
@@ -426,6 +553,7 @@ impl Runtime {
         reference: Handle,
     ) -> Result<Option<Message>, OakStatus> {
         self.validate_handle_access(node_id, reference)?;
+        self.validate_can_read_from_channel(node_id, reference)?;
         self.channels
             .with_channel(
                 self.channels.get_reader_channel(reference)?,
@@ -455,6 +583,7 @@ impl Runtime {
         reference: Handle,
     ) -> Result<ChannelReadStatus, OakStatus> {
         self.validate_handle_access(node_id, reference)?;
+        self.validate_can_read_from_channel(node_id, reference)?;
         self.channels
             .with_channel(self.channels.get_reader_channel(reference)?, |channel| {
                 Ok(if channel.messages.read().unwrap().front().is_some() {
@@ -482,6 +611,7 @@ impl Runtime {
         handles_capacity: usize,
     ) -> Result<Option<ReadStatus>, OakStatus> {
         self.validate_handle_access(node_id, reference)?;
+        self.validate_can_read_from_channel(node_id, reference)?;
         let result = self.channels
             .with_channel(self.channels.get_reader_channel(reference)?, |channel| {
                 let mut messages = channel.messages.write().unwrap();
@@ -528,6 +658,8 @@ impl Runtime {
         reference: Handle,
     ) -> Result<HandleDirection, OakStatus> {
         self.validate_handle_access(node_id, reference)?;
+        // TODO(#630): Check whether the calling node can read from the specified handle. Currently,
+        // performing this check seems to get tests to hang forever.
         {
             if self
                 .channels
@@ -631,28 +763,31 @@ impl Runtime {
     /// given module name and entrypoint. The `reader: ChannelReader` is passed to the newly
     /// created node.
     ///
-    /// The caller also specifies a [`oak_abi::label::Label`], which is assigned to the newly
-    /// created node. See <https://github.com/project-oak/oak/blob/master/docs/concepts.md#labels>
-    /// for more information on labels.
+    /// The caller also specifies a [`Label`], which is assigned to the newly created node. See
+    /// <https://github.com/project-oak/oak/blob/master/docs/concepts.md#labels> for more
+    /// information on labels.
     ///
     /// [`RuntimeRef::node_create`] is a method of [`RuntimeRef`] and not [`Runtime`], so that the
     /// underlying `Arc<Runtime>` can be passed to [`crate::node::Configuration::new_instance`]
     /// and given to a new node thread.
     pub fn node_create(
         self: Arc<Self>,
-        _node_id: NodeId,
+        node_id: NodeId,
         module_name: &str,
         entrypoint: &str,
-        label: &oak_abi::label::Label,
+        label: &Label,
         reader: Handle,
     ) -> Result<(), OakStatus> {
         if self.is_terminating() {
             return Err(OakStatus::ErrTerminated);
         }
 
-        // TODO(#630): Check whether the label of the caller "flows to" the provided label. In order
-        // to do that we first need to provide a reference to the caller node as a parameter to this
-        // function.
+        if node_id != RUNTIME_NODE_ID {
+            let node_label = self.get_node_label(node_id);
+            if !node_label.flows_to(label) {
+                return Err(OakStatus::ErrPermissionDenied);
+            }
+        }
 
         let reference = self.new_node_reference();
         let runtime_proxy = RuntimeProxy {
@@ -685,7 +820,7 @@ impl Runtime {
         &self,
         node_reference: NodeId,
         mut node_instance: Box<dyn crate::node::Node>,
-        label: &oak_abi::label::Label,
+        label: &Label,
         initial_handles: I,
     ) -> Result<(), OakStatus>
     where
@@ -770,7 +905,7 @@ impl RuntimeProxy {
         &self,
         module_name: &str,
         entrypoint: &str,
-        label: &oak_abi::label::Label,
+        label: &Label,
         channel_read_handle: Handle,
     ) -> Result<(), OakStatus> {
         self.runtime.clone().node_create(
@@ -783,7 +918,7 @@ impl RuntimeProxy {
     }
 
     /// See [`Runtime::new_channel`].
-    pub fn channel_create(&self, label: &oak_abi::label::Label) -> (Handle, Handle) {
+    pub fn channel_create(&self, label: &Label) -> (Handle, Handle) {
         self.runtime.new_channel(self.node_id, label)
     }
 
@@ -841,47 +976,136 @@ impl RuntimeProxy {
     }
 }
 
-#[test]
-fn create_channel() {
-    let configuration = crate::runtime::Configuration {
-        nodes: HashMap::new(),
-        entry_module: "test_module".to_string(),
-        entrypoint: "test_function".to_string(),
-    };
-    let runtime = Arc::new(crate::runtime::Runtime::create(configuration));
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    // Define a node implementation for test that exercises parts of the [`Runtime`] ABI.
-    struct TestNode {
-        node_id: NodeId,
-        runtime: Arc<Runtime>,
-    };
+    type NodeBody = dyn Fn(&RuntimeProxy) -> Result<(), OakStatus> + Send + Sync;
 
-    impl crate::node::Node for TestNode {
-        fn start(&mut self) -> Result<(), OakStatus> {
-            // Attempt to perform an operation that requires the [`Runtime`] to have created an
-            // appropriate [`NodeInfo`] instanace.
-            let (_write_handle, _read_handle) = self
-                .runtime
-                .new_channel(self.node_id, &oak_abi::label::Label::public_trusted());
-            Ok(())
+    /// Runs the provided function as if it were the body of a [`Node`] implementation, which is
+    /// instantiated by the [`Runtime`] with the provided [`Label`].
+    fn run_node_body(node_label: Label, node_body: Box<NodeBody>) {
+        let configuration = crate::runtime::Configuration {
+            nodes: maplit::hashmap![
+                "log".to_string() => crate::node::Configuration::LogNode,
+            ],
+            entry_module: "test_module".to_string(),
+            entrypoint: "test_function".to_string(),
+        };
+        let runtime = Arc::new(crate::runtime::Runtime::create(configuration));
+
+        struct TestNode {
+            runtime: RuntimeProxy,
+            node_body: Box<NodeBody>,
+        };
+
+        impl crate::node::Node for TestNode {
+            fn start(&mut self) -> Result<(), OakStatus> {
+                (self.node_body)(&self.runtime)
+            }
+            fn stop(&mut self) {}
         }
-        fn stop(&mut self) {}
+
+        // Manually allocate a new [`NodeId`].
+        let node_reference = runtime.new_node_reference();
+        let runtime_proxy = RuntimeProxy {
+            runtime: runtime.clone(),
+            node_id: node_reference,
+        };
+
+        let node_instance = TestNode {
+            runtime: runtime_proxy,
+            node_body,
+        };
+
+        let result = runtime.node_start_instance(
+            node_reference,
+            Box::new(node_instance),
+            &node_label,
+            vec![],
+        );
+        assert_eq!(Ok(()), result);
     }
 
-    // Manually allocate a new [`NodeId`].
-    let node_reference = runtime.new_node_reference();
+    /// Create a test node that creates a channel and succeeds.
+    #[test]
+    fn create_channel_success() {
+        run_node_body(
+            Label::public_trusted(),
+            Box::new(|runtime| {
+                // Attempt to perform an operation that requires the [`Runtime`] to have created an
+                // appropriate [`NodeInfo`] instanace.
+                let (_write_handle, _read_handle) =
+                    runtime.channel_create(&Label::public_trusted());
+                Ok(())
+            }),
+        );
+    }
 
-    // Create an instance of [`TestNode`] without starting it.
-    let node_instance = TestNode {
-        node_id: node_reference,
-        runtime: runtime.clone(),
-    };
+    /// Create a test node that creates a node and succeeds.
+    #[test]
+    fn create_node_success() {
+        run_node_body(
+            Label::public_trusted(),
+            Box::new(|runtime| {
+                let (_write_handle, read_handle) = runtime.channel_create(&Label::public_trusted());
+                let result = runtime.clone().node_create(
+                    "log",
+                    "unused",
+                    &Label::public_trusted(),
+                    read_handle,
+                );
+                assert_eq!(Ok(()), result);
+                Ok(())
+            }),
+        );
+    }
 
-    let result = runtime.node_start_instance(
-        node_reference,
-        Box::new(node_instance),
-        &oak_abi::label::Label::public_trusted(),
-        vec![],
-    );
-    assert_eq!(Ok(()), result);
+    /// Create a test node that creates a node with a non-existing configuration name and fails.
+    #[test]
+    fn create_node_invalid_configuration() {
+        run_node_body(
+            Label::public_trusted(),
+            Box::new(|runtime| {
+                let (_write_handle, read_handle) = runtime.channel_create(&Label::public_trusted());
+                let result = runtime.clone().node_create(
+                    "invalid-configuration-name",
+                    "unused",
+                    &Label::public_trusted(),
+                    read_handle,
+                );
+                assert_eq!(Err(OakStatus::ErrInvalidArgs), result);
+                Ok(())
+            }),
+        );
+    }
+
+    /// Create a test node that creates a node with a more public label and fails.
+    ///
+    /// If this succeeded, it would be a violation of information flow control, since the original
+    /// secret node would be able to spawn "public" nodes and use their side effects as a covert
+    /// channel to exfiltrate secret data.
+    #[test]
+    fn create_node_more_public_label() {
+        let secret_label = Label {
+            secrecy_tags: vec![oak_abi::label::authorization_bearer_token_hmac_tag(&[
+                1, 1, 1,
+            ])],
+            integrity_tags: vec![],
+        };
+        run_node_body(
+            secret_label,
+            Box::new(|runtime| {
+                let (_write_handle, read_handle) = runtime.channel_create(&Label::public_trusted());
+                let result = runtime.clone().node_create(
+                    "log",
+                    "unused",
+                    &Label::public_trusted(),
+                    read_handle,
+                );
+                assert_eq!(Err(OakStatus::ErrPermissionDenied), result);
+                Ok(())
+            }),
+        );
+    }
 }

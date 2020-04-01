@@ -68,5 +68,8 @@ pub fn error_from_nonok_status(status: OakStatus) -> io::Error {
         OakStatus::ErrInternal => io::Error::new(io::ErrorKind::Other, "Internal error"),
         OakStatus::ErrTerminated => io::Error::new(io::ErrorKind::Other, "Node terminated"),
         OakStatus::ErrChannelEmpty => io::Error::new(io::ErrorKind::UnexpectedEof, "Channel empty"),
+        OakStatus::ErrPermissionDenied => {
+            io::Error::new(io::ErrorKind::PermissionDenied, "Permission denied")
+        }
     }
 }

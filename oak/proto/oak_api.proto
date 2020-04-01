@@ -42,6 +42,8 @@ enum OakStatus {
   ERR_TERMINATED = 9;
   // Channel has no messages available to read.
   ERR_CHANNEL_EMPTY = 10;
+  // The node does not have sufficient permissions to perform the requested operation.
+  ERR_PERMISSION_DENIED = 11;
 }
 
 // Single byte values used to indicate the read status of a channel on the
