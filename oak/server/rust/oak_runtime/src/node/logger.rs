@@ -14,16 +14,15 @@
 // limitations under the License.
 //
 
+use std::fmt::{self, Display, Formatter};
 use std::string::String;
 
 use log::{error, info};
 
 use oak_abi::OakStatus;
-use std::{
-    thread,
-    thread::{spawn, JoinHandle},
-};
+use std::thread::{self, JoinHandle};
 
+use crate::pretty_name_for_thread;
 use crate::proto::log::{Level, LogMessage};
 use crate::runtime::Handle;
 use crate::runtime::RuntimeProxy;
@@ -48,19 +47,26 @@ impl LogNode {
     }
 }
 
+impl Display for LogNode {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        write!(f, "LogNode({})", self.config_name)
+    }
+}
+
 impl super::Node for LogNode {
     fn start(&mut self) -> Result<(), OakStatus> {
         // Clone or copy all the captured values and move them into the closure, for simplicity.
-        let config_name = self.config_name.clone();
         let runtime = self.runtime.clone();
         let reader = self.reader;
-        // TODO(#770): Use `std::thread::Builder` and give a name to this thread.
-        let thread_handle = spawn(move || {
-            let pretty_name = format!("{}-{:?}:", config_name, thread::current());
-            let result = logger(&pretty_name, &runtime, reader);
-            info!("{} LOG: exiting log thread {:?}", pretty_name, result);
-            runtime.exit_node();
-        });
+        let thread_handle = thread::Builder::new()
+            .name(self.to_string())
+            .spawn(move || {
+                let pretty_name = pretty_name_for_thread(&thread::current());
+                let result = logger(&pretty_name, &runtime, reader);
+                info!("{} LOG: exiting log thread {:?}", pretty_name, result);
+                runtime.exit_node();
+            })
+            .expect("failed to spawn thread");
         self.thread_handle = Some(thread_handle);
         Ok(())
     }

@@ -29,3 +29,17 @@ pub use config::configure_and_run;
 
 pub use message::Message;
 pub use runtime::{Handle, NodeId, Runtime};
+
+use std::thread::Thread;
+
+/// Formats the thread for logging. Threads should be given a name with
+/// [`std::thread::Builder::name`] to make the output more readable.
+fn pretty_name_for_thread(thread_handle: &Thread) -> String {
+    format!(
+        "{:?}:{}",
+        thread_handle.id(),
+        // Note: Use "<unnamed>" to make it stand out in the logs (and
+        // hopefully fixed).
+        thread_handle.name().unwrap_or("<unnamed>")
+    )
+}

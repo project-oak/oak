@@ -15,12 +15,10 @@
 //
 
 use std::collections::HashMap;
+use std::fmt::{self, Display, Formatter};
 use std::string::String;
 use std::sync::Arc;
-use std::{
-    thread,
-    thread::{spawn, JoinHandle},
-};
+use std::{thread, thread::JoinHandle};
 
 use log::{debug, error};
 
@@ -30,6 +28,7 @@ use wasmi::ValueType;
 
 use oak_abi::{ChannelReadStatus, OakStatus};
 
+use crate::pretty_name_for_thread;
 use crate::runtime::{Handle, HandleDirection, ReadStatus, RuntimeProxy};
 use crate::Message;
 
@@ -775,6 +774,12 @@ impl WasmNode {
     }
 }
 
+impl Display for WasmNode {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        write!(f, "WasmNode({})", self.config_name)
+    }
+}
+
 impl super::Node for WasmNode {
     /// Starts this instance of a Wasm node.
     ///
@@ -815,40 +820,41 @@ impl super::Node for WasmNode {
         );
 
         // Clone or copy all the captured values and move them into the closure, for simplicity.
-        let config_name = self.config_name.clone();
         let reader = self.reader;
         let runtime = self.runtime.clone();
         let module = self.module.clone();
         let entrypoint = self.entrypoint.clone();
-        // TODO(#770): Use `std::thread::Builder` and give a name to this thread.
-        let thread_handle = spawn(move || {
-            let pretty_name = format!("{}-{:?}:", config_name, thread::current());
-            let (mut abi, initial_handle) =
-                WasmInterface::new(pretty_name, runtime.clone(), reader);
+        let thread_handle = thread::Builder::new()
+            .name(self.to_string())
+            .spawn(move || {
+                let pretty_name = pretty_name_for_thread(&thread::current());
+                let (mut abi, initial_handle) =
+                    WasmInterface::new(pretty_name, runtime.clone(), reader);
 
-            let instance = wasmi::ModuleInstance::new(
-                &module,
-                &wasmi::ImportsBuilder::new().with_resolver("oak", &abi),
-            )
-            .expect("failed to instantiate wasm module")
-            .assert_no_start();
-
-            abi.memory = instance
-                .export_by_name("memory")
-                .unwrap()
-                .as_memory()
-                .cloned();
-
-            instance
-                .invoke_export(
-                    &entrypoint,
-                    &[wasmi::RuntimeValue::I64(initial_handle as i64)],
-                    &mut abi,
+                let instance = wasmi::ModuleInstance::new(
+                    &module,
+                    &wasmi::ImportsBuilder::new().with_resolver("oak", &abi),
                 )
-                .expect("failed to execute export");
+                .expect("failed to instantiate wasm module")
+                .assert_no_start();
 
-            runtime.exit_node();
-        });
+                abi.memory = instance
+                    .export_by_name("memory")
+                    .unwrap()
+                    .as_memory()
+                    .cloned();
+
+                instance
+                    .invoke_export(
+                        &entrypoint,
+                        &[wasmi::RuntimeValue::I64(initial_handle as i64)],
+                        &mut abi,
+                    )
+                    .expect("failed to execute export");
+
+                runtime.exit_node();
+            })
+            .expect("failed to spawn thread");
         self.thread_handle = Some(thread_handle);
         Ok(())
     }
