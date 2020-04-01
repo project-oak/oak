@@ -45,6 +45,7 @@ class NodeThread : public OakNode {
 
  private:
   void StopThread();
+  void RunAndCleanup(Handle handle);
 
   std::thread thread_;
 };

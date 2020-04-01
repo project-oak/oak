@@ -94,6 +94,8 @@ class OakNode {
  protected:
   bool TerminationPending() const { return runtime_->TerminationPending(); }
 
+  void ClearHandles() LOCKS_EXCLUDED(mu_);
+
   const std::string name_;
 
  private:

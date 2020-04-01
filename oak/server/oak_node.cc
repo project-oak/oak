@@ -251,4 +251,10 @@ bool OakNode::WaitOnChannels(std::vector<std::unique_ptr<ChannelStatus>>* status
   }
 }
 
+void OakNode::ClearHandles() {
+  absl::MutexLock lock(&mu_);
+  OAK_LOG(INFO) << "Dropping " << channel_halves_.size() << " handles for Node";
+  channel_halves_.clear();
+}
+
 }  // namespace oak
