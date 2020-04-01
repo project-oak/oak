@@ -376,35 +376,28 @@ impl Runtime {
             return Err(OakStatus::ErrChannelClosed);
         }
 
-        {
-            let mut new_references = Vec::with_capacity(msg.channels.len());
-            let mut failure = None;
+        let mut new_references = Vec::with_capacity(msg.channels.len());
+        let mut failure = None;
 
-            for reference in msg.channels.iter() {
-                match self.channels.duplicate_reference(*reference) {
-                    Err(e) => {
-                        failure = Some(e);
-                        break;
-                    }
-                    Ok(reference) => new_references.push(reference),
+        for reference in msg.channels.iter() {
+            match self.channels.duplicate_reference(*reference) {
+                Err(e) => {
+                    failure = Some(e);
+                    break;
                 }
+                Ok(reference) => new_references.push(reference),
             }
-
-            if let Some(err) = failure {
-                for reference in new_references {
-                    self.channels.remove_reference(reference).expect("channel_write: Failed to deallocate channel references during backtracking from error during channel reference copying");
-                }
-                return Err(err);
-            }
-
-            let msg = Message { channels: new_references, ..msg };
-
-            let mut messages = channel.messages.write().unwrap();
-
-            messages.push_back(msg);
         }
 
-        let mut waiting_threads = channel.waiting_threads.lock().unwrap();
+        if let Some(err) = failure {
+            for reference in new_references {
+                self.channels.remove_reference(reference).expect("channel_write: Failed to deallocate channel references during backtracking from error during channel reference copying");
+            }
+            return Err(err);
+        }
+
+        let msg = Message { channels: new_references, ..msg };
+        channel.messages.write().unwrap().push_back(msg);
 
         // Unpark (wake up) all waiting threads that still have live references. The first thread
         // woken can immediately read the message, and others might find `messages` is empty before
@@ -416,6 +409,7 @@ impl Runtime {
         // add itself again. Note that since that lock is currently held, the woken thread will add
         // itself to waiting_threads *after* we call clear below as we release the lock implicilty
         // on leaving this function.
+        let mut waiting_threads = channel.waiting_threads.lock().unwrap();
         for thread in waiting_threads.values() {
             if let Some(thread) = thread.upgrade() {
                 thread.unpark();
@@ -436,9 +430,9 @@ impl Runtime {
     ) -> Result<Option<Message>, OakStatus> {
         self.validate_handle_access(node_id, reference)?;
         self.channels
-            .with_channel(self.channels.get_reader_channel(reference)?, |channel| {
-                let mut messages = channel.messages.write().unwrap();
-                match messages.pop_front() {
+            .with_channel(
+                self.channels.get_reader_channel(reference)?,
+                |channel| match channel.messages.write().unwrap().pop_front() {
                     Some(m) => {
                         self.track_handles_in_node(node_id, vec![reference]);
                         Ok(Some(m))
@@ -450,8 +444,8 @@ impl Runtime {
                             Ok(None)
                         }
                     }
-                }
-            })
+                },
+            )
     }
 
     /// Thread safe. This function returns:
@@ -466,8 +460,7 @@ impl Runtime {
         self.validate_handle_access(node_id, reference)?;
         self.channels
             .with_channel(self.channels.get_reader_channel(reference)?, |channel| {
-                let messages = channel.messages.read().unwrap();
-                Ok(if messages.front().is_some() {
+                Ok(if channel.messages.read().unwrap().front().is_some() {
                     ChannelReadStatus::ReadReady
                 } else if channel.is_orphan() {
                     ChannelReadStatus::Orphaned
@@ -539,14 +532,24 @@ impl Runtime {
     ) -> Result<HandleDirection, OakStatus> {
         self.validate_handle_access(node_id, reference)?;
         {
-            let readers = self.channels.readers.read().unwrap();
-            if readers.contains_key(&reference) {
+            if self
+                .channels
+                .readers
+                .read()
+                .unwrap()
+                .contains_key(&reference)
+            {
                 return Ok(HandleDirection::Read);
             }
         }
         {
-            let writers = self.channels.writers.read().unwrap();
-            if writers.contains_key(&reference) {
+            if self
+                .channels
+                .writers
+                .read()
+                .unwrap()
+                .contains_key(&reference)
+            {
                 return Ok(HandleDirection::Write);
             }
         }
@@ -563,8 +566,7 @@ impl Runtime {
             let node_info = node_infos
                 .get(&node_id)
                 .expect("channel_close: No such node_id");
-            let mut handles = node_info.handles.lock().unwrap();
-            handles.remove(&reference);
+            node_info.handles.lock().unwrap().remove(&reference);
         }
 
         self.channels.remove_reference(reference)
@@ -604,8 +606,9 @@ impl Runtime {
             }
         }
 
-        let mut node_infos = self.node_infos.write().unwrap();
-        node_infos
+        self.node_infos
+            .write()
+            .unwrap()
             .remove(&node_id)
             .expect("remove_node_id: Node didn't exist!");
     }

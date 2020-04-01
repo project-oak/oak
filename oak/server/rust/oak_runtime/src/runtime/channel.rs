@@ -122,8 +122,10 @@ impl Channel {
     /// channels attached to an underlying channel. This allows the channel to wake up any waiting
     /// channels by calling `thread::unpark` on all the threads it knows about.
     pub fn add_waiter(&self, thread_id: ThreadId, thread: &Arc<Thread>) {
-        let mut waiting_threads = self.waiting_threads.lock().unwrap();
-        waiting_threads.insert(thread_id, Arc::downgrade(thread));
+        self.waiting_threads
+            .lock()
+            .unwrap()
+            .insert(thread_id, Arc::downgrade(thread));
     }
 
     /// Decrement the [`Channel`] writer counter.
@@ -167,8 +169,10 @@ impl ChannelMapping {
     /// Creates a new [`Channel`] and returns a `(writer handle, reader handle)` pair.
     pub fn new_channel(&self, label: &oak_abi::label::Label) -> (Handle, Handle) {
         let channel_id = self.next_channel_id.fetch_add(1, SeqCst);
-        let mut channels = self.channels.write().unwrap();
-        channels.insert(channel_id, Channel::new(label));
+        self.channels
+            .write()
+            .unwrap()
+            .insert(channel_id, Channel::new(label));
         (self.new_writer(channel_id), self.new_reader(channel_id))
     }
 
@@ -191,36 +195,37 @@ impl ChannelMapping {
     /// Create a new writer reference.
     fn new_writer(&self, channel: ChannelId) -> Handle {
         let reference = self.new_reference();
-        let mut writers = self.writers.write().unwrap();
-        writers.insert(reference, channel);
+        self.writers.write().unwrap().insert(reference, channel);
         reference
     }
 
     /// Create a new reader reference.
     fn new_reader(&self, channel: ChannelId) -> Handle {
         let reference = self.new_reference();
-        let mut readers = self.readers.write().unwrap();
-        readers.insert(reference, channel);
+        self.readers.write().unwrap().insert(reference, channel);
         reference
     }
 
     /// Attempt to retrieve the [`ChannelId`] associated with a reader [`Handle`].
     pub fn get_reader_channel(&self, reference: Handle) -> Result<ChannelId, OakStatus> {
-        let readers = self.readers.read().unwrap();
-        readers
+        self.readers
+            .read()
+            .unwrap()
             .get(&reference)
             .map_or(Err(OakStatus::ErrBadHandle), |id| Ok(*id))
     }
 
     /// Attempt to retrieve the [`ChannelId`] associated with a writer [`Handle`].
     pub fn get_writer_channel(&self, reference: Handle) -> Result<ChannelId, OakStatus> {
-        let writers = self.writers.read().unwrap();
-        writers
+        self.writers
+            .read()
+            .unwrap()
             .get(&reference)
             .map_or(Err(OakStatus::ErrBadHandle), |id| Ok(*id))
     }
 
     /// Perform an operation on a [`Channel`] associated with some [`ChannelId`].
+    /// The channels read lock is held while the operation is performed.
     pub fn with_channel<U, F: FnOnce(&Channel) -> Result<U, OakStatus>>(
         &self,
         channel_id: ChannelId,
@@ -247,10 +252,7 @@ impl ChannelMapping {
                 }
             }
 
-            {
-                let mut writers = self.writers.write().unwrap();
-                writers.remove(&reference);
-            }
+            self.writers.write().unwrap().remove(&reference);
         }
 
         if let Ok(channel_id) = self.get_reader_channel(reference) {
@@ -266,10 +268,7 @@ impl ChannelMapping {
                 }
             }
 
-            {
-                let mut readers = self.readers.write().unwrap();
-                readers.remove(&reference);
-            }
+            self.readers.write().unwrap().remove(&reference);
         }
 
         Ok(())
