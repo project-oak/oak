@@ -79,6 +79,8 @@ bool GrpcClientNode::HandleInvocation(Handle invocation_handle) {
   cq.Next(&got_tag, &ok);
   if (!ok) {
     OAK_LOG(ERROR) << "Failed to start gRPC method call";
+    FailInvocation(invocation->rsp_handle.get(),
+                   grpc::Status(grpc::StatusCode::INTERNAL, "failed to start method call"));
     return false;
   }
 
@@ -89,11 +91,15 @@ bool GrpcClientNode::HandleInvocation(Handle invocation_handle) {
   cq.Next(&got_tag, &ok);
   if (!ok) {
     OAK_LOG(ERROR) << "Failed to send gRPC request";
+    FailInvocation(invocation->rsp_handle.get(),
+                   grpc::Status(grpc::StatusCode::INTERNAL, "failed to write request"));
     return false;
   }
   call->WritesDone(tag(3));
   cq.Next(&got_tag, &ok);
   if (!ok) {
+    FailInvocation(invocation->rsp_handle.get(),
+                   grpc::Status(grpc::StatusCode::INTERNAL, "failed to close request"));
     OAK_LOG(ERROR) << "Failed to close gRPC request";
     return false;
   }
@@ -138,6 +144,8 @@ bool GrpcClientNode::HandleInvocation(Handle invocation_handle) {
   }
   if (!status.ok()) {
     // Final status includes an error, so pass it back on the response channel.
+    FailInvocation(invocation->rsp_handle.get(), status);
+
     oak::encap::GrpcResponse grpc_rsp;
     grpc_rsp.set_last(true);
     grpc_rsp.mutable_status()->set_code(status.error_code());
@@ -156,6 +164,22 @@ bool GrpcClientNode::HandleInvocation(Handle invocation_handle) {
   // References to the per-invocation request/response channels will be dropped
   // on exit, orphaning them.
   return true;
+}
+
+void GrpcClientNode::FailInvocation(Handle rsp_handle, grpc::Status status) {
+  oak::encap::GrpcResponse grpc_rsp;
+  grpc_rsp.set_last(true);
+  grpc_rsp.mutable_status()->set_code(status.error_code());
+  grpc_rsp.mutable_status()->set_message(status.error_message());
+
+  auto rsp_msg = absl::make_unique<NodeMessage>();
+  size_t serialized_size = grpc_rsp.ByteSizeLong();
+  rsp_msg->data.resize(serialized_size);
+  grpc_rsp.SerializeToArray(rsp_msg->data.data(), rsp_msg->data.size());
+
+  OAK_LOG(INFO) << "Write final gRPC status of (" << status.error_code() << ", '"
+                << status.error_message() << "') to response channel";
+  ChannelWrite(rsp_handle, std::move(rsp_msg));
 }
 
 void GrpcClientNode::Run(Handle invocation_handle) {

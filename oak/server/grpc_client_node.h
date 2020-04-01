@@ -35,6 +35,7 @@ class GrpcClientNode final : public NodeThread {
 
  private:
   bool HandleInvocation(Handle invocation_handle);
+  void FailInvocation(Handle rsp_handle, grpc::Status status);
   void Run(Handle handle) override;
 
   std::shared_ptr<grpc::ChannelInterface> channel_;
