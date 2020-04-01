@@ -46,7 +46,7 @@ struct NodeInfo {
 
     /// A [`HashSet`] containing all the handles associated with this Node.
     // TODO(#777): this overlaps ChannelMapping.{reader,writer}
-    handles: Mutex<HashSet<Handle>>,
+    handles: HashSet<Handle>,
 }
 
 /// An identifier for a [`Node`] that is opaque for type safety.
@@ -194,14 +194,13 @@ impl Runtime {
             return;
         }
 
-        let node_infos = self.node_infos.read().unwrap();
+        let mut node_infos = self.node_infos.write().unwrap();
         let node_info = node_infos
-            .get(&node_id)
+            .get_mut(&node_id)
             .expect("Invalid node_id passed into track_handles_in_node!");
 
-        let mut tracked_handles = node_info.handles.lock().unwrap();
         for handle in handles {
-            tracked_handles.insert(handle);
+            node_info.handles.insert(handle);
         }
     }
 
@@ -218,11 +217,10 @@ impl Runtime {
         let node_info = node_infos
             .get(&node_id)
             .expect("Invalid node_id passed into validate_handle_access!");
-        let tracked_handles = node_info.handles.lock().unwrap();
 
         // Check the handle exists in the handles associated with a node, otherwise
         // return ErrBadHandle.
-        if tracked_handles.contains(&handle) {
+        if node_info.handles.contains(&handle) {
             Ok(())
         } else {
             error!(
@@ -249,10 +247,9 @@ impl Runtime {
             .get(&node_id)
             .expect("Invalid node_id passed into filter_optional_handles!");
 
-        let tracked_handles = node_info.handles.lock().unwrap();
         for handle in handles {
             // Check handle is accessible by the node.
-            if !tracked_handles.contains(&handle) {
+            if !node_info.handles.contains(&handle) {
                 error!(
                     "filter_optional_handles: handle {:?} not found in node {:?}",
                     handle, node_id
@@ -562,11 +559,11 @@ impl Runtime {
 
         if node_id != RUNTIME_NODE_ID {
             // Remove handle from the nodes available handles
-            let node_infos = self.node_infos.read().unwrap();
+            let mut node_infos = self.node_infos.write().unwrap();
             let node_info = node_infos
-                .get(&node_id)
+                .get_mut(&node_id)
                 .expect("channel_close: No such node_id");
-            node_info.handles.lock().unwrap().remove(&reference);
+            node_info.handles.remove(&reference);
         }
 
         self.channels.remove_reference(reference)
@@ -591,8 +588,7 @@ impl Runtime {
                 let node_info = node_infos
                     .get(&node_id)
                     .expect("remove_node_id: No such node_id");
-                let handles = node_info.handles.lock().unwrap();
-                handles.iter().copied().collect()
+                node_info.handles.iter().copied().collect()
             };
 
             debug!(
@@ -702,7 +698,7 @@ impl Runtime {
             node_reference,
             NodeInfo {
                 label: label.clone(),
-                handles: Mutex::new(HashSet::new()),
+                handles: HashSet::new(),
             },
         );
 
