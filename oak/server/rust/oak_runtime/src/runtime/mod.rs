@@ -106,9 +106,9 @@ impl Runtime {
     /// After starting a [`Runtime`], calling [`Runtime::stop`] will send termination signals to
     /// nodes and wait for them to terminate.
     ///
-    /// Returns a [`RuntimeRef`] reference to the created runtime, and a writeable [`Handle`] to
-    /// send messages into the runtime. To receive messages, creating a new channel and passing
-    /// the write [`Handle`] into the runtime will enable messages to be read back out.
+    /// Returns a writeable [`Handle`] to send messages into the [`Runtime`]. To receive messages,
+    /// creating a new channel and passing the write [`Handle`] into the runtime will enable
+    /// messages to be read back out.
     pub fn run(self: Arc<Self>) -> Result<Handle, OakStatus> {
         let module_name = self.configuration.entry_module.clone();
         let entrypoint = self.configuration.entrypoint.clone();
@@ -767,9 +767,9 @@ impl Runtime {
     /// <https://github.com/project-oak/oak/blob/master/docs/concepts.md#labels> for more
     /// information on labels.
     ///
-    /// [`RuntimeRef::node_create`] is a method of [`RuntimeRef`] and not [`Runtime`], so that the
-    /// underlying `Arc<Runtime>` can be passed to [`crate::node::Configuration::new_instance`]
-    /// and given to a new node thread.
+    /// This method is defined on [`Arc`] and not [`Runtime`] itself, so that the [`Arc`] can clone
+    /// itself and be passed to [`crate::node::Configuration::new_instance`] to be given to a new
+    /// node thread.
     pub fn node_create(
         self: Arc<Self>,
         node_id: NodeId,
