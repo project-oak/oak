@@ -129,26 +129,26 @@ impl Channel {
     }
 
     /// Decrement the [`Channel`] writer counter.
-    pub fn remove_writer(&self) {
+    pub fn dec_writer_count(&self) {
         if self.writers.fetch_sub(1, SeqCst) == 0 {
             panic!("remove_reader: Writer count was already 0, something is very wrong!")
         }
     }
 
     /// Decrement the [`Channel`] reader counter.
-    pub fn remove_reader(&self) {
+    pub fn dec_reader_count(&self) {
         if self.readers.fetch_sub(1, SeqCst) == 0 {
             panic!("remove_reader: Reader count was already 0, something is very wrong!")
         }
     }
 
     /// Increment the [`Channel`] writer counter.
-    pub fn add_writer(&self) -> u64 {
+    pub fn inc_writer_count(&self) -> u64 {
         self.writers.fetch_add(1, SeqCst)
     }
 
     /// Increment the [`Channel`] reader counter.
-    pub fn add_reader(&self) -> u64 {
+    pub fn inc_reader_count(&self) -> u64 {
         self.readers.fetch_add(1, SeqCst)
     }
 }
@@ -245,7 +245,7 @@ impl ChannelMapping {
                 let channel = channels
                     .get(&channel_id)
                     .expect("remove_reference: Handle is invalid!");
-                channel.remove_writer();
+                channel.dec_writer_count();
                 if channel.has_no_reference() {
                     channels.remove(&channel_id);
                     debug!("remove_reference: deallocating channel {:?}", channel_id);
@@ -261,7 +261,7 @@ impl ChannelMapping {
                 let channel = channels
                     .get(&channel_id)
                     .expect("remove_reference: Handle is invalid!");
-                channel.remove_reader();
+                channel.dec_reader_count();
                 if channel.has_no_reference() {
                     channels.remove(&channel_id);
                     debug!("remove_reference: deallocating channel {:?}", channel_id);
@@ -279,13 +279,13 @@ impl ChannelMapping {
     /// [`oak_runtime::Runtime`] to encode [`Channel`]s in messages.
     pub fn duplicate_reference(&self, reference: Handle) -> Result<Handle, OakStatus> {
         if let Ok(channel_id) = self.get_writer_channel(reference) {
-            self.with_channel(channel_id, |channel| Ok(channel.add_writer()))?;
+            self.with_channel(channel_id, |channel| Ok(channel.inc_writer_count()))?;
 
             return Ok(self.new_writer(channel_id));
         }
 
         if let Ok(channel_id) = self.get_reader_channel(reference) {
-            self.with_channel(channel_id, |channel| Ok(channel.add_reader()))?;
+            self.with_channel(channel_id, |channel| Ok(channel.inc_reader_count()))?;
 
             return Ok(self.new_reader(channel_id));
         }
