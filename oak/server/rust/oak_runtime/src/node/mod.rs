@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+use std::fmt::Display;
 use std::string::String;
 use std::sync::Arc;
 
@@ -28,22 +29,13 @@ mod wasm;
 /// A trait implemented by every node and pseudo-node.
 ///
 /// Nodes must not do any work until the [`Node::start`] method is invoked.
-pub trait Node: Send + Sync {
+pub trait Node: Display + Send {
     /// Starts executing the node.
     ///
     /// This method will be invoked in a blocking fashion by the [`Runtime`], therefore node
     /// implementations should make sure that they create separate background threads to execute
     /// actual work, and wait on them to terminate when [`Node::stop`] is called.
     fn start(&mut self) -> Result<(), OakStatus>;
-
-    /// Stops executing the node.
-    ///
-    /// This method may block while the node terminates any outstanding work, but the node
-    /// implementation must guarantee that it eventually returns.
-    ///
-    /// Internally, a node may implement this by first attempting to gracefully terminate, and then
-    /// if that fails, continue trying with increasing level of aggressiveness.
-    fn stop(&mut self);
 }
 
 /// A `Configuration` corresponds to an entry from a `ApplicationConfiguration`. It is the

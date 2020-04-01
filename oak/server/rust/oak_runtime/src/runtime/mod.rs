@@ -18,7 +18,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::string::String;
 use std::sync::{Arc, Mutex, RwLock};
-use std::thread;
+use std::thread::{self, JoinHandle};
 
 use core::sync::atomic::Ordering::SeqCst;
 use core::sync::atomic::{AtomicBool, AtomicU64};
@@ -81,7 +81,7 @@ pub struct Runtime {
     node_infos: RwLock<HashMap<NodeId, NodeInfo>>,
 
     /// Currently running node instances, so that [`Runtime::stop`] can terminate all of them.
-    node_instances: Mutex<HashMap<NodeId, Box<dyn crate::node::Node>>>,
+    node_join_handles: Mutex<HashMap<NodeId, JoinHandle<Result<(), OakStatus>>>>,
     next_node_id: AtomicU64,
 }
 
@@ -94,7 +94,7 @@ impl Runtime {
             channels: channel::ChannelMapping::new(),
 
             node_infos: RwLock::new(HashMap::new()),
-            node_instances: Mutex::new(HashMap::new()),
+            node_join_handles: Mutex::new(HashMap::new()),
 
             // NodeId(0) reserved for RUNTIME_NODE_ID.
             next_node_id: AtomicU64::new(1),
@@ -172,13 +172,15 @@ impl Runtime {
         // for any additional work to be finished here. This may take an arbitrary amount of time,
         // depending on the work that the node thread has to perform, but at least we know that the
         // it will not be able to enter again in a blocking state.
-        for instance in self
-            .node_instances
+        for (node_id, node_join_handle) in self
+            .node_join_handles
             .lock()
             .expect("could not acquire lock on node_instances")
-            .values_mut()
+            .drain()
         {
-            instance.stop();
+            if let Err(err) = node_join_handle.join() {
+                error!("could not join thread for node {:?}: {:?}", node_id, err);
+            }
         }
     }
 
@@ -752,11 +754,15 @@ impl Runtime {
 
     /// Add an [`NodeId`] [`crate::node::Node`] pair to the [`Runtime`]. This method temporarily
     /// holds the [`Runtime::node_instances`] lock.
-    fn add_node_instance(&self, node_reference: NodeId, node_instance: Box<dyn crate::node::Node>) {
-        self.node_instances
+    fn add_node_join_handle(
+        &self,
+        node_reference: NodeId,
+        join_handle: JoinHandle<Result<(), OakStatus>>,
+    ) {
+        self.node_join_handles
             .lock()
-            .expect("could not acquire lock on node_instances")
-            .insert(node_reference, node_instance);
+            .expect("could not acquire lock on node_join_handles")
+            .insert(node_reference, join_handle);
     }
 
     /// Thread safe method that attempts to create a node within the [`Runtime`] corresponding to a
@@ -852,14 +858,19 @@ impl Runtime {
         // below, because that takes ownership of the instance itself.
         //
         // We also want no locks to be held while the instance is starting.
-        let result = node_instance.start();
+        let node_instance_name = node_instance.to_string();
+
+        let node_join_handle = thread::Builder::new()
+            .name(node_instance_name)
+            .spawn(move || node_instance.start())
+            .expect("could not spawn thread");
 
         // Regardless of the result of `Node::start`, insert the now running instance to the list of
         // running instances (by moving it), so that `Node::stop` will be called on it eventually.
-        self.add_node_instance(node_reference, node_instance);
+        self.add_node_join_handle(node_reference, node_join_handle);
 
         // Return the result of `Node::start`.
-        result
+        Ok(())
     }
 
     pub fn new_runtime_proxy(self: Arc<Self>) -> RuntimeProxy {
@@ -999,11 +1010,16 @@ mod tests {
             node_body: Box<NodeBody>,
         };
 
+        impl std::fmt::Display for TestNode {
+            fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+                write!(f, "TestNode")
+            }
+        }
+
         impl crate::node::Node for TestNode {
             fn start(&mut self) -> Result<(), OakStatus> {
                 (self.node_body)(&self.runtime)
             }
-            fn stop(&mut self) {}
         }
 
         // Manually allocate a new [`NodeId`].
@@ -1025,6 +1041,7 @@ mod tests {
             vec![],
         );
         assert_eq!(Ok(()), result);
+        runtime.stop();
     }
 
     /// Create a test node that creates a channel and succeeds.

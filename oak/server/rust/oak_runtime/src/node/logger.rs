@@ -16,11 +16,11 @@
 
 use std::fmt::{self, Display, Formatter};
 use std::string::String;
+use std::thread;
 
 use log::{error, info};
 
 use oak_abi::OakStatus;
-use std::thread::{self, JoinHandle};
 
 use crate::pretty_name_for_thread;
 use crate::proto::log::{Level, LogMessage};
@@ -32,7 +32,6 @@ pub struct LogNode {
     config_name: String,
     runtime: RuntimeProxy,
     reader: Handle,
-    thread_handle: Option<JoinHandle<()>>,
 }
 
 impl LogNode {
@@ -42,7 +41,6 @@ impl LogNode {
             config_name: config_name.to_string(),
             runtime,
             reader,
-            thread_handle: None,
         }
     }
 }
@@ -55,27 +53,11 @@ impl Display for LogNode {
 
 impl super::Node for LogNode {
     fn start(&mut self) -> Result<(), OakStatus> {
-        // Clone or copy all the captured values and move them into the closure, for simplicity.
-        let runtime = self.runtime.clone();
-        let reader = self.reader;
-        let thread_handle = thread::Builder::new()
-            .name(self.to_string())
-            .spawn(move || {
-                let pretty_name = pretty_name_for_thread(&thread::current());
-                let result = logger(&pretty_name, &runtime, reader);
-                info!("{} LOG: exiting log thread {:?}", pretty_name, result);
-                runtime.exit_node();
-            })
-            .expect("failed to spawn thread");
-        self.thread_handle = Some(thread_handle);
+        let pretty_name = pretty_name_for_thread(&thread::current());
+        let result = logger(&pretty_name, &self.runtime, self.reader);
+        info!("{} LOG: exiting log thread {:?}", pretty_name, result);
+        self.runtime.exit_node();
         Ok(())
-    }
-    fn stop(&mut self) {
-        if let Some(join_handle) = self.thread_handle.take() {
-            if let Err(err) = join_handle.join() {
-                error!("error while stopping log node: {:?}", err);
-            }
-        }
     }
 }
 
