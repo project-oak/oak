@@ -31,9 +31,9 @@ namespace {
 void* tag(int i) { return (void*)static_cast<intptr_t>(i); }
 }  // namespace
 
-GrpcClientNode::GrpcClientNode(BaseRuntime* runtime, const std::string& name, NodeId node_id,
+GrpcClientNode::GrpcClientNode(const std::string& name, NodeId node_id,
                                const std::string& grpc_address)
-    : NodeThread(runtime, name, node_id),
+    : OakNode(name, node_id),
       channel_(grpc::CreateChannel(grpc_address, grpc::InsecureChannelCredentials())),
       stub_(new grpc::GenericStub(channel_)) {
   OAK_LOG(INFO) << "Created gRPC client node for " << grpc_address;
@@ -48,7 +48,7 @@ bool GrpcClientNode::HandleInvocation(Handle invocation_handle) {
 
   // Expect to read a single request out of the request channel.
   // TODO(#97): support client-side streaming
-  NodeReadResult req_result = ChannelRead(invocation->req_handle.get(), INT_MAX, INT_MAX);
+  NodeReadResult req_result = ChannelRead(invocation->req_handle.get());
   if (req_result.status != OakStatus::OK) {
     OAK_LOG(ERROR) << "Failed to read invocation message: " << req_result.status;
     return false;

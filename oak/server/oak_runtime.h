@@ -26,88 +26,44 @@
 #include "include/grpcpp/server.h"
 #include "oak/proto/application.pb.h"
 #include "oak/proto/oak_abi.pb.h"
-#include "oak/server/base_runtime.h"
 #include "oak/server/oak_grpc_node.h"
-#include "oak/server/storage/storage_node.h"
+#include "oak/server/oak_node.h"
 
 namespace oak {
-// OakRuntime contains the common runtime needed for an Oak System. The Runtime is responsible for
-// Initializing and Running a gRPC server, creating the nodes and channels and keeping track of
-// the connectivity. For now, it only supports one node.
-//
-// It can run in its own enclave, but this is optional.
 
-class OakRuntime : public BaseRuntime {
+// OakRuntime contains the common C++ parts of a runtime needed for an Oak
+// System, but mostly acts as a proxy for the Rust runtime.
+class OakRuntime {
  public:
-  OakRuntime()
-      : grpc_node_(nullptr),
-        grpc_handle_(kInvalidHandle),
-        app_node_(nullptr),
-        app_handle_(kInvalidHandle),
-        next_node_id_(0),
-        termination_pending_(false) {}
+  OakRuntime() : grpc_node_(nullptr), grpc_handle_(kInvalidHandle) {}
   virtual ~OakRuntime() = default;
 
   // Initializes an OakRuntime with a user-provided ApplicationConfiguration. This
   // method should be called exactly once, before Start().
   grpc::Status Initialize(const ApplicationConfiguration& config,
-                          std::shared_ptr<grpc::ServerCredentials> grpc_credentials)
-      LOCKS_EXCLUDED(mu_);
-  grpc::Status Start();
-  grpc::Status Stop();
+                          std::shared_ptr<grpc::ServerCredentials> grpc_credentials);
+  void Start();
+  void Stop();
 
   void CreateAndRunPseudoNode(const std::string& config_name, NodeId node_id, Handle handle);
-
-  bool CreateAndRunNode(const std::string& config_name, const std::string& entrypoint_name,
-                        std::unique_ptr<ChannelHalf> half, std::string* node_name) override;
-
-  bool TerminationPending() override { return termination_pending_.load(); }
-
-  int32_t GetPort();
 
  private:
   OakRuntime& operator=(const OakRuntime& other) = delete;
 
-  std::string NextNodeName(const std::string& config_name, const std::string& entrypoint_name)
-      EXCLUSIVE_LOCKS_REQUIRED(mu_);
-  NodeId NextNodeId() EXCLUSIVE_LOCKS_REQUIRED(mu_);
-
-  OakNode* CreateNode(const std::string& config_name, const std::string& entrypoint_name,
-                      NodeId node_id, std::string* node_name) EXCLUSIVE_LOCKS_REQUIRED(mu_);
+  std::unique_ptr<OakNode> CreateNode(const std::string& config_name, NodeId node_id);
 
   // Information derived from ApplicationConfiguration; const after Initialize() called:
 
-  // Collection of Wasm configuration info indexed by config name.
-  std::map<std::string, std::unique_ptr<const WebAssemblyConfiguration>> wasm_config_;
-  // Config names that refer to a logging node.
-  std::set<std::string> log_config_;
   // Config names that refer to a storage proxy node.
   std::map<std::string, std::unique_ptr<std::string>> storage_config_;
   // Config names that refer to a gRPC client node.
   std::map<std::string, std::unique_ptr<std::string>> grpc_client_config_;
 
-  // Convenience (non-owning) reference to gRPC pseudo-node.
-  OakGrpcNode* grpc_node_;
+  // gRPC pseudo-node.
+  std::unique_ptr<OakGrpcNode> grpc_node_;
   // Handle for the write half of the gRPC server notification channel, relative
   // to the gRPC server pseudo-Node
   Handle grpc_handle_;
-  // Convenience (non-owning) reference to initial Application Wasm node;
-  OakNode* app_node_;
-  // Handle for the read half of the gRPC server notification channel, relative
-  // to the initial Application Wasm Node.
-  Handle app_handle_;
-
-  // Next indexes for node name/ID generation.
-  mutable absl::Mutex mu_;  // protects nodes_, next_index_, next_node_id_;
-  std::map<std::string, int> next_index_ GUARDED_BY(mu_);
-  NodeId next_node_id_ GUARDED_BY(mu_);
-
-  // Collection of running Nodes indexed by Node name.  Note that Node name is
-  // unique but is not visible to the running Application in any way.
-  std::map<std::string, std::unique_ptr<OakNode>> nodes_ GUARDED_BY(mu_);
-
-  std::atomic_bool termination_pending_;
-
 };  // class OakRuntime
 
 }  // namespace oak

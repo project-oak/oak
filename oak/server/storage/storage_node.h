@@ -22,16 +22,15 @@
 #include <thread>
 
 #include "oak/proto/grpc_encap.pb.h"
-#include "oak/server/node_thread.h"
+#include "oak/server/oak_node.h"
 #include "oak/server/storage/storage_processor.h"
 #include "third_party/asylo/statusor.h"
 
 namespace oak {
 
-class StorageNode final : public NodeThread {
+class StorageNode final : public OakNode {
  public:
-  StorageNode(BaseRuntime* runtime, const std::string& name, NodeId node_id,
-              const std::string& storage_address);
+  StorageNode(const std::string& name, NodeId node_id, const std::string& storage_address);
 
  private:
   void Run(Handle handle) override;

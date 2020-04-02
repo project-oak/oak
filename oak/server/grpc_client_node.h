@@ -23,15 +23,13 @@
 #include "grpcpp/generic/generic_stub.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/common/handles.h"
-#include "oak/server/base_runtime.h"
-#include "oak/server/node_thread.h"
+#include "oak/server/oak_node.h"
 
 namespace oak {
 
-class GrpcClientNode final : public NodeThread {
+class GrpcClientNode final : public OakNode {
  public:
-  GrpcClientNode(BaseRuntime* runtime, const std::string& name, NodeId node_id,
-                 const std::string& grpc_address);
+  GrpcClientNode(const std::string& name, NodeId node_id, const std::string& grpc_address);
 
  private:
   bool HandleInvocation(Handle invocation_handle);

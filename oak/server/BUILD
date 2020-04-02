@@ -14,9 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
-load("//oak/common:fuzzer.bzl", "oak_fuzzer")
-load("//oak/server:wabt.bzl", "wasm_group")
+load("@rules_cc//cc:defs.bzl", "cc_library")
 
 package(
     default_visibility = ["//oak/server:__subpackages__"],
@@ -28,10 +26,10 @@ cc_library(
     srcs = ["oak_node.cc"],
     hdrs = ["oak_node.h"],
     deps = [
-        ":base_runtime",
-        ":channel",
         "//oak/common:handles",
         "//oak/common:logging",
+        "//oak/proto:label_cc_proto",
+        "//oak/proto:oak_abi_cc_proto",
         "//oak/server/rust/oak_glue:oak_glue_wrapper",
         "@com_google_absl//absl/base:endian",
         "@com_google_absl//absl/memory",
@@ -43,66 +41,6 @@ cc_library(
     name = "handle_closer",
     hdrs = ["handle_closer.h"],
     deps = [":oak_node"],
-)
-
-cc_library(
-    name = "wasm_node",
-    srcs = [
-        "wabt_output.cc",
-        "wasm_node.cc",
-    ],
-    hdrs = [
-        "wabt_output.h",
-        "wasm_node.h",
-    ],
-    deps = [
-        "//oak/common:handles",
-        "//oak/common:logging",
-        "//oak/proto:grpc_encap_cc_proto",
-        "//oak/proto:oak_abi_cc_proto",
-        "//oak/server:node_thread",
-        "@com_google_absl//absl/base:endian",
-        "@com_google_absl//absl/memory",
-        "@com_google_absl//absl/time",
-        "@com_google_absl//absl/types:span",
-        "@wabt",
-    ],
-)
-
-oak_fuzzer(
-    name = "wasm_node_fuzz",
-    srcs = [
-        "wasm_node_fuzzer.cc",
-    ],
-    tags = ["manual"],  # requires main() from fuzzer
-    deps = [
-        ":wasm_node",
-    ],
-)
-
-cc_test(
-    name = "wasm_node_test",
-    srcs = [
-        "wabt_output_test.cc",
-        "wasm_node_test.cc",
-    ],
-    data = [
-        ":testdata",
-    ],
-    deps = [
-        ":wasm_node",
-        "@gtest//:gtest_main",
-    ],
-)
-
-wasm_group(
-    name = "testdata",
-    srcs = [
-        "testdata/empty.wat",
-        "testdata/minimal.wat",
-        "testdata/missing.wat",
-        "testdata/wrong.wat",
-    ],
 )
 
 # This should be the only target that depends on @com_github_grpc_grpc.
@@ -118,7 +56,6 @@ cc_library(
     ],
     deps = [
         ":oak_node",
-        "//oak/common:app_config",
         "//oak/common:handles",
         "//oak/common:label",
         "//oak/common:logging",
@@ -136,77 +73,18 @@ cc_library(
         "oak_runtime.h",
     ],
     deps = [
-        ":base_runtime",
         ":grpc_client_node",
         ":oak_grpc_node",
-        ":wasm_node",
+        ":oak_node",
         "//oak/common:app_config",
         "//oak/common:logging",
         "//oak/proto:oak_abi_cc_proto",
-        "//oak/server:logging_node",
         "//oak/server/rust/oak_glue:oak_glue_wrapper",
         "//oak/server/storage:storage_node",
         "@com_google_absl//absl/base",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/synchronization",
-    ],
-)
-
-cc_library(
-    name = "base_runtime",
-    hdrs = ["base_runtime.h"],
-    deps = [
-        ":channel",
-    ],
-)
-
-cc_library(
-    name = "channel",
-    srcs = ["channel.cc"],
-    hdrs = ["channel.h"],
-    deps = [
-        ":notification",
-        "//oak/common:logging",
-        "//oak/proto:label_cc_proto",
-        "//oak/proto:oak_abi_cc_proto",
-        "@com_google_absl//absl/memory",
-        "@com_google_absl//absl/synchronization",
-        "@com_google_absl//absl/types:variant",
-    ],
-)
-
-cc_test(
-    name = "channel_test",
-    srcs = ["channel_test.cc"],
-    deps = [
-        ":channel",
-        "@com_google_absl//absl/memory",
-        "@gtest//:gtest_main",
-    ],
-)
-
-cc_library(
-    name = "node_thread",
-    srcs = ["node_thread.cc"],
-    hdrs = ["node_thread.h"],
-    deps = [
-        ":oak_node",
-        "//oak/common:logging",
-    ],
-)
-
-cc_library(
-    name = "logging_node",
-    srcs = ["logging_node.cc"],
-    hdrs = ["logging_node.h"],
-    deps = [
-        ":handle_closer",
-        ":node_thread",
-        "//oak/common:handles",
-        "//oak/common:logging",
-        "//oak/proto:log_cc_proto",
-        "@com_google_absl//absl/memory",
     ],
 )
 
@@ -228,35 +106,12 @@ cc_library(
     srcs = ["grpc_client_node.cc"],
     hdrs = ["grpc_client_node.h"],
     deps = [
-        ":base_runtime",
         ":invocation",
-        ":node_thread",
+        ":oak_node",
         "//oak/common:handles",
         "//oak/common:logging",
         "//oak/proto:grpc_encap_cc_proto",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/memory",
-    ],
-)
-
-cc_library(
-    name = "notification",
-    srcs = ["notification.cc"],
-    hdrs = ["notification.h"],
-    deps = [
-        "@com_google_absl//absl/memory",
-        "@com_google_absl//absl/synchronization",
-    ],
-)
-
-cc_test(
-    name = "notification_test",
-    srcs = ["notification_test.cc"],
-    deps = [
-        ":channel",
-        ":notification",
-        "//oak/common:logging",
-        "@com_google_absl//absl/memory",
-        "@gtest//:gtest_main",
     ],
 )

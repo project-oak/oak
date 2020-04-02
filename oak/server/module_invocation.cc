@@ -21,7 +21,6 @@
 #include "oak/common/logging.h"
 #include "oak/proto/grpc_encap.pb.h"
 #include "oak/proto/label.pb.h"
-#include "oak/server/channel.h"
 
 using ::oak_abi::OakStatus;
 
@@ -187,7 +186,7 @@ void ModuleInvocation::BlockingSendResponse() {
     FinishAndCleanUp(grpc::Status(grpc::StatusCode::INTERNAL, "Message wait failed"));
     return;
   }
-  NodeReadResult rsp_result = grpc_node_->ChannelRead(rsp_handle_, INT_MAX, INT_MAX);
+  NodeReadResult rsp_result = grpc_node_->ChannelRead(rsp_handle_);
   if (rsp_result.status != OakStatus::OK) {
     OAK_LOG(ERROR) << "invocation#" << stream_id_
                    << " SendResponse: Failed to read message: " << rsp_result.status;

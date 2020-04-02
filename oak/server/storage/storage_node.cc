@@ -29,9 +29,9 @@ using ::oak_abi::OakStatus;
 
 namespace oak {
 
-StorageNode::StorageNode(BaseRuntime* runtime, const std::string& name, NodeId node_id,
+StorageNode::StorageNode(const std::string& name, NodeId node_id,
                          const std::string& storage_address)
-    : NodeThread(runtime, name, node_id), storage_processor_(storage_address) {}
+    : OakNode(name, node_id), storage_processor_(storage_address) {}
 
 void StorageNode::Run(Handle invocation_handle) {
   std::vector<std::unique_ptr<ChannelStatus>> channel_status;
@@ -49,7 +49,7 @@ void StorageNode::Run(Handle invocation_handle) {
     }
 
     // Expect to read a single request out of the request channel.
-    NodeReadResult req_result = ChannelRead(invocation->req_handle.get(), INT_MAX, INT_MAX);
+    NodeReadResult req_result = ChannelRead(invocation->req_handle.get());
     if (req_result.status != OakStatus::OK) {
       OAK_LOG(ERROR) << "Failed to read message: " << req_result.status;
       return;
