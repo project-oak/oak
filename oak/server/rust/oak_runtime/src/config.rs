@@ -92,9 +92,7 @@ pub fn from_protobuf(
                 Some(ConfigType::LogConfig(_)) => node::Configuration::LogNode,
                 Some(ConfigType::GrpcServerConfig(GrpcServerConfiguration { address })) => {
                     parse_server_address(address)
-                        .map(|parsed_address| node::Configuration::GrpcServerNode {
-                            parsed_address
-                        })
+                        .map(|address| node::Configuration::GrpcServerNode { address })
                         .map_err(|error| {
                             error!("Incorrect gRPC server address: {}", error);
                             OakStatus::ErrInvalidArgs
