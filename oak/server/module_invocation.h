@@ -19,7 +19,6 @@
 
 #include <memory>
 
-#include "include/grpcpp/generic/async_generic_service.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/common/handles.h"
 #include "oak/server/oak_grpc_node.h"

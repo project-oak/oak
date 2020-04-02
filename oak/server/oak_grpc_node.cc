@@ -18,16 +18,15 @@
 
 #include "absl/memory/memory.h"
 #include "include/grpcpp/grpcpp.h"
-#include "oak/common/app_config.h"
 #include "oak/common/logging.h"
 #include "oak/server/module_invocation.h"
 
 namespace oak {
 
 std::unique_ptr<OakGrpcNode> OakGrpcNode::Create(
-    BaseRuntime* runtime, const std::string& name, NodeId node_id,
+    const std::string& name, NodeId node_id,
     std::shared_ptr<grpc::ServerCredentials> grpc_credentials, const uint16_t port) {
-  std::unique_ptr<OakGrpcNode> node = absl::WrapUnique(new OakGrpcNode(runtime, name, node_id));
+  std::unique_ptr<OakGrpcNode> node = absl::WrapUnique(new OakGrpcNode(name, node_id));
 
   // Build Server
   grpc::ServerBuilder builder;
@@ -54,14 +53,14 @@ std::unique_ptr<OakGrpcNode> OakGrpcNode::Create(
 }
 
 void OakGrpcNode::Start(Handle handle) {
-  handle_ = handle;
-  OAK_LOG(INFO) << "{" << name_ << "} Using handle " << handle_ << " for sending invocations";
-  // Start a new thread to process the gRPC completion queue.
-  queue_thread_ = std::thread(&OakGrpcNode::CompletionQueueLoop, this);
+  OAK_LOG(INFO) << "{" << name_ << "} Using handle " << handle << " for sending invocations";
+  // Start a new thread to do processing.
+  queue_thread_ = std::thread(&OakGrpcNode::Run, this, handle);
 }
 
-void OakGrpcNode::CompletionQueueLoop() {
-  OAK_LOG(INFO) << "{" << name_ << "} Starting gRPC completion queue loop";
+void OakGrpcNode::Run(Handle handle) {
+  OAK_LOG(INFO) << "{" << name_ << "} Starting gRPC completion queue loop on handle " << handle;
+  handle_ = handle;
 
   // The stream object will delete itself when finished with the request,
   // after creating a new stream object for the next request.
@@ -71,11 +70,7 @@ void OakGrpcNode::CompletionQueueLoop() {
     bool ok;
     void* tag;
     if (!completion_queue_->Next(&tag, &ok)) {
-      if (!TerminationPending()) {
-        OAK_LOG(FATAL) << "{" << name_ << "} Failure reading from completion queue";
-      }
-      OAK_LOG(INFO) << "{" << name_
-                    << "} No Next event on completion queue, stopping gRPC completion queue loop";
+      OAK_LOG(ERROR) << "{" << name_ << "} Failure reading from completion queue";
       return;
     }
     auto callback = static_cast<std::function<void(bool)>*>(tag);

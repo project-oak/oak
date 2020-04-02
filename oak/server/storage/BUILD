@@ -53,7 +53,7 @@ cc_library(
         "//oak/proto:grpc_encap_cc_proto",
         "//oak/proto:storage_service_cc_proto",
         "//oak/server:invocation",
-        "//oak/server:node_thread",
+        "//oak/server:oak_node",
         "//third_party/asylo:statusor",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/memory",

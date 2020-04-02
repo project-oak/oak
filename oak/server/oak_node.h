@@ -19,42 +19,34 @@
 
 #include <stdint.h>
 
-#include <atomic>
 #include <memory>
-#include <random>
-#include <unordered_map>
-#include <utility>
 #include <vector>
 
-#include "absl/base/thread_annotations.h"
-#include "absl/synchronization/mutex.h"
 #include "oak/common/handles.h"
-#include "oak/server/base_runtime.h"
-#include "oak/server/channel.h"
+#include "oak/proto/label.pb.h"
+#include "oak/proto/oak_abi.pb.h"
 
 namespace oak {
 
+// Current readable status of a channel.
+struct ChannelStatus {
+  explicit ChannelStatus(uint64_t h) : handle(h), status(oak_abi::ChannelReadStatus::NOT_READY) {}
+  uint64_t handle;
+  oak_abi::ChannelReadStatus status;
+};
+
 // Representation of a message transferred over a channel, relative to
-// a particular Node.  This is equivalent to the Message object, but
-// using channel handles (which are relative to a particular OakNode) rather
-// than raw channel references.
+// a particular Node.
 struct NodeMessage {
   std::vector<char> data;
   std::vector<Handle> handles;
   oak::label::Label label;
 };
 
-// Result of a read operation relative to a Node. Equivalent to ReadResult but
-// holds a NodeMessage rather than a Message.
+// Result of a read operation relative to a Node.
 struct NodeReadResult {
-  explicit NodeReadResult(oak_abi::OakStatus s)
-      : status(s), required_size(0), required_channels(0) {}
+  explicit NodeReadResult(oak_abi::OakStatus s) : status(s) {}
   oak_abi::OakStatus status;
-  // The following fields are filled in if the status is ERR_BUFFER_TOO_SMALL
-  // or ERR_HANDLE_SPACE_TOO_SMALL, indicating the required size and number
-  // of handles needed to read the message.
-  uint32_t required_size;
-  uint32_t required_channels;
   // The following field is filled in if the status is OK.
   std::unique_ptr<NodeMessage> msg;
 };
@@ -63,16 +55,16 @@ using NodeId = uint64_t;
 
 class OakNode {
  public:
-  OakNode(BaseRuntime* runtime, const std::string& name, NodeId node_id)
-      : name_(name), node_id_(node_id), runtime_(runtime), prng_engine_() {}
+  OakNode(const std::string& name, NodeId node_id) : name_(name), node_id_(node_id) {}
   virtual ~OakNode() {}
 
-  virtual void Start(Handle handle) = 0;
-  virtual void Stop() = 0;
+  // The Run() method is run on a new thread, and should respond to termination
+  // requests (indicated by termination_pending_.load()) in a timely manner.
+  virtual void Run(Handle handle) = 0;
 
   // ChannelRead returns the first message on the channel identified by the
-  // handle, subject to size checks.
-  NodeReadResult ChannelRead(Handle handle, uint32_t max_size, uint32_t max_channels);
+  // handle.
+  NodeReadResult ChannelRead(Handle handle);
 
   // ChannelWrite passes ownership of a message to the channel identified by the
   // handle.
@@ -82,11 +74,7 @@ class OakNode {
   std::pair<Handle, Handle> ChannelCreate();
 
   // Close the given channel half.
-  oak_abi::OakStatus ChannelClose(Handle handle) LOCKS_EXCLUDED(mu_);
-
-  // Create a new Node.
-  oak_abi::OakStatus NodeCreate(Handle handle, const std::string& config_name,
-                                const std::string& entrypoint_name);
+  oak_abi::OakStatus ChannelClose(Handle handle);
 
   // Wait on the given channel handles, modifying the contents of the passed-in
   // vector.  Returns a boolean indicating whether the wait finished due to a
@@ -97,42 +85,12 @@ class OakNode {
   bool WaitOnChannels(std::vector<std::unique_ptr<ChannelStatus>>* statuses) const;
 
  protected:
-  bool TerminationPending() const { return runtime_->TerminationPending(); }
-
-  void ClearHandles() LOCKS_EXCLUDED(mu_);
-
   const std::string name_;
   const NodeId node_id_;
 
  private:
   // Allow the Runtime to use internal methods.
   friend class OakRuntime;
-
-  // Take ownership of the given channel half, returning a channel handle that
-  // the Node can use to refer to it in future.
-  Handle AddChannel(std::unique_ptr<ChannelHalf> half) LOCKS_EXCLUDED(mu_);
-
-  Handle NextHandle() EXCLUSIVE_LOCKS_REQUIRED(mu_);
-
-  // Return a borrowed reference to the channel half identified by the given
-  // handle (or nullptr if the handle is not recognized).  Caller is responsible
-  // for ensuring that the borrowed reference does not out-live the owned
-  // channel.
-  ChannelHalf* BorrowChannel(Handle handle) const LOCKS_EXCLUDED(mu_);
-  MessageChannelReadHalf* BorrowReadChannel(Handle handle) const LOCKS_EXCLUDED(mu_);
-  MessageChannelWriteHalf* BorrowWriteChannel(Handle handle) const LOCKS_EXCLUDED(mu_);
-
-  using ChannelHalfTable = std::unordered_map<Handle, std::unique_ptr<ChannelHalf>>;
-
-  // Runtime instance that owns this Node.
-  BaseRuntime* const runtime_;
-
-  mutable absl::Mutex mu_;  // protects prng_engine_, channel_halves_
-
-  std::random_device prng_engine_ GUARDED_BY(mu_);
-
-  // Map from channel handles to channel half instances.
-  ChannelHalfTable channel_halves_ GUARDED_BY(mu_);
 };
 
 }  // namespace oak

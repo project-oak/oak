@@ -29,16 +29,15 @@ grpc::Status OakLoader::CreateApplication(
     std::shared_ptr<grpc::ServerCredentials> grpc_credentials) {
   OAK_LOG(INFO) << "Creating an Oak application";
 
-  auto runtime = absl::make_unique<OakRuntime>();
-  auto status = runtime->Initialize(application_configuration, grpc_credentials);
+  runtime_ = absl::make_unique<OakRuntime>();
+  auto status = runtime_->Initialize(application_configuration, grpc_credentials);
   if (!status.ok()) {
     return status;
   }
 
   // Start the runtime.
-  auto result = runtime->Start();
-  runtime_ = std::move(runtime);
-  return result;
+  runtime_->Start();
+  return grpc::Status::OK;
 }
 
 grpc::Status OakLoader::TerminateApplication() {

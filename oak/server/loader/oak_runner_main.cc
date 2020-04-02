@@ -22,6 +22,7 @@
 #include "absl/flags/parse.h"
 #include "absl/synchronization/notification.h"
 #include "absl/time/time.h"
+#include "oak/common/app_config.h"
 #include "oak/common/logging.h"
 #include "oak/common/utils.h"
 #include "oak/server/loader/oak_loader.h"

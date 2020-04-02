@@ -16,6 +16,7 @@
 
 #include "oak/server/invocation.h"
 
+#include "absl/memory/memory.h"
 #include "oak/common/logging.h"
 
 using ::oak_abi::OakStatus;
@@ -29,7 +30,7 @@ std::unique_ptr<Invocation> Invocation::ReceiveFromChannel(OakNode* node,
   //    as a GrpcRequest.
   //  - Handle for the write half of a channel to send responses down, each
   //    serialized as a GrpcResponse.
-  NodeReadResult invocation = node->ChannelRead(invocation_handle, INT_MAX, INT_MAX);
+  NodeReadResult invocation = node->ChannelRead(invocation_handle);
   if (invocation.status != OakStatus::OK) {
     OAK_LOG(ERROR) << "Failed to read invocation message: " << invocation.status;
     return nullptr;
