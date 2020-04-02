@@ -55,7 +55,7 @@ message NodeConfiguration {
 message WebAssemblyConfiguration {
   // The compiled code of the Oak Node, in WebAssembly binary format.
   // See https://webassembly.org/docs/binary-encoding/ .
-  // TODO: Replace this with just a hash of the bytecode to instantiate, and
+  // TODO(#804): Replace this with just a hash of the bytecode to instantiate, and
   // pass the actual bytecode to the Oak Manager in some other way.
   bytes module_bytes = 1;
 }
