@@ -144,6 +144,8 @@ extern "C" {
         config_len: usize,
         entrypoint_buf: *const u8,
         entrypoint_len: usize,
+        label_buf: *const u8,
+        label_len: usize,
         handle: u64,
     ) -> u32;
 

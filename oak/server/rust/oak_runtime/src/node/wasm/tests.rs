@@ -19,6 +19,7 @@ use crate::{
     node::Node,
     runtime::{Runtime, TEST_NODE_ID},
 };
+use oak_abi::label::Label;
 use wat::{parse_file, parse_str};
 
 fn setup_node<S: AsRef<[u8]>>(buffer: S, entrypoint: &str) -> Box<dyn Node> {
@@ -28,8 +29,7 @@ fn setup_node<S: AsRef<[u8]>>(buffer: S, entrypoint: &str) -> Box<dyn Node> {
         entrypoint: entrypoint.to_string(),
     };
     let runtime_ref = Arc::new(Runtime::create(configuration));
-    let (_, reader_handle) =
-        runtime_ref.new_channel(TEST_NODE_ID, &oak_abi::label::Label::public_trusted());
+    let (_, reader_handle) = runtime_ref.new_channel(TEST_NODE_ID, &Label::public_trusted());
 
     let runtime_proxy = runtime_ref.new_runtime_proxy();
 
