@@ -19,6 +19,8 @@ package(
     licenses = ["notice"],
 )
 
+exports_files(srcs = glob(["ca.pem", "local.key", "local.pem"]))
+
 filegroup(
     name = "local",
     srcs = [
