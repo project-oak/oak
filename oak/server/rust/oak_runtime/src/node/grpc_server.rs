@@ -23,8 +23,12 @@ use std::{
     thread::{self, JoinHandle},
 };
 
-use oak::grpc::GrpcRequest;
-use oak_abi::{ChannelReadStatus, OakStatus};
+use oak::grpc::{encap_request, GrpcRequest};
+use oak_abi::{
+    label::Label,
+    ChannelReadStatus,
+    OakStatus
+};
 
 use crate::runtime::RuntimeProxy;
 use crate::{pretty_name_for_thread, Handle};
@@ -134,7 +138,7 @@ impl GrpcServerNode {
         let grpc_body = protobuf::parse_from_bytes::<Any>(http_body.bytes())
             .map_err(|error| format!("Failed to parse GrpcRequest {}", error))?;
 
-        oak::grpc::encap_request(&grpc_body, None, grpc_method)
+        encap_request(&grpc_body, None, grpc_method)
             .ok_or("Failed to parse Protobuf message".to_string())
     }
 
@@ -153,10 +157,10 @@ impl GrpcServerNode {
         // the response.
         let (request_writer, request_reader) = self
             .runtime
-            .channel_create(&oak_abi::label::Label::public_trusted());
+            .channel_create(&Label::public_trusted());
         let (response_writer, response_reader) = self
             .runtime
-            .channel_create(&oak_abi::label::Label::public_trusted());
+            .channel_create(&Label::public_trusted());
 
         // Create an invocation message and attach the method-invocation specific channels to it.
         let invocation = crate::Message {
@@ -217,7 +221,6 @@ impl GrpcServerNode {
 impl super::Node for GrpcServerNode {
     fn start(&mut self) -> Result<(), OakStatus> {
         let server = self.clone();
-        // TODO(#770): Use `std::thread::Builder` and give a name to this thread.
         let thread_handle = thread::Builder::new()
             .name(self.to_string())
             .spawn(move || {
