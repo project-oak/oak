@@ -46,12 +46,6 @@ steps:
     timeout: 60m
     entrypoint: 'bash'
     args: ['./scripts/build_server', '-s', 'base']
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: build_server_arm
-    waitFor: ['bazel_init']
-    timeout: 60m
-    entrypoint: 'bash'
-    args: ['./scripts/build_server', '-s', 'arm']
 
   # Package the Hello World application in a Docker image.
   - name: 'gcr.io/oak-ci/oak:latest'
