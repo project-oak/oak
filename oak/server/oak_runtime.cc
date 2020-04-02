@@ -21,12 +21,14 @@
 #include <string>
 #include <thread>
 
+#include "absl/base/call_once.h"
 #include "absl/memory/memory.h"
 #include "absl/strings/str_cat.h"
 #include "oak/common/app_config.h"
 #include "oak/common/logging.h"
 #include "oak/server/grpc_client_node.h"
 #include "oak/server/logging_node.h"
+#include "oak/server/rust/oak_glue/oak_glue.h"
 #include "oak/server/storage/storage_node.h"
 #include "oak/server/wasm_node.h"
 
@@ -37,14 +39,38 @@ namespace {
 // dynamically created Node names because they are all of the form
 // "<config>-<number>-<entrypoint>".
 constexpr char kGrpcNodeName[] = "grpc";
+
+absl::once_flag glue_once;
+
+void NodeFactory(uintptr_t data, const char* name, uint32_t name_len, uint64_t node_id,
+                 uint64_t handle) {
+  OakRuntime* runtime = reinterpret_cast<OakRuntime*>(data);
+  std::string config_name(name, name_len);
+  runtime->CreateAndRunPseudoNode(config_name, node_id, handle);
+}
+
 }  // namespace
 
 grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config,
                                     std::shared_ptr<grpc::ServerCredentials> grpc_credentials) {
+  absl::call_once(glue_once, &glue_init);
+
   OAK_LOG(INFO) << "Initializing Oak Runtime";
   if (!ValidApplicationConfig(config)) {
     return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid configuration");
   }
+
+  OAK_LOG(INFO) << "Starting Rust runtime";
+  std::string config_data;
+  if (!config.SerializeToString(&config_data)) {
+    OAK_LOG(ERROR) << "Failed to serialize ApplicationConfiguration";
+    return grpc::Status(grpc::StatusCode::INTERNAL, "Failed to serialize configuration");
+  }
+  uint64_t rust_handle = glue_start(reinterpret_cast<const uint8_t*>(config_data.data()),
+                                    static_cast<uint32_t>(config_data.size()), NodeFactory,
+                                    reinterpret_cast<uintptr_t>(this));
+  OAK_LOG(INFO) << "Started Rust runtime, handle=" << rust_handle;
+
   absl::MutexLock lock(&mu_);
 
   // Accumulate the various data structures indexed by config name.
@@ -77,6 +103,9 @@ grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config,
       OakGrpcNode::Create(this, grpc_name, grpc_node_id, grpc_credentials, grpc_port);
   grpc_node_ = grpc_node.get();  // borrowed copy
   nodes_[grpc_name] = std::move(grpc_node);
+
+  grpc_handle_ = rust_handle;
+  return grpc::Status::OK;
 
   // Create the initial Application Node.
   NodeId app_node_id = NextNodeId();
@@ -146,6 +175,24 @@ OakNode* OakRuntime::CreateNode(const std::string& config_name, const std::strin
   return result;
 }
 
+void OakRuntime::CreateAndRunPseudoNode(const std::string& config_name, NodeId node_id,
+                                        Handle handle) {
+  std::string node_name;
+  OakNode* node;
+  {
+    absl::MutexLock lock(&mu_);
+    node = CreateNode(config_name, "unused", node_id, &node_name);
+  }
+  if (node == nullptr) {
+    OAK_LOG(FATAL) << "Failed to create pseudo-Node with config " << config_name;
+  }
+
+  OAK_LOG(INFO) << "Start pseudo-node named {" << node_name << "} with initial handle " << handle;
+  node->Start(handle);
+  // Caller runs this on another thread, so OK to block here.
+  node->Stop();
+}
+
 bool OakRuntime::CreateAndRunNode(const std::string& config_name,
                                   const std::string& entrypoint_name,
                                   std::unique_ptr<ChannelHalf> half, std::string* node_name) {
@@ -174,8 +221,9 @@ grpc::Status OakRuntime::Start() {
 
   // Now all dependencies are running, start the initial pair of Nodes running.
   grpc_node_->Start(grpc_handle_);
-  app_node_->Start(app_handle_);
+  return grpc::Status::OK;
 
+  app_node_->Start(app_handle_);
   return grpc::Status::OK;
 }
 
@@ -183,6 +231,7 @@ int32_t OakRuntime::GetPort() { return grpc_node_->GetPort(); }
 
 grpc::Status OakRuntime::Stop() {
   OAK_LOG(INFO) << "Stopping runtime...";
+  glue_stop();
   termination_pending_ = true;
 
   // Take local ownership of all the nodes owned by the runtime.

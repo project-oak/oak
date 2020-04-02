@@ -56,6 +56,8 @@ class OakRuntime : public BaseRuntime {
   grpc::Status Start();
   grpc::Status Stop();
 
+  void CreateAndRunPseudoNode(const std::string& config_name, NodeId node_id, Handle handle);
+
   bool CreateAndRunNode(const std::string& config_name, const std::string& entrypoint_name,
                         std::unique_ptr<ChannelHalf> half, std::string* node_name) override;
 
