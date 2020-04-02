@@ -77,7 +77,7 @@ find . \
     -not \( -path ./cargo-cache -prune \) -and \
     -not \( -path ./target -prune \) -and \
     -not \( -path ./third_party -prune \) \
-    \( -type f \( -name '*.rs' -o -name '*.cc' -o -name '*.h' \) \) \
+    \( -type f \( -name '*.rs' -o -name '*.cc' -o -name '*.proto' -o -name '*.h' \) \) \
   \) -exec ./scripts/check_todo {} +
 
 # Check embedded code snippets are up-to-date.
