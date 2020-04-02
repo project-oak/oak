@@ -19,7 +19,10 @@ package(
     licenses = ["notice"],
 )
 
-exports_files(srcs = glob(["ca.pem", "local.key", "local.pem"]))
+exports_files(srcs = glob([
+    "ca.*",
+    "local.*",
+]))
 
 filegroup(
     name = "local",

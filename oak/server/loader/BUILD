@@ -66,8 +66,8 @@ container_image(
     files = [
         "oak_runner",
         "//examples/certs:ca.pem",
+        "//examples/certs:local.key",
         "//examples/certs:local.pem",
-        "//examples/certs:local.key"
     ],
     ports = [
         "8080/tcp",  # Oak Application gRPC port.
