@@ -18,39 +18,54 @@ use futures_executor::block_on;
 use log::{error, info, warn};
 use protobuf::{well_known_types::Any, Message};
 use std::{
+    fmt::{self, Display, Formatter},
     net::SocketAddr,
-    sync::Arc,
-    thread,
-    thread::{spawn, JoinHandle},
+    thread::{self, JoinHandle},
 };
 
 use oak::grpc::GrpcRequest;
 use oak_abi::{ChannelReadStatus, OakStatus};
 
-use crate::{Handle, NodeId, Runtime};
+use crate::runtime::RuntimeProxy;
+use crate::{pretty_name_for_thread, Handle};
 
 pub struct GrpcServerNode {
     config_name: String,
-    runtime: Arc<Runtime>,
-    node_id: NodeId,
+    runtime: RuntimeProxy,
     writer: Handle,
     thread_handle: Option<JoinHandle<()>>,
     address: SocketAddr,
+}
+
+/// Clone implementation without `thread_handle` copying to pass the node to other threads.
+impl Clone for GrpcServerNode {
+    fn clone(&self) -> Self {
+        Self::new(
+            &self.config_name,
+            self.runtime.clone(),
+            self.writer,
+            self.address.clone(),
+        )
+    }
+}
+
+impl Display for GrpcServerNode {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        write!(f, "GrpcServerNode({})", self.config_name)
+    }
 }
 
 impl GrpcServerNode {
     /// Creates a new [`GrpcServerNode`] instance, but does not start it.
     pub fn new(
         config_name: &str,
-        runtime: Arc<Runtime>,
-        node_id: NodeId,
+        runtime: RuntimeProxy,
         writer: Handle,
         address: SocketAddr,
     ) -> Self {
         Self {
             config_name: config_name.to_string(),
             runtime,
-            node_id,
             writer,
             thread_handle: None,
             address: address,
@@ -138,10 +153,10 @@ impl GrpcServerNode {
         // the response.
         let (request_writer, request_reader) = self
             .runtime
-            .new_channel(self.node_id, &oak_abi::label::Label::public_trusted());
+            .channel_create(&oak_abi::label::Label::public_trusted());
         let (response_writer, response_reader) = self
             .runtime
-            .new_channel(self.node_id, &oak_abi::label::Label::public_trusted());
+            .channel_create(&oak_abi::label::Label::public_trusted());
 
         // Create an invocation message and attach the method-invocation specific channels to it.
         let invocation = crate::Message {
@@ -160,7 +175,7 @@ impl GrpcServerNode {
 
         // Send a message to the temporary channel that will be read by the Oak node.
         self.runtime
-            .channel_write(self.node_id, request_writer, message)
+            .channel_write(request_writer, message)
             .map_err(|error| {
                 format!(
                     "Couldn't write a message to the terporary gRPC server channel: {:?}",
@@ -170,7 +185,7 @@ impl GrpcServerNode {
 
         // Send an invocation message (with attached handles) to the Oak node.
         self.runtime
-            .channel_write(self.node_id, self.writer, invocation)
+            .channel_write(self.writer, invocation)
             .map_err(|error| format!("Couldn't write a gRPC invocation message: {:?}", error))?;
 
         Ok(response_reader)
@@ -181,12 +196,12 @@ impl GrpcServerNode {
     fn process_response(&self, response_reader: Handle) -> Result<Vec<u8>, String> {
         let read_status = self
             .runtime
-            .wait_on_channels(self.node_id, &[Some(response_reader)])
+            .wait_on_channels(&[Some(response_reader)])
             .map_err(|error| format!("Couldn't wait on the temporary gRPC channel: {:?}", error))?;
 
         if read_status[0] == ChannelReadStatus::ReadReady {
             self.runtime
-                .channel_read(self.node_id, response_reader)
+                .channel_read(response_reader)
                 .map_err(|error| format!("Couldn't read temporary gRPC channel: {:?}", error))
                 .map(|message| {
                     // Return an empty HTTP body is the `message` is None.
@@ -198,48 +213,29 @@ impl GrpcServerNode {
     }
 }
 
-/// Clone implementation without `thread_handle` copying to pass the node to other threads.
-impl Clone for GrpcServerNode {
-    fn clone(&self) -> Self {
-        Self::new(
-            &self.config_name,
-            self.runtime.clone(),
-            self.node_id,
-            self.writer,
-            self.address.clone(),
-        )
-    }
-}
-
 /// Oak Node implementation for the gRPC server.
 impl super::Node for GrpcServerNode {
     fn start(&mut self) -> Result<(), OakStatus> {
         let server = self.clone();
         // TODO(#770): Use `std::thread::Builder` and give a name to this thread.
-        let thread_handle = spawn(move || {
-            let pretty_name = format!("{}-{:?}:", server.config_name, thread::current());
-
-            let service = hyper::service::make_service_fn(move |_| {
-                async move {
+        let thread_handle = thread::Builder::new()
+            .name(self.to_string())
+            .spawn(move || {
+                let pretty_name = pretty_name_for_thread(&thread::current());
+                let service = hyper::service::make_service_fn(move |_| async move {
                     Ok::<_, hyper::Error>(hyper::service::service_fn(move |req| {
                         server.clone().serve(req)
                     }))
-                }
-            });
+                });
 
-            let result = block_on(
-                hyper::Server::bind(&server.address).serve(service)
-            );
-            if let Err(error) = result {
-                error!(
-                    "{} LOG: gRPC server pseudo-node error: {}",
-                    pretty_name, error
+                let result = block_on(hyper::Server::bind(&server.address).serve(service));
+                info!(
+                    "{} LOG: exiting gRPC server node thread {:?}",
+                    pretty_name, result
                 );
-            }
-
-            info!("{} LOG: exiting gRPC server thread", pretty_name);
-            server.runtime.remove_node_id(server.node_id);
-        });
+                server.runtime.exit_node();
+            })
+            .expect("failed to spawn thread");
         self.thread_handle = Some(thread_handle);
         Ok(())
     }

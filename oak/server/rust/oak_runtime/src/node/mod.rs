@@ -121,11 +121,9 @@ impl Configuration {
         writer: Handle,
     ) -> Box<dyn Node> {
         match self {
-            Configuration::LogNode => {
-                Box::new(logger::LogNode::new(config_name, runtime, reader))
-            }
+            Configuration::LogNode => Box::new(logger::LogNode::new(config_name, runtime, reader)),
             Configuration::GrpcServerNode { address } => Box::new(
-                grpc_server::GrpcServerNode::new(config_name, runtime, node_id, writer, *address),
+                grpc_server::GrpcServerNode::new(config_name, runtime, writer, *address),
             ),
             Configuration::WasmNode { module } => Box::new(wasm::WasmNode::new(
                 config_name,
