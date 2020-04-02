@@ -23,8 +23,6 @@ package oak;
 // uniquely identifies the logical storage instance for the operation and
 // the StorageProvider implementation determines how it is used.
 
-// TODO: Consider merging storage_id into the name field to make the
-// interface truly opaque.
 service Storage {
   rpc Read(StorageReadRequest) returns (StorageReadResponse);
   rpc Write(StorageWriteRequest) returns (StorageWriteResponse);
