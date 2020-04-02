@@ -25,13 +25,16 @@ use std::{
 
 use oak::grpc::{encap_request, GrpcRequest};
 use oak_abi::{
-    label::Label,
     ChannelReadStatus,
+    label::Label,
     OakStatus
 };
 
-use crate::runtime::RuntimeProxy;
-use crate::{pretty_name_for_thread, Handle};
+use crate::{
+    Handle,
+    pretty_name_for_thread,
+    runtime::RuntimeProxy,
+};
 
 pub struct GrpcServerNode {
     config_name: String,
@@ -92,7 +95,7 @@ impl GrpcServerNode {
                 error
             })?;
 
-        // Create gRPC request from HTTP body.
+        // Create a gRPC request from an HTTP body.
         Self::decode_grpc_request(grpc_method, &http_body)
             .and_then(|request| {
                 // Process a gRPC request and send it into the Runtime.
@@ -130,7 +133,7 @@ impl GrpcServerNode {
             })
     }
 
-    /// Creates a gRPC request from `grpc_method` and an `http_body`.
+    /// Creates a gRPC request from a `grpc_method` and an `http_body`.
     fn decode_grpc_request(
         grpc_method: &str,
         http_body: &dyn hyper::body::Buf,
@@ -149,12 +152,11 @@ impl GrpcServerNode {
         response
     }
 
-    /// Processes a gRPC request, forwards it a temporary channel and sends handles for this channel
-    /// to the `self.writer`.
+    /// Processes a gRPC request, forwards it to a temporary channel and sends handles for this
+    /// channel to the `self.writer`.
     /// Returns a channel handle for reading a gRPC response.
     fn process_request(&self, request: GrpcRequest) -> Result<Handle, String> {
-        // Create a pair of temporary channels to pass the request to the Oak node and to receive
-        // the response.
+        // Create a pair of temporary channels to pass the gRPC request and to receive the response.
         let (request_writer, request_reader) = self
             .runtime
             .channel_create(&Label::public_trusted());
@@ -177,7 +179,7 @@ impl GrpcServerNode {
             .write_to_writer(&mut message.data)
             .map_err(|error| format!("Couldn't to serialize a GrpcRequest message: {}", error))?;
 
-        // Send a message to the temporary channel that will be read by the Oak node.
+        // Send a message to the temporary channel.
         self.runtime
             .channel_write(request_writer, message)
             .map_err(|error| {
