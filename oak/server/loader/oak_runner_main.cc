@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <csignal>
 #include <sstream>
 #include <string>
 
@@ -30,6 +31,12 @@ ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate
 ABSL_FLAG(std::string, private_key, "", "Path to the private key");
 ABSL_FLAG(std::string, cert_chain, "", "Path to the PEM-encoded certificate chain");
 
+namespace {
+
+absl::Notification server_done;
+
+void sigint_handler(int) { server_done.Notify(); }
+
 std::shared_ptr<grpc::ServerCredentials> BuildTlsCredentials(std::string pem_root_certs,
                                                              std::string private_key,
                                                              std::string cert_chain) {
@@ -40,10 +47,12 @@ std::shared_ptr<grpc::ServerCredentials> BuildTlsCredentials(std::string pem_roo
   return grpc::SslServerCredentials(options);
 }
 
+}  // namespace
+
 int main(int argc, char* argv[]) {
   absl::ParseCommandLine(argc, argv);
 
-  // Create loader instance.
+  // Create the loader instance.
   std::unique_ptr<oak::OakLoader> loader = absl::make_unique<oak::OakLoader>();
 
   // Load application configuration.
@@ -71,14 +80,16 @@ int main(int argc, char* argv[]) {
     OAK_LOG(ERROR) << "Failed to create application";
     return 1;
   }
+
   std::stringstream address;
   address << "0.0.0.0:" << application_config->grpc_port();
   OAK_LOG(INFO) << "Oak Application: " << address.str();
 
-  // Wait (same as `sleep(86400)`).
-  absl::Notification server_timeout;
-  server_timeout.WaitForNotificationWithTimeout(absl::Hours(24));
+  // Wait until notification of signal termination.
+  std::signal(SIGINT, sigint_handler);
+  server_done.WaitForNotification();
 
+  OAK_LOG(ERROR) << "Terminate Oak Application";
   loader->TerminateApplication();
 
   return 0;
