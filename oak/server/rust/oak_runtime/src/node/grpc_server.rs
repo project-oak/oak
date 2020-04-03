@@ -44,6 +44,23 @@ pub struct GrpcServerNode {
     address: SocketAddr,
 }
 
+#[derive(Debug)]
+enum GrpcServerError {
+    ProtobufParsingError,
+    RequestProcessingError,
+    ResponseProcessingError,
+}
+
+impl Into<http::StatusCode> for GrpcServerError {
+    fn into(self) -> http::StatusCode {
+        match self {
+            Self::ProtobufParsingError => http::StatusCode::BAD_REQUEST,
+            Self::RequestProcessingError => http::StatusCode::INTERNAL_SERVER_ERROR,
+            Self::ResponseProcessingError => http::StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+}
+
 /// Clone implementation without `thread_handle` copying to pass the node to other threads.
 impl Clone for GrpcServerNode {
     fn clone(&self) -> Self {
@@ -97,52 +114,32 @@ impl GrpcServerNode {
 
         // Create a gRPC request from an HTTP body.
         Self::decode_grpc_request(grpc_method, &http_body)
-            .and_then(|request| {
-                // Process a gRPC request and send it into the Runtime.
-                self.process_request(request)
-                    .and_then(|response_reader| {
-                        // Read a gRPC response from the Runtime.
-                        self.process_response(response_reader)
-                            .and_then(|body| {
-                                // Send gRPC response back to the HTTP client.
-                                Ok(Self::http_response(http::StatusCode::OK, body))
-                            })
-                            .or_else(|error| {
-                                error!("Couldn't process gRPC response: {}", error);
-                                Ok(Self::http_response(
-                                    http::StatusCode::INTERNAL_SERVER_ERROR,
-                                    vec![],
-                                ))
-                            })
-                    })
-                    .or_else(|error| {
-                        error!("Couldn't process gRPC request: {}", error);
-                        Ok(Self::http_response(
-                            http::StatusCode::INTERNAL_SERVER_ERROR,
-                            vec![],
-                        ))
-                    })
-            })
-            .or_else(|error| {
-                error!("Couldn't decode gRPC request: {}", error);
-                Ok(Self::http_response(
-                    http::StatusCode::BAD_REQUEST,
-                    // Return an error explanation in an HTTP response.
-                    error.chars().map(|c| c as u8).collect(),
-                ))
-            })
+            // Process a gRPC request and send it into the Runtime.
+            .and_then(|request| self.process_request(request))
+            // Read a gRPC response from the Runtime.
+            .and_then(|response_reader| self.process_response(response_reader))
+            // Send gRPC response back to the HTTP client.
+            .and_then(|body| Ok(Self::http_response(http::StatusCode::OK, body)))
+            // Convert an error to an HTTP response with a corresponding error status.
+            .or_else(|error| Ok(Self::http_response(error.into(), vec![])))
     }
 
     /// Creates a gRPC request from a `grpc_method` and an `http_body`.
     fn decode_grpc_request(
         grpc_method: &str,
         http_body: &dyn hyper::body::Buf,
-    ) -> Result<GrpcRequest, String> {
+    ) -> Result<GrpcRequest, GrpcServerError> {
         let grpc_body = protobuf::parse_from_bytes::<Any>(http_body.bytes())
-            .map_err(|error| format!("Failed to parse GrpcRequest {}", error))?;
+            .map_err(|error| {
+                error!("Failed to parse GrpcRequest {}", error);
+                GrpcServerError::ProtobufParsingError
+            })?;
 
         encap_request(&grpc_body, None, grpc_method)
-            .ok_or("Failed to parse Protobuf message".to_string())
+            .ok_or_else(|| {
+                error!("Failed to parse Protobuf message");
+                GrpcServerError::ProtobufParsingError
+            })
     }
 
     /// Creates an HTTP response message.
@@ -155,7 +152,7 @@ impl GrpcServerNode {
     /// Processes a gRPC request, forwards it to a temporary channel and sends handles for this
     /// channel to the `self.writer`.
     /// Returns a channel handle for reading a gRPC response.
-    fn process_request(&self, request: GrpcRequest) -> Result<Handle, String> {
+    fn process_request(&self, request: GrpcRequest) -> Result<Handle, GrpcServerError> {
         // Create a pair of temporary channels to pass the gRPC request and to receive the response.
         let (request_writer, request_reader) = self
             .runtime
@@ -177,44 +174,55 @@ impl GrpcServerNode {
         };
         request
             .write_to_writer(&mut message.data)
-            .map_err(|error| format!("Couldn't to serialize a GrpcRequest message: {}", error))?;
+            .map_err(|error| {
+                error!("Couldn't serialize a GrpcRequest message: {}", error);
+                GrpcServerError::RequestProcessingError
+            })?;
 
         // Send a message to the temporary channel.
         self.runtime
             .channel_write(request_writer, message)
             .map_err(|error| {
-                format!(
-                    "Couldn't write a message to the terporary gRPC server channel: {:?}",
-                    error
-                )
+                error!("Couldn't write a message to the terporary channel: {:?}", error);
+                GrpcServerError::RequestProcessingError
             })?;
 
         // Send an invocation message (with attached handles) to the Oak node.
         self.runtime
             .channel_write(self.writer, invocation)
-            .map_err(|error| format!("Couldn't write a gRPC invocation message: {:?}", error))?;
+            .map_err(|error| {
+                error!("Couldn't write a gRPC invocation message: {:?}", error);
+                GrpcServerError::RequestProcessingError
+            })?;
 
         Ok(response_reader)
     }
 
     /// Processes a gRPC response from a channel represented by `response_reader` and returns an
     /// HTTP response body.
-    fn process_response(&self, response_reader: Handle) -> Result<Vec<u8>, String> {
+    fn process_response(&self, response_reader: Handle) -> Result<Vec<u8>, GrpcServerError> {
         let read_status = self
             .runtime
             .wait_on_channels(&[Some(response_reader)])
-            .map_err(|error| format!("Couldn't wait on the temporary gRPC channel: {:?}", error))?;
+            .map_err(|error| {
+                error!("Couldn't wait on the temporary gRPC channel: {:?}", error);
+                GrpcServerError::ResponseProcessingError
+            })?;
 
         if read_status[0] == ChannelReadStatus::ReadReady {
             self.runtime
                 .channel_read(response_reader)
-                .map_err(|error| format!("Couldn't read temporary gRPC channel: {:?}", error))
+                .map_err(|error| {
+                    error!("Couldn't read temporary gRPC channel: {:?}", error);
+                    GrpcServerError::ResponseProcessingError
+                })
                 .map(|message| {
-                    // Return an empty HTTP body is the `message` is None.
+                    // Return an empty HTTP body if the `message` is None.
                     message.map_or(vec![], |m| m.data)
                 })
         } else {
-            Err(format!("Couldn't read channel: {:?}", read_status[0]))
+            error!("Couldn't read channel: {:?}", read_status[0]);
+            Err(GrpcServerError::ResponseProcessingError)
         }
     }
 }

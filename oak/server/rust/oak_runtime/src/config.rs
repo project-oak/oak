@@ -27,7 +27,7 @@ use log::error;
 use oak_abi::OakStatus;
 
 use crate::node;
-use crate::node::{load_wasm, parse_server_address};
+use crate::node::{load_wasm, check_port, parse_address};
 use crate::runtime;
 use crate::runtime::{Handle, Runtime};
 
@@ -91,10 +91,11 @@ pub fn from_protobuf(
                 }
                 Some(ConfigType::LogConfig(_)) => node::Configuration::LogNode,
                 Some(ConfigType::GrpcServerConfig(GrpcServerConfiguration { address })) => {
-                    parse_server_address(address)
+                    parse_address(address)
+                        .and_then(|address| check_port(&address).map(|_| address))
                         .map(|address| node::Configuration::GrpcServerNode { address })
                         .map_err(|error| {
-                            error!("Incorrect gRPC server address: {}", error);
+                            error!("Incorrect gRPC server address: {:?}", error);
                             OakStatus::ErrInvalidArgs
                         })?
                 }

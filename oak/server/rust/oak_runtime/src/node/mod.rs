@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use std::net::SocketAddr;
+use std::net::{AddrParseError, SocketAddr};
 use std::string::String;
 use std::sync::Arc;
 
@@ -66,8 +66,10 @@ pub enum Configuration {
 }
 
 /// A enumeration for errors occuring when building `Configuration` from protobuf types.
+#[derive(Debug)]
 pub enum ConfigurationError {
-    AddressParsingError(String),
+    AddressParsingError(AddrParseError),
+    IncorrectPort,
     WasmiModuleInializationError(wasmi::Error),
 }
 
@@ -91,20 +93,20 @@ pub fn load_wasm(wasm_bytes: &[u8]) -> Result<Configuration, ConfigurationError>
     })
 }
 
-/// Parses an `address` and checks if it's correct: TCP port should greater than 1023.
-pub fn parse_server_address(address: &str) -> Result<SocketAddr, ConfigurationError> {
+/// Parses an `address` from `String` to `SocketAddr`. 
+pub fn parse_address(address: &str) -> Result<SocketAddr, ConfigurationError> {
     address
         .parse()
-        .map_err(|e| ConfigurationError::AddressParsingError(format!("{}", e)))
-        .and_then(|parsed_address: SocketAddr| {
-            if parsed_address.port() > 1023 {
-                Ok(parsed_address)
-            } else {
-                Err(ConfigurationError::AddressParsingError(
-                    "Server TCP port is <= 1023".to_string(),
-                ))
-            }
-        })
+        .map_err(|error| ConfigurationError::AddressParsingError(error))
+}
+
+/// Checks if port is greater than 1023.
+pub fn check_port(address: &SocketAddr) -> Result<(), ConfigurationError> {
+    if address.port() > 1023 {
+        Ok(())
+    } else {
+        Err(ConfigurationError::IncorrectPort)
+    }
 }
 
 impl Configuration {
