@@ -27,7 +27,7 @@ use log::error;
 use oak_abi::OakStatus;
 
 use crate::node;
-use crate::node::{load_wasm, check_port, parse_address};
+use crate::node::{check_port, load_wasm, parse_address};
 use crate::runtime;
 use crate::runtime::{Handle, Runtime};
 

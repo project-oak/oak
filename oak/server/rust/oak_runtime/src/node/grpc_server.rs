@@ -24,17 +24,9 @@ use std::{
 };
 
 use oak::grpc::{encap_request, GrpcRequest};
-use oak_abi::{
-    ChannelReadStatus,
-    label::Label,
-    OakStatus
-};
+use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
 
-use crate::{
-    Handle,
-    pretty_name_for_thread,
-    runtime::RuntimeProxy,
-};
+use crate::{pretty_name_for_thread, runtime::RuntimeProxy, Handle};
 
 pub struct GrpcServerNode {
     config_name: String,
@@ -129,17 +121,15 @@ impl GrpcServerNode {
         grpc_method: &str,
         http_body: &dyn hyper::body::Buf,
     ) -> Result<GrpcRequest, GrpcServerError> {
-        let grpc_body = protobuf::parse_from_bytes::<Any>(http_body.bytes())
-            .map_err(|error| {
-                error!("Failed to parse GrpcRequest {}", error);
-                GrpcServerError::ProtobufParsingError
-            })?;
+        let grpc_body = protobuf::parse_from_bytes::<Any>(http_body.bytes()).map_err(|error| {
+            error!("Failed to parse GrpcRequest {}", error);
+            GrpcServerError::ProtobufParsingError
+        })?;
 
-        encap_request(&grpc_body, None, grpc_method)
-            .ok_or_else(|| {
-                error!("Failed to parse Protobuf message");
-                GrpcServerError::ProtobufParsingError
-            })
+        encap_request(&grpc_body, None, grpc_method).ok_or_else(|| {
+            error!("Failed to parse Protobuf message");
+            GrpcServerError::ProtobufParsingError
+        })
     }
 
     /// Creates an HTTP response message.
@@ -154,12 +144,10 @@ impl GrpcServerNode {
     /// Returns a channel handle for reading a gRPC response.
     fn process_request(&self, request: GrpcRequest) -> Result<Handle, GrpcServerError> {
         // Create a pair of temporary channels to pass the gRPC request and to receive the response.
-        let (request_writer, request_reader) = self
-            .runtime
-            .channel_create(&Label::public_trusted());
-        let (response_writer, response_reader) = self
-            .runtime
-            .channel_create(&Label::public_trusted());
+        let (request_writer, request_reader) =
+            self.runtime.channel_create(&Label::public_trusted());
+        let (response_writer, response_reader) =
+            self.runtime.channel_create(&Label::public_trusted());
 
         // Create an invocation message and attach the method-invocation specific channels to it.
         let invocation = crate::Message {
@@ -183,7 +171,10 @@ impl GrpcServerNode {
         self.runtime
             .channel_write(request_writer, message)
             .map_err(|error| {
-                error!("Couldn't write a message to the terporary channel: {:?}", error);
+                error!(
+                    "Couldn't write a message to the terporary channel: {:?}",
+                    error
+                );
                 GrpcServerError::RequestProcessingError
             })?;
 

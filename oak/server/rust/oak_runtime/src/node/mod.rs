@@ -93,7 +93,7 @@ pub fn load_wasm(wasm_bytes: &[u8]) -> Result<Configuration, ConfigurationError>
     })
 }
 
-/// Parses an `address` from `String` to `SocketAddr`. 
+/// Parses an `address` from `String` to `SocketAddr`.
 pub fn parse_address(address: &str) -> Result<SocketAddr, ConfigurationError> {
     address
         .parse()
