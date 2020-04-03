@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "absl/base/thread_annotations.h"
+#include "absl/synchronization/mutex.h"
 #include "include/grpcpp/security/server_credentials.h"
 #include "include/grpcpp/server.h"
 #include "oak/proto/application.pb.h"
@@ -35,24 +36,24 @@ namespace oak {
 // System, but mostly acts as a proxy for the Rust runtime.
 class OakRuntime {
  public:
-  OakRuntime() : grpc_node_(nullptr), grpc_handle_(kInvalidHandle) {}
-  virtual ~OakRuntime() = default;
+  static std::unique_ptr<OakRuntime> Create(
+      const ApplicationConfiguration& config,
+      std::shared_ptr<grpc::ServerCredentials> grpc_credentials);
+  ~OakRuntime() = default;
 
-  // Initializes an OakRuntime with a user-provided ApplicationConfiguration. This
-  // method should be called exactly once, before Start().
-  grpc::Status Initialize(const ApplicationConfiguration& config,
-                          std::shared_ptr<grpc::ServerCredentials> grpc_credentials);
-  void Start();
-  void Stop();
+  void Start() const;
+  void Stop() const;
 
-  void CreateAndRunPseudoNode(const std::string& config_name, NodeId node_id, Handle handle);
+  void CreateAndRunPseudoNode(const std::string& config_name, NodeId node_id, Handle handle) const;
 
  private:
+  OakRuntime(const ApplicationConfiguration& config,
+             std::shared_ptr<grpc::ServerCredentials> grpc_credentials);
   OakRuntime& operator=(const OakRuntime& other) = delete;
 
-  std::unique_ptr<OakNode> CreateNode(const std::string& config_name, NodeId node_id);
+  std::unique_ptr<OakNode> CreateNode(const std::string& config_name, NodeId node_id) const;
 
-  // Information derived from ApplicationConfiguration; const after Initialize() called:
+  // Information derived from ApplicationConfiguration, const after construction:
 
   // Config names that refer to a storage proxy node.
   std::map<std::string, std::unique_ptr<std::string>> storage_config_;
