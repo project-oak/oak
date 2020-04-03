@@ -28,7 +28,7 @@ Build and run the Client with the following command:
 
 ```bash
 ./scripts/build_example -e aggregator
-./bazel-client-bin/examples/aggregator/client/client --address=127.0.0.1 --bucket=test --data=1:10,2:20,3:30
+./bazel-client-bin/examples/aggregator/client/client --address=127.0.0.1:8080 --bucket=test --data=1:10,2:20,3:30
 ```
 
 Client code is in the `client` directory.
@@ -64,7 +64,13 @@ An Aggregator deployment consists of a single pod with two running containers
 Load Balancer and an assigned static IP that listens on the port `8080`.
 Aggregator is deployed using [Kubernetes](https://kubernetes.io/).
 
-In order to deploy the Aggregator example - run:
+In order to deploy the Aggregator example - first set up Kubernetes:
+
+```bash
+gcloud components install kubectl
+```
+
+and then run the following command:
 
 ```bash
 ./examples/aggregator/scripts/deploy
@@ -82,6 +88,6 @@ Deployment requires Docker images to be uploaded to the
 following command:
 
 ```bash
-./examples/aggregator/scripts/build_docker_images
+./scripts/build_example -e aggregator -i
 ./examples/aggregator/scripts/docker_push
 ```

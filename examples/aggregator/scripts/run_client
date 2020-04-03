@@ -8,4 +8,4 @@ source "${GLOBAL_SCRIPTS_DIR}/common"
 "${GLOBAL_SCRIPTS_DIR}/build_example" -e aggregator
 
 # Run the application client.
-"./bazel-client-bin/examples/aggregator/client/client" "${@}"
+"./bazel-client-bin/examples/aggregator/client/client" --ca_cert=./examples/certs/docker/ca.pem "${@}"

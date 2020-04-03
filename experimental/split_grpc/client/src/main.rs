@@ -26,7 +26,7 @@ pub mod proto {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
-    let root_cert = tokio::fs::read("examples/certs/ca.pem").await?;
+    let root_cert = tokio::fs::read("examples/certs/local/ca.pem").await?;
     let root_cert = Certificate::from_pem(root_cert);
     let tls_config = ClientTlsConfig::new()
         .ca_certificate(root_cert)

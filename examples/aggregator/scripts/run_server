@@ -8,4 +8,8 @@ source "${GLOBAL_SCRIPTS_DIR}/common"
 "${GLOBAL_SCRIPTS_DIR}/build_server" -s base
 
 readonly APPLICATION="${PWD}/bazel-client-bin/examples/aggregator/config/config.bin"
-exec ./bazel-bin/oak/server/loader/oak_runner --application="${APPLICATION}"
+exec ./bazel-bin/oak/server/loader/oak_runner \
+  --application="${APPLICATION}" \
+  --ca_cert="${SCRIPTS_DIR}/../examples/certs/docker/ca.pem" \
+  --cert_chain="${SCRIPTS_DIR}/../examples/certs/docker/local.pem" \
+  --private_key="${SCRIPTS_DIR}/../examples/certs/docker/local.key"

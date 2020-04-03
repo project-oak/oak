@@ -76,6 +76,6 @@ fi
 # We use a different symlink prefix for clang-based artifacts.
 exec ./bazel-clang-bin/oak/server/loader/oak_runner \
   --application="${APPLICATION}" \
-  --ca_cert="${SCRIPTS_DIR}/../examples/certs/ca.pem" \
-  --cert_chain="${SCRIPTS_DIR}/../examples/certs/local.pem" \
-  --private_key="${SCRIPTS_DIR}/../examples/certs/local.key"
+  --ca_cert="${SCRIPTS_DIR}/../examples/certs/local/ca.pem" \
+  --cert_chain="${SCRIPTS_DIR}/../examples/certs/local/local.pem" \
+  --private_key="${SCRIPTS_DIR}/../examples/certs/local/local.key"
