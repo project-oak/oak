@@ -49,28 +49,24 @@ void NodeFactory(uintptr_t data, const char* name, uint32_t name_len, uint64_t n
 
 }  // namespace
 
-grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config,
-                                    std::shared_ptr<grpc::ServerCredentials> grpc_credentials) {
+std::unique_ptr<OakRuntime> OakRuntime::Create(
+    const ApplicationConfiguration& config,
+    std::shared_ptr<grpc::ServerCredentials> grpc_credentials) {
   absl::call_once(glue_once, &glue_init);
 
   if (!ValidApplicationConfig(config)) {
-    return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid configuration");
+    OAK_LOG(ERROR) << "Invalid configuration";
+    return nullptr;
   }
 
-  OAK_LOG(INFO) << "Starting Rust runtime";
-  std::string config_data;
-  if (!config.SerializeToString(&config_data)) {
-    OAK_LOG(ERROR) << "Failed to serialize ApplicationConfiguration";
-    return grpc::Status(grpc::StatusCode::INTERNAL, "Failed to serialize configuration");
-  }
-  grpc_handle_ = glue_start(reinterpret_cast<const uint8_t*>(config_data.data()),
-                            static_cast<uint32_t>(config_data.size()), NodeFactory,
-                            reinterpret_cast<uintptr_t>(this));
-  OAK_LOG(INFO) << "Started Rust runtime, handle=" << grpc_handle_;
+  return std::unique_ptr<OakRuntime>(new OakRuntime(config, grpc_credentials));
+}
 
+OakRuntime::OakRuntime(const ApplicationConfiguration& config,
+                       std::shared_ptr<grpc::ServerCredentials> grpc_credentials)
+    : grpc_node_(OakGrpcNode::Create(kGrpcNodeName, 0, grpc_credentials, config.grpc_port())),
+      grpc_handle_(kInvalidHandle) {
   // Accumulate the various data structures indexed by config name.
-  storage_config_.clear();
-  grpc_client_config_.clear();
   for (const auto& node_config : config.node_configs()) {
     if (node_config.has_storage_config()) {
       const StorageProxyConfiguration& storage_config = node_config.storage_config();
@@ -82,37 +78,43 @@ grpc::Status OakRuntime::Initialize(const ApplicationConfiguration& config,
           absl::make_unique<std::string>(grpc_config.address());
     }
   }
-
-  // Create a gRPC pseudo-Node, with a node ID of zero (which indicates
-  // it acts as the controller of the Rust runtime).
-  const uint16_t grpc_port = config.grpc_port();
-  OAK_LOG(INFO) << "Create gRPC pseudo-Node named {" << kGrpcNodeName << "}";
-  grpc_node_ = OakGrpcNode::Create(kGrpcNodeName, 0, grpc_credentials, grpc_port);
-
-  return grpc::Status::OK;
+  std::string config_data;
+  if (!config.SerializeToString(&config_data)) {
+    OAK_LOG(FATAL) << "Failed to serialize ApplicationConfiguration";
+  }
+  OAK_LOG(INFO) << "Starting Rust runtime";
+  grpc_handle_ = glue_start(reinterpret_cast<const uint8_t*>(config_data.data()),
+                            static_cast<uint32_t>(config_data.size()), NodeFactory,
+                            reinterpret_cast<uintptr_t>(this));
+  OAK_LOG(INFO) << "Started Rust runtime, handle=" << grpc_handle_;
 }
 
 // Create (but don't start) a new Node instance.  Return a borrowed pointer to
 // the new Node (or nullptr on failure).
-std::unique_ptr<OakNode> OakRuntime::CreateNode(const std::string& config_name, NodeId node_id) {
+std::unique_ptr<OakNode> OakRuntime::CreateNode(const std::string& config_name,
+                                                NodeId node_id) const {
   std::string name = absl::StrCat(config_name, "-", node_id);
 
-  if (storage_config_.count(config_name) > 0) {
-    std::string address = *(storage_config_[config_name].get());
+  auto storage_iter = storage_config_.find(config_name);
+  if (storage_iter != storage_config_.end()) {
+    std::string address = *(storage_iter->second.get());
     OAK_LOG(INFO) << "Create storage proxy node named {" << name << "} connecting to " << address;
     return absl::make_unique<StorageNode>(name, node_id, address);
-  } else if (grpc_client_config_.count(config_name) > 0) {
-    std::string address = *(grpc_client_config_[config_name].get());
+  }
+
+  auto grpc_client_iter = grpc_client_config_.find(config_name);
+  if (grpc_client_iter != grpc_client_config_.end()) {
+    std::string address = *(grpc_client_iter->second.get());
     OAK_LOG(INFO) << "Create gRPC client node named {" << name << "} connecting to " << address;
     return absl::make_unique<GrpcClientNode>(name, node_id, address);
-  } else {
-    OAK_LOG(ERROR) << "failed to find config with name " << config_name;
-    return nullptr;
   }
+
+  OAK_LOG(ERROR) << "failed to find config with name " << config_name;
+  return nullptr;
 }
 
 void OakRuntime::CreateAndRunPseudoNode(const std::string& config_name, NodeId node_id,
-                                        Handle handle) {
+                                        Handle handle) const {
   std::unique_ptr<OakNode> node = CreateNode(config_name, node_id);
   if (node == nullptr) {
     OAK_LOG(FATAL) << "Failed to create pseudo-Node with config " << config_name;
@@ -125,13 +127,13 @@ void OakRuntime::CreateAndRunPseudoNode(const std::string& config_name, NodeId n
                 << handle;
 }
 
-void OakRuntime::Start() {
+void OakRuntime::Start() const {
   OAK_LOG(INFO) << "Starting runtime";
   // Start the initial gRPC Node running.
   grpc_node_->Start(grpc_handle_);
 }
 
-void OakRuntime::Stop() {
+void OakRuntime::Stop() const {
   OAK_LOG(INFO) << "Stopping gRPC server pseudo-Node...";
   grpc_node_->Stop();
   OAK_LOG(INFO) << "Stopping Rust runtime...";

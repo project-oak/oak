@@ -29,10 +29,9 @@ grpc::Status OakLoader::CreateApplication(
     std::shared_ptr<grpc::ServerCredentials> grpc_credentials) {
   OAK_LOG(INFO) << "Creating an Oak application";
 
-  runtime_ = absl::make_unique<OakRuntime>();
-  auto status = runtime_->Initialize(application_configuration, grpc_credentials);
-  if (!status.ok()) {
-    return status;
+  runtime_ = OakRuntime::Create(application_configuration, grpc_credentials);
+  if (runtime_ == nullptr) {
+    return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid configuration");
   }
 
   // Start the runtime.
