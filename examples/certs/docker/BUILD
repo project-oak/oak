@@ -21,7 +21,7 @@ package(
 
 exports_files(srcs = glob([
     "ca.*",
-    "local.*",
+    "docker.*",
 ]))
 
 filegroup(
