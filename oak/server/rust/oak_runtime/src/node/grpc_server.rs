@@ -121,13 +121,15 @@ impl GrpcServerNode {
         grpc_method: &str,
         http_body: &dyn hyper::body::Buf,
     ) -> Result<GrpcRequest, GrpcServerError> {
+        /// Parse HTTP body as a `protobuf::well_known_types::Any` message.
         let grpc_body = protobuf::parse_from_bytes::<Any>(http_body.bytes()).map_err(|error| {
-            error!("Failed to parse GrpcRequest {}", error);
+            error!("Failed to parse Protobuf message {}", error);
             GrpcServerError::ProtobufParsingError
         })?;
 
+        /// Create a gRPC request.
         encap_request(&grpc_body, None, grpc_method).ok_or_else(|| {
-            error!("Failed to parse Protobuf message");
+            error!("Failed to create GrpcRequest");
             GrpcServerError::ProtobufParsingError
         })
     }
