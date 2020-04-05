@@ -76,6 +76,12 @@ pub enum ConfigurationError {
 impl std::fmt::Display for ConfigurationError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         match self {
+            ConfigurationError::AddressParsingError(e) => {
+                write!(f, "Failed to parse an address: {}", e)
+            },
+            ConfigurationError::IncorrectPort => {
+                write!(f, "Incorrect port (must be > 1023)")
+            },
             ConfigurationError::WasmiModuleInializationError(e) => {
                 write!(f, "Failed to initialize wasmi::Module: {}", e)
             }
@@ -119,20 +125,21 @@ impl Configuration {
         config_name: &str, // Used for pretty debugging
         runtime: RuntimeProxy,
         entrypoint: String,
-        reader: Handle,
-        writer: Handle,
+        initial_reader: Handle,
     ) -> Box<dyn Node> {
         match self {
-            Configuration::LogNode => Box::new(logger::LogNode::new(config_name, runtime, reader)),
+            Configuration::LogNode => {
+                Box::new(logger::LogNode::new(config_name, runtime, initial_reader))
+            }
             Configuration::GrpcServerNode { address } => Box::new(
-                grpc_server::GrpcServerNode::new(config_name, runtime, writer, *address),
+                grpc_server::GrpcServerNode::new(config_name, runtime, *address, initial_reader),
             ),
             Configuration::WasmNode { module } => Box::new(wasm::WasmNode::new(
                 config_name,
                 runtime,
                 module.clone(),
                 entrypoint,
-                reader,
+                initial_reader,
             )),
         }
     }

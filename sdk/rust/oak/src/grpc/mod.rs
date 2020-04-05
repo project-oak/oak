@@ -17,7 +17,7 @@
 //! Functionality to help Oak Nodes interact with gRPC.
 
 pub use crate::proto::code::Code;
-use crate::{proto, OakError};
+use crate::{proto, OakError, OakStatus};
 use log::{error, warn};
 pub use proto::grpc_encap::{GrpcRequest, GrpcResponse};
 use protobuf::ProtobufEnum;
@@ -349,4 +349,30 @@ where
     let rr: Vec<R> =
         vec![protobuf::parse_from_bytes(&req).expect("Failed to parse request protobuf message")];
     node_fn(rr, writer)
+}
+
+/// Default name for predefined node configuration that corresponds to a gRPC pseudo-Node.
+pub const DEFAULT_CONFIG_NAME: &str = "grpc_server";
+
+/// Initialize agRPC pseudo-node with the default configuration.
+pub fn init_default() {
+    init(DEFAULT_CONFIG_NAME).unwrap();
+}
+
+/// Initialize a gRPC pseudo-Node and pass it a handle to write notification messages.
+/// 
+/// Returns a handle for reading gRPC invocations.
+pub fn init(config: &str) -> std::result::Result<crate::ReadHandle, OakStatus> {
+    // Create a channel and pass the read half to a new gRPC pseudo-node.
+    let (write_handle, read_handle) = crate::channel_create().expect("Couldn't create a channel");
+    crate::node_create(config, "oak_main", read_handle)?;
+    crate::channel_close(read_handle.handle).expect("Couldn't close the channel");
+
+    // Create a separate channel for receiving invocations and pass it to a gRPC pseudo-node.
+    let (invocation_write_handle, invocation_read_handle) = crate::channel_create()
+        .expect("Couldn't create a channel");
+    crate::channel_write(write_handle, &[], &[invocation_write_handle.handle])
+        .expect("Couldn't write to a channel");
+
+    Ok(invocation_read_handle)
 }

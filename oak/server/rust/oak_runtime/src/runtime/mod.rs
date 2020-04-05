@@ -125,7 +125,6 @@ impl Runtime {
             // When first starting, we assign the least privileged label to the entry point node.
             &Label::public_trusted(),
             chan_reader,
-            chan_writer,
         )?;
 
         // We call `expect` here because this should never fail, since the channel was just created
@@ -778,7 +777,6 @@ impl Runtime {
         entrypoint: &str,
         label: &Label,
         reader: Handle,
-        writer: Handle,
     ) -> Result<(), OakStatus> {
         if self.is_terminating() {
             return Err(OakStatus::ErrTerminated);
@@ -798,7 +796,6 @@ impl Runtime {
         };
 
         let reader = self.channels.duplicate_reference(reader)?;
-        let writer = self.channels.duplicate_reference(writer)?;
 
         let instance = self
             .configuration
@@ -807,13 +804,7 @@ impl Runtime {
             .ok_or(OakStatus::ErrInvalidArgs)
             .map(|conf| {
                 // This only creates a node instance, but does not start it.
-                conf.create_node(
-                    module_name,
-                    runtime_proxy,
-                    entrypoint.to_owned(),
-                    reader,
-                    writer,
-                )
+                conf.create_node(module_name, runtime_proxy, entrypoint.to_owned(), reader)
             })?;
 
         self.node_start_instance(reference, instance, label, vec![reader])?;
