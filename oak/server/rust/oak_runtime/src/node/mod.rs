@@ -78,10 +78,8 @@ impl std::fmt::Display for ConfigurationError {
         match self {
             ConfigurationError::AddressParsingError(e) => {
                 write!(f, "Failed to parse an address: {}", e)
-            },
-            ConfigurationError::IncorrectPort => {
-                write!(f, "Incorrect port (must be > 1023)")
-            },
+            }
+            ConfigurationError::IncorrectPort => write!(f, "Incorrect port (must be > 1023)"),
             ConfigurationError::WasmiModuleInializationError(e) => {
                 write!(f, "Failed to initialize wasmi::Module: {}", e)
             }

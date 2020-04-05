@@ -127,12 +127,17 @@ impl GrpcServerNode {
                             error!("Message is emtpy");
                             OakStatus::ErrInternal
                         })
-                        .and_then(|m| if m.channels.len() == 1 {
-                            Ok(m.channels[0])
-                        } else {
-                            error!("gRPC pseudo-node should be specified with a single `writer` \
-                            handle, found {}", m.channels.len());
-                            Err(OakStatus::ErrInternal)
+                        .and_then(|m| {
+                            if m.channels.len() == 1 {
+                                Ok(m.channels[0])
+                            } else {
+                                error!(
+                                    "gRPC pseudo-node should be specified with a single `writer` \
+                            handle, found {}",
+                                    m.channels.len()
+                                );
+                                Err(OakStatus::ErrInternal)
+                            }
                         })
                 })
         } else {
@@ -235,7 +240,10 @@ impl GrpcServerNode {
 
         // Send an invocation message (with attached handles) to the Oak node.
         self.runtime
-            .channel_write(self.node_writer.expect("Node writer wasn't initialized"), invocation)
+            .channel_write(
+                self.node_writer.expect("Node writer wasn't initialized"),
+                invocation,
+            )
             .map_err(|error| {
                 error!("Couldn't write a gRPC invocation message: {:?}", error);
                 GrpcServerError::RequestProcessingError
@@ -298,9 +306,7 @@ impl super::Node for GrpcServerNode {
                     async move {
                         Ok::<_, hyper::Error>(hyper::service::service_fn(move |req| {
                             let request_server = connection_server.clone();
-                            async move {
-                                request_server.serve(req).await
-                            }
+                            async move { request_server.serve(req).await }
                         }))
                     }
                 });
