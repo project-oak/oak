@@ -14,7 +14,6 @@
 // limitations under the License.
 //
 
-use futures_executor::block_on;
 use log::{error, info, warn};
 use protobuf::{well_known_types::Any, Message};
 use std::{
@@ -312,7 +311,10 @@ impl super::Node for GrpcServerNode {
                 });
 
                 // Start the HTTP server.
-                let result = block_on(hyper::Server::bind(&server.address).serve(service));
+                let mut tokio_runtime =
+                    tokio::runtime::Runtime::new().expect("Couldn't create Tokio runtime");
+                let result =
+                    tokio_runtime.block_on(hyper::Server::bind(&server.address).serve(service));
                 info!(
                     "{} LOG: exiting gRPC server node thread {:?}",
                     pretty_name, result
