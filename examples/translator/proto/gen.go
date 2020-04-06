@@ -1,5 +1,4 @@
-//
-// Copyright 2019 The Project Oak Authors
+// Copyright 2020 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,24 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
-syntax = "proto3";
+package proto
 
-package oak.examples.translator;
-option go_package = "github.com/project-oak/oak/examples/translator/proto";
-
-message TranslateRequest {
-  string text = 1;
-  // ISO 639-1 codes
-  string from_lang = 2;
-  string to_lang = 3;
-}
-
-message TranslateResponse {
-  string translated_text = 1;
-}
-
-service Translator {
-  rpc Translate(TranslateRequest) returns (TranslateResponse);
-}
+//go:generate protoc -I=. --go_out=plugins=grpc,paths=source_relative:. translator.proto

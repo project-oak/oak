@@ -261,14 +261,35 @@ interacting with it as a gRPC service, using the endpoint (host:port) from the
 previous section (which would typically be published by the ISV providing the
 Oak Application).
 
-The client connects to the gRPC service, and sends (Node-specific) gRPC requests
-to it, over a channel that has end-to-end encryption into the Runtime instance:
+The client connects to the gRPC service, and sends (Application-specific) gRPC
+requests to it, over a channel that has end-to-end encryption into the Runtime
+instance:
 
 <!-- prettier-ignore-start -->
 [embedmd]:# (../examples/hello_world/client/hello_world.cc C++ /.*Connect to the/ /CreateTlsChannel.*/)
 ```C++
   // Connect to the Oak Application.
   auto stub = HelloWorld::NewStub(oak::ApplicationClient::CreateTlsChannel(address, ca_cert));
+```
+<!-- prettier-ignore-end -->
+
+Because the Oak Application is available as a gRPC service, clients written in
+any language that supports gRPC can use the service. For example in Go:
+
+<!-- prettier-ignore-start -->
+[embedmd]:# (../examples/translator/client/translator.go Go /.*Connect to the Oak/ /NewTranslatorClient.*/)
+```Go
+	// Connect to the Oak Application.
+	creds, err := credentials.NewClientTLSFromFile(*caCert, "")
+	if err != nil {
+		glog.Exitf("Failed to set up TLS client credentials from %q: %v", *caCert, err)
+	}
+	conn, err := grpc.Dial(*address, grpc.WithTransportCredentials(creds))
+	if err != nil {
+		glog.Exitf("Failed to dial Oak Application at %v: %v", *address, err)
+	}
+	defer conn.Close()
+	client := translator_pb.NewTranslatorClient(conn)
 ```
 <!-- prettier-ignore-end -->
 

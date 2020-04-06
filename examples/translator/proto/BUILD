@@ -14,9 +14,8 @@
 # limitations under the License.
 #
 
-load("@com_github_grpc_grpc//bazel:cc_grpc_library.bzl", "cc_grpc_library")
-load("@rules_cc//cc:defs.bzl", "cc_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
+load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -28,15 +27,9 @@ proto_library(
     srcs = ["translator.proto"],
 )
 
-cc_proto_library(
-    name = "translator_cc_proto",
-    deps = [":translator_proto"],
-)
-
-cc_grpc_library(
-    name = "translator_cc_grpc",
-    srcs = ["translator_proto"],
-    grpc_only = True,
-    well_known_protos = True,
-    deps = ["translator_cc_proto"],
+go_proto_library(
+    name = "translator_go_proto",
+    compilers = ["@io_bazel_rules_go//proto:go_grpc"],
+    importpath = "github.com/project-oak/oak/examples/translator/proto",
+    proto = ":translator_proto",
 )

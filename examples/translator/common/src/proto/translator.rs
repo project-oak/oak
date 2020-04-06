@@ -455,7 +455,8 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     \tR\x06toLang\"<\n\x11TranslateResponse\x12'\n\x0ftranslated_text\x18\
     \x01\x20\x01(\tR\x0etranslatedText2p\n\nTranslator\x12b\n\tTranslate\x12\
     ).oak.examples.translator.TranslateRequest\x1a*.oak.examples.translator.\
-    TranslateResponseb\x06proto3\
+    TranslateResponseB6Z4github.com/project-oak/oak/examples/translator/prot\
+    ob\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {
