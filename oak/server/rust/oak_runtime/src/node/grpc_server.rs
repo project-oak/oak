@@ -27,19 +27,25 @@ use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
 
 use crate::{pretty_name_for_thread, runtime::RuntimeProxy, Handle};
 
-/// Struct that represents a gRPC pseudo-node.
+/// Struct that represents a gRPC server pseudo-node.
 ///
-/// `initial_reader` is used to read a `node_writer` from once the gRPC pseudo-node has started.
-///
-/// For each gRPC request from a client, gRPC pseudo-node creates a pair of temporary channels (to
-/// write a request to and to read a response from) and passes corresponding handles to the
-/// `node_writer`.
+/// For each gRPC request from a client, gRPC server pseudo-node creates a pair of temporary
+/// channels (to write a request to and to read a response from) and passes corresponding handles to
+/// the [`GrpcServerNode::channel_writer`].
 pub struct GrpcServerNode {
+    /// Pseudo-node name that corresponds to an entry from the
+    /// [`oak_runtime::proto::ApplicationConfiguration`].
     config_name: String,
+    /// Reference to a Runtime that corresponds to a node that created a gRPC server pseudo-node.
     runtime: RuntimeProxy,
+    /// Server address to listen client requests on.
     address: SocketAddr,
+    /// Channel handle used for reading a [`GrpcServerNode::channel_writer`] once the gRPC server
+    /// pseudo-node has started.
     initial_reader: Handle,
-    node_writer: Option<Handle>,
+    /// Channel handle used for writing invocations.
+    channel_writer: Option<Handle>,
+    /// Thread handle that corresponds to a thread running a gRPC server pseudo-node.
     thread_handle: Option<JoinHandle<()>>,
 }
 
@@ -68,7 +74,7 @@ impl Clone for GrpcServerNode {
             runtime: self.runtime.clone(),
             address: self.address.clone(),
             initial_reader: self.initial_reader,
-            node_writer: self.node_writer,
+            channel_writer: self.channel_writer,
             thread_handle: None,
         }
     }
@@ -83,8 +89,9 @@ impl Display for GrpcServerNode {
 impl GrpcServerNode {
     /// Creates a new [`GrpcServerNode`] instance, but does not start it.
     ///
-    /// `node_writer` and `thread_handle` are initialized with `None`, because they will receive
-    /// their values after the gRPC pseudo-node has started and a separate thread was initialized.
+    /// `channel_writer` and `thread_handle` are initialized with `None`, because they will receive
+    /// their values after the gRPC server pseudo-node has started and a separate thread was
+    /// initialized.
     pub fn new(
         config_name: &str,
         runtime: RuntimeProxy,
@@ -96,15 +103,15 @@ impl GrpcServerNode {
             runtime,
             address: address,
             initial_reader,
-            node_writer: None,
+            channel_writer: None,
             thread_handle: None,
         }
     }
 
-    /// Reads a `node_writer` handle from a channel specified by the `initial_reader`.
+    /// Reads a [`Handle`] from a channel specified by [`GrpcServerNode::initial_reader`].
     /// Returns an error if couldn't read from the channel or if received a wrong number of handles
     /// (not equal to 1).
-    fn init_node_writer(&self) -> Result<Handle, OakStatus> {
+    fn init_channel_writer(&self) -> Result<Handle, OakStatus> {
         let read_status = self
             .runtime
             .wait_on_channels(&[Some(self.initial_reader)])
@@ -123,7 +130,7 @@ impl GrpcServerNode {
                 .and_then(|message| {
                     message
                         .ok_or_else(|| {
-                            error!("Message is emtpy");
+                            error!("Empty message");
                             OakStatus::ErrInternal
                         })
                         .and_then(|m| {
@@ -131,8 +138,7 @@ impl GrpcServerNode {
                                 Ok(m.channels[0])
                             } else {
                                 error!(
-                                    "gRPC pseudo-node should be specified with a single `writer` \
-                            handle, found {}",
+                                    "gRPC server pseudo-node should receive a single `writer` handle, found {}",
                                     m.channels.len()
                                 );
                                 Err(OakStatus::ErrInternal)
@@ -151,10 +157,10 @@ impl GrpcServerNode {
         http_request: hyper::Request<hyper::Body>,
     ) -> Result<hyper::Response<hyper::Body>, hyper::Error> {
         // Parse HTTP header.
-        let grpc_method = http_request.uri().path().to_string();
+        let http_request_path = http_request.uri().path().to_string();
 
         // Aggregate the data buffers from an HTTP body asynchronously.
-        let http_body = hyper::body::aggregate(http_request)
+        let http_request_body = hyper::body::aggregate(http_request)
             .await
             .map_err(|error| {
                 warn!("Couldn't aggregate request body: {}", error);
@@ -162,7 +168,7 @@ impl GrpcServerNode {
             })?;
 
         // Create a gRPC request from an HTTP body.
-        Self::decode_grpc_request(&grpc_method, &http_body)
+        Self::decode_grpc_request(&http_request_path, &http_request_body)
             // Process a gRPC request and send it into the Runtime.
             .and_then(|request| self.process_request(request))
             // Read a gRPC response from the Runtime.
@@ -173,19 +179,20 @@ impl GrpcServerNode {
             .or_else(|error| Ok(Self::http_response(error.into(), vec![])))
     }
 
-    /// Creates a gRPC request from a `grpc_method` and an `http_body`.
+    /// Creates a [`GrpcRequest`] instance from a `http_request_path` and an `http_request_body`.
     fn decode_grpc_request(
-        grpc_method: &str,
-        http_body: &dyn hyper::body::Buf,
+        http_request_path: &str,
+        http_request_body: &dyn hyper::body::Buf,
     ) -> Result<GrpcRequest, GrpcServerError> {
-        // Parse HTTP body as a `protobuf::well_known_types::Any` message.
-        let grpc_body = protobuf::parse_from_bytes::<Any>(http_body.bytes()).map_err(|error| {
-            error!("Failed to parse Protobuf message {}", error);
-            GrpcServerError::ProtobufParsingError
-        })?;
+        // Parse an HTTP request body as a [`protobuf::well_known_types::Any`] message.
+        let grpc_request_body = protobuf::parse_from_bytes::<Any>(http_request_body.bytes())
+            .map_err(|error| {
+                error!("Failed to parse Protobuf message {}", error);
+                GrpcServerError::ProtobufParsingError
+            })?;
 
         // Create a gRPC request.
-        encap_request(&grpc_body, None, grpc_method).ok_or_else(|| {
+        encap_request(&grpc_request_body, None, http_request_path).ok_or_else(|| {
             error!("Failed to create a GrpcRequest");
             GrpcServerError::ProtobufParsingError
         })
@@ -199,8 +206,8 @@ impl GrpcServerNode {
     }
 
     /// Processes a gRPC request, forwards it to a temporary channel and sends handles for this
-    /// channel to the `self.writer`.
-    /// Returns a channel handle for reading a gRPC response.
+    /// channel to the [`GrpcServerNode::channel_writer`].
+    /// Returns a [`Handle`] for reading a gRPC response from.
     fn process_request(&self, request: GrpcRequest) -> Result<Handle, GrpcServerError> {
         // Create a pair of temporary channels to pass the gRPC request and to receive the response.
         let (request_writer, request_reader) =
@@ -209,6 +216,9 @@ impl GrpcServerNode {
             self.runtime.channel_create(&Label::public_trusted());
 
         // Create an invocation message and attach the method-invocation specific channels to it.
+        //
+        // This message should be in sync with the [`oak::grpc::Invocation`] from the Oak SDK:
+        // the order of the `request_reader` and `response_writer` must be consistent.
         let invocation = crate::Message {
             data: vec![],
             channels: vec![request_reader, response_writer],
@@ -231,7 +241,7 @@ impl GrpcServerNode {
             .channel_write(request_writer, message)
             .map_err(|error| {
                 error!(
-                    "Couldn't write a message to the terporary channel: {:?}",
+                    "Couldn't write a message to the temporary channel: {:?}",
                     error
                 );
                 GrpcServerError::RequestProcessingError
@@ -240,7 +250,7 @@ impl GrpcServerNode {
         // Send an invocation message (with attached handles) to the Oak node.
         self.runtime
             .channel_write(
-                self.node_writer.expect("Node writer wasn't initialized"),
+                self.channel_writer.expect("Node writer wasn't initialized"),
                 invocation,
             )
             .map_err(|error| {
@@ -266,7 +276,7 @@ impl GrpcServerNode {
             self.runtime
                 .channel_read(response_reader)
                 .map_err(|error| {
-                    error!("Couldn't read temporary gRPC channel: {:?}", error);
+                    error!("Couldn't read from a temporary gRPC channel: {:?}", error);
                     GrpcServerError::ResponseProcessingError
                 })
                 .map(|message| {
@@ -274,7 +284,10 @@ impl GrpcServerNode {
                     message.map_or(vec![], |m| m.data)
                 })
         } else {
-            error!("Couldn't read channel: {:?}", read_status[0]);
+            error!(
+                "Couldn't read from a temporary gRPC channel: {:?}",
+                read_status[0]
+            );
             Err(GrpcServerError::ResponseProcessingError)
         }
     }
@@ -291,7 +304,7 @@ impl super::Node for GrpcServerNode {
 
                 // Receive a `writer` handle used to pass handles for temporary channels.
                 server
-                    .init_node_writer()
+                    .init_channel_writer()
                     .expect("Couldn't initialialize node writer");
 
                 // Initialize a function that creates a separate instance on the `server` for each
