@@ -53,6 +53,8 @@ const CHANNEL_CREATE: usize = 3;
 const CHANNEL_WRITE: usize = 4;
 const CHANNEL_READ: usize = 5;
 const WAIT_ON_CHANNELS: usize = 6;
+// TODO(#817): remove this
+const WASI_STUB: usize = 7;
 
 type AbiHandle = u64;
 type AbiPointer = u32;
@@ -663,6 +665,8 @@ impl wasmi::Externals for WasmInterface {
                 map_host_errors(self.wait_on_channels(status_buff, handles_count))
             }
 
+            WASI_STUB => panic!("Attempt to invoke unimplemented WASI function"),
+
             _ => panic!("Unimplemented function at {}", index),
         }
     }
@@ -748,6 +752,58 @@ impl wasmi::ModuleImportResolver for WasmInterface {
     }
 }
 
+// Stub implementation of WASI exported functions, to allow partially-ported
+// applications to be run.
+// TODO(#817): remove WASI stubs
+struct WasiStub;
+
+impl wasmi::ModuleImportResolver for WasiStub {
+    fn resolve_func(
+        &self,
+        field_name: &str,
+        signature: &wasmi::Signature,
+    ) -> Result<wasmi::FuncRef, wasmi::Error> {
+        let (index, sig) = match field_name {
+            "proc_exit" => (WASI_STUB, wasmi::Signature::new(&[ABI_U32][..], None)),
+            "fd_write" => (
+                WASI_STUB,
+                wasmi::Signature::new(&[ABI_U32, ABI_U32, ABI_U32, ABI_U32][..], Some(ABI_U32)),
+            ),
+            "fd_seek" => (
+                WASI_STUB,
+                wasmi::Signature::new(&[ABI_U32, ABI_U64, ABI_U32, ABI_U32][..], Some(ABI_U32)),
+            ),
+            "fd_close" => (
+                WASI_STUB,
+                wasmi::Signature::new(&[ABI_U32][..], Some(ABI_U32)),
+            ),
+            "environ_sizes_get" => (
+                WASI_STUB,
+                wasmi::Signature::new(&[ABI_U32, ABI_U32][..], Some(ABI_U32)),
+            ),
+            "environ_get" => (
+                WASI_STUB,
+                wasmi::Signature::new(&[ABI_U32, ABI_U32][..], Some(ABI_U32)),
+            ),
+            _ => {
+                return Err(wasmi::Error::Instantiation(format!(
+                    "Export {} not found",
+                    field_name
+                )))
+            }
+        };
+
+        if &sig != signature {
+            return Err(wasmi::Error::Instantiation(format!(
+                "Export `{}` doesnt match expected type {:?}",
+                field_name, signature
+            )));
+        }
+
+        Ok(wasmi::FuncInstance::alloc_host(sig, index))
+    }
+}
+
 pub struct WasmNode {
     config_name: String,
     runtime: RuntimeProxy,
@@ -799,9 +855,12 @@ impl super::Node for WasmNode {
         {
             let (abi, _) =
                 WasmInterface::new(self.config_name.clone(), self.runtime.clone(), self.reader);
+            let wasi_stub = WasiStub;
             let instance = wasmi::ModuleInstance::new(
                 &self.module,
-                &wasmi::ImportsBuilder::new().with_resolver("oak", &abi),
+                &wasmi::ImportsBuilder::new()
+                    .with_resolver("oak", &abi)
+                    .with_resolver("wasi_snapshot_preview1", &wasi_stub),
             )
             .expect("failed to instantiate wasm module")
             .assert_no_start();
@@ -831,12 +890,15 @@ impl super::Node for WasmNode {
             .name(self.to_string())
             .spawn(move || {
                 let pretty_name = pretty_name_for_thread(&thread::current());
+                let wasi_stub = WasiStub;
                 let (mut abi, initial_handle) =
                     WasmInterface::new(pretty_name, runtime.clone(), reader);
 
                 let instance = wasmi::ModuleInstance::new(
                     &module,
-                    &wasmi::ImportsBuilder::new().with_resolver("oak", &abi),
+                    &wasmi::ImportsBuilder::new()
+                        .with_resolver("oak", &abi)
+                        .with_resolver("wasi_snapshot_preview1", &wasi_stub),
                 )
                 .expect("failed to instantiate wasm module")
                 .assert_no_start();
