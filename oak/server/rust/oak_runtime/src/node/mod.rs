@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+use std::net::{AddrParseError, SocketAddr};
 use std::string::String;
 use std::sync::Arc;
 
@@ -22,6 +23,7 @@ use oak_abi::OakStatus;
 use crate::runtime::RuntimeProxy;
 use crate::Handle;
 
+mod grpc_server;
 mod logger;
 mod wasm;
 
@@ -52,6 +54,9 @@ pub enum Configuration {
     /// The configuration for a logging pseudo node.
     LogNode,
 
+    /// The configuration for a gRPC server pseudo node that contains an `address` to listen on.
+    GrpcServerNode { address: SocketAddr },
+
     /// The configuration for a Wasm node.
     // It would be better to store a list of exported methods and copyable Wasm interpreter
     // instance, but wasmi doesn't allow this. We make do with having a copyable
@@ -61,13 +66,26 @@ pub enum Configuration {
 }
 
 /// A enumeration for errors occuring when building `Configuration` from protobuf types.
+#[derive(Debug)]
 pub enum ConfigurationError {
+    AddressParsingError(AddrParseError),
+    IncorrectPort,
     WasmiModuleInializationError(wasmi::Error),
+}
+
+impl From<AddrParseError> for ConfigurationError {
+    fn from(error: AddrParseError) -> Self {
+        ConfigurationError::AddressParsingError(error)
+    }
 }
 
 impl std::fmt::Display for ConfigurationError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         match self {
+            ConfigurationError::AddressParsingError(e) => {
+                write!(f, "Failed to parse an address: {}", e)
+            }
+            ConfigurationError::IncorrectPort => write!(f, "Incorrect port (must be > 1023)"),
             ConfigurationError::WasmiModuleInializationError(e) => {
                 write!(f, "Failed to initialize wasmi::Module: {}", e)
             }
@@ -83,6 +101,15 @@ pub fn load_wasm(wasm_bytes: &[u8]) -> Result<Configuration, ConfigurationError>
     Ok(Configuration::WasmNode {
         module: Arc::new(module),
     })
+}
+
+/// Checks if port is greater than 1023.
+pub fn check_port(address: &SocketAddr) -> Result<(), ConfigurationError> {
+    if address.port() > 1023 {
+        Ok(())
+    } else {
+        Err(ConfigurationError::IncorrectPort)
+    }
 }
 
 impl Configuration {
@@ -101,6 +128,9 @@ impl Configuration {
             Configuration::LogNode => {
                 Box::new(logger::LogNode::new(config_name, runtime, initial_reader))
             }
+            Configuration::GrpcServerNode { address } => Box::new(
+                grpc_server::GrpcServerNode::new(config_name, runtime, *address, initial_reader),
+            ),
             Configuration::WasmNode { module } => Box::new(wasm::WasmNode::new(
                 config_name,
                 runtime,

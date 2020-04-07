@@ -15,11 +15,12 @@
 //
 
 use crate::proto::{
-    node_configuration::ConfigType, ApplicationConfiguration, LogConfiguration, NodeConfiguration,
-    WebAssemblyConfiguration,
+    node_configuration::ConfigType, ApplicationConfiguration, GrpcServerConfiguration,
+    LogConfiguration, NodeConfiguration, WebAssemblyConfiguration,
 };
 use itertools::Itertools;
 use std::collections::HashMap;
+use std::net::AddrParseError;
 use std::sync::Arc;
 
 use log::error;
@@ -27,7 +28,7 @@ use log::error;
 use oak_abi::OakStatus;
 
 use crate::node;
-use crate::node::load_wasm;
+use crate::node::{check_port, load_wasm};
 use crate::runtime;
 use crate::runtime::{Handle, Runtime};
 
@@ -90,6 +91,15 @@ pub fn from_protobuf(
                     return Err(OakStatus::ErrInvalidArgs);
                 }
                 Some(ConfigType::LogConfig(_)) => node::Configuration::LogNode,
+                Some(ConfigType::GrpcServerConfig(GrpcServerConfiguration { address })) => address
+                    .parse()
+                    .map_err(|error: AddrParseError| error.into())
+                    .and_then(|address| check_port(&address).map(|_| address))
+                    .map(|address| node::Configuration::GrpcServerNode { address })
+                    .map_err(|error| {
+                        error!("Incorrect gRPC server address: {:?}", error);
+                        OakStatus::ErrInvalidArgs
+                    })?,
                 Some(ConfigType::WasmConfig(WebAssemblyConfiguration { module_bytes, .. })) => {
                     load_wasm(&module_bytes).map_err(|e| {
                         error!("Error loading Wasm module: {}", e);
