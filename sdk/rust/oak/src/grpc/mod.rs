@@ -366,7 +366,7 @@ pub fn init(config: &str) -> std::result::Result<crate::ReadHandle, OakStatus> {
     // Create a channel and pass the read half to a new gRPC pseudo-node.
     let (write_handle, read_handle) = crate::channel_create().expect("Couldn't create a channel");
     crate::node_create(config, "oak_main", read_handle)?;
-    crate::channel_close(read_handle.handle).expect("Couldn't close the channel");
+    crate::channel_close(read_handle.handle).expect("Couldn't close a channel");
 
     // Create a separate channel for receiving invocations and pass it to a gRPC pseudo-node.
     let (invocation_write_handle, invocation_read_handle) =

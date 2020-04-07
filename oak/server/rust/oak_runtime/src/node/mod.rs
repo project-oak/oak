@@ -73,6 +73,12 @@ pub enum ConfigurationError {
     WasmiModuleInializationError(wasmi::Error),
 }
 
+impl From<AddrParseError> for ConfigurationError {
+    fn from(error: AddrParseError) -> Self {
+        ConfigurationError::AddressParsingError(error)
+    }
+}
+
 impl std::fmt::Display for ConfigurationError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         match self {
@@ -95,13 +101,6 @@ pub fn load_wasm(wasm_bytes: &[u8]) -> Result<Configuration, ConfigurationError>
     Ok(Configuration::WasmNode {
         module: Arc::new(module),
     })
-}
-
-/// Parses an `address` from `String` to `SocketAddr`.
-pub fn parse_address(address: &str) -> Result<SocketAddr, ConfigurationError> {
-    address
-        .parse()
-        .map_err(|error| ConfigurationError::AddressParsingError(error))
 }
 
 /// Checks if port is greater than 1023.
