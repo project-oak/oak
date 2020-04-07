@@ -270,6 +270,7 @@ impl<'a> ::std::default::Default for &'a Tag {
 pub enum Tag_oneof_tag {
     grpc_tag(GrpcTag),
     web_assembly_module_tag(WebAssemblyModuleTag),
+    tls_endpoint_tag(TlsEndpointTag),
 }
 
 impl Tag {
@@ -374,6 +375,55 @@ impl Tag {
             WebAssemblyModuleTag::new()
         }
     }
+
+    // .oak.policy.TlsEndpointTag tls_endpoint_tag = 3;
+
+
+    pub fn get_tls_endpoint_tag(&self) -> &TlsEndpointTag {
+        match self.tag {
+            ::std::option::Option::Some(Tag_oneof_tag::tls_endpoint_tag(ref v)) => v,
+            _ => TlsEndpointTag::default_instance(),
+        }
+    }
+    pub fn clear_tls_endpoint_tag(&mut self) {
+        self.tag = ::std::option::Option::None;
+    }
+
+    pub fn has_tls_endpoint_tag(&self) -> bool {
+        match self.tag {
+            ::std::option::Option::Some(Tag_oneof_tag::tls_endpoint_tag(..)) => true,
+            _ => false,
+        }
+    }
+
+    // Param is passed by value, moved
+    pub fn set_tls_endpoint_tag(&mut self, v: TlsEndpointTag) {
+        self.tag = ::std::option::Option::Some(Tag_oneof_tag::tls_endpoint_tag(v))
+    }
+
+    // Mutable pointer to the field.
+    pub fn mut_tls_endpoint_tag(&mut self) -> &mut TlsEndpointTag {
+        if let ::std::option::Option::Some(Tag_oneof_tag::tls_endpoint_tag(_)) = self.tag {
+        } else {
+            self.tag = ::std::option::Option::Some(Tag_oneof_tag::tls_endpoint_tag(TlsEndpointTag::new()));
+        }
+        match self.tag {
+            ::std::option::Option::Some(Tag_oneof_tag::tls_endpoint_tag(ref mut v)) => v,
+            _ => panic!(),
+        }
+    }
+
+    // Take field
+    pub fn take_tls_endpoint_tag(&mut self) -> TlsEndpointTag {
+        if self.has_tls_endpoint_tag() {
+            match self.tag.take() {
+                ::std::option::Option::Some(Tag_oneof_tag::tls_endpoint_tag(v)) => v,
+                _ => panic!(),
+            }
+        } else {
+            TlsEndpointTag::new()
+        }
+    }
 }
 
 impl ::protobuf::Message for Tag {
@@ -384,6 +434,11 @@ impl ::protobuf::Message for Tag {
             }
         }
         if let Some(Tag_oneof_tag::web_assembly_module_tag(ref v)) = self.tag {
+            if !v.is_initialized() {
+                return false;
+            }
+        }
+        if let Some(Tag_oneof_tag::tls_endpoint_tag(ref v)) = self.tag {
             if !v.is_initialized() {
                 return false;
             }
@@ -407,6 +462,12 @@ impl ::protobuf::Message for Tag {
                     }
                     self.tag = ::std::option::Option::Some(Tag_oneof_tag::web_assembly_module_tag(is.read_message()?));
                 },
+                3 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    self.tag = ::std::option::Option::Some(Tag_oneof_tag::tls_endpoint_tag(is.read_message()?));
+                },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
                 },
@@ -429,6 +490,10 @@ impl ::protobuf::Message for Tag {
                     let len = v.compute_size();
                     my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
                 },
+                &Tag_oneof_tag::tls_endpoint_tag(ref v) => {
+                    let len = v.compute_size();
+                    my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+                },
             };
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
@@ -446,6 +511,11 @@ impl ::protobuf::Message for Tag {
                 },
                 &Tag_oneof_tag::web_assembly_module_tag(ref v) => {
                     os.write_tag(2, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+                    os.write_raw_varint32(v.get_cached_size())?;
+                    v.write_to_with_cached_sizes(os)?;
+                },
+                &Tag_oneof_tag::tls_endpoint_tag(ref v) => {
+                    os.write_tag(3, ::protobuf::wire_format::WireTypeLengthDelimited)?;
                     os.write_raw_varint32(v.get_cached_size())?;
                     v.write_to_with_cached_sizes(os)?;
                 },
@@ -503,6 +573,11 @@ impl ::protobuf::Message for Tag {
                     Tag::has_web_assembly_module_tag,
                     Tag::get_web_assembly_module_tag,
                 ));
+                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, TlsEndpointTag>(
+                    "tls_endpoint_tag",
+                    Tag::has_tls_endpoint_tag,
+                    Tag::get_tls_endpoint_tag,
+                ));
                 ::protobuf::reflect::MessageDescriptor::new::<Tag>(
                     "Tag",
                     fields,
@@ -525,6 +600,7 @@ impl ::protobuf::Message for Tag {
 
 impl ::protobuf::Clear for Tag {
     fn clear(&mut self) {
+        self.tag = ::std::option::Option::None;
         self.tag = ::std::option::Option::None;
         self.tag = ::std::option::Option::None;
         self.unknown_fields.clear();
@@ -881,17 +957,189 @@ impl ::protobuf::reflect::ProtobufValue for WebAssemblyModuleTag {
     }
 }
 
+#[derive(PartialEq,Clone,Default)]
+pub struct TlsEndpointTag {
+    // message fields
+    pub certificate_subject_alternative_name: ::std::string::String,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a TlsEndpointTag {
+    fn default() -> &'a TlsEndpointTag {
+        <TlsEndpointTag as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl TlsEndpointTag {
+    pub fn new() -> TlsEndpointTag {
+        ::std::default::Default::default()
+    }
+
+    // string certificate_subject_alternative_name = 1;
+
+
+    pub fn get_certificate_subject_alternative_name(&self) -> &str {
+        &self.certificate_subject_alternative_name
+    }
+    pub fn clear_certificate_subject_alternative_name(&mut self) {
+        self.certificate_subject_alternative_name.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_certificate_subject_alternative_name(&mut self, v: ::std::string::String) {
+        self.certificate_subject_alternative_name = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_certificate_subject_alternative_name(&mut self) -> &mut ::std::string::String {
+        &mut self.certificate_subject_alternative_name
+    }
+
+    // Take field
+    pub fn take_certificate_subject_alternative_name(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.certificate_subject_alternative_name, ::std::string::String::new())
+    }
+}
+
+impl ::protobuf::Message for TlsEndpointTag {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.certificate_subject_alternative_name)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if !self.certificate_subject_alternative_name.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.certificate_subject_alternative_name);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if !self.certificate_subject_alternative_name.is_empty() {
+            os.write_string(1, &self.certificate_subject_alternative_name)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> TlsEndpointTag {
+        TlsEndpointTag::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
+        };
+        unsafe {
+            descriptor.get(|| {
+                let mut fields = ::std::vec::Vec::new();
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                    "certificate_subject_alternative_name",
+                    |m: &TlsEndpointTag| { &m.certificate_subject_alternative_name },
+                    |m: &mut TlsEndpointTag| { &mut m.certificate_subject_alternative_name },
+                ));
+                ::protobuf::reflect::MessageDescriptor::new::<TlsEndpointTag>(
+                    "TlsEndpointTag",
+                    fields,
+                    file_descriptor_proto()
+                )
+            })
+        }
+    }
+
+    fn default_instance() -> &'static TlsEndpointTag {
+        static mut instance: ::protobuf::lazy::Lazy<TlsEndpointTag> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const TlsEndpointTag,
+        };
+        unsafe {
+            instance.get(TlsEndpointTag::new)
+        }
+    }
+}
+
+impl ::protobuf::Clear for TlsEndpointTag {
+    fn clear(&mut self) {
+        self.certificate_subject_alternative_name.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for TlsEndpointTag {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for TlsEndpointTag {
+    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
+        ::protobuf::reflect::ProtobufValueRef::Message(self)
+    }
+}
+
 static file_descriptor_proto_data: &'static [u8] = b"\
     \n\x16oak/proto/policy.proto\x12\noak.policy\"s\n\x05Label\x122\n\x0csec\
     recy_tags\x18\x01\x20\x03(\x0b2\x0f.oak.policy.TagR\x0bsecrecyTags\x126\
     \n\x0eintegrity_tags\x18\x02\x20\x03(\x0b2\x0f.oak.policy.TagR\rintegrit\
-    yTags\"\x99\x01\n\x03Tag\x120\n\x08grpc_tag\x18\x01\x20\x01(\x0b2\x13.oa\
+    yTags\"\xe1\x01\n\x03Tag\x120\n\x08grpc_tag\x18\x01\x20\x01(\x0b2\x13.oa\
     k.policy.GrpcTagH\0R\x07grpcTag\x12Y\n\x17web_assembly_module_tag\x18\
     \x02\x20\x01(\x0b2\x20.oak.policy.WebAssemblyModuleTagH\0R\x14webAssembl\
-    yModuleTagB\x05\n\x03tag\"P\n\x07GrpcTag\x12E\n\x1fauthorization_bearer_\
-    token_hmac\x18\x01\x20\x01(\x0cR\x1cauthorizationBearerTokenHmac\"E\n\
-    \x14WebAssemblyModuleTag\x12-\n\x12module_attestation\x18\x01\x20\x01(\
-    \x0cR\x11moduleAttestationb\x06proto3\
+    yModuleTag\x12F\n\x10tls_endpoint_tag\x18\x03\x20\x01(\x0b2\x1a.oak.poli\
+    cy.TlsEndpointTagH\0R\x0etlsEndpointTagB\x05\n\x03tag\"P\n\x07GrpcTag\
+    \x12E\n\x1fauthorization_bearer_token_hmac\x18\x01\x20\x01(\x0cR\x1cauth\
+    orizationBearerTokenHmac\"E\n\x14WebAssemblyModuleTag\x12-\n\x12module_a\
+    ttestation\x18\x01\x20\x01(\x0cR\x11moduleAttestation\"a\n\x0eTlsEndpoin\
+    tTag\x12O\n$certificate_subject_alternative_name\x18\x01\x20\x01(\tR!cer\
+    tificateSubjectAlternativeNameb\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {

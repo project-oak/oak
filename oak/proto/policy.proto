@@ -38,6 +38,7 @@ message Tag {
   oneof tag {
     GrpcTag grpc_tag = 1;
     WebAssemblyModuleTag web_assembly_module_tag = 2;
+    TlsEndpointTag tls_endpoint_tag = 3;
   }
 }
 
@@ -59,4 +60,22 @@ message WebAssemblyModuleTag {
   // TODO(#630): Replace this with identity assertions for multiple module
   // versions, based on a public verifiable log.
   bytes module_attestation = 1;
+}
+
+// Policies related to HTTPS communication.
+//
+// Applies to both the HTTP and gRPC client pseudo-nodes.
+message TlsEndpointTag {
+  // The Subject Alternative Name (SAN) of a certificate that a remote endpoint must be able to
+  // present in order to be allowed to receive data with this secrecy tag.
+  //
+  // In general a certificate may have multiple SANs; an HTTP or gRPC client pseudo-node connected
+  // to a remote endpoint with multiple SANs is able to declassify data with a TlsEndpointTag
+  // referring to any of these SANs.
+  //
+  // The certificate is validated by the Oak Runtime using the set of Certificate Authorities (CA)
+  // that are available to it.
+  //
+  // See https://tools.ietf.org/html/rfc5280#section-4.2.1.6
+  string certificate_subject_alternative_name = 1;
 }
