@@ -22,18 +22,18 @@
 //! cargo run --package=oak_loader -- --application=<APP_CONFIG_PATH>
 //! ```
 
-use log::{error, info};
+use log::info;
 use oak_runtime::{configure_and_run, proto::ApplicationConfiguration};
 use prost::Message;
-use std::{fs::File, io::Read, thread::sleep, time::Duration};
+use std::{fs::File, io::Read, thread::park};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Clone)]
 #[structopt(about = "Oak Loader")]
 pub struct Opt {
-    #[structopt(short, long, help = "Application configuration file")]
+    #[structopt(long, help = "Application configuration file")]
     application: String,
-    // TODO(#806): Make agruments non-optional once TLS support is enabled.
+    // TODO(#806): Make arguments non-optional once TLS support is enabled.
     #[structopt(long, help = "Path to the PEM-encoded CA root certificate")]
     ca_cert: Option<String>,
     #[structopt(long, help = "Path to the private key")]
@@ -42,39 +42,30 @@ pub struct Opt {
     cert_chain: Option<String>,
 }
 
-fn read_file(filename: &str) -> Result<Vec<u8>, std::io::Error> {
-    let mut file = File::open(filename).map_err(|error| {
-        error!("Couldn't open file \"{}\": {:?}", filename, error);
-        error
-    })?;
+fn read_file(filename: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    let mut file = File::open(filename)
+        .map_err(|error| format!("Failed to open file <{}>: {:?}", filename, error))?;
     let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer).map_err(|error| {
-        error!("Couldn't read file \"{}\": {:?}", filename, error);
-        error
-    })?;
+    file.read_to_end(&mut buffer)
+        .map_err(|error| format!("Failed to read file <{}>: {:?}", filename, error))?;
     Ok(buffer)
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
+    info!("Loading Oak Runtime");
 
     let opt = Opt::from_args();
     let app_config = {
         let buffer = read_file(&opt.application)?;
-        ApplicationConfiguration::decode(&buffer[..]).map_err(|error| {
-            error!("Couldn't decode application configuration: {:?}", error);
-            error
-        })?
+        ApplicationConfiguration::decode(&buffer[..])
+            .map_err(|error| format!("Failed to decode application configuration: {:?}", error))?
     };
 
-    // TODO(#806): Use TLS credentials for Rust Oak Runtime.
-    info!("Loading Oak Runtime");
-    configure_and_run(app_config).map_err(|error| {
-        let error_msg = format!("Runtime error: {:?}", error);
-        error!("{}", error_msg);
-        error_msg
-    })?;
-    sleep(Duration::from_secs(86400)); // 24 hours.
+    // Spawns a new thread corresponding to an initial Wasm Oak node.
+    configure_and_run(app_config).map_err(|error| format!("Runtime error: {:?}", error))?;
+    // Park current thread.
+    park();
 
     Ok(())
 }
