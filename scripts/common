@@ -6,7 +6,7 @@ set -o xtrace
 
 # Set the default Rust log level.
 # https://docs.rs/env_logger
-RUST_LOG='info'
+export RUST_LOG='info'
 
 # See https://pantheon.corp.google.com/gcr/images/oak-ci/GLOBAL/oak
 readonly DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak'
