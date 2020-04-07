@@ -51,7 +51,7 @@ pub struct GrpcServerNode {
 
 #[derive(Debug)]
 enum GrpcServerError {
-    ProtobufParsingError,
+    BadProtobufMessage,
     RequestProcessingError,
     ResponseProcessingError,
 }
@@ -59,7 +59,7 @@ enum GrpcServerError {
 impl Into<http::StatusCode> for GrpcServerError {
     fn into(self) -> http::StatusCode {
         match self {
-            Self::ProtobufParsingError => http::StatusCode::BAD_REQUEST,
+            Self::BadProtobufMessage => http::StatusCode::BAD_REQUEST,
             Self::RequestProcessingError => http::StatusCode::INTERNAL_SERVER_ERROR,
             Self::ResponseProcessingError => http::StatusCode::INTERNAL_SERVER_ERROR,
         }
@@ -72,7 +72,7 @@ impl Clone for GrpcServerNode {
         Self {
             config_name: self.config_name.to_string(),
             runtime: self.runtime.clone(),
-            address: self.address.clone(),
+            address: self.address,
             initial_reader: self.initial_reader,
             channel_writer: self.channel_writer,
             thread_handle: None,
@@ -101,7 +101,7 @@ impl GrpcServerNode {
         Self {
             config_name: config_name.to_string(),
             runtime,
-            address: address,
+            address,
             initial_reader,
             channel_writer: None,
             thread_handle: None,
@@ -188,13 +188,13 @@ impl GrpcServerNode {
         let grpc_request_body = protobuf::parse_from_bytes::<Any>(http_request_body.bytes())
             .map_err(|error| {
                 error!("Failed to parse Protobuf message {}", error);
-                GrpcServerError::ProtobufParsingError
+                GrpcServerError::BadProtobufMessage
             })?;
 
         // Create a gRPC request.
         encap_request(&grpc_request_body, None, http_request_path).ok_or_else(|| {
             error!("Failed to create a GrpcRequest");
-            GrpcServerError::ProtobufParsingError
+            GrpcServerError::BadProtobufMessage
         })
     }
 
