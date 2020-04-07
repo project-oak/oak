@@ -23,7 +23,6 @@
 <span id="23">23</span>
 <span id="24">24</span>
 <span id="25">25</span>
-<span id="26">26</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -41,15 +40,14 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">prelude</span>::<span class="ident">v1</span>::<span class="kw-2">*</span>;
-
-<span class="kw">pub</span> <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">channel</span>::<span class="ident">ChannelEither</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">Handle</span>;
 
 <span class="doccomment">/// Encapsulates a message consisting of opaque data bytes and a vector of channels.</span>
 <span class="doccomment">/// The data bytes should not contain any pointers or handles.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Message</span> {
     <span class="kw">pub</span> <span class="ident">data</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span> <span class="ident">channels</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ChannelEither</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">channels</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Handle</span><span class="op">&gt;</span>,
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "oak_runtime";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>

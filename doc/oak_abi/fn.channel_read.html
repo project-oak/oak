@@ -6,10 +6,10 @@ channel handles is indicated by <code>actual_handle_count</code>.</p>
 <p>If the provided spaces for data (<code>buf</code> plus <code>size</code>) or handles
 (<code>handle_buf</code> plus 8 x <code>handle_count</code>) are not large enough for the read
 operation, then no data will be returned and either
-<a href="../oak_abi/proto/enum.OakStatus.html#ErrBufferTooSmall.v"><code>ErrBufferTooSmall</code></a> or <a href="../oak_abi/proto/enum.OakStatus.html#ErrHandleSpaceTooSmall.v"><code>ErrHandleSpaceTooSmall</code></a> will be
+<a href="../oak_abi/enum.OakStatus.html#ErrBufferTooSmall.v"><code>ErrBufferTooSmall</code></a> or <a href="../oak_abi/enum.OakStatus.html#ErrHandleSpaceTooSmall.v"><code>ErrHandleSpaceTooSmall</code></a> will be
 returned.  In either case, the required sizes will be returned in the
 spaces provided by <code>actual_size</code> and <code>actual_handle_count</code>.</p>
-<p>Returns the status of the operation, as an <a href="../oak_abi/proto/enum.OakStatus.html"><code>OakStatus</code></a> value.
-If no message is available on the channel, <a href="../oak_abi/proto/enum.OakStatus.html#ErrChannelEmpty.v"><code>ErrChannelEmpty</code></a> will be
+<p>Returns the status of the operation, as an <a href="../oak_abi/enum.OakStatus.html"><code>OakStatus</code></a> value.
+If no message is available on the channel, <a href="../oak_abi/enum.OakStatus.html#ErrChannelEmpty.v"><code>ErrChannelEmpty</code></a> will be
 returned.</p>
 </div></section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../";window.currentCrate = "oak_abi";</script><script src="../aliases.js"></script><script src="../main.js"></script><script defer src="../search-index.js"></script></body></html>

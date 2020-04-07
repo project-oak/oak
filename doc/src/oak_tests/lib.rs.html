@@ -162,6 +162,18 @@
 <span id="162">162</span>
 <span id="163">163</span>
 <span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -183,10 +195,12 @@
 
 <span class="kw">use</span> <span class="ident">log</span>::<span class="ident">info</span>;
 
-<span class="kw">use</span> <span class="ident">oak_runtime</span>::<span class="ident">ChannelEither</span>;
 <span class="kw">use</span> <span class="ident">protobuf</span>::{<span class="ident">Message</span>, <span class="ident">ProtobufEnum</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">HashMap</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">process</span>::<span class="ident">Command</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::<span class="ident">Arc</span>;
+
+<span class="kw">use</span> <span class="ident">oak_runtime</span>::<span class="ident">runtime</span>::<span class="ident">TEST_NODE_ID</span>;
 
 <span class="comment">// TODO(#544): re-enable unit tests of SDK functionality</span>
 
@@ -202,6 +216,7 @@
             <span class="string">&quot;--target=wasm32-unknown-unknown&quot;</span>,
             <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;--manifest-path={}&quot;</span>, <span class="ident">cargo_path</span>),
         ])
+        .<span class="ident">env_remove</span>(<span class="string">&quot;RUSTFLAGS&quot;</span>)
         .<span class="ident">spawn</span>()<span class="question-mark">?</span>
         .<span class="ident">wait</span>()<span class="question-mark">?</span>;
 
@@ -221,7 +236,7 @@
 <span class="doccomment">/// given module name, using the default name &quot;oak_main&quot; for its entrypoint.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_single_module_default</span>(
     <span class="ident">module_config_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">oak_runtime</span>::<span class="ident">RuntimeRef</span>, <span class="ident">oak_runtime</span>::<span class="ident">ChannelWriter</span>), <span class="ident">oak</span>::<span class="ident">OakStatus</span><span class="op">&gt;</span> {
+) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">oak_runtime</span>::<span class="ident">Runtime</span><span class="op">&gt;</span>, <span class="ident">oak_runtime</span>::<span class="ident">Handle</span>), <span class="ident">oak</span>::<span class="ident">OakStatus</span><span class="op">&gt;</span> {
     <span class="ident">run_single_module</span>(<span class="ident">module_config_name</span>, <span class="ident">DEFAULT_ENTRYPOINT_NAME</span>)
 }
 
@@ -230,7 +245,7 @@
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_single_module</span>(
     <span class="ident">module_config_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">entrypoint_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">oak_runtime</span>::<span class="ident">RuntimeRef</span>, <span class="ident">oak_runtime</span>::<span class="ident">ChannelWriter</span>), <span class="ident">oak</span>::<span class="ident">OakStatus</span><span class="op">&gt;</span> {
+) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">oak_runtime</span>::<span class="ident">Runtime</span><span class="op">&gt;</span>, <span class="ident">oak_runtime</span>::<span class="ident">Handle</span>), <span class="ident">oak</span>::<span class="ident">OakStatus</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">wasm</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> [(
         <span class="ident">module_config_name</span>.<span class="ident">to_owned</span>(),
         <span class="ident">compile_rust_wasm</span>(
@@ -255,16 +270,18 @@
 
 <span class="comment">// TODO(#543): move this to oak_runtime as it&#39;s not test-specific</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">grpc_request</span><span class="op">&lt;</span><span class="ident">R</span>, <span class="ident">Q</span><span class="op">&gt;</span>(
-    <span class="ident">channel</span>: <span class="kw-2">&amp;</span><span class="ident">oak_runtime</span>::<span class="ident">ChannelWriter</span>,
+    <span class="ident">runtime</span>: <span class="kw-2">&amp;</span><span class="ident">oak_runtime</span>::<span class="ident">Runtime</span>,
+    <span class="ident">channel</span>: <span class="ident">oak_runtime</span>::<span class="ident">Handle</span>,
     <span class="ident">method_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-    <span class="ident">req</span>: <span class="ident">R</span>,
+    <span class="ident">req</span>: <span class="kw-2">&amp;</span><span class="ident">R</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">oak</span>::<span class="ident">grpc</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Q</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">R</span>: <span class="ident">protobuf</span>::<span class="ident">Message</span>,
     <span class="ident">Q</span>: <span class="ident">protobuf</span>::<span class="ident">Message</span>,
 {
     <span class="comment">// Put the request in a GrpcRequest wrapper and serialize into a message.</span>
-    <span class="kw">let</span> <span class="ident">grpc_req</span> <span class="op">=</span> <span class="ident">oak</span>::<span class="ident">grpc</span>::<span class="ident">encap_request</span>(<span class="ident">req</span>, <span class="ident">method_name</span>).<span class="ident">expect</span>(<span class="string">&quot;failed to build GrpcRequest&quot;</span>);
+    <span class="kw">let</span> <span class="ident">grpc_req</span> <span class="op">=</span>
+        <span class="ident">oak</span>::<span class="ident">grpc</span>::<span class="ident">encap_request</span>(<span class="ident">req</span>, <span class="prelude-val">None</span>, <span class="ident">method_name</span>).<span class="ident">expect</span>(<span class="string">&quot;failed to build GrpcRequest&quot;</span>);
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">req_msg</span> <span class="op">=</span> <span class="ident">oak_runtime</span>::<span class="ident">Message</span> {
         <span class="ident">data</span>: <span class="macro">vec</span><span class="macro">!</span>[],
         <span class="ident">channels</span>: <span class="macro">vec</span><span class="macro">!</span>[],
@@ -275,29 +292,36 @@
         .<span class="ident">expect</span>(<span class="string">&quot;failed to serialize GrpcRequest message&quot;</span>);
 
     <span class="comment">// Create a new channel to hold the request message.</span>
-    <span class="kw">let</span> (<span class="ident">req_write_half</span>, <span class="ident">req_read_half</span>) <span class="op">=</span> <span class="ident">oak_runtime</span>::<span class="ident">channel</span>::<span class="ident">new</span>();
-    <span class="ident">req_write_half</span>
-        .<span class="ident">write</span>(<span class="ident">req_msg</span>)
+    <span class="comment">//</span>
+    <span class="comment">// In most cases we do not care about labels, so we use the least privileged label for this</span>
+    <span class="comment">// channel.</span>
+    <span class="kw">let</span> (<span class="ident">req_write_half</span>, <span class="ident">req_read_half</span>) <span class="op">=</span>
+        <span class="ident">runtime</span>.<span class="ident">new_channel</span>(<span class="ident">TEST_NODE_ID</span>, <span class="kw-2">&amp;</span><span class="ident">oak_abi</span>::<span class="ident">label</span>::<span class="ident">Label</span>::<span class="ident">public_trusted</span>());
+    <span class="ident">runtime</span>
+        .<span class="ident">channel_write</span>(<span class="ident">TEST_NODE_ID</span>, <span class="ident">req_write_half</span>, <span class="ident">req_msg</span>)
         .<span class="ident">expect</span>(<span class="string">&quot;could not write message&quot;</span>);
 
     <span class="comment">// Create a new channel for responses to arrive on and also attach that to the message.</span>
-    <span class="kw">let</span> (<span class="ident">rsp_write_half</span>, <span class="ident">rsp_read_half</span>) <span class="op">=</span> <span class="ident">oak_runtime</span>::<span class="ident">channel</span>::<span class="ident">new</span>();
+    <span class="comment">//</span>
+    <span class="comment">// In most cases we do not care about labels, so we use the least privileged label for this</span>
+    <span class="comment">// channel.</span>
+    <span class="kw">let</span> (<span class="ident">rsp_write_half</span>, <span class="ident">rsp_read_half</span>) <span class="op">=</span>
+        <span class="ident">runtime</span>.<span class="ident">new_channel</span>(<span class="ident">TEST_NODE_ID</span>, <span class="kw-2">&amp;</span><span class="ident">oak_abi</span>::<span class="ident">label</span>::<span class="ident">Label</span>::<span class="ident">public_trusted</span>());
 
     <span class="comment">// Create a notification message and attach the method-invocation specific channels to it.</span>
     <span class="kw">let</span> <span class="ident">notify_msg</span> <span class="op">=</span> <span class="ident">oak_runtime</span>::<span class="ident">Message</span> {
         <span class="ident">data</span>: <span class="macro">vec</span><span class="macro">!</span>[],
-        <span class="ident">channels</span>: <span class="macro">vec</span><span class="macro">!</span>[
-            <span class="ident">ChannelEither</span>::<span class="ident">Reader</span>(<span class="ident">req_read_half</span>),
-            <span class="ident">ChannelEither</span>::<span class="ident">Writer</span>(<span class="ident">rsp_write_half</span>),
-        ],
+        <span class="ident">channels</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">req_read_half</span>, <span class="ident">rsp_write_half</span>],
     };
 
     <span class="comment">// Send the notification message (with attached handles) into the Node under test.</span>
-    <span class="ident">channel</span>.<span class="ident">write</span>(<span class="ident">notify_msg</span>).<span class="ident">expect</span>(<span class="string">&quot;could not write message&quot;</span>);
+    <span class="ident">runtime</span>
+        .<span class="ident">channel_write</span>(<span class="ident">TEST_NODE_ID</span>, <span class="ident">channel</span>, <span class="ident">notify_msg</span>)
+        .<span class="ident">expect</span>(<span class="string">&quot;could not write message&quot;</span>);
 
     <span class="comment">// Read the serialized, encapsulated response.</span>
     <span class="kw">loop</span> {
-        <span class="kw">let</span> <span class="ident">rsp</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">rsp_read_half</span>.<span class="ident">read</span>() {
+        <span class="kw">let</span> <span class="ident">rsp</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">runtime</span>.<span class="ident">channel_read</span>(<span class="ident">TEST_NODE_ID</span>, <span class="ident">rsp_read_half</span>) {
             <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">r</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">r</span>,
             <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;no pending gRPC response message; poll again soon&quot;</span>);

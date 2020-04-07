@@ -71,6 +71,7 @@
 <span id="71">71</span>
 <span id="72">72</span>
 <span id="73">73</span>
+<span id="74">74</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// This file is generated. Do not edit</span>
 <span class="comment">// @generated</span>
@@ -96,6 +97,7 @@
 <span class="kw">use</span> <span class="ident">oak</span>::<span class="ident">grpc</span>;
 <span class="kw">use</span> <span class="ident">protobuf</span>::<span class="ident">Message</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">Write</span>;
+<span class="kw">use</span> <span class="ident">log</span>::<span class="ident">error</span>;
 
 <span class="comment">// Oak Node server interface</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Chat</span> {
@@ -122,7 +124,7 @@
             <span class="string">&quot;/oak.examples.chat.Chat/Subscribe&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">grpc</span>::<span class="ident">handle_req_stream</span>(<span class="op">|</span><span class="ident">r</span>, <span class="ident">w</span><span class="op">|</span> <span class="self">self</span>.<span class="number">0</span>.<span class="ident">subscribe</span>(<span class="ident">r</span>, <span class="ident">w</span>), <span class="ident">req</span>, <span class="ident">writer</span>),
             <span class="string">&quot;/oak.examples.chat.Chat/SendMessage&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">grpc</span>::<span class="ident">handle_req_rsp</span>(<span class="op">|</span><span class="ident">r</span><span class="op">|</span> <span class="self">self</span>.<span class="number">0</span>.<span class="ident">send_message</span>(<span class="ident">r</span>), <span class="ident">req</span>, <span class="ident">writer</span>),
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;unknown method name: {}&quot;</span>, <span class="ident">method</span>);
+                <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;unknown method name: {}&quot;</span>, <span class="ident">method</span>);
             }
         };
     }
@@ -133,16 +135,16 @@
 
 <span class="kw">impl</span> <span class="ident">ChatClient</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_room</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">req</span>: <span class="kw">super</span>::<span class="ident">chat</span>::<span class="ident">CreateRoomRequest</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">protobuf</span>::<span class="ident">well_known_types</span>::<span class="ident">Empty</span><span class="op">&gt;</span> {
-        <span class="ident">oak</span>::<span class="ident">grpc</span>::<span class="ident">invoke_grpc_method</span>(<span class="string">&quot;/oak.examples.chat.Chat/CreateRoom&quot;</span>, <span class="ident">req</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>.<span class="ident">invocation_sender</span>)
+        <span class="ident">oak</span>::<span class="ident">grpc</span>::<span class="ident">invoke_grpc_method</span>(<span class="string">&quot;/oak.examples.chat.Chat/CreateRoom&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">req</span>, <span class="prelude-val">Some</span>(<span class="string">&quot;type.googleapis.com/oak.examples.chat.CreateRoomRequest&quot;</span>), <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>.<span class="ident">invocation_sender</span>)
     }
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">destroy_room</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">req</span>: <span class="kw">super</span>::<span class="ident">chat</span>::<span class="ident">DestroyRoomRequest</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">protobuf</span>::<span class="ident">well_known_types</span>::<span class="ident">Empty</span><span class="op">&gt;</span> {
-        <span class="ident">oak</span>::<span class="ident">grpc</span>::<span class="ident">invoke_grpc_method</span>(<span class="string">&quot;/oak.examples.chat.Chat/DestroyRoom&quot;</span>, <span class="ident">req</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>.<span class="ident">invocation_sender</span>)
+        <span class="ident">oak</span>::<span class="ident">grpc</span>::<span class="ident">invoke_grpc_method</span>(<span class="string">&quot;/oak.examples.chat.Chat/DestroyRoom&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">req</span>, <span class="prelude-val">Some</span>(<span class="string">&quot;type.googleapis.com/oak.examples.chat.DestroyRoomRequest&quot;</span>), <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>.<span class="ident">invocation_sender</span>)
     }
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">subscribe</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">req</span>: <span class="kw">super</span>::<span class="ident">chat</span>::<span class="ident">SubscribeRequest</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">oak</span>::<span class="ident">io</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">grpc</span>::<span class="ident">GrpcResponse</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="ident">oak</span>::<span class="ident">grpc</span>::<span class="ident">invoke_grpc_method_stream</span>(<span class="string">&quot;/oak.examples.chat.Chat/Subscribe&quot;</span>, <span class="ident">req</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>.<span class="ident">invocation_sender</span>)
+        <span class="ident">oak</span>::<span class="ident">grpc</span>::<span class="ident">invoke_grpc_method_stream</span>(<span class="string">&quot;/oak.examples.chat.Chat/Subscribe&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">req</span>, <span class="prelude-val">Some</span>(<span class="string">&quot;type.googleapis.com/oak.examples.chat.SubscribeRequest&quot;</span>), <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>.<span class="ident">invocation_sender</span>)
     }
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">send_message</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">req</span>: <span class="kw">super</span>::<span class="ident">chat</span>::<span class="ident">SendMessageRequest</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">protobuf</span>::<span class="ident">well_known_types</span>::<span class="ident">Empty</span><span class="op">&gt;</span> {
-        <span class="ident">oak</span>::<span class="ident">grpc</span>::<span class="ident">invoke_grpc_method</span>(<span class="string">&quot;/oak.examples.chat.Chat/SendMessage&quot;</span>, <span class="ident">req</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>.<span class="ident">invocation_sender</span>)
+        <span class="ident">oak</span>::<span class="ident">grpc</span>::<span class="ident">invoke_grpc_method</span>(<span class="string">&quot;/oak.examples.chat.Chat/SendMessage&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">req</span>, <span class="prelude-val">Some</span>(<span class="string">&quot;type.googleapis.com/oak.examples.chat.SendMessageRequest&quot;</span>), <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>.<span class="ident">invocation_sender</span>)
     }
 }
 </pre></div>

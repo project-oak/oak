@@ -147,6 +147,7 @@
 <span id="147">147</span>
 <span id="148">148</span>
 <span id="149">149</span>
+<span id="150">150</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -165,7 +166,7 @@
 <span class="comment">//</span>
 
 <span class="doccomment">//! Type, constant and Wasm host function definitions for the Oak application binary interface.</span>
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">proto</span>;
+<span class="kw">mod</span> <span class="ident">proto</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">proto</span>::<span class="kw-2">*</span>;
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">label</span>;
@@ -273,7 +274,8 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_close</span>(<span class="ident">handle</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u32</span>;
 
     <span class="doccomment">/// Create a new Node instance running code identified by configuration</span>
-    <span class="doccomment">/// name and entrypoint.</span>
+    <span class="doccomment">/// name and entrypoint; the entrypoint is only used when creating a</span>
+    <span class="doccomment">/// WebAssembly Node; it is ignored when creating a pseudo-Node.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// The configuration name is provided in the memory area given by</span>
     <span class="doccomment">/// `config_buf` and `config_len`; the entrypoint name is provided in the</span>

@@ -209,8 +209,6 @@
 <span id="209">209</span>
 <span id="210">210</span>
 <span id="211">211</span>
-<span id="212">212</span>
-<span id="213">213</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -242,30 +240,35 @@
 <span class="comment">// We use `hashbrown` since it is `no_std` compatible.</span>
 <span class="kw">use</span> <span class="ident">hashbrown</span>::<span class="ident">HashSet</span>;
 
-<span class="doccomment">/// A trait representing a label as part of a lattice.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Label</span>: <span class="ident">Sized</span> {
+<span class="kw">pub</span> <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">policy</span>::<span class="kw-2">*</span>;
+
+<span class="doccomment">/// A proto message representing a label as part of a lattice.</span>
+<span class="kw">impl</span> <span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">policy</span>::<span class="ident">Label</span> {
     <span class="doccomment">/// Convert the label to bytes.</span>
-    <span class="kw">fn</span> <span class="ident">serialize</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>;
-
-    <span class="doccomment">/// Build the label from bytes.</span>
-    <span class="kw">fn</span> <span class="ident">deserialize</span>(<span class="ident">bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>;
-
-    <span class="doccomment">/// Compare two labels according to the lattice structure: L_0 ⊑ L_1.</span>
-    <span class="kw">fn</span> <span class="ident">can_flow_to</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span>;
-}
-
-<span class="kw">impl</span> <span class="ident">Label</span> <span class="kw">for</span> <span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">policy</span>::<span class="ident">Label</span> {
-    <span class="kw">fn</span> <span class="ident">serialize</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">serialize</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">bytes</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
         <span class="self">self</span>.<span class="ident">encode</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">bytes</span>)
             .<span class="ident">expect</span>(<span class="string">&quot;could not serialize to bytes&quot;</span>);
         <span class="ident">bytes</span>
     }
-    <span class="kw">fn</span> <span class="ident">deserialize</span>(<span class="ident">bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+
+    <span class="doccomment">/// Build the label from bytes.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">deserialize</span>(<span class="ident">bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="self">Self</span>::<span class="ident">decode</span>(<span class="ident">bytes</span>).<span class="ident">ok</span>()
     }
 
-    <span class="kw">fn</span> <span class="ident">can_flow_to</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
+    <span class="comment">// Return the least privileged label.</span>
+    <span class="comment">//</span>
+    <span class="comment">// A node or channel with this label has only observed public data and is trusted by no one.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">public_trusted</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="ident">Label</span> {
+            <span class="ident">secrecy_tags</span>: <span class="macro">vec</span><span class="macro">!</span>[],
+            <span class="ident">integrity_tags</span>: <span class="macro">vec</span><span class="macro">!</span>[],
+        }
+    }
+
+    <span class="doccomment">/// Compare two labels according to the lattice structure: L_0 ⊑ L_1.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">flows_to</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
         <span class="attribute">#![<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">mutable_key_type</span>)]</span>
 
         <span class="kw">let</span> <span class="ident">self_secrecy_tags</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">secrecy_tags</span>.<span class="ident">iter</span>().<span class="ident">collect</span>();
@@ -281,34 +284,33 @@
     }
 }
 
+<span class="doccomment">/// Creates a [`Tag`] having as principal the provided authorization bearer token.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// See https://github.com/project-oak/oak/blob/master/oak/proto/policy.proto</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">authorization_bearer_token_hmac_tag</span>(<span class="ident">authorization_bearer_token_hmac</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Tag</span> {
+    <span class="ident">Tag</span> {
+        <span class="ident">tag</span>: <span class="prelude-val">Some</span>(<span class="ident">tag</span>::<span class="ident">Tag</span>::<span class="ident">GrpcTag</span>(<span class="ident">GrpcTag</span> {
+            <span class="ident">authorization_bearer_token_hmac</span>: <span class="ident">authorization_bearer_token_hmac</span>.<span class="ident">into</span>(),
+        })),
+    }
+}
+
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span> {
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
 
-    <span class="kw">fn</span> <span class="ident">authorization_bearer_token_hmac_tag</span>(
-        <span class="ident">authorization_bearer_token_hmac</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">policy</span>::<span class="ident">Tag</span> {
-        <span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">policy</span>::<span class="ident">Tag</span> {
-            <span class="ident">tag</span>: <span class="prelude-ty">Option</span>::<span class="prelude-val">Some</span>(<span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">policy</span>::<span class="ident">tag</span>::<span class="ident">Tag</span>::<span class="ident">GrpcTag</span>(
-                <span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">policy</span>::<span class="ident">GrpcTag</span> {
-                    <span class="ident">authorization_bearer_token_hmac</span>: <span class="ident">authorization_bearer_token_hmac</span>.<span class="ident">into</span>(),
-                },
-            )),
-        }
-    }
-
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">serialize_deserialize</span>() {
         <span class="kw">let</span> <span class="ident">labels</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[
-            <span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">policy</span>::<span class="ident">Label</span> {
+            <span class="ident">Label</span> {
                 <span class="ident">secrecy_tags</span>: <span class="macro">vec</span><span class="macro">!</span>[],
                 <span class="ident">integrity_tags</span>: <span class="macro">vec</span><span class="macro">!</span>[],
             },
-            <span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">policy</span>::<span class="ident">Label</span> {
+            <span class="ident">Label</span> {
                 <span class="ident">secrecy_tags</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">authorization_bearer_token_hmac_tag</span>(<span class="kw-2">&amp;</span>[<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>])],
                 <span class="ident">integrity_tags</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">authorization_bearer_token_hmac_tag</span>(<span class="kw-2">&amp;</span>[<span class="number">1</span>, <span class="number">1</span>, <span class="number">1</span>])],
             },
-            <span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">policy</span>::<span class="ident">Label</span> {
+            <span class="ident">Label</span> {
                 <span class="ident">secrecy_tags</span>: <span class="macro">vec</span><span class="macro">!</span>[
                     <span class="ident">authorization_bearer_token_hmac_tag</span>(<span class="kw-2">&amp;</span>[<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>]),
                     <span class="ident">authorization_bearer_token_hmac_tag</span>(<span class="kw-2">&amp;</span>[<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>]),
@@ -318,7 +320,7 @@
                     <span class="ident">authorization_bearer_token_hmac_tag</span>(<span class="kw-2">&amp;</span>[<span class="number">1</span>, <span class="number">1</span>, <span class="number">1</span>]),
                 ],
             },
-            <span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">policy</span>::<span class="ident">Label</span> {
+            <span class="ident">Label</span> {
                 <span class="ident">secrecy_tags</span>: <span class="macro">vec</span><span class="macro">!</span>[
                     <span class="ident">authorization_bearer_token_hmac_tag</span>(<span class="kw-2">&amp;</span>[<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>]),
                     <span class="ident">authorization_bearer_token_hmac_tag</span>(<span class="kw-2">&amp;</span>[<span class="number">1</span>, <span class="number">1</span>, <span class="number">1</span>]),
@@ -331,7 +333,7 @@
         ];
         <span class="kw">for</span> <span class="ident">label</span> <span class="kw">in</span> <span class="ident">labels</span>.<span class="ident">iter</span>() {
             <span class="kw">let</span> <span class="ident">bytes</span> <span class="op">=</span> <span class="ident">label</span>.<span class="ident">serialize</span>();
-            <span class="kw">let</span> <span class="ident">deserialized</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">policy</span>::<span class="ident">Label</span>::<span class="ident">deserialize</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>).<span class="ident">unwrap</span>();
+            <span class="kw">let</span> <span class="ident">deserialized</span> <span class="op">=</span> <span class="ident">Label</span>::<span class="ident">deserialize</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>).<span class="ident">unwrap</span>();
             <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="kw-2">*</span><span class="ident">label</span>, <span class="ident">deserialized</span>);
         }
     }
@@ -341,18 +343,12 @@
         <span class="kw">let</span> <span class="ident">tag_0</span> <span class="op">=</span> <span class="ident">authorization_bearer_token_hmac_tag</span>(<span class="kw-2">&amp;</span>[<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>]);
         <span class="kw">let</span> <span class="ident">tag_1</span> <span class="op">=</span> <span class="ident">authorization_bearer_token_hmac_tag</span>(<span class="kw-2">&amp;</span>[<span class="number">1</span>, <span class="number">1</span>, <span class="number">1</span>]);
 
-        <span class="comment">// The least privileged label.</span>
-        <span class="comment">//</span>
-        <span class="comment">// A node or channel with this label has only observed public data.</span>
-        <span class="kw">let</span> <span class="ident">public_trusted</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">policy</span>::<span class="ident">Label</span> {
-            <span class="ident">secrecy_tags</span>: <span class="macro">vec</span><span class="macro">!</span>[],
-            <span class="ident">integrity_tags</span>: <span class="macro">vec</span><span class="macro">!</span>[],
-        };
+        <span class="kw">let</span> <span class="ident">public_trusted</span> <span class="op">=</span> <span class="ident">Label</span>::<span class="ident">public_trusted</span>();
 
         <span class="comment">// A label that corresponds to the secrecy of tag_0.</span>
         <span class="comment">//</span>
         <span class="comment">// A node or channel with this label may have observed data related to tag_0.</span>
-        <span class="kw">let</span> <span class="ident">label_0</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">policy</span>::<span class="ident">Label</span> {
+        <span class="kw">let</span> <span class="ident">label_0</span> <span class="op">=</span> <span class="ident">Label</span> {
             <span class="ident">secrecy_tags</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">tag_0</span>.<span class="ident">clone</span>()],
             <span class="ident">integrity_tags</span>: <span class="macro">vec</span><span class="macro">!</span>[],
         };
@@ -360,7 +356,7 @@
         <span class="comment">// A label that corresponds to the secrecy of tag_1.</span>
         <span class="comment">//</span>
         <span class="comment">// A node or channel with this label may have observed data related to tag_1.</span>
-        <span class="kw">let</span> <span class="ident">label_1</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">policy</span>::<span class="ident">Label</span> {
+        <span class="kw">let</span> <span class="ident">label_1</span> <span class="op">=</span> <span class="ident">Label</span> {
             <span class="ident">secrecy_tags</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">tag_1</span>.<span class="ident">clone</span>()],
             <span class="ident">integrity_tags</span>: <span class="macro">vec</span><span class="macro">!</span>[],
         };
@@ -368,14 +364,14 @@
         <span class="comment">// A label that corresponds to the combined secrecy of both tag_0 and tag_1.</span>
         <span class="comment">//</span>
         <span class="comment">// A node or channel with this label may have observed data related to tag_0 and tag_1.</span>
-        <span class="kw">let</span> <span class="ident">label_0_1</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">policy</span>::<span class="ident">Label</span> {
+        <span class="kw">let</span> <span class="ident">label_0_1</span> <span class="op">=</span> <span class="ident">Label</span> {
             <span class="ident">secrecy_tags</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">tag_0</span>.<span class="ident">clone</span>(), <span class="ident">tag_1</span>.<span class="ident">clone</span>()],
             <span class="ident">integrity_tags</span>: <span class="macro">vec</span><span class="macro">!</span>[],
         };
 
         <span class="comment">// A label identical to `label_0_1`, but in which tags appear in a different order. This</span>
         <span class="comment">// should not make any difference in terms of what the label actually represent.</span>
-        <span class="kw">let</span> <span class="ident">label_1_0</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">policy</span>::<span class="ident">Label</span> {
+        <span class="kw">let</span> <span class="ident">label_1_0</span> <span class="op">=</span> <span class="ident">Label</span> {
             <span class="ident">secrecy_tags</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">tag_1</span>, <span class="ident">tag_0</span>],
             <span class="ident">integrity_tags</span>: <span class="macro">vec</span><span class="macro">!</span>[],
         };
@@ -391,38 +387,38 @@
         <span class="comment">//          public_trusted</span>
 
         <span class="comment">// Data with any label can flow to the same label.</span>
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">true</span>, <span class="ident">public_trusted</span>.<span class="ident">can_flow_to</span>(<span class="kw-2">&amp;</span><span class="ident">public_trusted</span>));
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">true</span>, <span class="ident">label_0</span>.<span class="ident">can_flow_to</span>(<span class="kw-2">&amp;</span><span class="ident">label_0</span>));
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">true</span>, <span class="ident">label_1</span>.<span class="ident">can_flow_to</span>(<span class="kw-2">&amp;</span><span class="ident">label_1</span>));
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">true</span>, <span class="ident">label_0_1</span>.<span class="ident">can_flow_to</span>(<span class="kw-2">&amp;</span><span class="ident">label_0_1</span>));
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">true</span>, <span class="ident">label_1_0</span>.<span class="ident">can_flow_to</span>(<span class="kw-2">&amp;</span><span class="ident">label_1_0</span>));
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">true</span>, <span class="ident">public_trusted</span>.<span class="ident">flows_to</span>(<span class="kw-2">&amp;</span><span class="ident">public_trusted</span>));
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">true</span>, <span class="ident">label_0</span>.<span class="ident">flows_to</span>(<span class="kw-2">&amp;</span><span class="ident">label_0</span>));
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">true</span>, <span class="ident">label_1</span>.<span class="ident">flows_to</span>(<span class="kw-2">&amp;</span><span class="ident">label_1</span>));
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">true</span>, <span class="ident">label_0_1</span>.<span class="ident">flows_to</span>(<span class="kw-2">&amp;</span><span class="ident">label_0_1</span>));
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">true</span>, <span class="ident">label_1_0</span>.<span class="ident">flows_to</span>(<span class="kw-2">&amp;</span><span class="ident">label_1_0</span>));
 
         <span class="comment">// label_0_1 and label_1_0 are effectively the same label, since the order of tags does not</span>
         <span class="comment">// matter.</span>
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">true</span>, <span class="ident">label_0_1</span>.<span class="ident">can_flow_to</span>(<span class="kw-2">&amp;</span><span class="ident">label_1_0</span>));
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">true</span>, <span class="ident">label_1_0</span>.<span class="ident">can_flow_to</span>(<span class="kw-2">&amp;</span><span class="ident">label_0_1</span>));
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">true</span>, <span class="ident">label_0_1</span>.<span class="ident">flows_to</span>(<span class="kw-2">&amp;</span><span class="ident">label_1_0</span>));
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">true</span>, <span class="ident">label_1_0</span>.<span class="ident">flows_to</span>(<span class="kw-2">&amp;</span><span class="ident">label_0_1</span>));
 
         <span class="comment">// public_trusted data can flow to more private data;</span>
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">true</span>, <span class="ident">public_trusted</span>.<span class="ident">can_flow_to</span>(<span class="kw-2">&amp;</span><span class="ident">label_0</span>));
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">true</span>, <span class="ident">public_trusted</span>.<span class="ident">can_flow_to</span>(<span class="kw-2">&amp;</span><span class="ident">label_1</span>));
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">true</span>, <span class="ident">public_trusted</span>.<span class="ident">can_flow_to</span>(<span class="kw-2">&amp;</span><span class="ident">label_0_1</span>));
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">true</span>, <span class="ident">public_trusted</span>.<span class="ident">flows_to</span>(<span class="kw-2">&amp;</span><span class="ident">label_0</span>));
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">true</span>, <span class="ident">public_trusted</span>.<span class="ident">flows_to</span>(<span class="kw-2">&amp;</span><span class="ident">label_1</span>));
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">true</span>, <span class="ident">public_trusted</span>.<span class="ident">flows_to</span>(<span class="kw-2">&amp;</span><span class="ident">label_0_1</span>));
 
         <span class="comment">// Private data cannot flow to public_trusted.</span>
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">false</span>, <span class="ident">label_0</span>.<span class="ident">can_flow_to</span>(<span class="kw-2">&amp;</span><span class="ident">public_trusted</span>));
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">false</span>, <span class="ident">label_1</span>.<span class="ident">can_flow_to</span>(<span class="kw-2">&amp;</span><span class="ident">public_trusted</span>));
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">false</span>, <span class="ident">label_0_1</span>.<span class="ident">can_flow_to</span>(<span class="kw-2">&amp;</span><span class="ident">public_trusted</span>));
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">false</span>, <span class="ident">label_0</span>.<span class="ident">flows_to</span>(<span class="kw-2">&amp;</span><span class="ident">public_trusted</span>));
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">false</span>, <span class="ident">label_1</span>.<span class="ident">flows_to</span>(<span class="kw-2">&amp;</span><span class="ident">public_trusted</span>));
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">false</span>, <span class="ident">label_0_1</span>.<span class="ident">flows_to</span>(<span class="kw-2">&amp;</span><span class="ident">public_trusted</span>));
 
         <span class="comment">// Private data with non-comparable labels cannot flow to each other.</span>
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">false</span>, <span class="ident">label_0</span>.<span class="ident">can_flow_to</span>(<span class="kw-2">&amp;</span><span class="ident">label_1</span>));
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">false</span>, <span class="ident">label_1</span>.<span class="ident">can_flow_to</span>(<span class="kw-2">&amp;</span><span class="ident">label_0</span>));
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">false</span>, <span class="ident">label_0</span>.<span class="ident">flows_to</span>(<span class="kw-2">&amp;</span><span class="ident">label_1</span>));
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">false</span>, <span class="ident">label_1</span>.<span class="ident">flows_to</span>(<span class="kw-2">&amp;</span><span class="ident">label_0</span>));
 
         <span class="comment">// Private data can flow to even more private data.</span>
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">true</span>, <span class="ident">label_0</span>.<span class="ident">can_flow_to</span>(<span class="kw-2">&amp;</span><span class="ident">label_0_1</span>));
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">true</span>, <span class="ident">label_1</span>.<span class="ident">can_flow_to</span>(<span class="kw-2">&amp;</span><span class="ident">label_0_1</span>));
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">true</span>, <span class="ident">label_0</span>.<span class="ident">flows_to</span>(<span class="kw-2">&amp;</span><span class="ident">label_0_1</span>));
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">true</span>, <span class="ident">label_1</span>.<span class="ident">flows_to</span>(<span class="kw-2">&amp;</span><span class="ident">label_0_1</span>));
 
         <span class="comment">// And vice versa.</span>
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">false</span>, <span class="ident">label_0_1</span>.<span class="ident">can_flow_to</span>(<span class="kw-2">&amp;</span><span class="ident">label_0</span>));
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">false</span>, <span class="ident">label_0_1</span>.<span class="ident">can_flow_to</span>(<span class="kw-2">&amp;</span><span class="ident">label_1</span>));
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">false</span>, <span class="ident">label_0_1</span>.<span class="ident">flows_to</span>(<span class="kw-2">&amp;</span><span class="ident">label_0</span>));
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="bool-val">false</span>, <span class="ident">label_0_1</span>.<span class="ident">flows_to</span>(<span class="kw-2">&amp;</span><span class="ident">label_1</span>));
     }
 }
 </pre></div>

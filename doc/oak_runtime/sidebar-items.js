@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["channel",""],["config",""],["message",""],["node",""],["proto",""],["runtime",""]]});
+initSidebarItems({"mod":[["config",""],["message",""],["node",""],["proto",""],["runtime",""]],"struct":[["Handle","A reference to a [`Channel`]. Each [`Handle`] has an implicit direction such that it is only possible to read or write to a [`Handle`] (exclusive or)."]]});

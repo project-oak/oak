@@ -273,9 +273,6 @@
 <span id="273">273</span>
 <span id="274">274</span>
 <span id="275">275</span>
-<span id="276">276</span>
-<span id="277">277</span>
-<span id="278">278</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -311,7 +308,7 @@
 
 <span class="kw">fn</span> <span class="ident">main</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">std</span>::<span class="ident">error</span>::<span class="ident">Error</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">opt</span> <span class="op">=</span> <span class="ident">Opt</span>::<span class="ident">from_args</span>();
-    <span class="comment">// TODO: Add support for running individual commands via command line flags.</span>
+    <span class="comment">// TODO(#396): Add support for running individual commands via command line flags.</span>
     <span class="kw">let</span> <span class="ident">root</span> <span class="op">=</span> <span class="ident">Step</span>::<span class="ident">Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;root&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">steps</span>: <span class="macro">vec</span><span class="macro">!</span>[
@@ -528,10 +525,7 @@
 <span class="kw">fn</span> <span class="ident">run_bazel_build</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
     <span class="ident">Step</span>::<span class="ident">Single</span> {
         <span class="ident">name</span>: <span class="string">&quot;bazel build&quot;</span>.<span class="ident">to_string</span>(),
-        <span class="ident">runnable</span>: <span class="ident">cmd</span>(
-            <span class="string">&quot;bazel&quot;</span>,
-            <span class="kw-2">&amp;</span>[<span class="string">&quot;build&quot;</span>, <span class="string">&quot;--&quot;</span>, <span class="string">&quot;//oak/...:all&quot;</span>, <span class="string">&quot;-//oak/server/asylo:all&quot;</span>],
-        ),
+        <span class="ident">runnable</span>: <span class="ident">cmd</span>(<span class="string">&quot;bazel&quot;</span>, <span class="kw-2">&amp;</span>[<span class="string">&quot;build&quot;</span>, <span class="string">&quot;--&quot;</span>, <span class="string">&quot;//oak/...:all&quot;</span>]),
     }
 }
 
@@ -540,8 +534,8 @@
         <span class="ident">name</span>: <span class="string">&quot;bazel test&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">runnable</span>: <span class="ident">cmd</span>(
             <span class="string">&quot;bazel&quot;</span>,
-            <span class="comment">// TODO: Extract these targets with `bazel query` at runtime, based on some label or</span>
-            <span class="comment">// attribute.</span>
+            <span class="comment">// TODO(#396): Extract these targets with `bazel query` at runtime,</span>
+            <span class="comment">// based on some label or attribute.</span>
             <span class="kw-2">&amp;</span>[
                 <span class="string">&quot;test&quot;</span>,
                 <span class="string">&quot;//oak/server:host_tests&quot;</span>,

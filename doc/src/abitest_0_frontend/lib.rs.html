@@ -1429,6 +1429,60 @@
 <span id="1429">1429</span>
 <span id="1430">1430</span>
 <span id="1431">1431</span>
+<span id="1432">1432</span>
+<span id="1433">1433</span>
+<span id="1434">1434</span>
+<span id="1435">1435</span>
+<span id="1436">1436</span>
+<span id="1437">1437</span>
+<span id="1438">1438</span>
+<span id="1439">1439</span>
+<span id="1440">1440</span>
+<span id="1441">1441</span>
+<span id="1442">1442</span>
+<span id="1443">1443</span>
+<span id="1444">1444</span>
+<span id="1445">1445</span>
+<span id="1446">1446</span>
+<span id="1447">1447</span>
+<span id="1448">1448</span>
+<span id="1449">1449</span>
+<span id="1450">1450</span>
+<span id="1451">1451</span>
+<span id="1452">1452</span>
+<span id="1453">1453</span>
+<span id="1454">1454</span>
+<span id="1455">1455</span>
+<span id="1456">1456</span>
+<span id="1457">1457</span>
+<span id="1458">1458</span>
+<span id="1459">1459</span>
+<span id="1460">1460</span>
+<span id="1461">1461</span>
+<span id="1462">1462</span>
+<span id="1463">1463</span>
+<span id="1464">1464</span>
+<span id="1465">1465</span>
+<span id="1466">1466</span>
+<span id="1467">1467</span>
+<span id="1468">1468</span>
+<span id="1469">1469</span>
+<span id="1470">1470</span>
+<span id="1471">1471</span>
+<span id="1472">1472</span>
+<span id="1473">1473</span>
+<span id="1474">1474</span>
+<span id="1475">1475</span>
+<span id="1476">1476</span>
+<span id="1477">1477</span>
+<span id="1478">1478</span>
+<span id="1479">1479</span>
+<span id="1480">1480</span>
+<span id="1481">1481</span>
+<span id="1482">1482</span>
+<span id="1483">1483</span>
+<span id="1484">1484</span>
+<span id="1485">1485</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -1457,7 +1511,7 @@
 <span class="kw">use</span> <span class="ident">proto</span>::<span class="ident">abitest</span>::{<span class="ident">ABITestRequest</span>, <span class="ident">ABITestResponse</span>, <span class="ident">ABITestResponse_TestResult</span>};
 <span class="kw">use</span> <span class="ident">proto</span>::<span class="ident">abitest</span>::{<span class="ident">GrpcTestRequest</span>, <span class="ident">GrpcTestResponse</span>};
 <span class="kw">use</span> <span class="ident">proto</span>::<span class="ident">abitest_grpc</span>::{<span class="ident">Dispatcher</span>, <span class="ident">OakABITestService</span>, <span class="ident">OakABITestServiceClient</span>};
-<span class="kw">use</span> <span class="ident">protobuf</span>::<span class="ident">ProtobufEnum</span>;
+<span class="kw">use</span> <span class="ident">protobuf</span>::{<span class="ident">Message</span>, <span class="ident">ProtobufEnum</span>};
 <span class="kw">use</span> <span class="ident">rand</span>::<span class="ident">Rng</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">HashMap</span>;
 
@@ -1558,6 +1612,10 @@
         <span class="ident">tests</span>.<span class="ident">insert</span>(<span class="string">&quot;ChannelWriteRaw&quot;</span>, <span class="ident">FrontendNode</span>::<span class="ident">test_channel_write_raw</span>);
         <span class="ident">tests</span>.<span class="ident">insert</span>(<span class="string">&quot;ChannelWrite&quot;</span>, <span class="ident">FrontendNode</span>::<span class="ident">test_channel_write</span>);
         <span class="ident">tests</span>.<span class="ident">insert</span>(
+            <span class="string">&quot;ChannelWriteHandle&quot;</span>,
+            <span class="ident">FrontendNode</span>::<span class="ident">test_channel_write_handle</span>,
+        );
+        <span class="ident">tests</span>.<span class="ident">insert</span>(
             <span class="string">&quot;ChannelWriteOrphan&quot;</span>,
             <span class="ident">FrontendNode</span>::<span class="ident">test_channel_write_orphan</span>,
         );
@@ -1579,8 +1637,7 @@
         <span class="ident">tests</span>.<span class="ident">insert</span>(<span class="string">&quot;DirectLog&quot;</span>, <span class="ident">FrontendNode</span>::<span class="ident">test_direct_log</span>);
         <span class="ident">tests</span>.<span class="ident">insert</span>(<span class="string">&quot;BackendRoundtrip&quot;</span>, <span class="ident">FrontendNode</span>::<span class="ident">test_backend_roundtrip</span>);
         <span class="ident">tests</span>.<span class="ident">insert</span>(<span class="string">&quot;Storage&quot;</span>, <span class="ident">FrontendNode</span>::<span class="ident">test_storage</span>);
-        <span class="comment">// TODO(#650): fix storage to emit errors for all these operations</span>
-        <span class="ident">tests</span>.<span class="ident">insert</span>(<span class="string">&quot;DISABLED_AbsentStorage&quot;</span>, <span class="ident">FrontendNode</span>::<span class="ident">test_absent_storage</span>);
+        <span class="ident">tests</span>.<span class="ident">insert</span>(<span class="string">&quot;AbsentStorage&quot;</span>, <span class="ident">FrontendNode</span>::<span class="ident">test_absent_storage</span>);
         <span class="ident">tests</span>.<span class="ident">insert</span>(
             <span class="string">&quot;GrpcClientUnaryMethod&quot;</span>,
             <span class="ident">FrontendNode</span>::<span class="ident">test_grpc_client_unary_method</span>,
@@ -2078,6 +2135,32 @@
         <span class="prelude-val">Ok</span>(())
     }
 
+    <span class="kw">fn</span> <span class="ident">test_channel_write_handle</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TestResult</span> {
+        <span class="kw">let</span> (<span class="ident">out_channel</span>, <span class="ident">in_channel</span>) <span class="op">=</span> <span class="ident">oak</span>::<span class="ident">channel_create</span>().<span class="ident">unwrap</span>();
+
+        <span class="comment">// Send a single handle.</span>
+        <span class="kw">let</span> <span class="ident">empty</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
+        <span class="macro">expect_eq</span><span class="macro">!</span>(
+            <span class="prelude-val">Ok</span>(()),
+            <span class="ident">oak</span>::<span class="ident">channel_write</span>(<span class="ident">out_channel</span>, <span class="kw-2">&amp;</span><span class="ident">empty</span>, <span class="kw-2">&amp;</span>[<span class="ident">in_channel</span>.<span class="ident">handle</span>])
+        );
+
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buffer</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>::<span class="ident">with_capacity</span>(<span class="number">5</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">handles</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">with_capacity</span>(<span class="number">1</span>);
+        <span class="macro">expect_eq</span><span class="macro">!</span>(
+            <span class="prelude-val">Ok</span>(()),
+            <span class="ident">oak</span>::<span class="ident">channel_read</span>(<span class="ident">in_channel</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buffer</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">handles</span>)
+        );
+        <span class="macro">expect_eq</span><span class="macro">!</span>(<span class="number">0</span>, <span class="ident">buffer</span>.<span class="ident">len</span>());
+        <span class="macro">expect_eq</span><span class="macro">!</span>(<span class="number">1</span>, <span class="ident">handles</span>.<span class="ident">len</span>());
+        <span class="comment">// The transferred handle has a new value.</span>
+        <span class="macro">expect</span><span class="macro">!</span>(<span class="ident">handles</span>[<span class="number">0</span>] <span class="op">!</span><span class="op">=</span> <span class="ident">in_channel</span>.<span class="ident">handle</span>);
+
+        <span class="macro">expect_eq</span><span class="macro">!</span>(<span class="prelude-val">Ok</span>(()), <span class="ident">oak</span>::<span class="ident">channel_close</span>(<span class="ident">in_channel</span>.<span class="ident">handle</span>));
+        <span class="macro">expect_eq</span><span class="macro">!</span>(<span class="prelude-val">Ok</span>(()), <span class="ident">oak</span>::<span class="ident">channel_close</span>(<span class="ident">out_channel</span>.<span class="ident">handle</span>));
+        <span class="prelude-val">Ok</span>(())
+    }
+
     <span class="kw">fn</span> <span class="ident">test_channel_write_orphan</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TestResult</span> {
         <span class="kw">let</span> (<span class="ident">out_channel</span>, <span class="ident">in_channel</span>) <span class="op">=</span> <span class="ident">oak</span>::<span class="ident">channel_create</span>().<span class="ident">unwrap</span>();
 
@@ -2564,13 +2647,28 @@
 
         <span class="ident">oak</span>::<span class="ident">channel_write</span>(
             <span class="ident">logging_handle</span>,
-            <span class="string">&quot;message sent direct to logging channel&quot;</span>.<span class="ident">as_bytes</span>(),
+            <span class="string">&quot;Malformed message sent direct to logging channel!&quot;</span>.<span class="ident">as_bytes</span>(),
+            <span class="kw-2">&amp;</span>[<span class="ident">in_handle</span>.<span class="ident">handle</span>, <span class="ident">out_handle</span>.<span class="ident">handle</span>],
+        )
+        .<span class="ident">expect</span>(<span class="string">&quot;could not write to channel&quot;</span>);
+
+        <span class="ident">oak</span>::<span class="ident">channel_write</span>(
+            <span class="ident">logging_handle</span>,
+            <span class="kw-2">&amp;</span><span class="ident">oak</span>::<span class="ident">proto</span>::<span class="ident">log</span>::<span class="ident">LogMessage</span> {
+                <span class="ident">level</span>: <span class="ident">oak</span>::<span class="ident">proto</span>::<span class="ident">log</span>::<span class="ident">Level</span>::<span class="ident">INFO</span>,
+                <span class="ident">file</span>: <span class="string">&quot;abitest&quot;</span>.<span class="ident">to_string</span>(),
+                <span class="ident">message</span>: <span class="string">&quot;Wellformed message sent direct to logging channel!&quot;</span>.<span class="ident">to_string</span>(),
+                ..<span class="ident">Default</span>::<span class="ident">default</span>()
+            }
+            .<span class="ident">write_to_bytes</span>()
+            .<span class="ident">unwrap</span>()[..],
             <span class="kw-2">&amp;</span>[<span class="ident">in_handle</span>.<span class="ident">handle</span>, <span class="ident">out_handle</span>.<span class="ident">handle</span>],
         )
         .<span class="ident">expect</span>(<span class="string">&quot;could not write to channel&quot;</span>);
 
         <span class="macro">expect_eq</span><span class="macro">!</span>(<span class="prelude-val">Ok</span>(()), <span class="ident">oak</span>::<span class="ident">channel_close</span>(<span class="ident">out_handle</span>.<span class="ident">handle</span>));
         <span class="macro">expect_eq</span><span class="macro">!</span>(<span class="prelude-val">Ok</span>(()), <span class="ident">oak</span>::<span class="ident">channel_close</span>(<span class="ident">in_handle</span>.<span class="ident">handle</span>));
+        <span class="macro">expect_eq</span><span class="macro">!</span>(<span class="prelude-val">Ok</span>(()), <span class="ident">oak</span>::<span class="ident">channel_close</span>(<span class="ident">logging_handle</span>.<span class="ident">handle</span>));
         <span class="prelude-val">Ok</span>(())
     }
 
@@ -2676,9 +2774,9 @@
         <span class="macro">expect_eq</span><span class="macro">!</span>(<span class="ident">value</span>.<span class="ident">to_vec</span>(), <span class="ident">got</span>);
 
         <span class="kw">let</span> <span class="ident">key2</span> <span class="op">=</span> <span class="string">b&quot;test-key-bogus&quot;</span>;
-        <span class="kw">let</span> <span class="ident">empty</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>::<span class="ident">new</span>();
-        <span class="kw">let</span> <span class="ident">got</span> <span class="op">=</span> <span class="ident">storage</span>.<span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">storage_name</span>, <span class="ident">key2</span>).<span class="ident">map_err</span>(<span class="ident">from_proto</span>)<span class="question-mark">?</span>;
-        <span class="macro">expect_eq</span><span class="macro">!</span>(<span class="ident">empty</span>, <span class="ident">got</span>);
+        <span class="kw">let</span> <span class="ident">got</span> <span class="op">=</span> <span class="ident">storage</span>.<span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">storage_name</span>, <span class="ident">key2</span>);
+        <span class="macro">expect_matches</span><span class="macro">!</span>(<span class="ident">got</span>, <span class="prelude-val">Err</span>(<span class="kw">_</span>));
+        <span class="macro">expect_eq</span><span class="macro">!</span>(<span class="ident">grpc</span>::<span class="ident">Code</span>::<span class="ident">NOT_FOUND</span>.<span class="ident">value</span>(), <span class="ident">got</span>.<span class="ident">unwrap_err</span>().<span class="ident">get_code</span>());
 
         <span class="kw">let</span> <span class="ident">got</span> <span class="op">=</span> <span class="ident">storage</span>.<span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">storage_name</span>, <span class="ident">key</span>).<span class="ident">map_err</span>(<span class="ident">from_proto</span>)<span class="question-mark">?</span>;
         <span class="macro">expect_eq</span><span class="macro">!</span>(<span class="ident">value</span>.<span class="ident">to_vec</span>(), <span class="ident">got</span>);
@@ -2687,8 +2785,9 @@
             .<span class="ident">delete</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">storage_name</span>, <span class="ident">key</span>)
             .<span class="ident">map_err</span>(<span class="ident">from_proto</span>)<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">got</span> <span class="op">=</span> <span class="ident">storage</span>.<span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">storage_name</span>, <span class="ident">key</span>).<span class="ident">map_err</span>(<span class="ident">from_proto</span>)<span class="question-mark">?</span>;
-        <span class="macro">expect_eq</span><span class="macro">!</span>(<span class="ident">empty</span>, <span class="ident">got</span>);
+        <span class="kw">let</span> <span class="ident">got</span> <span class="op">=</span> <span class="ident">storage</span>.<span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">storage_name</span>, <span class="ident">key</span>);
+        <span class="macro">expect_matches</span><span class="macro">!</span>(<span class="ident">got</span>, <span class="prelude-val">Err</span>(<span class="kw">_</span>));
+        <span class="macro">expect_eq</span><span class="macro">!</span>(<span class="ident">grpc</span>::<span class="ident">Code</span>::<span class="ident">NOT_FOUND</span>.<span class="ident">value</span>(), <span class="ident">got</span>.<span class="ident">unwrap_err</span>().<span class="ident">get_code</span>());
 
         <span class="ident">storage</span>
             .<span class="ident">delete</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">storage_name</span>, <span class="ident">key</span>)
@@ -2711,9 +2810,15 @@
         <span class="kw">let</span> <span class="ident">key</span> <span class="op">=</span> <span class="string">b&quot;a-test-key-0&quot;</span>;
         <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="string">b&quot;a-test-value-0&quot;</span>;
 
-        <span class="macro">expect_matches</span><span class="macro">!</span>(<span class="ident">storage</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">storage_name</span>, <span class="ident">key</span>, <span class="ident">value</span>), <span class="prelude-val">Err</span>(<span class="kw">_</span>));
-        <span class="macro">expect_matches</span><span class="macro">!</span>(<span class="ident">storage</span>.<span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">storage_name</span>, <span class="ident">key</span>), <span class="prelude-val">Err</span>(<span class="kw">_</span>));
-        <span class="macro">expect_matches</span><span class="macro">!</span>(<span class="ident">storage</span>.<span class="ident">delete</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">storage_name</span>, <span class="ident">key</span>), <span class="prelude-val">Err</span>(<span class="kw">_</span>));
+        <span class="kw">let</span> <span class="ident">got</span> <span class="op">=</span> <span class="ident">storage</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">storage_name</span>, <span class="ident">key</span>, <span class="ident">value</span>);
+        <span class="macro">expect_matches</span><span class="macro">!</span>(<span class="ident">got</span>, <span class="prelude-val">Err</span>(<span class="kw">_</span>));
+        <span class="macro">expect_eq</span><span class="macro">!</span>(<span class="ident">grpc</span>::<span class="ident">Code</span>::<span class="ident">UNAVAILABLE</span>.<span class="ident">value</span>(), <span class="ident">got</span>.<span class="ident">unwrap_err</span>().<span class="ident">get_code</span>());
+        <span class="kw">let</span> <span class="ident">got</span> <span class="op">=</span> <span class="ident">storage</span>.<span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">storage_name</span>, <span class="ident">key</span>);
+        <span class="macro">expect_matches</span><span class="macro">!</span>(<span class="ident">got</span>, <span class="prelude-val">Err</span>(<span class="kw">_</span>));
+        <span class="macro">expect_eq</span><span class="macro">!</span>(<span class="ident">grpc</span>::<span class="ident">Code</span>::<span class="ident">UNAVAILABLE</span>.<span class="ident">value</span>(), <span class="ident">got</span>.<span class="ident">unwrap_err</span>().<span class="ident">get_code</span>());
+        <span class="kw">let</span> <span class="ident">got</span> <span class="op">=</span> <span class="ident">storage</span>.<span class="ident">delete</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">storage_name</span>, <span class="ident">key</span>);
+        <span class="macro">expect_matches</span><span class="macro">!</span>(<span class="ident">got</span>, <span class="prelude-val">Err</span>(<span class="kw">_</span>));
+        <span class="macro">expect_eq</span><span class="macro">!</span>(<span class="ident">grpc</span>::<span class="ident">Code</span>::<span class="ident">UNAVAILABLE</span>.<span class="ident">value</span>(), <span class="ident">got</span>.<span class="ident">unwrap_err</span>().<span class="ident">get_code</span>());
 
         <span class="prelude-val">Ok</span>(())
     }
@@ -2788,6 +2893,7 @@
             }
         }
         <span class="macro">expect_eq</span><span class="macro">!</span>(<span class="number">2</span>, <span class="ident">count</span>);
+        <span class="ident">receiver</span>.<span class="ident">close</span>().<span class="ident">expect</span>(<span class="string">&quot;failed to close receiver&quot;</span>);
 
         <span class="comment">// Errored server-streaming method invocation of external service via</span>
         <span class="comment">// gRPC client pseudo-Node.</span>
@@ -2814,6 +2920,7 @@
             }
         }
         <span class="macro">expect</span><span class="macro">!</span>(<span class="ident">seen_err_code</span>);
+        <span class="ident">receiver</span>.<span class="ident">close</span>().<span class="ident">expect</span>(<span class="string">&quot;failed to close receiver&quot;</span>);
         <span class="prelude-val">Ok</span>(())
     }
     <span class="kw">fn</span> <span class="ident">test_absent_grpc_client</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TestResult</span> {
@@ -2849,6 +2956,7 @@
                 <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">e</span>)),
             }
         }
+        <span class="ident">receiver</span>.<span class="ident">close</span>().<span class="ident">expect</span>(<span class="string">&quot;failed to close receiver&quot;</span>);
 
         <span class="prelude-val">Ok</span>(())
     }

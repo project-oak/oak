@@ -70,6 +70,9 @@
 <span id="70">70</span>
 <span id="71">71</span>
 <span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -141,6 +144,9 @@
         <span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">Other</span>, <span class="string">&quot;Internal error&quot;</span>),
         <span class="ident">OakStatus</span>::<span class="ident">ErrTerminated</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">Other</span>, <span class="string">&quot;Node terminated&quot;</span>),
         <span class="ident">OakStatus</span>::<span class="ident">ErrChannelEmpty</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">UnexpectedEof</span>, <span class="string">&quot;Channel empty&quot;</span>),
+        <span class="ident">OakStatus</span>::<span class="ident">ErrPermissionDenied</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">PermissionDenied</span>, <span class="string">&quot;Permission denied&quot;</span>)
+        }
     }
 }
 </pre></div>

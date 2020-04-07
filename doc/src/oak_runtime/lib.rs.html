@@ -40,6 +40,9 @@
 <span id="40">40</span>
 <span id="41">41</span>
 <span id="42">42</span>
+<span id="43">43</span>
+<span id="44">44</span>
+<span id="45">45</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -57,16 +60,8 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
-<span class="attribute">#![<span class="ident">feature</span>(<span class="ident">result_contains_err</span>)]</span>
-
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;no_std&quot;</span>)]</span>
-<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">no_std_compat</span> <span class="kw">as</span> <span class="ident">std</span>;
-
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;std&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">proto</span>;
 
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">channel</span>;
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;std&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">config</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">message</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">node</span>;
@@ -75,13 +70,24 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span>;
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;std&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">config</span>::<span class="ident">application_configuration</span>;
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;std&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">config</span>::<span class="ident">configure_and_run</span>;
 
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">channel</span>::{<span class="ident">ChannelEither</span>, <span class="ident">ChannelReader</span>, <span class="ident">ChannelWriter</span>};
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">message</span>::<span class="ident">Message</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">runtime</span>::{<span class="ident">Runtime</span>, <span class="ident">RuntimeRef</span>};
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">runtime</span>::{<span class="ident">Handle</span>, <span class="ident">NodeId</span>, <span class="ident">Runtime</span>};
+
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">thread</span>::<span class="ident">Thread</span>;
+
+<span class="doccomment">/// Formats the thread for logging. Threads should be given a name with</span>
+<span class="doccomment">/// [`std::thread::Builder::name`] to make the output more readable.</span>
+<span class="kw">fn</span> <span class="ident">pretty_name_for_thread</span>(<span class="ident">thread_handle</span>: <span class="kw-2">&amp;</span><span class="ident">Thread</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
+    <span class="macro">format</span><span class="macro">!</span>(
+        <span class="string">&quot;{:?}:{}&quot;</span>,
+        <span class="ident">thread_handle</span>.<span class="ident">id</span>(),
+        <span class="comment">// Note: Use &quot;&lt;unnamed&gt;&quot; to make it stand out in the logs (and</span>
+        <span class="comment">// hopefully fixed).</span>
+        <span class="ident">thread_handle</span>.<span class="ident">name</span>().<span class="ident">unwrap_or</span>(<span class="string">&quot;&lt;unnamed&gt;&quot;</span>)
+    )
+}
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "oak_runtime";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>

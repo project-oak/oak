@@ -65,6 +65,7 @@
 <span id="65">65</span>
 <span id="66">66</span>
 <span id="67">67</span>
+<span id="68">68</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// This file is generated. Do not edit</span>
 <span class="comment">// @generated</span>
@@ -90,6 +91,7 @@
 <span class="kw">use</span> <span class="ident">oak</span>::<span class="ident">grpc</span>;
 <span class="kw">use</span> <span class="ident">protobuf</span>::<span class="ident">Message</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">Write</span>;
+<span class="kw">use</span> <span class="ident">log</span>::<span class="ident">error</span>;
 
 <span class="comment">// Oak Node server interface</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">HelloWorld</span> {
@@ -116,7 +118,7 @@
             <span class="string">&quot;/oak.examples.hello_world.HelloWorld/LotsOfGreetings&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">grpc</span>::<span class="ident">handle_stream_rsp</span>(<span class="op">|</span><span class="ident">rr</span><span class="op">|</span> <span class="self">self</span>.<span class="number">0</span>.<span class="ident">lots_of_greetings</span>(<span class="ident">rr</span>), <span class="ident">req</span>, <span class="ident">writer</span>),
             <span class="string">&quot;/oak.examples.hello_world.HelloWorld/BidiHello&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">grpc</span>::<span class="ident">handle_stream_stream</span>(<span class="op">|</span><span class="ident">rr</span>, <span class="ident">w</span><span class="op">|</span> <span class="self">self</span>.<span class="number">0</span>.<span class="ident">bidi_hello</span>(<span class="ident">rr</span>, <span class="ident">w</span>), <span class="ident">req</span>, <span class="ident">writer</span>),
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;unknown method name: {}&quot;</span>, <span class="ident">method</span>);
+                <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;unknown method name: {}&quot;</span>, <span class="ident">method</span>);
             }
         };
     }
@@ -127,10 +129,10 @@
 
 <span class="kw">impl</span> <span class="ident">HelloWorldClient</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">say_hello</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">req</span>: <span class="kw">super</span>::<span class="ident">hello_world</span>::<span class="ident">HelloRequest</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw">super</span>::<span class="ident">hello_world</span>::<span class="ident">HelloResponse</span><span class="op">&gt;</span> {
-        <span class="ident">oak</span>::<span class="ident">grpc</span>::<span class="ident">invoke_grpc_method</span>(<span class="string">&quot;/oak.examples.hello_world.HelloWorld/SayHello&quot;</span>, <span class="ident">req</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>.<span class="ident">invocation_sender</span>)
+        <span class="ident">oak</span>::<span class="ident">grpc</span>::<span class="ident">invoke_grpc_method</span>(<span class="string">&quot;/oak.examples.hello_world.HelloWorld/SayHello&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">req</span>, <span class="prelude-val">Some</span>(<span class="string">&quot;type.googleapis.com/oak.examples.hello_world.HelloRequest&quot;</span>), <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>.<span class="ident">invocation_sender</span>)
     }
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">lots_of_replies</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">req</span>: <span class="kw">super</span>::<span class="ident">hello_world</span>::<span class="ident">HelloRequest</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">oak</span>::<span class="ident">io</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">grpc</span>::<span class="ident">GrpcResponse</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="ident">oak</span>::<span class="ident">grpc</span>::<span class="ident">invoke_grpc_method_stream</span>(<span class="string">&quot;/oak.examples.hello_world.HelloWorld/LotsOfReplies&quot;</span>, <span class="ident">req</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>.<span class="ident">invocation_sender</span>)
+        <span class="ident">oak</span>::<span class="ident">grpc</span>::<span class="ident">invoke_grpc_method_stream</span>(<span class="string">&quot;/oak.examples.hello_world.HelloWorld/LotsOfReplies&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">req</span>, <span class="prelude-val">Some</span>(<span class="string">&quot;type.googleapis.com/oak.examples.hello_world.HelloRequest&quot;</span>), <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>.<span class="ident">invocation_sender</span>)
     }
 }
 </pre></div>
