@@ -6,10 +6,10 @@ source "${SCRIPTS_DIR}/common"
 
 language="rust"
 server="base"
-while getopts "s:a:l:e:h" opt; do
+while getopts "s:a:l:e:vh" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-s base|arm|asan|tsan] [-l rust|cpp] (-a APPLICATION | -e EXAMPLE)
+      echo -e "Usage: ${0} [-s base|arm|asan|tsan] [-l rust|cpp] (-a APPLICATION | -e EXAMPLE) [-v]
 
 Run a particular Oak Application in the Oak Runtime.
 Either the -a APPLICATION or the -e EXAMPLE option is required.
@@ -18,19 +18,21 @@ Either the -a APPLICATION or the -e EXAMPLE option is required.
   -e    Example application name
   -s    Server type:
           - base: base version of the server (default)
+          - rust: Rust version of the server
           - arm: server for ARM architecture
           - asan: server with address sanitizer
           - tsan: server with thread santizer
   -l    Example application variant (if -e specified):
           - rust (used by default)
           - cpp
+  -v    Enable verbose/debug output
   -h    Print Help (this message) and exit"
       exit 0;;
     l)
       language="${OPTARG}";;
     s)
       case "${OPTARG}" in
-        base|arm|asan|tsan)
+        base|rust|arm|asan|tsan)
           server="${OPTARG}";;
         *)
           echo "Invalid server type: ${OPTARG}"
@@ -40,6 +42,8 @@ Either the -a APPLICATION or the -e EXAMPLE option is required.
       readonly APPLICATION="${OPTARG}";;
     e)
       readonly EXAMPLE="${OPTARG}";;
+    v)
+      RUST_LOG='debug';;
     *)
       echo "Invalid argument: ${OPTARG}"
       exit 1;;
@@ -73,9 +77,17 @@ fi
 
 # Launching the server requires a `--application=<dir>/config.bin` flag.
 # `exec` is necessary for the `run_example` script to be able to get a PID of a background server.
-# We use a different symlink prefix for clang-based artifacts.
-exec ./bazel-clang-bin/oak/server/loader/oak_runner \
-  --application="${APPLICATION}" \
-  --ca_cert="${SCRIPTS_DIR}/../examples/certs/local/ca.pem" \
-  --cert_chain="${SCRIPTS_DIR}/../examples/certs/local/local.pem" \
-  --private_key="${SCRIPTS_DIR}/../examples/certs/local/local.key"
+if [[ "${server}" == "rust" ]]; then
+  exec cargo run --package=oak_loader -- \
+    --application="${APPLICATION}" \
+    --ca-cert="${SCRIPTS_DIR}/../examples/certs/local/ca.pem" \
+    --cert-chain="${SCRIPTS_DIR}/../examples/certs/local/local.pem" \
+    --private-key="${SCRIPTS_DIR}/../examples/certs/local/local.key"
+else
+  # We use a different symlink prefix for clang-based artifacts.
+  exec ./bazel-clang-bin/oak/server/loader/oak_runner \
+    --application="${APPLICATION}" \
+    --ca_cert="${SCRIPTS_DIR}/../examples/certs/local/ca.pem" \
+    --cert_chain="${SCRIPTS_DIR}/../examples/certs/local/local.pem" \
+    --private_key="${SCRIPTS_DIR}/../examples/certs/local/local.key"
+fi

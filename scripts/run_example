@@ -7,10 +7,11 @@ source "${SCRIPTS_DIR}/common"
 language="rust"
 server="base"
 buildargs=""
-while getopts "s:l:de:h" opt; do
+serverargs=""
+while getopts "s:l:de:vh" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-h] [-s base|asan|tsan|none] [-l rust|cpp] [-d] -e EXAMPLE [-- CLIENT_ARGS]
+      echo -e "Usage: ${0} [-h] [-s base|asan|tsan|none] [-l rust|cpp] [-d] -e EXAMPLE [-- CLIENT_ARGS] [-v]
 
 Build and run the given example Oak Application and client.
 
@@ -18,6 +19,7 @@ Options:
   -e    Example application name (required)
   -s    Server type used to run examples:
           - base: base version of the server (default)
+          - rust: Rust version of the server
           - asan: server with address sanitizer
           - tsan: server with thread sanitizer
           - none: run an application client without a server
@@ -25,6 +27,7 @@ Options:
   -l    Example application variant:
           - rust (used by default)
           - cpp
+  -v    Enable verbose/debug output for the server
   -h    Print Help (this message) and exit
 Options after -- will be passed to the example client program."
       exit 0;;
@@ -32,7 +35,7 @@ Options after -- will be passed to the example client program."
       language="${OPTARG}";;
     s)
       case "${OPTARG}" in
-        base|asan|tsan|none)
+        base|rust|asan|tsan|none)
           server="${OPTARG}";;
         *)
           echo "Invalid server type: ${OPTARG}"
@@ -42,6 +45,8 @@ Options after -- will be passed to the example client program."
       buildargs='-d';;
     e)
       readonly EXAMPLE="${OPTARG}";;
+    v)
+      serverargs='-v';;
     *)
       echo "Invalid argument: ${OPTARG}"
       exit 1;;
@@ -68,7 +73,7 @@ if [[ "${server}" != "none" ]]; then
   # The server is being built before running, so the build process will not happen in the
   # background.
   "${SCRIPTS_DIR}/build_server" -s "${server}"
-  "${SCRIPTS_DIR}/run_server" -s "${server}" -l "${language}" -e "${EXAMPLE}" &
+  "${SCRIPTS_DIR}/run_server" ${serverargs} -s "${server}" -l "${language}" -e "${EXAMPLE}" &
   readonly SERVER_PID=$!
 
   function stop_server {
