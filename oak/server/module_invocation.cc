@@ -23,6 +23,8 @@
 #include "oak/proto/label.pb.h"
 #include "oak/server/channel.h"
 
+using ::oak_abi::OakStatus;
+
 namespace oak {
 
 namespace {

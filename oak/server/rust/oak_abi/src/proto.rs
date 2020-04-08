@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-include!(concat!(env!("OUT_DIR"), "/oak.rs"));
+include!(concat!(env!("OUT_DIR"), "/oak_abi.rs"));
 
 pub mod label {
     include!(concat!(env!("OUT_DIR"), "/oak.label.rs"));

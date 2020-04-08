@@ -19,6 +19,9 @@
 #include "absl/memory/memory.h"
 #include "oak/common/logging.h"
 
+using ::oak_abi::ChannelReadStatus;
+using ::oak_abi::OakStatus;
+
 namespace oak {
 
 MessageChannel::ChannelHalves MessageChannel::Create() {

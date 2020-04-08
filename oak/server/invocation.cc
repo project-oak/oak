@@ -18,6 +18,8 @@
 
 #include "oak/common/logging.h"
 
+using ::oak_abi::OakStatus;
+
 namespace oak {
 
 std::unique_ptr<Invocation> Invocation::ReceiveFromChannel(OakNode* node,

@@ -16,7 +16,7 @@
 
 syntax = "proto3";
 
-package oak;
+package oak_abi;
 
 // Status values exchanged as i32 values across the Node Wasm interface.
 enum OakStatus {

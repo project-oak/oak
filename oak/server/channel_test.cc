@@ -21,6 +21,8 @@
 #include "absl/memory/memory.h"
 #include "gtest/gtest.h"
 
+using ::oak_abi::OakStatus;
+
 namespace oak {
 
 static std::unique_ptr<Message> CreateMessage(int base) {

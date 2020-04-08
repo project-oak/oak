@@ -27,13 +27,15 @@
 #include "absl/time/time.h"
 #include "absl/types/span.h"
 #include "oak/common/logging.h"
-#include "oak/proto/oak_api.pb.h"
+#include "oak/proto/oak_abi.pb.h"
 #include "oak/server/base_runtime.h"
 #include "oak/server/wabt_output.h"
 #include "src/binary-reader.h"
 #include "src/error-formatter.h"
 #include "src/error.h"
 #include "src/interp/binary-reader-interp.h"
+
+using ::oak_abi::OakStatus;
 
 namespace oak {
 
