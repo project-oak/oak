@@ -14,6 +14,7 @@ Build the specified version of the Oak Runtime server.
 
   -s    Server type:
           - base: base version of the server (default)
+          - rust: Rust version of the server
           - arm: server for ARM architecture
           - asan: server with address sanitizer
           - tsan: server with thread santizer
@@ -23,6 +24,8 @@ Build the specified version of the Oak Runtime server.
       case "${OPTARG}" in
         base)
           config='clang';;
+        rust)
+          config='rust';;
         arm)
           config='armv8';;
         asan)
@@ -39,12 +42,16 @@ Build the specified version of the Oak Runtime server.
   esac
 done
 
-bazel_build_flags+=(
-  "--config=${config}"
-)
+if [[ "${config}" == "rust" ]]; then
+  cargo build --package=oak_loader
+else
+  bazel_build_flags+=(
+    "--config=${config}"
+  )
 
-# Use a different output_base so that we don't lose incremental state.
-# See https://docs.bazel.build/versions/master/command-line-reference.html#flag--output_base.
-bazel --output_base="${CACHE_DIR}/$config" build "${bazel_build_flags[@]}" \
-  //oak/server/loader:oak_runner \
-  //oak/server/storage:storage_server
+  # Use a different output_base so that we don't lose incremental state.
+  # See https://docs.bazel.build/versions/master/command-line-reference.html#flag--output_base.
+  bazel --output_base="${CACHE_DIR}/$config" build "${bazel_build_flags[@]}" \
+    //oak/server/loader:oak_runner \
+    //oak/server/storage:storage_server
+fi
