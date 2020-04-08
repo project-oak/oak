@@ -26,8 +26,8 @@
 #include "absl/memory/memory.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/types/variant.h"
+#include "oak/proto/label.pb.h"
 #include "oak/proto/oak_api.pb.h"
-#include "oak/proto/policy.pb.h"
 #include "oak/server/notification.h"
 
 namespace oak {
@@ -47,7 +47,7 @@ struct Message {
   std::vector<std::unique_ptr<ChannelHalf>> channels;
   // TODO(#603): Consider using a native struct here instead of the proto
   // representation.
-  oak::policy::Label label;
+  oak::label::Label label;
 };
 
 // Result of a read operation.

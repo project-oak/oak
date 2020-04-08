@@ -97,7 +97,7 @@ cc_library(
     hdrs = ["policy.h"],
     visibility = ["//visibility:public"],
     deps = [
-        "//oak/proto:policy_cc_proto",
+        "//oak/proto:label_cc_proto",
         "@com_google_absl//absl/base",
         "@com_google_absl//absl/strings",
     ],

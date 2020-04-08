@@ -30,19 +30,19 @@ const char kOakPolicyGrpcMetadataKey[] = "x-oak-policy-bin";
 // See https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md.
 const char kOakAuthorizationBearerTokenGrpcMetadataKey[] = "x-oak-authorization-bearer-token-bin";
 
-std::string SerializePolicy(const oak::policy::Label& policy_proto) {
+std::string SerializePolicy(const oak::label::Label& policy_proto) {
   return policy_proto.SerializeAsString();
 }
 
-oak::policy::Label DeserializePolicy(const std::string& policy_bytes) {
-  oak::policy::Label policy_proto;
+oak::label::Label DeserializePolicy(const std::string& policy_bytes) {
+  oak::label::Label policy_proto;
   // TODO(#488): Check errors.
   policy_proto.ParseFromString(policy_bytes);
   return policy_proto;
 }
 
-oak::policy::Label AuthorizationBearerTokenPolicy(const std::string& authorization_token_hmac) {
-  oak::policy::Label label;
+oak::label::Label AuthorizationBearerTokenPolicy(const std::string& authorization_token_hmac) {
+  oak::label::Label label;
   auto* secrecy_tag = label.add_secrecy_tags();
   auto* integrity_tag = label.add_integrity_tags();
   secrecy_tag->mutable_grpc_tag()->set_authorization_bearer_token_hmac(authorization_token_hmac);
@@ -54,8 +54,8 @@ oak::policy::Label AuthorizationBearerTokenPolicy(const std::string& authorizati
   return label;
 }
 
-oak::policy::Label WebAssemblyModuleAttestationPolicy(const std::string& module_attestation) {
-  oak::policy::Label label;
+oak::label::Label WebAssemblyModuleAttestationPolicy(const std::string& module_attestation) {
+  oak::label::Label label;
   auto* secrecy_tag = label.add_secrecy_tags();
   auto* integrity_tag = label.add_integrity_tags();
   secrecy_tag->mutable_web_assembly_module_tag()->set_module_attestation(module_attestation);

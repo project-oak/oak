@@ -18,7 +18,7 @@ syntax = "proto3";
 
 package oak;
 
-import "oak/proto/policy.proto";
+import "oak/proto/label.proto";
 
 // In all the request messages below, the storage_name field is used to partition data within an Oak
 // Module and is not exposed to the StorageProvider. The StorageChannel generates a unique storage
@@ -28,7 +28,7 @@ import "oak/proto/policy.proto";
 message StorageItem {
   bytes name = 1;
   bytes value = 2;
-  oak.policy.Label policy = 3;
+  oak.label.Label label = 3;
 }
 
 message StorageChannelReadRequest {

@@ -121,7 +121,7 @@ cc_library(
         "//oak/common:logging",
         "//oak/common:policy",
         "//oak/proto:grpc_encap_cc_proto",
-        "//oak/proto:policy_cc_proto",
+        "//oak/proto:label_cc_proto",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/synchronization",
     ],
@@ -164,8 +164,8 @@ cc_library(
     deps = [
         ":notification",
         "//oak/common:logging",
+        "//oak/proto:label_cc_proto",
         "//oak/proto:oak_api_cc_proto",
-        "//oak/proto:policy_cc_proto",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/synchronization",
         "@com_google_absl//absl/types:variant",

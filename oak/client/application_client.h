@@ -25,7 +25,6 @@
 #include "oak/common/nonce_generator.h"
 #include "oak/common/policy.h"
 #include "oak/common/utils.h"
-#include "oak/proto/policy.pb.h"
 
 namespace oak {
 

@@ -16,9 +16,9 @@
 
 syntax = "proto3";
 
-package oak.policy;
+package oak.label;
 
-// Label represents a policy associated with a message or a Node.
+// Label represents information flowing through a Node or channel.
 //
 // See https://pdos.csail.mit.edu/papers/flume-sosp07.pdf section 3.1.
 message Label {

@@ -17,7 +17,7 @@
 use std::path;
 
 fn main() {
-    let proto_files = vec!["oak_api.proto", "policy.proto"];
+    let proto_files = vec!["oak_api.proto", "label.proto"];
 
     let proto_dir = path::Path::new("../../../../oak/proto/").to_path_buf();
     let proto_paths: Vec<path::PathBuf> = proto_files.iter().map(|f| proto_dir.join(f)).collect();
@@ -29,7 +29,7 @@ fn main() {
     }
 
     prost_build::Config::new()
-        .type_attribute(".oak.policy", "#[derive(Eq,Hash)]")
+        .type_attribute(".oak.label", "#[derive(Eq,Hash)]")
         .compile_protos(&proto_paths, &[proto_dir])
         .unwrap();
 }
