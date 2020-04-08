@@ -19,11 +19,11 @@
 
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/authorization_bearer_token_metadata.h"
-#include "oak/client/policy_metadata.h"
+#include "oak/client/label_metadata.h"
 #include "oak/common/hmac.h"
+#include "oak/common/label.h"
 #include "oak/common/logging.h"
 #include "oak/common/nonce_generator.h"
-#include "oak/common/policy.h"
 #include "oak/common/utils.h"
 
 namespace oak {
@@ -51,8 +51,8 @@ class ApplicationClient {
     return grpc::CompositeCallCredentials(
         grpc::MetadataCredentialsFromPlugin(
             absl::make_unique<AuthorizationBearerTokenMetadata>(authorization_bearer_token)),
-        grpc::MetadataCredentialsFromPlugin(absl::make_unique<PolicyMetadata>(
-            AuthorizationBearerTokenPolicy(authorization_bearer_token_hmac))));
+        grpc::MetadataCredentialsFromPlugin(absl::make_unique<LabelMetadata>(
+            AuthorizationBearerTokenLabel(authorization_bearer_token_hmac))));
   }
 
   // Generates a fresh nonce to use as authorization bearer token, and uses that to authenticate and
@@ -82,7 +82,7 @@ class ApplicationClient {
   // Returns a grpc Channel connecting to the specified address initialised with the following
   // composite channel credentials:
   // - Channel credentials, which should usually be TLS credentials
-  // - Oak Policy call credentials, possibly attaching a specific Oak Policy to each call
+  // - Oak Label call credentials, possibly attaching a specific Oak Label to each call
   //
   // Note that composite channel credentials are really channel credentials, plus a generator object
   // that modifies metadata for each call, and in this case it happens to always attach the same

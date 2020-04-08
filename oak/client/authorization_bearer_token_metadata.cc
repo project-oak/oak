@@ -18,7 +18,7 @@
 
 #include <map>
 
-#include "oak/common/policy.h"
+#include "oak/common/label.h"
 
 namespace oak {
 

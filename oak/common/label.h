@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-#ifndef OAK_COMMON_POLICY_H_
-#define OAK_COMMON_POLICY_H_
+#ifndef OAK_COMMON_LABEL_H_
+#define OAK_COMMON_LABEL_H_
 
 #include "absl/base/attributes.h"
 #include "oak/proto/label.pb.h"
 
 namespace oak {
 
-// Metadata key used to refer to the Oak Policy associated with the gRPC request. This is
+// Metadata key used to refer to the Oak Label associated with the gRPC request. This is
 // effectively treated as the name of a custom HTTP header.
-ABSL_CONST_INIT extern const char kOakPolicyGrpcMetadataKey[];
+ABSL_CONST_INIT extern const char kOakLabelGrpcMetadataKey[];
 
 // Metadata key used to refer to per-call authorization tokens.
 //
@@ -37,20 +37,20 @@ ABSL_CONST_INIT extern const char kOakPolicyGrpcMetadataKey[];
 // See https://tools.ietf.org/html/rfc6750
 ABSL_CONST_INIT extern const char kOakAuthorizationBearerTokenGrpcMetadataKey[];
 
-// Serialized the provided policy so that it can be sent as a binary gRPC metadata value.
-std::string SerializePolicy(const oak::label::Label& policy_proto);
+// Serialized the provided label so that it can be sent as a binary gRPC metadata value.
+std::string SerializeLabel(const oak::label::Label& label_proto);
 
-// Deserializes the provided binary gRPC metadata value into a policy.
-oak::label::Label DeserializePolicy(const std::string& policy_bytes);
+// Deserializes the provided binary gRPC metadata value into a label.
+oak::label::Label DeserializeLabel(const std::string& label_bytes);
 
-// Creates a policy that only allows declassifying data for gRPC clients that can present the
+// Creates a label that only allows declassifying data for gRPC clients that can present the
 // provided authorization bearer token.
-oak::label::Label AuthorizationBearerTokenPolicy(const std::string& authorization_token_hmac);
+oak::label::Label AuthorizationBearerTokenLabel(const std::string& authorization_token_hmac);
 
-// Creates a policy that only allows declassifying data for modules that match the
+// Creates a label that only allows declassifying data for modules that match the
 // provided module attestation.
-oak::label::Label WebAssemblyModuleAttestationPolicy(const std::string& module_attestation);
+oak::label::Label WebAssemblyModuleAttestationLabel(const std::string& module_attestation);
 
 }  // namespace oak
 
-#endif  // OAK_COMMON_POLICY_H_
+#endif  // OAK_COMMON_LABEL_H_
