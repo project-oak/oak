@@ -43,10 +43,10 @@ fn run_node_body(node_label: Label, node_body: Box<NodeBody>) {
     }
 
     // Manually allocate a new [`NodeId`].
-    let node_reference = runtime.new_node_reference();
+    let node_id = runtime.new_node_id();
     let runtime_proxy = RuntimeProxy {
         runtime: runtime.clone(),
-        node_id: node_reference,
+        node_id,
     };
 
     let node_instance = TestNode {
@@ -54,8 +54,7 @@ fn run_node_body(node_label: Label, node_body: Box<NodeBody>) {
         node_body,
     };
 
-    let result =
-        runtime.node_start_instance(node_reference, Box::new(node_instance), &node_label, vec![]);
+    let result = runtime.node_start_instance(node_id, Box::new(node_instance), &node_label, vec![]);
     assert_eq!(Ok(()), result);
 }
 
