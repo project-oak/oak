@@ -24,7 +24,7 @@ use crate::proto::storage_channel::{
 };
 use log::info;
 
-/// Default name for predefined node config that corresponds to a storage
+/// Default name for predefined Node config that corresponds to a storage
 /// pseudo-Node.
 pub const DEFAULT_CONFIG_NAME: &str = "storage";
 
@@ -35,13 +35,13 @@ pub struct Storage {
 
 impl Storage {
     /// Create a default `Storage` instance assuming the default pre-defined
-    /// name (`"storage"`) identifying storage node config.
+    /// name (`"storage"`) identifying storage Node config.
     pub fn default() -> Option<Storage> {
         Storage::new(DEFAULT_CONFIG_NAME)
     }
 
     /// Create a `Storage` instance using the given name identifying storage
-    /// node configuration.
+    /// Node configuration.
     pub fn new(config: &str) -> Option<Storage> {
         crate::grpc::client::Client::new(config, "oak_main").map(|client| Storage { client })
     }

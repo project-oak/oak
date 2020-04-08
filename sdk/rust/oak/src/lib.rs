@@ -398,7 +398,7 @@ pub fn set_panic_hook() {
 /// Trait implemented by all Oak Nodes.
 ///
 /// It has a single method for handling commands, which are [`Decodable`](crate::io::Decodable)
-/// objects that are received via the single incoming channel handle which is passed in at node
+/// objects that are received via the single incoming channel handle which is passed in at Node
 /// creation time. The return value is only used for logging in case of failure.
 pub trait Node<T: crate::io::Decodable> {
     fn handle_command(&mut self, command: T) -> Result<(), crate::OakError>;
@@ -407,13 +407,13 @@ pub trait Node<T: crate::io::Decodable> {
 /// Run an event loop on the provided `node`:
 ///
 /// - wait for new messages on the provided channel `in_handle`
-/// - if the runtime signals that the node was terminated while waiting, then exit the event loop
+/// - if the runtime signals that the Node was terminated while waiting, then exit the event loop
 /// - otherwise, read the available message via the provided channel handle
 /// - decode the message from (bytes + handles) to the specified type `T`
 /// - pass the typed object to the `Node::handle_command` method of the `node`, which executes a
 ///   single iteration of the event loop
 ///
-/// Note the loop is only interrupted if the node is terminated while waiting. Other errors are just
+/// Note the loop is only interrupted if the Node is terminated while waiting. Other errors are just
 /// logged, and the event loop continues with the next iteration.
 pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(mut node: N, in_handle: u64) {
     let in_channel = crate::ReadHandle {
@@ -426,7 +426,7 @@ pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(mut node: N, in_handl
     let receiver = crate::io::Receiver::new(in_channel);
     info!("starting event loop");
     loop {
-        // First wait until a message is available. If the node was terminated while waiting, this
+        // First wait until a message is available. If the Node was terminated while waiting, this
         // will return `ErrTerminated`, which indicates that the event loop should be terminated.
         // For any other error raised while waiting is logged, we try and determine whether it is
         // transient or not, and then continue or terminate the event loop, respectively.
@@ -461,10 +461,10 @@ pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(mut node: N, in_handl
     }
 }
 
-/// Register a new node entrypoint.
+/// Register a new Node entrypoint.
 ///
 /// This registers the entrypoint name and the expression used to construct the
-/// node instance. The returned object should implement the [`Node`](trait.Node.html) trait.
+/// Node instance. The returned object should implement the [`Node`](trait.Node.html) trait.
 ///
 /// ```
 /// # struct DummyCommand;
@@ -493,7 +493,7 @@ pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(mut node: N, in_handl
 /// in a function body). Is recommended but not required to define all entrypoints of your
 /// module in `lib.rs`.
 ///
-/// If instantiating your node requires some setup, it is possible to do that in the node
+/// If instantiating your Node requires some setup, it is possible to do that in the Node
 /// expression too:
 ///
 /// ```
@@ -528,7 +528,7 @@ macro_rules! entrypoint {
         // Do not mangle these functions when running unit tests, because the Rust unit test
         // framework will add a `pub extern "C" fn main()` containing the test runner. This can
         // cause clashes when $name = main. We don't fully omit it in tests so that compile errors
-        // in the node creation expression are still caught, and unit tests can still refer to the
+        // in the Node creation expression are still caught, and unit tests can still refer to the
         // symbol if they really want to.
         #[cfg_attr(not(test), no_mangle)]
         pub extern "C" fn $name(in_handle: u64) {

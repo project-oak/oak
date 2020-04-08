@@ -61,14 +61,14 @@ fn map_level(level: Level) -> crate::proto::log::Level {
     }
 }
 
-/// Default name for predefined node configuration that corresponds to a logging
+/// Default name for predefined Node configuration that corresponds to a logging
 /// pseudo-Node.
 pub const DEFAULT_CONFIG_NAME: &str = "log";
 
 /// Initialize Node-wide default logging.
 ///
 /// Uses the default level (`Debug`) and the default pre-defined name
-/// (`"log"`) identifying logging node configuration.
+/// (`"log"`) identifying logging Node configuration.
 ///
 /// # Panics
 ///
