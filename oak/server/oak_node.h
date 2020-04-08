@@ -45,8 +45,9 @@ struct NodeMessage {
 // Result of a read operation relative to a Node. Equivalent to ReadResult but
 // holds a NodeMessage rather than a Message.
 struct NodeReadResult {
-  explicit NodeReadResult(OakStatus s) : status(s), required_size(0), required_channels(0) {}
-  OakStatus status;
+  explicit NodeReadResult(oak_abi::OakStatus s)
+      : status(s), required_size(0), required_channels(0) {}
+  oak_abi::OakStatus status;
   // The following fields are filled in if the status is ERR_BUFFER_TOO_SMALL
   // or ERR_HANDLE_SPACE_TOO_SMALL, indicating the required size and number
   // of handles needed to read the message.
@@ -71,17 +72,17 @@ class OakNode {
 
   // ChannelWrite passes ownership of a message to the channel identified by the
   // handle.
-  OakStatus ChannelWrite(Handle handle, std::unique_ptr<NodeMessage> msg);
+  oak_abi::OakStatus ChannelWrite(Handle handle, std::unique_ptr<NodeMessage> msg);
 
   // Create a channel and return the (write, read) handles for it.
   std::pair<Handle, Handle> ChannelCreate();
 
   // Close the given channel half.
-  OakStatus ChannelClose(Handle handle) LOCKS_EXCLUDED(mu_);
+  oak_abi::OakStatus ChannelClose(Handle handle) LOCKS_EXCLUDED(mu_);
 
   // Create a new Node.
-  OakStatus NodeCreate(Handle handle, const std::string& config_name,
-                       const std::string& entrypoint_name);
+  oak_abi::OakStatus NodeCreate(Handle handle, const std::string& config_name,
+                                const std::string& entrypoint_name);
 
   // Wait on the given channel handles, modifying the contents of the passed-in
   // vector.  Returns a boolean indicating whether the wait finished due to a

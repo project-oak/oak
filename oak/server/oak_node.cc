@@ -20,6 +20,9 @@
 #include "oak/common/logging.h"
 #include "oak/server/notification.h"
 
+using ::oak_abi::ChannelReadStatus;
+using ::oak_abi::OakStatus;
+
 namespace oak {
 
 NodeReadResult OakNode::ChannelRead(Handle handle, uint32_t max_size, uint32_t max_channels) {

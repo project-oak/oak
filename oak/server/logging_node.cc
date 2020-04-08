@@ -21,6 +21,8 @@
 #include "oak/proto/log.pb.h"
 #include "oak/server/handle_closer.h"
 
+using ::oak_abi::OakStatus;
+
 namespace oak {
 
 void LoggingNode::Run(Handle handle) {

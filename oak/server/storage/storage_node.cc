@@ -25,6 +25,8 @@
 #include "oak/server/invocation.h"
 #include "third_party/asylo/status_macros.h"
 
+using ::oak_abi::OakStatus;
+
 namespace oak {
 
 StorageNode::StorageNode(BaseRuntime* runtime, const std::string& name,

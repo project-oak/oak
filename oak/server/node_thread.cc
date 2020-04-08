@@ -18,6 +18,8 @@
 
 #include "oak/common/logging.h"
 
+using ::oak_abi::OakStatus;
+
 namespace oak {
 
 NodeThread::~NodeThread() { StopThread(); }

@@ -56,13 +56,13 @@ cc_proto_library(
 )
 
 proto_library(
-    name = "oak_api_proto",
-    srcs = ["oak_api.proto"],
+    name = "oak_abi_proto",
+    srcs = ["oak_abi.proto"],
 )
 
 cc_proto_library(
-    name = "oak_api_cc_proto",
-    deps = [":oak_api_proto"],
+    name = "oak_abi_cc_proto",
+    deps = [":oak_abi_proto"],
 )
 
 proto_library(

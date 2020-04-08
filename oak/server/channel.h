@@ -27,7 +27,7 @@
 #include "absl/synchronization/mutex.h"
 #include "absl/types/variant.h"
 #include "oak/proto/label.pb.h"
-#include "oak/proto/oak_api.pb.h"
+#include "oak/proto/oak_abi.pb.h"
 #include "oak/server/notification.h"
 
 namespace oak {
@@ -52,8 +52,8 @@ struct Message {
 
 // Result of a read operation.
 struct ReadResult {
-  explicit ReadResult(OakStatus s) : status(s), required_size(0), required_channels(0) {}
-  OakStatus status;
+  explicit ReadResult(oak_abi::OakStatus s) : status(s), required_size(0), required_channels(0) {}
+  oak_abi::OakStatus status;
   // The following fields are filled in if the status is ERR_BUFFER_TOO_SMALL
   // or ERR_HANDLE_SPACE_TOO_SMALL, indicating the required size and number
   // of handles needed to read the message.
@@ -94,7 +94,7 @@ class MessageChannel {
 
   // Return the current readable status of the channel, and if NOT_READY add the
   // provided Notification to pending notifies for the channel.
-  ChannelReadStatus ReadStatus(std::weak_ptr<Notification> notify) LOCKS_EXCLUDED(mu_);
+  oak_abi::ChannelReadStatus ReadStatus(std::weak_ptr<Notification> notify) LOCKS_EXCLUDED(mu_);
 
   // Count indicates the number of pending messages.
   size_t Count() const LOCKS_EXCLUDED(mu_);
@@ -167,7 +167,7 @@ class MessageChannelReadHalf {
 
   // Return the current readable status of the channel, and if NOT_READY add the
   // provided Notification to pending notifies for the channel.
-  ChannelReadStatus ReadStatus(std::weak_ptr<Notification> notify) {
+  oak_abi::ChannelReadStatus ReadStatus(std::weak_ptr<Notification> notify) {
     return channel_->ReadStatus(notify);
   }
 
@@ -226,9 +226,9 @@ std::unique_ptr<ChannelHalf> CloneChannelHalf(ChannelHalf* half);
 
 // Current readable status of a channel.
 struct ChannelStatus {
-  explicit ChannelStatus(uint64_t h) : handle(h), status(ChannelReadStatus::NOT_READY) {}
+  explicit ChannelStatus(uint64_t h) : handle(h), status(oak_abi::ChannelReadStatus::NOT_READY) {}
   uint64_t handle;
-  ChannelReadStatus status;
+  oak_abi::ChannelReadStatus status;
 };
 
 }  // namespace oak

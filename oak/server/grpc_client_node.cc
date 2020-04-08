@@ -22,6 +22,8 @@
 #include "oak/proto/grpc_encap.pb.h"
 #include "oak/server/invocation.h"
 
+using ::oak_abi::OakStatus;
+
 namespace oak {
 
 namespace {
