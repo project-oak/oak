@@ -26,7 +26,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":authorization_bearer_token_metadata",
-        ":policy_metadata",
+        ":label_metadata",
         "//oak/common:app_config",
         "//oak/common:hmac",
         "//oak/common:logging",
@@ -36,12 +36,12 @@ cc_library(
 )
 
 cc_library(
-    name = "policy_metadata",
-    srcs = ["policy_metadata.cc"],
-    hdrs = ["policy_metadata.h"],
+    name = "label_metadata",
+    srcs = ["label_metadata.cc"],
+    hdrs = ["label_metadata.h"],
     visibility = ["//visibility:public"],
     deps = [
-        "//oak/common:policy",
+        "//oak/common:label",
         "//oak/proto:label_cc_proto",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/base",
@@ -54,7 +54,7 @@ cc_library(
     hdrs = ["authorization_bearer_token_metadata.h"],
     visibility = ["//visibility:public"],
     deps = [
-        "//oak/common:policy",
+        "//oak/common:label",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/base",
     ],

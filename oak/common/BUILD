@@ -92,9 +92,9 @@ filegroup(
 )
 
 cc_library(
-    name = "policy",
-    srcs = ["policy.cc"],
-    hdrs = ["policy.h"],
+    name = "label",
+    srcs = ["label.cc"],
+    hdrs = ["label.h"],
     visibility = ["//visibility:public"],
     deps = [
         "//oak/proto:label_cc_proto",

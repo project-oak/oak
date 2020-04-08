@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "oak/common/policy.h"
+#include "oak/common/label.h"
 
 #include "absl/strings/escaping.h"
 
@@ -23,25 +23,25 @@ namespace oak {
 // The `-bin` suffix allows sending binary data for this metadata key.
 //
 // See https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md.
-const char kOakPolicyGrpcMetadataKey[] = "x-oak-policy-bin";
+const char kOakLabelGrpcMetadataKey[] = "x-oak-label-bin";
 
 // The `-bin` suffix allows sending binary data for this metadata key.
 //
 // See https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md.
 const char kOakAuthorizationBearerTokenGrpcMetadataKey[] = "x-oak-authorization-bearer-token-bin";
 
-std::string SerializePolicy(const oak::label::Label& policy_proto) {
-  return policy_proto.SerializeAsString();
+std::string SerializeLabel(const oak::label::Label& label_proto) {
+  return label_proto.SerializeAsString();
 }
 
-oak::label::Label DeserializePolicy(const std::string& policy_bytes) {
-  oak::label::Label policy_proto;
+oak::label::Label DeserializeLabel(const std::string& label_bytes) {
+  oak::label::Label label_proto;
   // TODO(#488): Check errors.
-  policy_proto.ParseFromString(policy_bytes);
-  return policy_proto;
+  label_proto.ParseFromString(label_bytes);
+  return label_proto;
 }
 
-oak::label::Label AuthorizationBearerTokenPolicy(const std::string& authorization_token_hmac) {
+oak::label::Label AuthorizationBearerTokenLabel(const std::string& authorization_token_hmac) {
   oak::label::Label label;
   auto* secrecy_tag = label.add_secrecy_tags();
   auto* integrity_tag = label.add_integrity_tags();
@@ -54,7 +54,7 @@ oak::label::Label AuthorizationBearerTokenPolicy(const std::string& authorizatio
   return label;
 }
 
-oak::label::Label WebAssemblyModuleAttestationPolicy(const std::string& module_attestation) {
+oak::label::Label WebAssemblyModuleAttestationLabel(const std::string& module_attestation) {
   oak::label::Label label;
   auto* secrecy_tag = label.add_secrecy_tags();
   auto* integrity_tag = label.add_integrity_tags();

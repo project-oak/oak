@@ -14,33 +14,33 @@
  * limitations under the License.
  */
 
-#ifndef OAK_CLIENT_POLICY_METADATA_H_
-#define OAK_CLIENT_POLICY_METADATA_H_
+#ifndef OAK_CLIENT_LABEL_METADATA_H_
+#define OAK_CLIENT_LABEL_METADATA_H_
 
 #include "include/grpcpp/grpcpp.h"
 #include "oak/proto/label.pb.h"
 
 namespace oak {
 
-// This class injects the provided Oak Policy to each outgoing gRPC call, passed over gRPC binary
+// This class injects the provided Oak Label to each outgoing gRPC call, passed over gRPC binary
 // metadata.
 //
 // In real-world use cases it should be combined to channel credentials, providing enclave
 // attestation.
 //
 // See https://grpc.io/docs/guides/auth/.
-class PolicyMetadata : public grpc::MetadataCredentialsPlugin {
+class LabelMetadata : public grpc::MetadataCredentialsPlugin {
  public:
-  PolicyMetadata(const oak::label::Label& label);
+  LabelMetadata(const oak::label::Label& label);
 
   grpc::Status GetMetadata(grpc::string_ref service_url, grpc::string_ref method_name,
                            const grpc::AuthContext& channel_auth_context,
                            std::multimap<grpc::string, grpc::string>* metadata) override;
 
  private:
-  const std::string serialized_policy_;
+  const std::string serialized_label_;
 };
 
 }  // namespace oak
 
-#endif  // OAK_CLIENT_POLICY_METADATA_H_
+#endif  // OAK_CLIENT_LABEL_METADATA_H_
