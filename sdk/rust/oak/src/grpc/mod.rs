@@ -351,26 +351,26 @@ where
     node_fn(rr, writer)
 }
 
-/// Default name for predefined node configuration that corresponds to a gRPC pseudo-Node.
+/// Default name for predefined Node configuration that corresponds to a gRPC pseudo-Node.
 pub const DEFAULT_CONFIG_NAME: &str = "grpc_server";
 
-/// Initialize a gRPC pseudo-node with the default configuration.
+/// Initialize a gRPC pseudo-Node with the default configuration.
 pub fn init_default() {
     init(DEFAULT_CONFIG_NAME).unwrap();
 }
 
-/// Initializes a gRPC server pseudo-node and passes it a handle to write invocations to.
+/// Initializes a gRPC server pseudo-Node and passes it a handle to write invocations to.
 ///
 /// Returns a [`ReadHandle`] to read invocations from.
 ///
 /// [`ReadHandle`]: crate::ReadHandle
 pub fn init(config: &str) -> std::result::Result<crate::ReadHandle, OakStatus> {
-    // Create a channel and pass the read half to a new gRPC pseudo-node.
+    // Create a channel and pass the read half to a new gRPC pseudo-Node.
     let (write_handle, read_handle) = crate::channel_create().expect("Couldn't create a channel");
     crate::node_create(config, "oak_main", read_handle)?;
     crate::channel_close(read_handle.handle).expect("Couldn't close a channel");
 
-    // Create a separate channel for receiving invocations and pass it to a gRPC pseudo-node.
+    // Create a separate channel for receiving invocations and pass it to a gRPC pseudo-Node.
     let (invocation_write_handle, invocation_read_handle) =
         crate::channel_create().expect("Couldn't create a channel");
     crate::channel_write(write_handle, &[], &[invocation_write_handle.handle])
