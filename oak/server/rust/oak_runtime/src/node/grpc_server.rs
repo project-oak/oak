@@ -27,25 +27,25 @@ use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
 
 use crate::{pretty_name_for_thread, runtime::RuntimeProxy, Handle};
 
-/// Struct that represents a gRPC server pseudo-node.
+/// Struct that represents a gRPC server pseudo-Node.
 ///
-/// For each gRPC request from a client, gRPC server pseudo-node creates a pair of temporary
+/// For each gRPC request from a client, gRPC server pseudo-Node creates a pair of temporary
 /// channels (to write a request to and to read a response from) and passes corresponding handles to
 /// the [`GrpcServerNode::channel_writer`].
 pub struct GrpcServerNode {
-    /// Pseudo-node name that corresponds to an entry from the
+    /// Pseudo-Node name that corresponds to an entry from the
     /// [`oak_runtime::proto::ApplicationConfiguration`].
     config_name: String,
-    /// Reference to a Runtime that corresponds to a node that created a gRPC server pseudo-node.
+    /// Reference to a Runtime that corresponds to a Node that created a gRPC server pseudo-Node.
     runtime: RuntimeProxy,
     /// Server address to listen client requests on.
     address: SocketAddr,
     /// Channel handle used for reading a [`GrpcServerNode::channel_writer`] once the gRPC server
-    /// pseudo-node has started.
+    /// pseudo-Node has started.
     initial_reader: Handle,
     /// Channel handle used for writing invocations.
     channel_writer: Option<Handle>,
-    /// Thread handle that corresponds to a thread running a gRPC server pseudo-node.
+    /// Thread handle that corresponds to a thread running a gRPC server pseudo-Node.
     thread_handle: Option<JoinHandle<()>>,
 }
 
@@ -66,7 +66,7 @@ impl Into<http::StatusCode> for GrpcServerError {
     }
 }
 
-/// Clone implementation without `thread_handle` copying to pass the node to other threads.
+/// Clone implementation without `thread_handle` copying to pass the Node to other threads.
 impl Clone for GrpcServerNode {
     fn clone(&self) -> Self {
         Self {
@@ -90,7 +90,7 @@ impl GrpcServerNode {
     /// Creates a new [`GrpcServerNode`] instance, but does not start it.
     ///
     /// `channel_writer` and `thread_handle` are initialized with `None`, because they will receive
-    /// their values after the gRPC server pseudo-node has started and a separate thread was
+    /// their values after the gRPC server pseudo-Node has started and a separate thread was
     /// initialized.
     pub fn new(
         config_name: &str,
@@ -247,7 +247,7 @@ impl GrpcServerNode {
                 GrpcServerError::RequestProcessingError
             })?;
 
-        // Send an invocation message (with attached handles) to the Oak node.
+        // Send an invocation message (with attached handles) to the Oak Node.
         self.runtime
             .channel_write(
                 self.channel_writer.expect("Node writer wasn't initialized"),

@@ -82,7 +82,7 @@ impl super::Node for LogNode {
 fn logger(pretty_name: &str, runtime: &RuntimeProxy, reader: Handle) -> Result<(), OakStatus> {
     loop {
         // An error indicates the Runtime is terminating. We ignore it here and keep trying to read
-        // in case a Wasm node wants to emit remaining messages. We will return once the channel is
+        // in case a Wasm Node wants to emit remaining messages. We will return once the channel is
         // closed.
 
         let _ = runtime.wait_on_channels(&[Some(reader)]);

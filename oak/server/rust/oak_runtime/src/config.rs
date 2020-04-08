@@ -36,8 +36,8 @@ use crate::runtime::{Handle, Runtime};
 ///
 /// - module_name_wasm: collection of Wasm bytes indexed by config name.
 /// - logger_name: Node name to use for a logger configuration; if empty no logger will be included.
-/// - initial_node: Initial node to run on launch.
-/// - entrypoint: Entrypoint in the initial node to run on launch.
+/// - initial_node: Initial Node to run on launch.
+/// - entrypoint: Entrypoint in the initial Node to run on launch.
 pub fn application_configuration<S: ::std::hash::BuildHasher>(
     module_name_wasm: HashMap<String, Vec<u8>, S>,
     logger_name: &str,
@@ -71,7 +71,7 @@ pub fn application_configuration<S: ::std::hash::BuildHasher>(
 }
 
 /// Load a `runtime::Configuration` from a protobuf `ApplicationConfiguration`.
-/// This can fail if an unsupported node is passed, or if a node was unable to be initialized with
+/// This can fail if an unsupported Node is passed, or if a Node was unable to be initialized with
 /// the given configuration.
 pub fn from_protobuf(
     app_config: ApplicationConfiguration,
