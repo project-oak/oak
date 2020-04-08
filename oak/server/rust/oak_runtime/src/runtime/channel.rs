@@ -167,7 +167,7 @@ impl ChannelMapping {
         }
     }
 
-    /// Creates a new [`Channel`] and returns a `(writer handle, reader handle)` pair.
+    /// Creates a new [`Channel`] and returns a `(writer half ID, reader half ID)` pair.
     pub fn new_channel(&self, label: &oak_abi::label::Label) -> (ChannelHalfId, ChannelHalfId) {
         let channel_id = self.next_channel_id.fetch_add(1, SeqCst);
         self.channels
@@ -178,50 +178,50 @@ impl ChannelMapping {
     }
 
     /// Get a new free random [`ChannelHalfId`] that is not used by any readers or writers.
-    fn new_reference(&self) -> ChannelHalfId {
+    fn new_half_id(&self) -> ChannelHalfId {
         loop {
-            let handle = ChannelHalfId(rand::thread_rng().next_u64());
+            let half_id = ChannelHalfId(rand::thread_rng().next_u64());
 
-            let exists_reader = self.readers.read().unwrap().get(&handle).is_some();
-            let exists_writer = self.writers.read().unwrap().get(&handle).is_some();
+            let exists_reader = self.readers.read().unwrap().get(&half_id).is_some();
+            let exists_writer = self.writers.read().unwrap().get(&half_id).is_some();
 
             if exists_reader || exists_writer {
                 continue;
             }
 
-            return handle;
+            return half_id;
         }
     }
 
     /// Create a new writer reference.
     fn new_writer(&self, channel_id: ChannelId) -> ChannelHalfId {
-        let reference = self.new_reference();
-        self.writers.write().unwrap().insert(reference, channel_id);
-        reference
+        let half_id = self.new_half_id();
+        self.writers.write().unwrap().insert(half_id, channel_id);
+        half_id
     }
 
     /// Create a new reader reference.
     fn new_reader(&self, channel_id: ChannelId) -> ChannelHalfId {
-        let reference = self.new_reference();
-        self.readers.write().unwrap().insert(reference, channel_id);
-        reference
+        let half_id = self.new_half_id();
+        self.readers.write().unwrap().insert(half_id, channel_id);
+        half_id
     }
 
     /// Attempt to retrieve the [`ChannelId`] associated with a reader [`ChannelHalfId`].
-    pub fn get_reader_channel(&self, reference: ChannelHalfId) -> Result<ChannelId, OakStatus> {
+    pub fn get_reader_channel(&self, half_id: ChannelHalfId) -> Result<ChannelId, OakStatus> {
         self.readers
             .read()
             .unwrap()
-            .get(&reference)
+            .get(&half_id)
             .map_or(Err(OakStatus::ErrBadHandle), |id| Ok(*id))
     }
 
     /// Attempt to retrieve the [`ChannelId`] associated with a writer [`ChannelHalfId`].
-    pub fn get_writer_channel(&self, reference: ChannelHalfId) -> Result<ChannelId, OakStatus> {
+    pub fn get_writer_channel(&self, half_id: ChannelHalfId) -> Result<ChannelId, OakStatus> {
         self.writers
             .read()
             .unwrap()
-            .get(&reference)
+            .get(&half_id)
             .map_or(Err(OakStatus::ErrBadHandle), |id| Ok(*id))
     }
 
@@ -239,8 +239,8 @@ impl ChannelMapping {
 
     /// Deallocate a [`ChannelHalfId`] reference. The reference will no longer be usable in
     /// operations, and the underlying [`Channel`] may become orphaned.
-    pub fn remove_reference(&self, reference: ChannelHalfId) -> Result<(), OakStatus> {
-        if let Ok(channel_id) = self.get_writer_channel(reference) {
+    pub fn remove_half_id(&self, half_id: ChannelHalfId) -> Result<(), OakStatus> {
+        if let Ok(channel_id) = self.get_writer_channel(half_id) {
             {
                 let mut channels = self.channels.write().unwrap();
                 let channel = channels
@@ -253,10 +253,10 @@ impl ChannelMapping {
                 }
             }
 
-            self.writers.write().unwrap().remove(&reference);
+            self.writers.write().unwrap().remove(&half_id);
         }
 
-        if let Ok(channel_id) = self.get_reader_channel(reference) {
+        if let Ok(channel_id) = self.get_reader_channel(half_id) {
             {
                 let mut channels = self.channels.write().unwrap();
                 let channel = channels
@@ -269,7 +269,7 @@ impl ChannelMapping {
                 }
             }
 
-            self.readers.write().unwrap().remove(&reference);
+            self.readers.write().unwrap().remove(&half_id);
         }
 
         Ok(())
@@ -278,17 +278,14 @@ impl ChannelMapping {
     /// Duplicate a [`ChannelHalfId`] reference. This new reference and when it is closed will be
     /// tracked separately from the first [`ChannelHalfId`]. For instance this is used by the
     /// [`oak_runtime::Runtime`] to encode [`Channel`]s in messages.
-    pub fn duplicate_reference(
-        &self,
-        reference: ChannelHalfId,
-    ) -> Result<ChannelHalfId, OakStatus> {
-        if let Ok(channel_id) = self.get_writer_channel(reference) {
+    pub fn duplicate_half_id(&self, half_id: ChannelHalfId) -> Result<ChannelHalfId, OakStatus> {
+        if let Ok(channel_id) = self.get_writer_channel(half_id) {
             self.with_channel(channel_id, |channel| Ok(channel.inc_writer_count()))?;
 
             return Ok(self.new_writer(channel_id));
         }
 
-        if let Ok(channel_id) = self.get_reader_channel(reference) {
+        if let Ok(channel_id) = self.get_reader_channel(half_id) {
             self.with_channel(channel_id, |channel| Ok(channel.inc_reader_count()))?;
 
             return Ok(self.new_reader(channel_id));

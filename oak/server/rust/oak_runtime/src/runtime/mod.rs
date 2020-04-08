@@ -42,9 +42,9 @@ struct NodeInfo {
     /// See https://github.com/project-oak/oak/blob/master/docs/concepts.md#labels
     label: Label,
 
-    /// A [`HashSet`] containing all the handles associated with this Node.
+    /// A [`HashSet`] containing all the channel half IDs associated with this Node.
     // TODO(#777): this overlaps ChannelMapping.{reader,writer}
-    handles: HashSet<ChannelHalfId>,
+    half_ids: HashSet<ChannelHalfId>,
 }
 
 /// An identifier for a [`Node`] that is opaque for type safety.
@@ -185,7 +185,7 @@ impl Runtime {
     /// Allow the corresponding [`Node`] to use the [`ChannelHalfId`]s passed via the iterator.
     /// This is achieved by adding the [`ChannelHalfId`]s to the [`Node`]s [`HashMap`] of
     /// [`ChannelHalfId`]s.
-    fn track_handles_in_node<I>(&self, node_id: NodeId, handles: I)
+    fn track_half_ids_in_node<I>(&self, node_id: NodeId, half_ids: I)
     where
         I: IntoIterator<Item = ChannelHalfId>,
     {
@@ -196,21 +196,21 @@ impl Runtime {
         let mut node_infos = self.node_infos.write().unwrap();
         let node_info = node_infos
             .get_mut(&node_id)
-            .expect("Invalid node_id passed into track_handles_in_node!");
+            .expect("Invalid node_id passed into track_half_ids_in_node!");
 
-        for handle in handles {
-            node_info.handles.insert(handle);
+        for half_id in half_ids {
+            node_info.half_ids.insert(half_id);
         }
     }
 
     /// Validate the [`NodeId`] has access to [`ChannelHalfId`], returning
     /// `Err(OakStatus::ErrBadHandle)` if access is not allowed.
-    fn validate_handle_access(
+    fn validate_half_id_access(
         &self,
         node_id: NodeId,
-        handle: ChannelHalfId,
+        half_id: ChannelHalfId,
     ) -> Result<(), OakStatus> {
-        // Allow RUNTIME_NODE_ID access to all handles.
+        // Allow RUNTIME_NODE_ID access to all channel halves.
         if node_id == RUNTIME_NODE_ID {
             return Ok(());
         }
@@ -219,16 +219,16 @@ impl Runtime {
         // Lookup the node_id in the runtime's nodes hashmap.
         let node_info = node_infos
             .get(&node_id)
-            .expect("Invalid node_id passed into validate_handle_access!");
+            .expect("Invalid node_id passed into validate_half_id_access!");
 
-        // Check the handle exists in the handles associated with a node, otherwise
+        // Check the half_id exists in the half_ids associated with a node, otherwise
         // return ErrBadHandle.
-        if node_info.handles.contains(&handle) {
+        if node_info.half_ids.contains(&half_id) {
             Ok(())
         } else {
             error!(
-                "validate_handle_access: handle {:?} not found in node {:?}",
-                handle, node_id
+                "validate_half_id_access: half_id {:?} not found in node {:?}",
+                half_id, node_id
             );
             Err(OakStatus::ErrBadHandle)
         }
@@ -236,11 +236,11 @@ impl Runtime {
 
     /// Validate the [`NodeId`] has access to all [`ChannelHalfId`]'s passed in the iterator,
     /// returning `Err(OakStatus::ErrBadHandle)` if access is not allowed.
-    fn validate_handles_access<I>(&self, node_id: NodeId, handles: I) -> Result<(), OakStatus>
+    fn validate_half_ids_access<I>(&self, node_id: NodeId, half_ids: I) -> Result<(), OakStatus>
     where
         I: IntoIterator<Item = ChannelHalfId>,
     {
-        // Allow RUNTIME_NODE_ID access to all handles.
+        // Allow RUNTIME_NODE_ID access to all channels.
         if node_id == RUNTIME_NODE_ID {
             return Ok(());
         }
@@ -248,14 +248,14 @@ impl Runtime {
         let node_infos = self.node_infos.read().unwrap();
         let node_info = node_infos
             .get(&node_id)
-            .expect("Invalid node_id passed into filter_optional_handles!");
+            .expect("Invalid node_id passed into validate_half_ids_access!");
 
-        for handle in handles {
-            // Check handle is accessible by the node.
-            if !node_info.handles.contains(&handle) {
+        for half_id in half_ids {
+            // Check half_id is accessible by the node.
+            if !node_info.half_ids.contains(&half_id) {
                 error!(
-                    "filter_optional_handles: handle {:?} not found in node {:?}",
-                    handle, node_id
+                    "validate_half_ids_access: half_id {:?} not found in node {:?}",
+                    half_id, node_id
                 );
                 return Err(OakStatus::ErrBadHandle);
             }
@@ -276,26 +276,26 @@ impl Runtime {
         node_info.label.clone()
     }
 
-    /// Returns a clone of the [`Label`] associated with the provided reader `channel_handle`, in
+    /// Returns a clone of the [`Label`] associated with the provided reader `half_id`, in
     /// order to limit the scope of holding the lock on [`ChannelMapping::channels`].
     ///
-    /// Returns an error if `channel_handle` is invalid.
-    fn get_reader_channel_label(&self, channel_handle: ChannelHalfId) -> Result<Label, OakStatus> {
-        self.channels.with_channel(
-            self.channels.get_reader_channel(channel_handle)?,
-            |channel| Ok(channel.label.clone()),
-        )
+    /// Returns an error if `half_id` is invalid.
+    fn get_reader_channel_label(&self, half_id: ChannelHalfId) -> Result<Label, OakStatus> {
+        self.channels
+            .with_channel(self.channels.get_reader_channel(half_id)?, |channel| {
+                Ok(channel.label.clone())
+            })
     }
 
-    /// Returns a clone of the [`Label`] associated with the provided writer `channel_handle`, in
+    /// Returns a clone of the [`Label`] associated with the provided writer `half_id`, in
     /// order to limit the scope of holding the lock on [`ChannelMapping::channels`].
     ///
-    /// Returns an error if `channel_handle` is invalid.
-    fn get_writer_channel_label(&self, channel_handle: ChannelHalfId) -> Result<Label, OakStatus> {
-        self.channels.with_channel(
-            self.channels.get_writer_channel(channel_handle)?,
-            |channel| Ok(channel.label.clone()),
-        )
+    /// Returns an error if `half_id` is invalid.
+    fn get_writer_channel_label(&self, half_id: ChannelHalfId) -> Result<Label, OakStatus> {
+        self.channels
+            .with_channel(self.channels.get_writer_channel(half_id)?, |channel| {
+                Ok(channel.label.clone())
+            })
     }
 
     /// Returns whether the calling node is allowed to read from the provided channel, according to
@@ -303,31 +303,25 @@ impl Runtime {
     fn validate_can_read_from_channel(
         &self,
         node_id: NodeId,
-        channel_handle: ChannelHalfId,
+        half_id: ChannelHalfId,
     ) -> Result<(), OakStatus> {
         debug!(
             "validating whether node {:?} can read from channel {:?}",
-            node_id, channel_handle
+            node_id, half_id
         );
 
-        // Allow RUNTIME_NODE_ID access to all handles.
+        // Allow RUNTIME_NODE_ID access to all channels.
         if node_id == RUNTIME_NODE_ID {
             return Ok(());
         }
 
         let node_label = self.get_node_label(node_id);
-        let channel_label = self.get_reader_channel_label(channel_handle)?;
+        let channel_label = self.get_reader_channel_label(half_id)?;
         if channel_label.flows_to(&node_label) {
-            debug!(
-                "node {:?} can read from channel {:?}",
-                node_id, channel_handle
-            );
+            debug!("node {:?} can read from channel {:?}", node_id, half_id);
             Ok(())
         } else {
-            debug!(
-                "node {:?} cannot read from channel {:?}",
-                node_id, channel_handle
-            );
+            debug!("node {:?} cannot read from channel {:?}", node_id, half_id);
             Err(OakStatus::ErrPermissionDenied)
         }
     }
@@ -337,16 +331,16 @@ impl Runtime {
     fn validate_can_read_from_channels<I>(
         &self,
         node_id: NodeId,
-        channel_handles: I,
+        half_ids: I,
     ) -> Result<(), OakStatus>
     where
         I: IntoIterator<Item = ChannelHalfId>,
     {
-        let all_channel_handles_ok = channel_handles.into_iter().all(|channel_handle| {
-            self.validate_can_read_from_channel(node_id, channel_handle)
+        let all_half_ids_ok = half_ids.into_iter().all(|half_id| {
+            self.validate_can_read_from_channel(node_id, half_id)
                 .is_ok()
         });
-        if all_channel_handles_ok {
+        if all_half_ids_ok {
             Ok(())
         } else {
             Err(OakStatus::ErrPermissionDenied)
@@ -358,42 +352,36 @@ impl Runtime {
     fn validate_can_write_to_channel(
         &self,
         node_id: NodeId,
-        channel_handle: ChannelHalfId,
+        half_id: ChannelHalfId,
     ) -> Result<(), OakStatus> {
         debug!(
             "validating whether node {:?} can write to channel {:?}",
-            node_id, channel_handle
+            node_id, half_id
         );
 
-        // Allow RUNTIME_NODE_ID access to all handles.
+        // Allow RUNTIME_NODE_ID access to all channels.
         if node_id == RUNTIME_NODE_ID {
             return Ok(());
         }
 
         let node_label = self.get_node_label(node_id);
         debug!("node label: {:?}", node_label);
-        let channel_label = self.get_writer_channel_label(channel_handle)?;
+        let channel_label = self.get_writer_channel_label(half_id)?;
         debug!("channel label: {:?}", node_label);
         if node_label.flows_to(&channel_label) {
-            debug!(
-                "node {:?} can write to channel {:?}",
-                node_id, channel_handle
-            );
+            debug!("node {:?} can write to channel {:?}", node_id, half_id);
             Ok(())
         } else {
-            debug!(
-                "node {:?} cannot write to channel {:?}",
-                node_id, channel_handle
-            );
+            debug!("node {:?} cannot write to channel {:?}", node_id, half_id);
             Err(OakStatus::ErrPermissionDenied)
         }
     }
 
-    /// Creates a new [`Channel`] and returns a `(writer handle, reader handle)` pair.
+    /// Creates a new [`Channel`] and returns a `(writer, reader)` pair of `ChannelHalfId`s.
     pub fn new_channel(&self, node_id: NodeId, label: &Label) -> (ChannelHalfId, ChannelHalfId) {
         // TODO(#630): Check whether the calling node can create a node with the specified label.
         let (writer, reader) = self.channels.new_channel(label);
-        self.track_handles_in_node(node_id, vec![writer, reader]);
+        self.track_half_ids_in_node(node_id, vec![writer, reader]);
         (writer, reader)
     }
 
@@ -434,7 +422,7 @@ impl Runtime {
         node_id: NodeId,
         readers: &[Option<ChannelHalfId>],
     ) -> Result<Vec<ChannelReadStatus>, OakStatus> {
-        self.validate_handles_access(node_id, readers.iter().filter_map(|x| *x))?;
+        self.validate_half_ids_access(node_id, readers.iter().filter_map(|x| *x))?;
         self.validate_can_read_from_channels(node_id, readers.iter().filter_map(|x| *x))?;
 
         let thread = thread::current();
@@ -494,38 +482,38 @@ impl Runtime {
     pub fn channel_write(
         &self,
         node_id: NodeId,
-        reference: ChannelHalfId,
+        half_id: ChannelHalfId,
         msg: Message,
     ) -> Result<(), OakStatus> {
-        self.validate_handle_access(node_id, reference)?;
-        self.validate_can_write_to_channel(node_id, reference)?;
-        self.channels.with_channel(self.channels.get_writer_channel(reference)?, |channel|{
+        self.validate_half_id_access(node_id, half_id)?;
+        self.validate_can_write_to_channel(node_id, half_id)?;
+        self.channels.with_channel(self.channels.get_writer_channel(half_id)?, |channel|{
 
         if channel.is_orphan() {
             return Err(OakStatus::ErrChannelClosed);
         }
 
-        let mut new_references = Vec::with_capacity(msg.channels.len());
+        let mut new_half_ids = Vec::with_capacity(msg.channels.len());
         let mut failure = None;
 
-        for reference in msg.channels.iter() {
-            match self.channels.duplicate_reference(*reference) {
+        for half_id in msg.channels.iter() {
+            match self.channels.duplicate_half_id(*half_id) {
                 Err(e) => {
                     failure = Some(e);
                     break;
                 }
-                Ok(reference) => new_references.push(reference),
+                Ok(half_id) => new_half_ids.push(half_id),
             }
         }
 
         if let Some(err) = failure {
-            for reference in new_references {
-                self.channels.remove_reference(reference).expect("channel_write: Failed to deallocate channel references during backtracking from error during channel reference copying");
+            for half_id in new_half_ids {
+                self.channels.remove_half_id(half_id).expect("channel_write: Failed to deallocate channel half_ids during backtracking from error during channel half_id copying");
             }
             return Err(err);
         }
 
-        let msg = Message { channels: new_references, ..msg };
+        let msg = Message { channels: new_half_ids, ..msg };
         channel.messages.write().unwrap().push_back(msg);
 
         // Unpark (wake up) all waiting threads that still have live references. The first thread
@@ -555,16 +543,16 @@ impl Runtime {
     pub fn channel_read(
         &self,
         node_id: NodeId,
-        reference: ChannelHalfId,
+        half_id: ChannelHalfId,
     ) -> Result<Option<Message>, OakStatus> {
-        self.validate_handle_access(node_id, reference)?;
-        self.validate_can_read_from_channel(node_id, reference)?;
+        self.validate_half_id_access(node_id, half_id)?;
+        self.validate_can_read_from_channel(node_id, half_id)?;
         self.channels
             .with_channel(
-                self.channels.get_reader_channel(reference)?,
+                self.channels.get_reader_channel(half_id)?,
                 |channel| match channel.messages.write().unwrap().pop_front() {
                     Some(m) => {
-                        self.track_handles_in_node(node_id, vec![reference]);
+                        self.track_half_ids_in_node(node_id, vec![half_id]);
                         Ok(Some(m))
                     }
                     None => {
@@ -585,12 +573,12 @@ impl Runtime {
     pub fn channel_status(
         &self,
         node_id: NodeId,
-        reference: ChannelHalfId,
+        half_id: ChannelHalfId,
     ) -> Result<ChannelReadStatus, OakStatus> {
-        self.validate_handle_access(node_id, reference)?;
-        self.validate_can_read_from_channel(node_id, reference)?;
+        self.validate_half_id_access(node_id, half_id)?;
+        self.validate_can_read_from_channel(node_id, half_id)?;
         self.channels
-            .with_channel(self.channels.get_reader_channel(reference)?, |channel| {
+            .with_channel(self.channels.get_reader_channel(half_id)?, |channel| {
                 Ok(if channel.messages.read().unwrap().front().is_some() {
                     ChannelReadStatus::ReadReady
                 } else if channel.is_orphan() {
@@ -611,14 +599,14 @@ impl Runtime {
     pub fn channel_try_read_message(
         &self,
         node_id: NodeId,
-        reference: ChannelHalfId,
+        half_id: ChannelHalfId,
         bytes_capacity: usize,
         handles_capacity: usize,
     ) -> Result<Option<ReadStatus>, OakStatus> {
-        self.validate_handle_access(node_id, reference)?;
-        self.validate_can_read_from_channel(node_id, reference)?;
+        self.validate_half_id_access(node_id, half_id)?;
+        self.validate_can_read_from_channel(node_id, half_id)?;
         let result = self.channels
-            .with_channel(self.channels.get_reader_channel(reference)?, |channel| {
+            .with_channel(self.channels.get_reader_channel(half_id)?, |channel| {
                 let mut messages = channel.messages.write().unwrap();
                 match messages.front() {
                     Some(front) => {
@@ -646,10 +634,10 @@ impl Runtime {
                 }
             });
 
-        // Add handles outside the channels lock so we don't hold the node lock inside the channel
-        // lock.
+        // Add half IDs outside the channels lock so we don't hold the node lock
+        // inside the channel lock.
         if let Ok(Some(ReadStatus::Success(ref msg))) = result {
-            self.track_handles_in_node(node_id, msg.channels.clone());
+            self.track_half_ids_in_node(node_id, msg.channels.clone());
         }
 
         result
@@ -660,30 +648,18 @@ impl Runtime {
     pub fn channel_get_direction(
         &self,
         node_id: NodeId,
-        reference: ChannelHalfId,
+        half_id: ChannelHalfId,
     ) -> Result<ChannelHalfDirection, OakStatus> {
-        self.validate_handle_access(node_id, reference)?;
-        // TODO(#630): Check whether the calling node can read from the specified handle. Currently,
-        // performing this check seems to get tests to hang forever.
+        self.validate_half_id_access(node_id, half_id)?;
+        // TODO(#630): Check whether the calling node can read from the specified half ID.
+        // Currently, performing this check seems to get tests to hang forever.
         {
-            if self
-                .channels
-                .readers
-                .read()
-                .unwrap()
-                .contains_key(&reference)
-            {
+            if self.channels.readers.read().unwrap().contains_key(&half_id) {
                 return Ok(ChannelHalfDirection::Read);
             }
         }
         {
-            if self
-                .channels
-                .writers
-                .read()
-                .unwrap()
-                .contains_key(&reference)
-            {
+            if self.channels.writers.read().unwrap().contains_key(&half_id) {
                 return Ok(ChannelHalfDirection::Write);
             }
         }
@@ -691,23 +667,19 @@ impl Runtime {
     }
 
     /// Close a [`ChannelHalfId`], potentially orphaning the underlying [`channel::Channel`].
-    pub fn channel_close(
-        &self,
-        node_id: NodeId,
-        reference: ChannelHalfId,
-    ) -> Result<(), OakStatus> {
-        self.validate_handle_access(node_id, reference)?;
+    pub fn channel_close(&self, node_id: NodeId, half_id: ChannelHalfId) -> Result<(), OakStatus> {
+        self.validate_half_id_access(node_id, half_id)?;
 
         if node_id != RUNTIME_NODE_ID {
-            // Remove handle from the nodes available handles
+            // Remove half ID from the nodes available half IDs.
             let mut node_infos = self.node_infos.write().unwrap();
             let node_info = node_infos
                 .get_mut(&node_id)
                 .expect("channel_close: No such node_id");
-            node_info.handles.remove(&reference);
+            node_info.half_ids.remove(&half_id);
         }
 
-        self.channels.remove_reference(reference)
+        self.channels.remove_half_id(half_id)
     }
 
     /// Create a fresh [`NodeId`].
@@ -723,22 +695,22 @@ impl Runtime {
                 return;
             }
 
-            // Close any remaining handles
-            let remaining_handles: Vec<_> = {
+            // Close any remaining channel half IDs
+            let remaining_half_ids: Vec<_> = {
                 let node_infos = self.node_infos.read().unwrap();
                 let node_info = node_infos
                     .get(&node_id)
                     .expect("remove_node_id: No such node_id");
-                node_info.handles.iter().copied().collect()
+                node_info.half_ids.iter().copied().collect()
             };
 
             debug!(
                 "remove_node_id: node_id {:?} had open channels on exit: {:?}",
-                node_id, remaining_handles
+                node_id, remaining_half_ids
             );
 
-            for handle in remaining_handles {
-                self.channel_close(node_id, handle)
+            for half_id in remaining_half_ids {
+                self.channel_close(node_id, half_id)
                     .expect("remove_node_id: Unable to close hanging channel!");
             }
         }
@@ -804,7 +776,7 @@ impl Runtime {
             node_id,
         };
 
-        let reader = self.channels.duplicate_reference(reader)?;
+        let reader = self.channels.duplicate_half_id(reader)?;
 
         let instance = self
             .configuration
@@ -830,7 +802,7 @@ impl Runtime {
         node_id: NodeId,
         mut node_instance: Box<dyn crate::node::Node>,
         label: &Label,
-        initial_handles: I,
+        initial_half_ids: I,
     ) -> Result<(), OakStatus>
     where
         I: IntoIterator<Item = ChannelHalfId>,
@@ -842,13 +814,13 @@ impl Runtime {
             node_id,
             NodeInfo {
                 label: label.clone(),
-                handles: HashSet::new(),
+                half_ids: HashSet::new(),
             },
         );
 
-        // Make sure that the provided initial handles are tracked in the newly created node from
+        // Make sure that the provided initial half_ids are tracked in the newly created node from
         // the start.
-        self.track_handles_in_node(node_id, initial_handles);
+        self.track_half_ids_in_node(node_id, initial_half_ids);
 
         // Try to start the node instance, and store the result in a temporary variable to be
         // returned later.
@@ -915,15 +887,11 @@ impl RuntimeProxy {
         module_name: &str,
         entrypoint: &str,
         label: &Label,
-        channel_read_handle: ChannelHalfId,
+        read_half_id: ChannelHalfId,
     ) -> Result<(), OakStatus> {
-        self.runtime.clone().node_create(
-            self.node_id,
-            module_name,
-            entrypoint,
-            label,
-            channel_read_handle,
-        )
+        self.runtime
+            .clone()
+            .node_create(self.node_id, module_name, entrypoint, label, read_half_id)
     }
 
     /// See [`Runtime::new_channel`].
@@ -932,47 +900,42 @@ impl RuntimeProxy {
     }
 
     /// See [`Runtime::channel_close`].
-    pub fn channel_close(&self, channel_handle: ChannelHalfId) -> Result<(), OakStatus> {
-        self.runtime.channel_close(self.node_id, channel_handle)
+    pub fn channel_close(&self, half_id: ChannelHalfId) -> Result<(), OakStatus> {
+        self.runtime.channel_close(self.node_id, half_id)
     }
 
     /// See [`Runtime::wait_on_channels`].
     pub fn wait_on_channels(
         &self,
-        channel_read_handles: &[Option<ChannelHalfId>],
+        read_half_ids: &[Option<ChannelHalfId>],
     ) -> Result<Vec<ChannelReadStatus>, OakStatus> {
-        self.runtime
-            .wait_on_channels(self.node_id, channel_read_handles)
+        self.runtime.wait_on_channels(self.node_id, read_half_ids)
     }
 
     /// See [`Runtime::channel_write`].
     pub fn channel_write(
         &self,
-        channel_write_handle: ChannelHalfId,
+        write_half_id: ChannelHalfId,
         msg: Message,
     ) -> Result<(), OakStatus> {
-        self.runtime
-            .channel_write(self.node_id, channel_write_handle, msg)
+        self.runtime.channel_write(self.node_id, write_half_id, msg)
     }
 
     /// See [`Runtime::channel_read`].
-    pub fn channel_read(
-        &self,
-        channel_read_handle: ChannelHalfId,
-    ) -> Result<Option<Message>, OakStatus> {
-        self.runtime.channel_read(self.node_id, channel_read_handle)
+    pub fn channel_read(&self, read_half_id: ChannelHalfId) -> Result<Option<Message>, OakStatus> {
+        self.runtime.channel_read(self.node_id, read_half_id)
     }
 
     /// See [`Runtime::channel_try_read_message`].
     pub fn channel_try_read_message(
         &self,
-        channel_read_handle: ChannelHalfId,
+        read_half_id: ChannelHalfId,
         bytes_capacity: usize,
         handles_capacity: usize,
     ) -> Result<Option<ReadStatus>, OakStatus> {
         self.runtime.channel_try_read_message(
             self.node_id,
-            channel_read_handle,
+            read_half_id,
             bytes_capacity,
             handles_capacity,
         )
@@ -981,10 +944,9 @@ impl RuntimeProxy {
     /// See [`Runtime::channel_get_direction`].
     pub fn channel_get_direction(
         &self,
-        channel_handle: ChannelHalfId,
+        half_id: ChannelHalfId,
     ) -> Result<ChannelHalfDirection, OakStatus> {
-        self.runtime
-            .channel_get_direction(self.node_id, channel_handle)
+        self.runtime.channel_get_direction(self.node_id, half_id)
     }
 }
 
@@ -1043,7 +1005,7 @@ mod tests {
             Box::new(|runtime| {
                 // Attempt to perform an operation that requires the [`Runtime`] to have created an
                 // appropriate [`NodeInfo`] instanace.
-                let (_write_handle, _read_handle) =
+                let (_write_half_id, _read_half_id) =
                     runtime.channel_create(&Label::public_trusted());
                 Ok(())
             }),
@@ -1056,12 +1018,13 @@ mod tests {
         run_node_body(
             Label::public_trusted(),
             Box::new(|runtime| {
-                let (_write_handle, read_handle) = runtime.channel_create(&Label::public_trusted());
+                let (_write_half_id, read_half_id) =
+                    runtime.channel_create(&Label::public_trusted());
                 let result = runtime.clone().node_create(
                     "log",
                     "unused",
                     &Label::public_trusted(),
-                    read_handle,
+                    read_half_id,
                 );
                 assert_eq!(Ok(()), result);
                 Ok(())
@@ -1075,12 +1038,13 @@ mod tests {
         run_node_body(
             Label::public_trusted(),
             Box::new(|runtime| {
-                let (_write_handle, read_handle) = runtime.channel_create(&Label::public_trusted());
+                let (_write_half_id, read_half_id) =
+                    runtime.channel_create(&Label::public_trusted());
                 let result = runtime.clone().node_create(
                     "invalid-configuration-name",
                     "unused",
                     &Label::public_trusted(),
-                    read_handle,
+                    read_half_id,
                 );
                 assert_eq!(Err(OakStatus::ErrInvalidArgs), result);
                 Ok(())
@@ -1104,12 +1068,13 @@ mod tests {
         run_node_body(
             secret_label,
             Box::new(|runtime| {
-                let (_write_handle, read_handle) = runtime.channel_create(&Label::public_trusted());
+                let (_write_half_id, read_half_id) =
+                    runtime.channel_create(&Label::public_trusted());
                 let result = runtime.clone().node_create(
                     "log",
                     "unused",
                     &Label::public_trusted(),
-                    read_handle,
+                    read_half_id,
                 );
                 assert_eq!(Err(OakStatus::ErrPermissionDenied), result);
                 Ok(())

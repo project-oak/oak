@@ -61,7 +61,7 @@ const ABI_USIZE: ValueType = ValueType::I32;
 
 /// `WasmInterface` holds runtime values for a particular execution instance of Wasm. This includes
 /// the host ABI function mapping between the runtime and a Wasm instance, and the handle mapping
-/// between the instance and the runtime `Handle`s.
+/// between the ABI `Handle`s and the Runtime `ChannelHalfId`s.
 ///
 /// Any handle from `readers` or `writers` is unique to all handles in both `readers` and
 /// `writers`.
@@ -86,7 +86,7 @@ impl WasmInterface {
     /// particular values or sequence. See https://github.com/project-oak/oak/pull/347
     fn allocate_new_handle(
         &mut self,
-        channel: ChannelHalfId,
+        half_id: ChannelHalfId,
         direction: ChannelHalfDirection,
     ) -> AbiHandle {
         loop {
@@ -97,9 +97,9 @@ impl WasmInterface {
             }
 
             if direction == ChannelHalfDirection::Read {
-                self.readers.insert(handle, channel);
+                self.readers.insert(handle, half_id);
             } else {
-                self.writers.insert(handle, channel);
+                self.writers.insert(handle, half_id);
             }
 
             return handle;
@@ -193,7 +193,7 @@ impl WasmInterface {
             self.pretty_name, entrypoint
         );
 
-        let channel_ref = self.readers.get(&initial_handle).ok_or(()).map_err(|_| {
+        let half_id = self.readers.get(&initial_handle).ok_or(()).map_err(|_| {
             error!("node_create: Invalid handle");
             OakStatus::ErrBadHandle
         })?;
@@ -205,7 +205,7 @@ impl WasmInterface {
                 &entrypoint,
                 // TODO(#630): Let caller provide this label via the Wasm ABI.
                 &oak_abi::label::Label::public_trusted(),
-                channel_ref.clone(),
+                half_id.clone(),
             )
             .map_err(|_| {
                 error!(
@@ -296,12 +296,12 @@ impl WasmInterface {
             .map(|bytes| LittleEndian::read_u64(bytes))
             .collect();
 
-        let channels: Result<Vec<ChannelHalfId>, _> = handles
+        let half_ids: Result<Vec<ChannelHalfId>, _> = handles
             .iter()
             .map(|handle| match self.writers.get(handle) {
-                Some(channel) => Ok(*channel),
+                Some(half_id) => Ok(*half_id),
                 None => match self.readers.get(handle) {
-                    Some(channel) => Ok(*channel),
+                    Some(half_id) => Ok(*half_id),
                     None => {
                         error!("channel_write: Can't find handle {} to send", handle);
                         Err(OakStatus::ErrBadHandle)
@@ -312,7 +312,7 @@ impl WasmInterface {
 
         let msg = Message {
             data,
-            channels: channels?,
+            channels: half_ids?,
         };
 
         self.runtime.channel_write(*writer, msg)?;
@@ -332,7 +332,7 @@ impl WasmInterface {
         actual_length_addr: AbiPointer,
 
         handles_dest: AbiPointer,
-        handles_capcity: AbiPointerOffset,
+        handles_capacity: AbiPointerOffset,
         actual_handle_count_addr: AbiPointer,
     ) -> Result<(), OakStatus> {
         let reader = self.readers.get(&reader_handle).ok_or(()).map_err(|_| {
@@ -341,12 +341,12 @@ impl WasmInterface {
         })?;
 
         self.validate_ptr(dest, dest_capacity)?;
-        self.validate_ptr(handles_dest, handles_capcity * 8)?;
+        self.validate_ptr(handles_dest, handles_capacity * 8)?;
 
         let msg = self.runtime.channel_try_read_message(
             *reader,
             dest_capacity as usize,
-            handles_capcity as usize,
+            handles_capacity as usize,
         )?;
 
         let (actual_length, actual_handle_count) = match &msg {
@@ -449,7 +449,7 @@ impl WasmInterface {
                 OakStatus::ErrInvalidArgs
             })?;
 
-        let channels: Vec<Option<_>> = handles_raw
+        let half_ids: Vec<Option<_>> = handles_raw
             .chunks(9)
             .map(|bytes| {
                 let handle = LittleEndian::read_u64(bytes);
@@ -458,7 +458,7 @@ impl WasmInterface {
             })
             .collect();
 
-        let statuses = self.runtime.wait_on_channels(&channels)?;
+        let statuses = self.runtime.wait_on_channels(&half_ids)?;
 
         for (i, &status) in statuses.iter().enumerate() {
             self.get_memory()
@@ -626,7 +626,7 @@ impl wasmi::Externals for WasmInterface {
                 let actual_length: u32 = args.nth_checked(3)?;
 
                 let handles: u32 = args.nth_checked(4)?;
-                let handles_capcity: u32 = args.nth_checked(5)?;
+                let handles_capacity: u32 = args.nth_checked(5)?;
                 let actual_handle_count: u32 = args.nth_checked(6)?;
 
                 debug!(
@@ -637,7 +637,7 @@ impl wasmi::Externals for WasmInterface {
                     dest_capacity,
                     actual_length,
                     handles,
-                    handles_capcity,
+                    handles_capacity,
                     actual_handle_count
                 );
 
@@ -647,7 +647,7 @@ impl wasmi::Externals for WasmInterface {
                     dest_capacity,
                     actual_length,
                     handles,
-                    handles_capcity,
+                    handles_capacity,
                     actual_handle_count,
                 ))
             }

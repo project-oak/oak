@@ -127,6 +127,6 @@ pub fn configure_and_run(
 ) -> Result<(Arc<Runtime>, ChannelHalfId), OakStatus> {
     let configuration = from_protobuf(app_config)?;
     let runtime = Arc::new(Runtime::create(configuration));
-    let handle = runtime.clone().run()?;
-    Ok((runtime, handle))
+    let half_id = runtime.clone().run()?;
+    Ok((runtime, half_id))
 }
