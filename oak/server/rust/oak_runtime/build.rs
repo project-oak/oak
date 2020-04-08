@@ -29,7 +29,7 @@ fn main() {
     }
 
     prost_build::Config::new()
-        .type_attribute(".oak.policy", "#[derive(Eq,Hash)]")
+        .type_attribute(".oak.label", "#[derive(Eq,Hash)]")
         .compile_protos(&proto_paths, &[proto_dir])
         .unwrap();
 }

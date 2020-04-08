@@ -18,7 +18,7 @@
 #define OAK_CLIENT_POLICY_METADATA_H_
 
 #include "include/grpcpp/grpcpp.h"
-#include "oak/proto/policy.pb.h"
+#include "oak/proto/label.pb.h"
 
 namespace oak {
 
@@ -31,7 +31,7 @@ namespace oak {
 // See https://grpc.io/docs/guides/auth/.
 class PolicyMetadata : public grpc::MetadataCredentialsPlugin {
  public:
-  PolicyMetadata(const oak::policy::Label& label);
+  PolicyMetadata(const oak::label::Label& label);
 
   grpc::Status GetMetadata(grpc::string_ref service_url, grpc::string_ref method_name,
                            const grpc::AuthContext& channel_auth_context,

@@ -42,7 +42,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "//oak/common:policy",
-        "//oak/proto:policy_cc_proto",
+        "//oak/proto:label_cc_proto",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/base",
     ],

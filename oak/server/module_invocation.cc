@@ -20,7 +20,7 @@
 #include "oak/common/logging.h"
 #include "oak/common/policy.h"
 #include "oak/proto/grpc_encap.pb.h"
-#include "oak/proto/policy.pb.h"
+#include "oak/proto/label.pb.h"
 #include "oak/server/channel.h"
 
 namespace oak {
@@ -107,7 +107,7 @@ void ModuleInvocation::ProcessRequest(bool ok) {
     auto range = context_.client_metadata().equal_range(kOakPolicyGrpcMetadataKey);
     for (auto entry = range.first; entry != range.second; ++entry) {
       std::string policy_base64(entry->second.data(), entry->second.size());
-      oak::policy::Label policy = DeserializePolicy(policy_base64);
+      oak::label::Label policy = DeserializePolicy(policy_base64);
       // TODO(#306): Note that at the moment policies may refer to
       // authentication bearer tokens, which if logged in this way may be reused
       // by unauthorized parties. For now we are fine with this, eventually

@@ -31,7 +31,7 @@ pub struct StorageItem {
     // message fields
     pub name: ::std::vec::Vec<u8>,
     pub value: ::std::vec::Vec<u8>,
-    pub policy: ::protobuf::SingularPtrField<super::policy::Label>,
+    pub label: ::protobuf::SingularPtrField<super::label::Label>,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -100,43 +100,43 @@ impl StorageItem {
         ::std::mem::replace(&mut self.value, ::std::vec::Vec::new())
     }
 
-    // .oak.policy.Label policy = 3;
+    // .oak.label.Label label = 3;
 
 
-    pub fn get_policy(&self) -> &super::policy::Label {
-        self.policy.as_ref().unwrap_or_else(|| super::policy::Label::default_instance())
+    pub fn get_label(&self) -> &super::label::Label {
+        self.label.as_ref().unwrap_or_else(|| super::label::Label::default_instance())
     }
-    pub fn clear_policy(&mut self) {
-        self.policy.clear();
+    pub fn clear_label(&mut self) {
+        self.label.clear();
     }
 
-    pub fn has_policy(&self) -> bool {
-        self.policy.is_some()
+    pub fn has_label(&self) -> bool {
+        self.label.is_some()
     }
 
     // Param is passed by value, moved
-    pub fn set_policy(&mut self, v: super::policy::Label) {
-        self.policy = ::protobuf::SingularPtrField::some(v);
+    pub fn set_label(&mut self, v: super::label::Label) {
+        self.label = ::protobuf::SingularPtrField::some(v);
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_policy(&mut self) -> &mut super::policy::Label {
-        if self.policy.is_none() {
-            self.policy.set_default();
+    pub fn mut_label(&mut self) -> &mut super::label::Label {
+        if self.label.is_none() {
+            self.label.set_default();
         }
-        self.policy.as_mut().unwrap()
+        self.label.as_mut().unwrap()
     }
 
     // Take field
-    pub fn take_policy(&mut self) -> super::policy::Label {
-        self.policy.take().unwrap_or_else(|| super::policy::Label::new())
+    pub fn take_label(&mut self) -> super::label::Label {
+        self.label.take().unwrap_or_else(|| super::label::Label::new())
     }
 }
 
 impl ::protobuf::Message for StorageItem {
     fn is_initialized(&self) -> bool {
-        for v in &self.policy {
+        for v in &self.label {
             if !v.is_initialized() {
                 return false;
             }
@@ -155,7 +155,7 @@ impl ::protobuf::Message for StorageItem {
                     ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.value)?;
                 },
                 3 => {
-                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.policy)?;
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.label)?;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -175,7 +175,7 @@ impl ::protobuf::Message for StorageItem {
         if !self.value.is_empty() {
             my_size += ::protobuf::rt::bytes_size(2, &self.value);
         }
-        if let Some(ref v) = self.policy.as_ref() {
+        if let Some(ref v) = self.label.as_ref() {
             let len = v.compute_size();
             my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
         }
@@ -191,7 +191,7 @@ impl ::protobuf::Message for StorageItem {
         if !self.value.is_empty() {
             os.write_bytes(2, &self.value)?;
         }
-        if let Some(ref v) = self.policy.as_ref() {
+        if let Some(ref v) = self.label.as_ref() {
             os.write_tag(3, ::protobuf::wire_format::WireTypeLengthDelimited)?;
             os.write_raw_varint32(v.get_cached_size())?;
             v.write_to_with_cached_sizes(os)?;
@@ -248,10 +248,10 @@ impl ::protobuf::Message for StorageItem {
                     |m: &StorageItem| { &m.value },
                     |m: &mut StorageItem| { &mut m.value },
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::policy::Label>>(
-                    "policy",
-                    |m: &StorageItem| { &m.policy },
-                    |m: &mut StorageItem| { &mut m.policy },
+                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::label::Label>>(
+                    "label",
+                    |m: &StorageItem| { &m.label },
+                    |m: &mut StorageItem| { &mut m.label },
                 ));
                 ::protobuf::reflect::MessageDescriptor::new::<StorageItem>(
                     "StorageItem",
@@ -277,7 +277,7 @@ impl ::protobuf::Clear for StorageItem {
     fn clear(&mut self) {
         self.name.clear();
         self.value.clear();
-        self.policy.clear();
+        self.label.clear();
         self.unknown_fields.clear();
     }
 }
@@ -2589,30 +2589,30 @@ impl ::protobuf::reflect::ProtobufValue for StorageChannelRollbackResponse {
 }
 
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\x1foak/proto/storage_channel.proto\x12\x03oak\x1a\x16oak/proto/policy\
-    .proto\"b\n\x0bStorageItem\x12\x12\n\x04name\x18\x01\x20\x01(\x0cR\x04na\
-    me\x12\x14\n\x05value\x18\x02\x20\x01(\x0cR\x05value\x12)\n\x06policy\
-    \x18\x03\x20\x01(\x0b2\x11.oak.policy.LabelR\x06policy\"\x8b\x01\n\x19St\
-    orageChannelReadRequest\x12!\n\x0cstorage_name\x18\x01\x20\x01(\x0cR\x0b\
-    storageName\x12%\n\x0etransaction_id\x18\x02\x20\x01(\x0cR\rtransactionI\
-    d\x12$\n\x04item\x18\x03\x20\x01(\x0b2\x10.oak.StorageItemR\x04item\"B\n\
-    \x1aStorageChannelReadResponse\x12$\n\x04item\x18\x01\x20\x01(\x0b2\x10.\
-    oak.StorageItemR\x04item\"\x8c\x01\n\x1aStorageChannelWriteRequest\x12!\
-    \n\x0cstorage_name\x18\x01\x20\x01(\x0cR\x0bstorageName\x12%\n\x0etransa\
-    ction_id\x18\x02\x20\x01(\x0cR\rtransactionId\x12$\n\x04item\x18\x03\x20\
-    \x01(\x0b2\x10.oak.StorageItemR\x04item\"\x1d\n\x1bStorageChannelWriteRe\
-    sponse\"\x8d\x01\n\x1bStorageChannelDeleteRequest\x12!\n\x0cstorage_name\
-    \x18\x01\x20\x01(\x0cR\x0bstorageName\x12%\n\x0etransaction_id\x18\x02\
-    \x20\x01(\x0cR\rtransactionId\x12$\n\x04item\x18\x03\x20\x01(\x0b2\x10.o\
-    ak.StorageItemR\x04item\"\x1e\n\x1cStorageChannelDeleteResponse\"?\n\x1a\
-    StorageChannelBeginRequest\x12!\n\x0cstorage_name\x18\x01\x20\x01(\x0cR\
-    \x0bstorageName\"D\n\x1bStorageChannelBeginResponse\x12%\n\x0etransactio\
-    n_id\x18\x01\x20\x01(\x0cR\rtransactionId\"g\n\x1bStorageChannelCommitRe\
-    quest\x12!\n\x0cstorage_name\x18\x01\x20\x01(\x0cR\x0bstorageName\x12%\n\
-    \x0etransaction_id\x18\x02\x20\x01(\x0cR\rtransactionId\"\x1e\n\x1cStora\
-    geChannelCommitResponse\"\x88\x01\n\x1dStorageChannelRollbackRequest\x12\
-    !\n\x0cstorage_name\x18\x01\x20\x01(\x0cR\x0bstorageName\x12\x1d\n\nstor\
-    age_id\x18\x02\x20\x01(\x0cR\tstorageId\x12%\n\x0etransaction_id\x18\x03\
+    \n\x1foak/proto/storage_channel.proto\x12\x03oak\x1a\x15oak/proto/label.\
+    proto\"_\n\x0bStorageItem\x12\x12\n\x04name\x18\x01\x20\x01(\x0cR\x04nam\
+    e\x12\x14\n\x05value\x18\x02\x20\x01(\x0cR\x05value\x12&\n\x05label\x18\
+    \x03\x20\x01(\x0b2\x10.oak.label.LabelR\x05label\"\x8b\x01\n\x19StorageC\
+    hannelReadRequest\x12!\n\x0cstorage_name\x18\x01\x20\x01(\x0cR\x0bstorag\
+    eName\x12%\n\x0etransaction_id\x18\x02\x20\x01(\x0cR\rtransactionId\x12$\
+    \n\x04item\x18\x03\x20\x01(\x0b2\x10.oak.StorageItemR\x04item\"B\n\x1aSt\
+    orageChannelReadResponse\x12$\n\x04item\x18\x01\x20\x01(\x0b2\x10.oak.St\
+    orageItemR\x04item\"\x8c\x01\n\x1aStorageChannelWriteRequest\x12!\n\x0cs\
+    torage_name\x18\x01\x20\x01(\x0cR\x0bstorageName\x12%\n\x0etransaction_i\
+    d\x18\x02\x20\x01(\x0cR\rtransactionId\x12$\n\x04item\x18\x03\x20\x01(\
+    \x0b2\x10.oak.StorageItemR\x04item\"\x1d\n\x1bStorageChannelWriteRespons\
+    e\"\x8d\x01\n\x1bStorageChannelDeleteRequest\x12!\n\x0cstorage_name\x18\
+    \x01\x20\x01(\x0cR\x0bstorageName\x12%\n\x0etransaction_id\x18\x02\x20\
+    \x01(\x0cR\rtransactionId\x12$\n\x04item\x18\x03\x20\x01(\x0b2\x10.oak.S\
+    torageItemR\x04item\"\x1e\n\x1cStorageChannelDeleteResponse\"?\n\x1aStor\
+    ageChannelBeginRequest\x12!\n\x0cstorage_name\x18\x01\x20\x01(\x0cR\x0bs\
+    torageName\"D\n\x1bStorageChannelBeginResponse\x12%\n\x0etransaction_id\
+    \x18\x01\x20\x01(\x0cR\rtransactionId\"g\n\x1bStorageChannelCommitReques\
+    t\x12!\n\x0cstorage_name\x18\x01\x20\x01(\x0cR\x0bstorageName\x12%\n\x0e\
+    transaction_id\x18\x02\x20\x01(\x0cR\rtransactionId\"\x1e\n\x1cStorageCh\
+    annelCommitResponse\"\x88\x01\n\x1dStorageChannelRollbackRequest\x12!\n\
+    \x0cstorage_name\x18\x01\x20\x01(\x0cR\x0bstorageName\x12\x1d\n\nstorage\
+    _id\x18\x02\x20\x01(\x0cR\tstorageId\x12%\n\x0etransaction_id\x18\x03\
     \x20\x01(\x0cR\rtransactionId\"\x20\n\x1eStorageChannelRollbackResponse2\
     \xe0\x03\n\x0bStorageNode\x12G\n\x04Read\x12\x1e.oak.StorageChannelReadR\
     equest\x1a\x1f.oak.StorageChannelReadResponse\x12J\n\x05Write\x12\x1f.oa\

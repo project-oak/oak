@@ -17,8 +17,8 @@
 #[allow(clippy::all)]
 pub mod code;
 pub mod grpc_encap;
-pub mod policy;
+pub mod label;
+pub mod log;
 pub mod status;
 pub mod storage;
 pub mod storage_channel;
-pub mod log;

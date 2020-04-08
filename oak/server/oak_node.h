@@ -39,7 +39,7 @@ namespace oak {
 struct NodeMessage {
   std::vector<char> data;
   std::vector<Handle> handles;
-  oak::policy::Label label;
+  oak::label::Label label;
 };
 
 // Result of a read operation relative to a Node. Equivalent to ReadResult but

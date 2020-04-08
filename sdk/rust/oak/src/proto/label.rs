@@ -17,7 +17,7 @@
 #![allow(unsafe_code)]
 #![allow(unused_imports)]
 #![allow(unused_results)]
-//! Generated file from `oak/proto/policy.proto`
+//! Generated file from `oak/proto/label.proto`
 
 use protobuf::Message as Message_imported_for_functions;
 use protobuf::ProtobufEnum as ProtobufEnum_imported_for_functions;
@@ -47,7 +47,7 @@ impl Label {
         ::std::default::Default::default()
     }
 
-    // repeated .oak.policy.Tag secrecy_tags = 1;
+    // repeated .oak.label.Tag secrecy_tags = 1;
 
 
     pub fn get_secrecy_tags(&self) -> &[Tag] {
@@ -72,7 +72,7 @@ impl Label {
         ::std::mem::replace(&mut self.secrecy_tags, ::protobuf::RepeatedField::new())
     }
 
-    // repeated .oak.policy.Tag integrity_tags = 2;
+    // repeated .oak.label.Tag integrity_tags = 2;
 
 
     pub fn get_integrity_tags(&self) -> &[Tag] {
@@ -278,7 +278,7 @@ impl Tag {
         ::std::default::Default::default()
     }
 
-    // .oak.policy.GrpcTag grpc_tag = 1;
+    // .oak.label.GrpcTag grpc_tag = 1;
 
 
     pub fn get_grpc_tag(&self) -> &GrpcTag {
@@ -327,7 +327,7 @@ impl Tag {
         }
     }
 
-    // .oak.policy.WebAssemblyModuleTag web_assembly_module_tag = 2;
+    // .oak.label.WebAssemblyModuleTag web_assembly_module_tag = 2;
 
 
     pub fn get_web_assembly_module_tag(&self) -> &WebAssemblyModuleTag {
@@ -376,7 +376,7 @@ impl Tag {
         }
     }
 
-    // .oak.policy.TlsEndpointTag tls_endpoint_tag = 3;
+    // .oak.label.TlsEndpointTag tls_endpoint_tag = 3;
 
 
     pub fn get_tls_endpoint_tag(&self) -> &TlsEndpointTag {
@@ -1127,19 +1127,19 @@ impl ::protobuf::reflect::ProtobufValue for TlsEndpointTag {
 }
 
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\x16oak/proto/policy.proto\x12\noak.policy\"s\n\x05Label\x122\n\x0csec\
-    recy_tags\x18\x01\x20\x03(\x0b2\x0f.oak.policy.TagR\x0bsecrecyTags\x126\
-    \n\x0eintegrity_tags\x18\x02\x20\x03(\x0b2\x0f.oak.policy.TagR\rintegrit\
-    yTags\"\xe1\x01\n\x03Tag\x120\n\x08grpc_tag\x18\x01\x20\x01(\x0b2\x13.oa\
-    k.policy.GrpcTagH\0R\x07grpcTag\x12Y\n\x17web_assembly_module_tag\x18\
-    \x02\x20\x01(\x0b2\x20.oak.policy.WebAssemblyModuleTagH\0R\x14webAssembl\
-    yModuleTag\x12F\n\x10tls_endpoint_tag\x18\x03\x20\x01(\x0b2\x1a.oak.poli\
-    cy.TlsEndpointTagH\0R\x0etlsEndpointTagB\x05\n\x03tag\"P\n\x07GrpcTag\
-    \x12E\n\x1fauthorization_bearer_token_hmac\x18\x01\x20\x01(\x0cR\x1cauth\
-    orizationBearerTokenHmac\"E\n\x14WebAssemblyModuleTag\x12-\n\x12module_a\
-    ttestation\x18\x01\x20\x01(\x0cR\x11moduleAttestation\"a\n\x0eTlsEndpoin\
-    tTag\x12O\n$certificate_subject_alternative_name\x18\x01\x20\x01(\tR!cer\
-    tificateSubjectAlternativeNameb\x06proto3\
+    \n\x15oak/proto/label.proto\x12\toak.label\"q\n\x05Label\x121\n\x0csecre\
+    cy_tags\x18\x01\x20\x03(\x0b2\x0e.oak.label.TagR\x0bsecrecyTags\x125\n\
+    \x0eintegrity_tags\x18\x02\x20\x03(\x0b2\x0e.oak.label.TagR\rintegrityTa\
+    gs\"\xde\x01\n\x03Tag\x12/\n\x08grpc_tag\x18\x01\x20\x01(\x0b2\x12.oak.l\
+    abel.GrpcTagH\0R\x07grpcTag\x12X\n\x17web_assembly_module_tag\x18\x02\
+    \x20\x01(\x0b2\x1f.oak.label.WebAssemblyModuleTagH\0R\x14webAssemblyModu\
+    leTag\x12E\n\x10tls_endpoint_tag\x18\x03\x20\x01(\x0b2\x19.oak.label.Tls\
+    EndpointTagH\0R\x0etlsEndpointTagB\x05\n\x03tag\"P\n\x07GrpcTag\x12E\n\
+    \x1fauthorization_bearer_token_hmac\x18\x01\x20\x01(\x0cR\x1cauthorizati\
+    onBearerTokenHmac\"E\n\x14WebAssemblyModuleTag\x12-\n\x12module_attestat\
+    ion\x18\x01\x20\x01(\x0cR\x11moduleAttestation\"a\n\x0eTlsEndpointTag\
+    \x12O\n$certificate_subject_alternative_name\x18\x01\x20\x01(\tR!certifi\
+    cateSubjectAlternativeNameb\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {

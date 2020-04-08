@@ -18,7 +18,7 @@
 #define OAK_COMMON_POLICY_H_
 
 #include "absl/base/attributes.h"
-#include "oak/proto/policy.pb.h"
+#include "oak/proto/label.pb.h"
 
 namespace oak {
 
@@ -38,18 +38,18 @@ ABSL_CONST_INIT extern const char kOakPolicyGrpcMetadataKey[];
 ABSL_CONST_INIT extern const char kOakAuthorizationBearerTokenGrpcMetadataKey[];
 
 // Serialized the provided policy so that it can be sent as a binary gRPC metadata value.
-std::string SerializePolicy(const oak::policy::Label& policy_proto);
+std::string SerializePolicy(const oak::label::Label& policy_proto);
 
 // Deserializes the provided binary gRPC metadata value into a policy.
-oak::policy::Label DeserializePolicy(const std::string& policy_bytes);
+oak::label::Label DeserializePolicy(const std::string& policy_bytes);
 
 // Creates a policy that only allows declassifying data for gRPC clients that can present the
 // provided authorization bearer token.
-oak::policy::Label AuthorizationBearerTokenPolicy(const std::string& authorization_token_hmac);
+oak::label::Label AuthorizationBearerTokenPolicy(const std::string& authorization_token_hmac);
 
 // Creates a policy that only allows declassifying data for modules that match the
 // provided module attestation.
-oak::policy::Label WebAssemblyModuleAttestationPolicy(const std::string& module_attestation);
+oak::label::Label WebAssemblyModuleAttestationPolicy(const std::string& module_attestation);
 
 }  // namespace oak
 

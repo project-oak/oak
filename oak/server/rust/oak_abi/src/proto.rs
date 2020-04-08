@@ -16,6 +16,6 @@
 
 include!(concat!(env!("OUT_DIR"), "/oak.rs"));
 
-pub mod policy {
-    include!(concat!(env!("OUT_DIR"), "/oak.policy.rs"));
+pub mod label {
+    include!(concat!(env!("OUT_DIR"), "/oak.label.rs"));
 }
