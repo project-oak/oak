@@ -35,6 +35,9 @@ def oak_docker(name, application, ports):
     container_image(
         name = name,
         base = "//oak/server/loader:oak_docker",
+        entrypoint = [
+            "./oak_runner",
+        ],
         # `files` must contain full file paths with extensions.
         files = [application_path],
         ports = ports,

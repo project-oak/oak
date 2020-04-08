@@ -14,7 +14,6 @@ spec:
         - name: tls-secret
           mountPath: '/etc/oak-secrets'
           readOnly: true
-      command: ['./oak_runner']
       args:
         [
           '--application=config.bin',
@@ -27,7 +26,6 @@ spec:
       env:
         - name: RUST_LOG
           value: 'info'
-      command: ['./aggregator_backend']
   volumes:
     - name: tls-secret
       secret:
