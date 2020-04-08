@@ -34,7 +34,7 @@ pub use crate::proto::label::*;
 mod tests;
 
 /// A proto message representing a label as part of a lattice.
-impl crate::proto::policy::Label {
+impl crate::proto::label::Label {
     /// Convert the label to bytes.
     pub fn serialize(&self) -> Vec<u8> {
         let mut bytes = Vec::new();
@@ -77,7 +77,7 @@ impl crate::proto::policy::Label {
 
 /// Creates a [`Tag`] having as principal the provided authorization bearer token.
 ///
-/// See https://github.com/project-oak/oak/blob/master/oak/proto/policy.proto
+/// See https://github.com/project-oak/oak/blob/master/oak/proto/label.proto
 pub fn authorization_bearer_token_hmac_tag(authorization_bearer_token_hmac: &[u8]) -> Tag {
     Tag {
         tag: Some(tag::Tag::GrpcTag(GrpcTag {
