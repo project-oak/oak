@@ -702,7 +702,7 @@ impl Runtime {
     }
 
     /// Create a fresh [`NodeId`].
-    fn new_node_reference(&self) -> NodeId {
+    fn new_node_id(&self) -> NodeId {
         NodeId(self.next_node_id.fetch_add(1, SeqCst))
     }
 
@@ -743,20 +743,20 @@ impl Runtime {
 
     /// Add an [`NodeId`] [`NodeInfo`] pair to the [`Runtime`]. This method temporarily holds the
     /// [`Runtime::node_infos`] write lock.
-    fn add_node_info(&self, reference: NodeId, node_info: NodeInfo) {
+    fn add_node_info(&self, node_id: NodeId, node_info: NodeInfo) {
         self.node_infos
             .write()
             .expect("could not acquire lock on node_infos")
-            .insert(reference, node_info);
+            .insert(node_id, node_info);
     }
 
     /// Add an [`NodeId`] [`crate::node::Node`] pair to the [`Runtime`]. This method temporarily
     /// holds the [`Runtime::node_instances`] lock.
-    fn add_node_instance(&self, node_reference: NodeId, node_instance: Box<dyn crate::node::Node>) {
+    fn add_node_instance(&self, node_id: NodeId, node_instance: Box<dyn crate::node::Node>) {
         self.node_instances
             .lock()
             .expect("could not acquire lock on node_instances")
-            .insert(node_reference, node_instance);
+            .insert(node_id, node_instance);
     }
 
     /// Thread safe method that attempts to create a node within the [`Runtime`] corresponding to a
@@ -789,10 +789,10 @@ impl Runtime {
             }
         }
 
-        let reference = self.new_node_reference();
+        let node_id = self.new_node_id();
         let runtime_proxy = RuntimeProxy {
             runtime: self.clone(),
-            node_id: reference,
+            node_id,
         };
 
         let reader = self.channels.duplicate_reference(reader)?;
@@ -807,7 +807,7 @@ impl Runtime {
                 conf.create_node(module_name, runtime_proxy, entrypoint.to_owned(), reader)
             })?;
 
-        self.node_start_instance(reference, instance, label, vec![reader])?;
+        self.node_start_instance(node_id, instance, label, vec![reader])?;
 
         Ok(())
     }
@@ -818,7 +818,7 @@ impl Runtime {
     /// in [`Runtime::node_instances`] so that it can later be terminated.
     fn node_start_instance<I>(
         &self,
-        node_reference: NodeId,
+        node_id: NodeId,
         mut node_instance: Box<dyn crate::node::Node>,
         label: &Label,
         initial_handles: I,
@@ -830,7 +830,7 @@ impl Runtime {
         // node makes to the Runtime during `Node::start` (synchronously or asynchronously) may
         // fail.
         self.add_node_info(
-            node_reference,
+            node_id,
             NodeInfo {
                 label: label.clone(),
                 handles: HashSet::new(),
@@ -839,7 +839,7 @@ impl Runtime {
 
         // Make sure that the provided initial handles are tracked in the newly created node from
         // the start.
-        self.track_handles_in_node(node_reference, initial_handles);
+        self.track_handles_in_node(node_id, initial_handles);
 
         // Try to start the node instance, and store the result in a temporary variable to be
         // returned later.
@@ -856,7 +856,7 @@ impl Runtime {
 
         // Regardless of the result of `Node::start`, insert the now running instance to the list of
         // running instances (by moving it), so that `Node::stop` will be called on it eventually.
-        self.add_node_instance(node_reference, node_instance);
+        self.add_node_instance(node_id, node_instance);
 
         // Return the result of `Node::start`.
         result
@@ -865,7 +865,7 @@ impl Runtime {
     pub fn new_runtime_proxy(self: Arc<Self>) -> RuntimeProxy {
         RuntimeProxy {
             runtime: self.clone(),
-            node_id: self.new_node_reference(),
+            node_id: self.new_node_id(),
         }
     }
 }
@@ -1007,10 +1007,10 @@ mod tests {
         }
 
         // Manually allocate a new [`NodeId`].
-        let node_reference = runtime.new_node_reference();
+        let node_id = runtime.new_node_id();
         let runtime_proxy = RuntimeProxy {
             runtime: runtime.clone(),
-            node_id: node_reference,
+            node_id,
         };
 
         let node_instance = TestNode {
@@ -1018,12 +1018,8 @@ mod tests {
             node_body,
         };
 
-        let result = runtime.node_start_instance(
-            node_reference,
-            Box::new(node_instance),
-            &node_label,
-            vec![],
-        );
+        let result =
+            runtime.node_start_instance(node_id, Box::new(node_instance), &node_label, vec![]);
         assert_eq!(Ok(()), result);
     }
 
