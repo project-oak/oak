@@ -196,16 +196,16 @@ impl ChannelMapping {
     }
 
     /// Create a new writer reference.
-    fn new_writer(&self, channel: ChannelId) -> Handle {
+    fn new_writer(&self, channel_id: ChannelId) -> Handle {
         let reference = self.new_reference();
-        self.writers.write().unwrap().insert(reference, channel);
+        self.writers.write().unwrap().insert(reference, channel_id);
         reference
     }
 
     /// Create a new reader reference.
-    fn new_reader(&self, channel: ChannelId) -> Handle {
+    fn new_reader(&self, channel_id: ChannelId) -> Handle {
         let reference = self.new_reference();
-        self.readers.write().unwrap().insert(reference, channel);
+        self.readers.write().unwrap().insert(reference, channel_id);
         reference
     }
 
