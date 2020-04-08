@@ -119,7 +119,7 @@ pub fn from_protobuf(
 
 /// Configure a [`Runtime`] from the given protobuf [`ApplicationConfiguration`] and begin
 /// execution. This returns an [`Arc`] reference to the created [`Runtime`], and a writeable
-/// [`Handle`] to send messages into the runtime. Creating a new channel and passing the write
+/// [`Handle`] to send messages into the Runtime. Creating a new channel and passing the write
 /// [`Handle`] into the runtime will enable messages to be read back out from the [`Runtime`].
 pub fn configure_and_run(
     app_config: ApplicationConfiguration,

@@ -60,7 +60,7 @@ const ABI_U64: ValueType = ValueType::I64;
 const ABI_USIZE: ValueType = ValueType::I32;
 
 /// `WasmInterface` holds runtime values for a particular execution instance of Wasm. This includes
-/// the host ABI function mapping between the runtime and a Wasm instance, and the handle mapping
+/// the host ABI function mapping between the Runtime and a Wasm instance, and the handle mapping
 /// between the instance and the runtime `Handle`s.
 ///
 /// Any handle from `readers` or `writers` is unique to all handles in both `readers` and

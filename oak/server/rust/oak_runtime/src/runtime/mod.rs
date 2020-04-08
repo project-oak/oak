@@ -51,7 +51,7 @@ struct NodeInfo {
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct NodeId(u64);
 
-/// A node identifier reserved for the runtime that allows access to all handles and channels.
+/// A node identifier reserved for the Runtime that allows access to all handles and channels.
 const RUNTIME_NODE_ID: NodeId = NodeId(0);
 /// For testing use the same reserved identifier to allow manipulation of all handles and channels.
 #[cfg(any(feature = "test_build", test))]
@@ -107,7 +107,7 @@ impl Runtime {
     /// nodes and wait for them to terminate.
     ///
     /// Returns a writeable [`Handle`] to send messages into the [`Runtime`]. To receive messages,
-    /// creating a new channel and passing the write [`Handle`] into the runtime will enable
+    /// creating a new channel and passing the write [`Handle`] into the Runtime will enable
     /// messages to be read back out.
     pub fn run(self: Arc<Self>) -> Result<Handle, OakStatus> {
         let module_name = self.configuration.entry_module.clone();
