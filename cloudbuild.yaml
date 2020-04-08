@@ -68,6 +68,14 @@ steps:
     entrypoint: 'bash'
     args: ['./scripts/build_example', '-e', 'hello_world', '-i']
 
+  # Package the Aggregator application in a Docker image.
+  - name: 'gcr.io/oak-ci/oak:latest'
+    id: build_aggregator_docker
+    waitFor: ['build_server']
+    timeout: 60m
+    entrypoint: 'bash'
+    args: ['./scripts/build_example', '-e', 'aggregator', '-i']
+
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_tests
     waitFor: ['build_server']

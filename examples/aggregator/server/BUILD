@@ -32,9 +32,6 @@ oak_docker(
 container_image(
     name = "aggregator_backend_image",
     base = "@cc_image//image",
-    entrypoint = [
-        "./aggregator_backend",
-    ],
     files = [
         "//:target/release/aggregator_backend",
     ],

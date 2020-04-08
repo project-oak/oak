@@ -32,16 +32,9 @@ def oak_docker(name, application, ports):
         ports: Ports that should be exposed in the corresponding Docker container.
     """
     application_path = "{}.bin".format(application)
-    application_file = application_path.split(":")[-1]
     container_image(
         name = name,
         base = "//oak/server/loader:oak_docker",
-        entrypoint = [
-            "./oak_runner",
-            "--application={}".format(application_file),
-            "--ca_cert=ca.pem",
-            "--cert_chain=docker.pem",
-        ],
         # `files` must contain full file paths with extensions.
         files = [application_path],
         ports = ports,

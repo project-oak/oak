@@ -14,14 +14,20 @@ spec:
         - name: tls-secret
           mountPath: '/etc/oak-secrets'
           readOnly: true
-      env:
-        - name: OAK_TLS_PRIVATE_KEY
-          value: '/etc/oak-secrets/docker.key'
+      command: ['./oak_runner']
+      args:
+        [
+          '--application=config.bin',
+          '--ca_cert=ca.pem',
+          '--cert_chain=docker.pem',
+          '--private_key=/etc/oak-secrets/docker.key',
+        ]
     - name: backend
       image: gcr.io/oak-ci/oak-aggregator-backend:latest
       env:
         - name: RUST_LOG
           value: 'info'
+      command: ['./aggregator_backend']
   volumes:
     - name: tls-secret
       secret:
