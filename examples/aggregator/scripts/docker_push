@@ -9,8 +9,8 @@ readonly AGGREGATOR_DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak-aggregator'
 readonly BACKEND_DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak-aggregator-backend'
 
 declare -a image backend_image
-image="$(find -L ./bazel-bin -name aggregator_image.tar)"
-backend_image="$(find -L ./bazel-bin -name aggregator_backend_image.tar)"
+image="$(find ./bazel-cache -name aggregator_image.tar)"
+backend_image="$(find ./bazel-cache -name aggregator_backend_image.tar)"
 if [[ -z ${image} || -z ${backend_image} ]]; then
   echo "Docker images have not been built, run './scripts/build_example -e aggregator -i'"
   exit 1

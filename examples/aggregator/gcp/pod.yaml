@@ -17,8 +17,8 @@ spec:
       args:
         [
           '--application=config.bin',
-          '--ca_cert=ca.pem',
-          '--cert_chain=docker.pem',
+          '--ca_cert=/etc/oak-secrets/ca.pem',
+          '--cert_chain=/etc/oak-secrets/docker.pem',
           '--private_key=/etc/oak-secrets/docker.key',
         ]
     - name: backend
