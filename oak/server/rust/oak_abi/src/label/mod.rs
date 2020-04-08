@@ -14,28 +14,24 @@
 // limitations under the License.
 //
 
-//! Labels are defined at the ABI level because they need to be available:
-//!
-//! - to applications (e.g. via the SDK), so that they can be manipulated by running Oak Nodes
-//! - to the Runtime, so that they can be checked and enforced when data is exchanged between Nodes
-//!   over Channels
-//!
-//! In order to support this, Labels are serialized and deserialized across the ABI boundary, and
-//! can be read and write using ABI functions.
+//! Labels represent the kinds of information that is allowed to be processed
+//! by entities in the Oak system. The Oak Runtime allows Oak Nodes to manipulate
+//! labels, and so the labels need to be passed across the Oak ABI in a defined
+//! binary format.  That format is a serialized protocol buffer holding the
+//! `Label` message defined in the policy.proto file.
 
-use prost::Message;
-
-// We use `hashbrown` since it is `no_std` compatible.
 use hashbrown::HashSet;
+use prost::Message;
 
 pub use crate::proto::label::*;
 
 #[cfg(test)]
 mod tests;
 
-/// A proto message representing a label as part of a lattice.
+/// Add helper methods to the `Label` struct that is auto-generated from
+/// the protobuf message definition.
 impl crate::proto::label::Label {
-    /// Convert the label to bytes.
+    /// Convert a label to bytes.
     pub fn serialize(&self) -> Vec<u8> {
         let mut bytes = Vec::new();
         self.encode(&mut bytes)
@@ -48,9 +44,9 @@ impl crate::proto::label::Label {
         Self::decode(bytes).ok()
     }
 
-    // Return the least privileged label.
-    //
-    // A Node or channel with this label has only observed public data and is trusted by no one.
+    /// Return the least privileged label.
+    ///
+    /// A Node or channel with this label has only observed public data and is trusted by no one.
     pub fn public_trusted() -> Self {
         Label {
             secrecy_tags: vec![],
