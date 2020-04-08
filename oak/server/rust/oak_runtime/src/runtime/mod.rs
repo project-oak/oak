@@ -47,7 +47,7 @@ struct NodeInfo {
     handles: HashSet<Handle>,
 }
 
-/// An identifier for a [`Node`] that is opaque for type safety.
+/// An identifier for a Node that is opaque for type safety.
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct NodeId(u64);
 
@@ -385,6 +385,8 @@ impl Runtime {
     }
 
     /// Creates a new [`Channel`] and returns a `(writer handle, reader handle)` pair.
+    ///
+    /// [`Channel`]: crate::runtime::channel::Channel
     pub fn new_channel(&self, node_id: NodeId, label: &Label) -> (Handle, Handle) {
         // TODO(#630): Check whether the calling node can create a node with the specified label.
         let (writer, reader) = self.channels.new_channel(label);
@@ -411,12 +413,12 @@ impl Runtime {
             .collect()
     }
 
-    /// Waits on a slice of `Option<&ChannelReader>`s, blocking until one of the following
+    /// Waits on a slice of `Option<&Handle>`s, blocking until one of the following
     /// conditions:
     /// - If the [`Runtime`] is terminating this will return immediately with an `ErrTerminated`
     ///   status for each channel.
-    /// - If all readers are in an erroneous status, e.g. when all [`ChannelReader`]s are orphaned,
-    ///   this will immediately return the channels statuses.
+    /// - If all readers are in an erroneous status, e.g. when all channels are orphaned, this will
+    ///   immediately return the channels statuses.
     /// - If any of the channels is able to read a message, the corresponding element in the
     ///   returned vector will be set to `Ok(ReadReady)`, with `Ok(NotReady)` signaling the channel
     ///   has no message available
@@ -424,6 +426,8 @@ impl Runtime {
     /// In particular, if there is at least one channel in good status and no messages on said
     /// channel available, [`Runtime::wait_on_channels`] will continue to block until a message is
     /// available.
+    ///
+    /// [`Runtime`]: crate::runtime::Runtime
     pub fn wait_on_channels(
         &self,
         node_id: NodeId,
@@ -651,7 +655,7 @@ impl Runtime {
     }
 
     /// Return the direction of a [`Handle`]. This is useful when reading
-    /// [`Messages`] which contain [`Handle`]'s.
+    /// [`Message`]s which contain [`Handle`]'s.
     pub fn channel_get_direction(
         &self,
         node_id: NodeId,
@@ -706,7 +710,7 @@ impl Runtime {
         NodeId(self.next_node_id.fetch_add(1, SeqCst))
     }
 
-    /// Remove a [`Node`] by [`NodeId`] from the [`Runtime`].
+    /// Remove a Node by [`NodeId`] from the [`Runtime`].
     pub fn remove_node_id(&self, node_id: NodeId) {
         {
             // Do not remove the node if it is RUNTIME_NODE_ID
@@ -767,9 +771,9 @@ impl Runtime {
     /// <https://github.com/project-oak/oak/blob/master/docs/concepts.md#labels> for more
     /// information on labels.
     ///
-    /// This method is defined on [`Arc`] and not [`Runtime`] itself, so that the [`Arc`] can clone
-    /// itself and be passed to [`crate::node::Configuration::new_instance`] to be given to a new
-    /// node thread.
+    /// This method is defined on [`Arc`] and not [`Runtime`] itself, so that
+    /// the [`Arc`] can clone itself and be included in a [`RuntimeProxy`] object
+    /// to be given to a new node.
     pub fn node_create(
         self: Arc<Self>,
         node_id: NodeId,

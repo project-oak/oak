@@ -71,7 +71,10 @@ pub struct Channel {
 pub struct Handle(oak_abi::Handle);
 
 /// The direction of a [`Handle`] can be discovered by querying the associated
-/// [`oak_runtime::Runtime`] [`oak_runtime::Runtime::channel_get_direction`].
+/// [`Runtime`] [`Runtime::channel_get_direction`].
+///
+/// [`Runtime`]: crate::runtime::Runtime
+/// [`Runtime::channel_get_direction`]: crate::runtime::Runtime::channel_get_direction
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum HandleDirection {
     Read,
