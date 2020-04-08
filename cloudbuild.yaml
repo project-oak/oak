@@ -62,19 +62,11 @@ steps:
 
   # Package the Hello World application in a Docker image.
   - name: 'gcr.io/oak-ci/oak:latest'
-    id: build_hello_docker
+    id: build_server_docker
     waitFor: ['build_server']
     timeout: 60m
     entrypoint: 'bash'
     args: ['./scripts/build_example', '-e', 'hello_world', '-i']
-
-  # Package the Aggregator application in a Docker image.
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: build_aggregator_docker
-    waitFor: ['build_hello_docker']
-    timeout: 60m
-    entrypoint: 'bash'
-    args: ['./scripts/build_example', '-e', 'aggregator', '-i']
 
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_tests
@@ -85,7 +77,6 @@ steps:
 
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_examples
-    waitFor: ['build_server']
     timeout: 60m
     entrypoint: 'bash'
     args: ['./scripts/run_examples', '-s', 'base']
