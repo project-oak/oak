@@ -35,9 +35,9 @@ mod channel;
 pub use channel::{Handle, HandleDirection};
 
 struct NodeInfo {
-    /// The Label associated with this node.
+    /// The Label associated with this Node.
     ///
-    /// This is set at node creation time and does not change after that.
+    /// This is set at Node creation time and does not change after that.
     ///
     /// See https://github.com/project-oak/oak/blob/master/docs/concepts.md#labels
     label: Label,
@@ -51,7 +51,7 @@ struct NodeInfo {
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct NodeId(u64);
 
-/// A node identifier reserved for the Runtime that allows access to all handles and channels.
+/// A Node identifier reserved for the Runtime that allows access to all handles and channels.
 const RUNTIME_NODE_ID: NodeId = NodeId(0);
 /// For testing use the same reserved identifier to allow manipulation of all handles and channels.
 #[cfg(any(feature = "test_build", test))]
@@ -70,23 +70,23 @@ pub enum ReadStatus {
     NeedsCapacity(usize, usize),
 }
 
-/// Runtime structure for configuring and running a set of Oak nodes.
+/// Runtime structure for configuring and running a set of Oak Nodes.
 pub struct Runtime {
     configuration: Configuration,
     terminating: AtomicBool,
 
     channels: channel::ChannelMapping,
 
-    /// Runtime-specific state for each node instance.
+    /// Runtime-specific state for each Node instance.
     node_infos: RwLock<HashMap<NodeId, NodeInfo>>,
 
-    /// Currently running node instances, so that [`Runtime::stop`] can terminate all of them.
+    /// Currently running Node instances, so that [`Runtime::stop`] can terminate all of them.
     node_instances: Mutex<HashMap<NodeId, Box<dyn crate::node::Node>>>,
     next_node_id: AtomicU64,
 }
 
 impl Runtime {
-    /// Creates a [`Runtime`] instance but does not start executing any node.
+    /// Creates a [`Runtime`] instance but does not start executing any Node.
     pub fn create(configuration: Configuration) -> Self {
         Self {
             configuration,
@@ -104,7 +104,7 @@ impl Runtime {
     /// Configures and runs the protobuf specified Application [`Configuration`].
     ///
     /// After starting a [`Runtime`], calling [`Runtime::stop`] will send termination signals to
-    /// nodes and wait for them to terminate.
+    /// Nodes and wait for them to terminate.
     ///
     /// Returns a writeable [`Handle`] to send messages into the [`Runtime`]. To receive messages,
     /// creating a new channel and passing the write [`Handle`] into the Runtime will enable
@@ -114,7 +114,7 @@ impl Runtime {
         let entrypoint = self.configuration.entrypoint.clone();
 
         // When first starting, we assign the least privileged label to the channel connecting the
-        // outside world to the entry point node.
+        // outside world to the entry point Node.
         let (chan_writer, chan_reader) =
             self.new_channel(RUNTIME_NODE_ID, &Label::public_trusted());
 
@@ -122,7 +122,7 @@ impl Runtime {
             RUNTIME_NODE_ID,
             &module_name,
             &entrypoint,
-            // When first starting, we assign the least privileged label to the entry point node.
+            // When first starting, we assign the least privileged label to the entry point Node.
             &Label::public_trusted(),
             chan_reader,
         )?;
@@ -140,10 +140,10 @@ impl Runtime {
         self.terminating.load(SeqCst)
     }
 
-    /// Thread safe method for signaling termination to a [`Runtime`] and waiting for its node
+    /// Thread safe method for signaling termination to a [`Runtime`] and waiting for its Node
     /// threads to terminate.
     pub fn stop(&self) {
-        // Set the terminating flag; this will prevent additional nodes from starting to wait again,
+        // Set the terminating flag; this will prevent additional Nodes from starting to wait again,
         // because `wait_on_channels` will return immediately with `OakStatus::ErrTerminated`.
         self.terminating.store(true, SeqCst);
 
@@ -167,10 +167,10 @@ impl Runtime {
             }
         }
 
-        // Wait for the main thread of each node to finish. Any thread that was blocked on
+        // Wait for the main thread of each Node to finish. Any thread that was blocked on
         // `wait_on_channels` is now unblocked and received `OakStatus::ErrTerminated`, so we wait
         // for any additional work to be finished here. This may take an arbitrary amount of time,
-        // depending on the work that the node thread has to perform, but at least we know that the
+        // depending on the work that the Node thread has to perform, but at least we know that the
         // it will not be able to enter again in a blocking state.
         for instance in self
             .node_instances
@@ -211,12 +211,12 @@ impl Runtime {
         }
 
         let node_infos = self.node_infos.read().unwrap();
-        // Lookup the node_id in the runtime's nodes hashmap.
+        // Lookup the node_id in the runtime's node_infos hashmap.
         let node_info = node_infos
             .get(&node_id)
             .expect("Invalid node_id passed into validate_handle_access!");
 
-        // Check the handle exists in the handles associated with a node, otherwise
+        // Check the handle exists in the handles associated with a Node, otherwise
         // return ErrBadHandle.
         if node_info.handles.contains(&handle) {
             Ok(())
@@ -246,7 +246,7 @@ impl Runtime {
             .expect("Invalid node_id passed into filter_optional_handles!");
 
         for handle in handles {
-            // Check handle is accessible by the node.
+            // Check handle is accessible by the Node.
             if !node_info.handles.contains(&handle) {
                 error!(
                     "filter_optional_handles: handle {:?} not found in node {:?}",
@@ -293,7 +293,7 @@ impl Runtime {
         )
     }
 
-    /// Returns whether the calling node is allowed to read from the provided channel, according to
+    /// Returns whether the calling Node is allowed to read from the provided channel, according to
     /// their respective [`Label`]s.
     fn validate_can_read_from_channel(
         &self,
@@ -327,7 +327,7 @@ impl Runtime {
         }
     }
 
-    /// Returns whether the calling node is allowed to read from all the provided channels,
+    /// Returns whether the calling Node is allowed to read from all the provided channels,
     /// according to their respective [`Label`]s.
     fn validate_can_read_from_channels<I>(
         &self,
@@ -348,7 +348,7 @@ impl Runtime {
         }
     }
 
-    /// Returns whether the calling node is allowed to write to the provided channel, according to
+    /// Returns whether the calling Node is allowed to write to the provided channel, according to
     /// their respective [`Label`]s.
     fn validate_can_write_to_channel(
         &self,
@@ -388,7 +388,7 @@ impl Runtime {
     ///
     /// [`Channel`]: crate::runtime::channel::Channel
     pub fn new_channel(&self, node_id: NodeId, label: &Label) -> (Handle, Handle) {
-        // TODO(#630): Check whether the calling node can create a node with the specified label.
+        // TODO(#630): Check whether the calling Node can create a Node with the specified label.
         let (writer, reader) = self.channels.new_channel(label);
         self.track_handles_in_node(node_id, vec![writer, reader]);
         (writer, reader)
@@ -645,8 +645,8 @@ impl Runtime {
                 }
             });
 
-        // Add handles outside the channels lock so we don't hold the node lock inside the channel
-        // lock.
+        // Add handles outside the channels lock so we don't hold the node_infos lock inside the
+        // channel lock.
         if let Ok(Some(ReadStatus::Success(ref msg))) = result {
             self.track_handles_in_node(node_id, msg.channels.clone());
         }
@@ -662,7 +662,7 @@ impl Runtime {
         reference: Handle,
     ) -> Result<HandleDirection, OakStatus> {
         self.validate_handle_access(node_id, reference)?;
-        // TODO(#630): Check whether the calling node can read from the specified handle. Currently,
+        // TODO(#630): Check whether the calling Node can read from the specified handle. Currently,
         // performing this check seems to get tests to hang forever.
         {
             if self
@@ -694,7 +694,7 @@ impl Runtime {
         self.validate_handle_access(node_id, reference)?;
 
         if node_id != RUNTIME_NODE_ID {
-            // Remove handle from the nodes available handles
+            // Remove handle from the Node's available handles
             let mut node_infos = self.node_infos.write().unwrap();
             let node_info = node_infos
                 .get_mut(&node_id)
@@ -713,7 +713,7 @@ impl Runtime {
     /// Remove a Node by [`NodeId`] from the [`Runtime`].
     pub fn remove_node_id(&self, node_id: NodeId) {
         {
-            // Do not remove the node if it is RUNTIME_NODE_ID
+            // Do not remove the Node if it is RUNTIME_NODE_ID
             if node_id == RUNTIME_NODE_ID {
                 return;
             }
@@ -763,17 +763,17 @@ impl Runtime {
             .insert(node_reference, node_instance);
     }
 
-    /// Thread safe method that attempts to create a node within the [`Runtime`] corresponding to a
+    /// Thread safe method that attempts to create a Node within the [`Runtime`] corresponding to a
     /// given module name and entrypoint. The `reader: ChannelReader` is passed to the newly
-    /// created node.
+    /// created Node.
     ///
-    /// The caller also specifies a [`Label`], which is assigned to the newly created node. See
+    /// The caller also specifies a [`Label`], which is assigned to the newly created Node. See
     /// <https://github.com/project-oak/oak/blob/master/docs/concepts.md#labels> for more
     /// information on labels.
     ///
     /// This method is defined on [`Arc`] and not [`Runtime`] itself, so that
     /// the [`Arc`] can clone itself and be included in a [`RuntimeProxy`] object
-    /// to be given to a new node.
+    /// to be given to a new Node.
     pub fn node_create(
         self: Arc<Self>,
         node_id: NodeId,
@@ -807,7 +807,7 @@ impl Runtime {
             .get(module_name)
             .ok_or(OakStatus::ErrInvalidArgs)
             .map(|conf| {
-                // This only creates a node instance, but does not start it.
+                // This only creates a Node instance, but does not start it.
                 conf.create_node(module_name, runtime_proxy, entrypoint.to_owned(), reader)
             })?;
 
@@ -816,7 +816,7 @@ impl Runtime {
         Ok(())
     }
 
-    /// Starts a newly created node instance, by first initializing the necessary [`NodeInfo`] data
+    /// Starts a newly created Node instance, by first initializing the necessary [`NodeInfo`] data
     /// structure in [`Runtime`], allowing it to access the provided [`Handle`]s, then calling
     /// [`Node::start`] on the instance, and finally storing a reference to the running instance
     /// in [`Runtime::node_instances`] so that it can later be terminated.
@@ -831,7 +831,7 @@ impl Runtime {
         I: IntoIterator<Item = Handle>,
     {
         // First create the necessary info data structure in the Runtime, otherwise calls that the
-        // node makes to the Runtime during `Node::start` (synchronously or asynchronously) may
+        // Node makes to the Runtime during `Node::start` (synchronously or asynchronously) may
         // fail.
         self.add_node_info(
             node_reference,
@@ -841,11 +841,11 @@ impl Runtime {
             },
         );
 
-        // Make sure that the provided initial handles are tracked in the newly created node from
+        // Make sure that the provided initial handles are tracked in the newly created Node from
         // the start.
         self.track_handles_in_node(node_reference, initial_handles);
 
-        // Try to start the node instance, and store the result in a temporary variable to be
+        // Try to start the Node instance, and store the result in a temporary variable to be
         // returned later.
         //
         // In order for this to work correctly, the `NodeInfo` entry must already exist in
@@ -877,12 +877,12 @@ impl Runtime {
 /// A proxy object that binds together a reference to the underlying [`Runtime`] with a single
 /// [`NodeId`].
 ///
-/// This can be considered as the interface to the [`Runtime`] that node and pseudo-node
+/// This can be considered as the interface to the [`Runtime`] that Node and pseudo-Node
 /// implementations have access to.
 ///
-/// Each [`RuntimeProxy`] instance is used by an individual node or pseudo-node instance to
+/// Each [`RuntimeProxy`] instance is used by an individual Node or pseudo-Node instance to
 /// communicate with the [`Runtime`]. Nodes do not have direct access to the [`Runtime`] apart from
-/// through [`RuntimeProxy`], which exposes a more limited API, and ensures that nodes cannot
+/// through [`RuntimeProxy`], which exposes a more limited API, and ensures that Nodes cannot
 /// impersonate each other.
 ///
 /// Individual methods simply forward to corresponding methods on the underlying [`Runtime`], by
@@ -1031,7 +1031,7 @@ mod tests {
         assert_eq!(Ok(()), result);
     }
 
-    /// Create a test node that creates a channel and succeeds.
+    /// Create a test Node that creates a channel and succeeds.
     #[test]
     fn create_channel_success() {
         run_node_body(
@@ -1046,7 +1046,7 @@ mod tests {
         );
     }
 
-    /// Create a test node that creates a node and succeeds.
+    /// Create a test Node that creates a Node and succeeds.
     #[test]
     fn create_node_success() {
         run_node_body(
@@ -1065,7 +1065,7 @@ mod tests {
         );
     }
 
-    /// Create a test node that creates a node with a non-existing configuration name and fails.
+    /// Create a test Node that creates a Node with a non-existing configuration name and fails.
     #[test]
     fn create_node_invalid_configuration() {
         run_node_body(
@@ -1084,10 +1084,10 @@ mod tests {
         );
     }
 
-    /// Create a test node that creates a node with a more public label and fails.
+    /// Create a test Node that creates a Node with a more public label and fails.
     ///
     /// If this succeeded, it would be a violation of information flow control, since the original
-    /// secret node would be able to spawn "public" nodes and use their side effects as a covert
+    /// secret Node would be able to spawn "public" Nodes and use their side effects as a covert
     /// channel to exfiltrate secret data.
     #[test]
     fn create_node_more_public_label() {

@@ -47,7 +47,7 @@ impl crate::proto::label::Label {
 
     // Return the least privileged label.
     //
-    // A node or channel with this label has only observed public data and is trusted by no one.
+    // A Node or channel with this label has only observed public data and is trusted by no one.
     pub fn public_trusted() -> Self {
         Label {
             secrecy_tags: vec![],
@@ -135,7 +135,7 @@ mod tests {
 
         // A label that corresponds to the secrecy of tag_0.
         //
-        // A node or channel with this label may have observed data related to tag_0.
+        // A Node or channel with this label may have observed data related to tag_0.
         let label_0 = Label {
             secrecy_tags: vec![tag_0.clone()],
             integrity_tags: vec![],
@@ -143,7 +143,7 @@ mod tests {
 
         // A label that corresponds to the secrecy of tag_1.
         //
-        // A node or channel with this label may have observed data related to tag_1.
+        // A Node or channel with this label may have observed data related to tag_1.
         let label_1 = Label {
             secrecy_tags: vec![tag_1.clone()],
             integrity_tags: vec![],
@@ -151,7 +151,7 @@ mod tests {
 
         // A label that corresponds to the combined secrecy of both tag_0 and tag_1.
         //
-        // A node or channel with this label may have observed data related to tag_0 and tag_1.
+        // A Node or channel with this label may have observed data related to tag_0 and tag_1.
         let label_0_1 = Label {
             secrecy_tags: vec![tag_0.clone(), tag_1.clone()],
             integrity_tags: vec![],

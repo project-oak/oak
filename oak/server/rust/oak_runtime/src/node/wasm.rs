@@ -781,7 +781,7 @@ impl Display for WasmNode {
 }
 
 impl super::Node for WasmNode {
-    /// Starts this instance of a Wasm node.
+    /// Starts this instance of a Wasm Node.
     ///
     /// If the entry point is not found, returns `Err(OakStatus::ErrInvalidArgs)` immediately.
     fn start(&mut self) -> Result<(), OakStatus> {

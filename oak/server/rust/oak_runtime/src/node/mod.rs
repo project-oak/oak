@@ -27,25 +27,25 @@ mod grpc_server;
 mod logger;
 mod wasm;
 
-/// A trait implemented by every node and pseudo-node.
+/// A trait implemented by every Node and pseudo-Node.
 ///
 /// Nodes must not do any work until the [`Node::start`] method is invoked.
 pub trait Node: Send + Sync {
-    /// Starts executing the node.
+    /// Starts executing the Node.
     ///
-    /// This method will be invoked in a blocking fashion by the [`Runtime`], therefore node
+    /// This method will be invoked in a blocking fashion by the [`Runtime`], therefore Node
     /// implementations should make sure that they create separate background threads to execute
     /// actual work, and wait on them to terminate when [`Node::stop`] is called.
     ///
     /// [`Runtime`]: crate::runtime::Runtime
     fn start(&mut self) -> Result<(), OakStatus>;
 
-    /// Stops executing the node.
+    /// Stops executing the Node.
     ///
-    /// This method may block while the node terminates any outstanding work, but the node
+    /// This method may block while the Node terminates any outstanding work, but the Node
     /// implementation must guarantee that it eventually returns.
     ///
-    /// Internally, a node may implement this by first attempting to gracefully terminate, and then
+    /// Internally, a Node may implement this by first attempting to gracefully terminate, and then
     /// if that fails, continue trying with increasing level of aggressiveness.
     fn stop(&mut self);
 }
@@ -53,16 +53,16 @@ pub trait Node: Send + Sync {
 /// A `Configuration` corresponds to an entry from a `ApplicationConfiguration`. It is the
 /// static implementation specific configuration shared between instances.
 pub enum Configuration {
-    /// The configuration for a logging pseudo node.
+    /// The configuration for a logging pseudo-Node.
     LogNode,
 
-    /// The configuration for a gRPC server pseudo node that contains an `address` to listen on.
+    /// The configuration for a gRPC server pseudo-Node that contains an `address` to listen on.
     GrpcServerNode { address: SocketAddr },
 
-    /// The configuration for a Wasm node.
+    /// The configuration for a Wasm Node.
     // It would be better to store a list of exported methods and copyable Wasm interpreter
     // instance, but wasmi doesn't allow this. We make do with having a copyable
-    // `Arc<wasmi::Module>` that we pass to new nodes, and clone to to spawn new
+    // `Arc<wasmi::Module>` that we pass to new Nodes, and clone to to spawn new
     // `wasmi::ModuleInstances`.
     WasmNode { module: Arc<wasmi::Module> },
 }
@@ -95,7 +95,7 @@ impl std::fmt::Display for ConfigurationError {
     }
 }
 
-/// Loads a Wasm module into a node configuration, returning an error if `wasmi` failed to load the
+/// Loads a Wasm module into a Node configuration, returning an error if `wasmi` failed to load the
 /// module.
 pub fn load_wasm(wasm_bytes: &[u8]) -> Result<Configuration, ConfigurationError> {
     let module = wasmi::Module::from_buffer(wasm_bytes)
@@ -115,7 +115,7 @@ pub fn check_port(address: &SocketAddr) -> Result<(), ConfigurationError> {
 }
 
 impl Configuration {
-    /// Creates a new node instance corresponding to the [`Configuration`] `self`.
+    /// Creates a new Node instance corresponding to the [`Configuration`] `self`.
     ///
     /// On success returns a boxed [`Node`] that may be started by invoking the [`Node::start`]
     /// method.
