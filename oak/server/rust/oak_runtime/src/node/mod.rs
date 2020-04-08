@@ -21,7 +21,7 @@ use std::sync::Arc;
 use oak_abi::OakStatus;
 
 use crate::runtime::RuntimeProxy;
-use crate::Handle;
+use crate::ChannelHalfId;
 
 mod grpc_server;
 mod logger;
@@ -122,7 +122,7 @@ impl Configuration {
         config_name: &str, // Used for pretty debugging
         runtime: RuntimeProxy,
         entrypoint: String,
-        initial_reader: Handle,
+        initial_reader: ChannelHalfId,
     ) -> Box<dyn Node> {
         match self {
             Configuration::LogNode => {

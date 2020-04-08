@@ -65,15 +65,16 @@ pub struct Channel {
     pub label: oak_abi::label::Label,
 }
 
-/// A reference to a [`Channel`]. Each [`Handle`] has an implicit direction such that it is only
-/// possible to read or write to a [`Handle`] (exclusive or).
+/// A reference to one half of a [`Channel`]. Each [`ChannelHalfId`] has an
+/// implicit direction such that it is only possible to read or write to a
+/// [`ChannelHalfId`] (exclusive or).
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
-pub struct Handle(oak_abi::Handle);
+pub struct ChannelHalfId(u64);
 
-/// The direction of a [`Handle`] can be discovered by querying the associated
+/// The direction of a [`ChannelHalfId`] can be discovered by querying the associated
 /// [`oak_runtime::Runtime`] [`oak_runtime::Runtime::channel_get_direction`].
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
-pub enum HandleDirection {
+pub enum ChannelHalfDirection {
     Read,
     Write,
 }
@@ -82,15 +83,15 @@ pub enum HandleDirection {
 /// be visible outside the internals of [`Runtime`].
 type ChannelId = u64;
 
-/// Ownership and mapping of [`Channel`]s to [`Handle`]s.
+/// Ownership and mapping of [`Channel`]s to [`ChannelHalfId`]s.
 #[derive(Debug)]
 pub struct ChannelMapping {
     pub channels: RwLock<HashMap<ChannelId, Channel>>,
 
     pub next_channel_id: AtomicU64,
 
-    pub readers: RwLock<HashMap<Handle, ChannelId>>,
-    pub writers: RwLock<HashMap<Handle, ChannelId>>,
+    pub readers: RwLock<HashMap<ChannelHalfId, ChannelId>>,
+    pub writers: RwLock<HashMap<ChannelHalfId, ChannelId>>,
 }
 
 impl Channel {
@@ -167,7 +168,7 @@ impl ChannelMapping {
     }
 
     /// Creates a new [`Channel`] and returns a `(writer handle, reader handle)` pair.
-    pub fn new_channel(&self, label: &oak_abi::label::Label) -> (Handle, Handle) {
+    pub fn new_channel(&self, label: &oak_abi::label::Label) -> (ChannelHalfId, ChannelHalfId) {
         let channel_id = self.next_channel_id.fetch_add(1, SeqCst);
         self.channels
             .write()
@@ -176,10 +177,10 @@ impl ChannelMapping {
         (self.new_writer(channel_id), self.new_reader(channel_id))
     }
 
-    /// Get a new free random [`Handle`] that is not used by any readers or writers.
-    fn new_reference(&self) -> Handle {
+    /// Get a new free random [`ChannelHalfId`] that is not used by any readers or writers.
+    fn new_reference(&self) -> ChannelHalfId {
         loop {
-            let handle = Handle(rand::thread_rng().next_u64());
+            let handle = ChannelHalfId(rand::thread_rng().next_u64());
 
             let exists_reader = self.readers.read().unwrap().get(&handle).is_some();
             let exists_writer = self.writers.read().unwrap().get(&handle).is_some();
@@ -193,21 +194,21 @@ impl ChannelMapping {
     }
 
     /// Create a new writer reference.
-    fn new_writer(&self, channel_id: ChannelId) -> Handle {
+    fn new_writer(&self, channel_id: ChannelId) -> ChannelHalfId {
         let reference = self.new_reference();
         self.writers.write().unwrap().insert(reference, channel_id);
         reference
     }
 
     /// Create a new reader reference.
-    fn new_reader(&self, channel_id: ChannelId) -> Handle {
+    fn new_reader(&self, channel_id: ChannelId) -> ChannelHalfId {
         let reference = self.new_reference();
         self.readers.write().unwrap().insert(reference, channel_id);
         reference
     }
 
-    /// Attempt to retrieve the [`ChannelId`] associated with a reader [`Handle`].
-    pub fn get_reader_channel(&self, reference: Handle) -> Result<ChannelId, OakStatus> {
+    /// Attempt to retrieve the [`ChannelId`] associated with a reader [`ChannelHalfId`].
+    pub fn get_reader_channel(&self, reference: ChannelHalfId) -> Result<ChannelId, OakStatus> {
         self.readers
             .read()
             .unwrap()
@@ -215,8 +216,8 @@ impl ChannelMapping {
             .map_or(Err(OakStatus::ErrBadHandle), |id| Ok(*id))
     }
 
-    /// Attempt to retrieve the [`ChannelId`] associated with a writer [`Handle`].
-    pub fn get_writer_channel(&self, reference: Handle) -> Result<ChannelId, OakStatus> {
+    /// Attempt to retrieve the [`ChannelId`] associated with a writer [`ChannelHalfId`].
+    pub fn get_writer_channel(&self, reference: ChannelHalfId) -> Result<ChannelId, OakStatus> {
         self.writers
             .read()
             .unwrap()
@@ -236,9 +237,9 @@ impl ChannelMapping {
         f(channel)
     }
 
-    /// Deallocate a [`Handle`] reference. The reference will no longer be usable in
+    /// Deallocate a [`ChannelHalfId`] reference. The reference will no longer be usable in
     /// operations, and the underlying [`Channel`] may become orphaned.
-    pub fn remove_reference(&self, reference: Handle) -> Result<(), OakStatus> {
+    pub fn remove_reference(&self, reference: ChannelHalfId) -> Result<(), OakStatus> {
         if let Ok(channel_id) = self.get_writer_channel(reference) {
             {
                 let mut channels = self.channels.write().unwrap();
@@ -274,10 +275,13 @@ impl ChannelMapping {
         Ok(())
     }
 
-    /// Duplicate a [`Handle`] reference. This new reference and when it is closed will be
-    /// tracked separately from the first [`Handle`]. For instance this is used by the
+    /// Duplicate a [`ChannelHalfId`] reference. This new reference and when it is closed will be
+    /// tracked separately from the first [`ChannelHalfId`]. For instance this is used by the
     /// [`oak_runtime::Runtime`] to encode [`Channel`]s in messages.
-    pub fn duplicate_reference(&self, reference: Handle) -> Result<Handle, OakStatus> {
+    pub fn duplicate_reference(
+        &self,
+        reference: ChannelHalfId,
+    ) -> Result<ChannelHalfId, OakStatus> {
         if let Ok(channel_id) = self.get_writer_channel(reference) {
             self.with_channel(channel_id, |channel| Ok(channel.inc_writer_count()))?;
 

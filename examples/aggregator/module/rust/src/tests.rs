@@ -29,7 +29,7 @@ const MODULE_CONFIG_NAME: &str = "aggregator";
 
 fn submit_sample(
     runtime: &oak_runtime::Runtime,
-    entry_channel: oak_runtime::Handle,
+    entry_channel: oak_runtime::ChannelHalfId,
     bucket: &str,
     indices: Vec<u32>,
     values: Vec<f32>,

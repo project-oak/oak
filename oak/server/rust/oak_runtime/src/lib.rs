@@ -28,7 +28,7 @@ pub use config::application_configuration;
 pub use config::configure_and_run;
 
 pub use message::Message;
-pub use runtime::{Handle, NodeId, Runtime};
+pub use runtime::{ChannelHalfId, NodeId, Runtime};
 
 use std::thread::Thread;
 

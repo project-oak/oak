@@ -24,20 +24,20 @@ use std::thread::{self, JoinHandle};
 
 use crate::pretty_name_for_thread;
 use crate::proto::log::{Level, LogMessage};
-use crate::runtime::Handle;
+use crate::runtime::ChannelHalfId;
 use crate::runtime::RuntimeProxy;
 use prost::Message;
 
 pub struct LogNode {
     config_name: String,
     runtime: RuntimeProxy,
-    reader: Handle,
+    reader: ChannelHalfId,
     thread_handle: Option<JoinHandle<()>>,
 }
 
 impl LogNode {
     /// Creates a new [`LogNode`] instance, but does not start it.
-    pub fn new(config_name: &str, runtime: RuntimeProxy, reader: Handle) -> Self {
+    pub fn new(config_name: &str, runtime: RuntimeProxy, reader: ChannelHalfId) -> Self {
         Self {
             config_name: config_name.to_string(),
             runtime,
@@ -79,7 +79,11 @@ impl super::Node for LogNode {
     }
 }
 
-fn logger(pretty_name: &str, runtime: &RuntimeProxy, reader: Handle) -> Result<(), OakStatus> {
+fn logger(
+    pretty_name: &str,
+    runtime: &RuntimeProxy,
+    reader: ChannelHalfId,
+) -> Result<(), OakStatus> {
     loop {
         // An error indicates the runtime is terminating. We ignore it here and keep trying to read
         // in case a Wasm node wants to emit remaining messages. We will return once the channel is

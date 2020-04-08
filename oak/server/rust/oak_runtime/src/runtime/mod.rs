@@ -32,7 +32,7 @@ use crate::node;
 use crate::pretty_name_for_thread;
 
 mod channel;
-pub use channel::{Handle, HandleDirection};
+pub use channel::{ChannelHalfDirection, ChannelHalfId};
 
 struct NodeInfo {
     /// The Label associated with this node.
@@ -44,7 +44,7 @@ struct NodeInfo {
 
     /// A [`HashSet`] containing all the handles associated with this Node.
     // TODO(#777): this overlaps ChannelMapping.{reader,writer}
-    handles: HashSet<Handle>,
+    handles: HashSet<ChannelHalfId>,
 }
 
 /// An identifier for a [`Node`] that is opaque for type safety.
@@ -106,10 +106,10 @@ impl Runtime {
     /// After starting a [`Runtime`], calling [`Runtime::stop`] will send termination signals to
     /// nodes and wait for them to terminate.
     ///
-    /// Returns a writeable [`Handle`] to send messages into the [`Runtime`]. To receive messages,
-    /// creating a new channel and passing the write [`Handle`] into the runtime will enable
-    /// messages to be read back out.
-    pub fn run(self: Arc<Self>) -> Result<Handle, OakStatus> {
+    /// Returns a writeable [`ChannelHalfId`] to send messages into the [`Runtime`]. To receive
+    /// messages, creating a new channel and passing the write [`ChannelHalfId`] into the
+    /// runtime will enable messages to be read back out.
+    pub fn run(self: Arc<Self>) -> Result<ChannelHalfId, OakStatus> {
         let module_name = self.configuration.entry_module.clone();
         let entrypoint = self.configuration.entrypoint.clone();
 
@@ -182,11 +182,12 @@ impl Runtime {
         }
     }
 
-    /// Allow the corresponding [`Node`] to use the [`Handle`]s passed via the iterator.
-    /// This is achieved by adding the [`Handle`]s to the [`Node`]s [`HashMap`] of [`Handle`]s.
+    /// Allow the corresponding [`Node`] to use the [`ChannelHalfId`]s passed via the iterator.
+    /// This is achieved by adding the [`ChannelHalfId`]s to the [`Node`]s [`HashMap`] of
+    /// [`ChannelHalfId`]s.
     fn track_handles_in_node<I>(&self, node_id: NodeId, handles: I)
     where
-        I: IntoIterator<Item = Handle>,
+        I: IntoIterator<Item = ChannelHalfId>,
     {
         if node_id == RUNTIME_NODE_ID {
             return;
@@ -202,9 +203,13 @@ impl Runtime {
         }
     }
 
-    /// Validate the [`NodeId`] has access to [`Handle`], returning `Err(OakStatus::ErrBadHandle)`
-    /// if access is not allowed.
-    fn validate_handle_access(&self, node_id: NodeId, handle: Handle) -> Result<(), OakStatus> {
+    /// Validate the [`NodeId`] has access to [`ChannelHalfId`], returning
+    /// `Err(OakStatus::ErrBadHandle)` if access is not allowed.
+    fn validate_handle_access(
+        &self,
+        node_id: NodeId,
+        handle: ChannelHalfId,
+    ) -> Result<(), OakStatus> {
         // Allow RUNTIME_NODE_ID access to all handles.
         if node_id == RUNTIME_NODE_ID {
             return Ok(());
@@ -229,11 +234,11 @@ impl Runtime {
         }
     }
 
-    /// Validate the [`NodeId`] has access to all [`Handle`]'s passed in the iterator, returning
-    /// `Err(OakStatus::ErrBadHandle)` if access is not allowed.
+    /// Validate the [`NodeId`] has access to all [`ChannelHalfId`]'s passed in the iterator,
+    /// returning `Err(OakStatus::ErrBadHandle)` if access is not allowed.
     fn validate_handles_access<I>(&self, node_id: NodeId, handles: I) -> Result<(), OakStatus>
     where
-        I: IntoIterator<Item = Handle>,
+        I: IntoIterator<Item = ChannelHalfId>,
     {
         // Allow RUNTIME_NODE_ID access to all handles.
         if node_id == RUNTIME_NODE_ID {
@@ -275,7 +280,7 @@ impl Runtime {
     /// order to limit the scope of holding the lock on [`ChannelMapping::channels`].
     ///
     /// Returns an error if `channel_handle` is invalid.
-    fn get_reader_channel_label(&self, channel_handle: Handle) -> Result<Label, OakStatus> {
+    fn get_reader_channel_label(&self, channel_handle: ChannelHalfId) -> Result<Label, OakStatus> {
         self.channels.with_channel(
             self.channels.get_reader_channel(channel_handle)?,
             |channel| Ok(channel.label.clone()),
@@ -286,7 +291,7 @@ impl Runtime {
     /// order to limit the scope of holding the lock on [`ChannelMapping::channels`].
     ///
     /// Returns an error if `channel_handle` is invalid.
-    fn get_writer_channel_label(&self, channel_handle: Handle) -> Result<Label, OakStatus> {
+    fn get_writer_channel_label(&self, channel_handle: ChannelHalfId) -> Result<Label, OakStatus> {
         self.channels.with_channel(
             self.channels.get_writer_channel(channel_handle)?,
             |channel| Ok(channel.label.clone()),
@@ -298,7 +303,7 @@ impl Runtime {
     fn validate_can_read_from_channel(
         &self,
         node_id: NodeId,
-        channel_handle: Handle,
+        channel_handle: ChannelHalfId,
     ) -> Result<(), OakStatus> {
         debug!(
             "validating whether node {:?} can read from channel {:?}",
@@ -335,7 +340,7 @@ impl Runtime {
         channel_handles: I,
     ) -> Result<(), OakStatus>
     where
-        I: IntoIterator<Item = Handle>,
+        I: IntoIterator<Item = ChannelHalfId>,
     {
         let all_channel_handles_ok = channel_handles.into_iter().all(|channel_handle| {
             self.validate_can_read_from_channel(node_id, channel_handle)
@@ -353,7 +358,7 @@ impl Runtime {
     fn validate_can_write_to_channel(
         &self,
         node_id: NodeId,
-        channel_handle: Handle,
+        channel_handle: ChannelHalfId,
     ) -> Result<(), OakStatus> {
         debug!(
             "validating whether node {:?} can write to channel {:?}",
@@ -385,7 +390,7 @@ impl Runtime {
     }
 
     /// Creates a new [`Channel`] and returns a `(writer handle, reader handle)` pair.
-    pub fn new_channel(&self, node_id: NodeId, label: &Label) -> (Handle, Handle) {
+    pub fn new_channel(&self, node_id: NodeId, label: &Label) -> (ChannelHalfId, ChannelHalfId) {
         // TODO(#630): Check whether the calling node can create a node with the specified label.
         let (writer, reader) = self.channels.new_channel(label);
         self.track_handles_in_node(node_id, vec![writer, reader]);
@@ -398,7 +403,7 @@ impl Runtime {
     fn readers_statuses(
         &self,
         node_id: NodeId,
-        readers: &[Option<Handle>],
+        readers: &[Option<ChannelHalfId>],
     ) -> Vec<ChannelReadStatus> {
         readers
             .iter()
@@ -427,7 +432,7 @@ impl Runtime {
     pub fn wait_on_channels(
         &self,
         node_id: NodeId,
-        readers: &[Option<Handle>],
+        readers: &[Option<ChannelHalfId>],
     ) -> Result<Vec<ChannelReadStatus>, OakStatus> {
         self.validate_handles_access(node_id, readers.iter().filter_map(|x| *x))?;
         self.validate_can_read_from_channels(node_id, readers.iter().filter_map(|x| *x))?;
@@ -489,7 +494,7 @@ impl Runtime {
     pub fn channel_write(
         &self,
         node_id: NodeId,
-        reference: Handle,
+        reference: ChannelHalfId,
         msg: Message,
     ) -> Result<(), OakStatus> {
         self.validate_handle_access(node_id, reference)?;
@@ -550,7 +555,7 @@ impl Runtime {
     pub fn channel_read(
         &self,
         node_id: NodeId,
-        reference: Handle,
+        reference: ChannelHalfId,
     ) -> Result<Option<Message>, OakStatus> {
         self.validate_handle_access(node_id, reference)?;
         self.validate_can_read_from_channel(node_id, reference)?;
@@ -580,7 +585,7 @@ impl Runtime {
     pub fn channel_status(
         &self,
         node_id: NodeId,
-        reference: Handle,
+        reference: ChannelHalfId,
     ) -> Result<ChannelReadStatus, OakStatus> {
         self.validate_handle_access(node_id, reference)?;
         self.validate_can_read_from_channel(node_id, reference)?;
@@ -606,7 +611,7 @@ impl Runtime {
     pub fn channel_try_read_message(
         &self,
         node_id: NodeId,
-        reference: Handle,
+        reference: ChannelHalfId,
         bytes_capacity: usize,
         handles_capacity: usize,
     ) -> Result<Option<ReadStatus>, OakStatus> {
@@ -650,13 +655,13 @@ impl Runtime {
         result
     }
 
-    /// Return the direction of a [`Handle`]. This is useful when reading
-    /// [`Messages`] which contain [`Handle`]'s.
+    /// Return the direction of a [`ChannelHalfId`]. This is useful when reading
+    /// [`Messages`] which contain [`ChannelHalfId`]'s.
     pub fn channel_get_direction(
         &self,
         node_id: NodeId,
-        reference: Handle,
-    ) -> Result<HandleDirection, OakStatus> {
+        reference: ChannelHalfId,
+    ) -> Result<ChannelHalfDirection, OakStatus> {
         self.validate_handle_access(node_id, reference)?;
         // TODO(#630): Check whether the calling node can read from the specified handle. Currently,
         // performing this check seems to get tests to hang forever.
@@ -668,7 +673,7 @@ impl Runtime {
                 .unwrap()
                 .contains_key(&reference)
             {
-                return Ok(HandleDirection::Read);
+                return Ok(ChannelHalfDirection::Read);
             }
         }
         {
@@ -679,14 +684,18 @@ impl Runtime {
                 .unwrap()
                 .contains_key(&reference)
             {
-                return Ok(HandleDirection::Write);
+                return Ok(ChannelHalfDirection::Write);
             }
         }
         Err(OakStatus::ErrBadHandle)
     }
 
-    /// Close a [`Handle`], potentially orphaning the underlying [`channel::Channel`].
-    pub fn channel_close(&self, node_id: NodeId, reference: Handle) -> Result<(), OakStatus> {
+    /// Close a [`ChannelHalfId`], potentially orphaning the underlying [`channel::Channel`].
+    pub fn channel_close(
+        &self,
+        node_id: NodeId,
+        reference: ChannelHalfId,
+    ) -> Result<(), OakStatus> {
         self.validate_handle_access(node_id, reference)?;
 
         if node_id != RUNTIME_NODE_ID {
@@ -776,7 +785,7 @@ impl Runtime {
         module_name: &str,
         entrypoint: &str,
         label: &Label,
-        reader: Handle,
+        reader: ChannelHalfId,
     ) -> Result<(), OakStatus> {
         if self.is_terminating() {
             return Err(OakStatus::ErrTerminated);
@@ -813,9 +822,9 @@ impl Runtime {
     }
 
     /// Starts a newly created node instance, by first initializing the necessary [`NodeInfo`] data
-    /// structure in [`Runtime`], allowing it to access the provided [`Handle`]s, then calling
-    /// [`Node::start`] on the instance, and finally storing a reference to the running instance
-    /// in [`Runtime::node_instances`] so that it can later be terminated.
+    /// structure in [`Runtime`], allowing it to access the provided [`ChannelHalfId`]s, then
+    /// calling [`Node::start`] on the instance, and finally storing a reference to the running
+    /// instance in [`Runtime::node_instances`] so that it can later be terminated.
     fn node_start_instance<I>(
         &self,
         node_id: NodeId,
@@ -824,7 +833,7 @@ impl Runtime {
         initial_handles: I,
     ) -> Result<(), OakStatus>
     where
-        I: IntoIterator<Item = Handle>,
+        I: IntoIterator<Item = ChannelHalfId>,
     {
         // First create the necessary info data structure in the Runtime, otherwise calls that the
         // node makes to the Runtime during `Node::start` (synchronously or asynchronously) may
@@ -906,7 +915,7 @@ impl RuntimeProxy {
         module_name: &str,
         entrypoint: &str,
         label: &Label,
-        channel_read_handle: Handle,
+        channel_read_handle: ChannelHalfId,
     ) -> Result<(), OakStatus> {
         self.runtime.clone().node_create(
             self.node_id,
@@ -918,19 +927,19 @@ impl RuntimeProxy {
     }
 
     /// See [`Runtime::new_channel`].
-    pub fn channel_create(&self, label: &Label) -> (Handle, Handle) {
+    pub fn channel_create(&self, label: &Label) -> (ChannelHalfId, ChannelHalfId) {
         self.runtime.new_channel(self.node_id, label)
     }
 
     /// See [`Runtime::channel_close`].
-    pub fn channel_close(&self, channel_handle: Handle) -> Result<(), OakStatus> {
+    pub fn channel_close(&self, channel_handle: ChannelHalfId) -> Result<(), OakStatus> {
         self.runtime.channel_close(self.node_id, channel_handle)
     }
 
     /// See [`Runtime::wait_on_channels`].
     pub fn wait_on_channels(
         &self,
-        channel_read_handles: &[Option<Handle>],
+        channel_read_handles: &[Option<ChannelHalfId>],
     ) -> Result<Vec<ChannelReadStatus>, OakStatus> {
         self.runtime
             .wait_on_channels(self.node_id, channel_read_handles)
@@ -939,7 +948,7 @@ impl RuntimeProxy {
     /// See [`Runtime::channel_write`].
     pub fn channel_write(
         &self,
-        channel_write_handle: Handle,
+        channel_write_handle: ChannelHalfId,
         msg: Message,
     ) -> Result<(), OakStatus> {
         self.runtime
@@ -947,14 +956,17 @@ impl RuntimeProxy {
     }
 
     /// See [`Runtime::channel_read`].
-    pub fn channel_read(&self, channel_read_handle: Handle) -> Result<Option<Message>, OakStatus> {
+    pub fn channel_read(
+        &self,
+        channel_read_handle: ChannelHalfId,
+    ) -> Result<Option<Message>, OakStatus> {
         self.runtime.channel_read(self.node_id, channel_read_handle)
     }
 
     /// See [`Runtime::channel_try_read_message`].
     pub fn channel_try_read_message(
         &self,
-        channel_read_handle: Handle,
+        channel_read_handle: ChannelHalfId,
         bytes_capacity: usize,
         handles_capacity: usize,
     ) -> Result<Option<ReadStatus>, OakStatus> {
@@ -969,8 +981,8 @@ impl RuntimeProxy {
     /// See [`Runtime::channel_get_direction`].
     pub fn channel_get_direction(
         &self,
-        channel_handle: Handle,
-    ) -> Result<HandleDirection, OakStatus> {
+        channel_handle: ChannelHalfId,
+    ) -> Result<ChannelHalfDirection, OakStatus> {
         self.runtime
             .channel_get_direction(self.node_id, channel_handle)
     }

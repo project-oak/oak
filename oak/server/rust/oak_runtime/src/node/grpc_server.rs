@@ -25,7 +25,7 @@ use std::{
 use oak::grpc::{encap_request, GrpcRequest};
 use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
 
-use crate::{pretty_name_for_thread, runtime::RuntimeProxy, Handle};
+use crate::{pretty_name_for_thread, runtime::RuntimeProxy, ChannelHalfId};
 
 /// Struct that represents a gRPC server pseudo-node.
 ///
@@ -42,9 +42,9 @@ pub struct GrpcServerNode {
     address: SocketAddr,
     /// Channel handle used for reading a [`GrpcServerNode::channel_writer`] once the gRPC server
     /// pseudo-node has started.
-    initial_reader: Handle,
+    initial_reader: ChannelHalfId,
     /// Channel handle used for writing invocations.
-    channel_writer: Option<Handle>,
+    channel_writer: Option<ChannelHalfId>,
     /// Thread handle that corresponds to a thread running a gRPC server pseudo-node.
     thread_handle: Option<JoinHandle<()>>,
 }
@@ -96,7 +96,7 @@ impl GrpcServerNode {
         config_name: &str,
         runtime: RuntimeProxy,
         address: SocketAddr,
-        initial_reader: Handle,
+        initial_reader: ChannelHalfId,
     ) -> Self {
         Self {
             config_name: config_name.to_string(),
@@ -108,10 +108,10 @@ impl GrpcServerNode {
         }
     }
 
-    /// Reads a [`Handle`] from a channel specified by [`GrpcServerNode::initial_reader`].
+    /// Reads a [`ChannelHalfId`] from a channel specified by [`GrpcServerNode::initial_reader`].
     /// Returns an error if couldn't read from the channel or if received a wrong number of handles
     /// (not equal to 1).
-    fn init_channel_writer(&self) -> Result<Handle, OakStatus> {
+    fn init_channel_writer(&self) -> Result<ChannelHalfId, OakStatus> {
         let read_status = self
             .runtime
             .wait_on_channels(&[Some(self.initial_reader)])
@@ -207,8 +207,8 @@ impl GrpcServerNode {
 
     /// Processes a gRPC request, forwards it to a temporary channel and sends handles for this
     /// channel to the [`GrpcServerNode::channel_writer`].
-    /// Returns a [`Handle`] for reading a gRPC response from.
-    fn process_request(&self, request: GrpcRequest) -> Result<Handle, GrpcServerError> {
+    /// Returns a [`ChannelHalfId`] for reading a gRPC response from.
+    fn process_request(&self, request: GrpcRequest) -> Result<ChannelHalfId, GrpcServerError> {
         // Create a pair of temporary channels to pass the gRPC request and to receive the response.
         let (request_writer, request_reader) =
             self.runtime.channel_create(&Label::public_trusted());
@@ -263,7 +263,7 @@ impl GrpcServerNode {
 
     /// Processes a gRPC response from a channel represented by `response_reader` and returns an
     /// HTTP response body.
-    fn process_response(&self, response_reader: Handle) -> Result<Vec<u8>, GrpcServerError> {
+    fn process_response(&self, response_reader: ChannelHalfId) -> Result<Vec<u8>, GrpcServerError> {
         let read_status = self
             .runtime
             .wait_on_channels(&[Some(response_reader)])

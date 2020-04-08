@@ -29,7 +29,7 @@ use wasmi::ValueType;
 use oak_abi::{ChannelReadStatus, OakStatus};
 
 use crate::pretty_name_for_thread;
-use crate::runtime::{Handle, HandleDirection, ReadStatus, RuntimeProxy};
+use crate::runtime::{ChannelHalfDirection, ChannelHalfId, ReadStatus, RuntimeProxy};
 use crate::Message;
 
 /// These number mappings are not exposed to the Wasm client, and are only used by `wasmi` to map
@@ -70,9 +70,9 @@ struct WasmInterface {
     pretty_name: String,
 
     /// Reader channel mappings to unique u64 handles
-    readers: HashMap<AbiHandle, Handle>,
+    readers: HashMap<AbiHandle, ChannelHalfId>,
     /// Writer channel mappings to unique u64 handles
-    writers: HashMap<AbiHandle, Handle>,
+    writers: HashMap<AbiHandle, ChannelHalfId>,
 
     /// A reference to the memory used by the `wasmi` interpreter. Host ABI functions using Wasm
     /// relative addresses will perform reads/writes against this reference.
@@ -84,7 +84,11 @@ struct WasmInterface {
 impl WasmInterface {
     /// Generate a randomized handle. Handles are random to prevent accidental dependency on
     /// particular values or sequence. See https://github.com/project-oak/oak/pull/347
-    fn allocate_new_handle(&mut self, channel: Handle, direction: HandleDirection) -> AbiHandle {
+    fn allocate_new_handle(
+        &mut self,
+        channel: ChannelHalfId,
+        direction: ChannelHalfDirection,
+    ) -> AbiHandle {
         loop {
             let handle = rand::thread_rng().next_u64();
 
@@ -92,7 +96,7 @@ impl WasmInterface {
                 continue;
             }
 
-            if direction == HandleDirection::Read {
+            if direction == ChannelHalfDirection::Read {
                 self.readers.insert(handle, channel);
             } else {
                 self.writers.insert(handle, channel);
@@ -124,7 +128,7 @@ impl WasmInterface {
     pub fn new(
         pretty_name: String,
         runtime: RuntimeProxy,
-        initial_reader: Handle,
+        initial_reader: ChannelHalfId,
     ) -> (WasmInterface, AbiHandle) {
         let mut interface = WasmInterface {
             pretty_name,
@@ -133,7 +137,7 @@ impl WasmInterface {
             memory: None,
             runtime,
         };
-        let handle = interface.allocate_new_handle(initial_reader, HandleDirection::Read);
+        let handle = interface.allocate_new_handle(initial_reader, ChannelHalfDirection::Read);
         (interface, handle)
     }
 
@@ -226,8 +230,8 @@ impl WasmInterface {
         self.validate_ptr(write_addr, 8)?;
         self.validate_ptr(read_addr, 8)?;
 
-        let write_handle = self.allocate_new_handle(writer, HandleDirection::Write);
-        let read_handle = self.allocate_new_handle(reader, HandleDirection::Read);
+        let write_handle = self.allocate_new_handle(writer, ChannelHalfDirection::Write);
+        let read_handle = self.allocate_new_handle(reader, ChannelHalfDirection::Read);
 
         self.get_memory()
             .set_value(write_addr, write_handle as i64)
@@ -292,7 +296,7 @@ impl WasmInterface {
             .map(|bytes| LittleEndian::read_u64(bytes))
             .collect();
 
-        let channels: Result<Vec<Handle>, _> = handles
+        let channels: Result<Vec<ChannelHalfId>, _> = handles
             .iter()
             .map(|handle| match self.writers.get(handle) {
                 Some(channel) => Ok(*channel),
@@ -750,7 +754,7 @@ pub struct WasmNode {
     runtime: RuntimeProxy,
     module: Arc<wasmi::Module>,
     entrypoint: String,
-    reader: Handle,
+    reader: ChannelHalfId,
     thread_handle: Option<JoinHandle<()>>,
 }
 
@@ -761,7 +765,7 @@ impl WasmNode {
         runtime: RuntimeProxy,
         module: Arc<wasmi::Module>,
         entrypoint: String,
-        reader: Handle,
+        reader: ChannelHalfId,
     ) -> Self {
         Self {
             config_name: config_name.to_string(),
