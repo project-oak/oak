@@ -65,8 +65,6 @@ container_image(
     base = "@cc_image//image",
     files = [
         "oak_runner",
-        "//examples/certs/docker:ca.pem",
-        "//examples/certs/docker:docker.pem",
     ],
     ports = [
         "8080/tcp",  # Oak Application gRPC port.

@@ -10,7 +10,7 @@ source "${GLOBAL_SCRIPTS_DIR}/common"
 
 gcloud container clusters get-credentials aggregator
 kubectl create secret generic tls-private-key \
-  --from-file="${GLOBAL_ROOT_DIR}/examples/certs/docker/docker.key" \
-  --from-file="${GLOBAL_ROOT_DIR}/examples/certs/docker/docker.pem" \
-  --from-file="${GLOBAL_ROOT_DIR}/examples/certs/docker/ca.pem"
+  --from-file="${GLOBAL_ROOT_DIR}/examples/certs/gcp/gcp.key" \
+  --from-file="${GLOBAL_ROOT_DIR}/examples/certs/gcp/gcp.pem" \
+  --from-file="${GLOBAL_ROOT_DIR}/examples/certs/gcp/ca.pem"
 kubectl apply --filename="${GLOBAL_ROOT_DIR}/examples/aggregator/gcp/pod.yaml"
