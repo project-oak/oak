@@ -32,6 +32,9 @@ use crate::pretty_name_for_thread;
 use crate::runtime::{Handle, HandleDirection, ReadStatus, RuntimeProxy};
 use crate::Message;
 
+#[cfg(test)]
+mod tests;
+
 /// These number mappings are not exposed to the Wasm client, and are only used by `wasmi` to map
 /// import names to host functions. See https://docs.rs/wasmi/0.6.2/wasmi/trait.Externals.html
 ///
@@ -864,116 +867,5 @@ impl super::Node for WasmNode {
                 error!("error while stopping Wasm node: {:?}", err);
             }
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::node::Node;
-    use crate::runtime::{Runtime, TEST_NODE_ID};
-    use wat::{parse_file, parse_str};
-
-    fn setup_node<S: AsRef<[u8]>>(buffer: S, entrypoint: &str) -> Box<dyn Node> {
-        let configuration = crate::runtime::Configuration {
-            nodes: HashMap::new(),
-            entry_module: "test_module".to_string(),
-            entrypoint: entrypoint.to_string(),
-        };
-        let runtime_ref = Arc::new(Runtime::create(configuration));
-        let (_, reader_handle) =
-            runtime_ref.new_channel(TEST_NODE_ID, &oak_abi::label::Label::public_trusted());
-
-        let runtime_proxy = runtime_ref.new_runtime_proxy();
-
-        let module = wasmi::Module::from_buffer(buffer).unwrap();
-
-        Box::new(WasmNode::new(
-            "test",
-            runtime_proxy,
-            Arc::new(module),
-            entrypoint.to_string(),
-            reader_handle,
-        ))
-    }
-
-    #[test]
-    fn wasm_starting_module_without_content_fails() {
-        // Loads an empty module that does not have the necessary entry point, so it should fail
-        // immediately.
-        let binary = parse_file("../../testdata/empty.wat").unwrap();
-
-        // An empty module is equivalent to: [0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]
-        // From https://docs.rs/wasmi/0.6.2/wasmi/struct.Module.html#method.from_buffer:
-        // Minimal module:
-        // \0asm - magic
-        // 0x01 - version (in little-endian)
-        assert_eq!(binary, vec![0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]);
-        let mut node = setup_node(binary, "oak_main");
-        assert_eq!(Err(OakStatus::ErrInvalidArgs), node.start());
-    }
-
-    #[test]
-    fn wasm_starting_minimal_module_succeeds() {
-        let binary = parse_file("../../testdata/minimal.wat").unwrap();
-        let mut node = setup_node(binary, "oak_main");
-        assert_eq!(Ok(()), node.start());
-        node.stop();
-    }
-
-    #[test]
-    fn wasm_starting_module_missing_an_export_fails() {
-        let binary = parse_file("../../testdata/missing.wat").unwrap();
-        let mut node = setup_node(binary, "oak_main");
-        assert_eq!(Err(OakStatus::ErrInvalidArgs), node.start());
-    }
-
-    #[test]
-    fn wasm_starting_module_with_wrong_export_fails() {
-        let binary = parse_file("../../testdata/minimal.wat").unwrap();
-        let mut node = setup_node(binary, "oak_other_main");
-        assert_eq!(Err(OakStatus::ErrInvalidArgs), node.start());
-    }
-
-    #[test]
-    fn wasm_starting_module_with_wrong_signature_fails() {
-        let binary = parse_file("../../testdata/wrong.wat").unwrap();
-        let mut node = setup_node(binary, "oak_main");
-        assert_eq!(Err(OakStatus::ErrInvalidArgs), node.start());
-    }
-
-    #[test]
-    fn wasm_starting_module_with_wrong_signature_2_fails() {
-        // As a source of inspiration for writing tests in future, this test intentionally parses
-        // the module from a string literal as opposed to loading from file.
-
-        // Wrong signature: oak_main does not take any parameters
-        let wat = r#"
-        (module
-            (func $oak_main)
-            (memory (;0;) 18)
-            (export "memory" (memory 0))
-            (export "oak_main" (func $oak_main)))
-        "#;
-        let binary = parse_str(wat).unwrap();
-        let mut node = setup_node(binary, "oak_main");
-        assert_eq!(Err(OakStatus::ErrInvalidArgs), node.start());
-    }
-
-    #[test]
-    fn wasm_starting_module_with_wrong_signature_3_fails() {
-        // Wrong signature: oak_main has the correct input parameter, but returns i32
-        let wat = r#"
-        (module
-            (type (;0;) (func (param i64) (result i32)))
-            (func $oak_main (type 0)
-              i32.const 42)
-            (memory (;0;) 18)
-            (export "memory" (memory 0))
-            (export "oak_main" (func $oak_main)))
-        "#;
-        let binary = parse_str(wat).unwrap();
-        let mut node = setup_node(binary, "oak_main");
-        assert_eq!(Err(OakStatus::ErrInvalidArgs), node.start());
     }
 }
