@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <cstdlib>
 #include <sstream>
 #include <string>
 
@@ -28,6 +29,8 @@
 ABSL_FLAG(std::string, application, "", "Application configuration file");
 ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate");
 ABSL_FLAG(std::string, private_key, "", "Path to the private key");
+ABSL_FLAG(std::string, private_key_env, "OAK_TLS_PRIVATE_KEY",
+          "Name of environment variable providing the path to the private key");
 ABSL_FLAG(std::string, cert_chain, "", "Path to the PEM-encoded certificate chain");
 
 std::shared_ptr<grpc::ServerCredentials> BuildTlsCredentials(std::string pem_root_certs,
@@ -51,10 +54,17 @@ int main(int argc, char* argv[]) {
       oak::ReadConfigFromFile(absl::GetFlag(FLAGS_application));
 
   std::string private_key_path = absl::GetFlag(FLAGS_private_key);
-  std::string cert_chain_path = absl::GetFlag(FLAGS_cert_chain);
+  std::string private_key_env = absl::GetFlag(FLAGS_private_key_env);
+  if (private_key_path.empty() && !private_key_env.empty()) {
+    const char* env_path = std::getenv(private_key_env.c_str());
+    if (env_path) {
+      private_key_path = env_path;
+    }
+  }
   if (private_key_path.empty()) {
     OAK_LOG(FATAL) << "No private key file specified.";
   }
+  std::string cert_chain_path = absl::GetFlag(FLAGS_cert_chain);
   if (cert_chain_path.empty()) {
     OAK_LOG(FATAL) << "No certificate chain file specified.";
   }

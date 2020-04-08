@@ -41,7 +41,6 @@ def oak_docker(name, application, ports):
             "--application={}".format(application_file),
             "--ca_cert=ca.pem",
             "--cert_chain=docker.pem",
-            "--private_key=docker.key",
         ],
         # `files` must contain full file paths with extensions.
         files = [application_path],

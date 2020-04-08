@@ -66,7 +66,6 @@ container_image(
     files = [
         "oak_runner",
         "//examples/certs/docker:ca.pem",
-        "//examples/certs/docker:docker.key",
         "//examples/certs/docker:docker.pem",
     ],
     ports = [
