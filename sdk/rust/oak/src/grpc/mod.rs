@@ -361,7 +361,9 @@ pub fn init_default() {
 
 /// Initializes a gRPC server pseudo-node and passes it a handle to write invocations to.
 ///
-/// Returns a [`Handle`] to read invocations from.
+/// Returns a [`ReadHandle`] to read invocations from.
+///
+/// [`ReadHandle`]: crate::ReadHandle
 pub fn init(config: &str) -> std::result::Result<crate::ReadHandle, OakStatus> {
     // Create a channel and pass the read half to a new gRPC pseudo-node.
     let (write_handle, read_handle) = crate::channel_create().expect("Couldn't create a channel");
