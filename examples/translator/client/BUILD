@@ -14,21 +14,22 @@
 # limitations under the License.
 #
 
-load("@rules_cc//cc:defs.bzl", "cc_binary")
+load("@io_bazel_rules_go//go:def.bzl", "go_binary")
 
 package(
     licenses = ["notice"],
 )
 
-cc_binary(
+go_binary(
     name = "client",
-    srcs = ["translator.cc"],
+    srcs = ["translator.go"],
+    # Force binary location to be the same as for cc_binary, see:
+    # https://github.com/bazelbuild/rules_go/issues/1239
+    out = "client",
     deps = [
-        "//examples/translator/proto:translator_cc_grpc",
-        "//oak/client:application_client",
-        "//oak/common:logging",
-        "@com_github_grpc_grpc//:grpc++",
-        "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/flags:parse",
+        "//examples/translator/proto:translator_go_proto",
+        "@com_github_golang_glog//:go_default_library",
+        "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_grpc//credentials:go_default_library",
     ],
 )

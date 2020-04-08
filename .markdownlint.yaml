@@ -1,3 +1,9 @@
+# Hard tabs
+#
+# Go code uses tabs, so allow them in fenced code blocks.
+MD010:
+  code_blocks: false
+
 # Line length
 #
 # `prettier` seems to have a different heuristic for splitting lines, and sometimes some long lines
