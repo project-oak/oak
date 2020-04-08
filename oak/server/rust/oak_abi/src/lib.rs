@@ -14,7 +14,8 @@
 // limitations under the License.
 //
 
-//! Type, constant and Wasm host function definitions for the Oak application binary interface.
+//! Type, constant and Wasm host function definitions for the Oak application
+//! binary interface (ABI).
 mod proto;
 pub use proto::*;
 
@@ -41,6 +42,9 @@ pub const SPACE_BYTES_PER_HANDLE: usize = 9;
 /// Invalid handle value.
 pub const INVALID_HANDLE: Handle = 0;
 
+// The Oak ABI primarily consists of a collection of Wasm host functions in the
+// "oak" module that are made available to WebAssembly Nodes running under the
+// Oak runtime.
 // See https://rustwasm.github.io/book/reference/js-ffi.html
 #[link(wasm_import_module = "oak")]
 extern "C" {
