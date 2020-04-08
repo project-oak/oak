@@ -10,7 +10,7 @@ crate-type = ["cdylib"]
 [dependencies]
 log = "*"
 oak = "=0.1.0"
-protobuf = "*"
+prost = "*"
 translator_common = "=0.1.0"
 
 [dev-dependencies]
@@ -21,4 +21,3 @@ simple_logger = "*"
 
 [build-dependencies]
 oak_utils = "*"
-protoc-rust-grpc = { path = "../../../../third_party/grpc-rust/protoc-rust-grpc" }

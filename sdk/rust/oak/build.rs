@@ -15,9 +15,8 @@
 //
 
 fn main() {
-    oak_utils::run_protoc_rust(protoc_rust::Args {
-        out_dir: "src/proto",
-        input: &[
+    oak_utils::compile_protos(
+        &[
             "../../../third_party/google/rpc/code.proto",
             "../../../third_party/google/rpc/status.proto",
             "../../../oak/proto/grpc_encap.proto",
@@ -26,8 +25,6 @@ fn main() {
             "../../../oak/proto/storage_channel.proto",
             "../../../oak/proto/log.proto",
         ],
-        includes: &["../../.."],
-        customize: protoc_rust::Customize::default(),
-    })
-    .expect("protoc");
+        &["../../.."],
+    );
 }

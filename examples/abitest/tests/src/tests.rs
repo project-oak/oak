@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use abitest_0_frontend::proto::abitest::{ABITestRequest, ABITestResponse};
+use abitest_0_frontend::proto::{AbiTestRequest, AbiTestResponse};
 use assert_matches::assert_matches;
 use log::{error, info};
 use maplit::hashmap;
@@ -56,10 +56,10 @@ fn test_abi() {
         .expect("unable to configure runtime with test wasm");
 
     // TODO(#540): reinstate storage and gRPC client tests when Rust runtime supports them.
-    let mut req = ABITestRequest::new();
+    let mut req = AbiTestRequest::default();
     req.exclude = "(Storage|GrpcClient)".to_string();
 
-    let result: grpc::Result<ABITestResponse> = oak_tests::grpc_request(
+    let result: grpc::Result<AbiTestResponse> = oak_tests::grpc_request(
         &runtime,
         entry_channel,
         "/oak.examples.abitest.OakABITestService/RunTests",
@@ -70,7 +70,7 @@ fn test_abi() {
     runtime.stop();
 
     let mut disabled = 0;
-    for result in result.unwrap().get_results() {
+    for result in result.unwrap().results {
         if result.disabled {
             disabled += 1;
             continue;

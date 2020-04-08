@@ -13,7 +13,7 @@ abitest_1_backend = { path = "../module_1/rust" }
 log = "*"
 oak = "=0.1.0"
 oak_abi = "=0.1.0"
-protobuf = "*"
+prost = "*"
 
 [dev-dependencies]
 assert_matches = "*"

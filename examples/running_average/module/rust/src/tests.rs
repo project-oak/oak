@@ -14,19 +14,15 @@
 // limitations under the License.
 //
 
-use crate::proto::running_average::{GetAverageResponse, SubmitSampleRequest};
+use crate::proto::{GetAverageResponse, SubmitSampleRequest};
 use assert_matches::assert_matches;
 use oak::grpc;
-use protobuf::well_known_types::Empty;
 
 const MODULE_CONFIG_NAME: &str = "running_average";
 
 fn submit_sample(runtime: &oak_runtime::Runtime, entry_channel: oak_runtime::Handle, value: u64) {
-    let req = SubmitSampleRequest {
-        value,
-        ..Default::default()
-    };
-    let result: grpc::Result<Empty> = oak_tests::grpc_request(
+    let req = SubmitSampleRequest { value };
+    let result: grpc::Result<()> = oak_tests::grpc_request(
         &runtime,
         entry_channel,
         "/oak.examples.running_average.RunningAverage/SubmitSample",
@@ -45,12 +41,11 @@ fn test_running_average() {
     submit_sample(&runtime, entry_channel, 100);
     submit_sample(&runtime, entry_channel, 200);
 
-    let req = Empty::new();
     let result: grpc::Result<GetAverageResponse> = oak_tests::grpc_request(
         &runtime,
         entry_channel,
         "/oak.examples.running_average.RunningAverage/GetAverage",
-        &req,
+        &(),
     );
     assert_matches!(result, Ok(_));
     assert_eq!(150, result.unwrap().average);

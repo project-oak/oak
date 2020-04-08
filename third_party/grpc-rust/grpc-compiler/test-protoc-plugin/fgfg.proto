@@ -1,9 +1,0 @@
-syntax = "proto3";
-
-message FooBar {
-
-}
-
-service Baz {
-    rpc qux(FooBar) returns (FooBar) {}
-}

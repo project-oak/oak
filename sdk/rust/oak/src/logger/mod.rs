@@ -24,7 +24,7 @@
 use log::{Level, Log, Metadata, Record, SetLoggerError};
 
 struct OakChannelLogger {
-    channel: crate::io::Sender<crate::proto::log::LogMessage>,
+    channel: crate::io::Sender<crate::proto::oak::log::LogMessage>,
 }
 
 impl Log for OakChannelLogger {
@@ -35,12 +35,11 @@ impl Log for OakChannelLogger {
         if !self.enabled(record.metadata()) {
             return;
         }
-        let log_msg = crate::proto::log::LogMessage {
+        let log_msg = crate::proto::oak::log::LogMessage {
             file: record.file().unwrap_or("<unknown-file>").to_string(),
             line: record.line().unwrap_or_default(),
-            level: map_level(record.level()),
+            level: map_level(record.level()) as i32,
             message: format!("{}", record.args()),
-            ..Default::default()
         };
         match self.channel.send(&log_msg) {
             Ok(()) => (),
@@ -51,13 +50,13 @@ impl Log for OakChannelLogger {
     fn flush(&self) {}
 }
 
-fn map_level(level: Level) -> crate::proto::log::Level {
+fn map_level(level: Level) -> crate::proto::oak::log::Level {
     match level {
-        Level::Error => crate::proto::log::Level::ERROR,
-        Level::Warn => crate::proto::log::Level::WARN,
-        Level::Info => crate::proto::log::Level::INFO,
-        Level::Debug => crate::proto::log::Level::DEBUG,
-        Level::Trace => crate::proto::log::Level::TRACE,
+        Level::Error => crate::proto::oak::log::Level::Error,
+        Level::Warn => crate::proto::oak::log::Level::Warn,
+        Level::Info => crate::proto::oak::log::Level::Info,
+        Level::Debug => crate::proto::oak::log::Level::Debug,
+        Level::Trace => crate::proto::oak::log::Level::Trace,
     }
 }
 

@@ -22,16 +22,16 @@
 //! expressed in base 10, and get back a string representation of the accumulated average value up
 //! to and including the value provided in the request.
 
-mod proto;
+mod proto {
+    include!(concat!(env!("OUT_DIR"), "/oak.examples.running_average.rs"));
+}
 #[cfg(test)]
 mod tests;
 
 use oak::grpc;
-use proto::running_average::{GetAverageResponse, SubmitSampleRequest};
-use proto::running_average_grpc::{Dispatcher, RunningAverage};
-use protobuf::well_known_types::Empty;
+use proto::{GetAverageResponse, RunningAverage, RunningAverageDispatcher, SubmitSampleRequest};
 
-oak::entrypoint!(oak_main => Dispatcher::new(Node::default()));
+oak::entrypoint!(oak_main => RunningAverageDispatcher::new(Node::default()));
 
 #[derive(Default)]
 struct Node {
@@ -40,14 +40,14 @@ struct Node {
 }
 
 impl RunningAverage for Node {
-    fn submit_sample(&mut self, req: SubmitSampleRequest) -> grpc::Result<Empty> {
+    fn submit_sample(&mut self, req: SubmitSampleRequest) -> grpc::Result<()> {
         self.sum += req.value;
         self.count += 1;
-        Ok(Empty::new())
+        Ok(())
     }
 
-    fn get_average(&mut self, _req: Empty) -> grpc::Result<GetAverageResponse> {
-        let mut res = GetAverageResponse::new();
+    fn get_average(&mut self, _req: ()) -> grpc::Result<GetAverageResponse> {
+        let mut res = GetAverageResponse::default();
         res.average = self.sum / self.count;
         Ok(res)
     }

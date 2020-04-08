@@ -15,7 +15,7 @@ hex = "*"
 log = "*"
 oak = "=0.1.0"
 oak_abi = "=0.1.0"
-protobuf = "*"
+prost = "*"
 rand_core = "*"
 rand = "*"
 regex = "*"
@@ -24,4 +24,3 @@ serde_json = "*"
 
 [build-dependencies]
 oak_utils = "*"
-protoc-rust-grpc = { path = "../../../../third_party/grpc-rust/protoc-rust-grpc" }

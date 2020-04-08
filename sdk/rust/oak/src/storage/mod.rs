@@ -17,7 +17,7 @@
 //! Helper library for accessing Oak storage services.
 
 use crate::grpc;
-use crate::proto::storage_channel::{
+use crate::proto::oak::{
     StorageChannelDeleteRequest, StorageChannelDeleteResponse, StorageChannelReadRequest,
     StorageChannelReadResponse, StorageChannelWriteRequest, StorageChannelWriteResponse,
     StorageItem,
@@ -52,19 +52,14 @@ impl Storage {
         operation_request: Req,
     ) -> grpc::Result<Res>
     where
-        Req: protobuf::Message,
-        Res: protobuf::Message,
+        Req: prost::Message,
+        Res: prost::Message + Default,
     {
-        info!(
-            "StorageChannelRequest: {}",
-            protobuf::text_format::print_to_string(&operation_request)
-        );
-        let type_url =
-            String::from("type.googleapis.com/") + operation_request.descriptor().full_name();
+        info!("StorageChannelRequest: {:?}", operation_request);
         crate::grpc::invoke_grpc_method(
             grpc_method_name,
             &operation_request,
-            Some(&type_url),
+            None,
             &self.client.invocation_sender,
         )
     }
@@ -74,11 +69,12 @@ impl Storage {
     pub fn read(&mut self, storage_name: &[u8], name: &[u8]) -> grpc::Result<Vec<u8>> {
         let read_request = StorageChannelReadRequest {
             storage_name: storage_name.to_owned(),
-            item: protobuf::SingularPtrField::some(StorageItem {
+            transaction_id: vec![],
+            item: Some(StorageItem {
                 name: name.to_owned(),
-                ..Default::default()
+                value: vec![],
+                label: None,
             }),
-            ..Default::default()
         };
 
         // TODO(#757): Automatically generate boilerplate from the proto
@@ -87,7 +83,7 @@ impl Storage {
             "/oak.StorageNode/Read",
             read_request,
         )
-        .map(|r| r.get_item().get_value().to_vec())
+        .map(|r| r.item.unwrap_or_default().value.to_vec())
     }
 
     /// Set the value associated with the given `name` from the storage instance
@@ -96,12 +92,12 @@ impl Storage {
         // TODO(#449): Set policy for item.
         let write_request = StorageChannelWriteRequest {
             storage_name: storage_name.to_owned(),
-            item: protobuf::SingularPtrField::some(StorageItem {
+            transaction_id: vec![],
+            item: Some(StorageItem {
                 name: name.to_owned(),
                 value: value.to_owned(),
-                ..Default::default()
+                label: None,
             }),
-            ..Default::default()
         };
 
         // TODO(#757): Automatically generate boilerplate from the proto definition.
@@ -117,11 +113,12 @@ impl Storage {
     pub fn delete(&mut self, storage_name: &[u8], name: &[u8]) -> grpc::Result<()> {
         let delete_request = StorageChannelDeleteRequest {
             storage_name: storage_name.to_owned(),
-            item: protobuf::SingularPtrField::some(StorageItem {
+            transaction_id: vec![],
+            item: Some(StorageItem {
                 name: name.to_owned(),
-                ..Default::default()
+                value: vec![],
+                label: None,
             }),
-            ..Default::default()
         };
 
         // TODO(#757): Automatically generate boilerplate from the proto definition.

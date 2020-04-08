@@ -17,7 +17,8 @@
 /// Generic Oak error.
 #[derive(Debug)]
 pub enum OakError {
-    ProtobufError(protobuf::ProtobufError),
+    ProtobufDecodeError(Option<prost::DecodeError>),
+    ProtobufEncodeError(Option<prost::EncodeError>),
     OakStatus(crate::OakStatus),
     IoError(std::io::Error),
 }
@@ -25,7 +26,8 @@ pub enum OakError {
 impl std::fmt::Display for OakError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            OakError::ProtobufError(e) => write!(f, "protobuf error: {}", e),
+            OakError::ProtobufDecodeError(e) => write!(f, "protobuf decode error: {:?}", e),
+            OakError::ProtobufEncodeError(e) => write!(f, "protobuf encode error: {:?}", e),
             OakError::OakStatus(e) => write!(f, "Oak status value: {:?}", e),
             OakError::IoError(e) => write!(f, "I/O error: {}", e),
         }
@@ -34,9 +36,15 @@ impl std::fmt::Display for OakError {
 
 impl std::error::Error for OakError {}
 
-impl From<protobuf::ProtobufError> for OakError {
-    fn from(err: protobuf::ProtobufError) -> Self {
-        OakError::ProtobufError(err)
+impl From<prost::DecodeError> for OakError {
+    fn from(err: prost::DecodeError) -> Self {
+        OakError::ProtobufDecodeError(Some(err))
+    }
+}
+
+impl From<prost::EncodeError> for OakError {
+    fn from(err: prost::EncodeError) -> Self {
+        OakError::ProtobufEncodeError(Some(err))
     }
 }
 

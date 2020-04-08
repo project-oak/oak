@@ -12,7 +12,7 @@ aggregator_common = { path = "../../common" }
 itertools = "*"
 log = "*"
 oak = "=0.1.0"
-protobuf = "*"
+prost = "*"
 
 [dev-dependencies]
 assert_matches = "*"
@@ -23,4 +23,3 @@ simple_logger = "*"
 
 [build-dependencies]
 oak_utils = "*"
-protoc-rust-grpc = { path = "../../../../third_party/grpc-rust/protoc-rust-grpc" }

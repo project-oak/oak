@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::proto::aggregator::SerializedSparseVector;
+use crate::proto::SerializedSparseVector;
 use aggregator_common::Monoid;
 use std::collections::HashMap;
 use std::convert::{From, TryFrom};
@@ -66,7 +66,7 @@ impl From<SparseVector> for SerializedSparseVector {
     fn from(src: SparseVector) -> Self {
         src.entries
             .iter()
-            .fold(SerializedSparseVector::new(), |mut vec, (&i, &v)| {
+            .fold(SerializedSparseVector::default(), |mut vec, (&i, &v)| {
                 vec.indices.push(i);
                 vec.values.push(v);
                 vec

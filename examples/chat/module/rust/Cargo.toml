@@ -11,11 +11,10 @@ crate-type = ["cdylib"]
 bincode = "*"
 log = "*"
 oak = "=0.1.0"
-protobuf = "*"
+prost = "*"
 rand_core = "*"
 rand = "*"
 serde = { version = "*", features = ["derive"] }
 
 [build-dependencies]
 oak_utils = "*"
-protoc-rust-grpc = { path = "../../../../third_party/grpc-rust/protoc-rust-grpc" }

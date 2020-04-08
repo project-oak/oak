@@ -7,7 +7,8 @@ license = "Apache-2.0"
 
 [dependencies]
 oak_abi = "=0.1.0"
-protobuf = "*"
+prost = "*"
+prost-types = "*"
 fmt = "*"
 log = { version = "*", features = ["std"] }
 byteorder = "*"
@@ -16,7 +17,6 @@ serde = { version = "*", features = ["derive"] }
 
 [build-dependencies]
 oak_utils = "*"
-protoc-rust = "*"
 
 [dev-dependencies]
 assert_matches = "*"

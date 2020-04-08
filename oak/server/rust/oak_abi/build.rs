@@ -14,22 +14,12 @@
 // limitations under the License.
 //
 
-use std::path;
-
 fn main() {
-    let proto_files = vec!["oak_abi.proto", "label.proto"];
-
-    let proto_dir = path::Path::new("../../../../oak/proto/").to_path_buf();
-    let proto_paths: Vec<path::PathBuf> = proto_files.iter().map(|f| proto_dir.join(f)).collect();
-
-    // Tell Cargo that if any of the given files change, to rerun this build script.
-    // https://doc.rust-lang.org/cargo/reference/build-scripts.html#rerun-if-changed
-    for path in &proto_paths {
-        println!("cargo:rerun-if-changed={}", path.to_str().unwrap());
-    }
-
-    prost_build::Config::new()
-        .type_attribute(".oak.label", "#[derive(Eq,Hash)]")
-        .compile_protos(&proto_paths, &[proto_dir])
-        .unwrap();
+    oak_utils::compile_protos(
+        &[
+            "../../../../oak/proto/oak_abi.proto",
+            "../../../../oak/proto/label.proto",
+        ],
+        &["../../../../oak/proto"],
+    );
 }

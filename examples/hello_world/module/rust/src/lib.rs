@@ -14,14 +14,15 @@
 // limitations under the License.
 //
 
-mod proto;
+mod proto {
+    include!(concat!(env!("OUT_DIR"), "/oak.examples.hello_world.rs"));
+}
 #[cfg(test)]
 mod tests;
 
 use log::info;
 use oak::grpc;
-use proto::hello_world::{HelloRequest, HelloResponse};
-use proto::hello_world_grpc::{Dispatcher, HelloWorld};
+use proto::{HelloRequest, HelloResponse, HelloWorld, HelloWorldDispatcher};
 
 oak::entrypoint!(oak_main => {
     oak::logger::init_default();
@@ -29,7 +30,7 @@ oak::entrypoint!(oak_main => {
         translator: grpc::client::Client::new("translator", "oak_main")
             .map(translator_common::TranslatorClient),
     };
-    Dispatcher::new(node)
+    HelloWorldDispatcher::new(node)
 });
 
 struct Node {
@@ -46,14 +47,14 @@ impl Node {
 impl HelloWorld for Node {
     fn say_hello(&mut self, req: HelloRequest) -> grpc::Result<HelloResponse> {
         info!("Say hello to {}", req.greeting);
-        let mut res = HelloResponse::new();
+        let mut res = HelloResponse::default();
         res.reply = format!("HELLO {}!", req.greeting);
         Ok(res)
     }
 
     fn lots_of_replies(&mut self, req: HelloRequest, mut writer: grpc::ChannelResponseWriter) {
         info!("Say hello to {}", req.greeting);
-        let mut res1 = HelloResponse::new();
+        let mut res1 = HelloResponse::default();
         res1.reply = format!("HELLO {}!", req.greeting);
         writer
             .write(&res1, grpc::WriteMode::KeepOpen)
@@ -62,7 +63,7 @@ impl HelloWorld for Node {
         // Attempt to also generate a translated response.
         if let Some(salutation) = self.translate(&req.greeting, "en", "fr") {
             info!("Say bonjour to {}", salutation);
-            let mut res = HelloResponse::new();
+            let mut res = HelloResponse::default();
             res.reply = format!("BONJOUR {}!", salutation);
             writer
                 .write(&res, grpc::WriteMode::KeepOpen)
@@ -70,7 +71,7 @@ impl HelloWorld for Node {
         }
 
         info!("Say hello again to {}", req.greeting);
-        let mut res2 = HelloResponse::new();
+        let mut res2 = HelloResponse::default();
         res2.reply = format!("HELLO AGAIN {}!", req.greeting);
         writer
             .write(&res2, grpc::WriteMode::Close)
@@ -82,7 +83,7 @@ impl HelloWorld for Node {
         let mut msg = String::new();
         msg.push_str("Hello ");
         msg.push_str(&recipients(&reqs));
-        let mut res = HelloResponse::new();
+        let mut res = HelloResponse::default();
         res.reply = msg;
         Ok(res)
     }
@@ -90,12 +91,12 @@ impl HelloWorld for Node {
     fn bidi_hello(&mut self, reqs: Vec<HelloRequest>, mut writer: grpc::ChannelResponseWriter) {
         info!("Say hello");
         let msg = recipients(&reqs);
-        let mut res1 = HelloResponse::new();
+        let mut res1 = HelloResponse::default();
         res1.reply = format!("HELLO {}!", msg);
         writer
             .write(&res1, grpc::WriteMode::KeepOpen)
             .expect("Failed to write response");
-        let mut res2 = HelloResponse::new();
+        let mut res2 = HelloResponse::default();
         res2.reply = format!("BONJOUR {}!", msg);
         writer
             .write(&res2, grpc::WriteMode::Close)

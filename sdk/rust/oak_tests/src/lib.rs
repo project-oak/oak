@@ -18,7 +18,7 @@
 
 use log::info;
 
-use protobuf::{Message, ProtobufEnum};
+use prost::Message;
 use std::collections::HashMap;
 use std::process::Command;
 use std::sync::Arc;
@@ -99,8 +99,8 @@ pub fn grpc_request<R, Q>(
     req: &R,
 ) -> oak::grpc::Result<Q>
 where
-    R: protobuf::Message,
-    Q: protobuf::Message,
+    R: prost::Message,
+    Q: prost::Message + Default,
 {
     // Put the request in a GrpcRequest wrapper and serialize into a message.
     let grpc_req =
@@ -111,7 +111,7 @@ where
     };
 
     grpc_req
-        .write_to_writer(&mut req_msg.data)
+        .encode(&mut req_msg.data)
         .expect("failed to serialize GrpcRequest message");
 
     // Create a new channel to hold the request message.
@@ -160,16 +160,17 @@ where
             std::thread::sleep(std::time::Duration::from_millis(100));
             continue;
         }
-        let mut rsp: oak::proto::grpc_encap::GrpcResponse =
-            protobuf::parse_from_bytes(&rsp.data).expect("failed to parse GrpcResponse message");
+        let rsp = oak::proto::oak::GrpcResponse::decode(rsp.data.as_slice())
+            .expect("failed to parse GrpcResponse message");
         if !rsp.last {
             panic!("Expected single final response");
         }
 
-        if rsp.get_status().code != oak::grpc::Code::OK.value() {
-            return Err(rsp.take_status());
+        let status = rsp.status.unwrap_or_default();
+        if status.code != oak::grpc::Code::Ok as i32 {
+            return Err(status);
         }
-        let rsp: Q = protobuf::parse_from_bytes(&rsp.get_rsp_msg().value)
+        let rsp = Q::decode(rsp.rsp_msg.unwrap_or_default().value.as_slice())
             .expect("Failed to parse response protobuf message");
         return Ok(rsp);
     }

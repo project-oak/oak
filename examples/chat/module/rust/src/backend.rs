@@ -15,9 +15,10 @@
 //
 
 use crate::command::Command;
-use crate::proto::chat::Message;
+use crate::proto::Message;
 use log::info;
 use oak::Node;
+use prost::Message as _;
 
 oak::entrypoint!(backend_oak_main => {
     oak::logger::init_default();
@@ -40,7 +41,7 @@ impl Node<Command> for Room {
                 Ok(())
             }
             Command::SendMessage(message_bytes) => {
-                let message: Message = protobuf::parse_from_bytes(&message_bytes)
+                let message = Message::decode(message_bytes.as_slice())
                     .expect("could not parse message from bytes");
                 self.messages.push(message.clone());
                 info!("fan out message to {} clients", self.clients.len());

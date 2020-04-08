@@ -1,8 +1,0 @@
-Cargo.lock
-target
-*.iml
-.idea
-.project
-.*.swp
-long-tests/with-go/long_tests_client/long_tests_client
-long-tests/with-go/long_tests_server/long_tests_server

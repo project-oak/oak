@@ -16,7 +16,7 @@
 
 use assert_matches::assert_matches;
 use oak::grpc;
-use translator_common::proto::translator::{TranslateRequest, TranslateResponse};
+use translator_common::proto::{TranslateRequest, TranslateResponse};
 
 const MODULE_CONFIG_NAME: &str = "translator";
 
@@ -31,7 +31,6 @@ fn test_translate() {
         text: "WORLDS".into(),
         from_lang: "en".into(),
         to_lang: "it".into(),
-        ..Default::default()
     };
     let result: grpc::Result<TranslateResponse> = oak_tests::grpc_request(
         &runtime,

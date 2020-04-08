@@ -19,12 +19,13 @@ mod tests;
 
 use log::info;
 use oak::grpc;
-use translator_common::proto::translator::{TranslateRequest, TranslateResponse};
-use translator_common::proto::translator_grpc::{Dispatcher, Translator};
+use translator_common::proto::{
+    TranslateRequest, TranslateResponse, Translator, TranslatorDispatcher,
+};
 
 oak::entrypoint!(oak_main => {
     oak::logger::init_default();
-    Dispatcher::new(Node)
+    TranslatorDispatcher::new(Node)
 });
 
 struct Node;
@@ -35,7 +36,7 @@ impl Translator for Node {
             "attempt to translate '{}' from {} to {}",
             req.text, req.from_lang, req.to_lang
         );
-        let mut rsp = TranslateResponse::new();
+        let mut rsp = TranslateResponse::default();
         rsp.translated_text = match req.from_lang.as_str() {
             "en" => match req.text.as_str() {
                 "WORLDS" => match req.to_lang.as_str() {
@@ -44,7 +45,7 @@ impl Translator for Node {
                     _ => {
                         info!("output language {} not found", req.to_lang);
                         return Err(grpc::build_status(
-                            grpc::Code::NOT_FOUND,
+                            grpc::Code::NotFound,
                             "Output language not found",
                         ));
                     }
@@ -55,7 +56,7 @@ impl Translator for Node {
                         req.text, req.from_lang
                     );
                     return Err(grpc::build_status(
-                        grpc::Code::NOT_FOUND,
+                        grpc::Code::NotFound,
                         "Input text unrecognized",
                     ));
                 }
@@ -63,7 +64,7 @@ impl Translator for Node {
             _ => {
                 info!("input language '{}' not recognized", req.from_lang);
                 return Err(grpc::build_status(
-                    grpc::Code::NOT_FOUND,
+                    grpc::Code::NotFound,
                     "Input language unrecognized",
                 ));
             }
