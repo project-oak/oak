@@ -10,11 +10,26 @@ spec:
       image: gcr.io/oak-ci/oak-aggregator:latest
       ports:
         - containerPort: 8080
+      volumeMounts:
+        - name: tls-secret
+          mountPath: '/etc/oak-secrets'
+          readOnly: true
+      args:
+        [
+          '--application=config.bin',
+          '--ca_cert=/etc/oak-secrets/ca.pem',
+          '--cert_chain=/etc/oak-secrets/docker.pem',
+          '--private_key=/etc/oak-secrets/docker.key',
+        ]
     - name: backend
       image: gcr.io/oak-ci/oak-aggregator-backend:latest
       env:
         - name: RUST_LOG
           value: 'info'
+  volumes:
+    - name: tls-secret
+      secret:
+        secretName: tls-private-key
 ---
 apiVersion: v1
 kind: Service

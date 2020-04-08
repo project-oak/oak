@@ -20,21 +20,5 @@ package(
 )
 
 exports_files(srcs = glob([
-    "ca.*",
-    "docker.*",
+    "*.pem",
 ]))
-
-filegroup(
-    name = "local",
-    srcs = [
-        "local.key",
-        "local.pem",
-    ],
-)
-
-filegroup(
-    name = "ca",
-    srcs = [
-        "ca.pem",
-    ],
-)

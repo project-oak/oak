@@ -6,5 +6,6 @@ readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
 source "${GLOBAL_SCRIPTS_DIR}/common"
 
 gcloud container clusters get-credentials aggregator
+kubectl delete secret tls-private-key
 kubectl delete service aggregator
 kubectl delete pod aggregator
