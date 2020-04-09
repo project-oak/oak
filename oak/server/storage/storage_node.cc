@@ -91,6 +91,9 @@ oak::StatusOr<std::unique_ptr<GrpcResponse>> StorageNode::ProcessMethod(GrpcRequ
 
   if (method_name == "/oak.StorageNode/Read") {
     StorageChannelReadRequest read_req;
+    // Assume the type of the embedded request is correct.
+    grpc_req->mutable_req_msg()->set_type_url("type.googleapis.com/" +
+                                              read_req.GetDescriptor()->full_name());
     if (!grpc_req->req_msg().UnpackTo(&read_req)) {
       return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to unpack request");
     }
@@ -105,6 +108,9 @@ oak::StatusOr<std::unique_ptr<GrpcResponse>> StorageNode::ProcessMethod(GrpcRequ
 
   } else if (method_name == "/oak.StorageNode/Write") {
     StorageChannelWriteRequest write_req;
+    // Assume the type of the embedded request is correct.
+    grpc_req->mutable_req_msg()->set_type_url("type.googleapis.com/" +
+                                              write_req.GetDescriptor()->full_name());
     if (!grpc_req->req_msg().UnpackTo(&write_req)) {
       return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to unpack request");
     }
@@ -116,6 +122,9 @@ oak::StatusOr<std::unique_ptr<GrpcResponse>> StorageNode::ProcessMethod(GrpcRequ
 
   } else if (method_name == "/oak.StorageNode/Delete") {
     StorageChannelDeleteRequest delete_req;
+    // Assume the type of the embedded request is correct.
+    grpc_req->mutable_req_msg()->set_type_url("type.googleapis.com/" +
+                                              delete_req.GetDescriptor()->full_name());
     if (!grpc_req->req_msg().UnpackTo(&delete_req)) {
       return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to unpack request");
     }
@@ -125,6 +134,9 @@ oak::StatusOr<std::unique_ptr<GrpcResponse>> StorageNode::ProcessMethod(GrpcRequ
 
   } else if (method_name == "/oak.StorageNode/Begin") {
     StorageChannelBeginRequest begin_req;
+    // Assume the type of the embedded request is correct.
+    grpc_req->mutable_req_msg()->set_type_url("type.googleapis.com/" +
+                                              begin_req.GetDescriptor()->full_name());
     if (!grpc_req->req_msg().UnpackTo(&begin_req)) {
       return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to unpack request");
     }
@@ -136,6 +148,9 @@ oak::StatusOr<std::unique_ptr<GrpcResponse>> StorageNode::ProcessMethod(GrpcRequ
 
   } else if (method_name == "/oak.StorageNode/Commit") {
     StorageChannelCommitRequest commit_req;
+    // Assume the type of the embedded request is correct.
+    grpc_req->mutable_req_msg()->set_type_url("type.googleapis.com/" +
+                                              commit_req.GetDescriptor()->full_name());
     if (!grpc_req->req_msg().UnpackTo(&commit_req)) {
       return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to unpack request");
     }
@@ -144,6 +159,9 @@ oak::StatusOr<std::unique_ptr<GrpcResponse>> StorageNode::ProcessMethod(GrpcRequ
 
   } else if (method_name == "/oak.StorageNode/Rollback") {
     StorageChannelRollbackRequest rollback_req;
+    // Assume the type of the embedded request is correct.
+    grpc_req->mutable_req_msg()->set_type_url("type.googleapis.com/" +
+                                              rollback_req.GetDescriptor()->full_name());
     if (!grpc_req->req_msg().UnpackTo(&rollback_req)) {
       return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to unpack request");
     }
