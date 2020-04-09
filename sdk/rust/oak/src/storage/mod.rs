@@ -18,11 +18,9 @@
 
 use crate::grpc;
 use crate::proto::oak::storage::{
-    StorageChannelDeleteRequest, StorageChannelDeleteResponse, StorageChannelReadRequest,
-    StorageChannelReadResponse, StorageChannelWriteRequest, StorageChannelWriteResponse,
-    StorageItem,
+    StorageChannelDeleteRequest, StorageChannelReadRequest, StorageChannelWriteRequest,
+    StorageItem, StorageServiceClient,
 };
-use log::info;
 
 /// Default name for predefined Node config that corresponds to a storage
 /// pseudo-Node.
@@ -30,7 +28,7 @@ pub const DEFAULT_CONFIG_NAME: &str = "storage";
 
 /// Local representation of the connection to an external storage service.
 pub struct Storage {
-    client: crate::grpc::client::Client,
+    client: StorageServiceClient,
 }
 
 impl Storage {
@@ -43,25 +41,9 @@ impl Storage {
     /// Create a `Storage` instance using the given name identifying storage
     /// Node configuration.
     pub fn new(config: &str) -> Option<Storage> {
-        crate::grpc::client::Client::new(config, "oak_main").map(|client| Storage { client })
-    }
-
-    fn execute_operation<Req, Res>(
-        &mut self,
-        grpc_method_name: &str,
-        operation_request: Req,
-    ) -> grpc::Result<Res>
-    where
-        Req: prost::Message,
-        Res: prost::Message + Default,
-    {
-        info!("StorageChannelRequest: {:?}", operation_request);
-        crate::grpc::invoke_grpc_method(
-            grpc_method_name,
-            &operation_request,
-            None,
-            &self.client.invocation_sender,
-        )
+        crate::grpc::client::Client::new(config, "oak_main").map(|client| Storage {
+            client: StorageServiceClient(client),
+        })
     }
 
     /// Read the value associated with the given `name` from the storage
@@ -77,13 +59,9 @@ impl Storage {
             }),
         };
 
-        // TODO(#757): Automatically generate boilerplate from the proto
-        // definition.
-        self.execute_operation::<StorageChannelReadRequest, StorageChannelReadResponse>(
-            "/oak.storage.StorageService/Read",
-            read_request,
-        )
-        .map(|r| r.item.unwrap_or_default().value.to_vec())
+        self.client
+            .read(read_request)
+            .map(|r| r.item.unwrap_or_default().value.to_vec())
     }
 
     /// Set the value associated with the given `name` from the storage instance
@@ -100,12 +78,7 @@ impl Storage {
             }),
         };
 
-        // TODO(#757): Automatically generate boilerplate from the proto definition.
-        self.execute_operation::<StorageChannelWriteRequest, StorageChannelWriteResponse>(
-            "/oak.storage.StorageService/Write",
-            write_request,
-        )
-        .map(|_| ())
+        self.client.write(write_request).map(|_| ())
     }
 
     /// Delete the value associated with the given `name` from the storage
@@ -121,11 +94,6 @@ impl Storage {
             }),
         };
 
-        // TODO(#757): Automatically generate boilerplate from the proto definition.
-        self.execute_operation::<StorageChannelDeleteRequest, StorageChannelDeleteResponse>(
-            "/oak.storage.StorageService/Delete",
-            delete_request,
-        )
-        .map(|_| ())
+        self.client.delete(delete_request).map(|_| ())
     }
 }
