@@ -16,7 +16,7 @@
 
 syntax = "proto3";
 
-package oak;
+package oak.storage;
 
 import "oak/proto/label.proto";
 
@@ -86,7 +86,7 @@ message StorageChannelRollbackResponse {
 
 // Interface exposed by the Storage Node to other nodes over a pair of Oak Channels.
 // Methods in this interface map 1:1 with those in storage.proto.
-service StorageNode {
+service StorageService {
   rpc Read(StorageChannelReadRequest) returns (StorageChannelReadResponse);
   rpc Write(StorageChannelWriteRequest) returns (StorageChannelWriteResponse);
   rpc Delete(StorageChannelDeleteRequest) returns (StorageChannelDeleteResponse);

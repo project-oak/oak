@@ -51,7 +51,7 @@ cc_library(
         "//oak/common:handles",
         "//oak/common:logging",
         "//oak/proto:grpc_encap_cc_proto",
-        "//oak/proto:storage_channel_cc_proto",
+        "//oak/proto:storage_service_cc_proto",
         "//oak/server:invocation",
         "//oak/server:node_thread",
         "//third_party/asylo:statusor",
@@ -68,7 +68,6 @@ cc_library(
     deps = [
         "//oak/common:logging",
         "//oak/proto:storage_cc_grpc",
-        "//oak/proto:storage_channel_cc_proto",
         "//third_party/asylo:status_macros",
         "//third_party/asylo:statusor",
         "@boringssl//:crypto",

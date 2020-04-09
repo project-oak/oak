@@ -15,5 +15,5 @@
 //
 
 fn main() {
-    oak_utils::compile_protos(&["../../../oak/proto/storage_channel.proto"], &["../../.."]);
+    oak_utils::compile_protos(&["../../../oak/proto/storage_service.proto"], &["../../.."]);
 }

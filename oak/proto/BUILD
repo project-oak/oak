@@ -88,17 +88,16 @@ cc_proto_library(
 )
 
 proto_library(
-    name = "storage_channel_proto",
-    srcs = ["storage_channel.proto"],
+    name = "storage_service_proto",
+    srcs = ["storage_service.proto"],
     deps = [
         ":label_proto",
-        "//third_party/google/rpc:status_proto",
     ],
 )
 
 cc_proto_library(
-    name = "storage_channel_cc_proto",
-    deps = [":storage_channel_proto"],
+    name = "storage_service_cc_proto",
+    deps = [":storage_service_proto"],
 )
 
 proto_library(
