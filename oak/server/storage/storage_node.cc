@@ -58,15 +58,15 @@ void StorageNode::Run(Handle invocation_handle) {
       OAK_LOG(ERROR) << "Unexpectedly received channel handles in request channel";
       return;
     }
-    GrpcRequest grpc_req;
+    oak::encap::GrpcRequest grpc_req;
     grpc_req.ParseFromString(std::string(req_result.msg->data.data(), req_result.msg->data.size()));
 
-    std::unique_ptr<GrpcResponse> grpc_rsp;
-    oak::StatusOr<std::unique_ptr<GrpcResponse>> rsp_or = ProcessMethod(&grpc_req);
+    std::unique_ptr<oak::encap::GrpcResponse> grpc_rsp;
+    oak::StatusOr<std::unique_ptr<oak::encap::GrpcResponse>> rsp_or = ProcessMethod(&grpc_req);
     if (!rsp_or.ok()) {
       OAK_LOG(ERROR) << "Failed to perform " << grpc_req.method_name() << ": "
                      << rsp_or.status().code() << ", '" << rsp_or.status().message() << "'";
-      grpc_rsp = absl::make_unique<GrpcResponse>();
+      grpc_rsp = absl::make_unique<oak::encap::GrpcResponse>();
       grpc_rsp->mutable_status()->set_code(static_cast<int>(rsp_or.status().code()));
       grpc_rsp->mutable_status()->set_message(std::string(rsp_or.status().message()));
     } else {
@@ -84,8 +84,9 @@ void StorageNode::Run(Handle invocation_handle) {
   }
 }
 
-oak::StatusOr<std::unique_ptr<GrpcResponse>> StorageNode::ProcessMethod(GrpcRequest* grpc_req) {
-  auto grpc_rsp = absl::make_unique<GrpcResponse>();
+oak::StatusOr<std::unique_ptr<oak::encap::GrpcResponse>> StorageNode::ProcessMethod(
+    oak::encap::GrpcRequest* grpc_req) {
+  auto grpc_rsp = absl::make_unique<oak::encap::GrpcResponse>();
   grpc::Status status;
   std::string method_name = grpc_req->method_name();
 

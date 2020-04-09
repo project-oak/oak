@@ -6,8 +6,10 @@ edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
-prost = "*"
 hashbrown = "*"
+log = "*"
+prost = "*"
+prost-types = "*"
 
 [build-dependencies]
 oak_utils = "*"

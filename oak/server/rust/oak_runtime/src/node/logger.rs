@@ -23,9 +23,9 @@ use oak_abi::OakStatus;
 use std::thread::{self, JoinHandle};
 
 use crate::pretty_name_for_thread;
-use crate::proto::log::{Level, LogMessage};
 use crate::runtime::Handle;
 use crate::runtime::RuntimeProxy;
+use oak_abi::proto::oak::log::{Level, LogMessage};
 use prost::Message;
 
 pub struct LogNode {

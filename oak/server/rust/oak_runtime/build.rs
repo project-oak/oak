@@ -16,10 +16,7 @@
 
 fn main() {
     oak_utils::compile_protos(
-        &[
-            "../../../../oak/proto/application.proto",
-            "../../../../oak/proto/log.proto",
-        ],
+        &["../../../../oak/proto/application.proto"],
         &["../../../../oak/proto"],
     );
 }

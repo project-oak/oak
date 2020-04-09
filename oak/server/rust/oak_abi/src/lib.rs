@@ -16,10 +16,12 @@
 
 //! Type, constant and Wasm host function definitions for the Oak application
 //! binary interface (ABI).
-mod proto;
-pub use proto::*;
 
+pub mod grpc;
 pub mod label;
+pub mod proto;
+
+pub use proto::oak::{ChannelReadStatus, OakStatus};
 
 /// Handle used to identify read or write channel halves.
 ///

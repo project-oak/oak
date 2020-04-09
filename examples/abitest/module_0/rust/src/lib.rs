@@ -1182,8 +1182,8 @@ impl FrontendNode {
         .expect("could not write to channel");
 
         let mut bytes = Vec::new();
-        oak::proto::oak::log::LogMessage {
-            level: oak::proto::oak::log::Level::Info as i32,
+        oak_abi::proto::oak::log::LogMessage {
+            level: oak_abi::proto::oak::log::Level::Info as i32,
             file: "abitest".to_string(),
             line: 1988,
             message: "Wellformed message sent direct to logging channel!".to_string(),
@@ -1502,7 +1502,7 @@ impl FrontendNode {
 }
 
 // Helper for storage error conversion.
-fn from_proto(status: oak::proto::google::rpc::Status) -> Box<dyn std::error::Error> {
+fn from_proto(status: oak::grpc::Status) -> Box<dyn std::error::Error> {
     Box::new(std::io::Error::new(
         std::io::ErrorKind::Other,
         format!("status code {} message '{}'", status.code, status.message),

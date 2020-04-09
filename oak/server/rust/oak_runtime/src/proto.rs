@@ -15,7 +15,3 @@
 //
 
 include!(concat!(env!("OUT_DIR"), "/oak.rs"));
-
-pub mod log {
-    include!(concat!(env!("OUT_DIR"), "/oak.log.rs"));
-}
