@@ -16,21 +16,22 @@
 
 //! Functionality to help Oak Nodes interact with gRPC.
 
-pub use crate::proto::google::rpc::Code;
-use crate::{proto, OakError, OakStatus};
-use log::{error, warn};
-pub use proto::oak::{GrpcRequest, GrpcResponse};
+use crate::{OakError, OakStatus};
+use log::error;
+use oak_abi::proto::google::rpc;
+pub use oak_abi::proto::google::rpc::*;
+pub use oak_abi::proto::oak::encap::{GrpcRequest, GrpcResponse};
 
 pub mod client;
 mod invocation;
 pub use invocation::Invocation;
 
 /// Result type that uses a [`proto::status::Status`] type for error values.
-pub type Result<T> = std::result::Result<T, proto::google::rpc::Status>;
+pub type Result<T> = std::result::Result<T, rpc::Status>;
 
 /// Helper to create a gRPC status object.
-pub fn build_status(code: Code, msg: &str) -> proto::google::rpc::Status {
-    proto::google::rpc::Status {
+pub fn build_status(code: rpc::Code, msg: &str) -> rpc::Status {
+    rpc::Status {
         code: code as i32,
         message: msg.to_owned(),
         details: vec![],
@@ -169,41 +170,18 @@ impl<T: ServerNode> crate::Node<Invocation> for T {
     }
 }
 
-/// Encapsulate a protocol buffer message in a GrpcRequest wrapper using the
-/// given method name.
-pub fn encap_request<T: prost::Message>(
-    req: &T,
-    req_type_url: Option<&str>,
-    method_name: &str,
-) -> Option<GrpcRequest> {
-    // Put the request in a GrpcRequest wrapper and serialize it.
-    let mut grpc_req = GrpcRequest::default();
-    grpc_req.method_name = method_name.to_string();
-    let mut any = prost_types::Any::default();
-    if let Err(e) = req.encode(&mut any.value) {
-        warn!("failed to serialize gRPC request: {}", e);
-        return None;
-    };
-    if let Some(type_url) = req_type_url {
-        any.type_url = type_url.to_string();
-    }
-    grpc_req.req_msg = Some(any);
-    grpc_req.last = true;
-    Some(grpc_req)
-}
-
 /// Extract a protocol buffer message from a GrpcResponse wrapper.
 /// Returns the message together with an indicator of whether this is the last
 /// response.
 pub fn decap_response<T: prost::Message + Default>(grpc_rsp: GrpcResponse) -> Result<(T, bool)> {
     let status = grpc_rsp.status.unwrap_or_default();
-    if status.code != Code::Ok as i32 {
+    if status.code != rpc::Code::Ok as i32 {
         return Err(status);
     }
     let bytes = grpc_rsp.rsp_msg.unwrap_or_default().value;
     let rsp = T::decode(bytes.as_slice()).map_err(|proto_err| {
         build_status(
-            Code::InvalidArgument,
+            rpc::Code::InvalidArgument,
             &format!("message parsing failed: {}", proto_err),
         )
     })?;
@@ -228,8 +206,8 @@ where
 
     // Put the request in a GrpcRequest wrapper and send it into the request
     // message channel.
-    let req =
-        encap_request(req, req_type_url, method_name).expect("failed to serialize GrpcRequest");
+    let req = oak_abi::grpc::encap_request(req, req_type_url, method_name)
+        .expect("failed to serialize GrpcRequest");
     req_sender.send(&req).expect("failed to write to channel");
     req_sender.close().expect("failed to close channel");
 
@@ -273,7 +251,7 @@ where
     let grpc_rsp = result.map_err(|status| {
         error!("failed to receive response: {:?}", status);
         build_status(
-            Code::Internal,
+            rpc::Code::Internal,
             &format!("failed to receive gRPC response: {:?}", status),
         )
     })?;

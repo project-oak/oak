@@ -104,7 +104,7 @@ where
 {
     // Put the request in a GrpcRequest wrapper and serialize into a message.
     let grpc_req =
-        oak::grpc::encap_request(req, None, method_name).expect("failed to build GrpcRequest");
+        oak_abi::grpc::encap_request(req, None, method_name).expect("failed to build GrpcRequest");
     let mut req_msg = oak_runtime::Message {
         data: vec![],
         channels: vec![],
@@ -160,7 +160,7 @@ where
             std::thread::sleep(std::time::Duration::from_millis(100));
             continue;
         }
-        let rsp = oak::proto::oak::GrpcResponse::decode(rsp.data.as_slice())
+        let rsp = oak_abi::proto::oak::encap::GrpcResponse::decode(rsp.data.as_slice())
             .expect("failed to parse GrpcResponse message");
         if !rsp.last {
             panic!("Expected single final response");

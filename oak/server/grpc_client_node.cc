@@ -57,7 +57,7 @@ bool GrpcClientNode::HandleInvocation(Handle invocation_handle) {
     OAK_LOG(ERROR) << "Unexpectedly received channel handles in request channel";
     return false;
   }
-  GrpcRequest grpc_req;
+  oak::encap::GrpcRequest grpc_req;
   grpc_req.ParseFromString(std::string(req_result.msg->data.data(), req_result.msg->data.size()));
   std::string method_name = grpc_req.method_name();
   const grpc::string& req_data = grpc_req.req_msg().value();
@@ -115,7 +115,7 @@ bool GrpcClientNode::HandleInvocation(Handle invocation_handle) {
     }
 
     // Build an encapsulation of the gRPC response and put it in an Oak Message.
-    oak::GrpcResponse grpc_rsp;
+    oak::encap::GrpcResponse grpc_rsp;
     grpc_rsp.set_last(false);
     google::protobuf::Any* any = new google::protobuf::Any();
     any->set_value(rsp_data.data(), rsp_data.size());
@@ -140,7 +140,7 @@ bool GrpcClientNode::HandleInvocation(Handle invocation_handle) {
   }
   if (!status.ok()) {
     // Final status includes an error, so pass it back on the response channel.
-    oak::GrpcResponse grpc_rsp;
+    oak::encap::GrpcResponse grpc_rsp;
     grpc_rsp.set_last(true);
     grpc_rsp.mutable_status()->set_code(status.error_code());
     grpc_rsp.mutable_status()->set_message(status.error_message());

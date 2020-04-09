@@ -14,8 +14,24 @@
 // limitations under the License.
 //
 
-include!(concat!(env!("OUT_DIR"), "/oak_abi.rs"));
+pub mod google {
+    pub mod rpc {
+        include!(concat!(env!("OUT_DIR"), "/google.rpc.rs"));
+    }
+}
 
-pub mod label {
-    include!(concat!(env!("OUT_DIR"), "/oak.label.rs"));
+pub mod oak {
+    include!(concat!(env!("OUT_DIR"), "/oak_abi.rs"));
+
+    pub mod label {
+        include!(concat!(env!("OUT_DIR"), "/oak.label.rs"));
+    }
+
+    pub mod encap {
+        include!(concat!(env!("OUT_DIR"), "/oak.encap.rs"));
+    }
+
+    pub mod log {
+        include!(concat!(env!("OUT_DIR"), "/oak.log.rs"));
+    }
 }

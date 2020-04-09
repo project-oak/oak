@@ -94,7 +94,7 @@ void ModuleInvocation::ProcessRequest(bool ok) {
   }
 
   // Build an encapsulation of the gRPC request invocation and put it in a Message.
-  oak::GrpcRequest grpc_request;
+  oak::encap::GrpcRequest grpc_request;
   grpc_request.set_method_name(context_.method());
   google::protobuf::Any* any = new google::protobuf::Any();
   any->set_value(request_msg->data.data(), request_msg->data.size());
@@ -200,7 +200,7 @@ void ModuleInvocation::BlockingSendResponse() {
   OAK_LOG(INFO) << "invocation#" << stream_id_
                 << " SendResponse: Read encapsulated message of size "
                 << rsp_result.msg->data.size() << " from gRPC output channel";
-  oak::GrpcResponse grpc_response;
+  oak::encap::GrpcResponse grpc_response;
   if (!grpc_response.ParseFromString(
           std::string(rsp_result.msg->data.data(), rsp_result.msg->data.size()))) {
     OAK_LOG(ERROR) << "invocation#" << stream_id_

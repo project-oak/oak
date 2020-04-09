@@ -34,7 +34,8 @@ class StorageNode final : public NodeThread {
 
  private:
   void Run(Handle handle) override;
-  oak::StatusOr<std::unique_ptr<GrpcResponse>> ProcessMethod(GrpcRequest* channel_request);
+  oak::StatusOr<std::unique_ptr<oak::encap::GrpcResponse>> ProcessMethod(
+      oak::encap::GrpcRequest* channel_request);
 
   StorageProcessor storage_processor_;
 };

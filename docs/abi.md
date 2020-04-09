@@ -11,9 +11,12 @@ specific entrypoints which form the **Oak ABI**:
 
 These host functions provided by the Oak TCB revolve around the creation of
 other Nodes, and the use of [channels](concepts.md#channels) for inter-node
-communication. To communicate with the outside world beyond the Oak system, a
-Node may also create and communicate with
-[pseudo-Nodes](concepts.md#pseudo-nodes).
+communication.
+
+To communicate with the outside world beyond the Oak system, a Node may also
+create and communicate with [pseudo-Nodes](concepts.md#pseudo-nodes). The
+messages exchanged with pseudo-Nodes are encoded as serialized protocol buffer
+messages.
 
 Note also that the Oak ABI interactions are quite low-level; for example, they
 involve manual management of linear memory. Oak Applications will typically use
@@ -197,3 +200,13 @@ If creating the specified node would violate
 - arg 0: Destination buffer
 - arg 1: Destination buffer size in bytes
 - return 0: Status of operation
+
+## Protocol Buffer Messages
+
+The host functions described in the previous section allow opaque blobs of data
+to be exchanged (along with handles to other channels). When communicating with
+the pseudo-Nodes provided by the Oak system, these opaque blobs of data are
+defined to take the form of serialized protocol buffer messages. These include:
+
+- [Structured logging messages](../oak/proto/log.proto).
+- [Encapsulated gRPC requests and responses](../oak/proto/grpc_encap.proto).

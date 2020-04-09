@@ -23,7 +23,8 @@ use std::{
     thread::{self, JoinHandle},
 };
 
-use oak::grpc::{encap_request, GrpcRequest};
+use oak_abi::grpc::encap_request;
+use oak_abi::proto::oak::encap::GrpcRequest;
 use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
 
 use crate::{pretty_name_for_thread, runtime::RuntimeProxy, Handle};

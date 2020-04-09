@@ -23,14 +23,14 @@
 use hashbrown::HashSet;
 use prost::Message;
 
-pub use crate::proto::label::*;
+pub use crate::proto::oak::label::*;
 
 #[cfg(test)]
 mod tests;
 
 /// Add helper methods to the `Label` struct that is auto-generated from
 /// the protobuf message definition.
-impl crate::proto::label::Label {
+impl crate::proto::oak::label::Label {
     /// Convert a label to bytes.
     pub fn serialize(&self) -> Vec<u8> {
         let mut bytes = Vec::new();
