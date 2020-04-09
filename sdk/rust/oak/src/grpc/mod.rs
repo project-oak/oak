@@ -16,25 +16,25 @@
 
 //! Functionality to help Oak Nodes interact with gRPC.
 
-pub use crate::proto::code::Code;
+pub use crate::proto::google::rpc::Code;
 use crate::{proto, OakError, OakStatus};
 use log::{error, warn};
-pub use proto::grpc_encap::{GrpcRequest, GrpcResponse};
-use protobuf::ProtobufEnum;
+pub use proto::oak::{GrpcRequest, GrpcResponse};
 
 pub mod client;
 mod invocation;
 pub use invocation::Invocation;
 
 /// Result type that uses a [`proto::status::Status`] type for error values.
-pub type Result<T> = std::result::Result<T, proto::status::Status>;
+pub type Result<T> = std::result::Result<T, proto::google::rpc::Status>;
 
 /// Helper to create a gRPC status object.
-pub fn build_status(code: Code, msg: &str) -> proto::status::Status {
-    let mut status = proto::status::Status::new();
-    status.set_code(code.value());
-    status.set_message(msg.to_string());
-    status
+pub fn build_status(code: Code, msg: &str) -> proto::google::rpc::Status {
+    proto::google::rpc::Status {
+        code: code as i32,
+        message: msg.to_owned(),
+        details: vec![],
+    }
 }
 
 /// Channel-holding object that encapsulates response messages into
@@ -64,21 +64,21 @@ impl ChannelResponseWriter {
 
     /// Write out a gRPC response and optionally close out the method
     /// invocation.  Any errors from the channel are silently dropped.
-    pub fn write<T: protobuf::Message>(
+    pub fn write<T: prost::Message>(
         &mut self,
         rsp: &T,
         mode: WriteMode,
     ) -> std::result::Result<(), OakError> {
         // Put the serialized response into a GrpcResponse message wrapper and
         // serialize it into the channel.
-        let mut grpc_rsp = GrpcResponse::new();
-        let mut any = protobuf::well_known_types::Any::new();
-        rsp.write_to_writer(&mut any.value)?;
-        grpc_rsp.set_rsp_msg(any);
-        grpc_rsp.set_last(match mode {
+        let mut grpc_rsp = GrpcResponse::default();
+        let mut any = prost_types::Any::default();
+        rsp.encode(&mut any.value)?;
+        grpc_rsp.rsp_msg = Some(any);
+        grpc_rsp.last = match mode {
             WriteMode::KeepOpen => false,
             WriteMode::Close => true,
-        });
+        };
         self.sender.send(&grpc_rsp)?;
         if mode == WriteMode::Close {
             self.sender.close()?;
@@ -89,12 +89,12 @@ impl ChannelResponseWriter {
     /// Write an empty gRPC response and optionally close out the method
     /// invocation. Any errors from the channel are silently dropped.
     pub fn write_empty(&mut self, mode: WriteMode) -> std::result::Result<(), OakError> {
-        let mut grpc_rsp = GrpcResponse::new();
-        grpc_rsp.set_rsp_msg(protobuf::well_known_types::Any::new());
-        grpc_rsp.set_last(match mode {
+        let mut grpc_rsp = GrpcResponse::default();
+        grpc_rsp.rsp_msg = Some(prost_types::Any::default());
+        grpc_rsp.last = match mode {
             WriteMode::KeepOpen => false,
             WriteMode::Close => true,
-        });
+        };
         self.sender.send(&grpc_rsp)?;
         if mode == WriteMode::Close {
             self.sender.close()?;
@@ -106,10 +106,10 @@ impl ChannelResponseWriter {
     pub fn close(&mut self, result: Result<()>) -> std::result::Result<(), OakError> {
         // Build a final GrpcResponse message wrapper and serialize it into the
         // channel.
-        let mut grpc_rsp = GrpcResponse::new();
-        grpc_rsp.set_last(true);
+        let mut grpc_rsp = GrpcResponse::default();
+        grpc_rsp.last = true;
         if let Err(status) = result {
-            grpc_rsp.set_status(status);
+            grpc_rsp.status = Some(status);
         }
         self.sender.send(&grpc_rsp)?;
         self.sender.close()?;
@@ -159,7 +159,10 @@ impl<T: ServerNode> crate::Node<Invocation> for T {
         }
         self.invoke(
             &req.method_name,
-            req.get_req_msg().value.as_slice(),
+            req.req_msg
+                .map(|any| any.value)
+                .unwrap_or_default()
+                .as_slice(),
             ChannelResponseWriter::new(invocation.response_sender),
         );
         Ok(())
@@ -168,41 +171,43 @@ impl<T: ServerNode> crate::Node<Invocation> for T {
 
 /// Encapsulate a protocol buffer message in a GrpcRequest wrapper using the
 /// given method name.
-pub fn encap_request<T: protobuf::Message>(
+pub fn encap_request<T: prost::Message>(
     req: &T,
     req_type_url: Option<&str>,
     method_name: &str,
 ) -> Option<GrpcRequest> {
     // Put the request in a GrpcRequest wrapper and serialize it.
-    let mut grpc_req = GrpcRequest::new();
-    grpc_req.set_method_name(method_name.to_string());
-    let mut any = protobuf::well_known_types::Any::new();
-    if let Err(e) = req.write_to_writer(&mut any.value) {
+    let mut grpc_req = GrpcRequest::default();
+    grpc_req.method_name = method_name.to_string();
+    let mut any = prost_types::Any::default();
+    if let Err(e) = req.encode(&mut any.value) {
         warn!("failed to serialize gRPC request: {}", e);
         return None;
     };
     if let Some(type_url) = req_type_url {
-        any.set_type_url(type_url.to_string());
+        any.type_url = type_url.to_string();
     }
-    grpc_req.set_req_msg(any);
-    grpc_req.set_last(true);
+    grpc_req.req_msg = Some(any);
+    grpc_req.last = true;
     Some(grpc_req)
 }
 
 /// Extract a protocol buffer message from a GrpcResponse wrapper.
 /// Returns the message together with an indicator of whether this is the last
 /// response.
-pub fn decap_response<T: protobuf::Message>(mut grpc_rsp: GrpcResponse) -> Result<(T, bool)> {
-    if grpc_rsp.get_status().get_code() != Code::OK.value() {
-        return Err(grpc_rsp.take_status());
+pub fn decap_response<T: prost::Message + Default>(grpc_rsp: GrpcResponse) -> Result<(T, bool)> {
+    let status = grpc_rsp.status.unwrap_or_default();
+    if status.code != Code::Ok as i32 {
+        return Err(status);
     }
-    let rsp = protobuf::parse_from_bytes(&grpc_rsp.get_rsp_msg().value).map_err(|proto_err| {
+    let bytes = grpc_rsp.rsp_msg.unwrap_or_default().value;
+    let rsp = T::decode(bytes.as_slice()).map_err(|proto_err| {
         build_status(
-            Code::INVALID_ARGUMENT,
+            Code::InvalidArgument,
             &format!("message parsing failed: {}", proto_err),
         )
     })?;
-    Ok((rsp, grpc_rsp.get_last()))
+    Ok((rsp, grpc_rsp.last))
 }
 
 /// Helper to inject a (single) gRPC request message via a notification channel,
@@ -215,7 +220,7 @@ pub fn invoke_grpc_method_stream<R>(
     invocation_channel: &crate::io::Sender<Invocation>,
 ) -> Result<crate::io::Receiver<GrpcResponse>>
 where
-    R: protobuf::Message,
+    R: prost::Message,
 {
     // Create a new channel for request message delivery.
     let (req_sender, req_receiver) =
@@ -257,8 +262,8 @@ pub fn invoke_grpc_method<R, Q>(
     invocation_channel: &crate::io::Sender<Invocation>,
 ) -> Result<Q>
 where
-    R: protobuf::Message,
-    Q: protobuf::Message,
+    R: prost::Message,
+    Q: prost::Message + Default,
 {
     let rsp_receiver =
         invoke_grpc_method_stream(method_name, req, req_type_url, invocation_channel)?;
@@ -268,7 +273,7 @@ where
     let grpc_rsp = result.map_err(|status| {
         error!("failed to receive response: {:?}", status);
         build_status(
-            Code::INTERNAL,
+            Code::Internal,
             &format!("failed to receive gRPC response: {:?}", status),
         )
     })?;
@@ -285,10 +290,10 @@ where
 pub fn handle_req_rsp<C, R, Q>(mut node_fn: C, req: &[u8], mut writer: ChannelResponseWriter)
 where
     C: FnMut(R) -> Result<Q>,
-    R: protobuf::Message,
-    Q: protobuf::Message,
+    R: prost::Message + Default,
+    Q: prost::Message,
 {
-    let r: R = protobuf::parse_from_bytes(&req).expect("Failed to parse request protobuf message");
+    let r = R::decode(req).expect("Failed to parse request protobuf message");
     let result = match node_fn(r) {
         Ok(rsp) => writer.write(&rsp, WriteMode::Close),
         Err(status) => writer.close(Err(status)),
@@ -306,9 +311,9 @@ where
 pub fn handle_req_stream<C, R>(mut node_fn: C, req: &[u8], writer: ChannelResponseWriter)
 where
     C: FnMut(R, ChannelResponseWriter),
-    R: protobuf::Message,
+    R: prost::Message + Default,
 {
-    let r: R = protobuf::parse_from_bytes(&req).expect("Failed to parse request protobuf message");
+    let r = R::decode(req).expect("Failed to parse request protobuf message");
     node_fn(r, writer)
 }
 
@@ -320,12 +325,11 @@ where
 pub fn handle_stream_rsp<C, R, Q>(mut node_fn: C, req: &[u8], mut writer: ChannelResponseWriter)
 where
     C: FnMut(Vec<R>) -> Result<Q>,
-    R: protobuf::Message,
-    Q: protobuf::Message,
+    R: prost::Message + Default,
+    Q: prost::Message + Default,
 {
     // TODO(#97): better client-side streaming
-    let rr: Vec<R> =
-        vec![protobuf::parse_from_bytes(&req).expect("Failed to parse request protobuf message")];
+    let rr = vec![R::decode(req).expect("Failed to parse request protobuf message")];
     let result = match node_fn(rr) {
         Ok(rsp) => writer.write(&rsp, WriteMode::Close),
         Err(status) => writer.close(Err(status)),
@@ -343,11 +347,10 @@ where
 pub fn handle_stream_stream<C, R>(mut node_fn: C, req: &[u8], writer: ChannelResponseWriter)
 where
     C: FnMut(Vec<R>, ChannelResponseWriter),
-    R: protobuf::Message,
+    R: prost::Message + Default,
 {
     // TODO(#97): better client-side streaming
-    let rr: Vec<R> =
-        vec![protobuf::parse_from_bytes(&req).expect("Failed to parse request protobuf message")];
+    let rr = vec![R::decode(req).expect("Failed to parse request protobuf message")];
     node_fn(rr, writer)
 }
 

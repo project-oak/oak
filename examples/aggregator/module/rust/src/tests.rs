@@ -15,13 +15,12 @@
 //
 
 use crate::data::SparseVector;
-use crate::proto::aggregator::{Sample, SerializedSparseVector};
+use crate::proto::{Sample, SerializedSparseVector};
 use crate::SAMPLE_THRESHOLD;
 use aggregator_common::Monoid;
 use assert_matches::assert_matches;
 use maplit::hashmap;
 use oak::grpc;
-use protobuf::well_known_types::Empty;
 use std::collections::HashMap;
 use std::convert::{From, TryFrom};
 
@@ -33,15 +32,10 @@ fn submit_sample(
     bucket: &str,
     indices: Vec<u32>,
     values: Vec<f32>,
-) -> grpc::Result<Empty> {
+) -> grpc::Result<()> {
     let req = Sample {
         bucket: bucket.to_string(),
-        data: ::protobuf::SingularPtrField::some(SerializedSparseVector {
-            indices,
-            values,
-            ..Default::default()
-        }),
-        ..Default::default()
+        data: Some(SerializedSparseVector { indices, values }),
     };
     oak_tests::grpc_request(
         &runtime,
@@ -130,14 +124,12 @@ fn test_serialize() {
         SerializedSparseVector {
             indices: vec![1],
             values: vec![10.0],
-            ..Default::default()
         }
     );
     assert_eq!(
         SparseVector::try_from(&SerializedSparseVector {
             indices: vec![1, 2],
             values: vec![10.0, 20.0],
-            ..Default::default()
         }),
         Ok(SparseVector::new(hashmap! {1 => 10.0, 2 => 20.0}))
     );
@@ -145,7 +137,6 @@ fn test_serialize() {
         SparseVector::try_from(&SerializedSparseVector {
             indices: vec![1, 1], // Duplicated indices are not allowed.
             values: vec![10.0, 20.0],
-            ..Default::default()
         }),
         Err(_)
     );
@@ -153,7 +144,6 @@ fn test_serialize() {
         SparseVector::try_from(&SerializedSparseVector {
             indices: vec![1],
             values: vec![10.0, 20.0],
-            ..Default::default()
         }),
         Err(_)
     );
@@ -161,7 +151,6 @@ fn test_serialize() {
         SparseVector::try_from(&SerializedSparseVector {
             indices: vec![1, 2],
             values: vec![10.0],
-            ..Default::default()
         }),
         Err(_)
     );

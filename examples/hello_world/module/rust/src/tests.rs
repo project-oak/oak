@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::proto::hello_world::{HelloRequest, HelloResponse};
+use crate::proto::{HelloRequest, HelloResponse};
 use assert_matches::assert_matches;
 use oak::grpc;
 
@@ -30,7 +30,6 @@ fn test_say_hello() {
 
     let req = HelloRequest {
         greeting: "world".into(),
-        ..Default::default()
     };
     let result: grpc::Result<HelloResponse> = oak_tests::grpc_request(
         &runtime,

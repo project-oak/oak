@@ -15,7 +15,8 @@
 //
 
 use log::{error, info, warn};
-use protobuf::{well_known_types::Any, Message};
+use prost::Message;
+use prost_types::Any;
 use std::{
     fmt::{self, Display, Formatter},
     net::SocketAddr,
@@ -184,12 +185,11 @@ impl GrpcServerNode {
         http_request_path: &str,
         http_request_body: &dyn hyper::body::Buf,
     ) -> Result<GrpcRequest, GrpcServerError> {
-        // Parse an HTTP request body as a [`protobuf::well_known_types::Any`] message.
-        let grpc_request_body = protobuf::parse_from_bytes::<Any>(http_request_body.bytes())
-            .map_err(|error| {
-                error!("Failed to parse Protobuf message {}", error);
-                GrpcServerError::BadProtobufMessage
-            })?;
+        // Parse an HTTP request body as an [`Any`] message.
+        let grpc_request_body = Any::decode(http_request_body.bytes()).map_err(|error| {
+            error!("Failed to parse Protobuf message {}", error);
+            GrpcServerError::BadProtobufMessage
+        })?;
 
         // Create a gRPC request.
         encap_request(&grpc_request_body, None, http_request_path).ok_or_else(|| {
@@ -229,12 +229,10 @@ impl GrpcServerNode {
             data: vec![],
             channels: vec![],
         };
-        request
-            .write_to_writer(&mut message.data)
-            .map_err(|error| {
-                error!("Couldn't serialize a GrpcRequest message: {}", error);
-                GrpcServerError::RequestProcessingError
-            })?;
+        request.encode(&mut message.data).map_err(|error| {
+            error!("Couldn't serialize a GrpcRequest message: {}", error);
+            GrpcServerError::RequestProcessingError
+        })?;
 
         // Send a message to the temporary channel.
         self.runtime

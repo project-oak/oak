@@ -17,8 +17,8 @@
 /// A gRPC invocation, consisting of exactly two channels: one to read incoming requests from the
 /// client, and one to write outgoing responses to the client.
 pub struct Invocation {
-    pub request_receiver: crate::io::Receiver<crate::proto::grpc_encap::GrpcRequest>,
-    pub response_sender: crate::io::Sender<crate::proto::grpc_encap::GrpcResponse>,
+    pub request_receiver: crate::io::Receiver<crate::proto::oak::GrpcRequest>,
+    pub response_sender: crate::io::Sender<crate::proto::oak::GrpcResponse>,
 }
 
 // TODO(#389): Automatically generate this code.

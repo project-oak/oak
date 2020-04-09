@@ -23,7 +23,10 @@
 //! and a Sparse Vector - a dictionary with integer keys.
 
 mod data;
-mod proto;
+mod proto {
+    include!(concat!(env!("OUT_DIR"), "/oak.examples.aggregator.rs"));
+}
+
 #[cfg(test)]
 mod tests;
 
@@ -31,9 +34,7 @@ use aggregator_common::ThresholdAggregator;
 use data::SparseVector;
 use log::{debug, error};
 use oak::grpc;
-use proto::aggregator::Sample;
-use proto::aggregator_grpc::{Aggregator, AggregatorClient, Dispatcher};
-use protobuf::well_known_types::Empty;
+use proto::{Aggregator, AggregatorClient, AggregatorDispatcher, Sample};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
@@ -96,8 +97,7 @@ impl AggregatorNode {
             Some(grpc_client) => {
                 let res = grpc_client.submit_sample(Sample {
                     bucket,
-                    data: ::protobuf::SingularPtrField::some(svec.into()),
-                    ..Default::default()
+                    data: Some(svec.into()),
                 });
                 match res {
                     Ok(_) => Ok(()),
@@ -111,8 +111,8 @@ impl AggregatorNode {
 
 /// A gRPC service implementation for the Aggregator example.
 impl Aggregator for AggregatorNode {
-    fn submit_sample(&mut self, sample: Sample) -> grpc::Result<Empty> {
-        match sample.data.into_option() {
+    fn submit_sample(&mut self, sample: Sample) -> grpc::Result<()> {
+        match sample.data {
             Some(data) => match SparseVector::try_from(&data) {
                 Ok(svec) => {
                     debug!(
@@ -120,21 +120,21 @@ impl Aggregator for AggregatorNode {
                         sample.bucket, svec
                     );
                     match self.submit(sample.bucket, &svec) {
-                        Ok(_) => Ok(Empty::new()),
+                        Ok(_) => Ok(()),
                         Err(err) => {
                             let err = format!("Submit sample error: {}", err);
-                            Err(grpc::build_status(grpc::Code::INVALID_ARGUMENT, &err))
+                            Err(grpc::build_status(grpc::Code::InvalidArgument, &err))
                         }
                     }
                 }
                 Err(err) => {
                     let err = format!("Data deserialization error: {}", err);
-                    Err(grpc::build_status(grpc::Code::INVALID_ARGUMENT, &err))
+                    Err(grpc::build_status(grpc::Code::InvalidArgument, &err))
                 }
             },
             None => {
                 let err = "No data specified";
-                Err(grpc::build_status(grpc::Code::INVALID_ARGUMENT, &err))
+                Err(grpc::build_status(grpc::Code::InvalidArgument, &err))
             }
         }
     }
@@ -143,5 +143,5 @@ impl Aggregator for AggregatorNode {
 oak::entrypoint!(oak_main => {
     oak::logger::init_default();
     let node = AggregatorNode::new();
-    Dispatcher::new(node)
+    AggregatorDispatcher::new(node)
 });

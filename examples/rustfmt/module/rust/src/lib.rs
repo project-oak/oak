@@ -14,15 +14,17 @@
 // limitations under the License.
 //
 
-mod proto;
+mod proto {
+    include!(concat!(env!("OUT_DIR"), "/oak.examples.rustfmt.rs"));
+}
 
 use oak::grpc;
-use proto::rustfmt::{FormatRequest, FormatResponse};
-use proto::rustfmt_grpc::{Dispatcher, FormatService};
+use proto::{FormatRequest, FormatResponse};
+use proto::{FormatService, FormatServiceDispatcher};
 
 oak::entrypoint!(oak_main => {
     oak::logger::init_default();
-    Dispatcher::new(Node)
+    FormatServiceDispatcher::new(Node)
 });
 
 struct Node;
@@ -37,7 +39,7 @@ impl FormatService for Node {
             let input = rustfmt_nightly::Input::Text(req.code);
             session.format(input).expect("could not format input");
         }
-        let mut res = FormatResponse::new();
+        let mut res = FormatResponse::default();
         res.code = String::from_utf8(output).expect("could not parse UTF8");
         Ok(res)
     }

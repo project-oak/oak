@@ -14,18 +14,19 @@
 // limitations under the License.
 //
 
-pub mod proto;
+pub mod proto {
+    include!(concat!(env!("OUT_DIR"), "/oak.examples.abitest.rs"));
+}
 
 use abitest_common::{InternalMessage, LOG_CONFIG_NAME};
 use byteorder::WriteBytesExt;
 use expect::{expect, expect_eq, expect_matches};
 use log::{debug, info};
 use oak::{grpc, ChannelReadStatus, OakError, OakStatus};
-use proto::abitest::GrpcTestRequest_oneof_method_result::{err_code, ok_text};
-use proto::abitest::{ABITestRequest, ABITestResponse, ABITestResponse_TestResult};
-use proto::abitest::{GrpcTestRequest, GrpcTestResponse};
-use proto::abitest_grpc::{Dispatcher, OakABITestService, OakABITestServiceClient};
-use protobuf::{Message, ProtobufEnum};
+use prost::Message;
+use proto::{AbiTestRequest, AbiTestResponse};
+use proto::{GrpcTestRequest, GrpcTestResponse};
+use proto::{OakAbiTestService, OakAbiTestServiceClient, OakAbiTestServiceDispatcher};
 use rand::Rng;
 use std::collections::HashMap;
 
@@ -41,8 +42,8 @@ struct FrontendNode {
     storage: Option<oak::storage::Storage>,
     absent_storage: Option<oak::storage::Storage>,
     storage_name: Vec<u8>,
-    grpc_service: Option<OakABITestServiceClient>,
-    absent_grpc_service: Option<OakABITestServiceClient>,
+    grpc_service: Option<OakAbiTestServiceClient>,
+    absent_grpc_service: Option<OakAbiTestServiceClient>,
 }
 
 impl FrontendNode {
@@ -84,9 +85,9 @@ impl FrontendNode {
             absent_storage: oak::storage::Storage::new("absent-storage"),
             storage_name: storage_name.as_bytes().to_vec(),
             grpc_service: oak::grpc::client::Client::new("grpc-client", "ignored")
-                .map(OakABITestServiceClient),
+                .map(OakAbiTestServiceClient),
             absent_grpc_service: oak::grpc::client::Client::new("absent-grpc-client", "ignored")
-                .map(OakABITestServiceClient),
+                .map(OakAbiTestServiceClient),
         }
     }
 }
@@ -96,7 +97,7 @@ pub extern "C" fn frontend_oak_main(in_handle: u64) {
     let _ = std::panic::catch_unwind(|| {
         oak::set_panic_hook();
         let node = FrontendNode::new();
-        let dispatcher = Dispatcher::new(node);
+        let dispatcher = OakAbiTestServiceDispatcher::new(node);
         oak::run_event_loop(dispatcher, in_handle);
     });
 }
@@ -104,15 +105,15 @@ pub extern "C" fn frontend_oak_main(in_handle: u64) {
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 type TestFn = fn(&mut FrontendNode) -> TestResult;
 
-impl OakABITestService for FrontendNode {
-    fn run_tests(&mut self, req: ABITestRequest) -> grpc::Result<ABITestResponse> {
+impl OakAbiTestService for FrontendNode {
+    fn run_tests(&mut self, req: AbiTestRequest) -> grpc::Result<AbiTestResponse> {
         info!(
             "Run tests matching '{}' except those matching '{}'",
             req.include, req.exclude
         );
         let include = regex::Regex::new(&req.include).unwrap();
         let exclude = regex::Regex::new(&req.exclude).unwrap();
-        let mut results = protobuf::RepeatedField::<ABITestResponse_TestResult>::new();
+        let mut results = Vec::<proto::abi_test_response::TestResult>::new();
 
         // Manual registry of all tests.
         let mut tests: HashMap<&str, TestFn> = HashMap::new();
@@ -177,72 +178,76 @@ impl OakABITestService for FrontendNode {
                 );
                 continue;
             }
-            let mut result = ABITestResponse_TestResult::new();
-            result.set_name(name.to_string());
+            let mut result = proto::abi_test_response::TestResult::default();
+            result.name = name.to_string();
             if name.starts_with("DISABLED_") {
                 debug!("skip test '{}' as marked as disabled", name);
-                result.set_disabled(true);
-                result.set_success(false);
-                result.set_details("Test disabled".to_string());
+                result.disabled = true;
+                result.success = false;
+                result.details = "Test disabled".to_string();
                 results.push(result);
                 continue;
             }
             info!("running test {}", name);
             match testfn(self) {
-                Ok(()) => result.set_success(true),
+                Ok(()) => result.success = true,
                 Err(err) => {
-                    result.set_success(false);
-                    result.set_details(format!("Error: {}", err));
+                    result.success = false;
+                    result.details = format!("Error: {}", err);
                 }
             }
             results.push(result);
         }
 
-        let mut res = ABITestResponse::new();
-        res.set_results(results);
+        let mut res = AbiTestResponse::default();
+        res.results = results;
 
         Ok(res)
     }
 
     // gRPC test methods.
     fn unary_method(&mut self, req: GrpcTestRequest) -> grpc::Result<GrpcTestResponse> {
-        if req.has_err_code() {
-            info!("unary_method -> Err({})", req.get_err_code());
-            return Err(grpc::build_status(
-                grpc::Code::from_i32(req.get_err_code()).unwrap(),
-                "Deliberate error",
-            ));
+        match req.method_result {
+            Some(proto::grpc_test_request::MethodResult::ErrCode(err_code)) => {
+                info!("unary_method -> Err({})", err_code);
+                Err(grpc::build_status(
+                    grpc::Code::from_i32(err_code).unwrap(),
+                    "Deliberate error",
+                ))
+            }
+            Some(proto::grpc_test_request::MethodResult::OkText(ok_text)) => {
+                info!("unary_method -> Ok({})", ok_text);
+                let rsp = GrpcTestResponse { text: ok_text };
+                Ok(rsp)
+            }
+            None => panic!("invalid request"),
         }
-        info!("unary_method -> Ok({})", req.get_ok_text());
-        let mut rsp = GrpcTestResponse::new();
-        rsp.text = req.get_ok_text().to_string();
-        Ok(rsp)
     }
     fn server_streaming_method(
         &mut self,
         req: GrpcTestRequest,
         mut writer: grpc::ChannelResponseWriter,
     ) {
-        if req.has_err_code() {
-            info!("server_streaming_method -> Err({})", req.get_err_code());
-            let status = grpc::build_status(
-                grpc::Code::from_i32(req.get_err_code()).unwrap(),
-                "Deliberate error",
-            );
-            writer.close(Err(status)).expect("failed to close writer");
-            return;
-        }
-        // Write two responses to exercise streaming.
-        info!("server_streaming_method -> 2 x Ok({})", req.get_ok_text());
-        let mut rsp = GrpcTestResponse::new();
-        rsp.set_text(req.get_ok_text().to_string());
-        writer
-            .write(&rsp, grpc::WriteMode::KeepOpen)
-            .expect("Failed to write response");
-        rsp.set_text(req.get_ok_text().to_string());
-        writer
-            .write(&rsp, grpc::WriteMode::Close)
-            .expect("Failed to write response");
+        match req.method_result {
+            Some(proto::grpc_test_request::MethodResult::ErrCode(err_code)) => {
+                info!("server_streaming_method -> Err({})", err_code);
+                let status =
+                    grpc::build_status(grpc::Code::from_i32(err_code).unwrap(), "Deliberate error");
+                writer.close(Err(status)).expect("failed to close writer");
+            }
+            Some(proto::grpc_test_request::MethodResult::OkText(ok_text)) => {
+                // Write two responses to exercise streaming.
+                info!("server_streaming_method -> 2 x Ok({})", ok_text);
+                let rsp = GrpcTestResponse { text: ok_text };
+                writer
+                    .write(&rsp, grpc::WriteMode::KeepOpen)
+                    .expect("Failed to write response");
+                writer
+                    .write(&rsp, grpc::WriteMode::Close)
+                    .expect("Failed to write response");
+            }
+            None => panic!("invalid request"),
+        };
     }
     fn client_streaming_method(
         &mut self,
@@ -250,10 +255,12 @@ impl OakABITestService for FrontendNode {
     ) -> grpc::Result<GrpcTestResponse> {
         // If any request triggers an error, return it.
         for req in &reqs {
-            if req.has_err_code() {
-                info!("client_streaming_method -> Err({})", req.get_err_code());
+            if let Some(proto::grpc_test_request::MethodResult::ErrCode(err_code)) =
+                req.method_result
+            {
+                info!("client_streaming_method -> Err({})", err_code);
                 return Err(grpc::build_status(
-                    grpc::Code::from_i32(req.get_err_code()).unwrap(),
+                    grpc::Code::from_i32(err_code).unwrap(),
                     "Deliberate error",
                 ));
             }
@@ -261,10 +268,14 @@ impl OakABITestService for FrontendNode {
         // Otherwise return the text from all the requests combined.
         let mut combined_text = String::new();
         for req in &reqs {
-            combined_text.push_str(req.get_ok_text());
+            if let Some(proto::grpc_test_request::MethodResult::OkText(ok_text)) =
+                &req.method_result
+            {
+                combined_text.push_str(&ok_text);
+            }
         }
         info!("client_streaming_method -> Ok({})", combined_text);
-        let mut rsp = GrpcTestResponse::new();
+        let mut rsp = GrpcTestResponse::default();
         rsp.text = combined_text;
         Ok(rsp)
     }
@@ -274,21 +285,25 @@ impl OakABITestService for FrontendNode {
         mut writer: grpc::ChannelResponseWriter,
     ) {
         for req in &reqs {
-            if req.has_err_code() {
-                info!("bidi_streaming_method -> Err({})", req.get_err_code());
-                let status = grpc::build_status(
-                    grpc::Code::from_i32(req.get_err_code()).unwrap(),
-                    "Deliberate error",
-                );
-                writer.close(Err(status)).expect("failed to close writer");
-                return;
-            }
-            info!("bidi_streaming_method -> Ok({})", req.get_ok_text());
-            let mut rsp = GrpcTestResponse::new();
-            rsp.set_text(req.get_ok_text().to_string());
-            writer
-                .write(&rsp, grpc::WriteMode::KeepOpen)
-                .expect("Failed to write response");
+            match &req.method_result {
+                Some(proto::grpc_test_request::MethodResult::ErrCode(err_code)) => {
+                    info!("bidi_streaming_method -> Err({})", err_code);
+                    let status = grpc::build_status(
+                        grpc::Code::from_i32(*err_code).unwrap(),
+                        "Deliberate error",
+                    );
+                    writer.close(Err(status)).expect("failed to close writer");
+                }
+                Some(proto::grpc_test_request::MethodResult::OkText(ok_text)) => {
+                    info!("bidi_streaming_method -> Ok({})", ok_text);
+                    let mut rsp = GrpcTestResponse::default();
+                    rsp.text = ok_text.to_string();
+                    writer
+                        .write(&rsp, grpc::WriteMode::KeepOpen)
+                        .expect("Failed to write response");
+                }
+                None => panic!("invalid request"),
+            };
         }
     }
 }
@@ -1166,16 +1181,19 @@ impl FrontendNode {
         )
         .expect("could not write to channel");
 
+        let mut bytes = Vec::new();
+        oak::proto::oak::log::LogMessage {
+            level: oak::proto::oak::log::Level::Info as i32,
+            file: "abitest".to_string(),
+            line: 1988,
+            message: "Wellformed message sent direct to logging channel!".to_string(),
+        }
+        .encode(&mut bytes)
+        .unwrap();
+
         oak::channel_write(
             logging_handle,
-            &oak::proto::log::LogMessage {
-                level: oak::proto::log::Level::INFO,
-                file: "abitest".to_string(),
-                message: "Wellformed message sent direct to logging channel!".to_string(),
-                ..Default::default()
-            }
-            .write_to_bytes()
-            .unwrap()[..],
+            &bytes[..],
             &[in_handle.handle, out_handle.handle],
         )
         .expect("could not write to channel");
@@ -1290,7 +1308,7 @@ impl FrontendNode {
         let key2 = b"test-key-bogus";
         let got = storage.read(&self.storage_name, key2);
         expect_matches!(got, Err(_));
-        expect_eq!(grpc::Code::NOT_FOUND.value(), got.unwrap_err().get_code());
+        expect_eq!(grpc::Code::NotFound as i32, got.unwrap_err().code);
 
         let got = storage.read(&self.storage_name, key).map_err(from_proto)?;
         expect_eq!(value.to_vec(), got);
@@ -1301,7 +1319,7 @@ impl FrontendNode {
 
         let got = storage.read(&self.storage_name, key);
         expect_matches!(got, Err(_));
-        expect_eq!(grpc::Code::NOT_FOUND.value(), got.unwrap_err().get_code());
+        expect_eq!(grpc::Code::NotFound as i32, got.unwrap_err().code);
 
         storage
             .delete(&self.storage_name, key)
@@ -1326,13 +1344,13 @@ impl FrontendNode {
 
         let got = storage.write(&self.storage_name, key, value);
         expect_matches!(got, Err(_));
-        expect_eq!(grpc::Code::UNAVAILABLE.value(), got.unwrap_err().get_code());
+        expect_eq!(grpc::Code::Unavailable as i32, got.unwrap_err().code);
         let got = storage.read(&self.storage_name, key);
         expect_matches!(got, Err(_));
-        expect_eq!(grpc::Code::UNAVAILABLE.value(), got.unwrap_err().get_code());
+        expect_eq!(grpc::Code::Unavailable as i32, got.unwrap_err().code);
         let got = storage.delete(&self.storage_name, key);
         expect_matches!(got, Err(_));
-        expect_eq!(grpc::Code::UNAVAILABLE.value(), got.unwrap_err().get_code());
+        expect_eq!(grpc::Code::Unavailable as i32, got.unwrap_err().code);
 
         Ok(())
     }
@@ -1346,25 +1364,26 @@ impl FrontendNode {
 
         // Successful unary method invocation of external service via gRPC client pseudo-Node.
         let ok_req = GrpcTestRequest {
-            method_result: Some(ok_text("test".to_string())),
-            ..Default::default()
+            method_result: Some(proto::grpc_test_request::MethodResult::OkText(
+                "test".to_string(),
+            )),
         };
         let ok_rsp = GrpcTestResponse {
             text: "test".to_string(),
-            ..Default::default()
         };
         expect_eq!(grpc_stub.unary_method(ok_req), Ok(ok_rsp));
 
         // Errored unary method invocation of external service via gRPC client pseudo-Node.
         let err_req = GrpcTestRequest {
-            method_result: Some(err_code(grpc::Code::FAILED_PRECONDITION.value())),
-            ..Default::default()
+            method_result: Some(proto::grpc_test_request::MethodResult::ErrCode(
+                grpc::Code::FailedPrecondition as i32,
+            )),
         };
         let result = grpc_stub.unary_method(err_req);
         expect_matches!(result, Err(_));
         expect_eq!(
-            grpc::Code::FAILED_PRECONDITION.value(),
-            result.unwrap_err().get_code()
+            grpc::Code::FailedPrecondition as i32,
+            result.unwrap_err().code
         );
 
         Ok(())
@@ -1379,12 +1398,12 @@ impl FrontendNode {
         // Successful server-streaming method invocation of external service via
         // gRPC client pseudo-Node.
         let ok_req = GrpcTestRequest {
-            method_result: Some(ok_text("test".to_string())),
-            ..Default::default()
+            method_result: Some(proto::grpc_test_request::MethodResult::OkText(
+                "test".to_string(),
+            )),
         };
         let ok_rsp = GrpcTestResponse {
             text: "test".to_string(),
-            ..Default::default()
         };
         let receiver = grpc_stub
             .server_streaming_method(ok_req)
@@ -1394,10 +1413,14 @@ impl FrontendNode {
             match receiver.receive() {
                 Ok(grpc_rsp) => {
                     // TODO(#592): get typed response directly from receiver.
-                    expect_eq!(oak::grpc::Code::OK.value(), grpc_rsp.get_status().code);
-                    let rsp: GrpcTestResponse =
-                        protobuf::parse_from_bytes(&grpc_rsp.get_rsp_msg().value)
-                            .expect("failed to parse GrpcTestResponse");
+                    expect_eq!(
+                        oak::grpc::Code::Ok as i32,
+                        grpc_rsp.status.unwrap_or_default().code
+                    );
+                    let rsp = GrpcTestResponse::decode(
+                        grpc_rsp.rsp_msg.unwrap_or_default().value.as_slice(),
+                    )
+                    .expect("failed to parse GrpcTestResponse");
                     expect_eq!(rsp.clone(), ok_rsp.clone());
                     count += 1;
                 }
@@ -1412,8 +1435,9 @@ impl FrontendNode {
         // Errored server-streaming method invocation of external service via
         // gRPC client pseudo-Node.
         let err_req = GrpcTestRequest {
-            method_result: Some(err_code(grpc::Code::FAILED_PRECONDITION.value())),
-            ..Default::default()
+            method_result: Some(proto::grpc_test_request::MethodResult::ErrCode(
+                grpc::Code::FailedPrecondition as i32,
+            )),
         };
         let receiver = grpc_stub
             .server_streaming_method(err_req)
@@ -1423,8 +1447,8 @@ impl FrontendNode {
             match receiver.receive() {
                 Ok(grpc_rsp) => {
                     expect_eq!(
-                        grpc::Code::FAILED_PRECONDITION.value(),
-                        grpc_rsp.get_status().code
+                        grpc::Code::FailedPrecondition as i32,
+                        grpc_rsp.status.unwrap_or_default().code
                     );
                     seen_err_code = true;
                 }
@@ -1447,8 +1471,9 @@ impl FrontendNode {
             ))
         })?;
         let req = GrpcTestRequest {
-            method_result: Some(ok_text("test".to_string())),
-            ..Default::default()
+            method_result: Some(proto::grpc_test_request::MethodResult::OkText(
+                "test".to_string(),
+            )),
         };
 
         // Attempting to invoke any sort of method should fail.
@@ -1463,7 +1488,7 @@ impl FrontendNode {
             info!("absent.server_streaming_method().receive() -> {:?}", result);
             match result {
                 Ok(grpc_rsp) => {
-                    expect!(grpc_rsp.get_status().code != grpc::Code::OK.value());
+                    expect!(grpc_rsp.status.unwrap_or_default().code != grpc::Code::Ok as i32);
                 }
                 Err(OakError::OakStatus(OakStatus::ErrBadHandle)) => break,
                 Err(OakError::OakStatus(OakStatus::ErrChannelClosed)) => break,
@@ -1477,7 +1502,7 @@ impl FrontendNode {
 }
 
 // Helper for storage error conversion.
-fn from_proto(status: oak::proto::status::Status) -> Box<dyn std::error::Error> {
+fn from_proto(status: oak::proto::google::rpc::Status) -> Box<dyn std::error::Error> {
     Box::new(std::io::Error::new(
         std::io::ErrorKind::Other,
         format!("status code {} message '{}'", status.code, status.message),

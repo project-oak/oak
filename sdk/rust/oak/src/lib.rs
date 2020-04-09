@@ -27,9 +27,28 @@ pub use error::OakError;
 pub mod grpc;
 pub mod io;
 pub mod logger;
-pub mod proto;
 pub mod rand;
 pub mod storage;
+
+pub mod proto {
+    pub mod google {
+        pub mod protobuf {
+            include!(concat!(env!("OUT_DIR"), "/google.protobuf.rs"));
+        }
+        pub mod rpc {
+            include!(concat!(env!("OUT_DIR"), "/google.rpc.rs"));
+        }
+    }
+    pub mod oak {
+        include!(concat!(env!("OUT_DIR"), "/oak.rs"));
+        pub mod label {
+            include!(concat!(env!("OUT_DIR"), "/oak.label.rs"));
+        }
+        pub mod log {
+            include!(concat!(env!("OUT_DIR"), "/oak.log.rs"));
+        }
+    }
+}
 
 // TODO(#544)
 

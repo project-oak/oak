@@ -17,16 +17,19 @@
 use command::Command;
 use log::info;
 use oak::grpc;
-use proto::chat::{CreateRoomRequest, DestroyRoomRequest, SendMessageRequest, SubscribeRequest};
-use proto::chat_grpc::{Chat, Dispatcher};
-use protobuf::well_known_types::Empty;
-use protobuf::Message;
+use prost::Message;
+use proto::{
+    Chat, ChatDispatcher, CreateRoomRequest, DestroyRoomRequest, SendMessageRequest,
+    SubscribeRequest,
+};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 
 mod backend;
 mod command;
-mod proto;
+mod proto {
+    include!(concat!(env!("OUT_DIR"), "/oak.examples.chat.rs"));
+}
 
 type RoomId = Vec<u8>;
 type AdminToken = Vec<u8>;
@@ -38,7 +41,7 @@ struct Node {
 
 oak::entrypoint!(oak_main => {
     oak::logger::init_default();
-    Dispatcher::new(Node::default())
+    ChatDispatcher::new(Node::default())
 });
 
 struct Room {
@@ -59,18 +62,18 @@ impl Room {
 }
 
 fn room_id_not_found_err<T>() -> grpc::Result<T> {
-    Err(grpc::build_status(grpc::Code::NOT_FOUND, "room not found"))
+    Err(grpc::build_status(grpc::Code::NotFound, "room not found"))
 }
 
 fn room_id_duplicate_err<T>() -> grpc::Result<T> {
     Err(grpc::build_status(
-        grpc::Code::ALREADY_EXISTS,
+        grpc::Code::AlreadyExists,
         "room already exists",
     ))
 }
 
 impl Chat for Node {
-    fn create_room(&mut self, req: CreateRoomRequest) -> grpc::Result<Empty> {
+    fn create_room(&mut self, req: CreateRoomRequest) -> grpc::Result<()> {
         info!("creating room");
         if self.rooms.contains_key(&req.room_id) {
             return room_id_duplicate_err();
@@ -80,10 +83,10 @@ impl Chat for Node {
         // map.
         self.rooms.insert(req.room_id, Room::new(req.admin_token));
 
-        Ok(Empty::new())
+        Ok(())
     }
 
-    fn destroy_room(&mut self, req: DestroyRoomRequest) -> grpc::Result<Empty> {
+    fn destroy_room(&mut self, req: DestroyRoomRequest) -> grpc::Result<()> {
         info!("destroying room");
         match self.rooms.entry(req.room_id) {
             Entry::Occupied(e) => {
@@ -92,10 +95,10 @@ impl Chat for Node {
                     // will trigger it to terminate.
                     e.get().sender.close().expect("could not close channel");
                     e.remove();
-                    Ok(Empty::new())
+                    Ok(())
                 } else {
                     Err(grpc::build_status(
-                        grpc::Code::PERMISSION_DENIED,
+                        grpc::Code::PermissionDenied,
                         "invalid admin token",
                     ))
                 }
@@ -122,21 +125,22 @@ impl Chat for Node {
         };
     }
 
-    fn send_message(&mut self, req: SendMessageRequest) -> grpc::Result<Empty> {
+    fn send_message(&mut self, req: SendMessageRequest) -> grpc::Result<()> {
         info!("sending message to room");
         match self.rooms.get(&req.room_id) {
             None => room_id_not_found_err(),
             Some(room) => {
                 info!("new message to room {:?}", req.room_id);
-                let message_bytes = req
-                    .get_message()
-                    .write_to_bytes()
+                let mut message_bytes = Vec::new();
+                req.message
+                    .unwrap_or_default()
+                    .encode(&mut message_bytes)
                     .expect("could not convert message to bytes");
                 let command = Command::SendMessage(message_bytes);
                 room.sender
                     .send(&command)
                     .expect("could not send command to room Node");
-                Ok(Empty::new())
+                Ok(())
             }
         }
     }

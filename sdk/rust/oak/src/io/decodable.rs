@@ -22,14 +22,12 @@ pub trait Decodable: Sized {
     fn decode(message: &Message) -> Result<Self, OakError>;
 }
 
-impl<T: protobuf::Message> Decodable for T {
+impl<T: prost::Message + Default> Decodable for T {
     fn decode(message: &Message) -> Result<Self, OakError> {
         if !message.handles.is_empty() {
-            return Err(
-                protobuf::ProtobufError::WireError(protobuf::error::WireError::Other).into(),
-            );
+            return Err(OakError::ProtobufDecodeError(None));
         }
-        let value = protobuf::parse_from_bytes(&message.bytes)?;
+        let value = T::decode(message.bytes.as_slice())?;
         Ok(value)
     }
 }

@@ -14,11 +14,13 @@
 // limitations under the License.
 //
 
-pub mod proto;
+pub mod proto {
+    include!(concat!(env!("OUT_DIR"), "/oak.examples.translator.rs"));
+}
 
 use log::{info, warn};
-use proto::translator::TranslateRequest;
-pub use proto::translator_grpc::TranslatorClient;
+use proto::TranslateRequest;
+pub use proto::TranslatorClient;
 
 pub fn translate(
     client: &TranslatorClient,
@@ -30,7 +32,7 @@ pub fn translate(
         "attempt to translate '{}' from {} to {}",
         text, from_lang, to_lang
     );
-    let mut req = TranslateRequest::new();
+    let mut req = TranslateRequest::default();
     req.text = text.to_string();
     req.from_lang = from_lang.to_string();
     req.to_lang = to_lang.to_string();

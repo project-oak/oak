@@ -25,17 +25,21 @@
 //! TODO(#747): Consider stopping accepting contributions after the first client retrieves the
 //! intersection.
 
-mod proto;
+mod proto {
+    include!(concat!(
+        env!("OUT_DIR"),
+        "/oak.examples.private_set_intersection.rs"
+    ));
+}
 #[cfg(test)]
 mod tests;
 
 use oak::grpc;
-use proto::private_set_intersection::{GetIntersectionResponse, SubmitSetRequest};
-use proto::private_set_intersection_grpc::{Dispatcher, PrivateSetIntersection};
-use protobuf::well_known_types::Empty;
+use proto::{GetIntersectionResponse, SubmitSetRequest};
+use proto::{PrivateSetIntersection, PrivateSetIntersectionDispatcher};
 use std::collections::HashSet;
 
-oak::entrypoint!(oak_main => Dispatcher::new(Node::default()));
+oak::entrypoint!(oak_main => PrivateSetIntersectionDispatcher::new(Node::default()));
 
 #[derive(Default)]
 struct Node {
@@ -43,18 +47,18 @@ struct Node {
 }
 
 impl PrivateSetIntersection for Node {
-    fn submit_set(&mut self, req: SubmitSetRequest) -> grpc::Result<Empty> {
+    fn submit_set(&mut self, req: SubmitSetRequest) -> grpc::Result<()> {
         let set = req.values.iter().cloned().collect::<HashSet<_>>();
         let next = match self.values {
             Some(ref previous) => previous.intersection(&set).cloned().collect(),
             None => set,
         };
         self.values = Some(next);
-        Ok(Empty::new())
+        Ok(())
     }
 
-    fn get_intersection(&mut self, _req: Empty) -> grpc::Result<GetIntersectionResponse> {
-        let mut res = GetIntersectionResponse::new();
+    fn get_intersection(&mut self, _req: ()) -> grpc::Result<GetIntersectionResponse> {
+        let mut res = GetIntersectionResponse::default();
         if let Some(ref set) = self.values {
             res.values = set.iter().cloned().collect();
         };

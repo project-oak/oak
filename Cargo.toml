@@ -63,5 +63,3 @@ split_grpc_proxy = { path = "experimental/split_grpc/proxy" }
 split_grpc_server = { path = "experimental/split_grpc/server" }
 # Third party.
 expect = { path = "third_party/expect" }
-grpc-compiler = { path = "third_party/grpc-rust/grpc-compiler" }
-protoc-rust-grpc = { path = "third_party/grpc-rust/protoc-rust-grpc" }

@@ -14,10 +14,9 @@
 // limitations under the License.
 //
 
-use crate::proto::private_set_intersection::{GetIntersectionResponse, SubmitSetRequest};
+use crate::proto::{GetIntersectionResponse, SubmitSetRequest};
 use assert_matches::assert_matches;
 use oak::grpc;
-use protobuf::well_known_types::Empty;
 use std::collections::HashSet;
 use std::iter::FromIterator;
 
@@ -31,10 +30,9 @@ fn test_set_intersection() {
         .expect("Unable to configure runtime with test wasm!");
 
     let req = SubmitSetRequest {
-        values: vec!["a".to_string(), "b".to_string(), "c".to_string()].into(),
-        ..Default::default()
+        values: vec!["a".to_string(), "b".to_string(), "c".to_string()],
     };
-    let result: grpc::Result<Empty> = oak_tests::grpc_request(
+    let result: grpc::Result<()> = oak_tests::grpc_request(
         &runtime,
         entry_channel,
         "/oak.examples.private_set_intersection.PrivateSetIntersection/SubmitSet",
@@ -43,10 +41,9 @@ fn test_set_intersection() {
     assert_matches!(result, Ok(_));
 
     let req = SubmitSetRequest {
-        values: vec!["b".to_string(), "c".to_string(), "d".to_string()].into(),
-        ..Default::default()
+        values: vec!["b".to_string(), "c".to_string(), "d".to_string()],
     };
-    let result: grpc::Result<Empty> = oak_tests::grpc_request(
+    let result: grpc::Result<()> = oak_tests::grpc_request(
         &runtime,
         entry_channel,
         "/oak.examples.private_set_intersection.PrivateSetIntersection/SubmitSet",
@@ -54,12 +51,11 @@ fn test_set_intersection() {
     );
     assert_matches!(result, Ok(_));
 
-    let req = Empty::new();
     let result: grpc::Result<GetIntersectionResponse> = oak_tests::grpc_request(
         &runtime,
         entry_channel,
         "/oak.examples.private_set_intersection.PrivateSetIntersection/GetIntersection",
-        &req,
+        &(),
     );
     assert_matches!(result, Ok(_));
     let got = HashSet::<String>::from_iter(result.unwrap().values.to_vec());
