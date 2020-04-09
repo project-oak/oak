@@ -35,7 +35,9 @@ pub mod proto {
         // The storage protobuf messages use the label.Label type which is built
         // in the `oak_abi` crate, so make it available here too.
         use oak_abi::proto::oak::label;
-        include!(concat!(env!("OUT_DIR"), "/oak.rs"));
+        pub mod storage {
+            include!(concat!(env!("OUT_DIR"), "/oak.storage.rs"));
+        }
     }
 }
 

@@ -17,7 +17,7 @@
 //! Helper library for accessing Oak storage services.
 
 use crate::grpc;
-use crate::proto::oak::{
+use crate::proto::oak::storage::{
     StorageChannelDeleteRequest, StorageChannelDeleteResponse, StorageChannelReadRequest,
     StorageChannelReadResponse, StorageChannelWriteRequest, StorageChannelWriteResponse,
     StorageItem,
@@ -80,7 +80,7 @@ impl Storage {
         // TODO(#757): Automatically generate boilerplate from the proto
         // definition.
         self.execute_operation::<StorageChannelReadRequest, StorageChannelReadResponse>(
-            "/oak.StorageNode/Read",
+            "/oak.storage.StorageService/Read",
             read_request,
         )
         .map(|r| r.item.unwrap_or_default().value.to_vec())
@@ -102,7 +102,7 @@ impl Storage {
 
         // TODO(#757): Automatically generate boilerplate from the proto definition.
         self.execute_operation::<StorageChannelWriteRequest, StorageChannelWriteResponse>(
-            "/oak.StorageNode/Write",
+            "/oak.storage.StorageService/Write",
             write_request,
         )
         .map(|_| ())
@@ -123,7 +123,7 @@ impl Storage {
 
         // TODO(#757): Automatically generate boilerplate from the proto definition.
         self.execute_operation::<StorageChannelDeleteRequest, StorageChannelDeleteResponse>(
-            "/oak.StorageNode/Delete",
+            "/oak.storage.StorageService/Delete",
             delete_request,
         )
         .map(|_| ())
