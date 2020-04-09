@@ -1417,10 +1417,8 @@ impl FrontendNode {
                         oak::grpc::Code::Ok as i32,
                         grpc_rsp.status.unwrap_or_default().code
                     );
-                    let rsp = GrpcTestResponse::decode(
-                        grpc_rsp.rsp_msg.unwrap_or_default().value.as_slice(),
-                    )
-                    .expect("failed to parse GrpcTestResponse");
+                    let rsp = GrpcTestResponse::decode(grpc_rsp.rsp_msg.as_slice())
+                        .expect("failed to parse GrpcTestResponse");
                     expect_eq!(rsp.clone(), ok_rsp.clone());
                     count += 1;
                 }

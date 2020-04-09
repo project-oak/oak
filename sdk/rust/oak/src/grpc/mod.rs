@@ -72,13 +72,15 @@ impl ChannelResponseWriter {
     ) -> std::result::Result<(), OakError> {
         // Put the serialized response into a GrpcResponse message wrapper and
         // serialize it into the channel.
-        let mut grpc_rsp = GrpcResponse::default();
-        let mut any = prost_types::Any::default();
-        rsp.encode(&mut any.value)?;
-        grpc_rsp.rsp_msg = Some(any);
-        grpc_rsp.last = match mode {
-            WriteMode::KeepOpen => false,
-            WriteMode::Close => true,
+        let mut bytes = Vec::new();
+        rsp.encode(&mut bytes)?;
+        let grpc_rsp = GrpcResponse {
+            rsp_msg: bytes,
+            status: None,
+            last: match mode {
+                WriteMode::KeepOpen => false,
+                WriteMode::Close => true,
+            },
         };
         self.sender.send(&grpc_rsp)?;
         if mode == WriteMode::Close {
@@ -90,11 +92,13 @@ impl ChannelResponseWriter {
     /// Write an empty gRPC response and optionally close out the method
     /// invocation. Any errors from the channel are silently dropped.
     pub fn write_empty(&mut self, mode: WriteMode) -> std::result::Result<(), OakError> {
-        let mut grpc_rsp = GrpcResponse::default();
-        grpc_rsp.rsp_msg = Some(prost_types::Any::default());
-        grpc_rsp.last = match mode {
-            WriteMode::KeepOpen => false,
-            WriteMode::Close => true,
+        let grpc_rsp = GrpcResponse {
+            rsp_msg: Vec::new(),
+            status: None,
+            last: match mode {
+                WriteMode::KeepOpen => false,
+                WriteMode::Close => true,
+            },
         };
         self.sender.send(&grpc_rsp)?;
         if mode == WriteMode::Close {
@@ -160,10 +164,7 @@ impl<T: ServerNode> crate::Node<Invocation> for T {
         }
         self.invoke(
             &req.method_name,
-            req.req_msg
-                .map(|any| any.value)
-                .unwrap_or_default()
-                .as_slice(),
+            req.req_msg.as_slice(),
             ChannelResponseWriter::new(invocation.response_sender),
         );
         Ok(())
@@ -178,8 +179,7 @@ pub fn decap_response<T: prost::Message + Default>(grpc_rsp: GrpcResponse) -> Re
     if status.code != rpc::Code::Ok as i32 {
         return Err(status);
     }
-    let bytes = grpc_rsp.rsp_msg.unwrap_or_default().value;
-    let rsp = T::decode(bytes.as_slice()).map_err(|proto_err| {
+    let rsp = T::decode(grpc_rsp.rsp_msg.as_slice()).map_err(|proto_err| {
         build_status(
             rpc::Code::InvalidArgument,
             &format!("message parsing failed: {}", proto_err),
@@ -194,7 +194,6 @@ pub fn decap_response<T: prost::Message + Default>(grpc_rsp: GrpcResponse) -> Re
 pub fn invoke_grpc_method_stream<R>(
     method_name: &str,
     req: &R,
-    req_type_url: Option<&str>,
     invocation_channel: &crate::io::Sender<Invocation>,
 ) -> Result<crate::io::Receiver<GrpcResponse>>
 where
@@ -206,8 +205,8 @@ where
 
     // Put the request in a GrpcRequest wrapper and send it into the request
     // message channel.
-    let req = oak_abi::grpc::encap_request(req, req_type_url, method_name)
-        .expect("failed to serialize GrpcRequest");
+    let req =
+        oak_abi::grpc::encap_request(req, method_name).expect("failed to serialize GrpcRequest");
     req_sender.send(&req).expect("failed to write to channel");
     req_sender.close().expect("failed to close channel");
 
@@ -236,15 +235,13 @@ where
 pub fn invoke_grpc_method<R, Q>(
     method_name: &str,
     req: &R,
-    req_type_url: Option<&str>,
     invocation_channel: &crate::io::Sender<Invocation>,
 ) -> Result<Q>
 where
     R: prost::Message,
     Q: prost::Message + Default,
 {
-    let rsp_receiver =
-        invoke_grpc_method_stream(method_name, req, req_type_url, invocation_channel)?;
+    let rsp_receiver = invoke_grpc_method_stream(method_name, req, invocation_channel)?;
     // Read a single encapsulated response.
     let result = rsp_receiver.receive();
     rsp_receiver.close().expect("failed to close channel");

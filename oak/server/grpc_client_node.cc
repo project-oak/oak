@@ -60,7 +60,7 @@ bool GrpcClientNode::HandleInvocation(Handle invocation_handle) {
   oak::encap::GrpcRequest grpc_req;
   grpc_req.ParseFromString(std::string(req_result.msg->data.data(), req_result.msg->data.size()));
   std::string method_name = grpc_req.method_name();
-  const grpc::string& req_data = grpc_req.req_msg().value();
+  const grpc::string& req_data = grpc_req.req_msg();
 
   // Use a completion queue together with a generic client reader/writer to
   // perform the method invocation.  All steps are done in serial, so just use
@@ -117,9 +117,7 @@ bool GrpcClientNode::HandleInvocation(Handle invocation_handle) {
     // Build an encapsulation of the gRPC response and put it in an Oak Message.
     oak::encap::GrpcResponse grpc_rsp;
     grpc_rsp.set_last(false);
-    google::protobuf::Any* any = new google::protobuf::Any();
-    any->set_value(rsp_data.data(), rsp_data.size());
-    grpc_rsp.set_allocated_rsp_msg(any);
+    grpc_rsp.set_rsp_msg(rsp_data);
 
     auto rsp_msg = absl::make_unique<NodeMessage>();
     size_t serialized_size = grpc_rsp.ByteSizeLong();

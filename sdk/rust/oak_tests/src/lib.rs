@@ -104,7 +104,7 @@ where
 {
     // Put the request in a GrpcRequest wrapper and serialize into a message.
     let grpc_req =
-        oak_abi::grpc::encap_request(req, None, method_name).expect("failed to build GrpcRequest");
+        oak_abi::grpc::encap_request(req, method_name).expect("failed to build GrpcRequest");
     let mut req_msg = oak_runtime::Message {
         data: vec![],
         channels: vec![],
@@ -170,8 +170,8 @@ where
         if status.code != oak::grpc::Code::Ok as i32 {
             return Err(status);
         }
-        let rsp = Q::decode(rsp.rsp_msg.unwrap_or_default().value.as_slice())
-            .expect("Failed to parse response protobuf message");
+        let rsp =
+            Q::decode(rsp.rsp_msg.as_slice()).expect("Failed to parse response protobuf message");
         return Ok(rsp);
     }
 }
