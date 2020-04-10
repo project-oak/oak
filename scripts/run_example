@@ -11,7 +11,7 @@ serverargs=""
 while getopts "s:l:de:vh" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-h] [-s base|asan|tsan|none] [-l rust|cpp] [-d] -e EXAMPLE [-- CLIENT_ARGS] [-v]
+      echo -e "Usage: ${0} [-h] [-s base|asan|tsan|none] [-l rust|cpp] [-d] [-v] -e EXAMPLE [-- CLIENT_ARGS]
 
 Build and run the given example Oak Application and client.
 
@@ -85,9 +85,13 @@ if [[ "${server}" != "none" ]]; then
 fi
 
 # Run the application client.
-readonly CLIENT_ARGS=("${@}")  # Choose client args provided after '--'.
-"./bazel-client-bin/examples/${EXAMPLE}/client/client" "${CLIENT_ARGS[@]}" \
-  --ca_cert=./examples/certs/local/ca.pem
+if [ $# -eq 0 ]; then
+    "./bazel-client-bin/examples/${EXAMPLE}/client/client" --ca_cert=./examples/certs/local/ca.pem
+else
+    readonly CLIENT_ARGS=("${@}")  # Choose client args provided after '--'.
+    "./bazel-client-bin/examples/${EXAMPLE}/client/client" --ca_cert=./examples/certs/local/ca.pem \
+                                                           "${CLIENT_ARGS[@]-}"
+fi
 
 # TODO: Ensure that background processes are killed with something like `trap cleanup_fn EXIT`.
 if [[ "${server}" != "none" ]]; then
