@@ -42,6 +42,10 @@ Build the specified version of the Oak Runtime server.
   esac
 done
 
+if [[ "${config}" == "clang" && "${OSTYPE}" == "darwin"*  ]]; then
+    config='darwin'
+fi
+
 if [[ "${config}" == "rust" ]]; then
   cargo build --package=oak_loader
 else
