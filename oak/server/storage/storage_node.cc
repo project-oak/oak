@@ -92,11 +92,8 @@ oak::StatusOr<std::unique_ptr<oak::encap::GrpcResponse>> StorageNode::ProcessMet
 
   if (method_name == "/oak.storage.StorageService/Read") {
     oak::storage::StorageChannelReadRequest read_req;
-    // Assume the type of the embedded request is correct.
-    grpc_req->mutable_req_msg()->set_type_url("type.googleapis.com/" +
-                                              read_req.GetDescriptor()->full_name());
-    if (!grpc_req->req_msg().UnpackTo(&read_req)) {
-      return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to unpack request");
+    if (!read_req.ParseFromString(grpc_req->req_msg())) {
+      return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to parse request");
     }
     oak::storage::StorageChannelReadResponse read_rsp;
     std::string value;
@@ -105,15 +102,12 @@ oak::StatusOr<std::unique_ptr<oak::encap::GrpcResponse>> StorageNode::ProcessMet
                                                  read_req.transaction_id()));
     read_rsp.mutable_item()->ParseFromString(value);
     // TODO(#449): Check security policy for item.
-    grpc_rsp->mutable_rsp_msg()->PackFrom(read_rsp);
+    read_rsp.SerializeToString(grpc_rsp->mutable_rsp_msg());
 
   } else if (method_name == "/oak.storage.StorageService/Write") {
     oak::storage::StorageChannelWriteRequest write_req;
-    // Assume the type of the embedded request is correct.
-    grpc_req->mutable_req_msg()->set_type_url("type.googleapis.com/" +
-                                              write_req.GetDescriptor()->full_name());
-    if (!grpc_req->req_msg().UnpackTo(&write_req)) {
-      return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to unpack request");
+    if (!write_req.ParseFromString(grpc_req->req_msg())) {
+      return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to parse request");
     }
     // TODO(#449): Check integrity policy for item.
     std::string item;
@@ -123,11 +117,8 @@ oak::StatusOr<std::unique_ptr<oak::encap::GrpcResponse>> StorageNode::ProcessMet
 
   } else if (method_name == "/oak.storage.StorageService/Delete") {
     oak::storage::StorageChannelDeleteRequest delete_req;
-    // Assume the type of the embedded request is correct.
-    grpc_req->mutable_req_msg()->set_type_url("type.googleapis.com/" +
-                                              delete_req.GetDescriptor()->full_name());
-    if (!grpc_req->req_msg().UnpackTo(&delete_req)) {
-      return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to unpack request");
+    if (!delete_req.ParseFromString(grpc_req->req_msg())) {
+      return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to parse request");
     }
     // TODO(#449): Check integrity policy for item.
     OAK_RETURN_IF_ERROR(storage_processor_.Delete(
@@ -135,36 +126,27 @@ oak::StatusOr<std::unique_ptr<oak::encap::GrpcResponse>> StorageNode::ProcessMet
 
   } else if (method_name == "/oak.storage.StorageService/Begin") {
     oak::storage::StorageChannelBeginRequest begin_req;
-    // Assume the type of the embedded request is correct.
-    grpc_req->mutable_req_msg()->set_type_url("type.googleapis.com/" +
-                                              begin_req.GetDescriptor()->full_name());
-    if (!grpc_req->req_msg().UnpackTo(&begin_req)) {
-      return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to unpack request");
+    if (!begin_req.ParseFromString(grpc_req->req_msg())) {
+      return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to parse request");
     }
     oak::storage::StorageChannelBeginResponse begin_rsp;
     std::string transaction_id;
     OAK_ASSIGN_OR_RETURN(transaction_id, storage_processor_.Begin(begin_req.storage_name()));
     begin_rsp.set_transaction_id(transaction_id);
-    grpc_rsp->mutable_rsp_msg()->PackFrom(begin_rsp);
+    begin_rsp.SerializeToString(grpc_rsp->mutable_rsp_msg());
 
   } else if (method_name == "/oak.storage.StorageService/Commit") {
     oak::storage::StorageChannelCommitRequest commit_req;
-    // Assume the type of the embedded request is correct.
-    grpc_req->mutable_req_msg()->set_type_url("type.googleapis.com/" +
-                                              commit_req.GetDescriptor()->full_name());
-    if (!grpc_req->req_msg().UnpackTo(&commit_req)) {
-      return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to unpack request");
+    if (!commit_req.ParseFromString(grpc_req->req_msg())) {
+      return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to parse request");
     }
     OAK_RETURN_IF_ERROR(
         storage_processor_.Commit(commit_req.storage_name(), commit_req.transaction_id()));
 
   } else if (method_name == "/oak.storage.StorageService/Rollback") {
     oak::storage::StorageChannelRollbackRequest rollback_req;
-    // Assume the type of the embedded request is correct.
-    grpc_req->mutable_req_msg()->set_type_url("type.googleapis.com/" +
-                                              rollback_req.GetDescriptor()->full_name());
-    if (!grpc_req->req_msg().UnpackTo(&rollback_req)) {
-      return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to unpack request");
+    if (!rollback_req.ParseFromString(grpc_req->req_msg())) {
+      return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to parse request");
     }
     OAK_RETURN_IF_ERROR(
         storage_processor_.Rollback(rollback_req.storage_name(), rollback_req.transaction_id()));

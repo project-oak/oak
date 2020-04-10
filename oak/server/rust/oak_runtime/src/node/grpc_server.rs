@@ -193,7 +193,7 @@ impl GrpcServerNode {
         })?;
 
         // Create a gRPC request.
-        encap_request(&grpc_request_body, None, http_request_path).ok_or_else(|| {
+        encap_request(&grpc_request_body, http_request_path).ok_or_else(|| {
             error!("Failed to create a GrpcRequest");
             GrpcServerError::BadProtobufMessage
         })

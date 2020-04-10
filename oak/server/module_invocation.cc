@@ -96,9 +96,7 @@ void ModuleInvocation::ProcessRequest(bool ok) {
   // Build an encapsulation of the gRPC request invocation and put it in a Message.
   oak::encap::GrpcRequest grpc_request;
   grpc_request.set_method_name(context_.method());
-  google::protobuf::Any* any = new google::protobuf::Any();
-  any->set_value(request_msg->data.data(), request_msg->data.size());
-  grpc_request.set_allocated_req_msg(any);
+  grpc_request.set_req_msg(request_msg->data.data(), request_msg->data.size());
   grpc_request.set_last(true);
 
   auto req_msg = absl::make_unique<NodeMessage>();
@@ -210,7 +208,7 @@ void ModuleInvocation::BlockingSendResponse() {
   }
   // Any channel references included with the message will be dropped.
 
-  const grpc::string& inner_msg = grpc_response.rsp_msg().value();
+  const grpc::string& inner_msg = grpc_response.rsp_msg();
   grpc::Slice slice(inner_msg.data(), inner_msg.size());
   grpc::ByteBuffer bb(&slice, /*nslices=*/1);
 
@@ -223,14 +221,21 @@ void ModuleInvocation::BlockingSendResponse() {
     auto callback = new std::function<void(bool)>(
         std::bind(&ModuleInvocation::SendResponse, this, std::placeholders::_1));
     stream_.Write(bb, options, callback);
-  } else if (!grpc_response.has_rsp_msg()) {
-    // Final iteration but no response, just Finish.
-    google::rpc::Status status = grpc_response.status();
-    OAK_LOG(INFO) << "invocation#" << stream_id_
-                  << " SendResponse: Final inner response empty, status " << status.code();
-    FinishAndCleanUp(grpc::Status(static_cast<grpc::StatusCode>(status.code()), status.message()));
+  } else if (grpc_response.has_status()) {
+    if (inner_msg.empty()) {
+      // Final iteration with status and no response bytes, just Finish.
+      google::rpc::Status status = grpc_response.status();
+      OAK_LOG(INFO) << "invocation#" << stream_id_
+                    << " SendResponse: Final inner response empty, status " << status.code();
+      FinishAndCleanUp(
+          grpc::Status(static_cast<grpc::StatusCode>(status.code()), status.message()));
+    } else {
+      // Both status and response bytes, error out.
+      OAK_LOG(ERROR) << "invocation#" << stream_id_
+                     << " SendResponse: both status and response provided";
+    }
   } else {
-    // Final response, so WriteAndFinish.
+    // Final iteration with response bytes, so WriteAndFinish.
     OAK_LOG(INFO) << "invocation#" << stream_id_ << " SendResponse: Final inner response of size "
                   << inner_msg.size() << ", request stream->WriteAndFinish => CleanUp";
     options.set_last_message();

@@ -46,7 +46,6 @@ proto_library(
     srcs = ["grpc_encap.proto"],
     deps = [
         "//third_party/google/rpc:status_proto",
-        "@com_google_protobuf//:any_proto",
     ],
 )
 
