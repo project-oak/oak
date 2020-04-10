@@ -9,31 +9,40 @@ build:wasm32 --cpu=wasm32
 # Use a different symlink prefix for wasm-based artifacts.
 build:wasm32 --symlink_prefix=bazel-wasm-
 
+# Common options for clang-based compilation
+# Force the usage of stack protectors for all functions.
+build:clang-base --cxxopt="-fstack-protector-all"
+# Pretty colours.
+build:clang-base --cxxopt="-fcolor-diagnostics"
+# Don't omit the frame pointer, useful for debug.
+build:clang-base --cxxopt="-fno-omit-frame-pointer"
+# Enable all warnings.
+build:clang-base --cxxopt="-Wall"
+# Enable extra warnings.
+build:clang-base --cxxopt="-Wextra"
+# Simple but useful static checking to detect potential race conditions.
+build:clang-base --cxxopt="-Wthread-safety"
+# Treat warnings as errors.
+build:clang-base --cxxopt="-Werror"
+# Disable some warnings:
+# protobuf generates unused parameters, so skip this for now.
+build:clang-base --cxxopt="-Wno-unused-parameter"
+# https://stackoverflow.com/questions/1538943
+build:clang-base --cxxopt="-Wno-missing-field-initializers"
+build:clang-base --cxxopt="-Wno-error=sign-compare"
+# Allow dependencies to make use of library functions marked deprecated,
+# particularly on OS X.
+build:clang-base --cxxopt="-Wno-error=deprecated-declarations"
+# Use a different symlink prefix for clang-based artifacts.
+build:clang-base --symlink_prefix=bazel-clang-
+
+build:clang --config=clang-base
 build:clang --crosstool_top=//toolchain:clang
 build:clang --host_crosstool_top=@bazel_tools//tools/cpp:toolchain
 build:clang --cpu=k8
-# Force the usage of stack protectors for all functions.
-build:clang --cxxopt="-fstack-protector-all"
-# Pretty colours.
-build:clang --cxxopt="-fcolor-diagnostics"
-# Don't omit the frame pointer, useful for debug.
-build:clang --cxxopt="-fno-omit-frame-pointer"
-# Enable all warnings.
-build:clang --cxxopt="-Wall"
-# Enable extra warnings.
-build:clang --cxxopt="-Wextra"
-# Simple but useful static checking to detect potential race conditions.
-build:clang --cxxopt="-Wthread-safety"
-# Treat warnings as errors.
-build:clang --cxxopt="-Werror"
-# Disable some warnings:
-# protobuf generates unused parameters, so skip this for now.
-build:clang --cxxopt="-Wno-unused-parameter"
-# https://stackoverflow.com/questions/1538943
-build:clang --cxxopt="-Wno-missing-field-initializers"
-build:clang --cxxopt="-Wno-error=sign-compare"
-# Use a different symlink prefix for clang-based artifacts.
-build:clang --symlink_prefix=bazel-clang-
+
+# Darwin's default compiler is clang, so no need for a crosstool
+build:darwin --config=clang-base
 
 # armv8 build
 build:armv8 --crosstool_top=//toolchain:clang
