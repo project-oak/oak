@@ -50,7 +50,7 @@ Either the -a APPLICATION or the -e EXAMPLE option is required.
   esac
 done
 
-if [[ -v EXAMPLE ]]; then
+if [[ -n ${EXAMPLE+x} ]]; then
   # Determine expected configuration file from example name and language variant.
   case "${language}" in
     rust)
