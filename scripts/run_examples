@@ -5,16 +5,22 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 source "${SCRIPTS_DIR}/common"
 
 server="base"
-while getopts "s:h" opt; do
+languages="rust cpp"
+while getopts "s:l:h" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-s base|asan|tsan]
-  -s    Server type used to run exmples:
+      echo -e "Usage: ${0} [-s base|asan|tsan] [-l rust|cpp]
+  -s    Server type used to run examples:
           - base: base version of the server (default)
           - asan: server with address sanitizer
           - tsan: server with thread santizer
+  -l    Run examples implemented in which language (default: both):
+          - rust
+          - cpp
   -h    Print Help (this message) and exit"
       exit 0;;
+    l)
+      languages="${OPTARG}";;
     s)
       case "${OPTARG}" in
         base|asan|tsan)
@@ -30,7 +36,7 @@ while getopts "s:h" opt; do
 done
 
 # Run all examples.
-for language in rust cpp; do
+for language in ${languages}; do
   # TODO(#594): Re-enable rustfmt when upstream rustc internal error is fixed.
   examples="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/'"${language}"'$' | cut -d'/' -f2 | uniq | grep -v rustfmt)"
   for example in ${examples}; do
