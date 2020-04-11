@@ -33,6 +33,9 @@ build:clang-base --cxxopt="-Wno-error=sign-compare"
 # Allow dependencies to make use of library functions marked deprecated,
 # particularly on OS X.
 build:clang-base --cxxopt="-Wno-error=deprecated-declarations"
+# Workaround for missing thread-local reference in gRPC.
+# https://github.com/bazelbuild/bazel/issues/4341
+build:clang-base --copt=-DGRPC_BAZEL_BUILD
 # Use a different symlink prefix for clang-based artifacts.
 build:clang-base --symlink_prefix=bazel-clang-
 
