@@ -54,7 +54,7 @@ genrule(
     tags = ["no-sandbox"],
     # Clear an output directory since `genrule` doesn't use Bazel cache.
     cmd = "rm -rf ring_out_dir_outputs/*;"
-        + "mkdir -p ring_out_dir_outputs/;"
+        + " mkdir -p ring_out_dir_outputs/;"
         + " (export CARGO_MANIFEST_DIR=\"$$PWD/$$(dirname $(location :Cargo.toml))\";"
         + " export TARGET='x86_64-unknown-linux-gnu';"
         + " export RUST_BACKTRACE=1;"

@@ -82,6 +82,12 @@ pub struct GrpcServerConfiguration {
     /// `address` is represented as an "ip_address:tcp_port" string.
     #[prost(string, tag="1")]
     pub address: std::string::String,
+    /// Loaded private RSA key file used by a gRPC server pseudo-Node.
+    #[prost(bytes, tag="2")]
+    pub grpc_tls_private_key: std::vec::Vec<u8>,
+    /// Loaded PEM encoded X.509 TLS certificate file used by a gRPC server pseudo-Node.
+    #[prost(bytes, tag="3")]
+    pub grpc_tls_certificate: std::vec::Vec<u8>,
 }
 /// GrpcClientConfiguration describes the configuration of a gRPC client
 /// pseudo-Node (which is provided by the Oak Runtime), connected to a specific

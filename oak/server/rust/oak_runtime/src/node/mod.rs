@@ -20,6 +20,7 @@ use std::{
     sync::Arc,
     thread::JoinHandle,
 };
+use tonic::transport::Identity;
 
 use oak_abi::OakStatus;
 
@@ -51,8 +52,12 @@ pub enum Configuration {
     /// The configuration for a logging pseudo-Node.
     LogNode,
 
-    /// The configuration for a gRPC server pseudo-Node that contains an `address` to listen on.
-    GrpcServerNode { address: SocketAddr },
+    /// The configuration for a gRPC server pseudo-Node that contains an `address` to listen on and
+    /// a TLS identity that consists of a private RSA key and an X.509 TLS certificate.
+    GrpcServerNode {
+        address: SocketAddr,
+        tls_identity: Identity,
+    },
 
     /// The configuration for a Wasm Node.
     // It would be better to store a list of exported methods and copyable Wasm interpreter
@@ -128,9 +133,16 @@ impl Configuration {
             Configuration::LogNode => {
                 Box::new(logger::LogNode::new(config_name, runtime, initial_reader))
             }
-            Configuration::GrpcServerNode { address } => Box::new(
-                grpc_server::GrpcServerNode::new(config_name, runtime, *address, initial_reader),
-            ),
+            Configuration::GrpcServerNode {
+                address,
+                tls_identity,
+            } => Box::new(grpc_server::GrpcServerNode::new(
+                config_name,
+                runtime,
+                *address,
+                tls_identity.clone(),
+                initial_reader,
+            )),
             Configuration::WasmNode { module } => Box::new(wasm::WasmNode::new(
                 config_name,
                 runtime,
