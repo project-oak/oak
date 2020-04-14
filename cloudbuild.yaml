@@ -41,13 +41,6 @@ steps:
     args: ['info']
 
   - name: 'gcr.io/oak-ci/oak:latest'
-    id: check_formatting
-    waitFor: ['bazel_init']
-    timeout: 30m
-    entrypoint: 'bash'
-    args: ['./scripts/check_formatting']
-
-  - name: 'gcr.io/oak-ci/oak:latest'
     id: build_server
     waitFor: ['bazel_init']
     timeout: 60m
@@ -137,6 +130,20 @@ steps:
     timeout: 60m
     entrypoint: 'bash'
     args: ['./scripts/build_examples_android']
+
+  - name: 'gcr.io/oak-ci/oak:latest'
+    id: check_formatting
+    waitFor: ['bazel_init']
+    timeout: 30m
+    entrypoint: 'bash'
+    args: ['./scripts/check_formatting']
+
+  - name: 'gcr.io/oak-ci/oak:latest'
+    id: check_docs
+    waitFor: ['bazel_init']
+    timeout: 30m
+    entrypoint: 'bash'
+    args: ['./scripts/check_docs']
 
 # Copy compiled enclave binary to Google Cloud Storage.
 # See:

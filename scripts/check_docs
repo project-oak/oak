@@ -1,0 +1,19 @@
+#!/bin/bash
+#
+# Check that Rust documentation is generated without any warnings.
+
+readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
+# shellcheck source=scripts/common
+source "$SCRIPTS_DIR/common"
+
+# `cargo doc` produces warnings for incorrect paths. These warnings cannot be promoted to errors, so we use grep to detect them.
+if cargo doc --document-private-items --no-deps 2>&1 | grep --ignore-case --quiet --regexp='^warning'; then
+  echo "Warnings found when generating the docs."
+  exit 1
+fi
+
+# Check for any deadlinks in the generated docs. 
+if ! cargo deadlinks --dir target/doc; then
+  echo "Found deadlinks in the generated docs."
+  exit 1
+fi

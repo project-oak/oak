@@ -32,7 +32,6 @@ rm --recursive --force "${TARGET_DIR:?}"/*
 # files, but does not remove artifacts generated from now-removed files.
 rm --recursive --force ./target/doc
 cargo doc --no-deps
-cargo deadlinks
 cp --recursive ./target/doc "${TARGET_DIR}"
 
 # The docs generated from the Cargo workspace do not include a workspace-level index, so we generate
