@@ -15,6 +15,10 @@ check_license() {
     return 0
   fi
 
+  if echo "$path" | grep -q "/proto/"; then
+    return 0
+  fi
+
   # Look for "Apache License" on the file header
   if ! head -10 "$path" | grep -q 'Apache License'; then
     # Format: $path:$line:$message
