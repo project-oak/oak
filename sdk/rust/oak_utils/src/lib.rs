@@ -162,7 +162,26 @@ impl prost_build::ServiceGenerator for OakServiceGenerator {
     }
 }
 
+pub fn compile_protos_to<P, Q>(inputs: &[P], includes: &[P], out_dir: Q)
+where
+    P: AsRef<std::path::Path>,
+    Q: Into<std::path::PathBuf>,
+{
+    compile_protos_with(
+        prost_build::Config::new().out_dir(out_dir),
+        inputs,
+        includes,
+    );
+}
+
 pub fn compile_protos<P>(inputs: &[P], includes: &[P])
+where
+    P: AsRef<std::path::Path>,
+{
+    compile_protos_with(&mut prost_build::Config::new(), inputs, includes);
+}
+
+fn compile_protos_with<P>(prost_config: &mut prost_build::Config, inputs: &[P], includes: &[P])
 where
     P: AsRef<std::path::Path>,
 {
@@ -171,8 +190,7 @@ where
         // https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath
         println!("cargo:rerun-if-changed={}", input.as_ref().display());
     }
-
-    prost_build::Config::new()
+    prost_config
         .service_generator(Box::new(OakServiceGenerator))
         // We require label-related types to be comparable and hashable so that they can be used in
         // hash-based collections.
