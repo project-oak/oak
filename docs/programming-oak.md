@@ -109,15 +109,10 @@ demonstrates this.
 
 ### Generated gRPC service code
 
-The Oak SDK includes a `proto_rust_grpc` tool (forked from
-https://github.com/stepancheg/rust-protobuf and wrapped in the
-`oak_utils::run_proto_rust[_grpc]` helpers) which takes a
-[gRPC service definition](https://grpc.io/docs/guides/concepts/) and
-autogenerates Rust code for the corresponding Oak Node that implements that
-service.
-
-Adding a `build.rs` file to the Node that invokes this tool results in a
-generated file appearing in `src/proto/<service>_grpc.rs`.
+The Oak SDK provides `oak_utils::compile_protos` to autogenerate Rust code from
+a [gRPC service definition](https://grpc.io/docs/guides/concepts/). Adding a
+`build.rs` file to the Node that uses this function results in a generated file
+appearing in `src/proto/<service>_grpc.rs`.
 
 <!-- prettier-ignore-start -->
 [embedmd]:# (../examples/hello_world/module/rust/build.rs Rust /fn main/ /^}/)
