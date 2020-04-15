@@ -3,7 +3,7 @@
 [![Build Status](https://img.shields.io/badge/build-status-blue)](https://pantheon.corp.google.com/cloud-build/dashboard?project=oak-ci)
 [![Fuzzing Status](https://oss-fuzz-build-logs.storage.googleapis.com/badges/oak.svg)](https://bugs.chromium.org/p/oss-fuzz/issues/list?sort=-opened&can=1&q=proj:oak)
 [![Docs](https://img.shields.io/badge/docs-rust-brightgreen)](https://project-oak.github.io/oak)
-[![Slack](https://img.shields.io/badge/slack-project--oak-purple?logo=slack)](https://project-oak.slack.com)
+[![Slack](https://img.shields.io/badge/slack-project--oak-purple?logo=slack)](https://join.slack.com/t/project-oak/shared_invite/zt-5hiliinq-f0fYZGwlzfH3kMrJuu3qlw)
 [![Mailing list](https://img.shields.io/badge/mailing_list-project--oak--discuss-red?logo=gmail)](https://groups.google.com/g/project-oak-discuss)
 
 The goal of Project Oak is to create a specification and a reference
