@@ -83,6 +83,8 @@ pub enum HandleDirection {
 
 /// An internal identifier to track a [`Channel`]. This is implementation specific and should not
 /// be visible outside the internals of [`Runtime`].
+///
+/// [`Runtime`]: crate::runtime::Runtime
 type ChannelId = u64;
 
 /// Ownership and mapping of [`Channel`]s to [`Handle`]s.
@@ -279,7 +281,9 @@ impl ChannelMapping {
 
     /// Duplicate a [`Handle`] reference. This new reference and when it is closed will be
     /// tracked separately from the first [`Handle`]. For instance this is used by the
-    /// [`oak_runtime::Runtime`] to encode [`Channel`]s in messages.
+    /// [`Runtime`] to encode [`Channel`]s in messages.
+    ///
+    /// [`Runtime`]: crate::runtime::Runtime
     pub fn duplicate_reference(&self, reference: Handle) -> Result<Handle, OakStatus> {
         if let Ok(channel_id) = self.get_writer_channel(reference) {
             self.with_channel(channel_id, |channel| Ok(channel.inc_writer_count()))?;

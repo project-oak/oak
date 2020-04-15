@@ -187,6 +187,8 @@ impl Runtime {
 
     /// Allow the corresponding [`Node`] to use the [`Handle`]s passed via the iterator.
     /// This is achieved by adding the [`Handle`]s to the [`Node`]s [`HashMap`] of [`Handle`]s.
+    ///
+    /// [`Node`]: crate::node::Node
     fn track_handles_in_node<I>(&self, node_id: NodeId, handles: I)
     where
         I: IntoIterator<Item = Handle>,
@@ -275,7 +277,7 @@ impl Runtime {
     }
 
     /// Returns a clone of the [`Label`] associated with the provided reader `channel_handle`, in
-    /// order to limit the scope of holding the lock on [`ChannelMapping::channels`].
+    /// order to limit the scope of holding the lock on [`channel::ChannelMapping::channels`].
     ///
     /// Returns an error if `channel_handle` is invalid.
     fn get_reader_channel_label(&self, channel_handle: Handle) -> Result<Label, OakStatus> {
@@ -286,7 +288,7 @@ impl Runtime {
     }
 
     /// Returns a clone of the [`Label`] associated with the provided writer `channel_handle`, in
-    /// order to limit the scope of holding the lock on [`ChannelMapping::channels`].
+    /// order to limit the scope of holding the lock on [`channel::ChannelMapping::channels`].
     ///
     /// Returns an error if `channel_handle` is invalid.
     fn get_writer_channel_label(&self, channel_handle: Handle) -> Result<Label, OakStatus> {
@@ -823,6 +825,8 @@ impl Runtime {
     /// structure in [`Runtime`], allowing it to access the provided [`Handle`]s, then calling
     /// [`Node::start`] on the instance, and finally storing a reference to the running instance
     /// in [`Runtime::node_instances`] so that it can later be terminated.
+    ///
+    /// [`Node::start`]: crate::node::Node::start
     fn node_start_instance<I>(
         &self,
         node_id: NodeId,
