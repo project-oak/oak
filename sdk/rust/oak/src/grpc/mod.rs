@@ -19,8 +19,10 @@
 use crate::{OakError, OakStatus};
 use log::error;
 use oak_abi::proto::google::rpc;
-pub use oak_abi::proto::google::rpc::*;
-pub use oak_abi::proto::oak::encap::{GrpcRequest, GrpcResponse};
+pub use oak_abi::proto::{
+    google::rpc::*,
+    oak::encap::{GrpcRequest, GrpcResponse},
+};
 
 pub mod client;
 mod invocation;

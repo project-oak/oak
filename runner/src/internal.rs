@@ -15,10 +15,7 @@
 //
 
 use colored::*;
-use std::collections::HashSet;
-use std::io::Write;
-use std::process::Command;
-use std::time::Instant;
+use std::{collections::HashSet, io::Write, process::Command, time::Instant};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Clone)]

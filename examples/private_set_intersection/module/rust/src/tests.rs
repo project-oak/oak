@@ -17,8 +17,7 @@
 use crate::proto::{GetIntersectionResponse, SubmitSetRequest};
 use assert_matches::assert_matches;
 use oak::grpc;
-use std::collections::HashSet;
-use std::iter::FromIterator;
+use std::{collections::HashSet, iter::FromIterator};
 
 const MODULE_CONFIG_NAME: &str = "private_set_intersection";
 

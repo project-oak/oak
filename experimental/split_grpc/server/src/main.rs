@@ -21,8 +21,10 @@ use tonic::{
     Request, Response, Status, Streaming,
 };
 
-use proto::hello_world_server::{HelloWorld, HelloWorldServer};
-use proto::{HelloRequest, HelloResponse};
+use proto::{
+    hello_world_server::{HelloWorld, HelloWorldServer},
+    HelloRequest, HelloResponse,
+};
 
 pub mod proto {
     tonic::include_proto!("oak.examples.hello_world");

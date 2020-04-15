@@ -23,8 +23,7 @@
 //! cargo run --package=runner
 //! ```
 
-use std::io::Read;
-use std::path::PathBuf;
+use std::{io::Read, path::PathBuf};
 use structopt::StructOpt;
 
 mod internal;

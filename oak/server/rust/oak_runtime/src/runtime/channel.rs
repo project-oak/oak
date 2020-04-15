@@ -14,11 +14,14 @@
 // limitations under the License.
 //
 
-use std::collections::{HashMap, VecDeque};
-use std::sync::atomic::AtomicU64;
-use std::sync::atomic::Ordering::SeqCst;
-use std::sync::{Arc, Mutex, RwLock, Weak};
-use std::thread::{Thread, ThreadId};
+use std::{
+    collections::{HashMap, VecDeque},
+    sync::{
+        atomic::{AtomicU64, Ordering::SeqCst},
+        Arc, Mutex, RwLock, Weak,
+    },
+    thread::{Thread, ThreadId},
+};
 
 use log::debug;
 use rand::RngCore;

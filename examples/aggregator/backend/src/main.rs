@@ -24,8 +24,10 @@ pub mod proto {
 }
 
 use log::info;
-use proto::aggregator_server::{Aggregator, AggregatorServer};
-use proto::Sample;
+use proto::{
+    aggregator_server::{Aggregator, AggregatorServer},
+    Sample,
+};
 use tonic::{transport::Server, Request, Response, Status};
 
 #[derive(Default)]

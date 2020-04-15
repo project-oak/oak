@@ -19,8 +19,7 @@ mod proto {
 }
 
 use oak::grpc;
-use proto::{FormatRequest, FormatResponse};
-use proto::{FormatService, FormatServiceDispatcher};
+use proto::{FormatRequest, FormatResponse, FormatService, FormatServiceDispatcher};
 
 oak::entrypoint!(oak_main => {
     oak::logger::init_default();

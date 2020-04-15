@@ -16,9 +16,11 @@
 
 use futures::stream::StreamExt;
 use log::{error, info};
-use tokio::io;
-use tokio::net::{TcpListener, TcpStream};
-use tokio::spawn;
+use tokio::{
+    io,
+    net::{TcpListener, TcpStream},
+    spawn,
+};
 
 #[tokio::main]
 async fn main() -> io::Result<()> {

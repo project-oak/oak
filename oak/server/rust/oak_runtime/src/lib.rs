@@ -24,8 +24,7 @@ pub mod runtime;
 #[cfg(test)]
 mod tests;
 
-pub use config::application_configuration;
-pub use config::configure_and_run;
+pub use config::{application_configuration, configure_and_run};
 
 pub use message::Message;
 pub use runtime::{Handle, NodeId, Runtime};

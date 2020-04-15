@@ -35,8 +35,10 @@ mod proto {
 mod tests;
 
 use oak::grpc;
-use proto::{GetIntersectionResponse, SubmitSetRequest};
-use proto::{PrivateSetIntersection, PrivateSetIntersectionDispatcher};
+use proto::{
+    GetIntersectionResponse, PrivateSetIntersection, PrivateSetIntersectionDispatcher,
+    SubmitSetRequest,
+};
 use std::collections::HashSet;
 
 oak::entrypoint!(oak_main => PrivateSetIntersectionDispatcher::new(Node::default()));

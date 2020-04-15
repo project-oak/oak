@@ -19,9 +19,7 @@
 use log::info;
 
 use prost::Message;
-use std::collections::HashMap;
-use std::process::Command;
-use std::sync::Arc;
+use std::{collections::HashMap, process::Command, sync::Arc};
 
 use oak_runtime::runtime::TEST_NODE_ID;
 

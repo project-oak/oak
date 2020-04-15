@@ -19,18 +19,18 @@ use crate::proto::{
     LogConfiguration, NodeConfiguration, WebAssemblyConfiguration,
 };
 use itertools::Itertools;
-use std::collections::HashMap;
-use std::net::AddrParseError;
-use std::sync::Arc;
+use std::{collections::HashMap, net::AddrParseError, sync::Arc};
 
 use log::error;
 
 use oak_abi::OakStatus;
 
-use crate::node;
-use crate::node::{check_port, load_wasm};
-use crate::runtime;
-use crate::runtime::{Handle, Runtime};
+use crate::{
+    node,
+    node::{check_port, load_wasm},
+    runtime,
+    runtime::{Handle, Runtime},
+};
 
 /// Create an application configuration.
 ///

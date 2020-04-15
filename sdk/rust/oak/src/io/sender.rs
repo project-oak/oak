@@ -14,8 +14,7 @@
 // limitations under the License.
 //
 
-use crate::io::Encodable;
-use crate::{OakError, OakStatus, WriteHandle};
+use crate::{io::Encodable, OakError, OakStatus, WriteHandle};
 use serde::{Deserialize, Serialize};
 
 /// Wrapper for a handle to the send half of a channel, allowing to send data that can be encoded as

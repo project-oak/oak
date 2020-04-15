@@ -14,11 +14,14 @@
 // limitations under the License.
 //
 
-use std::collections::HashMap;
-use std::fmt::{self, Display, Formatter};
-use std::string::String;
-use std::sync::Arc;
-use std::{thread, thread::JoinHandle};
+use std::{
+    collections::HashMap,
+    fmt::{self, Display, Formatter},
+    string::String,
+    sync::Arc,
+    thread,
+    thread::JoinHandle,
+};
 
 use log::{debug, error};
 
@@ -28,9 +31,11 @@ use wasmi::ValueType;
 
 use oak_abi::{ChannelReadStatus, OakStatus};
 
-use crate::pretty_name_for_thread;
-use crate::runtime::{Handle, HandleDirection, ReadStatus, RuntimeProxy};
-use crate::Message;
+use crate::{
+    pretty_name_for_thread,
+    runtime::{Handle, HandleDirection, ReadStatus, RuntimeProxy},
+    Message,
+};
 
 #[cfg(test)]
 mod tests;

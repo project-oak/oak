@@ -14,22 +14,20 @@
 // limitations under the License.
 //
 
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::string::String;
-use std::sync::{Arc, Mutex, RwLock};
-use std::thread;
+use std::{
+    collections::{HashMap, HashSet},
+    string::String,
+    sync::{Arc, Mutex, RwLock},
+    thread,
+};
 
-use core::sync::atomic::Ordering::SeqCst;
-use core::sync::atomic::{AtomicBool, AtomicU64};
+use core::sync::atomic::{AtomicBool, AtomicU64, Ordering::SeqCst};
 
 use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
 
 use log::{debug, error};
 
-use crate::message::Message;
-use crate::node;
-use crate::pretty_name_for_thread;
+use crate::{message::Message, node, pretty_name_for_thread};
 
 mod channel;
 #[cfg(test)]

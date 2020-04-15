@@ -15,8 +15,10 @@
 //
 
 use super::*;
-use crate::node::Node;
-use crate::runtime::{Runtime, TEST_NODE_ID};
+use crate::{
+    node::Node,
+    runtime::{Runtime, TEST_NODE_ID},
+};
 use wat::{parse_file, parse_str};
 
 fn setup_node<S: AsRef<[u8]>>(buffer: S, entrypoint: &str) -> Box<dyn Node> {

@@ -16,10 +16,12 @@
 
 //! Helper library for accessing Oak storage services.
 
-use crate::grpc;
-use crate::proto::oak::storage::{
-    StorageChannelDeleteRequest, StorageChannelReadRequest, StorageChannelWriteRequest,
-    StorageItem, StorageServiceClient,
+use crate::{
+    grpc,
+    proto::oak::storage::{
+        StorageChannelDeleteRequest, StorageChannelReadRequest, StorageChannelWriteRequest,
+        StorageItem, StorageServiceClient,
+    },
 };
 
 /// Default name for predefined Node config that corresponds to a storage

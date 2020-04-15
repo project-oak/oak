@@ -14,8 +14,7 @@
 // limitations under the License.
 //
 
-use crate::command::Command;
-use crate::proto::Message;
+use crate::{command::Command, proto::Message};
 use log::info;
 use oak::Node;
 use prost::Message as _;

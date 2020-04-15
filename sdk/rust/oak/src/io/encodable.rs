@@ -14,8 +14,7 @@
 // limitations under the License.
 //
 
-use crate::io::Message;
-use crate::OakError;
+use crate::{io::Message, OakError};
 
 /// A trait for objects that can be encoded as bytes + handles.
 pub trait Encodable {

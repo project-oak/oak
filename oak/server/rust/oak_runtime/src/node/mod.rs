@@ -14,14 +14,15 @@
 // limitations under the License.
 //
 
-use std::net::{AddrParseError, SocketAddr};
-use std::string::String;
-use std::sync::Arc;
+use std::{
+    net::{AddrParseError, SocketAddr},
+    string::String,
+    sync::Arc,
+};
 
 use oak_abi::OakStatus;
 
-use crate::runtime::RuntimeProxy;
-use crate::Handle;
+use crate::{runtime::RuntimeProxy, Handle};
 
 mod grpc_server;
 mod logger;
