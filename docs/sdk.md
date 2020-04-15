@@ -101,6 +101,14 @@ The
 module holds functionality that is helpful for interacting with an external
 provider of persistent storage.
 
+### `oak::roughtime` Module
+
+The
+[`oak::roughtime`](https://project-oak.github.io/oak/doc/oak/roughtime/index.html)
+module holds functionality for retrieving an approximate wall clock time via a
+consensus of [Roughtime](https://roughtime.googlesource.com/roughtime) servers,
+as a `Duration` since the UNIX epoch.
+
 ### `oak::proto` Module
 
 The [`oak::proto`](https://project-oak.github.io/oak/doc/oak/proto/index.html)

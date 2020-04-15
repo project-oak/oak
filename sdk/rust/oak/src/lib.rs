@@ -28,6 +28,7 @@ pub mod grpc;
 pub mod io;
 pub mod logger;
 pub mod rand;
+pub mod roughtime;
 pub mod storage;
 
 pub mod proto {
@@ -37,6 +38,9 @@ pub mod proto {
         use oak_abi::proto::oak::label;
         pub mod storage {
             include!(concat!(env!("OUT_DIR"), "/oak.storage.rs"));
+        }
+        pub mod roughtime {
+            include!(concat!(env!("OUT_DIR"), "/oak.roughtime.rs"));
         }
     }
 }
