@@ -23,13 +23,14 @@
 
 namespace oak {
 
-// Tests getting the live roughtime from the hardcoded servers.
-// This requires an internet connection and both the roughtime servers to be up.
+// Tests getting the live Roughtime from the hardcoded servers.
+// This requires an internet connection and both the Roughtime servers to be up.
 TEST(RoughtimeClient, TestGetRoughTimeLive) {
   auto current = std::chrono::duration_cast<std::chrono::microseconds>(
                      std::chrono::system_clock::now().time_since_epoch())
                      .count();
-  auto time_or_status = RoughtimeClient::GetRoughTime();
+  RoughtimeClient client;
+  auto time_or_status = client.GetRoughTime();
   ASSERT_TRUE(time_or_status.ok());
   auto time = time_or_status.ValueOrDie();
 

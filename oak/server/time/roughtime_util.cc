@@ -31,9 +31,9 @@ StatusOr<RoughtimeInterval> FindOverlap(const std::vector<RoughtimeInterval>& in
                                         const int min_overlap) {
   for (const auto& interval : intervals) {
     int count = 0;
-    roughtime::rough_time_t min = 0;
-    roughtime::rough_time_t max = UINT64_MAX;
-    roughtime::rough_time_t point = interval.min;
+    ::roughtime::rough_time_t min = 0;
+    ::roughtime::rough_time_t max = UINT64_MAX;
+    ::roughtime::rough_time_t point = interval.min;
     for (const auto& test : intervals) {
       if (point >= test.min && point <= test.max) {
         if (test.min > min) {
