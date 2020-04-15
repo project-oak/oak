@@ -263,6 +263,9 @@ The available pseudo-Nodes are:
   requests to a channel that reaches the storage pseudo-Node, then read the
   associated responses from a corresponding outbound channel from the storage
   pseudo-Node.
+- **Roughtime client pseudo-Node**: Provides a mechanism for Oak Nodes to
+  retrieve a wall clock time using the
+  [Roughtime protocol](https://roughtime.googlesource.com/roughtime).
 
 An Oak Application uses any of these pseudo-Nodes (except the first) by
 including an entry for them in its `ApplicationConfiguration`, and creating them
@@ -345,4 +348,10 @@ future versions of the same or other Oak Applications).
 
 ## Time
 
-TODO: Roughtime
+The Oak Runtime includes a Roughtime client pseudo-Node, which allows Oak
+Applications to retrieve an approximate wall clock time using the
+[Roughtime protocol](https://roughtime.googlesource.com/roughtime). Note that
+retrieving the current time is relatively slow, and so is best done
+infrequently. (Also, retrieving the time involves interaction with external
+servers and so has the potential to leak information via the timing of the
+requests.)

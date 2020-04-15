@@ -49,6 +49,7 @@ message NodeConfiguration {
     StorageProxyConfiguration storage_config = 4;
     GrpcServerConfiguration grpc_server_config = 5;
     GrpcClientConfiguration grpc_client_config = 6;
+    RoughtimeClientConfiguration roughtime_client_config = 7;
   }
 }
 
@@ -90,4 +91,28 @@ message GrpcClientConfiguration {
   // The endpoint address of the external gRPC service.
   // `address` is represented as an "ip_address:tcp_port" string.
   string address = 1;
+}
+
+// RoughtimeClientConfiguration describes the configuration of a Roughtime
+// client pseudo-Node (which is provided by the Oak Runtime), with the
+// given external Roughtime servers and connection parameters.
+message RoughtimeClientConfiguration {
+  // The collection of Roughtime servers to query. A default set of servers
+  // will be used if this is empty.
+  repeated RoughtimeServer servers = 1;
+  // Connection parameters; default values will be used if any parameter is
+  // zero.
+  int32 min_overlapping_intervals = 2;
+  int32 timeout_seconds = 3;
+  int32 server_retries = 4;
+  uint32 max_radius_microseconds = 5;
+}
+
+// Information to identify a particular Roughtime server.
+// Only UDP and Ed25519 public keys are currently supported.
+message RoughtimeServer {
+  string name = 1;
+  string host = 2;
+  uint32 port = 3;
+  string public_key_base64 = 4;
 }

@@ -29,7 +29,7 @@ pub struct ApplicationConfiguration {
 pub struct NodeConfiguration {
     #[prost(string, tag="1")]
     pub name: std::string::String,
-    #[prost(oneof="node_configuration::ConfigType", tags="2, 3, 4, 5, 6")]
+    #[prost(oneof="node_configuration::ConfigType", tags="2, 3, 4, 5, 6, 7")]
     pub config_type: ::std::option::Option<node_configuration::ConfigType>,
 }
 pub mod node_configuration {
@@ -45,6 +45,8 @@ pub mod node_configuration {
         GrpcServerConfig(super::GrpcServerConfiguration),
         #[prost(message, tag="6")]
         GrpcClientConfig(super::GrpcClientConfiguration),
+        #[prost(message, tag="7")]
+        RoughtimeClientConfig(super::RoughtimeClientConfiguration),
     }
 }
 /// WebAssemblyConfiguration describes the configuration of a Web Assembly based Node.
@@ -90,4 +92,37 @@ pub struct GrpcClientConfiguration {
     /// `address` is represented as an "ip_address:tcp_port" string.
     #[prost(string, tag="1")]
     pub address: std::string::String,
+}
+/// RoughtimeClientConfiguration describes the configuration of a Roughtime
+/// client pseudo-Node (which is provided by the Oak Runtime), with the
+/// given external Roughtime servers and connection parameters.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct RoughtimeClientConfiguration {
+    /// The collection of Roughtime servers to query. A default set of servers
+    /// will be used if this is empty.
+    #[prost(message, repeated, tag="1")]
+    pub servers: ::std::vec::Vec<RoughtimeServer>,
+    /// Connection parameters; default values will be used if any parameter is
+    /// zero.
+    #[prost(int32, tag="2")]
+    pub min_overlapping_intervals: i32,
+    #[prost(int32, tag="3")]
+    pub timeout_seconds: i32,
+    #[prost(int32, tag="4")]
+    pub server_retries: i32,
+    #[prost(uint32, tag="5")]
+    pub max_radius_microseconds: u32,
+}
+/// Information to identify a particular Roughtime server.
+/// Only UDP and Ed25519 public keys are currently supported.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct RoughtimeServer {
+    #[prost(string, tag="1")]
+    pub name: std::string::String,
+    #[prost(string, tag="2")]
+    pub host: std::string::String,
+    #[prost(uint32, tag="3")]
+    pub port: u32,
+    #[prost(string, tag="4")]
+    pub public_key_base64: std::string::String,
 }

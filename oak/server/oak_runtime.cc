@@ -27,6 +27,7 @@
 #include "oak/common/app_config.h"
 #include "oak/common/logging.h"
 #include "oak/server/grpc_client_node.h"
+#include "oak/server/roughtime_client_node.h"
 #include "oak/server/rust/oak_glue/oak_glue.h"
 #include "oak/server/storage/storage_node.h"
 
@@ -76,6 +77,9 @@ OakRuntime::OakRuntime(const ApplicationConfiguration& config,
       const GrpcClientConfiguration& grpc_config = node_config.grpc_client_config();
       grpc_client_config_[node_config.name()] =
           absl::make_unique<std::string>(grpc_config.address());
+    } else if (node_config.has_roughtime_client_config()) {
+      roughtime_client_config_[node_config.name()] =
+          absl::make_unique<RoughtimeClientConfiguration>(node_config.roughtime_client_config());
     }
   }
   std::string config_data;
@@ -107,6 +111,14 @@ std::unique_ptr<OakNode> OakRuntime::CreateNode(const std::string& config_name,
     std::string address = *(grpc_client_iter->second.get());
     OAK_LOG(INFO) << "Create gRPC client node named {" << name << "} connecting to " << address;
     return absl::make_unique<GrpcClientNode>(name, node_id, address);
+  }
+
+  auto roughtime_iter = roughtime_client_config_.find(config_name);
+  if (roughtime_iter != roughtime_client_config_.end()) {
+    const RoughtimeClientConfiguration* roughtime_config = roughtime_iter->second.get();
+    OAK_LOG(INFO) << "Create Roughtime client node named {" << name << "} with config "
+                  << roughtime_config->DebugString();
+    return absl::make_unique<RoughtimeClientNode>(name, node_id, *roughtime_config);
   }
 
   OAK_LOG(ERROR) << "failed to find config with name " << config_name;

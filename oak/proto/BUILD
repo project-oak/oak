@@ -118,3 +118,13 @@ cc_grpc_library(
         "//third_party/google/rpc:status_cc_proto",
     ],
 )
+
+proto_library(
+    name = "roughtime_service_proto",
+    srcs = ["roughtime_service.proto"],
+)
+
+cc_proto_library(
+    name = "roughtime_service_cc_proto",
+    deps = [":roughtime_service_proto"],
+)

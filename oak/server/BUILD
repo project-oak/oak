@@ -76,6 +76,7 @@ cc_library(
         ":grpc_client_node",
         ":oak_grpc_node",
         ":oak_node",
+        ":roughtime_client_node",
         "//oak/common:app_config",
         "//oak/common:logging",
         "//oak/proto:oak_abi_cc_proto",
@@ -112,6 +113,23 @@ cc_library(
         "//oak/common:logging",
         "//oak/proto:grpc_encap_cc_proto",
         "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/memory",
+    ],
+)
+
+cc_library(
+    name = "roughtime_client_node",
+    srcs = ["roughtime_client_node.cc"],
+    hdrs = ["roughtime_client_node.h"],
+    deps = [
+        ":invocation",
+        ":oak_node",
+        "//oak/common:handles",
+        "//oak/common:logging",
+        "//oak/proto:application_cc_proto",
+        "//oak/proto:grpc_encap_cc_proto",
+        "//oak/proto:roughtime_service_cc_proto",
+        "//oak/server/time:roughtime_client",
         "@com_google_absl//absl/memory",
     ],
 )
