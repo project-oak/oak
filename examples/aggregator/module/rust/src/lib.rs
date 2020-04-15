@@ -35,8 +35,7 @@ use data::SparseVector;
 use log::{debug, error};
 use oak::grpc;
 use proto::{Aggregator, AggregatorClient, AggregatorDispatcher, Sample};
-use std::collections::HashMap;
-use std::convert::TryFrom;
+use std::{collections::HashMap, convert::TryFrom};
 
 /// Currently threshold value is hardcoded.
 const SAMPLE_THRESHOLD: u64 = 5;

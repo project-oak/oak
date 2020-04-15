@@ -20,12 +20,14 @@
 use log::{error, info, warn};
 use oak::grpc;
 use rand::prelude::*;
-use rand_distr::Distribution;
-use rand_distr::Normal;
-use rand_distr::Standard;
-use rusty_machine::learning::naive_bayes::{self, NaiveBayes};
-use rusty_machine::learning::SupModel;
-use rusty_machine::linalg::{BaseMatrix, Matrix};
+use rand_distr::{Distribution, Normal, Standard};
+use rusty_machine::{
+    learning::{
+        naive_bayes::{self, NaiveBayes},
+        SupModel,
+    },
+    linalg::{BaseMatrix, Matrix},
+};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Type {

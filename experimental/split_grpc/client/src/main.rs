@@ -15,8 +15,7 @@
 //
 
 use log::info;
-use proto::hello_world_client::HelloWorldClient;
-use proto::HelloRequest;
+use proto::{hello_world_client::HelloWorldClient, HelloRequest};
 use tonic::transport::{Certificate, Channel, ClientTlsConfig};
 
 pub mod proto {

@@ -24,9 +24,10 @@ use expect::{expect, expect_eq, expect_matches};
 use log::{debug, info};
 use oak::{grpc, ChannelReadStatus, OakError, OakStatus};
 use prost::Message;
-use proto::{AbiTestRequest, AbiTestResponse};
-use proto::{GrpcTestRequest, GrpcTestResponse};
-use proto::{OakAbiTestService, OakAbiTestServiceClient, OakAbiTestServiceDispatcher};
+use proto::{
+    AbiTestRequest, AbiTestResponse, GrpcTestRequest, GrpcTestResponse, OakAbiTestService,
+    OakAbiTestServiceClient, OakAbiTestServiceDispatcher,
+};
 use rand::Rng;
 use std::collections::HashMap;
 

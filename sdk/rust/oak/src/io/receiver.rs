@@ -14,8 +14,7 @@
 // limitations under the License.
 //
 
-use crate::io::Decodable;
-use crate::{OakError, OakStatus, ReadHandle};
+use crate::{io::Decodable, OakError, OakStatus, ReadHandle};
 use serde::{Deserialize, Serialize};
 
 /// Wrapper for a handle to the read half of a channel, allowing to receive data that can be decoded

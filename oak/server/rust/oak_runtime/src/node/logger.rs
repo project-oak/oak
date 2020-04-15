@@ -14,17 +14,20 @@
 // limitations under the License.
 //
 
-use std::fmt::{self, Display, Formatter};
-use std::string::String;
+use std::{
+    fmt::{self, Display, Formatter},
+    string::String,
+};
 
 use log::{error, info};
 
 use oak_abi::OakStatus;
 use std::thread::{self, JoinHandle};
 
-use crate::pretty_name_for_thread;
-use crate::runtime::Handle;
-use crate::runtime::RuntimeProxy;
+use crate::{
+    pretty_name_for_thread,
+    runtime::{Handle, RuntimeProxy},
+};
 use oak_abi::proto::oak::log::{Level, LogMessage};
 use prost::Message;
 

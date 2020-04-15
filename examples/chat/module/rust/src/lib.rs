@@ -22,8 +22,7 @@ use proto::{
     Chat, ChatDispatcher, CreateRoomRequest, DestroyRoomRequest, SendMessageRequest,
     SubscribeRequest,
 };
-use std::collections::hash_map::Entry;
-use std::collections::HashMap;
+use std::collections::{hash_map::Entry, HashMap};
 
 mod backend;
 mod command;

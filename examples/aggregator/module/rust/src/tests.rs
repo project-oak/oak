@@ -14,15 +14,19 @@
 // limitations under the License.
 //
 
-use crate::data::SparseVector;
-use crate::proto::{Sample, SerializedSparseVector};
-use crate::SAMPLE_THRESHOLD;
+use crate::{
+    data::SparseVector,
+    proto::{Sample, SerializedSparseVector},
+    SAMPLE_THRESHOLD,
+};
 use aggregator_common::Monoid;
 use assert_matches::assert_matches;
 use maplit::hashmap;
 use oak::grpc;
-use std::collections::HashMap;
-use std::convert::{From, TryFrom};
+use std::{
+    collections::HashMap,
+    convert::{From, TryFrom},
+};
 
 const MODULE_CONFIG_NAME: &str = "aggregator";
 
