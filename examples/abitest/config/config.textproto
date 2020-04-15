@@ -38,6 +38,16 @@ node_configs {
     address: "test.invalid:9999"
   }
 }
+node_configs {
+  name: "roughtime-client"
+  roughtime_client_config {}
+}
+node_configs {
+  name: "roughtime-misconfig"
+  roughtime_client_config {
+    min_overlapping_intervals: 99
+  }
+}
 grpc_port: 8080
 initial_node_config_name: "frontend-config"
 initial_entrypoint_name: "frontend_oak_main"
