@@ -15,14 +15,11 @@
 //
 
 use super::*;
-use crate::{
-    node::Node,
-    runtime::{Runtime, TEST_NODE_ID},
-};
+use crate::runtime::{Runtime, TEST_NODE_ID};
 use oak_abi::label::Label;
 use wat::{parse_file, parse_str};
 
-fn setup_node<S: AsRef<[u8]>>(buffer: S, entrypoint: &str) -> Box<dyn Node> {
+fn start_node<S: AsRef<[u8]>>(buffer: S, entrypoint: &str) -> Result<(), OakStatus> {
     let configuration = crate::runtime::Configuration {
         nodes: HashMap::new(),
         entry_module: "test_module".to_string(),
@@ -31,17 +28,29 @@ fn setup_node<S: AsRef<[u8]>>(buffer: S, entrypoint: &str) -> Box<dyn Node> {
     let runtime_ref = Arc::new(Runtime::create(configuration));
     let (_, reader_handle) = runtime_ref.new_channel(TEST_NODE_ID, &Label::public_trusted());
 
-    let runtime_proxy = runtime_ref.new_runtime_proxy();
+    let runtime_proxy = runtime_ref.clone().new_runtime_proxy();
 
     let module = wasmi::Module::from_buffer(buffer).unwrap();
 
-    Box::new(WasmNode::new(
+    let node = Box::new(WasmNode::new(
         "test",
         runtime_proxy,
         Arc::new(module),
         entrypoint.to_string(),
         reader_handle,
-    ))
+    ));
+
+    let result = runtime_ref.node_start_instance(
+        TEST_NODE_ID,
+        node,
+        &oak_abi::label::Label::public_trusted(),
+        vec![],
+    );
+
+    // Ensure that the runtime can terminate correctly, regardless of what the node does.
+    runtime_ref.stop();
+
+    result
 }
 
 #[test]
@@ -56,37 +65,36 @@ fn wasm_starting_module_without_content_fails() {
     // \0asm - magic
     // 0x01 - version (in little-endian)
     assert_eq!(binary, vec![0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]);
-    let mut node = setup_node(binary, "oak_main");
-    assert_eq!(Err(OakStatus::ErrInvalidArgs), node.start());
+    let result = start_node(binary, "oak_main");
+    assert_eq!(Some(OakStatus::ErrInvalidArgs), result.err());
 }
 
 #[test]
 fn wasm_starting_minimal_module_succeeds() {
     let binary = parse_file("../../testdata/minimal.wat").unwrap();
-    let mut node = setup_node(binary, "oak_main");
-    assert_eq!(Ok(()), node.start());
-    node.stop();
+    let result = start_node(binary, "oak_main");
+    assert_eq!(true, result.is_ok());
 }
 
 #[test]
 fn wasm_starting_module_missing_an_export_fails() {
     let binary = parse_file("../../testdata/missing.wat").unwrap();
-    let mut node = setup_node(binary, "oak_main");
-    assert_eq!(Err(OakStatus::ErrInvalidArgs), node.start());
+    let result = start_node(binary, "oak_main");
+    assert_eq!(Some(OakStatus::ErrInvalidArgs), result.err());
 }
 
 #[test]
 fn wasm_starting_module_with_wrong_export_fails() {
     let binary = parse_file("../../testdata/minimal.wat").unwrap();
-    let mut node = setup_node(binary, "oak_other_main");
-    assert_eq!(Err(OakStatus::ErrInvalidArgs), node.start());
+    let result = start_node(binary, "oak_other_main");
+    assert_eq!(Some(OakStatus::ErrInvalidArgs), result.err());
 }
 
 #[test]
 fn wasm_starting_module_with_wrong_signature_fails() {
     let binary = parse_file("../../testdata/wrong.wat").unwrap();
-    let mut node = setup_node(binary, "oak_main");
-    assert_eq!(Err(OakStatus::ErrInvalidArgs), node.start());
+    let result = start_node(binary, "oak_main");
+    assert_eq!(Some(OakStatus::ErrInvalidArgs), result.err());
 }
 
 #[test]
@@ -103,8 +111,8 @@ fn wasm_starting_module_with_wrong_signature_2_fails() {
         (export "oak_main" (func $oak_main)))
     "#;
     let binary = parse_str(wat).unwrap();
-    let mut node = setup_node(binary, "oak_main");
-    assert_eq!(Err(OakStatus::ErrInvalidArgs), node.start());
+    let result = start_node(binary, "oak_main");
+    assert_eq!(Some(OakStatus::ErrInvalidArgs), result.err());
 }
 
 #[test]
@@ -120,6 +128,6 @@ fn wasm_starting_module_with_wrong_signature_3_fails() {
         (export "oak_main" (func $oak_main)))
     "#;
     let binary = parse_str(wat).unwrap();
-    let mut node = setup_node(binary, "oak_main");
-    assert_eq!(Err(OakStatus::ErrInvalidArgs), node.start());
+    let result = start_node(binary, "oak_main");
+    assert_eq!(Some(OakStatus::ErrInvalidArgs), result.err());
 }

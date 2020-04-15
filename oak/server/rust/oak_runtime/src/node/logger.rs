@@ -35,7 +35,6 @@ pub struct LogNode {
     config_name: String,
     runtime: RuntimeProxy,
     reader: Handle,
-    thread_handle: Option<JoinHandle<()>>,
 }
 
 impl LogNode {
@@ -45,7 +44,38 @@ impl LogNode {
             config_name: config_name.to_string(),
             runtime,
             reader,
-            thread_handle: None,
+        }
+    }
+
+    /// Main node worker thread.
+    fn worker_thread(self) {
+        let pretty_name = pretty_name_for_thread(&thread::current());
+        let result = self.logger_loop(&pretty_name);
+        info!("{} LOG: exiting log thread {:?}", pretty_name, result);
+        self.runtime.exit_node();
+    }
+
+    fn logger_loop(&self, pretty_name: &str) -> Result<(), OakStatus> {
+        loop {
+            // An error indicates the Runtime is terminating. We ignore it here and keep trying to
+            // read in case a Wasm Node wants to emit remaining messages. We will return
+            // once the channel is closed.
+
+            let _ = self.runtime.wait_on_channels(&[Some(self.reader)]);
+
+            if let Some(message) = self.runtime.channel_read(self.reader)? {
+                match LogMessage::decode(&*message.data) {
+                    Ok(msg) => info!(
+                        "{} LOG: {} {}:{}: {}",
+                        pretty_name,
+                        to_level_name(msg.level),
+                        msg.file,
+                        msg.line,
+                        msg.message
+                    ),
+                    Err(error) => error!("{} Could not parse LogMessage: {}", pretty_name, error),
+                }
+            }
         }
     }
 }
@@ -57,52 +87,12 @@ impl Display for LogNode {
 }
 
 impl super::Node for LogNode {
-    fn start(&mut self) -> Result<(), OakStatus> {
-        // Clone or copy all the captured values and move them into the closure, for simplicity.
-        let runtime = self.runtime.clone();
-        let reader = self.reader;
+    fn start(self: Box<Self>) -> Result<JoinHandle<()>, OakStatus> {
         let thread_handle = thread::Builder::new()
             .name(self.to_string())
-            .spawn(move || {
-                let pretty_name = pretty_name_for_thread(&thread::current());
-                let result = logger(&pretty_name, &runtime, reader);
-                info!("{} LOG: exiting log thread {:?}", pretty_name, result);
-                runtime.exit_node();
-            })
+            .spawn(move || self.worker_thread())
             .expect("failed to spawn thread");
-        self.thread_handle = Some(thread_handle);
-        Ok(())
-    }
-    fn stop(&mut self) {
-        if let Some(join_handle) = self.thread_handle.take() {
-            if let Err(err) = join_handle.join() {
-                error!("error while stopping log node: {:?}", err);
-            }
-        }
-    }
-}
-
-fn logger(pretty_name: &str, runtime: &RuntimeProxy, reader: Handle) -> Result<(), OakStatus> {
-    loop {
-        // An error indicates the Runtime is terminating. We ignore it here and keep trying to read
-        // in case a Wasm Node wants to emit remaining messages. We will return once the channel is
-        // closed.
-
-        let _ = runtime.wait_on_channels(&[Some(reader)]);
-
-        if let Some(message) = runtime.channel_read(reader)? {
-            match LogMessage::decode(&*message.data) {
-                Ok(msg) => info!(
-                    "{} LOG: {} {}:{}: {}",
-                    pretty_name,
-                    to_level_name(msg.level),
-                    msg.file,
-                    msg.line,
-                    msg.message
-                ),
-                Err(error) => error!("{} Could not parse LogMessage: {}", pretty_name, error),
-            }
-        }
+        Ok(thread_handle)
     }
 }
 

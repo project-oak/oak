@@ -14,7 +14,7 @@ if grep --ignore-case --quiet --regexp='^warning' <<< "$DOCS_OUT"; then
   exit 1
 fi
 
-# Check for any deadlinks in the generated docs. 
+# Check for any deadlinks in the generated docs.
 if ! cargo deadlinks --dir target/doc; then
   echo "Found deadlinks in the generated docs."
   exit 1

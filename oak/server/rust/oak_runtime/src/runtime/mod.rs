@@ -19,6 +19,7 @@ use std::{
     string::String,
     sync::{Arc, Mutex, RwLock},
     thread,
+    thread::JoinHandle,
 };
 
 use core::sync::atomic::{AtomicBool, AtomicU64, Ordering::SeqCst};
@@ -82,8 +83,10 @@ pub struct Runtime {
     /// Runtime-specific state for each Node instance.
     node_infos: RwLock<HashMap<NodeId, NodeInfo>>,
 
-    /// Currently running Node instances, so that [`Runtime::stop`] can terminate all of them.
-    node_instances: Mutex<HashMap<NodeId, Box<dyn crate::node::Node>>>,
+    /// [`JoinHandle`]s of the currently running Node instances, so that [`Runtime::stop`] can wait
+    /// for termination of all of them.
+    node_join_handles: Mutex<HashMap<NodeId, JoinHandle<()>>>,
+
     next_node_id: AtomicU64,
 }
 
@@ -96,7 +99,7 @@ impl Runtime {
             channels: channel::ChannelMapping::new(),
 
             node_infos: RwLock::new(HashMap::new()),
-            node_instances: Mutex::new(HashMap::new()),
+            node_join_handles: Mutex::new(HashMap::new()),
 
             // NodeId(0) reserved for RUNTIME_NODE_ID.
             next_node_id: AtomicU64::new(1),
@@ -176,13 +179,15 @@ impl Runtime {
         // for any additional work to be finished here. This may take an arbitrary amount of time,
         // depending on the work that the Node thread has to perform, but at least we know that the
         // it will not be able to enter again in a blocking state.
-        for instance in self
-            .node_instances
+        for (_, instance) in self
+            .node_join_handles
             .lock()
-            .expect("could not acquire lock on node_instances")
-            .values_mut()
+            .expect("could not acquire lock on node_join_handles")
+            .drain()
         {
-            instance.stop();
+            if let Err(err) = instance.join() {
+                error!("could not terminate node: {:?}", err);
+            }
         }
     }
 
@@ -729,7 +734,7 @@ impl Runtime {
                 let node_infos = self.node_infos.read().unwrap();
                 let node_info = node_infos
                     .get(&node_id)
-                    .expect("remove_node_id: No such node_id");
+                    .unwrap_or_else(|| panic!("remove_node_id: No such node_id {:?}", node_id));
                 node_info.handles.iter().copied().collect()
             };
 
@@ -760,13 +765,13 @@ impl Runtime {
             .insert(node_id, node_info);
     }
 
-    /// Add an [`NodeId`] [`crate::node::Node`] pair to the [`Runtime`]. This method temporarily
-    /// holds the [`Runtime::node_instances`] lock.
-    fn add_node_instance(&self, node_id: NodeId, node_instance: Box<dyn crate::node::Node>) {
-        self.node_instances
+    /// Add an [`NodeId`] [`JoinHandle`] pair to the [`Runtime`]. This method temporarily holds the
+    /// [`Runtime::node_join_handles`] lock.
+    fn add_node_join_handle(&self, node_id: NodeId, node_join_handle: JoinHandle<()>) {
+        self.node_join_handles
             .lock()
-            .expect("could not acquire lock on node_instances")
-            .insert(node_id, node_instance);
+            .expect("could not acquire lock on node_join_handles")
+            .insert(node_id, node_join_handle);
     }
 
     /// Thread safe method that attempts to create a Node within the [`Runtime`] corresponding to a
@@ -824,14 +829,14 @@ impl Runtime {
 
     /// Starts a newly created Node instance, by first initializing the necessary [`NodeInfo`] data
     /// structure in [`Runtime`], allowing it to access the provided [`Handle`]s, then calling
-    /// [`Node::start`] on the instance, and finally storing a reference to the running instance
-    /// in [`Runtime::node_instances`] so that it can later be terminated.
+    /// [`Node::start`] on the instance, and finally storing a [`JoinHandle`] from the running
+    /// instance in [`Runtime::node_join_handles`] so that it can later be terminated.
     ///
     /// [`Node::start`]: crate::node::Node::start
-    fn node_start_instance<I>(
+    pub fn node_start_instance<I>(
         &self,
         node_id: NodeId,
-        mut node_instance: Box<dyn crate::node::Node>,
+        node_instance: Box<dyn crate::node::Node>,
         label: &Label,
         initial_handles: I,
     ) -> Result<(), OakStatus>
@@ -853,8 +858,7 @@ impl Runtime {
         // the start.
         self.track_handles_in_node(node_id, initial_handles);
 
-        // Try to start the Node instance, and store the result in a temporary variable to be
-        // returned later.
+        // Try to start the Node instance, and store the join handle.
         //
         // In order for this to work correctly, the `NodeInfo` entry must already exist in
         // `Runtime`, which is why we could not start this instance before the call to
@@ -864,14 +868,14 @@ impl Runtime {
         // below, because that takes ownership of the instance itself.
         //
         // We also want no locks to be held while the instance is starting.
-        let result = node_instance.start();
+        let node_join_handle = node_instance.start()?;
 
         // Regardless of the result of `Node::start`, insert the now running instance to the list of
         // running instances (by moving it), so that `Node::stop` will be called on it eventually.
-        self.add_node_instance(node_id, node_instance);
+        self.add_node_join_handle(node_id, node_join_handle);
 
         // Return the result of `Node::start`.
-        result
+        Ok(())
     }
 
     pub fn new_runtime_proxy(self: Arc<Self>) -> RuntimeProxy {

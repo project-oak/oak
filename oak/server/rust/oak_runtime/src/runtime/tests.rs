@@ -36,10 +36,13 @@ fn run_node_body(node_label: Label, node_body: Box<NodeBody>) {
     };
 
     impl crate::node::Node for TestNode {
-        fn start(&mut self) -> Result<(), OakStatus> {
-            (self.node_body)(&self.runtime)
+        fn start(self: Box<Self>) -> Result<JoinHandle<()>, OakStatus> {
+            // Execute the `node_body` immediately, so that any errors may be returned to the test
+            // function.
+            (self.node_body)(&self.runtime)?;
+            // Spawn a no-op background thread and return its handle.
+            Ok(thread::spawn(|| {}))
         }
-        fn stop(&mut self) {}
     }
 
     // Manually allocate a new [`NodeId`].

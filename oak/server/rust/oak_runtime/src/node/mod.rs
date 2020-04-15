@@ -18,6 +18,7 @@ use std::{
     net::{AddrParseError, SocketAddr},
     string::String,
     sync::Arc,
+    thread::JoinHandle,
 };
 
 use oak_abi::OakStatus;
@@ -32,24 +33,16 @@ mod wasm;
 /// A trait implemented by every Node and pseudo-Node.
 ///
 /// Nodes must not do any work until the [`Node::start`] method is invoked.
-pub trait Node: Send + Sync {
+pub trait Node {
     /// Starts executing the Node.
     ///
     /// This method will be invoked in a blocking fashion by the [`Runtime`], therefore Node
-    /// implementations should make sure that they create separate background threads to execute
-    /// actual work, and wait on them to terminate when [`Node::stop`] is called.
+    /// implementations should make sure that they create a separate background worker thread to
+    /// execute actual work, and return its [`JoinHandle`] as soon as possible. The worker thread
+    /// may in turn create additional sub-threads if necessary.
     ///
     /// [`Runtime`]: crate::runtime::Runtime
-    fn start(&mut self) -> Result<(), OakStatus>;
-
-    /// Stops executing the Node.
-    ///
-    /// This method may block while the Node terminates any outstanding work, but the Node
-    /// implementation must guarantee that it eventually returns.
-    ///
-    /// Internally, a Node may implement this by first attempting to gracefully terminate, and then
-    /// if that fails, continue trying with increasing level of aggressiveness.
-    fn stop(&mut self);
+    fn start(self: Box<Self>) -> Result<JoinHandle<()>, OakStatus>;
 }
 
 /// A `Configuration` corresponds to an entry from a `ApplicationConfiguration`. It is the

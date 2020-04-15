@@ -47,8 +47,6 @@ pub struct GrpcServerNode {
     initial_reader: Handle,
     /// Channel handle used for writing invocations.
     channel_writer: Option<Handle>,
-    /// Thread handle that corresponds to a thread running a gRPC server pseudo-Node.
-    thread_handle: Option<JoinHandle<()>>,
 }
 
 #[derive(Debug)]
@@ -77,7 +75,6 @@ impl Clone for GrpcServerNode {
             address: self.address,
             initial_reader: self.initial_reader,
             channel_writer: self.channel_writer,
-            thread_handle: None,
         }
     }
 }
@@ -106,7 +103,6 @@ impl GrpcServerNode {
             address,
             initial_reader,
             channel_writer: None,
-            thread_handle: None,
         }
     }
 
@@ -290,59 +286,50 @@ impl GrpcServerNode {
             Err(GrpcServerError::ResponseProcessingError)
         }
     }
+
+    /// Main node worker thread.
+    fn worker_thread(self) {
+        let pretty_name = pretty_name_for_thread(&thread::current());
+
+        // Receive a `writer` handle used to pass handles for temporary channels.
+        self.init_channel_writer()
+            .expect("Couldn't initialialize node writer");
+
+        // Initialize a function that creates a separate instance on the `server` for each
+        // HTTP request.
+        //
+        // TODO(#813): Remove multiple `clone` calls by either introducing `Arc<Mutex<T>>`
+        // or not using Hyper (move to more simple single-threaded server).
+        let generator_server = self.clone();
+        let service = hyper::service::make_service_fn(move |_| {
+            let connection_server = generator_server.clone();
+            async move {
+                Ok::<_, hyper::Error>(hyper::service::service_fn(move |req| {
+                    let request_server = connection_server.clone();
+                    async move { request_server.serve(req).await }
+                }))
+            }
+        });
+
+        // Start the HTTP server.
+        let mut tokio_runtime =
+            tokio::runtime::Runtime::new().expect("Couldn't create Tokio runtime");
+        let result = tokio_runtime.block_on(hyper::Server::bind(&self.address).serve(service));
+        info!(
+            "{} LOG: exiting gRPC server node thread {:?}",
+            pretty_name, result
+        );
+        self.runtime.exit_node();
+    }
 }
 
 /// Oak Node implementation for the gRPC server.
 impl super::Node for GrpcServerNode {
-    fn start(&mut self) -> Result<(), OakStatus> {
-        let server = self.clone();
+    fn start(self: Box<Self>) -> Result<JoinHandle<()>, OakStatus> {
         let thread_handle = thread::Builder::new()
             .name(self.to_string())
-            .spawn(move || {
-                let pretty_name = pretty_name_for_thread(&thread::current());
-
-                // Receive a `writer` handle used to pass handles for temporary channels.
-                server
-                    .init_channel_writer()
-                    .expect("Couldn't initialialize node writer");
-
-                // Initialize a function that creates a separate instance on the `server` for each
-                // HTTP request.
-                //
-                // TODO(#813): Remove multiple `clone` calls by either introducing `Arc<Mutex<T>>`
-                // or not using Hyper (move to more simple single-threaded server).
-                let generator_server = server.clone();
-                let service = hyper::service::make_service_fn(move |_| {
-                    let connection_server = generator_server.clone();
-                    async move {
-                        Ok::<_, hyper::Error>(hyper::service::service_fn(move |req| {
-                            let request_server = connection_server.clone();
-                            async move { request_server.serve(req).await }
-                        }))
-                    }
-                });
-
-                // Start the HTTP server.
-                let mut tokio_runtime =
-                    tokio::runtime::Runtime::new().expect("Couldn't create Tokio runtime");
-                let result =
-                    tokio_runtime.block_on(hyper::Server::bind(&server.address).serve(service));
-                info!(
-                    "{} LOG: exiting gRPC server node thread {:?}",
-                    pretty_name, result
-                );
-                server.runtime.exit_node();
-            })
+            .spawn(move || self.worker_thread())
             .expect("Failed to spawn thread");
-        self.thread_handle = Some(thread_handle);
-        Ok(())
-    }
-
-    fn stop(&mut self) {
-        if let Some(join_handle) = self.thread_handle.take() {
-            if let Err(err) = join_handle.join() {
-                error!("Error while stopping gRPC server node: {:?}", err);
-            }
-        }
+        Ok(thread_handle)
     }
 }
