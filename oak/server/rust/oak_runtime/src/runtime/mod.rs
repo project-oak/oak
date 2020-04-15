@@ -25,7 +25,7 @@ use core::sync::atomic::{AtomicBool, AtomicU64, Ordering::SeqCst};
 
 use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
 
-use log::{debug, error};
+use log::{debug, error, info};
 
 use crate::{message::Message, node, pretty_name_for_thread};
 
@@ -144,6 +144,8 @@ impl Runtime {
     /// Thread safe method for signaling termination to a [`Runtime`] and waiting for its Node
     /// threads to terminate.
     pub fn stop(&self) {
+        info!("stopping runtime instance");
+
         // Set the terminating flag; this will prevent additional Nodes from starting to wait again,
         // because `wait_on_channels` will return immediately with `OakStatus::ErrTerminated`.
         self.terminating.store(true, SeqCst);
@@ -876,6 +878,12 @@ impl Runtime {
             runtime: self.clone(),
             node_id: self.new_node_id(),
         }
+    }
+}
+
+impl Drop for Runtime {
+    fn drop(&mut self) {
+        self.stop();
     }
 }
 
