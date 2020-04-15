@@ -29,7 +29,7 @@ use proto::{
     OakAbiTestServiceClient, OakAbiTestServiceDispatcher,
 };
 use rand::Rng;
-use std::collections::HashMap;
+use std::{collections::HashMap, convert::TryInto};
 
 const BACKEND_COUNT: usize = 3;
 
@@ -45,6 +45,8 @@ struct FrontendNode {
     storage_name: Vec<u8>,
     grpc_service: Option<OakAbiTestServiceClient>,
     absent_grpc_service: Option<OakAbiTestServiceClient>,
+    roughtime: Option<oak::roughtime::Roughtime>,
+    misconfigured_roughtime: Option<oak::roughtime::Roughtime>,
 }
 
 impl FrontendNode {
@@ -89,6 +91,8 @@ impl FrontendNode {
                 .map(OakAbiTestServiceClient),
             absent_grpc_service: oak::grpc::client::Client::new("absent-grpc-client", "ignored")
                 .map(OakAbiTestServiceClient),
+            roughtime: oak::roughtime::Roughtime::new("roughtime-client"),
+            misconfigured_roughtime: oak::roughtime::Roughtime::new("roughtime-misconfig"),
         }
     }
 }
@@ -163,6 +167,11 @@ impl OakAbiTestService for FrontendNode {
             FrontendNode::test_grpc_client_server_streaming_method,
         );
         tests.insert("AbsentGrpcClient", FrontendNode::test_absent_grpc_client);
+        tests.insert("RoughtimeClient", FrontendNode::test_roughtime_client);
+        tests.insert(
+            "MisconfiguredRoughtimeClient",
+            FrontendNode::test_roughtime_client_misconfig,
+        );
 
         for (&name, &testfn) in &tests {
             if !include.is_match(name) {
@@ -1496,6 +1505,50 @@ impl FrontendNode {
         }
         receiver.close().expect("failed to close receiver");
 
+        Ok(())
+    }
+
+    fn test_roughtime_client(&mut self) -> TestResult {
+        let roughtime = self.roughtime.as_mut().ok_or_else(|| {
+            Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "no Roughtime channel available",
+            ))
+        })?;
+
+        let mut times: [std::time::Duration; 2] = [std::time::Duration::from_millis(0); 2];
+        for (i, time) in times.iter_mut().enumerate() {
+            let result = roughtime.get_roughtime();
+            expect_matches!(result, Ok(_));
+            *time = result.unwrap();
+
+            // Use chrono library to convert to wall clock datetime.
+            let dt = chrono::DateTime::<chrono::Utc>::from_utc(
+                chrono::NaiveDateTime::from_timestamp(
+                    time.as_secs().try_into().unwrap(),
+                    time.subsec_nanos(),
+                ),
+                chrono::Utc,
+            );
+            info!("Roughtime[{}] is {}", i, dt);
+        }
+
+        expect!(times[0] <= times[1]);
+        Ok(())
+    }
+    fn test_roughtime_client_misconfig(&mut self) -> TestResult {
+        let roughtime = self.misconfigured_roughtime.as_mut().ok_or_else(|| {
+            Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "no Roughtime channel available",
+            ))
+        })?;
+
+        // This Roughtime pseudo-Node has been configured to require more
+        // overlapping intervals than there are servers available, so will
+        // always fail to get the time.
+        let result = roughtime.get_roughtime();
+        expect_matches!(result, Err(_));
         Ok(())
     }
 }

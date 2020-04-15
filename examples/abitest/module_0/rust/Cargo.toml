@@ -10,6 +10,7 @@ crate-type = ["cdylib", "lib"]
 [dependencies]
 abitest_common = { path = "../../abitest_common" }
 byteorder = "*"
+chrono = "*"
 expect = { path = "../../../../third_party/expect" }
 hex = "*"
 log = "*"

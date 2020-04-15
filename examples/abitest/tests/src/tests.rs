@@ -55,9 +55,10 @@ fn test_abi() {
     let (runtime, entry_channel) = oak_runtime::configure_and_run(configuration)
         .expect("unable to configure runtime with test wasm");
 
-    // TODO(#540): reinstate storage and gRPC client tests when Rust runtime supports them.
+    // TODO(#540): reinstate storage, gRPC client and Roughtime tests when Rust
+    // runtime supports them.
     let mut req = AbiTestRequest::default();
-    req.exclude = "(Storage|GrpcClient)".to_string();
+    req.exclude = "(Storage|GrpcClient|Roughtime)".to_string();
 
     let result: grpc::Result<AbiTestResponse> = oak_tests::grpc_request(
         &runtime,
