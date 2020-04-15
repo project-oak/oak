@@ -24,7 +24,7 @@
 
 namespace oak {
 
-// Represents a roughtime interval as the minimum and maximum number of microseconds relative to the
+// Represents a Roughtime interval as the minimum and maximum number of microseconds relative to the
 // Unix epoch. The minimum and maximum points of the interval are both inclusive.
 struct RoughtimeInterval {
   roughtime::rough_time_t min;
