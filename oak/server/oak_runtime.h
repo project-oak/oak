@@ -59,6 +59,8 @@ class OakRuntime {
   std::map<std::string, std::unique_ptr<std::string>> storage_config_;
   // Config names that refer to a gRPC client node.
   std::map<std::string, std::unique_ptr<std::string>> grpc_client_config_;
+  // Config names that refer to a Roughtime client node.
+  std::map<std::string, std::unique_ptr<RoughtimeClientConfiguration>> roughtime_client_config_;
 
   // gRPC pseudo-node.
   std::unique_ptr<OakGrpcNode> grpc_node_;

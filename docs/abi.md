@@ -210,3 +210,4 @@ defined to take the form of serialized protocol buffer messages. These include:
 
 - [Structured logging messages](../oak/proto/log.proto).
 - [Encapsulated gRPC requests and responses](../oak/proto/grpc_encap.proto).
+- [Roughtime messages](../oak/proto/roughtime_service.proto).

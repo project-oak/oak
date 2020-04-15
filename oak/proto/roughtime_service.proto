@@ -1,0 +1,36 @@
+//
+// Copyright 2020 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package oak.roughtime;
+
+message RoughTimeRequest {
+}
+
+message RoughTimeResponse {
+  // Time is UTC and is given as microseconds since the UNIX epoch (00:00:00 UTC
+  // on 1 January 1970). Leap seconds are linearly smeared over a 24-hour
+  // period. That is, the smear extends from UTC noon to noon over 86,401 or
+  // 86,399 SI seconds, and all the smeared seconds are the same length.
+  uint64 rough_time_usec = 1;
+}
+
+// Interface exposed by the Roughtime client pseudo-Node to other nodes over a
+// pair of Oak Channels.
+service RoughtimeService {
+  rpc GetRoughTime(RoughTimeRequest) returns (RoughTimeResponse);
+}
