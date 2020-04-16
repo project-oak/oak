@@ -50,8 +50,7 @@ message StorageWriteRequest {
   bytes item_value = 4;
 }
 
-message StorageWriteResponse {
-}
+message StorageWriteResponse {}
 
 message StorageDeleteRequest {
   bytes storage_id = 1;
@@ -59,8 +58,7 @@ message StorageDeleteRequest {
   bytes item_name = 3;
 }
 
-message StorageDeleteResponse {
-}
+message StorageDeleteResponse {}
 
 message StorageBeginRequest {
   bytes storage_id = 1;
@@ -75,13 +73,11 @@ message StorageCommitRequest {
   bytes transaction_id = 2;
 }
 
-message StorageCommitResponse {
-}
+message StorageCommitResponse {}
 
 message StorageRollbackRequest {
   bytes storage_id = 1;
   bytes transaction_id = 2;
 }
 
-message StorageRollbackResponse {
-}
+message StorageRollbackResponse {}
