@@ -47,8 +47,7 @@ message StorageChannelWriteRequest {
   StorageItem item = 3;
 }
 
-message StorageChannelWriteResponse {
-}
+message StorageChannelWriteResponse {}
 
 message StorageChannelDeleteRequest {
   bytes storage_name = 1;
@@ -56,8 +55,7 @@ message StorageChannelDeleteRequest {
   StorageItem item = 3;
 }
 
-message StorageChannelDeleteResponse {
-}
+message StorageChannelDeleteResponse {}
 
 message StorageChannelBeginRequest {
   bytes storage_name = 1;
@@ -72,8 +70,7 @@ message StorageChannelCommitRequest {
   bytes transaction_id = 2;
 }
 
-message StorageChannelCommitResponse {
-}
+message StorageChannelCommitResponse {}
 
 message StorageChannelRollbackRequest {
   bytes storage_name = 1;
@@ -81,8 +78,7 @@ message StorageChannelRollbackRequest {
   bytes transaction_id = 3;
 }
 
-message StorageChannelRollbackResponse {
-}
+message StorageChannelRollbackResponse {}
 
 // Interface exposed by the Storage Node to other nodes over a pair of Oak Channels.
 // Methods in this interface map 1:1 with those in storage.proto.

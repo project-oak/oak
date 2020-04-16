@@ -24,6 +24,11 @@ RUN apt-get --yes update && \
   wget \
   xml2
 
+# Use a later version of clang-format from buster-backports.
+RUN echo 'deb http://deb.debian.org/debian buster-backports main' > /etc/apt/sources.list.d/backports.list
+RUN apt-get --yes update && apt-get install --no-install-recommends --yes clang-format-8
+RUN ln -s -f clang-format-8 /usr/bin/clang-format
+
 # Use a fixed version of Bazel.
 ARG bazel_version=1.2.1
 ARG bazel_sha=4bbb2718d451db5922223fda3aed3810c4ca50f431481e86a7fec4c585f18b1f

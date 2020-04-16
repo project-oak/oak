@@ -63,8 +63,7 @@ message WebAssemblyConfiguration {
 
 // LogConfiguration describes the configuration of a logging pseudo-Node (which
 // is provided by the Oak Runtime).
-message LogConfiguration {
-}
+message LogConfiguration {}
 
 // StorageProxyConfiguration describes the configuration of a storage proxy
 // pseudo-Node (which is provided by the Oak Runtime), connected to a specific

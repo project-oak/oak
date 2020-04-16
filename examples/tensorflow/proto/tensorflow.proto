@@ -18,8 +18,7 @@ syntax = "proto3";
 
 package oak.examples.tensorflow;
 
-message InitRequest {
-}
+message InitRequest {}
 
 message InitResponse {
   string status = 1;
