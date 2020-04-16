@@ -58,7 +58,6 @@ const std::vector<RoughtimeServerSpec> kDefaultServers{
      "etPaaIxcBMY1oUeGpwvPMCJMwlRVNxv51KK/tktoJTQ="},
     {"Cloudflare", "roughtime.cloudflare.com", 2002,
      "gD63hSj3ScS+wuOeGrubXlq35N1c5Lby/S+T7MNTjxo="},
-    {"int08h", "roughtime.int08h.com", 200, "AW5uAoTSTDfG5NfY1bTh08GUnOqlRb+HVhbJ3ODJvsE="},
     {"mixmin", "ticktock.mixmin.net", 5333, "cj8GsiNlRkqiDElAeNMSBBMwrAl15hYPgX50+GWX/lA="}};
 
 const int kDefaultMinOverlappingIntervals = 3;
