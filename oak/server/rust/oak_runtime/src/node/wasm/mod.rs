@@ -29,7 +29,7 @@ use byteorder::{ByteOrder, LittleEndian};
 use rand::RngCore;
 use wasmi::ValueType;
 
-use oak_abi::{ChannelReadStatus, OakStatus};
+use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
 
 use crate::{
     pretty_name_for_thread,
@@ -119,7 +119,8 @@ impl WasmInterface {
             .expect("WasmInterface memory not attached!?")
     }
 
-    /// Make sure a given address range falls within the currently allocated range of memory.
+    /// Validates whether a given address range falls within the currently allocated range of guest
+    /// memory.
     fn validate_ptr(&self, addr: AbiPointer, offset: AbiPointerOffset) -> Result<(), OakStatus> {
         let byte_size: wasmi::memory_units::Bytes = self.get_memory().current_size().into();
 
@@ -147,17 +148,20 @@ impl WasmInterface {
         (interface, handle)
     }
 
-    /// Corresponds to the host ABI function `node_create: (usize, usize, usize, usize, u64) ->
-    /// u32`.
+    /// Corresponds to the host ABI function [`node_create: (usize, usize, usize, usize,
+    /// u64) -> u32`](oak_abi::node_create).
+    #[allow(clippy::too_many_arguments)]
     fn node_create(
         &self,
         name_ptr: AbiPointer,
         name_length: AbiPointerOffset,
         entrypoint_ptr: AbiPointer,
         entrypoint_length: AbiPointerOffset,
+        label_ptr: AbiPointer,
+        label_length: AbiPointerOffset,
         initial_handle: AbiHandle,
     ) -> Result<(), OakStatus> {
-        let config_name = self
+        let config_name_bytes = self
             .get_memory()
             .get(name_ptr, name_length as usize)
             .map_err(|err| {
@@ -167,18 +171,16 @@ impl WasmInterface {
                 );
                 OakStatus::ErrInvalidArgs
             })?;
-
-        let config_name = String::from_utf8(config_name).map_err(|err| {
+        let config_name = String::from_utf8(config_name_bytes).map_err(|err| {
             error!("node_create: Unable to parse config_name: {:?}", err);
             OakStatus::ErrInvalidArgs
         })?;
-
         debug!(
             "{} node_create config_name is: {}",
             self.pretty_name, config_name
         );
 
-        let entrypoint = self
+        let entrypoint_bytes = self
             .get_memory()
             .get(entrypoint_ptr, entrypoint_length as usize)
             .map_err(|err| {
@@ -188,16 +190,30 @@ impl WasmInterface {
                 );
                 OakStatus::ErrInvalidArgs
             })?;
-
-        let entrypoint = String::from_utf8(entrypoint).map_err(|err| {
+        let entrypoint = String::from_utf8(entrypoint_bytes).map_err(|err| {
             error!("node_create: Unable to parse entrypoint: {:?}", err);
             OakStatus::ErrInvalidArgs
         })?;
-
         debug!(
             "{} node_create entrypoint is: {}",
             self.pretty_name, entrypoint
         );
+
+        let label_bytes = self
+            .get_memory()
+            .get(label_ptr, label_length as usize)
+            .map_err(|err| {
+                error!(
+                    "node_create: Unable to read label from guest memory: {:?}",
+                    err
+                );
+                OakStatus::ErrInvalidArgs
+            })?;
+        let label = Label::deserialize(&label_bytes).ok_or_else(|| {
+            error!("node_create: could not deserialize label");
+            OakStatus::ErrInvalidArgs
+        })?;
+        debug!("{} node_create label is: {:?}", self.pretty_name, label);
 
         let channel_ref = self.readers.get(&initial_handle).ok_or(()).map_err(|_| {
             error!("node_create: Invalid handle");
@@ -206,13 +222,7 @@ impl WasmInterface {
 
         self.runtime
             .clone()
-            .node_create(
-                &config_name,
-                &entrypoint,
-                // TODO(#630): Let caller provide this label via the Wasm ABI.
-                &oak_abi::label::Label::public_trusted(),
-                channel_ref.clone(),
-            )
+            .node_create(&config_name, &entrypoint, &label, channel_ref.clone())
             .map_err(|_| {
                 error!(
                     "node_create: Config \"{}\" entrypoint \"{}\" not found",
@@ -222,7 +232,8 @@ impl WasmInterface {
             })
     }
 
-    /// Corresponds to the host ABI function `channel_create: (usize, usize) -> u32`.
+    /// Corresponds to the host ABI function [`channel_create: (usize, usize) ->
+    /// u32`](oak_abi::channel_create).
     fn channel_create(
         &mut self,
         write_addr: AbiPointer,
@@ -231,7 +242,7 @@ impl WasmInterface {
         let (writer, reader) = self
             .runtime
             // TODO(#630): Let caller provide this label via the Wasm ABI.
-            .channel_create(&oak_abi::label::Label::public_trusted());
+            .channel_create(&Label::public_trusted());
 
         self.validate_ptr(write_addr, 8)?;
         self.validate_ptr(read_addr, 8)?;
@@ -260,8 +271,8 @@ impl WasmInterface {
             })
     }
 
-    /// Corresponds to the host ABI function `channel_write: (u64, usize, usize, usize, u32) ->
-    /// u32`
+    /// Corresponds to the host ABI function [`channel_write: (u64, usize, usize, usize, u32) ->
+    /// u32`](oak_abi::channel_write).
     fn channel_write(
         &self,
         writer_handle: AbiHandle,
@@ -326,9 +337,9 @@ impl WasmInterface {
         Ok(())
     }
 
+    /// Corresponds to the host ABI function [`channel_read: (u64, usize, usize, usize, usize, u32,
+    /// usize) -> u32`](oak_abi::channel_read).
     #[allow(clippy::too_many_arguments)]
-    /// Corresponds to the host ABI function `channel_read: (u64, usize, usize, usize, usize, u32,
-    /// usize) -> u32`
     fn channel_read(
         &mut self,
         reader_handle: AbiHandle,
@@ -424,7 +435,8 @@ impl WasmInterface {
         }
     }
 
-    /// Corresponds to the host ABI function `random_get: (usize, usize) -> u32`
+    /// Corresponds to the host ABI function [`random_get: (usize, usize) ->
+    /// u32`](oak_abi::random_get).
     fn random_get(&self, dest: AbiPointer, dest_length: AbiPointerOffset) -> Result<(), OakStatus> {
         self.validate_ptr(dest, dest_length)?;
 
@@ -438,7 +450,8 @@ impl WasmInterface {
         Ok(())
     }
 
-    /// Corresponds to the host ABI function `wait_on_channels: (usize, u32) -> u32`
+    /// Corresponds to the host ABI function [`wait_on_channels: (usize, u32) ->
+    /// u32`](oak_abi::wait_on_channels).
     fn wait_on_channels(
         &mut self,
         status_buff: AbiPointer,
@@ -523,7 +536,9 @@ impl wasmi::Externals for WasmInterface {
                 let name_length: u32 = args.nth_checked(1)?;
                 let entrypoint_ptr: u32 = args.nth_checked(2)?;
                 let entrypoint_length: u32 = args.nth_checked(3)?;
-                let initial_handle: u64 = args.nth_checked(4)?;
+                let label_ptr: u32 = args.nth_checked(4)?;
+                let label_length: u32 = args.nth_checked(5)?;
+                let initial_handle: u64 = args.nth_checked(6)?;
 
                 debug!(
                     "{} node_create: {} {} {} {} {}",
@@ -547,6 +562,8 @@ impl wasmi::Externals for WasmInterface {
                     name_length,
                     entrypoint_ptr,
                     entrypoint_length,
+                    label_ptr,
+                    label_length,
                     initial_handle,
                 ))
             }
@@ -684,13 +701,23 @@ impl wasmi::ModuleImportResolver for WasmInterface {
         field_name: &str,
         signature: &wasmi::Signature,
     ) -> Result<wasmi::FuncRef, wasmi::Error> {
+        // The comments alongside the types in the signatures correspond to the parameter names from
+        // /oak/server/rust/oak_abi/src/lib.rs
         let (index, sig) = match field_name {
             //
-            // - 0: node_create: (usize, usize, usize, usize, u64) -> u32
+            // - 0: node_create: (usize, usize, usize, usize, usize, usize, u64) -> u32
             "node_create" => (
                 NODE_CREATE,
                 wasmi::Signature::new(
-                    &[ABI_USIZE, ABI_USIZE, ABI_USIZE, ABI_USIZE, ABI_U64][..],
+                    &[
+                        ABI_USIZE, // config_buf
+                        ABI_USIZE, // config_len
+                        ABI_USIZE, // entrypoint_buf
+                        ABI_USIZE, // entrypoint_len
+                        ABI_USIZE, // label_buf
+                        ABI_USIZE, // label_len
+                        ABI_U64,   // handle
+                    ][..],
                     Some(ABI_U32),
                 ),
             ),
@@ -698,26 +725,49 @@ impl wasmi::ModuleImportResolver for WasmInterface {
             // - 1: random_get: (usize, usize) -> u32
             "random_get" => (
                 RANDOM_GET,
-                wasmi::Signature::new(&[ABI_USIZE, ABI_USIZE][..], Some(ABI_U32)),
+                wasmi::Signature::new(
+                    &[
+                        ABI_USIZE, // buf
+                        ABI_USIZE, // len
+                    ][..],
+                    Some(ABI_U32),
+                ),
             ),
             //
             // - 2: channel_close: (u64) -> u32
             "channel_close" => (
                 CHANNEL_CLOSE,
-                wasmi::Signature::new(&[ABI_U64][..], Some(ABI_U32)),
+                wasmi::Signature::new(
+                    &[
+                        ABI_U64, // handle
+                    ][..],
+                    Some(ABI_U32),
+                ),
             ),
             //
             // - 3: channel_create: (usize, usize) -> u32
             "channel_create" => (
                 CHANNEL_CREATE,
-                wasmi::Signature::new(&[ABI_USIZE, ABI_USIZE][..], Some(ABI_U32)),
+                wasmi::Signature::new(
+                    &[
+                        ABI_USIZE, // write
+                        ABI_USIZE, // read
+                    ][..],
+                    Some(ABI_U32),
+                ),
             ),
             //
             // - 4: channel_write: (u64, usize, usize, usize, u32) -> u32
             "channel_write" => (
                 CHANNEL_WRITE,
                 wasmi::Signature::new(
-                    &[ABI_U64, ABI_USIZE, ABI_USIZE, ABI_USIZE, ABI_U32][..],
+                    &[
+                        ABI_U64,   // handle
+                        ABI_USIZE, // buf
+                        ABI_USIZE, // size
+                        ABI_USIZE, // handle_buf
+                        ABI_U32,   // handle_count
+                    ][..],
                     Some(ABI_U32),
                 ),
             ),
@@ -727,7 +777,13 @@ impl wasmi::ModuleImportResolver for WasmInterface {
                 CHANNEL_READ,
                 wasmi::Signature::new(
                     &[
-                        ABI_U64, ABI_USIZE, ABI_USIZE, ABI_USIZE, ABI_USIZE, ABI_U32, ABI_USIZE,
+                        ABI_U64,   // handle
+                        ABI_USIZE, // buf
+                        ABI_USIZE, // size
+                        ABI_USIZE, // actual_size
+                        ABI_USIZE, // handle_buf
+                        ABI_U32,   // handle_count
+                        ABI_USIZE, // actual_handle_count
                     ][..],
                     Some(ABI_U32),
                 ),
@@ -736,7 +792,13 @@ impl wasmi::ModuleImportResolver for WasmInterface {
             // - 6: wait_on_channels: (usize, u32) -> u32
             "wait_on_channels" => (
                 WAIT_ON_CHANNELS,
-                wasmi::Signature::new(&[ABI_USIZE, ABI_U32][..], Some(ABI_U32)),
+                wasmi::Signature::new(
+                    &[
+                        ABI_USIZE, // buf
+                        ABI_U32,   // count
+                    ][..],
+                    Some(ABI_U32),
+                ),
             ),
             _ => {
                 return Err(wasmi::Error::Instantiation(format!(

@@ -23,6 +23,7 @@ use byteorder::WriteBytesExt;
 use expect::{expect, expect_eq, expect_matches};
 use log::{debug, info};
 use oak::{grpc, ChannelReadStatus, OakError, OakStatus};
+use oak_abi::label::Label;
 use prost::Message;
 use proto::{
     AbiTestRequest, AbiTestResponse, GrpcTestRequest, GrpcTestResponse, OakAbiTestService,
@@ -1000,14 +1001,50 @@ impl FrontendNode {
 
         let valid = "a_string";
         let non_utf8_name: Vec<u8> = vec![0xc3, 0x28];
+        let valid_label_bytes = Label::public_trusted().serialize();
+
+        // This sequence of bytes should not deserialize as a [`oak_abi::proto::policy::Label`]
+        // protobuf. We make sure here that this continues to be the case by making sure that
+        // [`Label::deserialize`] fails to parse these bytes.
+        let invalid_label_bytes = vec![0, 88, 0];
+        assert_eq!(None, Label::deserialize(&invalid_label_bytes));
+
         unsafe {
             expect_eq!(
+                OakStatus::Ok as u32,
+                oak_abi::node_create(
+                    BACKEND_CONFIG_NAME.as_ptr(),
+                    BACKEND_CONFIG_NAME.len(),
+                    BACKEND_ENTRYPOINT_NAME.as_ptr(),
+                    BACKEND_ENTRYPOINT_NAME.len(),
+                    valid_label_bytes.as_ptr(),
+                    valid_label_bytes.len(),
+                    in_channel
+                )
+            );
+
+            expect_eq!(
+                OakStatus::ErrInvalidArgs as u32,
+                oak_abi::node_create(
+                    BACKEND_CONFIG_NAME.as_ptr(),
+                    BACKEND_CONFIG_NAME.len(),
+                    BACKEND_ENTRYPOINT_NAME.as_ptr(),
+                    BACKEND_ENTRYPOINT_NAME.len(),
+                    invalid_label_bytes.as_ptr(),
+                    invalid_label_bytes.len(),
+                    in_channel
+                )
+            );
+
+            expect_eq!(
                 OakStatus::ErrInvalidArgs as u32,
                 oak_abi::node_create(
                     invalid_raw_offset() as *mut u8,
                     1,
                     valid.as_ptr(),
                     valid.len(),
+                    valid_label_bytes.as_ptr(),
+                    valid_label_bytes.len(),
                     in_channel
                 )
             );
@@ -1019,6 +1056,8 @@ impl FrontendNode {
                     non_utf8_name.len(),
                     valid.as_ptr(),
                     valid.len(),
+                    valid_label_bytes.as_ptr(),
+                    valid_label_bytes.len(),
                     in_channel
                 )
             );
@@ -1030,6 +1069,8 @@ impl FrontendNode {
                     valid.len(),
                     invalid_raw_offset() as *mut u8,
                     1,
+                    valid_label_bytes.as_ptr(),
+                    valid_label_bytes.len(),
                     in_channel
                 )
             );
@@ -1041,6 +1082,8 @@ impl FrontendNode {
                     valid.len(),
                     non_utf8_name.as_ptr(),
                     non_utf8_name.len(),
+                    valid_label_bytes.as_ptr(),
+                    valid_label_bytes.len(),
                     in_channel
                 )
             );

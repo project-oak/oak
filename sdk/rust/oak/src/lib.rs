@@ -19,7 +19,7 @@ use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
 
 // Re-export ABI constants that are also visible as part of the SDK API.
-pub use oak_abi::{ChannelReadStatus, OakStatus};
+pub use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
 
 mod error;
 pub use error::OakError;
@@ -336,21 +336,38 @@ pub fn channel_close(handle: Handle) -> Result<(), OakStatus> {
     result_from_status(status as i32, ())
 }
 
-/// Create a new Node running the configuration identified by `config_name`,
-/// running the entrypoint identified by `entrypoint_name` (for a Web Assembly
-/// Node; this parameter is ignored when creating a pseudo-Node), passing it the
-/// given handle.
+/// Similar to [`node_create_with_label`], but with a fixed label corresponding to "public trusted".
 pub fn node_create(
     config_name: &str,
     entrypoint_name: &str,
     half: ReadHandle,
 ) -> Result<(), OakStatus> {
+    node_create_with_label(config_name, entrypoint_name, &Label::public_trusted(), half)
+}
+
+/// Creates a new Node running the configuration identified by `config_name`, running the entrypoint
+/// identified by `entrypoint_name` (for a Web Assembly Node; this parameter is ignored when
+/// creating a pseudo-Node), with the provided `label`, and passing it the given handle.
+///
+/// The provided label must be equal or more restrictive than the label of the calling node, i.e.
+/// the label of the calling node must "flow to" the provided label.
+///
+/// See https://github.com/project-oak/oak/blob/master/docs/concepts.md#labels
+pub fn node_create_with_label(
+    config_name: &str,
+    entrypoint_name: &str,
+    label: &Label,
+    half: ReadHandle,
+) -> Result<(), OakStatus> {
+    let label_bytes = label.serialize();
     let status = unsafe {
         oak_abi::node_create(
             config_name.as_ptr(),
             config_name.len(),
             entrypoint_name.as_ptr(),
             entrypoint_name.len(),
+            label_bytes.as_ptr(),
+            label_bytes.len(),
             half.handle.id,
         )
     };
