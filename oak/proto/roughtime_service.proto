@@ -18,8 +18,7 @@ syntax = "proto3";
 
 package oak.roughtime;
 
-message RoughTimeRequest {
-}
+message RoughTimeRequest {}
 
 message RoughTimeResponse {
   // Time is UTC and is given as microseconds since the UNIX epoch (00:00:00 UTC

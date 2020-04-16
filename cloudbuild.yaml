@@ -127,14 +127,14 @@ steps:
 
   - name: 'gcr.io/oak-ci/oak:latest'
     id: check_formatting
-    waitFor: ['bazel_init']
+    waitFor: ['git_check_diff', 'build_android_image']
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/check_formatting']
 
   - name: 'gcr.io/oak-ci/oak:latest'
     id: check_docs
-    waitFor: ['bazel_init']
+    waitFor: ['check_formatting']
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/check_docs']
