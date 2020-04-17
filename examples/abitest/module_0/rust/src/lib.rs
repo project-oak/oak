@@ -21,7 +21,7 @@ pub mod proto {
 use abitest_common::{InternalMessage, LOG_CONFIG_NAME};
 use byteorder::WriteBytesExt;
 use expect::{expect, expect_eq, expect_matches};
-use log::{debug, info};
+use log::{debug, error, info, trace, warn};
 use oak::{grpc, ChannelReadStatus, OakError, OakStatus};
 use oak_abi::label::Label;
 use prost::Message;
@@ -155,6 +155,7 @@ impl OakAbiTestService for FrontendNode {
             "ChannelHandleReuse",
             FrontendNode::test_channel_handle_reuse,
         );
+        tests.insert("Log", FrontendNode::test_log);
         tests.insert("DirectLog", FrontendNode::test_direct_log);
         tests.insert("BackendRoundtrip", FrontendNode::test_backend_roundtrip);
         tests.insert("Storage", FrontendNode::test_storage);
@@ -1213,6 +1214,16 @@ impl FrontendNode {
 
         expect_eq!(Ok(()), oak::channel_close(out_handle.handle));
         expect_eq!(Ok(()), oak::channel_close(in_handle.handle));
+        Ok(())
+    }
+
+    fn test_log(&mut self) -> TestResult {
+        // Try out all the levels.
+        trace!("This is a trace level log");
+        debug!("This is a debug level log");
+        info!("This is a info level log");
+        warn!("This is a warn level log");
+        error!("This is an error level log");
         Ok(())
     }
 
