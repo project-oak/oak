@@ -11,7 +11,7 @@ serverargs=""
 while getopts "s:l:de:vh" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-h] [-s base|asan|tsan|none] [-l rust|cpp] [-d] [-v] -e EXAMPLE [-- CLIENT_ARGS]
+      echo -e "Usage: ${0} [-h] [-s base|logless|asan|tsan|none] [-l rust|cpp] [-d] [-v] -e EXAMPLE [-- CLIENT_ARGS]
 
 Build and run the given example Oak Application and client.
 
@@ -19,6 +19,7 @@ Options:
   -e    Example application name (required)
   -s    Server type used to run examples:
           - base: base version of the server (default)
+          - logless: base version of the server with debug logging compiled out
           - rust: Rust version of the server
           - asan: server with address sanitizer
           - tsan: server with thread sanitizer
@@ -35,7 +36,7 @@ Options after -- will be passed to the example client program."
       language="${OPTARG}";;
     s)
       case "${OPTARG}" in
-        base|rust|asan|tsan|none)
+        base|logless|rust|asan|tsan|none)
           server="${OPTARG}";;
         *)
           echo "Invalid server type: ${OPTARG}"

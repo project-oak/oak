@@ -41,8 +41,15 @@ steps:
     args: ['info']
 
   - name: 'gcr.io/oak-ci/oak:latest'
-    id: build_server
+    id: build_server_no_debug
     waitFor: ['bazel_init']
+    timeout: 60m
+    entrypoint: 'bash'
+    args: ['./scripts/build_server', '-s', 'logless']
+
+  - name: 'gcr.io/oak-ci/oak:latest'
+    id: build_server
+    waitFor: ['build_server_no_debug']
     timeout: 60m
     entrypoint: 'bash'
     args: ['./scripts/build_server', '-s', 'base']

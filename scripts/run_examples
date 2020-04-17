@@ -9,9 +9,10 @@ languages="rust cpp"
 while getopts "s:l:h" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-s base|asan|tsan] [-l rust|cpp]
+      echo -e "Usage: ${0} [-s base|logless|asan|tsan] [-l rust|cpp]
   -s    Server type used to run examples:
           - base: base version of the server (default)
+          - logless: base version of the server with debug logging compiled out
           - asan: server with address sanitizer
           - tsan: server with thread santizer
   -l    Run examples implemented in which language (default: both):
@@ -23,7 +24,7 @@ while getopts "s:l:h" opt; do
       languages="${OPTARG}";;
     s)
       case "${OPTARG}" in
-        base|asan|tsan)
+        base|logless|asan|tsan)
           server="${OPTARG}";;
         *)
           echo "Invalid server type: ${OPTARG}"

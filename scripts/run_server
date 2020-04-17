@@ -9,7 +9,7 @@ server="base"
 while getopts "s:a:l:e:vh" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-s base|arm|asan|tsan] [-l rust|cpp] (-a APPLICATION | -e EXAMPLE) [-v]
+      echo -e "Usage: ${0} [-s base|logless|arm|asan|tsan] [-l rust|cpp] (-a APPLICATION | -e EXAMPLE) [-v]
 
 Run a particular Oak Application in the Oak Runtime.
 Either the -a APPLICATION or the -e EXAMPLE option is required.
@@ -18,6 +18,7 @@ Either the -a APPLICATION or the -e EXAMPLE option is required.
   -e    Example application name
   -s    Server type:
           - base: base version of the server (default)
+          - logless: base version of the server with debug logging compiled out
           - rust: Rust version of the server
           - arm: server for ARM architecture
           - asan: server with address sanitizer
@@ -32,7 +33,7 @@ Either the -a APPLICATION or the -e EXAMPLE option is required.
       language="${OPTARG}";;
     s)
       case "${OPTARG}" in
-        base|rust|arm|asan|tsan)
+        base|logless|rust|arm|asan|tsan)
           server="${OPTARG}";;
         *)
           echo "Invalid server type: ${OPTARG}"
