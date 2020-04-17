@@ -31,6 +31,7 @@ cc_binary(
         "//oak/common:logging",
         "//oak/server/storage:memory_provider",
         "//oak/server/storage:storage_service",
+        "@com_github_google_glog//:glog",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
