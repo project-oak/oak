@@ -25,9 +25,9 @@
 #include "examples/abitest/client/grpctest.h"
 #include "examples/abitest/proto/abitest.grpc.pb.h"
 #include "examples/abitest/proto/abitest.pb.h"
+#include "glog/logging.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
-#include "oak/common/logging.h"
 #include "oak/server/storage/memory_provider.h"
 #include "oak/server/storage/storage_service.h"
 
@@ -52,8 +52,8 @@ namespace {
 // then runs a collection of tests of the ABI inside Oak and reports the results.
 bool run_abi_tests(OakABITestService::Stub* stub, const std::string& include,
                    const std::string& exclude) {
-  OAK_LOG(INFO) << "Run ABI tests matching: '" << include << "', exclude those matching '"
-                << exclude << "'";
+  LOG(INFO) << "Run ABI tests matching: '" << include << "', exclude those matching '" << exclude
+            << "'";
   grpc::ClientContext context;
   ABITestRequest request;
   request.set_include(include);
@@ -61,8 +61,8 @@ bool run_abi_tests(OakABITestService::Stub* stub, const std::string& include,
   ABITestResponse response;
   grpc::Status status = stub->RunTests(&context, request, &response);
   if (!status.ok()) {
-    OAK_LOG(WARNING) << "Could not call RunTests('" << include << "'): " << status.error_code()
-                     << ": " << status.error_message();
+    LOG(WARNING) << "Could not call RunTests('" << include << "'): " << status.error_code() << ": "
+                 << status.error_message();
     return false;
   }
 
@@ -73,15 +73,14 @@ bool run_abi_tests(OakABITestService::Stub* stub, const std::string& include,
       disabled++;
       continue;
     }
-    OAK_LOG(INFO) << "[ " << (result.success() ? " OK " : "FAIL") << " ] " << result.name();
+    LOG(INFO) << "[ " << (result.success() ? " OK " : "FAIL") << " ] " << result.name();
     if (!result.success()) {
       success = false;
-      OAK_LOG(INFO) << "    Details: " << result.details();
+      LOG(INFO) << "    Details: " << result.details();
     }
   }
   if (disabled > 0) {
-    OAK_LOG(INFO) << " YOU HAVE " << disabled << " DISABLED ABI TEST"
-                  << ((disabled > 1) ? "S" : "");
+    LOG(INFO) << " YOU HAVE " << disabled << " DISABLED ABI TEST" << ((disabled > 1) ? "S" : "");
   }
   return success;
 }
@@ -90,8 +89,8 @@ bool run_abi_tests(OakABITestService::Stub* stub, const std::string& include,
 // propagation and different types of method (client/server streaming).
 bool run_grpc_tests(OakABITestService::Stub* stub, const std::string& include,
                     const std::string& exclude) {
-  OAK_LOG(INFO) << "Run gRPC tests matching: '" << include << "', exclude those matching '"
-                << exclude << "'";
+  LOG(INFO) << "Run gRPC tests matching: '" << include << "', exclude those matching '" << exclude
+            << "'";
   bool success = true;
   std::regex include_re(include);
   std::regex exclude_re(exclude);
@@ -111,22 +110,21 @@ bool run_grpc_tests(OakABITestService::Stub* stub, const std::string& include,
     }
 
     if (test_fn(stub)) {
-      OAK_LOG(INFO) << "[  OK  ] " << test_name;
+      LOG(INFO) << "[  OK  ] " << test_name;
     } else {
       success = false;
-      OAK_LOG(INFO) << "[ FAIL ] " << test_name;
+      LOG(INFO) << "[ FAIL ] " << test_name;
     }
   }
   if (disabled > 0) {
-    OAK_LOG(INFO) << " YOU HAVE " << disabled << " DISABLED GRPC TEST"
-                  << ((disabled > 1) ? "S" : "");
+    LOG(INFO) << " YOU HAVE " << disabled << " DISABLED GRPC TEST" << ((disabled > 1) ? "S" : "");
   }
 
   return success;
 }
 
 void run_storage_server(int storage_port, grpc::Server** storage_server) {
-  OAK_LOG(INFO) << "Creating in-memory storage service on :" << storage_port;
+  LOG(INFO) << "Creating in-memory storage service on :" << storage_port;
   grpc::ServerBuilder builder;
   std::string server_address = absl::StrCat("[::]:", storage_port);
   std::shared_ptr<grpc::ServerCredentials> credentials = grpc::InsecureServerCredentials();
@@ -134,15 +132,15 @@ void run_storage_server(int storage_port, grpc::Server** storage_server) {
   oak::StorageService storage_service(new oak::MemoryProvider());
   builder.RegisterService(&storage_service);
 
-  OAK_LOG(INFO) << "Start storage server";
+  LOG(INFO) << "Start storage server";
   std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
   *storage_server = server.get();
   server->Wait();
-  OAK_LOG(INFO) << "Storage server done";
+  LOG(INFO) << "Storage server done";
 }
 
 void run_grpc_test_server(int grpc_test_port, grpc::Server** grpc_test_server) {
-  OAK_LOG(INFO) << "Creating test gRPC service on :" << grpc_test_port;
+  LOG(INFO) << "Creating test gRPC service on :" << grpc_test_port;
   grpc::ServerBuilder builder;
   std::string server_address = absl::StrCat("[::]:", grpc_test_port);
   std::shared_ptr<grpc::ServerCredentials> credentials = grpc::InsecureServerCredentials();
@@ -151,11 +149,11 @@ void run_grpc_test_server(int grpc_test_port, grpc::Server** grpc_test_server) {
   oak::test::GrpcTestServer grpc_test_service;
   builder.RegisterService(&grpc_test_service);
 
-  OAK_LOG(INFO) << "Start test gRPC server";
+  LOG(INFO) << "Start test gRPC server";
   std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
   *grpc_test_server = server.get();
   server->Wait();
-  OAK_LOG(INFO) << "Test gRPC server done";
+  LOG(INFO) << "Test gRPC server done";
 }
 
 }  // namespace
@@ -185,7 +183,7 @@ int main(int argc, char** argv) {
   // Connect to the Oak Application.
   std::string address = absl::GetFlag(FLAGS_address);
   std::string ca_cert = oak::ApplicationClient::LoadRootCert(absl::GetFlag(FLAGS_ca_cert));
-  OAK_LOG(INFO) << "Connecting to Oak Application: " << address;
+  LOG(INFO) << "Connecting to Oak Application: " << address;
 
   auto stub =
       OakABITestService::NewStub(oak::ApplicationClient::CreateTlsChannel(address, ca_cert));
