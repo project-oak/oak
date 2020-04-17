@@ -1,0 +1,10 @@
+61fdf25b4e2b4171a579dd9e4716b24348fb3f9f90ad936f9c91046618c93ed5  ./target/wasm32-unknown-unknown/release/abitest_0_frontend.wasm
+32a5f6aa9cbac2f71f40be10c52da32653a5b579810e5927af42df171a0f9dfc  ./target/wasm32-unknown-unknown/release/abitest_1_backend.wasm
+c697982360ea5d5a95b795889b4633ed27d3bc892f9bc9ac1df480c3759cb9b5  ./target/wasm32-unknown-unknown/release/aggregator.wasm
+2f5b176dbe8c9269d6bc2253c82d627d556db8a7214de8133ebfa185075a08dc  ./target/wasm32-unknown-unknown/release/chat.wasm
+c9a7fe26f4ad22af68ec375946a212c0356f5d90827f22884df540008dfc30dc  ./target/wasm32-unknown-unknown/release/hello_world.wasm
+874c832f9e16cc78e393b73e98ec08ee0c6b475ed67298e4094d31eaaf07f98c  ./target/wasm32-unknown-unknown/release/machine_learning.wasm
+97906ca9165f63281b03647ec55203e38a7acd2207f9518de52098a4c7c81bde  ./target/wasm32-unknown-unknown/release/running_average.wasm
+c6f59836ce3f0b2206134ee93215da39f37658cdabd5e90fb40c216ea0f1d694  ./target/wasm32-unknown-unknown/release/translator.wasm
+b2e0fe6e68f082564019b986128de56aad7eab08b791e3baacc66c784064dd04  ./bazel-clang-bin/oak/server/loader/oak_runner
+6fdb4a4a2c4ec7dab0581dbb5a179c9f66b28834de32c170a4bba74cd46b72e2  ./target/debug/oak_loader
