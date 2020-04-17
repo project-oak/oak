@@ -8,12 +8,13 @@ config="clang"
 while getopts "s:h" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-s base|arm|asan|tsan]
+      echo -e "Usage: ${0} [-s base|logless|arm|asan|tsan]
 
 Build the specified version of the Oak Runtime server.
 
   -s    Server type:
           - base: base version of the server (default)
+          - logless: base version of the server with debug logging compiled out
           - rust: Rust version of the server
           - arm: server for ARM architecture
           - asan: server with address sanitizer
@@ -24,6 +25,8 @@ Build the specified version of the Oak Runtime server.
       case "${OPTARG}" in
         base)
           config='clang';;
+        logless)
+          config='clang-logless';;
         rust)
           config='rust';;
         arm)
