@@ -26,7 +26,7 @@ use core::sync::atomic::{AtomicBool, AtomicU64, Ordering::SeqCst};
 
 use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
 
-use log::{debug, error, info};
+use log::{debug, error, info, trace};
 
 use crate::{message::Message, node, pretty_name_for_thread};
 
@@ -233,8 +233,8 @@ impl Runtime {
             Ok(())
         } else {
             error!(
-                "validate_handle_access: handle {:?} not found in node {:?}",
-                handle, node_id
+                "{:?}: validate_handle_access: handle {:?} not found",
+                node_id, handle
             );
             Err(OakStatus::ErrBadHandle)
         }
@@ -260,8 +260,8 @@ impl Runtime {
             // Check handle is accessible by the Node.
             if !node_info.handles.contains(&handle) {
                 error!(
-                    "filter_optional_handles: handle {:?} not found in node {:?}",
-                    handle, node_id
+                    "{:?}: validate_handles_access(): handle {:?} not found",
+                    node_id, handle
                 );
                 return Err(OakStatus::ErrBadHandle);
             }
@@ -311,27 +311,32 @@ impl Runtime {
         node_id: NodeId,
         channel_handle: Handle,
     ) -> Result<(), OakStatus> {
-        debug!(
-            "validating whether node {:?} can read from channel {:?}",
-            node_id, channel_handle
+        trace!(
+            "{:?}: validating readability of {:?}",
+            node_id,
+            channel_handle
         );
 
         // Allow RUNTIME_NODE_ID access to all handles.
         if node_id == RUNTIME_NODE_ID {
+            trace!("{:?}: runtime can read from any channel", node_id);
             return Ok(());
         }
 
         let node_label = self.get_node_label(node_id);
         let channel_label = self.get_reader_channel_label(channel_handle)?;
+        trace!(
+            "{:?}: node_label={:?}, channel_label={:?}",
+            node_id,
+            node_label,
+            channel_label
+        );
         if channel_label.flows_to(&node_label) {
-            debug!(
-                "node {:?} can read from channel {:?}",
-                node_id, channel_handle
-            );
+            trace!("{:?}: can read from channel {:?}", node_id, channel_handle);
             Ok(())
         } else {
             debug!(
-                "node {:?} cannot read from channel {:?}",
+                "{:?}: cannot read from channel {:?}",
                 node_id, channel_handle
             );
             Err(OakStatus::ErrPermissionDenied)
@@ -366,29 +371,32 @@ impl Runtime {
         node_id: NodeId,
         channel_handle: Handle,
     ) -> Result<(), OakStatus> {
-        debug!(
-            "validating whether node {:?} can write to channel {:?}",
-            node_id, channel_handle
+        trace!(
+            "{:?}: validating writability of {:?}",
+            node_id,
+            channel_handle
         );
 
         // Allow RUNTIME_NODE_ID access to all handles.
         if node_id == RUNTIME_NODE_ID {
+            trace!("{:?}: runtime can write to any channel", node_id);
             return Ok(());
         }
 
         let node_label = self.get_node_label(node_id);
-        debug!("node label: {:?}", node_label);
         let channel_label = self.get_writer_channel_label(channel_handle)?;
-        debug!("channel label: {:?}", node_label);
+        trace!(
+            "{:?}: node_label={:?}, channel_label={:?}",
+            node_id,
+            node_label,
+            channel_label
+        );
         if node_label.flows_to(&channel_label) {
-            debug!(
-                "node {:?} can write to channel {:?}",
-                node_id, channel_handle
-            );
+            trace!("{:?}: can write to channel {:?}", node_id, channel_handle);
             Ok(())
         } else {
             debug!(
-                "node {:?} cannot write to channel {:?}",
+                "{:?}: cannot write to channel {:?}",
                 node_id, channel_handle
             );
             Err(OakStatus::ErrPermissionDenied)
@@ -485,14 +493,16 @@ impl Runtime {
             }
 
             debug!(
-                "wait_on_channels: channels not ready, parking thread {}",
+                "{:?}: wait_on_channels: channels not ready, parking thread {}",
+                node_id,
                 pretty_name_for_thread(&thread::current())
             );
 
             thread::park();
 
             debug!(
-                "wait_on_channels: thread {} re-woken",
+                "{:?}: wait_on_channels: thread {} re-woken",
+                node_id,
                 pretty_name_for_thread(&thread::current())
             );
         }
@@ -739,7 +749,7 @@ impl Runtime {
             };
 
             debug!(
-                "remove_node_id: node_id {:?} had open channels on exit: {:?}",
+                "{:?}: remove_node_id() found open channels on exit: {:?}",
                 node_id, remaining_handles
             );
 
