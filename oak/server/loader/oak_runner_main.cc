@@ -53,6 +53,12 @@ std::shared_ptr<grpc::ServerCredentials> BuildTlsCredentials(std::string pem_roo
 int main(int argc, char* argv[]) {
   absl::ParseCommandLine(argc, argv);
 
+#ifdef OAK_DEBUG
+  // Use the failure signal handler from glog, which prints a stack trace on
+  // various crash signals.
+  google::InstallFailureSignalHandler();
+#endif
+
   // Create the loader instance.
   std::unique_ptr<oak::OakLoader> loader = absl::make_unique<oak::OakLoader>();
 
