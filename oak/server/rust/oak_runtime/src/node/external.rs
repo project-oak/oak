@@ -19,7 +19,7 @@ use crate::{
     NodeId,
 };
 use lazy_static::lazy_static;
-use log::{error, info};
+use log::info;
 use oak_abi::OakStatus;
 use std::{sync::RwLock, thread, thread::JoinHandle};
 
@@ -40,7 +40,6 @@ pub struct PseudoNode {
     config_name: String,
     runtime: RuntimeProxy,
     reader: Handle,
-    thread_handle: Option<JoinHandle<()>>,
 }
 
 impl PseudoNode {
@@ -49,51 +48,41 @@ impl PseudoNode {
             config_name: config_name.to_string(),
             runtime,
             reader,
-            thread_handle: None,
         }
+    }
+
+    /// Main node worker thread.
+    fn worker_thread(self) {
+        let pretty_name = format!("{}-{:?}:", self.config_name, thread::current());
+        let factory_fn: NodeFactory = FACTORY
+            .read()
+            .expect("unlock failed")
+            .expect("no registered factory");
+        info!(
+            "invoke external node factory with '{}', reader={:?} on thread {:?}",
+            self.config_name,
+            self.reader,
+            thread::current(),
+        );
+        factory_fn(&self.config_name, self.runtime.node_id, self.reader);
+
+        info!(
+            "{} LOG: exiting pseudo-Node thread {:?}",
+            pretty_name,
+            thread::current()
+        );
+        self.runtime.exit_node();
     }
 }
 
 impl super::Node for PseudoNode {
-    fn start(&mut self) -> Result<(), OakStatus> {
+    fn start(self: Box<Self>) -> Result<JoinHandle<()>, OakStatus> {
         // Clone or copy all the captured values and move them into the closure, for simplicity.
-        let config_name = self.config_name.clone();
-        let runtime = self.runtime.clone();
-        let reader = self.reader;
         let thread_handle = thread::Builder::new()
-            .name(format!("external={}", config_name))
-            .spawn(move || {
-                let pretty_name = format!("{}-{:?}:", config_name, thread::current());
-                let factory_fn: NodeFactory = FACTORY
-                    .read()
-                    .expect("unlock failed")
-                    .expect("no registered factory");
-                info!(
-                    "invoke external node factory with '{}', reader={:?} on thread {:?}",
-                    config_name,
-                    reader,
-                    thread::current(),
-                );
-                factory_fn(&config_name, runtime.node_id, reader);
-
-                info!(
-                    "{} LOG: exiting pseudo-Node thread {:?}",
-                    pretty_name,
-                    thread::current()
-                );
-                runtime.exit_node();
-            })
+            .name(format!("external={}", self.config_name))
+            .spawn(move || self.worker_thread())
             .expect("failed to spawn thread");
         info!("external node started on thread {:?}", thread_handle);
-        self.thread_handle = Some(thread_handle);
-        Ok(())
-    }
-
-    fn stop(&mut self) {
-        if let Some(join_handle) = self.thread_handle.take() {
-            if let Err(err) = join_handle.join() {
-                error!("error while stopping external node: {:?}", err);
-            }
-        }
+        Ok(thread_handle)
     }
 }

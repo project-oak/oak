@@ -23,7 +23,7 @@ use std::{
     thread::JoinHandle,
 };
 
-use log::{debug, error};
+use log::{debug, error, info, warn};
 
 use byteorder::{ByteOrder, LittleEndian};
 use rand::RngCore;
@@ -877,7 +877,6 @@ pub struct WasmNode {
     module: Arc<wasmi::Module>,
     entrypoint: String,
     reader: Handle,
-    thread_handle: Option<JoinHandle<()>>,
 }
 
 impl WasmNode {
@@ -895,8 +894,78 @@ impl WasmNode {
             module,
             entrypoint,
             reader,
-            thread_handle: None,
         }
+    }
+
+    fn validate_entrypoint(&self) -> Result<(), OakStatus> {
+        let (abi, _) =
+            WasmInterface::new(self.config_name.clone(), self.runtime.clone(), self.reader);
+        let wasi_stub = WasiStub;
+        let instance = wasmi::ModuleInstance::new(
+            &self.module,
+            &wasmi::ImportsBuilder::new()
+                .with_resolver("oak", &abi)
+                .with_resolver("wasi_snapshot_preview1", &wasi_stub),
+        )
+        .expect("failed to instantiate wasm module")
+        .assert_no_start();
+
+        let expected_signature = wasmi::Signature::new(&[ABI_U64][..], None);
+
+        let export = instance.export_by_name(&self.entrypoint).ok_or_else(|| {
+            warn!("entrypoint export not found");
+            OakStatus::ErrInvalidArgs
+        })?;
+
+        let export_func = export.as_func().ok_or_else(|| {
+            warn!("entrypoint export is not a function");
+            OakStatus::ErrInvalidArgs
+        })?;
+
+        let export_func_signature = export_func.signature();
+        if export_func_signature == &expected_signature {
+            info!("entrypoint export validated");
+            Ok(())
+        } else {
+            warn!(
+                "entrypoint export has incorrect function signature: {:?}",
+                export_func_signature
+            );
+            Err(OakStatus::ErrInvalidArgs)
+        }
+    }
+
+    /// Main node worker thread.
+    fn worker_thread(self) {
+        let pretty_name = pretty_name_for_thread(&thread::current());
+        let wasi_stub = WasiStub;
+        let (mut abi, initial_handle) =
+            WasmInterface::new(pretty_name, self.runtime.clone(), self.reader);
+
+        let instance = wasmi::ModuleInstance::new(
+            &self.module,
+            &wasmi::ImportsBuilder::new()
+                .with_resolver("oak", &abi)
+                .with_resolver("wasi_snapshot_preview1", &wasi_stub),
+        )
+        .expect("failed to instantiate wasm module")
+        .assert_no_start();
+
+        abi.memory = instance
+            .export_by_name("memory")
+            .unwrap()
+            .as_memory()
+            .cloned();
+
+        instance
+            .invoke_export(
+                &self.entrypoint,
+                &[wasmi::RuntimeValue::I64(initial_handle as i64)],
+                &mut abi,
+            )
+            .expect("failed to execute export");
+
+        self.runtime.exit_node();
     }
 }
 
@@ -910,7 +979,7 @@ impl super::Node for WasmNode {
     /// Starts this instance of a Wasm Node.
     ///
     /// If the entry point is not found, returns `Err(OakStatus::ErrInvalidArgs)` immediately.
-    fn start(&mut self) -> Result<(), OakStatus> {
+    fn start(self: Box<Self>) -> Result<JoinHandle<()>, OakStatus> {
         debug!(
             "new_instance: discovering {} {}",
             self.config_name, self.entrypoint
@@ -919,82 +988,17 @@ impl super::Node for WasmNode {
         // wasmi can't enumerate exports at creation, so we have to do it here per instance spawned
         // as the entrypoint could be anything. We do it before spawning the child thread so
         // that we can return an error code immediately if appropriate.
-        {
-            let (abi, _) =
-                WasmInterface::new(self.config_name.clone(), self.runtime.clone(), self.reader);
-            let wasi_stub = WasiStub;
-            let instance = wasmi::ModuleInstance::new(
-                &self.module,
-                &wasmi::ImportsBuilder::new()
-                    .with_resolver("oak", &abi)
-                    .with_resolver("wasi_snapshot_preview1", &wasi_stub),
-            )
-            .expect("failed to instantiate wasm module")
-            .assert_no_start();
-
-            let entrypoint_sig = wasmi::Signature::new(&[ABI_U64][..], None);
-
-            if instance
-                .export_by_name(&self.entrypoint)
-                .and_then(|e| e.as_func().map(|f| f.signature() != &entrypoint_sig))
-                .unwrap_or(true)
-            {
-                return Err(OakStatus::ErrInvalidArgs);
-            }
-        }
+        self.validate_entrypoint()?;
 
         debug!(
             "new_instance: starting {} {}",
             self.config_name, self.entrypoint
         );
 
-        // Clone or copy all the captured values and move them into the closure, for simplicity.
-        let reader = self.reader;
-        let runtime = self.runtime.clone();
-        let module = self.module.clone();
-        let entrypoint = self.entrypoint.clone();
         let thread_handle = thread::Builder::new()
             .name(self.to_string())
-            .spawn(move || {
-                let pretty_name = pretty_name_for_thread(&thread::current());
-                let wasi_stub = WasiStub;
-                let (mut abi, initial_handle) =
-                    WasmInterface::new(pretty_name, runtime.clone(), reader);
-
-                let instance = wasmi::ModuleInstance::new(
-                    &module,
-                    &wasmi::ImportsBuilder::new()
-                        .with_resolver("oak", &abi)
-                        .with_resolver("wasi_snapshot_preview1", &wasi_stub),
-                )
-                .expect("failed to instantiate wasm module")
-                .assert_no_start();
-
-                abi.memory = instance
-                    .export_by_name("memory")
-                    .unwrap()
-                    .as_memory()
-                    .cloned();
-
-                instance
-                    .invoke_export(
-                        &entrypoint,
-                        &[wasmi::RuntimeValue::I64(initial_handle as i64)],
-                        &mut abi,
-                    )
-                    .expect("failed to execute export");
-
-                runtime.exit_node();
-            })
+            .spawn(move || self.worker_thread())
             .expect("failed to spawn thread");
-        self.thread_handle = Some(thread_handle);
-        Ok(())
-    }
-    fn stop(&mut self) {
-        if let Some(join_handle) = self.thread_handle.take() {
-            if let Err(err) = join_handle.join() {
-                error!("error while stopping Wasm node: {:?}", err);
-            }
-        }
+        Ok(thread_handle)
     }
 }
