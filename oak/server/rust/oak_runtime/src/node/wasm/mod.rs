@@ -166,57 +166,64 @@ impl WasmInterface {
             .get(name_ptr, name_length as usize)
             .map_err(|err| {
                 error!(
-                    "node_create: Unable to read name from guest memory: {:?}",
-                    err
+                    "{}: node_create(): Unable to read name from guest memory: {:?}",
+                    self.pretty_name, err
                 );
                 OakStatus::ErrInvalidArgs
             })?;
         let config_name = String::from_utf8(config_name_bytes).map_err(|err| {
-            error!("node_create: Unable to parse config_name: {:?}", err);
+            error!(
+                "{}: node_create(): Unable to parse config_name: {:?}",
+                self.pretty_name, err
+            );
             OakStatus::ErrInvalidArgs
         })?;
-        debug!(
-            "{} node_create config_name is: {}",
-            self.pretty_name, config_name
-        );
 
         let entrypoint_bytes = self
             .get_memory()
             .get(entrypoint_ptr, entrypoint_length as usize)
             .map_err(|err| {
                 error!(
-                    "node_create: Unable to read entrypoint from guest memory: {:?}",
-                    err
+                    "{}: node_create(): Unable to read entrypoint from guest memory: {:?}",
+                    self.pretty_name, err
                 );
                 OakStatus::ErrInvalidArgs
             })?;
         let entrypoint = String::from_utf8(entrypoint_bytes).map_err(|err| {
-            error!("node_create: Unable to parse entrypoint: {:?}", err);
+            error!(
+                "{}: node_create(): Unable to parse entrypoint: {:?}",
+                self.pretty_name, err
+            );
             OakStatus::ErrInvalidArgs
         })?;
-        debug!(
-            "{} node_create entrypoint is: {}",
-            self.pretty_name, entrypoint
-        );
 
         let label_bytes = self
             .get_memory()
             .get(label_ptr, label_length as usize)
             .map_err(|err| {
                 error!(
-                    "node_create: Unable to read label from guest memory: {:?}",
-                    err
+                    "{}: node_create(): Unable to read label from guest memory: {:?}",
+                    self.pretty_name, err
                 );
                 OakStatus::ErrInvalidArgs
             })?;
         let label = Label::deserialize(&label_bytes).ok_or_else(|| {
-            error!("node_create: could not deserialize label");
+            error!(
+                "{}: node_create: could not deserialize label",
+                self.pretty_name
+            );
             OakStatus::ErrInvalidArgs
         })?;
-        debug!("{} node_create label is: {:?}", self.pretty_name, label);
 
+        debug!(
+            "{}: node_create('{}', '{}', {:?})",
+            self.pretty_name, config_name, entrypoint, label
+        );
         let channel_ref = self.readers.get(&initial_handle).ok_or(()).map_err(|_| {
-            error!("node_create: Invalid handle");
+            error!(
+                "{}: node_create(..., {}): Invalid handle",
+                self.pretty_name, initial_handle
+            );
             OakStatus::ErrBadHandle
         })?;
 
@@ -225,8 +232,8 @@ impl WasmInterface {
             .node_create(&config_name, &entrypoint, &label, channel_ref.clone())
             .map_err(|_| {
                 error!(
-                    "node_create: Config \"{}\" entrypoint \"{}\" not found",
-                    config_name, entrypoint
+                    "{}: node_create(): Config \"{}\" entrypoint \"{}\" not found",
+                    self.pretty_name, config_name, entrypoint
                 );
                 OakStatus::ErrInvalidArgs
             })
@@ -249,13 +256,17 @@ impl WasmInterface {
 
         let write_handle = self.allocate_new_handle(writer, HandleDirection::Write);
         let read_handle = self.allocate_new_handle(reader, HandleDirection::Read);
+        debug!(
+            "{}: channel_create() -> ({}, {})",
+            self.pretty_name, write_handle, read_handle
+        );
 
         self.get_memory()
             .set_value(write_addr, write_handle as i64)
             .map_err(|err| {
                 error!(
-                    "channel_create: Unable to write writer handle into guest memory: {:?}",
-                    err
+                    "{}: channel_create(): Unable to write writer handle into guest memory: {:?}",
+                    self.pretty_name, err
                 );
                 OakStatus::ErrInvalidArgs
             })?;
@@ -264,8 +275,8 @@ impl WasmInterface {
             .set_value(read_addr, read_handle as i64)
             .map_err(|err| {
                 error!(
-                    "channel_create: Unable to write reader handle into guest memory: {:?}",
-                    err
+                    "{}: channel_create(): Unable to write reader handle into guest memory: {:?}",
+                    self.pretty_name, err
                 );
                 OakStatus::ErrInvalidArgs
             })
@@ -282,7 +293,10 @@ impl WasmInterface {
         handles_count: AbiPointerOffset,
     ) -> Result<(), OakStatus> {
         let writer = self.writers.get(&writer_handle).ok_or(()).map_err(|_| {
-            error!("channel_write: No such handle");
+            error!(
+                "{}: channel_write({},...): No such handle",
+                self.pretty_name, writer_handle
+            );
             OakStatus::ErrBadHandle
         })?;
 
@@ -291,8 +305,8 @@ impl WasmInterface {
             .get(source, source_length as usize)
             .map_err(|err| {
                 error!(
-                    "channel_write: Unable to read message data from guest memory: {:?}",
-                    err
+                    "{}: channel_write(): Unable to read message data from guest memory: {:?}",
+                    self.pretty_name, err
                 );
                 OakStatus::ErrInvalidArgs
             })?;
@@ -302,8 +316,8 @@ impl WasmInterface {
             .get(handles, handles_count as usize * 8)
             .map_err(|err| {
                 error!(
-                    "channel_write: Unable to read handles from guest memory: {:?}",
-                    err
+                    "{}: channel_write(): Unable to read handles from guest memory: {:?}",
+                    self.pretty_name, err
                 );
                 OakStatus::ErrInvalidArgs
             })?;
@@ -320,7 +334,10 @@ impl WasmInterface {
                 None => match self.readers.get(handle) {
                     Some(channel) => Ok(*channel),
                     None => {
-                        error!("channel_write: Can't find handle {} to send", handle);
+                        error!(
+                            "{}: channel_write(): Can't find handle {} to send",
+                            self.pretty_name, handle
+                        );
                         Err(OakStatus::ErrBadHandle)
                     }
                 },
@@ -353,7 +370,10 @@ impl WasmInterface {
         actual_handle_count_addr: AbiPointer,
     ) -> Result<(), OakStatus> {
         let reader = self.readers.get(&reader_handle).ok_or(()).map_err(|_| {
-            error!("channel_read: No such handle");
+            error!(
+                "{}: channel_read(): No such handle {}",
+                self.pretty_name, reader_handle
+            );
             OakStatus::ErrBadHandle
         })?;
 
@@ -378,8 +398,8 @@ impl WasmInterface {
             .set(actual_length_addr, raw_writer)
             .map_err(|err| {
                 error!(
-                    "channel_read: Unable to write actual length into guest memory: {:?}",
-                    err
+                    "{}: channel_read(): Unable to write actual length into guest memory: {:?}",
+                    self.pretty_name, err
                 );
                 OakStatus::ErrInvalidArgs
             })?;
@@ -390,8 +410,8 @@ impl WasmInterface {
             .set(actual_handle_count_addr, raw_writer)
             .map_err(|err| {
                 error!(
-                    "channel_read: Unable to write actual handle count into guest memory: {:?}",
-                    err
+                    "{}: channel_read(): Unable to write actual handle count into guest memory: {:?}",
+                    self.pretty_name, err
                 );
                 OakStatus::ErrInvalidArgs
             })?;
@@ -400,8 +420,8 @@ impl WasmInterface {
             Some(ReadStatus::Success(msg)) => {
                 self.get_memory().set(dest, &msg.data).map_err(|err| {
                     error!(
-                        "channel_read: Unable to write destination buffer into guest memory: {:?}",
-                        err
+                        "{}: channel_read(): Unable to write destination buffer into guest memory: {:?}",
+                        self.pretty_name, err
                     );
                     OakStatus::ErrInvalidArgs
                 })?;
@@ -418,9 +438,9 @@ impl WasmInterface {
                     .set(handles_dest, &raw_writer)
                     .map_err(|err| {
                         error!(
-                        "channel_read: Unable to write destination buffer into guest memory: {:?}",
-                        err
-                    );
+                            "{}: channel_read(): Unable to write destination buffer into guest memory: {:?}",
+                            self.pretty_name, err
+                        );
                         OakStatus::ErrInvalidArgs
                     })
             }
@@ -462,8 +482,8 @@ impl WasmInterface {
             .get(status_buff, handles_count as usize * 9)
             .map_err(|err| {
                 error!(
-                    "wait_on_channels: Unable to read handles from guest memory: {:?}",
-                    err
+                    "{}: wait_on_channels(): Unable to read handles from guest memory: {:?}",
+                    self.pretty_name, err
                 );
                 OakStatus::ErrInvalidArgs
             })?;
@@ -484,8 +504,8 @@ impl WasmInterface {
                 .set_value(status_buff + 8 + (i as u32 * 9), status as u8)
                 .map_err(|err| {
                     error!(
-                        "wait_on_channels: Unable to set status {} to {:?}: {:?}",
-                        i, status, err
+                        "{}: wait_on_channels(): Unable to set status[{}] to {:?}: {:?}",
+                        self.pretty_name, i, status, err
                     );
                     OakStatus::ErrInvalidArgs
                 })?;
@@ -528,8 +548,6 @@ impl wasmi::Externals for WasmInterface {
         index: usize,
         args: wasmi::RuntimeArgs,
     ) -> Result<Option<wasmi::RuntimeValue>, wasmi::Trap> {
-        debug!("{} invoke_index: {} {:?}", self.pretty_name, index, args);
-
         match index {
             NODE_CREATE => {
                 let name_ptr: u32 = args.nth_checked(0)?;
@@ -541,7 +559,7 @@ impl wasmi::Externals for WasmInterface {
                 let initial_handle: u64 = args.nth_checked(6)?;
 
                 debug!(
-                    "{} node_create: {} {} {} {} {}",
+                    "{}: node_create({}, {}, {}, {}, {})",
                     self.pretty_name,
                     name_ptr,
                     name_length,
@@ -572,24 +590,27 @@ impl wasmi::Externals for WasmInterface {
                 let dest: u32 = args.nth_checked(0)?;
                 let dest_length: u32 = args.nth_checked(1)?;
 
-                debug!("{} random_get: {} {}", self.pretty_name, dest, dest_length);
+                debug!(
+                    "{}: random_get({}, {})",
+                    self.pretty_name, dest, dest_length
+                );
 
                 map_host_errors(self.random_get(dest, dest_length))
             }
 
             CHANNEL_CLOSE => {
-                let channel_id: u64 = args.nth_checked(0)?;
+                let handle: u64 = args.nth_checked(0)?;
 
-                debug!("{} channel_close: {}", self.pretty_name, channel_id);
+                debug!("{}: channel_close({})", self.pretty_name, handle);
 
-                let result = if let Some(reference) = self.readers.get(&channel_id).cloned() {
-                    self.readers.remove(&channel_id);
+                let result = if let Some(reference) = self.readers.get(&handle).cloned() {
+                    self.readers.remove(&handle);
                     self.runtime
                         .channel_close(reference)
                         .expect("Wasm CHANNEL_CLOSE: Channel reference inconsistency!");
                     OakStatus::Ok as i32
-                } else if let Some(reference) = self.writers.get(&channel_id).cloned() {
-                    self.writers.remove(&channel_id);
+                } else if let Some(reference) = self.writers.get(&handle).cloned() {
+                    self.writers.remove(&handle);
                     self.runtime
                         .channel_close(reference)
                         .expect("Wasm CHANNEL_CLOSE: Channel reference inconsistency!");
@@ -606,7 +627,7 @@ impl wasmi::Externals for WasmInterface {
                 let read_addr: u32 = args.nth_checked(1)?;
 
                 debug!(
-                    "{} channel_create: {} {}",
+                    "{}: channel_create({}, {})",
                     self.pretty_name, write_addr, read_addr
                 );
 
@@ -628,7 +649,7 @@ impl wasmi::Externals for WasmInterface {
                 let handles_count: u32 = args.nth_checked(4)?;
 
                 debug!(
-                    "{} channel_write: {} {} {} {} {}",
+                    "{}: channel_write({}, {}, {}, {}, {})",
                     self.pretty_name, writer_handle, source, source_length, handles, handles_count
                 );
 
@@ -649,18 +670,18 @@ impl wasmi::Externals for WasmInterface {
                 let actual_length: u32 = args.nth_checked(3)?;
 
                 let handles: u32 = args.nth_checked(4)?;
-                let handles_capcity: u32 = args.nth_checked(5)?;
+                let handles_capacity: u32 = args.nth_checked(5)?;
                 let actual_handle_count: u32 = args.nth_checked(6)?;
 
                 debug!(
-                    "{} channel_read: {} {} {} {} {} {} {}",
+                    "{}: channel_read({}, {}, {}, {}, {}, {}, {})",
                     self.pretty_name,
                     reader_handle,
                     dest,
                     dest_capacity,
                     actual_length,
                     handles,
-                    handles_capcity,
+                    handles_capacity,
                     actual_handle_count
                 );
 
@@ -670,7 +691,7 @@ impl wasmi::Externals for WasmInterface {
                     dest_capacity,
                     actual_length,
                     handles,
-                    handles_capcity,
+                    handles_capacity,
                     actual_handle_count,
                 ))
             }
@@ -680,7 +701,7 @@ impl wasmi::Externals for WasmInterface {
                 let handles_count: u32 = args.nth_checked(1)?;
 
                 debug!(
-                    "{} wait_on_channels: {} {}",
+                    "{}: wait_on_channels({}, {})",
                     self.pretty_name, status_buff, handles_count
                 );
 
@@ -913,23 +934,23 @@ impl WasmNode {
         let expected_signature = wasmi::Signature::new(&[ABI_U64][..], None);
 
         let export = instance.export_by_name(&self.entrypoint).ok_or_else(|| {
-            warn!("entrypoint export not found");
+            warn!("entrypoint '{}' export not found", self.entrypoint);
             OakStatus::ErrInvalidArgs
         })?;
 
         let export_func = export.as_func().ok_or_else(|| {
-            warn!("entrypoint export is not a function");
+            warn!("entrypoint '{}' export is not a function", self.entrypoint);
             OakStatus::ErrInvalidArgs
         })?;
 
         let export_func_signature = export_func.signature();
         if export_func_signature == &expected_signature {
-            info!("entrypoint export validated");
+            info!("entrypoint '{}' export validated", self.entrypoint);
             Ok(())
         } else {
             warn!(
-                "entrypoint export has incorrect function signature: {:?}",
-                export_func_signature
+                "entrypoint '{}' export has incorrect function signature: {:?}",
+                self.entrypoint, export_func_signature
             );
             Err(OakStatus::ErrInvalidArgs)
         }
@@ -981,7 +1002,7 @@ impl super::Node for WasmNode {
     /// If the entry point is not found, returns `Err(OakStatus::ErrInvalidArgs)` immediately.
     fn start(self: Box<Self>) -> Result<JoinHandle<()>, OakStatus> {
         debug!(
-            "new_instance: discovering {} {}",
+            "Node::start(): discovering '{}' '{}'",
             self.config_name, self.entrypoint
         );
 
@@ -991,7 +1012,7 @@ impl super::Node for WasmNode {
         self.validate_entrypoint()?;
 
         debug!(
-            "new_instance: starting {} {}",
+            "Node::start(): starting '{}' '{}'",
             self.config_name, self.entrypoint
         );
 

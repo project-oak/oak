@@ -30,7 +30,7 @@ use std::{
 pub extern "C" fn glue_init(debug: u32) {
     let _ = ::std::panic::catch_unwind(|| {
         if debug != 0 {
-            simple_logger::init().expect("failed to initialize logger");
+            simple_logger::init_with_level(log::Level::Debug).expect("failed to initialize logger");
         }
         info!("Rust FFI glue initialized");
     });
