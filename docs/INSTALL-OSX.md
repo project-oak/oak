@@ -44,6 +44,9 @@ RUN rustup default ${RUST_VERSION}
 # Install WebAssembly target for Rust.
 RUN rustup target add wasm32-unknown-unknown
 
+# Install musl target for Rust (for statically linked binaries).
+RUN rustup target add x86_64-unknown-linux-musl
+
 # Install rustfmt, clippy, and the Rust Language Server.
 RUN rustup component add \
   clippy \

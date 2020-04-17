@@ -50,7 +50,7 @@ if [[ "${config}" == "clang" && "${OSTYPE}" == "darwin"*  ]]; then
 fi
 
 if [[ "${config}" == "rust" ]]; then
-  cargo build --package=oak_loader
+  cargo build --release --target=x86_64-unknown-linux-musl --package=oak_loader
 else
   bazel_build_flags+=(
     "--config=${config}"
