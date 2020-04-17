@@ -1,38 +1,39 @@
 #!/usr/bin/env bash
+#
+# Script to generate documentation for Rust crates to publish as gh-pages.
+#
+# Usage:
+#
+# ./scipts/build_gh_pages <target_dir>
+#
+# Where <target_dir> must be an empty directory.
 
 readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "$SCRIPTS_DIR/common"
 
-# First check if the current commit is "clean" with respect to the master branch.
-readonly BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-([[ "${BRANCH}" == 'master' ]] && git diff --exit-code master && git diff --cached --exit-code master) \
-  || (echo "please commit any pending changes first and run this script from the master branch"; exit 1)
+readonly TARGET_DIR="${1:-}"
 
-readonly BRANCH_SHA1=$(git rev-parse --short=12 HEAD)
-readonly BRANCH_SUBJECT=$(git log -n 1 --format=format:%s)
-readonly COMMIT_MESSAGE=$(cat <<-END
-Update gh-pages from ${BRANCH_SHA1}
+if [[ -z "${TARGET_DIR}" ]]; then
+  echo 'target dir not specified'
+  exit 1
+fi
 
-Auto-generated from commit ${BRANCH_SHA1} ("${BRANCH_SUBJECT}").
-END
-)
+if [[ ! -d "${TARGET_DIR}" ]]; then
+  echo 'target not a directory'
+  exit 1
+fi
 
-# Create a temporary directory to stage the output of the generation process.
-readonly TARGET_DIR=$(mktemp --directory --tmpdir=/tmp 'project-oak-gh-pages-XXXXXXXXXX')
+if [[ ! -z "$(ls "${TARGET_DIR}"/*)" ]]; then
+  echo 'target dir not empty'
+  exit 1
+fi
 
-# Clone the gh-pages branch to the target directory, limiting to one commit.
-git clone git@github.com:project-oak/oak.git --branch=gh-pages --depth=1 "${TARGET_DIR}"
+# Generate docs directly in the target dir.
+cargo doc --no-deps --target-dir="${TARGET_DIR}"
 
-# Remove everything from the target directory. This script is supposed to automatically recreate
-# everything within that directory.
-rm --recursive --force "${TARGET_DIR:?}"/*
-
-# Remove previously generated artifacts, since `cargo doc` only regenerates new or modified
-# files, but does not remove artifacts generated from now-removed files.
-rm --recursive --force ./target/doc
-cargo doc --no-deps
-cp --recursive ./target/doc "${TARGET_DIR}"
+# Remove non-doc artifacts from the target dir.
+rm --recursive --force "${TARGET_DIR}/debug"
 
 # The docs generated from the Cargo workspace do not include a workspace-level index, so we generate
 # one here and redirect to the Oak SDK documentation.
@@ -47,12 +48,3 @@ cat <<-END > "${TARGET_DIR}/index.html"
   </body>
 </html>
 END
-
-(
-  cd "${TARGET_DIR}"
-  # Stage everything for commit, including the `index.html` page.
-  git add .
-  git commit --message="${COMMIT_MESSAGE}"
-  echo "to push changes, run the following command:"
-  echo "(cd ${TARGET_DIR} && git push)"
-)
