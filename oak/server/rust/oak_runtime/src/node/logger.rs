@@ -19,7 +19,7 @@ use std::{
     string::String,
 };
 
-use log::{error, info};
+use log::{error, info, log};
 
 use oak_abi::OakStatus;
 use std::thread::{self, JoinHandle};
@@ -60,18 +60,15 @@ impl LogNode {
             // An error indicates the Runtime is terminating. We ignore it here and keep trying to
             // read in case a Wasm Node wants to emit remaining messages. We will return
             // once the channel is closed.
-
             let _ = self.runtime.wait_on_channels(&[Some(self.reader)]);
 
             if let Some(message) = self.runtime.channel_read(self.reader)? {
                 match LogMessage::decode(&*message.data) {
-                    Ok(msg) => info!(
-                        "{} LOG: {} {}:{}: {}",
-                        pretty_name,
-                        to_level_name(msg.level),
-                        msg.file,
-                        msg.line,
-                        msg.message
+                    Ok(msg) => log!(
+                        target: &format!("{}:{}", msg.file, msg.line),
+                        to_level(msg.level),
+                        "{}",
+                        msg.message,
                     ),
                     Err(error) => error!("{} Could not parse LogMessage: {}", pretty_name, error),
                 }
@@ -96,10 +93,13 @@ impl super::Node for LogNode {
     }
 }
 
-fn to_level_name(level: i32) -> String {
-    format!(
-        "{:?}",
-        Level::from_i32(level).unwrap_or(Level::UnknownLevel)
-    )
-    .to_ascii_uppercase()
+fn to_level(level: i32) -> log::Level {
+    match Level::from_i32(level).unwrap_or(Level::UnknownLevel) {
+        Level::UnknownLevel => log::Level::Error,
+        Level::Error => log::Level::Error,
+        Level::Warn => log::Level::Warn,
+        Level::Info => log::Level::Info,
+        Level::Debugging => log::Level::Debug,
+        Level::Trace => log::Level::Trace,
+    }
 }
