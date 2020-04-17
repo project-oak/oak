@@ -16,6 +16,8 @@
 
 #include "oak/server/oak_grpc_node.h"
 
+#include <sstream>
+
 #include "absl/memory/memory.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/common/logging.h"
