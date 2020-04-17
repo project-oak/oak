@@ -27,9 +27,11 @@ use std::{
 };
 
 #[no_mangle]
-pub extern "C" fn glue_init() {
+pub extern "C" fn glue_init(debug: u32) {
     let _ = ::std::panic::catch_unwind(|| {
-        simple_logger::init().expect("failed to initialize logger");
+        if debug != 0 {
+            simple_logger::init().expect("failed to initialize logger");
+        }
         info!("Rust FFI glue initialized");
     });
 }

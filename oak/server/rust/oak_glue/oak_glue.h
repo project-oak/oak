@@ -22,8 +22,9 @@
 extern "C" {
 
 // Perform start of day initialization.  Must only be called once, before
-// any other functions.
-void glue_init();
+// any other functions.  The debug flag is treated as a boolean indicating
+// whether debug logging should be enabled for Rust.
+void glue_init(uint32_t debug);
 
 // Function pointer used for up-calling from Rust to C++ to create and run a pseudo-Node.
 // - The data parameter has the factory_data value registered at glue_start.

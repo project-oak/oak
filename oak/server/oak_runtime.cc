@@ -53,7 +53,12 @@ void NodeFactory(uintptr_t data, const char* name, uint32_t name_len, uint64_t n
 std::unique_ptr<OakRuntime> OakRuntime::Create(
     const ApplicationConfiguration& config,
     std::shared_ptr<grpc::ServerCredentials> grpc_credentials) {
-  absl::call_once(glue_once, &glue_init);
+#ifdef OAK_DEBUG
+  bool debug_mode = true;
+#else
+  bool debug_mode = false;
+#endif
+  absl::call_once(glue_once, &glue_init, static_cast<uint32_t>(debug_mode));
 
   if (!ValidApplicationConfig(config)) {
     OAK_LOG(ERROR) << "Invalid configuration";
