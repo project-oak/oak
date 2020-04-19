@@ -53,6 +53,12 @@ steps:
     timeout: 60m
     entrypoint: 'bash'
     args: ['./scripts/build_server', '-s', 'base']
+  - name: 'gcr.io/oak-ci/oak:latest'
+    id: build_server_rust
+    waitFor: ['bazel_init']
+    timeout: 60m
+    entrypoint: 'bash'
+    args: ['./scripts/build_server', '-s', 'rust']
 
   # Package the Hello World application in a Docker image.
   - name: 'gcr.io/oak-ci/oak:latest'
@@ -94,6 +100,17 @@ steps:
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/run_clang_tidy']
+
+  # Rebuild the index file with hashes of reproducible artifacts. If this changed compared to the
+  # checked-in version, it will be detected by the `git_check_diff` step below.
+  # TODO(#861): Re-enable this step (before git_check_diff) when artifacts are actually reproducibly
+  # built.
+  # - name: 'gcr.io/oak-ci/oak:latest'
+  #   id: build_reproducibility_index
+  #   waitFor: ['run_examples', 'build_server_rust']
+  #   timeout: 5m
+  #   entrypoint: 'bash'
+  #   args: ['./scripts/build_reproducibility_index']
 
   # Check whether any of the previous steps resulted in file diffs that were not checked in or
   # ignored by git.
