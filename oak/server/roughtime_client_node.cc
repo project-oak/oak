@@ -27,7 +27,7 @@ using ::oak_abi::OakStatus;
 namespace oak {
 
 RoughtimeClientNode::RoughtimeClientNode(const std::string& name, NodeId node_id,
-                                         const RoughtimeClientConfiguration& config)
+                                         const application::RoughtimeClientConfiguration& config)
     : OakNode(name, node_id) {
   std::vector<RoughtimeServerSpec> servers;
   for (const auto& server_conf : config.servers()) {

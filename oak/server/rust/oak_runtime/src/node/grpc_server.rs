@@ -36,7 +36,9 @@ use crate::{pretty_name_for_thread, runtime::RuntimeProxy, Handle};
 /// the [`GrpcServerNode::channel_writer`].
 pub struct GrpcServerNode {
     /// Pseudo-Node name that corresponds to an entry from the
-    /// [`crate::proto::ApplicationConfiguration`].
+    /// [`ApplicationConfiguration`].
+    ///
+    /// [`ApplicationConfiguration`]: crate::proto::oak::application::ApplicationConfiguration
     config_name: String,
     /// Reference to a Runtime that corresponds to a Node that created a gRPC server pseudo-Node.
     runtime: RuntimeProxy,

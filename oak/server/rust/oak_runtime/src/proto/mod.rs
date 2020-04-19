@@ -14,4 +14,8 @@
 // limitations under the License.
 //
 
-include!("oak.rs");
+pub mod oak {
+    pub mod application {
+        include!("oak.application.rs");
+    }
+}

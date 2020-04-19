@@ -51,7 +51,7 @@ void NodeFactory(uintptr_t data, const char* name, uint32_t name_len, uint64_t n
 }  // namespace
 
 std::unique_ptr<OakRuntime> OakRuntime::Create(
-    const ApplicationConfiguration& config,
+    const application::ApplicationConfiguration& config,
     std::shared_ptr<grpc::ServerCredentials> grpc_credentials) {
 #ifdef OAK_DEBUG
   bool debug_mode = true;
@@ -68,23 +68,24 @@ std::unique_ptr<OakRuntime> OakRuntime::Create(
   return std::unique_ptr<OakRuntime>(new OakRuntime(config, grpc_credentials));
 }
 
-OakRuntime::OakRuntime(const ApplicationConfiguration& config,
+OakRuntime::OakRuntime(const application::ApplicationConfiguration& config,
                        std::shared_ptr<grpc::ServerCredentials> grpc_credentials)
     : grpc_node_(OakGrpcNode::Create(kGrpcNodeName, 0, grpc_credentials, config.grpc_port())),
       grpc_handle_(kInvalidHandle) {
   // Accumulate the various data structures indexed by config name.
   for (const auto& node_config : config.node_configs()) {
     if (node_config.has_storage_config()) {
-      const StorageProxyConfiguration& storage_config = node_config.storage_config();
+      const application::StorageProxyConfiguration& storage_config = node_config.storage_config();
       storage_config_[node_config.name()] =
           absl::make_unique<std::string>(storage_config.address());
     } else if (node_config.has_grpc_client_config()) {
-      const GrpcClientConfiguration& grpc_config = node_config.grpc_client_config();
+      const application::GrpcClientConfiguration& grpc_config = node_config.grpc_client_config();
       grpc_client_config_[node_config.name()] =
           absl::make_unique<std::string>(grpc_config.address());
     } else if (node_config.has_roughtime_client_config()) {
       roughtime_client_config_[node_config.name()] =
-          absl::make_unique<RoughtimeClientConfiguration>(node_config.roughtime_client_config());
+          absl::make_unique<application::RoughtimeClientConfiguration>(
+              node_config.roughtime_client_config());
     }
   }
   std::string config_data;
@@ -120,7 +121,8 @@ std::unique_ptr<OakNode> OakRuntime::CreateNode(const std::string& config_name,
 
   auto roughtime_iter = roughtime_client_config_.find(config_name);
   if (roughtime_iter != roughtime_client_config_.end()) {
-    const RoughtimeClientConfiguration* roughtime_config = roughtime_iter->second.get();
+    const application::RoughtimeClientConfiguration* roughtime_config =
+        roughtime_iter->second.get();
     OAK_LOG(INFO) << "Create Roughtime client node named {" << name << "} with config "
                   << roughtime_config->DebugString();
     return absl::make_unique<RoughtimeClientNode>(name, node_id, *roughtime_config);

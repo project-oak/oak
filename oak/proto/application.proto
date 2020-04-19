@@ -16,7 +16,7 @@
 
 syntax = "proto3";
 
-package oak;
+package oak.application;
 
 // An ApplicationConfiguration represents a unit of deployment in Oak.
 //

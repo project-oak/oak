@@ -18,7 +18,9 @@ use byteorder::{ReadBytesExt, WriteBytesExt};
 use lazy_static::lazy_static;
 use log::{debug, error, info, warn};
 use oak_abi::OakStatus;
-use oak_runtime::{proto::ApplicationConfiguration, runtime::RuntimeProxy, NodeId};
+use oak_runtime::{
+    proto::oak::application::ApplicationConfiguration, runtime::RuntimeProxy, NodeId,
+};
 use prost::Message;
 use std::{
     convert::TryInto,

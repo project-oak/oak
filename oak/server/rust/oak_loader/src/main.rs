@@ -23,7 +23,7 @@
 //! ```
 
 use log::info;
-use oak_runtime::{configure_and_run, proto::ApplicationConfiguration};
+use oak_runtime::{configure_and_run, proto::oak::application::ApplicationConfiguration};
 use prost::Message;
 use std::{fs::File, io::Read, thread::park};
 use structopt::StructOpt;
