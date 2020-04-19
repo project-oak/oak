@@ -23,6 +23,9 @@
 #include "oak/common/logging.h"
 #include "oak/common/utils.h"
 
+using ::oak::application::ApplicationConfiguration;
+using ::oak::application::NodeConfiguration;
+
 namespace oak {
 
 namespace {
@@ -45,7 +48,7 @@ std::unique_ptr<ApplicationConfiguration> DefaultConfig(const std::string& modul
   config->set_initial_node_config_name(kAppConfigName);
   NodeConfiguration* node_config = config->add_node_configs();
   node_config->set_name(kAppConfigName);
-  WebAssemblyConfiguration* code = node_config->mutable_wasm_config();
+  application::WebAssemblyConfiguration* code = node_config->mutable_wasm_config();
   code->set_module_bytes(module_bytes);
   config->set_initial_entrypoint_name(kAppEntrypointName);
 
@@ -75,14 +78,14 @@ void AddLoggingToConfig(ApplicationConfiguration* config) {
 void AddStorageToConfig(ApplicationConfiguration* config, const std::string& storage_address) {
   NodeConfiguration* node_config = config->add_node_configs();
   node_config->set_name(kStorageConfigName);
-  StorageProxyConfiguration* storage = node_config->mutable_storage_config();
+  application::StorageProxyConfiguration* storage = node_config->mutable_storage_config();
   storage->set_address(storage_address);
 }
 
 void AddGrpcClientToConfig(ApplicationConfiguration* config, const std::string& grpc_address) {
   NodeConfiguration* node_config = config->add_node_configs();
   node_config->set_name(kGrpcClientConfigName);
-  GrpcClientConfiguration* grpc_config = node_config->mutable_grpc_client_config();
+  application::GrpcClientConfiguration* grpc_config = node_config->mutable_grpc_client_config();
   grpc_config->set_address(grpc_address);
 }
 

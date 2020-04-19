@@ -30,8 +30,9 @@ class OakLoader {
  public:
   OakLoader();
 
-  grpc::Status CreateApplication(const oak::ApplicationConfiguration& application_configuration,
-                                 std::shared_ptr<grpc::ServerCredentials> grpc_credentials);
+  grpc::Status CreateApplication(
+      const oak::application::ApplicationConfiguration& application_configuration,
+      std::shared_ptr<grpc::ServerCredentials> grpc_credentials);
 
   grpc::Status TerminateApplication();
 

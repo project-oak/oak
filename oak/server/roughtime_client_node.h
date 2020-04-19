@@ -30,7 +30,7 @@ namespace oak {
 class RoughtimeClientNode final : public OakNode {
  public:
   RoughtimeClientNode(const std::string& name, NodeId node_id,
-                      const RoughtimeClientConfiguration& config);
+                      const application::RoughtimeClientConfiguration& config);
 
  private:
   void Run(Handle handle) override;

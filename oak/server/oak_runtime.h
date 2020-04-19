@@ -37,7 +37,7 @@ namespace oak {
 class OakRuntime {
  public:
   static std::unique_ptr<OakRuntime> Create(
-      const ApplicationConfiguration& config,
+      const application::ApplicationConfiguration& config,
       std::shared_ptr<grpc::ServerCredentials> grpc_credentials);
   ~OakRuntime() = default;
 
@@ -47,7 +47,7 @@ class OakRuntime {
   void CreateAndRunPseudoNode(const std::string& config_name, NodeId node_id, Handle handle) const;
 
  private:
-  OakRuntime(const ApplicationConfiguration& config,
+  OakRuntime(const application::ApplicationConfiguration& config,
              std::shared_ptr<grpc::ServerCredentials> grpc_credentials);
   OakRuntime& operator=(const OakRuntime& other) = delete;
 
@@ -60,7 +60,8 @@ class OakRuntime {
   // Config names that refer to a gRPC client node.
   std::map<std::string, std::unique_ptr<std::string>> grpc_client_config_;
   // Config names that refer to a Roughtime client node.
-  std::map<std::string, std::unique_ptr<RoughtimeClientConfiguration>> roughtime_client_config_;
+  std::map<std::string, std::unique_ptr<application::RoughtimeClientConfiguration>>
+      roughtime_client_config_;
 
   // gRPC pseudo-node.
   std::unique_ptr<OakGrpcNode> grpc_node_;

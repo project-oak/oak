@@ -16,7 +16,7 @@
 
 use maplit::hashmap;
 
-use crate::proto::{
+use crate::proto::oak::application::{
     node_configuration::ConfigType::{LogConfig, WasmConfig},
     ApplicationConfiguration, LogConfiguration, NodeConfiguration, WebAssemblyConfiguration,
 };

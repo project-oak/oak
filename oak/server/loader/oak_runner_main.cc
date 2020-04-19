@@ -63,7 +63,7 @@ int main(int argc, char* argv[]) {
   std::unique_ptr<oak::OakLoader> loader = absl::make_unique<oak::OakLoader>();
 
   // Load application configuration.
-  std::unique_ptr<oak::ApplicationConfiguration> application_config =
+  std::unique_ptr<oak::application::ApplicationConfiguration> application_config =
       oak::ReadConfigFromFile(absl::GetFlag(FLAGS_application));
 
   std::string private_key_path = absl::GetFlag(FLAGS_private_key);

@@ -25,29 +25,34 @@ namespace oak {
 
 // Build a default application configuration with a single Wasm node of the given
 // name and contents, accessible via gRPC.
-std::unique_ptr<ApplicationConfiguration> DefaultConfig(const std::string& module_bytes);
+std::unique_ptr<application::ApplicationConfiguration> DefaultConfig(
+    const std::string& module_bytes);
 
 // Reads a serialized application configuration from file.
-std::unique_ptr<ApplicationConfiguration> ReadConfigFromFile(const std::string& filename);
+std::unique_ptr<application::ApplicationConfiguration> ReadConfigFromFile(
+    const std::string& filename);
 
 // Serializes an application configuration from `config` and writes it into a file.
-void WriteConfigToFile(const ApplicationConfiguration* config, const std::string& filename);
+void WriteConfigToFile(const application::ApplicationConfiguration* config,
+                       const std::string& filename);
 
 // Modify application configuration to make logging available.
-void AddLoggingToConfig(ApplicationConfiguration* config);
+void AddLoggingToConfig(application::ApplicationConfiguration* config);
 
 // Modify application configuration to make a storage proxy available.
-void AddStorageToConfig(ApplicationConfiguration* config, const std::string& storage_address);
+void AddStorageToConfig(application::ApplicationConfiguration* config,
+                        const std::string& storage_address);
 
 // Modify application configuration to make a gRPC client pseudo-Node available.
-void AddGrpcClientToConfig(ApplicationConfiguration* config, const std::string& grpc_address);
+void AddGrpcClientToConfig(application::ApplicationConfiguration* config,
+                           const std::string& grpc_address);
 
 // Modify application configuration to make the gRPC server use a specific,
 // non-default, port.
-void SetGrpcPortInConfig(ApplicationConfiguration* config, const int16_t grpc_port);
+void SetGrpcPortInConfig(application::ApplicationConfiguration* config, const int16_t grpc_port);
 
 // Checks whether the given ApplicationConfiguration is valid.
-bool ValidApplicationConfig(const ApplicationConfiguration& config);
+bool ValidApplicationConfig(const application::ApplicationConfiguration& config);
 
 }  // namespace oak
 

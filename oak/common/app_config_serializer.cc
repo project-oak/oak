@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
   }
 
   // Load application configuration.
-  auto config = absl::make_unique<oak::ApplicationConfiguration>();
+  auto config = absl::make_unique<oak::application::ApplicationConfiguration>();
   std::string textproto_string = oak::utils::read_file(textproto);
   google::protobuf::TextFormat::MergeFromString(textproto_string, config.get());
 

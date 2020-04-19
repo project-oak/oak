@@ -23,6 +23,8 @@
 #include "google/protobuf/text_format.h"
 #include "gtest/gtest.h"
 
+using oak::application::ApplicationConfiguration;
+
 namespace oak {
 
 namespace {

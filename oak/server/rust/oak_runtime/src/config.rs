@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::proto::{
+use crate::proto::oak::application::{
     node_configuration::ConfigType, ApplicationConfiguration, GrpcServerConfiguration,
     LogConfiguration, NodeConfiguration, WebAssemblyConfiguration,
 };

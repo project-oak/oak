@@ -25,7 +25,7 @@ namespace oak {
 OakLoader::OakLoader() {}
 
 grpc::Status OakLoader::CreateApplication(
-    const oak::ApplicationConfiguration& application_configuration,
+    const oak::application::ApplicationConfiguration& application_configuration,
     std::shared_ptr<grpc::ServerCredentials> grpc_credentials) {
   OAK_LOG(INFO) << "Creating an Oak application";
 
