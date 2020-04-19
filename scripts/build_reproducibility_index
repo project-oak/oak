@@ -6,7 +6,7 @@
 # This script should be re-run every time any of these artifacts changes, and should be checked in
 # so that we can enforce in CI that the hashes are indeed consistent.
 
-readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
+readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "$SCRIPTS_DIR/common"
 
