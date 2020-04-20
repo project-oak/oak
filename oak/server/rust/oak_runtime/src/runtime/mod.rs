@@ -56,6 +56,7 @@ pub struct NodeId(pub u64);
 /// A Node identifier reserved for the Runtime that allows access to all handles and channels.
 // TODO(#724): make private once main() is in Rust not C++
 pub const RUNTIME_NODE_ID: NodeId = NodeId(0);
+
 /// For testing use the same reserved identifier to allow manipulation of all handles and channels.
 #[cfg(any(feature = "test_build", test))]
 pub const TEST_NODE_ID: NodeId = NodeId(0);
@@ -741,6 +742,12 @@ impl Runtime {
             .write()
             .expect("could not acquire lock on node_infos")
             .insert(node_id, node_info);
+        crate::metrics::NUM_NODES.set(
+            self.node_infos
+                .read()
+                .expect("could not acquire lock on node_infos")
+                .len() as f64,
+        );
     }
 
     /// Add an [`NodeId`] [`JoinHandle`] pair to the [`Runtime`]. This method temporarily holds the

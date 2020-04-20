@@ -23,9 +23,9 @@
 //! ```
 
 use log::info;
-use oak_runtime::{configure_and_run, proto::oak::application::ApplicationConfiguration};
+use oak_runtime::{configure_and_run, metrics, proto::oak::application::ApplicationConfiguration};
 use prost::Message;
-use std::{fs::File, io::Read, thread::park};
+use std::{fs::File, io::Read};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Clone)]
@@ -51,7 +51,8 @@ fn read_file(filename: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     Ok(buffer)
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
     info!("Loading Oak Runtime");
 
@@ -64,8 +65,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Spawns a new thread corresponding to an initial Wasm Oak node.
     configure_and_run(app_config).map_err(|error| format!("Runtime error: {:?}", error))?;
-    // Park current thread.
-    park();
+
+    // TODO: port should come from config
+    let port = 3030;
+    let metrics_future = metrics::serve_metrics(port);
+
+    if let Err(e) = metrics_future.await {
+        eprintln!("Error when waiting for metrics_future: {:?}", e);
+    }
 
     Ok(())
 }

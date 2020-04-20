@@ -27,7 +27,12 @@ use oak_abi::{
     grpc::encap_request, label::Label, proto::oak::encap::GrpcRequest, ChannelReadStatus, OakStatus,
 };
 
-use crate::{pretty_name_for_thread, runtime::RuntimeProxy, Handle};
+use crate::{
+    metrics::{HTTP_BODY_GAUGE, HTTP_COUNTER, HTTP_REQ_HISTOGRAM},
+    pretty_name_for_thread,
+    runtime::RuntimeProxy,
+    Handle,
+};
 
 /// Struct that represents a gRPC server pseudo-Node.
 ///
@@ -208,6 +213,8 @@ impl GrpcServerNode {
     /// channel to the [`GrpcServerNode::channel_writer`].
     /// Returns a [`Handle`] for reading a gRPC response from.
     fn process_request(&self, request: GrpcRequest) -> Result<Handle, GrpcServerError> {
+        HTTP_COUNTER.inc();
+        let timer = HTTP_REQ_HISTOGRAM.with_label_values(&["all"]).start_timer();
         // Create a pair of temporary channels to pass the gRPC request and to receive the response.
         let (request_writer, request_reader) =
             self.runtime.channel_create(&Label::public_trusted());
@@ -255,6 +262,7 @@ impl GrpcServerNode {
                 GrpcServerError::RequestProcessingError
             })?;
 
+        timer.observe_duration();
         Ok(response_reader)
     }
 
@@ -278,7 +286,10 @@ impl GrpcServerNode {
                 })
                 .map(|message| {
                     // Return an empty HTTP body if the `message` is None.
-                    message.map_or(vec![], |m| m.data)
+                    message.map_or(vec![], |m| {
+                        HTTP_BODY_GAUGE.set(m.data.len() as f64);
+                        m.data
+                    })
                 })
         } else {
             error!(

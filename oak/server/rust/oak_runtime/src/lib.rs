@@ -18,6 +18,7 @@ pub mod proto;
 
 pub mod config;
 pub mod message;
+pub mod metrics;
 pub mod node;
 pub mod runtime;
 
