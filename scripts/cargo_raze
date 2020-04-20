@@ -4,5 +4,8 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "$SCRIPTS_DIR/common"
 
-cd cargo
+cd cargo || exit 1
+# Remove existing raze-generated BUILD files before regenerating, so
+# the files for removed/upgraded deps get cleared.
+rm -f remote/*
 cargo raze
