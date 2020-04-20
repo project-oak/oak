@@ -104,8 +104,8 @@
 <span class="doccomment">//! binary format.  That format is a serialized protocol buffer holding the</span>
 <span class="doccomment">//! `Label` message defined in the policy.proto file.</span>
 
-<span class="kw">use</span> <span class="ident">hashbrown</span>::<span class="ident">HashSet</span>;
 <span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">HashSet</span>;
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">label</span>::<span class="kw-2">*</span>;
 
