@@ -14,6 +14,7 @@ RUN apt-get --yes update && \
   libfl2 \
   libncurses5 \
   libssl-dev \
+  musl-tools \
   pkg-config \
   procps \
   python-dev \
