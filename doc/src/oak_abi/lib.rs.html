@@ -148,6 +148,14 @@
 <span id="148">148</span>
 <span id="149">149</span>
 <span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -165,11 +173,14 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
-<span class="doccomment">//! Type, constant and Wasm host function definitions for the Oak application binary interface.</span>
-<span class="kw">mod</span> <span class="ident">proto</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">proto</span>::<span class="kw-2">*</span>;
+<span class="doccomment">//! Type, constant and Wasm host function definitions for the Oak application</span>
+<span class="doccomment">//! binary interface (ABI).</span>
 
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">grpc</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">label</span>;
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">proto</span>;
+
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">proto</span>::<span class="ident">oak</span>::{<span class="ident">ChannelReadStatus</span>, <span class="ident">OakStatus</span>};
 
 <span class="doccomment">/// Handle used to identify read or write channel halves.</span>
 <span class="doccomment">///</span>
@@ -192,6 +203,9 @@
 <span class="doccomment">/// Invalid handle value.</span>
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">INVALID_HANDLE</span>: <span class="ident">Handle</span> <span class="op">=</span> <span class="number">0</span>;
 
+<span class="comment">// The Oak ABI primarily consists of a collection of Wasm host functions in the</span>
+<span class="comment">// &quot;oak&quot; module that are made available to WebAssembly Nodes running under the</span>
+<span class="comment">// Oak runtime.</span>
 <span class="comment">// See https://rustwasm.github.io/book/reference/js-ffi.html</span>
 <span class="attribute">#[<span class="ident">link</span>(<span class="ident">wasm_import_module</span> <span class="op">=</span> <span class="string">&quot;oak&quot;</span>)]</span>
 <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> {
@@ -289,6 +303,8 @@
         <span class="ident">config_len</span>: <span class="ident">usize</span>,
         <span class="ident">entrypoint_buf</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">u8</span>,
         <span class="ident">entrypoint_len</span>: <span class="ident">usize</span>,
+        <span class="ident">label_buf</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">u8</span>,
+        <span class="ident">label_len</span>: <span class="ident">usize</span>,
         <span class="ident">handle</span>: <span class="ident">u64</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u32</span>;
 

@@ -293,6 +293,16 @@
 <span id="293">293</span>
 <span id="294">294</span>
 <span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -310,11 +320,14 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::{<span class="ident">HashMap</span>, <span class="ident">VecDeque</span>};
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::<span class="ident">atomic</span>::<span class="ident">AtomicU64</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::<span class="ident">atomic</span>::<span class="ident">Ordering</span>::<span class="ident">SeqCst</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::{<span class="ident">Arc</span>, <span class="ident">Mutex</span>, <span class="ident">RwLock</span>, <span class="ident">Weak</span>};
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">thread</span>::{<span class="ident">Thread</span>, <span class="ident">ThreadId</span>};
+<span class="kw">use</span> <span class="ident">std</span>::{
+    <span class="ident">collections</span>::{<span class="ident">HashMap</span>, <span class="ident">VecDeque</span>},
+    <span class="ident">sync</span>::{
+        <span class="ident">atomic</span>::{<span class="ident">AtomicU64</span>, <span class="ident">Ordering</span>::<span class="ident">SeqCst</span>},
+        <span class="ident">Arc</span>, <span class="ident">Mutex</span>, <span class="ident">RwLock</span>, <span class="ident">Weak</span>,
+    },
+    <span class="ident">thread</span>::{<span class="ident">Thread</span>, <span class="ident">ThreadId</span>},
+};
 
 <span class="kw">use</span> <span class="ident">log</span>::<span class="ident">debug</span>;
 <span class="kw">use</span> <span class="ident">rand</span>::<span class="ident">RngCore</span>;
@@ -364,10 +377,13 @@
 <span class="doccomment">/// A reference to a [`Channel`]. Each [`Handle`] has an implicit direction such that it is only</span>
 <span class="doccomment">/// possible to read or write to a [`Handle`] (exclusive or).</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>, <span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Handle</span>(<span class="ident">oak_abi</span>::<span class="ident">Handle</span>);
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Handle</span>(<span class="kw">pub</span> <span class="ident">oak_abi</span>::<span class="ident">Handle</span>);
 
 <span class="doccomment">/// The direction of a [`Handle`] can be discovered by querying the associated</span>
-<span class="doccomment">/// [`oak_runtime::Runtime`] [`oak_runtime::Runtime::channel_get_direction`].</span>
+<span class="doccomment">/// [`Runtime`] [`Runtime::channel_get_direction`].</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// [`Runtime`]: crate::runtime::Runtime</span>
+<span class="doccomment">/// [`Runtime::channel_get_direction`]: crate::runtime::Runtime::channel_get_direction</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>, <span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">HandleDirection</span> {
     <span class="ident">Read</span>,
@@ -376,6 +392,8 @@
 
 <span class="doccomment">/// An internal identifier to track a [`Channel`]. This is implementation specific and should not</span>
 <span class="doccomment">/// be visible outside the internals of [`Runtime`].</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// [`Runtime`]: crate::runtime::Runtime</span>
 <span class="kw">type</span> <span class="ident">ChannelId</span> <span class="op">=</span> <span class="ident">u64</span>;
 
 <span class="doccomment">/// Ownership and mapping of [`Channel`]s to [`Handle`]s.</span>
@@ -489,16 +507,16 @@
     }
 
     <span class="doccomment">/// Create a new writer reference.</span>
-    <span class="kw">fn</span> <span class="ident">new_writer</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">channel</span>: <span class="ident">ChannelId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Handle</span> {
+    <span class="kw">fn</span> <span class="ident">new_writer</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">channel_id</span>: <span class="ident">ChannelId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Handle</span> {
         <span class="kw">let</span> <span class="ident">reference</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">new_reference</span>();
-        <span class="self">self</span>.<span class="ident">writers</span>.<span class="ident">write</span>().<span class="ident">unwrap</span>().<span class="ident">insert</span>(<span class="ident">reference</span>, <span class="ident">channel</span>);
+        <span class="self">self</span>.<span class="ident">writers</span>.<span class="ident">write</span>().<span class="ident">unwrap</span>().<span class="ident">insert</span>(<span class="ident">reference</span>, <span class="ident">channel_id</span>);
         <span class="ident">reference</span>
     }
 
     <span class="doccomment">/// Create a new reader reference.</span>
-    <span class="kw">fn</span> <span class="ident">new_reader</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">channel</span>: <span class="ident">ChannelId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Handle</span> {
+    <span class="kw">fn</span> <span class="ident">new_reader</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">channel_id</span>: <span class="ident">ChannelId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Handle</span> {
         <span class="kw">let</span> <span class="ident">reference</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">new_reference</span>();
-        <span class="self">self</span>.<span class="ident">readers</span>.<span class="ident">write</span>().<span class="ident">unwrap</span>().<span class="ident">insert</span>(<span class="ident">reference</span>, <span class="ident">channel</span>);
+        <span class="self">self</span>.<span class="ident">readers</span>.<span class="ident">write</span>().<span class="ident">unwrap</span>().<span class="ident">insert</span>(<span class="ident">reference</span>, <span class="ident">channel_id</span>);
         <span class="ident">reference</span>
     }
 
@@ -572,7 +590,9 @@
 
     <span class="doccomment">/// Duplicate a [`Handle`] reference. This new reference and when it is closed will be</span>
     <span class="doccomment">/// tracked separately from the first [`Handle`]. For instance this is used by the</span>
-    <span class="doccomment">/// [`oak_runtime::Runtime`] to encode [`Channel`]s in messages.</span>
+    <span class="doccomment">/// [`Runtime`] to encode [`Channel`]s in messages.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// [`Runtime`]: crate::runtime::Runtime</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">duplicate_reference</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">reference</span>: <span class="ident">Handle</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Handle</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">channel_id</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_writer_channel</span>(<span class="ident">reference</span>) {
             <span class="self">self</span>.<span class="ident">with_channel</span>(<span class="ident">channel_id</span>, <span class="op">|</span><span class="ident">channel</span><span class="op">|</span> <span class="prelude-val">Ok</span>(<span class="ident">channel</span>.<span class="ident">inc_writer_count</span>()))<span class="question-mark">?</span>;

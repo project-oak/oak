@@ -113,6 +113,7 @@
 <span id="113">113</span>
 <span id="114">114</span>
 <span id="115">115</span>
+<span id="116">116</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -130,14 +131,15 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
-<span class="kw">mod</span> <span class="ident">proto</span>;
+<span class="kw">mod</span> <span class="ident">proto</span> {
+    <span class="macro">include</span><span class="macro">!</span>(<span class="macro">concat</span><span class="macro">!</span>(<span class="macro">env</span><span class="macro">!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak.examples.hello_world.rs&quot;</span>));
+}
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span>;
 
 <span class="kw">use</span> <span class="ident">log</span>::<span class="ident">info</span>;
 <span class="kw">use</span> <span class="ident">oak</span>::<span class="ident">grpc</span>;
-<span class="kw">use</span> <span class="ident">proto</span>::<span class="ident">hello_world</span>::{<span class="ident">HelloRequest</span>, <span class="ident">HelloResponse</span>};
-<span class="kw">use</span> <span class="ident">proto</span>::<span class="ident">hello_world_grpc</span>::{<span class="ident">Dispatcher</span>, <span class="ident">HelloWorld</span>};
+<span class="kw">use</span> <span class="ident">proto</span>::{<span class="ident">HelloRequest</span>, <span class="ident">HelloResponse</span>, <span class="ident">HelloWorld</span>, <span class="ident">HelloWorldDispatcher</span>};
 
 <span class="ident">oak</span>::<span class="macro">entrypoint</span><span class="macro">!</span>(<span class="ident">oak_main</span> <span class="op">=</span><span class="op">&gt;</span> {
     <span class="ident">oak</span>::<span class="ident">logger</span>::<span class="ident">init_default</span>();
@@ -145,7 +147,7 @@
         <span class="ident">translator</span>: <span class="ident">grpc</span>::<span class="ident">client</span>::<span class="ident">Client</span>::<span class="ident">new</span>(<span class="string">&quot;translator&quot;</span>, <span class="string">&quot;oak_main&quot;</span>)
             .<span class="ident">map</span>(<span class="ident">translator_common</span>::<span class="ident">TranslatorClient</span>),
     };
-    <span class="ident">Dispatcher</span>::<span class="ident">new</span>(<span class="ident">node</span>)
+    <span class="ident">HelloWorldDispatcher</span>::<span class="ident">new</span>(<span class="ident">node</span>)
 });
 
 <span class="kw">struct</span> <span class="ident">Node</span> {
@@ -162,14 +164,14 @@
 <span class="kw">impl</span> <span class="ident">HelloWorld</span> <span class="kw">for</span> <span class="ident">Node</span> {
     <span class="kw">fn</span> <span class="ident">say_hello</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">req</span>: <span class="ident">HelloRequest</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">HelloResponse</span><span class="op">&gt;</span> {
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Say hello to {}&quot;</span>, <span class="ident">req</span>.<span class="ident">greeting</span>);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">HelloResponse</span>::<span class="ident">new</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">HelloResponse</span>::<span class="ident">default</span>();
         <span class="ident">res</span>.<span class="ident">reply</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;HELLO {}!&quot;</span>, <span class="ident">req</span>.<span class="ident">greeting</span>);
         <span class="prelude-val">Ok</span>(<span class="ident">res</span>)
     }
 
     <span class="kw">fn</span> <span class="ident">lots_of_replies</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">req</span>: <span class="ident">HelloRequest</span>, <span class="kw-2">mut</span> <span class="ident">writer</span>: <span class="ident">grpc</span>::<span class="ident">ChannelResponseWriter</span>) {
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Say hello to {}&quot;</span>, <span class="ident">req</span>.<span class="ident">greeting</span>);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res1</span> <span class="op">=</span> <span class="ident">HelloResponse</span>::<span class="ident">new</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res1</span> <span class="op">=</span> <span class="ident">HelloResponse</span>::<span class="ident">default</span>();
         <span class="ident">res1</span>.<span class="ident">reply</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;HELLO {}!&quot;</span>, <span class="ident">req</span>.<span class="ident">greeting</span>);
         <span class="ident">writer</span>
             .<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="ident">res1</span>, <span class="ident">grpc</span>::<span class="ident">WriteMode</span>::<span class="ident">KeepOpen</span>)
@@ -178,7 +180,7 @@
         <span class="comment">// Attempt to also generate a translated response.</span>
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">salutation</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">translate</span>(<span class="kw-2">&amp;</span><span class="ident">req</span>.<span class="ident">greeting</span>, <span class="string">&quot;en&quot;</span>, <span class="string">&quot;fr&quot;</span>) {
             <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Say bonjour to {}&quot;</span>, <span class="ident">salutation</span>);
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">HelloResponse</span>::<span class="ident">new</span>();
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">HelloResponse</span>::<span class="ident">default</span>();
             <span class="ident">res</span>.<span class="ident">reply</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;BONJOUR {}!&quot;</span>, <span class="ident">salutation</span>);
             <span class="ident">writer</span>
                 .<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="ident">res</span>, <span class="ident">grpc</span>::<span class="ident">WriteMode</span>::<span class="ident">KeepOpen</span>)
@@ -186,7 +188,7 @@
         }
 
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Say hello again to {}&quot;</span>, <span class="ident">req</span>.<span class="ident">greeting</span>);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res2</span> <span class="op">=</span> <span class="ident">HelloResponse</span>::<span class="ident">new</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res2</span> <span class="op">=</span> <span class="ident">HelloResponse</span>::<span class="ident">default</span>();
         <span class="ident">res2</span>.<span class="ident">reply</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;HELLO AGAIN {}!&quot;</span>, <span class="ident">req</span>.<span class="ident">greeting</span>);
         <span class="ident">writer</span>
             .<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="ident">res2</span>, <span class="ident">grpc</span>::<span class="ident">WriteMode</span>::<span class="ident">Close</span>)
@@ -198,7 +200,7 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">msg</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">new</span>();
         <span class="ident">msg</span>.<span class="ident">push_str</span>(<span class="string">&quot;Hello &quot;</span>);
         <span class="ident">msg</span>.<span class="ident">push_str</span>(<span class="kw-2">&amp;</span><span class="ident">recipients</span>(<span class="kw-2">&amp;</span><span class="ident">reqs</span>));
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">HelloResponse</span>::<span class="ident">new</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">HelloResponse</span>::<span class="ident">default</span>();
         <span class="ident">res</span>.<span class="ident">reply</span> <span class="op">=</span> <span class="ident">msg</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">res</span>)
     }
@@ -206,12 +208,12 @@
     <span class="kw">fn</span> <span class="ident">bidi_hello</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">reqs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">HelloRequest</span><span class="op">&gt;</span>, <span class="kw-2">mut</span> <span class="ident">writer</span>: <span class="ident">grpc</span>::<span class="ident">ChannelResponseWriter</span>) {
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Say hello&quot;</span>);
         <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="ident">recipients</span>(<span class="kw-2">&amp;</span><span class="ident">reqs</span>);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res1</span> <span class="op">=</span> <span class="ident">HelloResponse</span>::<span class="ident">new</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res1</span> <span class="op">=</span> <span class="ident">HelloResponse</span>::<span class="ident">default</span>();
         <span class="ident">res1</span>.<span class="ident">reply</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;HELLO {}!&quot;</span>, <span class="ident">msg</span>);
         <span class="ident">writer</span>
             .<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="ident">res1</span>, <span class="ident">grpc</span>::<span class="ident">WriteMode</span>::<span class="ident">KeepOpen</span>)
             .<span class="ident">expect</span>(<span class="string">&quot;Failed to write response&quot;</span>);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res2</span> <span class="op">=</span> <span class="ident">HelloResponse</span>::<span class="ident">new</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res2</span> <span class="op">=</span> <span class="ident">HelloResponse</span>::<span class="ident">default</span>();
         <span class="ident">res2</span>.<span class="ident">reply</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;BONJOUR {}!&quot;</span>, <span class="ident">msg</span>);
         <span class="ident">writer</span>
             .<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="ident">res2</span>, <span class="ident">grpc</span>::<span class="ident">WriteMode</span>::<span class="ident">Close</span>)

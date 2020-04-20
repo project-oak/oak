@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["run_protoc_rust",""],["run_protoc_rust_grpc",""]]});
+initSidebarItems({"fn":[["compile_protos",""],["compile_protos_to",""]]});

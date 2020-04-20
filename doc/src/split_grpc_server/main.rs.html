@@ -89,6 +89,8 @@
 <span id="89">89</span>
 <span id="90">90</span>
 <span id="91">91</span>
+<span id="92">92</span>
+<span id="93">93</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -113,8 +115,10 @@
     <span class="ident">Request</span>, <span class="ident">Response</span>, <span class="ident">Status</span>, <span class="ident">Streaming</span>,
 };
 
-<span class="kw">use</span> <span class="ident">proto</span>::<span class="ident">hello_world_server</span>::{<span class="ident">HelloWorld</span>, <span class="ident">HelloWorldServer</span>};
-<span class="kw">use</span> <span class="ident">proto</span>::{<span class="ident">HelloRequest</span>, <span class="ident">HelloResponse</span>};
+<span class="kw">use</span> <span class="ident">proto</span>::{
+    <span class="ident">hello_world_server</span>::{<span class="ident">HelloWorld</span>, <span class="ident">HelloWorldServer</span>},
+    <span class="ident">HelloRequest</span>, <span class="ident">HelloResponse</span>,
+};
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">proto</span> {
     <span class="ident">tonic</span>::<span class="macro">include_proto</span><span class="macro">!</span>(<span class="string">&quot;oak.examples.hello_world&quot;</span>);
@@ -167,8 +171,8 @@
 
 <span class="attribute">#[<span class="ident">tokio</span>::<span class="ident">main</span>]</span>
 <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">main</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">std</span>::<span class="ident">error</span>::<span class="ident">Error</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">cert</span> <span class="op">=</span> <span class="ident">tokio</span>::<span class="ident">fs</span>::<span class="ident">read</span>(<span class="string">&quot;examples/certs/local.pem&quot;</span>).<span class="kw">await</span><span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">key</span> <span class="op">=</span> <span class="ident">tokio</span>::<span class="ident">fs</span>::<span class="ident">read</span>(<span class="string">&quot;examples/certs/local.key&quot;</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">cert</span> <span class="op">=</span> <span class="ident">tokio</span>::<span class="ident">fs</span>::<span class="ident">read</span>(<span class="string">&quot;examples/certs/local/local.pem&quot;</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">key</span> <span class="op">=</span> <span class="ident">tokio</span>::<span class="ident">fs</span>::<span class="ident">read</span>(<span class="string">&quot;examples/certs/local/local.key&quot;</span>).<span class="kw">await</span><span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">identity</span> <span class="op">=</span> <span class="ident">Identity</span>::<span class="ident">from_pem</span>(<span class="ident">cert</span>, <span class="ident">key</span>);
     <span class="kw">let</span> <span class="ident">address</span> <span class="op">=</span> <span class="string">&quot;[::1]:50052&quot;</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">handler</span> <span class="op">=</span> <span class="ident">HelloWorldHandler</span>::<span class="ident">default</span>();

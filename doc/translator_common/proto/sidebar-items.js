@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["translator","Generated file from `translator.proto`"],["translator_grpc",""]]});
+initSidebarItems({"struct":[["TranslateRequest",""],["TranslateResponse",""],["TranslatorClient",""],["TranslatorDispatcher",""]],"trait":[["Translator",""]]});

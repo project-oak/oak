@@ -99,39 +99,6 @@
 <span id="99"> 99</span>
 <span id="100">100</span>
 <span id="101">101</span>
-<span id="102">102</span>
-<span id="103">103</span>
-<span id="104">104</span>
-<span id="105">105</span>
-<span id="106">106</span>
-<span id="107">107</span>
-<span id="108">108</span>
-<span id="109">109</span>
-<span id="110">110</span>
-<span id="111">111</span>
-<span id="112">112</span>
-<span id="113">113</span>
-<span id="114">114</span>
-<span id="115">115</span>
-<span id="116">116</span>
-<span id="117">117</span>
-<span id="118">118</span>
-<span id="119">119</span>
-<span id="120">120</span>
-<span id="121">121</span>
-<span id="122">122</span>
-<span id="123">123</span>
-<span id="124">124</span>
-<span id="125">125</span>
-<span id="126">126</span>
-<span id="127">127</span>
-<span id="128">128</span>
-<span id="129">129</span>
-<span id="130">130</span>
-<span id="131">131</span>
-<span id="132">132</span>
-<span id="133">133</span>
-<span id="134">134</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -151,57 +118,36 @@
 
 <span class="doccomment">//! Helper library for accessing Oak storage services.</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">grpc</span>;
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">storage_channel</span>::{
-    <span class="ident">StorageChannelDeleteRequest</span>, <span class="ident">StorageChannelDeleteResponse</span>, <span class="ident">StorageChannelReadRequest</span>,
-    <span class="ident">StorageChannelReadResponse</span>, <span class="ident">StorageChannelWriteRequest</span>, <span class="ident">StorageChannelWriteResponse</span>,
-    <span class="ident">StorageItem</span>,
+<span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">grpc</span>,
+    <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">storage</span>::{
+        <span class="ident">StorageChannelDeleteRequest</span>, <span class="ident">StorageChannelReadRequest</span>, <span class="ident">StorageChannelWriteRequest</span>,
+        <span class="ident">StorageItem</span>, <span class="ident">StorageServiceClient</span>,
+    },
 };
-<span class="kw">use</span> <span class="ident">log</span>::<span class="ident">info</span>;
 
-<span class="doccomment">/// Default name for predefined node config that corresponds to a storage</span>
+<span class="doccomment">/// Default name for predefined Node config that corresponds to a storage</span>
 <span class="doccomment">/// pseudo-Node.</span>
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">DEFAULT_CONFIG_NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;storage&quot;</span>;
 
 <span class="doccomment">/// Local representation of the connection to an external storage service.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Storage</span> {
-    <span class="ident">client</span>: <span class="kw">crate</span>::<span class="ident">grpc</span>::<span class="ident">client</span>::<span class="ident">Client</span>,
+    <span class="ident">client</span>: <span class="ident">StorageServiceClient</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Storage</span> {
     <span class="doccomment">/// Create a default `Storage` instance assuming the default pre-defined</span>
-    <span class="doccomment">/// name (`&quot;storage&quot;`) identifying storage node config.</span>
+    <span class="doccomment">/// name (`&quot;storage&quot;`) identifying storage Node config.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Storage</span><span class="op">&gt;</span> {
         <span class="ident">Storage</span>::<span class="ident">new</span>(<span class="ident">DEFAULT_CONFIG_NAME</span>)
     }
 
     <span class="doccomment">/// Create a `Storage` instance using the given name identifying storage</span>
-    <span class="doccomment">/// node configuration.</span>
+    <span class="doccomment">/// Node configuration.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Storage</span><span class="op">&gt;</span> {
-        <span class="kw">crate</span>::<span class="ident">grpc</span>::<span class="ident">client</span>::<span class="ident">Client</span>::<span class="ident">new</span>(<span class="ident">config</span>, <span class="string">&quot;oak_main&quot;</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">client</span><span class="op">|</span> <span class="ident">Storage</span> { <span class="ident">client</span> })
-    }
-
-    <span class="kw">fn</span> <span class="ident">execute_operation</span><span class="op">&lt;</span><span class="ident">Req</span>, <span class="ident">Res</span><span class="op">&gt;</span>(
-        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">grpc_method_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-        <span class="ident">operation_request</span>: <span class="ident">Req</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Res</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">Req</span>: <span class="ident">protobuf</span>::<span class="ident">Message</span>,
-        <span class="ident">Res</span>: <span class="ident">protobuf</span>::<span class="ident">Message</span>,
-    {
-        <span class="macro">info</span><span class="macro">!</span>(
-            <span class="string">&quot;StorageChannelRequest: {}&quot;</span>,
-            <span class="ident">protobuf</span>::<span class="ident">text_format</span>::<span class="ident">print_to_string</span>(<span class="kw-2">&amp;</span><span class="ident">operation_request</span>)
-        );
-        <span class="kw">let</span> <span class="ident">type_url</span> <span class="op">=</span>
-            <span class="ident">String</span>::<span class="ident">from</span>(<span class="string">&quot;type.googleapis.com/&quot;</span>) <span class="op">+</span> <span class="ident">operation_request</span>.<span class="ident">descriptor</span>().<span class="ident">full_name</span>();
-        <span class="kw">crate</span>::<span class="ident">grpc</span>::<span class="ident">invoke_grpc_method</span>(
-            <span class="ident">grpc_method_name</span>,
-            <span class="kw-2">&amp;</span><span class="ident">operation_request</span>,
-            <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="ident">type_url</span>),
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">client</span>.<span class="ident">invocation_sender</span>,
-        )
+        <span class="kw">crate</span>::<span class="ident">grpc</span>::<span class="ident">client</span>::<span class="ident">Client</span>::<span class="ident">new</span>(<span class="ident">config</span>, <span class="string">&quot;oak_main&quot;</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">client</span><span class="op">|</span> <span class="ident">Storage</span> {
+            <span class="ident">client</span>: <span class="ident">StorageServiceClient</span>(<span class="ident">client</span>),
+        })
     }
 
     <span class="doccomment">/// Read the value associated with the given `name` from the storage</span>
@@ -209,20 +155,17 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">storage_name</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">name</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">read_request</span> <span class="op">=</span> <span class="ident">StorageChannelReadRequest</span> {
             <span class="ident">storage_name</span>: <span class="ident">storage_name</span>.<span class="ident">to_owned</span>(),
-            <span class="ident">item</span>: <span class="ident">protobuf</span>::<span class="ident">SingularPtrField</span>::<span class="ident">some</span>(<span class="ident">StorageItem</span> {
+            <span class="ident">transaction_id</span>: <span class="macro">vec</span><span class="macro">!</span>[],
+            <span class="ident">item</span>: <span class="prelude-val">Some</span>(<span class="ident">StorageItem</span> {
                 <span class="ident">name</span>: <span class="ident">name</span>.<span class="ident">to_owned</span>(),
-                ..<span class="ident">Default</span>::<span class="ident">default</span>()
+                <span class="ident">value</span>: <span class="macro">vec</span><span class="macro">!</span>[],
+                <span class="ident">label</span>: <span class="prelude-val">None</span>,
             }),
-            ..<span class="ident">Default</span>::<span class="ident">default</span>()
         };
 
-        <span class="comment">// TODO(#757): Automatically generate boilerplate from the proto</span>
-        <span class="comment">// definition.</span>
-        <span class="self">self</span>.<span class="ident">execute_operation</span>::<span class="op">&lt;</span><span class="ident">StorageChannelReadRequest</span>, <span class="ident">StorageChannelReadResponse</span><span class="op">&gt;</span>(
-            <span class="string">&quot;/oak.StorageNode/Read&quot;</span>,
-            <span class="ident">read_request</span>,
-        )
-        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">r</span><span class="op">|</span> <span class="ident">r</span>.<span class="ident">get_item</span>().<span class="ident">get_value</span>().<span class="ident">to_vec</span>())
+        <span class="self">self</span>.<span class="ident">client</span>
+            .<span class="ident">read</span>(<span class="ident">read_request</span>)
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">r</span><span class="op">|</span> <span class="ident">r</span>.<span class="ident">item</span>.<span class="ident">unwrap_or_default</span>().<span class="ident">value</span>.<span class="ident">to_vec</span>())
     }
 
     <span class="doccomment">/// Set the value associated with the given `name` from the storage instance</span>
@@ -231,20 +174,15 @@
         <span class="comment">// TODO(#449): Set policy for item.</span>
         <span class="kw">let</span> <span class="ident">write_request</span> <span class="op">=</span> <span class="ident">StorageChannelWriteRequest</span> {
             <span class="ident">storage_name</span>: <span class="ident">storage_name</span>.<span class="ident">to_owned</span>(),
-            <span class="ident">item</span>: <span class="ident">protobuf</span>::<span class="ident">SingularPtrField</span>::<span class="ident">some</span>(<span class="ident">StorageItem</span> {
+            <span class="ident">transaction_id</span>: <span class="macro">vec</span><span class="macro">!</span>[],
+            <span class="ident">item</span>: <span class="prelude-val">Some</span>(<span class="ident">StorageItem</span> {
                 <span class="ident">name</span>: <span class="ident">name</span>.<span class="ident">to_owned</span>(),
                 <span class="ident">value</span>: <span class="ident">value</span>.<span class="ident">to_owned</span>(),
-                ..<span class="ident">Default</span>::<span class="ident">default</span>()
+                <span class="ident">label</span>: <span class="prelude-val">None</span>,
             }),
-            ..<span class="ident">Default</span>::<span class="ident">default</span>()
         };
 
-        <span class="comment">// TODO(#757): Automatically generate boilerplate from the proto definition.</span>
-        <span class="self">self</span>.<span class="ident">execute_operation</span>::<span class="op">&lt;</span><span class="ident">StorageChannelWriteRequest</span>, <span class="ident">StorageChannelWriteResponse</span><span class="op">&gt;</span>(
-            <span class="string">&quot;/oak.StorageNode/Write&quot;</span>,
-            <span class="ident">write_request</span>,
-        )
-        .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> ())
+        <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">write</span>(<span class="ident">write_request</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> ())
     }
 
     <span class="doccomment">/// Delete the value associated with the given `name` from the storage</span>
@@ -252,19 +190,15 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">delete</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">storage_name</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">name</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">delete_request</span> <span class="op">=</span> <span class="ident">StorageChannelDeleteRequest</span> {
             <span class="ident">storage_name</span>: <span class="ident">storage_name</span>.<span class="ident">to_owned</span>(),
-            <span class="ident">item</span>: <span class="ident">protobuf</span>::<span class="ident">SingularPtrField</span>::<span class="ident">some</span>(<span class="ident">StorageItem</span> {
+            <span class="ident">transaction_id</span>: <span class="macro">vec</span><span class="macro">!</span>[],
+            <span class="ident">item</span>: <span class="prelude-val">Some</span>(<span class="ident">StorageItem</span> {
                 <span class="ident">name</span>: <span class="ident">name</span>.<span class="ident">to_owned</span>(),
-                ..<span class="ident">Default</span>::<span class="ident">default</span>()
+                <span class="ident">value</span>: <span class="macro">vec</span><span class="macro">!</span>[],
+                <span class="ident">label</span>: <span class="prelude-val">None</span>,
             }),
-            ..<span class="ident">Default</span>::<span class="ident">default</span>()
         };
 
-        <span class="comment">// TODO(#757): Automatically generate boilerplate from the proto definition.</span>
-        <span class="self">self</span>.<span class="ident">execute_operation</span>::<span class="op">&lt;</span><span class="ident">StorageChannelDeleteRequest</span>, <span class="ident">StorageChannelDeleteResponse</span><span class="op">&gt;</span>(
-            <span class="string">&quot;/oak.StorageNode/Delete&quot;</span>,
-            <span class="ident">delete_request</span>,
-        )
-        .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> ())
+        <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">delete</span>(<span class="ident">delete_request</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> ())
     }
 }
 </pre></div>

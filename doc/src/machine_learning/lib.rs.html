@@ -265,6 +265,8 @@
 <span id="265">265</span>
 <span id="266">266</span>
 <span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -288,12 +290,14 @@
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">error</span>, <span class="ident">info</span>, <span class="ident">warn</span>};
 <span class="kw">use</span> <span class="ident">oak</span>::<span class="ident">grpc</span>;
 <span class="kw">use</span> <span class="ident">rand</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
-<span class="kw">use</span> <span class="ident">rand_distr</span>::<span class="ident">Distribution</span>;
-<span class="kw">use</span> <span class="ident">rand_distr</span>::<span class="ident">Normal</span>;
-<span class="kw">use</span> <span class="ident">rand_distr</span>::<span class="ident">Standard</span>;
-<span class="kw">use</span> <span class="ident">rusty_machine</span>::<span class="ident">learning</span>::<span class="ident">naive_bayes</span>::{<span class="self">self</span>, <span class="ident">NaiveBayes</span>};
-<span class="kw">use</span> <span class="ident">rusty_machine</span>::<span class="ident">learning</span>::<span class="ident">SupModel</span>;
-<span class="kw">use</span> <span class="ident">rusty_machine</span>::<span class="ident">linalg</span>::{<span class="ident">BaseMatrix</span>, <span class="ident">Matrix</span>};
+<span class="kw">use</span> <span class="ident">rand_distr</span>::{<span class="ident">Distribution</span>, <span class="ident">Normal</span>, <span class="ident">Standard</span>};
+<span class="kw">use</span> <span class="ident">rusty_machine</span>::{
+    <span class="ident">learning</span>::{
+        <span class="ident">naive_bayes</span>::{<span class="self">self</span>, <span class="ident">NaiveBayes</span>},
+        <span class="ident">SupModel</span>,
+    },
+    <span class="ident">linalg</span>::{<span class="ident">BaseMatrix</span>, <span class="ident">Matrix</span>},
+};
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">enum</span> <span class="ident">Type</span> {

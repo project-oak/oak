@@ -42,7 +42,6 @@
 <span id="42">42</span>
 <span id="43">43</span>
 <span id="44">44</span>
-<span id="45">45</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -70,8 +69,7 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span>;
 
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">config</span>::<span class="ident">application_configuration</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">config</span>::<span class="ident">configure_and_run</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">config</span>::{<span class="ident">application_configuration</span>, <span class="ident">configure_and_run</span>};
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">message</span>::<span class="ident">Message</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">runtime</span>::{<span class="ident">Handle</span>, <span class="ident">NodeId</span>, <span class="ident">Runtime</span>};

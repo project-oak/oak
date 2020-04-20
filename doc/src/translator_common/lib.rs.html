@@ -49,6 +49,8 @@
 <span id="49">49</span>
 <span id="50">50</span>
 <span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -66,11 +68,13 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">proto</span>;
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">proto</span> {
+    <span class="macro">include</span><span class="macro">!</span>(<span class="macro">concat</span><span class="macro">!</span>(<span class="macro">env</span><span class="macro">!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak.examples.translator.rs&quot;</span>));
+}
 
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">info</span>, <span class="ident">warn</span>};
-<span class="kw">use</span> <span class="ident">proto</span>::<span class="ident">translator</span>::<span class="ident">TranslateRequest</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">proto</span>::<span class="ident">translator_grpc</span>::<span class="ident">TranslatorClient</span>;
+<span class="kw">use</span> <span class="ident">proto</span>::<span class="ident">TranslateRequest</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">proto</span>::<span class="ident">TranslatorClient</span>;
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">translate</span>(
     <span class="ident">client</span>: <span class="kw-2">&amp;</span><span class="ident">TranslatorClient</span>,
@@ -82,7 +86,7 @@
         <span class="string">&quot;attempt to translate &#39;{}&#39; from {} to {}&quot;</span>,
         <span class="ident">text</span>, <span class="ident">from_lang</span>, <span class="ident">to_lang</span>
     );
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">req</span> <span class="op">=</span> <span class="ident">TranslateRequest</span>::<span class="ident">new</span>();
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">req</span> <span class="op">=</span> <span class="ident">TranslateRequest</span>::<span class="ident">default</span>();
     <span class="ident">req</span>.<span class="ident">text</span> <span class="op">=</span> <span class="ident">text</span>.<span class="ident">to_string</span>();
     <span class="ident">req</span>.<span class="ident">from_lang</span> <span class="op">=</span> <span class="ident">from_lang</span>.<span class="ident">to_string</span>();
     <span class="ident">req</span>.<span class="ident">to_lang</span> <span class="op">=</span> <span class="ident">to_lang</span>.<span class="ident">to_string</span>();

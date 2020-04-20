@@ -72,6 +72,7 @@
 <span id="72">72</span>
 <span id="73">73</span>
 <span id="74">74</span>
+<span id="75">75</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -94,12 +95,13 @@
 
 <span class="kw">use</span> <span class="ident">log</span>::<span class="ident">info</span>;
 <span class="kw">use</span> <span class="ident">oak</span>::<span class="ident">grpc</span>;
-<span class="kw">use</span> <span class="ident">translator_common</span>::<span class="ident">proto</span>::<span class="ident">translator</span>::{<span class="ident">TranslateRequest</span>, <span class="ident">TranslateResponse</span>};
-<span class="kw">use</span> <span class="ident">translator_common</span>::<span class="ident">proto</span>::<span class="ident">translator_grpc</span>::{<span class="ident">Dispatcher</span>, <span class="ident">Translator</span>};
+<span class="kw">use</span> <span class="ident">translator_common</span>::<span class="ident">proto</span>::{
+    <span class="ident">TranslateRequest</span>, <span class="ident">TranslateResponse</span>, <span class="ident">Translator</span>, <span class="ident">TranslatorDispatcher</span>,
+};
 
 <span class="ident">oak</span>::<span class="macro">entrypoint</span><span class="macro">!</span>(<span class="ident">oak_main</span> <span class="op">=</span><span class="op">&gt;</span> {
     <span class="ident">oak</span>::<span class="ident">logger</span>::<span class="ident">init_default</span>();
-    <span class="ident">Dispatcher</span>::<span class="ident">new</span>(<span class="ident">Node</span>)
+    <span class="ident">TranslatorDispatcher</span>::<span class="ident">new</span>(<span class="ident">Node</span>)
 });
 
 <span class="kw">struct</span> <span class="ident">Node</span>;
@@ -110,7 +112,7 @@
             <span class="string">&quot;attempt to translate &#39;{}&#39; from {} to {}&quot;</span>,
             <span class="ident">req</span>.<span class="ident">text</span>, <span class="ident">req</span>.<span class="ident">from_lang</span>, <span class="ident">req</span>.<span class="ident">to_lang</span>
         );
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rsp</span> <span class="op">=</span> <span class="ident">TranslateResponse</span>::<span class="ident">new</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rsp</span> <span class="op">=</span> <span class="ident">TranslateResponse</span>::<span class="ident">default</span>();
         <span class="ident">rsp</span>.<span class="ident">translated_text</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">req</span>.<span class="ident">from_lang</span>.<span class="ident">as_str</span>() {
             <span class="string">&quot;en&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">req</span>.<span class="ident">text</span>.<span class="ident">as_str</span>() {
                 <span class="string">&quot;WORLDS&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">req</span>.<span class="ident">to_lang</span>.<span class="ident">as_str</span>() {
@@ -119,7 +121,7 @@
                     <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
                         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;output language {} not found&quot;</span>, <span class="ident">req</span>.<span class="ident">to_lang</span>);
                         <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">grpc</span>::<span class="ident">build_status</span>(
-                            <span class="ident">grpc</span>::<span class="ident">Code</span>::<span class="ident">NOT_FOUND</span>,
+                            <span class="ident">grpc</span>::<span class="ident">Code</span>::<span class="ident">NotFound</span>,
                             <span class="string">&quot;Output language not found&quot;</span>,
                         ));
                     }
@@ -130,7 +132,7 @@
                         <span class="ident">req</span>.<span class="ident">text</span>, <span class="ident">req</span>.<span class="ident">from_lang</span>
                     );
                     <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">grpc</span>::<span class="ident">build_status</span>(
-                        <span class="ident">grpc</span>::<span class="ident">Code</span>::<span class="ident">NOT_FOUND</span>,
+                        <span class="ident">grpc</span>::<span class="ident">Code</span>::<span class="ident">NotFound</span>,
                         <span class="string">&quot;Input text unrecognized&quot;</span>,
                     ));
                 }
@@ -138,7 +140,7 @@
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;input language &#39;{}&#39; not recognized&quot;</span>, <span class="ident">req</span>.<span class="ident">from_lang</span>);
                 <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">grpc</span>::<span class="ident">build_status</span>(
-                    <span class="ident">grpc</span>::<span class="ident">Code</span>::<span class="ident">NOT_FOUND</span>,
+                    <span class="ident">grpc</span>::<span class="ident">Code</span>::<span class="ident">NotFound</span>,
                     <span class="string">&quot;Input language unrecognized&quot;</span>,
                 ));
             }

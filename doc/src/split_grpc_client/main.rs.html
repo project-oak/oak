@@ -48,7 +48,6 @@
 <span id="48">48</span>
 <span id="49">49</span>
 <span id="50">50</span>
-<span id="51">51</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -67,8 +66,7 @@
 <span class="comment">//</span>
 
 <span class="kw">use</span> <span class="ident">log</span>::<span class="ident">info</span>;
-<span class="kw">use</span> <span class="ident">proto</span>::<span class="ident">hello_world_client</span>::<span class="ident">HelloWorldClient</span>;
-<span class="kw">use</span> <span class="ident">proto</span>::<span class="ident">HelloRequest</span>;
+<span class="kw">use</span> <span class="ident">proto</span>::{<span class="ident">hello_world_client</span>::<span class="ident">HelloWorldClient</span>, <span class="ident">HelloRequest</span>};
 <span class="kw">use</span> <span class="ident">tonic</span>::<span class="ident">transport</span>::{<span class="ident">Certificate</span>, <span class="ident">Channel</span>, <span class="ident">ClientTlsConfig</span>};
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">proto</span> {

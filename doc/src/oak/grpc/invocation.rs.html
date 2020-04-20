@@ -78,8 +78,8 @@
 <span class="doccomment">/// A gRPC invocation, consisting of exactly two channels: one to read incoming requests from the</span>
 <span class="doccomment">/// client, and one to write outgoing responses to the client.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Invocation</span> {
-    <span class="kw">pub</span> <span class="ident">request_receiver</span>: <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">grpc_encap</span>::<span class="ident">GrpcRequest</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span> <span class="ident">response_sender</span>: <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">grpc_encap</span>::<span class="ident">GrpcResponse</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">request_receiver</span>: <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">encap</span>::<span class="ident">GrpcRequest</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">response_sender</span>: <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">encap</span>::<span class="ident">GrpcResponse</span><span class="op">&gt;</span>,
 }
 
 <span class="comment">// TODO(#389): Automatically generate this code.</span>

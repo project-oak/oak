@@ -141,6 +141,11 @@
 <span id="141">141</span>
 <span id="142">142</span>
 <span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -158,55 +163,55 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">net</span>::{<span class="ident">AddrParseError</span>, <span class="ident">SocketAddr</span>};
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">String</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::<span class="ident">Arc</span>;
+<span class="kw">use</span> <span class="ident">std</span>::{
+    <span class="ident">net</span>::{<span class="ident">AddrParseError</span>, <span class="ident">SocketAddr</span>},
+    <span class="ident">string</span>::<span class="ident">String</span>,
+    <span class="ident">sync</span>::<span class="ident">Arc</span>,
+    <span class="ident">thread</span>::<span class="ident">JoinHandle</span>,
+};
 
 <span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">OakStatus</span>;
 
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">runtime</span>::<span class="ident">RuntimeProxy</span>;
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">Handle</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">runtime</span>::<span class="ident">RuntimeProxy</span>, <span class="ident">Handle</span>};
 
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">external</span>;
 <span class="kw">mod</span> <span class="ident">grpc_server</span>;
 <span class="kw">mod</span> <span class="ident">logger</span>;
 <span class="kw">mod</span> <span class="ident">wasm</span>;
 
-<span class="doccomment">/// A trait implemented by every node and pseudo-node.</span>
+<span class="doccomment">/// A trait implemented by every Node and pseudo-Node.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// Nodes must not do any work until the [`Node::start`] method is invoked.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Node</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> {
-    <span class="doccomment">/// Starts executing the node.</span>
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Node</span> {
+    <span class="doccomment">/// Starts executing the Node.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// This method will be invoked in a blocking fashion by the [`Runtime`], therefore node</span>
-    <span class="doccomment">/// implementations should make sure that they create separate background threads to execute</span>
-    <span class="doccomment">/// actual work, and wait on them to terminate when [`Node::stop`] is called.</span>
-    <span class="kw">fn</span> <span class="ident">start</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span>;
-
-    <span class="doccomment">/// Stops executing the node.</span>
+    <span class="doccomment">/// This method will be invoked in a blocking fashion by the [`Runtime`], therefore Node</span>
+    <span class="doccomment">/// implementations should make sure that they create a separate background worker thread to</span>
+    <span class="doccomment">/// execute actual work, and return its [`JoinHandle`] as soon as possible. The worker thread</span>
+    <span class="doccomment">/// may in turn create additional sub-threads if necessary.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// This method may block while the node terminates any outstanding work, but the node</span>
-    <span class="doccomment">/// implementation must guarantee that it eventually returns.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Internally, a node may implement this by first attempting to gracefully terminate, and then</span>
-    <span class="doccomment">/// if that fails, continue trying with increasing level of aggressiveness.</span>
-    <span class="kw">fn</span> <span class="ident">stop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>);
+    <span class="doccomment">/// [`Runtime`]: crate::runtime::Runtime</span>
+    <span class="kw">fn</span> <span class="ident">start</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">JoinHandle</span><span class="op">&lt;</span>()<span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span>;
 }
 
 <span class="doccomment">/// A `Configuration` corresponds to an entry from a `ApplicationConfiguration`. It is the</span>
 <span class="doccomment">/// static implementation specific configuration shared between instances.</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Configuration</span> {
-    <span class="doccomment">/// The configuration for a logging pseudo node.</span>
+    <span class="doccomment">/// The configuration for a logging pseudo-Node.</span>
     <span class="ident">LogNode</span>,
 
-    <span class="doccomment">/// The configuration for a gRPC server pseudo node that contains an `address` to listen on.</span>
+    <span class="doccomment">/// The configuration for a gRPC server pseudo-Node that contains an `address` to listen on.</span>
     <span class="ident">GrpcServerNode</span> { <span class="ident">address</span>: <span class="ident">SocketAddr</span> },
 
-    <span class="doccomment">/// The configuration for a Wasm node.</span>
+    <span class="doccomment">/// The configuration for a Wasm Node.</span>
     <span class="comment">// It would be better to store a list of exported methods and copyable Wasm interpreter</span>
     <span class="comment">// instance, but wasmi doesn&#39;t allow this. We make do with having a copyable</span>
-    <span class="comment">// `Arc&lt;wasmi::Module&gt;` that we pass to new nodes, and clone to to spawn new</span>
+    <span class="comment">// `Arc&lt;wasmi::Module&gt;` that we pass to new Nodes, and clone to to spawn new</span>
     <span class="comment">// `wasmi::ModuleInstances`.</span>
     <span class="ident">WasmNode</span> { <span class="ident">module</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">wasmi</span>::<span class="ident">Module</span><span class="op">&gt;</span> },
+
+    <span class="doccomment">/// The configuration for an externally provided pseudo-Node.</span>
+    <span class="ident">External</span>,
 }
 
 <span class="doccomment">/// A enumeration for errors occuring when building `Configuration` from protobuf types.</span>
@@ -237,7 +242,7 @@
     }
 }
 
-<span class="doccomment">/// Loads a Wasm module into a node configuration, returning an error if `wasmi` failed to load the</span>
+<span class="doccomment">/// Loads a Wasm module into a Node configuration, returning an error if `wasmi` failed to load the</span>
 <span class="doccomment">/// module.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">load_wasm</span>(<span class="ident">wasm_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Configuration</span>, <span class="ident">ConfigurationError</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">module</span> <span class="op">=</span> <span class="ident">wasmi</span>::<span class="ident">Module</span>::<span class="ident">from_buffer</span>(<span class="ident">wasm_bytes</span>)
@@ -257,7 +262,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Configuration</span> {
-    <span class="doccomment">/// Creates a new node instance corresponding to the [`Configuration`] `self`.</span>
+    <span class="doccomment">/// Creates a new Node instance corresponding to the [`Configuration`] `self`.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// On success returns a boxed [`Node`] that may be started by invoking the [`Node::start`]</span>
     <span class="doccomment">/// method.</span>
@@ -280,6 +285,11 @@
                 <span class="ident">runtime</span>,
                 <span class="ident">module</span>.<span class="ident">clone</span>(),
                 <span class="ident">entrypoint</span>,
+                <span class="ident">initial_reader</span>,
+            )),
+            <span class="ident">Configuration</span>::<span class="ident">External</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">external</span>::<span class="ident">PseudoNode</span>::<span class="ident">new</span>(
+                <span class="ident">config_name</span>,
+                <span class="ident">runtime</span>,
                 <span class="ident">initial_reader</span>,
             )),
         }

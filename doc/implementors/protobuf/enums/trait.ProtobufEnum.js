@@ -1,3 +1,0 @@
-(function() {var implementors = {};
-implementors["oak"] = [{"text":"impl ProtobufEnum for <a class=\"enum\" href=\"oak/proto/code/enum.Code.html\" title=\"enum oak::proto::code::Code\">Code</a>","synthetic":false,"types":["oak::proto::code::Code"]},{"text":"impl ProtobufEnum for <a class=\"enum\" href=\"oak/proto/log/enum.Level.html\" title=\"enum oak::proto::log::Level\">Level</a>","synthetic":false,"types":["oak::proto::log::Level"]}];
-if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

@@ -42,6 +42,7 @@
 <span id="42">42</span>
 <span id="43">43</span>
 <span id="44">44</span>
+<span id="45">45</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -59,15 +60,16 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
-<span class="kw">mod</span> <span class="ident">proto</span>;
+<span class="kw">mod</span> <span class="ident">proto</span> {
+    <span class="macro">include</span><span class="macro">!</span>(<span class="macro">concat</span><span class="macro">!</span>(<span class="macro">env</span><span class="macro">!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak.examples.rustfmt.rs&quot;</span>));
+}
 
 <span class="kw">use</span> <span class="ident">oak</span>::<span class="ident">grpc</span>;
-<span class="kw">use</span> <span class="ident">proto</span>::<span class="ident">rustfmt</span>::{<span class="ident">FormatRequest</span>, <span class="ident">FormatResponse</span>};
-<span class="kw">use</span> <span class="ident">proto</span>::<span class="ident">rustfmt_grpc</span>::{<span class="ident">Dispatcher</span>, <span class="ident">FormatService</span>};
+<span class="kw">use</span> <span class="ident">proto</span>::{<span class="ident">FormatRequest</span>, <span class="ident">FormatResponse</span>, <span class="ident">FormatService</span>, <span class="ident">FormatServiceDispatcher</span>};
 
 <span class="ident">oak</span>::<span class="macro">entrypoint</span><span class="macro">!</span>(<span class="ident">oak_main</span> <span class="op">=</span><span class="op">&gt;</span> {
     <span class="ident">oak</span>::<span class="ident">logger</span>::<span class="ident">init_default</span>();
-    <span class="ident">Dispatcher</span>::<span class="ident">new</span>(<span class="ident">Node</span>)
+    <span class="ident">FormatServiceDispatcher</span>::<span class="ident">new</span>(<span class="ident">Node</span>)
 });
 
 <span class="kw">struct</span> <span class="ident">Node</span>;
@@ -82,7 +84,7 @@
             <span class="kw">let</span> <span class="ident">input</span> <span class="op">=</span> <span class="ident">rustfmt_nightly</span>::<span class="ident">Input</span>::<span class="ident">Text</span>(<span class="ident">req</span>.<span class="ident">code</span>);
             <span class="ident">session</span>.<span class="ident">format</span>(<span class="ident">input</span>).<span class="ident">expect</span>(<span class="string">&quot;could not format input&quot;</span>);
         }
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">FormatResponse</span>::<span class="ident">new</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">FormatResponse</span>::<span class="ident">default</span>();
         <span class="ident">res</span>.<span class="ident">code</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">from_utf8</span>(<span class="ident">output</span>).<span class="ident">expect</span>(<span class="string">&quot;could not parse UTF8&quot;</span>);
         <span class="prelude-val">Ok</span>(<span class="ident">res</span>)
     }

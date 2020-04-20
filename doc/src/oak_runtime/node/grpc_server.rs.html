@@ -335,18 +335,6 @@
 <span id="335">335</span>
 <span id="336">336</span>
 <span id="337">337</span>
-<span id="338">338</span>
-<span id="339">339</span>
-<span id="340">340</span>
-<span id="341">341</span>
-<span id="342">342</span>
-<span id="343">343</span>
-<span id="344">344</span>
-<span id="345">345</span>
-<span id="346">346</span>
-<span id="347">347</span>
-<span id="348">348</span>
-<span id="349">349</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -365,38 +353,40 @@
 <span class="comment">//</span>
 
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">error</span>, <span class="ident">info</span>, <span class="ident">warn</span>};
-<span class="kw">use</span> <span class="ident">protobuf</span>::{<span class="ident">well_known_types</span>::<span class="ident">Any</span>, <span class="ident">Message</span>};
+<span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span>;
+<span class="kw">use</span> <span class="ident">prost_types</span>::<span class="ident">Any</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">fmt</span>::{<span class="self">self</span>, <span class="ident">Display</span>, <span class="ident">Formatter</span>},
     <span class="ident">net</span>::<span class="ident">SocketAddr</span>,
     <span class="ident">thread</span>::{<span class="self">self</span>, <span class="ident">JoinHandle</span>},
 };
 
-<span class="kw">use</span> <span class="ident">oak</span>::<span class="ident">grpc</span>::{<span class="ident">encap_request</span>, <span class="ident">GrpcRequest</span>};
-<span class="kw">use</span> <span class="ident">oak_abi</span>::{<span class="ident">label</span>::<span class="ident">Label</span>, <span class="ident">ChannelReadStatus</span>, <span class="ident">OakStatus</span>};
+<span class="kw">use</span> <span class="ident">oak_abi</span>::{
+    <span class="ident">grpc</span>::<span class="ident">encap_request</span>, <span class="ident">label</span>::<span class="ident">Label</span>, <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">encap</span>::<span class="ident">GrpcRequest</span>, <span class="ident">ChannelReadStatus</span>, <span class="ident">OakStatus</span>,
+};
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">pretty_name_for_thread</span>, <span class="ident">runtime</span>::<span class="ident">RuntimeProxy</span>, <span class="ident">Handle</span>};
 
-<span class="doccomment">/// Struct that represents a gRPC server pseudo-node.</span>
+<span class="doccomment">/// Struct that represents a gRPC server pseudo-Node.</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// For each gRPC request from a client, gRPC server pseudo-node creates a pair of temporary</span>
+<span class="doccomment">/// For each gRPC request from a client, gRPC server pseudo-Node creates a pair of temporary</span>
 <span class="doccomment">/// channels (to write a request to and to read a response from) and passes corresponding handles to</span>
 <span class="doccomment">/// the [`GrpcServerNode::channel_writer`].</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GrpcServerNode</span> {
-    <span class="doccomment">/// Pseudo-node name that corresponds to an entry from the</span>
-    <span class="doccomment">/// [`oak_runtime::proto::ApplicationConfiguration`].</span>
+    <span class="doccomment">/// Pseudo-Node name that corresponds to an entry from the</span>
+    <span class="doccomment">/// [`ApplicationConfiguration`].</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// [`ApplicationConfiguration`]: crate::proto::oak::application::ApplicationConfiguration</span>
     <span class="ident">config_name</span>: <span class="ident">String</span>,
-    <span class="doccomment">/// Reference to a Runtime that corresponds to a node that created a gRPC server pseudo-node.</span>
+    <span class="doccomment">/// Reference to a Runtime that corresponds to a Node that created a gRPC server pseudo-Node.</span>
     <span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>,
     <span class="doccomment">/// Server address to listen client requests on.</span>
     <span class="ident">address</span>: <span class="ident">SocketAddr</span>,
     <span class="doccomment">/// Channel handle used for reading a [`GrpcServerNode::channel_writer`] once the gRPC server</span>
-    <span class="doccomment">/// pseudo-node has started.</span>
+    <span class="doccomment">/// pseudo-Node has started.</span>
     <span class="ident">initial_reader</span>: <span class="ident">Handle</span>,
     <span class="doccomment">/// Channel handle used for writing invocations.</span>
     <span class="ident">channel_writer</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Handle</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Thread handle that corresponds to a thread running a gRPC server pseudo-node.</span>
-    <span class="ident">thread_handle</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">JoinHandle</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
@@ -416,7 +406,7 @@
     }
 }
 
-<span class="doccomment">/// Clone implementation without `thread_handle` copying to pass the node to other threads.</span>
+<span class="doccomment">/// Clone implementation without `thread_handle` copying to pass the Node to other threads.</span>
 <span class="kw">impl</span> <span class="ident">Clone</span> <span class="kw">for</span> <span class="ident">GrpcServerNode</span> {
     <span class="kw">fn</span> <span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
@@ -425,7 +415,6 @@
             <span class="ident">address</span>: <span class="self">self</span>.<span class="ident">address</span>,
             <span class="ident">initial_reader</span>: <span class="self">self</span>.<span class="ident">initial_reader</span>,
             <span class="ident">channel_writer</span>: <span class="self">self</span>.<span class="ident">channel_writer</span>,
-            <span class="ident">thread_handle</span>: <span class="prelude-val">None</span>,
         }
     }
 }
@@ -440,7 +429,7 @@
     <span class="doccomment">/// Creates a new [`GrpcServerNode`] instance, but does not start it.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// `channel_writer` and `thread_handle` are initialized with `None`, because they will receive</span>
-    <span class="doccomment">/// their values after the gRPC server pseudo-node has started and a separate thread was</span>
+    <span class="doccomment">/// their values after the gRPC server pseudo-Node has started and a separate thread was</span>
     <span class="doccomment">/// initialized.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">config_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
@@ -454,7 +443,6 @@
             <span class="ident">address</span>,
             <span class="ident">initial_reader</span>,
             <span class="ident">channel_writer</span>: <span class="prelude-val">None</span>,
-            <span class="ident">thread_handle</span>: <span class="prelude-val">None</span>,
         }
     }
 
@@ -534,15 +522,14 @@
         <span class="ident">http_request_path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
         <span class="ident">http_request_body</span>: <span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">hyper</span>::<span class="ident">body</span>::<span class="ident">Buf</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">GrpcRequest</span>, <span class="ident">GrpcServerError</span><span class="op">&gt;</span> {
-        <span class="comment">// Parse an HTTP request body as a [`protobuf::well_known_types::Any`] message.</span>
-        <span class="kw">let</span> <span class="ident">grpc_request_body</span> <span class="op">=</span> <span class="ident">protobuf</span>::<span class="ident">parse_from_bytes</span>::<span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span>(<span class="ident">http_request_body</span>.<span class="ident">bytes</span>())
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
-                <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Failed to parse Protobuf message {}&quot;</span>, <span class="ident">error</span>);
-                <span class="ident">GrpcServerError</span>::<span class="ident">BadProtobufMessage</span>
-            })<span class="question-mark">?</span>;
+        <span class="comment">// Parse an HTTP request body as an [`Any`] message.</span>
+        <span class="kw">let</span> <span class="ident">grpc_request_body</span> <span class="op">=</span> <span class="ident">Any</span>::<span class="ident">decode</span>(<span class="ident">http_request_body</span>.<span class="ident">bytes</span>()).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
+            <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Failed to parse Protobuf message {}&quot;</span>, <span class="ident">error</span>);
+            <span class="ident">GrpcServerError</span>::<span class="ident">BadProtobufMessage</span>
+        })<span class="question-mark">?</span>;
 
         <span class="comment">// Create a gRPC request.</span>
-        <span class="ident">encap_request</span>(<span class="kw-2">&amp;</span><span class="ident">grpc_request_body</span>, <span class="prelude-val">None</span>, <span class="ident">http_request_path</span>).<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
+        <span class="ident">encap_request</span>(<span class="kw-2">&amp;</span><span class="ident">grpc_request_body</span>, <span class="ident">http_request_path</span>).<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
             <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Failed to create a GrpcRequest&quot;</span>);
             <span class="ident">GrpcServerError</span>::<span class="ident">BadProtobufMessage</span>
         })
@@ -579,12 +566,10 @@
             <span class="ident">data</span>: <span class="macro">vec</span><span class="macro">!</span>[],
             <span class="ident">channels</span>: <span class="macro">vec</span><span class="macro">!</span>[],
         };
-        <span class="ident">request</span>
-            .<span class="ident">write_to_writer</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">message</span>.<span class="ident">data</span>)
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
-                <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t serialize a GrpcRequest message: {}&quot;</span>, <span class="ident">error</span>);
-                <span class="ident">GrpcServerError</span>::<span class="ident">RequestProcessingError</span>
-            })<span class="question-mark">?</span>;
+        <span class="ident">request</span>.<span class="ident">encode</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">message</span>.<span class="ident">data</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
+            <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t serialize a GrpcRequest message: {}&quot;</span>, <span class="ident">error</span>);
+            <span class="ident">GrpcServerError</span>::<span class="ident">RequestProcessingError</span>
+        })<span class="question-mark">?</span>;
 
         <span class="comment">// Send a message to the temporary channel.</span>
         <span class="self">self</span>.<span class="ident">runtime</span>
@@ -597,7 +582,7 @@
                 <span class="ident">GrpcServerError</span>::<span class="ident">RequestProcessingError</span>
             })<span class="question-mark">?</span>;
 
-        <span class="comment">// Send an invocation message (with attached handles) to the Oak node.</span>
+        <span class="comment">// Send an invocation message (with attached handles) to the Oak Node.</span>
         <span class="self">self</span>.<span class="ident">runtime</span>
             .<span class="ident">channel_write</span>(
                 <span class="self">self</span>.<span class="ident">channel_writer</span>.<span class="ident">expect</span>(<span class="string">&quot;Node writer wasn&#39;t initialized&quot;</span>),
@@ -641,60 +626,51 @@
             <span class="prelude-val">Err</span>(<span class="ident">GrpcServerError</span>::<span class="ident">ResponseProcessingError</span>)
         }
     }
+
+    <span class="doccomment">/// Main node worker thread.</span>
+    <span class="kw">fn</span> <span class="ident">worker_thread</span>(<span class="self">self</span>) {
+        <span class="kw">let</span> <span class="ident">pretty_name</span> <span class="op">=</span> <span class="ident">pretty_name_for_thread</span>(<span class="kw-2">&amp;</span><span class="ident">thread</span>::<span class="ident">current</span>());
+
+        <span class="comment">// Receive a `writer` handle used to pass handles for temporary channels.</span>
+        <span class="self">self</span>.<span class="ident">init_channel_writer</span>()
+            .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t initialialize node writer&quot;</span>);
+
+        <span class="comment">// Initialize a function that creates a separate instance on the `server` for each</span>
+        <span class="comment">// HTTP request.</span>
+        <span class="comment">//</span>
+        <span class="comment">// TODO(#813): Remove multiple `clone` calls by either introducing `Arc&lt;Mutex&lt;T&gt;&gt;`</span>
+        <span class="comment">// or not using Hyper (move to more simple single-threaded server).</span>
+        <span class="kw">let</span> <span class="ident">generator_server</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">clone</span>();
+        <span class="kw">let</span> <span class="ident">service</span> <span class="op">=</span> <span class="ident">hyper</span>::<span class="ident">service</span>::<span class="ident">make_service_fn</span>(<span class="kw">move</span> <span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
+            <span class="kw">let</span> <span class="ident">connection_server</span> <span class="op">=</span> <span class="ident">generator_server</span>.<span class="ident">clone</span>();
+            <span class="kw">async</span> <span class="kw">move</span> {
+                <span class="prelude-val">Ok</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="ident">hyper</span>::<span class="ident">Error</span><span class="op">&gt;</span>(<span class="ident">hyper</span>::<span class="ident">service</span>::<span class="ident">service_fn</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">req</span><span class="op">|</span> {
+                    <span class="kw">let</span> <span class="ident">request_server</span> <span class="op">=</span> <span class="ident">connection_server</span>.<span class="ident">clone</span>();
+                    <span class="kw">async</span> <span class="kw">move</span> { <span class="ident">request_server</span>.<span class="ident">serve</span>(<span class="ident">req</span>).<span class="kw">await</span> }
+                }))
+            }
+        });
+
+        <span class="comment">// Start the HTTP server.</span>
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tokio_runtime</span> <span class="op">=</span>
+            <span class="ident">tokio</span>::<span class="ident">runtime</span>::<span class="ident">Runtime</span>::<span class="ident">new</span>().<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t create Tokio runtime&quot;</span>);
+        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">tokio_runtime</span>.<span class="ident">block_on</span>(<span class="ident">hyper</span>::<span class="ident">Server</span>::<span class="ident">bind</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">address</span>).<span class="ident">serve</span>(<span class="ident">service</span>));
+        <span class="macro">info</span><span class="macro">!</span>(
+            <span class="string">&quot;{} LOG: exiting gRPC server node thread {:?}&quot;</span>,
+            <span class="ident">pretty_name</span>, <span class="ident">result</span>
+        );
+        <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">exit_node</span>();
+    }
 }
 
 <span class="doccomment">/// Oak Node implementation for the gRPC server.</span>
 <span class="kw">impl</span> <span class="kw">super</span>::<span class="ident">Node</span> <span class="kw">for</span> <span class="ident">GrpcServerNode</span> {
-    <span class="kw">fn</span> <span class="ident">start</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">server</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">clone</span>();
+    <span class="kw">fn</span> <span class="ident">start</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">JoinHandle</span><span class="op">&lt;</span>()<span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">thread_handle</span> <span class="op">=</span> <span class="ident">thread</span>::<span class="ident">Builder</span>::<span class="ident">new</span>()
             .<span class="ident">name</span>(<span class="self">self</span>.<span class="ident">to_string</span>())
-            .<span class="ident">spawn</span>(<span class="kw">move</span> <span class="op">|</span><span class="op">|</span> {
-                <span class="kw">let</span> <span class="ident">pretty_name</span> <span class="op">=</span> <span class="ident">pretty_name_for_thread</span>(<span class="kw-2">&amp;</span><span class="ident">thread</span>::<span class="ident">current</span>());
-
-                <span class="comment">// Receive a `writer` handle used to pass handles for temporary channels.</span>
-                <span class="ident">server</span>
-                    .<span class="ident">init_channel_writer</span>()
-                    .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t initialialize node writer&quot;</span>);
-
-                <span class="comment">// Initialize a function that creates a separate instance on the `server` for each</span>
-                <span class="comment">// HTTP request.</span>
-                <span class="comment">//</span>
-                <span class="comment">// TODO(#813): Remove multiple `clone` calls by either introducing `Arc&lt;Mutex&lt;T&gt;&gt;`</span>
-                <span class="comment">// or not using Hyper (move to more simple single-threaded server).</span>
-                <span class="kw">let</span> <span class="ident">generator_server</span> <span class="op">=</span> <span class="ident">server</span>.<span class="ident">clone</span>();
-                <span class="kw">let</span> <span class="ident">service</span> <span class="op">=</span> <span class="ident">hyper</span>::<span class="ident">service</span>::<span class="ident">make_service_fn</span>(<span class="kw">move</span> <span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
-                    <span class="kw">let</span> <span class="ident">connection_server</span> <span class="op">=</span> <span class="ident">generator_server</span>.<span class="ident">clone</span>();
-                    <span class="kw">async</span> <span class="kw">move</span> {
-                        <span class="prelude-val">Ok</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="ident">hyper</span>::<span class="ident">Error</span><span class="op">&gt;</span>(<span class="ident">hyper</span>::<span class="ident">service</span>::<span class="ident">service_fn</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">req</span><span class="op">|</span> {
-                            <span class="kw">let</span> <span class="ident">request_server</span> <span class="op">=</span> <span class="ident">connection_server</span>.<span class="ident">clone</span>();
-                            <span class="kw">async</span> <span class="kw">move</span> { <span class="ident">request_server</span>.<span class="ident">serve</span>(<span class="ident">req</span>).<span class="kw">await</span> }
-                        }))
-                    }
-                });
-
-                <span class="comment">// Start the HTTP server.</span>
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tokio_runtime</span> <span class="op">=</span>
-                    <span class="ident">tokio</span>::<span class="ident">runtime</span>::<span class="ident">Runtime</span>::<span class="ident">new</span>().<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t create Tokio runtime&quot;</span>);
-                <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span>
-                    <span class="ident">tokio_runtime</span>.<span class="ident">block_on</span>(<span class="ident">hyper</span>::<span class="ident">Server</span>::<span class="ident">bind</span>(<span class="kw-2">&amp;</span><span class="ident">server</span>.<span class="ident">address</span>).<span class="ident">serve</span>(<span class="ident">service</span>));
-                <span class="macro">info</span><span class="macro">!</span>(
-                    <span class="string">&quot;{} LOG: exiting gRPC server node thread {:?}&quot;</span>,
-                    <span class="ident">pretty_name</span>, <span class="ident">result</span>
-                );
-                <span class="ident">server</span>.<span class="ident">runtime</span>.<span class="ident">exit_node</span>();
-            })
+            .<span class="ident">spawn</span>(<span class="kw">move</span> <span class="op">|</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">worker_thread</span>())
             .<span class="ident">expect</span>(<span class="string">&quot;Failed to spawn thread&quot;</span>);
-        <span class="self">self</span>.<span class="ident">thread_handle</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">thread_handle</span>);
-        <span class="prelude-val">Ok</span>(())
-    }
-
-    <span class="kw">fn</span> <span class="ident">stop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">join_handle</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">thread_handle</span>.<span class="ident">take</span>() {
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">join_handle</span>.<span class="ident">join</span>() {
-                <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Error while stopping gRPC server node: {:?}&quot;</span>, <span class="ident">err</span>);
-            }
-        }
+        <span class="prelude-val">Ok</span>(<span class="ident">thread_handle</span>)
     }
 }
 </pre></div>
