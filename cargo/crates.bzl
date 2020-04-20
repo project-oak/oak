@@ -476,6 +476,15 @@ def raze_fetch_remote_crates():
     )
 
     _new_http_archive(
+        name = "raze__prometheus__0_8_0",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/prometheus/prometheus-0.8.0.crate",
+        type = "tar.gz",
+        strip_prefix = "prometheus-0.8.0",
+
+        build_file = Label("//cargo/remote:prometheus-0.8.0.BUILD"),
+    )
+
+    _new_http_archive(
         name = "raze__prost__0_6_1",
         url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/prost/prost-0.6.1.crate",
         type = "tar.gz",
@@ -563,6 +572,15 @@ def raze_fetch_remote_crates():
         strip_prefix = "slab-0.4.2",
 
         build_file = Label("//cargo/remote:slab-0.4.2.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__spin__0_5_2",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/spin/spin-0.5.2.crate",
+        type = "tar.gz",
+        strip_prefix = "spin-0.5.2",
+
+        build_file = Label("//cargo/remote:spin-0.5.2.BUILD"),
     )
 
     _new_http_archive(
