@@ -1,0 +1,62 @@
+name: Build Rust docs
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build_rust_docs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v2
+
+      - name: Checkout gh-pages
+        uses: actions/checkout@v2
+        with:
+          ref: gh-pages
+          path: out
+
+      # We need to set up git user details before we can perform git operations.
+      - name: Git setup
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+
+      # Copied from https://github.com/jens-maus/RaspberryMatic/blob/ea6b8ce0dd2d53ea88b2766ba8d7f8e1d667281f/.github/workflows/ci.yml#L34-L40
+      - name: free disk space
+        run: |
+          df --human-readable
+          sudo swapoff --all
+          sudo rm --force /swapfile
+          sudo apt clean
+          docker rmi $(docker image ls --all --quiet)
+          df --human-readable
+
+      # Build Docker image, caching from the latest version from the remote repository.
+      - name: Docker build
+        timeout-minutes: 30
+        run: |
+          docker pull gcr.io/oak-ci/oak:latest
+          docker build --pull --cache-from=gcr.io/oak-ci/oak:latest --tag=gcr.io/oak-ci/oak:latest .
+
+      # Remove all files from the "out" folder.
+      - name: Clear "out" folder
+        run: rm --recursive --force ./out/*
+
+      # Generate docs from within the Docker image.
+      - name: Generate docs
+        run: ./scripts/docker_run ./scripts/build_gh_pages ./out
+
+      # From the "out" folder, commit the results and push to gh-pages.
+      # This step only applies to `push` events (not `pull_request`).
+      - name: Commit and push (post-merge only)
+        if: github.event_name == 'push'
+        run: |
+          cd ./out
+          git add .
+          git commit --message="Update gh-pages from ${GITHUB_SHA}"
+          git push

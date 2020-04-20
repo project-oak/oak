@@ -28,7 +28,6 @@ docker build \
 
 docker_run_flags=(
   '--interactive'
-  '--tty'
   '--rm'
   "--user=$DOCKER_UID:$DOCKER_GID"
   "--env=USER=$DOCKER_USER"
@@ -40,6 +39,11 @@ docker_run_flags=(
   '--workdir=/opt/my-project'
   '--network=host'
 )
+
+# Some CI systems (GitHub actions) do not run with a real TTY attached.
+if [[ -z "${CI:-}" ]]; then
+  docker_run_flags+=('--tty')
+fi
 
 if [[ "$1" == '--detach' ]]; then
   docker_run_flags+=('--detach')
