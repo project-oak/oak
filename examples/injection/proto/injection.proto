@@ -1,0 +1,91 @@
+//
+// Copyright 2020 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+import "oak/proto/handle.proto";
+
+package oak.examples.injection;
+
+// ========================
+// gRPC messages / services
+// ========================
+
+// Request the contents of an existing blob in the store.
+message GetBlobRequest {
+  fixed64 id = 1;
+}
+
+// Request to insert or update a blob in the store.
+message PutBlobRequest {
+  // Leave unset to store a new blob.
+  fixed64 id = 1;
+  bytes blob = 2;
+}
+
+// Returned in response to a GetBlobRequest or PutBlobRequest.
+message BlobResponse {
+  fixed64 id = 1;
+  bytes blob = 2;
+}
+
+service BlobStore {
+  // Retrieve a stored blob
+  rpc GetBlob(GetBlobRequest) returns (BlobResponse);
+  // Insert or update a blob
+  rpc PutBlob(PutBlobRequest) returns (BlobResponse);
+}
+
+// ==============================================
+// Inter-node messages, not exposed through gRPC.
+// ==============================================
+
+// Generic request to a BlobStore.
+message BlobRequest {
+  oneof request {
+    GetBlobRequest get = 1;
+    PutBlobRequest put = 2;
+  }
+}
+
+// Request handles to a blob store.
+message BlobStoreRequest {}
+
+// Response to a BlobStoreRequest
+message BlobStoreResponse {
+  BlobStoreInterface interface = 1;
+}
+
+// Container message for a sender that can write BlobStoreInterface messages.
+message BlobStoreProviderSender {
+  oak.handle.Sender sender = 1
+      [(oak.handle.message_type) = ".oak.examples.injection.BlobStoreInterface"];
+}
+
+// Container message for a sender that can write BlobResponse messages.
+message BlobStoreSender {
+  oak.handle.Sender sender = 1 [(oak.handle.message_type) = ".oak.examples.injection.BlobResponse"];
+}
+
+// Handles to and from a BlobStore.
+//
+// This is equivalent to the BlobStore service definition, but is encoded as a sender and receiver.
+// Eventually we should automatically generate code for this, but for now we do it by hand.
+message BlobStoreInterface {
+  oak.handle.Sender sender = 1 [(oak.handle.message_type) = ".oak.examples.injection.BlobRequest"];
+  oak.handle.Receiver receiver = 2
+      [(oak.handle.message_type) = ".oak.examples.injection.BlobResponse"];
+}

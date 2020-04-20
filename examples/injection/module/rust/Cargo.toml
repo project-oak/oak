@@ -1,0 +1,17 @@
+[package]
+name = "injection"
+version = "0.1.0"
+authors = ["Daan de Graaf <daagra@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+log = "*"
+oak = "=0.1.0"
+prost = "*"
+
+[build-dependencies]
+oak_utils = "*"

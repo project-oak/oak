@@ -12,6 +12,7 @@ members = [
   "chat/module/rust",
   "hello_world/grpc",
   "hello_world/module/rust",
+  "injection/module/rust",
   "machine_learning/module/rust",
   "trusted_information_retrieval/backend",
   "trusted_information_retrieval/client/rust",
@@ -35,6 +36,7 @@ members = [
 # Oak.
 oak = { path = "../sdk/rust/oak" }
 oak_abi = { path = "../oak_abi" }
+oak_derive = { path = "../sdk/rust/oak_derive" }
 oak_runtime = { path = "../oak/server/rust/oak_runtime" }
 oak_tests = { path = "../sdk/rust/oak_tests" }
 oak_utils = { path = "../oak_utils" }

@@ -14,18 +14,9 @@
 // limitations under the License.
 //
 
-use crate::{io::Message, OakError};
-
-/// A trait for objects that can be decoded from bytes + handles.
-pub trait Decodable: Sized {
-    fn decode(message: &Message) -> Result<Self, OakError>;
-}
-
-impl<T: crate::handle::HandleVisit + prost::Message + Default> Decodable for T {
-    fn decode(message: &Message) -> Result<Self, OakError> {
-        let mut value = T::decode(message.bytes.as_slice())?;
-        let handles: Vec<u64> = message.handles.iter().map(|h| h.id).collect();
-        crate::handle::inject_handles(&mut value, &handles)?;
-        Ok(value)
-    }
+fn main() {
+    oak_utils::compile_protos(
+        &["../../proto/injection.proto"],
+        &["../../proto", "../../../../"],
+    );
 }

@@ -17,6 +17,6 @@
 fn main() {
     oak_utils::compile_protos(
         &["../../proto/chat.proto"],
-        &["../../proto", "../../third_party"],
+        &["../../proto", "../../../../"],
     );
 }

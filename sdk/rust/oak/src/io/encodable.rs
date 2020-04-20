@@ -21,11 +21,15 @@ pub trait Encodable {
     fn encode(&self) -> Result<Message, OakError>;
 }
 
-impl<T: prost::Message> Encodable for T {
+impl<T: crate::handle::HandleVisit + prost::Message + Clone> Encodable for T {
     fn encode(&self) -> Result<Message, OakError> {
+        let mut msg = self.clone();
+        let handles = crate::handle::extract_handles(&mut msg)
+            .into_iter()
+            .map(crate::Handle::from_raw)
+            .collect();
         let mut bytes = Vec::new();
         self.encode(&mut bytes)?;
-        let handles = Vec::new();
         Ok(crate::io::Message { bytes, handles })
     }
 }

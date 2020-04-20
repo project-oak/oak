@@ -14,10 +14,12 @@
 // limitations under the License.
 //
 
-use crate::{command::Command, proto::Message};
-use log::info;
+use crate::proto::{
+    command::Command::{JoinRoom, SendMessage},
+    Command, Message,
+};
+use log::{info, warn};
 use oak::Node;
-use prost::Message as _;
 
 oak::entrypoint!(backend_oak_main => |in_channel| {
     oak::logger::init_default();
@@ -32,16 +34,13 @@ struct Room {
 
 impl Node<Command> for Room {
     fn handle_command(&mut self, command: Command) -> Result<(), oak::OakError> {
-        match command {
-            Command::Join(h) => {
-                let sender = oak::io::Sender::new(h);
+        match command.command {
+            Some(JoinRoom(sender)) => {
                 self.clients
                     .push(oak::grpc::ChannelResponseWriter::new(sender));
                 Ok(())
             }
-            Command::SendMessage(message_bytes) => {
-                let message = Message::decode(message_bytes.as_slice())
-                    .expect("could not parse message from bytes");
+            Some(SendMessage(message)) => {
                 self.messages.push(message.clone());
                 info!("fan out message to {} clients", self.clients.len());
                 for writer in &mut self.clients {
@@ -51,6 +50,10 @@ impl Node<Command> for Room {
                         .expect("could not write to channel");
                 }
                 Ok(())
+            }
+            None => {
+                warn!("Received empty command");
+                Err(oak::OakError::OakStatus(oak::OakStatus::ErrInvalidArgs))
             }
         }
     }

@@ -1,0 +1,8 @@
+name = "injection"
+
+[modules]
+app = { path = "examples/injection/bin/injection.wasm" }
+
+[initial_node_configuration]
+wasm_module_name = "app"
+wasm_entrypoint_name = "grpc_fe"

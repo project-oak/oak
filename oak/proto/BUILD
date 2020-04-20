@@ -137,3 +137,9 @@ cc_proto_library(
     name = "roughtime_service_cc_proto",
     deps = [":roughtime_service_proto"],
 )
+
+proto_library(
+    name = "handle_proto",
+    srcs = ["handle.proto"],
+    deps = ["@com_google_protobuf//:descriptor_proto"],
+)

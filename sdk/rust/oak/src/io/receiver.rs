@@ -16,6 +16,10 @@
 
 use crate::{io::Decodable, ChannelReadStatus, OakError, OakStatus, ReadHandle};
 use log::error;
+use prost::{
+    bytes::{Buf, BufMut},
+    encoding::{DecodeContext, WireType},
+};
 use serde::{Deserialize, Serialize};
 
 /// Wrapper for a handle to the read half of a channel, allowing to receive data that can be decoded
@@ -112,5 +116,56 @@ impl<T: Decodable> Receiver<T> {
                 Err(OakStatus::ErrInternal)
             }
         }
+    }
+}
+
+impl<T: Decodable> crate::handle::HandleVisit for Receiver<T> {
+    fn visit<F: FnMut(&mut crate::handle::Handle)>(&mut self, mut visitor: F) -> F {
+        visitor(&mut self.handle.handle.id);
+        visitor
+    }
+}
+
+impl<T: Decodable> Receiver<T> {
+    pub fn as_proto_handle(&self) -> crate::handle::Receiver {
+        crate::handle::Receiver {
+            id: self.handle.handle.id,
+        }
+    }
+}
+
+// Lean on the auto-generated impl of oak::handle::Receiver.
+impl<T: Send + Sync + core::fmt::Debug + Decodable> prost::Message for Receiver<T> {
+    fn encoded_len(&self) -> usize {
+        self.as_proto_handle().encoded_len()
+    }
+
+    fn clear(&mut self) {
+        self.handle.handle.id = 0;
+    }
+
+    fn encode_raw<B: BufMut>(&self, buf: &mut B) {
+        self.as_proto_handle().encode_raw(buf);
+    }
+
+    fn merge_field<B: Buf>(
+        &mut self,
+        tag: u32,
+        wire_type: WireType,
+        buf: &mut B,
+        ctx: DecodeContext,
+    ) -> Result<(), prost::DecodeError> {
+        let mut proto = self.as_proto_handle();
+        proto.merge_field(tag, wire_type, buf, ctx)?;
+        self.handle.handle.id = proto.id;
+        Ok(())
+    }
+}
+
+impl<T: Decodable> Default for Receiver<T> {
+    fn default() -> Receiver<T> {
+        Receiver::new(ReadHandle {
+            handle: crate::Handle::invalid(),
+        })
     }
 }
