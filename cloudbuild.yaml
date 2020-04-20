@@ -103,20 +103,25 @@ steps:
 
   # Rebuild the index file with hashes of reproducible artifacts. If this changed compared to the
   # checked-in version, it will be detected by the `git_check_diff` step below.
-  # TODO(#861): Re-enable this step (before git_check_diff) when artifacts are actually reproducibly
-  # built.
-  # - name: 'gcr.io/oak-ci/oak:latest'
-  #   id: build_reproducibility_index
-  #   waitFor: ['run_examples', 'build_server_rust']
-  #   timeout: 5m
-  #   entrypoint: 'bash'
-  #   args: ['./scripts/build_reproducibility_index']
+  - name: 'gcr.io/oak-ci/oak:latest'
+    id: build_reproducibility_index
+    waitFor: ['run_examples', 'build_server_rust']
+    timeout: 5m
+    entrypoint: 'bash'
+    args: ['./scripts/build_reproducibility_index']
 
   # Check whether any of the previous steps resulted in file diffs that were not checked in or
   # ignored by git.
   - name: 'gcr.io/oak-ci/oak:latest'
     id: git_check_diff
-    waitFor: ['git_init', 'run_clang_tidy', 'run_tests', 'run_examples']
+    waitFor:
+      [
+        'git_init',
+        'run_clang_tidy',
+        'run_tests',
+        'run_examples',
+        'build_reproducibility_index',
+      ]
     timeout: 5m
     entrypoint: 'bash'
     args: ['./scripts/git_check_diff']
