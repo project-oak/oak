@@ -13,16 +13,12 @@ alias(
     actual = "@raze__byteorder__1_3_4//:byteorder",
 )
 alias(
-    name = "hashbrown",
-    actual = "@raze__hashbrown__0_7_1//:hashbrown",
-)
-alias(
     name = "http",
     actual = "@raze__http__0_2_1//:http",
 )
 alias(
     name = "hyper",
-    actual = "@raze__hyper__0_13_4//:hyper",
+    actual = "@raze__hyper__0_13_5//:hyper",
 )
 alias(
     name = "indexmap",

@@ -8,7 +8,6 @@ path = "fake_lib.rs"
 
 [dependencies]
 byteorder = "*"
-hashbrown = "*"
 http = "*"
 hyper = "*"
 # Versions 1.3.x of indexmap have a "clever" feature that auto-detects whether a

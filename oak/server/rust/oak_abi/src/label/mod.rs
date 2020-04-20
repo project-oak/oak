@@ -20,8 +20,8 @@
 //! binary format.  That format is a serialized protocol buffer holding the
 //! `Label` message defined in the policy.proto file.
 
-use hashbrown::HashSet;
 use prost::Message;
+use std::collections::HashSet;
 
 pub use crate::proto::oak::label::*;
 

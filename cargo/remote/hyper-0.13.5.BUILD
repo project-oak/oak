@@ -52,8 +52,8 @@ rust_library(
         "@raze__itoa__0_4_5//:itoa",
         "@raze__log__0_4_8//:log",
         "@raze__net2__0_2_33//:net2",
-        "@raze__pin_project__0_4_8//:pin_project",
-        "@raze__time__0_1_42//:time",
+        "@raze__pin_project__0_4_9//:pin_project",
+        "@raze__time__0_1_43//:time",
         "@raze__tokio__0_2_18//:tokio",
         "@raze__tower_service__0_3_0//:tower_service",
         "@raze__want__0_3_0//:want",
@@ -61,7 +61,7 @@ rust_library(
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.13.4",
+    version = "0.13.5",
     crate_features = [
         "default",
         "net2",

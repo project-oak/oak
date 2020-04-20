@@ -12,7 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "notice", # "MIT"
+  "notice", # "MIT,Apache-2.0"
 ])
 
 load(
@@ -23,23 +23,20 @@ load(
 )
 
 
-alias(
-  name = "redox_syscall",
-  actual = ":syscall",
-)
 
 rust_library(
-    name = "syscall",
+    name = "time",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     edition = "2015",
     srcs = glob(["**/*.rs"]),
     deps = [
+        "@raze__libc__0_2_69//:libc",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.1.56",
+    version = "0.1.43",
     crate_features = [
     ],
 )

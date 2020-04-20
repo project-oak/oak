@@ -27,6 +27,7 @@ load(
 # Unsupported target "compiletest" with type "test" omitted
 # Unsupported target "enum-default" with type "example" omitted
 # Unsupported target "enum-default-expanded" with type "example" omitted
+# Unsupported target "no_infer_outlives" with type "test" omitted
 
 rust_library(
     name = "pin_project",
@@ -35,12 +36,12 @@ rust_library(
     edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__pin_project_internal__0_4_8//:pin_project_internal",
+        "@raze__pin_project_internal__0_4_9//:pin_project_internal",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.4.8",
+    version = "0.4.9",
     crate_features = [
     ],
 )

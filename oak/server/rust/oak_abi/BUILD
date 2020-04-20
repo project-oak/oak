@@ -27,7 +27,6 @@ rust_library(
     crate_type = "rlib",
     edition = "2018",
     deps = [
-        "//cargo:hashbrown",
         "//cargo:log",
         "//cargo:prost",
         "//cargo:prost_types",
