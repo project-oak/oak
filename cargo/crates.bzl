@@ -17,15 +17,6 @@ def _new_git_repository(name, **kwargs):
 def raze_fetch_remote_crates():
 
     _new_http_archive(
-        name = "raze__ahash__0_3_2",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/ahash/ahash-0.3.2.crate",
-        type = "tar.gz",
-        strip_prefix = "ahash-0.3.2",
-
-        build_file = Label("//cargo/remote:ahash-0.3.2.BUILD"),
-    )
-
-    _new_http_archive(
         name = "raze__anyhow__1_0_28",
         url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/anyhow/anyhow-1.0.28.crate",
         type = "tar.gz",
@@ -104,24 +95,6 @@ def raze_fetch_remote_crates():
         strip_prefix = "colored-1.9.3",
 
         build_file = Label("//cargo/remote:colored-1.9.3.BUILD"),
-    )
-
-    _new_http_archive(
-        name = "raze__const_random__0_1_8",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/const-random/const-random-0.1.8.crate",
-        type = "tar.gz",
-        strip_prefix = "const-random-0.1.8",
-
-        build_file = Label("//cargo/remote:const-random-0.1.8.BUILD"),
-    )
-
-    _new_http_archive(
-        name = "raze__const_random_macro__0_1_8",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/const-random-macro/const-random-macro-0.1.8.crate",
-        type = "tar.gz",
-        strip_prefix = "const-random-macro-0.1.8",
-
-        build_file = Label("//cargo/remote:const-random-macro-0.1.8.BUILD"),
     )
 
     _new_http_archive(
@@ -224,21 +197,12 @@ def raze_fetch_remote_crates():
     )
 
     _new_http_archive(
-        name = "raze__hashbrown__0_7_1",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/hashbrown/hashbrown-0.7.1.crate",
+        name = "raze__hermit_abi__0_1_11",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/hermit-abi/hermit-abi-0.1.11.crate",
         type = "tar.gz",
-        strip_prefix = "hashbrown-0.7.1",
+        strip_prefix = "hermit-abi-0.1.11",
 
-        build_file = Label("//cargo/remote:hashbrown-0.7.1.BUILD"),
-    )
-
-    _new_http_archive(
-        name = "raze__hermit_abi__0_1_10",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/hermit-abi/hermit-abi-0.1.10.crate",
-        type = "tar.gz",
-        strip_prefix = "hermit-abi-0.1.10",
-
-        build_file = Label("//cargo/remote:hermit-abi-0.1.10.BUILD"),
+        build_file = Label("//cargo/remote:hermit-abi-0.1.11.BUILD"),
     )
 
     _new_http_archive(
@@ -269,12 +233,12 @@ def raze_fetch_remote_crates():
     )
 
     _new_http_archive(
-        name = "raze__hyper__0_13_4",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/hyper/hyper-0.13.4.crate",
+        name = "raze__hyper__0_13_5",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/hyper/hyper-0.13.5.crate",
         type = "tar.gz",
-        strip_prefix = "hyper-0.13.4",
+        strip_prefix = "hyper-0.13.5",
 
-        build_file = Label("//cargo/remote:hyper-0.13.4.BUILD"),
+        build_file = Label("//cargo/remote:hyper-0.13.5.BUILD"),
     )
 
     _new_http_archive(
@@ -458,21 +422,21 @@ def raze_fetch_remote_crates():
     )
 
     _new_http_archive(
-        name = "raze__pin_project__0_4_8",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/pin-project/pin-project-0.4.8.crate",
+        name = "raze__pin_project__0_4_9",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/pin-project/pin-project-0.4.9.crate",
         type = "tar.gz",
-        strip_prefix = "pin-project-0.4.8",
+        strip_prefix = "pin-project-0.4.9",
 
-        build_file = Label("//cargo/remote:pin-project-0.4.8.BUILD"),
+        build_file = Label("//cargo/remote:pin-project-0.4.9.BUILD"),
     )
 
     _new_http_archive(
-        name = "raze__pin_project_internal__0_4_8",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/pin-project-internal/pin-project-internal-0.4.8.crate",
+        name = "raze__pin_project_internal__0_4_9",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/pin-project-internal/pin-project-internal-0.4.9.crate",
         type = "tar.gz",
-        strip_prefix = "pin-project-internal-0.4.8",
+        strip_prefix = "pin-project-internal-0.4.9",
 
-        build_file = Label("//cargo/remote:pin-project-internal-0.4.8.BUILD"),
+        build_file = Label("//cargo/remote:pin-project-internal-0.4.9.BUILD"),
     )
 
     _new_http_archive(
@@ -500,15 +464,6 @@ def raze_fetch_remote_crates():
         strip_prefix = "ppv-lite86-0.2.6",
 
         build_file = Label("//cargo/remote:ppv-lite86-0.2.6.BUILD"),
-    )
-
-    _new_http_archive(
-        name = "raze__proc_macro_hack__0_5_15",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/proc-macro-hack/proc-macro-hack-0.5.15.crate",
-        type = "tar.gz",
-        strip_prefix = "proc-macro-hack-0.5.15",
-
-        build_file = Label("//cargo/remote:proc-macro-hack-0.5.15.BUILD"),
     )
 
     _new_http_archive(
@@ -593,15 +548,6 @@ def raze_fetch_remote_crates():
     )
 
     _new_http_archive(
-        name = "raze__redox_syscall__0_1_56",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/redox_syscall/redox_syscall-0.1.56.crate",
-        type = "tar.gz",
-        strip_prefix = "redox_syscall-0.1.56",
-
-        build_file = Label("//cargo/remote:redox_syscall-0.1.56.BUILD"),
-    )
-
-    _new_http_archive(
         name = "raze__simple_logger__1_6_0",
         url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/simple_logger/simple_logger-1.6.0.crate",
         type = "tar.gz",
@@ -629,12 +575,12 @@ def raze_fetch_remote_crates():
     )
 
     _new_http_archive(
-        name = "raze__time__0_1_42",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/time/time-0.1.42.crate",
+        name = "raze__time__0_1_43",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/time/time-0.1.43.crate",
         type = "tar.gz",
-        strip_prefix = "time-0.1.42",
+        strip_prefix = "time-0.1.43",
 
-        build_file = Label("//cargo/remote:time-0.1.42.BUILD"),
+        build_file = Label("//cargo/remote:time-0.1.43.BUILD"),
     )
 
     _new_http_archive(

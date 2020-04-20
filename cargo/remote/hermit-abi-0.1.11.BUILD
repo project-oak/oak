@@ -23,10 +23,9 @@ load(
 )
 
 
-# Unsupported target "precise_time_ns" with type "bench" omitted
 
 rust_library(
-    name = "time",
+    name = "hermit_abi",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     edition = "2015",
@@ -37,8 +36,9 @@ rust_library(
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.1.42",
+    version = "0.1.11",
     crate_features = [
+        "default",
     ],
 )
 
