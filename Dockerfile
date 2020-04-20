@@ -4,7 +4,7 @@ ARG debian_snapshot=buster-20191118
 FROM debian/snapshot:${debian_snapshot}
 
 RUN apt-get --yes update && \
-    apt-get install --no-install-recommends --yes \
+  apt-get install --no-install-recommends --yes \
   build-essential \
   clang-format \
   clang-tidy \
@@ -36,11 +36,11 @@ ARG bazel_sha=4bbb2718d451db5922223fda3aed3810c4ca50f431481e86a7fec4c585f18b1f
 ARG bazel_url=https://storage.googleapis.com/bazel-apt/pool/jdk1.8/b/bazel/bazel_${bazel_version}_amd64.deb
 
 RUN wget "${bazel_url}" --no-verbose --output-file=- --output-document=bazel.deb && \
-    echo "${bazel_sha}  bazel.deb" > bazel.sha256 && \
-    sha256sum --check bazel.sha256 && \
-    apt-get install --yes ./bazel.deb && \
-    rm bazel.deb bazel.sha256 && \
-    apt-get clean
+  echo "${bazel_sha}  bazel.deb" > bazel.sha256 && \
+  sha256sum --check bazel.sha256 && \
+  apt-get install --yes ./bazel.deb && \
+  rm bazel.deb bazel.sha256 && \
+  apt-get clean
 
 # Install Node.js and npm.
 RUN curl --location https://deb.nodesource.com/setup_12.x | bash -
@@ -157,6 +157,9 @@ RUN rustup default ${RUST_VERSION}
 
 # Install WebAssembly target for Rust.
 RUN rustup target add wasm32-unknown-unknown
+
+# Install musl target for Rust (for statically linked binaries).
+RUN rustup target add x86_64-unknown-linux-musl
 
 # Install rustfmt, clippy, and the Rust Language Server.
 RUN rustup component add \
