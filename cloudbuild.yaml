@@ -11,7 +11,7 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     id: build_image
     waitFor: ['pull_image']
-    timeout: 10m
+    timeout: 20m
     args:
       [
         'build',
