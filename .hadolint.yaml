@@ -1,0 +1,8 @@
+ignored:
+  # Pin versions in apt get install.
+  # See https://github.com/hadolint/hadolint/wiki/DL3008.
+  - DL3008
+  # Set the SHELL option -o pipefail before RUN with a pipe in.
+  # This does not seem to work well with android.Dockerfile.
+  # See https://github.com/hadolint/hadolint/wiki/DL4006.
+  - DL4006
