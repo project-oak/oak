@@ -40,17 +40,8 @@ use crate::{
 #[cfg(test)]
 mod tests;
 
-/// These number mappings are not exposed to the Wasm client, and are only used by `wasmi` to map
-/// import names to host functions. See https://docs.rs/wasmi/0.6.2/wasmi/trait.Externals.html
-///
-/// - 0: node_create: (usize, usize, usize, usize, u64) -> u32
-/// - 1: random_get: (usize, usize) -> u32
-/// - 2: channel_close: (u64) -> u32
-/// - 3: channel_create: (usize, usize) -> u32
-/// - 4: channel_write: (u64, usize, usize, usize, u32) -> u32
-/// - 5: channel_read: (u64, usize, usize, usize, usize, u32, usize) -> u32
-/// - 6: wait_on_channels: (usize, u32) -> u32
-
+/// Wasm host function index numbers for `wasmi` to map import names with.  This numbering is not
+/// exposed to the Wasm client.  See https://docs.rs/wasmi/0.6.2/wasmi/trait.Externals.html
 const NODE_CREATE: usize = 0;
 const RANDOM_GET: usize = 1;
 const CHANNEL_CLOSE: usize = 2;
@@ -58,7 +49,7 @@ const CHANNEL_CREATE: usize = 3;
 const CHANNEL_WRITE: usize = 4;
 const CHANNEL_READ: usize = 5;
 const WAIT_ON_CHANNELS: usize = 6;
-// TODO(#817): remove this
+// TODO(#817): remove this; we shouldn't need to have WASI stubs.
 const WASI_STUB: usize = 7;
 
 type AbiHandle = u64;
@@ -722,11 +713,9 @@ impl wasmi::ModuleImportResolver for WasmInterface {
         field_name: &str,
         signature: &wasmi::Signature,
     ) -> Result<wasmi::FuncRef, wasmi::Error> {
-        // The comments alongside the types in the signatures correspond to the parameter names from
+        // The types in the signatures correspond to the parameters from
         // /oak/server/rust/oak_abi/src/lib.rs
         let (index, sig) = match field_name {
-            //
-            // - 0: node_create: (usize, usize, usize, usize, usize, usize, u64) -> u32
             "node_create" => (
                 NODE_CREATE,
                 wasmi::Signature::new(
@@ -742,8 +731,6 @@ impl wasmi::ModuleImportResolver for WasmInterface {
                     Some(ABI_U32),
                 ),
             ),
-            //
-            // - 1: random_get: (usize, usize) -> u32
             "random_get" => (
                 RANDOM_GET,
                 wasmi::Signature::new(
@@ -754,8 +741,6 @@ impl wasmi::ModuleImportResolver for WasmInterface {
                     Some(ABI_U32),
                 ),
             ),
-            //
-            // - 2: channel_close: (u64) -> u32
             "channel_close" => (
                 CHANNEL_CLOSE,
                 wasmi::Signature::new(
@@ -765,8 +750,6 @@ impl wasmi::ModuleImportResolver for WasmInterface {
                     Some(ABI_U32),
                 ),
             ),
-            //
-            // - 3: channel_create: (usize, usize) -> u32
             "channel_create" => (
                 CHANNEL_CREATE,
                 wasmi::Signature::new(
@@ -777,8 +760,6 @@ impl wasmi::ModuleImportResolver for WasmInterface {
                     Some(ABI_U32),
                 ),
             ),
-            //
-            // - 4: channel_write: (u64, usize, usize, usize, u32) -> u32
             "channel_write" => (
                 CHANNEL_WRITE,
                 wasmi::Signature::new(
@@ -792,8 +773,6 @@ impl wasmi::ModuleImportResolver for WasmInterface {
                     Some(ABI_U32),
                 ),
             ),
-            //
-            // - 5: channel_read: (u64, usize, usize, usize, usize, u32, usize) -> u32
             "channel_read" => (
                 CHANNEL_READ,
                 wasmi::Signature::new(
@@ -809,8 +788,6 @@ impl wasmi::ModuleImportResolver for WasmInterface {
                     Some(ABI_U32),
                 ),
             ),
-            //
-            // - 6: wait_on_channels: (usize, u32) -> u32
             "wait_on_channels" => (
                 WAIT_ON_CHANNELS,
                 wasmi::Signature::new(
