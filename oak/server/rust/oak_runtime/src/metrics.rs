@@ -4,7 +4,7 @@ use hyper::{
     Body, Request, Response, Server,
 };
 
-use log::info;
+use log::{error, info};
 use prometheus::{
     labels, opts, register_counter, register_gauge, register_histogram_vec, Counter, Encoder,
     Gauge, HistogramVec, TextEncoder,
@@ -69,7 +69,7 @@ pub async fn serve_metrics(port: u16) -> Result<(), Box<dyn std::error::Error>> 
 
     // Run this server for... forever!
     if let Err(e) = server.await {
-        eprintln!("server error: {}", e);
+        error!("server error: {}", e);
     }
     Ok(())
 }

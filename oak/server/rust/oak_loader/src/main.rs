@@ -22,10 +22,14 @@
 //! cargo run --package=oak_loader -- --application=<APP_CONFIG_PATH>
 //! ```
 
-use log::info;
+use log::{error, info};
 use oak_runtime::{configure_and_run, metrics, proto::oak::application::ApplicationConfiguration};
 use prost::Message;
-use std::{fs::File, io::Read};
+use std::{
+    fs::File,
+    io::Read,
+    thread::{park, spawn},
+};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Clone)]
@@ -51,8 +55,17 @@ fn read_file(filename: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     Ok(buffer)
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn start_metrics() {
+    // TODO: port should come from config
+    let port = 3030;
+
+    let mut tokio_runtime = tokio::runtime::Runtime::new().expect("Couldn't create Tokio runtime");
+    let result = tokio_runtime.block_on(metrics::serve_metrics(port));
+
+    info!("Exiting metrics server node thread {:?}", result);
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
     info!("Loading Oak Runtime");
 
@@ -66,13 +79,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Spawns a new thread corresponding to an initial Wasm Oak node.
     configure_and_run(app_config).map_err(|error| format!("Runtime error: {:?}", error))?;
 
-    // TODO: port should come from config
-    let port = 3030;
-    let metrics_future = metrics::serve_metrics(port);
+    let handle = spawn(move || {
+        start_metrics();
+    });
 
-    if let Err(e) = metrics_future.await {
-        eprintln!("Error when waiting for metrics_future: {:?}", e);
+    if let Err(e) = handle.join() {
+        error!("Join error: {:?}", e);
     }
+
+    // Park current thread.
+    park();
 
     Ok(())
 }
