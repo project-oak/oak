@@ -216,28 +216,7 @@ impl Runtime {
     /// Validate the [`NodeId`] has access to [`Handle`], returning `Err(OakStatus::ErrBadHandle)`
     /// if access is not allowed.
     fn validate_handle_access(&self, node_id: NodeId, handle: Handle) -> Result<(), OakStatus> {
-        // Allow RUNTIME_NODE_ID access to all handles.
-        if node_id == RUNTIME_NODE_ID {
-            return Ok(());
-        }
-
-        let node_infos = self.node_infos.read().unwrap();
-        // Lookup the node_id in the runtime's node_infos hashmap.
-        let node_info = node_infos
-            .get(&node_id)
-            .expect("Invalid node_id passed into validate_handle_access!");
-
-        // Check the handle exists in the handles associated with a Node, otherwise
-        // return ErrBadHandle.
-        if node_info.handles.contains(&handle) {
-            Ok(())
-        } else {
-            error!(
-                "{:?}: validate_handle_access: handle {:?} not found",
-                node_id, handle
-            );
-            Err(OakStatus::ErrBadHandle)
-        }
+        self.validate_handles_access(node_id, vec![handle])
     }
 
     /// Validate the [`NodeId`] has access to all [`Handle`]'s passed in the iterator, returning
