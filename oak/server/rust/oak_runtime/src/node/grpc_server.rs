@@ -114,7 +114,7 @@ impl GrpcServerNode {
     fn init_channel_writer(&self) -> Result<Handle, OakStatus> {
         let read_status = self
             .runtime
-            .wait_on_channels(&[Some(self.initial_reader)])
+            .wait_on_channels(&[self.initial_reader])
             .map_err(|error| {
                 error!("Couldn't wait on the initial reader handle: {:?}", error);
                 OakStatus::ErrInternal
@@ -263,7 +263,7 @@ impl GrpcServerNode {
     fn process_response(&self, response_reader: Handle) -> Result<Vec<u8>, GrpcServerError> {
         let read_status = self
             .runtime
-            .wait_on_channels(&[Some(response_reader)])
+            .wait_on_channels(&[response_reader])
             .map_err(|error| {
                 error!("Couldn't wait on the temporary gRPC channel: {:?}", error);
                 GrpcServerError::ResponseProcessingError

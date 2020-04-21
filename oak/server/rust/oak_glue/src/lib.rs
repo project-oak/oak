@@ -159,7 +159,7 @@ pub unsafe extern "C" fn glue_wait_on_channels(node_id: u64, buf: *mut u8, count
             let handle = mem_reader.read_u64::<byteorder::LittleEndian>().unwrap();
             let _b = mem_reader.read_u8().unwrap();
             debug!("{{{}}}: wait_on_channels handle {:?}", node_id, handle);
-            handles.push(Some(oak_runtime::Handle(handle)));
+            handles.push(oak_runtime::Handle(handle));
         }
 
         let proxy = proxy_for_node(node_id);
