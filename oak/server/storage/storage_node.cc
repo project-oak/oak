@@ -23,6 +23,7 @@
 #include "oak/proto/grpc_encap.pb.h"
 #include "oak/proto/storage_service.pb.h"
 #include "oak/server/invocation.h"
+#include "third_party/asylo/cleansing_types.h"
 #include "third_party/asylo/status_macros.h"
 
 using ::oak_abi::OakStatus;
@@ -95,12 +96,12 @@ oak::StatusOr<std::unique_ptr<oak::encap::GrpcResponse>> StorageNode::ProcessMet
     if (!read_req.ParseFromString(grpc_req->req_msg())) {
       return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to parse request");
     }
+    CleansingBytes item_name(read_req.item().name().begin(), read_req.item().name().end());
+    CleansingBytes value;
+    OAK_ASSIGN_OR_RETURN(value, storage_processor_.Read(read_req.storage_name(), item_name,
+                                                        read_req.transaction_id()));
     oak::storage::StorageChannelReadResponse read_rsp;
-    std::string value;
-    OAK_ASSIGN_OR_RETURN(value,
-                         storage_processor_.Read(read_req.storage_name(), read_req.item().name(),
-                                                 read_req.transaction_id()));
-    read_rsp.mutable_item()->ParseFromString(value);
+    read_rsp.mutable_item()->ParseFromArray(value.data(), value.size());
     // TODO(#449): Check security policy for item.
     read_rsp.SerializeToString(grpc_rsp->mutable_rsp_msg());
 
@@ -110,10 +111,14 @@ oak::StatusOr<std::unique_ptr<oak::encap::GrpcResponse>> StorageNode::ProcessMet
       return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to parse request");
     }
     // TODO(#449): Check integrity policy for item.
-    std::string item;
-    write_req.item().SerializeToString(&item);
-    OAK_RETURN_IF_ERROR(storage_processor_.Write(write_req.storage_name(), write_req.item().name(),
-                                                 item, write_req.transaction_id()));
+    CleansingBytes item(write_req.item().ByteSizeLong());
+    if (!write_req.item().SerializeToArray(reinterpret_cast<void*>(item.data()), item.size())) {
+      return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to serialize item");
+    }
+
+    CleansingBytes item_name(write_req.item().name().begin(), write_req.item().name().end());
+    OAK_RETURN_IF_ERROR(storage_processor_.Write(write_req.storage_name(), item_name, item,
+                                                 write_req.transaction_id()));
 
   } else if (method_name == "/oak.storage.StorageService/Delete") {
     oak::storage::StorageChannelDeleteRequest delete_req;
@@ -121,8 +126,9 @@ oak::StatusOr<std::unique_ptr<oak::encap::GrpcResponse>> StorageNode::ProcessMet
       return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to parse request");
     }
     // TODO(#449): Check integrity policy for item.
-    OAK_RETURN_IF_ERROR(storage_processor_.Delete(
-        delete_req.storage_name(), delete_req.item().name(), delete_req.transaction_id()));
+    CleansingBytes item_name(delete_req.item().name().begin(), delete_req.item().name().end());
+    OAK_RETURN_IF_ERROR(storage_processor_.Delete(delete_req.storage_name(), item_name,
+                                                  delete_req.transaction_id()));
 
   } else if (method_name == "/oak.storage.StorageService/Begin") {
     oak::storage::StorageChannelBeginRequest begin_req;

@@ -74,7 +74,7 @@ absl::Status RandomNonce(std::array<uint8_t, kAesGcmSivNonceSize>* nonce) {
 
 // Produces fixed nonces using the storage encryption key and item name to
 // allow deterministic encryption of the item name.
-absl::Status DeterministicNonce(const std::vector<uint8_t>& key_id, const std::string& item_name,
+absl::Status DeterministicNonce(const std::vector<uint8_t>& key_id, const CleansingBytes& item_name,
                                 std::array<uint8_t, kAesGcmSivNonceSize>* nonce) {
   // Generates a digest of the inputs to extract a fixed-size nonce.
   SHA256_CTX context;
@@ -94,7 +94,7 @@ StorageProcessor::StorageProcessor(const std::string& storage_address)
     : storage_service_(oak::Storage::NewStub(
           grpc::CreateChannel(storage_address, grpc::InsecureChannelCredentials()))) {}
 
-const oak::StatusOr<std::string> StorageProcessor::EncryptItem(const std::string& plaintext,
+const oak::StatusOr<std::string> StorageProcessor::EncryptItem(const CleansingBytes& plaintext,
                                                                ItemType item_type) {
   // TODO(#745): Replace "foo" with identifier for the encryption key.
   std::vector<uint8_t> key = GetStorageEncryptionKey("foo");
@@ -147,7 +147,8 @@ const oak::StatusOr<std::string> StorageProcessor::EncryptItem(const std::string
   return result;
 }
 
-const oak::StatusOr<std::string> StorageProcessor::DecryptItem(const std::string& input, ItemType) {
+const oak::StatusOr<CleansingBytes> StorageProcessor::DecryptItem(const std::string& input,
+                                                                  ItemType) {
   if (input.size() < kAesGcmSivNonceSize) {
     return absl::Status(absl::StatusCode::kInvalidArgument,
                         absl::StrCat("Input too short: expected at least ", kAesGcmSivNonceSize,
@@ -159,9 +160,8 @@ const oak::StatusOr<std::string> StorageProcessor::DecryptItem(const std::string
   std::vector<uint8_t> additional_data;
   std::vector<uint8_t> nonce(input.begin(), input.begin() + kAesGcmSivNonceSize);
   std::vector<uint8_t> ciphertext(input.begin() + kAesGcmSivNonceSize, input.end());
-  // TODO(#748): use a cleansing RAII type for the plaintext.
-  std::vector<uint8_t> plaintext;
-  plaintext.resize(ciphertext.size());
+  // Use a cleansing allocator for the plaintext so it is explicitly wiped when deleted.
+  auto plaintext = absl::make_unique<asylo::CleansingVector<uint8_t>>(ciphertext.size());
 
   // Initialize the AEAD context.
   EVP_AEAD const* const aead = EVP_aead_aes_256_gcm_siv();
@@ -173,22 +173,21 @@ const oak::StatusOr<std::string> StorageProcessor::DecryptItem(const std::string
 
   // Perform the actual decryption.
   size_t plaintext_length = 0;
-  if (EVP_AEAD_CTX_open(&context, plaintext.data(), &plaintext_length, plaintext.size(),
+  if (EVP_AEAD_CTX_open(&context, plaintext->data(), &plaintext_length, plaintext->size(),
                         nonce.data(), nonce.size(), ciphertext.data(), ciphertext.size(),
                         additional_data.data(), additional_data.size()) != 1) {
     EVP_AEAD_CTX_cleanup(&context);
     return absl::Status(absl::StatusCode::kInternal, "EVP_AEAD_CTX_open failed");
   }
-  plaintext.resize(plaintext_length);
-
+  plaintext->resize(plaintext_length);
   EVP_AEAD_CTX_cleanup(&context);
 
-  return std::string(plaintext.begin(), plaintext.end());
+  return CleansingBytes(plaintext->begin(), plaintext->end());
 }
 
-oak::StatusOr<std::string> StorageProcessor::Read(const std::string& storage_name,
-                                                  const std::string& item_name,
-                                                  const std::string& transaction_id) {
+oak::StatusOr<CleansingBytes> StorageProcessor::Read(const std::string& storage_name,
+                                                     const CleansingBytes& item_name,
+                                                     const std::string& transaction_id) {
   StorageReadRequest read_request;
   read_request.set_storage_id(GetStorageId(storage_name));
   if (!transaction_id.empty()) {
@@ -204,8 +203,9 @@ oak::StatusOr<std::string> StorageProcessor::Read(const std::string& storage_nam
   return DecryptItem(read_response.item_value(), ItemType::VALUE);
 }
 
-absl::Status StorageProcessor::Write(const std::string& storage_name, const std::string& item_name,
-                                     const std::string& item_value,
+absl::Status StorageProcessor::Write(const std::string& storage_name,
+                                     const CleansingBytes& item_name,
+                                     const CleansingBytes& item_value,
                                      const std::string& transaction_id) {
   StorageWriteRequest write_request;
   write_request.set_storage_id(GetStorageId(storage_name));
@@ -217,6 +217,7 @@ absl::Status StorageProcessor::Write(const std::string& storage_name, const std:
   write_request.set_item_name(name);
 
   std::string value;
+  // @@@@@
   OAK_ASSIGN_OR_RETURN(value, EncryptItem(item_value, ItemType::VALUE));
   write_request.set_item_value(value);
 
@@ -225,7 +226,8 @@ absl::Status StorageProcessor::Write(const std::string& storage_name, const std:
   return FromGrpcStatus(storage_service_->Write(&context, write_request, &write_response));
 }
 
-absl::Status StorageProcessor::Delete(const std::string& storage_name, const std::string& item_name,
+absl::Status StorageProcessor::Delete(const std::string& storage_name,
+                                      const CleansingBytes& item_name,
                                       const std::string& transaction_id) {
   StorageDeleteRequest delete_request;
   delete_request.set_storage_id(GetStorageId(storage_name));

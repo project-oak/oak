@@ -54,6 +54,7 @@ cc_library(
         "//oak/proto:storage_service_cc_proto",
         "//oak/server:invocation",
         "//oak/server:oak_node",
+        "//third_party/asylo:cleansing_types",
         "//third_party/asylo:statusor",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/memory",
@@ -68,6 +69,7 @@ cc_library(
     deps = [
         "//oak/common:logging",
         "//oak/proto:storage_cc_grpc",
+        "//third_party/asylo:cleansing_types",
         "//third_party/asylo:status_macros",
         "//third_party/asylo:statusor",
         "@boringssl//:crypto",

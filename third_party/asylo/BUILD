@@ -52,3 +52,13 @@ cc_test(
         "@gtest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "cleansing_types",
+    hdrs = [
+        "cleansing_allocator.h",
+        "cleansing_types.h",
+    ],
+    visibility = ["//visibility:public"],
+    deps = ["@boringssl//:crypto"],
+)
