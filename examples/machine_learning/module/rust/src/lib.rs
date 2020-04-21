@@ -164,7 +164,7 @@ struct Node {
 }
 
 impl oak::grpc::ServerNode for Node {
-    fn invoke(&mut self, method: &str, _req: &[u8], mut writer: grpc::ChannelResponseWriter) {
+    fn invoke(&mut self, method: &str, _req: &[u8], writer: grpc::ChannelResponseWriter) {
         match method {
             "/oak.examples.machine_learning.MachineLearning/Data" => {
                 info!("Data");

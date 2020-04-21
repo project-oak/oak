@@ -106,7 +106,7 @@ impl Chat for Node {
         }
     }
 
-    fn subscribe(&mut self, req: SubscribeRequest, mut writer: grpc::ChannelResponseWriter) {
+    fn subscribe(&mut self, req: SubscribeRequest, writer: grpc::ChannelResponseWriter) {
         info!("subscribing to room");
         match self.rooms.get(&req.room_id) {
             None => {
