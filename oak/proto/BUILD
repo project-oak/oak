@@ -115,7 +115,6 @@ cc_grpc_library(
     grpc_only = True,
     deps = [
         ":storage_cc_proto",
-        "//third_party/google/rpc:status_cc_proto",
     ],
 )
 
