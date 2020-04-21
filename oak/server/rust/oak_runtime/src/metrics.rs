@@ -1,3 +1,19 @@
+//
+// Copyright 2020 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
 use hyper::{
     header::CONTENT_TYPE,
     service::{make_service_fn, service_fn},
@@ -5,44 +21,16 @@ use hyper::{
 };
 
 use log::{error, info};
-use prometheus::{
-    labels, opts, register_counter, register_gauge, register_histogram_vec, Counter, Encoder,
-    Gauge, HistogramVec, TextEncoder,
-};
+use prometheus::{Encoder, TextEncoder};
 use std::{convert::Infallible, net::SocketAddr};
-
-lazy_static::lazy_static! {
-pub static ref HTTP_COUNTER: Counter = register_counter!(opts!(
-    "http_requests_total",
-    "Total number of HTTP requests made.",
-    labels! {"handler" => "all",}
-))
-.unwrap();
-pub static ref HTTP_BODY_GAUGE: Gauge = register_gauge!(opts!(
-    "http_response_size_bytes",
-    "The HTTP response sizes in bytes.",
-    labels! {"handler" => "all",}
-))
-.unwrap();
-pub static ref HTTP_REQ_HISTOGRAM: HistogramVec = register_histogram_vec!(
-    "http_request_duration_seconds",
-    "The HTTP request latencies in seconds.",
-    &["handler"]
-)
-.unwrap();
-pub static ref NUM_NODES: Gauge = register_gauge!(opts!(
-    "num_nodes",
-    "Number of nodes in the runtime.",
-    labels! {"handler" => "all",}
-))
-.unwrap();
-}
 
 async fn process_metrics(_req: Request<Body>) -> Result<Response<Body>, hyper::Error> {
     let encoder = TextEncoder::new();
     let metric_families = prometheus::gather();
     let mut buffer = vec![];
-    encoder.encode(&metric_families, &mut buffer).unwrap();
+    encoder
+        .encode(&metric_families, &mut buffer)
+        .expect("Could not encode metrics data!");
     info!("Metrics size: {}", buffer.len());
     let response = Response::builder()
         .status(200)

@@ -56,7 +56,7 @@ fn read_file(filename: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
 }
 
 fn start_metrics() {
-    // TODO: port should come from config
+    // TO_DO: port should come from config
     let port = 3030;
 
     let mut tokio_runtime = tokio::runtime::Runtime::new().expect("Couldn't create Tokio runtime");
@@ -76,19 +76,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .map_err(|error| format!("Failed to decode application configuration: {:?}", error))?
     };
 
-    // Spawns a new thread corresponding to an initial Wasm Oak node.
-    configure_and_run(app_config).map_err(|error| format!("Runtime error: {:?}", error))?;
+    let mut handles = vec![];
 
-    let handle = spawn(move || {
+    // start the runtime in a new thread
+    handles.push(spawn(move || {
+        // Spawns a new thread corresponding to an initial Wasm Oak node.
+        configure_and_run(app_config)
+            .map_err(|error| format!("Runtime error: {:?}", error))
+            .unwrap();
+
+        // Park current thread.
+        park();
+    }));
+
+    // start metrics server in a new thread
+    handles.push(spawn(move || {
         start_metrics();
-    });
+    }));
 
-    if let Err(e) = handle.join() {
-        error!("Join error: {:?}", e);
+    for handle in handles {
+        if let Err(e) = handle.join() {
+            error!("Join error: {:?}", e);
+        }
     }
-
-    // Park current thread.
-    park();
 
     Ok(())
 }

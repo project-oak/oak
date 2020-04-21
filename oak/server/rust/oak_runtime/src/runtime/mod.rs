@@ -36,6 +36,16 @@ mod tests;
 
 pub use channel::{Handle, HandleDirection};
 
+use prometheus::{opts, register_int_gauge, IntGauge};
+
+lazy_static::lazy_static! {
+    static ref NODES_COUNT: IntGauge = register_int_gauge!(opts!(
+        "nodes_count",
+        "Number of nodes in the runtime."
+    ))
+    .unwrap();
+}
+
 struct NodeInfo {
     /// The Label associated with this Node.
     ///
@@ -733,6 +743,7 @@ impl Runtime {
             .unwrap()
             .remove(&node_id)
             .expect("remove_node_id: Node didn't exist!");
+        self.update_nodes_count_metric();
     }
 
     /// Add an [`NodeId`] [`NodeInfo`] pair to the [`Runtime`]. This method temporarily holds the
@@ -742,11 +753,15 @@ impl Runtime {
             .write()
             .expect("could not acquire lock on node_infos")
             .insert(node_id, node_info);
-        crate::metrics::NUM_NODES.set(
+        self.update_nodes_count_metric();
+    }
+
+    fn update_nodes_count_metric(&self) {
+        NODES_COUNT.set(
             self.node_infos
                 .read()
                 .expect("could not acquire lock on node_infos")
-                .len() as f64,
+                .len() as i64,
         );
     }
 
