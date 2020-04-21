@@ -452,7 +452,7 @@
     <span class="kw">fn</span> <span class="ident">init_channel_writer</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Handle</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">read_status</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">runtime</span>
-            .<span class="ident">wait_on_channels</span>(<span class="kw-2">&amp;</span>[<span class="prelude-val">Some</span>(<span class="self">self</span>.<span class="ident">initial_reader</span>)])
+            .<span class="ident">wait_on_channels</span>(<span class="kw-2">&amp;</span>[<span class="self">self</span>.<span class="ident">initial_reader</span>])
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
                 <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t wait on the initial reader handle: {:?}&quot;</span>, <span class="ident">error</span>);
                 <span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>
@@ -601,7 +601,7 @@
     <span class="kw">fn</span> <span class="ident">process_response</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">response_reader</span>: <span class="ident">Handle</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">GrpcServerError</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">read_status</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">runtime</span>
-            .<span class="ident">wait_on_channels</span>(<span class="kw-2">&amp;</span>[<span class="prelude-val">Some</span>(<span class="ident">response_reader</span>)])
+            .<span class="ident">wait_on_channels</span>(<span class="kw-2">&amp;</span>[<span class="ident">response_reader</span>])
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
                 <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t wait on the temporary gRPC channel: {:?}&quot;</span>, <span class="ident">error</span>);
                 <span class="ident">GrpcServerError</span>::<span class="ident">ResponseProcessingError</span>
