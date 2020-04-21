@@ -12,9 +12,9 @@ source "$SCRIPTS_DIR/common"
 
 # List of artifacts that are expected to be reproducibly built.
 readonly REPRODUCIBLE_ARTIFACTS=(
-  ./target/wasm32-unknown-unknown/release/*.wasm
-  ./bazel-clang-bin/oak/server/loader/oak_runner
-  ./target/debug/oak_loader
+  # TODO(#865): Include wasm files when they are reproducibly buildable.
+  # ./target/wasm32-unknown-unknown/release/*.wasm
+  ./target/x86_64-unknown-linux-musl/release/oak_loader
 )
 
 # Index file containing hashes of the reproducible artifacts, alongside their file names.
@@ -22,4 +22,4 @@ readonly REPRODUCIBILITY_INDEX='./reproducibility_index'
 
 # Generate the index file by computing the hashes of the artifacts.
 # The index file must be checked in, and
-sha256sum "${REPRODUCIBLE_ARTIFACTS[@]}" > "${REPRODUCIBILITY_INDEX}"
+sha256sum "${REPRODUCIBLE_ARTIFACTS[@]}" | tee "${REPRODUCIBILITY_INDEX}"
