@@ -60,7 +60,7 @@ impl LogNode {
             // An error indicates the Runtime is terminating. We ignore it here and keep trying to
             // read in case a Wasm Node wants to emit remaining messages. We will return
             // once the channel is closed.
-            let _ = self.runtime.wait_on_channels(&[Some(self.reader)]);
+            let _ = self.runtime.wait_on_channels(&[self.reader]);
 
             if let Some(message) = self.runtime.channel_read(self.reader)? {
                 match LogMessage::decode(&*message.data) {

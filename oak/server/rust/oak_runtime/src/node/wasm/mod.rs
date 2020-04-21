@@ -478,31 +478,39 @@ impl WasmInterface {
                 );
                 OakStatus::ErrInvalidArgs
             })?;
-
-        let channels: Vec<Option<_>> = handles_raw
+        let handles: Vec<AbiHandle> = handles_raw
             .chunks(9)
-            .map(|bytes| {
-                let handle = LittleEndian::read_u64(bytes);
-
-                self.readers.get(&handle).copied()
-            })
+            .map(|bytes| LittleEndian::read_u64(bytes))
             .collect();
 
-        let statuses = self.runtime.wait_on_channels(&channels)?;
+        // Accumulate both the valid channels and their original position.
+        let mut all_statuses = vec![ChannelReadStatus::InvalidChannel; handles.len()];
+        let mut valid_pos = Vec::new();
+        let mut valid_channels = Vec::new();
+        for (i, handle) in handles.into_iter().enumerate() {
+            if let Some(channel) = self.readers.get(&handle).copied() {
+                valid_pos.push(i);
+                valid_channels.push(channel);
+            }
+        }
+        let valid_statuses = self.runtime.wait_on_channels(&valid_channels)?;
+        for i in 0..valid_channels.len() {
+            all_statuses[valid_pos[i]] = valid_statuses[i];
+        }
 
-        for (i, &status) in statuses.iter().enumerate() {
+        for (i, valid_status) in all_statuses.iter().enumerate() {
             self.get_memory()
-                .set_value(status_buff + 8 + (i as u32 * 9), status as u8)
+                .set_value(status_buff + 8 + (i as u32 * 9), *valid_status as u8)
                 .map_err(|err| {
                     error!(
                         "{}: wait_on_channels(): Unable to set status[{}] to {:?}: {:?}",
-                        self.pretty_name, i, status, err
+                        self.pretty_name, i, valid_status, err
                     );
                     OakStatus::ErrInvalidArgs
                 })?;
         }
 
-        if statuses
+        if all_statuses
             .iter()
             .all(|&s| s == ChannelReadStatus::InvalidChannel || s == ChannelReadStatus::Orphaned)
         {

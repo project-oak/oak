@@ -216,15 +216,16 @@ impl Runtime {
     /// Validate the [`NodeId`] has access to [`Handle`], returning `Err(OakStatus::ErrBadHandle)`
     /// if access is not allowed.
     fn validate_handle_access(&self, node_id: NodeId, handle: Handle) -> Result<(), OakStatus> {
-        self.validate_handles_access(node_id, vec![handle])
+        self.validate_handles_access(node_id, &[handle])
     }
 
     /// Validate the [`NodeId`] has access to all [`Handle`]'s passed in the iterator, returning
     /// `Err(OakStatus::ErrBadHandle)` if access is not allowed.
-    fn validate_handles_access<I>(&self, node_id: NodeId, handles: I) -> Result<(), OakStatus>
-    where
-        I: IntoIterator<Item = Handle>,
-    {
+    fn validate_handles_access(
+        &self,
+        node_id: NodeId,
+        handles: &[Handle],
+    ) -> Result<(), OakStatus> {
         // Allow RUNTIME_NODE_ID access to all handles.
         if node_id == RUNTIME_NODE_ID {
             return Ok(());
@@ -324,16 +325,13 @@ impl Runtime {
 
     /// Returns whether the calling Node is allowed to read from all the provided channels,
     /// according to their respective [`Label`]s.
-    fn validate_can_read_from_channels<I>(
+    fn validate_can_read_from_channels(
         &self,
         node_id: NodeId,
-        channel_handles: I,
-    ) -> Result<(), OakStatus>
-    where
-        I: IntoIterator<Item = Handle>,
-    {
-        let all_channel_handles_ok = channel_handles.into_iter().all(|channel_handle| {
-            self.validate_can_read_from_channel(node_id, channel_handle)
+        channel_handles: &[Handle],
+    ) -> Result<(), OakStatus> {
+        let all_channel_handles_ok = channel_handles.iter().all(|channel_handle| {
+            self.validate_can_read_from_channel(node_id, *channel_handle)
                 .is_ok()
         });
         if all_channel_handles_ok {
@@ -392,27 +390,20 @@ impl Runtime {
         (writer, reader)
     }
 
-    /// Reads the statuses from a slice of `Option<&ChannelReader>`s.
+    /// Reads the statuses from a slice of `Handle`s.
     /// [`ChannelReadStatus::InvalidChannel`] is set for `None` readers in the slice. For `Some(_)`
     /// readers, the result is set from a call to `has_message`.
-    fn readers_statuses(
-        &self,
-        node_id: NodeId,
-        readers: &[Option<Handle>],
-    ) -> Vec<ChannelReadStatus> {
+    fn readers_statuses(&self, node_id: NodeId, readers: &[Handle]) -> Vec<ChannelReadStatus> {
         readers
             .iter()
             .map(|chan| {
-                chan.map_or(ChannelReadStatus::InvalidChannel, |chan| {
-                    self.channel_status(node_id, chan)
-                        .unwrap_or(ChannelReadStatus::InvalidChannel)
-                })
+                self.channel_status(node_id, *chan)
+                    .unwrap_or(ChannelReadStatus::InvalidChannel)
             })
             .collect()
     }
 
-    /// Waits on a slice of `Option<&Handle>`s, blocking until one of the following
-    /// conditions:
+    /// Waits on a slice of `Handle`s, blocking until one of the following conditions:
     /// - If the [`Runtime`] is terminating this will return immediately with an `ErrTerminated`
     ///   status for each channel.
     /// - If all readers are in an erroneous status, e.g. when all channels are orphaned, this will
@@ -429,10 +420,10 @@ impl Runtime {
     pub fn wait_on_channels(
         &self,
         node_id: NodeId,
-        readers: &[Option<Handle>],
+        readers: &[Handle],
     ) -> Result<Vec<ChannelReadStatus>, OakStatus> {
-        self.validate_handles_access(node_id, readers.iter().filter_map(|x| *x))?;
-        self.validate_can_read_from_channels(node_id, readers.iter().filter_map(|x| *x))?;
+        self.validate_handles_access(node_id, readers)?;
+        self.validate_can_read_from_channels(node_id, readers)?;
 
         let thread = thread::current();
         while !self.is_terminating() {
@@ -450,15 +441,13 @@ impl Runtime {
             let thread_ref = Arc::new(thread.clone());
 
             for reader in readers {
-                if let Some(reader) = reader {
-                    self.channels.with_channel(
-                        self.channels.get_reader_channel(*reader)?,
-                        |channel| {
-                            channel.add_waiter(thread_id, &thread_ref);
-                            Ok(())
-                        },
-                    )?;
-                }
+                self.channels.with_channel(
+                    self.channels.get_reader_channel(*reader)?,
+                    |channel| {
+                        channel.add_waiter(thread_id, &thread_ref);
+                        Ok(())
+                    },
+                )?;
             }
             let statuses = self.readers_statuses(node_id, &readers);
 
@@ -941,7 +930,7 @@ impl RuntimeProxy {
     /// See [`Runtime::wait_on_channels`].
     pub fn wait_on_channels(
         &self,
-        channel_read_handles: &[Option<Handle>],
+        channel_read_handles: &[Handle],
     ) -> Result<Vec<ChannelReadStatus>, OakStatus> {
         self.runtime
             .wait_on_channels(self.node_id, channel_read_handles)
