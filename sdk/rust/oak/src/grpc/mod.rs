@@ -70,7 +70,7 @@ impl ChannelResponseWriter {
     /// Write out a gRPC response and optionally close out the method
     /// invocation.  Any errors from the channel are silently dropped.
     pub fn write<T: prost::Message>(
-        &mut self,
+        &self,
         rsp: &T,
         mode: WriteMode,
     ) -> std::result::Result<(), OakError> {
@@ -95,7 +95,7 @@ impl ChannelResponseWriter {
 
     /// Write an empty gRPC response and optionally close out the method
     /// invocation. Any errors from the channel are silently dropped.
-    pub fn write_empty(&mut self, mode: WriteMode) -> std::result::Result<(), OakError> {
+    pub fn write_empty(&self, mode: WriteMode) -> std::result::Result<(), OakError> {
         let grpc_rsp = GrpcResponse {
             rsp_msg: Vec::new(),
             status: None,
@@ -112,7 +112,7 @@ impl ChannelResponseWriter {
     }
 
     /// Close out the gRPC method invocation with the given final result.
-    pub fn close(&mut self, result: Result<()>) -> std::result::Result<(), OakError> {
+    pub fn close(&self, result: Result<()>) -> std::result::Result<(), OakError> {
         // Build a final GrpcResponse message wrapper and serialize it into the
         // channel.
         let mut grpc_rsp = GrpcResponse::default();
@@ -266,7 +266,7 @@ where
 /// request/response pair.
 ///
 /// Panics if [de-]serialization or channel operations fail.
-pub fn handle_req_rsp<C, R, Q>(mut node_fn: C, req: &[u8], mut writer: ChannelResponseWriter)
+pub fn handle_req_rsp<C, R, Q>(mut node_fn: C, req: &[u8], writer: ChannelResponseWriter)
 where
     C: FnMut(R) -> Result<Q>,
     R: prost::Message + Default,
@@ -301,7 +301,7 @@ where
 /// stream of requests to produce a response.
 ///
 /// Panics if [de-]serialization or channel operations fail.
-pub fn handle_stream_rsp<C, R, Q>(mut node_fn: C, req: &[u8], mut writer: ChannelResponseWriter)
+pub fn handle_stream_rsp<C, R, Q>(mut node_fn: C, req: &[u8], writer: ChannelResponseWriter)
 where
     C: FnMut(Vec<R>) -> Result<Q>,
     R: prost::Message + Default,

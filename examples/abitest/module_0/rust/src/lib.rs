@@ -238,7 +238,7 @@ impl OakAbiTestService for FrontendNode {
     fn server_streaming_method(
         &mut self,
         req: GrpcTestRequest,
-        mut writer: grpc::ChannelResponseWriter,
+        writer: grpc::ChannelResponseWriter,
     ) {
         match req.method_result {
             Some(proto::grpc_test_request::MethodResult::ErrCode(err_code)) => {
@@ -294,7 +294,7 @@ impl OakAbiTestService for FrontendNode {
     fn bidi_streaming_method(
         &mut self,
         reqs: Vec<GrpcTestRequest>,
-        mut writer: grpc::ChannelResponseWriter,
+        writer: grpc::ChannelResponseWriter,
     ) {
         for req in &reqs {
             match &req.method_result {

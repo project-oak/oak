@@ -52,7 +52,7 @@ impl HelloWorld for Node {
         Ok(res)
     }
 
-    fn lots_of_replies(&mut self, req: HelloRequest, mut writer: grpc::ChannelResponseWriter) {
+    fn lots_of_replies(&mut self, req: HelloRequest, writer: grpc::ChannelResponseWriter) {
         info!("Say hello to {}", req.greeting);
         let mut res1 = HelloResponse::default();
         res1.reply = format!("HELLO {}!", req.greeting);
@@ -88,7 +88,7 @@ impl HelloWorld for Node {
         Ok(res)
     }
 
-    fn bidi_hello(&mut self, reqs: Vec<HelloRequest>, mut writer: grpc::ChannelResponseWriter) {
+    fn bidi_hello(&mut self, reqs: Vec<HelloRequest>, writer: grpc::ChannelResponseWriter) {
         info!("Say hello");
         let msg = recipients(&reqs);
         let mut res1 = HelloResponse::default();
