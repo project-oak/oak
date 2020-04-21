@@ -51,6 +51,16 @@ find . \
     -not \( -path ./cargo-cache -prune \) -and \
     -not \( -path ./target -prune \) -and \
     -not \( -path ./third_party -prune \) \
+    \( -type f -name '*Dockerfile' \) \
+  \) -exec hadolint {} +
+
+find . \
+  \(  \
+    -not \( -path ./.git -prune \) -and \
+    -not \( -path ./bazel-cache -prune \) -and \
+    -not \( -path ./cargo-cache -prune \) -and \
+    -not \( -path ./target -prune \) -and \
+    -not \( -path ./third_party -prune \) \
     \( -type f -name '*.md' -or -name '*.yaml' -or -name '*.toml' \) \
   \) -exec prettier --check {} +
 

@@ -23,23 +23,23 @@ integration system, check the specific details in the project
 [embedmd]:# (../Dockerfile bash /^# Install rustup/ /^ +rustfmt/)
 ```bash
 # Install rustup.
-ARG RUSTUP_DIR=/usr/local/cargo
-ENV RUSTUP_HOME ${RUSTUP_DIR}
-ENV CARGO_HOME ${RUSTUP_DIR}
-RUN curl --location https://sh.rustup.rs > /tmp/rustup
-RUN sh /tmp/rustup -y --default-toolchain=none
-ENV PATH "${RUSTUP_DIR}/bin:${PATH}"
-RUN rustup --version
-RUN chmod a+rwx ${RUSTUP_DIR}
+ARG rustup_dir=/usr/local/cargo
+ENV RUSTUP_HOME ${rustup_dir}
+ENV CARGO_HOME ${rustup_dir}
+ENV PATH "${rustup_dir}/bin:${PATH}"
+RUN curl --location https://sh.rustup.rs > /tmp/rustup \
+  && sh /tmp/rustup -y --default-toolchain=none \
+  && chmod a+rwx ${rustup_dir} \
+  && rustup --version
 
 # Install Rust toolchain.
 # We currently need the nightly version in order to be able to compile some of the examples.
 # See https://rust-lang.github.io/rustup-components-history/ for how to pick a version that supports
 # the appropriate set of components.
 # Make sure to update WORKSPACE too, e.g. when updating nightly version
-ARG RUST_VERSION=nightly-2020-02-06
-RUN rustup toolchain install ${RUST_VERSION}
-RUN rustup default ${RUST_VERSION}
+ARG rust_version=nightly-2020-02-06
+RUN rustup toolchain install ${rust_version} \
+  && rustup default ${rust_version}
 
 # Install WebAssembly target for Rust.
 RUN rustup target add wasm32-unknown-unknown
