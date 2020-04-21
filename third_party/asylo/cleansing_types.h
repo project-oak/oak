@@ -22,7 +22,7 @@
 #include <string>
 #include <vector>
 
-#include "asylo/util/cleansing_allocator.h"
+#include "third_party/asylo/cleansing_allocator.h"
 
 namespace asylo {
 

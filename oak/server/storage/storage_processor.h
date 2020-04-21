@@ -17,26 +17,31 @@
 #ifndef OAK_SERVER_STORAGE_PROCESSOR_H_
 #define OAK_SERVER_STORAGE_PROCESSOR_H_
 
+#include <cstdint>
 #include <memory>
 
 #include "absl/status/status.h"
 #include "oak/proto/storage.grpc.pb.h"
+#include "third_party/asylo/cleansing_types.h"
 #include "third_party/asylo/statusor.h"
 
 namespace oak {
+
+using CleansingBytes = asylo::CleansingVector<uint8_t>;
 
 class StorageProcessor {
  public:
   explicit StorageProcessor(const std::string& storage_address);
 
   // Returns item value on success.
-  oak::StatusOr<std::string> Read(const std::string& storage_name, const std::string& item_name,
-                                  const std::string& transaction_id);
+  oak::StatusOr<CleansingBytes> Read(const std::string& storage_name,
+                                     const CleansingBytes& item_name,
+                                     const std::string& transaction_id);
 
-  absl::Status Write(const std::string& storage_name, const std::string& item_name,
-                     const std::string& item_value, const std::string& transaction_id);
+  absl::Status Write(const std::string& storage_name, const CleansingBytes& item_name,
+                     const CleansingBytes& item_value, const std::string& transaction_id);
 
-  absl::Status Delete(const std::string& storage_name, const std::string& item_name,
+  absl::Status Delete(const std::string& storage_name, const CleansingBytes& item_name,
                       const std::string& transaction_id);
 
   // Returns transaction ID on success.
@@ -55,11 +60,11 @@ class StorageProcessor {
   // Item values are encrypted with item_value_cryptor_, using a random nonce.
   // Returns the concatenation of the kAesGcmSivNonceSize-byte nonce followed by
   // the encrypted item.
-  const oak::StatusOr<std::string> EncryptItem(const std::string& item, ItemType item_type);
+  const oak::StatusOr<std::string> EncryptItem(const CleansingBytes& item, ItemType item_type);
 
   // Decrypts `input` which must be a kAesGcmSivNonceSize-byte nonce followed by
   // the encrypted item.
-  const oak::StatusOr<std::string> DecryptItem(const std::string& input, ItemType item_type);
+  const oak::StatusOr<CleansingBytes> DecryptItem(const std::string& input, ItemType item_type);
 
   std::unique_ptr<oak::Storage::Stub> storage_service_;
 };
