@@ -52,7 +52,6 @@ const WAIT_ON_CHANNELS: usize = 6;
 // TODO(#817): remove this; we shouldn't need to have WASI stubs.
 const WASI_STUB: usize = 7;
 
-type AbiHandle = u64;
 type AbiPointer = u32;
 type AbiPointerOffset = u32;
 
@@ -71,9 +70,9 @@ struct WasmInterface {
     pretty_name: String,
 
     /// Reader channel mappings to unique u64 handles
-    readers: HashMap<AbiHandle, Handle>,
+    readers: HashMap<oak_abi::Handle, Handle>,
     /// Writer channel mappings to unique u64 handles
-    writers: HashMap<AbiHandle, Handle>,
+    writers: HashMap<oak_abi::Handle, Handle>,
 
     /// A reference to the memory used by the `wasmi` interpreter. Host ABI functions using Wasm
     /// relative addresses will perform reads/writes against this reference.
@@ -85,7 +84,11 @@ struct WasmInterface {
 impl WasmInterface {
     /// Generate a randomized handle. Handles are random to prevent accidental dependency on
     /// particular values or sequence. See https://github.com/project-oak/oak/pull/347
-    fn allocate_new_handle(&mut self, channel: Handle, direction: HandleDirection) -> AbiHandle {
+    fn allocate_new_handle(
+        &mut self,
+        channel: Handle,
+        direction: HandleDirection,
+    ) -> oak_abi::Handle {
         loop {
             let handle = rand::thread_rng().next_u64();
 
@@ -127,7 +130,7 @@ impl WasmInterface {
         pretty_name: String,
         runtime: RuntimeProxy,
         initial_reader: Handle,
-    ) -> (WasmInterface, AbiHandle) {
+    ) -> (WasmInterface, oak_abi::Handle) {
         let mut interface = WasmInterface {
             pretty_name,
             readers: HashMap::new(),
@@ -150,7 +153,7 @@ impl WasmInterface {
         entrypoint_length: AbiPointerOffset,
         label_ptr: AbiPointer,
         label_length: AbiPointerOffset,
-        initial_handle: AbiHandle,
+        initial_handle: oak_abi::Handle,
     ) -> Result<(), OakStatus> {
         let config_name_bytes = self
             .get_memory()
@@ -277,7 +280,7 @@ impl WasmInterface {
     /// u32`](oak_abi::channel_write).
     fn channel_write(
         &self,
-        writer_handle: AbiHandle,
+        writer_handle: oak_abi::Handle,
         source: AbiPointer,
         source_length: AbiPointerOffset,
         handles: AbiPointer,
@@ -350,7 +353,7 @@ impl WasmInterface {
     #[allow(clippy::too_many_arguments)]
     fn channel_read(
         &mut self,
-        reader_handle: AbiHandle,
+        reader_handle: oak_abi::Handle,
 
         dest: AbiPointer,
         dest_capacity: AbiPointerOffset,
@@ -478,7 +481,7 @@ impl WasmInterface {
                 );
                 OakStatus::ErrInvalidArgs
             })?;
-        let handles: Vec<AbiHandle> = handles_raw
+        let handles: Vec<oak_abi::Handle> = handles_raw
             .chunks(9)
             .map(|bytes| LittleEndian::read_u64(bytes))
             .collect();
