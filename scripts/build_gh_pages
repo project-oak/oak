@@ -35,6 +35,9 @@ cargo doc --no-deps --target-dir="${TARGET_DIR}"
 # Remove non-doc artifacts from the target dir.
 rm --recursive --force "${TARGET_DIR}/debug"
 
+# Remove non-deterministic files.
+rm "${TARGET_DIR}/.rustc_info.json"
+
 # The docs generated from the Cargo workspace do not include a workspace-level index, so we generate
 # one here and redirect to the Oak SDK documentation.
 cat <<-END > "${TARGET_DIR}/index.html"

@@ -52,11 +52,16 @@ jobs:
         run: ./scripts/docker_run ./scripts/build_gh_pages ./out
 
       # From the "out" folder, commit the results and push to gh-pages.
-      # This step only applies to `push` events (not `pull_request`).
+      # This step only applies to `push` events (not `pull_request`), and only if there are actual
+      # changes to commit in the "out" folder.
       - name: Commit and push (post-merge only)
         if: github.event_name == 'push'
         run: |
           cd ./out
           git add .
-          git commit --message="Update gh-pages from ${GITHUB_SHA}"
-          git push
+          if [[ -n "$(git status --porcelain)" ]]; then
+            git commit --message="Update gh-pages from ${GITHUB_SHA}"
+            git push
+          else
+            echo 'no changes to commit'
+          fi
