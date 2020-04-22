@@ -12,7 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "restricted", # "MIT OR Apache-2.0"
+  "notice", # "ISC"
 ])
 
 load(
@@ -23,10 +23,11 @@ load(
 )
 
 
+# Unsupported target "tests" with type "test" omitted
 
 rust_library(
-    name = "futures_task",
-    crate_root = "src/lib.rs",
+    name = "untrusted",
+    crate_root = "src/untrusted.rs",
     crate_type = "lib",
     edition = "2018",
     srcs = glob(["**/*.rs"]),
@@ -35,9 +36,8 @@ rust_library(
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.3.4",
+    version = "0.7.0",
     crate_features = [
-        "alloc",
     ],
 )
 

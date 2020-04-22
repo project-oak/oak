@@ -12,7 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "notice", # "MIT"
+  "notice", # "Apache-2.0,ISC,MIT"
 ])
 
 load(
@@ -23,34 +23,34 @@ load(
 )
 
 
-# Unsupported target "codecs" with type "test" omitted
-# Unsupported target "framed" with type "test" omitted
-# Unsupported target "framed_read" with type "test" omitted
-# Unsupported target "framed_write" with type "test" omitted
-# Unsupported target "length_delimited" with type "test" omitted
+# Unsupported target "api" with type "test" omitted
+# Unsupported target "bench" with type "example" omitted
+# Unsupported target "benchmarks" with type "bench" omitted
+# Unsupported target "benchmarks" with type "test" omitted
+# Unsupported target "bogo_shim" with type "example" omitted
 
 rust_library(
-    name = "tokio_util",
+    name = "rustls",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__bytes__0_5_4//:bytes",
-        "@raze__futures_core__0_3_4//:futures_core",
-        "@raze__futures_sink__0_3_4//:futures_sink",
+        "@raze__base64__0_11_0//:base64",
         "@raze__log__0_4_8//:log",
-        "@raze__pin_project_lite__0_1_4//:pin_project_lite",
-        "@raze__tokio__0_2_19//:tokio",
+        "@raze__ring__0_16_12//:ring",
+        "@raze__sct__0_6_0//:sct",
+        "@raze__webpki__0_21_2//:webpki",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.3.1",
+    version = "0.17.0",
     crate_features = [
-        "codec",
         "default",
+        "log",
+        "logging",
     ],
 )
 
-# Unsupported target "udp" with type "test" omitted
+# Unsupported target "trytls_shim" with type "example" omitted

@@ -12,7 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "restricted", # "MIT OR Apache-2.0"
+  "notice", # "MIT"
 ])
 
 load(
@@ -25,19 +25,22 @@ load(
 
 
 rust_library(
-    name = "futures_task",
+    name = "tower_timeout",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
+        "@raze__pin_project__0_4_9//:pin_project",
+        "@raze__tokio__0_2_19//:tokio",
+        "@raze__tower_layer__0_3_0//:tower_layer",
+        "@raze__tower_service__0_3_0//:tower_service",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.3.4",
+    version = "0.3.0",
     crate_features = [
-        "alloc",
     ],
 )
 

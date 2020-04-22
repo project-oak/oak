@@ -12,7 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "restricted", # "MIT OR Apache-2.0"
+  "notice", # "MIT"
 ])
 
 load(
@@ -23,21 +23,26 @@ load(
 )
 
 
+# Unsupported target "dispatch" with type "test" omitted
+# Unsupported target "global_dispatch" with type "test" omitted
+# Unsupported target "macros" with type "test" omitted
 
 rust_library(
-    name = "futures_task",
+    name = "tracing_core",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
+        "@raze__lazy_static__1_4_0//:lazy_static",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.3.4",
+    version = "0.1.10",
     crate_features = [
-        "alloc",
+        "lazy_static",
+        "std",
     ],
 )
 

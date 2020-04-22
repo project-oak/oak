@@ -23,22 +23,26 @@ load(
 )
 
 
-# Unsupported target "precise_time_ns" with type "bench" omitted
 
 rust_library(
-    name = "time",
+    name = "wasm_bindgen_macro_support",
     crate_root = "src/lib.rs",
     crate_type = "lib",
-    edition = "2015",
+    edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__libc__0_2_69//:libc",
+        "@raze__proc_macro2__1_0_10//:proc_macro2",
+        "@raze__quote__1_0_3//:quote",
+        "@raze__syn__1_0_18//:syn",
+        "@raze__wasm_bindgen_backend__0_2_60//:wasm_bindgen_backend",
+        "@raze__wasm_bindgen_shared__0_2_60//:wasm_bindgen_shared",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.1.42",
+    version = "0.2.60",
     crate_features = [
+        "spans",
     ],
 )
 

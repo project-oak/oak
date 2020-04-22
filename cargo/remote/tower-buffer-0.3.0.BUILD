@@ -12,7 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "restricted", # "MIT OR Apache-2.0"
+  "notice", # "MIT"
 ])
 
 load(
@@ -23,22 +23,28 @@ load(
 )
 
 
+# Unsupported target "buffer" with type "test" omitted
 
 rust_library(
-    name = "pin_utils",
+    name = "tower_buffer",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
+        "@raze__futures_core__0_3_4//:futures_core",
+        "@raze__pin_project__0_4_9//:pin_project",
+        "@raze__tokio__0_2_19//:tokio",
+        "@raze__tower_layer__0_3_0//:tower_layer",
+        "@raze__tower_service__0_3_0//:tower_service",
+        "@raze__tracing__0_1_13//:tracing",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.1.0-alpha.4",
+    version = "0.3.0",
     crate_features = [
+        "log",
     ],
 )
 
-# Unsupported target "projection" with type "test" omitted
-# Unsupported target "stack_pin" with type "test" omitted

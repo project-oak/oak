@@ -17,6 +17,7 @@ default = []
 #  - they need to be synced to //cargo/Cargo.toml
 #  - `cd cargo && cargo raze` needs re-running, and the results checked in
 byteorder = { version = "*", default-features = false }
+bytes = "*"
 http = "*"
 hyper = "*"
 itertools = "*"
@@ -27,6 +28,7 @@ prost = "*"
 prost-types = "*"
 rand = "*"
 tokio = { version = "*", features = ["rt-core", "macros"] }
+tonic = { version = "*", features = ["tls"] }
 wasmi = { version = "*", default-features = false, features = ["core"] }
 prometheus = { version = "0.8", features = [
   "nightly"

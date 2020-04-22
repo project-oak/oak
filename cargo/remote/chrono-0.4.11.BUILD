@@ -34,7 +34,7 @@ rust_library(
     deps = [
         "@raze__num_integer__0_1_42//:num_integer",
         "@raze__num_traits__0_2_11//:num_traits",
-        "@raze__time__0_1_42//:time",
+        "@raze__time__0_1_43//:time",
     ],
     rustc_flags = [
         "--cap-lints=allow",

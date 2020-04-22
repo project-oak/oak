@@ -25,7 +25,7 @@ load(
 
 
 rust_library(
-    name = "futures_task",
+    name = "pin_utils",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     edition = "2018",
@@ -35,9 +35,10 @@ rust_library(
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.3.4",
+    version = "0.1.0",
     crate_features = [
-        "alloc",
     ],
 )
 
+# Unsupported target "projection" with type "test" omitted
+# Unsupported target "stack_pin" with type "test" omitted

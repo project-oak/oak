@@ -12,7 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "restricted", # "MIT OR Apache-2.0"
+  "notice", # "MIT,Apache-2.0"
 ])
 
 load(
@@ -25,7 +25,7 @@ load(
 
 
 rust_library(
-    name = "futures_task",
+    name = "base64",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     edition = "2018",
@@ -35,9 +35,16 @@ rust_library(
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.3.4",
+    version = "0.11.0",
     crate_features = [
-        "alloc",
+        "default",
+        "std",
     ],
 )
 
+# Unsupported target "benchmarks" with type "bench" omitted
+# Unsupported target "decode" with type "test" omitted
+# Unsupported target "encode" with type "test" omitted
+# Unsupported target "helpers" with type "test" omitted
+# Unsupported target "make_tables" with type "example" omitted
+# Unsupported target "tests" with type "test" omitted

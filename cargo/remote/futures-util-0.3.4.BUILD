@@ -33,13 +33,14 @@ rust_library(
     deps = [
         "@raze__futures_core__0_3_4//:futures_core",
         "@raze__futures_task__0_3_4//:futures_task",
-        "@raze__pin_utils__0_1_0_alpha_4//:pin_utils",
+        "@raze__pin_utils__0_1_0//:pin_utils",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
     version = "0.3.4",
     crate_features = [
+        "alloc",
     ],
 )
 

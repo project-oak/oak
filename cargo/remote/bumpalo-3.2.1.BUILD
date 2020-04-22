@@ -12,7 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "restricted", # "MIT OR Apache-2.0"
+  "notice", # "MIT,Apache-2.0"
 ])
 
 load(
@@ -23,9 +23,12 @@ load(
 )
 
 
+# Unsupported target "alloc_fill" with type "test" omitted
+# Unsupported target "alloc_with" with type "test" omitted
+# Unsupported target "benches" with type "bench" omitted
 
 rust_library(
-    name = "futures_task",
+    name = "bumpalo",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     edition = "2018",
@@ -35,9 +38,14 @@ rust_library(
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.3.4",
+    version = "3.2.1",
     crate_features = [
-        "alloc",
+        "default",
     ],
 )
 
+# Unsupported target "quickchecks" with type "test" omitted
+# Unsupported target "readme_up_to_date" with type "test" omitted
+# Unsupported target "string" with type "test" omitted
+# Unsupported target "tests" with type "test" omitted
+# Unsupported target "vec" with type "test" omitted

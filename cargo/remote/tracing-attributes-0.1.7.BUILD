@@ -12,7 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "restricted", # "MIT OR Apache-2.0"
+  "notice", # "MIT"
 ])
 
 load(
@@ -23,21 +23,29 @@ load(
 )
 
 
+# Unsupported target "destructuring" with type "test" omitted
+# Unsupported target "fields" with type "test" omitted
+# Unsupported target "instrument" with type "test" omitted
+# Unsupported target "levels" with type "test" omitted
+# Unsupported target "names" with type "test" omitted
+# Unsupported target "support" with type "test" omitted
+# Unsupported target "targets" with type "test" omitted
 
 rust_library(
-    name = "futures_task",
+    name = "tracing_attributes",
     crate_root = "src/lib.rs",
-    crate_type = "lib",
+    crate_type = "proc-macro",
     edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
+        "@raze__quote__1_0_3//:quote",
+        "@raze__syn__1_0_18//:syn",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.3.4",
+    version = "0.1.7",
     crate_features = [
-        "alloc",
     ],
 )
 

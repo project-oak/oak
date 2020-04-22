@@ -43,6 +43,7 @@ rust_library(
         "minwinbase",
         "minwindef",
         "ntdef",
+        "ntsecapi",
         "processenv",
         "profileapi",
         "std",
@@ -53,6 +54,7 @@ rust_library(
         "ws2def",
         "ws2ipdef",
         "ws2tcpip",
+        "wtypesbase",
     ],
 )
 

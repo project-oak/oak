@@ -12,7 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "restricted", # "MIT OR Apache-2.0"
+  "notice", # "MIT"
 ])
 
 load(
@@ -23,21 +23,27 @@ load(
 )
 
 
+# Unsupported target "ready_cache" with type "test" omitted
 
 rust_library(
-    name = "futures_task",
+    name = "tower_ready_cache",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
+        "@raze__futures_core__0_3_4//:futures_core",
+        "@raze__futures_util__0_3_4//:futures_util",
+        "@raze__indexmap__1_0_2//:indexmap",
+        "@raze__log__0_4_8//:log",
+        "@raze__tokio__0_2_19//:tokio",
+        "@raze__tower_service__0_3_0//:tower_service",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.3.4",
+    version = "0.3.1",
     crate_features = [
-        "alloc",
     ],
 )
 

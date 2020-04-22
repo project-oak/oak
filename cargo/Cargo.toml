@@ -8,6 +8,7 @@ path = "fake_lib.rs"
 
 [dependencies]
 byteorder = "*"
+bytes = "*"
 http = "*"
 hyper = "*"
 # Versions 1.3.x of indexmap have a "clever" feature that auto-detects whether a
@@ -24,7 +25,8 @@ prost = "*"
 prost-types = "*"
 rand = "*"
 simple_logger = "*"
-tokio = { version = "*", features = ["rt-core"] }
+tokio = { version = "*", features = ["rt-core", "macros"] }
+tonic = { version = "*", features = ["tls"] }
 wasmi = { version = "*", default-features = false, features = ["core"] }
 prometheus = { version = "0.8", features = [
   "nightly"
@@ -47,5 +49,16 @@ additional_flags = ["--cfg=use_proc_macro"]
 # https://github.com/google/cargo-raze/issues/110
 [raze.crates.log.'0.4.8']
 additional_flags = ["--cfg=atomic_cas"]
+
+# Add a `data` attribute to the corresponding generated `BUILD` file, since `cargo-raze` does not
+# automatically add non-`*.rs` files to the Bazel workspace.
+# https://github.com/google/cargo-raze/issues/41
+[raze.crates.ring.'0.16.12']
+data_attr = "glob([\"**/*.der\"])"
+
+[raze.crates.webpki.'0.21.2']
+data_attr = "glob([\"**/*.der\"])"
+
+[raze.crates.tonic.'0.2.0']
 
 [workspace]

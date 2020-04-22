@@ -13,6 +13,10 @@ alias(
     actual = "@raze__byteorder__1_3_4//:byteorder",
 )
 alias(
+    name = "bytes",
+    actual = "@raze__bytes__0_5_4//:bytes",
+)
+alias(
     name = "http",
     actual = "@raze__http__0_2_1//:http",
 )
@@ -58,7 +62,11 @@ alias(
 )
 alias(
     name = "tokio",
-    actual = "@raze__tokio__0_2_18//:tokio",
+    actual = "@raze__tokio__0_2_19//:tokio",
+)
+alias(
+    name = "tonic",
+    actual = "@raze__tonic__0_2_0//:tonic",
 )
 alias(
     name = "wasmi",

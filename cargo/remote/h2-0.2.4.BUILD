@@ -42,7 +42,7 @@ rust_library(
         "@raze__indexmap__1_0_2//:indexmap",
         "@raze__log__0_4_8//:log",
         "@raze__slab__0_4_2//:slab",
-        "@raze__tokio__0_2_18//:tokio",
+        "@raze__tokio__0_2_19//:tokio",
         "@raze__tokio_util__0_3_1//:tokio_util",
     ],
     rustc_flags = [

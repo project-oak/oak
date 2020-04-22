@@ -12,7 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "restricted", # "MIT OR Apache-2.0"
+  "notice", # "MIT"
 ])
 
 load(
@@ -23,21 +23,28 @@ load(
 )
 
 
+# Unsupported target "std_future" with type "test" omitted
+# Unsupported target "support" with type "test" omitted
 
 rust_library(
-    name = "futures_task",
+    name = "tracing_futures",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
+        "@raze__pin_project__0_4_9//:pin_project",
+        "@raze__tracing__0_1_13//:tracing",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.3.4",
+    version = "0.2.4",
     crate_features = [
-        "alloc",
+        "default",
+        "pin-project",
+        "std",
+        "std-future",
     ],
 )
 

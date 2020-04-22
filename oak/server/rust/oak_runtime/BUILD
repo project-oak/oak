@@ -28,6 +28,7 @@ rust_library(
     edition = "2018",
     deps = [
         "//cargo:byteorder",
+        "//cargo:bytes",
         "//cargo:http",
         "//cargo:hyper",
         "//cargo:itertools",
@@ -38,6 +39,7 @@ rust_library(
         "//cargo:prost_types",
         "//cargo:rand",
         "//cargo:tokio",
+        "//cargo:tonic",
         "//cargo:wasmi",
         "//oak/server/rust/oak_abi",
     ],

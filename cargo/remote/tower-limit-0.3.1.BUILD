@@ -12,7 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "restricted", # "MIT OR Apache-2.0"
+  "notice", # "MIT"
 ])
 
 load(
@@ -23,21 +23,28 @@ load(
 )
 
 
+# Unsupported target "concurrency" with type "test" omitted
+# Unsupported target "rate" with type "test" omitted
 
 rust_library(
-    name = "futures_task",
+    name = "tower_limit",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
+        "@raze__futures_core__0_3_4//:futures_core",
+        "@raze__pin_project__0_4_9//:pin_project",
+        "@raze__tokio__0_2_19//:tokio",
+        "@raze__tower_layer__0_3_0//:tower_layer",
+        "@raze__tower_load__0_3_0//:tower_load",
+        "@raze__tower_service__0_3_0//:tower_service",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.3.4",
+    version = "0.3.1",
     crate_features = [
-        "alloc",
     ],
 )
 

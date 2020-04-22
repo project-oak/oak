@@ -23,34 +23,37 @@ load(
 )
 
 
-# Unsupported target "codecs" with type "test" omitted
-# Unsupported target "framed" with type "test" omitted
-# Unsupported target "framed_read" with type "test" omitted
-# Unsupported target "framed_write" with type "test" omitted
-# Unsupported target "length_delimited" with type "test" omitted
+# Unsupported target "demo" with type "example" omitted
 
 rust_library(
-    name = "tokio_util",
+    name = "tower_balance",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__bytes__0_5_4//:bytes",
         "@raze__futures_core__0_3_4//:futures_core",
-        "@raze__futures_sink__0_3_4//:futures_sink",
-        "@raze__log__0_4_8//:log",
-        "@raze__pin_project_lite__0_1_4//:pin_project_lite",
+        "@raze__futures_util__0_3_4//:futures_util",
+        "@raze__indexmap__1_0_2//:indexmap",
+        "@raze__pin_project__0_4_9//:pin_project",
+        "@raze__rand__0_7_3//:rand",
+        "@raze__slab__0_4_2//:slab",
         "@raze__tokio__0_2_19//:tokio",
+        "@raze__tower_discover__0_3_0//:tower_discover",
+        "@raze__tower_layer__0_3_0//:tower_layer",
+        "@raze__tower_load__0_3_0//:tower_load",
+        "@raze__tower_make__0_3_0//:tower_make",
+        "@raze__tower_ready_cache__0_3_1//:tower_ready_cache",
+        "@raze__tower_service__0_3_0//:tower_service",
+        "@raze__tracing__0_1_13//:tracing",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.3.1",
+    version = "0.3.0",
     crate_features = [
-        "codec",
         "default",
+        "log",
     ],
 )
 
-# Unsupported target "udp" with type "test" omitted

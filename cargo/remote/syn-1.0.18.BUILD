@@ -41,7 +41,7 @@ rust_library(
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "1.0.17",
+    version = "1.0.18",
     crate_features = [
         "clone-impls",
         "default",
@@ -52,6 +52,7 @@ rust_library(
         "printing",
         "proc-macro",
         "quote",
+        "visit",
         "visit-mut",
     ],
 )

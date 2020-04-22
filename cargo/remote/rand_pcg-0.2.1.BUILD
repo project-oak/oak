@@ -23,21 +23,24 @@ load(
 )
 
 
+# Unsupported target "lcg128xsl64" with type "test" omitted
+# Unsupported target "lcg64xsh32" with type "test" omitted
+# Unsupported target "mcg128xsl64" with type "test" omitted
 
 rust_library(
-    name = "futures_task",
+    name = "rand_pcg",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
+        "@raze__rand_core__0_5_1//:rand_core",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.3.4",
+    version = "0.2.1",
     crate_features = [
-        "alloc",
     ],
 )
 
