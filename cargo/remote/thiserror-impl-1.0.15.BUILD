@@ -12,7 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "notice", # "MIT,Apache-2.0"
+  "restricted", # "MIT OR Apache-2.0"
 ])
 
 load(
@@ -23,30 +23,23 @@ load(
 )
 
 
-# Unsupported target "chrono" with type "bench" omitted
 
 rust_library(
-    name = "chrono",
+    name = "thiserror_impl",
     crate_root = "src/lib.rs",
-    crate_type = "lib",
-    edition = "2015",
+    crate_type = "proc-macro",
+    edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__num_integer__0_1_42//:num_integer",
-        "@raze__num_traits__0_2_11//:num_traits",
-        "@raze__time__0_1_42//:time",
+        "@raze__proc_macro2__1_0_10//:proc_macro2",
+        "@raze__quote__1_0_3//:quote",
+        "@raze__syn__1_0_17//:syn",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.4.11",
+    version = "1.0.15",
     crate_features = [
-        "clock",
-        "default",
-        "std",
-        "time",
     ],
 )
 
-# Unsupported target "serde" with type "bench" omitted
-# Unsupported target "wasm" with type "test" omitted

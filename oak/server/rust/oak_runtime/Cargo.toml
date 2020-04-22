@@ -26,12 +26,17 @@ oak_abi = "=0.1.0"
 prost = "*"
 prost-types = "*"
 rand = "*"
-tokio = { version = "*", features = ["rt-core"] }
+tokio = { version = "*", features = ["rt-core", "macros"] }
 wasmi = { version = "*", default-features = false, features = ["core"] }
+prometheus = { version = "0.8", features = [
+  "nightly"
+], default-features = false }
+futures = "*"
 
 [dev-dependencies]
 maplit = "*"
 wat = "*"
+simple_logger = "*"
 
 [build-dependencies]
 oak_utils = "*"

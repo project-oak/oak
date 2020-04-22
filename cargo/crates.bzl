@@ -476,6 +476,15 @@ def raze_fetch_remote_crates():
     )
 
     _new_http_archive(
+        name = "raze__prometheus__0_8_0",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/prometheus/prometheus-0.8.0.crate",
+        type = "tar.gz",
+        strip_prefix = "prometheus-0.8.0",
+
+        build_file = Label("//cargo/remote:prometheus-0.8.0.BUILD"),
+    )
+
+    _new_http_archive(
         name = "raze__prost__0_6_1",
         url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/prost/prost-0.6.1.crate",
         type = "tar.gz",
@@ -548,6 +557,15 @@ def raze_fetch_remote_crates():
     )
 
     _new_http_archive(
+        name = "raze__redox_syscall__0_1_56",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/redox_syscall/redox_syscall-0.1.56.crate",
+        type = "tar.gz",
+        strip_prefix = "redox_syscall-0.1.56",
+
+        build_file = Label("//cargo/remote:redox_syscall-0.1.56.BUILD"),
+    )
+
+    _new_http_archive(
         name = "raze__simple_logger__1_6_0",
         url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/simple_logger/simple_logger-1.6.0.crate",
         type = "tar.gz",
@@ -566,6 +584,15 @@ def raze_fetch_remote_crates():
     )
 
     _new_http_archive(
+        name = "raze__spin__0_5_2",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/spin/spin-0.5.2.crate",
+        type = "tar.gz",
+        strip_prefix = "spin-0.5.2",
+
+        build_file = Label("//cargo/remote:spin-0.5.2.BUILD"),
+    )
+
+    _new_http_archive(
         name = "raze__syn__1_0_17",
         url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/syn/syn-1.0.17.crate",
         type = "tar.gz",
@@ -575,12 +602,30 @@ def raze_fetch_remote_crates():
     )
 
     _new_http_archive(
-        name = "raze__time__0_1_43",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/time/time-0.1.43.crate",
+        name = "raze__thiserror__1_0_15",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/thiserror/thiserror-1.0.15.crate",
         type = "tar.gz",
-        strip_prefix = "time-0.1.43",
+        strip_prefix = "thiserror-1.0.15",
 
-        build_file = Label("//cargo/remote:time-0.1.43.BUILD"),
+        build_file = Label("//cargo/remote:thiserror-1.0.15.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__thiserror_impl__1_0_15",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/thiserror-impl/thiserror-impl-1.0.15.crate",
+        type = "tar.gz",
+        strip_prefix = "thiserror-impl-1.0.15",
+
+        build_file = Label("//cargo/remote:thiserror-impl-1.0.15.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__time__0_1_42",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/time/time-0.1.42.crate",
+        type = "tar.gz",
+        strip_prefix = "time-0.1.42",
+
+        build_file = Label("//cargo/remote:time-0.1.42.BUILD"),
     )
 
     _new_http_archive(

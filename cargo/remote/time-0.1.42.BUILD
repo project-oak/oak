@@ -23,6 +23,7 @@ load(
 )
 
 
+# Unsupported target "precise_time_ns" with type "bench" omitted
 
 rust_library(
     name = "time",
@@ -36,7 +37,7 @@ rust_library(
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.1.43",
+    version = "0.1.42",
     crate_features = [
     ],
 )
