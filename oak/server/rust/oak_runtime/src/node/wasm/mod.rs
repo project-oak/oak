@@ -14,6 +14,9 @@
 // limitations under the License.
 //
 
+use byteorder::{ByteOrder, LittleEndian};
+use log::{debug, error, info, warn};
+use rand::RngCore;
 use std::{
     collections::HashMap,
     fmt::{self, Display, Formatter},
@@ -22,20 +25,14 @@ use std::{
     thread,
     thread::JoinHandle,
 };
-
-use log::{debug, error, info, warn};
-
-use byteorder::{ByteOrder, LittleEndian};
-use rand::RngCore;
 use wasmi::ValueType;
-
-use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
 
 use crate::{
     pretty_name_for_thread,
     runtime::{Handle, HandleDirection, ReadStatus, RuntimeProxy},
     Message,
 };
+use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
 
 #[cfg(test)]
 mod tests;
@@ -52,21 +49,26 @@ const WAIT_ON_CHANNELS: usize = 6;
 // TODO(#817): remove this; we shouldn't need to have WASI stubs.
 const WASI_STUB: usize = 7;
 
+// Type aliases for positions and offsets in Wasm linear memory. Any future 64-bit version
+// of Wasm would use different types.
 type AbiPointer = u32;
 type AbiPointerOffset = u32;
-
-const ABI_U32: ValueType = ValueType::I32;
-const ABI_U64: ValueType = ValueType::I64;
+// Wasm type identifier for position/offset values in linear memory.  Any future 64-bit version of
+// Wasm would use a different value.
 const ABI_USIZE: ValueType = ValueType::I32;
 
-/// `WasmInterface` holds runtime values for a particular execution instance of Wasm. This includes
-/// the host ABI function mapping between the Runtime and a Wasm instance, and the handle mapping
-/// between the instance and the runtime `Handle`s.
+// Convenience short names for Wasm sized integer type identifiers.
+const ABI_U32: ValueType = ValueType::I32;
+const ABI_U64: ValueType = ValueType::I64;
+
+/// `WasmInterface` holds runtime values for a particular execution instance of Wasm, running a
+/// single Oak Wasm Node. This includes the host ABI function mapping between the Runtime and a
+/// Wasm instance, and the handle mapping between the instance and the runtime `Handle`s.
 ///
 /// Any handle from `readers` or `writers` is unique to all handles in both `readers` and
 /// `writers`.
 struct WasmInterface {
-    /// A configuration and thread specific name for pretty printing.
+    /// A configuration and thread specific Node name for pretty printing.
     pretty_name: String,
 
     /// Reader channel mappings to unique u64 handles
