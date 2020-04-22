@@ -304,13 +304,13 @@ impl WasmInterface {
             return Err(OakStatus::ErrTerminated);
         }
 
+        self.validate_ptr(write_addr, 8)?;
+        self.validate_ptr(read_addr, 8)?;
+
         let (writer, reader) = self
             .runtime
             // TODO(#630): Let caller provide this label via the Wasm ABI.
             .channel_create(&Label::public_trusted());
-
-        self.validate_ptr(write_addr, 8)?;
-        self.validate_ptr(read_addr, 8)?;
 
         let write_handle = self.allocate_new_handle(writer, HandleDirection::Write);
         let read_handle = self.allocate_new_handle(reader, HandleDirection::Read);
