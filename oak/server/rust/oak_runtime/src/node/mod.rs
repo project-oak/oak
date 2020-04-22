@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::{runtime::RuntimeProxy, Handle};
+use crate::{runtime, runtime::RuntimeProxy};
 use log::debug;
 use oak_abi::OakStatus;
 use std::{
@@ -126,7 +126,7 @@ impl Configuration {
         config_name: &str, // Used for pretty debugging
         runtime: RuntimeProxy,
         entrypoint: String,
-        initial_reader_channel: Handle,
+        initial_reader_channel: runtime::Handle,
     ) -> Box<dyn Node> {
         let initial_handle = runtime
             .runtime

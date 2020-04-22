@@ -20,7 +20,11 @@ use oak::grpc;
 
 const MODULE_CONFIG_NAME: &str = "running_average";
 
-fn submit_sample(runtime: &oak_runtime::Runtime, entry_channel: oak_runtime::Handle, value: u64) {
+fn submit_sample(
+    runtime: &oak_runtime::Runtime,
+    entry_channel: oak_runtime::runtime::Handle,
+    value: u64,
+) {
     let req = SubmitSampleRequest { value };
     let result: grpc::Result<()> = oak_tests::grpc_request(
         &runtime,
