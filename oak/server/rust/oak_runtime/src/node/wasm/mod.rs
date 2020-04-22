@@ -235,7 +235,6 @@ impl WasmInterface {
         })?;
 
         self.runtime
-            .clone()
             .node_create(&config_name, &entrypoint, &label, channel_ref.clone())
             .map_err(|_| {
                 error!(
