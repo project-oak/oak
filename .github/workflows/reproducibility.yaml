@@ -1,0 +1,54 @@
+name: Build Reproducibility Index
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build_reproducibility_index:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v2
+
+      # Build Docker image, caching from the latest version from the remote repository.
+      - name: Docker build
+        timeout-minutes: 30
+        run: |
+          docker pull gcr.io/oak-ci/oak:latest
+          docker build --pull --cache-from=gcr.io/oak-ci/oak:latest --tag=gcr.io/oak-ci/oak:latest .
+
+      # Build artifacts that are supposed to be reproducible.
+      - name: Build Rust server
+        run: ./scripts/docker_run ./scripts/build_server -s rust
+
+      - name: Build examples
+        run: ./scripts/docker_run ./scripts/build_examples
+
+      # Generate an index of the hashes of the reproducible artifacts.
+      - name: Generate Reproducibility Index
+        run: ./scripts/docker_run ./scripts/build_reproducibility_index
+
+      # Print out the index to the logs of the action.
+      - name: Print Reproducibility Index
+        run: cat ./reproducibility_index
+
+      # Also post a reply on the PR thread with the contents of the index, after merge.
+      - name: Post Reproducibility Index (post-merge only)
+        uses: actions/github-script@0.9.0
+        if: github.event_name == 'push'
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            const fs = require('fs').promises;
+            file_content = await fs.readFile('./reproducibility_index');
+
+            await github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: 'Reproducibility index:\n\n```\n' + file_content + '\n```\n'
+            })
