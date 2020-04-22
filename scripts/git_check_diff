@@ -5,4 +5,4 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 source "$SCRIPTS_DIR/common"
 
 # Check that any generated files match those that are checked in.
-git diff --exit-code -- . ':!*.bazelrc'
+git diff --exit-code -- . ':!*.bazelrc' ':!reproducibility_index'
