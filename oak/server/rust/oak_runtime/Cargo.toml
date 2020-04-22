@@ -36,6 +36,7 @@ futures = "*"
 [dev-dependencies]
 maplit = "*"
 wat = "*"
+simple_logger = "*"
 
 [build-dependencies]
 oak_utils = "*"

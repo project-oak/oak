@@ -44,6 +44,8 @@ pub struct Opt {
     private_key: Option<String>,
     #[structopt(long, help = "Path to the PEM-encoded certificate chain")]
     cert_chain: Option<String>,
+    #[structopt(long, help = "Metrics server port number")]
+    metrics_port: Option<u16>,
 }
 
 fn read_file(filename: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
@@ -55,18 +57,7 @@ fn read_file(filename: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     Ok(buffer)
 }
 
-fn start_metrics() {
-    // TO_DO: port should come from config
-    let port = 3030;
-
-    let mut tokio_runtime = tokio::runtime::Runtime::new().expect("Couldn't create Tokio runtime");
-    let result = tokio_runtime.block_on(metrics::serve_metrics(port));
-
-    info!("Exiting metrics server node thread {:?}", result);
-}
-
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    env_logger::init();
+fn start_runtime() -> Result<(), Box<dyn std::error::Error>> {
     info!("Loading Oak Runtime");
 
     let opt = Opt::from_args();
@@ -76,17 +67,36 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .map_err(|error| format!("Failed to decode application configuration: {:?}", error))?
     };
 
+    // Spawns a new thread corresponding to an initial Wasm Oak node.
+    configure_and_run(app_config)
+        .map_err(|error| format!("Runtime error: {:?}", error))
+        .unwrap();
+
+    // Park current thread.
+    park();
+
+    Ok(())
+}
+
+fn start_metrics() {
+    let opt = Opt::from_args();
+    let port = opt.metrics_port.unwrap_or(3030);
+
+    let mut tokio_runtime = tokio::runtime::Runtime::new().expect("Couldn't create Tokio runtime");
+    let result = tokio_runtime.block_on(metrics::serve_metrics(port));
+
+    info!("Exiting metrics server node thread {:?}", result);
+}
+
+fn main() {
+    env_logger::init();
     let mut handles = vec![];
 
     // start the runtime in a new thread
     handles.push(spawn(move || {
-        // Spawns a new thread corresponding to an initial Wasm Oak node.
-        configure_and_run(app_config)
-            .map_err(|error| format!("Runtime error: {:?}", error))
-            .unwrap();
-
-        // Park current thread.
-        park();
+        if let Err(e) = start_runtime() {
+            error!("Error in runtime: {}", e);
+        }
     }));
 
     // start metrics server in a new thread
@@ -99,6 +109,4 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             error!("Join error: {:?}", e);
         }
     }
-
-    Ok(())
 }
