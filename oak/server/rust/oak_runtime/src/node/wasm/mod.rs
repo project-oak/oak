@@ -623,93 +623,42 @@ impl wasmi::Externals for WasmInterface {
         args: wasmi::RuntimeArgs,
     ) -> Result<Option<wasmi::RuntimeValue>, wasmi::Trap> {
         match index {
-            NODE_CREATE => {
-                let name_ptr: u32 = args.nth_checked(0)?;
-                let name_length: u32 = args.nth_checked(1)?;
-                let entrypoint_ptr: u32 = args.nth_checked(2)?;
-                let entrypoint_length: u32 = args.nth_checked(3)?;
-                let label_ptr: u32 = args.nth_checked(4)?;
-                let label_length: u32 = args.nth_checked(5)?;
-                let initial_handle: u64 = args.nth_checked(6)?;
-
-                map_host_errors(self.node_create(
-                    name_ptr,
-                    name_length,
-                    entrypoint_ptr,
-                    entrypoint_length,
-                    label_ptr,
-                    label_length,
-                    initial_handle,
-                ))
-            }
-
+            NODE_CREATE => map_host_errors(self.node_create(
+                args.nth_checked(0)?,
+                args.nth_checked(1)?,
+                args.nth_checked(2)?,
+                args.nth_checked(3)?,
+                args.nth_checked(4)?,
+                args.nth_checked(5)?,
+                args.nth_checked(6)?,
+            )),
             RANDOM_GET => {
-                let dest: u32 = args.nth_checked(0)?;
-                let dest_length: u32 = args.nth_checked(1)?;
-
-                map_host_errors(self.random_get(dest, dest_length))
+                map_host_errors(self.random_get(args.nth_checked(0)?, args.nth_checked(1)?))
             }
-
-            CHANNEL_CLOSE => {
-                let handle: u64 = args.nth_checked(0)?;
-
-                map_host_errors(self.channel_close(handle))
-            }
-
+            CHANNEL_CLOSE => map_host_errors(self.channel_close(args.nth_checked(0)?)),
             CHANNEL_CREATE => {
-                let write_addr: u32 = args.nth_checked(0)?;
-                let read_addr: u32 = args.nth_checked(1)?;
-
-                map_host_errors(self.channel_create(write_addr, read_addr))
+                map_host_errors(self.channel_create(args.nth_checked(0)?, args.nth_checked(1)?))
             }
-
-            CHANNEL_WRITE => {
-                let writer_handle: u64 = args.nth_checked(0)?;
-                let source: u32 = args.nth_checked(1)?;
-                let source_length: u32 = args.nth_checked(2)?;
-                let handles: u32 = args.nth_checked(3)?;
-                let handles_count: u32 = args.nth_checked(4)?;
-
-                map_host_errors(self.channel_write(
-                    writer_handle,
-                    source,
-                    source_length,
-                    handles,
-                    handles_count,
-                ))
-            }
-
-            CHANNEL_READ => {
-                let reader_handle: u64 = args.nth_checked(0)?;
-
-                let dest: u32 = args.nth_checked(1)?;
-                let dest_capacity: u32 = args.nth_checked(2)?;
-                let actual_length: u32 = args.nth_checked(3)?;
-
-                let handles: u32 = args.nth_checked(4)?;
-                let handles_capacity: u32 = args.nth_checked(5)?;
-                let actual_handle_count: u32 = args.nth_checked(6)?;
-
-                map_host_errors(self.channel_read(
-                    reader_handle,
-                    dest,
-                    dest_capacity,
-                    actual_length,
-                    handles,
-                    handles_capacity,
-                    actual_handle_count,
-                ))
-            }
-
+            CHANNEL_WRITE => map_host_errors(self.channel_write(
+                args.nth_checked(0)?,
+                args.nth_checked(1)?,
+                args.nth_checked(2)?,
+                args.nth_checked(3)?,
+                args.nth_checked(4)?,
+            )),
+            CHANNEL_READ => map_host_errors(self.channel_read(
+                args.nth_checked(0)?,
+                args.nth_checked(1)?,
+                args.nth_checked(2)?,
+                args.nth_checked(3)?,
+                args.nth_checked(4)?,
+                args.nth_checked(5)?,
+                args.nth_checked(6)?,
+            )),
             WAIT_ON_CHANNELS => {
-                let status_buff: u32 = args.nth_checked(0)?;
-                let handles_count: u32 = args.nth_checked(1)?;
-
-                map_host_errors(self.wait_on_channels(status_buff, handles_count))
+                map_host_errors(self.wait_on_channels(args.nth_checked(0)?, args.nth_checked(1)?))
             }
-
             WASI_STUB => panic!("Attempt to invoke unimplemented WASI function"),
-
             _ => panic!("Unimplemented function at {}", index),
         }
     }
