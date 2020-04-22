@@ -57,10 +57,6 @@ type AbiPointerOffset = u32;
 // Wasm would use a different value.
 const ABI_USIZE: ValueType = ValueType::I32;
 
-// Convenience short names for Wasm sized integer type identifiers.
-const ABI_U32: ValueType = ValueType::I32;
-const ABI_U64: ValueType = ValueType::I64;
-
 /// `WasmInterface` holds runtime values for a particular execution instance of Wasm, running a
 /// single Oak Wasm Node. This includes the host ABI function mapping between the Runtime and a
 /// Wasm instance, and the handle mapping between the instance and the runtime `Handle`s.
@@ -680,15 +676,15 @@ impl wasmi::ModuleImportResolver for WasmInterface {
                 NODE_CREATE,
                 wasmi::Signature::new(
                     &[
-                        ABI_USIZE, // config_buf
-                        ABI_USIZE, // config_len
-                        ABI_USIZE, // entrypoint_buf
-                        ABI_USIZE, // entrypoint_len
-                        ABI_USIZE, // label_buf
-                        ABI_USIZE, // label_len
-                        ABI_U64,   // handle
+                        ABI_USIZE,      // config_buf
+                        ABI_USIZE,      // config_len
+                        ABI_USIZE,      // entrypoint_buf
+                        ABI_USIZE,      // entrypoint_len
+                        ABI_USIZE,      // label_buf
+                        ABI_USIZE,      // label_len
+                        ValueType::I64, // handle
                     ][..],
-                    Some(ABI_U32),
+                    Some(ValueType::I32),
                 ),
             ),
             "random_get" => (
@@ -698,16 +694,16 @@ impl wasmi::ModuleImportResolver for WasmInterface {
                         ABI_USIZE, // buf
                         ABI_USIZE, // len
                     ][..],
-                    Some(ABI_U32),
+                    Some(ValueType::I32),
                 ),
             ),
             "channel_close" => (
                 CHANNEL_CLOSE,
                 wasmi::Signature::new(
                     &[
-                        ABI_U64, // handle
+                        ValueType::I64, // handle
                     ][..],
-                    Some(ABI_U32),
+                    Some(ValueType::I32),
                 ),
             ),
             "channel_create" => (
@@ -717,45 +713,45 @@ impl wasmi::ModuleImportResolver for WasmInterface {
                         ABI_USIZE, // write
                         ABI_USIZE, // read
                     ][..],
-                    Some(ABI_U32),
+                    Some(ValueType::I32),
                 ),
             ),
             "channel_write" => (
                 CHANNEL_WRITE,
                 wasmi::Signature::new(
                     &[
-                        ABI_U64,   // handle
-                        ABI_USIZE, // buf
-                        ABI_USIZE, // size
-                        ABI_USIZE, // handle_buf
-                        ABI_U32,   // handle_count
+                        ValueType::I64, // handle
+                        ABI_USIZE,      // buf
+                        ABI_USIZE,      // size
+                        ABI_USIZE,      // handle_buf
+                        ValueType::I32, // handle_count
                     ][..],
-                    Some(ABI_U32),
+                    Some(ValueType::I32),
                 ),
             ),
             "channel_read" => (
                 CHANNEL_READ,
                 wasmi::Signature::new(
                     &[
-                        ABI_U64,   // handle
-                        ABI_USIZE, // buf
-                        ABI_USIZE, // size
-                        ABI_USIZE, // actual_size
-                        ABI_USIZE, // handle_buf
-                        ABI_U32,   // handle_count
-                        ABI_USIZE, // actual_handle_count
+                        ValueType::I64, // handle
+                        ABI_USIZE,      // buf
+                        ABI_USIZE,      // size
+                        ABI_USIZE,      // actual_size
+                        ABI_USIZE,      // handle_buf
+                        ValueType::I32, // handle_count
+                        ABI_USIZE,      // actual_handle_count
                     ][..],
-                    Some(ABI_U32),
+                    Some(ValueType::I32),
                 ),
             ),
             "wait_on_channels" => (
                 WAIT_ON_CHANNELS,
                 wasmi::Signature::new(
                     &[
-                        ABI_USIZE, // buf
-                        ABI_U32,   // count
+                        ABI_USIZE,      // buf
+                        ValueType::I32, // count
                     ][..],
-                    Some(ABI_U32),
+                    Some(ValueType::I32),
                 ),
             ),
             _ => {
@@ -789,26 +785,45 @@ impl wasmi::ModuleImportResolver for WasiStub {
         signature: &wasmi::Signature,
     ) -> Result<wasmi::FuncRef, wasmi::Error> {
         let (index, sig) = match field_name {
-            "proc_exit" => (WASI_STUB, wasmi::Signature::new(&[ABI_U32][..], None)),
+            "proc_exit" => (
+                WASI_STUB,
+                wasmi::Signature::new(&[ValueType::I32][..], None),
+            ),
             "fd_write" => (
                 WASI_STUB,
-                wasmi::Signature::new(&[ABI_U32, ABI_U32, ABI_U32, ABI_U32][..], Some(ABI_U32)),
+                wasmi::Signature::new(
+                    &[
+                        ValueType::I32,
+                        ValueType::I32,
+                        ValueType::I32,
+                        ValueType::I32,
+                    ][..],
+                    Some(ValueType::I32),
+                ),
             ),
             "fd_seek" => (
                 WASI_STUB,
-                wasmi::Signature::new(&[ABI_U32, ABI_U64, ABI_U32, ABI_U32][..], Some(ABI_U32)),
+                wasmi::Signature::new(
+                    &[
+                        ValueType::I32,
+                        ValueType::I64,
+                        ValueType::I32,
+                        ValueType::I32,
+                    ][..],
+                    Some(ValueType::I32),
+                ),
             ),
             "fd_close" => (
                 WASI_STUB,
-                wasmi::Signature::new(&[ABI_U32][..], Some(ABI_U32)),
+                wasmi::Signature::new(&[ValueType::I32][..], Some(ValueType::I32)),
             ),
             "environ_sizes_get" => (
                 WASI_STUB,
-                wasmi::Signature::new(&[ABI_U32, ABI_U32][..], Some(ABI_U32)),
+                wasmi::Signature::new(&[ValueType::I32, ValueType::I32][..], Some(ValueType::I32)),
             ),
             "environ_get" => (
                 WASI_STUB,
-                wasmi::Signature::new(&[ABI_U32, ABI_U32][..], Some(ABI_U32)),
+                wasmi::Signature::new(&[ValueType::I32, ValueType::I32][..], Some(ValueType::I32)),
             ),
             _ => {
                 return Err(wasmi::Error::Instantiation(format!(
@@ -868,7 +883,7 @@ impl WasmNode {
         .expect("failed to instantiate wasm module")
         .assert_no_start();
 
-        let expected_signature = wasmi::Signature::new(&[ABI_U64][..], None);
+        let expected_signature = wasmi::Signature::new(&[ValueType::I64][..], None);
 
         let export = instance.export_by_name(&self.entrypoint).ok_or_else(|| {
             warn!("entrypoint '{}' export not found", self.entrypoint);
