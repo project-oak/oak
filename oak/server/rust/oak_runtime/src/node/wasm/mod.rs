@@ -248,6 +248,48 @@ impl WasmInterface {
             })
     }
 
+    /// Corresponds to the host ABI function [`random_get: (usize, usize) ->
+    /// u32`](oak_abi::random_get).
+    fn random_get(&self, dest: AbiPointer, dest_length: AbiPointerOffset) -> Result<(), OakStatus> {
+        debug!(
+            "{}: random_get({}, {})",
+            self.pretty_name, dest, dest_length
+        );
+
+        self.validate_ptr(dest, dest_length)?;
+
+        let dest = dest as usize;
+        let dest_length = dest_length as usize;
+
+        self.get_memory().with_direct_access_mut(|memory| {
+            rand::thread_rng().fill_bytes(&mut memory[dest..(dest + dest_length)]);
+        });
+
+        Ok(())
+    }
+
+    /// Corresponds to the host ABI function [`channel_close: (u64) ->
+    /// u32`](oak_abi::channel_close).
+    fn channel_close(&mut self, handle: oak_abi::Handle) -> Result<(), OakStatus> {
+        debug!("{}: channel_close({})", self.pretty_name, handle);
+
+        if let Some(reference) = self.readers.get(&handle).cloned() {
+            self.readers.remove(&handle);
+            self.runtime
+                .channel_close(reference)
+                .expect("Wasm CHANNEL_CLOSE: Channel reference inconsistency!");
+            Ok(())
+        } else if let Some(reference) = self.writers.get(&handle).cloned() {
+            self.writers.remove(&handle);
+            self.runtime
+                .channel_close(reference)
+                .expect("Wasm CHANNEL_CLOSE: Channel reference inconsistency!");
+            Ok(())
+        } else {
+            Err(OakStatus::ErrBadHandle)
+        }
+    }
+
     /// Corresponds to the host ABI function [`channel_create: (usize, usize) ->
     /// u32`](oak_abi::channel_create).
     fn channel_create(
@@ -488,48 +530,6 @@ impl WasmInterface {
                     Err(OakStatus::ErrHandleSpaceTooSmall)
                 }
             }
-        }
-    }
-
-    /// Corresponds to the host ABI function [`random_get: (usize, usize) ->
-    /// u32`](oak_abi::random_get).
-    fn random_get(&self, dest: AbiPointer, dest_length: AbiPointerOffset) -> Result<(), OakStatus> {
-        debug!(
-            "{}: random_get({}, {})",
-            self.pretty_name, dest, dest_length
-        );
-
-        self.validate_ptr(dest, dest_length)?;
-
-        let dest = dest as usize;
-        let dest_length = dest_length as usize;
-
-        self.get_memory().with_direct_access_mut(|memory| {
-            rand::thread_rng().fill_bytes(&mut memory[dest..(dest + dest_length)]);
-        });
-
-        Ok(())
-    }
-
-    /// Corresponds to the host ABI function [`channel_close: (u64) ->
-    /// u32`](oak_abi::channel_close).
-    fn channel_close(&mut self, handle: oak_abi::Handle) -> Result<(), OakStatus> {
-        debug!("{}: channel_close({})", self.pretty_name, handle);
-
-        if let Some(reference) = self.readers.get(&handle).cloned() {
-            self.readers.remove(&handle);
-            self.runtime
-                .channel_close(reference)
-                .expect("Wasm CHANNEL_CLOSE: Channel reference inconsistency!");
-            Ok(())
-        } else if let Some(reference) = self.writers.get(&handle).cloned() {
-            self.writers.remove(&handle);
-            self.runtime
-                .channel_close(reference)
-                .expect("Wasm CHANNEL_CLOSE: Channel reference inconsistency!");
-            Ok(())
-        } else {
-            Err(OakStatus::ErrBadHandle)
         }
     }
 
