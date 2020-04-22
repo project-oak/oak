@@ -155,6 +155,21 @@ impl WasmInterface {
         label_length: AbiPointerOffset,
         initial_handle: oak_abi::Handle,
     ) -> Result<(), OakStatus> {
+        debug!(
+            "{}: node_create({}, {}, {}, {}, {})",
+            self.pretty_name,
+            name_ptr,
+            name_length,
+            entrypoint_ptr,
+            entrypoint_length,
+            initial_handle
+        );
+
+        if self.runtime.is_terminating() {
+            debug!("{}: node_create() returning terminated", self.pretty_name);
+            return Err(OakStatus::ErrTerminated);
+        }
+
         let config_name_bytes = self
             .get_memory()
             .get(name_ptr, name_length as usize)
@@ -240,6 +255,16 @@ impl WasmInterface {
         write_addr: AbiPointer,
         read_addr: AbiPointer,
     ) -> Result<(), OakStatus> {
+        debug!(
+            "{}: channel_create({}, {})",
+            self.pretty_name, write_addr, read_addr
+        );
+
+        if self.runtime.is_terminating() {
+            debug!("{} returning terminated", self.pretty_name);
+            return Err(OakStatus::ErrTerminated);
+        }
+
         let (writer, reader) = self
             .runtime
             // TODO(#630): Let caller provide this label via the Wasm ABI.
@@ -286,6 +311,11 @@ impl WasmInterface {
         handles: AbiPointer,
         handles_count: AbiPointerOffset,
     ) -> Result<(), OakStatus> {
+        debug!(
+            "{}: channel_write({}, {}, {}, {}, {})",
+            self.pretty_name, writer_handle, source, source_length, handles, handles_count
+        );
+
         let writer = self.writers.get(&writer_handle).ok_or(()).map_err(|_| {
             error!(
                 "{}: channel_write({},...): No such handle",
@@ -360,9 +390,21 @@ impl WasmInterface {
         actual_length_addr: AbiPointer,
 
         handles_dest: AbiPointer,
-        handles_capcity: AbiPointerOffset,
+        handles_capacity: AbiPointerOffset,
         actual_handle_count_addr: AbiPointer,
     ) -> Result<(), OakStatus> {
+        debug!(
+            "{}: channel_read({}, {}, {}, {}, {}, {}, {})",
+            self.pretty_name,
+            reader_handle,
+            dest,
+            dest_capacity,
+            actual_length_addr,
+            handles_dest,
+            handles_capacity,
+            actual_handle_count_addr
+        );
+
         let reader = self.readers.get(&reader_handle).ok_or(()).map_err(|_| {
             error!(
                 "{}: channel_read(): No such handle {}",
@@ -372,12 +414,12 @@ impl WasmInterface {
         })?;
 
         self.validate_ptr(dest, dest_capacity)?;
-        self.validate_ptr(handles_dest, handles_capcity * 8)?;
+        self.validate_ptr(handles_dest, handles_capacity * 8)?;
 
         let msg = self.runtime.channel_try_read_message(
             *reader,
             dest_capacity as usize,
-            handles_capcity as usize,
+            handles_capacity as usize,
         )?;
 
         let (actual_length, actual_handle_count) = match &msg {
@@ -452,6 +494,11 @@ impl WasmInterface {
     /// Corresponds to the host ABI function [`random_get: (usize, usize) ->
     /// u32`](oak_abi::random_get).
     fn random_get(&self, dest: AbiPointer, dest_length: AbiPointerOffset) -> Result<(), OakStatus> {
+        debug!(
+            "{}: random_get({}, {})",
+            self.pretty_name, dest, dest_length
+        );
+
         self.validate_ptr(dest, dest_length)?;
 
         let dest = dest as usize;
@@ -464,6 +511,28 @@ impl WasmInterface {
         Ok(())
     }
 
+    /// Corresponds to the host ABI function [`channel_close: (u64) ->
+    /// u32`](oak_abi::channel_close).
+    fn channel_close(&mut self, handle: oak_abi::Handle) -> Result<(), OakStatus> {
+        debug!("{}: channel_close({})", self.pretty_name, handle);
+
+        if let Some(reference) = self.readers.get(&handle).cloned() {
+            self.readers.remove(&handle);
+            self.runtime
+                .channel_close(reference)
+                .expect("Wasm CHANNEL_CLOSE: Channel reference inconsistency!");
+            Ok(())
+        } else if let Some(reference) = self.writers.get(&handle).cloned() {
+            self.writers.remove(&handle);
+            self.runtime
+                .channel_close(reference)
+                .expect("Wasm CHANNEL_CLOSE: Channel reference inconsistency!");
+            Ok(())
+        } else {
+            Err(OakStatus::ErrBadHandle)
+        }
+    }
+
     /// Corresponds to the host ABI function [`wait_on_channels: (usize, u32) ->
     /// u32`](oak_abi::wait_on_channels).
     fn wait_on_channels(
@@ -471,6 +540,11 @@ impl WasmInterface {
         status_buff: AbiPointer,
         handles_count: AbiPointerOffset,
     ) -> Result<(), OakStatus> {
+        debug!(
+            "{}: wait_on_channels({}, {})",
+            self.pretty_name, status_buff, handles_count
+        );
+
         let handles_raw: Vec<u8> = self
             .get_memory()
             .get(status_buff, handles_count as usize * 9)
@@ -525,11 +599,9 @@ impl WasmInterface {
 }
 
 /// A helper function to move between our specific result type `Result<(), OakStatus>` and the
-/// `wasmi` specific result type `Result<Option<wasmi::RuntimeValue>, wasmi::Trap>`.
-///
-/// This maps`Result<(), OakStatus>` to `Ok(Some(<wasmi::RuntimeValue>))` where
-/// - `Ok(())` to `OakStatus::Ok`
-/// - `Err(x)` to x
+/// `wasmi` specific result type `Result<Option<wasmi::RuntimeValue>, wasmi::Trap>`, mapping:
+/// - `Ok(())` to `Ok(Some(OakStatus::Ok))`
+/// - `Err(x)` to `Ok(Some(x))`
 fn map_host_errors(
     result: Result<(), OakStatus>,
 ) -> Result<Option<wasmi::RuntimeValue>, wasmi::Trap> {
@@ -540,11 +612,11 @@ fn map_host_errors(
 }
 
 impl wasmi::Externals for WasmInterface {
-    /// This function maps a function index corresponding to one of the host ABI functions we
-    /// export to the Wasm guest, and some passed arguments, to our native function. The arguments
-    /// should be the correct types as `resolve_func` will have already informed the `wasmi`
-    /// interpreter of the types of our functions. However, arguments are still checked via the
-    /// `nth_checked` method, and values are checked our native methods.
+    /// Invocation of a host function specified by registered index.  Acts as a wrapper for
+    /// the relevant native function, just:
+    /// - checking argument types (which should be correct as `wasmi` will only pass through those
+    ///   types that were specified when the host function was registered with `resolv_func`.
+    /// - mapping resulting return/error values.
     fn invoke_index(
         &mut self,
         index: usize,
@@ -559,23 +631,6 @@ impl wasmi::Externals for WasmInterface {
                 let label_ptr: u32 = args.nth_checked(4)?;
                 let label_length: u32 = args.nth_checked(5)?;
                 let initial_handle: u64 = args.nth_checked(6)?;
-
-                debug!(
-                    "{}: node_create({}, {}, {}, {}, {})",
-                    self.pretty_name,
-                    name_ptr,
-                    name_length,
-                    entrypoint_ptr,
-                    entrypoint_length,
-                    initial_handle
-                );
-
-                if self.runtime.is_terminating() {
-                    debug!("{} returning terminated", self.pretty_name);
-                    return Ok(Some(wasmi::RuntimeValue::I32(
-                        OakStatus::ErrTerminated as i32,
-                    )));
-                }
 
                 map_host_errors(self.node_create(
                     name_ptr,
@@ -592,53 +647,18 @@ impl wasmi::Externals for WasmInterface {
                 let dest: u32 = args.nth_checked(0)?;
                 let dest_length: u32 = args.nth_checked(1)?;
 
-                debug!(
-                    "{}: random_get({}, {})",
-                    self.pretty_name, dest, dest_length
-                );
-
                 map_host_errors(self.random_get(dest, dest_length))
             }
 
             CHANNEL_CLOSE => {
                 let handle: u64 = args.nth_checked(0)?;
 
-                debug!("{}: channel_close({})", self.pretty_name, handle);
-
-                let result = if let Some(reference) = self.readers.get(&handle).cloned() {
-                    self.readers.remove(&handle);
-                    self.runtime
-                        .channel_close(reference)
-                        .expect("Wasm CHANNEL_CLOSE: Channel reference inconsistency!");
-                    OakStatus::Ok as i32
-                } else if let Some(reference) = self.writers.get(&handle).cloned() {
-                    self.writers.remove(&handle);
-                    self.runtime
-                        .channel_close(reference)
-                        .expect("Wasm CHANNEL_CLOSE: Channel reference inconsistency!");
-                    OakStatus::Ok as i32
-                } else {
-                    OakStatus::ErrBadHandle as i32
-                };
-
-                Ok(Some(wasmi::RuntimeValue::I32(result)))
+                map_host_errors(self.channel_close(handle))
             }
 
             CHANNEL_CREATE => {
                 let write_addr: u32 = args.nth_checked(0)?;
                 let read_addr: u32 = args.nth_checked(1)?;
-
-                debug!(
-                    "{}: channel_create({}, {})",
-                    self.pretty_name, write_addr, read_addr
-                );
-
-                if self.runtime.is_terminating() {
-                    debug!("{} returning terminated", self.pretty_name);
-                    return Ok(Some(wasmi::RuntimeValue::I32(
-                        OakStatus::ErrTerminated as i32,
-                    )));
-                }
 
                 map_host_errors(self.channel_create(write_addr, read_addr))
             }
@@ -649,11 +669,6 @@ impl wasmi::Externals for WasmInterface {
                 let source_length: u32 = args.nth_checked(2)?;
                 let handles: u32 = args.nth_checked(3)?;
                 let handles_count: u32 = args.nth_checked(4)?;
-
-                debug!(
-                    "{}: channel_write({}, {}, {}, {}, {})",
-                    self.pretty_name, writer_handle, source, source_length, handles, handles_count
-                );
 
                 map_host_errors(self.channel_write(
                     writer_handle,
@@ -675,18 +690,6 @@ impl wasmi::Externals for WasmInterface {
                 let handles_capacity: u32 = args.nth_checked(5)?;
                 let actual_handle_count: u32 = args.nth_checked(6)?;
 
-                debug!(
-                    "{}: channel_read({}, {}, {}, {}, {}, {}, {})",
-                    self.pretty_name,
-                    reader_handle,
-                    dest,
-                    dest_capacity,
-                    actual_length,
-                    handles,
-                    handles_capacity,
-                    actual_handle_count
-                );
-
                 map_host_errors(self.channel_read(
                     reader_handle,
                     dest,
@@ -701,11 +704,6 @@ impl wasmi::Externals for WasmInterface {
             WAIT_ON_CHANNELS => {
                 let status_buff: u32 = args.nth_checked(0)?;
                 let handles_count: u32 = args.nth_checked(1)?;
-
-                debug!(
-                    "{}: wait_on_channels({}, {})",
-                    self.pretty_name, status_buff, handles_count
-                );
 
                 map_host_errors(self.wait_on_channels(status_buff, handles_count))
             }
