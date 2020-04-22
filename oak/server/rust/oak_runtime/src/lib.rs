@@ -18,11 +18,9 @@ pub mod proto;
 
 pub mod config;
 pub mod message;
+pub mod metrics;
 pub mod node;
 pub mod runtime;
-
-#[cfg(test)]
-mod tests;
 
 pub use config::{application_configuration, configure_and_run};
 
