@@ -14,10 +14,7 @@
 // limitations under the License.
 //
 
-use crate::{
-    runtime::{Handle, RuntimeProxy},
-    NodeId,
-};
+use crate::{runtime::RuntimeProxy, NodeId};
 use lazy_static::lazy_static;
 use log::info;
 use oak_abi::OakStatus;
@@ -25,7 +22,7 @@ use std::{sync::RwLock, thread, thread::JoinHandle};
 
 // TODO(#724): shift to a more explicit external pseudo-Node creation
 // mechanism when the runtime's main() is in Rust.
-pub type NodeFactory = fn(config_name: &str, node_id: NodeId, handle: Handle);
+pub type NodeFactory = fn(config_name: &str, node_id: NodeId, handle: oak_abi::Handle);
 
 lazy_static! {
     static ref FACTORY: RwLock<Option<NodeFactory>> = RwLock::new(None);
@@ -39,11 +36,11 @@ pub fn register_factory(factory: NodeFactory) {
 pub struct PseudoNode {
     config_name: String,
     runtime: RuntimeProxy,
-    reader: Handle,
+    reader: oak_abi::Handle,
 }
 
 impl PseudoNode {
-    pub fn new(config_name: &str, runtime: RuntimeProxy, reader: Handle) -> Self {
+    pub fn new(config_name: &str, runtime: RuntimeProxy, reader: oak_abi::Handle) -> Self {
         Self {
             config_name: config_name.to_string(),
             runtime,

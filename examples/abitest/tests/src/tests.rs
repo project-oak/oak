@@ -43,7 +43,7 @@ fn build_wasm() -> std::io::Result<HashMap<String, Vec<u8>>> {
 
 #[test]
 fn test_abi() {
-    simple_logger::init().unwrap();
+    simple_logger::init_with_level(log::Level::Debug).unwrap();
 
     let configuration = oak_runtime::application_configuration(
         build_wasm().expect("failed to build wasm modules"),

@@ -23,3 +23,14 @@ pub struct Message {
     pub data: Vec<u8>,
     pub channels: Vec<Handle>,
 }
+
+/// Encapsulates a message relative to a specific Node, consisting of opaque data bytes
+/// together with a vector of ABI handles that are relative to the Node.  This is the
+/// internal counterpart of the SDK's `Message` type, whereas the internal `Message`
+/// type above holds internal channel references that can be moved between different
+/// Node contexts.
+#[derive(Debug)]
+pub struct NodeMessage {
+    pub data: Vec<u8>,
+    pub handles: Vec<oak_abi::Handle>,
+}

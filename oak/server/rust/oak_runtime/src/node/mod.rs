@@ -14,6 +14,9 @@
 // limitations under the License.
 //
 
+use crate::{runtime::RuntimeProxy, Handle};
+use log::debug;
+use oak_abi::OakStatus;
 use std::{
     net::{AddrParseError, SocketAddr},
     string::String,
@@ -21,10 +24,6 @@ use std::{
     thread::JoinHandle,
 };
 use tonic::transport::Identity;
-
-use oak_abi::OakStatus;
-
-use crate::{runtime::RuntimeProxy, Handle};
 
 pub mod external;
 mod grpc;
@@ -127,11 +126,18 @@ impl Configuration {
         config_name: &str, // Used for pretty debugging
         runtime: RuntimeProxy,
         entrypoint: String,
-        initial_reader: Handle,
+        initial_reader_channel: Handle,
     ) -> Box<dyn Node> {
+        let initial_handle = runtime
+            .runtime
+            .register_channel(runtime.node_id, initial_reader_channel);
+        debug!(
+            "{:?}: create_node('{}', '{}', {:?}=>{}",
+            runtime.node_id, config_name, entrypoint, initial_reader_channel, initial_handle
+        );
         match self {
             Configuration::LogNode => {
-                Box::new(logger::LogNode::new(config_name, runtime, initial_reader))
+                Box::new(logger::LogNode::new(config_name, runtime, initial_handle))
             }
             Configuration::GrpcServerNode {
                 address,
@@ -141,19 +147,19 @@ impl Configuration {
                 runtime,
                 *address,
                 tls_identity.clone(),
-                initial_reader,
+                initial_handle,
             )),
             Configuration::WasmNode { module } => Box::new(wasm::WasmNode::new(
                 config_name,
                 runtime,
                 module.clone(),
                 entrypoint,
-                initial_reader,
+                initial_handle,
             )),
             Configuration::External => Box::new(external::PseudoNode::new(
                 config_name,
                 runtime,
-                initial_reader,
+                initial_handle,
             )),
         }
     }
