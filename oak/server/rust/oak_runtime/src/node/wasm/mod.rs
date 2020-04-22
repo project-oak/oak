@@ -14,11 +14,16 @@
 // limitations under the License.
 //
 
+use crate::{
+    pretty_name_for_thread,
+    runtime::{NodeReadStatus, RuntimeProxy},
+    NodeMessage,
+};
 use byteorder::{ByteOrder, LittleEndian};
 use log::{debug, error, info, warn};
+use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
 use rand::RngCore;
 use std::{
-    collections::HashMap,
     fmt::{self, Display, Formatter},
     string::String,
     sync::Arc,
@@ -26,13 +31,6 @@ use std::{
     thread::JoinHandle,
 };
 use wasmi::ValueType;
-
-use crate::{
-    pretty_name_for_thread,
-    runtime::{Handle, HandleDirection, ReadStatus, RuntimeProxy},
-    Message,
-};
-use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
 
 #[cfg(test)]
 mod tests;
@@ -58,19 +56,12 @@ type AbiPointerOffset = u32;
 const ABI_USIZE: ValueType = ValueType::I32;
 
 /// `WasmInterface` holds runtime values for a particular execution instance of Wasm, running a
-/// single Oak Wasm Node. This includes the host ABI function mapping between the Runtime and a
-/// Wasm instance, and the handle mapping between the instance and the runtime `Handle`s.
-///
-/// Any handle from `readers` or `writers` is unique to all handles in both `readers` and
-/// `writers`.
+/// single Oak Wasm Node.  The methods here that correspond to the Oak ABI host functions are
+/// wrappers around the equivalent methods in `RuntimeProxy`, translating values between Wasm linear
+/// memory and Rust types.
 struct WasmInterface {
     /// A configuration and thread specific Node name for pretty printing.
     pretty_name: String,
-
-    /// Reader channel mappings to unique u64 handles
-    readers: HashMap<oak_abi::Handle, Handle>,
-    /// Writer channel mappings to unique u64 handles
-    writers: HashMap<oak_abi::Handle, Handle>,
 
     /// A reference to the memory used by the `wasmi` interpreter. Host ABI functions using Wasm
     /// relative addresses will perform reads/writes against this reference.
@@ -80,30 +71,6 @@ struct WasmInterface {
 }
 
 impl WasmInterface {
-    /// Generate a randomized handle. Handles are random to prevent accidental dependency on
-    /// particular values or sequence. See https://github.com/project-oak/oak/pull/347
-    fn allocate_new_handle(
-        &mut self,
-        channel: Handle,
-        direction: HandleDirection,
-    ) -> oak_abi::Handle {
-        loop {
-            let handle = rand::thread_rng().next_u64();
-
-            if self.readers.get(&handle).is_some() || self.writers.get(&handle).is_some() {
-                continue;
-            }
-
-            if direction == HandleDirection::Read {
-                self.readers.insert(handle, channel);
-            } else {
-                self.writers.insert(handle, channel);
-            }
-
-            return handle;
-        }
-    }
-
     /// Helper function to get memory.
     fn get_memory(&self) -> &wasmi::MemoryRef {
         self.memory
@@ -124,20 +91,12 @@ impl WasmInterface {
     }
 
     /// Creates a new `WasmInterface` structure.
-    pub fn new(
-        pretty_name: String,
-        runtime: RuntimeProxy,
-        initial_reader: Handle,
-    ) -> (WasmInterface, oak_abi::Handle) {
-        let mut interface = WasmInterface {
+    pub fn new(pretty_name: String, runtime: RuntimeProxy) -> WasmInterface {
+        WasmInterface {
             pretty_name,
-            readers: HashMap::new(),
-            writers: HashMap::new(),
             memory: None,
             runtime,
-        };
-        let handle = interface.allocate_new_handle(initial_reader, HandleDirection::Read);
-        (interface, handle)
+        }
     }
 
     /// Corresponds to the host ABI function [`node_create: (usize, usize, usize, usize,
@@ -226,23 +185,9 @@ impl WasmInterface {
             "{}: node_create('{}', '{}', {:?})",
             self.pretty_name, config_name, entrypoint, label
         );
-        let channel_ref = self.readers.get(&initial_handle).ok_or(()).map_err(|_| {
-            error!(
-                "{}: node_create(..., {}): Invalid handle",
-                self.pretty_name, initial_handle
-            );
-            OakStatus::ErrBadHandle
-        })?;
 
         self.runtime
-            .node_create(&config_name, &entrypoint, &label, *channel_ref)
-            .map_err(|_| {
-                error!(
-                    "{}: node_create(): Config \"{}\" entrypoint \"{}\" not found",
-                    self.pretty_name, config_name, entrypoint
-                );
-                OakStatus::ErrInvalidArgs
-            })
+            .node_create(&config_name, &entrypoint, &label, initial_handle)
     }
 
     /// Corresponds to the host ABI function [`random_get: (usize, usize) ->
@@ -269,22 +214,7 @@ impl WasmInterface {
     /// u32`](oak_abi::channel_close).
     fn channel_close(&mut self, handle: oak_abi::Handle) -> Result<(), OakStatus> {
         debug!("{}: channel_close({})", self.pretty_name, handle);
-
-        if let Some(reference) = self.readers.get(&handle).cloned() {
-            self.readers.remove(&handle);
-            self.runtime
-                .channel_close(reference)
-                .expect("Wasm CHANNEL_CLOSE: Channel reference inconsistency!");
-            Ok(())
-        } else if let Some(reference) = self.writers.get(&handle).cloned() {
-            self.writers.remove(&handle);
-            self.runtime
-                .channel_close(reference)
-                .expect("Wasm CHANNEL_CLOSE: Channel reference inconsistency!");
-            Ok(())
-        } else {
-            Err(OakStatus::ErrBadHandle)
-        }
+        self.runtime.channel_close(handle)
     }
 
     /// Corresponds to the host ABI function [`channel_create: (usize, usize) ->
@@ -307,13 +237,11 @@ impl WasmInterface {
         self.validate_ptr(write_addr, 8)?;
         self.validate_ptr(read_addr, 8)?;
 
-        let (writer, reader) = self
+        let (write_handle, read_handle) = self
             .runtime
             // TODO(#630): Let caller provide this label via the Wasm ABI.
             .channel_create(&Label::public_trusted());
 
-        let write_handle = self.allocate_new_handle(writer, HandleDirection::Write);
-        let read_handle = self.allocate_new_handle(reader, HandleDirection::Read);
         debug!(
             "{}: channel_create() -> ({}, {})",
             self.pretty_name, write_handle, read_handle
@@ -355,14 +283,6 @@ impl WasmInterface {
             self.pretty_name, writer_handle, source, source_length, handles, handles_count
         );
 
-        let writer = self.writers.get(&writer_handle).ok_or(()).map_err(|_| {
-            error!(
-                "{}: channel_write({},...): No such handle",
-                self.pretty_name, writer_handle
-            );
-            OakStatus::ErrBadHandle
-        })?;
-
         let data = self
             .get_memory()
             .get(source, source_length as usize)
@@ -389,30 +309,9 @@ impl WasmInterface {
             .chunks(8)
             .map(|bytes| LittleEndian::read_u64(bytes))
             .collect();
+        let msg = NodeMessage { data, handles };
 
-        let channels: Result<Vec<Handle>, _> = handles
-            .iter()
-            .map(|handle| match self.writers.get(handle) {
-                Some(channel) => Ok(*channel),
-                None => match self.readers.get(handle) {
-                    Some(channel) => Ok(*channel),
-                    None => {
-                        error!(
-                            "{}: channel_write(): Can't find handle {} to send",
-                            self.pretty_name, handle
-                        );
-                        Err(OakStatus::ErrBadHandle)
-                    }
-                },
-            })
-            .collect();
-
-        let msg = Message {
-            data,
-            channels: channels?,
-        };
-
-        self.runtime.channel_write(*writer, msg)?;
+        self.runtime.channel_write(writer_handle, msg)?;
 
         Ok(())
     }
@@ -444,27 +343,19 @@ impl WasmInterface {
             actual_handle_count_addr
         );
 
-        let reader = self.readers.get(&reader_handle).ok_or(()).map_err(|_| {
-            error!(
-                "{}: channel_read(): No such handle {}",
-                self.pretty_name, reader_handle
-            );
-            OakStatus::ErrBadHandle
-        })?;
-
         self.validate_ptr(dest, dest_capacity)?;
         self.validate_ptr(handles_dest, handles_capacity * 8)?;
 
         let msg = self.runtime.channel_try_read_message(
-            *reader,
+            reader_handle,
             dest_capacity as usize,
             handles_capacity as usize,
         )?;
 
         let (actual_length, actual_handle_count) = match &msg {
             None => (0, 0),
-            Some(ReadStatus::Success(msg)) => (msg.data.len(), msg.channels.len()),
-            Some(ReadStatus::NeedsCapacity(a, b)) => (*a, *b),
+            Some(NodeReadStatus::Success(msg)) => (msg.data.len(), msg.handles.len()),
+            Some(NodeReadStatus::NeedsCapacity(a, b)) => (*a, *b),
         };
 
         let raw_writer = &mut [0; 4];
@@ -492,7 +383,7 @@ impl WasmInterface {
             })?;
 
         match msg {
-            Some(ReadStatus::Success(msg)) => {
+            Some(NodeReadStatus::Success(msg)) => {
                 self.get_memory().set(dest, &msg.data).map_err(|err| {
                     error!(
                         "{}: channel_read(): Unable to write destination buffer into guest memory: {:?}",
@@ -503,10 +394,8 @@ impl WasmInterface {
 
                 let mut raw_writer: Vec<u8> = vec![0; actual_handle_count * 8];
 
-                for (i, chan) in msg.channels.iter().enumerate() {
-                    let handle =
-                        self.allocate_new_handle(*chan, self.runtime.channel_get_direction(*chan)?);
-                    LittleEndian::write_u64(&mut raw_writer[i * 8..(i + 1) * 8], handle);
+                for (i, handle) in msg.handles.iter().enumerate() {
+                    LittleEndian::write_u64(&mut raw_writer[i * 8..(i + 1) * 8], *handle);
                 }
 
                 self.get_memory()
@@ -520,7 +409,7 @@ impl WasmInterface {
                     })
             }
             None => Err(OakStatus::ErrChannelEmpty),
-            Some(ReadStatus::NeedsCapacity(x, _)) => {
+            Some(NodeReadStatus::NeedsCapacity(x, _)) => {
                 if x > dest_capacity as usize {
                     Err(OakStatus::ErrBufferTooSmall)
                 } else {
@@ -557,34 +446,20 @@ impl WasmInterface {
             .map(|bytes| LittleEndian::read_u64(bytes))
             .collect();
 
-        // Accumulate both the valid channels and their original position.
-        let mut all_statuses = vec![ChannelReadStatus::InvalidChannel; handles.len()];
-        let mut valid_pos = Vec::new();
-        let mut valid_channels = Vec::new();
-        for (i, handle) in handles.into_iter().enumerate() {
-            if let Some(channel) = self.readers.get(&handle).copied() {
-                valid_pos.push(i);
-                valid_channels.push(channel);
-            }
-        }
-        let valid_statuses = self.runtime.wait_on_channels(&valid_channels)?;
-        for i in 0..valid_channels.len() {
-            all_statuses[valid_pos[i]] = valid_statuses[i];
-        }
-
-        for (i, valid_status) in all_statuses.iter().enumerate() {
+        let statuses = self.runtime.wait_on_channels(&handles)?;
+        for (i, status) in statuses.iter().enumerate() {
             self.get_memory()
-                .set_value(status_buff + 8 + (i as u32 * 9), *valid_status as u8)
+                .set_value(status_buff + 8 + (i as u32 * 9), *status as u8)
                 .map_err(|err| {
                     error!(
                         "{}: wait_on_channels(): Unable to set status[{}] to {:?}: {:?}",
-                        self.pretty_name, i, valid_status, err
+                        self.pretty_name, i, status, err
                     );
                     OakStatus::ErrInvalidArgs
                 })?;
         }
 
-        if all_statuses
+        if statuses
             .iter()
             .all(|&s| s == ChannelReadStatus::InvalidChannel || s == ChannelReadStatus::Orphaned)
         {
@@ -848,7 +723,7 @@ pub struct WasmNode {
     runtime: RuntimeProxy,
     module: Arc<wasmi::Module>,
     entrypoint: String,
-    reader: Handle,
+    initial_handle: oak_abi::Handle,
 }
 
 impl WasmNode {
@@ -858,20 +733,19 @@ impl WasmNode {
         runtime: RuntimeProxy,
         module: Arc<wasmi::Module>,
         entrypoint: String,
-        reader: Handle,
+        initial_handle: oak_abi::Handle,
     ) -> Self {
         Self {
             config_name: config_name.to_string(),
             runtime,
             module,
             entrypoint,
-            reader,
+            initial_handle,
         }
     }
 
     fn validate_entrypoint(&self) -> Result<(), OakStatus> {
-        let (abi, _) =
-            WasmInterface::new(self.config_name.clone(), self.runtime.clone(), self.reader);
+        let abi = WasmInterface::new(self.config_name.clone(), self.runtime.clone());
         let wasi_stub = WasiStub;
         let instance = wasmi::ModuleInstance::new(
             &self.module,
@@ -911,8 +785,7 @@ impl WasmNode {
     fn worker_thread(self) {
         let pretty_name = pretty_name_for_thread(&thread::current());
         let wasi_stub = WasiStub;
-        let (mut abi, initial_handle) =
-            WasmInterface::new(pretty_name, self.runtime.clone(), self.reader);
+        let mut abi = WasmInterface::new(pretty_name, self.runtime.clone());
 
         let instance = wasmi::ModuleInstance::new(
             &self.module,
@@ -932,7 +805,7 @@ impl WasmNode {
         instance
             .invoke_export(
                 &self.entrypoint,
-                &[wasmi::RuntimeValue::I64(initial_handle as i64)],
+                &[wasmi::RuntimeValue::I64(self.initial_handle as i64)],
                 &mut abi,
             )
             .expect("failed to execute export");

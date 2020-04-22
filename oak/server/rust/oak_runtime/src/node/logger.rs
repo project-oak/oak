@@ -14,32 +14,28 @@
 // limitations under the License.
 //
 
+use crate::{pretty_name_for_thread, runtime::RuntimeProxy};
+use log::{error, info, log};
+use oak_abi::{
+    proto::oak::log::{Level, LogMessage},
+    OakStatus,
+};
+use prost::Message;
 use std::{
     fmt::{self, Display, Formatter},
     string::String,
+    thread::{self, JoinHandle},
 };
-
-use log::{error, info, log};
-
-use oak_abi::OakStatus;
-use std::thread::{self, JoinHandle};
-
-use crate::{
-    pretty_name_for_thread,
-    runtime::{Handle, RuntimeProxy},
-};
-use oak_abi::proto::oak::log::{Level, LogMessage};
-use prost::Message;
 
 pub struct LogNode {
     config_name: String,
     runtime: RuntimeProxy,
-    reader: Handle,
+    reader: oak_abi::Handle,
 }
 
 impl LogNode {
     /// Creates a new [`LogNode`] instance, but does not start it.
-    pub fn new(config_name: &str, runtime: RuntimeProxy, reader: Handle) -> Self {
+    pub fn new(config_name: &str, runtime: RuntimeProxy, reader: oak_abi::Handle) -> Self {
         Self {
             config_name: config_name.to_string(),
             runtime,

@@ -16,7 +16,7 @@
 
 use super::*;
 use crate::runtime::{Runtime, TEST_NODE_ID};
-use oak_abi::label::Label;
+use std::collections::HashMap;
 use wat::{parse_file, parse_str};
 
 fn start_node<S: AsRef<[u8]>>(buffer: S, entrypoint: &str) -> Result<(), OakStatus> {
@@ -26,8 +26,6 @@ fn start_node<S: AsRef<[u8]>>(buffer: S, entrypoint: &str) -> Result<(), OakStat
         entrypoint: entrypoint.to_string(),
     };
     let runtime_ref = Arc::new(Runtime::create(configuration));
-    let (_, reader_handle) = runtime_ref.new_channel(TEST_NODE_ID, &Label::public_trusted());
-
     let runtime_proxy = runtime_ref.clone().new_runtime_proxy();
 
     let module = wasmi::Module::from_buffer(buffer).unwrap();
@@ -37,7 +35,7 @@ fn start_node<S: AsRef<[u8]>>(buffer: S, entrypoint: &str) -> Result<(), OakStat
         runtime_proxy,
         Arc::new(module),
         entrypoint.to_string(),
-        reader_handle,
+        oak_abi::INVALID_HANDLE,
     ));
 
     let result = runtime_ref.node_start_instance(

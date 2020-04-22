@@ -14,8 +14,13 @@
 // limitations under the License.
 //
 
+use crate::{
+    runtime::{DotIdentifier, HtmlPath},
+    Message,
+};
 use itertools::Itertools;
 use log::{debug, error, warn};
+use oak_abi::OakStatus;
 use rand::RngCore;
 use std::{
     collections::{HashMap, HashSet, VecDeque},
@@ -26,12 +31,6 @@ use std::{
     },
     thread::{Thread, ThreadId},
 };
-
-use crate::{
-    runtime::{DotIdentifier, HtmlPath},
-    Message,
-};
-use oak_abi::OakStatus;
 
 type Messages = VecDeque<Message>;
 

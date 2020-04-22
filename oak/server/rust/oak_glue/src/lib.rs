@@ -17,7 +17,7 @@
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use lazy_static::lazy_static;
 use log::{debug, error, info, warn};
-use oak_abi::OakStatus;
+use oak_abi::{label::Label, OakStatus};
 use oak_runtime::{
     proto::oak::application::ApplicationConfiguration, runtime::RuntimeProxy, NodeId,
 };
@@ -64,10 +64,10 @@ impl Glue {
 /// Recreate a RuntimeProxy instance that corresponds to the given node ID
 /// value.
 fn proxy_for_node(node_id: u64) -> RuntimeProxy {
-    RuntimeProxy {
-        runtime: GLUE.read().expect(R1).as_ref().expect(R2).runtime.clone(),
-        node_id: NodeId(node_id),
-    }
+    RuntimeProxy::new_for_node(
+        GLUE.read().expect(R1).as_ref().expect(R2).runtime.clone(),
+        NodeId(node_id),
+    )
 }
 
 lazy_static! {
@@ -90,6 +90,7 @@ pub unsafe extern "C" fn glue_start(
     config_len: u32,
     factory: Option<NodeFactory>,
     factory_data: usize,
+    node_id: *mut u64,
 ) -> u64 {
     std::panic::catch_unwind(|| {
         let config_data = std::slice::from_raw_parts(config_buf, config_len as usize);
@@ -109,7 +110,8 @@ pub unsafe extern "C" fn glue_start(
             "start runtime with initial config {}.{} {:?}",
             app_config.initial_node_config_name, app_config.initial_entrypoint_name, runtime_config
         );
-        let (runtime, grpc_handle) =
+
+        let (runtime, grpc_channel) =
             match oak_runtime::configure_and_run(app_config, runtime_config) {
                 Ok(p) => p,
                 Err(status) => {
@@ -117,13 +119,29 @@ pub unsafe extern "C" fn glue_start(
                     return oak_abi::INVALID_HANDLE;
                 }
             };
+        // Register the gRPC server pseudo-Node and retrieve its Node ID.
+        let grpc_proxy = runtime.clone().new_runtime_proxy();
+        *node_id = grpc_proxy.node_id.0;
+        runtime.node_configure_instance(
+            grpc_proxy.node_id,
+            "initial.implicit".to_string(),
+            &Label::public_trusted(),
+            vec![grpc_channel],
+        );
+        let grpc_handle = grpc_proxy
+            .runtime
+            .register_channel(grpc_proxy.node_id, grpc_channel);
+        info!(
+            "runtime started, grpc_node_id={}, grpc_handle={:?} registered as {}",
+            *node_id, grpc_channel, grpc_handle
+        );
 
         oak_runtime::node::external::register_factory(create_and_run_node);
         info!("register oak_glue::create_and_run_node() as node factory");
 
         let glue = Glue::new(runtime, factory, factory_data);
         *GLUE.write().expect(R1) = Some(glue);
-        grpc_handle.0
+        grpc_handle
     })
     .unwrap_or(oak_abi::INVALID_HANDLE)
 }
@@ -167,8 +185,8 @@ pub unsafe extern "C" fn glue_wait_on_channels(node_id: u64, buf: *mut u8, count
             // value.
             let handle = mem_reader.read_u64::<byteorder::LittleEndian>().unwrap();
             let _b = mem_reader.read_u8().unwrap();
-            debug!("{{{}}}: wait_on_channels handle {:?}", node_id, handle);
-            handles.push(oak_runtime::Handle(handle));
+            debug!("{{{}}}: wait_on_channels   handle {:?}", node_id, handle);
+            handles.push(handle);
         }
 
         let proxy = proxy_for_node(node_id);
@@ -220,11 +238,7 @@ pub unsafe extern "C" fn glue_channel_read(
     );
 
     let proxy = proxy_for_node(node_id);
-    let msg = match proxy.channel_try_read_message(
-        oak_runtime::Handle(handle),
-        size,
-        handle_count as usize,
-    ) {
+    let msg = match proxy.channel_try_read_message(handle, size, handle_count as usize) {
         Ok(msg) => msg,
         Err(status) => return status as u32,
     };
@@ -235,21 +249,21 @@ pub unsafe extern "C" fn glue_channel_read(
             *actual_handle_count = 0;
             OakStatus::ErrChannelEmpty
         }
-        Some(oak_runtime::runtime::ReadStatus::Success(msg)) => {
+        Some(oak_runtime::runtime::NodeReadStatus::Success(msg)) => {
             *actual_size = msg.data.len().try_into().unwrap();
-            *actual_handle_count = msg.channels.len().try_into().unwrap();
+            *actual_handle_count = msg.handles.len().try_into().unwrap();
             std::ptr::copy_nonoverlapping(msg.data.as_ptr(), buf, msg.data.len());
-            let mut handle_data = Vec::with_capacity(8 * msg.channels.len());
-            for handle in msg.channels {
-                debug!("{{{}}}: channel_read() added {:?}", node_id, handle);
+            let mut handle_data = Vec::with_capacity(8 * msg.handles.len());
+            for handle in msg.handles {
+                debug!("{{{}}}: channel_read() added handle {}", node_id, handle);
                 handle_data
-                    .write_u64::<byteorder::LittleEndian>(handle.0)
+                    .write_u64::<byteorder::LittleEndian>(handle)
                     .unwrap();
             }
             std::ptr::copy_nonoverlapping(handle_data.as_ptr(), handle_buf, handle_data.len());
             OakStatus::Ok
         }
-        Some(oak_runtime::runtime::ReadStatus::NeedsCapacity(a, b)) => {
+        Some(oak_runtime::runtime::NodeReadStatus::NeedsCapacity(a, b)) => {
             *actual_size = a.try_into().unwrap();
             *actual_handle_count = b.try_into().unwrap();
             if a > size as usize {
@@ -283,9 +297,9 @@ pub unsafe extern "C" fn glue_channel_write(
         "{{{}}}: channel_write(h={}, buf={:?}, size={}, handle_buf={:?}, count={})",
         node_id, handle, buf, size, handle_buf, handle_count
     );
-    let mut msg = oak_runtime::Message {
+    let mut msg = oak_runtime::NodeMessage {
         data: Vec::with_capacity(size),
-        channels: Vec::with_capacity(handle_count as usize),
+        handles: Vec::with_capacity(handle_count as usize),
     };
     std::ptr::copy_nonoverlapping(buf, msg.data.as_mut_ptr(), size);
     msg.data.set_len(size);
@@ -298,11 +312,12 @@ pub unsafe extern "C" fn glue_channel_write(
     let mut mem_reader = Cursor::new(handle_data);
     for _ in 0..handle_count as isize {
         let handle = mem_reader.read_u64::<byteorder::LittleEndian>().unwrap();
-        msg.channels.push(oak_runtime::Handle(handle));
+        debug!("{{{}}}: channel_write   include handle {}", node_id, handle);
+        msg.handles.push(handle);
     }
 
     let proxy = proxy_for_node(node_id);
-    let result = proxy.channel_write(oak_runtime::Handle(handle), msg);
+    let result = proxy.channel_write(handle, msg);
     debug!("{{{}}}: channel_write() -> {:?}", node_id, result);
     match result {
         Ok(_) => OakStatus::Ok as u32,
@@ -321,8 +336,8 @@ pub unsafe extern "C" fn glue_channel_create(node_id: u64, write: *mut u64, read
     let proxy = proxy_for_node(node_id);
     let (write_handle, read_handle) =
         proxy.channel_create(&oak_abi::label::Label::public_trusted());
-    *write = write_handle.0;
-    *read = read_handle.0;
+    *write = write_handle;
+    *read = read_handle;
     debug!(
         "{{{}}}: channel_create(*w={:?}, *r={:?}) -> OK",
         node_id, write_handle, read_handle
@@ -335,7 +350,7 @@ pub unsafe extern "C" fn glue_channel_create(node_id: u64, write: *mut u64, read
 pub extern "C" fn glue_channel_close(node_id: u64, handle: u64) -> u32 {
     debug!("{{{}}}: channel_close({})", node_id, handle);
     let proxy = proxy_for_node(node_id);
-    let result = proxy.channel_close(oak_runtime::Handle(handle));
+    let result = proxy.channel_close(handle);
     debug!("{{{}}}: channel_close({}) -> {:?}", node_id, handle, result);
     match result {
         Ok(_) => OakStatus::Ok as u32,
@@ -343,9 +358,9 @@ pub extern "C" fn glue_channel_close(node_id: u64, handle: u64) -> u32 {
     }
 }
 
-fn create_and_run_node(config_name: &str, node_id: NodeId, handle: oak_runtime::Handle) {
+fn create_and_run_node(config_name: &str, node_id: NodeId, handle: oak_abi::Handle) {
     info!(
-        "invoke registered factory with '{}', node_id={:?}, handle={:?}",
+        "invoke registered factory with '{}', node_id={:?}, handle={}",
         config_name, node_id, handle
     );
     let factory = GLUE.read().expect(R1).as_ref().expect(R2).factory;
@@ -355,6 +370,6 @@ fn create_and_run_node(config_name: &str, node_id: NodeId, handle: oak_runtime::
         config_name.as_ptr(),
         config_name.len() as u32,
         node_id.0,
-        handle.0,
+        handle,
     );
 }

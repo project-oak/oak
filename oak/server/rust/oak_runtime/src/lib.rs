@@ -33,8 +33,8 @@ pub mod runtime;
 
 pub use config::{application_configuration, configure_and_run};
 
-pub use message::Message;
-pub use runtime::{Handle, NodeId, Runtime};
+pub use message::{Message, NodeMessage};
+pub use runtime::{Handle, HandleDirection, NodeId, Runtime};
 
 use std::thread::Thread;
 

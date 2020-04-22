@@ -70,8 +70,7 @@ std::unique_ptr<OakRuntime> OakRuntime::Create(
 
 OakRuntime::OakRuntime(const application::ApplicationConfiguration& config,
                        std::shared_ptr<grpc::ServerCredentials> grpc_credentials)
-    : grpc_node_(OakGrpcNode::Create(kGrpcNodeName, 0, grpc_credentials, config.grpc_port())),
-      grpc_handle_(kInvalidHandle) {
+    : grpc_handle_(kInvalidHandle) {
   // Accumulate the various data structures indexed by config name.
   for (const auto& node_config : config.node_configs()) {
     if (node_config.has_storage_config()) {
@@ -93,10 +92,13 @@ OakRuntime::OakRuntime(const application::ApplicationConfiguration& config,
     OAK_LOG(FATAL) << "Failed to serialize ApplicationConfiguration";
   }
   OAK_LOG(INFO) << "Starting Rust runtime";
+  uint64_t grpc_node_id;
   grpc_handle_ = glue_start(reinterpret_cast<const uint8_t*>(config_data.data()),
                             static_cast<uint32_t>(config_data.size()), NodeFactory,
-                            reinterpret_cast<uintptr_t>(this));
-  OAK_LOG(INFO) << "Started Rust runtime, handle=" << grpc_handle_;
+                            reinterpret_cast<uintptr_t>(this), &grpc_node_id);
+  grpc_node_ =
+      OakGrpcNode::Create(kGrpcNodeName, grpc_node_id, grpc_credentials, config.grpc_port());
+  OAK_LOG(INFO) << "Started Rust runtime, node_id=" << grpc_node_id << ", handle=" << grpc_handle_;
 }
 
 // Create (but don't start) a new Node instance.  Return a borrowed pointer to

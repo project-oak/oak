@@ -35,9 +35,12 @@ typedef void (*node_factory)(uintptr_t data, const char* name, uint32_t name_len
                              uint64_t handle);
 
 // Start the Rust runtime, passing a serialized ApplicationConfiguration
-// protobuf message.
+// protobuf message.  Fills in node_id with the NodeId value for the implicitly
+// created initial Node (which is used to run the gRPC server pseudo-Node under),
+// and returns the initial write handle (which is used to send in gRPC invocations
+// to the first Application Node).
 uint64_t glue_start(const uint8_t* config_buf, uint32_t config_len, node_factory factory,
-                    uintptr_t factory_data);
+                    uintptr_t factory_data, uint64_t* node_id);
 // Stop the Rust runtime.
 void glue_stop();
 

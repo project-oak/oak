@@ -14,9 +14,16 @@
 // limitations under the License.
 //
 
+use crate::{
+    message::{Message, NodeMessage},
+    metrics::METRICS,
+    node, pretty_name_for_thread,
+};
 use core::sync::atomic::{AtomicBool, AtomicU64, Ordering::SeqCst};
 use itertools::Itertools;
 use log::{debug, error, info, trace};
+use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
+use rand::RngCore;
 use std::{
     collections::{HashMap, HashSet},
     fmt::Write,
@@ -25,9 +32,6 @@ use std::{
     thread,
     thread::JoinHandle,
 };
-
-use crate::{message::Message, metrics::METRICS, node, pretty_name_for_thread};
-use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
 
 mod channel;
 #[cfg(feature = "oak_debug")]
@@ -120,6 +124,10 @@ pub enum ReadStatus {
     Success(Message),
     NeedsCapacity(usize, usize),
 }
+pub enum NodeReadStatus {
+    Success(NodeMessage),
+    NeedsCapacity(usize, usize),
+}
 
 /// Information for managing an associated server.
 pub struct AuxServer {
@@ -178,9 +186,78 @@ pub struct Runtime {
     /// for termination of all of them.
     node_join_handles: Mutex<HashMap<NodeId, JoinHandle<()>>>,
 
+    handle_table: Arc<RwLock<HashMap<(NodeId, oak_abi::Handle), Handle>>>,
+
     next_node_id: AtomicU64,
 
     aux_servers: Mutex<Vec<AuxServer>>,
+}
+
+// Methods which translate between ABI handles (Node-relative u64 values) and runtime::Handle
+// values.
+impl Runtime {
+    pub fn register_channel(&self, node_id: NodeId, channel: Handle) -> oak_abi::Handle {
+        let mut table = self.handle_table.write().expect("handle table corrupt");
+        loop {
+            let candidate = (node_id, rand::thread_rng().next_u64());
+            if table.get(&candidate).is_none() {
+                table.insert(candidate, channel);
+                debug!(
+                    "{:?}: new ABI handle {} maps to {:?}",
+                    node_id, candidate.1, channel
+                );
+                return candidate.1;
+            }
+        }
+    }
+    fn drop_abi_handle(&self, node_id: NodeId, handle: oak_abi::Handle) -> Result<(), OakStatus> {
+        match self
+            .handle_table
+            .write()
+            .expect("handle table corrupt")
+            .remove(&(node_id, handle))
+        {
+            None => Err(OakStatus::ErrBadHandle),
+            Some(_) => Ok(()),
+        }
+    }
+    fn abi_to_channel(
+        &self,
+        node_id: NodeId,
+        handle: oak_abi::Handle,
+    ) -> Result<Handle, OakStatus> {
+        let result = self
+            .handle_table
+            .read()
+            .expect("handle table corrupt")
+            .get(&(node_id, handle))
+            .ok_or(OakStatus::ErrBadHandle)
+            .map(|channel| *channel);
+        trace!("{:?}: map ABI handle {} to {:?}", node_id, handle, result);
+        result
+    }
+    fn abi_to_read_channel(
+        &self,
+        node_id: NodeId,
+        handle: oak_abi::Handle,
+    ) -> Result<Handle, OakStatus> {
+        let channel = self.abi_to_channel(node_id, handle)?;
+        match self.channel_get_direction(node_id, channel)? {
+            HandleDirection::Read => Ok(channel),
+            HandleDirection::Write => Err(OakStatus::ErrBadHandle),
+        }
+    }
+    fn abi_to_write_channel(
+        &self,
+        node_id: NodeId,
+        handle: oak_abi::Handle,
+    ) -> Result<Handle, OakStatus> {
+        let channel = self.abi_to_channel(node_id, handle)?;
+        match self.channel_get_direction(node_id, channel)? {
+            HandleDirection::Read => Err(OakStatus::ErrBadHandle),
+            HandleDirection::Write => Ok(channel),
+        }
+    }
 }
 
 impl Runtime {
@@ -193,6 +270,7 @@ impl Runtime {
 
             node_infos: RwLock::new(HashMap::new()),
             node_join_handles: Mutex::new(HashMap::new()),
+            handle_table: Arc::new(RwLock::new(HashMap::new())),
 
             // NodeId(0) reserved for RUNTIME_NODE_ID.
             next_node_id: AtomicU64::new(1),
@@ -239,6 +317,10 @@ impl Runtime {
         // outside world to the entry point Node.
         let (chan_writer, chan_reader) =
             self.new_channel(RUNTIME_NODE_ID, &Label::public_trusted());
+        debug!(
+            "created initial channel ({:?}, {:?})",
+            chan_writer, chan_reader
+        );
 
         self.clone().node_create(
             RUNTIME_NODE_ID,
@@ -1025,14 +1107,11 @@ impl Runtime {
             }
         }
 
-        let node_id = self.new_node_id();
-        let runtime_proxy = RuntimeProxy {
-            runtime: self.clone(),
-            node_id,
-        };
-
+        let runtime_proxy = self.clone().new_runtime_proxy();
+        let new_node_id = runtime_proxy.node_id;
         let reader = self.channels.duplicate_reference(reader)?;
 
+        debug!("{:?}: create node instance {:?}", node_id, new_node_id);
         let instance = self
             .configuration
             .nodes
@@ -1043,8 +1122,9 @@ impl Runtime {
                 conf.create_node(module_name, runtime_proxy, entrypoint.to_owned(), reader)
             })?;
 
+        debug!("{:?}: start node instance {:?}", node_id, new_node_id);
         self.node_start_instance(
-            node_id,
+            new_node_id,
             format!("{}.{}", module_name, entrypoint),
             instance,
             label,
@@ -1072,21 +1152,10 @@ impl Runtime {
     where
         I: IntoIterator<Item = Handle>,
     {
-        // First create the necessary info data structure in the Runtime, otherwise calls that the
+        // First create the necessary data structures in the Runtime, otherwise calls that the
         // Node makes to the Runtime during `Node::start` (synchronously or asynchronously) may
         // fail.
-        self.add_node_info(
-            node_id,
-            NodeInfo {
-                pretty_name,
-                label: label.clone(),
-                handles: HashSet::new(),
-            },
-        );
-
-        // Make sure that the provided initial handles are tracked in the newly created Node from
-        // the start.
-        self.track_handles_in_node(node_id, initial_handles);
+        self.node_configure_instance(node_id, pretty_name, label, initial_handles);
 
         // Try to start the Node instance, and store the join handle.
         //
@@ -1114,11 +1183,32 @@ impl Runtime {
         Ok(())
     }
 
+    // Configure data structures for a Node instance.
+    pub fn node_configure_instance<I>(
+        &self,
+        node_id: NodeId,
+        pretty_name: String,
+        label: &Label,
+        initial_handles: I,
+    ) where
+        I: IntoIterator<Item = Handle>,
+    {
+        self.add_node_info(
+            node_id,
+            NodeInfo {
+                pretty_name,
+                label: label.clone(),
+                handles: HashSet::new(),
+            },
+        );
+
+        // Make sure that the provided initial handles are tracked in the newly created Node from
+        // the start.
+        self.track_handles_in_node(node_id, initial_handles);
+    }
+
     pub fn new_runtime_proxy(self: Arc<Self>) -> RuntimeProxy {
-        RuntimeProxy {
-            runtime: self.clone(),
-            node_id: self.new_node_id(),
-        }
+        RuntimeProxy::new_for_node(self.clone(), self.new_node_id())
     }
 }
 
@@ -1140,7 +1230,7 @@ impl Drop for Runtime {
 /// impersonate each other.
 ///
 /// Individual methods simply forward to corresponding methods on the underlying [`Runtime`], by
-/// partially applying the first argument.
+/// partially applying the first argument, and translating ABI handles to underlying channels.
 #[derive(Clone)]
 pub struct RuntimeProxy {
     pub runtime: Arc<Runtime>,
@@ -1148,6 +1238,9 @@ pub struct RuntimeProxy {
 }
 
 impl RuntimeProxy {
+    pub fn new_for_node(runtime: Arc<Runtime>, node_id: NodeId) -> Self {
+        RuntimeProxy { runtime, node_id }
+    }
     /// See [`Runtime::is_terminating`].
     pub fn is_terminating(&self) -> bool {
         self.runtime.is_terminating()
@@ -1164,72 +1257,132 @@ impl RuntimeProxy {
         module_name: &str,
         entrypoint: &str,
         label: &Label,
-        channel_read_handle: Handle,
+        initial_handle: oak_abi::Handle,
     ) -> Result<(), OakStatus> {
         self.runtime.clone().node_create(
             self.node_id,
             module_name,
             entrypoint,
             label,
-            channel_read_handle,
+            self.runtime
+                .abi_to_read_channel(self.node_id, initial_handle)?,
         )
     }
 
     /// See [`Runtime::new_channel`].
-    pub fn channel_create(&self, label: &Label) -> (Handle, Handle) {
-        self.runtime.new_channel(self.node_id, label)
+    pub fn channel_create(&self, label: &Label) -> (oak_abi::Handle, oak_abi::Handle) {
+        let (write_channel, read_channel) = self.runtime.new_channel(self.node_id, label);
+        let write_handle = self.runtime.register_channel(self.node_id, write_channel);
+        let read_handle = self.runtime.register_channel(self.node_id, read_channel);
+        (write_handle, read_handle)
     }
 
     /// See [`Runtime::channel_close`].
-    pub fn channel_close(&self, channel_handle: Handle) -> Result<(), OakStatus> {
-        self.runtime.channel_close(self.node_id, channel_handle)
+    pub fn channel_close(&self, handle: oak_abi::Handle) -> Result<(), OakStatus> {
+        let channel = self.runtime.abi_to_channel(self.node_id, handle)?;
+        let result = self.runtime.channel_close(self.node_id, channel);
+        self.runtime.drop_abi_handle(self.node_id, handle)?;
+        result
     }
 
     /// See [`Runtime::wait_on_channels`].
     pub fn wait_on_channels(
         &self,
-        channel_read_handles: &[Handle],
+        read_handles: &[oak_abi::Handle],
     ) -> Result<Vec<ChannelReadStatus>, OakStatus> {
-        self.runtime
-            .wait_on_channels(self.node_id, channel_read_handles)
+        // Accumulate both the valid channels and their original position.
+        let mut all_statuses = vec![ChannelReadStatus::InvalidChannel; read_handles.len()];
+        let mut valid_pos = Vec::new();
+        let mut valid_channels = Vec::new();
+        for (i, handle) in read_handles.iter().enumerate() {
+            if let Ok(channel) = self.runtime.abi_to_read_channel(self.node_id, *handle) {
+                valid_pos.push(i);
+                valid_channels.push(channel);
+            }
+        }
+        let valid_statuses = self
+            .runtime
+            .wait_on_channels(self.node_id, &valid_channels)?;
+        for i in 0..valid_channels.len() {
+            all_statuses[valid_pos[i]] = valid_statuses[i];
+        }
+        Ok(all_statuses)
     }
 
     /// See [`Runtime::channel_write`].
     pub fn channel_write(
         &self,
-        channel_write_handle: Handle,
-        msg: Message,
+        write_handle: oak_abi::Handle,
+        msg: NodeMessage,
     ) -> Result<(), OakStatus> {
-        self.runtime
-            .channel_write(self.node_id, channel_write_handle, msg)
+        let mut runtime_msg = Message {
+            data: msg.data,
+            channels: Vec::with_capacity(msg.handles.len()),
+        };
+        for handle in msg.handles {
+            let channel = self.runtime.abi_to_channel(self.node_id, handle)?;
+            runtime_msg.channels.push(channel);
+        }
+        self.runtime.channel_write(
+            self.node_id,
+            self.runtime
+                .abi_to_write_channel(self.node_id, write_handle)?,
+            runtime_msg,
+        )
     }
 
     /// See [`Runtime::channel_read`].
-    pub fn channel_read(&self, channel_read_handle: Handle) -> Result<Option<Message>, OakStatus> {
-        self.runtime.channel_read(self.node_id, channel_read_handle)
+    pub fn channel_read(
+        &self,
+        read_handle: oak_abi::Handle,
+    ) -> Result<Option<NodeMessage>, OakStatus> {
+        match self.runtime.channel_read(
+            self.node_id,
+            self.runtime
+                .abi_to_read_channel(self.node_id, read_handle)?,
+        ) {
+            Err(status) => Err(status),
+            Ok(None) => Ok(None),
+            Ok(Some(runtime_msg)) => Ok(Some(NodeMessage {
+                data: runtime_msg.data,
+                handles: runtime_msg
+                    .channels
+                    .iter()
+                    .map(|c| self.runtime.register_channel(self.node_id, *c))
+                    .collect(),
+            })),
+        }
     }
 
     /// See [`Runtime::channel_try_read_message`].
     pub fn channel_try_read_message(
         &self,
-        channel_read_handle: Handle,
+        read_handle: oak_abi::Handle,
         bytes_capacity: usize,
         handles_capacity: usize,
-    ) -> Result<Option<ReadStatus>, OakStatus> {
-        self.runtime.channel_try_read_message(
+    ) -> Result<Option<NodeReadStatus>, OakStatus> {
+        match self.runtime.channel_try_read_message(
             self.node_id,
-            channel_read_handle,
+            self.runtime
+                .abi_to_read_channel(self.node_id, read_handle)?,
             bytes_capacity,
             handles_capacity,
-        )
-    }
-
-    /// See [`Runtime::channel_get_direction`].
-    pub fn channel_get_direction(
-        &self,
-        channel_handle: Handle,
-    ) -> Result<HandleDirection, OakStatus> {
-        self.runtime
-            .channel_get_direction(self.node_id, channel_handle)
+        ) {
+            Err(status) => Err(status),
+            Ok(None) => Ok(None),
+            Ok(Some(ReadStatus::NeedsCapacity(z, c))) => {
+                Ok(Some(NodeReadStatus::NeedsCapacity(z, c)))
+            }
+            Ok(Some(ReadStatus::Success(runtime_msg))) => {
+                Ok(Some(NodeReadStatus::Success(NodeMessage {
+                    data: runtime_msg.data,
+                    handles: runtime_msg
+                        .channels
+                        .iter()
+                        .map(|c| self.runtime.register_channel(self.node_id, *c))
+                        .collect(),
+                })))
+            }
+        }
     }
 }
