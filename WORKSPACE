@@ -239,11 +239,11 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_rust",
-    sha256 = "69b67e19532b12da3edccda404772e85a788d16ae739343f5338dd340a0fba2e",
-    strip_prefix = "rules_rust-ec436b5ff2ab1ddeba6f27a7a1a5d263812981a6",
+    sha256 = "275f0166e61e6cad3e29b0e37c21ecbb66880c049dbeea6e574d74a8ec4775c5",
+    strip_prefix = "rules_rust-e285f2bd8be77712e6b80ccb52918b727d10d70e",
     urls = [
-        # Master branch as of 2019-11-15.
-        "https://github.com/bazelbuild/rules_rust/archive/ec436b5ff2ab1ddeba6f27a7a1a5d263812981a6.tar.gz",
+        # Master branch as of 2020-04-21.
+        "https://github.com/bazelbuild/rules_rust/archive/e285f2bd8be77712e6b80ccb52918b727d10d70e.tar.gz",
     ],
 )
 
