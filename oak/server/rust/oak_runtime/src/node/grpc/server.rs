@@ -90,7 +90,7 @@ impl GrpcServerNode {
         }
     }
 
-    /// Reads a [`Handle`] from a channel specified by [`GrpcServerNode::initial_reader`].
+    /// Reads an [`oak_abi::Handle`] from a channel specified by [`GrpcServerNode::initial_reader`].
     /// Returns an error if couldn't read from the channel or if received a wrong number of handles
     /// (not equal to 1).
     fn init_channel_writer(&mut self) -> Result<(), OakStatus> {
@@ -304,7 +304,7 @@ impl GrpcRequestHandler {
 
     /// Handles a gRPC request, forwards it to a temporary channel and sends handles for this
     /// channel to the [`GrpcServerNode::channel_writer`].
-    /// Returns a [`Handle`] for reading a gRPC response from.
+    /// Returns an [`oak_abi::Handle`] for reading a gRPC response from.
     fn handle_grpc_request(&self, request: GrpcRequest) -> Result<oak_abi::Handle, OakStatus> {
         // Create a pair of temporary channels to pass the gRPC request and to receive the response.
         let (request_writer, request_reader) =

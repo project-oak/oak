@@ -14,14 +14,12 @@
 // limitations under the License.
 //
 
-use crate::Handle;
-
 /// Encapsulates a message consisting of opaque data bytes and a vector of channels.
 /// The data bytes should not contain any pointers or handles.
 #[derive(Debug)]
 pub struct Message {
     pub data: Vec<u8>,
-    pub channels: Vec<Handle>,
+    pub channels: Vec<crate::runtime::Handle>,
 }
 
 /// Encapsulates a message relative to a specific Node, consisting of opaque data bytes

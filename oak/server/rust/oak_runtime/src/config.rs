@@ -14,12 +14,6 @@
 // limitations under the License.
 //
 
-use itertools::Itertools;
-use log::{error, warn};
-use oak_abi::OakStatus;
-use std::{collections::HashMap, sync::Arc};
-use tonic::transport::Identity;
-
 use crate::{
     node,
     node::load_wasm,
@@ -28,8 +22,13 @@ use crate::{
         LogConfiguration, NodeConfiguration, WebAssemblyConfiguration,
     },
     runtime,
-    runtime::{Handle, Runtime},
+    runtime::Runtime,
 };
+use itertools::Itertools;
+use log::{error, warn};
+use oak_abi::OakStatus;
+use std::{collections::HashMap, sync::Arc};
+use tonic::transport::Identity;
 
 /// Create an application configuration.
 ///
@@ -123,12 +122,13 @@ pub fn from_protobuf(
 
 /// Configure a [`Runtime`] from the given protobuf [`ApplicationConfiguration`] and begin
 /// execution. This returns an [`Arc`] reference to the created [`Runtime`], and a writeable
-/// [`Handle`] to send messages into the Runtime. Creating a new channel and passing the write
-/// [`Handle`] into the runtime will enable messages to be read back out from the [`Runtime`].
+/// [`runtime::Handle`] to send messages into the Runtime. Creating a new channel and passing the
+/// write [`runtime::Handle`] into the runtime will enable messages to be read back out from the
+/// [`Runtime`].
 pub fn configure_and_run(
     app_config: ApplicationConfiguration,
     runtime_config: crate::RuntimeConfiguration,
-) -> Result<(Arc<Runtime>, Handle), OakStatus> {
+) -> Result<(Arc<Runtime>, runtime::Handle), OakStatus> {
     let configuration = from_protobuf(app_config)?;
     let runtime = Arc::new(Runtime::create(configuration));
     let handle = runtime.clone().run(runtime_config)?;
