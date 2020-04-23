@@ -34,7 +34,7 @@ pub mod runtime;
 pub use config::{application_configuration, configure_and_run};
 
 pub use message::{Message, NodeMessage};
-pub use runtime::{HandleDirection, NodeId, Runtime};
+pub use runtime::{ChannelHalfId, NodeId, Runtime};
 
 use std::thread::Thread;
 

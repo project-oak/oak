@@ -19,7 +19,7 @@
 #[derive(Debug)]
 pub struct Message {
     pub data: Vec<u8>,
-    pub channels: Vec<crate::runtime::Handle>,
+    pub channels: Vec<crate::runtime::ChannelHalfId>,
 }
 
 /// Encapsulates a message relative to a specific Node, consisting of opaque data bytes

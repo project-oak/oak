@@ -122,13 +122,13 @@ pub fn from_protobuf(
 
 /// Configure a [`Runtime`] from the given protobuf [`ApplicationConfiguration`] and begin
 /// execution. This returns an [`Arc`] reference to the created [`Runtime`], and a writeable
-/// [`runtime::Handle`] to send messages into the Runtime. Creating a new channel and passing the
-/// write [`runtime::Handle`] into the runtime will enable messages to be read back out from the
-/// [`Runtime`].
+/// [`runtime::ChannelHalfId`] to send messages into the Runtime. Creating a new channel and
+/// passing the write [`runtime::ChannelHalfId`] into the runtime will enable messages to be read
+/// back out from the [`Runtime`].
 pub fn configure_and_run(
     app_config: ApplicationConfiguration,
     runtime_config: crate::RuntimeConfiguration,
-) -> Result<(Arc<Runtime>, runtime::Handle), OakStatus> {
+) -> Result<(Arc<Runtime>, runtime::ChannelHalfId), OakStatus> {
     let configuration = from_protobuf(app_config)?;
     let runtime = Arc::new(Runtime::create(configuration));
     let handle = runtime.clone().run(runtime_config)?;
