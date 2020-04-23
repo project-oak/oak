@@ -71,12 +71,12 @@ def raze_fetch_remote_crates():
     )
 
     _new_http_archive(
-        name = "raze__base64__0_11_0",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/base64/base64-0.11.0.crate",
+        name = "raze__base64__0_10_1",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/base64/base64-0.10.1.crate",
         type = "tar.gz",
-        strip_prefix = "base64-0.11.0",
+        strip_prefix = "base64-0.10.1",
 
-        build_file = Label("//cargo/remote:base64-0.11.0.BUILD"),
+        build_file = Label("//cargo/remote:base64-0.10.1.BUILD"),
     )
 
     _new_http_archive(
@@ -485,12 +485,12 @@ def raze_fetch_remote_crates():
     )
 
     _new_http_archive(
-        name = "raze__percent_encoding__2_1_0",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/percent-encoding/percent-encoding-2.1.0.crate",
+        name = "raze__percent_encoding__1_0_1",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/percent-encoding/percent-encoding-1.0.1.crate",
         type = "tar.gz",
-        strip_prefix = "percent-encoding-2.1.0",
+        strip_prefix = "percent-encoding-1.0.1",
 
-        build_file = Label("//cargo/remote:percent-encoding-2.1.0.BUILD"),
+        build_file = Label("//cargo/remote:percent-encoding-1.0.1.BUILD"),
     )
 
     _new_http_archive(
@@ -647,12 +647,12 @@ def raze_fetch_remote_crates():
     )
 
     _new_http_archive(
-        name = "raze__rustls__0_17_0",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/rustls/rustls-0.17.0.crate",
+        name = "raze__rustls__0_16_0",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/rustls/rustls-0.16.0.crate",
         type = "tar.gz",
-        strip_prefix = "rustls-0.17.0",
+        strip_prefix = "rustls-0.16.0",
 
-        build_file = Label("//cargo/remote:rustls-0.17.0.BUILD"),
+        build_file = Label("//cargo/remote:rustls-0.16.0.BUILD"),
     )
 
     _new_http_archive(
@@ -746,12 +746,21 @@ def raze_fetch_remote_crates():
     )
 
     _new_http_archive(
-        name = "raze__tokio_rustls__0_13_0",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/tokio-rustls/tokio-rustls-0.13.0.crate",
+        name = "raze__tokio_rustls__0_12_2",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/tokio-rustls/tokio-rustls-0.12.2.crate",
         type = "tar.gz",
-        strip_prefix = "tokio-rustls-0.13.0",
+        strip_prefix = "tokio-rustls-0.12.2",
 
-        build_file = Label("//cargo/remote:tokio-rustls-0.13.0.BUILD"),
+        build_file = Label("//cargo/remote:tokio-rustls-0.12.2.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__tokio_util__0_2_0",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/tokio-util/tokio-util-0.2.0.crate",
+        type = "tar.gz",
+        strip_prefix = "tokio-util-0.2.0",
+
+        build_file = Label("//cargo/remote:tokio-util-0.2.0.BUILD"),
     )
 
     _new_http_archive(
@@ -764,12 +773,12 @@ def raze_fetch_remote_crates():
     )
 
     _new_http_archive(
-        name = "raze__tonic__0_2_0",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/tonic/tonic-0.2.0.crate",
+        name = "raze__tonic__0_1_1",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/tonic/tonic-0.1.1.crate",
         type = "tar.gz",
-        strip_prefix = "tonic-0.2.0",
+        strip_prefix = "tonic-0.1.1",
 
-        build_file = Label("//cargo/remote:tonic-0.2.0.BUILD"),
+        build_file = Label("//cargo/remote:tonic-0.1.1.BUILD"),
     )
 
     _new_http_archive(

@@ -28,17 +28,16 @@ rust_library(
     name = "base64",
     crate_root = "src/lib.rs",
     crate_type = "lib",
-    edition = "2018",
+    edition = "2015",
     srcs = glob(["**/*.rs"]),
     deps = [
+        "@raze__byteorder__1_3_4//:byteorder",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.11.0",
+    version = "0.10.1",
     crate_features = [
-        "default",
-        "std",
     ],
 )
 

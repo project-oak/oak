@@ -13,9 +13,9 @@ http = "*"
 hyper = "*"
 # Versions 1.3.x of indexmap have a "clever" feature that auto-detects whether a
 # build is `std` or not, and sets an internal/inaccessible `has_std` flag
-# accordingly.  Without this flag, indexmap is not back-compatible and things
+# accordingly. Without this flag, indexmap is not back-compatible and things
 # fail to build (because the second default type argument to indexmap types are
-# no longer provided).  Force use of an earlier version of indexmap to avoid
+# no longer provided). Force use of an earlier version of indexmap to avoid
 # this.
 indexmap = "=1.0.2"
 itertools = "*"
@@ -26,7 +26,9 @@ prost-types = "*"
 rand = "*"
 simple_logger = "*"
 tokio = { version = "*", features = ["rt-core", "macros"] }
-tonic = { version = "*", features = ["tls"] }
+# Using an old version that is supported by `cargo-raze`:
+# https://github.com/google/cargo-raze/issues/41#issuecomment-592274128
+tonic = { version = "=0.1.1", features = ["tls"] }
 wasmi = { version = "*", default-features = false, features = ["core"] }
 prometheus = { version = "0.8", features = [
   "nightly"
@@ -43,7 +45,12 @@ target = "x86_64-unknown-linux-gnu"
 # cargo-raze itself; see:
 # https://github.com/google/cargo-raze/issues/64#issuecomment-431687016
 [raze.crates.proc-macro2.'1.0.10']
-additional_flags = ["--cfg=use_proc_macro"]
+additional_flags = [
+    "--cfg=use_proc_macro",
+    # This flag is necessary to solve problems with nested macro in `async-stream`:
+    # https://github.com/project-oak/oak/issues/890#issuecomment-618410736
+    "--cfg=wrap_proc_macro",
+]
 
 # Set the atomic_cas config when building log, see:
 # https://github.com/google/cargo-raze/issues/110
@@ -58,7 +65,5 @@ data_attr = "glob([\"**/*.der\"])"
 
 [raze.crates.webpki.'0.21.2']
 data_attr = "glob([\"**/*.der\"])"
-
-[raze.crates.tonic.'0.2.0']
 
 [workspace]

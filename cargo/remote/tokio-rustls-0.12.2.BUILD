@@ -35,14 +35,14 @@ rust_library(
     srcs = glob(["**/*.rs"]),
     deps = [
         "@raze__futures_core__0_3_4//:futures_core",
-        "@raze__rustls__0_17_0//:rustls",
+        "@raze__rustls__0_16_0//:rustls",
         "@raze__tokio__0_2_19//:tokio",
         "@raze__webpki__0_21_2//:webpki",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.13.0",
+    version = "0.12.2",
     crate_features = [
     ],
 )

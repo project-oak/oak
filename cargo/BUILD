@@ -66,7 +66,7 @@ alias(
 )
 alias(
     name = "tonic",
-    actual = "@raze__tonic__0_2_0//:tonic",
+    actual = "@raze__tonic__0_1_1//:tonic",
 )
 alias(
     name = "wasmi",

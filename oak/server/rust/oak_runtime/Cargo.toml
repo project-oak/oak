@@ -28,7 +28,9 @@ prost = "*"
 prost-types = "*"
 rand = "*"
 tokio = { version = "*", features = ["rt-core", "macros"] }
-tonic = { version = "*", features = ["tls"] }
+# Using an old version that is supported by `cargo-raze`:
+# https://github.com/google/cargo-raze/issues/41#issuecomment-592274128
+tonic = { version = "=0.1.1", features = ["tls"] }
 wasmi = { version = "*", default-features = false, features = ["core"] }
 prometheus = { version = "0.8", features = [
   "nightly"

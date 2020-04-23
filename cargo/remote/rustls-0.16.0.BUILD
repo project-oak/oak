@@ -36,7 +36,7 @@ rust_library(
     edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__base64__0_11_0//:base64",
+        "@raze__base64__0_10_1//:base64",
         "@raze__log__0_4_8//:log",
         "@raze__ring__0_16_12//:ring",
         "@raze__sct__0_6_0//:sct",
@@ -45,7 +45,7 @@ rust_library(
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.17.0",
+    version = "0.16.0",
     crate_features = [
         "default",
         "log",
