@@ -51,8 +51,8 @@ type WaitingThreads = Mutex<HashMap<ThreadId, Weak<Thread>>>;
 pub struct Channel {
     pub messages: RwLock<Messages>,
 
-    pub writers: AtomicU64,
-    pub readers: AtomicU64,
+    pub writer_count: AtomicU64,
+    pub reader_count: AtomicU64,
 
     /// A HashMap of `ThreadId`s to `Weak<Thread>`s. This allows threads to insert a weak reference
     /// to themselves to be woken when a new message is available. Weak references are used so that
@@ -75,8 +75,8 @@ impl std::fmt::Debug for Channel {
             f,
             "Channel {{ #msgs={}, #readers={}, #writers={}, label={:?} }}",
             self.messages.read().unwrap().len(),
-            self.readers.load(SeqCst),
-            self.writers.load(SeqCst),
+            self.reader_count.load(SeqCst),
+            self.writer_count.load(SeqCst),
             self.label,
         )
     }
@@ -144,23 +144,26 @@ impl Channel {
     pub fn new(label: &oak_abi::label::Label) -> Channel {
         Channel {
             messages: RwLock::new(Messages::new()),
-            writers: AtomicU64::new(1),
-            readers: AtomicU64::new(1),
+            writer_count: AtomicU64::new(1),
+            reader_count: AtomicU64::new(1),
             waiting_threads: Mutex::new(HashMap::new()),
             label: label.clone(),
         }
     }
 
-    /// Thread safe method that returns true when there is no longer at least one reader and one
-    /// writer.
-    pub fn is_orphan(&self) -> bool {
-        self.readers.load(SeqCst) == 0 || self.writers.load(SeqCst) == 0
+    /// Determine whether there are any readers of the channel.
+    pub fn has_readers(&self) -> bool {
+        self.reader_count.load(SeqCst) > 0
     }
 
-    /// Thread safe method that returns true when there is no longer at least one reader or
-    /// writer.
-    pub fn is_unused(&self) -> bool {
-        self.readers.load(SeqCst) == 0 && self.writers.load(SeqCst) == 0
+    /// Determine whether there are any writers of the channel.
+    pub fn has_writers(&self) -> bool {
+        self.writer_count.load(SeqCst) > 0
+    }
+
+    /// Determine whether there are any users of the channel.
+    pub fn has_users(&self) -> bool {
+        self.has_readers() || self.has_writers()
     }
 
     /// Insert the given `thread` reference into `thread_id` slot of the HashMap of waiting
@@ -175,26 +178,26 @@ impl Channel {
 
     /// Decrement the [`Channel`] writer counter.
     pub fn dec_writer_count(&self) {
-        if self.writers.fetch_sub(1, SeqCst) == 0 {
+        if self.writer_count.fetch_sub(1, SeqCst) == 0 {
             panic!("remove_reader: Writer count was already 0, something is very wrong!")
         }
     }
 
     /// Decrement the [`Channel`] reader counter.
     pub fn dec_reader_count(&self) {
-        if self.readers.fetch_sub(1, SeqCst) == 0 {
+        if self.reader_count.fetch_sub(1, SeqCst) == 0 {
             panic!("remove_reader: Reader count was already 0, something is very wrong!")
         }
     }
 
     /// Increment the [`Channel`] writer counter.
     pub fn inc_writer_count(&self) -> u64 {
-        self.writers.fetch_add(1, SeqCst)
+        self.writer_count.fetch_add(1, SeqCst)
     }
 
     /// Increment the [`Channel`] reader counter.
     pub fn inc_reader_count(&self) -> u64 {
-        self.readers.fetch_add(1, SeqCst)
+        self.reader_count.fetch_add(1, SeqCst)
     }
 
     // Build an HTML page describing a specific `Channel`.
@@ -203,8 +206,8 @@ impl Channel {
         write!(
             &mut s,
             "Channel {{ reader_count={}, writer_count={}, label={:?} }}<br/>",
-            self.readers.load(SeqCst),
-            self.writers.load(SeqCst),
+            self.reader_count.load(SeqCst),
+            self.writer_count.load(SeqCst),
             self.label
         )
         .unwrap();
@@ -232,6 +235,7 @@ impl Channel {
             }
             write!(&mut s, "]").unwrap();
         }
+
         s
     }
 }
@@ -329,7 +333,7 @@ impl ChannelMapping {
                     .get(&channel_id)
                     .expect("remove_half_id: ChannelHalfId is invalid!");
                 channel.dec_writer_count();
-                if channel.is_unused() {
+                if !channel.has_users() {
                     channels.remove(&channel_id);
                     debug!("remove_half_id: deallocating channel {:?}", channel_id);
                 }
@@ -345,7 +349,7 @@ impl ChannelMapping {
                     .get(&channel_id)
                     .expect("remove_half_id: ChannelHalfId is invalid!");
                 channel.dec_reader_count();
-                if channel.is_unused() {
+                if !channel.has_users() {
                     channels.remove(&channel_id);
                     debug!("remove_half_id: deallocating channel {:?}", channel_id);
                 }
@@ -446,8 +450,8 @@ impl ChannelMapping {
                     channel_id.dot_id(),
                     channel_id,
                     channel.messages.read().unwrap().len(),
-                    channel.readers.load(SeqCst),
-                    channel.writers.load(SeqCst),
+                    channel.reader_count.load(SeqCst),
+                    channel.writer_count.load(SeqCst),
                     channel_id.html_path(),
                 )
                 .unwrap();
