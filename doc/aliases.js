@@ -6,6 +6,7 @@ ALIASES["abitest_tests"] = {};
 ALIASES["aggregator"] = {};
 ALIASES["aggregator_backend"] = {};
 ALIASES["aggregator_common"] = {};
+ALIASES["auth_client"] = {};
 ALIASES["chat"] = {};
 ALIASES["expect"] = {};
 ALIASES["hello_world"] = {};

@@ -1,4 +1,5 @@
 (function() {var implementors = {};
+implementors["auth_client"] = [{"text":"impl StructOptInternal for <a class=\"struct\" href=\"auth_client/struct.Opt.html\" title=\"struct auth_client::Opt\">Opt</a>","synthetic":false,"types":["auth_client::Opt"]}];
 implementors["oak_loader"] = [{"text":"impl StructOptInternal for <a class=\"struct\" href=\"oak_loader/struct.Opt.html\" title=\"struct oak_loader::Opt\">Opt</a>","synthetic":false,"types":["oak_loader::Opt"]}];
 implementors["runner"] = [{"text":"impl StructOptInternal for <a class=\"struct\" href=\"runner/internal/struct.Opt.html\" title=\"struct runner::internal::Opt\">Opt</a>","synthetic":false,"types":["runner::internal::Opt"]}];
 if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

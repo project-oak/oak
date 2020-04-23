@@ -6,6 +6,7 @@ sourcesIndex["abitest_tests"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["aggregator"] = {"name":"","files":["data.rs","lib.rs"]};
 sourcesIndex["aggregator_backend"] = {"name":"","files":["main.rs"]};
 sourcesIndex["aggregator_common"] = {"name":"","files":["lib.rs"]};
+sourcesIndex["auth_client"] = {"name":"","files":["main.rs"]};
 sourcesIndex["chat"] = {"name":"","files":["backend.rs","command.rs","lib.rs"]};
 sourcesIndex["expect"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["hello_world"] = {"name":"","files":["lib.rs"]};

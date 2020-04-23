@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["get_authentication_request_url","Gets the URL for authentication requests."],["main",""]],"struct":[["Opt",""],["RedirectHandler","Handles the redirects to extract code from the query string."],["RedirectHandlerProducer","Produces instances of the redirect handler service."]]});
