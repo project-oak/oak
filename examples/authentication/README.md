@@ -9,14 +9,14 @@ successful authentication, the browser is redirected to connect to a web server
 running on localhost. The authentication code is extracted from the query string
 of the redirection URL and returned to the main thread.
 
-TODO(#855): The authenctication code can then be exchanged for an identity token
+TODO(#855): The authentication code can then be exchanged for an identity token
 by the authentication server.
 
 The client can be executed using:
 
 ```bash
 
-cargo run -b auth_client -- --client-id $YOUR_CLIENT_ID
+cargo run --package auth_client -- --client-id $YOUR_CLIENT_ID
 
 ```
 

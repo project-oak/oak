@@ -59,9 +59,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let redirect_address = opt.redirect_address.parse()?;
     info!("Listening for redirect on {}", &redirect_address);
 
-    info!("Opening Auth request in Browser");
-    let request_uri = get_request(opt);
-    info!("URI: {}", &request_uri);
     let (sender, receiver) = oneshot::channel();
     let result_sender = Arc::new(Mutex::new(ResultSender {
         sender: Some(sender),
@@ -75,12 +72,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let task = runner.spawn(async move {
         Server::bind(&redirect_address)
             .serve(maker)
+            // Use oneshot channel as signal for shutdown.
             .with_graceful_shutdown(async move {
                 receiver.await.unwrap();
             })
             .await
     });
+
+    let request_uri = get_authentication_request_url(opt);
+    info!("Opening Auth request in Browser");
+    info!("URI: {}", &request_uri);
+    // Open the URL in the system-configured default browser.
     open::that(request_uri)?;
+
+    // Wait until notified that the redirect has been processed.
     runner.block_on(task)??;
 
     let result = result_sender.lock().unwrap();
@@ -89,7 +94,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn get_request(opt: Opt) -> String {
+/// Gets the URL for authentication requests.
+///
+/// See: https://developers.google.com/identity/protocols/oauth2/openid-connect#sendauthrequest
+/// for more details on the request URL for the Google Identity Platform.
+fn get_authentication_request_url(opt: Opt) -> String {
     // TODO(#886): Retrieve endpoint from server.
     let mut auth_endpoint = Url::parse("https://accounts.google.com/o/oauth2/v2/auth").unwrap();
     // TODO(#886): Consider retrieving scope from server.
@@ -105,6 +114,10 @@ fn get_request(opt: Opt) -> String {
     auth_endpoint.to_string()
 }
 
+/// Provides storage for the result of proccessing the redirect and providing a notification to the
+/// main thread that it has been processed.
+///
+/// The oneshot Sender can only be used once.
 struct ResultSender {
     sender: Option<Sender<()>>,
     result: Option<Result<String, String>>,
@@ -118,7 +131,17 @@ impl ResultSender {
     }
 }
 
-// Handles the redirects to extract code from the query string.
+/// Handles the redirects to extract code from the query string.
+///
+/// A new instance is created for every incoming request. The redirect URL contains the result of
+/// the authentication as query string parameters. If the the authentication is successful the
+/// authentication code is be passed in the `code` paramter. If it failed the reason is passed in
+/// the `error` paramter.
+///
+/// The ResultSender is used to communicate the results back to the main thread and to notify Hyper
+/// to gracefully shut down the web server via the oneshot channel.
+///
+/// The handler is also responsible for sending an appropriate response to the client browser.
 struct RedirectHandler {
     result_sender: Arc<Mutex<ResultSender>>,
 }
@@ -136,14 +159,14 @@ impl Service<Request<Body>> for RedirectHandler {
         if let Some(query) = request.uri().query() {
             let lookup: HashMap<_, _> = form_urlencoded::parse(query.as_bytes()).collect();
             let result_sender = &mut self.result_sender.lock().unwrap();
-            if lookup.contains_key("code") {
-                let code = lookup.get("code").unwrap().to_string();
+            if let Some(code) = lookup.get("code") {
+                let code = code.to_string();
                 info!("Auth code: {:?}", code);
                 result_sender.result = Some(Ok(code));
                 result_sender.notify();
                 future::ok(Response::new(Body::from("Success!")))
-            } else if lookup.contains_key("error") {
-                let error = lookup.get("error").unwrap().to_string();
+            } else if let Some(error) = lookup.get("error") {
+                let error = error.to_string();
                 warn!("Error: {:?}", error);
                 result_sender.result = Some(Ok(error));
                 result_sender.notify();
@@ -172,7 +195,10 @@ impl Service<Request<Body>> for RedirectHandler {
     }
 }
 
-// Produces instances of the redirect handler service.
+/// Produces instances of the redirect handler service.
+///
+/// Hyper uses it to create a new handler for every incoming request. The handler needs a copy of
+/// the reference to the ResultSender to communicate the results back to the main thread.
 struct MakeHandler {
     result_sender: Arc<Mutex<ResultSender>>,
 }
