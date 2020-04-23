@@ -833,7 +833,7 @@ impl Runtime {
         self.validate_can_write_to_channel(node_id, half_id)?;
         self.channels.with_channel(self.channels.get_writer_channel(half_id)?, |channel|{
 
-        if channel.is_orphan() {
+        if !channel.has_readers() {
             return Err(OakStatus::ErrChannelClosed);
         }
 
@@ -900,7 +900,7 @@ impl Runtime {
                         Ok(Some(m))
                     }
                     None => {
-                        if channel.is_orphan() {
+                        if !channel.has_writers() {
                             Err(OakStatus::ErrChannelClosed)
                         } else {
                             Ok(None)
@@ -925,7 +925,7 @@ impl Runtime {
             .with_channel(self.channels.get_reader_channel(half_id)?, |channel| {
                 Ok(if channel.messages.read().unwrap().front().is_some() {
                     ChannelReadStatus::ReadReady
-                } else if channel.is_orphan() {
+                } else if !channel.has_writers() {
                     ChannelReadStatus::Orphaned
                 } else {
                     ChannelReadStatus::NotReady
@@ -969,7 +969,7 @@ impl Runtime {
                         ))
                     }
                     None => {
-                        if channel.is_orphan() {
+                        if !channel.has_writers() {
                             Err(OakStatus::ErrChannelClosed)
                         } else {
                             Ok(None)
