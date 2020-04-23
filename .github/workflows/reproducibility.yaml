@@ -44,11 +44,25 @@ jobs:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
             const fs = require('fs').promises;
-            file_content = await fs.readFile('./reproducibility_index');
+            const file_content = await fs.readFile('./reproducibility_index');
+
+            const opts = await github.repos.listPullRequestsAssociatedWithCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha
+            });
+            // See:
+            // - https://octokit.github.io/rest.js/v17#previews
+            // - https://developer.github.com/v3/repos/commits/#list-pull-requests-associated-with-commit
+            opts.mediaType = {
+                previews: ['groot']
+            };
+
+            const issues = await github.paginate(opts);
 
             await github.issues.createComment({
-              issue_number: context.issue.number,
+              issue_number: issues[0].number,
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: 'Reproducibility index:\n\n```\n' + file_content + '\n```\n'
-            })
+            });
