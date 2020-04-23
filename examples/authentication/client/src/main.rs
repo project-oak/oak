@@ -63,32 +63,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let (shutdown_sender, shutdown_receiver) = oneshot::channel();
     let (result_sender, mut result_receiver) = mpsc::channel(1);
-    let maker = MakeHandler { result_sender };
+    let producer = RedirectHandlerProducer { result_sender };
 
     let mut runner = tokio::runtime::Runtime::new().unwrap();
     let task = runner.spawn(async move {
         Server::bind(&redirect_address)
-            .serve(maker)
+            .serve(producer)
             // Use oneshot channel as signal for shutdown.
             .with_graceful_shutdown(async move {
-                shutdown_receiver.await.ok();
+                shutdown_receiver.await.unwrap();
             })
             .await
-            .ok();
+            .unwrap();
     });
 
-    let request_uri = get_authentication_request_url(opt);
+    let request_url = get_authentication_request_url(opt);
     info!("Opening Auth request in Browser");
-    info!("URI: {}", &request_uri);
+    info!("URL: {}", &request_url);
     // Open the URL in the system-configured default browser.
-    open::that(request_uri)?;
+    open::that(request_url)?;
 
     // Wait for result sent by redirect handler.
     let result = runner.block_on(result_receiver.recv());
     result_receiver.close();
 
     // Notify server to shutdown.
-    shutdown_sender.send(()).ok();
+    shutdown_sender.send(()).unwrap();
 
     // Wait until graceful shutdown is completed..
     runner.block_on(task)?;
@@ -107,13 +107,13 @@ fn get_authentication_request_url(opt: Opt) -> String {
     let mut auth_endpoint = Url::parse("https://accounts.google.com/o/oauth2/v2/auth").unwrap();
     // TODO(#886): Consider retrieving scope from server.
     let scope = "openid email";
-    let redirect_uri = format!("http://{}", opt.redirect_address);
+    let redirect_url = format!("http://{}", opt.redirect_address);
     // TODO(#886): Retrieve state and code challenge from server and add to request.
     auth_endpoint
         .query_pairs_mut()
         .append_pair("scope", scope)
         .append_pair("response_type", "code")
-        .append_pair("redirect_uri", &redirect_uri)
+        .append_pair("redirect_uri", &redirect_url)
         .append_pair("client_id", &opt.client_id);
     auth_endpoint.to_string()
 }
@@ -122,8 +122,8 @@ fn get_authentication_request_url(opt: Opt) -> String {
 ///
 /// A new instance is created for every incoming request. The redirect URL contains the result of
 /// the authentication as query string parameters. If the the authentication is successful the
-/// authentication code is be passed in the `code` paramter. If it failed the reason is passed in
-/// the `error` paramter.
+/// authentication code is passed in the `code` parameter. If it failed the reason is passed in
+/// the `error` parameter.
 ///
 /// The `result_sender` is used to communicate the results back to the main function.
 ///
@@ -182,11 +182,11 @@ impl Service<Request<Body>> for RedirectHandler {
 ///
 /// Hyper uses it to create a new handler for every incoming request. The handler needs a copy of
 /// the reference to the ResultSender to communicate the results back to the main thread.
-struct MakeHandler {
+struct RedirectHandlerProducer {
     result_sender: Sender<Result<String, String>>,
 }
 
-impl<T> Service<T> for MakeHandler {
+impl<T> Service<T> for RedirectHandlerProducer {
     type Response = RedirectHandler;
     type Error = std::io::Error;
     type Future = future::Ready<Result<Self::Response, Self::Error>>;
