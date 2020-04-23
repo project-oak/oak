@@ -294,7 +294,7 @@ impl ChannelMapping {
     }
 
     /// Attempt to retrieve the [`ChannelId`] associated with a reader [`ChannelHalfId`].
-    pub fn get_reader_channel(&self, half_id: ChannelHalfId) -> Result<ChannelId, OakStatus> {
+    fn get_reader_channel(&self, half_id: ChannelHalfId) -> Result<ChannelId, OakStatus> {
         self.readers
             .read()
             .unwrap()
@@ -303,7 +303,7 @@ impl ChannelMapping {
     }
 
     /// Attempt to retrieve the [`ChannelId`] associated with a writer [`ChannelHalfId`].
-    pub fn get_writer_channel(&self, half_id: ChannelHalfId) -> Result<ChannelId, OakStatus> {
+    fn get_writer_channel(&self, half_id: ChannelHalfId) -> Result<ChannelId, OakStatus> {
         self.writers
             .read()
             .unwrap()
@@ -311,9 +311,9 @@ impl ChannelMapping {
             .map_or(Err(OakStatus::ErrBadHandle), |id| Ok(*id))
     }
 
-    /// Perform an operation on a [`Channel`] associated with some [`ChannelId`].
+    /// Perform an operation on a [`Channel`] associated with a [`ChannelId`].
     /// The channels read lock is held while the operation is performed.
-    pub fn with_channel<U, F: FnOnce(&Channel) -> Result<U, OakStatus>>(
+    fn with_channel<U, F: FnOnce(&Channel) -> Result<U, OakStatus>>(
         &self,
         channel_id: ChannelId,
         f: F,
@@ -321,6 +321,26 @@ impl ChannelMapping {
         let channels = self.channels.read().unwrap();
         let channel = channels.get(&channel_id).ok_or(OakStatus::ErrBadHandle)?;
         f(channel)
+    }
+
+    /// Perform an operation on a [`Channel`] associated with a reader [`ChannelHalfId`].
+    /// The channels read lock is held while the operation is performed.
+    pub fn with_reader_channel<U, F: FnOnce(&Channel) -> Result<U, OakStatus>>(
+        &self,
+        half_id: ChannelHalfId,
+        f: F,
+    ) -> Result<U, OakStatus> {
+        self.with_channel(self.get_reader_channel(half_id)?, f)
+    }
+
+    /// Perform an operation on a [`Channel`] associated with a writer [`ChannelHalfId`].
+    /// The channels read lock is held while the operation is performed.
+    pub fn with_writer_channel<U, F: FnOnce(&Channel) -> Result<U, OakStatus>>(
+        &self,
+        half_id: ChannelHalfId,
+        f: F,
+    ) -> Result<U, OakStatus> {
+        self.with_channel(self.get_writer_channel(half_id)?, f)
     }
 
     /// Deallocate a [`ChannelHalfId`] so it is no longer usable in operations,

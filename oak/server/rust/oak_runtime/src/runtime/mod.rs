@@ -607,10 +607,8 @@ impl Runtime {
     ///
     /// Returns an error if `channel_handle` is invalid.
     fn get_reader_channel_label(&self, channel_handle: ChannelHalfId) -> Result<Label, OakStatus> {
-        self.channels.with_channel(
-            self.channels.get_reader_channel(channel_handle)?,
-            |channel| Ok(channel.label.clone()),
-        )
+        self.channels
+            .with_reader_channel(channel_handle, |channel| Ok(channel.label.clone()))
     }
 
     /// Returns a clone of the [`Label`] associated with the provided writer `channel_handle`, in
@@ -618,10 +616,8 @@ impl Runtime {
     ///
     /// Returns an error if `channel_handle` is invalid.
     fn get_writer_channel_label(&self, channel_handle: ChannelHalfId) -> Result<Label, OakStatus> {
-        self.channels.with_channel(
-            self.channels.get_writer_channel(channel_handle)?,
-            |channel| Ok(channel.label.clone()),
-        )
+        self.channels
+            .with_writer_channel(channel_handle, |channel| Ok(channel.label.clone()))
     }
 
     /// Returns whether the calling Node is allowed to read from the provided channel, according to
@@ -785,13 +781,10 @@ impl Runtime {
             let thread_ref = Arc::new(thread.clone());
 
             for reader in readers {
-                self.channels.with_channel(
-                    self.channels.get_reader_channel(*reader)?,
-                    |channel| {
-                        channel.add_waiter(thread_id, &thread_ref);
-                        Ok(())
-                    },
-                )?;
+                self.channels.with_reader_channel(*reader, |channel| {
+                    channel.add_waiter(thread_id, &thread_ref);
+                    Ok(())
+                })?;
             }
             let statuses = self.readers_statuses(node_id, &readers);
 
@@ -831,7 +824,7 @@ impl Runtime {
     ) -> Result<(), OakStatus> {
         self.validate_handle_access(node_id, half_id)?;
         self.validate_can_write_to_channel(node_id, half_id)?;
-        self.channels.with_channel(self.channels.get_writer_channel(half_id)?, |channel|{
+        self.channels.with_writer_channel(half_id, |channel|{
 
         if !channel.has_readers() {
             return Err(OakStatus::ErrChannelClosed);
@@ -891,23 +884,21 @@ impl Runtime {
     ) -> Result<Option<Message>, OakStatus> {
         self.validate_handle_access(node_id, half_id)?;
         self.validate_can_read_from_channel(node_id, half_id)?;
-        self.channels
-            .with_channel(
-                self.channels.get_reader_channel(half_id)?,
-                |channel| match channel.messages.write().unwrap().pop_front() {
-                    Some(m) => {
-                        self.track_handles_in_node(node_id, m.channels.to_vec());
-                        Ok(Some(m))
+        self.channels.with_reader_channel(half_id, |channel| {
+            match channel.messages.write().unwrap().pop_front() {
+                Some(m) => {
+                    self.track_handles_in_node(node_id, m.channels.to_vec());
+                    Ok(Some(m))
+                }
+                None => {
+                    if !channel.has_writers() {
+                        Err(OakStatus::ErrChannelClosed)
+                    } else {
+                        Ok(None)
                     }
-                    None => {
-                        if !channel.has_writers() {
-                            Err(OakStatus::ErrChannelClosed)
-                        } else {
-                            Ok(None)
-                        }
-                    }
-                },
-            )
+                }
+            }
+        })
     }
 
     /// Thread safe. This function returns:
@@ -921,16 +912,15 @@ impl Runtime {
     ) -> Result<ChannelReadStatus, OakStatus> {
         self.validate_handle_access(node_id, half_id)?;
         self.validate_can_read_from_channel(node_id, half_id)?;
-        self.channels
-            .with_channel(self.channels.get_reader_channel(half_id)?, |channel| {
-                Ok(if channel.messages.read().unwrap().front().is_some() {
-                    ChannelReadStatus::ReadReady
-                } else if !channel.has_writers() {
-                    ChannelReadStatus::Orphaned
-                } else {
-                    ChannelReadStatus::NotReady
-                })
+        self.channels.with_reader_channel(half_id, |channel| {
+            Ok(if channel.messages.read().unwrap().front().is_some() {
+                ChannelReadStatus::ReadReady
+            } else if !channel.has_writers() {
+                ChannelReadStatus::Orphaned
+            } else {
+                ChannelReadStatus::NotReady
             })
+        })
     }
 
     /// Thread safe. Reads a message from the channel if `bytes_capacity` and `handles_capacity` are
@@ -949,34 +939,35 @@ impl Runtime {
     ) -> Result<Option<ReadStatus>, OakStatus> {
         self.validate_handle_access(node_id, half_id)?;
         self.validate_can_read_from_channel(node_id, half_id)?;
-        let result = self.channels
-            .with_channel(self.channels.get_reader_channel(half_id)?, |channel| {
-                let mut messages = channel.messages.write().unwrap();
-                match messages.front() {
-                    Some(front) => {
-                        let req_bytes_capacity = front.data.len();
-                        let req_handles_capacity = front.channels.len();
+        let result = self.channels.with_reader_channel(half_id, |channel| {
+            let mut messages = channel.messages.write().unwrap();
+            match messages.front() {
+                Some(front) => {
+                    let req_bytes_capacity = front.data.len();
+                    let req_handles_capacity = front.channels.len();
 
-                        Ok(Some(
-                            if req_bytes_capacity > bytes_capacity
-                                || req_handles_capacity > handles_capacity
-                            {
-                                ReadStatus::NeedsCapacity(req_bytes_capacity, req_handles_capacity)
-                            } else {
-                                let msg = messages.pop_front().expect( "Front element disappeared while we were holding the write lock!");
-                                ReadStatus::Success(msg)
-                            },
-                        ))
-                    }
-                    None => {
-                        if !channel.has_writers() {
-                            Err(OakStatus::ErrChannelClosed)
+                    Ok(Some(
+                        if req_bytes_capacity > bytes_capacity
+                            || req_handles_capacity > handles_capacity
+                        {
+                            ReadStatus::NeedsCapacity(req_bytes_capacity, req_handles_capacity)
                         } else {
-                            Ok(None)
-                        }
+                            let msg = messages.pop_front().expect(
+                                "Front element disappeared while we were holding the write lock!",
+                            );
+                            ReadStatus::Success(msg)
+                        },
+                    ))
+                }
+                None => {
+                    if !channel.has_writers() {
+                        Err(OakStatus::ErrChannelClosed)
+                    } else {
+                        Ok(None)
                     }
                 }
-            });
+            }
+        });
 
         // Add handles outside the channels lock so we don't hold the node_infos lock inside the
         // channel lock.
