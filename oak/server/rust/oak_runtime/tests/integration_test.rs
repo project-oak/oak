@@ -17,17 +17,16 @@
 const METRICS_PORT: u16 = 9876;
 
 mod common {
-    use oak_runtime::runtime::{ChannelHalfId, Runtime};
+    use oak_runtime::runtime::RuntimeProxy;
 
     use hyper::{Client, Uri};
     use log::info;
     use maplit::hashmap;
     use oak_abi::OakStatus;
     use oak_runtime::config;
-    use std::sync::Arc;
     use wat::parse_str;
 
-    pub fn start_runtime() -> Result<(Arc<Runtime>, ChannelHalfId), OakStatus> {
+    pub fn start_runtime() -> Result<(RuntimeProxy, oak_abi::Handle), OakStatus> {
         let wat = r#"
         (module
             (type (;0;) (func (param i64)))
@@ -48,7 +47,7 @@ mod common {
             "oak_main",
         );
 
-        info!("Starting the runtime with one nodes.");
+        info!("Starting the runtime with one node.");
         config::configure_and_run(
             cfg,
             oak_runtime::RuntimeConfiguration {
@@ -86,7 +85,7 @@ fn test_metrics_gives_the_correct_number_of_nodes() {
     env_logger::init();
 
     // Start the Runtime, including a metrics server.
-    let (runtime, _handle) = common::start_runtime().expect("Starting the Runtime failed!");
+    let (runtime, _initial_handle) = common::start_runtime().expect("Starting the Runtime failed!");
 
     let mut rt = tokio::runtime::Runtime::new().expect("Couldn't create Tokio runtime");
     let res = rt
@@ -94,7 +93,7 @@ fn test_metrics_gives_the_correct_number_of_nodes() {
         .expect("Reading the metrics failed.");
 
     let value = get_int_metric_value(&res, "runtime_nodes_count");
-    assert_eq!(value, Some(1));
+    assert_eq!(value, Some(2));
 
-    runtime.stop();
+    runtime.stop_runtime();
 }

@@ -17,16 +17,12 @@
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use lazy_static::lazy_static;
 use log::{debug, error, info, warn};
-use oak_abi::{label::Label, OakStatus};
+use oak_abi::OakStatus;
 use oak_runtime::{
     proto::oak::application::ApplicationConfiguration, runtime::RuntimeProxy, NodeId,
 };
 use prost::Message;
-use std::{
-    convert::TryInto,
-    io::Cursor,
-    sync::{Arc, RwLock},
-};
+use std::{convert::TryInto, io::Cursor, sync::RwLock};
 
 #[no_mangle]
 pub extern "C" fn glue_init(debug: u32) {
@@ -42,14 +38,14 @@ type NodeFactory =
     extern "C" fn(data: usize, name: *const u8, name_len: u32, node_id: u64, handle: u64) -> ();
 
 struct Glue {
-    runtime: Arc<oak_runtime::Runtime>,
+    runtime: oak_runtime::RuntimeProxy,
     factory: Option<NodeFactory>,
     factory_data: usize,
 }
 
 impl Glue {
     fn new(
-        runtime: Arc<oak_runtime::Runtime>,
+        runtime: oak_runtime::RuntimeProxy,
         factory: Option<NodeFactory>,
         factory_data: usize,
     ) -> Self {
@@ -61,21 +57,23 @@ impl Glue {
     }
 }
 
-/// Recreate a RuntimeProxy instance that corresponds to the given node ID
-/// value.
-fn proxy_for_node(node_id: u64) -> RuntimeProxy {
-    RuntimeProxy::new_for_node(
-        GLUE.read().expect(R1).as_ref().expect(R2).runtime.clone(),
-        NodeId(node_id),
-    )
-}
-
 lazy_static! {
     static ref GLUE: RwLock<Option<Glue>> = RwLock::new(None);
 }
 
 const R1: &str = "global glue lock poisoned";
 const R2: &str = "global glue object missing";
+
+/// Recreate a RuntimeProxy instance that corresponds to the given node ID
+/// value.
+fn proxy_for_node(node_id: u64) -> RuntimeProxy {
+    GLUE.read()
+        .expect(R1)
+        .as_ref()
+        .expect(R2)
+        .runtime
+        .new_for_node(NodeId(node_id))
+}
 
 /// Start the Rust runtime, with the ApplicationConfiguration provided in
 /// serialized form.
@@ -111,7 +109,13 @@ pub unsafe extern "C" fn glue_start(
             app_config.initial_node_config_name, app_config.initial_entrypoint_name, runtime_config
         );
 
-        let (runtime, grpc_channel) =
+        // Register callback for creating C++ pseudo-Nodes.
+        oak_runtime::node::external::register_factory(create_and_run_node);
+        info!("register oak_glue::create_and_run_node() as node factory");
+
+        // Configure the Rust Runtime, and run the gRPC server pseudo-Node as the implicit
+        // initial Node.
+        let (grpc_proxy, grpc_handle) =
             match oak_runtime::configure_and_run(app_config, runtime_config) {
                 Ok(p) => p,
                 Err(status) => {
@@ -119,27 +123,13 @@ pub unsafe extern "C" fn glue_start(
                     return oak_abi::INVALID_HANDLE;
                 }
             };
-        // Register the gRPC server pseudo-Node and retrieve its Node ID.
-        let grpc_proxy = runtime.clone().new_runtime_proxy();
         *node_id = grpc_proxy.node_id.0;
-        runtime.node_configure_instance(
-            grpc_proxy.node_id,
-            "initial.implicit".to_string(),
-            &Label::public_trusted(),
-            vec![grpc_channel],
-        );
-        let grpc_handle = grpc_proxy
-            .runtime
-            .register_channel(grpc_proxy.node_id, grpc_channel);
         info!(
-            "runtime started, grpc_node_id={}, grpc_handle={:?} registered as {}",
-            *node_id, grpc_channel, grpc_handle
+            "runtime started, grpc_node_id={}, grpc_handle={}",
+            *node_id, grpc_handle
         );
 
-        oak_runtime::node::external::register_factory(create_and_run_node);
-        info!("register oak_glue::create_and_run_node() as node factory");
-
-        let glue = Glue::new(runtime, factory, factory_data);
+        let glue = Glue::new(grpc_proxy, factory, factory_data);
         *GLUE.write().expect(R1) = Some(glue);
         grpc_handle
     })
@@ -152,10 +142,10 @@ pub extern "C" fn glue_stop() {
     let mut glue = GLUE.write().expect(R1);
     info!(
         "runtime graph at exit:\n\n{}",
-        glue.as_ref().expect(R2).runtime.graph()
+        glue.as_ref().expect(R2).runtime.graph_runtime()
     );
     warn!("stopping Rust runtime");
-    glue.as_ref().expect(R2).runtime.stop();
+    glue.as_ref().expect(R2).runtime.stop_runtime();
     *glue = None;
 }
 

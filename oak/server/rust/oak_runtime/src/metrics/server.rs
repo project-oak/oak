@@ -23,7 +23,7 @@ use log::info;
 use prometheus::{Encoder, TextEncoder};
 use std::{net::SocketAddr, sync::Arc};
 
-use crate::Runtime;
+use crate::runtime::Runtime;
 
 #[derive(Debug)]
 enum MetricsServerError {

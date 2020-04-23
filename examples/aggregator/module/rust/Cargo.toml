@@ -17,6 +17,7 @@ prost = "*"
 
 [dev-dependencies]
 assert_matches = "*"
+oak_abi = "=0.1.0"
 oak_runtime = "=0.1.0"
 oak_tests = "=0.1.0"
 maplit = "*"

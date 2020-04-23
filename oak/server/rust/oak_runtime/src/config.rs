@@ -21,13 +21,12 @@ use crate::{
         node_configuration::ConfigType, ApplicationConfiguration, GrpcServerConfiguration,
         LogConfiguration, NodeConfiguration, WebAssemblyConfiguration,
     },
-    runtime,
-    runtime::Runtime,
+    runtime, RuntimeProxy,
 };
 use itertools::Itertools;
 use log::{error, warn};
 use oak_abi::OakStatus;
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 use tonic::transport::Identity;
 
 /// Create an application configuration.
@@ -120,17 +119,17 @@ pub fn from_protobuf(
     Ok(config)
 }
 
-/// Configure a [`Runtime`] from the given protobuf [`ApplicationConfiguration`] and begin
-/// execution. This returns an [`Arc`] reference to the created [`Runtime`], and a writeable
-/// [`runtime::ChannelHalfId`] to send messages into the Runtime. Creating a new channel and
-/// passing the write [`runtime::ChannelHalfId`] into the runtime will enable messages to be read
-/// back out from the [`Runtime`].
+/// Configure a [`RuntimeProxy`] from the given protobuf [`ApplicationConfiguration`] and begin
+/// execution. This returns a [`RuntimeProxy`] for an initial implicit Node, and a writeable
+/// [`oak_abi::Handle`] to send messages into the Runtime. Creating a new channel and
+/// passing the write [`oak_abi::Handle`] into the runtime will enable messages to be read
+/// back out from the [`RuntimeProxy`].
 pub fn configure_and_run(
     app_config: ApplicationConfiguration,
     runtime_config: crate::RuntimeConfiguration,
-) -> Result<(Arc<Runtime>, runtime::ChannelHalfId), OakStatus> {
+) -> Result<(RuntimeProxy, oak_abi::Handle), OakStatus> {
     let configuration = from_protobuf(app_config)?;
-    let runtime = Arc::new(Runtime::create(configuration));
-    let handle = runtime.clone().run(runtime_config)?;
-    Ok((runtime, handle))
+    let proxy = RuntimeProxy::create_runtime(configuration);
+    let handle = proxy.start_runtime(runtime_config)?;
+    Ok((proxy, handle))
 }

@@ -61,5 +61,5 @@ fn test_set_intersection() {
     let want: HashSet<String> = ["b".to_string(), "c".to_string()].iter().cloned().collect();
     assert_eq!(got, want);
 
-    runtime.stop();
+    runtime.stop_runtime();
 }

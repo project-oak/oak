@@ -427,7 +427,7 @@ framework via the Oak Runtime:
 fn test_say_hello() {
     simple_logger::init().unwrap();
 
-    let (runtime, entry_channel) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
+    let (runtime, entry_handle) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
         .expect("Unable to configure runtime with test wasm!");
 
     let req = HelloRequest {
@@ -435,14 +435,14 @@ fn test_say_hello() {
     };
     let result: grpc::Result<HelloResponse> = oak_tests::grpc_request(
         &runtime,
-        entry_channel,
+        entry_handle,
         "/oak.examples.hello_world.HelloWorld/SayHello",
         &req,
     );
     assert_matches!(result, Ok(_));
     assert_eq!("HELLO world!", result.unwrap().reply);
 
-    runtime.stop();
+    runtime.stop_runtime();
 }
 ```
 <!-- prettier-ignore-end -->

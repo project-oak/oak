@@ -20,15 +20,11 @@ use oak::grpc;
 
 const MODULE_CONFIG_NAME: &str = "running_average";
 
-fn submit_sample(
-    runtime: &oak_runtime::Runtime,
-    entry_channel: oak_runtime::runtime::ChannelHalfId,
-    value: u64,
-) {
+fn submit_sample(runtime: &oak_runtime::RuntimeProxy, entry_handle: oak_abi::Handle, value: u64) {
     let req = SubmitSampleRequest { value };
     let result: grpc::Result<()> = oak_tests::grpc_request(
         &runtime,
-        entry_channel,
+        entry_handle,
         "/oak.examples.running_average.RunningAverage/SubmitSample",
         &req,
     );
@@ -39,20 +35,20 @@ fn submit_sample(
 fn test_running_average() {
     simple_logger::init().unwrap();
 
-    let (runtime, entry_channel) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
+    let (runtime, entry_handle) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
         .expect("Unable to configure runtime with test wasm!");
 
-    submit_sample(&runtime, entry_channel, 100);
-    submit_sample(&runtime, entry_channel, 200);
+    submit_sample(&runtime, entry_handle, 100);
+    submit_sample(&runtime, entry_handle, 200);
 
     let result: grpc::Result<GetAverageResponse> = oak_tests::grpc_request(
         &runtime,
-        entry_channel,
+        entry_handle,
         "/oak.examples.running_average.RunningAverage/GetAverage",
         &(),
     );
     assert_matches!(result, Ok(_));
     assert_eq!(150, result.unwrap().average);
 
-    runtime.stop();
+    runtime.stop_runtime();
 }

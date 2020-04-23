@@ -15,8 +15,8 @@
 //
 
 use crate::{
+    message::Message,
     runtime::{DotIdentifier, HtmlPath},
-    Message,
 };
 use itertools::Itertools;
 use log::{debug, error, warn};

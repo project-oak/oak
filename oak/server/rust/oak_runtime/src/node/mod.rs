@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::{runtime, runtime::RuntimeProxy};
+use crate::runtime::RuntimeProxy;
 use log::debug;
 use oak_abi::OakStatus;
 use std::{
@@ -126,14 +126,11 @@ impl Configuration {
         config_name: &str, // Used for pretty debugging
         runtime: RuntimeProxy,
         entrypoint: String,
-        initial_reader_channel: runtime::ChannelHalfId,
+        initial_handle: oak_abi::Handle,
     ) -> Box<dyn Node> {
-        let initial_handle = runtime
-            .runtime
-            .register_channel(runtime.node_id, initial_reader_channel);
         debug!(
-            "{:?}: create_node('{}', '{}', {:?}=>{}",
-            runtime.node_id, config_name, entrypoint, initial_reader_channel, initial_handle
+            "{:?}: create_node('{}', '{}', {})",
+            runtime.node_id, config_name, entrypoint, initial_handle
         );
         match self {
             Configuration::LogNode => {
