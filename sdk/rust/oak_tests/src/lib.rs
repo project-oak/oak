@@ -16,12 +16,10 @@
 
 //! Test utilities to help with unit testing of Oak SDK code.
 
-use log::info;
+use log::{debug, info};
 
 use prost::Message;
-use std::{collections::HashMap, process::Command, sync::Arc};
-
-use oak_runtime::runtime::TEST_NODE_ID;
+use std::{collections::HashMap, process::Command};
 
 // TODO(#544): re-enable unit tests of SDK functionality
 
@@ -57,13 +55,7 @@ const MODULE_WASM_SUFFIX: &str = ".wasm";
 /// given module name, using the default name "oak_main" for its entrypoint.
 pub fn run_single_module_default(
     module_config_name: &str,
-) -> Result<
-    (
-        Arc<oak_runtime::Runtime>,
-        oak_runtime::runtime::ChannelHalfId,
-    ),
-    oak::OakStatus,
-> {
+) -> Result<(oak_runtime::RuntimeProxy, oak_abi::Handle), oak::OakStatus> {
     run_single_module(module_config_name, DEFAULT_ENTRYPOINT_NAME)
 }
 
@@ -72,13 +64,7 @@ pub fn run_single_module_default(
 pub fn run_single_module(
     module_config_name: &str,
     entrypoint_name: &str,
-) -> Result<
-    (
-        Arc<oak_runtime::Runtime>,
-        oak_runtime::runtime::ChannelHalfId,
-    ),
-    oak::OakStatus,
-> {
+) -> Result<(oak_runtime::RuntimeProxy, oak_abi::Handle), oak::OakStatus> {
     let wasm: HashMap<String, Vec<u8>> = [(
         module_config_name.to_owned(),
         compile_rust_wasm(
@@ -103,8 +89,8 @@ pub fn run_single_module(
 
 // TODO(#543): move this to oak_runtime as it's not test-specific
 pub fn grpc_request<R, Q>(
-    runtime: &oak_runtime::Runtime,
-    channel: oak_runtime::runtime::ChannelHalfId,
+    proxy: &oak_runtime::runtime::RuntimeProxy,
+    handle: oak_abi::Handle,
     method_name: &str,
     req: &R,
 ) -> oak::grpc::Result<Q>
@@ -115,9 +101,9 @@ where
     // Put the request in a GrpcRequest wrapper and serialize into a message.
     let grpc_req =
         oak_abi::grpc::encap_request(req, method_name).expect("failed to build GrpcRequest");
-    let mut req_msg = oak_runtime::Message {
+    let mut req_msg = oak_runtime::NodeMessage {
         data: vec![],
-        channels: vec![],
+        handles: vec![],
     };
 
     grpc_req
@@ -128,36 +114,45 @@ where
     //
     // In most cases we do not care about labels, so we use the least privileged label for this
     // channel.
-    let (req_write_half, req_read_half) =
-        runtime.new_channel(TEST_NODE_ID, &oak_abi::label::Label::public_trusted());
-    runtime
-        .channel_write(TEST_NODE_ID, req_write_half, req_msg)
+    let (req_write_handle, req_read_handle) =
+        proxy.channel_create(&oak_abi::label::Label::public_trusted());
+    proxy
+        .channel_write(req_write_handle, req_msg)
         .expect("could not write message");
 
     // Create a new channel for responses to arrive on and also attach that to the message.
     //
     // In most cases we do not care about labels, so we use the least privileged label for this
     // channel.
-    let (rsp_write_half, rsp_read_half) =
-        runtime.new_channel(TEST_NODE_ID, &oak_abi::label::Label::public_trusted());
+    let (rsp_write_handle, rsp_read_handle) =
+        proxy.channel_create(&oak_abi::label::Label::public_trusted());
 
     // Create a notification message and attach the method-invocation specific channels to it.
-    let notify_msg = oak_runtime::Message {
+    let notify_msg = oak_runtime::NodeMessage {
         data: vec![],
-        channels: vec![req_read_half, rsp_write_half],
+        handles: vec![req_read_handle, rsp_write_handle],
     };
 
     // Send the notification message (with attached handles) into the Node under test.
-    runtime
-        .channel_write(TEST_NODE_ID, channel, notify_msg)
+    proxy
+        .channel_write(handle, notify_msg)
         .expect("could not write message");
+    proxy
+        .channel_close(req_write_handle)
+        .expect("failed to close channel");
+    proxy
+        .channel_close(req_read_handle)
+        .expect("failed to close channel");
+    proxy
+        .channel_close(rsp_write_handle)
+        .expect("failed to close channel");
 
     // Read the serialized, encapsulated response.
     loop {
-        let rsp = match runtime.channel_read(TEST_NODE_ID, rsp_read_half) {
+        let rsp = match proxy.channel_read(rsp_read_handle) {
             Ok(Some(r)) => r,
             Ok(None) => {
-                info!("no pending gRPC response message; poll again soon");
+                debug!("no pending gRPC response message; poll again soon");
                 std::thread::sleep(std::time::Duration::from_millis(100));
                 continue;
             }
@@ -165,6 +160,9 @@ where
                 panic!("failed to read from response channel: {:?}", e);
             }
         };
+        proxy
+            .channel_close(rsp_read_handle)
+            .expect("failed to close channel");
         if rsp.data.is_empty() {
             info!("no pending message; poll again soon");
             std::thread::sleep(std::time::Duration::from_millis(100));

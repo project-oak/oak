@@ -69,7 +69,7 @@ fn test_abi() {
     );
     assert_matches!(result, Ok(_));
 
-    runtime.stop();
+    runtime.stop_runtime();
 
     let mut disabled = 0;
     for result in result.unwrap().results {

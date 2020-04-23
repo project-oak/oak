@@ -31,8 +31,8 @@ use std::{
 const MODULE_CONFIG_NAME: &str = "aggregator";
 
 fn submit_sample(
-    runtime: &oak_runtime::Runtime,
-    entry_channel: oak_runtime::runtime::ChannelHalfId,
+    runtime: &oak_runtime::RuntimeProxy,
+    entry_handle: oak_abi::Handle,
     bucket: &str,
     indices: Vec<u32>,
     values: Vec<f32>,
@@ -43,7 +43,7 @@ fn submit_sample(
     };
     oak_tests::grpc_request(
         &runtime,
-        entry_channel,
+        entry_handle,
         "/oak.examples.aggregator.Aggregator/SubmitSample",
         &req,
     )
@@ -53,14 +53,14 @@ fn submit_sample(
 fn test_aggregator() {
     simple_logger::init().unwrap();
 
-    let (runtime, entry_channel) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
+    let (runtime, entry_handle) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
         .expect("Unable to configure runtime with test wasm!");
 
     for i in 0..SAMPLE_THRESHOLD as u32 {
         assert_matches!(
             submit_sample(
                 &runtime,
-                entry_channel,
+                entry_handle,
                 "test",
                 vec![i, i + 1, i + 2],
                 vec![10.0, 20.0, 30.0]
@@ -72,7 +72,7 @@ fn test_aggregator() {
     assert_matches!(
         submit_sample(
             &runtime,
-            entry_channel,
+            entry_handle,
             "test",
             vec![1, 2, 3],
             vec![10.0, 20.0, 30.0]
@@ -80,7 +80,7 @@ fn test_aggregator() {
         Err(_)
     );
 
-    runtime.stop();
+    runtime.stop_runtime();
 }
 
 #[test]

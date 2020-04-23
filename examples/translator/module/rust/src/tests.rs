@@ -24,7 +24,7 @@ const MODULE_CONFIG_NAME: &str = "translator";
 fn test_translate() {
     simple_logger::init().unwrap();
 
-    let (runtime, entry_channel) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
+    let (runtime, entry_handle) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
         .expect("Unable to configure runtime with test wasm!");
 
     let req = TranslateRequest {
@@ -34,12 +34,12 @@ fn test_translate() {
     };
     let result: grpc::Result<TranslateResponse> = oak_tests::grpc_request(
         &runtime,
-        entry_channel,
+        entry_handle,
         "/oak.examples.translator.Translator/Translate",
         &req,
     );
     assert_matches!(result, Ok(_));
     assert_eq!("MONDI", result.unwrap().translated_text);
 
-    runtime.stop();
+    runtime.stop_runtime();
 }

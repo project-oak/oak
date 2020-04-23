@@ -15,39 +15,38 @@
 //
 
 use super::*;
-use crate::runtime::{Runtime, TEST_NODE_ID};
+use crate::RuntimeProxy;
 use std::collections::HashMap;
 use wat::{parse_file, parse_str};
 
 fn start_node<S: AsRef<[u8]>>(buffer: S, entrypoint: &str) -> Result<(), OakStatus> {
-    let configuration = crate::runtime::Configuration {
+    let mut configuration = crate::runtime::Configuration {
         nodes: HashMap::new(),
         entry_module: "test_module".to_string(),
         entrypoint: entrypoint.to_string(),
     };
-    let runtime_ref = Arc::new(Runtime::create(configuration));
-    let runtime_proxy = runtime_ref.clone().new_runtime_proxy();
-
     let module = wasmi::Module::from_buffer(buffer).unwrap();
-
-    let node = Box::new(WasmNode::new(
-        "test",
-        runtime_proxy,
-        Arc::new(module),
-        entrypoint.to_string(),
-        oak_abi::INVALID_HANDLE,
-    ));
-
-    runtime_ref.node_configure_instance(
-        TEST_NODE_ID,
-        "test.node".to_string(),
-        &oak_abi::label::Label::public_trusted(),
-        vec![],
+    configuration.nodes.insert(
+        "test_module".to_string(),
+        crate::node::Configuration::WasmNode {
+            module: Arc::new(module),
+        },
     );
-    let result = runtime_ref.node_start_instance(TEST_NODE_ID, node);
+    let proxy = RuntimeProxy::create_runtime(configuration);
+    let (_write_handle, read_handle) = proxy.channel_create(&Label::public_trusted());
+
+    let result = proxy.node_create(
+        "test_module",
+        entrypoint,
+        &oak_abi::label::Label::public_trusted(),
+        read_handle,
+    );
+    proxy
+        .channel_close(read_handle)
+        .expect("could not close channel");
 
     // Ensure that the runtime can terminate correctly, regardless of what the node does.
-    runtime_ref.stop();
+    proxy.stop_runtime();
 
     result
 }

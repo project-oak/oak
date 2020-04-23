@@ -113,7 +113,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("starting Runtime");
     let (runtime, initial_handle) = configure_and_run(app_config, runtime_config)
         .map_err(|status| format!("status {:?}", status))?;
-    info!("initial write handle {:?}", initial_handle);
+    info!(
+        "initial node {:?} with write handle {:?}",
+        runtime.node_id, initial_handle
+    );
 
     let done = Arc::new(AtomicBool::new(false));
     signal_hook::flag::register(signal_hook::SIGINT, Arc::clone(&done))?;
@@ -129,6 +132,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     info!("stop Runtime");
-    runtime.stop();
+    runtime.stop_runtime();
     Ok(())
 }

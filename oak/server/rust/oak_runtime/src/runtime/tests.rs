@@ -28,7 +28,7 @@ fn run_node_body(node_label: Label, node_body: Box<NodeBody>) {
         entry_module: "test_module".to_string(),
         entrypoint: "test_function".to_string(),
     };
-    let runtime = Arc::new(crate::runtime::Runtime::create(configuration));
+    let proxy = crate::RuntimeProxy::create_runtime(configuration);
 
     struct TestNode {
         runtime: RuntimeProxy,
@@ -45,25 +45,23 @@ fn run_node_body(node_label: Label, node_body: Box<NodeBody>) {
         }
     }
 
-    // Manually allocate a new [`NodeId`].
-    let node_id = runtime.new_node_id();
-    let runtime_proxy = RuntimeProxy {
-        runtime: runtime.clone(),
-        node_id,
-    };
-
-    let node_instance = TestNode {
-        runtime: runtime_proxy,
-        node_body,
-    };
-
-    runtime.node_configure_instance(
-        node_id,
+    // Create a new Node.
+    let test_proxy = proxy.clone().runtime.proxy_for_new_node();
+    let new_node_id = test_proxy.node_id;
+    proxy.runtime.node_configure_instance(
+        new_node_id,
         "test_module.test_function".to_string(),
         &node_label,
         vec![],
     );
-    let result = runtime.node_start_instance(node_id, Box::new(node_instance));
+
+    let node_instance = TestNode {
+        runtime: test_proxy,
+        node_body,
+    };
+    let result = proxy
+        .runtime
+        .node_start_instance(new_node_id, Box::new(node_instance));
     assert_eq!(Ok(()), result);
 }
 

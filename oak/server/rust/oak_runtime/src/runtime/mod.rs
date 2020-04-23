@@ -107,14 +107,6 @@ impl HtmlPath for NodeId {
     }
 }
 
-/// A Node identifier reserved for the Runtime that allows access to all handles and channels.
-// TODO(#724): make private once main() is in Rust not C++
-pub const RUNTIME_NODE_ID: NodeId = NodeId(0);
-
-/// For testing use the same reserved identifier to allow manipulation of all handles and channels.
-#[cfg(any(feature = "test_build", test))]
-pub const TEST_NODE_ID: NodeId = NodeId(0);
-
 pub struct Configuration {
     pub nodes: HashMap<String, node::Configuration>,
     pub entry_module: String,
@@ -197,7 +189,7 @@ pub struct Runtime {
 // Methods which translate between ABI handles (Node-relative u64 values) and runtime::ChannelHalfId
 // values.
 impl Runtime {
-    pub fn register_channel(&self, node_id: NodeId, channel: ChannelHalfId) -> oak_abi::Handle {
+    fn register_channel(&self, node_id: NodeId, channel: ChannelHalfId) -> oak_abi::Handle {
         let mut node_infos = self.node_infos.write().unwrap();
         let node_info = node_infos.get_mut(&node_id).expect("Invalid node_id");
         loop {
@@ -259,10 +251,11 @@ impl Runtime {
     }
 }
 
-impl Runtime {
-    /// Creates a [`Runtime`] instance but does not start executing any Node.
-    pub fn create(configuration: Configuration) -> Self {
-        Self {
+// Methods on `RuntimeProxy` for managing the core `Runtime` instance.
+impl RuntimeProxy {
+    /// Creates a [`Runtime`] instance with a single initial Node configured, and no channels.
+    pub fn create_runtime(configuration: Configuration) -> RuntimeProxy {
+        let runtime = Arc::new(Runtime {
             configuration,
             terminating: AtomicBool::new(false),
             channels: channel::ChannelMapping::new(),
@@ -270,11 +263,18 @@ impl Runtime {
             node_infos: RwLock::new(HashMap::new()),
             node_join_handles: Mutex::new(HashMap::new()),
 
-            // NodeId(0) reserved for RUNTIME_NODE_ID.
-            next_node_id: AtomicU64::new(1),
+            next_node_id: AtomicU64::new(0),
 
             aux_servers: Mutex::new(Vec::new()),
-        }
+        });
+        let proxy = runtime.proxy_for_new_node();
+        proxy.runtime.node_configure_instance(
+            proxy.node_id,
+            "implicit.initial".to_string(),
+            &Label::public_trusted(),
+            vec![],
+        );
+        proxy
     }
 
     /// Configures and runs the protobuf specified Application [`Configuration`].
@@ -282,68 +282,86 @@ impl Runtime {
     /// After starting a [`Runtime`], calling [`Runtime::stop`] will send termination signals to
     /// Nodes and wait for them to terminate.
     ///
-    /// Returns a writeable [`ChannelHalfId`] to send messages into the [`Runtime`]. To receive
-    /// messages, creating a new channel and passing the write [`ChannelHalfId`] into the
+    /// Returns a writeable [`oak_abi::Handle`] to send messages into the [`Runtime`]. To receive
+    /// messages, creating a new channel and passing the write [`oak_abi::Handle`] into the
     /// Runtime will enable messages to be read back out.
-    pub fn run(
-        self: Arc<Self>,
+    pub fn start_runtime(
+        &self,
         runtime_config: crate::RuntimeConfiguration,
-    ) -> Result<ChannelHalfId, OakStatus> {
-        let module_name = self.configuration.entry_module.clone();
-        let entrypoint = self.configuration.entrypoint.clone();
+    ) -> Result<oak_abi::Handle, OakStatus> {
+        let module_name = self.runtime.configuration.entry_module.clone();
+        let entrypoint = self.runtime.configuration.entrypoint.clone();
 
         if cfg!(feature = "oak_debug") {
             if let Some(port) = runtime_config.introspect_port {
-                self.aux_servers.lock().unwrap().push(AuxServer::new(
-                    "introspect",
-                    port,
-                    self.clone(),
-                    introspect::serve,
-                ));
+                self.runtime
+                    .aux_servers
+                    .lock()
+                    .unwrap()
+                    .push(AuxServer::new(
+                        "introspect",
+                        port,
+                        self.runtime.clone(),
+                        introspect::serve,
+                    ));
             }
         }
         if let Some(port) = runtime_config.metrics_port {
-            self.aux_servers.lock().unwrap().push(AuxServer::new(
-                "metrics",
-                port,
-                self.clone(),
-                crate::metrics::server::start_metrics_server,
-            ));
+            self.runtime
+                .aux_servers
+                .lock()
+                .unwrap()
+                .push(AuxServer::new(
+                    "metrics",
+                    port,
+                    self.runtime.clone(),
+                    crate::metrics::server::start_metrics_server,
+                ));
         }
 
         // When first starting, we assign the least privileged label to the channel connecting the
         // outside world to the entry point Node.
-        let (chan_writer, chan_reader) =
-            self.new_channel(RUNTIME_NODE_ID, &Label::public_trusted());
+        let (write_handle, read_handle) = self.channel_create(&Label::public_trusted());
         debug!(
-            "created initial channel ({:?}, {:?})",
-            chan_writer, chan_reader
+            "{:?}: created initial channel ({}, {})",
+            self.node_id, write_handle, read_handle,
         );
 
-        self.clone().node_create(
-            RUNTIME_NODE_ID,
+        self.node_create(
             &module_name,
             &entrypoint,
             // When first starting, we assign the least privileged label to the entry point Node.
             &Label::public_trusted(),
-            chan_reader,
+            read_handle,
         )?;
-
-        // We call `expect` here because this should never fail, since the channel was just created
-        // and guaranteed not to have already been closed.
-        self.channel_close(RUNTIME_NODE_ID, chan_reader)
+        self.channel_close(read_handle)
             .expect("could not close channel");
 
-        Ok(chan_writer)
+        Ok(write_handle)
     }
 
     /// Generate a Graphviz dot graph that shows the current shape of the Nodes and Channels in
     /// the runtime.
     #[cfg(feature = "oak_debug")]
-    pub fn graph(&self) -> String {
+    pub fn graph_runtime(&self) -> String {
+        self.runtime.graph()
+    }
+
+    /// Thread safe method for signaling termination to a [`Runtime`] and waiting for its Node
+    /// threads to terminate.
+    pub fn stop_runtime(&self) {
+        self.runtime.stop()
+    }
+}
+
+impl Runtime {
+    /// Generate a Graphviz dot graph that shows the current shape of the Nodes and Channels in
+    /// the runtime.
+    #[cfg(feature = "oak_debug")]
+    fn graph(&self) -> String {
         let mut s = String::new();
         writeln!(&mut s, "digraph Runtime {{").unwrap();
-        // Graph nodes for Oak Nodes.
+        // Graph nodes for Oak Nodes and ABI handles.
         {
             writeln!(&mut s, "  {{").unwrap();
             writeln!(
@@ -479,7 +497,7 @@ impl Runtime {
 
     /// Thread safe method for signaling termination to a [`Runtime`] and waiting for its Node
     /// threads to terminate.
-    pub fn stop(&self) {
+    fn stop(&self) {
         info!("stopping runtime instance");
 
         // Terminate any running servers.
@@ -535,10 +553,6 @@ impl Runtime {
     where
         I: IntoIterator<Item = ChannelHalfId>,
     {
-        if node_id == RUNTIME_NODE_ID {
-            return;
-        }
-
         let mut node_infos = self.node_infos.write().unwrap();
         let node_info = node_infos
             .get_mut(&node_id)
@@ -566,11 +580,6 @@ impl Runtime {
         node_id: NodeId,
         handles: &[ChannelHalfId],
     ) -> Result<(), OakStatus> {
-        // Allow RUNTIME_NODE_ID access to all handles.
-        if node_id == RUNTIME_NODE_ID {
-            return Ok(());
-        }
-
         let node_infos = self.node_infos.read().unwrap();
         let node_info = node_infos
             .get(&node_id)
@@ -633,12 +642,6 @@ impl Runtime {
             channel_handle
         );
 
-        // Allow RUNTIME_NODE_ID access to all handles.
-        if node_id == RUNTIME_NODE_ID {
-            trace!("{:?}: runtime can read from any channel", node_id);
-            return Ok(());
-        }
-
         let node_label = self.get_node_label(node_id);
         let channel_label = self.get_reader_channel_label(channel_handle)?;
         trace!(
@@ -690,12 +693,6 @@ impl Runtime {
             channel_handle
         );
 
-        // Allow RUNTIME_NODE_ID access to all handles.
-        if node_id == RUNTIME_NODE_ID {
-            trace!("{:?}: runtime can write to any channel", node_id);
-            return Ok(());
-        }
-
         let node_label = self.get_node_label(node_id);
         let channel_label = self.get_writer_channel_label(channel_handle)?;
         trace!(
@@ -719,7 +716,7 @@ impl Runtime {
     /// Creates a new [`Channel`] and returns a `(writer handle, reader handle)` pair.
     ///
     /// [`Channel`]: crate::runtime::channel::Channel
-    pub fn new_channel(&self, node_id: NodeId, label: &Label) -> (ChannelHalfId, ChannelHalfId) {
+    fn new_channel(&self, node_id: NodeId, label: &Label) -> (ChannelHalfId, ChannelHalfId) {
         // TODO(#630): Check whether the calling Node can create a Node with the specified label.
         let (writer, reader) = self.channels.new_channel(label);
         self.track_handles_in_node(node_id, vec![writer, reader]);
@@ -757,7 +754,7 @@ impl Runtime {
     /// available.
     ///
     /// [`Runtime`]: crate::runtime::Runtime
-    pub fn wait_on_channels(
+    fn wait_on_channels(
         &self,
         node_id: NodeId,
         readers: &[ChannelHalfId],
@@ -816,7 +813,7 @@ impl Runtime {
 
     /// Write a message to a channel. Fails with [`OakStatus::ErrChannelClosed`] if the underlying
     /// channel has been orphaned.
-    pub fn channel_write(
+    fn channel_write(
         &self,
         node_id: NodeId,
         half_id: ChannelHalfId,
@@ -877,7 +874,7 @@ impl Runtime {
 
     /// Thread safe. Read a message from a channel. Fails with [`OakStatus::ErrChannelClosed`] if
     /// the underlying channel is empty and has been orphaned.
-    pub fn channel_read(
+    fn channel_read(
         &self,
         node_id: NodeId,
         half_id: ChannelHalfId,
@@ -905,7 +902,7 @@ impl Runtime {
     /// - [`ChannelReadStatus::ReadReady`] if there is at least one message in the channel.
     /// - [`ChannelReadStatus::Orphaned`] if there are no messages and there are no writers
     /// - [`ChannelReadStatus::NotReady`] if there are no messages but there are some writers
-    pub fn channel_status(
+    fn channel_status(
         &self,
         node_id: NodeId,
         half_id: ChannelHalfId,
@@ -930,7 +927,7 @@ impl Runtime {
     /// `Some(ReadStatus::NeedsCapacity(needed_bytes_capacity,needed_handles_capacity))`. Does not
     /// guarantee that the next call will succeed after capacity adjustments as another thread may
     /// have read the original message.
-    pub fn channel_try_read_message(
+    fn channel_try_read_message(
         &self,
         node_id: NodeId,
         half_id: ChannelHalfId,
@@ -980,7 +977,7 @@ impl Runtime {
 
     /// Return the direction of a [`ChannelHalfId`]. This is useful when reading
     /// [`Message`]s which contain [`ChannelHalfId`]'s.
-    pub fn channel_half_get_direction(
+    fn channel_half_get_direction(
         &self,
         node_id: NodeId,
         half_id: ChannelHalfId,
@@ -992,18 +989,17 @@ impl Runtime {
     }
 
     /// Close a [`ChannelHalfId`], potentially orphaning the underlying [`channel::Channel`].
-    pub fn channel_close(&self, node_id: NodeId, half_id: ChannelHalfId) -> Result<(), OakStatus> {
+    fn channel_close(&self, node_id: NodeId, half_id: ChannelHalfId) -> Result<(), OakStatus> {
         self.validate_handle_access(node_id, half_id)?;
 
-        if node_id != RUNTIME_NODE_ID {
-            // Remove handle from the Node's available handles
+        // Remove handle from the Node's available handles
+        {
             let mut node_infos = self.node_infos.write().unwrap();
             let node_info = node_infos
                 .get_mut(&node_id)
                 .expect("channel_close: No such node_id");
             node_info.handles.remove(&half_id);
         }
-
         self.channels.remove_half_id(half_id)
     }
 
@@ -1013,31 +1009,24 @@ impl Runtime {
     }
 
     /// Remove a Node by [`NodeId`] from the [`Runtime`].
-    pub fn remove_node_id(&self, node_id: NodeId) {
-        {
-            // Do not remove the Node if it is RUNTIME_NODE_ID
-            if node_id == RUNTIME_NODE_ID {
-                return;
-            }
+    fn remove_node_id(&self, node_id: NodeId) {
+        // Close any remaining handles
+        let remaining_handles: Vec<_> = {
+            let node_infos = self.node_infos.read().unwrap();
+            let node_info = node_infos
+                .get(&node_id)
+                .unwrap_or_else(|| panic!("remove_node_id: No such node_id {:?}", node_id));
+            node_info.handles.iter().copied().collect()
+        };
 
-            // Close any remaining handles
-            let remaining_handles: Vec<_> = {
-                let node_infos = self.node_infos.read().unwrap();
-                let node_info = node_infos
-                    .get(&node_id)
-                    .unwrap_or_else(|| panic!("remove_node_id: No such node_id {:?}", node_id));
-                node_info.handles.iter().copied().collect()
-            };
+        debug!(
+            "{:?}: remove_node_id() found open handles on exit: {:?}",
+            node_id, remaining_handles
+        );
 
-            debug!(
-                "{:?}: remove_node_id() found open channels on exit: {:?}",
-                node_id, remaining_handles
-            );
-
-            for handle in remaining_handles {
-                self.channel_close(node_id, handle)
-                    .expect("remove_node_id: Unable to close hanging channel!");
-            }
+        for handle in remaining_handles {
+            self.channel_close(node_id, handle)
+                .expect("remove_node_id: Unable to close hanging channel!");
         }
 
         self.node_infos
@@ -1087,10 +1076,10 @@ impl Runtime {
     /// This method is defined on [`Arc`] and not [`Runtime`] itself, so that
     /// the [`Arc`] can clone itself and be included in a [`RuntimeProxy`] object
     /// to be given to a new Node.
-    pub fn node_create(
+    fn node_create(
         self: Arc<Self>,
         node_id: NodeId,
-        module_name: &str,
+        config_name: &str,
         entrypoint: &str,
         label: &Label,
         reader: ChannelHalfId,
@@ -1099,33 +1088,41 @@ impl Runtime {
             return Err(OakStatus::ErrTerminated);
         }
 
-        if node_id != RUNTIME_NODE_ID {
-            let node_label = self.get_node_label(node_id);
-            if !node_label.flows_to(label) {
-                return Err(OakStatus::ErrPermissionDenied);
-            }
+        let node_label = self.get_node_label(node_id);
+        if !node_label.flows_to(label) {
+            return Err(OakStatus::ErrPermissionDenied);
         }
+        let config = self
+            .configuration
+            .nodes
+            .get(config_name)
+            .ok_or(OakStatus::ErrInvalidArgs)?;
 
-        let runtime_proxy = self.clone().new_runtime_proxy();
-        let new_node_id = runtime_proxy.node_id;
         let reader = self.channels.duplicate_half_id(reader)?;
+        let new_node_proxy = self.clone().proxy_for_new_node();
+        let new_node_id = new_node_proxy.node_id;
         self.node_configure_instance(
             new_node_id,
-            format!("{}.{}", module_name, entrypoint),
+            format!("{}.{}", config_name, entrypoint),
             label,
             vec![reader],
         );
+        let initial_handle = new_node_proxy
+            .runtime
+            .register_channel(new_node_proxy.node_id, reader);
+        debug!(
+            "{:?}: create node instance {:?} '{}'.'{}' with handle {} from {:?}",
+            node_id, new_node_id, config_name, entrypoint, initial_handle, reader
+        );
 
         debug!("{:?}: create node instance {:?}", node_id, new_node_id);
-        let instance = self
-            .configuration
-            .nodes
-            .get(module_name)
-            .ok_or(OakStatus::ErrInvalidArgs)
-            .map(|conf| {
-                // This only creates a Node instance, but does not start it.
-                conf.create_node(module_name, runtime_proxy, entrypoint.to_owned(), reader)
-            })?;
+        // This only creates a Node instance, but does not start it.
+        let instance = config.create_node(
+            config_name,
+            new_node_proxy,
+            entrypoint.to_owned(),
+            initial_handle,
+        );
 
         debug!("{:?}: start node instance {:?}", node_id, new_node_id);
         self.node_start_instance(new_node_id, instance)?;
@@ -1140,7 +1137,7 @@ impl Runtime {
     /// The `pretty_name` parameter is only used for diagnostic/debugging output.
     ///
     /// [`Node::start`]: crate::node::Node::start
-    pub fn node_start_instance(
+    fn node_start_instance(
         &self,
         node_id: NodeId,
         node_instance: Box<dyn crate::node::Node>,
@@ -1172,7 +1169,7 @@ impl Runtime {
     }
 
     // Configure data structures for a Node instance.
-    pub fn node_configure_instance<I>(
+    fn node_configure_instance<I>(
         &self,
         node_id: NodeId,
         pretty_name: String,
@@ -1196,8 +1193,11 @@ impl Runtime {
         self.track_handles_in_node(node_id, initial_handles);
     }
 
-    pub fn new_runtime_proxy(self: Arc<Self>) -> RuntimeProxy {
-        RuntimeProxy::new_for_node(self.clone(), self.new_node_id())
+    fn proxy_for_new_node(self: Arc<Self>) -> RuntimeProxy {
+        RuntimeProxy {
+            runtime: self.clone(),
+            node_id: self.new_node_id(),
+        }
     }
 }
 
@@ -1222,13 +1222,17 @@ impl Drop for Runtime {
 /// partially applying the first argument, and translating ABI handles to underlying channels.
 #[derive(Clone)]
 pub struct RuntimeProxy {
-    pub runtime: Arc<Runtime>,
+    runtime: Arc<Runtime>,
     pub node_id: NodeId,
 }
 
 impl RuntimeProxy {
-    pub fn new_for_node(runtime: Arc<Runtime>, node_id: NodeId) -> Self {
-        RuntimeProxy { runtime, node_id }
+    /// Create a RuntimeProxy instance that acts as a proxy for the specified NodeId.
+    pub fn new_for_node(&self, node_id: NodeId) -> Self {
+        RuntimeProxy {
+            runtime: self.runtime.clone(),
+            node_id,
+        }
     }
     /// See [`Runtime::is_terminating`].
     pub fn is_terminating(&self) -> bool {
