@@ -17,7 +17,7 @@
 const METRICS_PORT: u16 = 9876;
 
 mod common {
-    use oak_runtime::runtime::{Handle, Runtime};
+    use oak_runtime::runtime::{ChannelHalfId, Runtime};
 
     use hyper::{Client, Uri};
     use log::info;
@@ -27,7 +27,7 @@ mod common {
     use std::sync::Arc;
     use wat::parse_str;
 
-    pub fn start_runtime() -> Result<(Arc<Runtime>, Handle), OakStatus> {
+    pub fn start_runtime() -> Result<(Arc<Runtime>, ChannelHalfId), OakStatus> {
         let wat = r#"
         (module
             (type (;0;) (func (param i64)))

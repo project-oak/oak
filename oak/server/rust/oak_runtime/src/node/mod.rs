@@ -126,7 +126,7 @@ impl Configuration {
         config_name: &str, // Used for pretty debugging
         runtime: RuntimeProxy,
         entrypoint: String,
-        initial_reader_channel: runtime::Handle,
+        initial_reader_channel: runtime::ChannelHalfId,
     ) -> Box<dyn Node> {
         let initial_handle = runtime
             .runtime

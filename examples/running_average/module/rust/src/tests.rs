@@ -22,7 +22,7 @@ const MODULE_CONFIG_NAME: &str = "running_average";
 
 fn submit_sample(
     runtime: &oak_runtime::Runtime,
-    entry_channel: oak_runtime::runtime::Handle,
+    entry_channel: oak_runtime::runtime::ChannelHalfId,
     value: u64,
 ) {
     let req = SubmitSampleRequest { value };
