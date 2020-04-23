@@ -57,13 +57,13 @@ fn run_node_body(node_label: Label, node_body: Box<NodeBody>) {
         node_body,
     };
 
-    let result = runtime.node_start_instance(
+    runtime.node_configure_instance(
         node_id,
         "test_module.test_function".to_string(),
-        Box::new(node_instance),
         &node_label,
         vec![],
     );
+    let result = runtime.node_start_instance(node_id, Box::new(node_instance));
     assert_eq!(Ok(()), result);
 }
 

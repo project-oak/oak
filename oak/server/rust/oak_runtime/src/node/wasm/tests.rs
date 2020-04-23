@@ -38,13 +38,13 @@ fn start_node<S: AsRef<[u8]>>(buffer: S, entrypoint: &str) -> Result<(), OakStat
         oak_abi::INVALID_HANDLE,
     ));
 
-    let result = runtime_ref.node_start_instance(
+    runtime_ref.node_configure_instance(
         TEST_NODE_ID,
         "test.node".to_string(),
-        node,
         &oak_abi::label::Label::public_trusted(),
         vec![],
     );
+    let result = runtime_ref.node_start_instance(TEST_NODE_ID, node);
 
     // Ensure that the runtime can terminate correctly, regardless of what the node does.
     runtime_ref.stop();

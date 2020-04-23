@@ -67,6 +67,9 @@ struct NodeInfo {
     /// A [`HashSet`] containing all the handles associated with this Node.
     // TODO(#777): this overlaps ChannelMapping.{reader,writer}
     handles: HashSet<Handle>,
+
+    /// Map of ABI handles to channels.
+    abi_handles: HashMap<oak_abi::Handle, Handle>,
 }
 
 impl std::fmt::Debug for NodeInfo {
@@ -186,8 +189,6 @@ pub struct Runtime {
     /// for termination of all of them.
     node_join_handles: Mutex<HashMap<NodeId, JoinHandle<()>>>,
 
-    handle_table: Arc<RwLock<HashMap<(NodeId, oak_abi::Handle), Handle>>>,
-
     next_node_id: AtomicU64,
 
     aux_servers: Mutex<Vec<AuxServer>>,
@@ -197,26 +198,24 @@ pub struct Runtime {
 // values.
 impl Runtime {
     pub fn register_channel(&self, node_id: NodeId, channel: Handle) -> oak_abi::Handle {
-        let mut table = self.handle_table.write().expect("handle table corrupt");
+        let mut node_infos = self.node_infos.write().unwrap();
+        let node_info = node_infos.get_mut(&node_id).expect("Invalid node_id");
         loop {
-            let candidate = (node_id, rand::thread_rng().next_u64());
-            if table.get(&candidate).is_none() {
-                table.insert(candidate, channel);
+            let candidate = rand::thread_rng().next_u64();
+            if node_info.abi_handles.get(&candidate).is_none() {
+                node_info.abi_handles.insert(candidate, channel);
                 debug!(
                     "{:?}: new ABI handle {} maps to {:?}",
-                    node_id, candidate.1, channel
+                    node_id, candidate, channel
                 );
-                return candidate.1;
+                return candidate;
             }
         }
     }
     fn drop_abi_handle(&self, node_id: NodeId, handle: oak_abi::Handle) -> Result<(), OakStatus> {
-        match self
-            .handle_table
-            .write()
-            .expect("handle table corrupt")
-            .remove(&(node_id, handle))
-        {
+        let mut node_infos = self.node_infos.write().unwrap();
+        let node_info = node_infos.get_mut(&node_id).expect("Invalid node_id");
+        match node_info.abi_handles.remove(&handle) {
             None => Err(OakStatus::ErrBadHandle),
             Some(_) => Ok(()),
         }
@@ -226,11 +225,11 @@ impl Runtime {
         node_id: NodeId,
         handle: oak_abi::Handle,
     ) -> Result<Handle, OakStatus> {
-        let result = self
-            .handle_table
-            .read()
-            .expect("handle table corrupt")
-            .get(&(node_id, handle))
+        let node_infos = self.node_infos.read().unwrap();
+        let node_info = node_infos.get(&node_id).expect("Invalid node_id");
+        let result = node_info
+            .abi_handles
+            .get(&handle)
             .ok_or(OakStatus::ErrBadHandle)
             .map(|channel| *channel);
         trace!("{:?}: map ABI handle {} to {:?}", node_id, handle, result);
@@ -270,7 +269,6 @@ impl Runtime {
 
             node_infos: RwLock::new(HashMap::new()),
             node_join_handles: Mutex::new(HashMap::new()),
-            handle_table: Arc::new(RwLock::new(HashMap::new())),
 
             // NodeId(0) reserved for RUNTIME_NODE_ID.
             next_node_id: AtomicU64::new(1),
@@ -1110,6 +1108,12 @@ impl Runtime {
         let runtime_proxy = self.clone().new_runtime_proxy();
         let new_node_id = runtime_proxy.node_id;
         let reader = self.channels.duplicate_reference(reader)?;
+        self.node_configure_instance(
+            new_node_id,
+            format!("{}.{}", module_name, entrypoint),
+            label,
+            vec![reader],
+        );
 
         debug!("{:?}: create node instance {:?}", node_id, new_node_id);
         let instance = self
@@ -1123,13 +1127,7 @@ impl Runtime {
             })?;
 
         debug!("{:?}: start node instance {:?}", node_id, new_node_id);
-        self.node_start_instance(
-            new_node_id,
-            format!("{}.{}", module_name, entrypoint),
-            instance,
-            label,
-            vec![reader],
-        )?;
+        self.node_start_instance(new_node_id, instance)?;
 
         Ok(())
     }
@@ -1141,22 +1139,11 @@ impl Runtime {
     /// `pretty_name` parameter is only used for diagnostic/debugging output.
     ///
     /// [`Node::start`]: crate::node::Node::start
-    pub fn node_start_instance<I>(
+    pub fn node_start_instance(
         &self,
         node_id: NodeId,
-        pretty_name: String,
         node_instance: Box<dyn crate::node::Node>,
-        label: &Label,
-        initial_handles: I,
-    ) -> Result<(), OakStatus>
-    where
-        I: IntoIterator<Item = Handle>,
-    {
-        // First create the necessary data structures in the Runtime, otherwise calls that the
-        // Node makes to the Runtime during `Node::start` (synchronously or asynchronously) may
-        // fail.
-        self.node_configure_instance(node_id, pretty_name, label, initial_handles);
-
+    ) -> Result<(), OakStatus> {
         // Try to start the Node instance, and store the join handle.
         //
         // In order for this to work correctly, the `NodeInfo` entry must already exist in
@@ -1199,6 +1186,7 @@ impl Runtime {
                 pretty_name,
                 label: label.clone(),
                 handles: HashSet::new(),
+                abi_handles: HashMap::new(),
             },
         );
 
