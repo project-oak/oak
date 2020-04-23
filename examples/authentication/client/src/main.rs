@@ -19,16 +19,18 @@
 //! This example uses the Google Identity Platform.
 //! https://developers.google.com/identity/
 
-use futures::channel::oneshot::{self, Sender};
 use futures_util::future;
 use hyper::{service::Service, Body, Request, Response, Server, StatusCode};
 use log::{info, warn};
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex},
     task::{Context, Poll},
 };
 use structopt::StructOpt;
+use tokio::sync::{
+    mpsc::{self, Sender},
+    oneshot,
+};
 use url::{form_urlencoded, Url};
 
 #[derive(StructOpt, Clone)]
@@ -59,14 +61,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let redirect_address = opt.redirect_address.parse()?;
     info!("Listening for redirect on {}", &redirect_address);
 
-    let (sender, receiver) = oneshot::channel();
-    let result_sender = Arc::new(Mutex::new(ResultSender {
-        sender: Some(sender),
-        result: None,
-    }));
-    let maker = MakeHandler {
-        result_sender: result_sender.clone(),
-    };
+    let (shutdown_sender, shutdown_receiver) = oneshot::channel();
+    let (result_sender, mut result_receiver) = mpsc::channel(1);
+    let maker = MakeHandler { result_sender };
 
     let mut runner = tokio::runtime::Runtime::new().unwrap();
     let task = runner.spawn(async move {
@@ -74,9 +71,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .serve(maker)
             // Use oneshot channel as signal for shutdown.
             .with_graceful_shutdown(async move {
-                receiver.await.unwrap();
+                shutdown_receiver.await.ok();
             })
             .await
+            .ok();
     });
 
     let request_uri = get_authentication_request_url(opt);
@@ -85,11 +83,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Open the URL in the system-configured default browser.
     open::that(request_uri)?;
 
-    // Wait until notified that the redirect has been processed.
-    runner.block_on(task)??;
+    // Wait for result sent by redirect handler.
+    let result = runner.block_on(result_receiver.recv());
+    result_receiver.close();
 
-    let result = result_sender.lock().unwrap();
-    let code = result.result.as_ref().unwrap().as_ref().ok().unwrap();
+    // Notify server to shutdown.
+    shutdown_sender.send(()).ok();
+
+    // Wait until graceful shutdown is completed..
+    runner.block_on(task)?;
+
+    let code = result.unwrap().unwrap();
     info!("Received code: {}", code);
     Ok(())
 }
@@ -114,23 +118,6 @@ fn get_authentication_request_url(opt: Opt) -> String {
     auth_endpoint.to_string()
 }
 
-/// Provides storage for the result of proccessing the redirect and providing a notification to the
-/// main thread that it has been processed.
-///
-/// The oneshot Sender can only be used once.
-struct ResultSender {
-    sender: Option<Sender<()>>,
-    result: Option<Result<String, String>>,
-}
-
-impl ResultSender {
-    fn notify(&mut self) {
-        if self.sender.is_some() {
-            self.sender.take().unwrap().send(()).unwrap();
-        }
-    }
-}
-
 /// Handles the redirects to extract code from the query string.
 ///
 /// A new instance is created for every incoming request. The redirect URL contains the result of
@@ -138,12 +125,11 @@ impl ResultSender {
 /// authentication code is be passed in the `code` paramter. If it failed the reason is passed in
 /// the `error` paramter.
 ///
-/// The ResultSender is used to communicate the results back to the main thread and to notify Hyper
-/// to gracefully shut down the web server via the oneshot channel.
+/// The `result_sender` is used to communicate the results back to the main function.
 ///
-/// The handler is also responsible for sending an appropriate response to the client browser.
+/// The handler is responsible for sending an appropriate response to the client browser.
 struct RedirectHandler {
-    result_sender: Arc<Mutex<ResultSender>>,
+    result_sender: Sender<Result<String, String>>,
 }
 
 impl Service<Request<Body>> for RedirectHandler {
@@ -158,18 +144,15 @@ impl Service<Request<Body>> for RedirectHandler {
     fn call(&mut self, request: Request<Body>) -> Self::Future {
         if let Some(query) = request.uri().query() {
             let lookup: HashMap<_, _> = form_urlencoded::parse(query.as_bytes()).collect();
-            let result_sender = &mut self.result_sender.lock().unwrap();
             if let Some(code) = lookup.get("code") {
                 let code = code.to_string();
                 info!("Auth code: {:?}", code);
-                result_sender.result = Some(Ok(code));
-                result_sender.notify();
+                self.result_sender.try_send(Ok(code)).unwrap();
                 future::ok(Response::new(Body::from("Success!")))
             } else if let Some(error) = lookup.get("error") {
                 let error = error.to_string();
                 warn!("Error: {:?}", error);
-                result_sender.result = Some(Ok(error));
-                result_sender.notify();
+                self.result_sender.try_send(Err(error)).unwrap();
                 future::ok(
                     Response::builder()
                         .status(StatusCode::UNAUTHORIZED)
@@ -200,7 +183,7 @@ impl Service<Request<Body>> for RedirectHandler {
 /// Hyper uses it to create a new handler for every incoming request. The handler needs a copy of
 /// the reference to the ResultSender to communicate the results back to the main thread.
 struct MakeHandler {
-    result_sender: Arc<Mutex<ResultSender>>,
+    result_sender: Sender<Result<String, String>>,
 }
 
 impl<T> Service<T> for MakeHandler {
