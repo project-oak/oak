@@ -6,8 +6,8 @@
 # based on the name of the directory bazel is cloned into.
 /bazel-*
 
-# Directory used to compare artifacts for reproducibility.
-/diff/
+# Index file used to compare artifacts for reproducibility.
+/reproducibility_index
 
 # Cargo cache.
 /cargo-cache/
