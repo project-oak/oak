@@ -46,10 +46,10 @@ target = "x86_64-unknown-linux-gnu"
 # https://github.com/google/cargo-raze/issues/64#issuecomment-431687016
 [raze.crates.proc-macro2.'1.0.10']
 additional_flags = [
-    "--cfg=use_proc_macro",
-    # This flag is necessary to solve problems with nested macro in `async-stream`:
-    # https://github.com/project-oak/oak/issues/890#issuecomment-618410736
-    "--cfg=wrap_proc_macro",
+  "--cfg=use_proc_macro",
+  # This flag is necessary to solve problems with nested macro in `async-stream`:
+  # https://github.com/project-oak/oak/issues/890#issuecomment-618410736
+  "--cfg=wrap_proc_macro",
 ]
 
 # Set the atomic_cas config when building log, see:
