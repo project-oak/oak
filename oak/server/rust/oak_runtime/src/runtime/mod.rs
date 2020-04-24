@@ -499,24 +499,7 @@ impl Runtime {
         self.terminating.store(true, SeqCst);
 
         // Unpark any threads that are blocked waiting on any channels.
-        for channel in self
-            .channels
-            .channels
-            .read()
-            .expect("could not acquire channel mapping")
-            .values()
-        {
-            for thread in channel
-                .waiting_threads
-                .lock()
-                .expect("could not acquire waiting threads for channel")
-                .values()
-            {
-                if let Some(thread) = thread.upgrade() {
-                    thread.unpark();
-                }
-            }
-        }
+        self.channels.notify_all_waiters();
 
         // Wait for the main thread of each Node to finish. Any thread that was blocked on
         // `wait_on_channels` is now unblocked and received `OakStatus::ErrTerminated`, so we wait
@@ -821,24 +804,7 @@ impl Runtime {
 
         let msg = Message { channels: new_half_ids, ..msg };
         channel.messages.write().unwrap().push_back(msg);
-
-        // Unpark (wake up) all waiting threads that still have live references. The first thread
-        // woken can immediately read the message, and others might find `messages` is empty before
-        // they are even woken. This should not be an issue (being woken does not guarantee a
-        // message is available), but it could potentially result in some particular thread always
-        // getting first chance to read the message.
-        //
-        // If a thread is woken and finds no message it will take the `waiting_threads` lock and
-        // add itself again. Note that since that lock is currently held, the woken thread will add
-        // itself to waiting_threads *after* we call clear below as we release the lock implicilty
-        // on leaving this function.
-        let mut waiting_threads = channel.waiting_threads.lock().unwrap();
-        for thread in waiting_threads.values() {
-            if let Some(thread) = thread.upgrade() {
-                thread.unpark();
-            }
-        }
-        waiting_threads.clear();
+        channel.wake_waiters();
 
         Ok(())
         })

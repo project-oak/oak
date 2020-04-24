@@ -51,15 +51,15 @@ type WaitingThreads = Mutex<HashMap<ThreadId, Weak<Thread>>>;
 pub struct Channel {
     pub messages: RwLock<Messages>,
 
-    pub writer_count: AtomicU64,
-    pub reader_count: AtomicU64,
+    writer_count: AtomicU64,
+    reader_count: AtomicU64,
 
     /// A HashMap of `ThreadId`s to `Weak<Thread>`s. This allows threads to insert a weak reference
     /// to themselves to be woken when a new message is available. Weak references are used so that
     /// if the thread is woken by a different channel, it can deallocate the underlying `Arc`
     /// instead of removing itself from all the `Channel`s it subscribed to.
     /// Threads can be woken up spuriously without issue.
-    pub waiting_threads: WaitingThreads,
+    waiting_threads: WaitingThreads,
 
     /// The Label associated with this channel.
     ///
@@ -128,9 +128,9 @@ impl HtmlPath for ChannelId {
 
 /// Ownership and mapping of [`Channel`]s to [`ChannelHalfId`]s.
 pub struct ChannelMapping {
-    pub channels: RwLock<HashMap<ChannelId, Channel>>,
+    channels: RwLock<HashMap<ChannelId, Channel>>,
     next_channel_id: AtomicU64,
-    pub half_ids: RwLock<HashMap<ChannelHalfId, ChannelId>>,
+    half_ids: RwLock<HashMap<ChannelHalfId, ChannelId>>,
 }
 
 impl Channel {
@@ -231,6 +231,26 @@ impl Channel {
             .unwrap()
             .insert(thread_id, Arc::downgrade(thread));
     }
+
+    pub fn wake_waiters(&self) {
+        // Unpark (wake up) all waiting threads that still have live references. The first thread
+        // woken can immediately read the message, and others might find `messages` is empty before
+        // they are even woken. This should not be an issue (being woken does not guarantee a
+        // message is available), but it could potentially result in some particular thread always
+        // getting first chance to read the message.
+        //
+        // If a thread is woken and finds no message it will take the `waiting_threads` lock and
+        // add itself again. Note that since that lock is currently held, the woken thread will add
+        // itself to waiting_threads *after* we call clear below as we release the lock implicilty
+        // on leaving this function.
+        let mut waiting_threads = self.waiting_threads.lock().unwrap();
+        for thread in waiting_threads.values() {
+            if let Some(thread) = thread.upgrade() {
+                thread.unpark();
+            }
+        }
+        waiting_threads.clear();
+    }
 }
 
 impl ChannelMapping {
@@ -240,6 +260,27 @@ impl ChannelMapping {
             channels: RwLock::new(HashMap::new()),
             next_channel_id: AtomicU64::new(0),
             half_ids: RwLock::new(HashMap::new()),
+        }
+    }
+
+    /// Unblock all threads waiting on any channel.
+    pub fn notify_all_waiters(&self) {
+        for channel in self
+            .channels
+            .read()
+            .expect("could not acquire channel mapping")
+            .values()
+        {
+            for thread in channel
+                .waiting_threads
+                .lock()
+                .expect("could not acquire waiting threads for channel")
+                .values()
+            {
+                if let Some(thread) = thread.upgrade() {
+                    thread.unpark();
+                }
+            }
         }
     }
 
