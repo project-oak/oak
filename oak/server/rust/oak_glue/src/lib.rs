@@ -127,6 +127,10 @@ pub unsafe extern "C" fn glue_start(
 #[no_mangle]
 pub extern "C" fn glue_stop() {
     let mut glue = GLUE.write().expect(R1);
+    info!(
+        "runtime graph at exit:\n\n{}",
+        glue.as_ref().expect(R2).runtime.graph()
+    );
     warn!("stopping Rust runtime");
     glue.as_ref().expect(R2).runtime.stop();
     *glue = None;

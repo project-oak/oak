@@ -14,10 +14,12 @@
 // limitations under the License.
 //
 
-use log::debug;
+use itertools::Itertools;
+use log::{debug, error};
 use rand::RngCore;
 use std::{
-    collections::{HashMap, VecDeque},
+    collections::{HashMap, HashSet, VecDeque},
+    fmt::Write,
     sync::{
         atomic::{AtomicU64, Ordering::SeqCst},
         Arc, Mutex, RwLock, Weak,
@@ -25,7 +27,7 @@ use std::{
     thread::{Thread, ThreadId},
 };
 
-use crate::Message;
+use crate::{runtime::DotIdentifier, Message};
 use oak_abi::OakStatus;
 
 type Messages = VecDeque<Message>;
@@ -82,6 +84,12 @@ impl std::fmt::Debug for Channel {
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct Handle(pub oak_abi::Handle);
 
+impl DotIdentifier for Handle {
+    fn dot_id(&self) -> String {
+        format!("h{}", self.0)
+    }
+}
+
 /// The direction of a [`Handle`] can be discovered by querying the associated
 /// [`Runtime`] [`Runtime::channel_get_direction`].
 ///
@@ -98,6 +106,12 @@ pub enum HandleDirection {
 ///
 /// [`Runtime`]: crate::runtime::Runtime
 type ChannelId = u64;
+
+impl DotIdentifier for ChannelId {
+    fn dot_id(&self) -> String {
+        format!("channel{}", self)
+    }
+}
 
 /// Ownership and mapping of [`Channel`]s to [`Handle`]s.
 pub struct ChannelMapping {
@@ -309,5 +323,83 @@ impl ChannelMapping {
         }
 
         Err(OakStatus::ErrBadHandle)
+    }
+
+    /// Build a Dot nodes stanza for the `ChannelMapping`.
+    #[cfg(feature = "oak_debug")]
+    pub fn graph_nodes(&self) -> String {
+        let mut s = String::new();
+        writeln!(&mut s, "  {{").unwrap();
+        writeln!(
+            &mut s,
+            "    node [shape=hexagon style=filled fillcolor=yellow]"
+        )
+        .unwrap();
+
+        {
+            for half_id in self.writers.read().unwrap().keys() {
+                writeln!(&mut s, "    {}", half_id.dot_id()).unwrap();
+            }
+        }
+        {
+            for half_id in self.readers.read().unwrap().keys() {
+                writeln!(&mut s, "    {}", half_id.dot_id()).unwrap();
+            }
+        }
+        writeln!(&mut s, "  }}").unwrap();
+
+        // Graph nodes for Channels.
+        {
+            writeln!(&mut s, "  {{").unwrap();
+            writeln!(
+                &mut s,
+                "    node [shape=ellipse style=filled fillcolor=green]"
+            )
+            .unwrap();
+            let channels = self.channels.read().unwrap();
+            for channel_id in channels.keys().sorted() {
+                let channel = channels.get(&channel_id).unwrap();
+                writeln!(
+                    &mut s,
+                    "    {} [label=\"channel-{}\\nm={}, w={}, r={}\"]",
+                    channel_id.dot_id(),
+                    channel_id,
+                    channel.messages.read().unwrap().len(),
+                    channel.readers.load(SeqCst),
+                    channel.writers.load(SeqCst),
+                )
+                .unwrap();
+            }
+            writeln!(&mut s, "  }}").unwrap();
+        }
+        s
+    }
+
+    /// Build a Dot edges stanza for the `ChannelMapping`, allowing for the set
+    /// of nodes that have been already observed in the graph.
+    #[cfg(feature = "oak_debug")]
+    pub fn graph_edges(&self, seen: HashSet<Handle>) -> String {
+        let mut s = String::new();
+        {
+            for (half_id, channel_id) in self.writers.read().unwrap().iter() {
+                write!(&mut s, "  {} -> {}", half_id.dot_id(), channel_id.dot_id()).unwrap();
+                if !seen.contains(half_id) {
+                    error!("reader {:?} is not referenced by any node!", half_id);
+                    write!(&mut s, "  [color=red style=bold]").unwrap();
+                }
+                writeln!(&mut s).unwrap();
+            }
+        }
+        {
+            for (half_id, channel_id) in self.readers.read().unwrap().iter() {
+                write!(&mut s, "  {} -> {}", channel_id.dot_id(), half_id.dot_id()).unwrap();
+                if !seen.contains(half_id) {
+                    error!("writer {:?} is not referenced by any node!", half_id);
+                    write!(&mut s, "  [color=red style=bold]").unwrap();
+                }
+                writeln!(&mut s).unwrap();
+            }
+        }
+        s
     }
 }
