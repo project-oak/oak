@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+use log::debug;
+use rand::RngCore;
 use std::{
     collections::{HashMap, VecDeque},
     sync::{
@@ -23,12 +25,8 @@ use std::{
     thread::{Thread, ThreadId},
 };
 
-use log::debug;
-use rand::RngCore;
-
-use oak_abi::OakStatus;
-
 use crate::Message;
+use oak_abi::OakStatus;
 
 type Messages = VecDeque<Message>;
 
@@ -46,7 +44,6 @@ type WaitingThreads = Mutex<HashMap<ThreadId, Weak<Thread>>>;
 /// Readers and writers to this channel must increment the reader/writer count. This is implemented
 /// for `ChannelWriter`/`ChannelReader`, which will increment/decrement readers/writers when
 /// cloning/dropping.
-#[derive(Debug)]
 pub struct Channel {
     pub messages: RwLock<Messages>,
 
@@ -68,6 +65,18 @@ pub struct Channel {
     pub label: oak_abi::label::Label,
 }
 
+impl std::fmt::Debug for Channel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Channel {{ #msgs={}, #readers={}, #writers={}, label={:?} }}",
+            self.messages.read().unwrap().len(),
+            self.readers.load(SeqCst),
+            self.writers.load(SeqCst),
+            self.label,
+        )
+    }
+}
 /// A reference to a [`Channel`]. Each [`Handle`] has an implicit direction such that it is only
 /// possible to read or write to a [`Handle`] (exclusive or).
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
@@ -91,7 +100,6 @@ pub enum HandleDirection {
 type ChannelId = u64;
 
 /// Ownership and mapping of [`Channel`]s to [`Handle`]s.
-#[derive(Debug)]
 pub struct ChannelMapping {
     pub channels: RwLock<HashMap<ChannelId, Channel>>,
 
