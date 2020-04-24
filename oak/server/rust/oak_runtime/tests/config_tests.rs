@@ -16,14 +16,14 @@
 
 use maplit::hashmap;
 
-use crate::proto::oak::application::{
+use oak_runtime::proto::oak::application::{
     node_configuration::ConfigType::{LogConfig, WasmConfig},
     ApplicationConfiguration, LogConfiguration, NodeConfiguration, WebAssemblyConfiguration,
 };
 
 #[test]
 fn test_app_config() {
-    let cfg = crate::application_configuration(
+    let cfg = oak_runtime::application_configuration(
         hashmap!["node".to_string() => vec![0x00, 0x01]],
         "lumberjack",
         "node",
@@ -53,7 +53,7 @@ fn test_app_config() {
 
 #[test]
 fn test_app_config_multi() {
-    let cfg = crate::application_configuration(
+    let cfg = oak_runtime::application_configuration(
         hashmap![
             "node".to_string() => vec![0x00, 0x01],
             "another_node".to_string() => vec![0x02, 0x03],
@@ -92,7 +92,7 @@ fn test_app_config_multi() {
 
 #[test]
 fn test_app_config_no_logger() {
-    let cfg = crate::application_configuration(
+    let cfg = oak_runtime::application_configuration(
         hashmap!["node".to_string() => vec![0x00, 0x01]],
         "",
         "node",

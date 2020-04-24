@@ -37,6 +37,10 @@ alias(
     actual = "@raze__log__0_4_8//:log",
 )
 alias(
+    name = "prometheus",
+    actual = "@raze__prometheus__0_8_0//:prometheus",
+)
+alias(
     name = "prost",
     actual = "@raze__prost__0_6_1//:prost",
 )

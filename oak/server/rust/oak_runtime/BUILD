@@ -33,6 +33,7 @@ rust_library(
         "//cargo:itertools",
         "//cargo:lazy_static",
         "//cargo:log",
+        "//cargo:prometheus",
         "//cargo:prost",
         "//cargo:prost_types",
         "//cargo:rand",

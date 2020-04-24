@@ -27,7 +27,7 @@ use oak_abi::{
     grpc::encap_request, label::Label, proto::oak::encap::GrpcRequest, ChannelReadStatus, OakStatus,
 };
 
-use crate::{pretty_name_for_thread, runtime::RuntimeProxy, Handle};
+use crate::{metrics::METRICS, pretty_name_for_thread, runtime::RuntimeProxy, Handle};
 
 /// Struct that represents a gRPC server pseudo-Node.
 ///
@@ -278,7 +278,10 @@ impl GrpcServerNode {
                 })
                 .map(|message| {
                     // Return an empty HTTP body if the `message` is None.
-                    message.map_or(vec![], |m| m.data)
+                    message.map_or(vec![], |m| {
+                        METRICS.grpc_response_size.observe(m.data.len() as f64);
+                        m.data
+                    })
                 })
         } else {
             error!(
@@ -308,7 +311,13 @@ impl GrpcServerNode {
             async move {
                 Ok::<_, hyper::Error>(hyper::service::service_fn(move |req| {
                     let request_server = connection_server.clone();
-                    async move { request_server.serve(req).await }
+                    METRICS.grpc_requests_total.inc();
+                    async move {
+                        let timer = METRICS.grpc_request_duration.start_timer();
+                        let res = request_server.serve(req).await;
+                        timer.observe_duration();
+                        res
+                    }
                 }))
             }
         });

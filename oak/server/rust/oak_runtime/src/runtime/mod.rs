@@ -28,7 +28,7 @@ use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
 
 use log::{debug, error, info, trace};
 
-use crate::{message::Message, node, pretty_name_for_thread};
+use crate::{message::Message, metrics::METRICS, node, pretty_name_for_thread};
 
 mod channel;
 #[cfg(test)]
@@ -56,6 +56,7 @@ pub struct NodeId(pub u64);
 /// A Node identifier reserved for the Runtime that allows access to all handles and channels.
 // TODO(#724): make private once main() is in Rust not C++
 pub const RUNTIME_NODE_ID: NodeId = NodeId(0);
+
 /// For testing use the same reserved identifier to allow manipulation of all handles and channels.
 #[cfg(any(feature = "test_build", test))]
 pub const TEST_NODE_ID: NodeId = NodeId(0);
@@ -732,6 +733,7 @@ impl Runtime {
             .unwrap()
             .remove(&node_id)
             .expect("remove_node_id: Node didn't exist!");
+        self.update_nodes_count_metric();
     }
 
     /// Add an [`NodeId`] [`NodeInfo`] pair to the [`Runtime`]. This method temporarily holds the
@@ -741,6 +743,16 @@ impl Runtime {
             .write()
             .expect("could not acquire lock on node_infos")
             .insert(node_id, node_info);
+        self.update_nodes_count_metric();
+    }
+
+    fn update_nodes_count_metric(&self) {
+        METRICS.runtime_nodes_count.set(
+            self.node_infos
+                .read()
+                .expect("could not acquire lock on node_infos")
+                .len() as i64,
+        );
     }
 
     /// Add an [`NodeId`] [`JoinHandle`] pair to the [`Runtime`]. This method temporarily holds the
