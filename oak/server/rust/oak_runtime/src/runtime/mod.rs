@@ -225,7 +225,7 @@ impl Runtime {
         handle: oak_abi::Handle,
     ) -> Result<ChannelHalfId, OakStatus> {
         let channel = self.abi_to_channel(node_id, handle)?;
-        match self.channel_half_get_direction(node_id, channel)? {
+        match channel.direction {
             ChannelHalfDirection::Read => Ok(channel),
             ChannelHalfDirection::Write => Err(OakStatus::ErrBadHandle),
         }
@@ -236,7 +236,7 @@ impl Runtime {
         handle: oak_abi::Handle,
     ) -> Result<ChannelHalfId, OakStatus> {
         let channel = self.abi_to_channel(node_id, handle)?;
-        match self.channel_half_get_direction(node_id, channel)? {
+        match channel.direction {
             ChannelHalfDirection::Read => Err(OakStatus::ErrBadHandle),
             ChannelHalfDirection::Write => Ok(channel),
         }
@@ -396,7 +396,7 @@ impl Runtime {
                 let node_info = node_infos.get(node_id).unwrap();
                 for (handle, half_id) in &node_info.abi_handles {
                     seen.insert(*half_id);
-                    match self.channel_half_get_direction(*node_id, *half_id).unwrap() {
+                    match half_id.direction {
                         ChannelHalfDirection::Write => {
                             writeln!(&mut s, "  {} -> {}", node_id.dot_id(), half_id.dot_id())
                                 .unwrap();
@@ -952,16 +952,6 @@ impl Runtime {
                 }
             }
         })
-    }
-
-    /// Return the direction of a [`ChannelHalfId`]. This is useful when reading
-    /// [`Message`]s which contain [`ChannelHalfId`]'s.
-    fn channel_half_get_direction(
-        &self,
-        _node_id: NodeId,
-        half_id: ChannelHalfId,
-    ) -> Result<ChannelHalfDirection, OakStatus> {
-        self.channels.get_direction(half_id)
     }
 
     /// Close an [`oak_abi::Handle`], potentially orphaning the underlying [`channel::Channel`].

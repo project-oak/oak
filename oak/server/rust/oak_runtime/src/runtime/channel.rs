@@ -19,7 +19,7 @@ use crate::{
     runtime::{DotIdentifier, HtmlPath},
 };
 use itertools::Itertools;
-use log::{debug, error, warn};
+use log::{debug, error};
 use oak_abi::OakStatus;
 use rand::RngCore;
 use std::{
@@ -82,28 +82,26 @@ impl std::fmt::Debug for Channel {
     }
 }
 
-/// An identifier for one half of a [`Channel`]. Each [`ChannelHalfId`] has an implicit direction
-/// such that it is only possible to read or write to a [`ChannelHalfId`] (exclusive or).
+/// An identifier for one half of a [`Channel`].
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
-pub struct ChannelHalfId(u64);
+pub struct ChannelHalfId {
+    id: u64,
+    pub direction: ChannelHalfDirection,
+}
 
 impl DotIdentifier for ChannelHalfId {
     fn dot_id(&self) -> String {
-        format!("h{}", self.0)
+        format!("h{}", self.id)
     }
 }
 
 impl HtmlPath for ChannelHalfId {
     fn html_path(&self) -> String {
-        format!("/half/{}", self.0)
+        format!("/half/{}", self.id)
     }
 }
 
-/// The direction of a [`ChannelHalfId`] can be discovered by querying the associated
-/// [`Runtime`] with [`channel_half_get_direction`].
-///
-/// [`Runtime`]: crate::runtime::Runtime
-/// [`channel_half_get_direction`]: crate::runtime::Runtime::channel_half_get_direction
+/// The direction of a [`ChannelHalfId`].
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum ChannelHalfDirection {
     Read,
@@ -131,21 +129,16 @@ impl HtmlPath for ChannelId {
 /// Ownership and mapping of [`Channel`]s to [`ChannelHalfId`]s.
 pub struct ChannelMapping {
     pub channels: RwLock<HashMap<ChannelId, Channel>>,
-
-    pub next_channel_id: AtomicU64,
-
-    pub readers: RwLock<HashMap<ChannelHalfId, ChannelId>>,
-    pub writers: RwLock<HashMap<ChannelHalfId, ChannelId>>,
+    next_channel_id: AtomicU64,
+    pub half_ids: RwLock<HashMap<ChannelHalfId, ChannelId>>,
 }
 
 impl Channel {
-    /// Create a new channel with the assumption there is currently one active reader and one active
-    /// writer.
-    pub fn new(label: &oak_abi::label::Label) -> Channel {
+    fn new(label: &oak_abi::label::Label) -> Channel {
         Channel {
             messages: RwLock::new(Messages::new()),
-            writer_count: AtomicU64::new(1),
-            reader_count: AtomicU64::new(1),
+            writer_count: AtomicU64::new(0),
+            reader_count: AtomicU64::new(0),
             waiting_threads: Mutex::new(HashMap::new()),
             label: label.clone(),
         }
@@ -166,37 +159,27 @@ impl Channel {
         self.has_readers() || self.has_writers()
     }
 
-    /// Insert the given `thread` reference into `thread_id` slot of the HashMap of waiting
-    /// channels attached to an underlying channel. This allows the channel to wake up any waiting
-    /// channels by calling `thread::unpark` on all the threads it knows about.
-    pub fn add_waiter(&self, thread_id: ThreadId, thread: &Arc<Thread>) {
-        self.waiting_threads
-            .lock()
-            .unwrap()
-            .insert(thread_id, Arc::downgrade(thread));
-    }
-
     /// Decrement the [`Channel`] writer counter.
-    pub fn dec_writer_count(&self) {
+    fn dec_writer_count(&self) {
         if self.writer_count.fetch_sub(1, SeqCst) == 0 {
             panic!("remove_reader: Writer count was already 0, something is very wrong!")
         }
     }
 
     /// Decrement the [`Channel`] reader counter.
-    pub fn dec_reader_count(&self) {
+    fn dec_reader_count(&self) {
         if self.reader_count.fetch_sub(1, SeqCst) == 0 {
             panic!("remove_reader: Reader count was already 0, something is very wrong!")
         }
     }
 
     /// Increment the [`Channel`] writer counter.
-    pub fn inc_writer_count(&self) -> u64 {
+    fn inc_writer_count(&self) -> u64 {
         self.writer_count.fetch_add(1, SeqCst)
     }
 
     /// Increment the [`Channel`] reader counter.
-    pub fn inc_reader_count(&self) -> u64 {
+    fn inc_reader_count(&self) -> u64 {
         self.reader_count.fetch_add(1, SeqCst)
     }
 
@@ -238,6 +221,16 @@ impl Channel {
 
         s
     }
+
+    /// Insert the given `thread` reference into `thread_id` slot of the HashMap of waiting
+    /// channels attached to an underlying channel. This allows the channel to wake up any waiting
+    /// channels by calling `thread::unpark` on all the threads it knows about.
+    pub fn add_waiter(&self, thread_id: ThreadId, thread: &Arc<Thread>) {
+        self.waiting_threads
+            .lock()
+            .unwrap()
+            .insert(thread_id, Arc::downgrade(thread));
+    }
 }
 
 impl ChannelMapping {
@@ -245,66 +238,66 @@ impl ChannelMapping {
     pub fn new() -> ChannelMapping {
         ChannelMapping {
             channels: RwLock::new(HashMap::new()),
-
             next_channel_id: AtomicU64::new(0),
-
-            readers: RwLock::new(HashMap::new()),
-            writers: RwLock::new(HashMap::new()),
+            half_ids: RwLock::new(HashMap::new()),
         }
     }
 
     /// Creates a new [`Channel`] and returns a `(writer handle, reader handle)` pair.
     pub fn new_channel(&self, label: &oak_abi::label::Label) -> (ChannelHalfId, ChannelHalfId) {
         let channel_id = self.next_channel_id.fetch_add(1, SeqCst);
-        self.channels
-            .write()
-            .unwrap()
-            .insert(channel_id, Channel::new(label));
-        (self.new_writer(channel_id), self.new_reader(channel_id))
-    }
-
-    /// Get a new free random [`ChannelHalfId`] that is not used by any readers or writers.
-    fn new_half_id(&self) -> ChannelHalfId {
-        loop {
-            let handle = ChannelHalfId(rand::thread_rng().next_u64());
-
-            let exists_reader = self.readers.read().unwrap().get(&handle).is_some();
-            let exists_writer = self.writers.read().unwrap().get(&handle).is_some();
-
-            if exists_reader || exists_writer {
-                continue;
-            }
-
-            return handle;
+        debug!("new channel ID {}", channel_id);
+        {
+            self.channels
+                .write()
+                .unwrap()
+                .insert(channel_id, Channel::new(label));
         }
+        (
+            self.new_half_id(ChannelHalfDirection::Write, channel_id),
+            self.new_half_id(ChannelHalfDirection::Read, channel_id),
+        )
     }
 
-    /// Create a new writer channel half ID.
-    fn new_writer(&self, channel_id: ChannelId) -> ChannelHalfId {
-        let half_id = self.new_half_id();
-        self.writers.write().unwrap().insert(half_id, channel_id);
+    /// Get a new [`ChannelHalfId`] with a fresh internal ID.
+    fn new_half_id(&self, direction: ChannelHalfDirection, channel_id: ChannelId) -> ChannelHalfId {
+        let mut half_id;
+        loop {
+            let mut half_ids = self.half_ids.write().unwrap();
+            half_id = ChannelHalfId {
+                id: rand::thread_rng().next_u64(),
+                direction,
+            };
+            if half_ids.get(&half_id).is_none() {
+                debug!("new half ID {:?} for channel ID {}", half_id, channel_id);
+                half_ids.insert(half_id, channel_id);
+                break;
+            }
+        }
+        match direction {
+            ChannelHalfDirection::Write => {
+                self.channels
+                    .read()
+                    .unwrap()
+                    .get(&channel_id)
+                    .unwrap()
+                    .inc_writer_count();
+            }
+            ChannelHalfDirection::Read => {
+                self.channels
+                    .read()
+                    .unwrap()
+                    .get(&channel_id)
+                    .unwrap()
+                    .inc_reader_count();
+            }
+        };
         half_id
     }
 
-    /// Create a new reader channel half ID.
-    fn new_reader(&self, channel_id: ChannelId) -> ChannelHalfId {
-        let half_id = self.new_half_id();
-        self.readers.write().unwrap().insert(half_id, channel_id);
-        half_id
-    }
-
-    /// Attempt to retrieve the [`ChannelId`] associated with a reader [`ChannelHalfId`].
-    fn get_reader_channel(&self, half_id: ChannelHalfId) -> Result<ChannelId, OakStatus> {
-        self.readers
-            .read()
-            .unwrap()
-            .get(&half_id)
-            .map_or(Err(OakStatus::ErrBadHandle), |id| Ok(*id))
-    }
-
-    /// Attempt to retrieve the [`ChannelId`] associated with a writer [`ChannelHalfId`].
-    fn get_writer_channel(&self, half_id: ChannelHalfId) -> Result<ChannelId, OakStatus> {
-        self.writers
+    /// Attempt to retrieve the [`ChannelId`] associated with a [`ChannelHalfId`].
+    fn get_channel(&self, half_id: ChannelHalfId) -> Result<ChannelId, OakStatus> {
+        self.half_ids
             .read()
             .unwrap()
             .get(&half_id)
@@ -315,9 +308,10 @@ impl ChannelMapping {
     /// The channels read lock is held while the operation is performed.
     fn with_channel<U, F: FnOnce(&Channel) -> Result<U, OakStatus>>(
         &self,
-        channel_id: ChannelId,
+        half_id: ChannelHalfId,
         f: F,
     ) -> Result<U, OakStatus> {
+        let channel_id = self.get_channel(half_id)?;
         let channels = self.channels.read().unwrap();
         let channel = channels.get(&channel_id).ok_or(OakStatus::ErrBadHandle)?;
         f(channel)
@@ -330,7 +324,10 @@ impl ChannelMapping {
         half_id: ChannelHalfId,
         f: F,
     ) -> Result<U, OakStatus> {
-        self.with_channel(self.get_reader_channel(half_id)?, f)
+        if half_id.direction != ChannelHalfDirection::Read {
+            return Err(OakStatus::ErrBadHandle);
+        }
+        self.with_channel(half_id, f)
     }
 
     /// Perform an operation on a [`Channel`] associated with a writer [`ChannelHalfId`].
@@ -340,42 +337,37 @@ impl ChannelMapping {
         half_id: ChannelHalfId,
         f: F,
     ) -> Result<U, OakStatus> {
-        self.with_channel(self.get_writer_channel(half_id)?, f)
+        if half_id.direction != ChannelHalfDirection::Write {
+            return Err(OakStatus::ErrBadHandle);
+        }
+        self.with_channel(half_id, f)
     }
 
     /// Deallocate a [`ChannelHalfId`] so it is no longer usable in operations,
     /// and the underlying [`Channel`] may become orphaned.
     pub fn remove_half_id(&self, half_id: ChannelHalfId) -> Result<(), OakStatus> {
-        if let Ok(channel_id) = self.get_writer_channel(half_id) {
-            {
-                let mut channels = self.channels.write().unwrap();
-                let channel = channels
-                    .get(&channel_id)
-                    .expect("remove_half_id: ChannelHalfId is invalid!");
-                channel.dec_writer_count();
-                if !channel.has_users() {
-                    channels.remove(&channel_id);
-                    debug!("remove_half_id: deallocating channel {:?}", channel_id);
-                }
-            }
-
-            self.writers.write().unwrap().remove(&half_id);
+        // First remove from the half->ChannelId map.
+        let channel_id;
+        {
+            let mut half_ids = self.half_ids.write().unwrap();
+            channel_id = half_ids.remove(&half_id).ok_or(OakStatus::ErrBadHandle)?;
         }
+        // Now decrement the count on the underlying channel.
+        {
+            let mut channels = self.channels.write().unwrap();
+            let channel = channels
+                .get(&channel_id)
+                .expect("remove_half_id: ChannelHalfId is invalid!");
 
-        if let Ok(channel_id) = self.get_reader_channel(half_id) {
-            {
-                let mut channels = self.channels.write().unwrap();
-                let channel = channels
-                    .get(&channel_id)
-                    .expect("remove_half_id: ChannelHalfId is invalid!");
-                channel.dec_reader_count();
-                if !channel.has_users() {
-                    channels.remove(&channel_id);
-                    debug!("remove_half_id: deallocating channel {:?}", channel_id);
-                }
+            match half_id.direction {
+                ChannelHalfDirection::Write => channel.dec_writer_count(),
+                ChannelHalfDirection::Read => channel.dec_reader_count(),
+            };
+            // If this was the final user of the channel, drop that too.
+            if !channel.has_users() {
+                channels.remove(&channel_id);
+                debug!("remove_half_id: deallocating channel {:?}", channel_id);
             }
-
-            self.readers.write().unwrap().remove(&half_id);
         }
 
         Ok(())
@@ -388,34 +380,7 @@ impl ChannelMapping {
     ///
     /// [`Runtime`]: crate::runtime::Runtime
     pub fn duplicate_half_id(&self, half_id: ChannelHalfId) -> Result<ChannelHalfId, OakStatus> {
-        if let Ok(channel_id) = self.get_writer_channel(half_id) {
-            self.with_channel(channel_id, |channel| Ok(channel.inc_writer_count()))?;
-
-            return Ok(self.new_writer(channel_id));
-        }
-
-        if let Ok(channel_id) = self.get_reader_channel(half_id) {
-            self.with_channel(channel_id, |channel| Ok(channel.inc_reader_count()))?;
-
-            return Ok(self.new_reader(channel_id));
-        }
-
-        Err(OakStatus::ErrBadHandle)
-    }
-
-    /// Determine the direction of a [`ChannelHalfId`].
-    pub fn get_direction(&self, half_id: ChannelHalfId) -> Result<ChannelHalfDirection, OakStatus> {
-        {
-            if self.readers.read().unwrap().contains_key(&half_id) {
-                return Ok(ChannelHalfDirection::Read);
-            }
-        }
-        {
-            if self.writers.read().unwrap().contains_key(&half_id) {
-                return Ok(ChannelHalfDirection::Write);
-            }
-        }
-        Err(OakStatus::ErrBadHandle)
+        Ok(self.new_half_id(half_id.direction, self.get_channel(half_id)?))
     }
 
     /// Build a Dot nodes stanza for the `ChannelMapping`.
@@ -430,18 +395,7 @@ impl ChannelMapping {
         .unwrap();
 
         {
-            for half_id in self.writers.read().unwrap().keys() {
-                writeln!(
-                    &mut s,
-                    r###"    {} [URL="{}"]"###,
-                    half_id.dot_id(),
-                    half_id.html_path()
-                )
-                .unwrap();
-            }
-        }
-        {
-            for half_id in self.readers.read().unwrap().keys() {
+            for half_id in self.half_ids.read().unwrap().keys() {
                 writeln!(
                     &mut s,
                     r###"    {} [URL="{}"]"###,
@@ -487,20 +441,19 @@ impl ChannelMapping {
     pub fn graph_edges(&self, seen: HashSet<ChannelHalfId>) -> String {
         let mut s = String::new();
         {
-            for (half_id, channel_id) in self.writers.read().unwrap().iter() {
-                write!(&mut s, "  {} -> {}", half_id.dot_id(), channel_id.dot_id()).unwrap();
+            for (half_id, channel_id) in self.half_ids.read().unwrap().iter() {
+                match half_id.direction {
+                    ChannelHalfDirection::Write => {
+                        write!(&mut s, "  {} -> {}", half_id.dot_id(), channel_id.dot_id())
+                            .unwrap();
+                    }
+                    ChannelHalfDirection::Read => {
+                        write!(&mut s, "  {} -> {}", channel_id.dot_id(), half_id.dot_id())
+                            .unwrap();
+                    }
+                };
                 if !seen.contains(half_id) {
-                    warn!("reader {:?} is not referenced by any node!", half_id);
-                    write!(&mut s, "  [color=red style=bold]").unwrap();
-                }
-                writeln!(&mut s).unwrap();
-            }
-        }
-        {
-            for (half_id, channel_id) in self.readers.read().unwrap().iter() {
-                write!(&mut s, "  {} -> {}", channel_id.dot_id(), half_id.dot_id()).unwrap();
-                if !seen.contains(half_id) {
-                    warn!("writer {:?} is not referenced by any node!", half_id);
+                    error!("reader handle {:?} is not referenced by any node!", half_id);
                     write!(&mut s, "  [color=red style=bold]").unwrap();
                 }
                 writeln!(&mut s).unwrap();
@@ -530,20 +483,14 @@ impl ChannelMapping {
                     )
                     .unwrap();
                     for half in &msg.channels {
-                        match self.get_direction(*half) {
-                            Ok(ChannelHalfDirection::Write) => {
+                        match half.direction {
+                            ChannelHalfDirection::Write => {
                                 writeln!(&mut s, "    {} -> {}", graph_node, half.dot_id())
                                     .unwrap();
                             }
-                            Ok(ChannelHalfDirection::Read) => {
+                            ChannelHalfDirection::Read => {
                                 writeln!(&mut s, "    {} -> {}", half.dot_id(), graph_node)
                                     .unwrap();
-                            }
-                            Err(_) => {
-                                error!(
-                                    "message in channel {} has message referencing unknown {:?}",
-                                    channel_id, half
-                                );
                             }
                         }
                     }
@@ -579,25 +526,16 @@ impl ChannelMapping {
         writeln!(&mut s, "<h2>Channel Halves</h2>").unwrap();
         writeln!(&mut s, "<ul>").unwrap();
         {
-            for (h, channel_id) in self.readers.read().unwrap().iter() {
+            for (h, channel_id) in self.half_ids.read().unwrap().iter() {
                 writeln!(
                     &mut s,
-                    r###"<li><a href="{}">{:?}</a> => READ <a href="{}">channel-{}</a>"###,
+                    r###"<li><a href="{}">{:?}</a> => {} <a href="{}">channel-{}</a>"###,
                     h.html_path(),
                     h,
-                    channel_id.html_path(),
-                    channel_id
-                )
-                .unwrap();
-            }
-        }
-        {
-            for (h, channel_id) in self.writers.read().unwrap().iter() {
-                writeln!(
-                    &mut s,
-                    r###"<li><a href="{}">{:?}</a> => WRITE <a href="{}">channel-{}</a>"###,
-                    h.html_path(),
-                    h,
+                    match h.direction {
+                        ChannelHalfDirection::Write => "WRITE",
+                        ChannelHalfDirection::Read => "READ",
+                    },
                     channel_id.html_path(),
                     channel_id
                 )
@@ -612,21 +550,27 @@ impl ChannelMapping {
     #[cfg(feature = "oak_debug")]
     pub fn html_for_channel(&self, id: u64) -> Option<String> {
         let channel_id: ChannelId = id;
-        self.with_channel(channel_id, |channel| Ok(channel.html()))
-            .ok()
+        let channels = self.channels.read().unwrap();
+        let channel = channels.get(&channel_id)?;
+        Some(channel.html())
     }
 
     // Build an HTML page describing a specific runtime::Handle.
     #[cfg(feature = "oak_debug")]
     pub fn html_for_half(&self, id: u64) -> Option<String> {
-        let half_id = ChannelHalfId(id);
-        if let Some(channel_id) = self.writers.read().unwrap().get(&half_id) {
+        if let Some(channel_id) = self.half_ids.read().unwrap().get(&ChannelHalfId {
+            id,
+            direction: ChannelHalfDirection::Write,
+        }) {
             Some(format!(
                 r###"WRITE half for <a href="{}">channel {}</a>"###,
                 channel_id.html_path(),
                 channel_id
             ))
-        } else if let Some(channel_id) = self.readers.read().unwrap().get(&half_id) {
+        } else if let Some(channel_id) = self.half_ids.read().unwrap().get(&ChannelHalfId {
+            id,
+            direction: ChannelHalfDirection::Read,
+        }) {
             Some(format!(
                 r###"READ half for <a href="{}">channel {}</a>"###,
                 channel_id.html_path(),
