@@ -52,7 +52,6 @@ fn run_node_body(node_label: Label, node_body: Box<NodeBody>) {
         new_node_id,
         "test_module.test_function".to_string(),
         &node_label,
-        vec![],
     );
 
     let node_instance = TestNode {
@@ -72,7 +71,7 @@ fn create_channel_success() {
         Label::public_trusted(),
         Box::new(|runtime| {
             // Attempt to perform an operation that requires the [`Runtime`] to have created an
-            // appropriate [`NodeInfo`] instanace.
+            // appropriate [`NodeInfo`] instance.
             let (_write_handle, _read_handle) = runtime.channel_create(&Label::public_trusted());
             Ok(())
         }),
