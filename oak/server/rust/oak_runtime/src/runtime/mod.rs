@@ -28,23 +28,13 @@ use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
 
 use log::{debug, error, info, trace};
 
-use crate::{message::Message, node, pretty_name_for_thread};
+use crate::{message::Message, metrics::METRICS, node, pretty_name_for_thread};
 
 mod channel;
 #[cfg(test)]
 mod tests;
 
 pub use channel::{Handle, HandleDirection};
-
-use prometheus::{opts, register_int_gauge, IntGauge};
-
-lazy_static::lazy_static! {
-    static ref NODES_COUNT: IntGauge = register_int_gauge!(opts!(
-        "nodes_count",
-        "Number of nodes in the runtime."
-    ))
-    .expect("Creating nodes_count metric failed.");
-}
 
 struct NodeInfo {
     /// The Label associated with this Node.
@@ -757,7 +747,7 @@ impl Runtime {
     }
 
     fn update_nodes_count_metric(&self) {
-        NODES_COUNT.set(
+        METRICS.runtime_nodes_count.set(
             self.node_infos
                 .read()
                 .expect("could not acquire lock on node_infos")

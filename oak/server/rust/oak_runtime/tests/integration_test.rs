@@ -14,7 +14,10 @@
 // limitations under the License.
 //
 
-use std::thread::{park, spawn};
+use oak_runtime::metrics;
+use std::thread::spawn;
+
+const METRICS_PORT: u16 = 9876;
 
 mod common {
     use oak_runtime::runtime::{Handle, Runtime};
@@ -23,18 +26,15 @@ mod common {
     use log::info;
     use maplit::hashmap;
     use oak_abi::OakStatus;
-    use oak_runtime::{config, metrics};
+    use oak_runtime::config;
     use std::sync::Arc;
     use wat::parse_str;
-
-    const PORT: u16 = 9876;
 
     pub fn start_runtime() -> Result<(Arc<Runtime>, Handle), OakStatus> {
         let wat = r#"
         (module
-            (type (;0;) (func (param i64) (result i32)))
-            (func $oak_main (type 0)
-              i32.const 42)
+            (type (;0;) (func (param i64)))
+            (func $oak_main (type 0))
             (memory (;0;) 18)
             (export "memory" (memory 0))
             (export "oak_main" (func $oak_main)))
@@ -48,69 +48,53 @@ mod common {
             ],
             "lumberjack",
             "node",
-            "main",
+            "oak_main",
         );
 
         info!("Starting the runtime with one nodes.");
         config::configure_and_run(cfg)
     }
 
-    pub fn start_metrics_server() {
-        info!("Starting the metrics server");
-
-        let mut tokio_runtime =
-            tokio::runtime::Runtime::new().expect("Couldn't create Tokio runtime");
-        let result = tokio_runtime.block_on(metrics::serve_metrics(PORT));
-
-        info!("Exiting metrics server node thread {:?}", result);
-    }
-
     pub async fn read_metrics() -> Result<String, hyper::error::Error> {
         info!("Reading the metrics.");
         let client = Client::new();
 
-        let uri = format!("http://localhost:{}", &PORT)
+        let uri = format!("http://localhost:{}", &super::METRICS_PORT)
             .parse::<Uri>()
             .expect("Could not parse URI.");
-        match client.get(uri).await {
-            Err(e) => Err(e),
-            Ok(res) => {
-                info!("status: {}", res.status());
 
-                // Concatenate the body stream into a single buffer...
-                match hyper::body::to_bytes(res).await {
-                    Err(e) => Err(e),
-                    Ok(buf) => Ok(format!("{:?}", buf)),
-                }
-            }
-        }
+        let res = client.get(uri).await?;
+        info!("status: {}", res.status());
+
+        let buf = hyper::body::to_bytes(res).await?;
+        Ok(std::str::from_utf8(&buf[..]).unwrap().to_string())
     }
+}
+
+fn get_int_metric_value(all_metrics: &str, metric_name: &str) -> Option<i64> {
+    let pattern = format!(r"(.*)(\b{} \b)([0-9]+)(.*)", metric_name);
+    let re = regex::Regex::new(&pattern).unwrap();
+    re.captures(&all_metrics)
+        .map(|c| c[3].parse::<i64>().unwrap())
 }
 
 #[test]
 fn test_metrics_gives_the_correct_number_of_nodes() {
-    simple_logger::init().unwrap();
+    env_logger::init();
 
-    // Alternatively, one could start the runtime without spawning a new thread, but this seems to
-    // be a more generic way of starting the runtime.
-    let rt_handle = spawn(move || {
-        let _res = common::start_runtime();
-    });
+    // Start the Runtime
+    common::start_runtime().expect("Starting the Runtime failed!");
 
-    // start metrics server in a new thread
-    let metrics_handle = spawn(move || {
-        common::start_metrics_server();
-
-        // Keep the server up until the test is complete.
-        park();
+    // Start metrics server in a new thread
+    spawn(move || {
+        metrics::server::start_metrics_server(METRICS_PORT).unwrap();
     });
 
     let mut rt = tokio::runtime::Runtime::new().expect("Couldn't create Tokio runtime");
     let res = rt
         .block_on(common::read_metrics())
-        .expect("Could not get the data from future.");
-    assert_eq!(res, "b\"# HELP nodes_count Number of nodes in the runtime.\\n# TYPE nodes_count gauge\\nnodes_count 1\\n\"");
+        .expect("Reading the metrics failed.");
 
-    metrics_handle.thread().unpark();
-    let _ = rt_handle.join();
+    let value = get_int_metric_value(&res, "runtime_nodes_count");
+    assert_eq!(value, Some(1));
 }

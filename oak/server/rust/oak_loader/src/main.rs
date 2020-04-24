@@ -44,8 +44,14 @@ pub struct Opt {
     private_key: Option<String>,
     #[structopt(long, help = "Path to the PEM-encoded certificate chain")]
     cert_chain: Option<String>,
-    #[structopt(long, help = "Metrics server port number")]
-    metrics_port: Option<u16>,
+    #[structopt(
+        long,
+        default_value = "3030",
+        help = "Metrics server port number. Defaults to 3030."
+    )]
+    metrics_port: u16,
+    #[structopt(long, help = "Starts the Runtime without a metrics server.")]
+    no_metrics: bool,
 }
 
 fn read_file(filename: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
@@ -57,20 +63,17 @@ fn read_file(filename: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     Ok(buffer)
 }
 
-fn start_runtime() -> Result<(), Box<dyn std::error::Error>> {
+fn start_runtime(application: String) -> Result<(), Box<dyn std::error::Error>> {
     info!("Loading Oak Runtime");
 
-    let opt = Opt::from_args();
     let app_config = {
-        let buffer = read_file(&opt.application)?;
+        let buffer = read_file(&application)?;
         ApplicationConfiguration::decode(&buffer[..])
             .map_err(|error| format!("Failed to decode application configuration: {:?}", error))?
     };
 
-    // Spawns a new thread corresponding to an initial Wasm Oak node.
-    configure_and_run(app_config)
-        .map_err(|error| format!("Runtime error: {:?}", error))
-        .expect("Error when starting the Runtime");
+    // Start the Runtime from the given config.
+    configure_and_run(app_config).map_err(|error| format!("Runtime error: {:?}", error))?;
 
     // Park current thread.
     park();
@@ -78,33 +81,27 @@ fn start_runtime() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn start_metrics() {
-    let opt = Opt::from_args();
-    let port = opt.metrics_port.unwrap_or(3030);
-
-    let mut tokio_runtime = tokio::runtime::Runtime::new().expect("Couldn't create Tokio runtime");
-    let result = tokio_runtime.block_on(metrics::serve_metrics(port));
-
-    info!("Exiting metrics server node thread {:?}", result);
-}
-
 fn main() {
     env_logger::init();
-    let mut handles = vec![];
+    let mut threads = vec![];
+    let opt = Opt::from_args();
+    let application = opt.application.clone();
 
-    // start the runtime in a new thread
-    handles.push(spawn(move || {
-        if let Err(e) = start_runtime() {
-            error!("Error in runtime: {}", e);
+    // Start the runtime in a new thread
+    threads.push(spawn(move || {
+        if let Err(e) = start_runtime(application) {
+            error!("Error in the Oak Runtime: {}", e);
         }
     }));
 
-    // start metrics server in a new thread
-    handles.push(spawn(move || {
-        start_metrics();
-    }));
+    if !opt.no_metrics {
+        // Start the metrics server in a new thread
+        threads.push(spawn(move || {
+            metrics::server::start_metrics_server(opt.metrics_port).expect("Metrics server error!");
+        }));
+    }
 
-    for handle in handles {
+    for handle in threads {
         if let Err(e) = handle.join() {
             error!("Join error: {:?}", e);
         }

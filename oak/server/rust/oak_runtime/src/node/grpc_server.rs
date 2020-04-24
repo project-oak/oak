@@ -27,41 +27,7 @@ use oak_abi::{
     grpc::encap_request, label::Label, proto::oak::encap::GrpcRequest, ChannelReadStatus, OakStatus,
 };
 
-use crate::{pretty_name_for_thread, runtime::RuntimeProxy, Handle};
-
-use prometheus::{opts, register_histogram, register_int_counter, Histogram, IntCounter};
-
-struct GrpcMetrics {
-    request_duration: Histogram,
-    requests_total: IntCounter,
-    response_size: Histogram,
-}
-
-impl GrpcMetrics {
-    fn new() -> Self {
-        Self {
-            request_duration: register_histogram!(
-                "grpc_request_duration_seconds",
-                "The gRPC request latencies in seconds."
-            )
-            .expect("Creating grpc_request_duration_seconds metric failed."),
-            requests_total: register_int_counter!(opts!(
-                "grpc_requests_total",
-                "Total number of gRPC requests served."
-            ))
-            .expect("Creating grpc_requests_total metric failed."),
-            response_size: register_histogram!(
-                "grpc_response_size_bytes",
-                "The gRPC response sizes in bytes."
-            )
-            .expect("Creating grpc_response_size_bytes metric failed."),
-        }
-    }
-}
-
-lazy_static::lazy_static! {
-    static ref METRICS: GrpcMetrics = GrpcMetrics::new();
-}
+use crate::{metrics::METRICS, pretty_name_for_thread, runtime::RuntimeProxy, Handle};
 
 /// Struct that represents a gRPC server pseudo-Node.
 ///
@@ -201,10 +167,8 @@ impl GrpcServerNode {
                 error
             })?;
 
-        METRICS.requests_total.inc();
-        let timer = METRICS.request_duration.start_timer();
         // Create a gRPC request from an HTTP body.
-        let res = Self::decode_grpc_request(&http_request_path, &http_request_body)
+        Self::decode_grpc_request(&http_request_path, &http_request_body)
             // Process a gRPC request and send it into the Runtime.
             .and_then(|request| self.process_request(request))
             // Read a gRPC response from the Runtime.
@@ -212,11 +176,7 @@ impl GrpcServerNode {
             // Send gRPC response back to the HTTP client.
             .map(|body| Self::http_response(http::StatusCode::OK, body))
             // Convert an error to an HTTP response with a corresponding error status.
-            .or_else(|error| Ok(Self::http_response(error.into(), vec![])));
-
-        timer.observe_duration();
-
-        res
+            .or_else(|error| Ok(Self::http_response(error.into(), vec![])))
     }
 
     /// Creates a [`GrpcRequest`] instance from a `http_request_path` and an `http_request_body`.
@@ -319,7 +279,7 @@ impl GrpcServerNode {
                 .map(|message| {
                     // Return an empty HTTP body if the `message` is None.
                     message.map_or(vec![], |m| {
-                        METRICS.response_size.observe(m.data.len() as f64);
+                        METRICS.grpc_response_size.observe(m.data.len() as f64);
                         m.data
                     })
                 })
@@ -351,7 +311,13 @@ impl GrpcServerNode {
             async move {
                 Ok::<_, hyper::Error>(hyper::service::service_fn(move |req| {
                     let request_server = connection_server.clone();
-                    async move { request_server.serve(req).await }
+                    METRICS.grpc_requests_total.inc();
+                    async move {
+                        let timer = METRICS.grpc_request_duration.start_timer();
+                        let res = request_server.serve(req).await;
+                        timer.observe_duration();
+                        res
+                    }
                 }))
             }
         });

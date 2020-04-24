@@ -34,9 +34,10 @@ prometheus = { version = "0.8", features = [
 futures = "*"
 
 [dev-dependencies]
+env_logger = "*"
 maplit = "*"
+regex = "*"
 wat = "*"
-simple_logger = "*"
 
 [build-dependencies]
 oak_utils = "*"
