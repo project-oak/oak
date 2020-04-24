@@ -111,10 +111,6 @@ pub struct Configuration {
 
 /// A helper type to determine if `try_read_message` was called with not enough `bytes_capacity`
 /// and/or `handles_capacity`.
-pub enum ReadStatus {
-    Success(Message),
-    NeedsCapacity(usize, usize),
-}
 pub enum NodeReadStatus {
     Success(NodeMessage),
     NeedsCapacity(usize, usize),
@@ -657,7 +653,7 @@ impl Runtime {
     /// Creates a new [`Channel`] and returns a `(writer handle, reader handle)` pair.
     ///
     /// [`Channel`]: crate::runtime::channel::Channel
-    fn new_channel(&self, node_id: NodeId, label: &Label) -> (oak_abi::Handle, oak_abi::Handle) {
+    fn channel_create(&self, node_id: NodeId, label: &Label) -> (oak_abi::Handle, oak_abi::Handle) {
         // TODO(#630): Check whether the calling Node can create a Node with the specified label.
         let (write_channel, read_channel) = self.channels.new_channel(label);
         let write_handle = self.register_channel(node_id, write_channel);
@@ -707,9 +703,20 @@ impl Runtime {
     fn wait_on_channels(
         &self,
         node_id: NodeId,
-        readers: &[ChannelHalfId],
+        read_handles: &[oak_abi::Handle],
     ) -> Result<Vec<ChannelReadStatus>, OakStatus> {
-        self.validate_can_read_from_channels(node_id, readers)?;
+        // Accumulate both the valid channels and their original position.
+        let mut all_statuses = vec![ChannelReadStatus::InvalidChannel; read_handles.len()];
+        let mut reader_pos = Vec::new();
+        let mut readers = Vec::new();
+        for (i, handle) in read_handles.iter().enumerate() {
+            if let Ok(channel) = self.abi_to_read_channel(node_id, *handle) {
+                reader_pos.push(i);
+                readers.push(channel);
+            }
+        }
+
+        self.validate_can_read_from_channels(node_id, &readers)?;
 
         let thread = thread::current();
         while !self.is_terminating() {
@@ -726,7 +733,7 @@ impl Runtime {
             let thread_id = thread.id();
             let thread_ref = Arc::new(thread.clone());
 
-            for reader in readers {
+            for reader in &readers {
                 self.channels.with_reader_channel(*reader, |channel| {
                     channel.add_waiter(thread_id, &thread_ref);
                     Ok(())
@@ -740,7 +747,12 @@ impl Runtime {
             let any_ready = statuses.iter().any(|&s| s == ChannelReadStatus::ReadReady);
 
             if all_unreadable || any_ready {
-                return Ok(statuses);
+                // Transcribe the status for valid channels back to the original position
+                // in the list of all statuses.
+                for i in 0..readers.len() {
+                    all_statuses[reader_pos[i]] = statuses[i];
+                }
+                return Ok(all_statuses);
             }
 
             debug!(
@@ -765,10 +777,22 @@ impl Runtime {
     fn channel_write(
         &self,
         node_id: NodeId,
-        half_id: ChannelHalfId,
-        msg: Message,
+        write_handle: oak_abi::Handle,
+        node_msg: NodeMessage,
     ) -> Result<(), OakStatus> {
+        let half_id = self.abi_to_write_channel(node_id, write_handle)?;
         self.validate_can_write_to_channel(node_id, half_id)?;
+
+        // Translate the Node-relative handles in the `NodeMessage` to channels.
+        let mut msg = Message {
+            data: node_msg.data,
+            channels: Vec::with_capacity(node_msg.handles.len()),
+        };
+        for handle in node_msg.handles {
+            let channel = self.abi_to_channel(node_id, handle)?;
+            msg.channels.push(channel);
+        }
+
         self.channels.with_writer_channel(half_id, |channel|{
 
         if !channel.has_readers() {
@@ -825,10 +849,11 @@ impl Runtime {
     fn channel_read(
         &self,
         node_id: NodeId,
-        half_id: ChannelHalfId,
-    ) -> Result<Option<Message>, OakStatus> {
+        read_handle: oak_abi::Handle,
+    ) -> Result<Option<NodeMessage>, OakStatus> {
+        let half_id = self.abi_to_read_channel(node_id, read_handle)?;
         self.validate_can_read_from_channel(node_id, half_id)?;
-        self.channels.with_reader_channel(half_id, |channel| {
+        match self.channels.with_reader_channel(half_id, |channel| {
             match channel.messages.write().unwrap().pop_front() {
                 Some(m) => Ok(Some(m)),
                 None => {
@@ -839,7 +864,18 @@ impl Runtime {
                     }
                 }
             }
-        })
+        }) {
+            Err(status) => Err(status),
+            Ok(None) => Ok(None),
+            Ok(Some(runtime_msg)) => Ok(Some(NodeMessage {
+                data: runtime_msg.data,
+                handles: runtime_msg
+                    .channels
+                    .iter()
+                    .map(|c| self.register_channel(node_id, *c))
+                    .collect(),
+            })),
+        }
     }
 
     /// Thread safe. This function returns:
@@ -873,10 +909,11 @@ impl Runtime {
     fn channel_try_read_message(
         &self,
         node_id: NodeId,
-        half_id: ChannelHalfId,
+        handle: oak_abi::Handle,
         bytes_capacity: usize,
         handles_capacity: usize,
-    ) -> Result<Option<ReadStatus>, OakStatus> {
+    ) -> Result<Option<NodeReadStatus>, OakStatus> {
+        let half_id = self.abi_to_read_channel(node_id, handle)?;
         self.validate_can_read_from_channel(node_id, half_id)?;
         self.channels.with_reader_channel(half_id, |channel| {
             let mut messages = channel.messages.write().unwrap();
@@ -885,18 +922,26 @@ impl Runtime {
                     let req_bytes_capacity = front.data.len();
                     let req_handles_capacity = front.channels.len();
 
-                    Ok(Some(
-                        if req_bytes_capacity > bytes_capacity
-                            || req_handles_capacity > handles_capacity
-                        {
-                            ReadStatus::NeedsCapacity(req_bytes_capacity, req_handles_capacity)
-                        } else {
-                            let msg = messages.pop_front().expect(
-                                "Front element disappeared while we were holding the write lock!",
-                            );
-                            ReadStatus::Success(msg)
-                        },
-                    ))
+                    if req_bytes_capacity > bytes_capacity
+                        || req_handles_capacity > handles_capacity
+                    {
+                        Ok(Some(NodeReadStatus::NeedsCapacity(
+                            req_bytes_capacity,
+                            req_handles_capacity,
+                        )))
+                    } else {
+                        let msg = messages.pop_front().expect(
+                            "Front element disappeared while we were holding the write lock!",
+                        );
+                        Ok(Some(NodeReadStatus::Success(NodeMessage {
+                            data: msg.data,
+                            handles: msg
+                                .channels
+                                .iter()
+                                .map(|c| self.register_channel(node_id, *c))
+                                .collect(),
+                        })))
+                    }
                 }
                 None => {
                     if !channel.has_writers() {
@@ -919,8 +964,10 @@ impl Runtime {
         self.channels.get_direction(half_id)
     }
 
-    /// Close a [`ChannelHalfId`], potentially orphaning the underlying [`channel::Channel`].
-    fn channel_close(&self, _node_id: NodeId, half_id: ChannelHalfId) -> Result<(), OakStatus> {
+    /// Close an [`oak_abi::Handle`], potentially orphaning the underlying [`channel::Channel`].
+    fn channel_close(&self, node_id: NodeId, handle: oak_abi::Handle) -> Result<(), OakStatus> {
+        let half_id = self.abi_to_channel(node_id, handle)?;
+        self.drop_abi_handle(node_id, handle)?;
         self.channels.remove_half_id(half_id)
     }
 
@@ -937,7 +984,7 @@ impl Runtime {
             let node_info = node_infos
                 .get(&node_id)
                 .unwrap_or_else(|| panic!("remove_node_id: No such node_id {:?}", node_id));
-            node_info.abi_handles.values().copied().collect()
+            node_info.abi_handles.keys().copied().collect()
         };
 
         debug!(
@@ -1003,12 +1050,13 @@ impl Runtime {
         config_name: &str,
         entrypoint: &str,
         label: &Label,
-        reader: ChannelHalfId,
+        initial_handle: oak_abi::Handle,
     ) -> Result<(), OakStatus> {
         if self.is_terminating() {
             return Err(OakStatus::ErrTerminated);
         }
 
+        let reader = self.abi_to_read_channel(node_id, initial_handle)?;
         let node_label = self.get_node_label(node_id);
         if !node_label.flows_to(label) {
             return Err(OakStatus::ErrPermissionDenied);
@@ -1126,7 +1174,7 @@ impl Drop for Runtime {
 /// impersonate each other.
 ///
 /// Individual methods simply forward to corresponding methods on the underlying [`Runtime`], by
-/// partially applying the first argument, and translating ABI handles to underlying channels.
+/// partially applying the first argument.
 #[derive(Clone)]
 pub struct RuntimeProxy {
     runtime: Arc<Runtime>,
@@ -1164,22 +1212,18 @@ impl RuntimeProxy {
             module_name,
             entrypoint,
             label,
-            self.runtime
-                .abi_to_read_channel(self.node_id, initial_handle)?,
+            initial_handle,
         )
     }
 
-    /// See [`Runtime::new_channel`].
+    /// See [`Runtime::channel_create`].
     pub fn channel_create(&self, label: &Label) -> (oak_abi::Handle, oak_abi::Handle) {
-        self.runtime.new_channel(self.node_id, label)
+        self.runtime.channel_create(self.node_id, label)
     }
 
     /// See [`Runtime::channel_close`].
     pub fn channel_close(&self, handle: oak_abi::Handle) -> Result<(), OakStatus> {
-        let channel = self.runtime.abi_to_channel(self.node_id, handle)?;
-        let result = self.runtime.channel_close(self.node_id, channel);
-        self.runtime.drop_abi_handle(self.node_id, handle)?;
-        result
+        self.runtime.channel_close(self.node_id, handle)
     }
 
     /// See [`Runtime::wait_on_channels`].
@@ -1187,23 +1231,7 @@ impl RuntimeProxy {
         &self,
         read_handles: &[oak_abi::Handle],
     ) -> Result<Vec<ChannelReadStatus>, OakStatus> {
-        // Accumulate both the valid channels and their original position.
-        let mut all_statuses = vec![ChannelReadStatus::InvalidChannel; read_handles.len()];
-        let mut valid_pos = Vec::new();
-        let mut valid_channels = Vec::new();
-        for (i, handle) in read_handles.iter().enumerate() {
-            if let Ok(channel) = self.runtime.abi_to_read_channel(self.node_id, *handle) {
-                valid_pos.push(i);
-                valid_channels.push(channel);
-            }
-        }
-        let valid_statuses = self
-            .runtime
-            .wait_on_channels(self.node_id, &valid_channels)?;
-        for i in 0..valid_channels.len() {
-            all_statuses[valid_pos[i]] = valid_statuses[i];
-        }
-        Ok(all_statuses)
+        self.runtime.wait_on_channels(self.node_id, read_handles)
     }
 
     /// See [`Runtime::channel_write`].
@@ -1212,20 +1240,7 @@ impl RuntimeProxy {
         write_handle: oak_abi::Handle,
         msg: NodeMessage,
     ) -> Result<(), OakStatus> {
-        let mut runtime_msg = Message {
-            data: msg.data,
-            channels: Vec::with_capacity(msg.handles.len()),
-        };
-        for handle in msg.handles {
-            let channel = self.runtime.abi_to_channel(self.node_id, handle)?;
-            runtime_msg.channels.push(channel);
-        }
-        self.runtime.channel_write(
-            self.node_id,
-            self.runtime
-                .abi_to_write_channel(self.node_id, write_handle)?,
-            runtime_msg,
-        )
+        self.runtime.channel_write(self.node_id, write_handle, msg)
     }
 
     /// See [`Runtime::channel_read`].
@@ -1233,22 +1248,7 @@ impl RuntimeProxy {
         &self,
         read_handle: oak_abi::Handle,
     ) -> Result<Option<NodeMessage>, OakStatus> {
-        match self.runtime.channel_read(
-            self.node_id,
-            self.runtime
-                .abi_to_read_channel(self.node_id, read_handle)?,
-        ) {
-            Err(status) => Err(status),
-            Ok(None) => Ok(None),
-            Ok(Some(runtime_msg)) => Ok(Some(NodeMessage {
-                data: runtime_msg.data,
-                handles: runtime_msg
-                    .channels
-                    .iter()
-                    .map(|c| self.runtime.register_channel(self.node_id, *c))
-                    .collect(),
-            })),
-        }
+        self.runtime.channel_read(self.node_id, read_handle)
     }
 
     /// See [`Runtime::channel_try_read_message`].
@@ -1258,28 +1258,11 @@ impl RuntimeProxy {
         bytes_capacity: usize,
         handles_capacity: usize,
     ) -> Result<Option<NodeReadStatus>, OakStatus> {
-        match self.runtime.channel_try_read_message(
+        self.runtime.channel_try_read_message(
             self.node_id,
-            self.runtime
-                .abi_to_read_channel(self.node_id, read_handle)?,
+            read_handle,
             bytes_capacity,
             handles_capacity,
-        ) {
-            Err(status) => Err(status),
-            Ok(None) => Ok(None),
-            Ok(Some(ReadStatus::NeedsCapacity(z, c))) => {
-                Ok(Some(NodeReadStatus::NeedsCapacity(z, c)))
-            }
-            Ok(Some(ReadStatus::Success(runtime_msg))) => {
-                Ok(Some(NodeReadStatus::Success(NodeMessage {
-                    data: runtime_msg.data,
-                    handles: runtime_msg
-                        .channels
-                        .iter()
-                        .map(|c| self.runtime.register_channel(self.node_id, *c))
-                        .collect(),
-                })))
-            }
-        }
+        )
     }
 }
