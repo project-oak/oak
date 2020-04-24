@@ -18,9 +18,9 @@
 #include "absl/flags/parse.h"
 #include "examples/hello_world/proto/hello_world.grpc.pb.h"
 #include "examples/hello_world/proto/hello_world.pb.h"
+#include "glog/logging.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
-#include "oak/common/logging.h"
 
 ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak application to connect to");
 ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate");
@@ -33,28 +33,28 @@ void say_hello(HelloWorld::Stub* stub, std::string name) {
   grpc::ClientContext context;
   HelloRequest request;
   request.set_greeting(name);
-  OAK_LOG(INFO) << "Request: " << request.greeting();
+  LOG(INFO) << "Request: " << request.greeting();
   HelloResponse response;
   grpc::Status status = stub->SayHello(&context, request, &response);
   if (!status.ok()) {
-    OAK_LOG(FATAL) << "Could not call SayHello('" << name << "'): " << status.error_code() << ": "
-                   << status.error_message();
+    LOG(FATAL) << "Could not call SayHello('" << name << "'): " << status.error_code() << ": "
+               << status.error_message();
   }
-  OAK_LOG(INFO) << "Response: " << response.reply();
+  LOG(INFO) << "Response: " << response.reply();
 }
 
 void lots_of_replies(HelloWorld::Stub* stub, std::string name) {
   grpc::ClientContext context;
   HelloRequest request;
   request.set_greeting(name);
-  OAK_LOG(INFO) << "Request: " << request.greeting();
+  LOG(INFO) << "Request: " << request.greeting();
   auto reader = stub->LotsOfReplies(&context, request);
   if (reader == nullptr) {
-    OAK_LOG(FATAL) << "Could not call LotsOfReplies";
+    LOG(FATAL) << "Could not call LotsOfReplies";
   }
   HelloResponse response;
   while (reader->Read(&response)) {
-    OAK_LOG(INFO) << "Response: " << response.reply();
+    LOG(INFO) << "Response: " << response.reply();
   }
 }
 
@@ -63,7 +63,7 @@ int main(int argc, char** argv) {
 
   std::string address = absl::GetFlag(FLAGS_address);
   std::string ca_cert = oak::ApplicationClient::LoadRootCert(absl::GetFlag(FLAGS_ca_cert));
-  OAK_LOG(INFO) << "Connecting to Oak Application: " << address;
+  LOG(INFO) << "Connecting to Oak Application: " << address;
 
   // Connect to the Oak Application.
   auto stub = HelloWorld::NewStub(oak::ApplicationClient::CreateTlsChannel(address, ca_cert));

@@ -21,9 +21,9 @@
 #include "absl/types/optional.h"
 #include "examples/aggregator/proto/aggregator.grpc.pb.h"
 #include "examples/aggregator/proto/aggregator.pb.h"
+#include "glog/logging.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
-#include "oak/common/logging.h"
 
 ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak application to connect to");
 ABSL_FLAG(std::string, bucket, "", "Bucket under which to aggregate samples");
@@ -39,25 +39,25 @@ using ::oak::examples::aggregator::SerializedSparseVector;
 void submit_sample(Aggregator::Stub* stub, std::string& bucket, std::vector<uint32_t>& indices,
                    std::vector<float>& values) {
   grpc::ClientContext context;
-  OAK_LOG(INFO) << "Submitting sample:";
+  LOG(INFO) << "Submitting sample:";
   Sample request;
-  OAK_LOG(INFO) << "  bucket: " << bucket;
+  LOG(INFO) << "  bucket: " << bucket;
   request.set_bucket(bucket);
-  OAK_LOG(INFO) << "  indices:";
+  LOG(INFO) << "  indices:";
   for (auto index : indices) {
-    OAK_LOG(INFO) << "    - " << index;
+    LOG(INFO) << "    - " << index;
     request.mutable_data()->add_indices(index);
   }
-  OAK_LOG(INFO) << "  values:";
+  LOG(INFO) << "  values:";
   for (auto value : values) {
-    OAK_LOG(INFO) << "    - " << value;
+    LOG(INFO) << "    - " << value;
     request.mutable_data()->add_values(value);
   }
   google::protobuf::Empty response;
   grpc::Status status = stub->SubmitSample(&context, request, &response);
   if (!status.ok()) {
-    OAK_LOG(ERROR) << "Could not submit sample: " << status.error_code() << ": "
-                   << status.error_message();
+    LOG(ERROR) << "Could not submit sample: " << status.error_code() << ": "
+               << status.error_message();
   }
 }
 
@@ -66,7 +66,7 @@ int main(int argc, char** argv) {
 
   std::string address = absl::GetFlag(FLAGS_address);
   std::string ca_cert = oak::ApplicationClient::LoadRootCert(absl::GetFlag(FLAGS_ca_cert));
-  OAK_LOG(INFO) << "Connecting to Oak Application: " << address;
+  LOG(INFO) << "Connecting to Oak Application: " << address;
 
   auto stub = Aggregator::NewStub(oak::ApplicationClient::CreateTlsChannel(address, ca_cert));
 
@@ -77,18 +77,18 @@ int main(int argc, char** argv) {
   for (const std::string& item : absl::GetFlag(FLAGS_data)) {
     std::vector<std::string> item_pair = absl::StrSplit(item, ':');
     if (item_pair.size() != 2) {
-      OAK_LOG(FATAL) << "Incorrect data specification: " << item;
+      LOG(FATAL) << "Incorrect data specification: " << item;
     }
 
     uint32_t index;
     if (!absl::SimpleAtoi(item_pair.front(), &index)) {
-      OAK_LOG(FATAL) << "Incorrect index: " << item_pair.front();
+      LOG(FATAL) << "Incorrect index: " << item_pair.front();
     }
     indices.push_back(index);
 
     float value;
     if (!absl::SimpleAtof(item_pair.back(), &value)) {
-      OAK_LOG(FATAL) << "Incorrect value: " << item_pair.back();
+      LOG(FATAL) << "Incorrect value: " << item_pair.back();
     }
     values.push_back(value);
   }

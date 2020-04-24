@@ -28,7 +28,6 @@ cc_binary(
         ":grpctest",
         "//examples/abitest/proto:abitest_cc_grpc",
         "//oak/client:application_client",
-        "//oak/common:logging",
         "//oak/server/storage:memory_provider",
         "//oak/server/storage:storage_service",
         "@com_github_google_glog//:glog",
@@ -45,7 +44,7 @@ cc_library(
     hdrs = ["grpctest.h"],
     deps = [
         "//examples/abitest/proto:abitest_cc_grpc",
-        "//oak/common:logging",
+        "@com_github_google_glog//:glog",
         "@com_github_grpc_grpc//:grpc++",
     ],
 )
@@ -56,7 +55,7 @@ cc_library(
     hdrs = ["grpc_test_server.h"],
     deps = [
         "//examples/abitest/proto:abitest_cc_grpc",
-        "//oak/common:logging",
+        "@com_github_google_glog//:glog",
         "@com_github_grpc_grpc//:grpc++",
     ],
 )

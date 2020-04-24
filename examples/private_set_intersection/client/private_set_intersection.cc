@@ -18,9 +18,9 @@
 #include "absl/flags/parse.h"
 #include "examples/private_set_intersection/proto/private_set_intersection.grpc.pb.h"
 #include "examples/private_set_intersection/proto/private_set_intersection.pb.h"
+#include "glog/logging.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
-#include "oak/common/logging.h"
 #include "oak/common/nonce_generator.h"
 
 ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak application to connect to");
@@ -39,8 +39,7 @@ void SubmitSet(PrivateSetIntersection::Stub* stub, std::vector<std::string> set)
   google::protobuf::Empty response;
   grpc::Status status = stub->SubmitSet(&context, request, &response);
   if (!status.ok()) {
-    OAK_LOG(FATAL) << "Could not submit set: " << status.error_code() << ": "
-                   << status.error_message();
+    LOG(FATAL) << "Could not submit set: " << status.error_code() << ": " << status.error_message();
   }
 }
 
@@ -51,8 +50,8 @@ std::vector<std::string> RetrieveIntersection(PrivateSetIntersection::Stub* stub
   GetIntersectionResponse response;
   grpc::Status status = stub->GetIntersection(&context, request, &response);
   if (!status.ok()) {
-    OAK_LOG(FATAL) << "Could not retrieve intersection: " << status.error_code() << ": "
-                   << status.error_message();
+    LOG(FATAL) << "Could not retrieve intersection: " << status.error_code() << ": "
+               << status.error_message();
   }
   for (auto item : response.values()) {
     values.push_back(item);
@@ -65,7 +64,7 @@ int main(int argc, char** argv) {
 
   std::string address = absl::GetFlag(FLAGS_address);
   std::string ca_cert = oak::ApplicationClient::LoadRootCert(absl::GetFlag(FLAGS_ca_cert));
-  OAK_LOG(INFO) << "Connecting to Oak Application: " << address;
+  LOG(INFO) << "Connecting to Oak Application: " << address;
 
   // Connect to the Oak Application from different clients sharing the same access token.
   oak::NonceGenerator<oak::kPerChannelNonceSizeBytes> nonce_generator;
@@ -90,15 +89,15 @@ int main(int argc, char** argv) {
 
   // Retrieve intersection.
   std::vector<std::string> intersection_0 = RetrieveIntersection(stub_0.get());
-  OAK_LOG(INFO) << "client 0 intersection:";
+  LOG(INFO) << "client 0 intersection:";
   for (auto item : intersection_0) {
-    OAK_LOG(INFO) << "- " << item;
+    LOG(INFO) << "- " << item;
   }
 
   std::vector<std::string> intersection_1 = RetrieveIntersection(stub_1.get());
-  OAK_LOG(INFO) << "client 1 intersection:";
+  LOG(INFO) << "client 1 intersection:";
   for (auto item : intersection_1) {
-    OAK_LOG(INFO) << "- " << item;
+    LOG(INFO) << "- " << item;
   }
 
   return EXIT_SUCCESS;
