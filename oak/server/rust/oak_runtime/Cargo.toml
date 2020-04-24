@@ -10,7 +10,8 @@ license = "Apache-2.0"
 
 [features]
 test_build = []
-default = []
+oak_debug = []
+default = ["oak_debug"]
 
 [dependencies]
 # Note that if new dependencies are added here:

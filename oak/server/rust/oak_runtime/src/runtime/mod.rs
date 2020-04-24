@@ -19,6 +19,7 @@ use itertools::Itertools;
 use log::{debug, error, info, trace};
 use std::{
     collections::{HashMap, HashSet},
+    fmt::Write,
     string::String,
     sync::{Arc, Mutex, RwLock},
     thread,
@@ -33,6 +34,12 @@ mod channel;
 mod tests;
 
 pub use channel::{Handle, HandleDirection};
+
+/// Trait that gives an identifier for a data structure that is suitable for
+/// use with Graphviz/Dot.
+pub trait DotIdentifier {
+    fn dot_id(&self) -> String;
+}
 
 struct NodeInfo {
     /// Name for the Node in debugging output.
@@ -70,8 +77,14 @@ impl std::fmt::Debug for NodeInfo {
 }
 
 /// An identifier for a Node that is opaque for type safety.
-#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug, PartialOrd, Ord)]
 pub struct NodeId(pub u64);
+
+impl DotIdentifier for NodeId {
+    fn dot_id(&self) -> String {
+        format!("node{}", self.0)
+    }
+}
 
 /// A Node identifier reserved for the Runtime that allows access to all handles and channels.
 // TODO(#724): make private once main() is in Rust not C++
@@ -159,6 +172,74 @@ impl Runtime {
             .expect("could not close channel");
 
         Ok(chan_writer)
+    }
+
+    /// Generate a Graphviz dot graph that shows the current shape of the Nodes and Channels in
+    /// the runtime.
+    #[cfg(feature = "oak_debug")]
+    pub fn graph(&self) -> String {
+        let mut s = String::new();
+        writeln!(&mut s, "digraph Runtime {{").unwrap();
+        // Graph nodes for Oak Nodes.
+        {
+            writeln!(&mut s, "  {{").unwrap();
+            writeln!(
+                &mut s,
+                "    node [shape=box style=filled fillcolor=red fontsize=24]"
+            )
+            .unwrap();
+            let node_infos = self.node_infos.read().unwrap();
+            for node_id in node_infos.keys().sorted() {
+                let node_info = node_infos.get(node_id).unwrap();
+                write!(
+                    &mut s,
+                    "    {} [label=\"{}\"]",
+                    node_id.dot_id(),
+                    node_info.pretty_name,
+                )
+                .unwrap();
+                if self
+                    .node_join_handles
+                    .lock()
+                    .unwrap()
+                    .get(&node_id)
+                    .is_none()
+                {
+                    write!(&mut s, " [style=dashed]").unwrap();
+                }
+                writeln!(&mut s).unwrap();
+            }
+            writeln!(&mut s, "  }}").unwrap();
+        }
+
+        // Graph nodes for internal connections between Nodes and Channels.
+        write!(&mut s, "{}", self.channels.graph_nodes()).unwrap();
+
+        // Edges for connections between Nodes and channel halves.  Track which we have seen.
+        let mut seen = HashSet::new();
+        {
+            let node_infos = self.node_infos.read().unwrap();
+            for node_id in node_infos.keys().sorted() {
+                let node_info = node_infos.get(node_id).unwrap();
+                for half_id in &node_info.handles {
+                    seen.insert(half_id.clone());
+                    match self.channel_get_direction(*node_id, *half_id).unwrap() {
+                        HandleDirection::Write => {
+                            writeln!(&mut s, "  {} -> {}", node_id.dot_id(), half_id.dot_id())
+                                .unwrap();
+                        }
+                        HandleDirection::Read => {
+                            writeln!(&mut s, "  {} -> {}", half_id.dot_id(), node_id.dot_id())
+                                .unwrap();
+                        }
+                    }
+                }
+            }
+        }
+        // Edges for connections between halves and Channels.
+        write!(&mut s, "{}", self.channels.graph_edges(seen)).unwrap();
+        writeln!(&mut s, "}}").unwrap();
+        s
     }
 
     /// Thread safe method for determining if the [`Runtime`] is terminating.

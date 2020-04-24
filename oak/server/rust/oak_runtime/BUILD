@@ -24,6 +24,7 @@ package(
 rust_library(
     name = "oak_runtime",
     srcs = glob(["src/**/*.rs"]),
+    crate_features = ["oak_debug"],
     crate_type = "rlib",
     edition = "2018",
     deps = [
