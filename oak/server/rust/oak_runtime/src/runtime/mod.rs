@@ -14,6 +14,9 @@
 // limitations under the License.
 //
 
+use core::sync::atomic::{AtomicBool, AtomicU64, Ordering::SeqCst};
+use itertools::Itertools;
+use log::{debug, error, info, trace};
 use std::{
     collections::{HashMap, HashSet},
     string::String,
@@ -22,13 +25,8 @@ use std::{
     thread::JoinHandle,
 };
 
-use core::sync::atomic::{AtomicBool, AtomicU64, Ordering::SeqCst};
-
-use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
-
-use log::{debug, error, info, trace};
-
 use crate::{message::Message, metrics::METRICS, node, pretty_name_for_thread};
+use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
 
 mod channel;
 #[cfg(test)]
@@ -47,6 +45,21 @@ struct NodeInfo {
     /// A [`HashSet`] containing all the handles associated with this Node.
     // TODO(#777): this overlaps ChannelMapping.{reader,writer}
     handles: HashSet<Handle>,
+}
+
+impl std::fmt::Debug for NodeInfo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "NodeInfo {{label={:?}, handles=[", self.label)?;
+        write!(
+            f,
+            "{}",
+            self.handles
+                .iter()
+                .map(|handle| format!("{:?}", handle))
+                .join(", ")
+        )?;
+        write!(f, "]}}")
+    }
 }
 
 /// An identifier for a Node that is opaque for type safety.
