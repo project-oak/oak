@@ -408,6 +408,10 @@ impl ChannelMapping {
             if !channel.has_users() {
                 channels.remove(&channel_id);
                 debug!("remove_half_id: deallocating channel {:?}", channel_id);
+            } else if half_id.direction == ChannelHalfDirection::Write && !channel.has_writers() {
+                // This was the last writer to the channel: wake any waiters so they
+                // can be aware that the channel is orphaned.
+                channel.wake_waiters();
             }
         }
 
