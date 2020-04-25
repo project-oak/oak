@@ -103,6 +103,18 @@ impl HtmlPath for NodeId {
     }
 }
 
+impl DotIdentifier for (NodeId, oak_abi::Handle) {
+    fn dot_id(&self) -> String {
+        format!("{}_{}", self.0.dot_id(), self.1)
+    }
+}
+
+impl HtmlPath for (NodeId, oak_abi::Handle) {
+    fn html_path(&self) -> String {
+        format!("{}/{}", self.0.html_path(), self.1)
+    }
+}
+
 pub struct Configuration {
     pub nodes: HashMap<String, node::Configuration>,
     pub entry_module: String,
@@ -384,11 +396,36 @@ impl Runtime {
             }
             writeln!(&mut s, "  }}").unwrap();
         }
+        {
+            writeln!(&mut s, "  {{").unwrap();
+            writeln!(
+                &mut s,
+                "    node [shape=hexagon style=filled fillcolor=orange]"
+            )
+            .unwrap();
+            let node_infos = self.node_infos.read().unwrap();
+            for node_id in node_infos.keys().sorted() {
+                let node_info = node_infos.get(node_id).unwrap();
+                for handle in node_info.abi_handles.keys() {
+                    writeln!(
+                        &mut s,
+                        r###"    {} [label="{}:{}" URL="{}"]"###,
+                        (*node_id, *handle).dot_id(),
+                        node_id.0,
+                        handle,
+                        (*node_id, *handle).html_path(),
+                    )
+                    .unwrap();
+                }
+            }
+            writeln!(&mut s, "  }}").unwrap();
+        }
 
         // Graph nodes for internal connections between Nodes and Channels.
         write!(&mut s, "{}", self.channels.graph_nodes()).unwrap();
 
-        // Edges for connections between Nodes and channel halves.  Track which we have seen.
+        // Edges for connections between Nodes and channel halves.  Track which `ChannelHalfId`s we
+        // see along the way.
         let mut seen = HashSet::new();
         {
             let node_infos = self.node_infos.read().unwrap();
@@ -398,12 +435,36 @@ impl Runtime {
                     seen.insert(*half_id);
                     match half_id.direction {
                         ChannelHalfDirection::Write => {
-                            writeln!(&mut s, "  {} -> {}", node_id.dot_id(), half_id.dot_id())
-                                .unwrap();
+                            writeln!(
+                                &mut s,
+                                "  {} -> {}",
+                                node_id.dot_id(),
+                                (*node_id, *handle).dot_id(),
+                            )
+                            .unwrap();
+                            writeln!(
+                                &mut s,
+                                "  {} -> {}",
+                                (*node_id, *handle).dot_id(),
+                                half_id.dot_id()
+                            )
+                            .unwrap();
                         }
                         ChannelHalfDirection::Read => {
-                            writeln!(&mut s, "  {} -> {}", half_id.dot_id(), node_id.dot_id())
-                                .unwrap();
+                            writeln!(
+                                &mut s,
+                                "  {} -> {}",
+                                half_id.dot_id(),
+                                (*node_id, *handle).dot_id(),
+                            )
+                            .unwrap();
+                            writeln!(
+                                &mut s,
+                                "  {} -> {}",
+                                (*node_id, *handle).dot_id(),
+                                node_id.dot_id()
+                            )
+                            .unwrap();
                         }
                     }
                 }
@@ -461,15 +522,41 @@ impl Runtime {
             write!(&mut s, "<p>No current thread for Node.").unwrap();
         }
         write!(&mut s, "<p>Label={:?}<p>Handles:<ul>", node_info.label).unwrap();
-        for half_id in node_info.abi_handles.values() {
+        for (handle, half_id) in &node_info.abi_handles {
             write!(
                 &mut s,
-                r###"<li><a href="{}">{:?}</a>"###,
+                r###"<li>Handle <a href="{}">{}</a> => <a href="{}">{:?}</a>"###,
+                (node_id, *handle).html_path(),
+                handle,
                 half_id.html_path(),
                 half_id
             )
             .unwrap();
         }
+        Some(s)
+    }
+    #[cfg(feature = "oak_debug")]
+    pub fn html_for_handle(&self, id: u64, handle: oak_abi::Handle) -> Option<String> {
+        let node_id = NodeId(id);
+        let node_infos = self.node_infos.read().unwrap();
+        let node_info = node_infos.get(&node_id)?;
+        let half_id = node_info.abi_handles.get(&handle)?;
+        let mut s = String::new();
+        write!(
+            &mut s,
+            r###"<h2><a href="{}">Node {}</a> Handle {}</h2>"###,
+            node_id.html_path(),
+            node_info.pretty_name,
+            handle,
+        )
+        .unwrap();
+        write!(
+            &mut s,
+            r###"<p>Maps to <a href="{}">{:?}</a>"###,
+            half_id.html_path(),
+            half_id
+        )
+        .unwrap();
         Some(s)
     }
     #[cfg(feature = "oak_debug")]

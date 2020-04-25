@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+use crate::runtime::Runtime;
 use hyper::{
     service::{make_service_fn, service_fn},
     Body, Error, Method, Request, Response, Server, StatusCode,
@@ -21,8 +22,6 @@ use hyper::{
 use log::info;
 use regex::Regex;
 use std::{net::SocketAddr, sync::Arc};
-
-use crate::runtime::Runtime;
 
 // TODO(#672): Shift to a templating library.
 fn dot_wrap(title: &str, graph: &str) -> String {
@@ -76,6 +75,21 @@ fn find_id(path: &str, kind: &str) -> Option<u64> {
         .ok()
 }
 
+// Look for a path like "/{kind}/{id}/{subid}" and return the id values.
+fn find_ids(path: &str, kind: &str) -> Option<(u64, u64)> {
+    let captures = Regex::new(&format!(r"^/{}/(?P<id>\d+)/(?P<subid>\d+)/?$", kind))
+        .unwrap()
+        .captures(path)?;
+    let id = captures.name("id").unwrap().as_str().parse::<u64>().ok()?;
+    let subid = captures
+        .name("subid")
+        .unwrap()
+        .as_str()
+        .parse::<u64>()
+        .ok()?;
+    Some((id, subid))
+}
+
 fn handle_request(
     req: Request<Body>,
     runtime: Arc<Runtime>,
@@ -101,6 +115,13 @@ fn handle_request(
         if let Some(body) = runtime.html_for_node(node_id) {
             return Ok(Response::new(Body::from(html_wrap(
                 &format!("Node {}", node_id),
+                &body,
+            ))));
+        }
+    } else if let Some((node_id, handle)) = find_ids(path, "node") {
+        if let Some(body) = runtime.html_for_handle(node_id, handle) {
+            return Ok(Response::new(Body::from(html_wrap(
+                &format!("Node {} Handle {}", node_id, handle),
                 &body,
             ))));
         }
