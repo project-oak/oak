@@ -42,6 +42,7 @@ fn start_node<S: AsRef<[u8]>>(buffer: S, entrypoint: &str) -> Result<(), OakStat
 
     let result = runtime_ref.node_start_instance(
         TEST_NODE_ID,
+        "test.node".to_string(),
         node,
         &oak_abi::label::Label::public_trusted(),
         vec![],
