@@ -14,6 +14,15 @@
 // limitations under the License.
 //
 
+//! Oak Runtime implementation
+//!
+//! # Features
+//!
+//! The `oak_debug` feature enables various debugging features, including
+//! data structure introspection functionality. This feature should only
+//! be enabled in development, as it destroys the privacy guarantees of the
+//! platform by providing easy channels for the exfiltration of private data.
+
 pub mod proto;
 
 pub mod config;

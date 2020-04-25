@@ -402,4 +402,16 @@ impl ChannelMapping {
         }
         s
     }
+
+    #[cfg(feature = "oak_debug")]
+    pub fn html_for_channel(&self, id: u64) -> Option<String> {
+        let channel_id: ChannelId = id;
+        Some(format!("placeholder for {}", channel_id))
+    }
+
+    #[cfg(feature = "oak_debug")]
+    pub fn html_for_half(&self, id: u64) -> Option<String> {
+        let half = Handle(id);
+        Some(format!("placeholder for {:?}", half))
+    }
 }

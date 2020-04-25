@@ -10,7 +10,7 @@ license = "Apache-2.0"
 
 [features]
 test_build = []
-oak_debug = []
+oak_debug = ["regex"]
 default = ["oak_debug"]
 
 [dependencies]
@@ -28,6 +28,7 @@ oak_abi = "=0.1.0"
 prost = "*"
 prost-types = "*"
 rand = "*"
+regex = { version = "1", optional = true }
 tokio = { version = "*", features = ["rt-core", "macros"] }
 # Using an old version that is supported by `cargo-raze`:
 # https://github.com/google/cargo-raze/issues/41#issuecomment-592274128
