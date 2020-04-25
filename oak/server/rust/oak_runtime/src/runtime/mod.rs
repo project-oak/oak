@@ -30,6 +30,8 @@ use crate::{message::Message, metrics::METRICS, node, pretty_name_for_thread};
 use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
 
 mod channel;
+#[cfg(feature = "oak_debug")]
+mod introspect;
 #[cfg(test)]
 mod tests;
 
@@ -152,6 +154,16 @@ impl Runtime {
         let module_name = self.configuration.entry_module.clone();
         let entrypoint = self.configuration.entrypoint.clone();
 
+        if cfg!(feature = "oak_debug") {
+            // TODO(#672): make introspection port configurable externally
+            info!("spawning introspection server on new thread");
+            let runtime = self.clone();
+            let _thread_handle = thread::Builder::new()
+                .name("introspection-server".to_string())
+                .spawn(move || introspect::serve(1909, runtime))
+                .expect("failed to spawn introspection thread");
+        }
+
         // When first starting, we assign the least privileged label to the channel connecting the
         // outside world to the entry point Node.
         let (chan_writer, chan_reader) =
@@ -240,6 +252,23 @@ impl Runtime {
         write!(&mut s, "{}", self.channels.graph_edges(seen)).unwrap();
         writeln!(&mut s, "}}").unwrap();
         s
+    }
+
+    #[cfg(feature = "oak_debug")]
+    pub fn html(&self) -> String {
+        format!("<pre>\n{:?}\n</pre>", self)
+    }
+    #[cfg(feature = "oak_debug")]
+    pub fn html_for_node(&self, id: u64) -> Option<String> {
+        Some(format!("placeholder for {}", id))
+    }
+    #[cfg(feature = "oak_debug")]
+    pub fn html_for_channel(&self, id: u64) -> Option<String> {
+        self.channels.html_for_channel(id)
+    }
+    #[cfg(feature = "oak_debug")]
+    pub fn html_for_half(&self, id: u64) -> Option<String> {
+        self.channels.html_for_half(id)
     }
 
     /// Thread safe method for determining if the [`Runtime`] is terminating.
