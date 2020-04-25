@@ -35,6 +35,9 @@ mod tests;
 pub use channel::{Handle, HandleDirection};
 
 struct NodeInfo {
+    /// Name for the Node in debugging output.
+    pretty_name: String,
+
     /// The Label associated with this Node.
     ///
     /// This is set at Node creation time and does not change after that.
@@ -49,7 +52,11 @@ struct NodeInfo {
 
 impl std::fmt::Debug for NodeInfo {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "NodeInfo {{label={:?}, handles=[", self.label)?;
+        write!(
+            f,
+            "NodeInfo {{'{}', label={:?}, handles=[",
+            self.pretty_name, self.label
+        )?;
         write!(
             f,
             "{}",
@@ -825,7 +832,13 @@ impl Runtime {
                 conf.create_node(module_name, runtime_proxy, entrypoint.to_owned(), reader)
             })?;
 
-        self.node_start_instance(node_id, instance, label, vec![reader])?;
+        self.node_start_instance(
+            node_id,
+            format!("{}.{}", module_name, entrypoint),
+            instance,
+            label,
+            vec![reader],
+        )?;
 
         Ok(())
     }
@@ -833,12 +846,14 @@ impl Runtime {
     /// Starts a newly created Node instance, by first initializing the necessary [`NodeInfo`] data
     /// structure in [`Runtime`], allowing it to access the provided [`Handle`]s, then calling
     /// [`Node::start`] on the instance, and finally storing a [`JoinHandle`] from the running
-    /// instance in [`Runtime::node_join_handles`] so that it can later be terminated.
+    /// instance in [`Runtime::node_join_handles`] so that it can later be terminated.  The
+    /// `pretty_name` parameter is only used for diagnostic/debugging output.
     ///
     /// [`Node::start`]: crate::node::Node::start
     pub fn node_start_instance<I>(
         &self,
         node_id: NodeId,
+        pretty_name: String,
         node_instance: Box<dyn crate::node::Node>,
         label: &Label,
         initial_handles: I,
@@ -852,6 +867,7 @@ impl Runtime {
         self.add_node_info(
             node_id,
             NodeInfo {
+                pretty_name,
                 label: label.clone(),
                 handles: HashSet::new(),
             },
