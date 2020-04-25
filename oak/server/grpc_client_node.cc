@@ -195,6 +195,7 @@ void GrpcClientNode::Run(Handle invocation_handle) {
       OAK_LOG(ERROR) << "Invocation processing failed!";
     }
   }
+  ChannelClose(invocation_handle);
 }
 
 }  // namespace oak

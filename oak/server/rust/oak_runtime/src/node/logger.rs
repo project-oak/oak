@@ -52,6 +52,7 @@ impl LogNode {
         let pretty_name = pretty_name_for_thread(&thread::current());
         let result = self.logger_loop(&pretty_name);
         info!("{} LOG: exiting log thread {:?}", pretty_name, result);
+        let _ = self.runtime.channel_close(self.reader);
         self.runtime.exit_node();
     }
 

@@ -92,8 +92,9 @@ void RoughtimeClientNode::Run(Handle invocation_handle) {
     grpc_rsp.SerializeToArray(rsp_msg->data.data(), rsp_msg->data.size());
     ChannelWrite(invocation->rsp_handle.get(), std::move(rsp_msg));
 
-    // The response channel reference is dropped here.
+    // The Invocation reference is dropped here, which closes the request & response channels.
   }
+  ChannelClose(invocation_handle);
 }
 
 }  // namespace oak
