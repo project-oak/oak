@@ -43,6 +43,12 @@ pub trait DotIdentifier {
     fn dot_id(&self) -> String;
 }
 
+/// Trait that returns the path at which the debug introspection server will
+/// show a page for a data structure.
+pub trait HtmlPath {
+    fn html_path(&self) -> String;
+}
+
 struct NodeInfo {
     /// Name for the Node in debugging output.
     pretty_name: String,
@@ -85,6 +91,12 @@ pub struct NodeId(pub u64);
 impl DotIdentifier for NodeId {
     fn dot_id(&self) -> String {
         format!("node{}", self.0)
+    }
+}
+
+impl HtmlPath for NodeId {
+    fn html_path(&self) -> String {
+        format!("/node/{}", self.0)
     }
 }
 
@@ -205,9 +217,10 @@ impl Runtime {
                 let node_info = node_infos.get(node_id).unwrap();
                 write!(
                     &mut s,
-                    "    {} [label=\"{}\"]",
+                    r###"    {} [label="{}" URL="{}"]"###,
                     node_id.dot_id(),
                     node_info.pretty_name,
+                    node_id.html_path(),
                 )
                 .unwrap();
                 if self
@@ -256,11 +269,60 @@ impl Runtime {
 
     #[cfg(feature = "oak_debug")]
     pub fn html(&self) -> String {
-        format!("<pre>\n{:?}\n</pre>", self)
+        let mut s = String::new();
+        writeln!(&mut s, "<h2>Nodes</h2>").unwrap();
+        writeln!(&mut s, r###"<p><a href="/graph">Show as graph</a><ul>"###).unwrap();
+        {
+            let node_infos = self.node_infos.read().unwrap();
+            for node_id in node_infos.keys().sorted() {
+                let node_info = node_infos.get(node_id).unwrap();
+                write!(
+                    &mut s,
+                    r###"<li><a href="{}">{:?}</a> => <tt>{:?}"###,
+                    node_id.html_path(),
+                    node_id,
+                    node_info
+                )
+                .unwrap();
+                if let Some(join_handle) = self.node_join_handles.lock().unwrap().get(&node_id) {
+                    write!(&mut s, ", join_handle={:?}", join_handle).unwrap();
+                }
+                writeln!(&mut s, "</tt>").unwrap();
+            }
+        }
+        writeln!(&mut s, "</ul>").unwrap();
+        write!(&mut s, "{}", self.channels.html()).unwrap();
+        s
     }
+
     #[cfg(feature = "oak_debug")]
     pub fn html_for_node(&self, id: u64) -> Option<String> {
-        Some(format!("placeholder for {}", id))
+        let node_id = NodeId(id);
+        let node_infos = self.node_infos.read().unwrap();
+        let node_info = node_infos.get(&node_id)?;
+        let mut s = String::new();
+        write!(&mut s, "<h2>{}</h2>", node_info.pretty_name).unwrap();
+        if let Some(join_handle) = self.node_join_handles.lock().unwrap().get(&node_id) {
+            write!(
+                &mut s,
+                "<p>Node thread is currently running, join_handle={:?}",
+                join_handle
+            )
+            .unwrap();
+        } else {
+            write!(&mut s, "<p>No current thread for Node.").unwrap();
+        }
+        write!(&mut s, "<p>Label={:?}<p>Handles:<ul>", node_info.label).unwrap();
+        for half_id in &node_info.handles {
+            write!(
+                &mut s,
+                r###"<li><a href="{}">{:?}</a>"###,
+                half_id.html_path(),
+                half_id
+            )
+            .unwrap();
+        }
+        Some(s)
     }
     #[cfg(feature = "oak_debug")]
     pub fn html_for_channel(&self, id: u64) -> Option<String> {
