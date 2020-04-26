@@ -17,6 +17,15 @@ def _new_git_repository(name, **kwargs):
 def raze_fetch_remote_crates():
 
     _new_http_archive(
+        name = "raze__aho_corasick__0_7_10",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/aho-corasick/aho-corasick-0.7.10.crate",
+        type = "tar.gz",
+        strip_prefix = "aho-corasick-0.7.10",
+
+        build_file = Label("//cargo/remote:aho-corasick-0.7.10.BUILD"),
+    )
+
+    _new_http_archive(
         name = "raze__anyhow__1_0_28",
         url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/anyhow/anyhow-1.0.28.crate",
         type = "tar.gz",
@@ -320,15 +329,6 @@ def raze_fetch_remote_crates():
         strip_prefix = "itertools-0.8.2",
 
         build_file = Label("//cargo/remote:itertools-0.8.2.BUILD"),
-    )
-
-    _new_http_archive(
-        name = "raze__itertools__0_9_0",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/itertools/itertools-0.9.0.crate",
-        type = "tar.gz",
-        strip_prefix = "itertools-0.9.0",
-
-        build_file = Label("//cargo/remote:itertools-0.9.0.BUILD"),
     )
 
     _new_http_archive(
@@ -638,6 +638,24 @@ def raze_fetch_remote_crates():
     )
 
     _new_http_archive(
+        name = "raze__regex__1_3_7",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/regex/regex-1.3.7.crate",
+        type = "tar.gz",
+        strip_prefix = "regex-1.3.7",
+
+        build_file = Label("//cargo/remote:regex-1.3.7.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__regex_syntax__0_6_17",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/regex-syntax/regex-syntax-0.6.17.crate",
+        type = "tar.gz",
+        strip_prefix = "regex-syntax-0.6.17",
+
+        build_file = Label("//cargo/remote:regex-syntax-0.6.17.BUILD"),
+    )
+
+    _new_http_archive(
         name = "raze__ring__0_16_12",
         url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/ring/ring-0.16.12.crate",
         type = "tar.gz",
@@ -716,6 +734,15 @@ def raze_fetch_remote_crates():
         strip_prefix = "thiserror-impl-1.0.15",
 
         build_file = Label("//cargo/remote:thiserror-impl-1.0.15.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__thread_local__1_0_1",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/thread_local/thread_local-1.0.1.crate",
+        type = "tar.gz",
+        strip_prefix = "thread_local-1.0.1",
+
+        build_file = Label("//cargo/remote:thread_local-1.0.1.BUILD"),
     )
 
     _new_http_archive(

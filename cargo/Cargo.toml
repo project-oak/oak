@@ -24,6 +24,7 @@ log = { version = "*", features = ["std"] }
 prost = "*"
 prost-types = "*"
 rand = "*"
+regex = "1"
 simple_logger = "*"
 tokio = { version = "*", features = ["rt-core", "macros"] }
 # Using an old version that is supported by `cargo-raze`:

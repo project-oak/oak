@@ -30,7 +30,7 @@ alias(
 )
 alias(
     name = "itertools",
-    actual = "@raze__itertools__0_9_0//:itertools",
+    actual = "@raze__itertools__0_8_2//:itertools",
 )
 alias(
     name = "lazy_static",
@@ -55,6 +55,10 @@ alias(
 alias(
     name = "rand",
     actual = "@raze__rand__0_7_3//:rand",
+)
+alias(
+    name = "regex",
+    actual = "@raze__regex__1_3_7//:regex",
 )
 alias(
     name = "simple_logger",
