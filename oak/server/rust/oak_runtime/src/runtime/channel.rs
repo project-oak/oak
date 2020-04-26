@@ -27,7 +27,10 @@ use std::{
     thread::{Thread, ThreadId},
 };
 
-use crate::{runtime::DotIdentifier, Message};
+use crate::{
+    runtime::{DotIdentifier, HtmlPath},
+    Message,
+};
 use oak_abi::OakStatus;
 
 type Messages = VecDeque<Message>;
@@ -79,6 +82,7 @@ impl std::fmt::Debug for Channel {
         )
     }
 }
+
 /// A reference to a [`Channel`]. Each [`Handle`] has an implicit direction such that it is only
 /// possible to read or write to a [`Handle`] (exclusive or).
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
@@ -87,6 +91,12 @@ pub struct Handle(pub oak_abi::Handle);
 impl DotIdentifier for Handle {
     fn dot_id(&self) -> String {
         format!("h{}", self.0)
+    }
+}
+
+impl HtmlPath for Handle {
+    fn html_path(&self) -> String {
+        format!("/half/{}", self.0)
     }
 }
 
@@ -110,6 +120,12 @@ type ChannelId = u64;
 impl DotIdentifier for ChannelId {
     fn dot_id(&self) -> String {
         format!("channel{}", self)
+    }
+}
+
+impl HtmlPath for ChannelId {
+    fn html_path(&self) -> String {
+        format!("/channel/{}", self)
     }
 }
 
@@ -180,6 +196,44 @@ impl Channel {
     /// Increment the [`Channel`] reader counter.
     pub fn inc_reader_count(&self) -> u64 {
         self.readers.fetch_add(1, SeqCst)
+    }
+
+    // Build an HTML page describing a specific `Channel`.
+    fn html(&self) -> String {
+        let mut s = String::new();
+        write!(
+            &mut s,
+            "Channel {{ reader_count={}, writer_count={}, label={:?} }}<br/>",
+            self.readers.load(SeqCst),
+            self.writers.load(SeqCst),
+            self.label
+        )
+        .unwrap();
+        let messages = self.messages.read().unwrap();
+        write!(&mut s, r###"Messages: (count = {}):<ul>"###, messages.len()).unwrap();
+        for (i, message) in messages.iter().enumerate() {
+            write!(
+                &mut s,
+                "  <li>message[{}]: data.len()={}, halves=[",
+                i,
+                message.data.len()
+            )
+            .unwrap();
+            for (j, half) in message.channels.iter().enumerate() {
+                if j > 0 {
+                    write!(&mut s, ", ").unwrap();
+                }
+                write!(
+                    &mut s,
+                    r###"<a href="{}">{:?}</a>"###,
+                    half.html_path(),
+                    half
+                )
+                .unwrap();
+            }
+            write!(&mut s, "]").unwrap();
+        }
+        s
     }
 }
 
@@ -338,12 +392,24 @@ impl ChannelMapping {
 
         {
             for half_id in self.writers.read().unwrap().keys() {
-                writeln!(&mut s, "    {}", half_id.dot_id()).unwrap();
+                writeln!(
+                    &mut s,
+                    r###"    {} [URL="{}"]"###,
+                    half_id.dot_id(),
+                    half_id.html_path()
+                )
+                .unwrap();
             }
         }
         {
             for half_id in self.readers.read().unwrap().keys() {
-                writeln!(&mut s, "    {}", half_id.dot_id()).unwrap();
+                writeln!(
+                    &mut s,
+                    r###"    {} [URL="{}"]"###,
+                    half_id.dot_id(),
+                    half_id.html_path()
+                )
+                .unwrap();
             }
         }
         writeln!(&mut s, "  }}").unwrap();
@@ -361,12 +427,13 @@ impl ChannelMapping {
                 let channel = channels.get(&channel_id).unwrap();
                 writeln!(
                     &mut s,
-                    "    {} [label=\"channel-{}\\nm={}, w={}, r={}\"]",
+                    r###"    {} [label="channel-{}\\nm={}, w={}, r={}" URL="{}"]"###,
                     channel_id.dot_id(),
                     channel_id,
                     channel.messages.read().unwrap().len(),
                     channel.readers.load(SeqCst),
                     channel.writers.load(SeqCst),
+                    channel_id.html_path(),
                 )
                 .unwrap();
             }
@@ -403,15 +470,85 @@ impl ChannelMapping {
         s
     }
 
+    // Build an HTML page describing the `ChannelMapping` structure.
+    #[cfg(feature = "oak_debug")]
+    pub fn html(&self) -> String {
+        let mut s = String::new();
+        writeln!(&mut s, "<h2>Channels</h2>").unwrap();
+        writeln!(&mut s, "<ul>").unwrap();
+        {
+            let channels = self.channels.read().unwrap();
+            for channel_id in channels.keys().sorted() {
+                let channel = channels.get(channel_id).unwrap();
+                writeln!(
+                    &mut s,
+                    r###"<li><a href="{}">channel-{}</a> => {:?}"###,
+                    channel_id.html_path(),
+                    channel_id,
+                    channel
+                )
+                .unwrap();
+            }
+        }
+        writeln!(&mut s, "</ul>").unwrap();
+        writeln!(&mut s, "<h2>Channel Halves</h2>").unwrap();
+        writeln!(&mut s, "<ul>").unwrap();
+        {
+            for (h, channel_id) in self.readers.read().unwrap().iter() {
+                writeln!(
+                    &mut s,
+                    r###"<li><a href="{}">{:?}</a> => READ <a href="{}">channel-{}</a>"###,
+                    h.html_path(),
+                    h,
+                    channel_id.html_path(),
+                    channel_id
+                )
+                .unwrap();
+            }
+        }
+        {
+            for (h, channel_id) in self.writers.read().unwrap().iter() {
+                writeln!(
+                    &mut s,
+                    r###"<li><a href="{}">{:?}</a> => WRITE <a href="{}">channel-{}</a>"###,
+                    h.html_path(),
+                    h,
+                    channel_id.html_path(),
+                    channel_id
+                )
+                .unwrap();
+            }
+        }
+        writeln!(&mut s, "</ul>").unwrap();
+        s
+    }
+
+    // Build an HTML page describing a specific channel identified by `ChannelId`.
     #[cfg(feature = "oak_debug")]
     pub fn html_for_channel(&self, id: u64) -> Option<String> {
         let channel_id: ChannelId = id;
-        Some(format!("placeholder for {}", channel_id))
+        self.with_channel(channel_id, |channel| Ok(channel.html()))
+            .ok()
     }
 
+    // Build an HTML page describing a specific runtime::Handle.
     #[cfg(feature = "oak_debug")]
     pub fn html_for_half(&self, id: u64) -> Option<String> {
-        let half = Handle(id);
-        Some(format!("placeholder for {:?}", half))
+        let half_id = Handle(id);
+        if let Some(channel_id) = self.writers.read().unwrap().get(&half_id) {
+            Some(format!(
+                r###"WRITE half for <a href="{}">channel {}</a>"###,
+                channel_id.html_path(),
+                channel_id
+            ))
+        } else if let Some(channel_id) = self.readers.read().unwrap().get(&half_id) {
+            Some(format!(
+                r###"READ half for <a href="{}">channel {}</a>"###,
+                channel_id.html_path(),
+                channel_id
+            ))
+        } else {
+            None
+        }
     }
 }
