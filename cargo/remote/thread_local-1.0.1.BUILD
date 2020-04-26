@@ -12,8 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "notice", # "MIT"
-  "unencumbered", # "Unlicense"
+  "notice", # "Apache-2.0,MIT"
 ])
 
 load(
@@ -24,24 +23,22 @@ load(
 )
 
 
-# Unsupported target "build-script-build" with type "custom-build" omitted
+# Unsupported target "thread_local" with type "bench" omitted
 
 rust_library(
-    name = "memchr",
+    name = "thread_local",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     edition = "2015",
     srcs = glob(["**/*.rs"]),
     deps = [
+        "@raze__lazy_static__1_4_0//:lazy_static",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "2.3.3",
+    version = "1.0.1",
     crate_features = [
-        "default",
-        "std",
-        "use_std",
     ],
 )
 
