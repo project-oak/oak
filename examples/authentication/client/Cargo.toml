@@ -13,6 +13,11 @@ futures-util = { version = "*", default-features = false }
 hyper = "*"
 log = "*"
 open = "*"
+prost = "*"
 structopt = "*"
-tokio = "*"
+tokio = { version = "*", features = ["fs", "macros", "sync", "stream"] }
+tonic = { version = "*", features = ["tls"] }
 url = "*"
+
+[build-dependencies]
+tonic-build = "*"

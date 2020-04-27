@@ -12,10 +12,16 @@ of the redirection URL and returned to the main thread.
 TODO(#855): The authentication code can then be exchanged for an identity token
 by the authentication server.
 
-The client can be executed using:
+The server can be run using:
 
 ```bash
-cargo run --package=auth_client -- --client-id=691249393555-0h52jim9ni9clkpd5chi82q9ccn44ebm.apps.googleusercontent.com
+cargo run --package=auth_server -- --client-id=691249393555-0h52jim9ni9clkpd5chi82q9ccn44ebm.apps.googleusercontent.com
+```
+
+While the server is running, the client can be executed using:
+
+```bash
+cargo run --package=auth_client
 ```
 
 This requires a valid OAuth Client ID, which can be created as described in
