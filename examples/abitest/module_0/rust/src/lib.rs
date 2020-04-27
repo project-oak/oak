@@ -34,6 +34,7 @@ use std::{collections::HashMap, convert::TryInto};
 
 const BACKEND_COUNT: usize = 3;
 
+const FRONTEND_CONFIG_NAME: &str = "frontend-config";
 const BACKEND_CONFIG_NAME: &str = "backend-config";
 const BACKEND_ENTRYPOINT_NAME: &str = "backend_oak_main";
 const STORAGE_NAME_PREFIX: &str = "abitest";
@@ -52,6 +53,22 @@ struct FrontendNode {
 
 impl FrontendNode {
     pub fn new() -> Self {
+        {
+            // Before doing anything else, deliberately lose some channels.
+            // We can't check these with automatic testing, but they're useful for
+            // manual introspection to check that Runtime internal channel tracking
+            // is working correctly.
+            //
+            // First lose channels directly.
+            lose_channels();
+
+            // Second, start an ephemeral Node which also loses channels.
+            let (wh, rh) = oak::channel_create().unwrap();
+            oak::node_create(FRONTEND_CONFIG_NAME, "channel_loser", rh)
+                .expect("failed to create channel_loser ephemeral Node");
+            oak::channel_close(wh.handle).unwrap();
+            oak::channel_close(rh.handle).unwrap();
+        }
         oak::logger::init(log::Level::Debug, LOG_CONFIG_NAME)
             .expect("could not initialize logging node");
 
@@ -1613,4 +1630,54 @@ fn from_proto(status: oak::grpc::Status) -> Box<dyn std::error::Error> {
         std::io::ErrorKind::Other,
         format!("status code {} message '{}'", status.code, status.message),
     ))
+}
+
+fn lose_channels() {
+    // Create a channel holding a message that holds references to itself.
+    let (wh, rh) = oak::channel_create().unwrap();
+    let data = vec![0x01, 0x02, 0x03];
+    oak::channel_write(wh, &data, &[wh.handle, rh.handle]).unwrap();
+    // Close both handles so this channel is immediately lost.
+    oak::channel_close(wh.handle).unwrap();
+    oak::channel_close(rh.handle).unwrap();
+
+    // Create a channel holding a message that holds references to itself.
+    let (wh, rh) = oak::channel_create().unwrap();
+    let data = vec![0x01, 0x02, 0x03];
+    oak::channel_write(wh, &data, &[wh.handle, rh.handle]).unwrap();
+    // Keep the write handle open, so this channel will be lost when
+    // the Node exits
+    oak::channel_close(rh.handle).unwrap();
+
+    // Create a pair of channels, each holding a message that holds references to the other
+    let (wh_a, rh_a) = oak::channel_create().unwrap();
+    let (wh_b, rh_b) = oak::channel_create().unwrap();
+    oak::channel_write(wh_a, &data, &[wh_b.handle, rh_b.handle]).unwrap();
+    oak::channel_write(wh_b, &data, &[wh_a.handle, rh_a.handle]).unwrap();
+    // Close all handles so these channels are immediately lost.
+    oak::channel_close(wh_a.handle).unwrap();
+    oak::channel_close(wh_b.handle).unwrap();
+    oak::channel_close(rh_a.handle).unwrap();
+    oak::channel_close(rh_b.handle).unwrap();
+
+    // Create a pair of channels, each holding a message that holds references to the other
+    let (wh_a, rh_a) = oak::channel_create().unwrap();
+    let (wh_b, rh_b) = oak::channel_create().unwrap();
+    oak::channel_write(wh_a, &data, &[wh_b.handle, rh_b.handle]).unwrap();
+    oak::channel_write(wh_b, &data, &[wh_a.handle, rh_a.handle]).unwrap();
+    // Keep the write handles open.
+    oak::channel_close(rh_a.handle).unwrap();
+    oak::channel_close(rh_b.handle).unwrap();
+
+    // Node exit: at this point the Runtime can recover channels that are still in
+    // the Node's handle table.
+}
+
+// Entrypoint for a Node instance that creates channels and loses track of them.
+#[no_mangle]
+pub extern "C" fn channel_loser(_handle: u64) {
+    lose_channels();
+    // At this point there are two channels that this Node can no longer access.
+    // On Node exit (when this function returns), the Runtime should free those
+    // channels.
 }
