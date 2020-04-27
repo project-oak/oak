@@ -43,19 +43,25 @@ the internal state of the Node itself (which may be empty), implement the
 [`oak::Node`](https://project-oak.github.io/oak/doc/oak/trait.Node.html) trait
 for it, then define an
 [`entrypoint`](https://project-oak.github.io/oak/doc/oak/macro.entrypoint.html)
-so the Oak SDK knows how to instantiate it:
+so the Oak SDK knows how to instantiate it.
+
+The defined entrypoint should run an `oak::run_event_loop` function that is
+specified with a channel handle (used for reading messages) and an Oak Node that
+receives these messages. Fox example, such a handle could be provided by the
+gRPC server pseudo-Node:
 
 <!-- prettier-ignore-start -->
 [embedmd]:# (../examples/machine_learning/module/rust/src/lib.rs Rust /^oak::entrypoint.*/ /}\);$/)
 ```Rust
-oak::entrypoint!(oak_main => {
+oak::entrypoint!(oak_main => |in_channel| {
     oak::logger::init_default();
-    Node {
+    let node = Node {
         training_set_size: 1000,
         test_set_size: 1000,
         config: None,
         model: NaiveBayes::new(),
-    }
+    };
+    oak::run_event_loop(node, in_channel);
 });
 ```
 <!-- prettier-ignore-end -->
@@ -93,9 +99,10 @@ with the automatically generated `Dispatcher`, as described in the next section.
 <!-- prettier-ignore-start -->
 [embedmd]:# (../examples/rustfmt/module/rust/src/lib.rs Rust /oak::entrypoint!/ /^}/)
 ```Rust
-oak::entrypoint!(oak_main => {
+oak::entrypoint!(oak_main => |in_channel| {
     oak::logger::init_default();
-    FormatServiceDispatcher::new(Node)
+    let dispatcher = FormatServiceDispatcher::new(Node);
+    oak::run_event_loop(dispatcher, in_channel);
 }
 ```
 <!-- prettier-ignore-end -->
@@ -124,7 +131,10 @@ pub extern "C" fn frontend_oak_main(in_handle: u64) {
         oak::set_panic_hook();
         let node = FrontendNode::new();
         let dispatcher = OakAbiTestServiceDispatcher::new(node);
-        oak::run_event_loop(dispatcher, in_handle);
+        let in_channel = ::oak::ReadHandle {
+            handle: ::oak::Handle::from_raw(in_handle),
+        };
+        oak::run_event_loop(dispatcher, in_channel);
     });
 }
 ```
@@ -218,12 +228,26 @@ node_configs {
   }
 }
 node_configs {
+  name: "translator"
+  wasm_config {
+    module_bytes: "<bytes>"
+  }
+}
+node_configs {
+  name: "grpc-server"
+  grpc_server_config {
+    address: "[::]:8080"
+    grpc_tls_private_key: "<bytes>"
+    grpc_tls_certificate: "<bytes>"
+  }
+}
+node_configs {
   name: "log"
   log_config {}
 }
 grpc_port: 8080
 initial_node_config_name: "app"
-initial_entrypoint_name: "oak_main"
+initial_entrypoint_name: "grpc_oak_main"
 ```
 <!-- prettier-ignore-end -->
 

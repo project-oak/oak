@@ -4,19 +4,20 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "${SCRIPTS_DIR}/common"
 
-server="base"
-languages="rust cpp"
+server="rust"
+languages="rust"
 while getopts "s:l:h" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-s base|logless|asan|tsan] [-l rust|cpp]
+      echo -e "Usage: ${0} [-s rust|base|logless|asan|tsan] [-l rust|cpp]
   -s    Server type used to run examples:
-          - base: base version of the server (default)
+          - rust: Rust version of the server (default)
+          - base: base version of the server
           - logless: base version of the server with debug logging compiled out
           - asan: server with address sanitizer
           - tsan: server with thread santizer
-  -l    Run examples implemented in which language (default: both):
-          - rust
+  -l    Run examples implemented in which language:
+          - rust (default)
           - cpp
   -h    Print Help (this message) and exit"
       exit 0;;
@@ -24,7 +25,7 @@ while getopts "s:l:h" opt; do
       languages="${OPTARG}";;
     s)
       case "${OPTARG}" in
-        base|logless|asan|tsan)
+        base|logless|rust|asan|tsan)
           server="${OPTARG}";;
         *)
           echo "Invalid server type: ${OPTARG}"
@@ -35,6 +36,12 @@ while getopts "s:l:h" opt; do
       exit 1;;
   esac
 done
+
+# TODO(#1009): Re-enable C++ examples after supporting them with Rust Oak Loader.
+if [[ "${languages}" == "cpp" ]]; then
+  echo "C++ examples are currently not supported"
+  exit 1
+fi
 
 # Run all examples.
 for language in ${languages}; do

@@ -27,6 +27,8 @@ use tonic::transport::{Certificate, Identity, Uri};
 pub mod external;
 mod grpc;
 mod logger;
+mod roughtime;
+mod storage;
 mod wasm;
 
 /// Trait encapsulating execution of a Node or pseudo-Node.
@@ -74,6 +76,12 @@ pub enum Configuration {
     WasmNode {
         module: Arc<wasmi::Module>,
     },
+
+    /// The configuration for a storage Node.
+    StorageNode,
+
+    /// The configuration for a Roughtime client Node.
+    RoughtimeClientNode,
 
     /// The configuration for an externally provided pseudo-Node.
     External,
@@ -176,7 +184,6 @@ impl Configuration {
                 *address,
                 tls_identity.clone(),
             ))),
-
             Configuration::GrpcClientNode {
                 uri,
                 root_tls_certificate,
@@ -192,6 +199,12 @@ impl Configuration {
                     None => None,
                 }
             }
+
+            Configuration::StorageNode => Some(Box::new(storage::StorageNode::new(node_name))),
+            Configuration::RoughtimeClientNode => {
+                Some(Box::new(roughtime::RoughtimeClientNode::new(node_name)))
+            }
+
             Configuration::External => {
                 Some(Box::new(external::PseudoNode::new(node_name, config_name)))
             }
@@ -206,6 +219,8 @@ impl Configuration {
             Configuration::GrpcServerNode { .. } => "GrpcServerNode".to_string(),
             Configuration::GrpcClientNode { .. } => "GrpcClientNode".to_string(),
             Configuration::WasmNode { .. } => format!("WasmNode-{}", entrypoint),
+            Configuration::StorageNode { .. } => "StorageNode".to_string(),
+            Configuration::RoughtimeClientNode { .. } => "RoughtimeClientNode".to_string(),
             Configuration::External => "ExternalPseudoNode".to_string(),
         }
     }

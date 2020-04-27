@@ -19,12 +19,13 @@ use crate::{
     node::{check_uri, load_certificate, load_wasm},
     proto::oak::application::{
         node_configuration::ConfigType, ApplicationConfiguration, GrpcClientConfiguration,
-        GrpcServerConfiguration, LogConfiguration, NodeConfiguration, WebAssemblyConfiguration,
+        GrpcServerConfiguration, LogConfiguration, NodeConfiguration, RoughtimeClientConfiguration,
+        StorageProxyConfiguration, WebAssemblyConfiguration,
     },
     runtime, RuntimeProxy,
 };
 use itertools::Itertools;
-use log::{error, warn};
+use log::error;
 use oak_abi::OakStatus;
 use std::collections::HashMap;
 use tonic::transport::Identity;
@@ -131,13 +132,12 @@ pub fn from_protobuf(
                         OakStatus::ErrInvalidArgs
                     })?
                 }
-                Some(node_config) => {
-                    warn!(
-                        "Assuming pseudo-Node of type {:?} implemented externally!",
-                        node_config
-                    );
-                    node::Configuration::External
+                Some(ConfigType::StorageConfig(StorageProxyConfiguration { .. })) => {
+                    node::Configuration::StorageNode
                 }
+                Some(ConfigType::RoughtimeClientConfig(RoughtimeClientConfiguration {
+                    ..
+                })) => node::Configuration::RoughtimeClientNode,
             },
         );
     }

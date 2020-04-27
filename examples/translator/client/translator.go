@@ -26,7 +26,7 @@ import (
 )
 
 var (
-	address = flag.String("address", "127.0.0.1:8080", "Address of the Oak application to connect to")
+	address = flag.String("address", "localhost:8080", "Address of the Oak application to connect to")
 	caCert  = flag.String("ca_cert", "", "Path to the PEM-encoded CA root certificate")
 )
 

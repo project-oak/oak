@@ -63,7 +63,7 @@ impl Client {
             }
             Err(status) => {
                 warn!(
-                    "failed to create Client for '{}' in '{}' : {:?}",
+                    "failed to create gRPC client pseudo-Node for '{}' in '{}' : {:?}",
                     entrypoint_name, config_name, status
                 );
                 None

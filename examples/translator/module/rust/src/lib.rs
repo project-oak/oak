@@ -23,9 +23,17 @@ use translator_common::proto::{
     TranslateRequest, TranslateResponse, Translator, TranslatorDispatcher,
 };
 
-oak::entrypoint!(oak_main => {
+oak::entrypoint!(oak_main => |in_channel| {
     oak::logger::init_default();
-    TranslatorDispatcher::new(Node)
+    let dispatcher = TranslatorDispatcher::new(Node);
+    oak::run_event_loop(dispatcher, in_channel);
+});
+
+oak::entrypoint!(grpc_oak_main => |_in_channel| {
+    oak::logger::init_default();
+    let dispatcher = TranslatorDispatcher::new(Node);
+    let grpc_channel = oak::grpc::server::init_default();
+    oak::run_event_loop(dispatcher, grpc_channel);
 });
 
 struct Node;

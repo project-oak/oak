@@ -27,16 +27,26 @@ node_configs {
   }
 }
 node_configs {
+  name: "grpc-server"
+  grpc_server_config {
+    address: "[::]:8080"
+    grpc_tls_private_key: "<bytes>"
+    grpc_tls_certificate: "<bytes>"
+  }
+}
+node_configs {
   name: "grpc-client"
   grpc_client_config {
     uri: "https://localhost:7878"
+    root_tls_certificate: "<bytes>"
     address: "localhost:7878"
   }
 }
 node_configs {
   name: "absent-grpc-client"
   grpc_client_config {
-    uri: "https://localhost:9999"
+    uri: "https://test.invalid:9999"
+    root_tls_certificate: "<bytes>"
     address: "test.invalid:9999"
   }
 }
@@ -52,4 +62,4 @@ node_configs {
 }
 grpc_port: 8080
 initial_node_config_name: "frontend-config"
-initial_entrypoint_name: "frontend_oak_main"
+initial_entrypoint_name: "grpc_frontend_oak_main"

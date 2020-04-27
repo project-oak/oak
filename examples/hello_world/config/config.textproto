@@ -5,9 +5,23 @@ node_configs {
   }
 }
 node_configs {
+  name: "translator"
+  wasm_config {
+    module_bytes: "<bytes>"
+  }
+}
+node_configs {
+  name: "grpc-server"
+  grpc_server_config {
+    address: "[::]:8080"
+    grpc_tls_private_key: "<bytes>"
+    grpc_tls_certificate: "<bytes>"
+  }
+}
+node_configs {
   name: "log"
   log_config {}
 }
 grpc_port: 8080
 initial_node_config_name: "app"
-initial_entrypoint_name: "oak_main"
+initial_entrypoint_name: "grpc_oak_main"

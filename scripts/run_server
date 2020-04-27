@@ -5,11 +5,11 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 source "${SCRIPTS_DIR}/common"
 
 language="rust"
-server="base"
+server="rust"
 while getopts "s:a:l:e:vh" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-s base|logless|arm|asan|tsan] [-l rust|cpp] (-a APPLICATION | -e EXAMPLE) [-v]
+      echo -e "Usage: ${0} [-s rust|base|logless|arm|asan|tsan] [-l rust|cpp] (-a APPLICATION | -e EXAMPLE) [-v]
 
 Run a particular Oak Application in the Oak Runtime.
 Either the -a APPLICATION or the -e EXAMPLE option is required.
@@ -17,9 +17,9 @@ Either the -a APPLICATION or the -e EXAMPLE option is required.
   -a    Path to a serialized application configuration file
   -e    Example application name
   -s    Server type:
-          - base: base version of the server (default)
+          - rust: Rust version of the server (default)
+          - base: base version of the server
           - logless: base version of the server with debug logging compiled out
-          - rust: Rust version of the server
           - arm: server for ARM architecture
           - asan: server with address sanitizer
           - tsan: server with thread santizer
@@ -79,7 +79,7 @@ fi
 # Launching the server requires a `--application=<dir>/config.bin` flag.
 # `exec` is necessary for the `run_example` script to be able to get a PID of a background server.
 if [[ "${server}" == "rust" ]]; then
-  exec ./bazel-clang-bin/oak/server/rust/oak_loader/oak_loader \
+  exec cargo run --release --target=x86_64-unknown-linux-musl --package=oak_loader -- \
     --application="${APPLICATION}" \
     --grpc-tls-private-key="${SCRIPTS_DIR}/../examples/certs/local/local.key" \
     --grpc-tls-certificate="${SCRIPTS_DIR}/../examples/certs/local/local.pem" \

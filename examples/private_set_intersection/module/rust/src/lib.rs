@@ -41,7 +41,16 @@ use proto::{
 };
 use std::collections::HashSet;
 
-oak::entrypoint!(oak_main => PrivateSetIntersectionDispatcher::new(Node::default()));
+oak::entrypoint!(oak_main => |in_channel| {
+    let dispatcher = PrivateSetIntersectionDispatcher::new(Node::default());
+    oak::run_event_loop(dispatcher, in_channel);
+});
+
+oak::entrypoint!(grpc_oak_main => |_in_channel| {
+    let dispatcher = PrivateSetIntersectionDispatcher::new(Node::default());
+    let grpc_channel = oak::grpc::server::init_default();
+    oak::run_event_loop(dispatcher, grpc_channel);
+});
 
 #[derive(Default)]
 struct Node {

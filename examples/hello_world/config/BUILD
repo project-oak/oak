@@ -27,6 +27,7 @@ serialized_config(
     name = "config",
     modules = {
         "app": "//:target/wasm32-unknown-unknown/release/hello_world.wasm",
+        "translator": "//:target/wasm32-unknown-unknown/release/translator.wasm",
     },
     textproto = ":config.textproto",
 )
@@ -37,13 +38,4 @@ serialized_config(
         "app": "//examples/hello_world/module/cpp:hello_world.wasm",
     },
     textproto = ":config.textproto",
-)
-
-serialized_config(
-    name = "config_translator",
-    modules = {
-        "app": "//:target/wasm32-unknown-unknown/release/hello_world.wasm",
-        "translator": "//:target/wasm32-unknown-unknown/release/translator.wasm",
-    },
-    textproto = ":config_translator.textproto",
 )

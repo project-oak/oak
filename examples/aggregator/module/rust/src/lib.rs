@@ -34,7 +34,7 @@ use aggregator_common::ThresholdAggregator;
 use data::SparseVector;
 use log::{debug, error};
 use oak::grpc;
-use oak_abi::label::{tag, Label, Tag, TlsEndpointTag};
+use oak_abi::label::Label;
 use proto::{Aggregator, AggregatorClient, AggregatorDispatcher, Sample};
 use std::{collections::HashMap, convert::TryFrom};
 
@@ -99,15 +99,16 @@ impl AggregatorNode {
         // only allowed if the current Node actually has the appropriate capability (i.e. the
         // correct WebAssembly module hash) as specified by the label component being removed, as
         // set by the client.
-        let label = Label {
-            secrecy_tags: vec![Tag {
-                tag: Some(tag::Tag::TlsEndpointTag(TlsEndpointTag {
-                    certificate_subject_alternative_name: "google.com".to_string(),
-                })),
-            }],
-            integrity_tags: vec![],
-        };
-        match oak::grpc::client::Client::new_with_label("grpc-client", "", &label)
+        // TODO(#814): Uncomment and use correct secrecy labels.
+        // let label = Label {
+        //     secrecy_tags: vec![Tag {
+        //         tag: Some(tag::Tag::TlsEndpointTag(TlsEndpointTag {
+        //             certificate_subject_alternative_name: "google.com".to_string(),
+        //         })),
+        //     }],
+        //     integrity_tags: vec![],
+        // };
+        match oak::grpc::client::Client::new_with_label("grpc-client", "", &Label::public_trusted())
             .map(AggregatorClient)
         {
             Some(grpc_client) => {
@@ -156,8 +157,15 @@ impl Aggregator for AggregatorNode {
     }
 }
 
-oak::entrypoint!(oak_main => {
+oak::entrypoint!(oak_main => |in_channel| {
     oak::logger::init_default();
-    let node = AggregatorNode::new();
-    AggregatorDispatcher::new(node)
+    let dispatcher = AggregatorDispatcher::new(AggregatorNode::new());
+    oak::run_event_loop(dispatcher, in_channel);
+});
+
+oak::entrypoint!(grpc_oak_main => |_in_channel| {
+    oak::logger::init_default();
+    let dispatcher = AggregatorDispatcher::new(AggregatorNode::new());
+    let grpc_channel = oak::grpc::server::init_default();
+    oak::run_event_loop(dispatcher, grpc_channel);
 });

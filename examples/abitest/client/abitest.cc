@@ -31,8 +31,10 @@
 #include "oak/server/storage/memory_provider.h"
 #include "oak/server/storage/storage_service.h"
 
-ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak application to connect to");
+ABSL_FLAG(std::string, address, "localhost:8080", "Address of the Oak application to connect to");
 ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate");
+ABSL_FLAG(std::string, private_key, "", "Path to the private key");
+ABSL_FLAG(std::string, cert_chain, "", "Path to the PEM-encoded certificate chain");
 ABSL_FLAG(int, storage_port, 7867,
           "Port on which the test Storage Server listens; set to zero to disable.");
 ABSL_FLAG(int, grpc_test_port, 7878,
@@ -139,11 +141,11 @@ void run_storage_server(int storage_port, grpc::Server** storage_server) {
   LOG(INFO) << "Storage server done";
 }
 
-void run_grpc_test_server(int grpc_test_port, grpc::Server** grpc_test_server) {
+void run_grpc_test_server(int grpc_test_port, grpc::Server** grpc_test_server,
+                          std::shared_ptr<grpc::ServerCredentials> credentials) {
   LOG(INFO) << "Creating test gRPC service on :" << grpc_test_port;
   grpc::ServerBuilder builder;
   std::string server_address = absl::StrCat("[::]:", grpc_test_port);
-  std::shared_ptr<grpc::ServerCredentials> credentials = grpc::InsecureServerCredentials();
   builder.AddListeningPort(server_address, credentials);
 
   oak::test::GrpcTestServer grpc_test_service;
@@ -158,6 +160,16 @@ void run_grpc_test_server(int grpc_test_port, grpc::Server** grpc_test_server) {
 
 }  // namespace
 
+std::shared_ptr<grpc::ServerCredentials> CreateGrpcCredentialsOrDie(const std::string& private_key,
+                                                                    const std::string& cert_chain,
+                                                                    const std::string& ca_cert) {
+  grpc::SslServerCredentialsOptions::PemKeyCertPair key_cert_pair = {private_key, cert_chain};
+  grpc::SslServerCredentialsOptions options;
+  options.pem_root_certs = ca_cert;
+  options.pem_key_cert_pairs.push_back(key_cert_pair);
+  return grpc::SslServerCredentials(options);
+}
+
 int main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
 
@@ -169,12 +181,28 @@ int main(int argc, char** argv) {
         absl::make_unique<std::thread>(run_storage_server, storage_port, &storage_server);
   }
 
+  std::string ca_cert = oak::ApplicationClient::LoadRootCert(absl::GetFlag(FLAGS_ca_cert));
+
   int grpc_test_port = absl::GetFlag(FLAGS_grpc_test_port);
   std::unique_ptr<std::thread> grpc_test_thread;
   grpc::Server* grpc_test_server;
+
   if (grpc_test_port > 0) {
-    grpc_test_thread =
-        absl::make_unique<std::thread>(run_grpc_test_server, grpc_test_port, &grpc_test_server);
+    std::string private_key_path = absl::GetFlag(FLAGS_private_key);
+    std::string cert_chain_path = absl::GetFlag(FLAGS_cert_chain);
+    if (private_key_path.empty()) {
+      LOG(FATAL) << "No private key file specified";
+    }
+    if (cert_chain_path.empty()) {
+      LOG(FATAL) << "No certificate chain file specified";
+    }
+    std::string private_key = oak::utils::read_file(private_key_path);
+    std::string cert_chain = oak::utils::read_file(cert_chain_path);
+
+    std::shared_ptr<grpc::ServerCredentials> grpc_credentials =
+        CreateGrpcCredentialsOrDie(private_key, cert_chain, ca_cert);
+    grpc_test_thread = absl::make_unique<std::thread>(run_grpc_test_server, grpc_test_port,
+                                                      &grpc_test_server, grpc_credentials);
   }
 
   const std::string& include = absl::GetFlag(FLAGS_test_include);
@@ -182,7 +210,6 @@ int main(int argc, char** argv) {
 
   // Connect to the Oak Application.
   std::string address = absl::GetFlag(FLAGS_address);
-  std::string ca_cert = oak::ApplicationClient::LoadRootCert(absl::GetFlag(FLAGS_ca_cert));
   LOG(INFO) << "Connecting to Oak Application: " << address;
 
   auto stub =
