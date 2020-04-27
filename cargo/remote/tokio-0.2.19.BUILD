@@ -60,6 +60,7 @@ load(
 # Unsupported target "process_issue_42" with type "test" omitted
 # Unsupported target "process_kill_on_drop" with type "test" omitted
 # Unsupported target "process_smoke" with type "test" omitted
+# Unsupported target "read_to_string" with type "test" omitted
 # Unsupported target "rt_basic" with type "test" omitted
 # Unsupported target "rt_common" with type "test" omitted
 # Unsupported target "rt_threaded" with type "test" omitted
@@ -92,6 +93,7 @@ load(
 # Unsupported target "sync_oneshot" with type "test" omitted
 # Unsupported target "sync_rwlock" with type "test" omitted
 # Unsupported target "sync_semaphore" with type "test" omitted
+# Unsupported target "sync_semaphore_owned" with type "test" omitted
 # Unsupported target "sync_watch" with type "test" omitted
 # Unsupported target "task_blocking" with type "test" omitted
 # Unsupported target "task_local" with type "test" omitted
@@ -99,6 +101,7 @@ load(
 # Unsupported target "tcp_accept" with type "test" omitted
 # Unsupported target "tcp_connect" with type "test" omitted
 # Unsupported target "tcp_echo" with type "test" omitted
+# Unsupported target "tcp_into_split" with type "test" omitted
 # Unsupported target "tcp_peek" with type "test" omitted
 # Unsupported target "tcp_shutdown" with type "test" omitted
 # Unsupported target "tcp_split" with type "test" omitted
@@ -126,11 +129,12 @@ rust_library(
         "@raze__mio__0_6_21//:mio",
         "@raze__pin_project_lite__0_1_4//:pin_project_lite",
         "@raze__slab__0_4_2//:slab",
+        "@raze__tokio_macros__0_2_5//:tokio_macros",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.2.18",
+    version = "0.2.19",
     crate_features = [
         "blocking",
         "default",
@@ -140,6 +144,7 @@ rust_library(
         "io-util",
         "iovec",
         "lazy_static",
+        "macros",
         "memchr",
         "mio",
         "rt-core",
@@ -148,6 +153,7 @@ rust_library(
         "sync",
         "tcp",
         "time",
+        "tokio-macros",
     ],
 )
 

@@ -39,6 +39,7 @@ rust_library(
         "@raze__libc__0_2_69//:libc",
         "@raze__rand_chacha__0_2_2//:rand_chacha",
         "@raze__rand_core__0_5_1//:rand_core",
+        "@raze__rand_pcg__0_2_1//:rand_pcg",
     ],
     rustc_flags = [
         "--cap-lints=allow",
@@ -50,6 +51,8 @@ rust_library(
         "getrandom",
         "getrandom_package",
         "libc",
+        "rand_pcg",
+        "small_rng",
         "std",
     ],
 )

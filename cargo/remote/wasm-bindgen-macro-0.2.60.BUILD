@@ -12,7 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "restricted", # "MIT OR Apache-2.0"
+  "notice", # "MIT,Apache-2.0"
 ])
 
 load(
@@ -23,21 +23,24 @@ load(
 )
 
 
+# Unsupported target "ui" with type "test" omitted
 
 rust_library(
-    name = "futures_task",
+    name = "wasm_bindgen_macro",
     crate_root = "src/lib.rs",
-    crate_type = "lib",
+    crate_type = "proc-macro",
     edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
+        "@raze__quote__1_0_3//:quote",
+        "@raze__wasm_bindgen_macro_support__0_2_60//:wasm_bindgen_macro_support",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.3.4",
+    version = "0.2.60",
     crate_features = [
-        "alloc",
+        "spans",
     ],
 )
 

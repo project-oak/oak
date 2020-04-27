@@ -12,7 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "restricted", # "MIT OR Apache-2.0"
+  "notice", # "MIT,Apache-2.0"
 ])
 
 load(
@@ -25,19 +25,18 @@ load(
 
 
 rust_library(
-    name = "futures_task",
-    crate_root = "src/lib.rs",
+    name = "percent_encoding",
+    crate_root = "lib.rs",
     crate_type = "lib",
-    edition = "2018",
+    edition = "2015",
     srcs = glob(["**/*.rs"]),
     deps = [
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.3.4",
+    version = "1.0.1",
     crate_features = [
-        "alloc",
     ],
 )
 

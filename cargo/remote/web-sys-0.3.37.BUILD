@@ -12,7 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "restricted", # "MIT OR Apache-2.0"
+  "notice", # "MIT,Apache-2.0"
 ])
 
 load(
@@ -23,21 +23,26 @@ load(
 )
 
 
+# Unsupported target "wasm" with type "test" omitted
 
 rust_library(
-    name = "futures_task",
+    name = "web_sys",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
+        "@raze__js_sys__0_3_37//:js_sys",
+        "@raze__wasm_bindgen__0_2_60//:wasm_bindgen",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.3.4",
+    version = "0.3.37",
     crate_features = [
-        "alloc",
+        "Crypto",
+        "EventTarget",
+        "Window",
     ],
 )
 

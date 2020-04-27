@@ -12,7 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "notice", # "MIT,Apache-2.0"
+  "restricted", # "no license"
 ])
 
 load(
@@ -23,22 +23,28 @@ load(
 )
 
 
+# Unsupported target "dns_name_tests" with type "test" omitted
+# Unsupported target "integration" with type "test" omitted
 
 rust_library(
-    name = "hermit_abi",
-    crate_root = "src/lib.rs",
+    name = "webpki",
+    crate_root = "src/webpki.rs",
     crate_type = "lib",
-    edition = "2015",
+    edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__libc__0_2_69//:libc",
+        "@raze__ring__0_16_12//:ring",
+        "@raze__untrusted__0_7_0//:untrusted",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.1.11",
+    data = glob(["**/*.der"]),
+    version = "0.21.2",
     crate_features = [
         "default",
+        "std",
+        "trust_anchor_util",
     ],
 )
 

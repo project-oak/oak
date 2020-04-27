@@ -26,6 +26,33 @@ def raze_fetch_remote_crates():
     )
 
     _new_http_archive(
+        name = "raze__async_stream__0_2_1",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/async-stream/async-stream-0.2.1.crate",
+        type = "tar.gz",
+        strip_prefix = "async-stream-0.2.1",
+
+        build_file = Label("//cargo/remote:async-stream-0.2.1.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__async_stream_impl__0_2_1",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/async-stream-impl/async-stream-impl-0.2.1.crate",
+        type = "tar.gz",
+        strip_prefix = "async-stream-impl-0.2.1",
+
+        build_file = Label("//cargo/remote:async-stream-impl-0.2.1.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__async_trait__0_1_30",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/async-trait/async-trait-0.1.30.crate",
+        type = "tar.gz",
+        strip_prefix = "async-trait-0.1.30",
+
+        build_file = Label("//cargo/remote:async-trait-0.1.30.BUILD"),
+    )
+
+    _new_http_archive(
         name = "raze__atty__0_2_14",
         url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/atty/atty-0.2.14.crate",
         type = "tar.gz",
@@ -44,12 +71,30 @@ def raze_fetch_remote_crates():
     )
 
     _new_http_archive(
+        name = "raze__base64__0_10_1",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/base64/base64-0.10.1.crate",
+        type = "tar.gz",
+        strip_prefix = "base64-0.10.1",
+
+        build_file = Label("//cargo/remote:base64-0.10.1.BUILD"),
+    )
+
+    _new_http_archive(
         name = "raze__bitflags__1_2_1",
         url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/bitflags/bitflags-1.2.1.crate",
         type = "tar.gz",
         strip_prefix = "bitflags-1.2.1",
 
         build_file = Label("//cargo/remote:bitflags-1.2.1.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__bumpalo__3_2_1",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/bumpalo/bumpalo-3.2.1.crate",
+        type = "tar.gz",
+        strip_prefix = "bumpalo-3.2.1",
+
+        build_file = Label("//cargo/remote:bumpalo-3.2.1.BUILD"),
     )
 
     _new_http_archive(
@@ -68,6 +113,15 @@ def raze_fetch_remote_crates():
         strip_prefix = "bytes-0.5.4",
 
         build_file = Label("//cargo/remote:bytes-0.5.4.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__cc__1_0_52",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/cc/cc-1.0.52.crate",
+        type = "tar.gz",
+        strip_prefix = "cc-1.0.52",
+
+        build_file = Label("//cargo/remote:cc-1.0.52.BUILD"),
     )
 
     _new_http_archive(
@@ -197,12 +251,12 @@ def raze_fetch_remote_crates():
     )
 
     _new_http_archive(
-        name = "raze__hermit_abi__0_1_11",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/hermit-abi/hermit-abi-0.1.11.crate",
+        name = "raze__hermit_abi__0_1_12",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/hermit-abi/hermit-abi-0.1.12.crate",
         type = "tar.gz",
-        strip_prefix = "hermit-abi-0.1.11",
+        strip_prefix = "hermit-abi-0.1.12",
 
-        build_file = Label("//cargo/remote:hermit-abi-0.1.11.BUILD"),
+        build_file = Label("//cargo/remote:hermit-abi-0.1.12.BUILD"),
     )
 
     _new_http_archive(
@@ -284,6 +338,15 @@ def raze_fetch_remote_crates():
         strip_prefix = "itoa-0.4.5",
 
         build_file = Label("//cargo/remote:itoa-0.4.5.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__js_sys__0_3_37",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/js-sys/js-sys-0.3.37.crate",
+        type = "tar.gz",
+        strip_prefix = "js-sys-0.3.37",
+
+        build_file = Label("//cargo/remote:js-sys-0.3.37.BUILD"),
     )
 
     _new_http_archive(
@@ -422,6 +485,15 @@ def raze_fetch_remote_crates():
     )
 
     _new_http_archive(
+        name = "raze__percent_encoding__1_0_1",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/percent-encoding/percent-encoding-1.0.1.crate",
+        type = "tar.gz",
+        strip_prefix = "percent-encoding-1.0.1",
+
+        build_file = Label("//cargo/remote:percent-encoding-1.0.1.BUILD"),
+    )
+
+    _new_http_archive(
         name = "raze__pin_project__0_4_9",
         url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/pin-project/pin-project-0.4.9.crate",
         type = "tar.gz",
@@ -449,12 +521,12 @@ def raze_fetch_remote_crates():
     )
 
     _new_http_archive(
-        name = "raze__pin_utils__0_1_0_alpha_4",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/pin-utils/pin-utils-0.1.0-alpha.4.crate",
+        name = "raze__pin_utils__0_1_0",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/pin-utils/pin-utils-0.1.0.crate",
         type = "tar.gz",
-        strip_prefix = "pin-utils-0.1.0-alpha.4",
+        strip_prefix = "pin-utils-0.1.0",
 
-        build_file = Label("//cargo/remote:pin-utils-0.1.0-alpha.4.BUILD"),
+        build_file = Label("//cargo/remote:pin-utils-0.1.0.BUILD"),
     )
 
     _new_http_archive(
@@ -557,12 +629,39 @@ def raze_fetch_remote_crates():
     )
 
     _new_http_archive(
-        name = "raze__redox_syscall__0_1_56",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/redox_syscall/redox_syscall-0.1.56.crate",
+        name = "raze__rand_pcg__0_2_1",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/rand_pcg/rand_pcg-0.2.1.crate",
         type = "tar.gz",
-        strip_prefix = "redox_syscall-0.1.56",
+        strip_prefix = "rand_pcg-0.2.1",
 
-        build_file = Label("//cargo/remote:redox_syscall-0.1.56.BUILD"),
+        build_file = Label("//cargo/remote:rand_pcg-0.2.1.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__ring__0_16_12",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/ring/ring-0.16.12.crate",
+        type = "tar.gz",
+        strip_prefix = "ring-0.16.12",
+
+        build_file = Label("//cargo/remote:ring-0.16.12.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__rustls__0_16_0",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/rustls/rustls-0.16.0.crate",
+        type = "tar.gz",
+        strip_prefix = "rustls-0.16.0",
+
+        build_file = Label("//cargo/remote:rustls-0.16.0.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__sct__0_6_0",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/sct/sct-0.6.0.crate",
+        type = "tar.gz",
+        strip_prefix = "sct-0.6.0",
+
+        build_file = Label("//cargo/remote:sct-0.6.0.BUILD"),
     )
 
     _new_http_archive(
@@ -593,12 +692,12 @@ def raze_fetch_remote_crates():
     )
 
     _new_http_archive(
-        name = "raze__syn__1_0_17",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/syn/syn-1.0.17.crate",
+        name = "raze__syn__1_0_18",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/syn/syn-1.0.18.crate",
         type = "tar.gz",
-        strip_prefix = "syn-1.0.17",
+        strip_prefix = "syn-1.0.18",
 
-        build_file = Label("//cargo/remote:syn-1.0.17.BUILD"),
+        build_file = Label("//cargo/remote:syn-1.0.18.BUILD"),
     )
 
     _new_http_archive(
@@ -620,21 +719,48 @@ def raze_fetch_remote_crates():
     )
 
     _new_http_archive(
-        name = "raze__time__0_1_42",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/time/time-0.1.42.crate",
+        name = "raze__time__0_1_43",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/time/time-0.1.43.crate",
         type = "tar.gz",
-        strip_prefix = "time-0.1.42",
+        strip_prefix = "time-0.1.43",
 
-        build_file = Label("//cargo/remote:time-0.1.42.BUILD"),
+        build_file = Label("//cargo/remote:time-0.1.43.BUILD"),
     )
 
     _new_http_archive(
-        name = "raze__tokio__0_2_18",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/tokio/tokio-0.2.18.crate",
+        name = "raze__tokio__0_2_19",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/tokio/tokio-0.2.19.crate",
         type = "tar.gz",
-        strip_prefix = "tokio-0.2.18",
+        strip_prefix = "tokio-0.2.19",
 
-        build_file = Label("//cargo/remote:tokio-0.2.18.BUILD"),
+        build_file = Label("//cargo/remote:tokio-0.2.19.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__tokio_macros__0_2_5",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/tokio-macros/tokio-macros-0.2.5.crate",
+        type = "tar.gz",
+        strip_prefix = "tokio-macros-0.2.5",
+
+        build_file = Label("//cargo/remote:tokio-macros-0.2.5.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__tokio_rustls__0_12_2",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/tokio-rustls/tokio-rustls-0.12.2.crate",
+        type = "tar.gz",
+        strip_prefix = "tokio-rustls-0.12.2",
+
+        build_file = Label("//cargo/remote:tokio-rustls-0.12.2.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__tokio_util__0_2_0",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/tokio-util/tokio-util-0.2.0.crate",
+        type = "tar.gz",
+        strip_prefix = "tokio-util-0.2.0",
+
+        build_file = Label("//cargo/remote:tokio-util-0.2.0.BUILD"),
     )
 
     _new_http_archive(
@@ -647,12 +773,174 @@ def raze_fetch_remote_crates():
     )
 
     _new_http_archive(
+        name = "raze__tonic__0_1_1",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/tonic/tonic-0.1.1.crate",
+        type = "tar.gz",
+        strip_prefix = "tonic-0.1.1",
+
+        build_file = Label("//cargo/remote:tonic-0.1.1.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__tower__0_3_1",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/tower/tower-0.3.1.crate",
+        type = "tar.gz",
+        strip_prefix = "tower-0.3.1",
+
+        build_file = Label("//cargo/remote:tower-0.3.1.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__tower_balance__0_3_0",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/tower-balance/tower-balance-0.3.0.crate",
+        type = "tar.gz",
+        strip_prefix = "tower-balance-0.3.0",
+
+        build_file = Label("//cargo/remote:tower-balance-0.3.0.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__tower_buffer__0_3_0",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/tower-buffer/tower-buffer-0.3.0.crate",
+        type = "tar.gz",
+        strip_prefix = "tower-buffer-0.3.0",
+
+        build_file = Label("//cargo/remote:tower-buffer-0.3.0.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__tower_discover__0_3_0",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/tower-discover/tower-discover-0.3.0.crate",
+        type = "tar.gz",
+        strip_prefix = "tower-discover-0.3.0",
+
+        build_file = Label("//cargo/remote:tower-discover-0.3.0.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__tower_layer__0_3_0",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/tower-layer/tower-layer-0.3.0.crate",
+        type = "tar.gz",
+        strip_prefix = "tower-layer-0.3.0",
+
+        build_file = Label("//cargo/remote:tower-layer-0.3.0.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__tower_limit__0_3_1",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/tower-limit/tower-limit-0.3.1.crate",
+        type = "tar.gz",
+        strip_prefix = "tower-limit-0.3.1",
+
+        build_file = Label("//cargo/remote:tower-limit-0.3.1.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__tower_load__0_3_0",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/tower-load/tower-load-0.3.0.crate",
+        type = "tar.gz",
+        strip_prefix = "tower-load-0.3.0",
+
+        build_file = Label("//cargo/remote:tower-load-0.3.0.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__tower_load_shed__0_3_0",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/tower-load-shed/tower-load-shed-0.3.0.crate",
+        type = "tar.gz",
+        strip_prefix = "tower-load-shed-0.3.0",
+
+        build_file = Label("//cargo/remote:tower-load-shed-0.3.0.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__tower_make__0_3_0",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/tower-make/tower-make-0.3.0.crate",
+        type = "tar.gz",
+        strip_prefix = "tower-make-0.3.0",
+
+        build_file = Label("//cargo/remote:tower-make-0.3.0.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__tower_ready_cache__0_3_1",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/tower-ready-cache/tower-ready-cache-0.3.1.crate",
+        type = "tar.gz",
+        strip_prefix = "tower-ready-cache-0.3.1",
+
+        build_file = Label("//cargo/remote:tower-ready-cache-0.3.1.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__tower_retry__0_3_0",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/tower-retry/tower-retry-0.3.0.crate",
+        type = "tar.gz",
+        strip_prefix = "tower-retry-0.3.0",
+
+        build_file = Label("//cargo/remote:tower-retry-0.3.0.BUILD"),
+    )
+
+    _new_http_archive(
         name = "raze__tower_service__0_3_0",
         url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/tower-service/tower-service-0.3.0.crate",
         type = "tar.gz",
         strip_prefix = "tower-service-0.3.0",
 
         build_file = Label("//cargo/remote:tower-service-0.3.0.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__tower_timeout__0_3_0",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/tower-timeout/tower-timeout-0.3.0.crate",
+        type = "tar.gz",
+        strip_prefix = "tower-timeout-0.3.0",
+
+        build_file = Label("//cargo/remote:tower-timeout-0.3.0.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__tower_util__0_3_1",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/tower-util/tower-util-0.3.1.crate",
+        type = "tar.gz",
+        strip_prefix = "tower-util-0.3.1",
+
+        build_file = Label("//cargo/remote:tower-util-0.3.1.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__tracing__0_1_13",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/tracing/tracing-0.1.13.crate",
+        type = "tar.gz",
+        strip_prefix = "tracing-0.1.13",
+
+        build_file = Label("//cargo/remote:tracing-0.1.13.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__tracing_attributes__0_1_7",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/tracing-attributes/tracing-attributes-0.1.7.crate",
+        type = "tar.gz",
+        strip_prefix = "tracing-attributes-0.1.7",
+
+        build_file = Label("//cargo/remote:tracing-attributes-0.1.7.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__tracing_core__0_1_10",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/tracing-core/tracing-core-0.1.10.crate",
+        type = "tar.gz",
+        strip_prefix = "tracing-core-0.1.10",
+
+        build_file = Label("//cargo/remote:tracing-core-0.1.10.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__tracing_futures__0_2_4",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/tracing-futures/tracing-futures-0.2.4.crate",
+        type = "tar.gz",
+        strip_prefix = "tracing-futures-0.2.4",
+
+        build_file = Label("//cargo/remote:tracing-futures-0.2.4.BUILD"),
     )
 
     _new_http_archive(
@@ -674,6 +962,15 @@ def raze_fetch_remote_crates():
     )
 
     _new_http_archive(
+        name = "raze__untrusted__0_7_0",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/untrusted/untrusted-0.7.0.crate",
+        type = "tar.gz",
+        strip_prefix = "untrusted-0.7.0",
+
+        build_file = Label("//cargo/remote:untrusted-0.7.0.BUILD"),
+    )
+
+    _new_http_archive(
         name = "raze__want__0_3_0",
         url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/want/want-0.3.0.crate",
         type = "tar.gz",
@@ -692,6 +989,51 @@ def raze_fetch_remote_crates():
     )
 
     _new_http_archive(
+        name = "raze__wasm_bindgen__0_2_60",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/wasm-bindgen/wasm-bindgen-0.2.60.crate",
+        type = "tar.gz",
+        strip_prefix = "wasm-bindgen-0.2.60",
+
+        build_file = Label("//cargo/remote:wasm-bindgen-0.2.60.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__wasm_bindgen_backend__0_2_60",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/wasm-bindgen-backend/wasm-bindgen-backend-0.2.60.crate",
+        type = "tar.gz",
+        strip_prefix = "wasm-bindgen-backend-0.2.60",
+
+        build_file = Label("//cargo/remote:wasm-bindgen-backend-0.2.60.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__wasm_bindgen_macro__0_2_60",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/wasm-bindgen-macro/wasm-bindgen-macro-0.2.60.crate",
+        type = "tar.gz",
+        strip_prefix = "wasm-bindgen-macro-0.2.60",
+
+        build_file = Label("//cargo/remote:wasm-bindgen-macro-0.2.60.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__wasm_bindgen_macro_support__0_2_60",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/wasm-bindgen-macro-support/wasm-bindgen-macro-support-0.2.60.crate",
+        type = "tar.gz",
+        strip_prefix = "wasm-bindgen-macro-support-0.2.60",
+
+        build_file = Label("//cargo/remote:wasm-bindgen-macro-support-0.2.60.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__wasm_bindgen_shared__0_2_60",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/wasm-bindgen-shared/wasm-bindgen-shared-0.2.60.crate",
+        type = "tar.gz",
+        strip_prefix = "wasm-bindgen-shared-0.2.60",
+
+        build_file = Label("//cargo/remote:wasm-bindgen-shared-0.2.60.BUILD"),
+    )
+
+    _new_http_archive(
         name = "raze__wasmi__0_6_2",
         url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/wasmi/wasmi-0.6.2.crate",
         type = "tar.gz",
@@ -707,6 +1049,24 @@ def raze_fetch_remote_crates():
         strip_prefix = "wasmi-validation-0.3.0",
 
         build_file = Label("//cargo/remote:wasmi-validation-0.3.0.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__web_sys__0_3_37",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/web-sys/web-sys-0.3.37.crate",
+        type = "tar.gz",
+        strip_prefix = "web-sys-0.3.37",
+
+        build_file = Label("//cargo/remote:web-sys-0.3.37.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__webpki__0_21_2",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/webpki/webpki-0.21.2.crate",
+        type = "tar.gz",
+        strip_prefix = "webpki-0.21.2",
+
+        build_file = Label("//cargo/remote:webpki-0.21.2.BUILD"),
     )
 
     _new_http_archive(

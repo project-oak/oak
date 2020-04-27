@@ -23,34 +23,34 @@ load(
 )
 
 
-# Unsupported target "codecs" with type "test" omitted
-# Unsupported target "framed" with type "test" omitted
-# Unsupported target "framed_read" with type "test" omitted
-# Unsupported target "framed_write" with type "test" omitted
-# Unsupported target "length_delimited" with type "test" omitted
+# Unsupported target "builder" with type "test" omitted
 
 rust_library(
-    name = "tokio_util",
+    name = "tower",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__bytes__0_5_4//:bytes",
         "@raze__futures_core__0_3_4//:futures_core",
-        "@raze__futures_sink__0_3_4//:futures_sink",
-        "@raze__log__0_4_8//:log",
-        "@raze__pin_project_lite__0_1_4//:pin_project_lite",
-        "@raze__tokio__0_2_19//:tokio",
+        "@raze__tower_buffer__0_3_0//:tower_buffer",
+        "@raze__tower_discover__0_3_0//:tower_discover",
+        "@raze__tower_layer__0_3_0//:tower_layer",
+        "@raze__tower_limit__0_3_1//:tower_limit",
+        "@raze__tower_load_shed__0_3_0//:tower_load_shed",
+        "@raze__tower_retry__0_3_0//:tower_retry",
+        "@raze__tower_service__0_3_0//:tower_service",
+        "@raze__tower_timeout__0_3_0//:tower_timeout",
+        "@raze__tower_util__0_3_1//:tower_util",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
     version = "0.3.1",
     crate_features = [
-        "codec",
         "default",
+        "full",
+        "log",
     ],
 )
 
-# Unsupported target "udp" with type "test" omitted

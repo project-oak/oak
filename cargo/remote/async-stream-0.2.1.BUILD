@@ -12,7 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "restricted", # "MIT OR Apache-2.0"
+  "notice", # "MIT"
 ])
 
 load(
@@ -25,19 +25,24 @@ load(
 
 
 rust_library(
-    name = "futures_task",
+    name = "async_stream",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
+        "@raze__async_stream_impl__0_2_1//:async_stream_impl",
+        "@raze__futures_core__0_3_4//:futures_core",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.3.4",
+    version = "0.2.1",
     crate_features = [
-        "alloc",
     ],
 )
 
+# Unsupported target "for_await" with type "test" omitted
+# Unsupported target "stream" with type "test" omitted
+# Unsupported target "tcp_accept" with type "example" omitted
+# Unsupported target "try_stream" with type "test" omitted

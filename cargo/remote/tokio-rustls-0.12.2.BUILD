@@ -12,7 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "restricted", # "MIT OR Apache-2.0"
+  "notice", # "MIT,Apache-2.0"
 ])
 
 load(
@@ -23,21 +23,27 @@ load(
 )
 
 
+# Unsupported target "badssl" with type "test" omitted
+# Unsupported target "early-data" with type "test" omitted
+# Unsupported target "test" with type "test" omitted
 
 rust_library(
-    name = "futures_task",
+    name = "tokio_rustls",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
+        "@raze__futures_core__0_3_4//:futures_core",
+        "@raze__rustls__0_16_0//:rustls",
+        "@raze__tokio__0_2_19//:tokio",
+        "@raze__webpki__0_21_2//:webpki",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.3.4",
+    version = "0.12.2",
     crate_features = [
-        "alloc",
     ],
 )
 

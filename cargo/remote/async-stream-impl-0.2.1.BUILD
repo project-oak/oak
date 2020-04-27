@@ -12,7 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "restricted", # "MIT OR Apache-2.0"
+  "notice", # "MIT"
 ])
 
 load(
@@ -25,19 +25,21 @@ load(
 
 
 rust_library(
-    name = "futures_task",
+    name = "async_stream_impl",
     crate_root = "src/lib.rs",
-    crate_type = "lib",
+    crate_type = "proc-macro",
     edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
+        "@raze__proc_macro2__1_0_10//:proc_macro2",
+        "@raze__quote__1_0_3//:quote",
+        "@raze__syn__1_0_18//:syn",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.3.4",
+    version = "0.2.1",
     crate_features = [
-        "alloc",
     ],
 )
 

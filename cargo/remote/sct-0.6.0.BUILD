@@ -12,7 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "restricted", # "MIT OR Apache-2.0"
+  "notice", # "Apache-2.0,ISC,MIT"
 ])
 
 load(
@@ -25,19 +25,20 @@ load(
 
 
 rust_library(
-    name = "futures_task",
+    name = "sct",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
+        "@raze__ring__0_16_12//:ring",
+        "@raze__untrusted__0_7_0//:untrusted",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.3.4",
+    version = "0.6.0",
     crate_features = [
-        "alloc",
     ],
 )
 

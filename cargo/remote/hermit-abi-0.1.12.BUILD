@@ -12,7 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "restricted", # "MIT OR Apache-2.0"
+  "notice", # "MIT,Apache-2.0"
 ])
 
 load(
@@ -25,19 +25,20 @@ load(
 
 
 rust_library(
-    name = "futures_task",
+    name = "hermit_abi",
     crate_root = "src/lib.rs",
     crate_type = "lib",
-    edition = "2018",
+    edition = "2015",
     srcs = glob(["**/*.rs"]),
     deps = [
+        "@raze__libc__0_2_69//:libc",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.3.4",
+    version = "0.1.12",
     crate_features = [
-        "alloc",
+        "default",
     ],
 )
 
