@@ -26,8 +26,8 @@ cc_binary(
     deps = [
         "//examples/chat/proto:chat_cc_grpc",
         "//oak/client:application_client",
-        "//oak/common:logging",
         "//oak/common:nonce_generator",
+        "@com_github_google_glog//:glog",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",

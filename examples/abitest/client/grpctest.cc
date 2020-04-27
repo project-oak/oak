@@ -16,8 +16,8 @@
 
 #include "examples/abitest/client/grpctest.h"
 
+#include "glog/logging.h"
 #include "include/grpcpp/grpcpp.h"
-#include "oak/common/logging.h"
 
 using ::oak::examples::abitest::GrpcTestRequest;
 using ::oak::examples::abitest::GrpcTestResponse;
@@ -67,7 +67,7 @@ bool test_server_streaming_method_ok(OakABITestService::Stub* stub) {
 
   auto reader = stub->ServerStreamingMethod(&context, req);
   if (reader == nullptr) {
-    OAK_LOG(FATAL) << "Could not get response reader";
+    LOG(FATAL) << "Could not get response reader";
   }
   int count = 0;
   GrpcTestResponse rsp;
@@ -91,7 +91,7 @@ bool test_server_streaming_method_err(OakABITestService::Stub* stub) {
 
   auto reader = stub->ServerStreamingMethod(&context, req);
   if (reader == nullptr) {
-    OAK_LOG(FATAL) << "Could not get response reader";
+    LOG(FATAL) << "Could not get response reader";
   }
   int count = 0;
   GrpcTestResponse rsp;

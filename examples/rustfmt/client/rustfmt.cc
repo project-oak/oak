@@ -18,9 +18,9 @@
 #include "absl/flags/parse.h"
 #include "examples/rustfmt/proto/rustfmt.grpc.pb.h"
 #include "examples/rustfmt/proto/rustfmt.pb.h"
+#include "glog/logging.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
-#include "oak/common/logging.h"
 
 ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak application to connect to");
 ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate");
@@ -32,15 +32,15 @@ using ::oak::examples::rustfmt::FormatService;
 void format(FormatService::Stub* stub, std::string code) {
   FormatRequest request;
   request.set_code(code);
-  OAK_LOG(INFO) << "Request: " << request.code();
+  LOG(INFO) << "Request: " << request.code();
   grpc::ClientContext context;
   FormatResponse response;
   grpc::Status status = stub->Format(&context, request, &response);
   if (!status.ok()) {
-    OAK_LOG(FATAL) << "Could not call Format: " << status.error_code() << ": "
-                   << status.error_message();
+    LOG(FATAL) << "Could not call Format: " << status.error_code() << ": "
+               << status.error_message();
   }
-  OAK_LOG(INFO) << "Response: " << response.code();
+  LOG(INFO) << "Response: " << response.code();
 }
 
 int main(int argc, char** argv) {
@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
 
   std::string address = absl::GetFlag(FLAGS_address);
   std::string ca_cert = oak::ApplicationClient::LoadRootCert(absl::GetFlag(FLAGS_ca_cert));
-  OAK_LOG(INFO) << "Connecting to Oak Application: " << address;
+  LOG(INFO) << "Connecting to Oak Application: " << address;
 
   // Connect to the Oak Application.
   auto stub = FormatService::NewStub(oak::ApplicationClient::CreateTlsChannel(address, ca_cert));

@@ -18,9 +18,9 @@
 #include "absl/flags/parse.h"
 #include "examples/machine_learning/proto/machine_learning.grpc.pb.h"
 #include "examples/machine_learning/proto/machine_learning.pb.h"
+#include "glog/logging.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
-#include "oak/common/logging.h"
 
 ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak application to connect to");
 ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate");
@@ -38,8 +38,8 @@ std::string send_data(MachineLearning::Stub* stub) {
   MLResponse response;
   ::grpc::Status status = stub->Data(&context, data, &response);
   if (!status.ok()) {
-    OAK_LOG(FATAL) << "Could not submit data: " << status.error_code() << ": "
-                   << status.error_message();
+    LOG(FATAL) << "Could not submit data: " << status.error_code() << ": "
+               << status.error_message();
   }
   return response.message();
 }
@@ -50,7 +50,7 @@ std::string learn(MachineLearning::Stub* stub) {
   MLResponse response;
   ::grpc::Status status = stub->Learn(&context, learn, &response);
   if (!status.ok()) {
-    OAK_LOG(FATAL) << "Could not learn: " << status.error_code() << ": " << status.error_message();
+    LOG(FATAL) << "Could not learn: " << status.error_code() << ": " << status.error_message();
   }
   return response.message();
 }
@@ -61,8 +61,7 @@ std::string predict(MachineLearning::Stub* stub) {
   MLResponse response;
   ::grpc::Status status = stub->Predict(&context, predict, &response);
   if (!status.ok()) {
-    OAK_LOG(FATAL) << "Could not predict: " << status.error_code() << ": "
-                   << status.error_message();
+    LOG(FATAL) << "Could not predict: " << status.error_code() << ": " << status.error_message();
   }
   return response.message();
 }
@@ -72,20 +71,20 @@ int main(int argc, char** argv) {
 
   std::string address = absl::GetFlag(FLAGS_address);
   std::string ca_cert = oak::ApplicationClient::LoadRootCert(absl::GetFlag(FLAGS_ca_cert));
-  OAK_LOG(INFO) << "Connecting to Oak Application: " << address;
+  LOG(INFO) << "Connecting to Oak Application: " << address;
 
   // Connect to the Oak Application.
   auto stub = MachineLearning::NewStub(oak::ApplicationClient::CreateTlsChannel(address, ca_cert));
 
   // Perform multiple invocations of the same Oak Application, with different parameters.
   auto message_0 = send_data(stub.get());
-  OAK_LOG(INFO) << "data response: " << message_0;
+  LOG(INFO) << "data response: " << message_0;
 
   auto message_1 = learn(stub.get());
-  OAK_LOG(INFO) << "learn response: " << message_1;
+  LOG(INFO) << "learn response: " << message_1;
 
   auto message_2 = predict(stub.get());
-  OAK_LOG(INFO) << "predict response: " << message_2;
+  LOG(INFO) << "predict response: " << message_2;
 
   return EXIT_SUCCESS;
 }
