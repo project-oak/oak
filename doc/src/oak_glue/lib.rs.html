@@ -349,6 +349,10 @@
 <span id="349">349</span>
 <span id="350">350</span>
 <span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -479,6 +483,10 @@
 <span class="attribute">#[<span class="ident">no_mangle</span>]</span>
 <span class="kw">pub</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span> <span class="ident">glue_stop</span>() {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">glue</span> <span class="op">=</span> <span class="ident">GLUE</span>.<span class="ident">write</span>().<span class="ident">expect</span>(<span class="ident">R1</span>);
+    <span class="macro">info</span><span class="macro">!</span>(
+        <span class="string">&quot;runtime graph at exit:\n\n{}&quot;</span>,
+        <span class="ident">glue</span>.<span class="ident">as_ref</span>().<span class="ident">expect</span>(<span class="ident">R2</span>).<span class="ident">runtime</span>.<span class="ident">graph</span>()
+    );
     <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;stopping Rust runtime&quot;</span>);
     <span class="ident">glue</span>.<span class="ident">as_ref</span>().<span class="ident">expect</span>(<span class="ident">R2</span>).<span class="ident">runtime</span>.<span class="ident">stop</span>();
     <span class="kw-2">*</span><span class="ident">glue</span> <span class="op">=</span> <span class="prelude-val">None</span>;

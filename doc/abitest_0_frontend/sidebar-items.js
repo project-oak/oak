@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["frontend_oak_main",""]],"mod":[["proto",""]]});
+initSidebarItems({"fn":[["channel_loser",""],["frontend_oak_main",""]],"mod":[["proto",""]]});
