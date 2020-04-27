@@ -91,9 +91,12 @@ message GrpcServerConfiguration {
 // pseudo-Node (which is provided by the Oak Runtime), connected to a specific
 // external (non-Oak) gRPC service.
 message GrpcClientConfiguration {
-  // The endpoint address of the external gRPC service.
-  // `address` is represented as an "ip_address:tcp_port" string.
-  string address = 1;
+  // The URI component of a gRPC request. Must contain the "Host" element.
+  // https://docs.rs/tonic/0.2.1/tonic/transport/struct.Uri.html
+  string uri = 1;
+  // Loaded PEM encoded X.509 TLS root certificate file used to authenticate an external gRPC
+  // service.
+  string root_tls_certificate = 2;
 }
 
 // RoughtimeClientConfiguration describes the configuration of a Roughtime

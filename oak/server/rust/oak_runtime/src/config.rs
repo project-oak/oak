@@ -16,10 +16,10 @@
 
 use crate::{
     node,
-    node::load_wasm,
+    node::{check_uri, load_wasm},
     proto::oak::application::{
-        node_configuration::ConfigType, ApplicationConfiguration, GrpcServerConfiguration,
-        LogConfiguration, NodeConfiguration, WebAssemblyConfiguration,
+        node_configuration::ConfigType, ApplicationConfiguration, GrpcClientConfiguration,
+        GrpcServerConfiguration, LogConfiguration, NodeConfiguration, WebAssemblyConfiguration,
     },
     runtime, RuntimeProxy,
 };
@@ -27,7 +27,7 @@ use itertools::Itertools;
 use log::{error, warn};
 use oak_abi::OakStatus;
 use std::collections::HashMap;
-use tonic::transport::Identity;
+use tonic::transport::{Certificate, Identity};
 
 /// Create an application configuration.
 ///
@@ -98,6 +98,25 @@ pub fn from_protobuf(
                         OakStatus::ErrInvalidArgs
                     })?,
                     tls_identity: Identity::from_pem(grpc_tls_certificate, grpc_tls_private_key),
+                },
+                Some(ConfigType::GrpcClientConfig(GrpcClientConfiguration {
+                    uri,
+                    root_tls_certificate,
+                })) => node::Configuration::GrpcClientNode {
+                    uri: uri
+                        .parse()
+                        .map_err(|error| {
+                            error!("Error parsing URI {}: {:?}", uri, error);
+                            OakStatus::ErrInvalidArgs
+                        })
+                        .and_then(|uri| match check_uri(&uri) {
+                            Ok(_) => Ok(uri),
+                            Err(error) => {
+                                error!("Incorrect URI {}: {:?}", uri, error);
+                                Err(OakStatus::ErrInvalidArgs)
+                            }
+                        })?,
+                    root_tls_certificate: Certificate::from_pem(root_tls_certificate),
                 },
                 Some(ConfigType::WasmConfig(WebAssemblyConfiguration { module_bytes, .. })) => {
                     load_wasm(&module_bytes).map_err(|error| {

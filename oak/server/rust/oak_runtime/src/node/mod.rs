@@ -21,7 +21,7 @@ use std::{
     string::String,
     sync::Arc,
 };
-use tonic::transport::Identity;
+use tonic::transport::{Certificate, Identity, Uri};
 
 pub mod external;
 mod grpc;
@@ -48,6 +48,13 @@ pub enum Configuration {
         tls_identity: Identity,
     },
 
+    /// The configuration for a gRPC server pseudo-Node that contains a URI and an X.509 root TLS
+    /// certificate.
+    GrpcClientNode {
+        uri: Uri,
+        root_tls_certificate: Certificate,
+    },
+
     /// The configuration for a Wasm Node.
     // It would be better to store a list of exported methods and copyable Wasm interpreter
     // instance, but wasmi doesn't allow this. We make do with having a copyable
@@ -64,6 +71,7 @@ pub enum Configuration {
 pub enum ConfigurationError {
     AddressParsingError(AddrParseError),
     IncorrectPort,
+    NoHostElement,
     WasmiModuleInializationError(wasmi::Error),
 }
 
@@ -80,6 +88,7 @@ impl std::fmt::Display for ConfigurationError {
                 write!(f, "Failed to parse an address: {}", e)
             }
             ConfigurationError::IncorrectPort => write!(f, "Incorrect port (must be > 1023)"),
+            ConfigurationError::NoHostElement => write!(f, "URI doesn't contain the Host element"),
             ConfigurationError::WasmiModuleInializationError(e) => {
                 write!(f, "Failed to initialize wasmi::Module: {}", e)
             }
@@ -103,6 +112,17 @@ pub fn check_port(address: &SocketAddr) -> Result<(), ConfigurationError> {
         Ok(())
     } else {
         Err(ConfigurationError::IncorrectPort)
+    }
+}
+
+/// Checks if URI contains the "Host" element.
+pub fn check_uri(uri: &Uri) -> Result<(), ConfigurationError> {
+    match uri
+        .authority()
+        .filter(|authority| !authority.host().is_empty())
+    {
+        Some(_) => Ok(()),
+        None => Err(ConfigurationError::NoHostElement),
     }
 }
 
@@ -130,6 +150,15 @@ impl Configuration {
                 *address,
                 tls_identity.clone(),
             ))),
+
+            Configuration::GrpcClientNode {
+                uri,
+                root_tls_certificate,
+            } => Some(Box::new(grpc::client::GrpcClientNode::new(
+                node_name,
+                uri.clone(),
+                root_tls_certificate.clone(),
+            ))),
             Configuration::WasmNode { module } => {
                 match wasm::WasmNode::new(node_name, module.clone(), entrypoint) {
                     Some(node) => Some(Box::new(node)),
@@ -146,6 +175,7 @@ impl Configuration {
         match self {
             Configuration::LogNode => "LogNode".to_string(),
             Configuration::GrpcServerNode { .. } => "GrpcServerNode".to_string(),
+            Configuration::GrpcClientNode { .. } => "GrpcClientNode".to_string(),
             Configuration::WasmNode { .. } => format!("WasmNode-{}", entrypoint),
             Configuration::External => "ExternalPseudoNode".to_string(),
         }

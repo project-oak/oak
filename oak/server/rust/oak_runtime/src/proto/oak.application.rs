@@ -94,10 +94,14 @@ pub struct GrpcServerConfiguration {
 /// external (non-Oak) gRPC service.
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GrpcClientConfiguration {
-    /// The endpoint address of the external gRPC service.
-    /// `address` is represented as an "ip_address:tcp_port" string.
+    /// The URI component of a gRPC request. Must contain the "Host" element.
+    /// https://docs.rs/tonic/0.2.1/tonic/transport/struct.Uri.html
     #[prost(string, tag="1")]
-    pub address: std::string::String,
+    pub uri: std::string::String,
+    /// Loaded PEM encoded X.509 TLS root certificate file used to authenticate an external gRPC
+    /// service.
+    #[prost(string, tag="2")]
+    pub root_tls_certificate: std::string::String,
 }
 /// RoughtimeClientConfiguration describes the configuration of a Roughtime
 /// client pseudo-Node (which is provided by the Oak Runtime), with the
