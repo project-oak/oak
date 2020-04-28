@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["authentication_client","Generated client implementations."]],"struct":[["AuthParameters","Parameters needed by clients to initiate OpenID Connect authentication requests."]]});

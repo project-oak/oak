@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["get_authentication_request_url","Gets the URL for authentication requests."],["main",""]],"struct":[["Opt",""],["RedirectHandler","Handles the redirects to extract code from the query string."],["RedirectHandlerProducer","Produces instances of the redirect handler service."]]});
+initSidebarItems({"fn":[["get_authentication_code","Gets the OIDC authentication code by opening the default browser and extracting it from the resulting redirect URL."],["main",""]],"mod":[["auth_client",""],["redirect_handler",""]],"struct":[["Opt",""]]});
