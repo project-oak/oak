@@ -19,6 +19,7 @@ use hyper::{service::Service, Body, Request, Response, StatusCode};
 use log::{info, warn};
 use std::{
     collections::HashMap,
+    error, fmt,
     task::{Context, Poll},
 };
 use tokio::sync::mpsc::Sender;
@@ -35,7 +36,7 @@ use url::form_urlencoded;
 ///
 /// The handler is responsible for sending an appropriate response to the client browser.
 pub struct RedirectHandler {
-    result_sender: Sender<Result<String, String>>,
+    result_sender: Sender<Result<String, AuthError>>,
 }
 
 impl Service<Request<Body>> for RedirectHandler {
@@ -58,7 +59,9 @@ impl Service<Request<Body>> for RedirectHandler {
             } else if let Some(error) = lookup.get("error") {
                 let error = error.to_string();
                 warn!("Error: {:?}", error);
-                self.result_sender.try_send(Err(error)).unwrap();
+                self.result_sender
+                    .try_send(Err(AuthError::new(&error)))
+                    .unwrap();
                 future::ok(
                     Response::builder()
                         .status(StatusCode::UNAUTHORIZED)
@@ -89,11 +92,11 @@ impl Service<Request<Body>> for RedirectHandler {
 /// Hyper uses it to create a new handler for every incoming request. The handler needs a copy of
 /// the reference to the ResultSender to communicate the results back to the main thread.
 pub struct RedirectHandlerProducer {
-    result_sender: Sender<Result<String, String>>,
+    result_sender: Sender<Result<String, AuthError>>,
 }
 
 impl RedirectHandlerProducer {
-    pub fn new(result_sender: Sender<Result<String, String>>) -> RedirectHandlerProducer {
+    pub fn new(result_sender: Sender<Result<String, AuthError>>) -> RedirectHandlerProducer {
         RedirectHandlerProducer { result_sender }
     }
 }
@@ -111,5 +114,32 @@ impl<T> Service<T> for RedirectHandlerProducer {
         future::ok(RedirectHandler {
             result_sender: self.result_sender.clone(),
         })
+    }
+}
+
+/// Wrapper to store the server authentication error message.
+#[derive(Debug, Clone)]
+pub struct AuthError {
+    server_message: String,
+}
+
+impl AuthError {
+    pub fn new(message: &str) -> AuthError {
+        AuthError {
+            server_message: message.to_owned(),
+        }
+    }
+}
+
+impl fmt::Display for AuthError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Authentication error: {}", &self.server_message)
+    }
+}
+
+impl error::Error for AuthError {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        // Source is not tracked.
+        None
     }
 }

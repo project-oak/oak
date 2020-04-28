@@ -56,16 +56,17 @@ pub struct Opt {
     ca_cert: String,
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
     let opt = Opt::from_args();
-    let mut runner = tokio::runtime::Runtime::new().unwrap();
-    let request_url = runner.block_on(auth_client::get_authentication_request_url(
+    let request_url = auth_client::get_authentication_request_url(
         &opt.ca_cert,
         &opt.auth_server,
         &opt.redirect_address,
-    ))?;
-    let code = runner.block_on(get_authentication_code(&opt.redirect_address, &request_url))?;
+    )
+    .await?;
+    let code = get_authentication_code(&opt.redirect_address, &request_url).await?;
     info!("Received code: {}", code);
     Ok(())
 }
