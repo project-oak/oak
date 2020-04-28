@@ -15,11 +15,14 @@
 //
 
 /// Encapsulates a message consisting of opaque data bytes and a vector of channels.
-/// The data bytes should not contain any pointers or handles.
+/// The data bytes should not contain any pointers or handles.  Note that `Message`
+/// and `Channel` objects can be leaked if the Oak application creates cycles of
+/// references (e.g. the only reference to a `Channel` is in a `Message` that is
+/// held in the same `Channel`).
 #[derive(Debug)]
 pub struct Message {
     pub data: Vec<u8>,
-    pub channels: Vec<crate::runtime::ChannelHalfId>,
+    pub channels: Vec<crate::runtime::ChannelHalf>,
 }
 
 /// Encapsulates a message relative to a specific Node, consisting of opaque data bytes
