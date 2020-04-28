@@ -15,7 +15,7 @@
 //
 
 use itertools::Itertools;
-use log::{debug, error};
+use log::{debug, error, warn};
 use rand::RngCore;
 use std::{
     collections::{HashMap, HashSet, VecDeque},
@@ -379,6 +379,21 @@ impl ChannelMapping {
         Err(OakStatus::ErrBadHandle)
     }
 
+    /// Determine the direction of a [`Handle`] reference.
+    pub fn get_direction(&self, reference: Handle) -> Result<HandleDirection, OakStatus> {
+        {
+            if self.readers.read().unwrap().contains_key(&reference) {
+                return Ok(HandleDirection::Read);
+            }
+        }
+        {
+            if self.writers.read().unwrap().contains_key(&reference) {
+                return Ok(HandleDirection::Write);
+            }
+        }
+        Err(OakStatus::ErrBadHandle)
+    }
+
     /// Build a Dot nodes stanza for the `ChannelMapping`.
     #[cfg(feature = "oak_debug")]
     pub fn graph_nodes(&self) -> String {
@@ -451,7 +466,7 @@ impl ChannelMapping {
             for (half_id, channel_id) in self.writers.read().unwrap().iter() {
                 write!(&mut s, "  {} -> {}", half_id.dot_id(), channel_id.dot_id()).unwrap();
                 if !seen.contains(half_id) {
-                    error!("reader {:?} is not referenced by any node!", half_id);
+                    warn!("reader {:?} is not referenced by any node!", half_id);
                     write!(&mut s, "  [color=red style=bold]").unwrap();
                 }
                 writeln!(&mut s).unwrap();
@@ -461,11 +476,57 @@ impl ChannelMapping {
             for (half_id, channel_id) in self.readers.read().unwrap().iter() {
                 write!(&mut s, "  {} -> {}", channel_id.dot_id(), half_id.dot_id()).unwrap();
                 if !seen.contains(half_id) {
-                    error!("writer {:?} is not referenced by any node!", half_id);
+                    warn!("writer {:?} is not referenced by any node!", half_id);
                     write!(&mut s, "  [color=red style=bold]").unwrap();
                 }
                 writeln!(&mut s).unwrap();
             }
+        }
+        {
+            writeln!(&mut s, "  {{").unwrap();
+            writeln!(
+                &mut s,
+                r###"    node [shape=rect fontsize=10 label="msg"]"###
+            )
+            .unwrap();
+            // Messages have no identifier, so just use a count (and don't make it visible to the
+            // user).
+            let mut msg_counter = 0;
+            let channels = self.channels.read().unwrap();
+            for channel_id in channels.keys().sorted() {
+                let channel = channels.get(&channel_id).unwrap();
+                let mut prev_graph_node = channel_id.dot_id();
+                for msg in channel.messages.read().unwrap().iter() {
+                    msg_counter += 1;
+                    let graph_node = format!("msg{}", msg_counter);
+                    writeln!(
+                        &mut s,
+                        "    {} -> {} [style=dashed arrowhead=none]",
+                        graph_node, prev_graph_node
+                    )
+                    .unwrap();
+                    for half in &msg.channels {
+                        match self.get_direction(*half) {
+                            Ok(HandleDirection::Write) => {
+                                writeln!(&mut s, "    {} -> {}", graph_node, half.dot_id())
+                                    .unwrap();
+                            }
+                            Ok(HandleDirection::Read) => {
+                                writeln!(&mut s, "    {} -> {}", half.dot_id(), graph_node)
+                                    .unwrap();
+                            }
+                            Err(_) => {
+                                error!(
+                                    "message in channel {} has message referencing unknown {:?}",
+                                    channel_id, half
+                                );
+                            }
+                        }
+                    }
+                    prev_graph_node = graph_node;
+                }
+            }
+            writeln!(&mut s, "  }}").unwrap();
         }
         s
     }

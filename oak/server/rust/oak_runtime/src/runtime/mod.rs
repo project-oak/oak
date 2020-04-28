@@ -846,31 +846,8 @@ impl Runtime {
         self.validate_handle_access(node_id, reference)?;
         // TODO(#630): Check whether the calling Node can read from the specified handle. Currently,
         // performing this check seems to get tests to hang forever.
-        {
-            if self
-                .channels
-                .readers
-                .read()
-                .unwrap()
-                .contains_key(&reference)
-            {
-                return Ok(HandleDirection::Read);
-            }
-        }
-        {
-            if self
-                .channels
-                .writers
-                .read()
-                .unwrap()
-                .contains_key(&reference)
-            {
-                return Ok(HandleDirection::Write);
-            }
-        }
-        Err(OakStatus::ErrBadHandle)
+        self.channels.get_direction(reference)
     }
-
     /// Close a [`Handle`], potentially orphaning the underlying [`channel::Channel`].
     pub fn channel_close(&self, node_id: NodeId, reference: Handle) -> Result<(), OakStatus> {
         self.validate_handle_access(node_id, reference)?;
