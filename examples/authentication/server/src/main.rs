@@ -50,6 +50,8 @@ impl Authentication for AuthenticationHandler {
     ) -> Result<Response<AuthParameters>, Status> {
         Ok(Response::new(AuthParameters {
             client_id: self.client_id.clone(),
+            // Using Google Identity Platform enpoint for this example.
+            // See https://developers.google.com/identity/protocols/oauth2/openid-connect
             auth_endpoint: "https://accounts.google.com/o/oauth2/v2/auth".to_string(),
         }))
     }
