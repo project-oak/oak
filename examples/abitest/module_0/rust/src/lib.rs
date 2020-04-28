@@ -157,6 +157,15 @@ impl OakAbiTestService for FrontendNode {
             "ChannelWriteOrphan",
             FrontendNode::test_channel_write_orphan,
         );
+        tests.insert(
+            "ChannelHandleRecovered",
+            FrontendNode::test_channel_handle_recovered,
+        );
+        tests.insert("ChannelChainLost", FrontendNode::test_channel_chain_lost);
+        tests.insert(
+            "ChannelChainRecovered",
+            FrontendNode::test_channel_chain_recovered,
+        );
         tests.insert("WaitOnChannelsRaw", FrontendNode::test_channel_wait_raw);
         tests.insert("WaitOnChannels", FrontendNode::test_channel_wait);
         tests.insert(
@@ -733,6 +742,101 @@ impl FrontendNode {
         );
 
         expect_eq!(Ok(()), oak::channel_close(out_channel.handle));
+        Ok(())
+    }
+
+    fn test_channel_handle_recovered(&mut self) -> TestResult {
+        // Set up a channel with a message in it.
+        let (lost_wh, lost_rh) = oak::channel_create().unwrap();
+        let data = vec![0x08, 0x0c];
+        expect_eq!(Ok(()), oak::channel_write(lost_wh, &data, &[]));
+
+        // Put a message with handle to the first channel into a second channel.
+        let (holder_wh, holder_rh) = oak::channel_create().unwrap();
+        expect_eq!(
+            Ok(()),
+            oak::channel_write(holder_wh, &[], &[lost_rh.handle])
+        );
+        expect_eq!(Ok(()), oak::channel_close(holder_wh.handle));
+
+        // Close both handles for the first channel.  At this point the only reference
+        // to the first channel is inside the message that's pending on the second channel.
+        expect_eq!(Ok(()), oak::channel_close(lost_wh.handle));
+        expect_eq!(Ok(()), oak::channel_close(lost_rh.handle));
+
+        // Now pull a handle for the first channel out of the second channel,
+        // much like a magician pulling a rabbit from a hat.
+        let mut buffer = Vec::<u8>::with_capacity(5);
+        let mut handles = Vec::with_capacity(1);
+        expect_eq!(
+            Ok(()),
+            oak::channel_read(holder_rh, &mut buffer, &mut handles)
+        );
+        expect_eq!(0, buffer.len());
+        expect_eq!(1, handles.len());
+        let recovered_rh = handles[0];
+
+        // And was your card the eight of clubs?
+        expect_eq!(
+            Ok(()),
+            oak::channel_read(
+                oak::ReadHandle {
+                    handle: recovered_rh
+                },
+                &mut buffer,
+                &mut handles
+            )
+        );
+        expect_eq!(0, handles.len());
+        expect_eq!(2, buffer.len());
+        expect_eq!(8, buffer[0]);
+        expect_eq!(0xC, buffer[1]);
+
+        expect_eq!(Ok(()), oak::channel_close(holder_rh.handle));
+        Ok(())
+    }
+
+    fn test_channel_chain_lost(&mut self) -> TestResult {
+        let outermost_rh = new_channel_chain(8)?;
+        // Close the outermost read handle.  This should lead to a cascade of
+        // channel deletion inside the Runtime as the only references to inner
+        // channels get removed in turn.
+        expect_eq!(Ok(()), oak::channel_close(outermost_rh.handle));
+        Ok(())
+    }
+
+    fn test_channel_chain_recovered(&mut self) -> TestResult {
+        let nest_count = 8;
+        let outermost_rh = new_channel_chain(nest_count)?;
+        let mut outer_rh = outermost_rh;
+        for _ in 0..nest_count {
+            // Expect to read a message with a single handle from the current outer handle.
+            let mut buffer = Vec::<u8>::with_capacity(5);
+            let mut handles = Vec::with_capacity(1);
+            expect_eq!(
+                Ok(()),
+                oak::channel_read(outer_rh, &mut buffer, &mut handles)
+            );
+            expect_eq!(0, buffer.len());
+            expect_eq!(1, handles.len());
+            let inner_rh = handles[0];
+            expect_eq!(Ok(()), oak::channel_close(outer_rh.handle));
+            outer_rh = oak::ReadHandle { handle: inner_rh };
+        }
+        let innermost_rh = outer_rh;
+
+        let mut buffer = Vec::<u8>::with_capacity(5);
+        let mut handles = Vec::with_capacity(1);
+        expect_eq!(
+            Ok(()),
+            oak::channel_read(innermost_rh, &mut buffer, &mut handles)
+        );
+        expect_eq!(0, handles.len());
+        expect_eq!(2, buffer.len());
+        expect_eq!(8, buffer[0]);
+        expect_eq!(0xC, buffer[1]);
+
+        expect_eq!(Ok(()), oak::channel_close(innermost_rh.handle));
         Ok(())
     }
 
@@ -1680,4 +1784,38 @@ pub extern "C" fn channel_loser(_handle: u64) {
     // At this point there are two channels that this Node can no longer access.
     // On Node exit (when this function returns), the Runtime should free those
     // channels.
+}
+
+// Build a nested chain of channels where:
+//  - The innermost channel has a message with data (0x8 0xC) in it.
+//  - The next channel has a message with a single read handle in it; this is the only handle for
+//    the previous channel that exists.
+//  - The next channel has a message with a single read handle in it; this is the only handle for
+//    the previous channel that exists.
+//  - ...
+//  - The final channel has a message with a single read handle in it; this is the only handle for
+//    the previous channel that exists.
+// All of the channels and the embedded data can be recovered from the read
+// handle of the final data. Alternatively, all of them should be freed by
+// the runtime when the final handle is closed.
+fn new_channel_chain(nest_count: u32) -> Result<oak::ReadHandle, Box<dyn std::error::Error>> {
+    // Set up a channel with a message in it.
+    let (innermost_wh, innermost_rh) = oak::channel_create().unwrap();
+    let data = vec![0x08, 0x0c];
+    expect_eq!(Ok(()), oak::channel_write(innermost_wh, &data, &[]));
+    expect_eq!(Ok(()), oak::channel_close(innermost_wh.handle));
+
+    let mut inner_rh = innermost_rh;
+    for _ in 0..nest_count {
+        // Put a message with a handle to the previous channel into a new outer channel.
+        let (outer_wh, outer_rh) = oak::channel_create().unwrap();
+        expect_eq!(
+            Ok(()),
+            oak::channel_write(outer_wh, &[], &[inner_rh.handle])
+        );
+        expect_eq!(Ok(()), oak::channel_close(inner_rh.handle));
+        expect_eq!(Ok(()), oak::channel_close(outer_wh.handle));
+        inner_rh = outer_rh;
+    }
+    Ok(inner_rh)
 }
