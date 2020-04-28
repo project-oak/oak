@@ -18,6 +18,7 @@ use crate::{
     message::{Message, NodeMessage},
     metrics::METRICS,
     node, pretty_name_for_thread,
+    runtime::channel::{with_reader_channel, with_writer_channel},
 };
 use core::sync::atomic::{AtomicBool, AtomicU64, Ordering::SeqCst};
 use itertools::Itertools;
@@ -25,7 +26,7 @@ use log::{debug, error, info, trace};
 use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
 use rand::RngCore;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     fmt::Write,
     string::String,
     sync::{Arc, Mutex, RwLock},
@@ -39,7 +40,7 @@ mod introspect;
 #[cfg(test)]
 mod tests;
 
-pub use channel::{ChannelHalfDirection, ChannelHalfId};
+pub use channel::{ChannelHalf, ChannelHalfDirection};
 
 /// Trait that gives an identifier for a data structure that is suitable for
 /// use with Graphviz/Dot.
@@ -65,7 +66,7 @@ struct NodeInfo {
     label: Label,
 
     /// Map of ABI handles to channels.
-    abi_handles: HashMap<oak_abi::Handle, ChannelHalfId>,
+    abi_handles: HashMap<oak_abi::Handle, ChannelHalf>,
 }
 
 impl std::fmt::Debug for NodeInfo {
@@ -80,7 +81,7 @@ impl std::fmt::Debug for NodeInfo {
             "{}",
             self.abi_handles
                 .iter()
-                .map(|(handle, half_id)| format!("{} => {:?}", handle, half_id))
+                .map(|(handle, half)| format!("{} => {:?}", handle, half))
                 .join(", ")
         )?;
         write!(f, "]}}")
@@ -121,10 +122,14 @@ pub struct Configuration {
     pub entrypoint: String,
 }
 
-/// A helper type to determine if `try_read_message` was called with not enough `bytes_capacity`
+/// Helper types to determine if `try_read_message` was called with not enough `bytes_capacity`
 /// and/or `handles_capacity`.
 pub enum NodeReadStatus {
     Success(NodeMessage),
+    NeedsCapacity(usize, usize),
+}
+pub enum ReadStatus {
+    Success(Message),
     NeedsCapacity(usize, usize),
 }
 
@@ -190,67 +195,72 @@ pub struct Runtime {
     aux_servers: Mutex<Vec<AuxServer>>,
 }
 
-// Methods which translate between ABI handles (Node-relative u64 values) and runtime::ChannelHalfId
+// Methods which translate between ABI handles (Node-relative u64 values) and `ChannelHalf`
 // values.
 impl Runtime {
-    fn register_channel(&self, node_id: NodeId, channel: ChannelHalfId) -> oak_abi::Handle {
+    fn new_abi_handle(&self, node_id: NodeId, half: ChannelHalf) -> oak_abi::Handle {
         let mut node_infos = self.node_infos.write().unwrap();
         let node_info = node_infos.get_mut(&node_id).expect("Invalid node_id");
         loop {
             let candidate = rand::thread_rng().next_u64();
             if node_info.abi_handles.get(&candidate).is_none() {
-                node_info.abi_handles.insert(candidate, channel);
                 debug!(
                     "{:?}: new ABI handle {} maps to {:?}",
-                    node_id, candidate, channel
+                    node_id, candidate, half
                 );
+                node_info.abi_handles.insert(candidate, half);
                 return candidate;
             }
         }
     }
-    fn drop_abi_handle(&self, node_id: NodeId, handle: oak_abi::Handle) -> Result<(), OakStatus> {
+    // Remove the handle from the Node's handle table, and return the `ChannelHalf` that
+    // it corresponded to (if found).
+    fn drop_abi_handle(
+        &self,
+        node_id: NodeId,
+        handle: oak_abi::Handle,
+    ) -> Result<ChannelHalf, OakStatus> {
         let mut node_infos = self.node_infos.write().unwrap();
         let node_info = node_infos.get_mut(&node_id).expect("Invalid node_id");
-        match node_info.abi_handles.remove(&handle) {
-            None => Err(OakStatus::ErrBadHandle),
-            Some(_) => Ok(()),
-        }
+        node_info
+            .abi_handles
+            .remove(&handle)
+            .ok_or(OakStatus::ErrBadHandle)
     }
-    fn abi_to_channel(
+    fn abi_to_half(
         &self,
         node_id: NodeId,
         handle: oak_abi::Handle,
-    ) -> Result<ChannelHalfId, OakStatus> {
+    ) -> Result<ChannelHalf, OakStatus> {
         let node_infos = self.node_infos.read().unwrap();
         let node_info = node_infos.get(&node_id).expect("Invalid node_id");
-        let result = node_info
+        let half = node_info
             .abi_handles
             .get(&handle)
-            .ok_or(OakStatus::ErrBadHandle)
-            .map(|channel| *channel);
-        trace!("{:?}: map ABI handle {} to {:?}", node_id, handle, result);
-        result
+            .ok_or(OakStatus::ErrBadHandle)?;
+        trace!("{:?}: map ABI handle {} to {:?}", node_id, handle, half);
+        Ok(half.clone())
     }
-    fn abi_to_read_channel(
+    fn abi_to_read_half(
         &self,
         node_id: NodeId,
         handle: oak_abi::Handle,
-    ) -> Result<ChannelHalfId, OakStatus> {
-        let channel = self.abi_to_channel(node_id, handle)?;
-        match channel.direction {
-            ChannelHalfDirection::Read => Ok(channel),
+    ) -> Result<ChannelHalf, OakStatus> {
+        let half = self.abi_to_half(node_id, handle)?;
+        match half.direction {
+            ChannelHalfDirection::Read => Ok(half),
             ChannelHalfDirection::Write => Err(OakStatus::ErrBadHandle),
         }
     }
-    fn abi_to_write_channel(
+    fn abi_to_write_half(
         &self,
         node_id: NodeId,
         handle: oak_abi::Handle,
-    ) -> Result<ChannelHalfId, OakStatus> {
-        let channel = self.abi_to_channel(node_id, handle)?;
-        match channel.direction {
+    ) -> Result<ChannelHalf, OakStatus> {
+        let half = self.abi_to_half(node_id, handle)?;
+        match half.direction {
             ChannelHalfDirection::Read => Err(OakStatus::ErrBadHandle),
-            ChannelHalfDirection::Write => Ok(channel),
+            ChannelHalfDirection::Write => Ok(half),
         }
     }
 }
@@ -421,19 +431,17 @@ impl Runtime {
             writeln!(&mut s, "  }}").unwrap();
         }
 
-        // Graph nodes for internal connections between Nodes and Channels.
+        // Graph nodes for channels.
         write!(&mut s, "{}", self.channels.graph_nodes()).unwrap();
 
-        // Edges for connections between Nodes and channel halves.  Track which `ChannelHalfId`s we
+        // Edges for connections between Nodes and channels.  Track which `ChannelId`s we
         // see along the way.
-        let mut seen = HashSet::new();
         {
             let node_infos = self.node_infos.read().unwrap();
             for node_id in node_infos.keys().sorted() {
                 let node_info = node_infos.get(node_id).unwrap();
-                for (handle, half_id) in &node_info.abi_handles {
-                    seen.insert(*half_id);
-                    match half_id.direction {
+                for (handle, half) in &node_info.abi_handles {
+                    match half.direction {
                         ChannelHalfDirection::Write => {
                             writeln!(
                                 &mut s,
@@ -446,7 +454,7 @@ impl Runtime {
                                 &mut s,
                                 "  {} -> {}",
                                 (*node_id, *handle).dot_id(),
-                                half_id.dot_id()
+                                half.dot_id()
                             )
                             .unwrap();
                         }
@@ -454,7 +462,7 @@ impl Runtime {
                             writeln!(
                                 &mut s,
                                 "  {} -> {}",
-                                half_id.dot_id(),
+                                half.dot_id(),
                                 (*node_id, *handle).dot_id(),
                             )
                             .unwrap();
@@ -470,8 +478,9 @@ impl Runtime {
                 }
             }
         }
-        // Edges for connections between halves and Channels.
-        write!(&mut s, "{}", self.channels.graph_edges(seen)).unwrap();
+        // Graph edges for channels.
+        write!(&mut s, "{}", self.channels.graph_edges()).unwrap();
+
         writeln!(&mut s, "}}").unwrap();
         s
     }
@@ -522,14 +531,14 @@ impl Runtime {
             write!(&mut s, "<p>No current thread for Node.").unwrap();
         }
         write!(&mut s, "<p>Label={:?}<p>Handles:<ul>", node_info.label).unwrap();
-        for (handle, half_id) in &node_info.abi_handles {
+        for (handle, half) in &node_info.abi_handles {
             write!(
                 &mut s,
                 r###"<li>Handle <a href="{}">{}</a> => <a href="{}">{:?}</a>"###,
                 (node_id, *handle).html_path(),
                 handle,
-                half_id.html_path(),
-                half_id
+                half.html_path(),
+                half
             )
             .unwrap();
         }
@@ -540,7 +549,7 @@ impl Runtime {
         let node_id = NodeId(id);
         let node_infos = self.node_infos.read().unwrap();
         let node_info = node_infos.get(&node_id)?;
-        let half_id = node_info.abi_handles.get(&handle)?;
+        let half = node_info.abi_handles.get(&handle)?;
         let mut s = String::new();
         write!(
             &mut s,
@@ -553,8 +562,8 @@ impl Runtime {
         write!(
             &mut s,
             r###"<p>Maps to <a href="{}">{:?}</a>"###,
-            half_id.html_path(),
-            half_id
+            half.html_path(),
+            half
         )
         .unwrap();
         Some(s)
@@ -562,10 +571,6 @@ impl Runtime {
     #[cfg(feature = "oak_debug")]
     pub fn html_for_channel(&self, id: u64) -> Option<String> {
         self.channels.html_for_channel(id)
-    }
-    #[cfg(feature = "oak_debug")]
-    pub fn html_for_half(&self, id: u64) -> Option<String> {
-        self.channels.html_for_half(id)
     }
 
     /// Thread safe method for determining if the [`Runtime`] is terminating.
@@ -622,18 +627,16 @@ impl Runtime {
     /// order to limit the scope of holding the lock on [`channel::ChannelMapping::channels`].
     ///
     /// Returns an error if `channel_handle` is invalid.
-    fn get_reader_channel_label(&self, channel_handle: ChannelHalfId) -> Result<Label, OakStatus> {
-        self.channels
-            .with_reader_channel(channel_handle, |channel| Ok(channel.label.clone()))
+    fn get_reader_channel_label(&self, channel_half: &ChannelHalf) -> Result<Label, OakStatus> {
+        with_reader_channel(channel_half, |channel| Ok(channel.label.clone()))
     }
 
     /// Returns a clone of the [`Label`] associated with the provided writer `channel_handle`, in
     /// order to limit the scope of holding the lock on [`channel::ChannelMapping::channels`].
     ///
     /// Returns an error if `channel_handle` is invalid.
-    fn get_writer_channel_label(&self, channel_handle: ChannelHalfId) -> Result<Label, OakStatus> {
-        self.channels
-            .with_writer_channel(channel_handle, |channel| Ok(channel.label.clone()))
+    fn get_writer_channel_label(&self, channel_half: &ChannelHalf) -> Result<Label, OakStatus> {
+        with_writer_channel(channel_half, |channel| Ok(channel.label.clone()))
     }
 
     /// Returns whether the calling Node is allowed to read from the provided channel, according to
@@ -641,16 +644,16 @@ impl Runtime {
     fn validate_can_read_from_channel(
         &self,
         node_id: NodeId,
-        channel_handle: ChannelHalfId,
+        channel_half: &ChannelHalf,
     ) -> Result<(), OakStatus> {
         trace!(
             "{:?}: validating readability of {:?}",
             node_id,
-            channel_handle
+            channel_half
         );
 
         let node_label = self.get_node_label(node_id);
-        let channel_label = self.get_reader_channel_label(channel_handle)?;
+        let channel_label = self.get_reader_channel_label(&channel_half)?;
         trace!(
             "{:?}: node_label={:?}, channel_label={:?}",
             node_id,
@@ -658,13 +661,10 @@ impl Runtime {
             channel_label
         );
         if channel_label.flows_to(&node_label) {
-            trace!("{:?}: can read from channel {:?}", node_id, channel_handle);
+            trace!("{:?}: can read from channel {:?}", node_id, channel_half);
             Ok(())
         } else {
-            debug!(
-                "{:?}: cannot read from channel {:?}",
-                node_id, channel_handle
-            );
+            debug!("{:?}: cannot read from channel {:?}", node_id, channel_half);
             Err(OakStatus::ErrPermissionDenied)
         }
     }
@@ -674,13 +674,12 @@ impl Runtime {
     fn validate_can_read_from_channels(
         &self,
         node_id: NodeId,
-        channel_handles: &[ChannelHalfId],
+        channel_halves: &[ChannelHalf],
     ) -> Result<(), OakStatus> {
-        let all_channel_handles_ok = channel_handles.iter().all(|channel_handle| {
-            self.validate_can_read_from_channel(node_id, *channel_handle)
-                .is_ok()
-        });
-        if all_channel_handles_ok {
+        let all_channel_halves_ok = channel_halves
+            .iter()
+            .all(|half| self.validate_can_read_from_channel(node_id, half).is_ok());
+        if all_channel_halves_ok {
             Ok(())
         } else {
             Err(OakStatus::ErrPermissionDenied)
@@ -692,16 +691,16 @@ impl Runtime {
     fn validate_can_write_to_channel(
         &self,
         node_id: NodeId,
-        channel_handle: ChannelHalfId,
+        channel_half: &ChannelHalf,
     ) -> Result<(), OakStatus> {
         trace!(
             "{:?}: validating writability of {:?}",
             node_id,
-            channel_handle
+            channel_half
         );
 
         let node_label = self.get_node_label(node_id);
-        let channel_label = self.get_writer_channel_label(channel_handle)?;
+        let channel_label = self.get_writer_channel_label(&channel_half)?;
         trace!(
             "{:?}: node_label={:?}, channel_label={:?}",
             node_id,
@@ -709,13 +708,10 @@ impl Runtime {
             channel_label
         );
         if node_label.flows_to(&channel_label) {
-            trace!("{:?}: can write to channel {:?}", node_id, channel_handle);
+            trace!("{:?}: can write to channel {:?}", node_id, channel_half);
             Ok(())
         } else {
-            debug!(
-                "{:?}: cannot write to channel {:?}",
-                node_id, channel_handle
-            );
+            debug!("{:?}: cannot write to channel {:?}", node_id, channel_half);
             Err(OakStatus::ErrPermissionDenied)
         }
     }
@@ -725,38 +721,40 @@ impl Runtime {
     /// [`Channel`]: crate::runtime::channel::Channel
     fn channel_create(&self, node_id: NodeId, label: &Label) -> (oak_abi::Handle, oak_abi::Handle) {
         // TODO(#630): Check whether the calling Node can create a Node with the specified label.
-        let (write_channel, read_channel) = self.channels.new_channel(label);
-        let write_handle = self.register_channel(node_id, write_channel);
-        let read_handle = self.register_channel(node_id, read_channel);
+        // First get a pair of `ChannelHalf` objects covered by `ChannelMapping`.
+        let (write_half, read_half) = self.channels.new_channel(label);
         trace!(
-            "{:?}: allocated handles w={}, r={} for channels w={:?},r={:?}",
+            "{:?}: allocated channel with halves w={:?},r={:?}",
+            node_id,
+            write_half,
+            read_half,
+        );
+        // Insert them into the handle table and return the ABI handles to the caller.
+        let write_handle = self.new_abi_handle(node_id, write_half);
+        let read_handle = self.new_abi_handle(node_id, read_half);
+        trace!(
+            "{:?}: allocated handles w={}, r={} for channel",
             node_id,
             write_handle,
             read_handle,
-            write_channel,
-            read_channel
         );
         (write_handle, read_handle)
     }
 
-    /// Reads the statuses from a slice of `ChannelHalfId`s.
+    /// Reads the statuses from a slice of `ChannelHalf`s.
     /// [`ChannelReadStatus::InvalidChannel`] is set for `None` readers in the slice. For `Some(_)`
     /// readers, the result is set from a call to `has_message`.
-    fn readers_statuses(
-        &self,
-        node_id: NodeId,
-        readers: &[ChannelHalfId],
-    ) -> Vec<ChannelReadStatus> {
+    fn readers_statuses(&self, node_id: NodeId, readers: &[ChannelHalf]) -> Vec<ChannelReadStatus> {
         readers
             .iter()
-            .map(|chan| {
-                self.channel_status(node_id, *chan)
+            .map(|half| {
+                self.channel_status(node_id, half)
                     .unwrap_or(ChannelReadStatus::InvalidChannel)
             })
             .collect()
     }
 
-    /// Waits on a slice of `ChannelHalfId`s, blocking until one of the following conditions:
+    /// Waits on a slice of `ChannelHalf`s, blocking until one of the following conditions:
     /// - If the [`Runtime`] is terminating this will return immediately with an `ErrTerminated`
     ///   status for each channel.
     /// - If all readers are in an erroneous status, e.g. when all channels are orphaned, this will
@@ -780,9 +778,9 @@ impl Runtime {
         let mut reader_pos = Vec::new();
         let mut readers = Vec::new();
         for (i, handle) in read_handles.iter().enumerate() {
-            if let Ok(channel) = self.abi_to_read_channel(node_id, *handle) {
+            if let Ok(half) = self.abi_to_read_half(node_id, *handle) {
                 reader_pos.push(i);
-                readers.push(channel);
+                readers.push(half);
             }
         }
 
@@ -804,7 +802,7 @@ impl Runtime {
             let thread_ref = Arc::new(thread.clone());
 
             for reader in &readers {
-                self.channels.with_reader_channel(*reader, |channel| {
+                with_reader_channel(reader, |channel| {
                     channel.add_waiter(thread_id, &thread_ref);
                     Ok(())
                 })?;
@@ -850,50 +848,31 @@ impl Runtime {
         write_handle: oak_abi::Handle,
         node_msg: NodeMessage,
     ) -> Result<(), OakStatus> {
-        let half_id = self.abi_to_write_channel(node_id, write_handle)?;
-        self.validate_can_write_to_channel(node_id, half_id)?;
+        let half = self.abi_to_write_half(node_id, write_handle)?;
+        self.validate_can_write_to_channel(node_id, &half)?;
 
-        // Translate the Node-relative handles in the `NodeMessage` to channels.
-        let mut msg = Message {
+        // Translate the Node-relative handles in the `NodeMessage` to channel halves.
+        let msg = self.message_from(node_msg, node_id)?;
+        with_writer_channel(&half, |channel| {
+            if !channel.has_readers() {
+                return Err(OakStatus::ErrChannelClosed);
+            }
+            channel.messages.write().unwrap().push_back(msg);
+            channel.wake_waiters();
+
+            Ok(())
+        })
+    }
+
+    // Translate the Node-relative handles in the `NodeMessage` to channel halves.
+    fn message_from(&self, node_msg: NodeMessage, node_id: NodeId) -> Result<Message, OakStatus> {
+        Ok(Message {
             data: node_msg.data,
-            channels: Vec::with_capacity(node_msg.handles.len()),
-        };
-        for handle in node_msg.handles {
-            let channel = self.abi_to_channel(node_id, handle)?;
-            msg.channels.push(channel);
-        }
-
-        self.channels.with_writer_channel(half_id, |channel|{
-
-        if !channel.has_readers() {
-            return Err(OakStatus::ErrChannelClosed);
-        }
-
-        let mut new_half_ids = Vec::with_capacity(msg.channels.len());
-        let mut failure = None;
-
-        for half_id in msg.channels.iter() {
-            match self.channels.duplicate_half_id(*half_id) {
-                Err(e) => {
-                    failure = Some(e);
-                    break;
-                }
-                Ok(half_id) => new_half_ids.push(half_id),
-            }
-        }
-
-        if let Some(err) = failure {
-            for half_id in new_half_ids {
-                self.channels.remove_half_id(half_id).expect("channel_write: Failed to deallocate channel half_ids during backtracking from error during channel half_id copying");
-            }
-            return Err(err);
-        }
-
-        let msg = Message { channels: new_half_ids, ..msg };
-        channel.messages.write().unwrap().push_back(msg);
-        channel.wake_waiters();
-
-        Ok(())
+            channels: node_msg
+                .handles
+                .into_iter()
+                .map(|handle| self.abi_to_half(node_id, handle))
+                .collect::<Result<Vec<ChannelHalf>, OakStatus>>()?,
         })
     }
 
@@ -904,9 +883,9 @@ impl Runtime {
         node_id: NodeId,
         read_handle: oak_abi::Handle,
     ) -> Result<Option<NodeMessage>, OakStatus> {
-        let half_id = self.abi_to_read_channel(node_id, read_handle)?;
-        self.validate_can_read_from_channel(node_id, half_id)?;
-        match self.channels.with_reader_channel(half_id, |channel| {
+        let half = self.abi_to_read_half(node_id, read_handle)?;
+        self.validate_can_read_from_channel(node_id, &half)?;
+        match with_reader_channel(&half, |channel| {
             match channel.messages.write().unwrap().pop_front() {
                 Some(m) => Ok(Some(m)),
                 None => {
@@ -920,14 +899,7 @@ impl Runtime {
         }) {
             Err(status) => Err(status),
             Ok(None) => Ok(None),
-            Ok(Some(runtime_msg)) => Ok(Some(NodeMessage {
-                data: runtime_msg.data,
-                handles: runtime_msg
-                    .channels
-                    .iter()
-                    .map(|c| self.register_channel(node_id, *c))
-                    .collect(),
-            })),
+            Ok(Some(runtime_msg)) => Ok(Some(self.node_message_from(runtime_msg, node_id))),
         }
     }
 
@@ -938,10 +910,10 @@ impl Runtime {
     fn channel_status(
         &self,
         node_id: NodeId,
-        half_id: ChannelHalfId,
+        half: &ChannelHalf,
     ) -> Result<ChannelReadStatus, OakStatus> {
-        self.validate_can_read_from_channel(node_id, half_id)?;
-        self.channels.with_reader_channel(half_id, |channel| {
+        self.validate_can_read_from_channel(node_id, half)?;
+        with_reader_channel(half, |channel| {
             Ok(if channel.messages.read().unwrap().front().is_some() {
                 ChannelReadStatus::ReadReady
             } else if !channel.has_writers() {
@@ -966,9 +938,9 @@ impl Runtime {
         bytes_capacity: usize,
         handles_capacity: usize,
     ) -> Result<Option<NodeReadStatus>, OakStatus> {
-        let half_id = self.abi_to_read_channel(node_id, handle)?;
-        self.validate_can_read_from_channel(node_id, half_id)?;
-        self.channels.with_reader_channel(half_id, |channel| {
+        let half = self.abi_to_read_half(node_id, handle)?;
+        self.validate_can_read_from_channel(node_id, &half)?;
+        let result = with_reader_channel(&half, |channel| {
             let mut messages = channel.messages.write().unwrap();
             match messages.front() {
                 Some(front) => {
@@ -978,22 +950,14 @@ impl Runtime {
                     if req_bytes_capacity > bytes_capacity
                         || req_handles_capacity > handles_capacity
                     {
-                        Ok(Some(NodeReadStatus::NeedsCapacity(
+                        Ok(Some(ReadStatus::NeedsCapacity(
                             req_bytes_capacity,
                             req_handles_capacity,
                         )))
                     } else {
-                        let msg = messages.pop_front().expect(
+                        Ok(Some(ReadStatus::Success(messages.pop_front().expect(
                             "Front element disappeared while we were holding the write lock!",
-                        );
-                        Ok(Some(NodeReadStatus::Success(NodeMessage {
-                            data: msg.data,
-                            handles: msg
-                                .channels
-                                .iter()
-                                .map(|c| self.register_channel(node_id, *c))
-                                .collect(),
-                        })))
+                        ))))
                     }
                 }
                 None => {
@@ -1004,14 +968,38 @@ impl Runtime {
                     }
                 }
             }
+        })?;
+        // Translate the result into the handle numbering space of this Node.
+        Ok(match result {
+            None => None,
+            Some(ReadStatus::NeedsCapacity(z, c)) => Some(NodeReadStatus::NeedsCapacity(z, c)),
+            Some(ReadStatus::Success(msg)) => Some(NodeReadStatus::Success(
+                self.node_message_from(msg, node_id),
+            )),
         })
+    }
+
+    // Translate a Message to include ABI handles (which are relative to this Node) rather than
+    // internal channel references.
+    fn node_message_from(&self, msg: Message, node_id: NodeId) -> NodeMessage {
+        NodeMessage {
+            data: msg.data,
+            handles: msg
+                .channels
+                .iter()
+                .map(|half| self.new_abi_handle(node_id, half.clone()))
+                .collect(),
+        }
     }
 
     /// Close an [`oak_abi::Handle`], potentially orphaning the underlying [`channel::Channel`].
     fn channel_close(&self, node_id: NodeId, handle: oak_abi::Handle) -> Result<(), OakStatus> {
-        let half_id = self.abi_to_channel(node_id, handle)?;
-        self.drop_abi_handle(node_id, handle)?;
-        self.channels.remove_half_id(half_id)
+        // Remove the ABI handle -> half mapping.
+        let half = self.drop_abi_handle(node_id, handle)?;
+        // Drop the half via the `ChannelMapping` object, in case this was the last reference
+        // to the underlying channel.
+        self.channels.drop_half(half);
+        Ok(())
     }
 
     /// Create a fresh [`NodeId`].
@@ -1099,7 +1087,7 @@ impl Runtime {
             return Err(OakStatus::ErrTerminated);
         }
 
-        let reader = self.abi_to_read_channel(node_id, initial_handle)?;
+        let reader = self.abi_to_read_half(node_id, initial_handle)?;
         let node_label = self.get_node_label(node_id);
         if !node_label.flows_to(label) {
             return Err(OakStatus::ErrPermissionDenied);
@@ -1110,7 +1098,6 @@ impl Runtime {
             .get(config_name)
             .ok_or(OakStatus::ErrInvalidArgs)?;
 
-        let reader = self.channels.duplicate_half_id(reader)?;
         let new_node_proxy = self.clone().proxy_for_new_node();
         let new_node_id = new_node_proxy.node_id;
         self.node_configure_instance(
@@ -1120,7 +1107,7 @@ impl Runtime {
         );
         let initial_handle = new_node_proxy
             .runtime
-            .register_channel(new_node_proxy.node_id, reader);
+            .new_abi_handle(new_node_proxy.node_id, reader.clone());
         debug!(
             "{:?}: create node instance {:?} '{}'.'{}' with handle {} from {:?}",
             node_id, new_node_id, config_name, entrypoint, initial_handle, reader
@@ -1142,7 +1129,7 @@ impl Runtime {
     }
 
     /// Starts a newly created Node instance, by first initializing the necessary [`NodeInfo`] data
-    /// structure in [`Runtime`], allowing it to access the provided [`ChannelHalfId`]s, then
+    /// structure in [`Runtime`], allowing it to access the provided [`ChannelHalf`]s, then
     /// calling [`Node::start`] on the instance, and finally storing a [`JoinHandle`] from the
     /// running instance in [`Runtime::node_join_handles`] so that it can later be terminated.
     /// The `pretty_name` parameter is only used for diagnostic/debugging output.

@@ -19,11 +19,10 @@ use crate::{
     runtime::{DotIdentifier, HtmlPath},
 };
 use itertools::Itertools;
-use log::{debug, error};
+use log::debug;
 use oak_abi::OakStatus;
-use rand::RngCore;
 use std::{
-    collections::{HashMap, HashSet, VecDeque},
+    collections::{HashMap, VecDeque},
     fmt::Write,
     sync::{
         atomic::{AtomicU64, Ordering::SeqCst},
@@ -45,12 +44,21 @@ type Messages = VecDeque<Message>;
 type WaitingThreads = Mutex<HashMap<ThreadId, Weak<Thread>>>;
 
 /// The internal implementation of a channel representation backed by a `VecDeque<Message>`.
-/// Readers and writers to this channel must increment the reader/writer count. This is implemented
-/// for `ChannelWriter`/`ChannelReader`, which will increment/decrement readers/writers when
-/// cloning/dropping.
+///
+/// Channels are reference counted using `Arc<Channel>`, almost always in the form of a
+/// `ChannelHalf` object that references one end of the `Channel` (read or write) and which
+/// is included in the `reader_count` or `writer_count`.  The exception to this is the overall
+/// `ChannelMapping` object, which holds a raw `Arc<Channel>` indexed by the `ChannelId` value.
+/// When the counts of `ChannelHalf` objects referring to this channel both reach zero, this
+/// `Channel` can be removed from the `ChannelMapping`, which removes the final `Arc<Channel>`
+/// and triggers the `Drop` of the `Channel`.
 pub struct Channel {
+    // The identifier under which this channel is tracked in the main `ChannelMapping`.
+    id: ChannelId,
+
     pub messages: RwLock<Messages>,
 
+    // Counts of the numbers of `ChannelHalf` objects that refer to this channel.
     writer_count: AtomicU64,
     reader_count: AtomicU64,
 
@@ -73,8 +81,8 @@ impl std::fmt::Debug for Channel {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Channel {{ #msgs={}, #readers={}, #writers={}, label={:?} }}",
-            self.messages.read().unwrap().len(),
+            "Channel {{ id={}, #readers={}, #writers={}, label={:?} }}",
+            self.id,
             self.reader_count.load(SeqCst),
             self.writer_count.load(SeqCst),
             self.label,
@@ -82,36 +90,109 @@ impl std::fmt::Debug for Channel {
     }
 }
 
-/// An identifier for one half of a [`Channel`].
-#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
-pub struct ChannelHalfId {
-    id: u64,
+/// A reference to one half of a [`Channel`].
+pub struct ChannelHalf {
+    channel: Arc<Channel>,
     pub direction: ChannelHalfDirection,
 }
 
-impl DotIdentifier for ChannelHalfId {
+impl ChannelHalf {
+    // Constructor for `ChannelHalf` keeps the underlying channel's reader/writer count
+    // up-to-date.
+    pub fn new(channel: Arc<Channel>, direction: ChannelHalfDirection) -> Self {
+        match direction {
+            ChannelHalfDirection::Write => channel.inc_writer_count(),
+            ChannelHalfDirection::Read => channel.inc_reader_count(),
+        };
+        ChannelHalf { channel, direction }
+    }
+}
+
+// Manual implementation of the `Clone` trait to keep the counts for the underlying channel in sync.
+impl Clone for ChannelHalf {
+    fn clone(&self) -> Self {
+        ChannelHalf::new(self.channel.clone(), self.direction)
+    }
+}
+
+// Manual implementation of the `Drop` trait to keep the counts for the underlying channel in sync.
+// Note that a non-ephemeral `ChannelHalf` (i.e. one that's stored in a data structure, rather than
+// born and dying in a transient scope) should be dropped by calling `ChannelMapping::drop_half()`,
+// so that if the final `ChannelHalf` that refers to a `Channel` is dropped, then the
+// `ChannelMapping` can remove its own raw `Arc<Channel>` and allow the `Channel` to drop.
+impl Drop for ChannelHalf {
+    fn drop(&mut self) {
+        match self.direction {
+            ChannelHalfDirection::Write => self.channel.dec_writer_count(),
+            ChannelHalfDirection::Read => self.channel.dec_reader_count(),
+        };
+    }
+}
+
+impl std::fmt::Debug for ChannelHalf {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Channel {} {}",
+            self.channel.id,
+            match self.direction {
+                ChannelHalfDirection::Write => "WRITE",
+                ChannelHalfDirection::Read => "READ",
+            },
+        )
+    }
+}
+
+impl DotIdentifier for ChannelHalf {
     fn dot_id(&self) -> String {
-        format!("h{}", self.id)
+        self.channel.id.dot_id()
     }
 }
 
-impl HtmlPath for ChannelHalfId {
+impl HtmlPath for ChannelHalf {
     fn html_path(&self) -> String {
-        format!("/half/{}", self.id)
+        self.channel.id.html_path()
     }
 }
 
-/// The direction of a [`ChannelHalfId`].
+/// Perform an operation on a [`Channel`] associated with a [`ChannelId`].
+fn with_channel<U, F: FnOnce(Arc<Channel>) -> Result<U, OakStatus>>(
+    half: &ChannelHalf,
+    f: F,
+) -> Result<U, OakStatus> {
+    f(half.channel.clone())
+}
+
+/// Perform an operation on a [`Channel`] associated with a reader [`ChannelHalf`].
+pub fn with_reader_channel<U, F: FnOnce(Arc<Channel>) -> Result<U, OakStatus>>(
+    half: &ChannelHalf,
+    f: F,
+) -> Result<U, OakStatus> {
+    if half.direction != ChannelHalfDirection::Read {
+        return Err(OakStatus::ErrBadHandle);
+    }
+    with_channel(half, f)
+}
+
+/// Perform an operation on a [`Channel`] associated with a writer [`ChannelHalf`].
+pub fn with_writer_channel<U, F: FnOnce(Arc<Channel>) -> Result<U, OakStatus>>(
+    half: &ChannelHalf,
+    f: F,
+) -> Result<U, OakStatus> {
+    if half.direction != ChannelHalfDirection::Write {
+        return Err(OakStatus::ErrBadHandle);
+    }
+    with_channel(half, f)
+}
+
+/// The direction of a [`ChannelHalf`].
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum ChannelHalfDirection {
     Read,
     Write,
 }
 
-/// An internal identifier to track a [`Channel`]. This is implementation specific and should not
-/// be visible outside the internals of [`Runtime`].
-///
-/// [`Runtime`]: crate::runtime::Runtime
+/// An internal identifier to track a [`Channel`].
 type ChannelId = u64;
 
 impl DotIdentifier for ChannelId {
@@ -126,22 +207,39 @@ impl HtmlPath for ChannelId {
     }
 }
 
-/// Ownership and mapping of [`Channel`]s to [`ChannelHalfId`]s.
+/// Mapping of [`ChannelId`]s to [`Channel`]s.
 pub struct ChannelMapping {
-    channels: RwLock<HashMap<ChannelId, Channel>>,
+    // The `channels` field holds the only raw `Arc<Channel>` which is not encapsulated in a
+    // `ChannelHalf` object; this means that the refcount for the channel will always be
+    // one higher than (channel.reader_count + channel.writer_count).  When the latter
+    // drops to zero (if done via ChannelMapping.drop_half()), then this final `Arc`
+    // will be dropped when the `Channel` is removed from this `HashMap`.
+    channels: RwLock<HashMap<ChannelId, Arc<Channel>>>,
     next_channel_id: AtomicU64,
-    half_ids: RwLock<HashMap<ChannelHalfId, ChannelId>>,
+}
+
+impl Drop for Channel {
+    fn drop(&mut self) {
+        debug!("dropping Channel object {:?}", self);
+        // There should be no waiters for this channel (a waiting Node would have
+        // to have a `Handle` to wait on, which would be a reference that pins this
+        // channel to existence) so no need to `wake_waiters()`.
+        // Deliberately clear the HashMap under the lock to avoid a TSAN report.
+        self.waiting_threads.lock().unwrap().clear();
+    }
 }
 
 impl Channel {
-    fn new(label: &oak_abi::label::Label) -> Channel {
-        Channel {
+    fn new(id: ChannelId, label: &oak_abi::label::Label) -> Arc<Channel> {
+        debug!("create new Channel object with ID {}", id);
+        Arc::new(Channel {
+            id,
             messages: RwLock::new(Messages::new()),
             writer_count: AtomicU64::new(0),
             reader_count: AtomicU64::new(0),
             waiting_threads: Mutex::new(HashMap::new()),
             label: label.clone(),
-        }
+        })
     }
 
     /// Determine whether there are any readers of the channel.
@@ -188,7 +286,8 @@ impl Channel {
         let mut s = String::new();
         write!(
             &mut s,
-            "Channel {{ reader_count={}, writer_count={}, label={:?} }}<br/>",
+            "Channel {{ id={}, reader_count={}, writer_count={}, label={:?} }}<br/>",
+            self.id,
             self.reader_count.load(SeqCst),
             self.writer_count.load(SeqCst),
             self.label
@@ -259,7 +358,63 @@ impl ChannelMapping {
         ChannelMapping {
             channels: RwLock::new(HashMap::new()),
             next_channel_id: AtomicU64::new(0),
-            half_ids: RwLock::new(HashMap::new()),
+        }
+    }
+
+    /// Creates a new [`Channel`] and returns a `(writer half, reader half)` pair.
+    pub fn new_channel(&self, label: &oak_abi::label::Label) -> (ChannelHalf, ChannelHalf) {
+        let channel_id = self.next_channel_id.fetch_add(1, SeqCst);
+        let channel = Channel::new(channel_id, label);
+        let result = (
+            ChannelHalf::new(channel.clone(), ChannelHalfDirection::Write),
+            ChannelHalf::new(channel.clone(), ChannelHalfDirection::Read),
+        );
+        debug!("tracking new channel ID {}", channel_id);
+        self.channels.write().unwrap().insert(channel_id, channel);
+        result
+    }
+
+    /// Drop a [`ChannelHalf`], which may result in the underlying [`Channel`] becoming orphaned
+    /// and so freed.
+    pub fn drop_half(&self, half: ChannelHalf) {
+        let channel = half.channel.clone();
+        let direction = half.direction;
+        drop(half);
+
+        if !channel.has_users() {
+            // We have just dropped the final half that referred to the channel.
+            // Drop it from the master `HashMap` too.
+            {
+                let mut channels = self.channels.write().unwrap();
+                channels.remove(&channel.id);
+            }
+            // We should now hold the only live `Arc<Channel>` for the channel.
+            // Manually clear the channel's contents before we drop that too,
+            // but be careful to avoid infinite recursion.
+            let messages: Messages;
+            {
+                messages = channel.messages.write().unwrap().drain(..).collect();
+                // `channel.messages` is now empty, so if another channel's
+                // messages refer to this channel, it will go no further.
+            }
+            for msg in messages {
+                for half in msg.channels {
+                    debug!("drop_half: dropping half {:?} from queued message", half);
+                    self.drop_half(half);
+                }
+            }
+
+            debug!(
+                "drop_half: removed channel {:?} from tracking, with approx {} Arcs and {} weak refs remaining",
+                channel.id,
+                Arc::strong_count(&channel),
+                Arc::weak_count(&channel)
+            );
+            drop(channel); // be explicit: final `Arc<Channel>` dropped here.
+        } else if direction == ChannelHalfDirection::Write && !channel.has_writers() {
+            // This was the last writer to the channel: wake any waiters so they
+            // can be aware that the channel is orphaned.
+            channel.wake_waiters();
         }
     }
 
@@ -271,188 +426,14 @@ impl ChannelMapping {
             .expect("could not acquire channel mapping")
             .values()
         {
-            for thread in channel
-                .waiting_threads
-                .lock()
-                .expect("could not acquire waiting threads for channel")
-                .values()
-            {
-                if let Some(thread) = thread.upgrade() {
-                    thread.unpark();
-                }
-            }
+            channel.wake_waiters();
         }
-    }
-
-    /// Creates a new [`Channel`] and returns a `(writer handle, reader handle)` pair.
-    pub fn new_channel(&self, label: &oak_abi::label::Label) -> (ChannelHalfId, ChannelHalfId) {
-        let channel_id = self.next_channel_id.fetch_add(1, SeqCst);
-        debug!("new channel ID {}", channel_id);
-        {
-            self.channels
-                .write()
-                .unwrap()
-                .insert(channel_id, Channel::new(label));
-        }
-        (
-            self.new_half_id(ChannelHalfDirection::Write, channel_id),
-            self.new_half_id(ChannelHalfDirection::Read, channel_id),
-        )
-    }
-
-    /// Get a new [`ChannelHalfId`] with a fresh internal ID.
-    fn new_half_id(&self, direction: ChannelHalfDirection, channel_id: ChannelId) -> ChannelHalfId {
-        let mut half_id;
-        loop {
-            let mut half_ids = self.half_ids.write().unwrap();
-            half_id = ChannelHalfId {
-                id: rand::thread_rng().next_u64(),
-                direction,
-            };
-            if half_ids.get(&half_id).is_none() {
-                debug!("new half ID {:?} for channel ID {}", half_id, channel_id);
-                half_ids.insert(half_id, channel_id);
-                break;
-            }
-        }
-        match direction {
-            ChannelHalfDirection::Write => {
-                self.channels
-                    .read()
-                    .unwrap()
-                    .get(&channel_id)
-                    .unwrap()
-                    .inc_writer_count();
-            }
-            ChannelHalfDirection::Read => {
-                self.channels
-                    .read()
-                    .unwrap()
-                    .get(&channel_id)
-                    .unwrap()
-                    .inc_reader_count();
-            }
-        };
-        half_id
-    }
-
-    /// Attempt to retrieve the [`ChannelId`] associated with a [`ChannelHalfId`].
-    fn get_channel(&self, half_id: ChannelHalfId) -> Result<ChannelId, OakStatus> {
-        self.half_ids
-            .read()
-            .unwrap()
-            .get(&half_id)
-            .map_or(Err(OakStatus::ErrBadHandle), |id| Ok(*id))
-    }
-
-    /// Perform an operation on a [`Channel`] associated with a [`ChannelId`].
-    /// The channels read lock is held while the operation is performed.
-    fn with_channel<U, F: FnOnce(&Channel) -> Result<U, OakStatus>>(
-        &self,
-        half_id: ChannelHalfId,
-        f: F,
-    ) -> Result<U, OakStatus> {
-        let channel_id = self.get_channel(half_id)?;
-        let channels = self.channels.read().unwrap();
-        let channel = channels.get(&channel_id).ok_or(OakStatus::ErrBadHandle)?;
-        f(channel)
-    }
-
-    /// Perform an operation on a [`Channel`] associated with a reader [`ChannelHalfId`].
-    /// The channels read lock is held while the operation is performed.
-    pub fn with_reader_channel<U, F: FnOnce(&Channel) -> Result<U, OakStatus>>(
-        &self,
-        half_id: ChannelHalfId,
-        f: F,
-    ) -> Result<U, OakStatus> {
-        if half_id.direction != ChannelHalfDirection::Read {
-            return Err(OakStatus::ErrBadHandle);
-        }
-        self.with_channel(half_id, f)
-    }
-
-    /// Perform an operation on a [`Channel`] associated with a writer [`ChannelHalfId`].
-    /// The channels read lock is held while the operation is performed.
-    pub fn with_writer_channel<U, F: FnOnce(&Channel) -> Result<U, OakStatus>>(
-        &self,
-        half_id: ChannelHalfId,
-        f: F,
-    ) -> Result<U, OakStatus> {
-        if half_id.direction != ChannelHalfDirection::Write {
-            return Err(OakStatus::ErrBadHandle);
-        }
-        self.with_channel(half_id, f)
-    }
-
-    /// Deallocate a [`ChannelHalfId`] so it is no longer usable in operations,
-    /// and the underlying [`Channel`] may become orphaned.
-    pub fn remove_half_id(&self, half_id: ChannelHalfId) -> Result<(), OakStatus> {
-        // First remove from the half->ChannelId map.
-        let channel_id;
-        {
-            let mut half_ids = self.half_ids.write().unwrap();
-            channel_id = half_ids.remove(&half_id).ok_or(OakStatus::ErrBadHandle)?;
-        }
-        // Now decrement the count on the underlying channel.
-        {
-            let mut channels = self.channels.write().unwrap();
-            let channel = channels
-                .get(&channel_id)
-                .expect("remove_half_id: ChannelHalfId is invalid!");
-
-            match half_id.direction {
-                ChannelHalfDirection::Write => channel.dec_writer_count(),
-                ChannelHalfDirection::Read => channel.dec_reader_count(),
-            };
-            // If this was the final user of the channel, drop that too.
-            if !channel.has_users() {
-                channels.remove(&channel_id);
-                debug!("remove_half_id: deallocating channel {:?}", channel_id);
-            } else if half_id.direction == ChannelHalfDirection::Write && !channel.has_writers() {
-                // This was the last writer to the channel: wake any waiters so they
-                // can be aware that the channel is orphaned.
-                channel.wake_waiters();
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Duplicate a [`ChannelHalfId`]. This new identifier and when it is closed
-    /// will be tracked separately from the first [`ChannelHalfId`]. For
-    /// instance this is used by the [`Runtime`] to encode [`Channel`]s in
-    /// messages.
-    ///
-    /// [`Runtime`]: crate::runtime::Runtime
-    pub fn duplicate_half_id(&self, half_id: ChannelHalfId) -> Result<ChannelHalfId, OakStatus> {
-        Ok(self.new_half_id(half_id.direction, self.get_channel(half_id)?))
     }
 
     /// Build a Dot nodes stanza for the `ChannelMapping`.
     #[cfg(feature = "oak_debug")]
     pub fn graph_nodes(&self) -> String {
         let mut s = String::new();
-        writeln!(&mut s, "  {{").unwrap();
-        writeln!(
-            &mut s,
-            "    node [shape=hexagon style=filled fillcolor=yellow]"
-        )
-        .unwrap();
-
-        {
-            for half_id in self.half_ids.read().unwrap().keys() {
-                writeln!(
-                    &mut s,
-                    r###"    {} [URL="{}"]"###,
-                    half_id.dot_id(),
-                    half_id.html_path()
-                )
-                .unwrap();
-            }
-        }
-        writeln!(&mut s, "  }}").unwrap();
-
-        // Graph nodes for Channels.
         {
             writeln!(&mut s, "  {{").unwrap();
             writeln!(
@@ -480,30 +461,10 @@ impl ChannelMapping {
         s
     }
 
-    /// Build a Dot edges stanza for the `ChannelMapping`, allowing for the set
-    /// of nodes that have been already observed in the graph.
+    /// Build a Dot edges stanza for the `ChannelMapping`.
     #[cfg(feature = "oak_debug")]
-    pub fn graph_edges(&self, seen: HashSet<ChannelHalfId>) -> String {
+    pub fn graph_edges(&self) -> String {
         let mut s = String::new();
-        {
-            for (half_id, channel_id) in self.half_ids.read().unwrap().iter() {
-                match half_id.direction {
-                    ChannelHalfDirection::Write => {
-                        write!(&mut s, "  {} -> {}", half_id.dot_id(), channel_id.dot_id())
-                            .unwrap();
-                    }
-                    ChannelHalfDirection::Read => {
-                        write!(&mut s, "  {} -> {}", channel_id.dot_id(), half_id.dot_id())
-                            .unwrap();
-                    }
-                };
-                if !seen.contains(half_id) {
-                    error!("reader handle {:?} is not referenced by any node!", half_id);
-                    write!(&mut s, "  [color=red style=bold]").unwrap();
-                }
-                writeln!(&mut s).unwrap();
-            }
-        }
         {
             writeln!(&mut s, "  {{").unwrap();
             writeln!(
@@ -568,26 +529,6 @@ impl ChannelMapping {
             }
         }
         writeln!(&mut s, "</ul>").unwrap();
-        writeln!(&mut s, "<h2>Channel Halves</h2>").unwrap();
-        writeln!(&mut s, "<ul>").unwrap();
-        {
-            for (h, channel_id) in self.half_ids.read().unwrap().iter() {
-                writeln!(
-                    &mut s,
-                    r###"<li><a href="{}">{:?}</a> => {} <a href="{}">channel-{}</a>"###,
-                    h.html_path(),
-                    h,
-                    match h.direction {
-                        ChannelHalfDirection::Write => "WRITE",
-                        ChannelHalfDirection::Read => "READ",
-                    },
-                    channel_id.html_path(),
-                    channel_id
-                )
-                .unwrap();
-            }
-        }
-        writeln!(&mut s, "</ul>").unwrap();
         s
     }
 
@@ -595,34 +536,11 @@ impl ChannelMapping {
     #[cfg(feature = "oak_debug")]
     pub fn html_for_channel(&self, id: u64) -> Option<String> {
         let channel_id: ChannelId = id;
-        let channels = self.channels.read().unwrap();
-        let channel = channels.get(&channel_id)?;
-        Some(channel.html())
-    }
-
-    // Build an HTML page describing a specific runtime::Handle.
-    #[cfg(feature = "oak_debug")]
-    pub fn html_for_half(&self, id: u64) -> Option<String> {
-        if let Some(channel_id) = self.half_ids.read().unwrap().get(&ChannelHalfId {
-            id,
-            direction: ChannelHalfDirection::Write,
-        }) {
-            Some(format!(
-                r###"WRITE half for <a href="{}">channel {}</a>"###,
-                channel_id.html_path(),
-                channel_id
-            ))
-        } else if let Some(channel_id) = self.half_ids.read().unwrap().get(&ChannelHalfId {
-            id,
-            direction: ChannelHalfDirection::Read,
-        }) {
-            Some(format!(
-                r###"READ half for <a href="{}">channel {}</a>"###,
-                channel_id.html_path(),
-                channel_id
-            ))
-        } else {
-            None
+        let channel;
+        {
+            let channels = self.channels.read().unwrap();
+            channel = channels.get(&channel_id)?.clone();
         }
+        Some(channel.html())
     }
 }
