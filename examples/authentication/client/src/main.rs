@@ -20,7 +20,7 @@
 //! https://developers.google.com/identity/
 
 use hyper::Server;
-use log::info;
+use log::{info, warn};
 use structopt::StructOpt;
 use tokio::sync::{mpsc, oneshot};
 
@@ -105,8 +105,10 @@ async fn get_authentication_code(
     // Notify local HTTP server to shutdown.
     shutdown_sender.send(()).unwrap();
 
-    // Wait until graceful shutdown is completed, ignoring shutdown errors.
-    task.await.ok();
+    // Wait until graceful shutdown is completed, logging shutdown errors.
+    if let Err(error) = task.await {
+        warn!("Error while shutting down server: {}", error);
+    }
     let code = result.unwrap().unwrap();
     Ok(code)
 }
