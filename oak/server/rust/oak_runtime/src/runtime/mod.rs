@@ -1036,7 +1036,13 @@ impl Runtime {
         // below, because that takes ownership of the instance itself.
         //
         // We also want no locks to be held while the instance is starting.
-        let node_join_handle = node_instance.start()?;
+        let node_join_handle = match node_instance.start() {
+            Ok(join_handle) => join_handle,
+            Err(status) => {
+                self.remove_node_id(node_id);
+                return Err(status);
+            }
+        };
 
         // Regardless of the result of `Node::start`, insert the now running instance to the list of
         // running instances (by moving it), so that `Node::stop` will be called on it eventually.
