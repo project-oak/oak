@@ -24,7 +24,7 @@ if [[ ! -d "${TARGET_DIR}" ]]; then
   exit 1
 fi
 
-if [[ ! -z "$(ls "${TARGET_DIR}"/*)" ]]; then
+if [[ -n "$(ls "${TARGET_DIR}"/*)" ]]; then
   echo 'target dir not empty'
   exit 1
 fi
