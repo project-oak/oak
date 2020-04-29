@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+readonly SCRIPTS_DIR="$(dirname "$0")"
+# shellcheck source=scripts/common
+source "$SCRIPTS_DIR/common"
+
+export RUST_BACKTRACE=1
+export RUSTFLAGS="-Z sanitizer=thread"
+export TSAN_OPTIONS="halt_on_error=1 report_atomic_races=0"
+
+# Just run the abitest example for the moment.
+cargo -Zbuild-std test --manifest-path=./examples/abitest/tests/Cargo.toml --target=x86_64-unknown-linux-gnu --verbose -- --nocapture
+
+bazel_build_flags+=( '--keep_going' '--config=tsan' )
+
+bazel test "${bazel_build_flags[@]}" -- //oak/...:all
