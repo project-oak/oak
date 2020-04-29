@@ -235,7 +235,7 @@ impl WasmInterface {
         })?;
 
         self.runtime
-            .node_create(&config_name, &entrypoint, &label, channel_ref.clone())
+            .node_create(&config_name, &entrypoint, &label, *channel_ref)
             .map_err(|_| {
                 error!(
                     "{}: node_create(): Config \"{}\" entrypoint \"{}\" not found",

@@ -247,7 +247,7 @@ impl Runtime {
             for node_id in node_infos.keys().sorted() {
                 let node_info = node_infos.get(node_id).unwrap();
                 for half_id in &node_info.handles {
-                    seen.insert(half_id.clone());
+                    seen.insert(*half_id);
                     match self.channel_get_direction(*node_id, *half_id).unwrap() {
                         HandleDirection::Write => {
                             writeln!(&mut s, "  {} -> {}", node_id.dot_id(), half_id.dot_id())
