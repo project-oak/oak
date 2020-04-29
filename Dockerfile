@@ -168,7 +168,7 @@ RUN curl --location https://sh.rustup.rs > /tmp/rustup \
 # See https://rust-lang.github.io/rustup-components-history/ for how to pick a version that supports
 # the appropriate set of components.
 # Make sure to update WORKSPACE too, e.g. when updating nightly version
-ARG rust_version=nightly-2020-02-06
+ARG rust_version=nightly-2020-04-17
 RUN rustup toolchain install ${rust_version} \
   && rustup default ${rust_version}
 
