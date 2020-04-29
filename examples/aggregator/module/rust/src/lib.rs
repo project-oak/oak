@@ -108,8 +108,11 @@ impl AggregatorNode {
         //     }],
         //     integrity_tags: vec![],
         // };
-        match oak::grpc::client::Client::new_with_label("grpc-client", "", &Label::public_trusted())
-            .map(AggregatorClient)
+        match oak::grpc::client::Client::new_with_label(
+            &oak::node_config::grpc_client("127.0.0.1:8888"),
+            &Label::public_trusted(),
+        )
+        .map(AggregatorClient)
         {
             Some(grpc_client) => {
                 let res = grpc_client.submit_sample(Sample {
@@ -166,6 +169,6 @@ oak::entrypoint!(oak_main => |in_channel| {
 oak::entrypoint!(grpc_oak_main => |_in_channel| {
     oak::logger::init_default();
     let dispatcher = AggregatorDispatcher::new(AggregatorNode::new());
-    let grpc_channel = oak::grpc::server::init_default();
+    let grpc_channel = oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
     oak::run_event_loop(dispatcher, grpc_channel);
 });

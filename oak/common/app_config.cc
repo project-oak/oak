@@ -43,30 +43,11 @@ void WriteConfigToFile(const ApplicationConfiguration* config, const std::string
 }
 
 bool ValidApplicationConfig(const ApplicationConfiguration& config) {
-  // Check name uniqueness for NodeConfiguration.
-  std::set<std::string> config_names;
-  std::set<std::string> wasm_names;
-  for (const auto& node_config : config.node_configs()) {
-    if (config_names.count(node_config.name()) > 0) {
-      LOG(ERROR) << "duplicate node config name " << node_config.name();
-      return false;
-    }
-    config_names.insert(node_config.name());
-    if (node_config.has_wasm_config()) {
-      wasm_names.insert(node_config.name());
-    }
+  if (!config.has_initial_node_configuration()) {
+    LOG(ERROR) << "Missing initial node configuration";
+    return false;
   }
 
-  // Check name for the config of the initial node is present and is a Web
-  // Assembly variant.
-  if (wasm_names.count(config.initial_node_config_name()) == 0) {
-    LOG(ERROR) << "config of the initial node is not present in Wasm";
-    return false;
-  }
-  if (config.initial_entrypoint_name().empty()) {
-    LOG(ERROR) << "missing entrypoint name";
-    return false;
-  }
   return true;
 }
 

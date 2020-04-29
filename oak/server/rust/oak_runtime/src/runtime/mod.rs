@@ -26,6 +26,7 @@ use itertools::Itertools;
 use log::{debug, error, info, trace, warn};
 use oak_abi::{
     label::{Label, Tag},
+    proto::oak::application::{ApplicationConfiguration, NodeConfiguration},
     ChannelReadStatus, OakStatus,
 };
 use prometheus::proto::MetricFamily;
@@ -150,16 +151,6 @@ impl std::fmt::Debug for NodeInfo {
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug, PartialOrd, Ord)]
 pub struct NodeId(pub u64);
 
-/// Internal version of the [`ApplicationConfiguration`] protobuf, holding
-/// the same information but parsed and verified.
-///
-/// [`ApplicationConfiguration`]: crate::proto::oak::application::ApplicationConfiguration
-pub struct Configuration {
-    pub nodes: HashMap<String, node::Configuration>,
-    pub entry_module: String,
-    pub entrypoint: String,
-}
-
 /// Helper types to indicate whether a channel read operation has succeed or has failed with not
 /// enough `bytes_capacity` and/or `handles_capacity`.
 pub enum NodeReadStatus {
@@ -221,7 +212,7 @@ impl Drop for AuxServer {
 
 /// Runtime structure for configuring and running a set of Oak Nodes.
 pub struct Runtime {
-    application_configuration: Configuration,
+    application_configuration: ApplicationConfiguration,
     grpc_configuration: GrpcConfiguration,
 
     terminating: AtomicBool,
@@ -318,11 +309,11 @@ impl Runtime {
 impl RuntimeProxy {
     /// Creates a [`Runtime`] instance with a single initial Node configured, and no channels.
     pub fn create_runtime(
-        configuration: Configuration,
+        application_configuration: ApplicationConfiguration,
         grpc_configuration: GrpcConfiguration,
     ) -> RuntimeProxy {
         let runtime = Arc::new(Runtime {
-            application_configuration: configuration,
+            application_configuration,
             grpc_configuration,
             terminating: AtomicBool::new(false),
             next_channel_id: AtomicU64::new(0),
@@ -345,7 +336,7 @@ impl RuntimeProxy {
         proxy
     }
 
-    /// Configures and runs the protobuf specified Application [`Configuration`].
+    /// Configures and runs the protobuf specified [`ApplicationConfiguration`].
     ///
     /// After starting a [`Runtime`], calling [`Runtime::stop`] will notify all Nodes that they
     /// should terminate, and wait for them to terminate.
@@ -354,17 +345,22 @@ impl RuntimeProxy {
     /// the configuration.
     pub fn start_runtime(
         &self,
-        runtime_config: crate::RuntimeConfiguration,
+        runtime_configuration: crate::RuntimeConfiguration,
     ) -> Result<oak_abi::Handle, OakStatus> {
-        let module_name = self.runtime.application_configuration.entry_module.clone();
-        let entrypoint = self.runtime.application_configuration.entrypoint.clone();
+        let node_configuration = self
+            .runtime
+            .application_configuration
+            .initial_node_configuration
+            .as_ref()
+            .ok_or(OakStatus::ErrInvalidArgs)?;
+
         self.metrics_data()
             .runtime_metrics
             .runtime_health_check
             .set(1);
 
         if cfg!(feature = "oak_debug") {
-            if let Some(port) = runtime_config.introspect_port {
+            if let Some(port) = runtime_configuration.introspect_port {
                 self.runtime
                     .aux_servers
                     .lock()
@@ -377,7 +373,7 @@ impl RuntimeProxy {
                     ));
             }
         }
-        if let Some(port) = runtime_config.metrics_port {
+        if let Some(port) = runtime_configuration.metrics_port {
             self.runtime
                 .aux_servers
                 .lock()
@@ -399,8 +395,7 @@ impl RuntimeProxy {
         );
 
         self.node_create(
-            &module_name,
-            &entrypoint,
+            &node_configuration,
             // When first starting, we assign the least privileged label to the entry point Node.
             &Label::public_trusted(),
             read_handle,
@@ -991,11 +986,11 @@ impl Runtime {
     fn node_create(
         self: Arc<Self>,
         node_id: NodeId,
-        config_name: &str,
-        entrypoint: &str,
+        config: &NodeConfiguration,
         label: &Label,
         initial_handle: oak_abi::Handle,
     ) -> Result<(), OakStatus> {
+        info!("creating node with config: {:?}", config);
         if self.is_terminating() {
             return Err(OakStatus::ErrTerminated);
         }
@@ -1003,20 +998,9 @@ impl Runtime {
 
         let reader = self.abi_to_read_half(node_id, initial_handle)?;
 
-        let config = self
-            .application_configuration
-            .nodes
-            .get(config_name)
-            .ok_or(OakStatus::ErrInvalidArgs)?;
-
         let new_node_proxy = self.clone().proxy_for_new_node();
         let new_node_id = new_node_proxy.node_id;
-        let new_node_name = format!(
-            "{}.{}({})",
-            config_name,
-            config.node_subname(entrypoint),
-            new_node_id.0
-        );
+        let new_node_name = format!("{}({})", config.name, new_node_id.0);
         self.node_configure_instance(
             new_node_id,
             &new_node_name,
@@ -1025,22 +1009,18 @@ impl Runtime {
         );
         let initial_handle = new_node_proxy
             .runtime
-            .new_abi_handle(new_node_proxy.node_id, reader.clone());
-        debug!(
-            "{:?}: create node instance {:?} '{}'.'{}' with handle {} from {:?}",
-            node_id, new_node_id, config_name, entrypoint, initial_handle, reader
-        );
+            .new_abi_handle(new_node_proxy.node_id, reader);
 
-        debug!("{:?}: create node instance {:?}", node_id, new_node_id);
         // This only creates a Node instance, but does not start it.
-        let instance = config
-            .create_node(
-                &new_node_name,
-                config_name,
-                entrypoint.to_owned(),
-                &self.grpc_configuration,
-            )
-            .ok_or(OakStatus::ErrInvalidArgs)?;
+        let instance = node::create_node(
+            &self.application_configuration,
+            config,
+            &self.grpc_configuration,
+        )
+        .map_err(|err| {
+            warn!("could not create node: {:?}", err);
+            OakStatus::ErrInvalidArgs
+        })?;
 
         debug!("{:?}: start node instance {:?}", node_id, new_node_id);
         let node_stopper = self.clone().node_start_instance(
@@ -1062,7 +1042,7 @@ impl Runtime {
     fn node_start_instance(
         self: Arc<Self>,
         node_name: &str,
-        node_instance: Box<dyn crate::node::Node + Send>,
+        node_instance: Box<dyn crate::node::Node>,
         node_proxy: RuntimeProxy,
         initial_handle: oak_abi::Handle,
     ) -> Result<NodeStopper, OakStatus> {
@@ -1185,18 +1165,13 @@ impl RuntimeProxy {
     /// See [`Runtime::node_create`].
     pub fn node_create(
         &self,
-        module_name: &str,
-        entrypoint: &str,
+        config: &NodeConfiguration,
         label: &Label,
         initial_handle: oak_abi::Handle,
     ) -> Result<(), OakStatus> {
-        self.runtime.clone().node_create(
-            self.node_id,
-            module_name,
-            entrypoint,
-            label,
-            initial_handle,
-        )
+        self.runtime
+            .clone()
+            .node_create(self.node_id, config, label, initial_handle)
     }
 
     /// See [`Runtime::channel_create`].

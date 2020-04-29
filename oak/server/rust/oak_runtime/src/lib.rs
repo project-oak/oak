@@ -23,8 +23,6 @@
 //! be enabled in development, as it destroys the privacy guarantees of the
 //! platform by providing easy channels for the exfiltration of private data.
 
-pub mod proto;
-
 pub mod config;
 pub mod io;
 pub mod message;
@@ -34,7 +32,7 @@ pub mod runtime;
 
 use tonic::transport::{Certificate, Identity};
 
-pub use config::{application_configuration, configure_and_run};
+pub use config::configure_and_run;
 pub use message::NodeMessage;
 pub use runtime::{NodeId, RuntimeProxy};
 

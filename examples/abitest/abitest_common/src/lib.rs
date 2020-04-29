@@ -30,6 +30,3 @@ impl oak::io::Encodable for InternalMessage {
         Ok(oak::io::Message { bytes, handles })
     }
 }
-
-// Expected name for log node config.
-pub const LOG_CONFIG_NAME: &str = "logging-config";

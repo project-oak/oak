@@ -60,10 +60,6 @@ fn map_level(level: Level) -> oak_abi::proto::oak::log::Level {
     }
 }
 
-/// Default name for predefined Node configuration that corresponds to a logging
-/// pseudo-Node.
-pub const DEFAULT_CONFIG_NAME: &str = "log";
-
 /// Initialize Node-wide default logging.
 ///
 /// Uses the default level (`Debug`) and the default pre-defined name
@@ -73,7 +69,7 @@ pub const DEFAULT_CONFIG_NAME: &str = "log";
 ///
 /// Panics if a logger has already been set.
 pub fn init_default() {
-    init(Level::Debug, DEFAULT_CONFIG_NAME).unwrap();
+    init(Level::Debug).unwrap();
 }
 
 /// Initialize Node-wide logging via a channel to a logging pseudo-Node.
@@ -84,10 +80,10 @@ pub fn init_default() {
 /// # Errors
 ///
 /// An error is returned if a logger has already been set.
-pub fn init(level: Level, config: &str) -> Result<(), SetLoggerError> {
+pub fn init(level: Level) -> Result<(), SetLoggerError> {
     // Create a channel and pass the read half to a fresh logging Node.
     let (write_handle, read_handle) = crate::channel_create().expect("could not create channel");
-    crate::node_create(config, "oak_main", read_handle).expect("could not create node");
+    crate::node_create(&crate::node_config::log(), read_handle).expect("could not create node");
     crate::channel_close(read_handle.handle).expect("could not close channel");
 
     log::set_boxed_logger(Box::new(OakChannelLogger {

@@ -54,24 +54,6 @@ cc_library(
     ],
 )
 
-cc_test(
-    name = "app_config_test",
-    srcs = ["app_config_test.cc"],
-    data = [":testdata"],
-    deps = [
-        ":app_config",
-        "@com_google_absl//absl/memory",
-        "@gtest//:gtest_main",
-    ],
-)
-
-filegroup(
-    name = "testdata",
-    srcs = glob([
-        "testdata/*.textproto",
-    ]),
-)
-
 cc_library(
     name = "label",
     srcs = ["label.cc"],

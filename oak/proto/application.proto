@@ -20,27 +20,41 @@ package oak.application;
 
 // An ApplicationConfiguration represents a unit of deployment in Oak.
 //
-// An Oak Application is built from a collection of interconnected Nodes,
-// each of which is running the code described by an entry in this
-// configuration.  These Nodes are created dynamically at runtime, with
-// the exception of the specified initial Node (which is created by the
-// Oak runtime).
+// A running Oak Application instance is built from a collection of
+// interconnected Nodes.
+//
+// Nodes are created dynamically at runtime, with the exception of the specified
+// initial Node (which is created by the Oak runtime when instantiating the Oak
+// Application).
+//
+// WebAssembly Nodes in particular can only run the code described by an entry
+// in this configuration.
 message ApplicationConfiguration {
-  // Collection of available Node configurations, indexed by name (which must be
-  // unique across the collection).  Each Node in the application will run under
-  // a configuration that is identified by an entry in this collection.
-  repeated NodeConfiguration node_configs = 1;
-  // Indication of what configuration the initial Node should run.  Must identify a
-  // NodeConfiguration entry that holds a WebAssemblyConfiguration object.
-  string initial_node_config_name = 2;
-  // The name of an exported Web Assembly function in the initial Node to
-  // be used as the Node's main entrypoint.
-  string initial_entrypoint_name = 3;
+  // Map from Wasm module names to their bytecode representation.
+  //
+  // See https://webassembly.org/docs/binary-encoding/ .
+  //
+  // Any developer-authored code running as part of an Oak Application must
+  // appear in this map.
+  //
+  // Entries in this map may be referenced by instances of
+  // WebAssemblyConfiguration objects.
+  map<string, bytes> wasm_modules = 1;
+
+  // Indication of what configuration the initial Node should run.
+  //
+  // Usually a NodeConfiguration entry that holds a WebAssemblyConfiguration
+  // object.
+  NodeConfiguration initial_node_configuration = 2;
 }
 
 // NodeConfiguration indicates the configuration of a created Node.
 message NodeConfiguration {
+  // Display name of the newly created node instance, for debugging purposes.
+  //
+  // Does not need to be unique.
   string name = 1;
+
   oneof config_type {
     WebAssemblyConfiguration wasm_config = 2;
     LogConfiguration log_config = 3;
@@ -51,13 +65,16 @@ message NodeConfiguration {
   }
 }
 
-// WebAssemblyConfiguration describes the configuration of a Web Assembly based Node.
+// WebAssemblyConfiguration describes the configuration of a Web Assembly based
+// Node.
 message WebAssemblyConfiguration {
-  // The compiled code of the Oak Node, in WebAssembly binary format.
-  // See https://webassembly.org/docs/binary-encoding/ .
-  // TODO(#804): Replace this with just a hash of the bytecode to instantiate, and
-  // pass the actual bytecode to the Oak Manager in some other way.
-  bytes module_bytes = 1;
+  // The name of one of the entries in the
+  // `ApplicationConfiguration.wasm_modules` field.
+  string wasm_module_name = 1;
+
+  // The name of an exported WebAssembly function to invoke as the Node entry
+  // point.
+  string wasm_entrypoint_name = 2;
 }
 
 // LogConfiguration describes the configuration of a logging pseudo-Node (which
@@ -85,8 +102,8 @@ message GrpcServerConfiguration {
 // pseudo-Node (which is provided by the Oak Runtime), connected to a specific
 // external (non-Oak) gRPC service.
 message GrpcClientConfiguration {
-  // The URI component of a gRPC server endpoint. Must contain the "Host" element.
-  // https://docs.rs/tonic/0.2.1/tonic/transport/struct.Uri.html
+  // The URI component of a gRPC server endpoint. Must contain the "Host"
+  // element. https://docs.rs/tonic/0.2.1/tonic/transport/struct.Uri.html
   string uri = 1;
   // The endpoint address of the external gRPC service.
   // `address` is represented as an "ip_address:tcp_port" string.
@@ -117,13 +134,14 @@ message RoughtimeServer {
   string public_key_base64 = 4;
 }
 
-// A serialized list of key-value pairs that are specified as command line flags to the Oak Loader
-// binary, and are made available to the initial Node of the running Oak Application.
+// A serialized list of key-value pairs that are specified as command line flags
+// to the Oak Loader binary, and are made available to the initial Node of the
+// running Oak Application.
 //
 // Keys are human readable strings and usually correspond to file names.
 //
-// Values are raw binary blobs and usually correspond to file contents, which must be interpreted by
-// the running Oak Application.
+// Values are raw binary blobs and usually correspond to file contents, which
+// must be interpreted by the running Oak Application.
 message ConfigMap {
   map<string, bytes> items = 1;
 }

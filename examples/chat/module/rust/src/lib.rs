@@ -47,7 +47,8 @@ oak::entrypoint!(oak_main => |in_channel| {
 oak::entrypoint!(grpc_oak_main => |_in_channel| {
     oak::logger::init_default();
     let dispatcher = ChatDispatcher::new(Node::default());
-    let grpc_channel = oak::grpc::server::init_default();
+    let grpc_channel =
+        oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
     oak::run_event_loop(dispatcher, grpc_channel);
 });
 
@@ -59,7 +60,8 @@ struct Room {
 impl Room {
     fn new(admin_token: AdminToken) -> Self {
         let (wh, rh) = oak::channel_create().unwrap();
-        oak::node_create("app", "backend_oak_main", rh).expect("could not create node");
+        oak::node_create(&oak::node_config::wasm("app", "backend_oak_main"), rh)
+            .expect("could not create node");
         oak::channel_close(rh.handle).expect("could not close channel");
         Room {
             sender: oak::io::Sender::new(wh),

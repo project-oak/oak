@@ -27,7 +27,7 @@ use proto::{HelloRequest, HelloResponse, HelloWorld, HelloWorldDispatcher};
 oak::entrypoint!(oak_main => |in_channel| {
     oak::logger::init_default();
     let node = Node {
-        translator: grpc::client::Client::new("translator", "oak_main")
+        translator: grpc::client::Client::new(&oak::node_config::wasm("translator", "oak_main"))
             .map(translator_common::TranslatorClient),
     };
     let dispatcher = HelloWorldDispatcher::new(node);
@@ -37,11 +37,12 @@ oak::entrypoint!(oak_main => |in_channel| {
 oak::entrypoint!(grpc_oak_main => |_in_channel| {
     oak::logger::init_default();
     let node = Node {
-        translator: grpc::client::Client::new("translator", "oak_main")
+        translator: grpc::client::Client::new(&oak::node_config::wasm("translator", "oak_main"))
             .map(translator_common::TranslatorClient),
     };
     let dispatcher = HelloWorldDispatcher::new(node);
-    let grpc_channel = oak::grpc::server::init_default();
+    let grpc_channel =
+        oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
     oak::run_event_loop(dispatcher, grpc_channel);
 });
 

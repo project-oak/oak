@@ -61,7 +61,8 @@ oak::entrypoint!(grpc_oak_main => |_in_channel| {
         config: None,
         model: NaiveBayes::new(),
     };
-    let grpc_channel = oak::grpc::server::init_default();
+    let grpc_channel =
+        oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
     oak::run_event_loop(node, grpc_channel);
 });
 ```
@@ -108,7 +109,8 @@ Application), the easiest way to use a gRPC service implementation is to:
 oak::entrypoint!(grpc_oak_main => |_in_channel| {
     oak::logger::init_default();
     let dispatcher = FormatServiceDispatcher::new(Node);
-    let grpc_channel = oak::grpc::server::init_default();
+    let grpc_channel =
+        oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
     oak::run_event_loop(dispatcher, grpc_channel);
 }
 ```
@@ -210,14 +212,10 @@ simple access to the service.
 
 ## Running an Oak Application
 
-In order to run the Oak Application, each of the Nodes that comprise the
-Application must first be compiled into one or more WebAssembly modules, and
+In order to run the Oak Application, each of the WebAssembly Nodes that comprise
+the Application must first be compiled into one or more WebAssembly modules, and
 these compiled WebAssembly modules are then assembled into an overall
 Application Configuration File.
-
-The Application Configuration also includes the port that the Oak Server should
-use for its gRPC service to appear on; the resulting (host:port) service
-endpoint is connected to by any clients of the Application.
 
 Each of these steps is described in the following sections.
 
@@ -228,37 +226,21 @@ be serialized into a binary file. The Application first needs to specify a
 template configuration file:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/hello_world/config/config.textproto /node_configs.*/ /initial_entrypoint_name.*/)
+[embedmd]:# (../examples/hello_world/config/config.textproto)
 ```textproto
-node_configs {
-  name: "app"
-  wasm_config {
-    module_bytes: "<bytes>"
+initial_node_configuration: {
+  name: "main"
+  wasm_config: {
+    wasm_module_name: "app"
+    wasm_entrypoint_name: "grpc_oak_main"
   }
 }
-node_configs {
-  name: "translator"
-  wasm_config {
-    module_bytes: "<bytes>"
-  }
-}
-node_configs {
-  name: "grpc-server"
-  grpc_server_config {
-    address: "[::]:8080"
-  }
-}
-node_configs {
-  name: "log"
-  log_config {}
-}
-initial_node_config_name: "app"
-initial_entrypoint_name: "grpc_oak_main"
 ```
 <!-- prettier-ignore-end -->
 
-The `module_bytes: "<bytes>"` means that this value will be filled with
-WebAssembly module bytes after serialization using the
+The `wasm_modules` field (not shown above because it is empty in the template
+configuration) will be filled with WebAssembly module bytes after serialization
+using the
 [_Application Configuration Serializer_](../oak/common/app_config_serializer.cc),
 as follows:
 
@@ -421,7 +403,8 @@ to the room:
 [embedmd]:# (../examples/chat/module/rust/src/lib.rs Rust /.*channel_create\(\)/ /\}$/)
 ```Rust
         let (wh, rh) = oak::channel_create().unwrap();
-        oak::node_create("app", "backend_oak_main", rh).expect("could not create node");
+        oak::node_create(&oak::node_config::wasm("app", "backend_oak_main"), rh)
+            .expect("could not create node");
         oak::channel_close(rh.handle).expect("could not close channel");
         Room {
             sender: oak::io::Sender::new(wh),
@@ -539,7 +522,8 @@ oak::entrypoint!(oak_main => |in_channel| {
 oak::entrypoint!(grpc_oak_main => |_in_channel| {
     oak::logger::init_default();
     let dispatcher = TranslatorDispatcher::new(Node);
-    let grpc_channel = oak::grpc::server::init_default();
+    let grpc_channel =
+        oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
     oak::run_event_loop(dispatcher, grpc_channel);
 });
 ```
@@ -552,20 +536,32 @@ use of the functionality of the Oak Runtime.
 ### Testing Multi-Node Applications
 
 It's also possible to test an Oak Application that's built from multiple Nodes,
-using `oak_runtime::application_configuration` to create an application
-configuration and then `oak_runtime::Runtime::configure_and_run(configuration)`
-to configure and run the Runtime.
+by defining an appropriate `ApplicationConfiguration` instance and then
+`oak_runtime::Runtime::configure_and_run(application_configuration, ...)` to
+configure and run the Runtime.
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/abitest/tests/src/tests.rs Rust / +let configuration =/ /configure_and_run.*/)
+[embedmd]:# (../examples/abitest/tests/src/tests.rs Rust / +let application_configuration =/ /unable to configure runtime.*/)
 ```Rust
-    let configuration = oak_runtime::application_configuration(
-        build_wasm().expect("failed to build wasm modules"),
-        LOG_CONFIG_NAME,
-        FRONTEND_CONFIG_NAME,
-        FRONTEND_ENTRYPOINT_NAME,
-    );
+    let application_configuration = ApplicationConfiguration {
+        wasm_modules: build_wasm().expect("failed to build wasm modules"),
+        initial_node_configuration: Some(oak::node_config::wasm(
+            FRONTEND_MODULE_NAME,
+            FRONTEND_ENTRYPOINT_NAME,
+        )),
+    };
 
     let (runtime, entry_channel) = oak_runtime::configure_and_run(
+        application_configuration,
+        oak_runtime::RuntimeConfiguration::default(),
+        oak_runtime::GrpcConfiguration {
+            grpc_server_tls_identity: None,
+            // Some of the tests require a gRPC client, so we populate the required certificate with
+            // an invalid value here, even though it will still fail when instantiating the actual
+            // gRPC client.
+            grpc_client_root_tls_certificate: Some(Certificate::from_pem("invalid-cert")),
+        },
+    )
+    .expect("unable to configure runtime with test wasm");
 ```
 <!-- prettier-ignore-end -->

@@ -17,8 +17,13 @@
 //! Test utilities to help with unit testing of Oak SDK code.
 
 use log::{debug, info};
+use oak_abi::proto::oak::application::{
+    node_configuration::ConfigType, ApplicationConfiguration, NodeConfiguration,
+    WebAssemblyConfiguration,
+};
 use prost::Message;
 use std::{collections::HashMap, process::Command};
+use tonic::transport::Certificate;
 
 // TODO(#544): re-enable unit tests of SDK functionality
 
@@ -45,21 +50,20 @@ pub fn compile_rust_wasm(cargo_path: &str, module_name: &str) -> std::io::Result
     std::fs::read(path)
 }
 
-const DEFAULT_LOG_CONFIG_NAME: &str = "log";
 const DEFAULT_ENTRYPOINT_NAME: &str = "oak_main";
 const DEFAULT_MODULE_MANIFEST: &str = "Cargo.toml";
 const MODULE_WASM_SUFFIX: &str = ".wasm";
 
-/// Convenience helper to build and run a single-Node Application with the
-/// given module name, using the default name "oak_main" for its entrypoint.
+/// Convenience helper to build and run a single-Node Application with the given module name, using
+/// the default name "oak_main" for its entrypoint.
 pub fn run_single_module_default(
     module_config_name: &str,
 ) -> Result<(oak_runtime::RuntimeProxy, oak_abi::Handle), oak::OakStatus> {
     run_single_module(module_config_name, DEFAULT_ENTRYPOINT_NAME)
 }
 
-/// Convenience helper to build and run a single-Node application with the
-/// given module name, using the provided entrypoint name.
+/// Convenience helper to build and run a single-Node application with the given module name, using
+/// the provided entrypoint name.
 pub fn run_single_module(
     module_config_name: &str,
     entrypoint_name: &str,
@@ -76,23 +80,33 @@ pub fn run_single_module(
     .cloned()
     .collect();
 
-    let configuration = oak_runtime::application_configuration(
-        wasm,
-        DEFAULT_LOG_CONFIG_NAME,
-        module_config_name,
-        entrypoint_name,
-    );
+    let application_configuration = ApplicationConfiguration {
+        wasm_modules: wasm,
+        initial_node_configuration: Some(NodeConfiguration {
+            name: "test".to_string(),
+            config_type: Some(ConfigType::WasmConfig(WebAssemblyConfiguration {
+                wasm_module_name: module_config_name.to_string(),
+                wasm_entrypoint_name: entrypoint_name.to_string(),
+            })),
+        }),
+    };
 
     oak_runtime::configure_and_run(
-        configuration,
+        application_configuration,
         oak_runtime::RuntimeConfiguration::default(),
-        oak_runtime::GrpcConfiguration::default(),
+        oak_runtime::GrpcConfiguration {
+            grpc_server_tls_identity: None,
+            // Some of the tests require a gRPC client, so we populate the required certificate with
+            // an invalid value here, even though it will still fail when instantiating the actual
+            // gRPC client.
+            grpc_client_root_tls_certificate: Some(Certificate::from_pem("invalid-cert")),
+        },
     )
 }
 
 // TODO(#543): move this to oak_runtime as it's not test-specific
 pub fn grpc_request<R, Q>(
-    proxy: &oak_runtime::runtime::RuntimeProxy,
+    proxy: &oak_runtime::RuntimeProxy,
     handle: oak_abi::Handle,
     method_name: &str,
     req: &R,

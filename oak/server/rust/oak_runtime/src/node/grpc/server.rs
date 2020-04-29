@@ -17,7 +17,7 @@
 use crate::{
     node::{
         grpc::{codec::VecCodec, to_tonic_status},
-        Node,
+        ConfigurationError, Node,
     },
     runtime::RuntimeProxy,
 };
@@ -25,7 +25,10 @@ use hyper::service::Service;
 use log::{debug, error, info};
 use oak_abi::{
     label::Label,
-    proto::oak::encap::{GrpcRequest, GrpcResponse},
+    proto::oak::{
+        application::GrpcServerConfiguration,
+        encap::{GrpcRequest, GrpcResponse},
+    },
     ChannelReadStatus, OakStatus,
 };
 use prost::Message;
@@ -50,14 +53,29 @@ pub struct GrpcServerNode {
     tls_identity: Identity,
 }
 
+/// Checks if port is greater than 1023.
+fn check_port(address: &SocketAddr) -> Result<(), ConfigurationError> {
+    if address.port() > 1023 {
+        Ok(())
+    } else {
+        Err(ConfigurationError::IncorrectPort)
+    }
+}
+
 impl GrpcServerNode {
     /// Creates a new [`GrpcServerNode`] instance, but does not start it.
-    pub fn new(node_name: &str, address: SocketAddr, tls_identity: Identity) -> Self {
-        Self {
+    pub fn new(
+        node_name: &str,
+        config: GrpcServerConfiguration,
+        tls_identity: Identity,
+    ) -> Result<Self, ConfigurationError> {
+        let address = config.address.parse()?;
+        check_port(&address)?;
+        Ok(Self {
             node_name: node_name.to_string(),
             address,
             tls_identity,
-        }
+        })
     }
 
     /// Reads an [`oak_abi::Handle`] from a channel specified by `handle`.

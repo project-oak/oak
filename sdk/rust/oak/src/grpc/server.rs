@@ -14,27 +14,20 @@
 // limitations under the License.
 //
 
-//! Functionality to help Oak Nodes create gRPC pseudo-Nodes.
+//! Functionality to help Oak Nodes create gRPC server pseudo-Nodes.
 
 use crate::{OakStatus, ReadHandle};
 
-/// Default name for predefined Node configuration that corresponds to a gRPC pseudo-Node.
-pub const DEFAULT_CONFIG_NAME: &str = "grpc-server";
-
-/// Initialize a gRPC pseudo-Node with the default configuration.
-pub fn init_default() -> ReadHandle {
-    init(DEFAULT_CONFIG_NAME).expect("Coundn't create gRPC server pseudo-Node")
-}
-
-/// Initializes a gRPC server pseudo-Node and passes it a handle to write invocations to.
+/// Initializes a gRPC server pseudo-Node listening on the provided address.
 ///
 /// Returns a [`ReadHandle`] to read invocations from.
 ///
 /// [`ReadHandle`]: crate::ReadHandle
-pub fn init(config: &str) -> std::result::Result<ReadHandle, OakStatus> {
+pub fn init(address: &str) -> std::result::Result<ReadHandle, OakStatus> {
     // Create a channel and pass the read half to a new gRPC pseudo-Node.
     let (write_handle, read_handle) = crate::channel_create().expect("Couldn't create a channel");
-    crate::node_create(config, "oak_main", read_handle)?;
+    let config = crate::node_config::grpc_server(address);
+    crate::node_create(&config, read_handle)?;
     crate::channel_close(read_handle.handle).expect("Couldn't close a channel");
 
     // Create a separate channel for receiving invocations and pass it to a gRPC pseudo-Node.

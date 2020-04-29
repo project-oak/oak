@@ -183,22 +183,23 @@ Closes the channel identified by `param[0]`.
 ### `node_create`
 
 Creates a new Node running the Node configuration identified by `param[0]` and
-`param[1]`, using the entrypoint specified by `param[2]` and `param[3]`,
-assigning the label specified by `param[4]` and `param[5]` to the newly created
-Node, passing in an initial handle to the read half of a channel identified by
-`param[6]`. The entrypoint name is ignored when creating non-WebAssembly Nodes.
+`param[1]`, assigning the label specified by `param[2]` and `param[3]` to the
+newly created Node, passing in an initial handle to the read half of a channel
+identified by `param[4]`. The entrypoint name is ignored when creating
+non-WebAssembly Nodes.
+
+The Node configuration is a serialized
+[`NodeConfiguration`](/oak/proto/application.proto) protobuf message.
 
 If creating the specified Node would violate
 [information flow control](/docs/concepts.md#labels), returns
 `ERR_PERMISSION_DENIED`.
 
-- `param[0]: usize`: Source buffer holding node configuration name
-- `param[1]: usize`: Node configuration name size in bytes
-- `param[2]: usize`: Source buffer holding entrypoint name
-- `param[3]: usize`: Entrypoint name size in bytes
-- `param[4]: usize`: Source buffer holding label
-- `param[5]: usize`: Label size in bytes
-- `param[6]: usize`: Handle to channel
+- `param[0]: usize`: Source buffer holding serialized NodeConfiguration
+- `param[1]: usize`: Serialized NodeConfiguration size in bytes
+- `param[2]: usize`: Source buffer holding label
+- `param[3]: usize`: Label size in bytes
+- `param[4]: usize`: Handle to channel
 - `result[0]: u32`: Status of operation
 
 ### random_get

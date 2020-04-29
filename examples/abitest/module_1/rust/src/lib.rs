@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use abitest_common::{InternalMessage, LOG_CONFIG_NAME};
+use abitest_common::InternalMessage;
 use log::{error, info};
 use std::collections::HashSet;
 
@@ -42,8 +42,7 @@ pub extern "C" fn backend_oak_main(in_handle: u64) {
 }
 
 fn inner_main(in_handle: u64) -> Result<(), oak::OakStatus> {
-    oak::logger::init(log::Level::Debug, LOG_CONFIG_NAME)
-        .expect("Couldn't initialize logging node!");
+    oak::logger::init(log::Level::Debug).expect("Couldn't initialize logging node!");
     let in_channel = oak::ReadHandle {
         handle: oak::Handle::from_raw(in_handle),
     };

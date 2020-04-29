@@ -15,7 +15,7 @@
 //
 
 use log::{info, warn};
-use oak_abi::label::Label;
+use oak_abi::{label::Label, proto::oak::application::NodeConfiguration};
 
 /// Client for a gRPC service in another Node.
 pub struct Client {
@@ -25,8 +25,8 @@ pub struct Client {
 impl Client {
     /// Similar to [`Client::new_with_label`] but with a fixed label corresponding to "public
     /// trusted".
-    pub fn new(config_name: &str, entrypoint_name: &str) -> Option<Client> {
-        Client::new_with_label(config_name, entrypoint_name, &Label::public_trusted())
+    pub fn new(config: &NodeConfiguration) -> Option<Client> {
+        Client::new_with_label(config, &Label::public_trusted())
     }
 
     /// Creates a new Node that implements a gRPC service, and if successful return a Client.
@@ -37,35 +37,20 @@ impl Client {
     /// proxy for a remote non-Oak gRPC service).
     ///
     /// The provided [`Label`] specifies the label for the newly created Node and Channel.
-    pub fn new_with_label(
-        config_name: &str,
-        entrypoint_name: &str,
-        label: &Label,
-    ) -> Option<Client> {
+    pub fn new_with_label(config: &NodeConfiguration, label: &Label) -> Option<Client> {
         let (invocation_sender, invocation_receiver) =
             crate::io::channel_create().expect("failed to create channel");
-        let status = crate::node_create_with_label(
-            config_name,
-            entrypoint_name,
-            label,
-            invocation_receiver.handle,
-        );
+        let status = crate::node_create_with_label(config, label, invocation_receiver.handle);
         invocation_receiver
             .close()
             .expect("failed to close channel");
         match status {
             Ok(_) => {
-                info!(
-                    "Client created for '{}' in '{}'",
-                    entrypoint_name, config_name
-                );
+                info!("Client created for '{:?}'", config);
                 Some(Client { invocation_sender })
             }
             Err(status) => {
-                warn!(
-                    "failed to create gRPC client pseudo-Node for '{}' in '{}' : {:?}",
-                    entrypoint_name, config_name, status
-                );
+                warn!("failed to create Client for '{:?}': {:?}", config, status);
                 None
             }
         }

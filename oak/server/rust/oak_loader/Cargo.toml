@@ -16,6 +16,7 @@ default = ["oak_debug"]
 anyhow = "*"
 log = "*"
 oak_runtime = "=0.1.0"
+oak_abi = "=0.1.0"
 prost = "*"
 rustls = "*"
 signal-hook = "*"

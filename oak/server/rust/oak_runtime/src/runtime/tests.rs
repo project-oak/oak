@@ -15,7 +15,10 @@
 //
 
 use super::*;
-use maplit::hashset;
+use maplit::{hashmap, hashset};
+use oak_abi::proto::oak::application::{
+    node_configuration::ConfigType, ApplicationConfiguration, LogConfiguration, NodeConfiguration,
+};
 use std::sync::Once;
 
 static LOG_INIT_ONCE: Once = Once::new();
@@ -33,12 +36,9 @@ type NodeBody = dyn Fn(RuntimeProxy) -> Result<(), OakStatus> + Send + Sync;
 /// instantiated by the [`Runtime`] with the provided [`Label`].
 fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: Box<NodeBody>) {
     init_logging();
-    let configuration = crate::runtime::Configuration {
-        nodes: maplit::hashmap! {
-            "log".to_string() => crate::node::Configuration::LogNode,
-        },
-        entry_module: "test_module".to_string(),
-        entrypoint: "test_function".to_string(),
+    let configuration = ApplicationConfiguration {
+        wasm_modules: hashmap! {},
+        initial_node_configuration: None,
     };
     info!("Create runtime for test");
     let proxy = crate::RuntimeProxy::create_runtime(configuration, GrpcConfiguration::default());
@@ -262,14 +262,18 @@ fn create_node_same_label_ok() {
         &NodePrivilege::default(),
         Box::new(move |runtime| {
             let (_write_handle, read_handle) = runtime.channel_create(&label_clone)?;
-            let result = runtime.node_create("log", "unused", &label_clone, read_handle);
+            let node_configuration = NodeConfiguration {
+                name: "test".to_string(),
+                config_type: Some(ConfigType::LogConfig(LogConfiguration {})),
+            };
+            let result = runtime.node_create(&node_configuration, &label_clone, read_handle);
             assert_eq!(Ok(()), result);
             Ok(())
         }),
     );
 }
 
-/// Create a test Node that creates a Node with a non-existing configuration name and fails.
+/// Create a test Node that creates a Node with an invalid configuration and fails.
 #[test]
 fn create_node_invalid_configuration_err() {
     let label = test_label();
@@ -279,12 +283,12 @@ fn create_node_invalid_configuration_err() {
         &NodePrivilege::default(),
         Box::new(move |runtime| {
             let (_write_handle, read_handle) = runtime.channel_create(&label_clone)?;
-            let result = runtime.node_create(
-                "invalid-configuration-name",
-                "unused",
-                &label_clone,
-                read_handle,
-            );
+            // Node configuration without config type.
+            let node_configuration = NodeConfiguration {
+                name: "test".to_string(),
+                config_type: None,
+            };
+            let result = runtime.node_create(&node_configuration, &label_clone, read_handle);
             assert_eq!(Err(OakStatus::ErrInvalidArgs), result);
             Ok(())
         }),
@@ -313,8 +317,12 @@ fn create_node_less_confidential_label_err() {
         &NodePrivilege::default(),
         Box::new(move |runtime| {
             let (_write_handle, read_handle) = runtime.channel_create(&initial_label_clone)?;
+            let node_configuration = NodeConfiguration {
+                name: "test".to_string(),
+                config_type: Some(ConfigType::LogConfig(LogConfiguration {})),
+            };
             let result =
-                runtime.node_create("log", "unused", &less_confidential_label, read_handle);
+                runtime.node_create(&node_configuration, &less_confidential_label, read_handle);
             assert_eq!(Err(OakStatus::ErrPermissionDenied), result);
             Ok(())
         }),
@@ -340,8 +348,12 @@ fn create_node_more_confidential_label_ok() {
         &NodePrivilege::default(),
         Box::new(move |runtime| {
             let (_write_handle, read_handle) = runtime.channel_create(&initial_label_clone)?;
+            let node_configuration = NodeConfiguration {
+                name: "test".to_string(),
+                config_type: Some(ConfigType::LogConfig(LogConfiguration {})),
+            };
             let result =
-                runtime.node_create("log", "unused", &more_confidential_label, read_handle);
+                runtime.node_create(&node_configuration, &more_confidential_label, read_handle);
             assert_eq!(Ok(()), result);
             Ok(())
         }),

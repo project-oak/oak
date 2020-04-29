@@ -15,33 +15,39 @@
 //
 
 use super::*;
-use crate::{GrpcConfiguration, RuntimeProxy};
-use std::collections::HashMap;
+use crate::{runtime::RuntimeProxy, GrpcConfiguration};
+use maplit::hashmap;
+use oak_abi::{
+    label::Label,
+    proto::oak::application::{
+        node_configuration::ConfigType, ApplicationConfiguration, WebAssemblyConfiguration,
+    },
+};
 use wat::{parse_file, parse_str};
 
-fn start_node<S: AsRef<[u8]>>(buffer: S, entrypoint: &str) -> Result<(), OakStatus> {
+fn start_node(wasm_module: Vec<u8>, entrypoint_name: &str) -> Result<(), OakStatus> {
     crate::runtime::tests::init_logging();
-    let mut configuration = crate::runtime::Configuration {
-        nodes: HashMap::new(),
-        entry_module: "test_module".to_string(),
-        entrypoint: entrypoint.to_string(),
+    let module_name = "oak_module";
+    let application_configuration = ApplicationConfiguration {
+        wasm_modules: hashmap! { module_name.to_string() => wasm_module },
+        initial_node_configuration: None,
     };
-    let module = wasmi::Module::from_buffer(buffer).unwrap();
-    configuration.nodes.insert(
-        "test_module".to_string(),
-        crate::node::Configuration::WasmNode {
-            module: Arc::new(module),
-        },
-    );
-    let proxy = RuntimeProxy::create_runtime(configuration, GrpcConfiguration::default());
+    let proxy =
+        RuntimeProxy::create_runtime(application_configuration, GrpcConfiguration::default());
     let (_write_handle, read_handle) = proxy.channel_create(&Label::public_trusted())?;
 
     let result = proxy.node_create(
-        "test_module",
-        entrypoint,
+        &NodeConfiguration {
+            name: "test".to_string(),
+            config_type: Some(ConfigType::WasmConfig(WebAssemblyConfiguration {
+                wasm_module_name: module_name.to_string(),
+                wasm_entrypoint_name: entrypoint_name.to_string(),
+            })),
+        },
         &oak_abi::label::Label::public_trusted(),
         read_handle,
     );
+
     proxy
         .channel_close(read_handle)
         .expect("could not close channel");
