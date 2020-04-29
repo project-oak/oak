@@ -6,6 +6,10 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "$SCRIPTS_DIR/common"
 
+# TODO: drop the warning filter when we're using a version of Rust with
+# false positive warning removed (https://github.com/rust-lang/rust/pull/70789)
+export RUSTDOCFLAGS="-A unused_braces"
+
 DOCS_OUT="$(cargo doc --document-private-items --no-deps 2>&1)"
 
 # `cargo doc` produces warnings for incorrect paths. These warnings cannot be promoted to errors, so we use grep to detect them.
