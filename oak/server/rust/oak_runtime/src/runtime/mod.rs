@@ -16,7 +16,7 @@
 
 use crate::{
     message::{Message, NodeMessage},
-    metrics::METRICS,
+    metrics::Metrics,
     node,
     runtime::channel::{with_reader_channel, with_writer_channel, Channel},
 };
@@ -24,6 +24,7 @@ use core::sync::atomic::{AtomicBool, AtomicU64, Ordering::SeqCst};
 use itertools::Itertools;
 use log::{debug, error, info, trace, warn};
 use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
+use prometheus::proto::MetricFamily;
 use rand::RngCore;
 use std::{
     collections::HashMap,
@@ -201,6 +202,8 @@ pub struct Runtime {
     next_node_id: AtomicU64,
 
     aux_servers: Mutex<Vec<AuxServer>>,
+
+    pub metrics_data: Metrics,
 }
 
 // Methods which translate between ABI handles (Node-relative u64 values) and `ChannelHalf`
@@ -273,6 +276,10 @@ impl Runtime {
             ChannelHalfDirection::Write => Ok(half),
         }
     }
+
+    pub fn gather_metrics(&self) -> Vec<MetricFamily> {
+        self.metrics_data.gather()
+    }
 }
 
 // Methods on `RuntimeProxy` for managing the core `Runtime` instance.
@@ -289,6 +296,8 @@ impl RuntimeProxy {
             next_node_id: AtomicU64::new(0),
 
             aux_servers: Mutex::new(Vec::new()),
+
+            metrics_data: Metrics::new(),
         });
         let proxy = runtime.proxy_for_new_node();
         proxy.runtime.node_configure_instance(
@@ -1099,16 +1108,6 @@ impl Runtime {
         self.update_nodes_count_metric();
     }
 
-    /// Update the node count metric with the current value.
-    fn update_nodes_count_metric(&self) {
-        METRICS.runtime_nodes_count.set(
-            self.node_infos
-                .read()
-                .expect("could not acquire lock on node_infos")
-                .len() as i64,
-        );
-    }
-
     /// Add the [`JoinHandle`] for a running Node to `NodeInfo`. The provided `NodeId` value
     /// must already be present in `self.node_infos`.
     fn add_node_join_handle(&self, node_id: NodeId, node_join_handle: JoinHandle<()>) {
@@ -1255,6 +1254,21 @@ impl Runtime {
             node_id: self.new_node_id(),
         }
     }
+
+    /// Update the node count metric with the current value.
+    fn update_nodes_count_metric(&self) {
+        self.metrics_data
+            .runtime_metrics
+            .runtime_nodes_total
+            .set(self.get_nodes_count());
+    }
+
+    fn get_nodes_count(&self) -> i64 {
+        self.node_infos
+            .read()
+            .expect("could not acquire lock on node_infos")
+            .len() as i64
+    }
 }
 
 /// Manual implementation of the [`Drop`] trait to ensure that all components of
@@ -1366,5 +1380,9 @@ impl RuntimeProxy {
             bytes_capacity,
             handles_capacity,
         )
+    }
+
+    pub fn metrics_data(&self) -> Metrics {
+        self.runtime.metrics_data.clone()
     }
 }

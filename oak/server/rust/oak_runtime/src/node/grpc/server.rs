@@ -15,7 +15,6 @@
 //
 
 use crate::{
-    metrics::METRICS,
     node::{grpc::codec::VecCodec, Node},
     runtime::RuntimeProxy,
 };
@@ -185,11 +184,19 @@ impl Service<http::Request<hyper::Body>> for HttpRequestHandler {
             request.uri().path().to_string(),
         );
 
+        let method_name = request.uri().path().to_string();
+        let metrics_data = self.runtime.metrics_data();
         let future = async move {
             debug!("Processing an HTTP/2 request: {:?}", request);
             let mut grpc_service = Grpc::new(VecCodec::default());
             let response = grpc_service.unary(grpc_handler, request).await;
             debug!("Sending an HTTP/2 response: {:?}", response);
+            let stc = format!("{}", response.status());
+            metrics_data
+                .grpc_server_metrics
+                .grpc_server_handled_total
+                .with_label_values(&[&method_name, &stc])
+                .inc();
             Ok(response)
         };
 
@@ -214,10 +221,19 @@ impl UnaryService<Vec<u8>> for GrpcRequestHandler {
 
     fn call(&mut self, request: tonic::Request<Vec<u8>>) -> Self::Future {
         let handler = self.clone();
+        let metrics_data = handler.runtime.metrics_data();
         let future = async move {
             debug!("Processing a gRPC request: {:?}", request);
-            METRICS.grpc_requests_total.inc();
-            let timer = METRICS.grpc_request_duration.start_timer();
+            metrics_data
+                .grpc_server_metrics
+                .grpc_server_started_total
+                .with_label_values(&[&handler.method_name])
+                .inc();
+            let timer = metrics_data
+                .grpc_server_metrics
+                .grpc_server_handled_latency_seconds
+                .with_label_values(&[&handler.method_name])
+                .start_timer();
 
             // Create a gRPC request.
             // TODO(#953): Add streaming support.
@@ -329,7 +345,12 @@ impl GrpcRequestHandler {
                 .map(|message| {
                     // Return an empty HTTP body if the `message` is None.
                     message.map_or(vec![], |m| {
-                        METRICS.grpc_response_size.observe(m.data.len() as f64);
+                        self.runtime
+                            .metrics_data()
+                            .grpc_server_metrics
+                            .grpc_response_size_bytes
+                            .with_label_values(&[&self.method_name])
+                            .observe(m.data.len() as f64);
                         m.data
                     })
                 })
