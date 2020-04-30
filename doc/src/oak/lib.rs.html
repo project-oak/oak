@@ -576,6 +576,15 @@
 <span id="576">576</span>
 <span id="577">577</span>
 <span id="578">578</span>
+<span id="579">579</span>
+<span id="580">580</span>
+<span id="581">581</span>
+<span id="582">582</span>
+<span id="583">583</span>
+<span id="584">584</span>
+<span id="585">585</span>
+<span id="586">586</span>
+<span id="587">587</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -594,7 +603,7 @@
 <span class="comment">//</span>
 
 <span class="kw">use</span> <span class="ident">byteorder</span>::{<span class="ident">ReadBytesExt</span>, <span class="ident">WriteBytesExt</span>};
-<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">error</span>, <span class="ident">info</span>};
+<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">error</span>, <span class="ident">info</span>, <span class="ident">warn</span>};
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 
 <span class="comment">// Re-export ABI constants that are also visible as part of the SDK API.</span>
@@ -1044,15 +1053,24 @@
         <span class="comment">// transient or not, and then continue or terminate the event loop, respectively.</span>
         <span class="kw">match</span> <span class="ident">receiver</span>.<span class="ident">wait</span>() {
             <span class="prelude-val">Err</span>(<span class="ident">status</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;error waiting for command: {:?}&quot;</span>, <span class="ident">status</span>);
                 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">OakStatus</span>::<span class="kw-2">*</span>;
                 <span class="kw">match</span> <span class="ident">status</span> {
-                    <span class="ident">ErrTerminated</span> <span class="op">|</span> <span class="ident">ErrBadHandle</span> <span class="op">|</span> <span class="ident">ErrChannelClosed</span> <span class="op">=</span><span class="op">&gt;</span> {
-                        <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;non-transient error: terminating event loop&quot;</span>);
+                    <span class="ident">ErrTerminated</span> <span class="op">=</span><span class="op">&gt;</span> {
+                        <span class="macro">info</span><span class="macro">!</span>(
+                            <span class="string">&quot;received termination status: {:?}; terminating event loop&quot;</span>,
+                            <span class="ident">status</span>
+                        );
+                        <span class="kw">return</span>;
+                    }
+                    <span class="ident">ErrBadHandle</span> <span class="op">|</span> <span class="ident">ErrChannelClosed</span> <span class="op">=</span><span class="op">&gt;</span> {
+                        <span class="macro">warn</span><span class="macro">!</span>(
+                            <span class="string">&quot;non-transient error waiting for command: {:?}; terminating event loop&quot;</span>,
+                            <span class="ident">status</span>
+                        );
                         <span class="kw">return</span>;
                     }
                     <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
-                        <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;(possibly) transient error: continuing event loop&quot;</span>);
+                        <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;(possibly) transient error waiting for command: {:?}; continuing event loop&quot;</span>, <span class="ident">status</span>);
                         <span class="kw">continue</span>;
                     }
                 }
