@@ -1171,23 +1171,6 @@
 <span id="1171">1171</span>
 <span id="1172">1172</span>
 <span id="1173">1173</span>
-<span id="1174">1174</span>
-<span id="1175">1175</span>
-<span id="1176">1176</span>
-<span id="1177">1177</span>
-<span id="1178">1178</span>
-<span id="1179">1179</span>
-<span id="1180">1180</span>
-<span id="1181">1181</span>
-<span id="1182">1182</span>
-<span id="1183">1183</span>
-<span id="1184">1184</span>
-<span id="1185">1185</span>
-<span id="1186">1186</span>
-<span id="1187">1187</span>
-<span id="1188">1188</span>
-<span id="1189">1189</span>
-<span id="1190">1190</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -2037,31 +2020,8 @@
         <span class="self">self</span>.<span class="ident">validate_handle_access</span>(<span class="ident">node_id</span>, <span class="ident">reference</span>)<span class="question-mark">?</span>;
         <span class="comment">// TODO(#630): Check whether the calling Node can read from the specified handle. Currently,</span>
         <span class="comment">// performing this check seems to get tests to hang forever.</span>
-        {
-            <span class="kw">if</span> <span class="self">self</span>
-                .<span class="ident">channels</span>
-                .<span class="ident">readers</span>
-                .<span class="ident">read</span>()
-                .<span class="ident">unwrap</span>()
-                .<span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="ident">reference</span>)
-            {
-                <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">HandleDirection</span>::<span class="ident">Read</span>);
-            }
-        }
-        {
-            <span class="kw">if</span> <span class="self">self</span>
-                .<span class="ident">channels</span>
-                .<span class="ident">writers</span>
-                .<span class="ident">read</span>()
-                .<span class="ident">unwrap</span>()
-                .<span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="ident">reference</span>)
-            {
-                <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">HandleDirection</span>::<span class="ident">Write</span>);
-            }
-        }
-        <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrBadHandle</span>)
+        <span class="self">self</span>.<span class="ident">channels</span>.<span class="ident">get_direction</span>(<span class="ident">reference</span>)
     }
-
     <span class="doccomment">/// Close a [`Handle`], potentially orphaning the underlying [`channel::Channel`].</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_close</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">reference</span>: <span class="ident">Handle</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">validate_handle_access</span>(<span class="ident">node_id</span>, <span class="ident">reference</span>)<span class="question-mark">?</span>;
@@ -2250,7 +2210,13 @@
         <span class="comment">// below, because that takes ownership of the instance itself.</span>
         <span class="comment">//</span>
         <span class="comment">// We also want no locks to be held while the instance is starting.</span>
-        <span class="kw">let</span> <span class="ident">node_join_handle</span> <span class="op">=</span> <span class="ident">node_instance</span>.<span class="ident">start</span>()<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">node_join_handle</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">node_instance</span>.<span class="ident">start</span>() {
+            <span class="prelude-val">Ok</span>(<span class="ident">join_handle</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">join_handle</span>,
+            <span class="prelude-val">Err</span>(<span class="ident">status</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="self">self</span>.<span class="ident">remove_node_id</span>(<span class="ident">node_id</span>);
+                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">status</span>);
+            }
+        };
 
         <span class="comment">// Regardless of the result of `Node::start`, insert the now running instance to the list of</span>
         <span class="comment">// running instances (by moving it), so that `Node::stop` will be called on it eventually.</span>
