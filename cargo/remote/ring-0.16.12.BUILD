@@ -54,8 +54,6 @@ genrule(
     tags = ["no-sandbox"],
     cmd = "mkdir -p ring_out_dir_outputs/;"
         + " (export CARGO_MANIFEST_DIR=\"$$PWD/$$(dirname $(location :Cargo.toml))\";"
-        # TODO(acmcarther): This needs to be revisited as part of the cross compilation story.
-        #                   See also: https://github.com/google/cargo-raze/pull/54
         + " export TARGET='x86_64-unknown-linux-gnu';"
         + " export RUST_BACKTRACE=1;"
         + " export CARGO_FEATURE_ALLOC=1;"
