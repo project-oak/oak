@@ -209,17 +209,29 @@ impl Runtime {
     /// Returns a writeable [`Handle`] to send messages into the [`Runtime`]. To receive messages,
     /// creating a new channel and passing the write [`Handle`] into the Runtime will enable
     /// messages to be read back out.
-    pub fn run(self: Arc<Self>) -> Result<Handle, OakStatus> {
+    pub fn run(
+        self: Arc<Self>,
+        runtime_config: crate::RuntimeConfiguration,
+    ) -> Result<Handle, OakStatus> {
         let module_name = self.configuration.entry_module.clone();
         let entrypoint = self.configuration.entrypoint.clone();
 
         if cfg!(feature = "oak_debug") {
-            // TODO(#672): make introspection port configurable externally
+            if let Some(port) = runtime_config.introspect_port {
+                self.aux_servers.lock().unwrap().push(AuxServer::new(
+                    "introspect",
+                    port,
+                    self.clone(),
+                    introspect::serve,
+                ));
+            }
+        }
+        if let Some(port) = runtime_config.metrics_port {
             self.aux_servers.lock().unwrap().push(AuxServer::new(
-                "introspect",
-                1909,
+                "metrics",
+                port,
                 self.clone(),
-                introspect::serve,
+                crate::metrics::server::start_metrics_server,
             ));
         }
 

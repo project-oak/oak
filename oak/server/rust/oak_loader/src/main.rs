@@ -23,13 +23,9 @@
 //! ```
 
 use log::{error, info};
-use oak_runtime::{configure_and_run, metrics, proto::oak::application::ApplicationConfiguration};
+use oak_runtime::{configure_and_run, proto::oak::application::ApplicationConfiguration};
 use prost::Message;
-use std::{
-    fs::File,
-    io::Read,
-    thread::{park, spawn},
-};
+use std::{fs::File, io::Read, thread};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Clone)]
@@ -52,6 +48,14 @@ pub struct Opt {
     metrics_port: u16,
     #[structopt(long, help = "Starts the Runtime without a metrics server.")]
     no_metrics: bool,
+    #[structopt(
+        long,
+        default_value = "1909",
+        help = "Introspection server port number. Defaults to 1909."
+    )]
+    introspect_port: u16,
+    #[structopt(long, help = "Starts the Runtime without an introspection server.")]
+    no_introspect: bool,
 }
 
 fn read_file(filename: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
@@ -63,7 +67,10 @@ fn read_file(filename: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     Ok(buffer)
 }
 
-fn start_runtime(application: String) -> Result<(), Box<dyn std::error::Error>> {
+fn start_runtime(
+    application: String,
+    runtime_config: oak_runtime::RuntimeConfiguration,
+) -> Result<(), Box<dyn std::error::Error>> {
     info!("Loading Oak Runtime");
 
     let app_config = {
@@ -73,37 +80,35 @@ fn start_runtime(application: String) -> Result<(), Box<dyn std::error::Error>> 
     };
 
     // Start the Runtime from the given config.
-    configure_and_run(app_config).map_err(|error| format!("Runtime error: {:?}", error))?;
+    let (_runtime, _initial_handle) = configure_and_run(app_config, runtime_config)
+        .map_err(|error| format!("Runtime error: {:?}", error))?;
 
-    // Park current thread.
-    park();
-
+    // The Runtime kicks off its own threads for the initial Node and any subsequently created
+    // Nodes, so just park the current thread.
+    thread::park();
     Ok(())
 }
 
 fn main() {
     env_logger::init();
-    let mut threads = vec![];
     let opt = Opt::from_args();
     let application = opt.application.clone();
 
     // Start the runtime in a new thread
-    threads.push(spawn(move || {
-        if let Err(e) = start_runtime(application) {
-            error!("Error in the Oak Runtime: {}", e);
-        }
-    }));
+    let runtime_config = oak_runtime::RuntimeConfiguration {
+        metrics_port: if opt.no_metrics {
+            None
+        } else {
+            Some(opt.metrics_port)
+        },
+        introspect_port: if opt.no_introspect {
+            None
+        } else {
+            Some(opt.introspect_port)
+        },
+    };
 
-    if !opt.no_metrics {
-        // Start the metrics server in a new thread
-        threads.push(spawn(move || {
-            metrics::server::start_metrics_server(opt.metrics_port).expect("Metrics server error!");
-        }));
-    }
-
-    for handle in threads {
-        if let Err(e) = handle.join() {
-            error!("Join error: {:?}", e);
-        }
+    if let Err(e) = start_runtime(application, runtime_config) {
+        error!("failed to start Oak Runtime: {}", e);
     }
 }

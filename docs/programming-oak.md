@@ -481,7 +481,8 @@ to configure and run the Runtime.
         FRONTEND_ENTRYPOINT_NAME,
     );
 
-    let (runtime, entry_channel) = oak_runtime::configure_and_run(configuration)
+    let (runtime, entry_channel) =
+        oak_runtime::configure_and_run(configuration, oak_runtime::RuntimeConfiguration::default())
 ```
 <!-- prettier-ignore-end -->
 

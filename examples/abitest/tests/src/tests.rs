@@ -52,8 +52,9 @@ fn test_abi() {
         FRONTEND_ENTRYPOINT_NAME,
     );
 
-    let (runtime, entry_channel) = oak_runtime::configure_and_run(configuration)
-        .expect("unable to configure runtime with test wasm");
+    let (runtime, entry_channel) =
+        oak_runtime::configure_and_run(configuration, oak_runtime::RuntimeConfiguration::default())
+            .expect("unable to configure runtime with test wasm");
 
     // TODO(#540): reinstate storage, gRPC client and Roughtime tests when Rust
     // runtime supports them.

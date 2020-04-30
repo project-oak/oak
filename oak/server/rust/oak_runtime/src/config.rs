@@ -126,9 +126,10 @@ pub fn from_protobuf(
 /// [`Handle`] into the runtime will enable messages to be read back out from the [`Runtime`].
 pub fn configure_and_run(
     app_config: ApplicationConfiguration,
+    runtime_config: crate::RuntimeConfiguration,
 ) -> Result<(Arc<Runtime>, Handle), OakStatus> {
     let configuration = from_protobuf(app_config)?;
     let runtime = Arc::new(Runtime::create(configuration));
-    let handle = runtime.clone().run()?;
+    let handle = runtime.clone().run(runtime_config)?;
     Ok((runtime, handle))
 }

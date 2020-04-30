@@ -49,3 +49,21 @@ fn pretty_name_for_thread(thread_handle: &Thread) -> String {
         thread_handle.name().unwrap_or("<unnamed>")
     )
 }
+
+/// Configuration options that govern the behaviour of the Runtime itself.
+#[derive(Debug)]
+pub struct RuntimeConfiguration {
+    /// Port to run a metrics server on, if provided.
+    pub metrics_port: Option<u16>,
+    /// Port to run an introspection server on, if provided.
+    pub introspect_port: Option<u16>,
+}
+
+impl Default for RuntimeConfiguration {
+    fn default() -> Self {
+        RuntimeConfiguration {
+            metrics_port: None,
+            introspect_port: None,
+        }
+    }
+}

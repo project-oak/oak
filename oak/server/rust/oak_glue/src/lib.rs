@@ -101,17 +101,22 @@ pub unsafe extern "C" fn glue_start(
                 return oak_abi::INVALID_HANDLE;
             }
         };
-        info!(
-            "start runtime with initial config {}.{}",
-            app_config.initial_node_config_name, app_config.initial_entrypoint_name
-        );
-        let (runtime, grpc_handle) = match oak_runtime::configure_and_run(app_config) {
-            Ok(p) => p,
-            Err(status) => {
-                error!("Failed to start runtime: {:?}", status);
-                return oak_abi::INVALID_HANDLE;
-            }
+        let runtime_config = oak_runtime::RuntimeConfiguration {
+            metrics_port: Some(3030),
+            introspect_port: Some(1909),
         };
+        info!(
+            "start runtime with initial config {}.{} {:?}",
+            app_config.initial_node_config_name, app_config.initial_entrypoint_name, runtime_config
+        );
+        let (runtime, grpc_handle) =
+            match oak_runtime::configure_and_run(app_config, runtime_config) {
+                Ok(p) => p,
+                Err(status) => {
+                    error!("Failed to start runtime: {:?}", status);
+                    return oak_abi::INVALID_HANDLE;
+                }
+            };
 
         oak_runtime::node::external::register_factory(create_and_run_node);
         info!("register oak_glue::create_and_run_node() as node factory");
