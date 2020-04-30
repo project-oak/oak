@@ -9,3 +9,7 @@ cd cargo || exit 1
 # the files for removed/upgraded deps get cleared.
 rm -f remote/*
 cargo raze
+# `remote/ring-0.16.12.BUILD` contains manually added environment
+# variables that were added to solve #890:
+# https://github.com/project-oak/oak/issues/890#issuecomment-621773356
+git checkout remote/ring-0.16.12.BUILD

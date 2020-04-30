@@ -67,11 +67,12 @@ gen_buildrs = true
 additional_flags = [
   # These flags are necessary to link a static `ring-core` library compiled from C sources.
   #
-  # Do not change `remote/ring-0.16.12.BUILD` since it contains manually added evnironment variables
+  # Do not change `remote/ring-0.16.12.BUILD` since it contains manually added environment variables
   # that were added to solve #890:
   # https://github.com/project-oak/oak/issues/890#issuecomment-621773356
-  # `cargo raze` can change `remote/ring-0.16.12.BUILD`, so before compiling run:
+  # `cargo raze` can change `remote/ring-0.16.12.BUILD`, so before compiling, run:
   # git checkout cargo/remote/ring-0.16.12.BUILD
+  # Which is already added to the `./scripts/cargo_raze` script.
   "-lstatic=ring-core",
   "-Lnative=../../../../../execroot/oak/ring_out_dir_outputs/",
 ]
