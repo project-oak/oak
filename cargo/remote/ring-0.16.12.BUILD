@@ -70,7 +70,7 @@ genrule(
         + " export OUT_DIR=$$PWD/ring_out_dir_outputs;"
         + " export BINARY_PATH=\"$$PWD/$(location :ring_build_script)\";"
         + " export OUT_TAR=$$PWD/$@;"
-        + " cd $$(dirname $(location :Cargo.toml)) && echo TEST && pwd && (echo OUT_DIR $$OUT_DIR) && $$BINARY_PATH && tar -czf $$OUT_TAR -C $$OUT_DIR .)"
+        + " cd $$(dirname $(location :Cargo.toml)) && $$BINARY_PATH && tar -czf $$OUT_TAR -C $$OUT_DIR .)"
 )
 
 # Unsupported target "aead_tests" with type "test" omitted
