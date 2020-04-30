@@ -6,3 +6,12 @@
 #
 # See https://linux.die.net/man/1/ld (--build-id flag).
 rustflags = ["-C", "link-args=-Xlinker --build-id=none"]
+
+[target.x86_64-unknown-linux-musl]
+# Make NT_GNU_BUILD_ID header generation deterministic.
+#
+# Either `none` or `sha1` values would make the header deterministic, assuming the rest of the build
+# process is deterministic.
+#
+# See https://linux.die.net/man/1/ld (--build-id flag).
+rustflags = ["-C", "link-args=-Xlinker --build-id=none"]
