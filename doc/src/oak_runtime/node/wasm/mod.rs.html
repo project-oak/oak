@@ -1212,7 +1212,7 @@
         })<span class="question-mark">?</span>;
 
         <span class="self">self</span>.<span class="ident">runtime</span>
-            .<span class="ident">node_create</span>(<span class="kw-2">&amp;</span><span class="ident">config_name</span>, <span class="kw-2">&amp;</span><span class="ident">entrypoint</span>, <span class="kw-2">&amp;</span><span class="ident">label</span>, <span class="ident">channel_ref</span>.<span class="ident">clone</span>())
+            .<span class="ident">node_create</span>(<span class="kw-2">&amp;</span><span class="ident">config_name</span>, <span class="kw-2">&amp;</span><span class="ident">entrypoint</span>, <span class="kw-2">&amp;</span><span class="ident">label</span>, <span class="kw-2">*</span><span class="ident">channel_ref</span>)
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
                 <span class="macro">error</span><span class="macro">!</span>(
                     <span class="string">&quot;{}: node_create(): Config \&quot;{}\&quot; entrypoint \&quot;{}\&quot; not found&quot;</span>,
