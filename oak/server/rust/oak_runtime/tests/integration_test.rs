@@ -14,9 +14,6 @@
 // limitations under the License.
 //
 
-use oak_runtime::metrics;
-use std::thread::spawn;
-
 const METRICS_PORT: u16 = 9876;
 
 mod common {
@@ -52,7 +49,13 @@ mod common {
         );
 
         info!("Starting the runtime with one nodes.");
-        config::configure_and_run(cfg)
+        config::configure_and_run(
+            cfg,
+            oak_runtime::RuntimeConfiguration {
+                metrics_port: Some(crate::METRICS_PORT),
+                introspect_port: None,
+            },
+        )
     }
 
     pub async fn read_metrics() -> Result<String, hyper::error::Error> {
@@ -82,13 +85,8 @@ fn get_int_metric_value(all_metrics: &str, metric_name: &str) -> Option<i64> {
 fn test_metrics_gives_the_correct_number_of_nodes() {
     env_logger::init();
 
-    // Start the Runtime
-    common::start_runtime().expect("Starting the Runtime failed!");
-
-    // Start metrics server in a new thread
-    spawn(move || {
-        metrics::server::start_metrics_server(METRICS_PORT).unwrap();
-    });
+    // Start the Runtime, including a metrics server.
+    let (runtime, _handle) = common::start_runtime().expect("Starting the Runtime failed!");
 
     let mut rt = tokio::runtime::Runtime::new().expect("Couldn't create Tokio runtime");
     let res = rt
@@ -97,4 +95,6 @@ fn test_metrics_gives_the_correct_number_of_nodes() {
 
     let value = get_int_metric_value(&res, "runtime_nodes_count");
     assert_eq!(value, Some(1));
+
+    runtime.stop();
 }

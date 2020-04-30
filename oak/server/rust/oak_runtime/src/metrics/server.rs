@@ -19,10 +19,11 @@ use hyper::{
     service::{make_service_fn, service_fn},
     Body, Request, Response, Server,
 };
-
 use log::info;
 use prometheus::{Encoder, TextEncoder};
-use std::net::SocketAddr;
+use std::{net::SocketAddr, sync::Arc};
+
+use crate::Runtime;
 
 #[derive(Debug)]
 enum MetricsServerError {
@@ -82,7 +83,14 @@ async fn make_server(port: u16) -> Result<(), hyper::error::Error> {
     server.await
 }
 
-pub fn start_metrics_server(port: u16) -> Result<(), hyper::error::Error> {
+pub fn start_metrics_server(
+    port: u16,
+    _runtime: Arc<Runtime>,
+    notify_receiver: tokio::sync::oneshot::Receiver<()>,
+) {
     let mut tokio_runtime = tokio::runtime::Runtime::new().expect("Couldn't create Tokio runtime");
-    tokio_runtime.block_on(make_server(port))
+    tokio_runtime.block_on(futures::future::select(
+        Box::pin(make_server(port)),
+        notify_receiver,
+    ));
 }
