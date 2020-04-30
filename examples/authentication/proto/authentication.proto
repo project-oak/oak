@@ -27,6 +27,19 @@ message AuthParameters {
   // TODO(#886): Add support for scope, state and code challenge.
 }
 
+// Request for exchanging an authorisation code for and identity token.
+message IdentityTokenRequest {
+  string auth_code = 1;
+}
+
+// Wrapper for the exchanged identity token.
+message IdentityTokenResponse {
+  string token = 1;
+}
+
 service Authentication {
+  // Gets the parameters needed by a client to make an authentication request.
   rpc GetAuthParameters(google.protobuf.Empty) returns (AuthParameters);
+  // Exchanges an authorisation code for an identity token.
+  rpc GetTokenFromCode(IdentityTokenRequest) returns (IdentityTokenResponse);
 }

@@ -15,8 +15,13 @@ by the authentication server.
 The server can be run using:
 
 ```bash
-cargo run --package=auth_server -- --client-id=691249393555-0h52jim9ni9clkpd5chi82q9ccn44ebm.apps.googleusercontent.com
+cargo run --package=auth_server -- \
+  --client-id=691249393555-0h52jim9ni9clkpd5chi82q9ccn44ebm.apps.googleusercontent.com \
+  --client-secret=$CLIENT_SECRET
 ```
+
+Where `$CLIENT_SECRET` contains the corresponding secret for the client ID that
+was specified.
 
 While the server is running, the client can be executed using:
 
