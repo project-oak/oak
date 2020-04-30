@@ -31,9 +31,17 @@ rust_library(
     edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
+        "@raze__futures_channel__0_3_4//:futures_channel",
         "@raze__futures_core__0_3_4//:futures_core",
+        "@raze__futures_io__0_3_4//:futures_io",
+        "@raze__futures_macro__0_3_4//:futures_macro",
+        "@raze__futures_sink__0_3_4//:futures_sink",
         "@raze__futures_task__0_3_4//:futures_task",
+        "@raze__memchr__2_3_3//:memchr",
         "@raze__pin_utils__0_1_0//:pin_utils",
+        "@raze__proc_macro_hack__0_5_15//:proc_macro_hack",
+        "@raze__proc_macro_nested__0_1_4//:proc_macro_nested",
+        "@raze__slab__0_4_2//:slab",
     ],
     rustc_flags = [
         "--cap-lints=allow",
@@ -41,6 +49,20 @@ rust_library(
     version = "0.3.4",
     crate_features = [
         "alloc",
+        "async-await",
+        "async-await-macro",
+        "channel",
+        "futures-channel",
+        "futures-io",
+        "futures-macro",
+        "futures-sink",
+        "io",
+        "memchr",
+        "proc-macro-hack",
+        "proc-macro-nested",
+        "sink",
+        "slab",
+        "std",
     ],
 )
 

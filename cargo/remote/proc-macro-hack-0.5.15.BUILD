@@ -23,32 +23,21 @@ load(
 )
 
 
-# Unsupported target "channel" with type "test" omitted
+# Unsupported target "compiletest" with type "test" omitted
 
 rust_library(
-    name = "futures_channel",
+    name = "proc_macro_hack",
     crate_root = "src/lib.rs",
-    crate_type = "lib",
+    crate_type = "proc-macro",
     edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__futures_core__0_3_4//:futures_core",
-        "@raze__futures_sink__0_3_4//:futures_sink",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.3.4",
+    version = "0.5.15",
     crate_features = [
-        "alloc",
-        "default",
-        "futures-sink",
-        "sink",
-        "std",
     ],
 )
 
-# Unsupported target "mpsc" with type "test" omitted
-# Unsupported target "mpsc-close" with type "test" omitted
-# Unsupported target "oneshot" with type "test" omitted
-# Unsupported target "sync_mpsc" with type "bench" omitted

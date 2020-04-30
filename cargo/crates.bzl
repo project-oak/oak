@@ -197,6 +197,15 @@ def raze_fetch_remote_crates():
     )
 
     _new_http_archive(
+        name = "raze__futures__0_3_4",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/futures/futures-0.3.4.crate",
+        type = "tar.gz",
+        strip_prefix = "futures-0.3.4",
+
+        build_file = Label("//cargo/remote:futures-0.3.4.BUILD"),
+    )
+
+    _new_http_archive(
         name = "raze__futures_channel__0_3_4",
         url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/futures-channel/futures-channel-0.3.4.crate",
         type = "tar.gz",
@@ -212,6 +221,33 @@ def raze_fetch_remote_crates():
         strip_prefix = "futures-core-0.3.4",
 
         build_file = Label("//cargo/remote:futures-core-0.3.4.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__futures_executor__0_3_4",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/futures-executor/futures-executor-0.3.4.crate",
+        type = "tar.gz",
+        strip_prefix = "futures-executor-0.3.4",
+
+        build_file = Label("//cargo/remote:futures-executor-0.3.4.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__futures_io__0_3_4",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/futures-io/futures-io-0.3.4.crate",
+        type = "tar.gz",
+        strip_prefix = "futures-io-0.3.4",
+
+        build_file = Label("//cargo/remote:futures-io-0.3.4.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__futures_macro__0_3_4",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/futures-macro/futures-macro-0.3.4.crate",
+        type = "tar.gz",
+        strip_prefix = "futures-macro-0.3.4",
+
+        build_file = Label("//cargo/remote:futures-macro-0.3.4.BUILD"),
     )
 
     _new_http_archive(
@@ -536,6 +572,24 @@ def raze_fetch_remote_crates():
         strip_prefix = "ppv-lite86-0.2.6",
 
         build_file = Label("//cargo/remote:ppv-lite86-0.2.6.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__proc_macro_hack__0_5_15",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/proc-macro-hack/proc-macro-hack-0.5.15.crate",
+        type = "tar.gz",
+        strip_prefix = "proc-macro-hack-0.5.15",
+
+        build_file = Label("//cargo/remote:proc-macro-hack-0.5.15.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__proc_macro_nested__0_1_4",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/proc-macro-nested/proc-macro-nested-0.1.4.crate",
+        type = "tar.gz",
+        strip_prefix = "proc-macro-nested-0.1.4",
+
+        build_file = Label("//cargo/remote:proc-macro-nested-0.1.4.BUILD"),
     )
 
     _new_http_archive(

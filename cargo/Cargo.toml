@@ -9,6 +9,7 @@ path = "fake_lib.rs"
 [dependencies]
 byteorder = "*"
 bytes = "*"
+futures = "*"
 http = "*"
 hyper = "*"
 # Versions 1.3.x of indexmap have a "clever" feature that auto-detects whether a
@@ -21,6 +22,9 @@ indexmap = "=1.0.2"
 itertools = "*"
 lazy_static = "*"
 log = { version = "*", features = ["std"] }
+prometheus = { version = "0.8", features = [
+  "nightly"
+], default-features = false }
 prost = "*"
 prost-types = "*"
 rand = "*"
@@ -31,9 +35,6 @@ tokio = { version = "*", features = ["rt-core", "macros"] }
 # https://github.com/google/cargo-raze/issues/41#issuecomment-592274128
 tonic = { version = "=0.1.1", features = ["tls"] }
 wasmi = { version = "*", default-features = false, features = ["core"] }
-prometheus = { version = "0.8", features = [
-  "nightly"
-], default-features = false }
 
 [raze]
 genmode = "Remote"
@@ -66,5 +67,8 @@ data_attr = "glob([\"**/*.der\"])"
 
 [raze.crates.webpki.'0.21.2']
 data_attr = "glob([\"**/*.der\"])"
+
+[raze.crates.proc-macro-nested.'0.1.4']
+gen_buildrs = true
 
 [workspace]
