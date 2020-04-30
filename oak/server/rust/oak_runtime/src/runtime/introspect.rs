@@ -125,13 +125,6 @@ fn handle_request(
                 &body,
             ))));
         }
-    } else if let Some(channel_id) = find_id(path, "channel") {
-        if let Some(body) = runtime.html_for_channel(channel_id) {
-            return Ok(Response::new(Body::from(html_wrap(
-                &format!("Channel {}", channel_id),
-                &body,
-            ))));
-        }
     }
     let mut not_found = Response::default();
     *not_found.status_mut() = StatusCode::NOT_FOUND;

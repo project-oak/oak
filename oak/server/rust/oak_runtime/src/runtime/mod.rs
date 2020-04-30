@@ -18,7 +18,7 @@ use crate::{
     message::{Message, NodeMessage},
     metrics::METRICS,
     node, pretty_name_for_thread,
-    runtime::channel::{with_reader_channel, with_writer_channel},
+    runtime::channel::{with_reader_channel, with_writer_channel, Channel},
 };
 use core::sync::atomic::{AtomicBool, AtomicU64, Ordering::SeqCst};
 use itertools::Itertools;
@@ -181,7 +181,7 @@ pub struct Runtime {
     configuration: Configuration,
     terminating: AtomicBool,
 
-    channels: channel::ChannelMapping,
+    next_channel_id: AtomicU64,
 
     /// Runtime-specific state for each Node instance.
     node_infos: RwLock<HashMap<NodeId, NodeInfo>>,
@@ -213,19 +213,15 @@ impl Runtime {
             }
         }
     }
-    // Remove the handle from the Node's handle table, and return the `ChannelHalf` that
-    // it corresponded to (if found).
-    fn drop_abi_handle(
-        &self,
-        node_id: NodeId,
-        handle: oak_abi::Handle,
-    ) -> Result<ChannelHalf, OakStatus> {
+    // Remove the handle from the Node's handle table.
+    fn drop_abi_handle(&self, node_id: NodeId, handle: oak_abi::Handle) -> Result<(), OakStatus> {
         let mut node_infos = self.node_infos.write().unwrap();
         let node_info = node_infos.get_mut(&node_id).expect("Invalid node_id");
         node_info
             .abi_handles
             .remove(&handle)
             .ok_or(OakStatus::ErrBadHandle)
+            .map(|_half| ())
     }
     fn abi_to_half(
         &self,
@@ -272,7 +268,7 @@ impl RuntimeProxy {
         let runtime = Arc::new(Runtime {
             configuration,
             terminating: AtomicBool::new(false),
-            channels: channel::ChannelMapping::new(),
+            next_channel_id: AtomicU64::new(0),
 
             node_infos: RwLock::new(HashMap::new()),
             node_join_handles: Mutex::new(HashMap::new()),
@@ -430,12 +426,25 @@ impl Runtime {
             }
             writeln!(&mut s, "  }}").unwrap();
         }
+        {
+            writeln!(&mut s, "  {{").unwrap();
+            writeln!(
+                &mut s,
+                "    node [shape=ellipse style=filled fillcolor=green]"
+            )
+            .unwrap();
+            let node_infos = self.node_infos.read().unwrap();
+            for node_id in node_infos.keys().sorted() {
+                let node_info = node_infos.get(node_id).unwrap();
+                for half in node_info.abi_handles.values() {
+                    writeln!(&mut s, "    {}", half.dot_id(),).unwrap();
+                }
+            }
+            writeln!(&mut s, "  }}").unwrap();
+        }
 
-        // Graph nodes for channels.
-        write!(&mut s, "{}", self.channels.graph_nodes()).unwrap();
-
-        // Edges for connections between Nodes and channels.  Track which `ChannelId`s we
-        // see along the way.
+        // Edges for connections between Nodes and channels and messages.
+        let mut msg_counter = 0;
         {
             let node_infos = self.node_infos.read().unwrap();
             for node_id in node_infos.keys().sorted() {
@@ -445,14 +454,8 @@ impl Runtime {
                         ChannelHalfDirection::Write => {
                             writeln!(
                                 &mut s,
-                                "  {} -> {}",
+                                "  {} -> {} -> {}",
                                 node_id.dot_id(),
-                                (*node_id, *handle).dot_id(),
-                            )
-                            .unwrap();
-                            writeln!(
-                                &mut s,
-                                "  {} -> {}",
                                 (*node_id, *handle).dot_id(),
                                 half.dot_id()
                             )
@@ -461,25 +464,54 @@ impl Runtime {
                         ChannelHalfDirection::Read => {
                             writeln!(
                                 &mut s,
-                                "  {} -> {}",
+                                "  {} -> {} -> {}",
                                 half.dot_id(),
-                                (*node_id, *handle).dot_id(),
-                            )
-                            .unwrap();
-                            writeln!(
-                                &mut s,
-                                "  {} -> {}",
                                 (*node_id, *handle).dot_id(),
                                 node_id.dot_id()
                             )
                             .unwrap();
                         }
                     }
+                    // Include messages in the channel.
+                    let messages = half.get_messages();
+                    if messages.len() > 0 {
+                        writeln!(&mut s, "  {{").unwrap();
+                        writeln!(
+                            &mut s,
+                            r###"    node [shape=rect fontsize=10 label="msg"]"###
+                        )
+                        .unwrap();
+                        // Messages have no identifier, so just use a count (and don't make it
+                        // visible to the user).
+                        let mut prev_graph_node = half.dot_id();
+                        for msg in messages.iter() {
+                            msg_counter += 1;
+                            let graph_node = format!("msg{}", msg_counter);
+                            writeln!(
+                                &mut s,
+                                "    {} -> {} [style=dashed arrowhead=none]",
+                                graph_node, prev_graph_node
+                            )
+                            .unwrap();
+                            for half in &msg.channels {
+                                match half.direction {
+                                    ChannelHalfDirection::Write => {
+                                        writeln!(&mut s, "    {} -> {}", graph_node, half.dot_id())
+                                            .unwrap();
+                                    }
+                                    ChannelHalfDirection::Read => {
+                                        writeln!(&mut s, "    {} -> {}", half.dot_id(), graph_node)
+                                            .unwrap();
+                                    }
+                                }
+                            }
+                            prev_graph_node = graph_node;
+                        }
+                        writeln!(&mut s, "  }}").unwrap();
+                    }
                 }
             }
         }
-        // Graph edges for channels.
-        write!(&mut s, "{}", self.channels.graph_edges()).unwrap();
 
         writeln!(&mut s, "}}").unwrap();
         s
@@ -509,7 +541,6 @@ impl Runtime {
             }
         }
         writeln!(&mut s, "</ul>").unwrap();
-        write!(&mut s, "{}", self.channels.html()).unwrap();
         s
     }
 
@@ -534,10 +565,9 @@ impl Runtime {
         for (handle, half) in &node_info.abi_handles {
             write!(
                 &mut s,
-                r###"<li>Handle <a href="{}">{}</a> => <a href="{}">{:?}</a>"###,
+                r###"<li>Handle <a href="{}">{}</a> => {:?}"###,
                 (node_id, *handle).html_path(),
                 handle,
-                half.html_path(),
                 half
             )
             .unwrap();
@@ -559,18 +589,8 @@ impl Runtime {
             handle,
         )
         .unwrap();
-        write!(
-            &mut s,
-            r###"<p>Maps to <a href="{}">{:?}</a>"###,
-            half.html_path(),
-            half
-        )
-        .unwrap();
+        write!(&mut s, r###"<p>Maps to {:?}"###, half).unwrap();
         Some(s)
-    }
-    #[cfg(feature = "oak_debug")]
-    pub fn html_for_channel(&self, id: u64) -> Option<String> {
-        self.channels.html_for_channel(id)
     }
 
     /// Thread safe method for determining if the [`Runtime`] is terminating.
@@ -591,21 +611,42 @@ impl Runtime {
         self.terminating.store(true, SeqCst);
 
         // Unpark any threads that are blocked waiting on any channels.
-        self.channels.notify_all_waiters();
+        self.notify_all_waiters();
 
         // Wait for the main thread of each Node to finish. Any thread that was blocked on
         // `wait_on_channels` is now unblocked and received `OakStatus::ErrTerminated`, so we wait
         // for any additional work to be finished here. This may take an arbitrary amount of time,
         // depending on the work that the Node thread has to perform, but at least we know that the
         // it will not be able to enter again in a blocking state.
-        for (_, instance) in self
+        for (node_id, instance) in self
             .node_join_handles
             .lock()
             .expect("could not acquire lock on node_join_handles")
             .drain()
         {
+            debug!("join thread for {:?}...", node_id);
             if let Err(err) = instance.join() {
                 error!("could not terminate node: {:?}", err);
+            }
+            debug!("join thread for {:?}...done", node_id);
+        }
+    }
+
+    fn notify_all_waiters(&self) {
+        // Hold the write lock and wake up any Node threads blocked on
+        // a `Channel`.
+        let node_infos = self
+            .node_infos
+            .write()
+            .expect("could not acquire lock on node_infos");
+        for node_id in node_infos.keys().sorted() {
+            let node_info = node_infos.get(node_id).unwrap();
+            for (handle, half) in &node_info.abi_handles {
+                debug!(
+                    "waking waiters on {:?} handle {} => {:?}",
+                    node_id, handle, half
+                );
+                half.wake_waiters();
             }
         }
     }
@@ -623,16 +664,14 @@ impl Runtime {
         node_info.label.clone()
     }
 
-    /// Returns a clone of the [`Label`] associated with the provided reader `channel_handle`, in
-    /// order to limit the scope of holding the lock on [`channel::ChannelMapping::channels`].
+    /// Returns a clone of the [`Label`] associated with the provided reader `channel_handle`.
     ///
     /// Returns an error if `channel_handle` is invalid.
     fn get_reader_channel_label(&self, channel_half: &ChannelHalf) -> Result<Label, OakStatus> {
         with_reader_channel(channel_half, |channel| Ok(channel.label.clone()))
     }
 
-    /// Returns a clone of the [`Label`] associated with the provided writer `channel_handle`, in
-    /// order to limit the scope of holding the lock on [`channel::ChannelMapping::channels`].
+    /// Returns a clone of the [`Label`] associated with the provided writer `channel_handle`.
     ///
     /// Returns an error if `channel_handle` is invalid.
     fn get_writer_channel_label(&self, channel_half: &ChannelHalf) -> Result<Label, OakStatus> {
@@ -721,8 +760,11 @@ impl Runtime {
     /// [`Channel`]: crate::runtime::channel::Channel
     fn channel_create(&self, node_id: NodeId, label: &Label) -> (oak_abi::Handle, oak_abi::Handle) {
         // TODO(#630): Check whether the calling Node can create a Node with the specified label.
-        // First get a pair of `ChannelHalf` objects covered by `ChannelMapping`.
-        let (write_half, read_half) = self.channels.new_channel(label);
+        // First get a pair of `ChannelHalf` objects.
+        let channel_id = self.next_channel_id.fetch_add(1, SeqCst);
+        let channel = Channel::new(channel_id, label);
+        let write_half = ChannelHalf::new(channel.clone(), ChannelHalfDirection::Write);
+        let read_half = ChannelHalf::new(channel, ChannelHalfDirection::Read);
         trace!(
             "{:?}: allocated channel with halves w={:?},r={:?}",
             node_id,
@@ -994,11 +1036,8 @@ impl Runtime {
 
     /// Close an [`oak_abi::Handle`], potentially orphaning the underlying [`channel::Channel`].
     fn channel_close(&self, node_id: NodeId, handle: oak_abi::Handle) -> Result<(), OakStatus> {
-        // Remove the ABI handle -> half mapping.
-        let half = self.drop_abi_handle(node_id, handle)?;
-        // Drop the half via the `ChannelMapping` object, in case this was the last reference
-        // to the underlying channel.
-        self.channels.drop_half(half);
+        // Remove the ABI handle -> half mapping; half will be dropped at end of scope.
+        self.drop_abi_handle(node_id, handle)?;
         Ok(())
     }
 
@@ -1189,6 +1228,7 @@ impl Runtime {
 impl Drop for Runtime {
     fn drop(&mut self) {
         self.stop();
+        info!("Runtime instance dropped");
     }
 }
 
