@@ -15,7 +15,7 @@
 //
 
 use byteorder::{ReadBytesExt, WriteBytesExt};
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
 
 // Re-export ABI constants that are also visible as part of the SDK API.
@@ -465,15 +465,24 @@ pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(mut node: N, in_handl
         // transient or not, and then continue or terminate the event loop, respectively.
         match receiver.wait() {
             Err(status) => {
-                error!("error waiting for command: {:?}", status);
                 use crate::OakStatus::*;
                 match status {
-                    ErrTerminated | ErrBadHandle | ErrChannelClosed => {
-                        info!("non-transient error: terminating event loop");
+                    ErrTerminated => {
+                        info!(
+                            "received termination status: {:?}; terminating event loop",
+                            status
+                        );
+                        return;
+                    }
+                    ErrBadHandle | ErrChannelClosed => {
+                        warn!(
+                            "non-transient error waiting for command: {:?}; terminating event loop",
+                            status
+                        );
                         return;
                     }
                     _ => {
-                        info!("(possibly) transient error: continuing event loop");
+                        warn!("(possibly) transient error waiting for command: {:?}; continuing event loop", status);
                         continue;
                     }
                 }
