@@ -22,10 +22,61 @@ load(
     "rust_test",
 )
 
+rust_binary(
+    name = "ring_build_script",
+    srcs = glob(["**/*.rs"]),
+    crate_root = "build.rs",
+    edition = "2018",
+    deps = [
+        "@raze__cc__1_0_52//:cc",
+    ],
+    rustc_flags = [
+        "--cap-lints=allow",
+    ],
+    crate_features = [
+      "alloc",
+      "default",
+      "dev_urandom_fallback",
+      "lazy_static",
+    ],
+    data = glob(["*"]),
+    version = "0.16.12",
+    visibility = ["//visibility:private"],
+)
+
+genrule(
+    name = "ring_build_script_executor",
+    srcs = glob(["*", "**/*.rs"]),
+    outs = ["ring_out_dir_outputs.tar.gz"],
+    tools = [
+      ":ring_build_script",
+    ],
+    tags = ["no-sandbox"],
+    cmd = "mkdir -p ring_out_dir_outputs/;"
+        + " (export CARGO_MANIFEST_DIR=\"$$PWD/$$(dirname $(location :Cargo.toml))\";"
+        # TODO(acmcarther): This needs to be revisited as part of the cross compilation story.
+        #                   See also: https://github.com/google/cargo-raze/pull/54
+        + " export TARGET='x86_64-unknown-linux-gnu';"
+        + " export RUST_BACKTRACE=1;"
+        + " export CARGO_FEATURE_ALLOC=1;"
+        + " export CARGO_FEATURE_DEFAULT=1;"
+        + " export CARGO_FEATURE_DEV_URANDOM_FALLBACK=1;"
+        + " export CARGO_FEATURE_LAZY_STATIC=1;"
+        + " export CARGO_PKG_NAME=ring;"
+        + " export CARGO_CFG_TARGET_ARCH=x86_64;"
+        + " export CARGO_CFG_TARGET_OS=linux;"
+        + " export CARGO_CFG_TARGET_ENV=musl;"
+        + " export OPT_LEVEL=3;"
+        + " export DEBUG=false;"
+        + " export HOST=any;"
+        + " export OUT_DIR=$$PWD/ring_out_dir_outputs;"
+        + " export BINARY_PATH=\"$$PWD/$(location :ring_build_script)\";"
+        + " export OUT_TAR=$$PWD/$@;"
+        + " cd $$(dirname $(location :Cargo.toml)) && echo TEST && pwd && (echo OUT_DIR $$OUT_DIR) && $$BINARY_PATH && tar -czf $$OUT_TAR -C $$OUT_DIR .)"
+)
 
 # Unsupported target "aead_tests" with type "test" omitted
 # Unsupported target "agreement_tests" with type "test" omitted
-# Unsupported target "build-script-build" with type "custom-build" omitted
 # Unsupported target "digest_tests" with type "test" omitted
 # Unsupported target "ecdsa_tests" with type "test" omitted
 # Unsupported target "ed25519_tests" with type "test" omitted
@@ -49,7 +100,10 @@ rust_library(
     ],
     rustc_flags = [
         "--cap-lints=allow",
+        "-lstatic=ring-core",
+        "-Lnative=../../../../../execroot/oak/ring_out_dir_outputs/",
     ],
+    out_dir_tar = ":ring_build_script_executor",
     data = glob(["**/*.der"]),
     version = "0.16.12",
     crate_features = [

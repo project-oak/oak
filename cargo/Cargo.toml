@@ -63,6 +63,18 @@ additional_flags = ["--cfg=atomic_cas"]
 # automatically add non-`*.rs` files to the Bazel workspace.
 # https://github.com/google/cargo-raze/issues/41
 [raze.crates.ring.'0.16.12']
+gen_buildrs = true
+additional_flags = [
+  # These flags are necessary to link a static `ring-core` library compiled from C sources.
+  #
+  # Do not change `remote/ring-0.16.12.BUILD` since it contains manually added evnironment variables
+  # that were added to solve #890:
+  # https://github.com/project-oak/oak/issues/890#issuecomment-621773356
+  # `cargo raze` can change `remote/ring-0.16.12.BUILD`, so before compiling run:
+  # `git checkout cargo/remote/ring-0.16.12.BUILD
+  "-lstatic=ring-core",
+  "-Lnative=../../../../../execroot/oak/ring_out_dir_outputs/",
+]
 data_attr = "glob([\"**/*.der\"])"
 
 [raze.crates.webpki.'0.21.2']
