@@ -121,6 +121,49 @@ pub enum ReadStatus {
     NeedsCapacity(usize, usize),
 }
 
+/// Information for managing an associated server.
+pub struct AuxServer {
+    pub name: String,
+    pub join_handle: Option<JoinHandle<()>>,
+    pub notify_sender: Option<tokio::sync::oneshot::Sender<()>>,
+}
+
+impl AuxServer {
+    fn new<F: FnOnce(u16, Arc<Runtime>, tokio::sync::oneshot::Receiver<()>) + 'static + Send>(
+        name: &str,
+        port: u16,
+        runtime: Arc<Runtime>,
+        f: F,
+    ) -> Self {
+        let (notify_sender, notify_receiver) = tokio::sync::oneshot::channel::<()>();
+        info!("spawning {} server on new thread", name);
+        let join_handle = thread::Builder::new()
+            .name(format!("{}-server", name))
+            .spawn(move || f(port, runtime, notify_receiver))
+            .expect("failed to spawn introspection thread");
+        AuxServer {
+            name: name.to_string(),
+            join_handle: Some(join_handle),
+            notify_sender: Some(notify_sender),
+        }
+    }
+}
+
+impl Drop for AuxServer {
+    fn drop(&mut self) {
+        let join_handle = self.join_handle.take();
+        let notify_sender = self.notify_sender.take();
+        if let Some(notify_sender) = notify_sender {
+            info!("stopping {} server", self.name);
+            notify_sender.send(()).unwrap();
+        }
+        if let Some(join_handle) = join_handle {
+            let result = join_handle.join();
+            info!("stopped {} server, result {:?}", self.name, result);
+        }
+    }
+}
+
 /// Runtime structure for configuring and running a set of Oak Nodes.
 pub struct Runtime {
     configuration: Configuration,
@@ -136,6 +179,8 @@ pub struct Runtime {
     node_join_handles: Mutex<HashMap<NodeId, JoinHandle<()>>>,
 
     next_node_id: AtomicU64,
+
+    aux_servers: Mutex<Vec<AuxServer>>,
 }
 
 impl Runtime {
@@ -151,6 +196,8 @@ impl Runtime {
 
             // NodeId(0) reserved for RUNTIME_NODE_ID.
             next_node_id: AtomicU64::new(1),
+
+            aux_servers: Mutex::new(Vec::new()),
         }
     }
 
@@ -168,12 +215,12 @@ impl Runtime {
 
         if cfg!(feature = "oak_debug") {
             // TODO(#672): make introspection port configurable externally
-            info!("spawning introspection server on new thread");
-            let runtime = self.clone();
-            let _thread_handle = thread::Builder::new()
-                .name("introspection-server".to_string())
-                .spawn(move || introspect::serve(1909, runtime))
-                .expect("failed to spawn introspection thread");
+            self.aux_servers.lock().unwrap().push(AuxServer::new(
+                "introspect",
+                1909,
+                self.clone(),
+                introspect::serve,
+            ));
         }
 
         // When first starting, we assign the least privileged label to the channel connecting the
@@ -342,6 +389,9 @@ impl Runtime {
     /// threads to terminate.
     pub fn stop(&self) {
         info!("stopping runtime instance");
+
+        // Terminate any running servers.
+        self.aux_servers.lock().unwrap().drain(..);
 
         // Set the terminating flag; this will prevent additional Nodes from starting to wait again,
         // because `wait_on_channels` will return immediately with `OakStatus::ErrTerminated`.

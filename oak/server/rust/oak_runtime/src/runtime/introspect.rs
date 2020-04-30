@@ -145,14 +145,19 @@ async fn make_server(port: u16, runtime: Arc<Runtime>) {
     // Then bind and serve...
     let server = Server::bind(&addr).serve(make_service);
 
-    // And run forever...
+    // And run until asked to terminate...
     let result = server.await;
     info!("introspection server terminated with {:?}", result);
 }
 
-// TODO(#908): add a termination mechanism so that this `Arc<Runtime>` doesn't
-// force the `Runtime` instance to be undroppable.
-pub fn serve(port: u16, runtime: Arc<Runtime>) {
+pub fn serve(
+    port: u16,
+    runtime: Arc<Runtime>,
+    notify_receiver: tokio::sync::oneshot::Receiver<()>,
+) {
     let mut tokio_runtime = tokio::runtime::Runtime::new().expect("Couldn't create Tokio runtime");
-    tokio_runtime.block_on(make_server(port, runtime))
+    tokio_runtime.block_on(futures::future::select(
+        Box::pin(make_server(port, runtime)),
+        notify_receiver,
+    ));
 }
