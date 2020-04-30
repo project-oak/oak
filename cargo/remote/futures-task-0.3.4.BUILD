@@ -38,6 +38,7 @@ rust_library(
     version = "0.3.4",
     crate_features = [
         "alloc",
+        "std",
     ],
 )
 

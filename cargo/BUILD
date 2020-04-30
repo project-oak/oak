@@ -17,6 +17,10 @@ alias(
     actual = "@raze__bytes__0_5_4//:bytes",
 )
 alias(
+    name = "futures",
+    actual = "@raze__futures__0_3_4//:futures",
+)
+alias(
     name = "http",
     actual = "@raze__http__0_2_1//:http",
 )

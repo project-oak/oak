@@ -23,32 +23,21 @@ load(
 )
 
 
-# Unsupported target "channel" with type "test" omitted
 
 rust_library(
-    name = "futures_channel",
+    name = "futures_io",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__futures_core__0_3_4//:futures_core",
-        "@raze__futures_sink__0_3_4//:futures_sink",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
     version = "0.3.4",
     crate_features = [
-        "alloc",
-        "default",
-        "futures-sink",
-        "sink",
         "std",
     ],
 )
 
-# Unsupported target "mpsc" with type "test" omitted
-# Unsupported target "mpsc-close" with type "test" omitted
-# Unsupported target "oneshot" with type "test" omitted
-# Unsupported target "sync_mpsc" with type "bench" omitted
