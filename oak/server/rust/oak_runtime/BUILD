@@ -30,6 +30,7 @@ rust_library(
     deps = [
         "//cargo:byteorder",
         "//cargo:bytes",
+        "//cargo:futures",
         "//cargo:http",
         "//cargo:hyper",
         "//cargo:itertools",
