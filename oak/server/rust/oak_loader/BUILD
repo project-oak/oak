@@ -27,6 +27,7 @@ rust_binary(
     deps = [
         "//cargo:log",
         "//cargo:prost",
+        "//cargo:signal_hook",
         "//cargo:simple_logger",
         "//cargo:structopt",
         "//oak/server/rust/oak_runtime",

@@ -25,7 +25,14 @@
 use log::info;
 use oak_runtime::{configure_and_run, proto::oak::application::ApplicationConfiguration};
 use prost::Message;
-use std::{fs::File, io::Read, thread};
+use std::{
+    fs::File,
+    io::Read,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Clone)]
@@ -92,9 +99,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map_err(|status| format!("status {:?}", status))?;
     info!("initial write handle {:?}", initial_handle);
 
+    let done = Arc::new(AtomicBool::new(false));
+    signal_hook::flag::register(signal_hook::SIGINT, Arc::clone(&done))?;
+
     // The Runtime kicks off its own threads for the initial Node and any subsequently created
-    // Nodes, so just park the current thread.
-    thread::park();
+    // Nodes, so just block the current thread until a signal arrives.
+    while !done.load(Ordering::Relaxed) {
+        // There are few synchronization mechanisms that are allowed to be used in a signal
+        // handler context, so use a primitive sleep loop to watch for the termination
+        // notification (rather than something more accurate like `std::sync::Condvar`).
+        // See e.g.: http://man7.org/linux/man-pages/man7/signal-safety.7.html
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
 
     info!("stop Runtime");
     runtime.stop();
