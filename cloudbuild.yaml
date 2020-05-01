@@ -66,7 +66,7 @@ steps:
     waitFor: ['build_server']
     timeout: 60m
     entrypoint: 'bash'
-    args: ['./scripts/build_example', '-e', 'hello_world', '-i']
+    args: ['./scripts/build_example', '-e', 'hello_world', '-i', 'base']
 
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_tests

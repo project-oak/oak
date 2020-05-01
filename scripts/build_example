@@ -6,17 +6,19 @@ source "${SCRIPTS_DIR}/common"
 
 language="rust"
 compilation_mode='fastbuild'
-docker_image=false
-while getopts "l:ide:h" opt; do
+docker_config=''
+while getopts "l:i:de:h" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-h] [-l rust|cpp] [-i] [-d] -e EXAMPLE
+      echo -e "Usage: ${0} [-h] [-l rust|cpp] [-i base|logless] [-d] -e EXAMPLE
 
 Build the given example Oak Application and client.
 
 Options:
   -e    Example application name (required)
-  -i    Package application in a Docker image
+  -i    Package application in a Docker image with one of the following server types:
+          - base: base version of the server (default)
+          - logless: base version of the server with debug logging compiled out
   -d    Build C++ code for example using debug mode
   -l    Example application variant:
           - rust (used by default)
@@ -26,7 +28,15 @@ Options:
     l)
       language="${OPTARG}";;
     i)
-      docker_image=true;;
+      case "${OPTARG}" in
+        base)
+          docker_config='clang';;
+        logless)
+          docker_config='clang-logless';;
+        *)
+          echo "Invalid server type: ${OPTARG}"
+          exit 1;;
+      esac;;
     d)
       compilation_mode='dbg';;
     e)
@@ -79,16 +89,18 @@ case "${language}" in
     exit 1;;
 esac
 
-if [[ "${docker_image}" == true ]]; then
+if [[ -n "${docker_config}" ]]; then
   if [[ "${language}" != "rust" ]]; then
     echo "Docker images are only supported for Rust modules"
     exit 1
   fi
 
-  bazel build "${bazel_build_flags[@]}" "//examples/${EXAMPLE}/server:${EXAMPLE}_image.tar"
+  readonly DOCKER_BAZEL_BUILD_FLAGS=("${bazel_build_flags[@]}" "--config=${docker_config}")
+  bazel build "${DOCKER_BAZEL_BUILD_FLAGS[@]}" "//examples/${EXAMPLE}/server:${EXAMPLE}_image.tar"
 
   # `aggregator` example has an additional Backend Docker image.
   if [[ "${EXAMPLE}" == "aggregator" ]]; then
+    # `aggregator` Backend doesn't require `clang`.
     bazel build "${bazel_build_flags[@]}" "//examples/aggregator/server:aggregator_backend_image.tar"
   fi
 fi
