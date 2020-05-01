@@ -112,6 +112,10 @@
 <span id="112">112</span>
 <span id="113">113</span>
 <span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -137,10 +141,17 @@
 <span class="doccomment">//! cargo run --package=oak_loader -- --application=&lt;APP_CONFIG_PATH&gt;</span>
 <span class="doccomment">//! ```</span>
 
-<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">error</span>, <span class="ident">info</span>};
+<span class="kw">use</span> <span class="ident">log</span>::<span class="ident">info</span>;
 <span class="kw">use</span> <span class="ident">oak_runtime</span>::{<span class="ident">configure_and_run</span>, <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::<span class="ident">ApplicationConfiguration</span>};
 <span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span>;
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">fs</span>::<span class="ident">File</span>, <span class="ident">io</span>::<span class="ident">Read</span>, <span class="ident">thread</span>};
+<span class="kw">use</span> <span class="ident">std</span>::{
+    <span class="ident">fs</span>::<span class="ident">File</span>,
+    <span class="ident">io</span>::<span class="ident">Read</span>,
+    <span class="ident">sync</span>::{
+        <span class="ident">atomic</span>::{<span class="ident">AtomicBool</span>, <span class="ident">Ordering</span>},
+        <span class="ident">Arc</span>,
+    },
+};
 <span class="kw">use</span> <span class="ident">structopt</span>::<span class="ident">StructOpt</span>;
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>)]</span>
@@ -182,34 +193,12 @@
     <span class="prelude-val">Ok</span>(<span class="ident">buffer</span>)
 }
 
-<span class="kw">fn</span> <span class="ident">start_runtime</span>(
-    <span class="ident">application</span>: <span class="ident">String</span>,
-    <span class="ident">runtime_config</span>: <span class="ident">oak_runtime</span>::<span class="ident">RuntimeConfiguration</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">std</span>::<span class="ident">error</span>::<span class="ident">Error</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Loading Oak Runtime&quot;</span>);
-
-    <span class="kw">let</span> <span class="ident">app_config</span> <span class="op">=</span> {
-        <span class="kw">let</span> <span class="ident">buffer</span> <span class="op">=</span> <span class="ident">read_file</span>(<span class="kw-2">&amp;</span><span class="ident">application</span>)<span class="question-mark">?</span>;
-        <span class="ident">ApplicationConfiguration</span>::<span class="ident">decode</span>(<span class="kw-2">&amp;</span><span class="ident">buffer</span>[..])
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Failed to decode application configuration: {:?}&quot;</span>, <span class="ident">error</span>))<span class="question-mark">?</span>
-    };
-
-    <span class="comment">// Start the Runtime from the given config.</span>
-    <span class="kw">let</span> (<span class="ident">_runtime</span>, <span class="ident">_initial_handle</span>) <span class="op">=</span> <span class="ident">configure_and_run</span>(<span class="ident">app_config</span>, <span class="ident">runtime_config</span>)
-        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Runtime error: {:?}&quot;</span>, <span class="ident">error</span>))<span class="question-mark">?</span>;
-
-    <span class="comment">// The Runtime kicks off its own threads for the initial Node and any subsequently created</span>
-    <span class="comment">// Nodes, so just park the current thread.</span>
-    <span class="ident">thread</span>::<span class="ident">park</span>();
-    <span class="prelude-val">Ok</span>(())
-}
-
-<span class="kw">fn</span> <span class="ident">main</span>() {
-    <span class="ident">env_logger</span>::<span class="ident">init</span>();
+<span class="kw">fn</span> <span class="ident">main</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">std</span>::<span class="ident">error</span>::<span class="ident">Error</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="ident">simple_logger</span>::<span class="ident">init</span>().<span class="ident">expect</span>(<span class="string">&quot;failed to initialize logger&quot;</span>);
     <span class="kw">let</span> <span class="ident">opt</span> <span class="op">=</span> <span class="ident">Opt</span>::<span class="ident">from_args</span>();
-    <span class="kw">let</span> <span class="ident">application</span> <span class="op">=</span> <span class="ident">opt</span>.<span class="ident">application</span>.<span class="ident">clone</span>();
 
-    <span class="comment">// Start the runtime in a new thread</span>
+    <span class="kw">let</span> <span class="ident">app_config_data</span> <span class="op">=</span> <span class="ident">read_file</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">application</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">app_config</span> <span class="op">=</span> <span class="ident">ApplicationConfiguration</span>::<span class="ident">decode</span>(<span class="kw-2">&amp;</span><span class="ident">app_config_data</span>[..])<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">runtime_config</span> <span class="op">=</span> <span class="ident">oak_runtime</span>::<span class="ident">RuntimeConfiguration</span> {
         <span class="ident">metrics_port</span>: <span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">no_metrics</span> {
             <span class="prelude-val">None</span>
@@ -223,9 +212,28 @@
         },
     };
 
-    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="ident">start_runtime</span>(<span class="ident">application</span>, <span class="ident">runtime_config</span>) {
-        <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;failed to start Oak Runtime: {}&quot;</span>, <span class="ident">e</span>);
+    <span class="comment">// Start the Runtime from the given config.</span>
+    <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;starting Runtime&quot;</span>);
+    <span class="kw">let</span> (<span class="ident">runtime</span>, <span class="ident">initial_handle</span>) <span class="op">=</span> <span class="ident">configure_and_run</span>(<span class="ident">app_config</span>, <span class="ident">runtime_config</span>)
+        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">status</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;status {:?}&quot;</span>, <span class="ident">status</span>))<span class="question-mark">?</span>;
+    <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;initial write handle {:?}&quot;</span>, <span class="ident">initial_handle</span>);
+
+    <span class="kw">let</span> <span class="ident">done</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">AtomicBool</span>::<span class="ident">new</span>(<span class="bool-val">false</span>));
+    <span class="ident">signal_hook</span>::<span class="ident">flag</span>::<span class="ident">register</span>(<span class="ident">signal_hook</span>::<span class="ident">SIGINT</span>, <span class="ident">Arc</span>::<span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="ident">done</span>))<span class="question-mark">?</span>;
+
+    <span class="comment">// The Runtime kicks off its own threads for the initial Node and any subsequently created</span>
+    <span class="comment">// Nodes, so just block the current thread until a signal arrives.</span>
+    <span class="kw">while</span> <span class="op">!</span><span class="ident">done</span>.<span class="ident">load</span>(<span class="ident">Ordering</span>::<span class="ident">Relaxed</span>) {
+        <span class="comment">// There are few synchronization mechanisms that are allowed to be used in a signal</span>
+        <span class="comment">// handler context, so use a primitive sleep loop to watch for the termination</span>
+        <span class="comment">// notification (rather than something more accurate like `std::sync::Condvar`).</span>
+        <span class="comment">// See e.g.: http://man7.org/linux/man-pages/man7/signal-safety.7.html</span>
+        <span class="ident">std</span>::<span class="ident">thread</span>::<span class="ident">sleep</span>(<span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">Duration</span>::<span class="ident">from_millis</span>(<span class="number">100</span>));
     }
+
+    <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;stop Runtime&quot;</span>);
+    <span class="ident">runtime</span>.<span class="ident">stop</span>();
+    <span class="prelude-val">Ok</span>(())
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "oak_loader";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>
