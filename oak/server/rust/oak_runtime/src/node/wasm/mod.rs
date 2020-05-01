@@ -32,7 +32,7 @@ use crate::{
     runtime::{Handle, HandleDirection, ReadStatus, RuntimeProxy},
     Message,
 };
-use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
+use oak_abi::{label::Label, ChannelReadStatus, ChannelStatusError, OakStatus};
 
 #[cfg(test)]
 mod tests;
@@ -573,7 +573,12 @@ impl WasmInterface {
             return Err(OakStatus::ErrBadHandle);
         }
 
-        let (valid_statuses, all_valid) = self.runtime.wait_on_channels(&valid_channels)?;
+        let (valid_statuses, all_valid) = match self.runtime.wait_on_channels(&valid_channels) {
+            Ok(s) => Ok((s, true)),
+            Err(ChannelStatusError::HasInvalid(s)) => Ok((s, false)),
+            Err(ChannelStatusError::Error(s)) => Err(s),
+        }?;
+
         for i in 0..valid_channels.len() {
             all_statuses[valid_pos[i]] = valid_statuses[i];
         }

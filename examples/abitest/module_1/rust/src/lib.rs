@@ -16,6 +16,7 @@
 
 use abitest_common::{InternalMessage, LOG_CONFIG_NAME};
 use log::{error, info};
+use oak::ChannelStatusError;
 use std::collections::HashSet;
 
 // Backend node for channel testing.  This node listens for read channel handles
@@ -63,7 +64,11 @@ fn inner_main(in_handle: u64) -> Result<(), oak::OakStatus> {
     // Wait on 1+N read handles (starting with N=0).
     let mut wait_handles = vec![in_channel];
     loop {
-        let (ready_status, _all_valid) = oak::wait_on_channels(&wait_handles)?;
+        let ready_status = match oak::wait_on_channels(&wait_handles) {
+            Ok(s) => Ok(s),
+            Err(ChannelStatusError::HasInvalid(s)) => Ok(s),
+            Err(ChannelStatusError::Error(s)) => Err(s),
+        }?;
         // If there is a message on in_channel, it is expected to contain
         // a collection of read handles for future listening
         if ready_status[0] == oak::ChannelReadStatus::ReadReady {

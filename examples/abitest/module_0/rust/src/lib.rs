@@ -22,7 +22,7 @@ use abitest_common::{InternalMessage, LOG_CONFIG_NAME};
 use byteorder::WriteBytesExt;
 use expect::{expect, expect_eq, expect_matches};
 use log::{debug, error, info, trace, warn};
-use oak::{grpc, ChannelReadStatus, OakError, OakStatus};
+use oak::{grpc, ChannelReadStatus, ChannelStatusError, OakError, OakStatus};
 use oak_abi::label::Label;
 use prost::Message;
 use proto::{
@@ -347,10 +347,13 @@ impl OakAbiTestService for FrontendNode {
 }
 
 // Helper for status conversion
-fn status_convert<T>(result: Result<T, OakStatus>) -> Result<T, OakError> {
+fn status_convert<T>(result: Result<T, ChannelStatusError>) -> Result<T, OakError> {
     match result {
         Ok(t) => Ok(t),
-        Err(status) => Err(OakError::OakStatus(status)),
+        Err(ChannelStatusError::Error(status)) => Err(OakError::OakStatus(status)),
+        Err(ChannelStatusError::HasInvalid(_)) => {
+            Err(OakError::OakStatus(OakStatus::ErrInvalidChannel))
+        }
     }
 }
 
@@ -988,7 +991,7 @@ impl FrontendNode {
 
         // Waiting on (just) non-read channel handles should fail immediately.
         expect_eq!(
-            Err(OakStatus::ErrBadHandle),
+            Err(ChannelStatusError::Error(OakStatus::ErrBadHandle)),
             oak::wait_on_channels(&[
                 oak::ReadHandle {
                     handle: out1.handle
@@ -1005,18 +1008,18 @@ impl FrontendNode {
 
         expect_eq!(
             vec![ChannelReadStatus::ReadReady, ChannelReadStatus::NotReady],
-            status_convert(oak::wait_on_channels(&[in1, in2]))?.0
+            status_convert(oak::wait_on_channels(&[in1, in2]))?
         );
         // No read so still ready (level triggered not edge triggered).
         expect_eq!(
             vec![ChannelReadStatus::ReadReady, ChannelReadStatus::NotReady],
-            status_convert(oak::wait_on_channels(&[in1, in2]))?.0
+            status_convert(oak::wait_on_channels(&[in1, in2]))?
         );
 
         expect_eq!(Ok(()), oak::channel_write(out2, &data, &[]));
         expect_eq!(
             vec![ChannelReadStatus::ReadReady, ChannelReadStatus::ReadReady],
-            status_convert(oak::wait_on_channels(&[in1, in2]))?.0
+            status_convert(oak::wait_on_channels(&[in1, in2]))?
         );
 
         let mut buffer = Vec::<u8>::with_capacity(5);
@@ -1027,7 +1030,7 @@ impl FrontendNode {
 
         expect_eq!(
             vec![ChannelReadStatus::NotReady, ChannelReadStatus::ReadReady],
-            status_convert(oak::wait_on_channels(&[in1, in2]))?.0
+            status_convert(oak::wait_on_channels(&[in1, in2]))?
         );
 
         // Write channels and nonsense handles are ignored.
@@ -1044,7 +1047,6 @@ impl FrontendNode {
                     handle: out1.handle
                 }
             ]))?
-            .0
         );
         expect_eq!(
             vec![
@@ -1059,7 +1061,6 @@ impl FrontendNode {
                     handle: oak::Handle::from_raw(9_999_999)
                 }
             ]))?
-            .0
         );
 
         expect_eq!(Ok(()), oak::channel_close(out1.handle));
@@ -1069,7 +1070,7 @@ impl FrontendNode {
         // the channel is closed.
         expect_eq!(
             vec![ChannelReadStatus::ReadReady],
-            status_convert(oak::wait_on_channels(&[in2]))?.0
+            status_convert(oak::wait_on_channels(&[in2]))?
         );
 
         expect_eq!(Ok(()), oak::channel_close(in1.handle));
@@ -1089,7 +1090,7 @@ impl FrontendNode {
         expect_eq!(Ok(()), oak::channel_write(out2, &data, &[]));
         expect_eq!(
             vec![ChannelReadStatus::ReadReady, ChannelReadStatus::ReadReady],
-            status_convert(oak::wait_on_channels(&[in1, in2]))?.0
+            status_convert(oak::wait_on_channels(&[in1, in2]))?
         );
 
         // Close the only write handle to channel 1.
@@ -1098,8 +1099,9 @@ impl FrontendNode {
         // Channel is still read-ready because there's a queued message.
         expect_eq!(
             vec![ChannelReadStatus::ReadReady],
-            status_convert(oak::wait_on_channels(&[in1]))?.0
+            status_convert(oak::wait_on_channels(&[in1]))?
         );
+        info!("HERE!!!");
 
         // Consume the only message on channel 1.
         let mut buffer = Vec::<u8>::with_capacity(5);
@@ -1110,8 +1112,11 @@ impl FrontendNode {
 
         // Now expect the channel status to be orphaned.
         expect_eq!(
-            vec![ChannelReadStatus::Orphaned, ChannelReadStatus::ReadReady],
-            status_convert(oak::wait_on_channels(&[in1, in2]))?.0
+            Err(ChannelStatusError::HasInvalid(vec![
+                ChannelReadStatus::Orphaned,
+                ChannelReadStatus::ReadReady
+            ])),
+            oak::wait_on_channels(&[in1, in2])
         );
 
         expect_eq!(Ok(()), oak::channel_close(in1.handle));
@@ -1313,17 +1318,16 @@ impl FrontendNode {
         );
         // Wait on an invalid handle.
         expect_eq!(
-            vec![
+            Ok(vec![
                 ChannelReadStatus::ReadReady,
                 ChannelReadStatus::InvalidChannel
-            ],
-            status_convert(oak::wait_on_channels(&[
+            ]),
+            oak::wait_on_channels(&[
                 in_handle,
                 oak::ReadHandle {
                     handle: oak::Handle::from_raw(9_987_321)
                 }
-            ]))?
-            .0
+            ])
         );
 
         // Close both of the previously mentioned invalid handles.
@@ -1432,8 +1436,11 @@ impl FrontendNode {
 
             // Block until there is a response from one of the backends
             // available.
-            let (readies, _all_valid) =
-                oak::wait_on_channels(&self.backend_in).map_err(OakError::OakStatus)?;
+            let readies = match oak::wait_on_channels(&self.backend_in) {
+                Ok(s) => Ok(s),
+                Err(ChannelStatusError::HasInvalid(s)) => Ok(s),
+                Err(ChannelStatusError::Error(s)) => Err(OakError::OakStatus(s)),
+            }?;
 
             // Expect exactly one of the backends to have received
             // the message.

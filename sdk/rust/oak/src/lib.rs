@@ -19,7 +19,7 @@ use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
 
 // Re-export ABI constants that are also visible as part of the SDK API.
-pub use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
+pub use oak_abi::{label::Label, ChannelReadStatus, ChannelStatusError, OakStatus};
 
 mod error;
 #[cfg(target_os = "macos")]
@@ -184,7 +184,7 @@ fn prep_handle_space(space: &mut [u8]) {
 /// (because the notification space is re-created on each invocation).
 pub fn wait_on_channels(
     handles: &[ReadHandle],
-) -> Result<(Vec<ChannelReadStatus>, bool), OakStatus> {
+) -> Result<Vec<ChannelReadStatus>, ChannelStatusError> {
     let mut space = new_handle_space(handles);
     unsafe {
         let status = oak_abi::wait_on_channels(space.as_mut_ptr(), handles.len() as u32);
@@ -198,13 +198,13 @@ pub fn wait_on_channels(
                 .and_then(ChannelReadStatus::from_i32)
             {
                 Some(status) => results.push(status),
-                None => return Err(OakStatus::Unspecified),
+                None => return Err(ChannelStatusError::Error(OakStatus::Unspecified)),
             }
         }
         match OakStatus::from_i32(status as i32) {
-            Some(OakStatus::Ok) => Ok((results, true)),
-            Some(OakStatus::ErrInvalidChannel) => Ok((results, false)),
-            _ => Err(OakStatus::ErrInternal),
+            Some(OakStatus::Ok) => Ok(results),
+            Some(OakStatus::ErrInvalidChannel) => Err(ChannelStatusError::HasInvalid(results)),
+            _ => Err(ChannelStatusError::Error(OakStatus::ErrInternal)),
         }
     }
 }

@@ -44,6 +44,23 @@ pub const SPACE_BYTES_PER_HANDLE: usize = 9;
 /// Invalid handle value.
 pub const INVALID_HANDLE: Handle = 0;
 
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum ChannelStatusError {
+    HasInvalid(Vec<ChannelReadStatus>),
+    Error(OakStatus),
+}
+
+impl From<OakStatus> for ChannelStatusError {
+    fn from(status: OakStatus) -> Self {
+        match status {
+            OakStatus::ErrInvalidChannel => {
+                panic!("Cannot map OakStatus::ErrInvalidChannel to ChannelStatusError.")
+            }
+            s => ChannelStatusError::Error(s),
+        }
+    }
+}
+
 // The Oak ABI primarily consists of a collection of Wasm host functions in the
 // "oak" module that are made available to WebAssembly Nodes running under the
 // Oak runtime.

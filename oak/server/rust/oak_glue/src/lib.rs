@@ -17,7 +17,7 @@
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use lazy_static::lazy_static;
 use log::{debug, error, info, warn};
-use oak_abi::OakStatus;
+use oak_abi::{ChannelStatusError, OakStatus};
 use oak_runtime::{
     proto::oak::application::ApplicationConfiguration, runtime::RuntimeProxy, NodeId,
 };
@@ -172,9 +172,10 @@ pub unsafe extern "C" fn glue_wait_on_channels(node_id: u64, buf: *mut u8, count
         }
 
         let proxy = proxy_for_node(node_id);
-        let (channel_statuses, all_valid) = match proxy.wait_on_channels(&handles) {
-            Ok(r) => r,
-            Err(s) => return s as u32,
+        let (channel_statuses, status) = match proxy.wait_on_channels(&handles) {
+            Ok(r) => (r, OakStatus::Ok as u32),
+            Err(ChannelStatusError::HasInvalid(r)) => (r, OakStatus::ErrInvalidChannel as u32),
+            Err(ChannelStatusError::Error(s)) => return s as u32,
         };
 
         if channel_statuses.len() != handles.len() {
@@ -192,11 +193,7 @@ pub unsafe extern "C" fn glue_wait_on_channels(node_id: u64, buf: *mut u8, count
 
             *p = *channel_status as u8;
         }
-        if all_valid {
-            OakStatus::Ok as u32
-        } else {
-            OakStatus::ErrInvalidChannel as u32
-        }
+        status
     })
     .unwrap_or(OakStatus::ErrInternal as u32)
 }

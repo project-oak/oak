@@ -24,7 +24,8 @@ use std::{
 };
 
 use oak_abi::{
-    grpc::encap_request, label::Label, proto::oak::encap::GrpcRequest, ChannelReadStatus, OakStatus,
+    grpc::encap_request, label::Label, proto::oak::encap::GrpcRequest, ChannelReadStatus,
+    ChannelStatusError, OakStatus,
 };
 
 use crate::{metrics::METRICS, pretty_name_for_thread, runtime::RuntimeProxy, Handle};
@@ -112,18 +113,16 @@ impl GrpcServerNode {
     /// Returns an error if couldn't read from the channel or if received a wrong number of handles
     /// (not equal to 1).
     fn init_channel_writer(&self) -> Result<Handle, OakStatus> {
-        let (read_status, all_valid) = self
+        let read_status = self
             .runtime
             .wait_on_channels(&[self.initial_reader])
             .map_err(|error| {
                 error!("Couldn't wait on the initial reader handle: {:?}", error);
-                OakStatus::ErrInternal
+                match error {
+                    ChannelStatusError::HasInvalid(_) => OakStatus::ErrInvalidChannel,
+                    ChannelStatusError::Error(_) => OakStatus::ErrInternal,
+                }
             })?;
-
-        if !all_valid {
-            error!("Couldn't read channel: {:?}", read_status[0]);
-            return Err(OakStatus::ErrInvalidChannel);
-        }
 
         if read_status[0] == ChannelReadStatus::ReadReady {
             self.runtime
@@ -266,21 +265,13 @@ impl GrpcServerNode {
     /// Processes a gRPC response from a channel represented by `response_reader` and returns an
     /// HTTP response body.
     fn process_response(&self, response_reader: Handle) -> Result<Vec<u8>, GrpcServerError> {
-        let (read_status, all_valid) =
-            self.runtime
-                .wait_on_channels(&[response_reader])
-                .map_err(|error| {
-                    error!("Couldn't wait on the temporary gRPC channel: {:?}", error);
-                    GrpcServerError::ResponseProcessingError
-                })?;
-
-        if !all_valid {
-            error!(
-                "Couldn't read from a temporary gRPC channel: {:?}",
-                read_status[0]
-            );
-            return Err(GrpcServerError::ResponseProcessingError);
-        }
+        let read_status = self
+            .runtime
+            .wait_on_channels(&[response_reader])
+            .map_err(|error| {
+                error!("Couldn't wait on the temporary gRPC channel: {:?}", error);
+                GrpcServerError::ResponseProcessingError
+            })?;
 
         if read_status[0] == ChannelReadStatus::ReadReady {
             self.runtime

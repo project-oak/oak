@@ -27,7 +27,7 @@ use std::{
 };
 
 use crate::{message::Message, metrics::METRICS, node, pretty_name_for_thread};
-use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
+use oak_abi::{label::Label, ChannelReadStatus, ChannelStatusError, OakStatus};
 
 mod channel;
 #[cfg(feature = "oak_debug")]
@@ -676,7 +676,7 @@ impl Runtime {
         &self,
         node_id: NodeId,
         readers: &[Handle],
-    ) -> Result<(Vec<ChannelReadStatus>, bool), OakStatus> {
+    ) -> Result<Vec<ChannelReadStatus>, ChannelStatusError> {
         self.validate_handles_access(node_id, readers)?;
         self.validate_can_read_from_channels(node_id, readers)?;
 
@@ -690,11 +690,10 @@ impl Runtime {
 
             if any_invalid {
                 debug!(
-                    "{:?}: wait_on_channels: Returning early with ChannelWaitStatus::HasInvalid.",
+                    "{:?}: wait_on_channels: Returning early with ChannelStatusError::HasInvalid.",
                     node_id
                 );
-                // return Ok(ChannelWaitStatus::HasInvalid(statuses));
-                return Ok((statuses, false));
+                return Err(ChannelStatusError::HasInvalid(statuses));
             }
 
             // Create a new Arc each iteration to be dropped after `thread::park` e.g. when the
@@ -723,7 +722,7 @@ impl Runtime {
             let any_ready = statuses.iter().any(|&s| s == ChannelReadStatus::ReadReady);
 
             if any_ready {
-                return Ok((statuses, true));
+                return Ok(statuses);
             }
 
             debug!(
@@ -740,7 +739,7 @@ impl Runtime {
                 pretty_name_for_thread(&thread::current())
             );
         }
-        Err(OakStatus::ErrTerminated)
+        Err(ChannelStatusError::Error(OakStatus::ErrTerminated))
     }
 
     /// Write a message to a channel. Fails with [`OakStatus::ErrChannelClosed`] if the underlying
@@ -1200,7 +1199,7 @@ impl RuntimeProxy {
     pub fn wait_on_channels(
         &self,
         channel_read_handles: &[Handle],
-    ) -> Result<(Vec<ChannelReadStatus>, bool), OakStatus> {
+    ) -> Result<Vec<ChannelReadStatus>, ChannelStatusError> {
         self.runtime
             .wait_on_channels(self.node_id, channel_read_handles)
     }
