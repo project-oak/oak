@@ -90,7 +90,7 @@ fn start_runtime(
 }
 
 fn main() {
-    env_logger::init();
+    simple_logger::init().expect("failed to initialize logger");
     let opt = Opt::from_args();
     let application = opt.application.clone();
 
