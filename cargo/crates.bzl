@@ -44,6 +44,15 @@ def raze_fetch_remote_crates():
     )
 
     _new_http_archive(
+        name = "raze__arc_swap__0_4_6",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/arc-swap/arc-swap-0.4.6.crate",
+        type = "tar.gz",
+        strip_prefix = "arc-swap-0.4.6",
+
+        build_file = Label("//cargo/remote:arc-swap-0.4.6.BUILD"),
+    )
+
+    _new_http_archive(
         name = "raze__async_stream__0_2_1",
         url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/async-stream/async-stream-0.2.1.crate",
         type = "tar.gz",
@@ -779,6 +788,24 @@ def raze_fetch_remote_crates():
         strip_prefix = "sct-0.6.0",
 
         build_file = Label("//cargo/remote:sct-0.6.0.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__signal_hook__0_1_13",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/signal-hook/signal-hook-0.1.13.crate",
+        type = "tar.gz",
+        strip_prefix = "signal-hook-0.1.13",
+
+        build_file = Label("//cargo/remote:signal-hook-0.1.13.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__signal_hook_registry__1_2_0",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/signal-hook-registry/signal-hook-registry-1.2.0.crate",
+        type = "tar.gz",
+        strip_prefix = "signal-hook-registry-1.2.0",
+
+        build_file = Label("//cargo/remote:signal-hook-registry-1.2.0.BUILD"),
     )
 
     _new_http_archive(

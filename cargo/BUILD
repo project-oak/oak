@@ -65,6 +65,10 @@ alias(
     actual = "@raze__regex__1_3_7//:regex",
 )
 alias(
+    name = "signal_hook",
+    actual = "@raze__signal_hook__0_1_13//:signal_hook",
+)
+alias(
     name = "simple_logger",
     actual = "@raze__simple_logger__1_6_0//:simple_logger",
 )

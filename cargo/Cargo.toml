@@ -29,6 +29,7 @@ prost = "*"
 prost-types = "*"
 rand = "*"
 regex = "1"
+signal-hook = "*"
 simple_logger = "*"
 structopt = "*"
 tokio = { version = "*", features = ["rt-core", "macros"] }
