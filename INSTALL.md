@@ -9,6 +9,7 @@ apt install docker.io
 apt install curl
 apt install protobuf-compiler
 apt install libprotobuf-dev
+apt install musl-tools
 apt install openjdk-8-jdk-headless
 echo "deb [arch=amd64] http://storage.googleapis.com/bazel-apt stable jdk1.8" | tee /etc/apt/sources.list.d/bazel.list
 curl https://bazel.build/bazel-release.pub.gpg | apt-key add -
