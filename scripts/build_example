@@ -17,7 +17,7 @@ Build the given example Oak Application and client.
 Options:
   -e    Example application name (required)
   -i    Package application in a Docker image with one of the following server types:
-          - base: base version of the server (default)
+          - base: base version of the server
           - logless: base version of the server with debug logging compiled out
   -d    Build C++ code for example using debug mode
   -l    Example application variant:
