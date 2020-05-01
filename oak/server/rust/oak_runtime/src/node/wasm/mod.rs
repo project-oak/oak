@@ -568,6 +568,7 @@ impl WasmInterface {
             }
         }
 
+        // If there are no valid channels, return with statuses of all the channels set to invalid.
         if valid_channels.is_empty() {
             self.set_statuses(&all_statuses, status_buff)?;
             return Err(OakStatus::ErrBadHandle);
@@ -599,6 +600,7 @@ impl WasmInterface {
         }
     }
 
+    // Fills the `status_buff` with channel statuses in `all_statuses`.
     fn set_statuses(
         &self,
         all_statuses: &[ChannelReadStatus],

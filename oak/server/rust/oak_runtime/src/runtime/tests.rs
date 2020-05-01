@@ -143,3 +143,53 @@ fn create_node_more_public_label() {
         }),
     );
 }
+
+#[test]
+fn wait_on_channels_immediately_returns_error_if_any_channel_is_invalid() {
+    run_node_body(
+        Label::public_trusted(),
+        Box::new(|runtime| {
+            // Create channels with handles
+            let (write_handle, read_handle) = runtime.channel_create(&Label::public_trusted());
+
+            // Close the write_handle; this should make the channel Orphaned
+            let result = runtime.clone().channel_close(write_handle);
+            assert_eq!(Ok(()), result);
+
+            // Wait on channel
+            let result = runtime.clone().wait_on_channels(&[read_handle]);
+            assert!(result.is_err());
+            assert_eq!(
+                Err(vec![ChannelReadStatus::Orphaned]),
+                result.map_err(|e| match e {
+                    ChannelStatusError::HasInvalid(s) => s,
+                    _ => Vec::new(),
+                })
+            );
+            Ok(())
+        }),
+    );
+}
+
+#[test]
+fn wait_on_channels_immediately_returns_error_if_cannot_read_from_channel() {
+    run_node_body(
+        Label::public_trusted(),
+        Box::new(|runtime| {
+            // Create channels with handles
+            let (write_handle, _read_handle) = runtime.channel_create(&Label::public_trusted());
+
+            // Wait on channel
+            let result = runtime.clone().wait_on_channels(&[write_handle]);
+            assert!(result.is_err());
+            assert_eq!(
+                Err(OakStatus::ErrPermissionDenied),
+                result.map_err(|e| match e {
+                    ChannelStatusError::Error(s) => s,
+                    _ => OakStatus::ErrInternal,
+                })
+            );
+            Ok(())
+        }),
+    );
+}

@@ -661,15 +661,23 @@ impl Runtime {
     /// Waits on a slice of `Handle`s, blocking until one of the following conditions:
     /// - If the [`Runtime`] is terminating this will return immediately with an `ErrTerminated`
     ///   status for each channel.
-    /// - If all readers are in an erroneous status, e.g. when all channels are orphaned, this will
-    ///   immediately return the channels statuses.
+    /// - If any of the readers are in an erroneous status, e.g. when a channel is orphaned, this
+    ///   will immediately return with a `ChannelStatusError` containing the channels statuses.
     /// - If any of the channels is able to read a message, the corresponding element in the
     ///   returned vector will be set to `Ok(ReadReady)`, with `Ok(NotReady)` signaling the channel
     ///   has no message available
     ///
-    /// In particular, if there is at least one channel in good status and no messages on said
-    /// channel available, [`Runtime::wait_on_channels`] will continue to block until a message is
-    /// available.
+    /// In particular, if all channels are valid, and there is at least one channel in good status
+    /// and no messages on said channel available, [`Runtime::wait_on_channels`] will continue to
+    /// block until a message is available.
+    ///
+    /// Invariant: This method returns a vector of [`ChannelReadStatus`] values:
+    /// - As `Ok(statuses)`, if any of the channels is able to read a message, corresponding to the
+    ///   last condition above.
+    /// - As `ChannelStatusError::HasInvalid(statuses)`, if at least one input channel is invalid,
+    ///   corresponding to the second condition above.
+    /// In both cases, the returned vector of [`ChannelReadStatus`] values will be in 1-1
+    /// correspondence with the passed-in vector of [`Handle`]s.
     ///
     /// [`Runtime`]: crate::runtime::Runtime
     pub fn wait_on_channels(
@@ -690,8 +698,8 @@ impl Runtime {
 
             if any_invalid {
                 debug!(
-                    "{:?}: wait_on_channels: Returning early with ChannelStatusError::HasInvalid.",
-                    node_id
+                    "{:?}: wait_on_channels: Returning early with ChannelStatusError::HasInvalid({:?}).",
+                    node_id, statuses
                 );
                 return Err(ChannelStatusError::HasInvalid(statuses));
             }

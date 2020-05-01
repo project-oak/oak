@@ -44,9 +44,14 @@ pub const SPACE_BYTES_PER_HANDLE: usize = 9;
 /// Invalid handle value.
 pub const INVALID_HANDLE: Handle = 0;
 
+/// Distinguishes between failure conditions that happen due to erroneous channel statuses, and
+/// general failures indicated by `OakStatus`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum ChannelStatusError {
+    /// Provides the caller with `ChannelReadStatus`es to allow investigating the failure
+    /// condition.
     HasInvalid(Vec<ChannelReadStatus>),
+    /// Indicates general failure conditions.
     Error(OakStatus),
 }
 
