@@ -15,17 +15,50 @@
 //
 
 use colored::*;
-use std::{collections::HashSet, io::Write, process::Command, time::Instant};
+use std::{collections::HashSet, io::Write, time::Instant};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Clone)]
 pub struct Opt {
-    #[structopt(long)]
+    #[structopt(long, help = "do not execute commands")]
     dry_run: bool,
-    #[structopt(long)]
+    #[structopt(long, help = "print commands")]
     commands: bool,
-    #[structopt(long)]
+    #[structopt(long, help = "show logs of commands")]
     logs: bool,
+    #[structopt(subcommand)]
+    pub cmd: Command,
+}
+
+#[derive(StructOpt, Clone)]
+pub enum Command {
+    BuildExamples(BuildExamples),
+    BuildServer(BuildServer),
+    RunTests,
+}
+
+#[derive(StructOpt, Clone)]
+pub struct BuildExamples {
+    #[structopt(long, help = "package application in a Docker image")]
+    docker: bool,
+    #[structopt(long, help = "build in debug mode")]
+    debug: bool,
+    #[structopt(
+        long,
+        help = "application variant: [rust, cpp]",
+        default_value = "rust"
+    )]
+    pub variant: String,
+}
+
+#[derive(StructOpt, Clone)]
+pub struct BuildServer {
+    #[structopt(
+        long,
+        help = "server variant: [base, logless, rust, arm, asan, tsan]",
+        default_value = "base"
+    )]
+    pub variant: String,
 }
 
 /// Encapsulates all the local state relative to a step, and is propagated to child steps.
@@ -126,7 +159,9 @@ pub fn run_step(context: &Context, step: &Step) -> HashSet<StatusResultValue> {
             if context.opt.commands || context.opt.dry_run {
                 eprintln!("{} ⊢ [{}]", context.prefix, status.command);
             };
-            if status.value == StatusResultValue::Error || context.opt.logs {
+            if (status.value == StatusResultValue::Error || context.opt.logs)
+                && !status.logs.is_empty()
+            {
                 eprintln!("{} {}", context.prefix, "╔════════════════════════".blue());
                 for line in status.logs.lines() {
                     eprintln!("{} {} {}", context.prefix, "║".blue(), line);
@@ -189,7 +224,7 @@ impl Runnable for Cmd {
         // TODO(#396): Add dry-run mode that only prints the commands but does not actually run
         // them.
         std::io::stderr().flush().expect("could not flush stderr");
-        let mut cmd = Command::new(&self.executable);
+        let mut cmd = std::process::Command::new(&self.executable);
         cmd.args(&self.args);
         let command_string = format!("{:?}", cmd);
         if opt.dry_run {
@@ -199,19 +234,41 @@ impl Runnable for Cmd {
                 logs: "".to_string(),
             }
         } else {
-            let child = cmd
+            let mut child = cmd
                 .stdout(std::process::Stdio::piped())
                 .stderr(std::process::Stdio::piped())
                 .spawn()
                 .expect("could not spawn command");
+
+            if opt.logs {
+                println!();
+                let out = child.stderr.as_mut().unwrap();
+                use std::io::BufRead;
+                for line in std::io::BufReader::new(out).lines() {
+                    println!("{}", line.unwrap());
+                }
+            }
+
             let output = child
                 .wait_with_output()
                 .expect("could not wait for command to terminate");
-            let logs = format!(
-                "\n{}\n----\n{}\n",
-                std::str::from_utf8(&output.stdout).expect("could not parse command output"),
-                std::str::from_utf8(&output.stderr).expect("could not parse command output"),
-            );
+
+            let mut logs = String::new();
+            {
+                let stdout =
+                    std::str::from_utf8(&output.stdout).expect("could not parse command stdout");
+                if !stdout.is_empty() {
+                    logs += &format!("════╡ stdout ╞════\n{}", stdout);
+                }
+            }
+            {
+                let stderr =
+                    std::str::from_utf8(&output.stderr).expect("could not parse command stderr");
+                if !stderr.is_empty() {
+                    logs += &format!("════╡ stderr ╞════\n{}", stderr);
+                }
+            }
+
             if output.status.success() {
                 SingleStatusResult {
                     value: StatusResultValue::Ok,
