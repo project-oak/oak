@@ -153,6 +153,13 @@ steps:
     args: ['./scripts/check_formatting']
 
   - name: 'gcr.io/oak-ci/oak:latest'
+    id: check_cargo_deny
+    waitFor: ['check_formatting']
+    timeout: 30m
+    entrypoint: 'bash'
+    args: ['./scripts/check_cargo_deny']
+
+  - name: 'gcr.io/oak-ci/oak:latest'
     id: check_docs
     waitFor: ['check_formatting']
     timeout: 30m

@@ -3,6 +3,7 @@ name = "private_set_intersection"
 version = "0.1.0"
 authors = ["Tiziano Santoro <tzn@google.com>"]
 edition = "2018"
+license = "Apache-2.0"
 
 [lib]
 crate-type = ["cdylib"]
