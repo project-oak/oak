@@ -132,6 +132,7 @@
 <span id="132">132</span>
 <span id="133">133</span>
 <span id="134">134</span>
+<span id="135">135</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -261,10 +262,11 @@
 <span class="doccomment">/// [`Handle`] into the runtime will enable messages to be read back out from the [`Runtime`].</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">configure_and_run</span>(
     <span class="ident">app_config</span>: <span class="ident">ApplicationConfiguration</span>,
+    <span class="ident">runtime_config</span>: <span class="kw">crate</span>::<span class="ident">RuntimeConfiguration</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Runtime</span><span class="op">&gt;</span>, <span class="ident">Handle</span>), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">configuration</span> <span class="op">=</span> <span class="ident">from_protobuf</span>(<span class="ident">app_config</span>)<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">runtime</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">Runtime</span>::<span class="ident">create</span>(<span class="ident">configuration</span>));
-    <span class="kw">let</span> <span class="ident">handle</span> <span class="op">=</span> <span class="ident">runtime</span>.<span class="ident">clone</span>().<span class="ident">run</span>()<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">handle</span> <span class="op">=</span> <span class="ident">runtime</span>.<span class="ident">clone</span>().<span class="ident">run</span>(<span class="ident">runtime_config</span>)<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>((<span class="ident">runtime</span>, <span class="ident">handle</span>))
 }
 </pre></div>

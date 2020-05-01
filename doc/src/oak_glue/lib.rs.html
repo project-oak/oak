@@ -353,6 +353,11 @@
 <span id="353">353</span>
 <span id="354">354</span>
 <span id="355">355</span>
+<span id="356">356</span>
+<span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -457,17 +462,22 @@
                 <span class="kw">return</span> <span class="ident">oak_abi</span>::<span class="ident">INVALID_HANDLE</span>;
             }
         };
-        <span class="macro">info</span><span class="macro">!</span>(
-            <span class="string">&quot;start runtime with initial config {}.{}&quot;</span>,
-            <span class="ident">app_config</span>.<span class="ident">initial_node_config_name</span>, <span class="ident">app_config</span>.<span class="ident">initial_entrypoint_name</span>
-        );
-        <span class="kw">let</span> (<span class="ident">runtime</span>, <span class="ident">grpc_handle</span>) <span class="op">=</span> <span class="kw">match</span> <span class="ident">oak_runtime</span>::<span class="ident">configure_and_run</span>(<span class="ident">app_config</span>) {
-            <span class="prelude-val">Ok</span>(<span class="ident">p</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">p</span>,
-            <span class="prelude-val">Err</span>(<span class="ident">status</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Failed to start runtime: {:?}&quot;</span>, <span class="ident">status</span>);
-                <span class="kw">return</span> <span class="ident">oak_abi</span>::<span class="ident">INVALID_HANDLE</span>;
-            }
+        <span class="kw">let</span> <span class="ident">runtime_config</span> <span class="op">=</span> <span class="ident">oak_runtime</span>::<span class="ident">RuntimeConfiguration</span> {
+            <span class="ident">metrics_port</span>: <span class="prelude-val">Some</span>(<span class="number">3030</span>),
+            <span class="ident">introspect_port</span>: <span class="prelude-val">Some</span>(<span class="number">1909</span>),
         };
+        <span class="macro">info</span><span class="macro">!</span>(
+            <span class="string">&quot;start runtime with initial config {}.{} {:?}&quot;</span>,
+            <span class="ident">app_config</span>.<span class="ident">initial_node_config_name</span>, <span class="ident">app_config</span>.<span class="ident">initial_entrypoint_name</span>, <span class="ident">runtime_config</span>
+        );
+        <span class="kw">let</span> (<span class="ident">runtime</span>, <span class="ident">grpc_handle</span>) <span class="op">=</span>
+            <span class="kw">match</span> <span class="ident">oak_runtime</span>::<span class="ident">configure_and_run</span>(<span class="ident">app_config</span>, <span class="ident">runtime_config</span>) {
+                <span class="prelude-val">Ok</span>(<span class="ident">p</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">p</span>,
+                <span class="prelude-val">Err</span>(<span class="ident">status</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Failed to start runtime: {:?}&quot;</span>, <span class="ident">status</span>);
+                    <span class="kw">return</span> <span class="ident">oak_abi</span>::<span class="ident">INVALID_HANDLE</span>;
+                }
+            };
 
         <span class="ident">oak_runtime</span>::<span class="ident">node</span>::<span class="ident">external</span>::<span class="ident">register_factory</span>(<span class="ident">create_and_run_node</span>);
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;register oak_glue::create_and_run_node() as node factory&quot;</span>);

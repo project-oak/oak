@@ -156,6 +156,11 @@
 <span id="156">156</span>
 <span id="157">157</span>
 <span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -304,16 +309,21 @@
     <span class="comment">// Then bind and serve...</span>
     <span class="kw">let</span> <span class="ident">server</span> <span class="op">=</span> <span class="ident">Server</span>::<span class="ident">bind</span>(<span class="kw-2">&amp;</span><span class="ident">addr</span>).<span class="ident">serve</span>(<span class="ident">make_service</span>);
 
-    <span class="comment">// And run forever...</span>
+    <span class="comment">// And run until asked to terminate...</span>
     <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">server</span>.<span class="kw">await</span>;
     <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;introspection server terminated with {:?}&quot;</span>, <span class="ident">result</span>);
 }
 
-<span class="comment">// TODO(#908): add a termination mechanism so that this `Arc&lt;Runtime&gt;` doesn&#39;t</span>
-<span class="comment">// force the `Runtime` instance to be undroppable.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">serve</span>(<span class="ident">port</span>: <span class="ident">u16</span>, <span class="ident">runtime</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Runtime</span><span class="op">&gt;</span>) {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">serve</span>(
+    <span class="ident">port</span>: <span class="ident">u16</span>,
+    <span class="ident">runtime</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Runtime</span><span class="op">&gt;</span>,
+    <span class="ident">notify_receiver</span>: <span class="ident">tokio</span>::<span class="ident">sync</span>::<span class="ident">oneshot</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
+) {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tokio_runtime</span> <span class="op">=</span> <span class="ident">tokio</span>::<span class="ident">runtime</span>::<span class="ident">Runtime</span>::<span class="ident">new</span>().<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t create Tokio runtime&quot;</span>);
-    <span class="ident">tokio_runtime</span>.<span class="ident">block_on</span>(<span class="ident">make_server</span>(<span class="ident">port</span>, <span class="ident">runtime</span>))
+    <span class="ident">tokio_runtime</span>.<span class="ident">block_on</span>(<span class="ident">futures</span>::<span class="ident">future</span>::<span class="ident">select</span>(
+        <span class="ident">Box</span>::<span class="ident">pin</span>(<span class="ident">make_server</span>(<span class="ident">port</span>, <span class="ident">runtime</span>)),
+        <span class="ident">notify_receiver</span>,
+    ));
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../";window.currentCrate = "oak_runtime";</script><script src="../../../aliases.js"></script><script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script><script defer src="../../../search-index.js"></script></body></html>
