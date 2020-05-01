@@ -452,10 +452,13 @@ impl WasmInterface {
                 })?;
         }
 
-        if statuses
-            .iter()
-            .all(|&s| s == ChannelReadStatus::InvalidChannel || s == ChannelReadStatus::Orphaned)
-        {
+        let is_invalid = |&s| {
+            s == ChannelReadStatus::InvalidChannel
+                || s == ChannelReadStatus::Orphaned
+                || s == ChannelReadStatus::PermissionDenied
+        };
+
+        if statuses.iter().all(is_invalid) {
             Err(OakStatus::ErrBadHandle)
         } else {
             Ok(())

@@ -208,7 +208,7 @@ pub fn wait_on_channels(handles: &[ReadHandle]) -> Result<Vec<ChannelReadStatus>
 /// It also returns an error if the underlying channel is empty (i.e. not ready to read).
 ///
 /// The provided vectors for received data and associated handles will be
-/// resized to accomodate the information in the message; any data already
+/// resized to accommodate the information in the message; any data already
 /// held in the vectors will be overwritten.
 pub fn channel_read(
     half: ReadHandle,

@@ -130,3 +130,88 @@ fn create_node_more_public_label() {
         }),
     );
 }
+
+#[test]
+fn wait_on_channels_immediately_returns_if_any_channel_is_orphaned() {
+    run_node_body(
+        Label::public_trusted(),
+        Box::new(|runtime| {
+            let (write_handle_0, read_handle_0) = runtime.channel_create(&Label::public_trusted());
+            let (_write_handle_1, read_handle_1) = runtime.channel_create(&Label::public_trusted());
+
+            // Close the write_handle; this should make the channel Orphaned
+            let result = runtime.channel_close(write_handle_0);
+            assert_eq!(Ok(()), result);
+
+            let result = runtime.wait_on_channels(&[read_handle_0, read_handle_1]);
+            assert_eq!(
+                Ok(vec![
+                    ChannelReadStatus::Orphaned,
+                    ChannelReadStatus::NotReady
+                ]),
+                result
+            );
+            Ok(())
+        }),
+    );
+}
+
+#[test]
+fn wait_on_channels_blocks_if_all_channels_have_status_not_ready() {
+    run_node_body(
+        Label::public_trusted(),
+        Box::new(|runtime| {
+            let (write_handle, read_handle) = runtime.channel_create(&Label::public_trusted());
+
+            // Change the status of the channel concurrently, to unpark the waiting thread.
+            let runtime_copy = runtime.clone();
+            let start = std::time::Instant::now();
+            std::thread::spawn(move || {
+                let ten_millis = std::time::Duration::from_millis(10);
+                thread::sleep(ten_millis);
+
+                // Close the write_handle; this should make the channel Orphaned
+                let result = runtime_copy.channel_close(write_handle);
+                assert_eq!(Ok(()), result);
+            });
+
+            let result = runtime.wait_on_channels(&[read_handle]);
+            assert!(start.elapsed() >= std::time::Duration::from_millis(10));
+            assert_eq!(Ok(vec![ChannelReadStatus::Orphaned]), result);
+            Ok(())
+        }),
+    );
+}
+
+#[test]
+fn wait_on_channels_immediately_returns_if_any_channel_is_invalid() {
+    run_node_body(
+        Label::public_trusted(),
+        Box::new(|runtime| {
+            let (write_handle, _read_handle) = runtime.channel_create(&Label::public_trusted());
+            let (_write_handle, read_handle) = runtime.channel_create(&Label::public_trusted());
+
+            let result = runtime.wait_on_channels(&[write_handle, read_handle]);
+            assert_eq!(
+                Ok(vec![
+                    ChannelReadStatus::InvalidChannel,
+                    ChannelReadStatus::NotReady
+                ]),
+                result
+            );
+            Ok(())
+        }),
+    );
+}
+
+#[test]
+fn wait_on_channels_immediately_returns_if_the_input_list_is_empty() {
+    run_node_body(
+        Label::public_trusted(),
+        Box::new(|runtime| {
+            let result = runtime.wait_on_channels(&[]);
+            assert_eq!(Ok(Vec::<ChannelReadStatus>::new()), result);
+            Ok(())
+        }),
+    );
+}

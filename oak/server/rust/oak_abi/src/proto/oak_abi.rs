@@ -40,4 +40,6 @@ pub enum ChannelReadStatus {
     InvalidChannel = 2,
     /// Channel has no extant write halves (and is empty).
     Orphaned = 3,
+    /// A node trying to access the channel does not have the permission to do so.
+    PermissionDenied = 4,
 }
