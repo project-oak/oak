@@ -26,8 +26,8 @@ the WebAssembly target and it seems that is not in the rustc package.
 ```bash
 curl https://sh.rustup.rs -sSf > /tmp/rustup  # make sure you're happy to run
 sh /tmp/rustup  # choose option 1
-rustup target add wasm32-unknown-unknown
 source $HOME/.cargo/env
+rustup target add wasm32-unknown-unknown
 cd $WHERE_YOU_LIKE_TO_KEEP_GIT_REPOS
 git clone https://github.com/project-oak/oak.git
 ./scripts/docker_run ./scripts/build_server  # this may take some time
