@@ -172,7 +172,7 @@ pub unsafe extern "C" fn glue_wait_on_channels(node_id: u64, buf: *mut u8, count
         }
 
         let proxy = proxy_for_node(node_id);
-        let channel_statuses = match proxy.wait_on_channels(&handles) {
+        let (channel_statuses, all_valid) = match proxy.wait_on_channels(&handles) {
             Ok(r) => r,
             Err(s) => return s as u32,
         };
@@ -192,7 +192,11 @@ pub unsafe extern "C" fn glue_wait_on_channels(node_id: u64, buf: *mut u8, count
 
             *p = *channel_status as u8;
         }
-        OakStatus::Ok as u32
+        if all_valid {
+            OakStatus::Ok as u32
+        } else {
+            OakStatus::ErrInvalidChannel as u32
+        }
     })
     .unwrap_or(OakStatus::ErrInternal as u32)
 }

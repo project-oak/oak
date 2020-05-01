@@ -71,5 +71,8 @@ pub fn error_from_nonok_status(status: OakStatus) -> io::Error {
         OakStatus::ErrPermissionDenied => {
             io::Error::new(io::ErrorKind::PermissionDenied, "Permission denied")
         }
+        OakStatus::ErrInvalidChannel => {
+            io::Error::new(io::ErrorKind::InvalidInput, "Invalid channel")
+        }
     }
 }

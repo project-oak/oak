@@ -26,6 +26,8 @@ pub enum OakStatus {
     ErrChannelEmpty = 10,
     /// The node does not have sufficient permissions to perform the requested operation.
     ErrPermissionDenied = 11,
+    /// One or more of the channels are invalid
+    ErrInvalidChannel = 12,
 }
 /// Single byte values used to indicate the read status of a channel on the
 /// `oak.wait_on_channels` host function.

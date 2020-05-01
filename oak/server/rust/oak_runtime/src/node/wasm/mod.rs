@@ -567,11 +567,38 @@ impl WasmInterface {
                 valid_channels.push(channel);
             }
         }
-        let valid_statuses = self.runtime.wait_on_channels(&valid_channels)?;
+
+        if valid_channels.is_empty() {
+            self.set_statuses(&all_statuses, status_buff)?;
+            return Err(OakStatus::ErrBadHandle);
+        }
+
+        let (valid_statuses, all_valid) = self.runtime.wait_on_channels(&valid_channels)?;
         for i in 0..valid_channels.len() {
             all_statuses[valid_pos[i]] = valid_statuses[i];
         }
 
+        self.set_statuses(&all_statuses, status_buff)?;
+
+        if !all_valid {
+            return Err(OakStatus::ErrInvalidChannel);
+        }
+
+        if all_statuses
+            .iter()
+            .all(|&s| s == ChannelReadStatus::InvalidChannel || s == ChannelReadStatus::Orphaned)
+        {
+            Err(OakStatus::ErrBadHandle)
+        } else {
+            Ok(())
+        }
+    }
+
+    fn set_statuses(
+        &self,
+        all_statuses: &[ChannelReadStatus],
+        status_buff: AbiPointer,
+    ) -> Result<(), OakStatus> {
         for (i, valid_status) in all_statuses.iter().enumerate() {
             self.get_memory()
                 .set_value(status_buff + 8 + (i as u32 * 9), *valid_status as u8)
@@ -583,15 +610,7 @@ impl WasmInterface {
                     OakStatus::ErrInvalidArgs
                 })?;
         }
-
-        if all_statuses
-            .iter()
-            .all(|&s| s == ChannelReadStatus::InvalidChannel || s == ChannelReadStatus::Orphaned)
-        {
-            Err(OakStatus::ErrBadHandle)
-        } else {
-            Ok(())
-        }
+        Ok(())
     }
 }
 

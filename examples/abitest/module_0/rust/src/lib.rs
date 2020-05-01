@@ -960,7 +960,7 @@ impl FrontendNode {
                 .unwrap();
             space.push(0x00);
             expect_eq!(
-                OakStatus::ErrBadHandle as u32,
+                OakStatus::ErrInvalidChannel as u32,
                 oak_abi::wait_on_channels(space.as_mut_ptr(), COUNT as u32)
             );
             expect_eq!(ChannelReadStatus::Orphaned as i32, i32::from(space[8]));
@@ -1005,18 +1005,18 @@ impl FrontendNode {
 
         expect_eq!(
             vec![ChannelReadStatus::ReadReady, ChannelReadStatus::NotReady],
-            status_convert(oak::wait_on_channels(&[in1, in2]))?
+            status_convert(oak::wait_on_channels(&[in1, in2]))?.0
         );
         // No read so still ready (level triggered not edge triggered).
         expect_eq!(
             vec![ChannelReadStatus::ReadReady, ChannelReadStatus::NotReady],
-            status_convert(oak::wait_on_channels(&[in1, in2]))?
+            status_convert(oak::wait_on_channels(&[in1, in2]))?.0
         );
 
         expect_eq!(Ok(()), oak::channel_write(out2, &data, &[]));
         expect_eq!(
             vec![ChannelReadStatus::ReadReady, ChannelReadStatus::ReadReady],
-            status_convert(oak::wait_on_channels(&[in1, in2]))?
+            status_convert(oak::wait_on_channels(&[in1, in2]))?.0
         );
 
         let mut buffer = Vec::<u8>::with_capacity(5);
@@ -1027,7 +1027,7 @@ impl FrontendNode {
 
         expect_eq!(
             vec![ChannelReadStatus::NotReady, ChannelReadStatus::ReadReady],
-            status_convert(oak::wait_on_channels(&[in1, in2]))?
+            status_convert(oak::wait_on_channels(&[in1, in2]))?.0
         );
 
         // Write channels and nonsense handles are ignored.
@@ -1044,6 +1044,7 @@ impl FrontendNode {
                     handle: out1.handle
                 }
             ]))?
+            .0
         );
         expect_eq!(
             vec![
@@ -1058,6 +1059,7 @@ impl FrontendNode {
                     handle: oak::Handle::from_raw(9_999_999)
                 }
             ]))?
+            .0
         );
 
         expect_eq!(Ok(()), oak::channel_close(out1.handle));
@@ -1067,7 +1069,7 @@ impl FrontendNode {
         // the channel is closed.
         expect_eq!(
             vec![ChannelReadStatus::ReadReady],
-            status_convert(oak::wait_on_channels(&[in2]))?
+            status_convert(oak::wait_on_channels(&[in2]))?.0
         );
 
         expect_eq!(Ok(()), oak::channel_close(in1.handle));
@@ -1087,7 +1089,7 @@ impl FrontendNode {
         expect_eq!(Ok(()), oak::channel_write(out2, &data, &[]));
         expect_eq!(
             vec![ChannelReadStatus::ReadReady, ChannelReadStatus::ReadReady],
-            status_convert(oak::wait_on_channels(&[in1, in2]))?
+            status_convert(oak::wait_on_channels(&[in1, in2]))?.0
         );
 
         // Close the only write handle to channel 1.
@@ -1096,7 +1098,7 @@ impl FrontendNode {
         // Channel is still read-ready because there's a queued message.
         expect_eq!(
             vec![ChannelReadStatus::ReadReady],
-            status_convert(oak::wait_on_channels(&[in1]))?
+            status_convert(oak::wait_on_channels(&[in1]))?.0
         );
 
         // Consume the only message on channel 1.
@@ -1109,7 +1111,7 @@ impl FrontendNode {
         // Now expect the channel status to be orphaned.
         expect_eq!(
             vec![ChannelReadStatus::Orphaned, ChannelReadStatus::ReadReady],
-            status_convert(oak::wait_on_channels(&[in1, in2]))?
+            status_convert(oak::wait_on_channels(&[in1, in2]))?.0
         );
 
         expect_eq!(Ok(()), oak::channel_close(in1.handle));
@@ -1311,16 +1313,17 @@ impl FrontendNode {
         );
         // Wait on an invalid handle.
         expect_eq!(
-            Ok(vec![
+            vec![
                 ChannelReadStatus::ReadReady,
                 ChannelReadStatus::InvalidChannel
-            ]),
-            oak::wait_on_channels(&[
+            ],
+            status_convert(oak::wait_on_channels(&[
                 in_handle,
                 oak::ReadHandle {
                     handle: oak::Handle::from_raw(9_987_321)
                 }
-            ])
+            ]))?
+            .0
         );
 
         // Close both of the previously mentioned invalid handles.
@@ -1429,7 +1432,8 @@ impl FrontendNode {
 
             // Block until there is a response from one of the backends
             // available.
-            let readies = oak::wait_on_channels(&self.backend_in).map_err(OakError::OakStatus)?;
+            let (readies, _all_valid) =
+                oak::wait_on_channels(&self.backend_in).map_err(OakError::OakStatus)?;
 
             // Expect exactly one of the backends to have received
             // the message.

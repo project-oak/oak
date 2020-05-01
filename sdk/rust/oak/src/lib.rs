@@ -182,7 +182,9 @@ fn prep_handle_space(space: &mut [u8]) {
 /// This is a convenience wrapper around the [`oak_abi::wait_on_channels`] host
 /// function. This version is easier to use in Rust but is less efficient
 /// (because the notification space is re-created on each invocation).
-pub fn wait_on_channels(handles: &[ReadHandle]) -> Result<Vec<ChannelReadStatus>, OakStatus> {
+pub fn wait_on_channels(
+    handles: &[ReadHandle],
+) -> Result<(Vec<ChannelReadStatus>, bool), OakStatus> {
     let mut space = new_handle_space(handles);
     unsafe {
         let status = oak_abi::wait_on_channels(space.as_mut_ptr(), handles.len() as u32);
@@ -199,7 +201,11 @@ pub fn wait_on_channels(handles: &[ReadHandle]) -> Result<Vec<ChannelReadStatus>
                 None => return Err(OakStatus::Unspecified),
             }
         }
-        Ok(results)
+        match OakStatus::from_i32(status as i32) {
+            Some(OakStatus::Ok) => Ok((results, true)),
+            Some(OakStatus::ErrInvalidChannel) => Ok((results, false)),
+            _ => Err(OakStatus::ErrInternal),
+        }
     }
 }
 
@@ -394,6 +400,7 @@ pub fn random_get(buf: &mut [u8]) -> Result<(), OakStatus> {
 pub fn result_from_status<T>(status: i32, val: T) -> Result<T, OakStatus> {
     match OakStatus::from_i32(status) {
         Some(OakStatus::Ok) => Ok(val),
+        Some(OakStatus::ErrInvalidChannel) => Ok(val),
         Some(status) => Err(status),
         None => Err(OakStatus::Unspecified),
     }
