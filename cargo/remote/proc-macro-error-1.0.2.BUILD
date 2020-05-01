@@ -12,7 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "notice", # "MIT,Apache-2.0"
+  "restricted", # "MIT OR Apache-2.0"
 ])
 
 load(
@@ -24,38 +24,27 @@ load(
 
 
 # Unsupported target "build-script-build" with type "custom-build" omitted
+# Unsupported target "macro-errors" with type "test" omitted
+# Unsupported target "ok" with type "test" omitted
 
 rust_library(
-    name = "winapi",
+    name = "proc_macro_error",
     crate_root = "src/lib.rs",
     crate_type = "lib",
-    edition = "2015",
+    edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
+        "@raze__proc_macro_error_attr__1_0_2//:proc_macro_error_attr",
+        "@raze__proc_macro2__1_0_10//:proc_macro2",
+        "@raze__quote__1_0_3//:quote",
+        "@raze__syn__1_0_18//:syn",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.3.8",
+    version = "1.0.2",
     crate_features = [
-        "consoleapi",
-        "errhandlingapi",
-        "handleapi",
-        "minwinbase",
-        "minwindef",
-        "ntdef",
-        "ntsecapi",
-        "processenv",
-        "profileapi",
-        "std",
-        "sysinfoapi",
-        "timezoneapi",
-        "winbase",
-        "winsock2",
-        "ws2def",
-        "ws2ipdef",
-        "ws2tcpip",
-        "wtypesbase",
     ],
 )
 
+# Unsupported target "runtime-errors" with type "test" omitted

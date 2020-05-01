@@ -12,7 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "notice", # "MIT,Apache-2.0"
+  "notice", # "MIT"
 ])
 
 load(
@@ -23,10 +23,9 @@ load(
 )
 
 
-# Unsupported target "build-script-build" with type "custom-build" omitted
 
 rust_library(
-    name = "winapi",
+    name = "ansi_term",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     edition = "2015",
@@ -36,26 +35,9 @@ rust_library(
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.3.8",
+    version = "0.11.0",
     crate_features = [
-        "consoleapi",
-        "errhandlingapi",
-        "handleapi",
-        "minwinbase",
-        "minwindef",
-        "ntdef",
-        "ntsecapi",
-        "processenv",
-        "profileapi",
-        "std",
-        "sysinfoapi",
-        "timezoneapi",
-        "winbase",
-        "winsock2",
-        "ws2def",
-        "ws2ipdef",
-        "ws2tcpip",
-        "wtypesbase",
     ],
 )
 
+# Unsupported target "colours" with type "example" omitted

@@ -69,6 +69,10 @@ alias(
     actual = "@raze__simple_logger__1_6_0//:simple_logger",
 )
 alias(
+    name = "structopt",
+    actual = "@raze__structopt__0_3_14//:structopt",
+)
+alias(
     name = "tokio",
     actual = "@raze__tokio__0_2_19//:tokio",
 )

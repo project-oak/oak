@@ -30,6 +30,7 @@ prost-types = "*"
 rand = "*"
 regex = "1"
 simple_logger = "*"
+structopt = "*"
 tokio = { version = "*", features = ["rt-core", "macros"] }
 # Using an old version that is supported by `cargo-raze`:
 # https://github.com/google/cargo-raze/issues/41#issuecomment-592274128

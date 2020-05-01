@@ -12,7 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "notice", # "MIT,Apache-2.0"
+  "notice", # "Apache-2.0,MIT"
 ])
 
 load(
@@ -23,39 +23,25 @@ load(
 )
 
 
-# Unsupported target "build-script-build" with type "custom-build" omitted
 
 rust_library(
-    name = "winapi",
+    name = "structopt_derive",
     crate_root = "src/lib.rs",
-    crate_type = "lib",
-    edition = "2015",
+    crate_type = "proc-macro",
+    edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
+        "@raze__heck__0_3_1//:heck",
+        "@raze__proc_macro_error__1_0_2//:proc_macro_error",
+        "@raze__proc_macro2__1_0_10//:proc_macro2",
+        "@raze__quote__1_0_3//:quote",
+        "@raze__syn__1_0_18//:syn",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.3.8",
+    version = "0.4.7",
     crate_features = [
-        "consoleapi",
-        "errhandlingapi",
-        "handleapi",
-        "minwinbase",
-        "minwindef",
-        "ntdef",
-        "ntsecapi",
-        "processenv",
-        "profileapi",
-        "std",
-        "sysinfoapi",
-        "timezoneapi",
-        "winbase",
-        "winsock2",
-        "ws2def",
-        "ws2ipdef",
-        "ws2tcpip",
-        "wtypesbase",
     ],
 )
 
