@@ -14,6 +14,18 @@ jobs:
       - name: Checkout branch
         uses: actions/checkout@v2
 
+      - name: Checkout hashes
+        uses: actions/checkout@v2
+        with:
+          ref: hashes
+          path: out
+
+      # We need to set up git user details before we can perform git operations.
+      - name: Git setup
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+
       # Build Docker image, caching from the latest version from the remote repository.
       - name: Docker build
         timeout-minutes: 30
@@ -32,9 +44,37 @@ jobs:
       - name: Generate Reproducibility Index
         run: ./scripts/docker_run ./scripts/build_reproducibility_index
 
+      # Remove all files from the "out" folder.
+      - name: Clear "out" folder
+        run: rm --recursive --force ./out/*
+
+      - name: Copy Reproducibility Index
+        run: cp ./reproducibility_index ./out/
+
+      - name: Diff Reproducibility Index
+        run: |
+          cd ./out
+          git add .
+          git status
+          git diff --staged
+
       # Print out the index to the logs of the action.
       - name: Print Reproducibility Index
         run: cat ./reproducibility_index
+
+      # From the "out" folder, commit the results and push to the `hashes` branch.
+      # This step only applies to `push` events (not `pull_request`), even if there are no actual
+      # changes to commit in the "out" folder (in which case the commit will be empty, but it will
+      # still be part of the history).
+      - name: Commit and push (post-merge only)
+        if: github.event_name == 'push'
+        run: |
+          cd ./out
+          git add .
+          git status
+          git diff --staged
+          git commit --allow-empty --message="Update hashes from ${GITHUB_SHA}"
+          git push
 
       # Also post a reply on the PR thread with the contents of the index, after merge.
       - name: Post Reproducibility Index (post-merge only)

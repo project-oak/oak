@@ -51,7 +51,7 @@ jobs:
       - name: Generate docs
         run: ./scripts/docker_run ./scripts/build_gh_pages ./out
 
-      # From the "out" folder, commit the results and push to gh-pages.
+      # From the "out" folder, commit the results and push to the `gh-pages` branch.
       # This step only applies to `push` events (not `pull_request`), and only if there are actual
       # changes to commit in the "out" folder.
       - name: Commit and push (post-merge only)
