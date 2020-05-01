@@ -22,7 +22,7 @@
 //! cargo run --package=oak_loader -- --application=<APP_CONFIG_PATH>
 //! ```
 
-use log::{error, info};
+use log::info;
 use oak_runtime::{configure_and_run, proto::oak::application::ApplicationConfiguration};
 use prost::Message;
 use std::{fs::File, io::Read, thread};
@@ -67,34 +67,12 @@ fn read_file(filename: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     Ok(buffer)
 }
 
-fn start_runtime(
-    application: String,
-    runtime_config: oak_runtime::RuntimeConfiguration,
-) -> Result<(), Box<dyn std::error::Error>> {
-    info!("Loading Oak Runtime");
-
-    let app_config = {
-        let buffer = read_file(&application)?;
-        ApplicationConfiguration::decode(&buffer[..])
-            .map_err(|error| format!("Failed to decode application configuration: {:?}", error))?
-    };
-
-    // Start the Runtime from the given config.
-    let (_runtime, _initial_handle) = configure_and_run(app_config, runtime_config)
-        .map_err(|error| format!("Runtime error: {:?}", error))?;
-
-    // The Runtime kicks off its own threads for the initial Node and any subsequently created
-    // Nodes, so just park the current thread.
-    thread::park();
-    Ok(())
-}
-
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     simple_logger::init().expect("failed to initialize logger");
     let opt = Opt::from_args();
-    let application = opt.application.clone();
 
-    // Start the runtime in a new thread
+    let app_config_data = read_file(&opt.application)?;
+    let app_config = ApplicationConfiguration::decode(&app_config_data[..])?;
     let runtime_config = oak_runtime::RuntimeConfiguration {
         metrics_port: if opt.no_metrics {
             None
@@ -108,7 +86,17 @@ fn main() {
         },
     };
 
-    if let Err(e) = start_runtime(application, runtime_config) {
-        error!("failed to start Oak Runtime: {}", e);
-    }
+    // Start the Runtime from the given config.
+    info!("starting Runtime");
+    let (runtime, initial_handle) = configure_and_run(app_config, runtime_config)
+        .map_err(|status| format!("status {:?}", status))?;
+    info!("initial write handle {:?}", initial_handle);
+
+    // The Runtime kicks off its own threads for the initial Node and any subsequently created
+    // Nodes, so just park the current thread.
+    thread::park();
+
+    info!("stop Runtime");
+    runtime.stop();
+    Ok(())
 }
