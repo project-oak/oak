@@ -79,7 +79,7 @@ fi
 # Launching the server requires a `--application=<dir>/config.bin` flag.
 # `exec` is necessary for the `run_example` script to be able to get a PID of a background server.
 if [[ "${server}" == "rust" ]]; then
-  exec cargo run --release --target=x86_64-unknown-linux-musl --package=oak_loader -- \
+  exec ./bazel-clang-bin/oak/server/rust/oak_loader/oak_loader \
     --application="${APPLICATION}" \
     --ca-cert="${SCRIPTS_DIR}/../examples/certs/local/ca.pem" \
     --cert-chain="${SCRIPTS_DIR}/../examples/certs/local/local.pem" \
