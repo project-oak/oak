@@ -21,7 +21,7 @@ cargo clippy --all-targets -- --deny=warnings
 if [[ "${OSTYPE}" == 'darwin'*  ]]; then
   bazel_build_flags+=( '--config=darwin' )
 fi
-bazel_build_flags+=( '--keep_going' '--config=clang' )
+bazel_build_flags+=( '--keep_going' )
 
 bazel build "${bazel_build_flags[@]}" -- //oak/...:all
 
