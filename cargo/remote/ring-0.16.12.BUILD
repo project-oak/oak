@@ -52,7 +52,9 @@ genrule(
       ":ring_build_script",
     ],
     tags = ["no-sandbox"],
-    cmd = "mkdir -p ring_out_dir_outputs/;"
+    # Clear an output directory since `genrule` doesn't use Bazel cache.
+    cmd = "rm -rf ring_out_dir_outputs/*;"
+        + "mkdir -p ring_out_dir_outputs/;"
         + " (export CARGO_MANIFEST_DIR=\"$$PWD/$$(dirname $(location :Cargo.toml))\";"
         + " export TARGET='x86_64-unknown-linux-gnu';"
         + " export RUST_BACKTRACE=1;"
@@ -60,6 +62,8 @@ genrule(
         + " export CARGO_FEATURE_DEFAULT=1;"
         + " export CARGO_FEATURE_DEV_URANDOM_FALLBACK=1;"
         + " export CARGO_FEATURE_LAZY_STATIC=1;"
+
+        # Additional flags for `build.rs`.
         + " export CARGO_PKG_NAME=ring;"
         + " export CARGO_CFG_TARGET_ARCH=x86_64;"
         + " export CARGO_CFG_TARGET_OS=linux;"
@@ -67,6 +71,7 @@ genrule(
         + " export OPT_LEVEL=3;"
         + " export DEBUG=false;"
         + " export HOST=any;"
+
         + " export OUT_DIR=$$PWD/ring_out_dir_outputs;"
         + " export BINARY_PATH=\"$$PWD/$(location :ring_build_script)\";"
         + " export OUT_TAR=$$PWD/$@;"
