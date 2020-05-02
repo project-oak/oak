@@ -23,6 +23,7 @@ if [[ "${OSTYPE}" == 'darwin'*  ]]; then
 fi
 bazel_build_flags+=( '--keep_going' )
 
-bazel build "${bazel_build_flags[@]}" -- //oak/...:all
+# Clang is required to successfully build targets created by `cargo raze`.
+bazel build '--config=clang' "${bazel_build_flags[@]}" -- //oak/...:all
 
 bazel test "${bazel_build_flags[@]}" -- //oak/...:all
