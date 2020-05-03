@@ -5,6 +5,7 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 source "${SCRIPTS_DIR}/common"
 
 config="clang"
+target="//oak/server/loader:oak_runner"
 while getopts "s:h" opt; do
   case "${opt}" in
     h)
@@ -28,7 +29,9 @@ Build the specified version of the Oak Runtime server.
         logless)
           config='clang-logless';;
         rust)
-          config='clang';;
+          config='clang'
+          target='//oak/server/rust/oak_loader'
+          ;;
         arm)
           config='armv8';;
         asan)
@@ -52,6 +55,5 @@ bazel_build_flags+=(
 # Use a different output_base so that we don't lose incremental state.
 # See https://docs.bazel.build/versions/master/command-line-reference.html#flag--output_base.
 bazel --output_base="${CACHE_DIR}/$config" build "${bazel_build_flags[@]}" \
-  //oak/server/loader:oak_runner \
-  //oak/server/rust/oak_loader \
+  "${target}" \
   //oak/server/storage:storage_server
