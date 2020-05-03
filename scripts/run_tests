@@ -17,12 +17,15 @@ cargo test --all-targets
 cargo test --doc
 cargo clippy --all-targets -- --deny=warnings
 
-
-if [[ "${OSTYPE}" == "darwin"*  ]]; then
-  bazel_build_flags+=( "--config=darwin" )
+if [[ "${OSTYPE}" == 'darwin'*  ]]; then
+  bazel_build_flags+=( '--config=darwin' )
 fi
 bazel_build_flags+=( '--keep_going' )
 
-bazel build "${bazel_build_flags[@]}" -- //oak/...:all
+# Clang is required to successfully build targets created by `cargo raze`.
+bazel build '--config=clang' "${bazel_build_flags[@]}" -- //oak/...:all -//oak/common:hmac_test
+# `hmac_test` cannon be built with Clang (#936).
+bazel build "${bazel_build_flags[@]}" -- //oak/common:hmac_test
 
-bazel test "${bazel_build_flags[@]}" -- //oak/...:all
+bazel test '--config=clang' "${bazel_build_flags[@]}" -- //oak/...:all -//oak/common:hmac_test
+bazel test "${bazel_build_flags[@]}" -- //oak/common:hmac_test
