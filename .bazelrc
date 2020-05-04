@@ -51,10 +51,6 @@ build:clang-logless --crosstool_top=//toolchain:clang
 build:clang-logless --host_crosstool_top=@bazel_tools//tools/cpp:toolchain
 build:clang-logless --cpu=k8
 
-# Darwin's default compiler is clang, so no need for a crosstool
-build:darwin --config=oak-debug
-build:darwin --config=clang-base
-
 # armv8 build
 build:armv8 --crosstool_top=//toolchain:clang
 build:armv8 --host_crosstool_top=@bazel_tools//tools/cpp:toolchain

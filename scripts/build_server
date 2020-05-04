@@ -45,10 +45,6 @@ Build the specified version of the Oak Runtime server.
   esac
 done
 
-if [[ "${config}" == "clang" && "${OSTYPE}" == "darwin"*  ]]; then
-    config='darwin'
-fi
-
 bazel_build_flags+=(
   "--config=${config}"
 )
