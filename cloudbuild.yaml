@@ -87,18 +87,19 @@ steps:
     timeout: 60m
     entrypoint: 'bash'
     args: ['./scripts/run_examples', '-s', 'base']
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: run_examples_asan
-    waitFor: ['run_examples']
-    timeout: 60m
-    entrypoint: 'bash'
-    args: ['./scripts/run_examples', '-s', 'asan']
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: run_examples_tsan
-    waitFor: ['run_examples_asan']
-    timeout: 60m
-    entrypoint: 'bash'
-    args: ['./scripts/run_examples', '-s', 'tsan']
+    # TODO(942): Reenable `asan` and `tsan`.
+  # - name: 'gcr.io/oak-ci/oak:latest'
+  #   id: run_examples_asan
+  #   waitFor: ['run_examples']
+  #   timeout: 60m
+  #   entrypoint: 'bash'
+  #   args: ['./scripts/run_examples', '-s', 'asan']
+  # - name: 'gcr.io/oak-ci/oak:latest'
+  #   id: run_examples_tsan
+  #   waitFor: ['run_examples_asan']
+  #   timeout: 60m
+  #   entrypoint: 'bash'
+  #   args: ['./scripts/run_examples', '-s', 'tsan']
 
   # Run clang-tidy after the examples finish running, since they share the same `output_base`.
   - name: 'gcr.io/oak-ci/oak:latest'
