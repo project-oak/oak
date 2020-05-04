@@ -198,7 +198,7 @@ int main(int argc, char** argv) {
   if (room_id.empty()) {
     room = absl::make_unique<Room>(stub.get());
     room_id = room->Id();
-    LOG(INFO) << "Join this room with --app_address=" << address
+    LOG(INFO) << "Join this room with --address=" << address
               << " --room_id=" << absl::Base64Escape(room_id);
   }
   // Calculate a user handle.
