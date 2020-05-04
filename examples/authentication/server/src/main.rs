@@ -31,7 +31,6 @@ pub mod proto {
 }
 
 mod auth_handler;
-mod http_client;
 mod token_exchanger;
 
 #[derive(StructOpt, Clone)]

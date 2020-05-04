@@ -27,7 +27,7 @@ message AuthParameters {
   // TODO(#886): Add support for scope, state and code challenge.
 }
 
-// Request for exchanging an authorisation code for and identity token.
+// Request for exchanging an authorisation code for an identity token.
 message IdentityTokenRequest {
   string auth_code = 1;
 }

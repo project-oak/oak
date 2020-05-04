@@ -16,6 +16,7 @@
 
 //! gRPC service implementation for handling authentication requests from clients.
 
+use crate::token_exchanger;
 use proto::{
     authentication_server::{Authentication, AuthenticationServer},
     AuthParameters, IdentityTokenRequest, IdentityTokenResponse,
@@ -26,8 +27,6 @@ pub mod proto {
     tonic::include_proto!("oak.examples.authentication");
 }
 
-use crate::token_exchanger;
-
 pub fn build_service(
     client_id: &str,
     client_secret: &str,
@@ -35,6 +34,7 @@ pub fn build_service(
     AuthenticationServer::new(AuthenticationHandler::new(client_id, client_secret))
 }
 
+/// Service implementation to handle authentication requests.
 #[derive(Default)]
 pub struct AuthenticationHandler {
     client_id: String,
@@ -54,7 +54,7 @@ impl AuthenticationHandler {
 
 #[tonic::async_trait]
 impl Authentication for AuthenticationHandler {
-    /// Gets the authentication parameters needed by the client to send authorisation token
+    /// Gets the authentication parameters needed by the client to send authorisation code
     /// requests to the authentication endpoint.
     async fn get_auth_parameters(
         &self,
@@ -62,7 +62,7 @@ impl Authentication for AuthenticationHandler {
     ) -> Result<Response<AuthParameters>, Status> {
         Ok(Response::new(AuthParameters {
             client_id: self.client_id.clone(),
-            // Using Google Identity Platform enpoint for this example.
+            // Using Google Identity Platform endpoint for this example.
             // See https://developers.google.com/identity/protocols/oauth2/openid-connect
             // TODO(#923): The endpoint should be read from the discovery document.
             auth_endpoint: "https://accounts.google.com/o/oauth2/v2/auth".to_string(),
