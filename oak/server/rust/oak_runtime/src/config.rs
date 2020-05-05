@@ -14,20 +14,19 @@
 // limitations under the License.
 //
 
-use crate::proto::oak::application::{
-    node_configuration::ConfigType, ApplicationConfiguration, GrpcServerConfiguration,
-    LogConfiguration, NodeConfiguration, WebAssemblyConfiguration,
-};
 use itertools::Itertools;
-use std::{collections::HashMap, net::AddrParseError, sync::Arc};
-
 use log::{error, warn};
-
 use oak_abi::OakStatus;
+use std::{collections::HashMap, sync::Arc};
+use tonic::transport::Identity;
 
 use crate::{
     node,
-    node::{check_port, load_wasm},
+    node::load_wasm,
+    proto::oak::application::{
+        node_configuration::ConfigType, ApplicationConfiguration, GrpcServerConfiguration,
+        LogConfiguration, NodeConfiguration, WebAssemblyConfiguration,
+    },
     runtime,
     runtime::{Handle, Runtime},
 };
@@ -91,18 +90,20 @@ pub fn from_protobuf(
                     return Err(OakStatus::ErrInvalidArgs);
                 }
                 Some(ConfigType::LogConfig(_)) => node::Configuration::LogNode,
-                Some(ConfigType::GrpcServerConfig(GrpcServerConfiguration { address })) => address
-                    .parse()
-                    .map_err(|error: AddrParseError| error.into())
-                    .and_then(|address| check_port(&address).map(|_| address))
-                    .map(|address| node::Configuration::GrpcServerNode { address })
-                    .map_err(|error| {
+                Some(ConfigType::GrpcServerConfig(GrpcServerConfiguration {
+                    address,
+                    grpc_tls_private_key,
+                    grpc_tls_certificate,
+                })) => node::Configuration::GrpcServerNode {
+                    address: address.parse().map_err(|error| {
                         error!("Incorrect gRPC server address: {:?}", error);
                         OakStatus::ErrInvalidArgs
                     })?,
+                    tls_identity: Identity::from_pem(grpc_tls_certificate, grpc_tls_private_key),
+                },
                 Some(ConfigType::WasmConfig(WebAssemblyConfiguration { module_bytes, .. })) => {
-                    load_wasm(&module_bytes).map_err(|e| {
-                        error!("Error loading Wasm module: {}", e);
+                    load_wasm(&module_bytes).map_err(|error| {
+                        error!("Error loading Wasm module: {}", error);
                         OakStatus::ErrInvalidArgs
                     })?
                 }

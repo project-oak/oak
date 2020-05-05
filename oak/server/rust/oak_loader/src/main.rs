@@ -18,9 +18,10 @@
 //!
 //! To invoke, run the following command from the root of the repository:
 //!
-//! ```
-//! cargo run --package=oak_loader -- --application=<APP_CONFIG_PATH>
-//! ```
+//! cargo run --package=oak_loader -- \
+//!     --application=<APP_CONFIG_PATH> \
+//!     --grpc-tls-private-key=<PRIVATE_KEY_PATH> \
+//!     --grpc-tls-certificate=<CERTIFICATE_PATH>
 
 use log::info;
 use oak_runtime::{configure_and_run, proto::oak::application::ApplicationConfiguration};
@@ -35,25 +36,27 @@ use std::{
 };
 use structopt::StructOpt;
 
+use oak_runtime::proto::oak::application::node_configuration::ConfigType::GrpcServerConfig;
+
 #[derive(StructOpt, Clone)]
 #[structopt(about = "Oak Loader")]
 pub struct Opt {
     #[structopt(long, help = "Application configuration file")]
     application: String,
-    // TODO(#806): Make arguments non-optional once TLS support is enabled.
-    #[structopt(long, help = "Path to the PEM-encoded CA root certificate")]
-    ca_cert: Option<String>,
-    #[structopt(long, help = "Path to the private key")]
-    private_key: Option<String>,
-    #[structopt(long, help = "Path to the PEM-encoded certificate chain")]
-    cert_chain: Option<String>,
+    #[structopt(long, help = "Private RSA key file used by gRPC server pseudo-Nodes")]
+    grpc_tls_private_key: String,
+    #[structopt(
+        long,
+        help = "PEM encoded X.509 TLS certificate file used by gRPC server pseudo-Nodes"
+    )]
+    grpc_tls_certificate: String,
     #[structopt(
         long,
         default_value = "3030",
-        help = "Metrics server port number. Defaults to 3030."
+        help = "Metrics server port number (the default value is 3030)"
     )]
     metrics_port: u16,
-    #[structopt(long, help = "Starts the Runtime without a metrics server.")]
+    #[structopt(long, help = "Starts the Runtime without a metrics server")]
     no_metrics: bool,
     #[structopt(
         long,
@@ -78,8 +81,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     simple_logger::init().expect("failed to initialize logger");
     let opt = Opt::from_args();
 
+    // Load application configuration.
     let app_config_data = read_file(&opt.application)?;
-    let app_config = ApplicationConfiguration::decode(&app_config_data[..])?;
+    let mut app_config = ApplicationConfiguration::decode(app_config_data.as_ref())?;
+
+    // Assign a TLS identity to all gRPC server nodes in the application configuration.
+    let grpc_tls_private_key = read_file(&opt.grpc_tls_private_key)?;
+    let grpc_tls_certificate = read_file(&opt.grpc_tls_certificate)?;
+    for node in &mut app_config.node_configs {
+        if let Some(GrpcServerConfig(ref mut grpc_server_config)) = node.config_type {
+            grpc_server_config.grpc_tls_private_key = grpc_tls_private_key.clone();
+            grpc_server_config.grpc_tls_certificate = grpc_tls_certificate.clone();
+        }
+    }
+
+    // Create Runtime config.
     let runtime_config = oak_runtime::RuntimeConfiguration {
         metrics_port: if opt.no_metrics {
             None

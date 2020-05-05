@@ -14,13 +14,20 @@
 // limitations under the License.
 //
 
-use log::{error, info, warn};
+use hyper::service::Service;
+use log::{debug, error, info, warn};
 use prost::Message;
-use prost_types::Any;
 use std::{
     fmt::{self, Display, Formatter},
     net::SocketAddr,
+    task::{Context, Poll},
     thread::{self, JoinHandle},
+};
+use tonic::{
+    codec::{Codec, DecodeBuf, Decoder, EncodeBuf, Encoder},
+    codegen::BoxFuture,
+    server::{Grpc, UnaryService},
+    transport::{Identity, NamedService},
 };
 
 use oak_abi::{
@@ -34,9 +41,9 @@ use crate::{metrics::METRICS, pretty_name_for_thread, runtime::RuntimeProxy, Han
 /// For each gRPC request from a client, gRPC server pseudo-Node creates a pair of temporary
 /// channels (to write a request to and to read a response from) and passes corresponding handles to
 /// the [`GrpcServerNode::channel_writer`].
+#[derive(Clone)]
 pub struct GrpcServerNode {
-    /// Pseudo-Node name that corresponds to an entry from the
-    /// [`ApplicationConfiguration`].
+    /// Pseudo-Node name that corresponds to an entry from the [`ApplicationConfiguration`].
     ///
     /// [`ApplicationConfiguration`]: crate::proto::oak::application::ApplicationConfiguration
     config_name: String,
@@ -44,41 +51,14 @@ pub struct GrpcServerNode {
     runtime: RuntimeProxy,
     /// Server address to listen client requests on.
     address: SocketAddr,
+    /// Loaded files containing a server TLS key and certificates.
+    tls_identity: Identity,
     /// Channel handle used for reading a [`GrpcServerNode::channel_writer`] once the gRPC server
     /// pseudo-Node has started.
     initial_reader: Handle,
-    /// Channel handle used for writing invocations.
+    /// Channel handle used for writing gRPC invocations.
+    /// Is set after the [`GrpcServerNode::init_channel_writer`] is called.
     channel_writer: Option<Handle>,
-}
-
-#[derive(Debug)]
-enum GrpcServerError {
-    BadProtobufMessage,
-    RequestProcessingError,
-    ResponseProcessingError,
-}
-
-impl Into<http::StatusCode> for GrpcServerError {
-    fn into(self) -> http::StatusCode {
-        match self {
-            Self::BadProtobufMessage => http::StatusCode::BAD_REQUEST,
-            Self::RequestProcessingError => http::StatusCode::INTERNAL_SERVER_ERROR,
-            Self::ResponseProcessingError => http::StatusCode::INTERNAL_SERVER_ERROR,
-        }
-    }
-}
-
-/// Clone implementation without `thread_handle` copying to pass the Node to other threads.
-impl Clone for GrpcServerNode {
-    fn clone(&self) -> Self {
-        Self {
-            config_name: self.config_name.to_string(),
-            runtime: self.runtime.clone(),
-            address: self.address,
-            initial_reader: self.initial_reader,
-            channel_writer: self.channel_writer,
-        }
-    }
 }
 
 impl Display for GrpcServerNode {
@@ -97,12 +77,14 @@ impl GrpcServerNode {
         config_name: &str,
         runtime: RuntimeProxy,
         address: SocketAddr,
+        tls_identity: Identity,
         initial_reader: Handle,
     ) -> Self {
         Self {
             config_name: config_name.to_string(),
             runtime,
             address,
+            tls_identity,
             initial_reader,
             channel_writer: None,
         }
@@ -111,7 +93,7 @@ impl GrpcServerNode {
     /// Reads a [`Handle`] from a channel specified by [`GrpcServerNode::initial_reader`].
     /// Returns an error if couldn't read from the channel or if received a wrong number of handles
     /// (not equal to 1).
-    fn init_channel_writer(&self) -> Result<Handle, OakStatus> {
+    fn init_channel_writer(&mut self) -> Result<(), OakStatus> {
         let read_status = self
             .runtime
             .wait_on_channels(&[self.initial_reader])
@@ -120,7 +102,7 @@ impl GrpcServerNode {
                 OakStatus::ErrInternal
             })?;
 
-        if read_status[0] == ChannelReadStatus::ReadReady {
+        let channel_writer = if read_status[0] == ChannelReadStatus::ReadReady {
             self.runtime
                 .channel_read(self.initial_reader)
                 .map_err(|error| {
@@ -138,7 +120,7 @@ impl GrpcServerNode {
                                 Ok(m.channels[0])
                             } else {
                                 error!(
-                                    "gRPC server pseudo-node should receive a single `writer` handle, found {}",
+                                    "gRPC server pseudo-Node should receive a single writer handle, found {}",
                                     m.channels.len()
                                 );
                                 Err(OakStatus::ErrInternal)
@@ -148,66 +130,234 @@ impl GrpcServerNode {
         } else {
             error!("Couldn't read channel: {:?}", read_status[0]);
             Err(OakStatus::ErrInternal)
+        }?;
+        self.channel_writer = Some(channel_writer);
+
+        warn!("Channel writer received: {:?}", self.channel_writer);
+        Ok(())
+    }
+
+    /// Main Node worker thread.
+    fn worker_thread(mut self) {
+        let pretty_name = pretty_name_for_thread(&thread::current());
+
+        // Receive a `channel_writer` handle used to pass handles for temporary channels.
+        info!("{}: Waiting for a channel writer", pretty_name);
+        self.init_channel_writer()
+            .expect("Couldn't initialialize a channel writer");
+
+        let handler = HttpRequestHandler {
+            runtime: self.runtime.clone(),
+            writer: self
+                .channel_writer
+                .expect("Channel writer is not initialized"),
+        };
+
+        // Handles incoming TLS connections, unpacks HTTP/2 requests and forwards them to
+        // [`HttpRequestHandler::handle`].
+        let server = tonic::transport::Server::builder()
+            .tls_config(tonic::transport::ServerTlsConfig::new().identity(self.tls_identity))
+            .add_service(handler)
+            .serve(self.address);
+
+        // Create an Async runtime for executing futures.
+        // https://docs.rs/tokio/
+        let mut async_runtime = tokio::runtime::Builder::new()
+            // Use simple scheduler that runs all tasks on the current-thread.
+            // https://docs.rs/tokio/0.2.16/tokio/runtime/index.html#basic-scheduler
+            .basic_scheduler()
+            // Enables the I/O driver.
+            // Necessary for using net, process, signal, and I/O types on the Tokio runtime.
+            .enable_io()
+            .build()
+            .expect("Couldn't create an Async runtime");
+
+        // Start a gRPC server.
+        info!(
+            "{}: Starting a gRPC server pseudo-Node on: {}",
+            pretty_name, self.address
+        );
+        let result = async_runtime.block_on(server);
+        info!(
+            "{}: Exiting gRPC server pseudo-Node thread {:?}",
+            pretty_name, result
+        );
+
+        self.runtime.exit_node();
+    }
+}
+
+/// Oak Node implementation for the gRPC server.
+impl super::Node for GrpcServerNode {
+    fn start(self: Box<Self>) -> Result<JoinHandle<()>, OakStatus> {
+        let thread_handle = thread::Builder::new()
+            .name(self.to_string())
+            .spawn(move || self.worker_thread())
+            .expect("Failed to spawn thread");
+        Ok(thread_handle)
+    }
+}
+
+/// [`HttpRequestHandler`] handles HTTP/2 requests from a client and sends HTTP/2 responses back.
+#[derive(Clone)]
+struct HttpRequestHandler {
+    /// Reference to a Runtime that corresponds to a node that created a gRPC server pseudo-Node.
+    runtime: RuntimeProxy,
+    /// Channel handle used for writing gRPC invocations.
+    writer: Handle,
+}
+
+// Set a mandatory prefix for all gRPC requests processed by a gRPC pseudo-Node.
+impl NamedService for HttpRequestHandler {
+    const NAME: &'static str = "oak";
+}
+
+impl Service<http::Request<hyper::Body>> for HttpRequestHandler {
+    type Response = http::Response<tonic::body::BoxBody>;
+    type Error = http::Error;
+    type Future = BoxFuture<Self::Response, Self::Error>;
+
+    fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        Poll::Ready(Ok(()))
+    }
+
+    // Decodes an unary gRPC request using a [`VecCodec`] and processes it with
+    // [`tonic::server::Grpc::unary`] and a [`GrpcRequestHandler`].
+    fn call(&mut self, request: http::Request<hyper::Body>) -> Self::Future {
+        let grpc_handler = GrpcRequestHandler::new(
+            self.runtime.clone(),
+            self.writer,
+            request.uri().path().to_string(),
+        );
+
+        let future = async move {
+            debug!("Processing an HTTP/2 request: {:?}", request);
+            let mut grpc_service = Grpc::new(VecCodec::default());
+            let response = grpc_service.unary(grpc_handler, request).await;
+            debug!("Sending an HTTP/2 response: {:?}", response);
+            Ok(response)
+        };
+
+        Box::pin(future)
+    }
+}
+
+/// Encapsulates [`VecEncoder`] and [`VecDecoder`] types and is used by [`tonic::server::Grpc`].
+#[derive(Default)]
+struct VecCodec;
+
+impl Codec for VecCodec {
+    type Encode = Vec<u8>;
+    type Decode = Vec<u8>;
+
+    type Encoder = VecEncoder;
+    type Decoder = VecDecoder;
+
+    fn encoder(&mut self) -> Self::Encoder {
+        VecEncoder::default()
+    }
+
+    fn decoder(&mut self) -> Self::Decoder {
+        VecDecoder::default()
+    }
+}
+
+/// Custom encoder for creating [`tonic::codec::EncodeBuf`] from bytes.
+#[derive(Default)]
+struct VecEncoder;
+
+impl Encoder for VecEncoder {
+    type Item = Vec<u8>;
+    type Error = tonic::Status;
+
+    fn encode(&mut self, item: Self::Item, dst: &mut EncodeBuf<'_>) -> Result<(), Self::Error> {
+        use bytes::BufMut;
+
+        dst.put(&item[..]);
+        Ok(())
+    }
+}
+
+/// Custom decoder for extracting bytes from [`tonic::codec::DecodeBuf`].
+#[derive(Default)]
+struct VecDecoder;
+
+impl Decoder for VecDecoder {
+    type Item = Vec<u8>;
+    type Error = tonic::Status;
+
+    fn decode(&mut self, src: &mut DecodeBuf<'_>) -> Result<Option<Self::Item>, Self::Error> {
+        use bytes::{buf::BufExt, Buf};
+
+        let item = Vec::from(src.reader().into_inner().bytes());
+        Ok(Some(item))
+    }
+}
+
+/// [`GrpcRequestHandler`] handles gRPC requests and generates gRPC responses.
+#[derive(Clone)]
+struct GrpcRequestHandler {
+    /// Reference to a Runtime that corresponds to the Node that created a gRPC server pseudo-Node.
+    runtime: RuntimeProxy,
+    /// Channel handle used for writing gRPC invocations.
+    writer: Handle,
+    /// Name of the gRPC method that should be invoked.
+    method_name: String,
+}
+
+impl UnaryService<Vec<u8>> for GrpcRequestHandler {
+    type Response = Vec<u8>;
+    type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
+
+    fn call(&mut self, request: tonic::Request<Vec<u8>>) -> Self::Future {
+        let handler = self.clone();
+        let future = async move {
+            debug!("Processing a gRPC request: {:?}", request);
+            METRICS.grpc_requests_total.inc();
+            let timer = METRICS.grpc_request_duration.start_timer();
+
+            // Decode a gRPC request.
+            let grpc_request =
+                encap_request(request.get_ref(), &handler.method_name).ok_or_else(|| {
+                    let warning = "Failed to parse an incoming Protobuf message";
+                    warn!("{}", warning);
+                    tonic::Status::new(tonic::Code::InvalidArgument, warning)
+                })?;
+
+            let response = handler
+                // Handle a gRPC request and send it into the Runtime.
+                .handle_grpc_request(grpc_request)
+                // Read a gRPC response from the Runtime.
+                .and_then(|response_reader| handler.handle_grpc_response(response_reader))
+                // Convert an error to a gRPC error status without sending clients descriptions for
+                // internal errors.
+                // Errors are logged inside inside [`GrpcRequestHandler::handle_grpc_request`] and
+                // [`GrpcRequestHandler::handle_grpc_response`].
+                .map_err(|_| tonic::Status::new(tonic::Code::Internal, ""))?;
+
+            // Send a gRPC response back to the client.
+            debug!("Sending a gRPC response: {:?}", response);
+            timer.observe_duration();
+            Ok(tonic::Response::new(response))
+        };
+
+        Box::pin(future)
+    }
+}
+
+impl GrpcRequestHandler {
+    fn new(runtime: RuntimeProxy, writer: Handle, method_name: String) -> Self {
+        Self {
+            runtime,
+            writer,
+            method_name,
         }
     }
 
-    /// Processes an HTTP request from a client and sends an HTTP response back.
-    async fn serve(
-        &self,
-        http_request: hyper::Request<hyper::Body>,
-    ) -> Result<hyper::Response<hyper::Body>, hyper::Error> {
-        // Parse HTTP header.
-        let http_request_path = http_request.uri().path().to_string();
-
-        // Aggregate the data buffers from an HTTP body asynchronously.
-        let http_request_body = hyper::body::aggregate(http_request)
-            .await
-            .map_err(|error| {
-                warn!("Couldn't aggregate request body: {}", error);
-                error
-            })?;
-
-        // Create a gRPC request from an HTTP body.
-        Self::decode_grpc_request(&http_request_path, &http_request_body)
-            // Process a gRPC request and send it into the Runtime.
-            .and_then(|request| self.process_request(request))
-            // Read a gRPC response from the Runtime.
-            .and_then(|response_reader| self.process_response(response_reader))
-            // Send gRPC response back to the HTTP client.
-            .map(|body| Self::http_response(http::StatusCode::OK, body))
-            // Convert an error to an HTTP response with a corresponding error status.
-            .or_else(|error| Ok(Self::http_response(error.into(), vec![])))
-    }
-
-    /// Creates a [`GrpcRequest`] instance from a `http_request_path` and an `http_request_body`.
-    fn decode_grpc_request(
-        http_request_path: &str,
-        http_request_body: &dyn hyper::body::Buf,
-    ) -> Result<GrpcRequest, GrpcServerError> {
-        // Parse an HTTP request body as an [`Any`] message.
-        let grpc_request_body = Any::decode(http_request_body.bytes()).map_err(|error| {
-            error!("Failed to parse Protobuf message {}", error);
-            GrpcServerError::BadProtobufMessage
-        })?;
-
-        // Create a gRPC request.
-        encap_request(&grpc_request_body, http_request_path).ok_or_else(|| {
-            error!("Failed to create a GrpcRequest");
-            GrpcServerError::BadProtobufMessage
-        })
-    }
-
-    /// Creates an HTTP response message.
-    fn http_response(status: http::StatusCode, body: Vec<u8>) -> hyper::Response<hyper::Body> {
-        let mut response = hyper::Response::new(hyper::Body::from(body));
-        *response.status_mut() = status;
-        response
-    }
-
-    /// Processes a gRPC request, forwards it to a temporary channel and sends handles for this
+    /// Handles a gRPC request, forwards it to a temporary channel and sends handles for this
     /// channel to the [`GrpcServerNode::channel_writer`].
     /// Returns a [`Handle`] for reading a gRPC response from.
-    fn process_request(&self, request: GrpcRequest) -> Result<Handle, GrpcServerError> {
+    fn handle_grpc_request(&self, request: GrpcRequest) -> Result<Handle, OakStatus> {
         // Create a pair of temporary channels to pass the gRPC request and to receive the response.
         let (request_writer, request_reader) =
             self.runtime.channel_create(&Label::public_trusted());
@@ -230,7 +380,7 @@ impl GrpcServerNode {
         };
         request.encode(&mut message.data).map_err(|error| {
             error!("Couldn't serialize a GrpcRequest message: {}", error);
-            GrpcServerError::RequestProcessingError
+            OakStatus::ErrInternal
         })?;
 
         // Send a message to the temporary channel.
@@ -241,32 +391,29 @@ impl GrpcServerNode {
                     "Couldn't write a message to the temporary channel: {:?}",
                     error
                 );
-                GrpcServerError::RequestProcessingError
+                error
             })?;
 
         // Send an invocation message (with attached handles) to the Oak Node.
         self.runtime
-            .channel_write(
-                self.channel_writer.expect("Node writer wasn't initialized"),
-                invocation,
-            )
+            .channel_write(self.writer, invocation)
             .map_err(|error| {
                 error!("Couldn't write a gRPC invocation message: {:?}", error);
-                GrpcServerError::RequestProcessingError
+                error
             })?;
 
         Ok(response_reader)
     }
 
-    /// Processes a gRPC response from a channel represented by `response_reader` and returns an
-    /// HTTP response body.
-    fn process_response(&self, response_reader: Handle) -> Result<Vec<u8>, GrpcServerError> {
+    /// Handles a gRPC response from a channel represented by `response_reader` and returns a
+    /// gRPC response body.
+    fn handle_grpc_response(&self, response_reader: Handle) -> Result<Vec<u8>, OakStatus> {
         let read_status = self
             .runtime
             .wait_on_channels(&[response_reader])
             .map_err(|error| {
                 error!("Couldn't wait on the temporary gRPC channel: {:?}", error);
-                GrpcServerError::ResponseProcessingError
+                error
             })?;
 
         if read_status[0] == ChannelReadStatus::ReadReady {
@@ -274,7 +421,7 @@ impl GrpcServerNode {
                 .channel_read(response_reader)
                 .map_err(|error| {
                     error!("Couldn't read from a temporary gRPC channel: {:?}", error);
-                    GrpcServerError::ResponseProcessingError
+                    error
                 })
                 .map(|message| {
                     // Return an empty HTTP body if the `message` is None.
@@ -288,59 +435,7 @@ impl GrpcServerNode {
                 "Couldn't read from a temporary gRPC channel: {:?}",
                 read_status[0]
             );
-            Err(GrpcServerError::ResponseProcessingError)
+            Err(OakStatus::ErrInternal)
         }
-    }
-
-    /// Main node worker thread.
-    fn worker_thread(self) {
-        let pretty_name = pretty_name_for_thread(&thread::current());
-
-        // Receive a `writer` handle used to pass handles for temporary channels.
-        self.init_channel_writer()
-            .expect("Couldn't initialialize node writer");
-
-        // Initialize a function that creates a separate instance on the `server` for each
-        // HTTP request.
-        //
-        // TODO(#813): Remove multiple `clone` calls by either introducing `Arc<Mutex<T>>`
-        // or not using Hyper (move to more simple single-threaded server).
-        let generator_server = self.clone();
-        let service = hyper::service::make_service_fn(move |_| {
-            let connection_server = generator_server.clone();
-            async move {
-                Ok::<_, hyper::Error>(hyper::service::service_fn(move |req| {
-                    let request_server = connection_server.clone();
-                    METRICS.grpc_requests_total.inc();
-                    async move {
-                        let timer = METRICS.grpc_request_duration.start_timer();
-                        let res = request_server.serve(req).await;
-                        timer.observe_duration();
-                        res
-                    }
-                }))
-            }
-        });
-
-        // Start the HTTP server.
-        let mut tokio_runtime =
-            tokio::runtime::Runtime::new().expect("Couldn't create Tokio runtime");
-        let result = tokio_runtime.block_on(hyper::Server::bind(&self.address).serve(service));
-        info!(
-            "{} LOG: exiting gRPC server node thread {:?}",
-            pretty_name, result
-        );
-        self.runtime.exit_node();
-    }
-}
-
-/// Oak Node implementation for the gRPC server.
-impl super::Node for GrpcServerNode {
-    fn start(self: Box<Self>) -> Result<JoinHandle<()>, OakStatus> {
-        let thread_handle = thread::Builder::new()
-            .name(self.to_string())
-            .spawn(move || self.worker_thread())
-            .expect("Failed to spawn thread");
-        Ok(thread_handle)
     }
 }
