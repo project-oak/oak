@@ -34,13 +34,7 @@ use oak_abi::{
     grpc::encap_request, label::Label, proto::oak::encap::GrpcRequest, ChannelReadStatus, OakStatus,
 };
 
-use crate::{
-    Handle,
-    metrics::METRICS,
-    node::Node,
-    pretty_name_for_thread,
-    runtime::RuntimeProxy,
-};
+use crate::{metrics::METRICS, node::Node, pretty_name_for_thread, runtime::RuntimeProxy, Handle};
 
 /// Struct that represents a gRPC server pseudo-Node.
 ///
