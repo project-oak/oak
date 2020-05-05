@@ -388,8 +388,6 @@
 <span id="388">388</span>
 <span id="389">389</span>
 <span id="390">390</span>
-<span id="391">391</span>
-<span id="392">392</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -416,9 +414,7 @@
 };
 <span class="kw">use</span> <span class="ident">hyper</span>::<span class="ident">service</span>::<span class="ident">Service</span>;
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">error</span>, <span class="ident">info</span>, <span class="ident">warn</span>};
-<span class="kw">use</span> <span class="ident">oak_abi</span>::{
-    <span class="ident">grpc</span>::<span class="ident">encap_request</span>, <span class="ident">label</span>::<span class="ident">Label</span>, <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">encap</span>::<span class="ident">GrpcRequest</span>, <span class="ident">ChannelReadStatus</span>, <span class="ident">OakStatus</span>,
-};
+<span class="kw">use</span> <span class="ident">oak_abi</span>::{<span class="ident">label</span>::<span class="ident">Label</span>, <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">encap</span>::<span class="ident">GrpcRequest</span>, <span class="ident">ChannelReadStatus</span>, <span class="ident">OakStatus</span>};
 <span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">fmt</span>::{<span class="self">self</span>, <span class="ident">Display</span>, <span class="ident">Formatter</span>},
@@ -660,13 +656,13 @@
             <span class="ident">METRICS</span>.<span class="ident">grpc_requests_total</span>.<span class="ident">inc</span>();
             <span class="kw">let</span> <span class="ident">timer</span> <span class="op">=</span> <span class="ident">METRICS</span>.<span class="ident">grpc_request_duration</span>.<span class="ident">start_timer</span>();
 
-            <span class="comment">// Decode a gRPC request.</span>
-            <span class="kw">let</span> <span class="ident">grpc_request</span> <span class="op">=</span>
-                <span class="ident">encap_request</span>(<span class="ident">request</span>.<span class="ident">get_ref</span>(), <span class="kw-2">&amp;</span><span class="ident">handler</span>.<span class="ident">method_name</span>).<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
-                    <span class="kw">let</span> <span class="ident">warning</span> <span class="op">=</span> <span class="string">&quot;Failed to parse an incoming Protobuf message&quot;</span>;
-                    <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">warning</span>);
-                    <span class="ident">tonic</span>::<span class="ident">Status</span>::<span class="ident">new</span>(<span class="ident">tonic</span>::<span class="ident">Code</span>::<span class="ident">InvalidArgument</span>, <span class="ident">warning</span>)
-                })<span class="question-mark">?</span>;
+            <span class="comment">// Create a gRPC request.</span>
+            <span class="comment">// TODO(#953): Add streaming support.</span>
+            <span class="kw">let</span> <span class="ident">grpc_request</span> <span class="op">=</span> <span class="ident">GrpcRequest</span> {
+                <span class="ident">method_name</span>: <span class="ident">handler</span>.<span class="ident">method_name</span>.<span class="ident">to_string</span>(),
+                <span class="ident">req_msg</span>: <span class="ident">request</span>.<span class="ident">into_inner</span>(),
+                <span class="ident">last</span>: <span class="bool-val">true</span>,
+            };
 
             <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">handler</span>
                 <span class="comment">// Handle a gRPC request and send it into the Runtime.</span>
