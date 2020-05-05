@@ -18,12 +18,10 @@
 //!
 //! To invoke, run the following command from the root of the repository:
 //!
-//! ```
 //! cargo run --package=oak_loader -- \
 //!     --application=<APP_CONFIG_PATH> \
 //!     --grpc-tls-private-key=<PRIVATE_KEY_PATH> \
 //!     --grpc-tls-certificate=<CERTIFICATE_PATH>
-//! ```
 
 use log::info;
 use oak_runtime::{configure_and_run, proto::oak::application::ApplicationConfiguration};

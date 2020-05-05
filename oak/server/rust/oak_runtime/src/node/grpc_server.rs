@@ -54,7 +54,7 @@ pub struct GrpcServerNode {
     address: SocketAddr,
     /// Loaded files containing a server TLS key and certificates.
     tls_identity: Identity,
-    /// Channel handle used for reading a [`GrpcServer::writer`] once the gRPC server
+    /// Channel handle used for reading a [`GrpcServer::channel_writer`] once the gRPC server
     /// pseudo-Node has started.
     initial_reader: Handle,
     /// Channel handle used for writing gRPC invocations.
