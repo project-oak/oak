@@ -34,7 +34,7 @@ use oak_abi::{
     grpc::encap_request, label::Label, proto::oak::encap::GrpcRequest, ChannelReadStatus, OakStatus,
 };
 
-use crate::{metrics::METRICS, pretty_name_for_thread, runtime::RuntimeProxy, Handle};
+use crate::{metrics::METRICS, node::Node, pretty_name_for_thread, runtime::RuntimeProxy, Handle};
 
 /// Struct that represents a gRPC server pseudo-Node.
 ///
@@ -188,7 +188,7 @@ impl GrpcServerNode {
 }
 
 /// Oak Node implementation for the gRPC server.
-impl super::Node for GrpcServerNode {
+impl Node for GrpcServerNode {
     fn start(self: Box<Self>) -> Result<JoinHandle<()>, OakStatus> {
         let thread_handle = thread::Builder::new()
             .name(self.to_string())
