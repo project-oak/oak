@@ -111,6 +111,57 @@
 <span id="111">111</span>
 <span id="112">112</span>
 <span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">/// Parameters needed by clients to initiate OpenID Connect authentication requests.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, ::<span class="ident">prost</span>::<span class="ident">Message</span>)]</span>
@@ -121,6 +172,18 @@
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span> <span class="op">=</span> <span class="string">&quot;2&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">auth_endpoint</span>: <span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">String</span>,
 }
+<span class="doccomment">/// Request for exchanging an authorisation code for an identity token.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, ::<span class="ident">prost</span>::<span class="ident">Message</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">IdentityTokenRequest</span> {
+    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span> <span class="op">=</span> <span class="string">&quot;1&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">auth_code</span>: <span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">String</span>,
+}
+<span class="doccomment">/// Wrapper for the exchanged identity token.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, ::<span class="ident">prost</span>::<span class="ident">Message</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">IdentityTokenResponse</span> {
+    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span> <span class="op">=</span> <span class="string">&quot;1&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">token</span>: <span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">String</span>,
+}
 <span class="doccomment">/// Generated server implementations.</span>
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">authentication_server</span> {
     <span class="attribute">#![<span class="ident">allow</span>(<span class="ident">unused_variables</span>, <span class="ident">dead_code</span>, <span class="ident">missing_docs</span>)]</span>
@@ -129,10 +192,16 @@
     <span class="doccomment">/// AuthenticationServer.</span>
     <span class="attribute">#[<span class="ident">async_trait</span>]</span>
     <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Authentication</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="lifetime">&#39;static</span> {
+        <span class="doccomment">/// Gets the parameters needed by a client to make an authentication request.</span>
         <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">get_auth_parameters</span>(
             <span class="kw-2">&amp;</span><span class="self">self</span>,
             <span class="ident">request</span>: <span class="ident">tonic</span>::<span class="ident">Request</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
         ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">tonic</span>::<span class="ident">Response</span><span class="op">&lt;</span><span class="kw">super</span>::<span class="ident">AuthParameters</span><span class="op">&gt;</span>, <span class="ident">tonic</span>::<span class="ident">Status</span><span class="op">&gt;</span>;
+        <span class="doccomment">/// Exchanges an authorisation code for an identity token.</span>
+        <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">get_token_from_code</span>(
+            <span class="kw-2">&amp;</span><span class="self">self</span>,
+            <span class="ident">request</span>: <span class="ident">tonic</span>::<span class="ident">Request</span><span class="op">&lt;</span><span class="kw">super</span>::<span class="ident">IdentityTokenRequest</span><span class="op">&gt;</span>,
+        ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">tonic</span>::<span class="ident">Response</span><span class="op">&lt;</span><span class="kw">super</span>::<span class="ident">IdentityTokenResponse</span><span class="op">&gt;</span>, <span class="ident">tonic</span>::<span class="ident">Status</span><span class="op">&gt;</span>;
     }
     <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
     <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
@@ -184,6 +253,39 @@
                         <span class="kw">let</span> <span class="ident">interceptor</span> <span class="op">=</span> <span class="ident">inner</span>.<span class="number">1</span>.<span class="ident">clone</span>();
                         <span class="kw">let</span> <span class="ident">inner</span> <span class="op">=</span> <span class="ident">inner</span>.<span class="number">0</span>;
                         <span class="kw">let</span> <span class="ident">method</span> <span class="op">=</span> <span class="ident">GetAuthParametersSvc</span>(<span class="ident">inner</span>);
+                        <span class="kw">let</span> <span class="ident">codec</span> <span class="op">=</span> <span class="ident">tonic</span>::<span class="ident">codec</span>::<span class="ident">ProstCodec</span>::<span class="ident">default</span>();
+                        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">grpc</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">interceptor</span>) <span class="op">=</span> <span class="ident">interceptor</span> {
+                            <span class="ident">tonic</span>::<span class="ident">server</span>::<span class="ident">Grpc</span>::<span class="ident">with_interceptor</span>(<span class="ident">codec</span>, <span class="ident">interceptor</span>)
+                        } <span class="kw">else</span> {
+                            <span class="ident">tonic</span>::<span class="ident">server</span>::<span class="ident">Grpc</span>::<span class="ident">new</span>(<span class="ident">codec</span>)
+                        };
+                        <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">grpc</span>.<span class="ident">unary</span>(<span class="ident">method</span>, <span class="ident">req</span>).<span class="kw">await</span>;
+                        <span class="prelude-val">Ok</span>(<span class="ident">res</span>)
+                    };
+                    <span class="ident">Box</span>::<span class="ident">pin</span>(<span class="ident">fut</span>)
+                }
+                <span class="string">&quot;/oak.examples.authentication.Authentication/GetTokenFromCode&quot;</span> <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_camel_case_types</span>)]</span>
+                    <span class="kw">struct</span> <span class="ident">GetTokenFromCodeSvc</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Authentication</span><span class="op">&gt;</span>(<span class="kw">pub</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>);
+                    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Authentication</span><span class="op">&gt;</span> <span class="ident">tonic</span>::<span class="ident">server</span>::<span class="ident">UnaryService</span><span class="op">&lt;</span><span class="kw">super</span>::<span class="ident">IdentityTokenRequest</span><span class="op">&gt;</span>
+                        <span class="kw">for</span> <span class="ident">GetTokenFromCodeSvc</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
+                    {
+                        <span class="kw">type</span> <span class="ident">Response</span> <span class="op">=</span> <span class="kw">super</span>::<span class="ident">IdentityTokenResponse</span>;
+                        <span class="kw">type</span> <span class="ident">Future</span> <span class="op">=</span> <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="ident">tonic</span>::<span class="ident">Response</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Response</span><span class="op">&gt;</span>, <span class="ident">tonic</span>::<span class="ident">Status</span><span class="op">&gt;</span>;
+                        <span class="kw">fn</span> <span class="ident">call</span>(
+                            <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
+                            <span class="ident">request</span>: <span class="ident">tonic</span>::<span class="ident">Request</span><span class="op">&lt;</span><span class="kw">super</span>::<span class="ident">IdentityTokenRequest</span><span class="op">&gt;</span>,
+                        ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>::<span class="ident">Future</span> {
+                            <span class="kw">let</span> <span class="ident">inner</span> <span class="op">=</span> <span class="self">self</span>.<span class="number">0</span>.<span class="ident">clone</span>();
+                            <span class="kw">let</span> <span class="ident">fut</span> <span class="op">=</span> <span class="kw">async</span> <span class="kw">move</span> { <span class="ident">inner</span>.<span class="ident">get_token_from_code</span>(<span class="ident">request</span>).<span class="kw">await</span> };
+                            <span class="ident">Box</span>::<span class="ident">pin</span>(<span class="ident">fut</span>)
+                        }
+                    }
+                    <span class="kw">let</span> <span class="ident">inner</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">clone</span>();
+                    <span class="kw">let</span> <span class="ident">fut</span> <span class="op">=</span> <span class="kw">async</span> <span class="kw">move</span> {
+                        <span class="kw">let</span> <span class="ident">interceptor</span> <span class="op">=</span> <span class="ident">inner</span>.<span class="number">1</span>.<span class="ident">clone</span>();
+                        <span class="kw">let</span> <span class="ident">inner</span> <span class="op">=</span> <span class="ident">inner</span>.<span class="number">0</span>;
+                        <span class="kw">let</span> <span class="ident">method</span> <span class="op">=</span> <span class="ident">GetTokenFromCodeSvc</span>(<span class="ident">inner</span>);
                         <span class="kw">let</span> <span class="ident">codec</span> <span class="op">=</span> <span class="ident">tonic</span>::<span class="ident">codec</span>::<span class="ident">ProstCodec</span>::<span class="ident">default</span>();
                         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">grpc</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">interceptor</span>) <span class="op">=</span> <span class="ident">interceptor</span> {
                             <span class="ident">tonic</span>::<span class="ident">server</span>::<span class="ident">Grpc</span>::<span class="ident">with_interceptor</span>(<span class="ident">codec</span>, <span class="ident">interceptor</span>)

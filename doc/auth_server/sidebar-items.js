@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["main",""]],"mod":[["proto",""]],"struct":[["AuthenticationHandler",""],["Opt",""]]});
+initSidebarItems({"fn":[["main",""]],"mod":[["auth_handler","gRPC service implementation for handling authentication requests from clients."],["proto",""],["token_exchanger","Utilities for exchanging authorisation codes for identity tokens and validating the resulting tokens."]],"struct":[["Opt",""]]});

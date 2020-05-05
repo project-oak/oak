@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["get_authentication_request_url","Gets the URL for authentication requests."]],"mod":[["proto",""]]});
+initSidebarItems({"fn":[["build_auth_client","Creates an `AuthenticationClient` that trusts certificates signed by the root certificate stored at `ca_cert` for TLS and connects to `auth_server`."],["get_authentication_request_url","Gets the URL for authentication requests."],["get_identity_token","Exchanges the authorisation code for an identity token."]],"mod":[["proto",""]]});
