@@ -14,4 +14,5 @@
 // limitations under the License.
 //
 
+mod codec;
 pub mod server;
