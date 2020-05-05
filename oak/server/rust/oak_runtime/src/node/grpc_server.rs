@@ -43,8 +43,7 @@ use crate::{metrics::METRICS, pretty_name_for_thread, runtime::RuntimeProxy, Han
 /// the [`GrpcServerNode::channel_writer`].
 #[derive(Clone)]
 pub struct GrpcServerNode {
-    /// Pseudo-Node name that corresponds to an entry from the
-    /// [`ApplicationConfiguration`].
+    /// Pseudo-Node name that corresponds to an entry from the [`ApplicationConfiguration`].
     ///
     /// [`ApplicationConfiguration`]: crate::proto::oak::application::ApplicationConfiguration
     config_name: String,
@@ -54,7 +53,7 @@ pub struct GrpcServerNode {
     address: SocketAddr,
     /// Loaded files containing a server TLS key and certificates.
     tls_identity: Identity,
-    /// Channel handle used for reading a [`GrpcServer::channel_writer`] once the gRPC server
+    /// Channel handle used for reading a [`GrpcServerNode::channel_writer`] once the gRPC server
     /// pseudo-Node has started.
     initial_reader: Handle,
     /// Channel handle used for writing gRPC invocations.
@@ -138,7 +137,7 @@ impl GrpcServerNode {
         Ok(())
     }
 
-    /// Main node worker thread.
+    /// Main Node worker thread.
     fn worker_thread(mut self) {
         let pretty_name = pretty_name_for_thread(&thread::current());
 
@@ -155,7 +154,7 @@ impl GrpcServerNode {
         };
 
         // Handles incoming TLS connections, unpacks HTTP/2 requests and forwards them to
-        // [`HttpRequestHandler::handle`]
+        // [`HttpRequestHandler::handle`].
         let server = tonic::transport::Server::builder()
             .tls_config(tonic::transport::ServerTlsConfig::new().identity(self.tls_identity))
             .add_service(handler)
