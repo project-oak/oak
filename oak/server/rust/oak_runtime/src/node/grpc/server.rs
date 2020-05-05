@@ -266,6 +266,7 @@ impl UnaryService<Vec<u8>> for GrpcRequestHandler {
             let timer = METRICS.grpc_request_duration.start_timer();
 
             // Create a gRPC request.
+            // TODO(#953): Add streaming support.
             let grpc_request = GrpcRequest {
                 method_name: handler.method_name.to_string(),
                 req_msg: request.into_inner(),
