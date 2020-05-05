@@ -78,7 +78,7 @@ fn read_file(filename: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    simple_logger::init().expect("failed to initialize logger");
+    simple_logger::init_by_env();
     let opt = Opt::from_args();
 
     // Load application configuration.
