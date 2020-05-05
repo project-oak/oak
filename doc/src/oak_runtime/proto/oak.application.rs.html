@@ -126,6 +126,12 @@
 <span id="126">126</span>
 <span id="127">127</span>
 <span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">/// An ApplicationConfiguration represents a unit of deployment in Oak.</span>
 <span class="doccomment">///</span>
@@ -211,6 +217,12 @@
     <span class="doccomment">/// `address` is represented as an &quot;ip_address:tcp_port&quot; string.</span>
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">address</span>: <span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">String</span>,
+    <span class="doccomment">/// Loaded private RSA key file used by a gRPC server pseudo-Node.</span>
+    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">bytes</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;2&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">grpc_tls_private_key</span>: <span class="ident">std</span>::<span class="ident">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Loaded PEM encoded X.509 TLS certificate file used by a gRPC server pseudo-Node.</span>
+    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">bytes</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;3&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">grpc_tls_certificate</span>: <span class="ident">std</span>::<span class="ident">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
 }
 <span class="doccomment">/// GrpcClientConfiguration describes the configuration of a gRPC client</span>
 <span class="doccomment">/// pseudo-Node (which is provided by the Oak Runtime), connected to a specific</span>

@@ -146,6 +146,18 @@
 <span id="146">146</span>
 <span id="147">147</span>
 <span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -169,6 +181,7 @@
     <span class="ident">sync</span>::<span class="ident">Arc</span>,
     <span class="ident">thread</span>::<span class="ident">JoinHandle</span>,
 };
+<span class="kw">use</span> <span class="ident">tonic</span>::<span class="ident">transport</span>::<span class="ident">Identity</span>;
 
 <span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">OakStatus</span>;
 
@@ -200,8 +213,12 @@
     <span class="doccomment">/// The configuration for a logging pseudo-Node.</span>
     <span class="ident">LogNode</span>,
 
-    <span class="doccomment">/// The configuration for a gRPC server pseudo-Node that contains an `address` to listen on.</span>
-    <span class="ident">GrpcServerNode</span> { <span class="ident">address</span>: <span class="ident">SocketAddr</span> },
+    <span class="doccomment">/// The configuration for a gRPC server pseudo-Node that contains an `address` to listen on and</span>
+    <span class="doccomment">/// a TLS identity that consists of a private RSA key and an X.509 TLS certificate.</span>
+    <span class="ident">GrpcServerNode</span> {
+        <span class="ident">address</span>: <span class="ident">SocketAddr</span>,
+        <span class="ident">tls_identity</span>: <span class="ident">Identity</span>,
+    },
 
     <span class="doccomment">/// The configuration for a Wasm Node.</span>
     <span class="comment">// It would be better to store a list of exported methods and copyable Wasm interpreter</span>
@@ -277,9 +294,16 @@
             <span class="ident">Configuration</span>::<span class="ident">LogNode</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">logger</span>::<span class="ident">LogNode</span>::<span class="ident">new</span>(<span class="ident">config_name</span>, <span class="ident">runtime</span>, <span class="ident">initial_reader</span>))
             }
-            <span class="ident">Configuration</span>::<span class="ident">GrpcServerNode</span> { <span class="ident">address</span> } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Box</span>::<span class="ident">new</span>(
-                <span class="ident">grpc_server</span>::<span class="ident">GrpcServerNode</span>::<span class="ident">new</span>(<span class="ident">config_name</span>, <span class="ident">runtime</span>, <span class="kw-2">*</span><span class="ident">address</span>, <span class="ident">initial_reader</span>),
-            ),
+            <span class="ident">Configuration</span>::<span class="ident">GrpcServerNode</span> {
+                <span class="ident">address</span>,
+                <span class="ident">tls_identity</span>,
+            } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">grpc_server</span>::<span class="ident">GrpcServerNode</span>::<span class="ident">new</span>(
+                <span class="ident">config_name</span>,
+                <span class="ident">runtime</span>,
+                <span class="kw-2">*</span><span class="ident">address</span>,
+                <span class="ident">tls_identity</span>.<span class="ident">clone</span>(),
+                <span class="ident">initial_reader</span>,
+            )),
             <span class="ident">Configuration</span>::<span class="ident">WasmNode</span> { <span class="ident">module</span> } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">wasm</span>::<span class="ident">WasmNode</span>::<span class="ident">new</span>(
                 <span class="ident">config_name</span>,
                 <span class="ident">runtime</span>,
