@@ -568,12 +568,9 @@ impl WasmInterface {
             }
         }
 
-        // If there are no valid channels, return with statuses of all the channels set to invalid.
-        if valid_channels.is_empty() {
-            self.set_statuses(&all_statuses, status_buff)?;
-            return Err(OakStatus::ErrBadHandle);
-        }
-
+        // Set all statuses to invalid, so that in case of an error, the buffer matches the returned
+        // OakStatus.
+        self.set_statuses(&all_statuses, status_buff)?;
         let (valid_statuses, all_valid) = match self.runtime.wait_on_channels(&valid_channels) {
             Ok(s) => Ok((s, true)),
             Err(ChannelStatusError::HasInvalid(s)) => Ok((s, false)),

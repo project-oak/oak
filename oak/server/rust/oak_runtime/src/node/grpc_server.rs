@@ -24,8 +24,7 @@ use std::{
 };
 
 use oak_abi::{
-    grpc::encap_request, label::Label, proto::oak::encap::GrpcRequest, ChannelReadStatus,
-    ChannelStatusError, OakStatus,
+    grpc::encap_request, label::Label, proto::oak::encap::GrpcRequest, ChannelReadStatus, OakStatus,
 };
 
 use crate::{metrics::METRICS, pretty_name_for_thread, runtime::RuntimeProxy, Handle};
@@ -118,10 +117,7 @@ impl GrpcServerNode {
             .wait_on_channels(&[self.initial_reader])
             .map_err(|error| {
                 error!("Couldn't wait on the initial reader handle: {:?}", error);
-                match error {
-                    ChannelStatusError::HasInvalid(_) => OakStatus::ErrInvalidChannel,
-                    ChannelStatusError::Error(_) => OakStatus::ErrInternal,
-                }
+                OakStatus::ErrInternal
             })?;
 
         if read_status[0] == ChannelReadStatus::ReadReady {

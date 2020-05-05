@@ -1101,7 +1101,6 @@ impl FrontendNode {
             vec![ChannelReadStatus::ReadReady],
             status_convert(oak::wait_on_channels(&[in1]))?
         );
-        info!("HERE!!!");
 
         // Consume the only message on channel 1.
         let mut buffer = Vec::<u8>::with_capacity(5);
@@ -1436,11 +1435,11 @@ impl FrontendNode {
 
             // Block until there is a response from one of the backends
             // available.
-            let readies = match oak::wait_on_channels(&self.backend_in) {
-                Ok(s) => Ok(s),
-                Err(ChannelStatusError::HasInvalid(s)) => Ok(s),
-                Err(ChannelStatusError::Error(s)) => Err(OakError::OakStatus(s)),
-            }?;
+            let readies = oak::wait_on_channels(&self.backend_in).or_else(|e| match e {
+                // Retrieve the statuses from HasInvalid, instead of terminating with error. 
+                ChannelStatusError::HasInvalid(s) => Ok(s),
+                ChannelStatusError::Error(s) => Err(OakError::OakStatus(s)),
+            })?;
 
             // Expect exactly one of the backends to have received
             // the message.

@@ -685,6 +685,10 @@ impl Runtime {
         node_id: NodeId,
         readers: &[Handle],
     ) -> Result<Vec<ChannelReadStatus>, ChannelStatusError> {
+        if readers.is_empty() {
+            return Err(ChannelStatusError::Error(OakStatus::ErrBadHandle));
+        }
+
         self.validate_handles_access(node_id, readers)?;
         self.validate_can_read_from_channels(node_id, readers)?;
 
