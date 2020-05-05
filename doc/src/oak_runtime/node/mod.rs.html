@@ -188,7 +188,7 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">runtime</span>::<span class="ident">RuntimeProxy</span>, <span class="ident">Handle</span>};
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">external</span>;
-<span class="kw">mod</span> <span class="ident">grpc_server</span>;
+<span class="kw">mod</span> <span class="ident">grpc</span>;
 <span class="kw">mod</span> <span class="ident">logger</span>;
 <span class="kw">mod</span> <span class="ident">wasm</span>;
 
@@ -297,7 +297,7 @@
             <span class="ident">Configuration</span>::<span class="ident">GrpcServerNode</span> {
                 <span class="ident">address</span>,
                 <span class="ident">tls_identity</span>,
-            } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">grpc_server</span>::<span class="ident">GrpcServerNode</span>::<span class="ident">new</span>(
+            } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">grpc</span>::<span class="ident">server</span>::<span class="ident">GrpcServerNode</span>::<span class="ident">new</span>(
                 <span class="ident">config_name</span>,
                 <span class="ident">runtime</span>,
                 <span class="kw-2">*</span><span class="ident">address</span>,
