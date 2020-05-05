@@ -14,8 +14,18 @@
 // limitations under the License.
 //
 
+use crate::{
+    metrics::METRICS,
+    node::{grpc::codec::VecCodec, Node},
+    pretty_name_for_thread,
+    runtime::RuntimeProxy,
+    Handle,
+};
 use hyper::service::Service;
 use log::{debug, error, info, warn};
+use oak_abi::{
+    grpc::encap_request, label::Label, proto::oak::encap::GrpcRequest, ChannelReadStatus, OakStatus,
+};
 use prost::Message;
 use std::{
     fmt::{self, Display, Formatter},
@@ -27,18 +37,6 @@ use tonic::{
     codegen::BoxFuture,
     server::{Grpc, UnaryService},
     transport::{Identity, NamedService},
-};
-
-use oak_abi::{
-    grpc::encap_request, label::Label, proto::oak::encap::GrpcRequest, ChannelReadStatus, OakStatus,
-};
-
-use crate::{
-    metrics::METRICS,
-    node::{grpc::codec::VecCodec, Node},
-    pretty_name_for_thread,
-    runtime::RuntimeProxy,
-    Handle,
 };
 
 /// Struct that represents a gRPC server pseudo-Node.
