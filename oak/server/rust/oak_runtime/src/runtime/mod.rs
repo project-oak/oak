@@ -807,7 +807,7 @@ impl Runtime {
                 self.channels.get_reader_channel(reference)?,
                 |channel| match channel.messages.write().unwrap().pop_front() {
                     Some(m) => {
-                        self.track_handles_in_node(node_id, vec![reference]);
+                        self.track_handles_in_node(node_id, m.channels.to_vec());
                         Ok(Some(m))
                     }
                     None => {
