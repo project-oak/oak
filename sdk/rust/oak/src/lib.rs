@@ -448,10 +448,17 @@ pub trait Node<T: crate::io::Decodable> {
 ///
 /// Note the loop is only interrupted if the Node is terminated while waiting. Other errors are just
 /// logged, and the event loop continues with the next iteration.
-pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(mut node: N, in_handle: u64) {
+pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(node: N, in_handle: u64) {
     let in_channel = crate::ReadHandle {
         handle: crate::Handle::from_raw(in_handle),
     };
+    run_event_loop_impl(node, in_channel)
+}
+
+pub fn run_event_loop_impl<T: crate::io::Decodable, N: Node<T>>(
+    mut node: N,
+    in_channel: crate::ReadHandle,
+) {
     if !in_channel.handle.is_valid() {
         error!("invalid input handle");
         return;
@@ -581,6 +588,33 @@ macro_rules! entrypoint {
                 ::oak::set_panic_hook();
 
                 ::oak::run_event_loop($node, in_handle);
+            });
+        }
+    };
+}
+
+/// Register a new Node entrypoint.
+///
+/// This registers the entrypoint name and the expression used to construct the Node instance.
+/// The returned object should be a function that runs [`::oak::run_event_loop`].
+#[macro_export]
+macro_rules! entrypoint_rust {
+    ($name:ident => $main_function:expr) => {
+        // Do not mangle these functions when running unit tests, because the Rust unit test
+        // framework will add a `pub extern "C" fn main()` containing the test runner. This can
+        // cause clashes when $name = main. We don't fully omit it in tests so that compile errors
+        // in the Node creation expression are still caught, and unit tests can still refer to the
+        // symbol if they really want to.
+        #[cfg_attr(not(test), no_mangle)]
+        pub extern "C" fn $name(_: u64) {
+            // A panic in the Rust module code cannot safely pass through the FFI
+            // boundary, so catch any panics here and drop them.
+            // https://doc.rust-lang.org/nomicon/ffi.html#ffi-and-panics
+            let _ = ::std::panic::catch_unwind(|| {
+                ::oak::set_panic_hook();
+
+                // Run the Node's `main` function.
+                $main_function;
             });
         }
     };

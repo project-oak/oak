@@ -29,3 +29,11 @@ serialized_config(
     },
     textproto = ":config.textproto",
 )
+
+serialized_config(
+    name = "config_rust",
+    modules = {
+        "app": "//:target/wasm32-unknown-unknown/release/private_set_intersection.wasm",
+    },
+    textproto = ":config_rust.textproto",
+)

@@ -13,6 +13,7 @@ while getopts "s:l:h" opt; do
   -s    Server type used to run examples:
           - base: base version of the server (default)
           - logless: base version of the server with debug logging compiled out
+          - rust: Rust version of the server
           - asan: server with address sanitizer
           - tsan: server with thread santizer
   -l    Run examples implemented in which language (default: both):
@@ -24,7 +25,7 @@ while getopts "s:l:h" opt; do
       languages="${OPTARG}";;
     s)
       case "${OPTARG}" in
-        base|logless|asan|tsan)
+        base|logless|rust|asan|tsan)
           server="${OPTARG}";;
         *)
           echo "Invalid server type: ${OPTARG}"
@@ -36,15 +37,28 @@ while getopts "s:l:h" opt; do
   esac
 done
 
-# Run all examples.
-for language in ${languages}; do
-  # TODO(#594): Re-enable rustfmt when upstream rustc internal error is fixed.
-  examples="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/'"${language}"'$' | cut -d'/' -f2 | uniq | grep -v rustfmt)"
-  for example in ${examples}; do
-    if [[ "${example}" == "chat" ]]; then
-        "${SCRIPTS_DIR}/run_example" -s "${server}" -l "${language}" -e chat -- --test
+if [[ "${server}" == "rust" ]]; then
+  # Run examples that are supported by the Rust Oak Loader.
+  for example in ${RUST_LOADER_EXAMPLES}; do
+    if [[ "${example}" == "abitest" ]]; then
+      # Run only currently supported tests.
+      "${SCRIPTS_DIR}/run_example" -s rust -l rust -e abitest -- \
+        --test_include UnaryMethodOK UnaryMethodErr
     else
-        "${SCRIPTS_DIR}/run_example" -s "${server}" -l "${language}" -e "${example}"
+      "${SCRIPTS_DIR}/run_example" -s rust -l rust -e "${example}"
     fi
   done
-done
+else
+  # Run all examples.
+  for language in ${languages}; do
+    # TODO(#594): Re-enable rustfmt when upstream rustc internal error is fixed.
+    examples="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/'"${language}"'$' | cut -d'/' -f2 | uniq | grep -v rustfmt)"
+    for example in ${examples}; do
+      if [[ "${example}" == "chat" ]]; then
+          "${SCRIPTS_DIR}/run_example" -s "${server}" -l "${language}" -e chat -- --test
+      else
+          "${SCRIPTS_DIR}/run_example" -s "${server}" -l "${language}" -e "${example}"
+      fi
+    done
+  done
+fi

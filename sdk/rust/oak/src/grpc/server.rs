@@ -22,8 +22,8 @@ use crate::{OakStatus, ReadHandle};
 pub const DEFAULT_CONFIG_NAME: &str = "grpc_server";
 
 /// Initialize a gRPC pseudo-Node with the default configuration.
-pub fn init_default() {
-    init(DEFAULT_CONFIG_NAME).expect("Coundn't create a gRPC pseudo-Node");
+pub fn init_default() -> ReadHandle {
+    init(DEFAULT_CONFIG_NAME).expect("Coundn't create a gRPC pseudo-Node")
 }
 
 /// Initializes a gRPC server pseudo-Node and passes it a handle to write invocations to.

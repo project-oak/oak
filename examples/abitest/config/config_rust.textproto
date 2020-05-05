@@ -1,0 +1,61 @@
+node_configs {
+  name: "frontend-config"
+  wasm_config {
+    module_bytes: "<bytes>"
+  }
+}
+node_configs {
+  name: "backend-config"
+  wasm_config {
+    module_bytes: "<bytes>"
+  }
+}
+node_configs {
+  name: "logging-config"
+  log_config {}
+}
+node_configs {
+  name: "storage"
+  storage_config {
+    address: "localhost:7867"
+  }
+}
+node_configs {
+  name: "absent-storage"
+  storage_config {
+    address: "test.invalid:9999"
+  }
+}
+node_configs {
+  name: "grpc_server"
+  grpc_server_config {
+    address: "[::]:8080"
+    grpc_tls_private_key: "<bytes>"
+    grpc_tls_certificate: "<bytes>"
+  }
+}
+node_configs {
+  name: "grpc-client"
+  grpc_client_config {
+    address: "localhost:7878"
+  }
+}
+node_configs {
+  name: "absent-grpc-client"
+  grpc_client_config {
+    address: "test.invalid:9999"
+  }
+}
+node_configs {
+  name: "roughtime-client"
+  roughtime_client_config {}
+}
+node_configs {
+  name: "roughtime-misconfig"
+  roughtime_client_config {
+    min_overlapping_intervals: 99
+  }
+}
+grpc_port: 8080
+initial_node_config_name: "frontend-config"
+initial_entrypoint_name: "frontend_oak_main_rust"

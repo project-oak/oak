@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include <cassert>
+
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 #include "examples/private_set_intersection/proto/private_set_intersection.grpc.pb.h"
@@ -23,7 +25,7 @@
 #include "oak/client/application_client.h"
 #include "oak/common/nonce_generator.h"
 
-ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak application to connect to");
+ABSL_FLAG(std::string, address, "localhost:8080", "Address of the Oak application to connect to");
 ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate");
 
 using ::oak::examples::private_set_intersection::GetIntersectionResponse;
@@ -87,18 +89,22 @@ int main(int argc, char** argv) {
   std::vector<std::string> set_1{"b", "c", "d"};
   SubmitSet(stub_1.get(), set_1);
 
+  std::set<std::string> expected_set{"b", "c"};
+
   // Retrieve intersection.
   std::vector<std::string> intersection_0 = RetrieveIntersection(stub_0.get());
   LOG(INFO) << "client 0 intersection:";
   for (auto item : intersection_0) {
     LOG(INFO) << "- " << item;
   }
+  assert(std::set<std::string>(intersection_0.begin(), intersection_0.end()) == expected_set);
 
   std::vector<std::string> intersection_1 = RetrieveIntersection(stub_1.get());
   LOG(INFO) << "client 1 intersection:";
   for (auto item : intersection_1) {
     LOG(INFO) << "- " << item;
   }
+  assert(std::set<std::string>(intersection_1.begin(), intersection_1.end()) == expected_set);
 
   return EXIT_SUCCESS;
 }

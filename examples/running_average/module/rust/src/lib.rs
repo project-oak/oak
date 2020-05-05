@@ -33,6 +33,12 @@ use proto::{GetAverageResponse, RunningAverage, RunningAverageDispatcher, Submit
 
 oak::entrypoint!(oak_main => RunningAverageDispatcher::new(Node::default()));
 
+oak::entrypoint_rust!(oak_main_rust => {
+    let dispatcher = RunningAverageDispatcher::new(Node::default());
+    let grpc_channel = oak::grpc::server::init_default();
+    oak::run_event_loop_impl(dispatcher, grpc_channel);
+});
+
 #[derive(Default)]
 struct Node {
     sum: u64,

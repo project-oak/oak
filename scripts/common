@@ -65,6 +65,17 @@ else
   )
 fi
 
+# Examples that are supported by the Rust Oak Loader.
+readonly RUST_LOADER_EXAMPLES=(
+  'abitest'
+  'chat'
+  'machine_learning'
+  'private_set_intersection'
+  'running_average'
+  'rustfmt'
+  'translator'
+)
+
 # kill_pid tries to kill the given pid(s), first softly then more aggressively.
 kill_pid() {
   local pids=( "$@" )

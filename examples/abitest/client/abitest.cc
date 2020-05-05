@@ -31,7 +31,7 @@
 #include "oak/server/storage/memory_provider.h"
 #include "oak/server/storage/storage_service.h"
 
-ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak application to connect to");
+ABSL_FLAG(std::string, address, "localhost:8080", "Address of the Oak application to connect to");
 ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate");
 ABSL_FLAG(int, storage_port, 7867,
           "Port on which the test Storage Server listens; set to zero to disable.");

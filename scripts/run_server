@@ -55,7 +55,17 @@ if [[ -n ${EXAMPLE+x} ]]; then
   # Determine expected configuration file from example name and language variant.
   case "${language}" in
     rust)
-      readonly APPLICATION="${PWD}/bazel-client-bin/examples/${EXAMPLE}/config/config.bin";;
+      # Compile examples that are supported by the Rust Oak Loader.
+      if [[ "${server}" == "rust" ]]; then
+        if [[ " ${RUST_LOADER_EXAMPLES[@]} " =~ " ${EXAMPLE} " ]]; then
+          readonly APPLICATION="${PWD}/bazel-client-bin/examples/${EXAMPLE}/config/config_rust.bin"
+        else
+          echo "Example ${EXAMPLE} is not supported by the rust server"
+          exit 1
+        fi
+      else
+        readonly APPLICATION="${PWD}/bazel-client-bin/examples/${EXAMPLE}/config/config.bin"
+      fi;;
     cpp)
       # TensorFlow example is compiled with Emscripten and other examples with Clang.
       if [[ "${EXAMPLE}" == "tensorflow" ]]; then

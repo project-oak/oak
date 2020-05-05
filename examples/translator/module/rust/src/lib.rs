@@ -28,6 +28,13 @@ oak::entrypoint!(oak_main => {
     TranslatorDispatcher::new(Node)
 });
 
+oak::entrypoint_rust!(oak_main_rust => {
+    oak::logger::init_default();
+    let dispatcher = TranslatorDispatcher::new(Node);
+    let grpc_channel = oak::grpc::server::init_default();
+    oak::run_event_loop_impl(dispatcher, grpc_channel);
+});
+
 struct Node;
 
 impl Translator for Node {

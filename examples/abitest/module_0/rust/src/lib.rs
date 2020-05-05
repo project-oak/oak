@@ -125,6 +125,17 @@ pub extern "C" fn frontend_oak_main(in_handle: u64) {
     });
 }
 
+#[no_mangle]
+pub extern "C" fn frontend_oak_main_rust(_: u64) {
+    let _ = std::panic::catch_unwind(|| {
+        oak::set_panic_hook();
+        let node = FrontendNode::new();
+        let dispatcher = OakAbiTestServiceDispatcher::new(node);
+        let grpc_channel = oak::grpc::server::init_default();
+        oak::run_event_loop_impl(dispatcher, grpc_channel);
+    });
+}
+
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 type TestFn = fn(&mut FrontendNode) -> TestResult;
 

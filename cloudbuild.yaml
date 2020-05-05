@@ -88,10 +88,16 @@ steps:
     timeout: 60m
     entrypoint: 'bash'
     args: ['./scripts/run_examples', '-s', 'base']
+  - name: 'gcr.io/oak-ci/oak:latest'
+    id: run_examples_rust
+    waitFor: ['run_examples']
+    timeout: 60m
+    entrypoint: 'bash'
+    args: ['./scripts/run_examples', '-s', 'rust']
   # TODO(942): Reenable `run_examples` with `asan` and `tsan`.
   # - name: 'gcr.io/oak-ci/oak:latest'
   #   id: run_examples_asan
-  #   waitFor: ['run_examples']
+  #   waitFor: ['run_examples_rust']
   #   timeout: 60m
   #   entrypoint: 'bash'
   #   args: ['./scripts/run_examples', '-s', 'asan']
@@ -114,7 +120,7 @@ steps:
   # ignored by git.
   - name: 'gcr.io/oak-ci/oak:latest'
     id: git_check_diff
-    waitFor: ['git_init', 'run_clang_tidy', 'run_examples']
+    waitFor: ['git_init', 'run_clang_tidy', 'run_examples', 'run_examples_rust']
     timeout: 5m
     entrypoint: 'bash'
     args: ['./scripts/git_check_diff']

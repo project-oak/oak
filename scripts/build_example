@@ -69,6 +69,11 @@ case "${language}" in
       cargo build --release --package=aggregator_backend
     fi
     bazel --output_base="${CACHE_DIR}/client" build "${bazel_build_flags[@]}" "//examples/${EXAMPLE}/config:config"
+
+    # Compile examples that are supported by the Rust Oak Loader.
+    if [[ " ${RUST_LOADER_EXAMPLES[@]} " =~ " ${EXAMPLE} " ]]; then
+      bazel --output_base="${CACHE_DIR}/client" build "${bazel_build_flags[@]}" "//examples/${EXAMPLE}/config:config_rust"
+    fi
     ;;
   cpp)
     # `config_cpp` depends on a Wasm module, so it should be built with `wasm32` or `emscripten`.

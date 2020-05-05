@@ -30,3 +30,12 @@ serialized_config(
     },
     textproto = ":config.textproto",
 )
+
+serialized_config(
+    name = "config_rust",
+    modules = {
+        "frontend-config": "//:target/wasm32-unknown-unknown/release/abitest_0_frontend.wasm",
+        "backend-config": "//:target/wasm32-unknown-unknown/release/abitest_1_backend.wasm",
+    },
+    textproto = ":config_rust.textproto",
+)

@@ -156,6 +156,18 @@ oak::entrypoint!(oak_main => {
     }
 });
 
+oak::entrypoint_rust!(oak_main_rust => {
+    oak::logger::init_default();
+    let node = Node {
+        training_set_size: 1000,
+        test_set_size: 1000,
+        config: None,
+        model: NaiveBayes::new(),
+    };
+    let grpc_channel = oak::grpc::server::init_default();
+    oak::run_event_loop_impl(node, grpc_channel);
+});
+
 struct Node {
     training_set_size: usize,
     test_set_size: usize,
