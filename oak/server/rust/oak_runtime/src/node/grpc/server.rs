@@ -23,9 +23,7 @@ use crate::{
 };
 use hyper::service::Service;
 use log::{debug, error, info, warn};
-use oak_abi::{
-    grpc::encap_request, label::Label, proto::oak::encap::GrpcRequest, ChannelReadStatus, OakStatus,
-};
+use oak_abi::{label::Label, proto::oak::encap::GrpcRequest, ChannelReadStatus, OakStatus};
 use prost::Message;
 use std::{
     fmt::{self, Display, Formatter},
@@ -268,12 +266,11 @@ impl UnaryService<Vec<u8>> for GrpcRequestHandler {
             let timer = METRICS.grpc_request_duration.start_timer();
 
             // Decode a gRPC request.
-            let grpc_request =
-                encap_request(request.get_ref(), &handler.method_name).ok_or_else(|| {
-                    let warning = "Failed to parse an incoming Protobuf message";
-                    warn!("{}", warning);
-                    tonic::Status::new(tonic::Code::InvalidArgument, warning)
-                })?;
+            let grpc_request = GrpcRequest {
+                method_name: handler.method_name.to_string(),
+                req_msg: request.into_inner(),
+                last: true,
+            };
 
             let response = handler
                 // Handle a gRPC request and send it into the Runtime.
