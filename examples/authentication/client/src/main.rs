@@ -60,14 +60,13 @@ pub struct Opt {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
     let opt = Opt::from_args();
-    let request_url = auth_client::get_authentication_request_url(
-        &opt.ca_cert,
-        &opt.auth_server,
-        &opt.redirect_address,
-    )
-    .await?;
+    let mut client = auth_client::build_auth_client(&opt.ca_cert, &opt.auth_server).await?;
+    let request_url =
+        auth_client::get_authentication_request_url(&mut client, &opt.redirect_address).await?;
     let code = get_authentication_code(&opt.redirect_address, &request_url).await?;
-    info!("Received code: {}", code);
+    info!("Received code: {}", &code);
+    let token = auth_client::get_identity_token(&mut client, &code).await?;
+    info!("Received token: {}", &token);
     Ok(())
 }
 

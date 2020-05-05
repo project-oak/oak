@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use proto::authentication_client::AuthenticationClient;
+use proto::{authentication_client::AuthenticationClient, IdentityTokenRequest};
 use tonic::transport::{Certificate, Channel, ClientTlsConfig};
 use url::Url;
 
@@ -22,15 +22,12 @@ pub mod proto {
     tonic::include_proto!("oak.examples.authentication");
 }
 
-/// Gets the URL for authentication requests.
-///
-/// See: https://developers.google.com/identity/protocols/oauth2/openid-connect#sendauthrequest
-/// for more details on the request URL for the Google Identity Platform.
-pub async fn get_authentication_request_url(
+/// Creates an `AuthenticationClient` that trusts certificates signed by the root certificate stored
+/// at `ca_cert` for TLS and connects to `auth_server`.
+pub async fn build_auth_client(
     ca_cert: &str,
     auth_server: &str,
-    redirect_address: &str,
-) -> Result<String, Box<dyn std::error::Error>> {
+) -> Result<AuthenticationClient<Channel>, Box<dyn std::error::Error>> {
     let root_cert = tokio::fs::read(ca_cert).await?;
     let root_cert = Certificate::from_pem(root_cert);
     let tls_config = ClientTlsConfig::new().ca_certificate(root_cert);
@@ -40,8 +37,17 @@ pub async fn get_authentication_request_url(
         .connect()
         .await?;
 
-    let mut auth_client = AuthenticationClient::new(channel);
+    Ok(AuthenticationClient::new(channel))
+}
 
+/// Gets the URL for authentication requests.
+///
+/// See: https://developers.google.com/identity/protocols/oauth2/openid-connect#sendauthrequest
+/// for more details on the request URL for the Google Identity Platform.
+pub async fn get_authentication_request_url(
+    auth_client: &mut AuthenticationClient<Channel>,
+    redirect_address: &str,
+) -> Result<String, Box<dyn std::error::Error>> {
     let request = tonic::Request::new(());
     let response = auth_client.get_auth_parameters(request).await?.into_inner();
 
@@ -57,4 +63,16 @@ pub async fn get_authentication_request_url(
         .append_pair("redirect_uri", &redirect_url)
         .append_pair("client_id", &response.client_id);
     Ok(auth_endpoint.to_string())
+}
+
+/// Exchanges the authorisation code for an identity token.
+pub async fn get_identity_token(
+    auth_client: &mut AuthenticationClient<Channel>,
+    code: &str,
+) -> Result<String, Box<dyn std::error::Error>> {
+    let request = tonic::Request::new(IdentityTokenRequest {
+        auth_code: code.to_owned(),
+    });
+    let response = auth_client.get_token_from_code(request).await?.into_inner();
+    Ok(response.token)
 }
