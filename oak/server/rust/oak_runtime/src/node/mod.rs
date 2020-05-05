@@ -27,7 +27,7 @@ use oak_abi::OakStatus;
 use crate::{runtime::RuntimeProxy, Handle};
 
 pub mod external;
-mod grpc_server;
+mod grpc;
 mod logger;
 mod wasm;
 
@@ -136,7 +136,7 @@ impl Configuration {
             Configuration::GrpcServerNode {
                 address,
                 tls_identity,
-            } => Box::new(grpc_server::GrpcServerNode::new(
+            } => Box::new(grpc::server::GrpcServerNode::new(
                 config_name,
                 runtime,
                 *address,
