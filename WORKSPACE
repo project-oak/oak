@@ -261,14 +261,6 @@ rust_repository_set(
     version = "nightly",
 )
 
-rust_repository_set(
-    name = "rust_darwin_x86_64",
-    exec_triple = "x86_64-apple-darwin",
-    extra_target_triples = ["wasm32-unknown-unknown"],
-    iso_date = "2020-04-17",
-    version = "nightly",
-)
-
 load("//cargo:crates.bzl", "raze_fetch_remote_crates")
 
 raze_fetch_remote_crates()
