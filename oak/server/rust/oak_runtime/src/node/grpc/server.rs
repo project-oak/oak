@@ -265,7 +265,7 @@ impl UnaryService<Vec<u8>> for GrpcRequestHandler {
             METRICS.grpc_requests_total.inc();
             let timer = METRICS.grpc_request_duration.start_timer();
 
-            // Decode a gRPC request.
+            // Create a gRPC request.
             let grpc_request = GrpcRequest {
                 method_name: handler.method_name.to_string(),
                 req_msg: request.into_inner(),
