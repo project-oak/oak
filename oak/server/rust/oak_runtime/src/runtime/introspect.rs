@@ -42,6 +42,7 @@ fn dot_wrap(title: &str, graph: &str) -> String {
         integrity="sha384-rhFJRiWvj+zkVQouZi5hc+vHuqhp1N8AnncxPSaKQ+PUhODpXC3Pgy4EcxjYCIYA"
         crossorigin="anonymous"></script>
 <div id="graph" style="text-align: center;"></div>
+<style>html, body, #graph, #graph > * {{ width: 100%; height: 100%; margin: 0;}}</style>
 <script>d3.select("#graph").graphviz().renderDot(`
 {}
 `);</script>
