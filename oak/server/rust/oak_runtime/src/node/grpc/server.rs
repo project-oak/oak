@@ -24,7 +24,6 @@ use std::{
     thread::{self, JoinHandle},
 };
 use tonic::{
-    codec::{Codec, DecodeBuf, Decoder, EncodeBuf, Encoder},
     codegen::BoxFuture,
     server::{Grpc, UnaryService},
     transport::{Identity, NamedService},
@@ -34,7 +33,13 @@ use oak_abi::{
     grpc::encap_request, label::Label, proto::oak::encap::GrpcRequest, ChannelReadStatus, OakStatus,
 };
 
-use crate::{metrics::METRICS, node::Node, pretty_name_for_thread, runtime::RuntimeProxy, Handle};
+use crate::{
+    metrics::METRICS,
+    node::{grpc::codec::VecCodec, Node},
+    pretty_name_for_thread,
+    runtime::RuntimeProxy,
+    Handle,
+};
 
 /// Struct that represents a gRPC server pseudo-Node.
 ///
@@ -239,58 +244,6 @@ impl Service<http::Request<hyper::Body>> for HttpRequestHandler {
         };
 
         Box::pin(future)
-    }
-}
-
-/// Encapsulates [`VecEncoder`] and [`VecDecoder`] types and is used by [`tonic::server::Grpc`].
-#[derive(Default)]
-struct VecCodec;
-
-impl Codec for VecCodec {
-    type Encode = Vec<u8>;
-    type Decode = Vec<u8>;
-
-    type Encoder = VecEncoder;
-    type Decoder = VecDecoder;
-
-    fn encoder(&mut self) -> Self::Encoder {
-        VecEncoder::default()
-    }
-
-    fn decoder(&mut self) -> Self::Decoder {
-        VecDecoder::default()
-    }
-}
-
-/// Custom encoder for creating [`tonic::codec::EncodeBuf`] from bytes.
-#[derive(Default)]
-struct VecEncoder;
-
-impl Encoder for VecEncoder {
-    type Item = Vec<u8>;
-    type Error = tonic::Status;
-
-    fn encode(&mut self, item: Self::Item, dst: &mut EncodeBuf<'_>) -> Result<(), Self::Error> {
-        use bytes::BufMut;
-
-        dst.put(&item[..]);
-        Ok(())
-    }
-}
-
-/// Custom decoder for extracting bytes from [`tonic::codec::DecodeBuf`].
-#[derive(Default)]
-struct VecDecoder;
-
-impl Decoder for VecDecoder {
-    type Item = Vec<u8>;
-    type Error = tonic::Status;
-
-    fn decode(&mut self, src: &mut DecodeBuf<'_>) -> Result<Option<Self::Item>, Self::Error> {
-        use bytes::{buf::BufExt, Buf};
-
-        let item = Vec::from(src.reader().into_inner().bytes());
-        Ok(Some(item))
     }
 }
 
