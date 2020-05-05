@@ -188,3 +188,4 @@ RUN rustup component add \
 
 RUN cargo install cargo-deadlinks
 RUN cargo install cargo-raze
+RUN cargo install cargo-deny

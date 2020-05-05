@@ -3,6 +3,7 @@ name = "aggregator_backend"
 version = "0.1.0"
 authors = ["Ivan Petrov <ivanpetrov@google.com>"]
 edition = "2018"
+license = "Apache-2.0"
 
 [dependencies]
 env_logger = "*"
