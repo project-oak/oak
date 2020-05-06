@@ -67,14 +67,19 @@ struct NodeInfo {
 
     /// Map of ABI handles to channels.
     abi_handles: HashMap<oak_abi::Handle, ChannelHalf>,
+
+    /// If the Node is currently running, holds the [`JoinHandle`] for its thread
+    /// (with one small exception, when the Runtime is in the process of closing
+    /// down and the [`JoinHandle`] is held by the shutdown processing code).
+    join_handle: Option<JoinHandle<()>>,
 }
 
 impl std::fmt::Debug for NodeInfo {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "NodeInfo {{'{}', label={:?}, handles=[",
-            self.pretty_name, self.label
+            "NodeInfo {{'{}', label={:?}, join_handle={:?}, handles=[",
+            self.pretty_name, self.label, self.join_handle,
         )?;
         write!(
             f,
@@ -186,10 +191,6 @@ pub struct Runtime {
     /// Runtime-specific state for each Node instance.
     node_infos: RwLock<HashMap<NodeId, NodeInfo>>,
 
-    /// [`JoinHandle`]s of the currently running Node instances, so that [`Runtime::stop`] can wait
-    /// for termination of all of them.
-    node_join_handles: Mutex<HashMap<NodeId, JoinHandle<()>>>,
-
     next_node_id: AtomicU64,
 
     aux_servers: Mutex<Vec<AuxServer>>,
@@ -271,7 +272,6 @@ impl RuntimeProxy {
             next_channel_id: AtomicU64::new(0),
 
             node_infos: RwLock::new(HashMap::new()),
-            node_join_handles: Mutex::new(HashMap::new()),
 
             next_node_id: AtomicU64::new(0),
 
@@ -389,13 +389,7 @@ impl Runtime {
                     node_id.html_path(),
                 )
                 .unwrap();
-                if self
-                    .node_join_handles
-                    .lock()
-                    .unwrap()
-                    .get(&node_id)
-                    .is_none()
-                {
+                if node_info.join_handle.is_none() {
                     write!(&mut s, " [style=dashed]").unwrap();
                 }
                 writeln!(&mut s).unwrap();
@@ -528,16 +522,12 @@ impl Runtime {
                 let node_info = node_infos.get(node_id).unwrap();
                 write!(
                     &mut s,
-                    r###"<li><a href="{}">{:?}</a> => <tt>{:?}"###,
+                    r###"<li><a href="{}">{:?}</a> => <tt>{:?}</tt>"###,
                     node_id.html_path(),
                     node_id,
                     node_info
                 )
                 .unwrap();
-                if let Some(join_handle) = self.node_join_handles.lock().unwrap().get(&node_id) {
-                    write!(&mut s, ", join_handle={:?}", join_handle).unwrap();
-                }
-                writeln!(&mut s, "</tt>").unwrap();
             }
         }
         writeln!(&mut s, "</ul>").unwrap();
@@ -551,7 +541,7 @@ impl Runtime {
         let node_info = node_infos.get(&node_id)?;
         let mut s = String::new();
         write!(&mut s, "<h2>{}</h2>", node_info.pretty_name).unwrap();
-        if let Some(join_handle) = self.node_join_handles.lock().unwrap().get(&node_id) {
+        if let Some(join_handle) = &node_info.join_handle {
             write!(
                 &mut s,
                 "<p>Node thread is currently running, join_handle={:?}",
@@ -618,26 +608,38 @@ impl Runtime {
         // for any additional work to be finished here. This may take an arbitrary amount of time,
         // depending on the work that the Node thread has to perform, but at least we know that the
         // it will not be able to enter again in a blocking state.
-        for (node_id, instance) in self
-            .node_join_handles
-            .lock()
-            .expect("could not acquire lock on node_join_handles")
-            .drain()
-        {
-            debug!("join thread for {:?}...", node_id);
-            if let Err(err) = instance.join() {
-                error!("could not terminate node: {:?}", err);
+        let join_handles = self.take_join_handles();
+        for (node_id, join_handle_opt) in join_handles {
+            if let Some(join_handle) = join_handle_opt {
+                debug!("join thread for {:?} ...", node_id);
+                if let Err(err) = join_handle.join() {
+                    error!("could not join node {:?}: {:?}", node_id, err);
+                }
+                debug!("join thread for {:?}...done", node_id);
             }
-            debug!("join thread for {:?}...done", node_id);
+            // There is now no thread running for this Node, so it is safe to remove
+            // the information for it.
+            self.remove_node_id(node_id);
         }
     }
 
-    fn notify_all_waiters(&self) {
-        // Hold the write lock and wake up any Node threads blocked on
-        // a `Channel`.
-        let node_infos = self
+    // Move all of the Node join handles out of the `node_infos` tracker.
+    fn take_join_handles(&self) -> Vec<(NodeId, Option<JoinHandle<()>>)> {
+        let mut node_infos = self
             .node_infos
             .write()
+            .expect("could not acquire lock on node_infos");
+        node_infos
+            .iter_mut()
+            .map(|(id, info)| (*id, info.join_handle.take()))
+            .collect()
+    }
+
+    fn notify_all_waiters(&self) {
+        // Hold the write lock and wake up any Node threads blocked on a `Channel`.
+        let node_infos = self
+            .node_infos
+            .read()
             .expect("could not acquire lock on node_infos");
         for node_id in node_infos.keys().sorted() {
             let node_info = node_infos.get(node_id).unwrap();
@@ -1050,9 +1052,10 @@ impl Runtime {
         // Close any remaining handles
         let remaining_handles: Vec<_> = {
             let node_infos = self.node_infos.read().unwrap();
-            let node_info = node_infos
-                .get(&node_id)
-                .unwrap_or_else(|| panic!("remove_node_id: No such node_id {:?}", node_id));
+            let node_info = match node_infos.get(&node_id) {
+                Some(node_info) => node_info,
+                None => return,
+            };
             node_info.abi_handles.keys().copied().collect()
         };
 
@@ -1093,13 +1096,17 @@ impl Runtime {
         );
     }
 
-    /// Add an [`NodeId`] [`JoinHandle`] pair to the [`Runtime`]. This method temporarily holds the
-    /// [`Runtime::node_join_handles`] lock.
+    /// Add the [`JoinHandle`] for a running Node to `NodeInfo`. The provided `NodeId` value
+    /// must already be present in `self.node_infos`.
     fn add_node_join_handle(&self, node_id: NodeId, node_join_handle: JoinHandle<()>) {
-        self.node_join_handles
-            .lock()
-            .expect("could not acquire lock on node_join_handles")
-            .insert(node_id, node_join_handle);
+        let mut node_infos = self
+            .node_infos
+            .write()
+            .expect("could not acquire lock on node_infos");
+        let mut node_info = node_infos
+            .get_mut(&node_id)
+            .expect("node ID not in node_infos");
+        node_info.join_handle = Some(node_join_handle);
     }
 
     /// Thread safe method that attempts to create a Node within the [`Runtime`] corresponding to a
@@ -1212,6 +1219,7 @@ impl Runtime {
                 pretty_name,
                 label: label.clone(),
                 abi_handles: HashMap::new(),
+                join_handle: None,
             },
         );
     }
