@@ -1233,6 +1233,108 @@
 <span id="1233">1233</span>
 <span id="1234">1234</span>
 <span id="1235">1235</span>
+<span id="1236">1236</span>
+<span id="1237">1237</span>
+<span id="1238">1238</span>
+<span id="1239">1239</span>
+<span id="1240">1240</span>
+<span id="1241">1241</span>
+<span id="1242">1242</span>
+<span id="1243">1243</span>
+<span id="1244">1244</span>
+<span id="1245">1245</span>
+<span id="1246">1246</span>
+<span id="1247">1247</span>
+<span id="1248">1248</span>
+<span id="1249">1249</span>
+<span id="1250">1250</span>
+<span id="1251">1251</span>
+<span id="1252">1252</span>
+<span id="1253">1253</span>
+<span id="1254">1254</span>
+<span id="1255">1255</span>
+<span id="1256">1256</span>
+<span id="1257">1257</span>
+<span id="1258">1258</span>
+<span id="1259">1259</span>
+<span id="1260">1260</span>
+<span id="1261">1261</span>
+<span id="1262">1262</span>
+<span id="1263">1263</span>
+<span id="1264">1264</span>
+<span id="1265">1265</span>
+<span id="1266">1266</span>
+<span id="1267">1267</span>
+<span id="1268">1268</span>
+<span id="1269">1269</span>
+<span id="1270">1270</span>
+<span id="1271">1271</span>
+<span id="1272">1272</span>
+<span id="1273">1273</span>
+<span id="1274">1274</span>
+<span id="1275">1275</span>
+<span id="1276">1276</span>
+<span id="1277">1277</span>
+<span id="1278">1278</span>
+<span id="1279">1279</span>
+<span id="1280">1280</span>
+<span id="1281">1281</span>
+<span id="1282">1282</span>
+<span id="1283">1283</span>
+<span id="1284">1284</span>
+<span id="1285">1285</span>
+<span id="1286">1286</span>
+<span id="1287">1287</span>
+<span id="1288">1288</span>
+<span id="1289">1289</span>
+<span id="1290">1290</span>
+<span id="1291">1291</span>
+<span id="1292">1292</span>
+<span id="1293">1293</span>
+<span id="1294">1294</span>
+<span id="1295">1295</span>
+<span id="1296">1296</span>
+<span id="1297">1297</span>
+<span id="1298">1298</span>
+<span id="1299">1299</span>
+<span id="1300">1300</span>
+<span id="1301">1301</span>
+<span id="1302">1302</span>
+<span id="1303">1303</span>
+<span id="1304">1304</span>
+<span id="1305">1305</span>
+<span id="1306">1306</span>
+<span id="1307">1307</span>
+<span id="1308">1308</span>
+<span id="1309">1309</span>
+<span id="1310">1310</span>
+<span id="1311">1311</span>
+<span id="1312">1312</span>
+<span id="1313">1313</span>
+<span id="1314">1314</span>
+<span id="1315">1315</span>
+<span id="1316">1316</span>
+<span id="1317">1317</span>
+<span id="1318">1318</span>
+<span id="1319">1319</span>
+<span id="1320">1320</span>
+<span id="1321">1321</span>
+<span id="1322">1322</span>
+<span id="1323">1323</span>
+<span id="1324">1324</span>
+<span id="1325">1325</span>
+<span id="1326">1326</span>
+<span id="1327">1327</span>
+<span id="1328">1328</span>
+<span id="1329">1329</span>
+<span id="1330">1330</span>
+<span id="1331">1331</span>
+<span id="1332">1332</span>
+<span id="1333">1333</span>
+<span id="1334">1334</span>
+<span id="1335">1335</span>
+<span id="1336">1336</span>
+<span id="1337">1337</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -1250,11 +1352,19 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
+<span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">message</span>::{<span class="ident">Message</span>, <span class="ident">NodeMessage</span>},
+    <span class="ident">metrics</span>::<span class="ident">METRICS</span>,
+    <span class="ident">node</span>, <span class="ident">pretty_name_for_thread</span>,
+    <span class="ident">runtime</span>::<span class="ident">channel</span>::{<span class="ident">with_reader_channel</span>, <span class="ident">with_writer_channel</span>, <span class="ident">Channel</span>},
+};
 <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">sync</span>::<span class="ident">atomic</span>::{<span class="ident">AtomicBool</span>, <span class="ident">AtomicU64</span>, <span class="ident">Ordering</span>::<span class="ident">SeqCst</span>};
 <span class="kw">use</span> <span class="ident">itertools</span>::<span class="ident">Itertools</span>;
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">error</span>, <span class="ident">info</span>, <span class="ident">trace</span>};
+<span class="kw">use</span> <span class="ident">oak_abi</span>::{<span class="ident">label</span>::<span class="ident">Label</span>, <span class="ident">ChannelReadStatus</span>, <span class="ident">OakStatus</span>};
+<span class="kw">use</span> <span class="ident">rand</span>::<span class="ident">RngCore</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
-    <span class="ident">collections</span>::{<span class="ident">HashMap</span>, <span class="ident">HashSet</span>},
+    <span class="ident">collections</span>::<span class="ident">HashMap</span>,
     <span class="ident">fmt</span>::<span class="ident">Write</span>,
     <span class="ident">string</span>::<span class="ident">String</span>,
     <span class="ident">sync</span>::{<span class="ident">Arc</span>, <span class="ident">Mutex</span>, <span class="ident">RwLock</span>},
@@ -1262,16 +1372,13 @@
     <span class="ident">thread</span>::<span class="ident">JoinHandle</span>,
 };
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">message</span>::<span class="ident">Message</span>, <span class="ident">metrics</span>::<span class="ident">METRICS</span>, <span class="ident">node</span>, <span class="ident">pretty_name_for_thread</span>};
-<span class="kw">use</span> <span class="ident">oak_abi</span>::{<span class="ident">label</span>::<span class="ident">Label</span>, <span class="ident">ChannelReadStatus</span>, <span class="ident">OakStatus</span>};
-
 <span class="kw">mod</span> <span class="ident">channel</span>;
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>)]</span>
 <span class="kw">mod</span> <span class="ident">introspect</span>;
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span>;
 
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">channel</span>::{<span class="ident">Handle</span>, <span class="ident">HandleDirection</span>};
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">channel</span>::{<span class="ident">ChannelHalf</span>, <span class="ident">ChannelHalfDirection</span>};
 
 <span class="doccomment">/// Trait that gives an identifier for a data structure that is suitable for</span>
 <span class="doccomment">/// use with Graphviz/Dot.</span>
@@ -1296,9 +1403,8 @@
     <span class="doccomment">/// See https://github.com/project-oak/oak/blob/master/docs/concepts.md#labels</span>
     <span class="ident">label</span>: <span class="ident">Label</span>,
 
-    <span class="doccomment">/// A [`HashSet`] containing all the handles associated with this Node.</span>
-    <span class="comment">// TODO(#777): this overlaps ChannelMapping.{reader,writer}</span>
-    <span class="ident">handles</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">Handle</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Map of ABI handles to channels.</span>
+    <span class="ident">abi_handles</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">oak_abi</span>::<span class="ident">Handle</span>, <span class="ident">ChannelHalf</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Debug</span> <span class="kw">for</span> <span class="ident">NodeInfo</span> {
@@ -1311,9 +1417,9 @@
         <span class="macro">write</span><span class="macro">!</span>(
             <span class="ident">f</span>,
             <span class="string">&quot;{}&quot;</span>,
-            <span class="self">self</span>.<span class="ident">handles</span>
+            <span class="self">self</span>.<span class="ident">abi_handles</span>
                 .<span class="ident">iter</span>()
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">handle</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">handle</span>))
+                .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">handle</span>, <span class="ident">half</span>)<span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{} =&gt; {:?}&quot;</span>, <span class="ident">handle</span>, <span class="ident">half</span>))
                 .<span class="ident">join</span>(<span class="string">&quot;, &quot;</span>)
         )<span class="question-mark">?</span>;
         <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;]}}&quot;</span>)
@@ -1336,13 +1442,17 @@
     }
 }
 
-<span class="doccomment">/// A Node identifier reserved for the Runtime that allows access to all handles and channels.</span>
-<span class="comment">// TODO(#724): make private once main() is in Rust not C++</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">RUNTIME_NODE_ID</span>: <span class="ident">NodeId</span> <span class="op">=</span> <span class="ident">NodeId</span>(<span class="number">0</span>);
+<span class="kw">impl</span> <span class="ident">DotIdentifier</span> <span class="kw">for</span> (<span class="ident">NodeId</span>, <span class="ident">oak_abi</span>::<span class="ident">Handle</span>) {
+    <span class="kw">fn</span> <span class="ident">dot_id</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
+        <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}_{}&quot;</span>, <span class="self">self</span>.<span class="number">0</span>.<span class="ident">dot_id</span>(), <span class="self">self</span>.<span class="number">1</span>)
+    }
+}
 
-<span class="doccomment">/// For testing use the same reserved identifier to allow manipulation of all handles and channels.</span>
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;test_build&quot;</span>, <span class="ident">test</span>))]</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">TEST_NODE_ID</span>: <span class="ident">NodeId</span> <span class="op">=</span> <span class="ident">NodeId</span>(<span class="number">0</span>);
+<span class="kw">impl</span> <span class="ident">HtmlPath</span> <span class="kw">for</span> (<span class="ident">NodeId</span>, <span class="ident">oak_abi</span>::<span class="ident">Handle</span>) {
+    <span class="kw">fn</span> <span class="ident">html_path</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
+        <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/{}&quot;</span>, <span class="self">self</span>.<span class="number">0</span>.<span class="ident">html_path</span>(), <span class="self">self</span>.<span class="number">1</span>)
+    }
+}
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Configuration</span> {
     <span class="kw">pub</span> <span class="ident">nodes</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">node</span>::<span class="ident">Configuration</span><span class="op">&gt;</span>,
@@ -1350,8 +1460,12 @@
     <span class="kw">pub</span> <span class="ident">entrypoint</span>: <span class="ident">String</span>,
 }
 
-<span class="doccomment">/// A helper type to determine if `try_read_message` was called with not enough `bytes_capacity`</span>
+<span class="doccomment">/// Helper types to determine if `try_read_message` was called with not enough `bytes_capacity`</span>
 <span class="doccomment">/// and/or `handles_capacity`.</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">NodeReadStatus</span> {
+    <span class="ident">Success</span>(<span class="ident">NodeMessage</span>),
+    <span class="ident">NeedsCapacity</span>(<span class="ident">usize</span>, <span class="ident">usize</span>),
+}
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ReadStatus</span> {
     <span class="ident">Success</span>(<span class="ident">Message</span>),
     <span class="ident">NeedsCapacity</span>(<span class="ident">usize</span>, <span class="ident">usize</span>),
@@ -1405,7 +1519,7 @@
     <span class="ident">configuration</span>: <span class="ident">Configuration</span>,
     <span class="ident">terminating</span>: <span class="ident">AtomicBool</span>,
 
-    <span class="ident">channels</span>: <span class="ident">channel</span>::<span class="ident">ChannelMapping</span>,
+    <span class="ident">next_channel_id</span>: <span class="ident">AtomicU64</span>,
 
     <span class="doccomment">/// Runtime-specific state for each Node instance.</span>
     <span class="ident">node_infos</span>: <span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">NodeId</span>, <span class="ident">NodeInfo</span><span class="op">&gt;</span><span class="op">&gt;</span>,
@@ -1419,22 +1533,95 @@
     <span class="ident">aux_servers</span>: <span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">AuxServer</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
+<span class="comment">// Methods which translate between ABI handles (Node-relative u64 values) and `ChannelHalf`</span>
+<span class="comment">// values.</span>
 <span class="kw">impl</span> <span class="ident">Runtime</span> {
-    <span class="doccomment">/// Creates a [`Runtime`] instance but does not start executing any Node.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create</span>(<span class="ident">configuration</span>: <span class="ident">Configuration</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">new_abi_handle</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">half</span>: <span class="ident">ChannelHalf</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">oak_abi</span>::<span class="ident">Handle</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">node_infos</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">node_infos</span>.<span class="ident">write</span>().<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">node_info</span> <span class="op">=</span> <span class="ident">node_infos</span>.<span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="ident">node_id</span>).<span class="ident">expect</span>(<span class="string">&quot;Invalid node_id&quot;</span>);
+        <span class="kw">loop</span> {
+            <span class="kw">let</span> <span class="ident">candidate</span> <span class="op">=</span> <span class="ident">rand</span>::<span class="ident">thread_rng</span>().<span class="ident">next_u64</span>();
+            <span class="kw">if</span> <span class="ident">node_info</span>.<span class="ident">abi_handles</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">candidate</span>).<span class="ident">is_none</span>() {
+                <span class="macro">debug</span><span class="macro">!</span>(
+                    <span class="string">&quot;{:?}: new ABI handle {} maps to {:?}&quot;</span>,
+                    <span class="ident">node_id</span>, <span class="ident">candidate</span>, <span class="ident">half</span>
+                );
+                <span class="ident">node_info</span>.<span class="ident">abi_handles</span>.<span class="ident">insert</span>(<span class="ident">candidate</span>, <span class="ident">half</span>);
+                <span class="kw">return</span> <span class="ident">candidate</span>;
+            }
+        }
+    }
+    <span class="comment">// Remove the handle from the Node&#39;s handle table.</span>
+    <span class="kw">fn</span> <span class="ident">drop_abi_handle</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">node_infos</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">node_infos</span>.<span class="ident">write</span>().<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">node_info</span> <span class="op">=</span> <span class="ident">node_infos</span>.<span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="ident">node_id</span>).<span class="ident">expect</span>(<span class="string">&quot;Invalid node_id&quot;</span>);
+        <span class="ident">node_info</span>
+            .<span class="ident">abi_handles</span>
+            .<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">handle</span>)
+            .<span class="ident">ok_or</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrBadHandle</span>)
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">_half</span><span class="op">|</span> ())
+    }
+    <span class="kw">fn</span> <span class="ident">abi_to_half</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
+        <span class="ident">handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ChannelHalf</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">node_infos</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">node_infos</span>.<span class="ident">read</span>().<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">node_info</span> <span class="op">=</span> <span class="ident">node_infos</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">node_id</span>).<span class="ident">expect</span>(<span class="string">&quot;Invalid node_id&quot;</span>);
+        <span class="kw">let</span> <span class="ident">half</span> <span class="op">=</span> <span class="ident">node_info</span>
+            .<span class="ident">abi_handles</span>
+            .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">handle</span>)
+            .<span class="ident">ok_or</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrBadHandle</span>)<span class="question-mark">?</span>;
+        <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{:?}: map ABI handle {} to {:?}&quot;</span>, <span class="ident">node_id</span>, <span class="ident">handle</span>, <span class="ident">half</span>);
+        <span class="prelude-val">Ok</span>(<span class="ident">half</span>.<span class="ident">clone</span>())
+    }
+    <span class="kw">fn</span> <span class="ident">abi_to_read_half</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
+        <span class="ident">handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ChannelHalf</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">half</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">abi_to_half</span>(<span class="ident">node_id</span>, <span class="ident">handle</span>)<span class="question-mark">?</span>;
+        <span class="kw">match</span> <span class="ident">half</span>.<span class="ident">direction</span> {
+            <span class="ident">ChannelHalfDirection</span>::<span class="ident">Read</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">half</span>),
+            <span class="ident">ChannelHalfDirection</span>::<span class="ident">Write</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrBadHandle</span>),
+        }
+    }
+    <span class="kw">fn</span> <span class="ident">abi_to_write_half</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
+        <span class="ident">handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ChannelHalf</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">half</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">abi_to_half</span>(<span class="ident">node_id</span>, <span class="ident">handle</span>)<span class="question-mark">?</span>;
+        <span class="kw">match</span> <span class="ident">half</span>.<span class="ident">direction</span> {
+            <span class="ident">ChannelHalfDirection</span>::<span class="ident">Read</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrBadHandle</span>),
+            <span class="ident">ChannelHalfDirection</span>::<span class="ident">Write</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">half</span>),
+        }
+    }
+}
+
+<span class="comment">// Methods on `RuntimeProxy` for managing the core `Runtime` instance.</span>
+<span class="kw">impl</span> <span class="ident">RuntimeProxy</span> {
+    <span class="doccomment">/// Creates a [`Runtime`] instance with a single initial Node configured, and no channels.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_runtime</span>(<span class="ident">configuration</span>: <span class="ident">Configuration</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">RuntimeProxy</span> {
+        <span class="kw">let</span> <span class="ident">runtime</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">Runtime</span> {
             <span class="ident">configuration</span>,
             <span class="ident">terminating</span>: <span class="ident">AtomicBool</span>::<span class="ident">new</span>(<span class="bool-val">false</span>),
-            <span class="ident">channels</span>: <span class="ident">channel</span>::<span class="ident">ChannelMapping</span>::<span class="ident">new</span>(),
+            <span class="ident">next_channel_id</span>: <span class="ident">AtomicU64</span>::<span class="ident">new</span>(<span class="number">0</span>),
 
             <span class="ident">node_infos</span>: <span class="ident">RwLock</span>::<span class="ident">new</span>(<span class="ident">HashMap</span>::<span class="ident">new</span>()),
             <span class="ident">node_join_handles</span>: <span class="ident">Mutex</span>::<span class="ident">new</span>(<span class="ident">HashMap</span>::<span class="ident">new</span>()),
 
-            <span class="comment">// NodeId(0) reserved for RUNTIME_NODE_ID.</span>
-            <span class="ident">next_node_id</span>: <span class="ident">AtomicU64</span>::<span class="ident">new</span>(<span class="number">1</span>),
+            <span class="ident">next_node_id</span>: <span class="ident">AtomicU64</span>::<span class="ident">new</span>(<span class="number">0</span>),
 
             <span class="ident">aux_servers</span>: <span class="ident">Mutex</span>::<span class="ident">new</span>(<span class="ident">Vec</span>::<span class="ident">new</span>()),
-        }
+        });
+        <span class="kw">let</span> <span class="ident">proxy</span> <span class="op">=</span> <span class="ident">runtime</span>.<span class="ident">proxy_for_new_node</span>();
+        <span class="ident">proxy</span>.<span class="ident">runtime</span>.<span class="ident">node_configure_instance</span>(
+            <span class="ident">proxy</span>.<span class="ident">node_id</span>,
+            <span class="string">&quot;implicit.initial&quot;</span>.<span class="ident">to_string</span>(),
+            <span class="kw-2">&amp;</span><span class="ident">Label</span>::<span class="ident">public_trusted</span>(),
+        );
+        <span class="ident">proxy</span>
     }
 
     <span class="doccomment">/// Configures and runs the protobuf specified Application [`Configuration`].</span>
@@ -1442,64 +1629,86 @@
     <span class="doccomment">/// After starting a [`Runtime`], calling [`Runtime::stop`] will send termination signals to</span>
     <span class="doccomment">/// Nodes and wait for them to terminate.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// Returns a writeable [`Handle`] to send messages into the [`Runtime`]. To receive messages,</span>
-    <span class="doccomment">/// creating a new channel and passing the write [`Handle`] into the Runtime will enable</span>
-    <span class="doccomment">/// messages to be read back out.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run</span>(
-        <span class="self">self</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Returns a writeable [`oak_abi::Handle`] to send messages into the [`Runtime`]. To receive</span>
+    <span class="doccomment">/// messages, creating a new channel and passing the write [`oak_abi::Handle`] into the</span>
+    <span class="doccomment">/// Runtime will enable messages to be read back out.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start_runtime</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">runtime_config</span>: <span class="kw">crate</span>::<span class="ident">RuntimeConfiguration</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Handle</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">module_name</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">configuration</span>.<span class="ident">entry_module</span>.<span class="ident">clone</span>();
-        <span class="kw">let</span> <span class="ident">entrypoint</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">configuration</span>.<span class="ident">entrypoint</span>.<span class="ident">clone</span>();
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">oak_abi</span>::<span class="ident">Handle</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">module_name</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">configuration</span>.<span class="ident">entry_module</span>.<span class="ident">clone</span>();
+        <span class="kw">let</span> <span class="ident">entrypoint</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">configuration</span>.<span class="ident">entrypoint</span>.<span class="ident">clone</span>();
 
         <span class="kw">if</span> <span class="macro">cfg</span><span class="macro">!</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>) {
             <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">port</span>) <span class="op">=</span> <span class="ident">runtime_config</span>.<span class="ident">introspect_port</span> {
-                <span class="self">self</span>.<span class="ident">aux_servers</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>().<span class="ident">push</span>(<span class="ident">AuxServer</span>::<span class="ident">new</span>(
-                    <span class="string">&quot;introspect&quot;</span>,
-                    <span class="ident">port</span>,
-                    <span class="self">self</span>.<span class="ident">clone</span>(),
-                    <span class="ident">introspect</span>::<span class="ident">serve</span>,
-                ));
+                <span class="self">self</span>.<span class="ident">runtime</span>
+                    .<span class="ident">aux_servers</span>
+                    .<span class="ident">lock</span>()
+                    .<span class="ident">unwrap</span>()
+                    .<span class="ident">push</span>(<span class="ident">AuxServer</span>::<span class="ident">new</span>(
+                        <span class="string">&quot;introspect&quot;</span>,
+                        <span class="ident">port</span>,
+                        <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">clone</span>(),
+                        <span class="ident">introspect</span>::<span class="ident">serve</span>,
+                    ));
             }
         }
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">port</span>) <span class="op">=</span> <span class="ident">runtime_config</span>.<span class="ident">metrics_port</span> {
-            <span class="self">self</span>.<span class="ident">aux_servers</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>().<span class="ident">push</span>(<span class="ident">AuxServer</span>::<span class="ident">new</span>(
-                <span class="string">&quot;metrics&quot;</span>,
-                <span class="ident">port</span>,
-                <span class="self">self</span>.<span class="ident">clone</span>(),
-                <span class="kw">crate</span>::<span class="ident">metrics</span>::<span class="ident">server</span>::<span class="ident">start_metrics_server</span>,
-            ));
+            <span class="self">self</span>.<span class="ident">runtime</span>
+                .<span class="ident">aux_servers</span>
+                .<span class="ident">lock</span>()
+                .<span class="ident">unwrap</span>()
+                .<span class="ident">push</span>(<span class="ident">AuxServer</span>::<span class="ident">new</span>(
+                    <span class="string">&quot;metrics&quot;</span>,
+                    <span class="ident">port</span>,
+                    <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">clone</span>(),
+                    <span class="kw">crate</span>::<span class="ident">metrics</span>::<span class="ident">server</span>::<span class="ident">start_metrics_server</span>,
+                ));
         }
 
         <span class="comment">// When first starting, we assign the least privileged label to the channel connecting the</span>
         <span class="comment">// outside world to the entry point Node.</span>
-        <span class="kw">let</span> (<span class="ident">chan_writer</span>, <span class="ident">chan_reader</span>) <span class="op">=</span>
-            <span class="self">self</span>.<span class="ident">new_channel</span>(<span class="ident">RUNTIME_NODE_ID</span>, <span class="kw-2">&amp;</span><span class="ident">Label</span>::<span class="ident">public_trusted</span>());
+        <span class="kw">let</span> (<span class="ident">write_handle</span>, <span class="ident">read_handle</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">channel_create</span>(<span class="kw-2">&amp;</span><span class="ident">Label</span>::<span class="ident">public_trusted</span>());
+        <span class="macro">debug</span><span class="macro">!</span>(
+            <span class="string">&quot;{:?}: created initial channel ({}, {})&quot;</span>,
+            <span class="self">self</span>.<span class="ident">node_id</span>, <span class="ident">write_handle</span>, <span class="ident">read_handle</span>,
+        );
 
-        <span class="self">self</span>.<span class="ident">clone</span>().<span class="ident">node_create</span>(
-            <span class="ident">RUNTIME_NODE_ID</span>,
+        <span class="self">self</span>.<span class="ident">node_create</span>(
             <span class="kw-2">&amp;</span><span class="ident">module_name</span>,
             <span class="kw-2">&amp;</span><span class="ident">entrypoint</span>,
             <span class="comment">// When first starting, we assign the least privileged label to the entry point Node.</span>
             <span class="kw-2">&amp;</span><span class="ident">Label</span>::<span class="ident">public_trusted</span>(),
-            <span class="ident">chan_reader</span>,
+            <span class="ident">read_handle</span>,
         )<span class="question-mark">?</span>;
-
-        <span class="comment">// We call `expect` here because this should never fail, since the channel was just created</span>
-        <span class="comment">// and guaranteed not to have already been closed.</span>
-        <span class="self">self</span>.<span class="ident">channel_close</span>(<span class="ident">RUNTIME_NODE_ID</span>, <span class="ident">chan_reader</span>)
+        <span class="self">self</span>.<span class="ident">channel_close</span>(<span class="ident">read_handle</span>)
             .<span class="ident">expect</span>(<span class="string">&quot;could not close channel&quot;</span>);
 
-        <span class="prelude-val">Ok</span>(<span class="ident">chan_writer</span>)
+        <span class="prelude-val">Ok</span>(<span class="ident">write_handle</span>)
     }
 
     <span class="doccomment">/// Generate a Graphviz dot graph that shows the current shape of the Nodes and Channels in</span>
     <span class="doccomment">/// the runtime.</span>
     <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">graph</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">graph_runtime</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
+        <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">graph</span>()
+    }
+
+    <span class="doccomment">/// Thread safe method for signaling termination to a [`Runtime`] and waiting for its Node</span>
+    <span class="doccomment">/// threads to terminate.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">stop_runtime</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+        <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">stop</span>()
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">Runtime</span> {
+    <span class="doccomment">/// Generate a Graphviz dot graph that shows the current shape of the Nodes and Channels in</span>
+    <span class="doccomment">/// the runtime.</span>
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>)]</span>
+    <span class="kw">fn</span> <span class="ident">graph</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">s</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">new</span>();
         <span class="macro">writeln</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>, <span class="string">&quot;digraph Runtime {{&quot;</span>).<span class="ident">unwrap</span>();
-        <span class="comment">// Graph nodes for Oak Nodes.</span>
+        <span class="comment">// Graph nodes for Oak Nodes and ABI handles.</span>
         {
             <span class="macro">writeln</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>, <span class="string">&quot;  {{&quot;</span>).<span class="ident">unwrap</span>();
             <span class="macro">writeln</span><span class="macro">!</span>(
@@ -1531,33 +1740,117 @@
             }
             <span class="macro">writeln</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>, <span class="string">&quot;  }}&quot;</span>).<span class="ident">unwrap</span>();
         }
+        {
+            <span class="macro">writeln</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>, <span class="string">&quot;  {{&quot;</span>).<span class="ident">unwrap</span>();
+            <span class="macro">writeln</span><span class="macro">!</span>(
+                <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>,
+                <span class="string">&quot;    node [shape=hexagon style=filled fillcolor=orange]&quot;</span>
+            )
+            .<span class="ident">unwrap</span>();
+            <span class="kw">let</span> <span class="ident">node_infos</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">node_infos</span>.<span class="ident">read</span>().<span class="ident">unwrap</span>();
+            <span class="kw">for</span> <span class="ident">node_id</span> <span class="kw">in</span> <span class="ident">node_infos</span>.<span class="ident">keys</span>().<span class="ident">sorted</span>() {
+                <span class="kw">let</span> <span class="ident">node_info</span> <span class="op">=</span> <span class="ident">node_infos</span>.<span class="ident">get</span>(<span class="ident">node_id</span>).<span class="ident">unwrap</span>();
+                <span class="kw">for</span> <span class="ident">handle</span> <span class="kw">in</span> <span class="ident">node_info</span>.<span class="ident">abi_handles</span>.<span class="ident">keys</span>() {
+                    <span class="macro">writeln</span><span class="macro">!</span>(
+                        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>,
+                        <span class="string">r###&quot;    {} [label=&quot;{}:{}&quot; URL=&quot;{}&quot;]&quot;###</span>,
+                        (<span class="kw-2">*</span><span class="ident">node_id</span>, <span class="kw-2">*</span><span class="ident">handle</span>).<span class="ident">dot_id</span>(),
+                        <span class="ident">node_id</span>.<span class="number">0</span>,
+                        <span class="ident">handle</span>,
+                        (<span class="kw-2">*</span><span class="ident">node_id</span>, <span class="kw-2">*</span><span class="ident">handle</span>).<span class="ident">html_path</span>(),
+                    )
+                    .<span class="ident">unwrap</span>();
+                }
+            }
+            <span class="macro">writeln</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>, <span class="string">&quot;  }}&quot;</span>).<span class="ident">unwrap</span>();
+        }
+        {
+            <span class="macro">writeln</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>, <span class="string">&quot;  {{&quot;</span>).<span class="ident">unwrap</span>();
+            <span class="macro">writeln</span><span class="macro">!</span>(
+                <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>,
+                <span class="string">&quot;    node [shape=ellipse style=filled fillcolor=green]&quot;</span>
+            )
+            .<span class="ident">unwrap</span>();
+            <span class="kw">let</span> <span class="ident">node_infos</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">node_infos</span>.<span class="ident">read</span>().<span class="ident">unwrap</span>();
+            <span class="kw">for</span> <span class="ident">node_id</span> <span class="kw">in</span> <span class="ident">node_infos</span>.<span class="ident">keys</span>().<span class="ident">sorted</span>() {
+                <span class="kw">let</span> <span class="ident">node_info</span> <span class="op">=</span> <span class="ident">node_infos</span>.<span class="ident">get</span>(<span class="ident">node_id</span>).<span class="ident">unwrap</span>();
+                <span class="kw">for</span> <span class="ident">half</span> <span class="kw">in</span> <span class="ident">node_info</span>.<span class="ident">abi_handles</span>.<span class="ident">values</span>() {
+                    <span class="macro">writeln</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>, <span class="string">&quot;    {}&quot;</span>, <span class="ident">half</span>.<span class="ident">dot_id</span>(),).<span class="ident">unwrap</span>();
+                }
+            }
+            <span class="macro">writeln</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>, <span class="string">&quot;  }}&quot;</span>).<span class="ident">unwrap</span>();
+        }
 
-        <span class="comment">// Graph nodes for internal connections between Nodes and Channels.</span>
-        <span class="macro">write</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>, <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.<span class="ident">channels</span>.<span class="ident">graph_nodes</span>()).<span class="ident">unwrap</span>();
-
-        <span class="comment">// Edges for connections between Nodes and channel halves.  Track which we have seen.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">seen</span> <span class="op">=</span> <span class="ident">HashSet</span>::<span class="ident">new</span>();
+        <span class="comment">// Edges for connections between Nodes and channels and messages.</span>
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">msg_counter</span> <span class="op">=</span> <span class="number">0</span>;
         {
             <span class="kw">let</span> <span class="ident">node_infos</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">node_infos</span>.<span class="ident">read</span>().<span class="ident">unwrap</span>();
             <span class="kw">for</span> <span class="ident">node_id</span> <span class="kw">in</span> <span class="ident">node_infos</span>.<span class="ident">keys</span>().<span class="ident">sorted</span>() {
                 <span class="kw">let</span> <span class="ident">node_info</span> <span class="op">=</span> <span class="ident">node_infos</span>.<span class="ident">get</span>(<span class="ident">node_id</span>).<span class="ident">unwrap</span>();
-                <span class="kw">for</span> <span class="ident">half_id</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">node_info</span>.<span class="ident">handles</span> {
-                    <span class="ident">seen</span>.<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">half_id</span>);
-                    <span class="kw">match</span> <span class="self">self</span>.<span class="ident">channel_get_direction</span>(<span class="kw-2">*</span><span class="ident">node_id</span>, <span class="kw-2">*</span><span class="ident">half_id</span>).<span class="ident">unwrap</span>() {
-                        <span class="ident">HandleDirection</span>::<span class="ident">Write</span> <span class="op">=</span><span class="op">&gt;</span> {
-                            <span class="macro">writeln</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>, <span class="string">&quot;  {} -&gt; {}&quot;</span>, <span class="ident">node_id</span>.<span class="ident">dot_id</span>(), <span class="ident">half_id</span>.<span class="ident">dot_id</span>())
-                                .<span class="ident">unwrap</span>();
+                <span class="kw">for</span> (<span class="ident">handle</span>, <span class="ident">half</span>) <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">node_info</span>.<span class="ident">abi_handles</span> {
+                    <span class="kw">match</span> <span class="ident">half</span>.<span class="ident">direction</span> {
+                        <span class="ident">ChannelHalfDirection</span>::<span class="ident">Write</span> <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="macro">writeln</span><span class="macro">!</span>(
+                                <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>,
+                                <span class="string">&quot;  {} -&gt; {} -&gt; {}&quot;</span>,
+                                <span class="ident">node_id</span>.<span class="ident">dot_id</span>(),
+                                (<span class="kw-2">*</span><span class="ident">node_id</span>, <span class="kw-2">*</span><span class="ident">handle</span>).<span class="ident">dot_id</span>(),
+                                <span class="ident">half</span>.<span class="ident">dot_id</span>()
+                            )
+                            .<span class="ident">unwrap</span>();
                         }
-                        <span class="ident">HandleDirection</span>::<span class="ident">Read</span> <span class="op">=</span><span class="op">&gt;</span> {
-                            <span class="macro">writeln</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>, <span class="string">&quot;  {} -&gt; {}&quot;</span>, <span class="ident">half_id</span>.<span class="ident">dot_id</span>(), <span class="ident">node_id</span>.<span class="ident">dot_id</span>())
-                                .<span class="ident">unwrap</span>();
+                        <span class="ident">ChannelHalfDirection</span>::<span class="ident">Read</span> <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="macro">writeln</span><span class="macro">!</span>(
+                                <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>,
+                                <span class="string">&quot;  {} -&gt; {} -&gt; {}&quot;</span>,
+                                <span class="ident">half</span>.<span class="ident">dot_id</span>(),
+                                (<span class="kw-2">*</span><span class="ident">node_id</span>, <span class="kw-2">*</span><span class="ident">handle</span>).<span class="ident">dot_id</span>(),
+                                <span class="ident">node_id</span>.<span class="ident">dot_id</span>()
+                            )
+                            .<span class="ident">unwrap</span>();
                         }
+                    }
+                    <span class="comment">// Include messages in the channel.</span>
+                    <span class="kw">let</span> <span class="ident">messages</span> <span class="op">=</span> <span class="ident">half</span>.<span class="ident">get_messages</span>();
+                    <span class="kw">if</span> <span class="ident">messages</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="number">0</span> {
+                        <span class="macro">writeln</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>, <span class="string">&quot;  {{&quot;</span>).<span class="ident">unwrap</span>();
+                        <span class="macro">writeln</span><span class="macro">!</span>(
+                            <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>,
+                            <span class="string">r###&quot;    node [shape=rect fontsize=10 label=&quot;msg&quot;]&quot;###</span>
+                        )
+                        .<span class="ident">unwrap</span>();
+                        <span class="comment">// Messages have no identifier, so just use a count (and don&#39;t make it</span>
+                        <span class="comment">// visible to the user).</span>
+                        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">prev_graph_node</span> <span class="op">=</span> <span class="ident">half</span>.<span class="ident">dot_id</span>();
+                        <span class="kw">for</span> <span class="ident">msg</span> <span class="kw">in</span> <span class="ident">messages</span>.<span class="ident">iter</span>() {
+                            <span class="ident">msg_counter</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
+                            <span class="kw">let</span> <span class="ident">graph_node</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;msg{}&quot;</span>, <span class="ident">msg_counter</span>);
+                            <span class="macro">writeln</span><span class="macro">!</span>(
+                                <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>,
+                                <span class="string">&quot;    {} -&gt; {} [style=dashed arrowhead=none]&quot;</span>,
+                                <span class="ident">graph_node</span>, <span class="ident">prev_graph_node</span>
+                            )
+                            .<span class="ident">unwrap</span>();
+                            <span class="kw">for</span> <span class="ident">half</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">msg</span>.<span class="ident">channels</span> {
+                                <span class="kw">match</span> <span class="ident">half</span>.<span class="ident">direction</span> {
+                                    <span class="ident">ChannelHalfDirection</span>::<span class="ident">Write</span> <span class="op">=</span><span class="op">&gt;</span> {
+                                        <span class="macro">writeln</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>, <span class="string">&quot;    {} -&gt; {}&quot;</span>, <span class="ident">graph_node</span>, <span class="ident">half</span>.<span class="ident">dot_id</span>())
+                                            .<span class="ident">unwrap</span>();
+                                    }
+                                    <span class="ident">ChannelHalfDirection</span>::<span class="ident">Read</span> <span class="op">=</span><span class="op">&gt;</span> {
+                                        <span class="macro">writeln</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>, <span class="string">&quot;    {} -&gt; {}&quot;</span>, <span class="ident">half</span>.<span class="ident">dot_id</span>(), <span class="ident">graph_node</span>)
+                                            .<span class="ident">unwrap</span>();
+                                    }
+                                }
+                            }
+                            <span class="ident">prev_graph_node</span> <span class="op">=</span> <span class="ident">graph_node</span>;
+                        }
+                        <span class="macro">writeln</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>, <span class="string">&quot;  }}&quot;</span>).<span class="ident">unwrap</span>();
                     }
                 }
             }
         }
-        <span class="comment">// Edges for connections between halves and Channels.</span>
-        <span class="macro">write</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>, <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.<span class="ident">channels</span>.<span class="ident">graph_edges</span>(<span class="ident">seen</span>)).<span class="ident">unwrap</span>();
+
         <span class="macro">writeln</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>, <span class="string">&quot;}}&quot;</span>).<span class="ident">unwrap</span>();
         <span class="ident">s</span>
     }
@@ -1586,7 +1879,6 @@
             }
         }
         <span class="macro">writeln</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>, <span class="string">&quot;&lt;/ul&gt;&quot;</span>).<span class="ident">unwrap</span>();
-        <span class="macro">write</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>, <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.<span class="ident">channels</span>.<span class="ident">html</span>()).<span class="ident">unwrap</span>();
         <span class="ident">s</span>
     }
 
@@ -1608,24 +1900,35 @@
             <span class="macro">write</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>, <span class="string">&quot;&lt;p&gt;No current thread for Node.&quot;</span>).<span class="ident">unwrap</span>();
         }
         <span class="macro">write</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>, <span class="string">&quot;&lt;p&gt;Label={:?}&lt;p&gt;Handles:&lt;ul&gt;&quot;</span>, <span class="ident">node_info</span>.<span class="ident">label</span>).<span class="ident">unwrap</span>();
-        <span class="kw">for</span> <span class="ident">half_id</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">node_info</span>.<span class="ident">handles</span> {
+        <span class="kw">for</span> (<span class="ident">handle</span>, <span class="ident">half</span>) <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">node_info</span>.<span class="ident">abi_handles</span> {
             <span class="macro">write</span><span class="macro">!</span>(
                 <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>,
-                <span class="string">r###&quot;&lt;li&gt;&lt;a href=&quot;{}&quot;&gt;{:?}&lt;/a&gt;&quot;###</span>,
-                <span class="ident">half_id</span>.<span class="ident">html_path</span>(),
-                <span class="ident">half_id</span>
+                <span class="string">r###&quot;&lt;li&gt;Handle &lt;a href=&quot;{}&quot;&gt;{}&lt;/a&gt; =&gt; {:?}&quot;###</span>,
+                (<span class="ident">node_id</span>, <span class="kw-2">*</span><span class="ident">handle</span>).<span class="ident">html_path</span>(),
+                <span class="ident">handle</span>,
+                <span class="ident">half</span>
             )
             .<span class="ident">unwrap</span>();
         }
         <span class="prelude-val">Some</span>(<span class="ident">s</span>)
     }
     <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">html_for_channel</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">id</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">channels</span>.<span class="ident">html_for_channel</span>(<span class="ident">id</span>)
-    }
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">html_for_half</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">id</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">channels</span>.<span class="ident">html_for_half</span>(<span class="ident">id</span>)
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">html_for_handle</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">id</span>: <span class="ident">u64</span>, <span class="ident">handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">node_id</span> <span class="op">=</span> <span class="ident">NodeId</span>(<span class="ident">id</span>);
+        <span class="kw">let</span> <span class="ident">node_infos</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">node_infos</span>.<span class="ident">read</span>().<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">node_info</span> <span class="op">=</span> <span class="ident">node_infos</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">node_id</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">half</span> <span class="op">=</span> <span class="ident">node_info</span>.<span class="ident">abi_handles</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">handle</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">s</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">new</span>();
+        <span class="macro">write</span><span class="macro">!</span>(
+            <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>,
+            <span class="string">r###&quot;&lt;h2&gt;&lt;a href=&quot;{}&quot;&gt;Node {}&lt;/a&gt; Handle {}&lt;/h2&gt;&quot;###</span>,
+            <span class="ident">node_id</span>.<span class="ident">html_path</span>(),
+            <span class="ident">node_info</span>.<span class="ident">pretty_name</span>,
+            <span class="ident">handle</span>,
+        )
+        .<span class="ident">unwrap</span>();
+        <span class="macro">write</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>, <span class="string">r###&quot;&lt;p&gt;Maps to {:?}&quot;###</span>, <span class="ident">half</span>).<span class="ident">unwrap</span>();
+        <span class="prelude-val">Some</span>(<span class="ident">s</span>)
     }
 
     <span class="doccomment">/// Thread safe method for determining if the [`Runtime`] is terminating.</span>
@@ -1635,7 +1938,7 @@
 
     <span class="doccomment">/// Thread safe method for signaling termination to a [`Runtime`] and waiting for its Node</span>
     <span class="doccomment">/// threads to terminate.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">stop</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+    <span class="kw">fn</span> <span class="ident">stop</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;stopping runtime instance&quot;</span>);
 
         <span class="comment">// Terminate any running servers.</span>
@@ -1646,98 +1949,44 @@
         <span class="self">self</span>.<span class="ident">terminating</span>.<span class="ident">store</span>(<span class="bool-val">true</span>, <span class="ident">SeqCst</span>);
 
         <span class="comment">// Unpark any threads that are blocked waiting on any channels.</span>
-        <span class="kw">for</span> <span class="ident">channel</span> <span class="kw">in</span> <span class="self">self</span>
-            .<span class="ident">channels</span>
-            .<span class="ident">channels</span>
-            .<span class="ident">read</span>()
-            .<span class="ident">expect</span>(<span class="string">&quot;could not acquire channel mapping&quot;</span>)
-            .<span class="ident">values</span>()
-        {
-            <span class="kw">for</span> <span class="ident">thread</span> <span class="kw">in</span> <span class="ident">channel</span>
-                .<span class="ident">waiting_threads</span>
-                .<span class="ident">lock</span>()
-                .<span class="ident">expect</span>(<span class="string">&quot;could not acquire waiting threads for channel&quot;</span>)
-                .<span class="ident">values</span>()
-            {
-                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">thread</span>) <span class="op">=</span> <span class="ident">thread</span>.<span class="ident">upgrade</span>() {
-                    <span class="ident">thread</span>.<span class="ident">unpark</span>();
-                }
-            }
-        }
+        <span class="self">self</span>.<span class="ident">notify_all_waiters</span>();
 
         <span class="comment">// Wait for the main thread of each Node to finish. Any thread that was blocked on</span>
         <span class="comment">// `wait_on_channels` is now unblocked and received `OakStatus::ErrTerminated`, so we wait</span>
         <span class="comment">// for any additional work to be finished here. This may take an arbitrary amount of time,</span>
         <span class="comment">// depending on the work that the Node thread has to perform, but at least we know that the</span>
         <span class="comment">// it will not be able to enter again in a blocking state.</span>
-        <span class="kw">for</span> (<span class="kw">_</span>, <span class="ident">instance</span>) <span class="kw">in</span> <span class="self">self</span>
+        <span class="kw">for</span> (<span class="ident">node_id</span>, <span class="ident">instance</span>) <span class="kw">in</span> <span class="self">self</span>
             .<span class="ident">node_join_handles</span>
             .<span class="ident">lock</span>()
             .<span class="ident">expect</span>(<span class="string">&quot;could not acquire lock on node_join_handles&quot;</span>)
             .<span class="ident">drain</span>()
         {
+            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;join thread for {:?}...&quot;</span>, <span class="ident">node_id</span>);
             <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">instance</span>.<span class="ident">join</span>() {
                 <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;could not terminate node: {:?}&quot;</span>, <span class="ident">err</span>);
             }
+            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;join thread for {:?}...done&quot;</span>, <span class="ident">node_id</span>);
         }
     }
 
-    <span class="doccomment">/// Allow the corresponding [`Node`] to use the [`Handle`]s passed via the iterator.</span>
-    <span class="doccomment">/// This is achieved by adding the [`Handle`]s to the [`Node`]s [`HashMap`] of [`Handle`]s.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// [`Node`]: crate::node::Node</span>
-    <span class="kw">fn</span> <span class="ident">track_handles_in_node</span><span class="op">&lt;</span><span class="ident">I</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">handles</span>: <span class="ident">I</span>)
-    <span class="kw">where</span>
-        <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">Handle</span><span class="op">&gt;</span>,
-    {
-        <span class="kw">if</span> <span class="ident">node_id</span> <span class="op">=</span><span class="op">=</span> <span class="ident">RUNTIME_NODE_ID</span> {
-            <span class="kw">return</span>;
-        }
-
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">node_infos</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">node_infos</span>.<span class="ident">write</span>().<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="ident">node_info</span> <span class="op">=</span> <span class="ident">node_infos</span>
-            .<span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="ident">node_id</span>)
-            .<span class="ident">expect</span>(<span class="string">&quot;Invalid node_id passed into track_handles_in_node!&quot;</span>);
-
-        <span class="kw">for</span> <span class="ident">handle</span> <span class="kw">in</span> <span class="ident">handles</span> {
-            <span class="ident">node_info</span>.<span class="ident">handles</span>.<span class="ident">insert</span>(<span class="ident">handle</span>);
-        }
-    }
-
-    <span class="doccomment">/// Validate the [`NodeId`] has access to [`Handle`], returning `Err(OakStatus::ErrBadHandle)`</span>
-    <span class="doccomment">/// if access is not allowed.</span>
-    <span class="kw">fn</span> <span class="ident">validate_handle_access</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">handle</span>: <span class="ident">Handle</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">validate_handles_access</span>(<span class="ident">node_id</span>, <span class="kw-2">&amp;</span>[<span class="ident">handle</span>])
-    }
-
-    <span class="doccomment">/// Validate the [`NodeId`] has access to all [`Handle`]&#39;s passed in the iterator, returning</span>
-    <span class="doccomment">/// `Err(OakStatus::ErrBadHandle)` if access is not allowed.</span>
-    <span class="kw">fn</span> <span class="ident">validate_handles_access</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
-        <span class="ident">handles</span>: <span class="kw-2">&amp;</span>[<span class="ident">Handle</span>],
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="comment">// Allow RUNTIME_NODE_ID access to all handles.</span>
-        <span class="kw">if</span> <span class="ident">node_id</span> <span class="op">=</span><span class="op">=</span> <span class="ident">RUNTIME_NODE_ID</span> {
-            <span class="kw">return</span> <span class="prelude-val">Ok</span>(());
-        }
-
-        <span class="kw">let</span> <span class="ident">node_infos</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">node_infos</span>.<span class="ident">read</span>().<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="ident">node_info</span> <span class="op">=</span> <span class="ident">node_infos</span>
-            .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">node_id</span>)
-            .<span class="ident">expect</span>(<span class="string">&quot;Invalid node_id passed into filter_optional_handles!&quot;</span>);
-
-        <span class="kw">for</span> <span class="ident">handle</span> <span class="kw">in</span> <span class="ident">handles</span> {
-            <span class="comment">// Check handle is accessible by the Node.</span>
-            <span class="kw">if</span> <span class="op">!</span><span class="ident">node_info</span>.<span class="ident">handles</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">handle</span>) {
-                <span class="macro">error</span><span class="macro">!</span>(
-                    <span class="string">&quot;{:?}: validate_handles_access(): handle {:?} not found&quot;</span>,
-                    <span class="ident">node_id</span>, <span class="ident">handle</span>
+    <span class="kw">fn</span> <span class="ident">notify_all_waiters</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+        <span class="comment">// Hold the write lock and wake up any Node threads blocked on</span>
+        <span class="comment">// a `Channel`.</span>
+        <span class="kw">let</span> <span class="ident">node_infos</span> <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">node_infos</span>
+            .<span class="ident">write</span>()
+            .<span class="ident">expect</span>(<span class="string">&quot;could not acquire lock on node_infos&quot;</span>);
+        <span class="kw">for</span> <span class="ident">node_id</span> <span class="kw">in</span> <span class="ident">node_infos</span>.<span class="ident">keys</span>().<span class="ident">sorted</span>() {
+            <span class="kw">let</span> <span class="ident">node_info</span> <span class="op">=</span> <span class="ident">node_infos</span>.<span class="ident">get</span>(<span class="ident">node_id</span>).<span class="ident">unwrap</span>();
+            <span class="kw">for</span> (<span class="ident">handle</span>, <span class="ident">half</span>) <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">node_info</span>.<span class="ident">abi_handles</span> {
+                <span class="macro">debug</span><span class="macro">!</span>(
+                    <span class="string">&quot;waking waiters on {:?} handle {} =&gt; {:?}&quot;</span>,
+                    <span class="ident">node_id</span>, <span class="ident">handle</span>, <span class="ident">half</span>
                 );
-                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrBadHandle</span>);
+                <span class="ident">half</span>.<span class="ident">wake_waiters</span>();
             }
         }
-        <span class="prelude-val">Ok</span>(())
     }
 
     <span class="doccomment">/// Returns a clone of the [`Label`] associated with the provided `node_id`, in order to limit</span>
@@ -1753,26 +2002,18 @@
         <span class="ident">node_info</span>.<span class="ident">label</span>.<span class="ident">clone</span>()
     }
 
-    <span class="doccomment">/// Returns a clone of the [`Label`] associated with the provided reader `channel_handle`, in</span>
-    <span class="doccomment">/// order to limit the scope of holding the lock on [`channel::ChannelMapping::channels`].</span>
+    <span class="doccomment">/// Returns a clone of the [`Label`] associated with the provided reader `channel_handle`.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Returns an error if `channel_handle` is invalid.</span>
-    <span class="kw">fn</span> <span class="ident">get_reader_channel_label</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">channel_handle</span>: <span class="ident">Handle</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Label</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">channels</span>.<span class="ident">with_channel</span>(
-            <span class="self">self</span>.<span class="ident">channels</span>.<span class="ident">get_reader_channel</span>(<span class="ident">channel_handle</span>)<span class="question-mark">?</span>,
-            <span class="op">|</span><span class="ident">channel</span><span class="op">|</span> <span class="prelude-val">Ok</span>(<span class="ident">channel</span>.<span class="ident">label</span>.<span class="ident">clone</span>()),
-        )
+    <span class="kw">fn</span> <span class="ident">get_reader_channel_label</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">channel_half</span>: <span class="kw-2">&amp;</span><span class="ident">ChannelHalf</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Label</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+        <span class="ident">with_reader_channel</span>(<span class="ident">channel_half</span>, <span class="op">|</span><span class="ident">channel</span><span class="op">|</span> <span class="prelude-val">Ok</span>(<span class="ident">channel</span>.<span class="ident">label</span>.<span class="ident">clone</span>()))
     }
 
-    <span class="doccomment">/// Returns a clone of the [`Label`] associated with the provided writer `channel_handle`, in</span>
-    <span class="doccomment">/// order to limit the scope of holding the lock on [`channel::ChannelMapping::channels`].</span>
+    <span class="doccomment">/// Returns a clone of the [`Label`] associated with the provided writer `channel_handle`.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Returns an error if `channel_handle` is invalid.</span>
-    <span class="kw">fn</span> <span class="ident">get_writer_channel_label</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">channel_handle</span>: <span class="ident">Handle</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Label</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">channels</span>.<span class="ident">with_channel</span>(
-            <span class="self">self</span>.<span class="ident">channels</span>.<span class="ident">get_writer_channel</span>(<span class="ident">channel_handle</span>)<span class="question-mark">?</span>,
-            <span class="op">|</span><span class="ident">channel</span><span class="op">|</span> <span class="prelude-val">Ok</span>(<span class="ident">channel</span>.<span class="ident">label</span>.<span class="ident">clone</span>()),
-        )
+    <span class="kw">fn</span> <span class="ident">get_writer_channel_label</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">channel_half</span>: <span class="kw-2">&amp;</span><span class="ident">ChannelHalf</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Label</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+        <span class="ident">with_writer_channel</span>(<span class="ident">channel_half</span>, <span class="op">|</span><span class="ident">channel</span><span class="op">|</span> <span class="prelude-val">Ok</span>(<span class="ident">channel</span>.<span class="ident">label</span>.<span class="ident">clone</span>()))
     }
 
     <span class="doccomment">/// Returns whether the calling Node is allowed to read from the provided channel, according to</span>
@@ -1780,22 +2021,16 @@
     <span class="kw">fn</span> <span class="ident">validate_can_read_from_channel</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
-        <span class="ident">channel_handle</span>: <span class="ident">Handle</span>,
+        <span class="ident">channel_half</span>: <span class="kw-2">&amp;</span><span class="ident">ChannelHalf</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="macro">trace</span><span class="macro">!</span>(
             <span class="string">&quot;{:?}: validating readability of {:?}&quot;</span>,
             <span class="ident">node_id</span>,
-            <span class="ident">channel_handle</span>
+            <span class="ident">channel_half</span>
         );
 
-        <span class="comment">// Allow RUNTIME_NODE_ID access to all handles.</span>
-        <span class="kw">if</span> <span class="ident">node_id</span> <span class="op">=</span><span class="op">=</span> <span class="ident">RUNTIME_NODE_ID</span> {
-            <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{:?}: runtime can read from any channel&quot;</span>, <span class="ident">node_id</span>);
-            <span class="kw">return</span> <span class="prelude-val">Ok</span>(());
-        }
-
         <span class="kw">let</span> <span class="ident">node_label</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_node_label</span>(<span class="ident">node_id</span>);
-        <span class="kw">let</span> <span class="ident">channel_label</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_reader_channel_label</span>(<span class="ident">channel_handle</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">channel_label</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_reader_channel_label</span>(<span class="kw-2">&amp;</span><span class="ident">channel_half</span>)<span class="question-mark">?</span>;
         <span class="macro">trace</span><span class="macro">!</span>(
             <span class="string">&quot;{:?}: node_label={:?}, channel_label={:?}&quot;</span>,
             <span class="ident">node_id</span>,
@@ -1803,13 +2038,10 @@
             <span class="ident">channel_label</span>
         );
         <span class="kw">if</span> <span class="ident">channel_label</span>.<span class="ident">flows_to</span>(<span class="kw-2">&amp;</span><span class="ident">node_label</span>) {
-            <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{:?}: can read from channel {:?}&quot;</span>, <span class="ident">node_id</span>, <span class="ident">channel_handle</span>);
+            <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{:?}: can read from channel {:?}&quot;</span>, <span class="ident">node_id</span>, <span class="ident">channel_half</span>);
             <span class="prelude-val">Ok</span>(())
         } <span class="kw">else</span> {
-            <span class="macro">debug</span><span class="macro">!</span>(
-                <span class="string">&quot;{:?}: cannot read from channel {:?}&quot;</span>,
-                <span class="ident">node_id</span>, <span class="ident">channel_handle</span>
-            );
+            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{:?}: cannot read from channel {:?}&quot;</span>, <span class="ident">node_id</span>, <span class="ident">channel_half</span>);
             <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrPermissionDenied</span>)
         }
     }
@@ -1819,13 +2051,12 @@
     <span class="kw">fn</span> <span class="ident">validate_can_read_from_channels</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
-        <span class="ident">channel_handles</span>: <span class="kw-2">&amp;</span>[<span class="ident">Handle</span>],
+        <span class="ident">channel_halves</span>: <span class="kw-2">&amp;</span>[<span class="ident">ChannelHalf</span>],
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">all_channel_handles_ok</span> <span class="op">=</span> <span class="ident">channel_handles</span>.<span class="ident">iter</span>().<span class="ident">all</span>(<span class="op">|</span><span class="ident">channel_handle</span><span class="op">|</span> {
-            <span class="self">self</span>.<span class="ident">validate_can_read_from_channel</span>(<span class="ident">node_id</span>, <span class="kw-2">*</span><span class="ident">channel_handle</span>)
-                .<span class="ident">is_ok</span>()
-        });
-        <span class="kw">if</span> <span class="ident">all_channel_handles_ok</span> {
+        <span class="kw">let</span> <span class="ident">all_channel_halves_ok</span> <span class="op">=</span> <span class="ident">channel_halves</span>
+            .<span class="ident">iter</span>()
+            .<span class="ident">all</span>(<span class="op">|</span><span class="ident">half</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">validate_can_read_from_channel</span>(<span class="ident">node_id</span>, <span class="ident">half</span>).<span class="ident">is_ok</span>());
+        <span class="kw">if</span> <span class="ident">all_channel_halves_ok</span> {
             <span class="prelude-val">Ok</span>(())
         } <span class="kw">else</span> {
             <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrPermissionDenied</span>)
@@ -1837,22 +2068,16 @@
     <span class="kw">fn</span> <span class="ident">validate_can_write_to_channel</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
-        <span class="ident">channel_handle</span>: <span class="ident">Handle</span>,
+        <span class="ident">channel_half</span>: <span class="kw-2">&amp;</span><span class="ident">ChannelHalf</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="macro">trace</span><span class="macro">!</span>(
             <span class="string">&quot;{:?}: validating writability of {:?}&quot;</span>,
             <span class="ident">node_id</span>,
-            <span class="ident">channel_handle</span>
+            <span class="ident">channel_half</span>
         );
 
-        <span class="comment">// Allow RUNTIME_NODE_ID access to all handles.</span>
-        <span class="kw">if</span> <span class="ident">node_id</span> <span class="op">=</span><span class="op">=</span> <span class="ident">RUNTIME_NODE_ID</span> {
-            <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{:?}: runtime can write to any channel&quot;</span>, <span class="ident">node_id</span>);
-            <span class="kw">return</span> <span class="prelude-val">Ok</span>(());
-        }
-
         <span class="kw">let</span> <span class="ident">node_label</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_node_label</span>(<span class="ident">node_id</span>);
-        <span class="kw">let</span> <span class="ident">channel_label</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_writer_channel_label</span>(<span class="ident">channel_handle</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">channel_label</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_writer_channel_label</span>(<span class="kw-2">&amp;</span><span class="ident">channel_half</span>)<span class="question-mark">?</span>;
         <span class="macro">trace</span><span class="macro">!</span>(
             <span class="string">&quot;{:?}: node_label={:?}, channel_label={:?}&quot;</span>,
             <span class="ident">node_id</span>,
@@ -1860,13 +2085,10 @@
             <span class="ident">channel_label</span>
         );
         <span class="kw">if</span> <span class="ident">node_label</span>.<span class="ident">flows_to</span>(<span class="kw-2">&amp;</span><span class="ident">channel_label</span>) {
-            <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{:?}: can write to channel {:?}&quot;</span>, <span class="ident">node_id</span>, <span class="ident">channel_handle</span>);
+            <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{:?}: can write to channel {:?}&quot;</span>, <span class="ident">node_id</span>, <span class="ident">channel_half</span>);
             <span class="prelude-val">Ok</span>(())
         } <span class="kw">else</span> {
-            <span class="macro">debug</span><span class="macro">!</span>(
-                <span class="string">&quot;{:?}: cannot write to channel {:?}&quot;</span>,
-                <span class="ident">node_id</span>, <span class="ident">channel_handle</span>
-            );
+            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{:?}: cannot write to channel {:?}&quot;</span>, <span class="ident">node_id</span>, <span class="ident">channel_half</span>);
             <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrPermissionDenied</span>)
         }
     }
@@ -1874,27 +2096,45 @@
     <span class="doccomment">/// Creates a new [`Channel`] and returns a `(writer handle, reader handle)` pair.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`Channel`]: crate::runtime::channel::Channel</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_channel</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">Handle</span>, <span class="ident">Handle</span>) {
+    <span class="kw">fn</span> <span class="ident">channel_create</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">oak_abi</span>::<span class="ident">Handle</span>, <span class="ident">oak_abi</span>::<span class="ident">Handle</span>) {
         <span class="comment">// TODO(#630): Check whether the calling Node can create a Node with the specified label.</span>
-        <span class="kw">let</span> (<span class="ident">writer</span>, <span class="ident">reader</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">channels</span>.<span class="ident">new_channel</span>(<span class="ident">label</span>);
-        <span class="self">self</span>.<span class="ident">track_handles_in_node</span>(<span class="ident">node_id</span>, <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">writer</span>, <span class="ident">reader</span>]);
-        (<span class="ident">writer</span>, <span class="ident">reader</span>)
+        <span class="comment">// First get a pair of `ChannelHalf` objects.</span>
+        <span class="kw">let</span> <span class="ident">channel_id</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">next_channel_id</span>.<span class="ident">fetch_add</span>(<span class="number">1</span>, <span class="ident">SeqCst</span>);
+        <span class="kw">let</span> <span class="ident">channel</span> <span class="op">=</span> <span class="ident">Channel</span>::<span class="ident">new</span>(<span class="ident">channel_id</span>, <span class="ident">label</span>);
+        <span class="kw">let</span> <span class="ident">write_half</span> <span class="op">=</span> <span class="ident">ChannelHalf</span>::<span class="ident">new</span>(<span class="ident">channel</span>.<span class="ident">clone</span>(), <span class="ident">ChannelHalfDirection</span>::<span class="ident">Write</span>);
+        <span class="kw">let</span> <span class="ident">read_half</span> <span class="op">=</span> <span class="ident">ChannelHalf</span>::<span class="ident">new</span>(<span class="ident">channel</span>, <span class="ident">ChannelHalfDirection</span>::<span class="ident">Read</span>);
+        <span class="macro">trace</span><span class="macro">!</span>(
+            <span class="string">&quot;{:?}: allocated channel with halves w={:?},r={:?}&quot;</span>,
+            <span class="ident">node_id</span>,
+            <span class="ident">write_half</span>,
+            <span class="ident">read_half</span>,
+        );
+        <span class="comment">// Insert them into the handle table and return the ABI handles to the caller.</span>
+        <span class="kw">let</span> <span class="ident">write_handle</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">new_abi_handle</span>(<span class="ident">node_id</span>, <span class="ident">write_half</span>);
+        <span class="kw">let</span> <span class="ident">read_handle</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">new_abi_handle</span>(<span class="ident">node_id</span>, <span class="ident">read_half</span>);
+        <span class="macro">trace</span><span class="macro">!</span>(
+            <span class="string">&quot;{:?}: allocated handles w={}, r={} for channel&quot;</span>,
+            <span class="ident">node_id</span>,
+            <span class="ident">write_handle</span>,
+            <span class="ident">read_handle</span>,
+        );
+        (<span class="ident">write_handle</span>, <span class="ident">read_handle</span>)
     }
 
-    <span class="doccomment">/// Reads the statuses from a slice of `Handle`s.</span>
+    <span class="doccomment">/// Reads the statuses from a slice of `ChannelHalf`s.</span>
     <span class="doccomment">/// [`ChannelReadStatus::InvalidChannel`] is set for `None` readers in the slice. For `Some(_)`</span>
     <span class="doccomment">/// readers, the result is set from a call to `has_message`.</span>
-    <span class="kw">fn</span> <span class="ident">readers_statuses</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">readers</span>: <span class="kw-2">&amp;</span>[<span class="ident">Handle</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ChannelReadStatus</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">readers_statuses</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">readers</span>: <span class="kw-2">&amp;</span>[<span class="ident">ChannelHalf</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ChannelReadStatus</span><span class="op">&gt;</span> {
         <span class="ident">readers</span>
             .<span class="ident">iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">chan</span><span class="op">|</span> {
-                <span class="self">self</span>.<span class="ident">channel_status</span>(<span class="ident">node_id</span>, <span class="kw-2">*</span><span class="ident">chan</span>)
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">half</span><span class="op">|</span> {
+                <span class="self">self</span>.<span class="ident">channel_status</span>(<span class="ident">node_id</span>, <span class="ident">half</span>)
                     .<span class="ident">unwrap_or</span>(<span class="ident">ChannelReadStatus</span>::<span class="ident">InvalidChannel</span>)
             })
             .<span class="ident">collect</span>()
     }
 
-    <span class="doccomment">/// Waits on a slice of `Handle`s, blocking until one of the following conditions:</span>
+    <span class="doccomment">/// Waits on a slice of `ChannelHalf`s, blocking until one of the following conditions:</span>
     <span class="doccomment">/// - If the [`Runtime`] is terminating this will return immediately with an `ErrTerminated`</span>
     <span class="doccomment">///   status for each channel.</span>
     <span class="doccomment">/// - If all readers are in an erroneous status, e.g. when all channels are orphaned, this will</span>
@@ -1908,13 +2148,23 @@
     <span class="doccomment">/// available.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`Runtime`]: crate::runtime::Runtime</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">wait_on_channels</span>(
+    <span class="kw">fn</span> <span class="ident">wait_on_channels</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
-        <span class="ident">readers</span>: <span class="kw-2">&amp;</span>[<span class="ident">Handle</span>],
+        <span class="ident">read_handles</span>: <span class="kw-2">&amp;</span>[<span class="ident">oak_abi</span>::<span class="ident">Handle</span>],
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ChannelReadStatus</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">validate_handles_access</span>(<span class="ident">node_id</span>, <span class="ident">readers</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">validate_can_read_from_channels</span>(<span class="ident">node_id</span>, <span class="ident">readers</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Accumulate both the valid channels and their original position.</span>
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">all_statuses</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">ChannelReadStatus</span>::<span class="ident">InvalidChannel</span>; <span class="ident">read_handles</span>.<span class="ident">len</span>()];
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">reader_pos</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">readers</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
+        <span class="kw">for</span> (<span class="ident">i</span>, <span class="ident">handle</span>) <span class="kw">in</span> <span class="ident">read_handles</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">half</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">abi_to_read_half</span>(<span class="ident">node_id</span>, <span class="kw-2">*</span><span class="ident">handle</span>) {
+                <span class="ident">reader_pos</span>.<span class="ident">push</span>(<span class="ident">i</span>);
+                <span class="ident">readers</span>.<span class="ident">push</span>(<span class="ident">half</span>);
+            }
+        }
+
+        <span class="self">self</span>.<span class="ident">validate_can_read_from_channels</span>(<span class="ident">node_id</span>, <span class="kw-2">&amp;</span><span class="ident">readers</span>)<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">thread</span> <span class="op">=</span> <span class="ident">thread</span>::<span class="ident">current</span>();
         <span class="kw">while</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">is_terminating</span>() {
@@ -1928,17 +2178,13 @@
             <span class="comment">// Note we read statuses directly after adding waiters, before blocking to ensure that</span>
             <span class="comment">// there are no messages, after we have been added as a waiter.</span>
 
-            <span class="kw">let</span> <span class="ident">thread_id</span> <span class="op">=</span> <span class="ident">thread</span>.<span class="ident">id</span>();
             <span class="kw">let</span> <span class="ident">thread_ref</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">thread</span>.<span class="ident">clone</span>());
 
-            <span class="kw">for</span> <span class="ident">reader</span> <span class="kw">in</span> <span class="ident">readers</span> {
-                <span class="self">self</span>.<span class="ident">channels</span>.<span class="ident">with_channel</span>(
-                    <span class="self">self</span>.<span class="ident">channels</span>.<span class="ident">get_reader_channel</span>(<span class="kw-2">*</span><span class="ident">reader</span>)<span class="question-mark">?</span>,
-                    <span class="op">|</span><span class="ident">channel</span><span class="op">|</span> {
-                        <span class="ident">channel</span>.<span class="ident">add_waiter</span>(<span class="ident">thread_id</span>, <span class="kw-2">&amp;</span><span class="ident">thread_ref</span>);
-                        <span class="prelude-val">Ok</span>(())
-                    },
-                )<span class="question-mark">?</span>;
+            <span class="kw">for</span> <span class="ident">reader</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">readers</span> {
+                <span class="ident">with_reader_channel</span>(<span class="ident">reader</span>, <span class="op">|</span><span class="ident">channel</span><span class="op">|</span> {
+                    <span class="ident">channel</span>.<span class="ident">add_waiter</span>(<span class="kw-2">&amp;</span><span class="ident">thread_ref</span>);
+                    <span class="prelude-val">Ok</span>(())
+                })<span class="question-mark">?</span>;
             }
             <span class="kw">let</span> <span class="ident">statuses</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">readers_statuses</span>(<span class="ident">node_id</span>, <span class="kw-2">&amp;</span><span class="ident">readers</span>);
 
@@ -1948,7 +2194,12 @@
             <span class="kw">let</span> <span class="ident">any_ready</span> <span class="op">=</span> <span class="ident">statuses</span>.<span class="ident">iter</span>().<span class="ident">any</span>(<span class="op">|</span><span class="kw-2">&amp;</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span> <span class="op">=</span><span class="op">=</span> <span class="ident">ChannelReadStatus</span>::<span class="ident">ReadReady</span>);
 
             <span class="kw">if</span> <span class="ident">all_unreadable</span> <span class="op">|</span><span class="op">|</span> <span class="ident">any_ready</span> {
-                <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">statuses</span>);
+                <span class="comment">// Transcribe the status for valid channels back to the original position</span>
+                <span class="comment">// in the list of all statuses.</span>
+                <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">readers</span>.<span class="ident">len</span>() {
+                    <span class="ident">all_statuses</span>[<span class="ident">reader_pos</span>[<span class="ident">i</span>]] <span class="op">=</span> <span class="ident">statuses</span>[<span class="ident">i</span>];
+                }
+                <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">all_statuses</span>);
             }
 
             <span class="macro">debug</span><span class="macro">!</span>(
@@ -1970,114 +2221,86 @@
 
     <span class="doccomment">/// Write a message to a channel. Fails with [`OakStatus::ErrChannelClosed`] if the underlying</span>
     <span class="doccomment">/// channel has been orphaned.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_write</span>(
+    <span class="kw">fn</span> <span class="ident">channel_write</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
-        <span class="ident">reference</span>: <span class="ident">Handle</span>,
-        <span class="ident">msg</span>: <span class="ident">Message</span>,
+        <span class="ident">write_handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
+        <span class="ident">node_msg</span>: <span class="ident">NodeMessage</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">validate_handle_access</span>(<span class="ident">node_id</span>, <span class="ident">reference</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">validate_can_write_to_channel</span>(<span class="ident">node_id</span>, <span class="ident">reference</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">channels</span>.<span class="ident">with_channel</span>(<span class="self">self</span>.<span class="ident">channels</span>.<span class="ident">get_writer_channel</span>(<span class="ident">reference</span>)<span class="question-mark">?</span>, <span class="op">|</span><span class="ident">channel</span><span class="op">|</span>{
+        <span class="kw">let</span> <span class="ident">half</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">abi_to_write_half</span>(<span class="ident">node_id</span>, <span class="ident">write_handle</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">validate_can_write_to_channel</span>(<span class="ident">node_id</span>, <span class="kw-2">&amp;</span><span class="ident">half</span>)<span class="question-mark">?</span>;
 
-        <span class="kw">if</span> <span class="ident">channel</span>.<span class="ident">is_orphan</span>() {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrChannelClosed</span>);
-        }
-
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">new_references</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">with_capacity</span>(<span class="ident">msg</span>.<span class="ident">channels</span>.<span class="ident">len</span>());
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">failure</span> <span class="op">=</span> <span class="prelude-val">None</span>;
-
-        <span class="kw">for</span> <span class="ident">reference</span> <span class="kw">in</span> <span class="ident">msg</span>.<span class="ident">channels</span>.<span class="ident">iter</span>() {
-            <span class="kw">match</span> <span class="self">self</span>.<span class="ident">channels</span>.<span class="ident">duplicate_reference</span>(<span class="kw-2">*</span><span class="ident">reference</span>) {
-                <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="ident">failure</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">e</span>);
-                    <span class="kw">break</span>;
-                }
-                <span class="prelude-val">Ok</span>(<span class="ident">reference</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">new_references</span>.<span class="ident">push</span>(<span class="ident">reference</span>),
+        <span class="comment">// Translate the Node-relative handles in the `NodeMessage` to channel halves.</span>
+        <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">message_from</span>(<span class="ident">node_msg</span>, <span class="ident">node_id</span>)<span class="question-mark">?</span>;
+        <span class="ident">with_writer_channel</span>(<span class="kw-2">&amp;</span><span class="ident">half</span>, <span class="op">|</span><span class="ident">channel</span><span class="op">|</span> {
+            <span class="kw">if</span> <span class="op">!</span><span class="ident">channel</span>.<span class="ident">has_readers</span>() {
+                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrChannelClosed</span>);
             }
-        }
+            <span class="ident">channel</span>.<span class="ident">messages</span>.<span class="ident">write</span>().<span class="ident">unwrap</span>().<span class="ident">push_back</span>(<span class="ident">msg</span>);
+            <span class="ident">channel</span>.<span class="ident">wake_waiters</span>();
 
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">failure</span> {
-            <span class="kw">for</span> <span class="ident">reference</span> <span class="kw">in</span> <span class="ident">new_references</span> {
-                <span class="self">self</span>.<span class="ident">channels</span>.<span class="ident">remove_reference</span>(<span class="ident">reference</span>).<span class="ident">expect</span>(<span class="string">&quot;channel_write: Failed to deallocate channel references during backtracking from error during channel reference copying&quot;</span>);
-            }
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>);
-        }
+            <span class="prelude-val">Ok</span>(())
+        })
+    }
 
-        <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="ident">Message</span> { <span class="ident">channels</span>: <span class="ident">new_references</span>, ..<span class="ident">msg</span> };
-        <span class="ident">channel</span>.<span class="ident">messages</span>.<span class="ident">write</span>().<span class="ident">unwrap</span>().<span class="ident">push_back</span>(<span class="ident">msg</span>);
-
-        <span class="comment">// Unpark (wake up) all waiting threads that still have live references. The first thread</span>
-        <span class="comment">// woken can immediately read the message, and others might find `messages` is empty before</span>
-        <span class="comment">// they are even woken. This should not be an issue (being woken does not guarantee a</span>
-        <span class="comment">// message is available), but it could potentially result in some particular thread always</span>
-        <span class="comment">// getting first chance to read the message.</span>
-        <span class="comment">//</span>
-        <span class="comment">// If a thread is woken and finds no message it will take the `waiting_threads` lock and</span>
-        <span class="comment">// add itself again. Note that since that lock is currently held, the woken thread will add</span>
-        <span class="comment">// itself to waiting_threads *after* we call clear below as we release the lock implicilty</span>
-        <span class="comment">// on leaving this function.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">waiting_threads</span> <span class="op">=</span> <span class="ident">channel</span>.<span class="ident">waiting_threads</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>();
-        <span class="kw">for</span> <span class="ident">thread</span> <span class="kw">in</span> <span class="ident">waiting_threads</span>.<span class="ident">values</span>() {
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">thread</span>) <span class="op">=</span> <span class="ident">thread</span>.<span class="ident">upgrade</span>() {
-                <span class="ident">thread</span>.<span class="ident">unpark</span>();
-            }
-        }
-        <span class="ident">waiting_threads</span>.<span class="ident">clear</span>();
-
-        <span class="prelude-val">Ok</span>(())
+    <span class="comment">// Translate the Node-relative handles in the `NodeMessage` to channel halves.</span>
+    <span class="kw">fn</span> <span class="ident">message_from</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_msg</span>: <span class="ident">NodeMessage</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Message</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+        <span class="prelude-val">Ok</span>(<span class="ident">Message</span> {
+            <span class="ident">data</span>: <span class="ident">node_msg</span>.<span class="ident">data</span>,
+            <span class="ident">channels</span>: <span class="ident">node_msg</span>
+                .<span class="ident">handles</span>
+                .<span class="ident">into_iter</span>()
+                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">handle</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">abi_to_half</span>(<span class="ident">node_id</span>, <span class="ident">handle</span>))
+                .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ChannelHalf</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>,
         })
     }
 
     <span class="doccomment">/// Thread safe. Read a message from a channel. Fails with [`OakStatus::ErrChannelClosed`] if</span>
     <span class="doccomment">/// the underlying channel is empty and has been orphaned.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_read</span>(
+    <span class="kw">fn</span> <span class="ident">channel_read</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
-        <span class="ident">reference</span>: <span class="ident">Handle</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Message</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">validate_handle_access</span>(<span class="ident">node_id</span>, <span class="ident">reference</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">validate_can_read_from_channel</span>(<span class="ident">node_id</span>, <span class="ident">reference</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">channels</span>
-            .<span class="ident">with_channel</span>(
-                <span class="self">self</span>.<span class="ident">channels</span>.<span class="ident">get_reader_channel</span>(<span class="ident">reference</span>)<span class="question-mark">?</span>,
-                <span class="op">|</span><span class="ident">channel</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">channel</span>.<span class="ident">messages</span>.<span class="ident">write</span>().<span class="ident">unwrap</span>().<span class="ident">pop_front</span>() {
-                    <span class="prelude-val">Some</span>(<span class="ident">m</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                        <span class="self">self</span>.<span class="ident">track_handles_in_node</span>(<span class="ident">node_id</span>, <span class="ident">m</span>.<span class="ident">channels</span>.<span class="ident">to_vec</span>());
-                        <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">m</span>))
+        <span class="ident">read_handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NodeMessage</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">half</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">abi_to_read_half</span>(<span class="ident">node_id</span>, <span class="ident">read_handle</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">validate_can_read_from_channel</span>(<span class="ident">node_id</span>, <span class="kw-2">&amp;</span><span class="ident">half</span>)<span class="question-mark">?</span>;
+        <span class="kw">match</span> <span class="ident">with_reader_channel</span>(<span class="kw-2">&amp;</span><span class="ident">half</span>, <span class="op">|</span><span class="ident">channel</span><span class="op">|</span> {
+            <span class="kw">match</span> <span class="ident">channel</span>.<span class="ident">messages</span>.<span class="ident">write</span>().<span class="ident">unwrap</span>().<span class="ident">pop_front</span>() {
+                <span class="prelude-val">Some</span>(<span class="ident">m</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">m</span>)),
+                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="kw">if</span> <span class="op">!</span><span class="ident">channel</span>.<span class="ident">has_writers</span>() {
+                        <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrChannelClosed</span>)
+                    } <span class="kw">else</span> {
+                        <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
                     }
-                    <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
-                        <span class="kw">if</span> <span class="ident">channel</span>.<span class="ident">is_orphan</span>() {
-                            <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrChannelClosed</span>)
-                        } <span class="kw">else</span> {
-                            <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
-                        }
-                    }
-                },
-            )
+                }
+            }
+        }) {
+            <span class="prelude-val">Err</span>(<span class="ident">status</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">status</span>),
+            <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
+            <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">runtime_msg</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="self">self</span>.<span class="ident">node_message_from</span>(<span class="ident">runtime_msg</span>, <span class="ident">node_id</span>))),
+        }
     }
 
     <span class="doccomment">/// Thread safe. This function returns:</span>
     <span class="doccomment">/// - [`ChannelReadStatus::ReadReady`] if there is at least one message in the channel.</span>
     <span class="doccomment">/// - [`ChannelReadStatus::Orphaned`] if there are no messages and there are no writers</span>
     <span class="doccomment">/// - [`ChannelReadStatus::NotReady`] if there are no messages but there are some writers</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_status</span>(
+    <span class="kw">fn</span> <span class="ident">channel_status</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
-        <span class="ident">reference</span>: <span class="ident">Handle</span>,
+        <span class="ident">half</span>: <span class="kw-2">&amp;</span><span class="ident">ChannelHalf</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ChannelReadStatus</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">validate_handle_access</span>(<span class="ident">node_id</span>, <span class="ident">reference</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">validate_can_read_from_channel</span>(<span class="ident">node_id</span>, <span class="ident">reference</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">channels</span>
-            .<span class="ident">with_channel</span>(<span class="self">self</span>.<span class="ident">channels</span>.<span class="ident">get_reader_channel</span>(<span class="ident">reference</span>)<span class="question-mark">?</span>, <span class="op">|</span><span class="ident">channel</span><span class="op">|</span> {
-                <span class="prelude-val">Ok</span>(<span class="kw">if</span> <span class="ident">channel</span>.<span class="ident">messages</span>.<span class="ident">read</span>().<span class="ident">unwrap</span>().<span class="ident">front</span>().<span class="ident">is_some</span>() {
-                    <span class="ident">ChannelReadStatus</span>::<span class="ident">ReadReady</span>
-                } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">channel</span>.<span class="ident">is_orphan</span>() {
-                    <span class="ident">ChannelReadStatus</span>::<span class="ident">Orphaned</span>
-                } <span class="kw">else</span> {
-                    <span class="ident">ChannelReadStatus</span>::<span class="ident">NotReady</span>
-                })
+        <span class="self">self</span>.<span class="ident">validate_can_read_from_channel</span>(<span class="ident">node_id</span>, <span class="ident">half</span>)<span class="question-mark">?</span>;
+        <span class="ident">with_reader_channel</span>(<span class="ident">half</span>, <span class="op">|</span><span class="ident">channel</span><span class="op">|</span> {
+            <span class="prelude-val">Ok</span>(<span class="kw">if</span> <span class="ident">channel</span>.<span class="ident">messages</span>.<span class="ident">read</span>().<span class="ident">unwrap</span>().<span class="ident">front</span>().<span class="ident">is_some</span>() {
+                <span class="ident">ChannelReadStatus</span>::<span class="ident">ReadReady</span>
+            } <span class="kw">else</span> <span class="kw">if</span> <span class="op">!</span><span class="ident">channel</span>.<span class="ident">has_writers</span>() {
+                <span class="ident">ChannelReadStatus</span>::<span class="ident">Orphaned</span>
+            } <span class="kw">else</span> {
+                <span class="ident">ChannelReadStatus</span>::<span class="ident">NotReady</span>
             })
+        })
     }
 
     <span class="doccomment">/// Thread safe. Reads a message from the channel if `bytes_capacity` and `handles_capacity` are</span>
@@ -2087,79 +2310,72 @@
     <span class="doccomment">/// `Some(ReadStatus::NeedsCapacity(needed_bytes_capacity,needed_handles_capacity))`. Does not</span>
     <span class="doccomment">/// guarantee that the next call will succeed after capacity adjustments as another thread may</span>
     <span class="doccomment">/// have read the original message.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_try_read_message</span>(
+    <span class="kw">fn</span> <span class="ident">channel_try_read_message</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
-        <span class="ident">reference</span>: <span class="ident">Handle</span>,
+        <span class="ident">handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
         <span class="ident">bytes_capacity</span>: <span class="ident">usize</span>,
         <span class="ident">handles_capacity</span>: <span class="ident">usize</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ReadStatus</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">validate_handle_access</span>(<span class="ident">node_id</span>, <span class="ident">reference</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">validate_can_read_from_channel</span>(<span class="ident">node_id</span>, <span class="ident">reference</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">channels</span>
-            .<span class="ident">with_channel</span>(<span class="self">self</span>.<span class="ident">channels</span>.<span class="ident">get_reader_channel</span>(<span class="ident">reference</span>)<span class="question-mark">?</span>, <span class="op">|</span><span class="ident">channel</span><span class="op">|</span> {
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">messages</span> <span class="op">=</span> <span class="ident">channel</span>.<span class="ident">messages</span>.<span class="ident">write</span>().<span class="ident">unwrap</span>();
-                <span class="kw">match</span> <span class="ident">messages</span>.<span class="ident">front</span>() {
-                    <span class="prelude-val">Some</span>(<span class="ident">front</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                        <span class="kw">let</span> <span class="ident">req_bytes_capacity</span> <span class="op">=</span> <span class="ident">front</span>.<span class="ident">data</span>.<span class="ident">len</span>();
-                        <span class="kw">let</span> <span class="ident">req_handles_capacity</span> <span class="op">=</span> <span class="ident">front</span>.<span class="ident">channels</span>.<span class="ident">len</span>();
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NodeReadStatus</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">half</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">abi_to_read_half</span>(<span class="ident">node_id</span>, <span class="ident">handle</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">validate_can_read_from_channel</span>(<span class="ident">node_id</span>, <span class="kw-2">&amp;</span><span class="ident">half</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">with_reader_channel</span>(<span class="kw-2">&amp;</span><span class="ident">half</span>, <span class="op">|</span><span class="ident">channel</span><span class="op">|</span> {
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">messages</span> <span class="op">=</span> <span class="ident">channel</span>.<span class="ident">messages</span>.<span class="ident">write</span>().<span class="ident">unwrap</span>();
+            <span class="kw">match</span> <span class="ident">messages</span>.<span class="ident">front</span>() {
+                <span class="prelude-val">Some</span>(<span class="ident">front</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="kw">let</span> <span class="ident">req_bytes_capacity</span> <span class="op">=</span> <span class="ident">front</span>.<span class="ident">data</span>.<span class="ident">len</span>();
+                    <span class="kw">let</span> <span class="ident">req_handles_capacity</span> <span class="op">=</span> <span class="ident">front</span>.<span class="ident">channels</span>.<span class="ident">len</span>();
 
-                        <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(
-                            <span class="kw">if</span> <span class="ident">req_bytes_capacity</span> <span class="op">&gt;</span> <span class="ident">bytes_capacity</span>
-                                <span class="op">|</span><span class="op">|</span> <span class="ident">req_handles_capacity</span> <span class="op">&gt;</span> <span class="ident">handles_capacity</span>
-                            {
-                                <span class="ident">ReadStatus</span>::<span class="ident">NeedsCapacity</span>(<span class="ident">req_bytes_capacity</span>, <span class="ident">req_handles_capacity</span>)
-                            } <span class="kw">else</span> {
-                                <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="ident">messages</span>.<span class="ident">pop_front</span>().<span class="ident">expect</span>( <span class="string">&quot;Front element disappeared while we were holding the write lock!&quot;</span>);
-                                <span class="ident">ReadStatus</span>::<span class="ident">Success</span>(<span class="ident">msg</span>)
-                            },
-                        ))
-                    }
-                    <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
-                        <span class="kw">if</span> <span class="ident">channel</span>.<span class="ident">is_orphan</span>() {
-                            <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrChannelClosed</span>)
-                        } <span class="kw">else</span> {
-                            <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
-                        }
+                    <span class="kw">if</span> <span class="ident">req_bytes_capacity</span> <span class="op">&gt;</span> <span class="ident">bytes_capacity</span>
+                        <span class="op">|</span><span class="op">|</span> <span class="ident">req_handles_capacity</span> <span class="op">&gt;</span> <span class="ident">handles_capacity</span>
+                    {
+                        <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">ReadStatus</span>::<span class="ident">NeedsCapacity</span>(
+                            <span class="ident">req_bytes_capacity</span>,
+                            <span class="ident">req_handles_capacity</span>,
+                        )))
+                    } <span class="kw">else</span> {
+                        <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">ReadStatus</span>::<span class="ident">Success</span>(<span class="ident">messages</span>.<span class="ident">pop_front</span>().<span class="ident">expect</span>(
+                            <span class="string">&quot;Front element disappeared while we were holding the write lock!&quot;</span>,
+                        ))))
                     }
                 }
-            });
-
-        <span class="comment">// Add handles outside the channels lock so we don&#39;t hold the node_infos lock inside the</span>
-        <span class="comment">// channel lock.</span>
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">ReadStatus</span>::<span class="ident">Success</span>(<span class="kw-2">ref</span> <span class="ident">msg</span>))) <span class="op">=</span> <span class="ident">result</span> {
-            <span class="self">self</span>.<span class="ident">track_handles_in_node</span>(<span class="ident">node_id</span>, <span class="ident">msg</span>.<span class="ident">channels</span>.<span class="ident">clone</span>());
-        }
-
-        <span class="ident">result</span>
+                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="kw">if</span> <span class="op">!</span><span class="ident">channel</span>.<span class="ident">has_writers</span>() {
+                        <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrChannelClosed</span>)
+                    } <span class="kw">else</span> {
+                        <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
+                    }
+                }
+            }
+        })<span class="question-mark">?</span>;
+        <span class="comment">// Translate the result into the handle numbering space of this Node.</span>
+        <span class="prelude-val">Ok</span>(<span class="kw">match</span> <span class="ident">result</span> {
+            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+            <span class="prelude-val">Some</span>(<span class="ident">ReadStatus</span>::<span class="ident">NeedsCapacity</span>(<span class="ident">z</span>, <span class="ident">c</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">NodeReadStatus</span>::<span class="ident">NeedsCapacity</span>(<span class="ident">z</span>, <span class="ident">c</span>)),
+            <span class="prelude-val">Some</span>(<span class="ident">ReadStatus</span>::<span class="ident">Success</span>(<span class="ident">msg</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">NodeReadStatus</span>::<span class="ident">Success</span>(
+                <span class="self">self</span>.<span class="ident">node_message_from</span>(<span class="ident">msg</span>, <span class="ident">node_id</span>),
+            )),
+        })
     }
 
-    <span class="doccomment">/// Return the direction of a [`Handle`]. This is useful when reading</span>
-    <span class="doccomment">/// [`Message`]s which contain [`Handle`]&#39;s.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_get_direction</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
-        <span class="ident">reference</span>: <span class="ident">Handle</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">HandleDirection</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">validate_handle_access</span>(<span class="ident">node_id</span>, <span class="ident">reference</span>)<span class="question-mark">?</span>;
-        <span class="comment">// TODO(#630): Check whether the calling Node can read from the specified handle. Currently,</span>
-        <span class="comment">// performing this check seems to get tests to hang forever.</span>
-        <span class="self">self</span>.<span class="ident">channels</span>.<span class="ident">get_direction</span>(<span class="ident">reference</span>)
-    }
-    <span class="doccomment">/// Close a [`Handle`], potentially orphaning the underlying [`channel::Channel`].</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_close</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">reference</span>: <span class="ident">Handle</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">validate_handle_access</span>(<span class="ident">node_id</span>, <span class="ident">reference</span>)<span class="question-mark">?</span>;
-
-        <span class="kw">if</span> <span class="ident">node_id</span> <span class="op">!</span><span class="op">=</span> <span class="ident">RUNTIME_NODE_ID</span> {
-            <span class="comment">// Remove handle from the Node&#39;s available handles</span>
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">node_infos</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">node_infos</span>.<span class="ident">write</span>().<span class="ident">unwrap</span>();
-            <span class="kw">let</span> <span class="ident">node_info</span> <span class="op">=</span> <span class="ident">node_infos</span>
-                .<span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="ident">node_id</span>)
-                .<span class="ident">expect</span>(<span class="string">&quot;channel_close: No such node_id&quot;</span>);
-            <span class="ident">node_info</span>.<span class="ident">handles</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">reference</span>);
+    <span class="comment">// Translate a Message to include ABI handles (which are relative to this Node) rather than</span>
+    <span class="comment">// internal channel references.</span>
+    <span class="kw">fn</span> <span class="ident">node_message_from</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">msg</span>: <span class="ident">Message</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NodeMessage</span> {
+        <span class="ident">NodeMessage</span> {
+            <span class="ident">data</span>: <span class="ident">msg</span>.<span class="ident">data</span>,
+            <span class="ident">handles</span>: <span class="ident">msg</span>
+                .<span class="ident">channels</span>
+                .<span class="ident">iter</span>()
+                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">half</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">new_abi_handle</span>(<span class="ident">node_id</span>, <span class="ident">half</span>.<span class="ident">clone</span>()))
+                .<span class="ident">collect</span>(),
         }
+    }
 
-        <span class="self">self</span>.<span class="ident">channels</span>.<span class="ident">remove_reference</span>(<span class="ident">reference</span>)
+    <span class="doccomment">/// Close an [`oak_abi::Handle`], potentially orphaning the underlying [`channel::Channel`].</span>
+    <span class="kw">fn</span> <span class="ident">channel_close</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+        <span class="comment">// Remove the ABI handle -&gt; half mapping; half will be dropped at end of scope.</span>
+        <span class="self">self</span>.<span class="ident">drop_abi_handle</span>(<span class="ident">node_id</span>, <span class="ident">handle</span>)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(())
     }
 
     <span class="doccomment">/// Create a fresh [`NodeId`].</span>
@@ -2168,31 +2384,24 @@
     }
 
     <span class="doccomment">/// Remove a Node by [`NodeId`] from the [`Runtime`].</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">remove_node_id</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>) {
-        {
-            <span class="comment">// Do not remove the Node if it is RUNTIME_NODE_ID</span>
-            <span class="kw">if</span> <span class="ident">node_id</span> <span class="op">=</span><span class="op">=</span> <span class="ident">RUNTIME_NODE_ID</span> {
-                <span class="kw">return</span>;
-            }
+    <span class="kw">fn</span> <span class="ident">remove_node_id</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>) {
+        <span class="comment">// Close any remaining handles</span>
+        <span class="kw">let</span> <span class="ident">remaining_handles</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> {
+            <span class="kw">let</span> <span class="ident">node_infos</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">node_infos</span>.<span class="ident">read</span>().<span class="ident">unwrap</span>();
+            <span class="kw">let</span> <span class="ident">node_info</span> <span class="op">=</span> <span class="ident">node_infos</span>
+                .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">node_id</span>)
+                .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;remove_node_id: No such node_id {:?}&quot;</span>, <span class="ident">node_id</span>));
+            <span class="ident">node_info</span>.<span class="ident">abi_handles</span>.<span class="ident">keys</span>().<span class="ident">copied</span>().<span class="ident">collect</span>()
+        };
 
-            <span class="comment">// Close any remaining handles</span>
-            <span class="kw">let</span> <span class="ident">remaining_handles</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> {
-                <span class="kw">let</span> <span class="ident">node_infos</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">node_infos</span>.<span class="ident">read</span>().<span class="ident">unwrap</span>();
-                <span class="kw">let</span> <span class="ident">node_info</span> <span class="op">=</span> <span class="ident">node_infos</span>
-                    .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">node_id</span>)
-                    .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;remove_node_id: No such node_id {:?}&quot;</span>, <span class="ident">node_id</span>));
-                <span class="ident">node_info</span>.<span class="ident">handles</span>.<span class="ident">iter</span>().<span class="ident">copied</span>().<span class="ident">collect</span>()
-            };
+        <span class="macro">debug</span><span class="macro">!</span>(
+            <span class="string">&quot;{:?}: remove_node_id() found open handles on exit: {:?}&quot;</span>,
+            <span class="ident">node_id</span>, <span class="ident">remaining_handles</span>
+        );
 
-            <span class="macro">debug</span><span class="macro">!</span>(
-                <span class="string">&quot;{:?}: remove_node_id() found open channels on exit: {:?}&quot;</span>,
-                <span class="ident">node_id</span>, <span class="ident">remaining_handles</span>
-            );
-
-            <span class="kw">for</span> <span class="ident">handle</span> <span class="kw">in</span> <span class="ident">remaining_handles</span> {
-                <span class="self">self</span>.<span class="ident">channel_close</span>(<span class="ident">node_id</span>, <span class="ident">handle</span>)
-                    .<span class="ident">expect</span>(<span class="string">&quot;remove_node_id: Unable to close hanging channel!&quot;</span>);
-            }
+        <span class="kw">for</span> <span class="ident">handle</span> <span class="kw">in</span> <span class="ident">remaining_handles</span> {
+            <span class="self">self</span>.<span class="ident">channel_close</span>(<span class="ident">node_id</span>, <span class="ident">handle</span>)
+                .<span class="ident">expect</span>(<span class="string">&quot;remove_node_id: Unable to close hanging channel!&quot;</span>);
         }
 
         <span class="self">self</span>.<span class="ident">node_infos</span>
@@ -2242,88 +2451,71 @@
     <span class="doccomment">/// This method is defined on [`Arc`] and not [`Runtime`] itself, so that</span>
     <span class="doccomment">/// the [`Arc`] can clone itself and be included in a [`RuntimeProxy`] object</span>
     <span class="doccomment">/// to be given to a new Node.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">node_create</span>(
+    <span class="kw">fn</span> <span class="ident">node_create</span>(
         <span class="self">self</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
-        <span class="ident">module_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
+        <span class="ident">config_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
         <span class="ident">entrypoint</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
         <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>,
-        <span class="ident">reader</span>: <span class="ident">Handle</span>,
+        <span class="ident">initial_handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="self">self</span>.<span class="ident">is_terminating</span>() {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrTerminated</span>);
         }
 
-        <span class="kw">if</span> <span class="ident">node_id</span> <span class="op">!</span><span class="op">=</span> <span class="ident">RUNTIME_NODE_ID</span> {
-            <span class="kw">let</span> <span class="ident">node_label</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_node_label</span>(<span class="ident">node_id</span>);
-            <span class="kw">if</span> <span class="op">!</span><span class="ident">node_label</span>.<span class="ident">flows_to</span>(<span class="ident">label</span>) {
-                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrPermissionDenied</span>);
-            }
+        <span class="kw">let</span> <span class="ident">reader</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">abi_to_read_half</span>(<span class="ident">node_id</span>, <span class="ident">initial_handle</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">node_label</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_node_label</span>(<span class="ident">node_id</span>);
+        <span class="kw">if</span> <span class="op">!</span><span class="ident">node_label</span>.<span class="ident">flows_to</span>(<span class="ident">label</span>) {
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrPermissionDenied</span>);
         }
-
-        <span class="kw">let</span> <span class="ident">node_id</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">new_node_id</span>();
-        <span class="kw">let</span> <span class="ident">runtime_proxy</span> <span class="op">=</span> <span class="ident">RuntimeProxy</span> {
-            <span class="ident">runtime</span>: <span class="self">self</span>.<span class="ident">clone</span>(),
-            <span class="ident">node_id</span>,
-        };
-
-        <span class="kw">let</span> <span class="ident">reader</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">channels</span>.<span class="ident">duplicate_reference</span>(<span class="ident">reader</span>)<span class="question-mark">?</span>;
-
-        <span class="kw">let</span> <span class="ident">instance</span> <span class="op">=</span> <span class="self">self</span>
+        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">configuration</span>
             .<span class="ident">nodes</span>
-            .<span class="ident">get</span>(<span class="ident">module_name</span>)
-            .<span class="ident">ok_or</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>)
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">conf</span><span class="op">|</span> {
-                <span class="comment">// This only creates a Node instance, but does not start it.</span>
-                <span class="ident">conf</span>.<span class="ident">create_node</span>(<span class="ident">module_name</span>, <span class="ident">runtime_proxy</span>, <span class="ident">entrypoint</span>.<span class="ident">to_owned</span>(), <span class="ident">reader</span>)
-            })<span class="question-mark">?</span>;
+            .<span class="ident">get</span>(<span class="ident">config_name</span>)
+            .<span class="ident">ok_or</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>)<span class="question-mark">?</span>;
 
-        <span class="self">self</span>.<span class="ident">node_start_instance</span>(
-            <span class="ident">node_id</span>,
-            <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}.{}&quot;</span>, <span class="ident">module_name</span>, <span class="ident">entrypoint</span>),
-            <span class="ident">instance</span>,
+        <span class="kw">let</span> <span class="ident">new_node_proxy</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">clone</span>().<span class="ident">proxy_for_new_node</span>();
+        <span class="kw">let</span> <span class="ident">new_node_id</span> <span class="op">=</span> <span class="ident">new_node_proxy</span>.<span class="ident">node_id</span>;
+        <span class="self">self</span>.<span class="ident">node_configure_instance</span>(
+            <span class="ident">new_node_id</span>,
+            <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}.{}&quot;</span>, <span class="ident">config_name</span>, <span class="ident">entrypoint</span>),
             <span class="ident">label</span>,
-            <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">reader</span>],
-        )<span class="question-mark">?</span>;
+        );
+        <span class="kw">let</span> <span class="ident">initial_handle</span> <span class="op">=</span> <span class="ident">new_node_proxy</span>
+            .<span class="ident">runtime</span>
+            .<span class="ident">new_abi_handle</span>(<span class="ident">new_node_proxy</span>.<span class="ident">node_id</span>, <span class="ident">reader</span>.<span class="ident">clone</span>());
+        <span class="macro">debug</span><span class="macro">!</span>(
+            <span class="string">&quot;{:?}: create node instance {:?} &#39;{}&#39;.&#39;{}&#39; with handle {} from {:?}&quot;</span>,
+            <span class="ident">node_id</span>, <span class="ident">new_node_id</span>, <span class="ident">config_name</span>, <span class="ident">entrypoint</span>, <span class="ident">initial_handle</span>, <span class="ident">reader</span>
+        );
+
+        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{:?}: create node instance {:?}&quot;</span>, <span class="ident">node_id</span>, <span class="ident">new_node_id</span>);
+        <span class="comment">// This only creates a Node instance, but does not start it.</span>
+        <span class="kw">let</span> <span class="ident">instance</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">create_node</span>(
+            <span class="ident">config_name</span>,
+            <span class="ident">new_node_proxy</span>,
+            <span class="ident">entrypoint</span>.<span class="ident">to_owned</span>(),
+            <span class="ident">initial_handle</span>,
+        );
+
+        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{:?}: start node instance {:?}&quot;</span>, <span class="ident">node_id</span>, <span class="ident">new_node_id</span>);
+        <span class="self">self</span>.<span class="ident">node_start_instance</span>(<span class="ident">new_node_id</span>, <span class="ident">instance</span>)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(())
     }
 
     <span class="doccomment">/// Starts a newly created Node instance, by first initializing the necessary [`NodeInfo`] data</span>
-    <span class="doccomment">/// structure in [`Runtime`], allowing it to access the provided [`Handle`]s, then calling</span>
-    <span class="doccomment">/// [`Node::start`] on the instance, and finally storing a [`JoinHandle`] from the running</span>
-    <span class="doccomment">/// instance in [`Runtime::node_join_handles`] so that it can later be terminated.  The</span>
-    <span class="doccomment">/// `pretty_name` parameter is only used for diagnostic/debugging output.</span>
+    <span class="doccomment">/// structure in [`Runtime`], allowing it to access the provided [`ChannelHalf`]s, then</span>
+    <span class="doccomment">/// calling [`Node::start`] on the instance, and finally storing a [`JoinHandle`] from the</span>
+    <span class="doccomment">/// running instance in [`Runtime::node_join_handles`] so that it can later be terminated.</span>
+    <span class="doccomment">/// The `pretty_name` parameter is only used for diagnostic/debugging output.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`Node::start`]: crate::node::Node::start</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">node_start_instance</span><span class="op">&lt;</span><span class="ident">I</span><span class="op">&gt;</span>(
+    <span class="kw">fn</span> <span class="ident">node_start_instance</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
-        <span class="ident">pretty_name</span>: <span class="ident">String</span>,
         <span class="ident">node_instance</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="kw">crate</span>::<span class="ident">node</span>::<span class="ident">Node</span><span class="op">&gt;</span>,
-        <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>,
-        <span class="ident">initial_handles</span>: <span class="ident">I</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">Handle</span><span class="op">&gt;</span>,
-    {
-        <span class="comment">// First create the necessary info data structure in the Runtime, otherwise calls that the</span>
-        <span class="comment">// Node makes to the Runtime during `Node::start` (synchronously or asynchronously) may</span>
-        <span class="comment">// fail.</span>
-        <span class="self">self</span>.<span class="ident">add_node_info</span>(
-            <span class="ident">node_id</span>,
-            <span class="ident">NodeInfo</span> {
-                <span class="ident">pretty_name</span>,
-                <span class="ident">label</span>: <span class="ident">label</span>.<span class="ident">clone</span>(),
-                <span class="ident">handles</span>: <span class="ident">HashSet</span>::<span class="ident">new</span>(),
-            },
-        );
-
-        <span class="comment">// Make sure that the provided initial handles are tracked in the newly created Node from</span>
-        <span class="comment">// the start.</span>
-        <span class="self">self</span>.<span class="ident">track_handles_in_node</span>(<span class="ident">node_id</span>, <span class="ident">initial_handles</span>);
-
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="comment">// Try to start the Node instance, and store the join handle.</span>
         <span class="comment">//</span>
         <span class="comment">// In order for this to work correctly, the `NodeInfo` entry must already exist in</span>
@@ -2350,7 +2542,19 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_runtime_proxy</span>(<span class="self">self</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">RuntimeProxy</span> {
+    <span class="comment">// Configure data structures for a Node instance.</span>
+    <span class="kw">fn</span> <span class="ident">node_configure_instance</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">pretty_name</span>: <span class="ident">String</span>, <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>) {
+        <span class="self">self</span>.<span class="ident">add_node_info</span>(
+            <span class="ident">node_id</span>,
+            <span class="ident">NodeInfo</span> {
+                <span class="ident">pretty_name</span>,
+                <span class="ident">label</span>: <span class="ident">label</span>.<span class="ident">clone</span>(),
+                <span class="ident">abi_handles</span>: <span class="ident">HashMap</span>::<span class="ident">new</span>(),
+            },
+        );
+    }
+
+    <span class="kw">fn</span> <span class="ident">proxy_for_new_node</span>(<span class="self">self</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">RuntimeProxy</span> {
         <span class="ident">RuntimeProxy</span> {
             <span class="ident">runtime</span>: <span class="self">self</span>.<span class="ident">clone</span>(),
             <span class="ident">node_id</span>: <span class="self">self</span>.<span class="ident">new_node_id</span>(),
@@ -2361,6 +2565,7 @@
 <span class="kw">impl</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">Runtime</span> {
     <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
         <span class="self">self</span>.<span class="ident">stop</span>();
+        <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Runtime instance dropped&quot;</span>);
     }
 }
 
@@ -2379,11 +2584,18 @@
 <span class="doccomment">/// partially applying the first argument.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RuntimeProxy</span> {
-    <span class="kw">pub</span> <span class="ident">runtime</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Runtime</span><span class="op">&gt;</span>,
+    <span class="ident">runtime</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Runtime</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">RuntimeProxy</span> {
+    <span class="doccomment">/// Create a RuntimeProxy instance that acts as a proxy for the specified NodeId.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_for_node</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="ident">RuntimeProxy</span> {
+            <span class="ident">runtime</span>: <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">clone</span>(),
+            <span class="ident">node_id</span>,
+        }
+    }
     <span class="doccomment">/// See [`Runtime::is_terminating`].</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_terminating</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
         <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">is_terminating</span>()
@@ -2400,73 +2612,65 @@
         <span class="ident">module_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
         <span class="ident">entrypoint</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
         <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>,
-        <span class="ident">channel_read_handle</span>: <span class="ident">Handle</span>,
+        <span class="ident">initial_handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">clone</span>().<span class="ident">node_create</span>(
             <span class="self">self</span>.<span class="ident">node_id</span>,
             <span class="ident">module_name</span>,
             <span class="ident">entrypoint</span>,
             <span class="ident">label</span>,
-            <span class="ident">channel_read_handle</span>,
+            <span class="ident">initial_handle</span>,
         )
     }
 
-    <span class="doccomment">/// See [`Runtime::new_channel`].</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_create</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">Handle</span>, <span class="ident">Handle</span>) {
-        <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">new_channel</span>(<span class="self">self</span>.<span class="ident">node_id</span>, <span class="ident">label</span>)
+    <span class="doccomment">/// See [`Runtime::channel_create`].</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_create</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">oak_abi</span>::<span class="ident">Handle</span>, <span class="ident">oak_abi</span>::<span class="ident">Handle</span>) {
+        <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">channel_create</span>(<span class="self">self</span>.<span class="ident">node_id</span>, <span class="ident">label</span>)
     }
 
     <span class="doccomment">/// See [`Runtime::channel_close`].</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_close</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">channel_handle</span>: <span class="ident">Handle</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">channel_close</span>(<span class="self">self</span>.<span class="ident">node_id</span>, <span class="ident">channel_handle</span>)
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_close</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">channel_close</span>(<span class="self">self</span>.<span class="ident">node_id</span>, <span class="ident">handle</span>)
     }
 
     <span class="doccomment">/// See [`Runtime::wait_on_channels`].</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">wait_on_channels</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">channel_read_handles</span>: <span class="kw-2">&amp;</span>[<span class="ident">Handle</span>],
+        <span class="ident">read_handles</span>: <span class="kw-2">&amp;</span>[<span class="ident">oak_abi</span>::<span class="ident">Handle</span>],
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ChannelReadStatus</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">runtime</span>
-            .<span class="ident">wait_on_channels</span>(<span class="self">self</span>.<span class="ident">node_id</span>, <span class="ident">channel_read_handles</span>)
+        <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">wait_on_channels</span>(<span class="self">self</span>.<span class="ident">node_id</span>, <span class="ident">read_handles</span>)
     }
 
     <span class="doccomment">/// See [`Runtime::channel_write`].</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_write</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">channel_write_handle</span>: <span class="ident">Handle</span>,
-        <span class="ident">msg</span>: <span class="ident">Message</span>,
+        <span class="ident">write_handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
+        <span class="ident">msg</span>: <span class="ident">NodeMessage</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">runtime</span>
-            .<span class="ident">channel_write</span>(<span class="self">self</span>.<span class="ident">node_id</span>, <span class="ident">channel_write_handle</span>, <span class="ident">msg</span>)
+        <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">channel_write</span>(<span class="self">self</span>.<span class="ident">node_id</span>, <span class="ident">write_handle</span>, <span class="ident">msg</span>)
     }
 
     <span class="doccomment">/// See [`Runtime::channel_read`].</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">channel_read_handle</span>: <span class="ident">Handle</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Message</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">channel_read</span>(<span class="self">self</span>.<span class="ident">node_id</span>, <span class="ident">channel_read_handle</span>)
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_read</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">read_handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NodeMessage</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">channel_read</span>(<span class="self">self</span>.<span class="ident">node_id</span>, <span class="ident">read_handle</span>)
     }
 
     <span class="doccomment">/// See [`Runtime::channel_try_read_message`].</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_try_read_message</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">channel_read_handle</span>: <span class="ident">Handle</span>,
+        <span class="ident">read_handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
         <span class="ident">bytes_capacity</span>: <span class="ident">usize</span>,
         <span class="ident">handles_capacity</span>: <span class="ident">usize</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ReadStatus</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NodeReadStatus</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">channel_try_read_message</span>(
             <span class="self">self</span>.<span class="ident">node_id</span>,
-            <span class="ident">channel_read_handle</span>,
+            <span class="ident">read_handle</span>,
             <span class="ident">bytes_capacity</span>,
             <span class="ident">handles_capacity</span>,
         )
-    }
-
-    <span class="doccomment">/// See [`Runtime::channel_get_direction`].</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_get_direction</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">channel_handle</span>: <span class="ident">Handle</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">HandleDirection</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">runtime</span>
-            .<span class="ident">channel_get_direction</span>(<span class="self">self</span>.<span class="ident">node_id</span>, <span class="ident">channel_handle</span>)
     }
 }
 </pre></div>

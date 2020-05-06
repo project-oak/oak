@@ -23,6 +23,18 @@
 <span id="23">23</span>
 <span id="24">24</span>
 <span id="25">25</span>
+<span id="26">26</span>
+<span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -40,14 +52,26 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">Handle</span>;
-
 <span class="doccomment">/// Encapsulates a message consisting of opaque data bytes and a vector of channels.</span>
-<span class="doccomment">/// The data bytes should not contain any pointers or handles.</span>
+<span class="doccomment">/// The data bytes should not contain any pointers or handles.  Note that `Message`</span>
+<span class="doccomment">/// and `Channel` objects can be leaked if the Oak application creates cycles of</span>
+<span class="doccomment">/// references (e.g. the only reference to a `Channel` is in a `Message` that is</span>
+<span class="doccomment">/// held in the same `Channel`).</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Message</span> {
     <span class="kw">pub</span> <span class="ident">data</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span> <span class="ident">channels</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Handle</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">channels</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">crate</span>::<span class="ident">runtime</span>::<span class="ident">ChannelHalf</span><span class="op">&gt;</span>,
+}
+
+<span class="doccomment">/// Encapsulates a message relative to a specific Node, consisting of opaque data bytes</span>
+<span class="doccomment">/// together with a vector of ABI handles that are relative to the Node.  This is the</span>
+<span class="doccomment">/// internal counterpart of the SDK&#39;s `Message` type, whereas the internal `Message`</span>
+<span class="doccomment">/// type above holds internal channel references that can be moved between different</span>
+<span class="doccomment">/// Node contexts.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">NodeMessage</span> {
+    <span class="kw">pub</span> <span class="ident">data</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">handles</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">oak_abi</span>::<span class="ident">Handle</span><span class="op">&gt;</span>,
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "oak_runtime";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>

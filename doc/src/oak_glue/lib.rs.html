@@ -358,6 +358,11 @@
 <span id="358">358</span>
 <span id="359">359</span>
 <span id="360">360</span>
+<span id="361">361</span>
+<span id="362">362</span>
+<span id="363">363</span>
+<span id="364">364</span>
+<span id="365">365</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -383,11 +388,7 @@
     <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::<span class="ident">ApplicationConfiguration</span>, <span class="ident">runtime</span>::<span class="ident">RuntimeProxy</span>, <span class="ident">NodeId</span>,
 };
 <span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span>;
-<span class="kw">use</span> <span class="ident">std</span>::{
-    <span class="ident">convert</span>::<span class="ident">TryInto</span>,
-    <span class="ident">io</span>::<span class="ident">Cursor</span>,
-    <span class="ident">sync</span>::{<span class="ident">Arc</span>, <span class="ident">RwLock</span>},
-};
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">convert</span>::<span class="ident">TryInto</span>, <span class="ident">io</span>::<span class="ident">Cursor</span>, <span class="ident">sync</span>::<span class="ident">RwLock</span>};
 
 <span class="attribute">#[<span class="ident">no_mangle</span>]</span>
 <span class="kw">pub</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span> <span class="ident">glue_init</span>(<span class="ident">debug</span>: <span class="ident">u32</span>) {
@@ -403,14 +404,14 @@
     <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span>(<span class="ident">data</span>: <span class="ident">usize</span>, <span class="ident">name</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">u8</span>, <span class="ident">name_len</span>: <span class="ident">u32</span>, <span class="ident">node_id</span>: <span class="ident">u64</span>, <span class="ident">handle</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> ();
 
 <span class="kw">struct</span> <span class="ident">Glue</span> {
-    <span class="ident">runtime</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">oak_runtime</span>::<span class="ident">Runtime</span><span class="op">&gt;</span>,
+    <span class="ident">runtime</span>: <span class="ident">oak_runtime</span>::<span class="ident">RuntimeProxy</span>,
     <span class="ident">factory</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NodeFactory</span><span class="op">&gt;</span>,
     <span class="ident">factory_data</span>: <span class="ident">usize</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Glue</span> {
     <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">runtime</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">oak_runtime</span>::<span class="ident">Runtime</span><span class="op">&gt;</span>,
+        <span class="ident">runtime</span>: <span class="ident">oak_runtime</span>::<span class="ident">RuntimeProxy</span>,
         <span class="ident">factory</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NodeFactory</span><span class="op">&gt;</span>,
         <span class="ident">factory_data</span>: <span class="ident">usize</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
@@ -422,21 +423,23 @@
     }
 }
 
-<span class="doccomment">/// Recreate a RuntimeProxy instance that corresponds to the given node ID</span>
-<span class="doccomment">/// value.</span>
-<span class="kw">fn</span> <span class="ident">proxy_for_node</span>(<span class="ident">node_id</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">RuntimeProxy</span> {
-    <span class="ident">RuntimeProxy</span> {
-        <span class="ident">runtime</span>: <span class="ident">GLUE</span>.<span class="ident">read</span>().<span class="ident">expect</span>(<span class="ident">R1</span>).<span class="ident">as_ref</span>().<span class="ident">expect</span>(<span class="ident">R2</span>).<span class="ident">runtime</span>.<span class="ident">clone</span>(),
-        <span class="ident">node_id</span>: <span class="ident">NodeId</span>(<span class="ident">node_id</span>),
-    }
-}
-
 <span class="macro">lazy_static</span><span class="macro">!</span> {
     <span class="kw">static</span> <span class="kw-2">ref</span> <span class="ident">GLUE</span>: <span class="ident">RwLock</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Glue</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">RwLock</span>::<span class="ident">new</span>(<span class="prelude-val">None</span>);
 }
 
 <span class="kw">const</span> <span class="ident">R1</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;global glue lock poisoned&quot;</span>;
 <span class="kw">const</span> <span class="ident">R2</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;global glue object missing&quot;</span>;
+
+<span class="doccomment">/// Recreate a RuntimeProxy instance that corresponds to the given node ID</span>
+<span class="doccomment">/// value.</span>
+<span class="kw">fn</span> <span class="ident">proxy_for_node</span>(<span class="ident">node_id</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">RuntimeProxy</span> {
+    <span class="ident">GLUE</span>.<span class="ident">read</span>()
+        .<span class="ident">expect</span>(<span class="ident">R1</span>)
+        .<span class="ident">as_ref</span>()
+        .<span class="ident">expect</span>(<span class="ident">R2</span>)
+        .<span class="ident">runtime</span>
+        .<span class="ident">new_for_node</span>(<span class="ident">NodeId</span>(<span class="ident">node_id</span>))
+}
 
 <span class="doccomment">/// Start the Rust runtime, with the ApplicationConfiguration provided in</span>
 <span class="doccomment">/// serialized form.</span>
@@ -451,6 +454,7 @@
     <span class="ident">config_len</span>: <span class="ident">u32</span>,
     <span class="ident">factory</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NodeFactory</span><span class="op">&gt;</span>,
     <span class="ident">factory_data</span>: <span class="ident">usize</span>,
+    <span class="ident">node_id</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u64</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
     <span class="ident">std</span>::<span class="ident">panic</span>::<span class="ident">catch_unwind</span>(<span class="op">|</span><span class="op">|</span> {
         <span class="kw">let</span> <span class="ident">config_data</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">slice</span>::<span class="ident">from_raw_parts</span>(<span class="ident">config_buf</span>, <span class="ident">config_len</span> <span class="kw">as</span> <span class="ident">usize</span>);
@@ -470,7 +474,14 @@
             <span class="string">&quot;start runtime with initial config {}.{} {:?}&quot;</span>,
             <span class="ident">app_config</span>.<span class="ident">initial_node_config_name</span>, <span class="ident">app_config</span>.<span class="ident">initial_entrypoint_name</span>, <span class="ident">runtime_config</span>
         );
-        <span class="kw">let</span> (<span class="ident">runtime</span>, <span class="ident">grpc_handle</span>) <span class="op">=</span>
+
+        <span class="comment">// Register callback for creating C++ pseudo-Nodes.</span>
+        <span class="ident">oak_runtime</span>::<span class="ident">node</span>::<span class="ident">external</span>::<span class="ident">register_factory</span>(<span class="ident">create_and_run_node</span>);
+        <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;register oak_glue::create_and_run_node() as node factory&quot;</span>);
+
+        <span class="comment">// Configure the Rust Runtime, and run the gRPC server pseudo-Node as the implicit</span>
+        <span class="comment">// initial Node.</span>
+        <span class="kw">let</span> (<span class="ident">grpc_proxy</span>, <span class="ident">grpc_handle</span>) <span class="op">=</span>
             <span class="kw">match</span> <span class="ident">oak_runtime</span>::<span class="ident">configure_and_run</span>(<span class="ident">app_config</span>, <span class="ident">runtime_config</span>) {
                 <span class="prelude-val">Ok</span>(<span class="ident">p</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">p</span>,
                 <span class="prelude-val">Err</span>(<span class="ident">status</span>) <span class="op">=</span><span class="op">&gt;</span> {
@@ -478,13 +489,15 @@
                     <span class="kw">return</span> <span class="ident">oak_abi</span>::<span class="ident">INVALID_HANDLE</span>;
                 }
             };
+        <span class="kw-2">*</span><span class="ident">node_id</span> <span class="op">=</span> <span class="ident">grpc_proxy</span>.<span class="ident">node_id</span>.<span class="number">0</span>;
+        <span class="macro">info</span><span class="macro">!</span>(
+            <span class="string">&quot;runtime started, grpc_node_id={}, grpc_handle={}&quot;</span>,
+            <span class="kw-2">*</span><span class="ident">node_id</span>, <span class="ident">grpc_handle</span>
+        );
 
-        <span class="ident">oak_runtime</span>::<span class="ident">node</span>::<span class="ident">external</span>::<span class="ident">register_factory</span>(<span class="ident">create_and_run_node</span>);
-        <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;register oak_glue::create_and_run_node() as node factory&quot;</span>);
-
-        <span class="kw">let</span> <span class="ident">glue</span> <span class="op">=</span> <span class="ident">Glue</span>::<span class="ident">new</span>(<span class="ident">runtime</span>, <span class="ident">factory</span>, <span class="ident">factory_data</span>);
+        <span class="kw">let</span> <span class="ident">glue</span> <span class="op">=</span> <span class="ident">Glue</span>::<span class="ident">new</span>(<span class="ident">grpc_proxy</span>, <span class="ident">factory</span>, <span class="ident">factory_data</span>);
         <span class="kw-2">*</span><span class="ident">GLUE</span>.<span class="ident">write</span>().<span class="ident">expect</span>(<span class="ident">R1</span>) <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">glue</span>);
-        <span class="ident">grpc_handle</span>.<span class="number">0</span>
+        <span class="ident">grpc_handle</span>
     })
     .<span class="ident">unwrap_or</span>(<span class="ident">oak_abi</span>::<span class="ident">INVALID_HANDLE</span>)
 }
@@ -495,10 +508,10 @@
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">glue</span> <span class="op">=</span> <span class="ident">GLUE</span>.<span class="ident">write</span>().<span class="ident">expect</span>(<span class="ident">R1</span>);
     <span class="macro">info</span><span class="macro">!</span>(
         <span class="string">&quot;runtime graph at exit:\n\n{}&quot;</span>,
-        <span class="ident">glue</span>.<span class="ident">as_ref</span>().<span class="ident">expect</span>(<span class="ident">R2</span>).<span class="ident">runtime</span>.<span class="ident">graph</span>()
+        <span class="ident">glue</span>.<span class="ident">as_ref</span>().<span class="ident">expect</span>(<span class="ident">R2</span>).<span class="ident">runtime</span>.<span class="ident">graph_runtime</span>()
     );
     <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;stopping Rust runtime&quot;</span>);
-    <span class="ident">glue</span>.<span class="ident">as_ref</span>().<span class="ident">expect</span>(<span class="ident">R2</span>).<span class="ident">runtime</span>.<span class="ident">stop</span>();
+    <span class="ident">glue</span>.<span class="ident">as_ref</span>().<span class="ident">expect</span>(<span class="ident">R2</span>).<span class="ident">runtime</span>.<span class="ident">stop_runtime</span>();
     <span class="kw-2">*</span><span class="ident">glue</span> <span class="op">=</span> <span class="prelude-val">None</span>;
 }
 
@@ -528,8 +541,8 @@
             <span class="comment">// value.</span>
             <span class="kw">let</span> <span class="ident">handle</span> <span class="op">=</span> <span class="ident">mem_reader</span>.<span class="ident">read_u64</span>::<span class="op">&lt;</span><span class="ident">byteorder</span>::<span class="ident">LittleEndian</span><span class="op">&gt;</span>().<span class="ident">unwrap</span>();
             <span class="kw">let</span> <span class="ident">_b</span> <span class="op">=</span> <span class="ident">mem_reader</span>.<span class="ident">read_u8</span>().<span class="ident">unwrap</span>();
-            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{{{}}}: wait_on_channels handle {:?}&quot;</span>, <span class="ident">node_id</span>, <span class="ident">handle</span>);
-            <span class="ident">handles</span>.<span class="ident">push</span>(<span class="ident">oak_runtime</span>::<span class="ident">Handle</span>(<span class="ident">handle</span>));
+            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{{{}}}: wait_on_channels   handle {:?}&quot;</span>, <span class="ident">node_id</span>, <span class="ident">handle</span>);
+            <span class="ident">handles</span>.<span class="ident">push</span>(<span class="ident">handle</span>);
         }
 
         <span class="kw">let</span> <span class="ident">proxy</span> <span class="op">=</span> <span class="ident">proxy_for_node</span>(<span class="ident">node_id</span>);
@@ -581,11 +594,7 @@
     );
 
     <span class="kw">let</span> <span class="ident">proxy</span> <span class="op">=</span> <span class="ident">proxy_for_node</span>(<span class="ident">node_id</span>);
-    <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">proxy</span>.<span class="ident">channel_try_read_message</span>(
-        <span class="ident">oak_runtime</span>::<span class="ident">Handle</span>(<span class="ident">handle</span>),
-        <span class="ident">size</span>,
-        <span class="ident">handle_count</span> <span class="kw">as</span> <span class="ident">usize</span>,
-    ) {
+    <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">proxy</span>.<span class="ident">channel_try_read_message</span>(<span class="ident">handle</span>, <span class="ident">size</span>, <span class="ident">handle_count</span> <span class="kw">as</span> <span class="ident">usize</span>) {
         <span class="prelude-val">Ok</span>(<span class="ident">msg</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">msg</span>,
         <span class="prelude-val">Err</span>(<span class="ident">status</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="ident">status</span> <span class="kw">as</span> <span class="ident">u32</span>,
     };
@@ -596,21 +605,21 @@
             <span class="kw-2">*</span><span class="ident">actual_handle_count</span> <span class="op">=</span> <span class="number">0</span>;
             <span class="ident">OakStatus</span>::<span class="ident">ErrChannelEmpty</span>
         }
-        <span class="prelude-val">Some</span>(<span class="ident">oak_runtime</span>::<span class="ident">runtime</span>::<span class="ident">ReadStatus</span>::<span class="ident">Success</span>(<span class="ident">msg</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+        <span class="prelude-val">Some</span>(<span class="ident">oak_runtime</span>::<span class="ident">runtime</span>::<span class="ident">NodeReadStatus</span>::<span class="ident">Success</span>(<span class="ident">msg</span>)) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw-2">*</span><span class="ident">actual_size</span> <span class="op">=</span> <span class="ident">msg</span>.<span class="ident">data</span>.<span class="ident">len</span>().<span class="ident">try_into</span>().<span class="ident">unwrap</span>();
-            <span class="kw-2">*</span><span class="ident">actual_handle_count</span> <span class="op">=</span> <span class="ident">msg</span>.<span class="ident">channels</span>.<span class="ident">len</span>().<span class="ident">try_into</span>().<span class="ident">unwrap</span>();
+            <span class="kw-2">*</span><span class="ident">actual_handle_count</span> <span class="op">=</span> <span class="ident">msg</span>.<span class="ident">handles</span>.<span class="ident">len</span>().<span class="ident">try_into</span>().<span class="ident">unwrap</span>();
             <span class="ident">std</span>::<span class="ident">ptr</span>::<span class="ident">copy_nonoverlapping</span>(<span class="ident">msg</span>.<span class="ident">data</span>.<span class="ident">as_ptr</span>(), <span class="ident">buf</span>, <span class="ident">msg</span>.<span class="ident">data</span>.<span class="ident">len</span>());
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">handle_data</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">with_capacity</span>(<span class="number">8</span> <span class="op">*</span> <span class="ident">msg</span>.<span class="ident">channels</span>.<span class="ident">len</span>());
-            <span class="kw">for</span> <span class="ident">handle</span> <span class="kw">in</span> <span class="ident">msg</span>.<span class="ident">channels</span> {
-                <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{{{}}}: channel_read() added {:?}&quot;</span>, <span class="ident">node_id</span>, <span class="ident">handle</span>);
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">handle_data</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">with_capacity</span>(<span class="number">8</span> <span class="op">*</span> <span class="ident">msg</span>.<span class="ident">handles</span>.<span class="ident">len</span>());
+            <span class="kw">for</span> <span class="ident">handle</span> <span class="kw">in</span> <span class="ident">msg</span>.<span class="ident">handles</span> {
+                <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{{{}}}: channel_read() added handle {}&quot;</span>, <span class="ident">node_id</span>, <span class="ident">handle</span>);
                 <span class="ident">handle_data</span>
-                    .<span class="ident">write_u64</span>::<span class="op">&lt;</span><span class="ident">byteorder</span>::<span class="ident">LittleEndian</span><span class="op">&gt;</span>(<span class="ident">handle</span>.<span class="number">0</span>)
+                    .<span class="ident">write_u64</span>::<span class="op">&lt;</span><span class="ident">byteorder</span>::<span class="ident">LittleEndian</span><span class="op">&gt;</span>(<span class="ident">handle</span>)
                     .<span class="ident">unwrap</span>();
             }
             <span class="ident">std</span>::<span class="ident">ptr</span>::<span class="ident">copy_nonoverlapping</span>(<span class="ident">handle_data</span>.<span class="ident">as_ptr</span>(), <span class="ident">handle_buf</span>, <span class="ident">handle_data</span>.<span class="ident">len</span>());
             <span class="ident">OakStatus</span>::<span class="prelude-val">Ok</span>
         }
-        <span class="prelude-val">Some</span>(<span class="ident">oak_runtime</span>::<span class="ident">runtime</span>::<span class="ident">ReadStatus</span>::<span class="ident">NeedsCapacity</span>(<span class="ident">a</span>, <span class="ident">b</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+        <span class="prelude-val">Some</span>(<span class="ident">oak_runtime</span>::<span class="ident">runtime</span>::<span class="ident">NodeReadStatus</span>::<span class="ident">NeedsCapacity</span>(<span class="ident">a</span>, <span class="ident">b</span>)) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw-2">*</span><span class="ident">actual_size</span> <span class="op">=</span> <span class="ident">a</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>();
             <span class="kw-2">*</span><span class="ident">actual_handle_count</span> <span class="op">=</span> <span class="ident">b</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>();
             <span class="kw">if</span> <span class="ident">a</span> <span class="op">&gt;</span> <span class="ident">size</span> <span class="kw">as</span> <span class="ident">usize</span> {
@@ -644,9 +653,9 @@
         <span class="string">&quot;{{{}}}: channel_write(h={}, buf={:?}, size={}, handle_buf={:?}, count={})&quot;</span>,
         <span class="ident">node_id</span>, <span class="ident">handle</span>, <span class="ident">buf</span>, <span class="ident">size</span>, <span class="ident">handle_buf</span>, <span class="ident">handle_count</span>
     );
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">msg</span> <span class="op">=</span> <span class="ident">oak_runtime</span>::<span class="ident">Message</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">msg</span> <span class="op">=</span> <span class="ident">oak_runtime</span>::<span class="ident">NodeMessage</span> {
         <span class="ident">data</span>: <span class="ident">Vec</span>::<span class="ident">with_capacity</span>(<span class="ident">size</span>),
-        <span class="ident">channels</span>: <span class="ident">Vec</span>::<span class="ident">with_capacity</span>(<span class="ident">handle_count</span> <span class="kw">as</span> <span class="ident">usize</span>),
+        <span class="ident">handles</span>: <span class="ident">Vec</span>::<span class="ident">with_capacity</span>(<span class="ident">handle_count</span> <span class="kw">as</span> <span class="ident">usize</span>),
     };
     <span class="ident">std</span>::<span class="ident">ptr</span>::<span class="ident">copy_nonoverlapping</span>(<span class="ident">buf</span>, <span class="ident">msg</span>.<span class="ident">data</span>.<span class="ident">as_mut_ptr</span>(), <span class="ident">size</span>);
     <span class="ident">msg</span>.<span class="ident">data</span>.<span class="ident">set_len</span>(<span class="ident">size</span>);
@@ -659,11 +668,12 @@
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">mem_reader</span> <span class="op">=</span> <span class="ident">Cursor</span>::<span class="ident">new</span>(<span class="ident">handle_data</span>);
     <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">handle_count</span> <span class="kw">as</span> <span class="ident">isize</span> {
         <span class="kw">let</span> <span class="ident">handle</span> <span class="op">=</span> <span class="ident">mem_reader</span>.<span class="ident">read_u64</span>::<span class="op">&lt;</span><span class="ident">byteorder</span>::<span class="ident">LittleEndian</span><span class="op">&gt;</span>().<span class="ident">unwrap</span>();
-        <span class="ident">msg</span>.<span class="ident">channels</span>.<span class="ident">push</span>(<span class="ident">oak_runtime</span>::<span class="ident">Handle</span>(<span class="ident">handle</span>));
+        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{{{}}}: channel_write   include handle {}&quot;</span>, <span class="ident">node_id</span>, <span class="ident">handle</span>);
+        <span class="ident">msg</span>.<span class="ident">handles</span>.<span class="ident">push</span>(<span class="ident">handle</span>);
     }
 
     <span class="kw">let</span> <span class="ident">proxy</span> <span class="op">=</span> <span class="ident">proxy_for_node</span>(<span class="ident">node_id</span>);
-    <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">proxy</span>.<span class="ident">channel_write</span>(<span class="ident">oak_runtime</span>::<span class="ident">Handle</span>(<span class="ident">handle</span>), <span class="ident">msg</span>);
+    <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">proxy</span>.<span class="ident">channel_write</span>(<span class="ident">handle</span>, <span class="ident">msg</span>);
     <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{{{}}}: channel_write() -&gt; {:?}&quot;</span>, <span class="ident">node_id</span>, <span class="ident">result</span>);
     <span class="kw">match</span> <span class="ident">result</span> {
         <span class="prelude-val">Ok</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">OakStatus</span>::<span class="prelude-val">Ok</span> <span class="kw">as</span> <span class="ident">u32</span>,
@@ -682,8 +692,8 @@
     <span class="kw">let</span> <span class="ident">proxy</span> <span class="op">=</span> <span class="ident">proxy_for_node</span>(<span class="ident">node_id</span>);
     <span class="kw">let</span> (<span class="ident">write_handle</span>, <span class="ident">read_handle</span>) <span class="op">=</span>
         <span class="ident">proxy</span>.<span class="ident">channel_create</span>(<span class="kw-2">&amp;</span><span class="ident">oak_abi</span>::<span class="ident">label</span>::<span class="ident">Label</span>::<span class="ident">public_trusted</span>());
-    <span class="kw-2">*</span><span class="ident">write</span> <span class="op">=</span> <span class="ident">write_handle</span>.<span class="number">0</span>;
-    <span class="kw-2">*</span><span class="ident">read</span> <span class="op">=</span> <span class="ident">read_handle</span>.<span class="number">0</span>;
+    <span class="kw-2">*</span><span class="ident">write</span> <span class="op">=</span> <span class="ident">write_handle</span>;
+    <span class="kw-2">*</span><span class="ident">read</span> <span class="op">=</span> <span class="ident">read_handle</span>;
     <span class="macro">debug</span><span class="macro">!</span>(
         <span class="string">&quot;{{{}}}: channel_create(*w={:?}, *r={:?}) -&gt; OK&quot;</span>,
         <span class="ident">node_id</span>, <span class="ident">write_handle</span>, <span class="ident">read_handle</span>
@@ -696,7 +706,7 @@
 <span class="kw">pub</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span> <span class="ident">glue_channel_close</span>(<span class="ident">node_id</span>: <span class="ident">u64</span>, <span class="ident">handle</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u32</span> {
     <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{{{}}}: channel_close({})&quot;</span>, <span class="ident">node_id</span>, <span class="ident">handle</span>);
     <span class="kw">let</span> <span class="ident">proxy</span> <span class="op">=</span> <span class="ident">proxy_for_node</span>(<span class="ident">node_id</span>);
-    <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">proxy</span>.<span class="ident">channel_close</span>(<span class="ident">oak_runtime</span>::<span class="ident">Handle</span>(<span class="ident">handle</span>));
+    <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">proxy</span>.<span class="ident">channel_close</span>(<span class="ident">handle</span>);
     <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{{{}}}: channel_close({}) -&gt; {:?}&quot;</span>, <span class="ident">node_id</span>, <span class="ident">handle</span>, <span class="ident">result</span>);
     <span class="kw">match</span> <span class="ident">result</span> {
         <span class="prelude-val">Ok</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">OakStatus</span>::<span class="prelude-val">Ok</span> <span class="kw">as</span> <span class="ident">u32</span>,
@@ -704,9 +714,9 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">create_and_run_node</span>(<span class="ident">config_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">handle</span>: <span class="ident">oak_runtime</span>::<span class="ident">Handle</span>) {
+<span class="kw">fn</span> <span class="ident">create_and_run_node</span>(<span class="ident">config_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>) {
     <span class="macro">info</span><span class="macro">!</span>(
-        <span class="string">&quot;invoke registered factory with &#39;{}&#39;, node_id={:?}, handle={:?}&quot;</span>,
+        <span class="string">&quot;invoke registered factory with &#39;{}&#39;, node_id={:?}, handle={}&quot;</span>,
         <span class="ident">config_name</span>, <span class="ident">node_id</span>, <span class="ident">handle</span>
     );
     <span class="kw">let</span> <span class="ident">factory</span> <span class="op">=</span> <span class="ident">GLUE</span>.<span class="ident">read</span>().<span class="ident">expect</span>(<span class="ident">R1</span>).<span class="ident">as_ref</span>().<span class="ident">expect</span>(<span class="ident">R2</span>).<span class="ident">factory</span>;
@@ -716,7 +726,7 @@
         <span class="ident">config_name</span>.<span class="ident">as_ptr</span>(),
         <span class="ident">config_name</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>,
         <span class="ident">node_id</span>.<span class="number">0</span>,
-        <span class="ident">handle</span>.<span class="number">0</span>,
+        <span class="ident">handle</span>,
     );
 }
 </pre></div>

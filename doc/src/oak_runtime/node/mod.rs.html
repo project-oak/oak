@@ -158,6 +158,9 @@
 <span id="158">158</span>
 <span id="159">159</span>
 <span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -175,6 +178,9 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">runtime</span>::<span class="ident">RuntimeProxy</span>;
+<span class="kw">use</span> <span class="ident">log</span>::<span class="ident">debug</span>;
+<span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">OakStatus</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">net</span>::{<span class="ident">AddrParseError</span>, <span class="ident">SocketAddr</span>},
     <span class="ident">string</span>::<span class="ident">String</span>,
@@ -182,10 +188,6 @@
     <span class="ident">thread</span>::<span class="ident">JoinHandle</span>,
 };
 <span class="kw">use</span> <span class="ident">tonic</span>::<span class="ident">transport</span>::<span class="ident">Identity</span>;
-
-<span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">OakStatus</span>;
-
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">runtime</span>::<span class="ident">RuntimeProxy</span>, <span class="ident">Handle</span>};
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">external</span>;
 <span class="kw">mod</span> <span class="ident">grpc</span>;
@@ -288,11 +290,15 @@
         <span class="ident">config_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="comment">// Used for pretty debugging</span>
         <span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>,
         <span class="ident">entrypoint</span>: <span class="ident">String</span>,
-        <span class="ident">initial_reader</span>: <span class="ident">Handle</span>,
+        <span class="ident">initial_handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Node</span><span class="op">&gt;</span> {
+        <span class="macro">debug</span><span class="macro">!</span>(
+            <span class="string">&quot;{:?}: create_node(&#39;{}&#39;, &#39;{}&#39;, {})&quot;</span>,
+            <span class="ident">runtime</span>.<span class="ident">node_id</span>, <span class="ident">config_name</span>, <span class="ident">entrypoint</span>, <span class="ident">initial_handle</span>
+        );
         <span class="kw">match</span> <span class="self">self</span> {
             <span class="ident">Configuration</span>::<span class="ident">LogNode</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">logger</span>::<span class="ident">LogNode</span>::<span class="ident">new</span>(<span class="ident">config_name</span>, <span class="ident">runtime</span>, <span class="ident">initial_reader</span>))
+                <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">logger</span>::<span class="ident">LogNode</span>::<span class="ident">new</span>(<span class="ident">config_name</span>, <span class="ident">runtime</span>, <span class="ident">initial_handle</span>))
             }
             <span class="ident">Configuration</span>::<span class="ident">GrpcServerNode</span> {
                 <span class="ident">address</span>,
@@ -302,19 +308,19 @@
                 <span class="ident">runtime</span>,
                 <span class="kw-2">*</span><span class="ident">address</span>,
                 <span class="ident">tls_identity</span>.<span class="ident">clone</span>(),
-                <span class="ident">initial_reader</span>,
+                <span class="ident">initial_handle</span>,
             )),
             <span class="ident">Configuration</span>::<span class="ident">WasmNode</span> { <span class="ident">module</span> } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">wasm</span>::<span class="ident">WasmNode</span>::<span class="ident">new</span>(
                 <span class="ident">config_name</span>,
                 <span class="ident">runtime</span>,
                 <span class="ident">module</span>.<span class="ident">clone</span>(),
                 <span class="ident">entrypoint</span>,
-                <span class="ident">initial_reader</span>,
+                <span class="ident">initial_handle</span>,
             )),
             <span class="ident">Configuration</span>::<span class="ident">External</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">external</span>::<span class="ident">PseudoNode</span>::<span class="ident">new</span>(
                 <span class="ident">config_name</span>,
                 <span class="ident">runtime</span>,
-                <span class="ident">initial_reader</span>,
+                <span class="ident">initial_handle</span>,
             )),
         }
     }

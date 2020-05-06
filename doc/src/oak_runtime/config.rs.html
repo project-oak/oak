@@ -133,7 +133,6 @@
 <span id="133">133</span>
 <span id="134">134</span>
 <span id="135">135</span>
-<span id="136">136</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -151,12 +150,6 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
-<span class="kw">use</span> <span class="ident">itertools</span>::<span class="ident">Itertools</span>;
-<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">error</span>, <span class="ident">warn</span>};
-<span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">OakStatus</span>;
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">HashMap</span>, <span class="ident">sync</span>::<span class="ident">Arc</span>};
-<span class="kw">use</span> <span class="ident">tonic</span>::<span class="ident">transport</span>::<span class="ident">Identity</span>;
-
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">node</span>,
     <span class="ident">node</span>::<span class="ident">load_wasm</span>,
@@ -164,9 +157,13 @@
         <span class="ident">node_configuration</span>::<span class="ident">ConfigType</span>, <span class="ident">ApplicationConfiguration</span>, <span class="ident">GrpcServerConfiguration</span>,
         <span class="ident">LogConfiguration</span>, <span class="ident">NodeConfiguration</span>, <span class="ident">WebAssemblyConfiguration</span>,
     },
-    <span class="ident">runtime</span>,
-    <span class="ident">runtime</span>::{<span class="ident">Handle</span>, <span class="ident">Runtime</span>},
+    <span class="ident">runtime</span>, <span class="ident">RuntimeProxy</span>,
 };
+<span class="kw">use</span> <span class="ident">itertools</span>::<span class="ident">Itertools</span>;
+<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">error</span>, <span class="ident">warn</span>};
+<span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">OakStatus</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">HashMap</span>;
+<span class="kw">use</span> <span class="ident">tonic</span>::<span class="ident">transport</span>::<span class="ident">Identity</span>;
 
 <span class="doccomment">/// Create an application configuration.</span>
 <span class="doccomment">///</span>
@@ -258,18 +255,19 @@
     <span class="prelude-val">Ok</span>(<span class="ident">config</span>)
 }
 
-<span class="doccomment">/// Configure a [`Runtime`] from the given protobuf [`ApplicationConfiguration`] and begin</span>
-<span class="doccomment">/// execution. This returns an [`Arc`] reference to the created [`Runtime`], and a writeable</span>
-<span class="doccomment">/// [`Handle`] to send messages into the Runtime. Creating a new channel and passing the write</span>
-<span class="doccomment">/// [`Handle`] into the runtime will enable messages to be read back out from the [`Runtime`].</span>
+<span class="doccomment">/// Configure a [`RuntimeProxy`] from the given protobuf [`ApplicationConfiguration`] and begin</span>
+<span class="doccomment">/// execution. This returns a [`RuntimeProxy`] for an initial implicit Node, and a writeable</span>
+<span class="doccomment">/// [`oak_abi::Handle`] to send messages into the Runtime. Creating a new channel and</span>
+<span class="doccomment">/// passing the write [`oak_abi::Handle`] into the runtime will enable messages to be read</span>
+<span class="doccomment">/// back out from the [`RuntimeProxy`].</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">configure_and_run</span>(
     <span class="ident">app_config</span>: <span class="ident">ApplicationConfiguration</span>,
     <span class="ident">runtime_config</span>: <span class="kw">crate</span>::<span class="ident">RuntimeConfiguration</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Runtime</span><span class="op">&gt;</span>, <span class="ident">Handle</span>), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">RuntimeProxy</span>, <span class="ident">oak_abi</span>::<span class="ident">Handle</span>), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">configuration</span> <span class="op">=</span> <span class="ident">from_protobuf</span>(<span class="ident">app_config</span>)<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">runtime</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">Runtime</span>::<span class="ident">create</span>(<span class="ident">configuration</span>));
-    <span class="kw">let</span> <span class="ident">handle</span> <span class="op">=</span> <span class="ident">runtime</span>.<span class="ident">clone</span>().<span class="ident">run</span>(<span class="ident">runtime_config</span>)<span class="question-mark">?</span>;
-    <span class="prelude-val">Ok</span>((<span class="ident">runtime</span>, <span class="ident">handle</span>))
+    <span class="kw">let</span> <span class="ident">proxy</span> <span class="op">=</span> <span class="ident">RuntimeProxy</span>::<span class="ident">create_runtime</span>(<span class="ident">configuration</span>);
+    <span class="kw">let</span> <span class="ident">handle</span> <span class="op">=</span> <span class="ident">proxy</span>.<span class="ident">start_runtime</span>(<span class="ident">runtime_config</span>)<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>((<span class="ident">proxy</span>, <span class="ident">handle</span>))
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "oak_runtime";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>
