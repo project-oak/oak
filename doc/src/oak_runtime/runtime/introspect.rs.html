@@ -267,9 +267,9 @@
     <span class="ident">runtime</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Runtime</span><span class="op">&gt;</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span>, <span class="ident">hyper</span>::<span class="ident">Error</span><span class="op">&gt;</span> {
     <span class="kw">if</span> <span class="ident">req</span>.<span class="ident">method</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">Method</span>::<span class="ident">GET</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">not_found</span> <span class="op">=</span> <span class="ident">Response</span>::<span class="ident">default</span>();
-        <span class="kw-2">*</span><span class="ident">not_found</span>.<span class="ident">status_mut</span>() <span class="op">=</span> <span class="ident">StatusCode</span>::<span class="ident">NOT_FOUND</span>;
-        <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">not_found</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">method_not_allowed</span> <span class="op">=</span> <span class="ident">Response</span>::<span class="ident">default</span>();
+        <span class="kw-2">*</span><span class="ident">method_not_allowed</span>.<span class="ident">status_mut</span>() <span class="op">=</span> <span class="ident">StatusCode</span>::<span class="ident">METHOD_NOT_ALLOWED</span>;
+        <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">method_not_allowed</span>);
     }
     <span class="comment">// TODO(#672): Shift to a framework.</span>
     <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="ident">req</span>.<span class="ident">uri</span>().<span class="ident">path</span>();
