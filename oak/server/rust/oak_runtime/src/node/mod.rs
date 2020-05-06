@@ -127,37 +127,42 @@ impl Configuration {
         runtime: RuntimeProxy,
         entrypoint: String,
         initial_handle: oak_abi::Handle,
-    ) -> Box<dyn Node> {
+    ) -> Option<Box<dyn Node>> {
         debug!(
             "{:?}: create_node('{}', '{}', {})",
             runtime.node_id, config_name, entrypoint, initial_handle
         );
         match self {
-            Configuration::LogNode => {
-                Box::new(logger::LogNode::new(config_name, runtime, initial_handle))
-            }
+            Configuration::LogNode => Some(Box::new(logger::LogNode::new(
+                config_name,
+                runtime,
+                initial_handle,
+            ))),
             Configuration::GrpcServerNode {
                 address,
                 tls_identity,
-            } => Box::new(grpc::server::GrpcServerNode::new(
+            } => Some(Box::new(grpc::server::GrpcServerNode::new(
                 config_name,
                 runtime,
                 *address,
                 tls_identity.clone(),
                 initial_handle,
-            )),
-            Configuration::WasmNode { module } => Box::new(wasm::WasmNode::new(
+            ))),
+            Configuration::WasmNode { module } => match wasm::WasmNode::new(
                 config_name,
                 runtime,
                 module.clone(),
                 entrypoint,
                 initial_handle,
-            )),
-            Configuration::External => Box::new(external::PseudoNode::new(
+            ) {
+                Some(node) => Some(Box::new(node)),
+                None => None,
+            },
+            Configuration::External => Some(Box::new(external::PseudoNode::new(
                 config_name,
                 runtime,
                 initial_handle,
-            )),
+            ))),
         }
     }
 }
