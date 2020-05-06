@@ -23,6 +23,9 @@ package(
 rust_binary(
     name = "oak_loader",
     srcs = glob(["src/**/*.rs"]),
+    crate_features = [
+        "oak_debug",
+    ],
     edition = "2018",
     deps = [
         "//cargo:log",

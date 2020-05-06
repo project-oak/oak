@@ -41,27 +41,23 @@ use oak_runtime::proto::oak::application::node_configuration::ConfigType::GrpcSe
 #[derive(StructOpt, Clone)]
 #[structopt(about = "Oak Loader")]
 pub struct Opt {
-    #[structopt(long, help = "Application configuration file")]
+    #[structopt(long, help = "Application configuration file.")]
     application: String,
-    #[structopt(long, help = "Private RSA key file used by gRPC server pseudo-Nodes")]
+    #[structopt(long, help = "Private RSA key file used by gRPC server pseudo-Nodes.")]
     grpc_tls_private_key: String,
     #[structopt(
         long,
-        help = "PEM encoded X.509 TLS certificate file used by gRPC server pseudo-Nodes"
+        help = "PEM encoded X.509 TLS certificate file used by gRPC server pseudo-Nodes."
     )]
     grpc_tls_certificate: String,
-    #[structopt(
-        long,
-        default_value = "3030",
-        help = "Metrics server port number (the default value is 3030)"
-    )]
+    #[structopt(long, default_value = "3030", help = "Metrics server port number.")]
     metrics_port: u16,
-    #[structopt(long, help = "Starts the Runtime without a metrics server")]
+    #[structopt(long, help = "Starts the Runtime without a metrics server.")]
     no_metrics: bool,
     #[structopt(
         long,
         default_value = "1909",
-        help = "Introspection server port number. Defaults to 1909."
+        help = "Introspection server port number."
     )]
     introspect_port: u16,
     #[structopt(long, help = "Starts the Runtime without an introspection server.")]
@@ -78,7 +74,11 @@ fn read_file(filename: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    simple_logger::init_by_env();
+    if cfg!(feature = "oak_debug") {
+        simple_logger::init_by_env();
+    } else {
+        eprintln!("No debugging output configured at build time");
+    }
     let opt = Opt::from_args();
 
     // Load application configuration.
@@ -96,6 +96,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Create Runtime config.
+    #[cfg(feature = "oak_debug")]
     let runtime_config = oak_runtime::RuntimeConfiguration {
         metrics_port: if opt.no_metrics {
             None
@@ -108,9 +109,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             Some(opt.introspect_port)
         },
     };
+    #[cfg(not(feature = "oak_debug"))]
+    let runtime_config = oak_runtime::RuntimeConfiguration {
+        metrics_port: None,
+        introspect_port: None,
+    };
 
     // Start the Runtime from the given config.
-    info!("starting Runtime");
+    info!("starting Runtime, config {:?}", runtime_config);
     let (runtime, initial_handle) = configure_and_run(app_config, runtime_config)
         .map_err(|status| format!("status {:?}", status))?;
     info!(
@@ -133,5 +139,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     info!("stop Runtime");
     runtime.stop_runtime();
+
+    info!("Runtime stopped");
     Ok(())
 }
