@@ -769,20 +769,23 @@ pub struct WasmNode {
 
 impl WasmNode {
     /// Creates a new [`WasmNode`] instance, but does not start it.
+    /// May fail if the provided Wasm module is not valid.
     pub fn new(
         config_name: &str,
         runtime: RuntimeProxy,
         module: Arc<wasmi::Module>,
         entrypoint: String,
         initial_handle: oak_abi::Handle,
-    ) -> Self {
-        Self {
+    ) -> Option<Self> {
+        validate_entrypoint(runtime.clone(), &module, &entrypoint).ok()?;
+
+        Some(Self {
             config_name: config_name.to_string(),
             runtime,
             module,
             entrypoint,
             initial_handle,
-        }
+        })
     }
 
     /// Main node worker thread.
@@ -826,23 +829,8 @@ impl Display for WasmNode {
 
 impl super::Node for WasmNode {
     /// Starts this instance of a Wasm Node.
-    ///
-    /// If the entry point is not found, returns `Err(OakStatus::ErrInvalidArgs)` immediately.
     fn start(self: Box<Self>) -> Result<JoinHandle<()>, OakStatus> {
-        debug!(
-            "Node::start(): discovering '{}' '{}'",
-            self.config_name, self.entrypoint
-        );
-
-        // wasmi can't enumerate exports at creation, so we have to do it here per instance spawned
-        // as the entrypoint could be anything. We do it before spawning the child thread so
-        // that we can return an error code immediately if appropriate.
-        validate_entrypoint(self.runtime.clone(), &self.module, &self.entrypoint)?;
-
-        debug!(
-            "Node::start(): starting '{}' '{}'",
-            self.config_name, self.entrypoint
-        );
+        debug!( "Node::start(): running '{}' '{}'", self.config_name, self.entrypoint );
 
         let thread_handle = thread::Builder::new()
             .name(self.to_string())

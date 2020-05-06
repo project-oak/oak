@@ -1160,12 +1160,14 @@ impl Runtime {
 
         debug!("{:?}: create node instance {:?}", node_id, new_node_id);
         // This only creates a Node instance, but does not start it.
-        let instance = config.create_node(
-            config_name,
-            new_node_proxy,
-            entrypoint.to_owned(),
-            initial_handle,
-        );
+        let instance = config
+            .create_node(
+                config_name,
+                new_node_proxy,
+                entrypoint.to_owned(),
+                initial_handle,
+            )
+            .ok_or(OakStatus::ErrInvalidArgs)?;
 
         debug!("{:?}: start node instance {:?}", node_id, new_node_id);
         self.node_start_instance(new_node_id, instance)?;
