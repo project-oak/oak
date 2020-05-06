@@ -69,6 +69,8 @@ fn test_abi() {
     );
     assert_matches!(result, Ok(_));
 
+    info!("Runtime graph at exit is:\n{}", runtime.graph_runtime());
+
     runtime.stop_runtime();
 
     let mut disabled = 0;
