@@ -27,9 +27,8 @@ Next, let's start the server:
 ./scripts/run_server -e chat
 ```
 
-
-After this, one can run the first client, which typically creates the Oak
-Application and a first chat room inside it:
+After this, one can run the first client, which connects to the Oak Application
+and opens a first chat room inside it:
 
 ```bash
 ./scripts/run_example -s none -e chat
