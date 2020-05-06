@@ -840,12 +840,11 @@ impl Runtime {
             // Note we read statuses directly after adding waiters, before blocking to ensure that
             // there are no messages, after we have been added as a waiter.
 
-            let thread_id = thread.id();
             let thread_ref = Arc::new(thread.clone());
 
             for reader in &readers {
                 with_reader_channel(reader, |channel| {
-                    channel.add_waiter(thread_id, &thread_ref);
+                    channel.add_waiter(&thread_ref);
                     Ok(())
                 })?;
             }
