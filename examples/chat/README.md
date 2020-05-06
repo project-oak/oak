@@ -15,8 +15,14 @@ as bearer tokens:
 
 ## Command Line Operation
 
-The first client to run typically creates the Oak Application and a first chat
-room inside it:
+Initially, the chat example needs to be built:
+
+```bash
+./scripts/build_example -e chat
+```
+
+After this, one can run the first client, which typically creates the Oak
+Application and a first chat room inside it:
 
 ```bash
 ./scripts/run_example -s none -e chat
