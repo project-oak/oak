@@ -42,8 +42,7 @@ for language in ${languages}; do
   examples="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/'"${language}"'$' | cut -d'/' -f2 | uniq | grep -v rustfmt)"
   for example in ${examples}; do
     if [[ "${example}" == "chat" ]]; then
-        client_args+=("--test")
-        "${SCRIPTS_DIR}/run_example" -s "${server}" -l "${language}" -e "${example}" -- --test
+        "${SCRIPTS_DIR}/run_example" -s "${server}" -l "${language}" -e chat -- --test
     else
         "${SCRIPTS_DIR}/run_example" -s "${server}" -l "${language}" -e "${example}"
     fi
