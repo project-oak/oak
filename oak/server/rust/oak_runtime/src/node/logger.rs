@@ -14,79 +14,58 @@
 // limitations under the License.
 //
 
-use crate::{pretty_name_for_thread, runtime::RuntimeProxy};
+use crate::runtime::RuntimeProxy;
 use log::{error, info, log};
-use oak_abi::{
-    proto::oak::log::{Level, LogMessage},
-    OakStatus,
-};
+use oak_abi::proto::oak::log::{Level, LogMessage};
 use prost::Message;
-use std::{
-    fmt::{self, Display, Formatter},
-    string::String,
-    thread::{self, JoinHandle},
-};
+use std::string::String;
 
 pub struct LogNode {
-    config_name: String,
+    node_name: String,
     runtime: RuntimeProxy,
     reader: oak_abi::Handle,
 }
 
 impl LogNode {
     /// Creates a new [`LogNode`] instance, but does not start it.
-    pub fn new(config_name: &str, runtime: RuntimeProxy, reader: oak_abi::Handle) -> Self {
+    pub fn new(node_name: &str, runtime: RuntimeProxy, reader: oak_abi::Handle) -> Self {
         Self {
-            config_name: config_name.to_string(),
+            node_name: node_name.to_string(),
             runtime,
             reader,
         }
     }
+}
 
-    /// Main node worker thread.
-    fn worker_thread(self) {
-        let pretty_name = pretty_name_for_thread(&thread::current());
-        let result = self.logger_loop(&pretty_name);
-        info!("{} LOG: exiting log thread {:?}", pretty_name, result);
-        let _ = self.runtime.channel_close(self.reader);
-        self.runtime.exit_node();
-    }
-
-    fn logger_loop(&self, pretty_name: &str) -> Result<(), OakStatus> {
+impl super::Node for LogNode {
+    fn run(self: Box<Self>) {
         loop {
             // An error indicates the Runtime is terminating. We ignore it here and keep trying to
             // read in case a Wasm Node wants to emit remaining messages. We will return
             // once the channel is closed.
             let _ = self.runtime.wait_on_channels(&[self.reader]);
 
-            if let Some(message) = self.runtime.channel_read(self.reader)? {
-                match LogMessage::decode(&*message.data) {
+            match self.runtime.channel_read(self.reader) {
+                Ok(Some(message)) => match LogMessage::decode(&*message.data) {
                     Ok(msg) => log!(
                         target: &format!("{}:{}", msg.file, msg.line),
                         to_level(msg.level),
                         "{}",
                         msg.message,
                     ),
-                    Err(error) => error!("{} Could not parse LogMessage: {}", pretty_name, error),
+                    Err(error) => {
+                        error!("{} Could not parse LogMessage: {}", self.node_name, error)
+                    }
+                },
+                Ok(None) => {}
+                Err(status) => {
+                    error!("{} Failed channel read: {:?}", self.node_name, status);
+                    break;
                 }
             }
         }
-    }
-}
-
-impl Display for LogNode {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        write!(f, "LogNode({})", self.config_name)
-    }
-}
-
-impl super::Node for LogNode {
-    fn start(self: Box<Self>) -> Result<JoinHandle<()>, OakStatus> {
-        let thread_handle = thread::Builder::new()
-            .name(self.to_string())
-            .spawn(move || self.worker_thread())
-            .expect("failed to spawn thread");
-        Ok(thread_handle)
+        info!("{} logger execution complete", self.node_name);
+        let _ = self.runtime.channel_close(self.reader);
     }
 }
 

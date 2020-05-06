@@ -17,7 +17,7 @@
 use crate::{
     message::{Message, NodeMessage},
     metrics::METRICS,
-    node, pretty_name_for_thread,
+    node,
     runtime::channel::{with_reader_channel, with_writer_channel, Channel},
 };
 use core::sync::atomic::{AtomicBool, AtomicU64, Ordering::SeqCst};
@@ -56,7 +56,7 @@ pub trait HtmlPath {
 
 struct NodeInfo {
     /// Name for the Node in debugging output.
-    pretty_name: String,
+    name: String,
 
     /// The Label associated with this Node.
     ///
@@ -79,7 +79,7 @@ impl std::fmt::Debug for NodeInfo {
         write!(
             f,
             "NodeInfo {{'{}', label={:?}, join_handle={:?}, handles=[",
-            self.pretty_name, self.label, self.join_handle,
+            self.name, self.label, self.join_handle,
         )?;
         write!(
             f,
@@ -280,7 +280,7 @@ impl RuntimeProxy {
         let proxy = runtime.proxy_for_new_node();
         proxy.runtime.node_configure_instance(
             proxy.node_id,
-            "implicit.initial".to_string(),
+            "implicit.initial",
             &Label::public_trusted(),
         );
         proxy
@@ -385,7 +385,7 @@ impl Runtime {
                     &mut s,
                     r###"    {} [label="{}" URL="{}"]"###,
                     node_id.dot_id(),
-                    node_info.pretty_name,
+                    node_info.name,
                     node_id.html_path(),
                 )
                 .unwrap();
@@ -540,7 +540,7 @@ impl Runtime {
         let node_infos = self.node_infos.read().unwrap();
         let node_info = node_infos.get(&node_id)?;
         let mut s = String::new();
-        write!(&mut s, "<h2>{}</h2>", node_info.pretty_name).unwrap();
+        write!(&mut s, "<h2>{}</h2>", node_info.name).unwrap();
         if let Some(join_handle) = &node_info.join_handle {
             write!(
                 &mut s,
@@ -575,7 +575,7 @@ impl Runtime {
             &mut s,
             r###"<h2><a href="{}">Node {}</a> Handle {}</h2>"###,
             node_id.html_path(),
-            node_info.pretty_name,
+            node_info.name,
             handle,
         )
         .unwrap();
@@ -617,9 +617,6 @@ impl Runtime {
                 }
                 debug!("join thread for {:?}...done", node_id);
             }
-            // There is now no thread running for this Node, so it is safe to remove
-            // the information for it.
-            self.remove_node_id(node_id);
         }
     }
 
@@ -867,17 +864,17 @@ impl Runtime {
             }
 
             debug!(
-                "{:?}: wait_on_channels: channels not ready, parking thread {}",
+                "{:?}: wait_on_channels: channels not ready, parking thread {:?}",
                 node_id,
-                pretty_name_for_thread(&thread::current())
+                thread::current()
             );
 
             thread::park();
 
             debug!(
-                "{:?}: wait_on_channels: thread {} re-woken",
+                "{:?}: wait_on_channels: thread {:?} re-woken",
                 node_id,
-                pretty_name_for_thread(&thread::current())
+                thread::current()
             );
         }
         Err(OakStatus::ErrTerminated)
@@ -1052,10 +1049,9 @@ impl Runtime {
         // Close any remaining handles
         let remaining_handles: Vec<_> = {
             let node_infos = self.node_infos.read().unwrap();
-            let node_info = match node_infos.get(&node_id) {
-                Some(node_info) => node_info,
-                None => return,
-            };
+            let node_info = node_infos
+                .get(&node_id)
+                .unwrap_or_else(|| panic!("remove_node_id: No such node_id {:?}", node_id));
             node_info.abi_handles.keys().copied().collect()
         };
 
@@ -1145,11 +1141,13 @@ impl Runtime {
 
         let new_node_proxy = self.clone().proxy_for_new_node();
         let new_node_id = new_node_proxy.node_id;
-        self.node_configure_instance(
-            new_node_id,
-            format!("{}.{}", config_name, entrypoint),
-            label,
+        let new_node_name = format!(
+            "{}.{}({})",
+            config_name,
+            config.node_subname(entrypoint),
+            new_node_id.0
         );
+        self.node_configure_instance(new_node_id, &new_node_name, label);
         let initial_handle = new_node_proxy
             .runtime
             .new_abi_handle(new_node_proxy.node_id, reader.clone());
@@ -1162,30 +1160,28 @@ impl Runtime {
         // This only creates a Node instance, but does not start it.
         let instance = config
             .create_node(
-                config_name,
+                &new_node_name,
                 new_node_proxy,
+                config_name,
                 entrypoint.to_owned(),
                 initial_handle,
             )
             .ok_or(OakStatus::ErrInvalidArgs)?;
 
         debug!("{:?}: start node instance {:?}", node_id, new_node_id);
-        self.node_start_instance(new_node_id, instance)?;
+        self.node_start_instance(new_node_id, &new_node_name, instance)?;
 
         Ok(())
     }
 
-    /// Starts a newly created Node instance, by first initializing the necessary [`NodeInfo`] data
-    /// structure in [`Runtime`], allowing it to access the provided [`ChannelHalf`]s, then
-    /// calling [`Node::start`] on the instance, and finally storing a [`JoinHandle`] from the
-    /// running instance in [`Runtime::node_join_handles`] so that it can later be terminated.
-    /// The `pretty_name` parameter is only used for diagnostic/debugging output.
-    ///
-    /// [`Node::start`]: crate::node::Node::start
+    /// Starts running a newly created Node instance on a new thread.  The join handle
+    /// for the new thread is stored in the corresponding [`NodeInfo`].
+    /// The `node_name` parameter is only used for diagnostic/debugging output.
     fn node_start_instance(
-        &self,
+        self: Arc<Self>,
         node_id: NodeId,
-        node_instance: Box<dyn crate::node::Node>,
+        node_name: &str,
+        node_instance: Box<dyn crate::node::Node + Send>,
     ) -> Result<(), OakStatus> {
         // Try to start the Node instance, and store the join handle.
         //
@@ -1197,13 +1193,16 @@ impl Runtime {
         // below, because that takes ownership of the instance itself.
         //
         // We also want no locks to be held while the instance is starting.
-        let node_join_handle = match node_instance.start() {
-            Ok(join_handle) => join_handle,
-            Err(status) => {
-                self.remove_node_id(node_id);
-                return Err(status);
-            }
-        };
+        let runtime = self.clone();
+        let node_join_handle = thread::Builder::new()
+            .name(node_name.to_string())
+            .spawn(move || {
+                node_instance.run();
+                // It's now safe to remove the state for this Node, as there's nothing left
+                // that can invoke `Runtime` functionality for it.
+                runtime.remove_node_id(node_id)
+            })
+            .expect("failed to spawn thread");
 
         // Regardless of the result of `Node::start`, insert the now running instance to the list of
         // running instances (by moving it), so that `Node::stop` will be called on it eventually.
@@ -1214,11 +1213,11 @@ impl Runtime {
     }
 
     // Configure data structures for a Node instance.
-    fn node_configure_instance(&self, node_id: NodeId, pretty_name: String, label: &Label) {
+    fn node_configure_instance(&self, node_id: NodeId, node_name: &str, label: &Label) {
         self.add_node_info(
             node_id,
             NodeInfo {
-                pretty_name,
+                name: node_name.to_string(),
                 label: label.clone(),
                 abi_handles: HashMap::new(),
                 join_handle: None,
@@ -1271,11 +1270,6 @@ impl RuntimeProxy {
     /// See [`Runtime::is_terminating`].
     pub fn is_terminating(&self) -> bool {
         self.runtime.is_terminating()
-    }
-
-    /// See [`Runtime::remove_node_id`].
-    pub fn exit_node(&self) {
-        self.runtime.remove_node_id(self.node_id)
     }
 
     /// See [`Runtime::node_create`].

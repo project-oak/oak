@@ -36,20 +36,6 @@ pub use config::{application_configuration, configure_and_run};
 pub use message::NodeMessage;
 pub use runtime::{NodeId, RuntimeProxy};
 
-use std::thread::Thread;
-
-/// Formats the thread for logging. Threads should be given a name with
-/// [`std::thread::Builder::name`] to make the output more readable.
-fn pretty_name_for_thread(thread_handle: &Thread) -> String {
-    format!(
-        "{:?}:{}",
-        thread_handle.id(),
-        // Note: Use "<unnamed>" to make it stand out in the logs (and
-        // hopefully fixed).
-        thread_handle.name().unwrap_or("<unnamed>")
-    )
-}
-
 /// Configuration options that govern the behaviour of the Runtime itself.
 #[derive(Debug)]
 pub struct RuntimeConfiguration {

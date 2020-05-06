@@ -17,18 +17,15 @@
 use crate::{
     metrics::METRICS,
     node::{grpc::codec::VecCodec, Node},
-    pretty_name_for_thread,
     runtime::RuntimeProxy,
 };
 use hyper::service::Service;
-use log::{debug, error, info, warn};
+use log::{debug, error, info};
 use oak_abi::{label::Label, proto::oak::encap::GrpcRequest, ChannelReadStatus, OakStatus};
 use prost::Message;
 use std::{
-    fmt::{self, Display, Formatter},
     net::SocketAddr,
     task::{Context, Poll},
-    thread::{self, JoinHandle},
 };
 use tonic::{
     codegen::BoxFuture,
@@ -43,10 +40,8 @@ use tonic::{
 /// the [`GrpcServerNode::channel_writer`].
 #[derive(Clone)]
 pub struct GrpcServerNode {
-    /// Pseudo-Node name that corresponds to an entry from the [`ApplicationConfiguration`].
-    ///
-    /// [`ApplicationConfiguration`]: crate::proto::oak::application::ApplicationConfiguration
-    config_name: String,
+    /// Pseudo-Node name.
+    node_name: String,
     /// Reference to a Runtime that corresponds to a Node that created a gRPC server pseudo-Node.
     runtime: RuntimeProxy,
     /// Server address to listen client requests on.
@@ -61,27 +56,19 @@ pub struct GrpcServerNode {
     channel_writer: Option<oak_abi::Handle>,
 }
 
-impl Display for GrpcServerNode {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        write!(f, "GrpcServerNode({})", self.config_name)
-    }
-}
-
 impl GrpcServerNode {
     /// Creates a new [`GrpcServerNode`] instance, but does not start it.
     ///
-    /// `channel_writer` and `thread_handle` are initialized with `None`, because they will receive
-    /// their values after the gRPC server pseudo-Node has started and a separate thread was
-    /// initialized.
+    /// `channel_writer` is initialized with `None`, and is filled in at `run`-time.
     pub fn new(
-        config_name: &str,
+        node_name: &str,
         runtime: RuntimeProxy,
         address: SocketAddr,
         tls_identity: Identity,
         initial_reader: oak_abi::Handle,
     ) -> Self {
         Self {
-            config_name: config_name.to_string(),
+            node_name: node_name.to_string(),
             runtime,
             address,
             tls_identity,
@@ -133,16 +120,16 @@ impl GrpcServerNode {
         }?;
         self.channel_writer = Some(channel_writer);
 
-        warn!("Channel writer received: {:?}", self.channel_writer);
+        info!("Channel writer received: {:?}", self.channel_writer);
         Ok(())
     }
+}
 
-    /// Main Node worker thread.
-    fn worker_thread(mut self) {
-        let pretty_name = pretty_name_for_thread(&thread::current());
-
+/// Oak Node implementation for the gRPC server.
+impl Node for GrpcServerNode {
+    fn run(mut self: Box<Self>) {
         // Receive a `channel_writer` handle used to pass handles for temporary channels.
-        info!("{}: Waiting for a channel writer", pretty_name);
+        info!("{}: Waiting for a channel writer", self.node_name);
         self.init_channel_writer()
             .expect("Couldn't initialialize a channel writer");
 
@@ -175,26 +162,13 @@ impl GrpcServerNode {
         // Start a gRPC server.
         info!(
             "{}: Starting a gRPC server pseudo-Node on: {}",
-            pretty_name, self.address
+            self.node_name, self.address
         );
         let result = async_runtime.block_on(server);
         info!(
             "{}: Exiting gRPC server pseudo-Node thread {:?}",
-            pretty_name, result
+            self.node_name, result
         );
-
-        self.runtime.exit_node();
-    }
-}
-
-/// Oak Node implementation for the gRPC server.
-impl Node for GrpcServerNode {
-    fn start(self: Box<Self>) -> Result<JoinHandle<()>, OakStatus> {
-        let thread_handle = thread::Builder::new()
-            .name(self.to_string())
-            .spawn(move || self.worker_thread())
-            .expect("Failed to spawn thread");
-        Ok(thread_handle)
     }
 }
 

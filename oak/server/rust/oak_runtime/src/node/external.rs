@@ -17,8 +17,7 @@
 use crate::{NodeId, RuntimeProxy};
 use lazy_static::lazy_static;
 use log::info;
-use oak_abi::OakStatus;
-use std::{sync::RwLock, thread, thread::JoinHandle};
+use std::{sync::RwLock, thread};
 
 // TODO(#724): shift to a more explicit external pseudo-Node creation
 // mechanism when the runtime's main() is in Rust.
@@ -34,52 +33,43 @@ pub fn register_factory(factory: NodeFactory) {
 }
 
 pub struct PseudoNode {
+    node_name: String,
     config_name: String,
     runtime: RuntimeProxy,
     reader: oak_abi::Handle,
 }
 
 impl PseudoNode {
-    pub fn new(config_name: &str, runtime: RuntimeProxy, reader: oak_abi::Handle) -> Self {
+    pub fn new(
+        node_name: &str,
+        runtime: RuntimeProxy,
+        config_name: &str,
+        reader: oak_abi::Handle,
+    ) -> Self {
         Self {
+            node_name: node_name.to_string(),
             config_name: config_name.to_string(),
             runtime,
             reader,
         }
     }
+}
 
-    /// Main node worker thread.
-    fn worker_thread(self) {
-        let pretty_name = format!("{}-{:?}:", self.config_name, thread::current());
+impl super::Node for PseudoNode {
+    fn run(self: Box<Self>) {
         let factory_fn: NodeFactory = FACTORY
             .read()
             .expect("unlock failed")
             .expect("no registered factory");
         info!(
-            "invoke external node factory with '{}', reader={:?} on thread {:?}",
-            self.config_name,
+            "{}: invoke external node factory with reader={:?} on thread {:?}",
+            self.node_name,
             self.reader,
             thread::current(),
         );
         factory_fn(&self.config_name, self.runtime.node_id, self.reader);
 
-        info!(
-            "{} LOG: exiting pseudo-Node thread {:?}",
-            pretty_name,
-            thread::current()
-        );
-        self.runtime.exit_node();
-    }
-}
-
-impl super::Node for PseudoNode {
-    fn start(self: Box<Self>) -> Result<JoinHandle<()>, OakStatus> {
-        // Clone or copy all the captured values and move them into the closure, for simplicity.
-        let thread_handle = thread::Builder::new()
-            .name(format!("external={}", self.config_name))
-            .spawn(move || self.worker_thread())
-            .expect("failed to spawn thread");
-        info!("external node started on thread {:?}", thread_handle);
-        Ok(thread_handle)
+        info!("{} pseudo-Node execution complete", self.node_name);
+        let _ = self.runtime.channel_close(self.reader);
     }
 }
