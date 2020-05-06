@@ -95,9 +95,9 @@ fn handle_request(
     runtime: Arc<Runtime>,
 ) -> Result<Response<Body>, hyper::Error> {
     if req.method() != Method::GET {
-        let mut not_found = Response::default();
-        *not_found.status_mut() = StatusCode::NOT_FOUND;
-        return Ok(not_found);
+        let mut method_not_allowed = Response::default();
+        *method_not_allowed.status_mut() = StatusCode::METHOD_NOT_ALLOWED;
+        return Ok(method_not_allowed);
     }
     // TODO(#672): Shift to a framework.
     let path = req.uri().path();
