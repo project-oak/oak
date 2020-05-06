@@ -268,11 +268,11 @@ impl Channel {
     /// Insert the given `thread` reference into `thread_id` slot of the HashMap of waiting
     /// channels attached to an underlying channel. This allows the channel to wake up any waiting
     /// channels by calling `thread::unpark` on all the threads it knows about.
-    pub fn add_waiter(&self, thread_id: ThreadId, thread: &Arc<Thread>) {
+    pub fn add_waiter(&self, thread: &Arc<Thread>) {
         self.waiting_threads
             .lock()
             .unwrap()
-            .insert(thread_id, Arc::downgrade(thread));
+            .insert(thread.id(), Arc::downgrade(thread));
     }
 
     pub fn wake_waiters(&self) {
