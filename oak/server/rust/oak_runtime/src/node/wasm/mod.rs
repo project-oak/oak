@@ -718,6 +718,47 @@ impl wasmi::ModuleImportResolver for WasiStub {
     }
 }
 
+fn validate_entrypoint(
+    runtime: RuntimeProxy,
+    module: &wasmi::Module,
+    entrypoint: &str,
+) -> Result<(), OakStatus> {
+    let abi = WasmInterface::new("validate_entrypoint".to_string(), runtime);
+    let wasi_stub = WasiStub;
+    let instance = wasmi::ModuleInstance::new(
+        &module,
+        &wasmi::ImportsBuilder::new()
+            .with_resolver("oak", &abi)
+            .with_resolver("wasi_snapshot_preview1", &wasi_stub),
+    )
+    .expect("failed to instantiate wasm module")
+    .assert_no_start();
+
+    let expected_signature = wasmi::Signature::new(&[ValueType::I64][..], None);
+
+    let export = instance.export_by_name(&entrypoint).ok_or_else(|| {
+        warn!("entrypoint '{}' export not found", entrypoint);
+        OakStatus::ErrInvalidArgs
+    })?;
+
+    let export_func = export.as_func().ok_or_else(|| {
+        warn!("entrypoint '{}' export is not a function", entrypoint);
+        OakStatus::ErrInvalidArgs
+    })?;
+
+    let export_func_signature = export_func.signature();
+    if export_func_signature == &expected_signature {
+        info!("entrypoint '{}' export validated", entrypoint);
+        Ok(())
+    } else {
+        warn!(
+            "entrypoint '{}' export has incorrect function signature: {:?}",
+            entrypoint, export_func_signature
+        );
+        Err(OakStatus::ErrInvalidArgs)
+    }
+}
+
 pub struct WasmNode {
     config_name: String,
     runtime: RuntimeProxy,
@@ -741,43 +782,6 @@ impl WasmNode {
             module,
             entrypoint,
             initial_handle,
-        }
-    }
-
-    fn validate_entrypoint(&self) -> Result<(), OakStatus> {
-        let abi = WasmInterface::new(self.config_name.clone(), self.runtime.clone());
-        let wasi_stub = WasiStub;
-        let instance = wasmi::ModuleInstance::new(
-            &self.module,
-            &wasmi::ImportsBuilder::new()
-                .with_resolver("oak", &abi)
-                .with_resolver("wasi_snapshot_preview1", &wasi_stub),
-        )
-        .expect("failed to instantiate wasm module")
-        .assert_no_start();
-
-        let expected_signature = wasmi::Signature::new(&[ValueType::I64][..], None);
-
-        let export = instance.export_by_name(&self.entrypoint).ok_or_else(|| {
-            warn!("entrypoint '{}' export not found", self.entrypoint);
-            OakStatus::ErrInvalidArgs
-        })?;
-
-        let export_func = export.as_func().ok_or_else(|| {
-            warn!("entrypoint '{}' export is not a function", self.entrypoint);
-            OakStatus::ErrInvalidArgs
-        })?;
-
-        let export_func_signature = export_func.signature();
-        if export_func_signature == &expected_signature {
-            info!("entrypoint '{}' export validated", self.entrypoint);
-            Ok(())
-        } else {
-            warn!(
-                "entrypoint '{}' export has incorrect function signature: {:?}",
-                self.entrypoint, export_func_signature
-            );
-            Err(OakStatus::ErrInvalidArgs)
         }
     }
 
@@ -833,7 +837,7 @@ impl super::Node for WasmNode {
         // wasmi can't enumerate exports at creation, so we have to do it here per instance spawned
         // as the entrypoint could be anything. We do it before spawning the child thread so
         // that we can return an error code immediately if appropriate.
-        self.validate_entrypoint()?;
+        validate_entrypoint(self.runtime.clone(), &self.module, &self.entrypoint)?;
 
         debug!(
             "Node::start(): starting '{}' '{}'",
