@@ -36,31 +36,27 @@ fn run_node_body(node_label: Label, node_body: Box<NodeBody>) {
     };
 
     impl crate::node::Node for TestNode {
-        fn start(self: Box<Self>) -> Result<JoinHandle<()>, OakStatus> {
-            // Execute the `node_body` immediately, so that any errors may be returned to the test
-            // function.
-            (self.node_body)(&self.runtime)?;
-            // Spawn a no-op background thread and return its handle.
-            Ok(thread::spawn(|| {}))
+        fn run(self: Box<Self>) {
+            let _ = (self.node_body)(&self.runtime);
         }
     }
 
     // Create a new Node.
     let test_proxy = proxy.clone().runtime.proxy_for_new_node();
     let new_node_id = test_proxy.node_id;
-    proxy.runtime.node_configure_instance(
-        new_node_id,
-        "test_module.test_function".to_string(),
-        &node_label,
-    );
+    let new_node_name = format!("TestNode({})", new_node_id.0);
+    proxy
+        .runtime
+        .node_configure_instance(new_node_id, "test_module.test_function", &node_label);
 
     let node_instance = TestNode {
         runtime: test_proxy,
         node_body,
     };
-    let result = proxy
-        .runtime
-        .node_start_instance(new_node_id, Box::new(node_instance));
+    let result =
+        proxy
+            .runtime
+            .node_start_instance(new_node_id, &new_node_name, Box::new(node_instance));
     assert_eq!(Ok(()), result);
 }
 

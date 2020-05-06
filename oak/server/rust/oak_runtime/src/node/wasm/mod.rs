@@ -15,7 +15,6 @@
 //
 
 use crate::{
-    pretty_name_for_thread,
     runtime::{NodeReadStatus, RuntimeProxy},
     NodeMessage,
 };
@@ -23,13 +22,7 @@ use byteorder::{ByteOrder, LittleEndian};
 use log::{debug, error, info, warn};
 use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
 use rand::RngCore;
-use std::{
-    fmt::{self, Display, Formatter},
-    string::String,
-    sync::Arc,
-    thread,
-    thread::JoinHandle,
-};
+use std::{string::String, sync::Arc};
 use wasmi::ValueType;
 
 #[cfg(test)]
@@ -91,9 +84,9 @@ impl WasmInterface {
     }
 
     /// Creates a new `WasmInterface` structure.
-    pub fn new(pretty_name: String, runtime: RuntimeProxy) -> WasmInterface {
+    pub fn new(pretty_name: &str, runtime: RuntimeProxy) -> WasmInterface {
         WasmInterface {
-            pretty_name,
+            pretty_name: pretty_name.to_string(),
             memory: None,
             runtime,
         }
@@ -723,7 +716,7 @@ fn validate_entrypoint(
     module: &wasmi::Module,
     entrypoint: &str,
 ) -> Result<(), OakStatus> {
-    let abi = WasmInterface::new("validate_entrypoint".to_string(), runtime);
+    let abi = WasmInterface::new(&"validate_entrypoint", runtime);
     let wasi_stub = WasiStub;
     let instance = wasmi::ModuleInstance::new(
         &module,
@@ -760,7 +753,7 @@ fn validate_entrypoint(
 }
 
 pub struct WasmNode {
-    config_name: String,
+    node_name: String,
     runtime: RuntimeProxy,
     module: Arc<wasmi::Module>,
     entrypoint: String,
@@ -771,7 +764,7 @@ impl WasmNode {
     /// Creates a new [`WasmNode`] instance, but does not start it.
     /// May fail if the provided Wasm module is not valid.
     pub fn new(
-        config_name: &str,
+        node_name: &str,
         runtime: RuntimeProxy,
         module: Arc<wasmi::Module>,
         entrypoint: String,
@@ -780,19 +773,24 @@ impl WasmNode {
         validate_entrypoint(runtime.clone(), &module, &entrypoint).ok()?;
 
         Some(Self {
-            config_name: config_name.to_string(),
+            node_name: node_name.to_string(),
             runtime,
             module,
             entrypoint,
             initial_handle,
         })
     }
+}
 
-    /// Main node worker thread.
-    fn worker_thread(self) {
-        let pretty_name = pretty_name_for_thread(&thread::current());
+impl super::Node for WasmNode {
+    /// Runs this instance of a Wasm Node.
+    fn run(self: Box<Self>) {
+        debug!(
+            "{}: running entrypoint '{}'",
+            self.node_name, self.entrypoint
+        );
         let wasi_stub = WasiStub;
-        let mut abi = WasmInterface::new(pretty_name, self.runtime.clone());
+        let mut abi = WasmInterface::new(&self.node_name, self.runtime.clone());
 
         let instance = wasmi::ModuleInstance::new(
             &self.module,
@@ -816,26 +814,9 @@ impl WasmNode {
                 &mut abi,
             )
             .expect("failed to execute export");
-
-        self.runtime.exit_node();
-    }
-}
-
-impl Display for WasmNode {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        write!(f, "WasmNode({})", self.config_name)
-    }
-}
-
-impl super::Node for WasmNode {
-    /// Starts this instance of a Wasm Node.
-    fn start(self: Box<Self>) -> Result<JoinHandle<()>, OakStatus> {
-        debug!( "Node::start(): running '{}' '{}'", self.config_name, self.entrypoint );
-
-        let thread_handle = thread::Builder::new()
-            .name(self.to_string())
-            .spawn(move || self.worker_thread())
-            .expect("failed to spawn thread");
-        Ok(thread_handle)
+        debug!(
+            "{}: entrypoint '{}' completed",
+            self.node_name, self.entrypoint
+        );
     }
 }

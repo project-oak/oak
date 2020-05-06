@@ -16,12 +16,10 @@
 
 use crate::runtime::RuntimeProxy;
 use log::debug;
-use oak_abi::OakStatus;
 use std::{
     net::{AddrParseError, SocketAddr},
     string::String,
     sync::Arc,
-    thread::JoinHandle,
 };
 use tonic::transport::Identity;
 
@@ -30,19 +28,10 @@ mod grpc;
 mod logger;
 mod wasm;
 
-/// A trait implemented by every Node and pseudo-Node.
-///
-/// Nodes must not do any work until the [`Node::start`] method is invoked.
+/// Trait encapsulating execution of a Node or pseudo-Node.
 pub trait Node {
-    /// Starts executing the Node.
-    ///
-    /// This method will be invoked in a blocking fashion by the [`Runtime`], therefore Node
-    /// implementations should make sure that they create a separate background worker thread to
-    /// execute actual work, and return its [`JoinHandle`] as soon as possible. The worker thread
-    /// may in turn create additional sub-threads if necessary.
-    ///
-    /// [`Runtime`]: crate::runtime::Runtime
-    fn start(self: Box<Self>) -> Result<JoinHandle<()>, OakStatus>;
+    /// Execute the Node.  The method should continue execution until the Node terminates.
+    fn run(self: Box<Self>);
 }
 
 /// A `Configuration` corresponds to an entry from a `ApplicationConfiguration`. It is the
@@ -117,24 +106,24 @@ pub fn check_port(address: &SocketAddr) -> Result<(), ConfigurationError> {
 }
 
 impl Configuration {
-    /// Creates a new Node instance corresponding to the [`Configuration`] `self`.
+    /// Creates a new Node instance corresponding to the [`Configuration`].
     ///
-    /// On success returns a boxed [`Node`] that may be started by invoking the [`Node::start`]
-    /// method.
+    /// On success returns a boxed [`Node`] that can be run with [`Node::run`].
     pub fn create_node(
         &self,
-        config_name: &str, // Used for pretty debugging
+        node_name: &str, // Used for pretty debugging
         runtime: RuntimeProxy,
+        config_name: &str,
         entrypoint: String,
         initial_handle: oak_abi::Handle,
-    ) -> Option<Box<dyn Node>> {
+    ) -> Option<Box<dyn Node + Send>> {
         debug!(
             "{:?}: create_node('{}', '{}', {})",
-            runtime.node_id, config_name, entrypoint, initial_handle
+            runtime.node_id, node_name, entrypoint, initial_handle
         );
         match self {
             Configuration::LogNode => Some(Box::new(logger::LogNode::new(
-                config_name,
+                node_name,
                 runtime,
                 initial_handle,
             ))),
@@ -142,14 +131,14 @@ impl Configuration {
                 address,
                 tls_identity,
             } => Some(Box::new(grpc::server::GrpcServerNode::new(
-                config_name,
+                node_name,
                 runtime,
                 *address,
                 tls_identity.clone(),
                 initial_handle,
             ))),
             Configuration::WasmNode { module } => match wasm::WasmNode::new(
-                config_name,
+                node_name,
                 runtime,
                 module.clone(),
                 entrypoint,
@@ -159,10 +148,23 @@ impl Configuration {
                 None => None,
             },
             Configuration::External => Some(Box::new(external::PseudoNode::new(
-                config_name,
+                node_name,
                 runtime,
+                config_name,
                 initial_handle,
             ))),
+        }
+    }
+
+    pub fn node_subname(&self, entrypoint: &str) -> String {
+        match self {
+            Configuration::LogNode => "LogNode".to_string(),
+            Configuration::GrpcServerNode {
+                address: _,
+                tls_identity: _,
+            } => "GrpcServerNode".to_string(),
+            Configuration::WasmNode { module: _ } => format!("WasmNode-{}", entrypoint),
+            Configuration::External => "ExternalPseudoNode".to_string(),
         }
     }
 }
