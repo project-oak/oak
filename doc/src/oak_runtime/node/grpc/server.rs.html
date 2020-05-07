@@ -335,6 +335,19 @@
 <span id="335">335</span>
 <span id="336">336</span>
 <span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -359,7 +372,11 @@
 };
 <span class="kw">use</span> <span class="ident">hyper</span>::<span class="ident">service</span>::<span class="ident">Service</span>;
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">error</span>, <span class="ident">info</span>};
-<span class="kw">use</span> <span class="ident">oak_abi</span>::{<span class="ident">label</span>::<span class="ident">Label</span>, <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">encap</span>::<span class="ident">GrpcRequest</span>, <span class="ident">ChannelReadStatus</span>, <span class="ident">OakStatus</span>};
+<span class="kw">use</span> <span class="ident">oak_abi</span>::{
+    <span class="ident">label</span>::<span class="ident">Label</span>,
+    <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">encap</span>::{<span class="ident">GrpcRequest</span>, <span class="ident">GrpcResponse</span>},
+    <span class="ident">ChannelReadStatus</span>, <span class="ident">OakStatus</span>,
+};
 <span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">net</span>::<span class="ident">SocketAddr</span>,
@@ -654,7 +671,7 @@
             <span class="self">self</span>.<span class="ident">runtime</span>
                 .<span class="ident">channel_read</span>(<span class="ident">response_reader</span>)
                 .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
-                    <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t read from a temporary gRPC channel: {:?}&quot;</span>, <span class="ident">error</span>);
+                    <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t read from the temporary gRPC channel: {:?}&quot;</span>, <span class="ident">error</span>);
                     <span class="ident">error</span>
                 })
                 .<span class="ident">map</span>(<span class="op">|</span><span class="ident">message</span><span class="op">|</span> {
@@ -664,9 +681,18 @@
                         <span class="ident">m</span>.<span class="ident">data</span>
                     })
                 })
+                .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">response</span><span class="op">|</span> {
+                    <span class="comment">// Return the serialized message body.</span>
+                    <span class="ident">GrpcResponse</span>::<span class="ident">decode</span>(<span class="ident">response</span>.<span class="ident">as_slice</span>())
+                        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
+                            <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t parse the GrpcResponse message: {}&quot;</span>, <span class="ident">error</span>);
+                            <span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>
+                        })
+                        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">message</span><span class="op">|</span> <span class="ident">message</span>.<span class="ident">rsp_msg</span>)
+                })
         } <span class="kw">else</span> {
             <span class="macro">error</span><span class="macro">!</span>(
-                <span class="string">&quot;Couldn&#39;t read from a temporary gRPC channel: {:?}&quot;</span>,
+                <span class="string">&quot;Couldn&#39;t read from the temporary gRPC channel: {:?}&quot;</span>,
                 <span class="ident">read_status</span>[<span class="number">0</span>]
             );
             <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>)
