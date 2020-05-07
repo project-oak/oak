@@ -830,23 +830,6 @@
 <span id="830">830</span>
 <span id="831">831</span>
 <span id="832">832</span>
-<span id="833">833</span>
-<span id="834">834</span>
-<span id="835">835</span>
-<span id="836">836</span>
-<span id="837">837</span>
-<span id="838">838</span>
-<span id="839">839</span>
-<span id="840">840</span>
-<span id="841">841</span>
-<span id="842">842</span>
-<span id="843">843</span>
-<span id="844">844</span>
-<span id="845">845</span>
-<span id="846">846</span>
-<span id="847">847</span>
-<span id="848">848</span>
-<span id="849">849</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -865,7 +848,6 @@
 <span class="comment">//</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">pretty_name_for_thread</span>,
     <span class="ident">runtime</span>::{<span class="ident">NodeReadStatus</span>, <span class="ident">RuntimeProxy</span>},
     <span class="ident">NodeMessage</span>,
 };
@@ -873,13 +855,7 @@
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">error</span>, <span class="ident">info</span>, <span class="ident">warn</span>};
 <span class="kw">use</span> <span class="ident">oak_abi</span>::{<span class="ident">label</span>::<span class="ident">Label</span>, <span class="ident">ChannelReadStatus</span>, <span class="ident">OakStatus</span>};
 <span class="kw">use</span> <span class="ident">rand</span>::<span class="ident">RngCore</span>;
-<span class="kw">use</span> <span class="ident">std</span>::{
-    <span class="ident">fmt</span>::{<span class="self">self</span>, <span class="ident">Display</span>, <span class="ident">Formatter</span>},
-    <span class="ident">string</span>::<span class="ident">String</span>,
-    <span class="ident">sync</span>::<span class="ident">Arc</span>,
-    <span class="ident">thread</span>,
-    <span class="ident">thread</span>::<span class="ident">JoinHandle</span>,
-};
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">string</span>::<span class="ident">String</span>, <span class="ident">sync</span>::<span class="ident">Arc</span>};
 <span class="kw">use</span> <span class="ident">wasmi</span>::<span class="ident">ValueType</span>;
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
@@ -941,9 +917,9 @@
     }
 
     <span class="doccomment">/// Creates a new `WasmInterface` structure.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">pretty_name</span>: <span class="ident">String</span>, <span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">WasmInterface</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">pretty_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">WasmInterface</span> {
         <span class="ident">WasmInterface</span> {
-            <span class="ident">pretty_name</span>,
+            <span class="ident">pretty_name</span>: <span class="ident">pretty_name</span>.<span class="ident">to_string</span>(),
             <span class="ident">memory</span>: <span class="prelude-val">None</span>,
             <span class="ident">runtime</span>,
         }
@@ -1387,113 +1363,137 @@
 }
 
 <span class="kw">impl</span> <span class="ident">wasmi</span>::<span class="ident">ModuleImportResolver</span> <span class="kw">for</span> <span class="ident">WasmInterface</span> {
-    <span class="doccomment">/// A resolver function, mapping function names to an index and a type signature.</span>
     <span class="kw">fn</span> <span class="ident">resolve_func</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">field_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
         <span class="ident">signature</span>: <span class="kw-2">&amp;</span><span class="ident">wasmi</span>::<span class="ident">Signature</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">wasmi</span>::<span class="ident">FuncRef</span>, <span class="ident">wasmi</span>::<span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="comment">// The types in the signatures correspond to the parameters from</span>
-        <span class="comment">// /oak/server/rust/oak_abi/src/lib.rs</span>
-        <span class="kw">let</span> (<span class="ident">index</span>, <span class="ident">sig</span>) <span class="op">=</span> <span class="kw">match</span> <span class="ident">field_name</span> {
-            <span class="string">&quot;node_create&quot;</span> <span class="op">=</span><span class="op">&gt;</span> (
-                <span class="ident">NODE_CREATE</span>,
-                <span class="ident">wasmi</span>::<span class="ident">Signature</span>::<span class="ident">new</span>(
-                    <span class="kw-2">&amp;</span>[
-                        <span class="ident">ABI_USIZE</span>,      <span class="comment">// config_buf</span>
-                        <span class="ident">ABI_USIZE</span>,      <span class="comment">// config_len</span>
-                        <span class="ident">ABI_USIZE</span>,      <span class="comment">// entrypoint_buf</span>
-                        <span class="ident">ABI_USIZE</span>,      <span class="comment">// entrypoint_len</span>
-                        <span class="ident">ABI_USIZE</span>,      <span class="comment">// label_buf</span>
-                        <span class="ident">ABI_USIZE</span>,      <span class="comment">// label_len</span>
-                        <span class="ident">ValueType</span>::<span class="ident">I64</span>, <span class="comment">// handle</span>
-                    ][..],
-                    <span class="prelude-val">Some</span>(<span class="ident">ValueType</span>::<span class="ident">I32</span>),
-                ),
-            ),
-            <span class="string">&quot;random_get&quot;</span> <span class="op">=</span><span class="op">&gt;</span> (
-                <span class="ident">RANDOM_GET</span>,
-                <span class="ident">wasmi</span>::<span class="ident">Signature</span>::<span class="ident">new</span>(
-                    <span class="kw-2">&amp;</span>[
-                        <span class="ident">ABI_USIZE</span>, <span class="comment">// buf</span>
-                        <span class="ident">ABI_USIZE</span>, <span class="comment">// len</span>
-                    ][..],
-                    <span class="prelude-val">Some</span>(<span class="ident">ValueType</span>::<span class="ident">I32</span>),
-                ),
-            ),
-            <span class="string">&quot;channel_close&quot;</span> <span class="op">=</span><span class="op">&gt;</span> (
-                <span class="ident">CHANNEL_CLOSE</span>,
-                <span class="ident">wasmi</span>::<span class="ident">Signature</span>::<span class="ident">new</span>(
-                    <span class="kw-2">&amp;</span>[
-                        <span class="ident">ValueType</span>::<span class="ident">I64</span>, <span class="comment">// handle</span>
-                    ][..],
-                    <span class="prelude-val">Some</span>(<span class="ident">ValueType</span>::<span class="ident">I32</span>),
-                ),
-            ),
-            <span class="string">&quot;channel_create&quot;</span> <span class="op">=</span><span class="op">&gt;</span> (
-                <span class="ident">CHANNEL_CREATE</span>,
-                <span class="ident">wasmi</span>::<span class="ident">Signature</span>::<span class="ident">new</span>(
-                    <span class="kw-2">&amp;</span>[
-                        <span class="ident">ABI_USIZE</span>, <span class="comment">// write</span>
-                        <span class="ident">ABI_USIZE</span>, <span class="comment">// read</span>
-                    ][..],
-                    <span class="prelude-val">Some</span>(<span class="ident">ValueType</span>::<span class="ident">I32</span>),
-                ),
-            ),
-            <span class="string">&quot;channel_write&quot;</span> <span class="op">=</span><span class="op">&gt;</span> (
-                <span class="ident">CHANNEL_WRITE</span>,
-                <span class="ident">wasmi</span>::<span class="ident">Signature</span>::<span class="ident">new</span>(
-                    <span class="kw-2">&amp;</span>[
-                        <span class="ident">ValueType</span>::<span class="ident">I64</span>, <span class="comment">// handle</span>
-                        <span class="ident">ABI_USIZE</span>,      <span class="comment">// buf</span>
-                        <span class="ident">ABI_USIZE</span>,      <span class="comment">// size</span>
-                        <span class="ident">ABI_USIZE</span>,      <span class="comment">// handle_buf</span>
-                        <span class="ident">ValueType</span>::<span class="ident">I32</span>, <span class="comment">// handle_count</span>
-                    ][..],
-                    <span class="prelude-val">Some</span>(<span class="ident">ValueType</span>::<span class="ident">I32</span>),
-                ),
-            ),
-            <span class="string">&quot;channel_read&quot;</span> <span class="op">=</span><span class="op">&gt;</span> (
-                <span class="ident">CHANNEL_READ</span>,
-                <span class="ident">wasmi</span>::<span class="ident">Signature</span>::<span class="ident">new</span>(
-                    <span class="kw-2">&amp;</span>[
-                        <span class="ident">ValueType</span>::<span class="ident">I64</span>, <span class="comment">// handle</span>
-                        <span class="ident">ABI_USIZE</span>,      <span class="comment">// buf</span>
-                        <span class="ident">ABI_USIZE</span>,      <span class="comment">// size</span>
-                        <span class="ident">ABI_USIZE</span>,      <span class="comment">// actual_size</span>
-                        <span class="ident">ABI_USIZE</span>,      <span class="comment">// handle_buf</span>
-                        <span class="ident">ValueType</span>::<span class="ident">I32</span>, <span class="comment">// handle_count</span>
-                        <span class="ident">ABI_USIZE</span>,      <span class="comment">// actual_handle_count</span>
-                    ][..],
-                    <span class="prelude-val">Some</span>(<span class="ident">ValueType</span>::<span class="ident">I32</span>),
-                ),
-            ),
-            <span class="string">&quot;wait_on_channels&quot;</span> <span class="op">=</span><span class="op">&gt;</span> (
-                <span class="ident">WAIT_ON_CHANNELS</span>,
-                <span class="ident">wasmi</span>::<span class="ident">Signature</span>::<span class="ident">new</span>(
-                    <span class="kw-2">&amp;</span>[
-                        <span class="ident">ABI_USIZE</span>,      <span class="comment">// buf</span>
-                        <span class="ident">ValueType</span>::<span class="ident">I32</span>, <span class="comment">// count</span>
-                    ][..],
-                    <span class="prelude-val">Some</span>(<span class="ident">ValueType</span>::<span class="ident">I32</span>),
-                ),
-            ),
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">wasmi</span>::<span class="ident">Error</span>::<span class="ident">Instantiation</span>(<span class="macro">format</span><span class="macro">!</span>(
-                    <span class="string">&quot;Export {} not found&quot;</span>,
-                    <span class="ident">field_name</span>
-                )))
-            }
-        };
+        <span class="ident">oak_resolve_func</span>(<span class="ident">field_name</span>, <span class="ident">signature</span>)
+    }
+}
 
-        <span class="kw">if</span> <span class="kw-2">&amp;</span><span class="ident">sig</span> <span class="op">!</span><span class="op">=</span> <span class="ident">signature</span> {
+<span class="doccomment">/// A resolver function, mapping Oak host function names to an index and a type signature.</span>
+<span class="kw">fn</span> <span class="ident">oak_resolve_func</span>(
+    <span class="ident">field_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
+    <span class="ident">signature</span>: <span class="kw-2">&amp;</span><span class="ident">wasmi</span>::<span class="ident">Signature</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">wasmi</span>::<span class="ident">FuncRef</span>, <span class="ident">wasmi</span>::<span class="ident">Error</span><span class="op">&gt;</span> {
+    <span class="comment">// The types in the signatures correspond to the parameters from</span>
+    <span class="comment">// /oak/server/rust/oak_abi/src/lib.rs</span>
+    <span class="kw">let</span> (<span class="ident">index</span>, <span class="ident">sig</span>) <span class="op">=</span> <span class="kw">match</span> <span class="ident">field_name</span> {
+        <span class="string">&quot;node_create&quot;</span> <span class="op">=</span><span class="op">&gt;</span> (
+            <span class="ident">NODE_CREATE</span>,
+            <span class="ident">wasmi</span>::<span class="ident">Signature</span>::<span class="ident">new</span>(
+                <span class="kw-2">&amp;</span>[
+                    <span class="ident">ABI_USIZE</span>,      <span class="comment">// config_buf</span>
+                    <span class="ident">ABI_USIZE</span>,      <span class="comment">// config_len</span>
+                    <span class="ident">ABI_USIZE</span>,      <span class="comment">// entrypoint_buf</span>
+                    <span class="ident">ABI_USIZE</span>,      <span class="comment">// entrypoint_len</span>
+                    <span class="ident">ABI_USIZE</span>,      <span class="comment">// label_buf</span>
+                    <span class="ident">ABI_USIZE</span>,      <span class="comment">// label_len</span>
+                    <span class="ident">ValueType</span>::<span class="ident">I64</span>, <span class="comment">// handle</span>
+                ][..],
+                <span class="prelude-val">Some</span>(<span class="ident">ValueType</span>::<span class="ident">I32</span>),
+            ),
+        ),
+        <span class="string">&quot;random_get&quot;</span> <span class="op">=</span><span class="op">&gt;</span> (
+            <span class="ident">RANDOM_GET</span>,
+            <span class="ident">wasmi</span>::<span class="ident">Signature</span>::<span class="ident">new</span>(
+                <span class="kw-2">&amp;</span>[
+                    <span class="ident">ABI_USIZE</span>, <span class="comment">// buf</span>
+                    <span class="ident">ABI_USIZE</span>, <span class="comment">// len</span>
+                ][..],
+                <span class="prelude-val">Some</span>(<span class="ident">ValueType</span>::<span class="ident">I32</span>),
+            ),
+        ),
+        <span class="string">&quot;channel_close&quot;</span> <span class="op">=</span><span class="op">&gt;</span> (
+            <span class="ident">CHANNEL_CLOSE</span>,
+            <span class="ident">wasmi</span>::<span class="ident">Signature</span>::<span class="ident">new</span>(
+                <span class="kw-2">&amp;</span>[
+                    <span class="ident">ValueType</span>::<span class="ident">I64</span>, <span class="comment">// handle</span>
+                ][..],
+                <span class="prelude-val">Some</span>(<span class="ident">ValueType</span>::<span class="ident">I32</span>),
+            ),
+        ),
+        <span class="string">&quot;channel_create&quot;</span> <span class="op">=</span><span class="op">&gt;</span> (
+            <span class="ident">CHANNEL_CREATE</span>,
+            <span class="ident">wasmi</span>::<span class="ident">Signature</span>::<span class="ident">new</span>(
+                <span class="kw-2">&amp;</span>[
+                    <span class="ident">ABI_USIZE</span>, <span class="comment">// write</span>
+                    <span class="ident">ABI_USIZE</span>, <span class="comment">// read</span>
+                ][..],
+                <span class="prelude-val">Some</span>(<span class="ident">ValueType</span>::<span class="ident">I32</span>),
+            ),
+        ),
+        <span class="string">&quot;channel_write&quot;</span> <span class="op">=</span><span class="op">&gt;</span> (
+            <span class="ident">CHANNEL_WRITE</span>,
+            <span class="ident">wasmi</span>::<span class="ident">Signature</span>::<span class="ident">new</span>(
+                <span class="kw-2">&amp;</span>[
+                    <span class="ident">ValueType</span>::<span class="ident">I64</span>, <span class="comment">// handle</span>
+                    <span class="ident">ABI_USIZE</span>,      <span class="comment">// buf</span>
+                    <span class="ident">ABI_USIZE</span>,      <span class="comment">// size</span>
+                    <span class="ident">ABI_USIZE</span>,      <span class="comment">// handle_buf</span>
+                    <span class="ident">ValueType</span>::<span class="ident">I32</span>, <span class="comment">// handle_count</span>
+                ][..],
+                <span class="prelude-val">Some</span>(<span class="ident">ValueType</span>::<span class="ident">I32</span>),
+            ),
+        ),
+        <span class="string">&quot;channel_read&quot;</span> <span class="op">=</span><span class="op">&gt;</span> (
+            <span class="ident">CHANNEL_READ</span>,
+            <span class="ident">wasmi</span>::<span class="ident">Signature</span>::<span class="ident">new</span>(
+                <span class="kw-2">&amp;</span>[
+                    <span class="ident">ValueType</span>::<span class="ident">I64</span>, <span class="comment">// handle</span>
+                    <span class="ident">ABI_USIZE</span>,      <span class="comment">// buf</span>
+                    <span class="ident">ABI_USIZE</span>,      <span class="comment">// size</span>
+                    <span class="ident">ABI_USIZE</span>,      <span class="comment">// actual_size</span>
+                    <span class="ident">ABI_USIZE</span>,      <span class="comment">// handle_buf</span>
+                    <span class="ident">ValueType</span>::<span class="ident">I32</span>, <span class="comment">// handle_count</span>
+                    <span class="ident">ABI_USIZE</span>,      <span class="comment">// actual_handle_count</span>
+                ][..],
+                <span class="prelude-val">Some</span>(<span class="ident">ValueType</span>::<span class="ident">I32</span>),
+            ),
+        ),
+        <span class="string">&quot;wait_on_channels&quot;</span> <span class="op">=</span><span class="op">&gt;</span> (
+            <span class="ident">WAIT_ON_CHANNELS</span>,
+            <span class="ident">wasmi</span>::<span class="ident">Signature</span>::<span class="ident">new</span>(
+                <span class="kw-2">&amp;</span>[
+                    <span class="ident">ABI_USIZE</span>,      <span class="comment">// buf</span>
+                    <span class="ident">ValueType</span>::<span class="ident">I32</span>, <span class="comment">// count</span>
+                ][..],
+                <span class="prelude-val">Some</span>(<span class="ident">ValueType</span>::<span class="ident">I32</span>),
+            ),
+        ),
+        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">wasmi</span>::<span class="ident">Error</span>::<span class="ident">Instantiation</span>(<span class="macro">format</span><span class="macro">!</span>(
-                <span class="string">&quot;Export `{}` doesnt match expected type {:?}&quot;</span>,
-                <span class="ident">field_name</span>, <span class="ident">signature</span>
-            )));
+                <span class="string">&quot;Export {} not found&quot;</span>,
+                <span class="ident">field_name</span>
+            )))
         }
+    };
 
-        <span class="prelude-val">Ok</span>(<span class="ident">wasmi</span>::<span class="ident">FuncInstance</span>::<span class="ident">alloc_host</span>(<span class="ident">sig</span>, <span class="ident">index</span>))
+    <span class="kw">if</span> <span class="kw-2">&amp;</span><span class="ident">sig</span> <span class="op">!</span><span class="op">=</span> <span class="ident">signature</span> {
+        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">wasmi</span>::<span class="ident">Error</span>::<span class="ident">Instantiation</span>(<span class="macro">format</span><span class="macro">!</span>(
+            <span class="string">&quot;Export `{}` doesnt match expected type {:?}&quot;</span>,
+            <span class="ident">field_name</span>, <span class="ident">signature</span>
+        )));
+    }
+
+    <span class="prelude-val">Ok</span>(<span class="ident">wasmi</span>::<span class="ident">FuncInstance</span>::<span class="ident">alloc_host</span>(<span class="ident">sig</span>, <span class="ident">index</span>))
+}
+
+<span class="doccomment">/// Stub version of `WasmInterface`, to allow checks of entrypoint signatures</span>
+<span class="doccomment">/// and host function linking to be validated, without needing to construct</span>
+<span class="doccomment">/// a full `WasmInterface` object.</span>
+<span class="kw">struct</span> <span class="ident">WasmInterfaceStub</span>;
+
+<span class="kw">impl</span> <span class="ident">wasmi</span>::<span class="ident">ModuleImportResolver</span> <span class="kw">for</span> <span class="ident">WasmInterfaceStub</span> {
+    <span class="comment">// For validating Oak Wasm modules, we provide exactly the same set of</span>
+    <span class="comment">// host functions and signatures as the full `WasmInterface does.</span>
+    <span class="kw">fn</span> <span class="ident">resolve_func</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">field_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
+        <span class="ident">signature</span>: <span class="kw-2">&amp;</span><span class="ident">wasmi</span>::<span class="ident">Signature</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">wasmi</span>::<span class="ident">FuncRef</span>, <span class="ident">wasmi</span>::<span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="ident">oak_resolve_func</span>(<span class="ident">field_name</span>, <span class="ident">signature</span>)
     }
 }
 
@@ -1568,74 +1568,72 @@
     }
 }
 
+<span class="kw">fn</span> <span class="ident">validate_entrypoint</span>(<span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">wasmi</span>::<span class="ident">Module</span>, <span class="ident">entrypoint</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">abi_stub</span> <span class="op">=</span> <span class="ident">WasmInterfaceStub</span>;
+    <span class="kw">let</span> <span class="ident">wasi_stub</span> <span class="op">=</span> <span class="ident">WasiStub</span>;
+    <span class="kw">let</span> <span class="ident">instance</span> <span class="op">=</span> <span class="ident">wasmi</span>::<span class="ident">ModuleInstance</span>::<span class="ident">new</span>(
+        <span class="kw-2">&amp;</span><span class="ident">module</span>,
+        <span class="kw-2">&amp;</span><span class="ident">wasmi</span>::<span class="ident">ImportsBuilder</span>::<span class="ident">new</span>()
+            .<span class="ident">with_resolver</span>(<span class="string">&quot;oak&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">abi_stub</span>)
+            .<span class="ident">with_resolver</span>(<span class="string">&quot;wasi_snapshot_preview1&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">wasi_stub</span>),
+    )
+    .<span class="ident">expect</span>(<span class="string">&quot;failed to instantiate wasm module&quot;</span>)
+    .<span class="ident">assert_no_start</span>();
+
+    <span class="kw">let</span> <span class="ident">expected_signature</span> <span class="op">=</span> <span class="ident">wasmi</span>::<span class="ident">Signature</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span>[<span class="ident">ValueType</span>::<span class="ident">I64</span>][..], <span class="prelude-val">None</span>);
+
+    <span class="kw">let</span> <span class="ident">export</span> <span class="op">=</span> <span class="ident">instance</span>.<span class="ident">export_by_name</span>(<span class="kw-2">&amp;</span><span class="ident">entrypoint</span>).<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
+        <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;entrypoint &#39;{}&#39; export not found&quot;</span>, <span class="ident">entrypoint</span>);
+        <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
+    })<span class="question-mark">?</span>;
+
+    <span class="kw">let</span> <span class="ident">export_func</span> <span class="op">=</span> <span class="ident">export</span>.<span class="ident">as_func</span>().<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
+        <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;entrypoint &#39;{}&#39; export is not a function&quot;</span>, <span class="ident">entrypoint</span>);
+        <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
+    })<span class="question-mark">?</span>;
+
+    <span class="kw">let</span> <span class="ident">export_func_signature</span> <span class="op">=</span> <span class="ident">export_func</span>.<span class="ident">signature</span>();
+    <span class="kw">if</span> <span class="ident">export_func_signature</span> <span class="op">=</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">expected_signature</span> {
+        <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;entrypoint &#39;{}&#39; export validated&quot;</span>, <span class="ident">entrypoint</span>);
+        <span class="prelude-val">Ok</span>(())
+    } <span class="kw">else</span> {
+        <span class="macro">warn</span><span class="macro">!</span>(
+            <span class="string">&quot;entrypoint &#39;{}&#39; export has incorrect function signature: {:?}&quot;</span>,
+            <span class="ident">entrypoint</span>, <span class="ident">export_func_signature</span>
+        );
+        <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>)
+    }
+}
+
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">WasmNode</span> {
-    <span class="ident">config_name</span>: <span class="ident">String</span>,
-    <span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>,
+    <span class="ident">node_name</span>: <span class="ident">String</span>,
     <span class="ident">module</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">wasmi</span>::<span class="ident">Module</span><span class="op">&gt;</span>,
     <span class="ident">entrypoint</span>: <span class="ident">String</span>,
-    <span class="ident">initial_handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">WasmNode</span> {
     <span class="doccomment">/// Creates a new [`WasmNode`] instance, but does not start it.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">config_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-        <span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>,
-        <span class="ident">module</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">wasmi</span>::<span class="ident">Module</span><span class="op">&gt;</span>,
-        <span class="ident">entrypoint</span>: <span class="ident">String</span>,
-        <span class="ident">initial_handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">config_name</span>: <span class="ident">config_name</span>.<span class="ident">to_string</span>(),
-            <span class="ident">runtime</span>,
+    <span class="doccomment">/// May fail if the provided Wasm module is not valid.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">node_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">module</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">wasmi</span>::<span class="ident">Module</span><span class="op">&gt;</span>, <span class="ident">entrypoint</span>: <span class="ident">String</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+        <span class="ident">validate_entrypoint</span>(<span class="kw-2">&amp;</span><span class="ident">module</span>, <span class="kw-2">&amp;</span><span class="ident">entrypoint</span>).<span class="ident">ok</span>()<span class="question-mark">?</span>;
+
+        <span class="prelude-val">Some</span>(<span class="self">Self</span> {
+            <span class="ident">node_name</span>: <span class="ident">node_name</span>.<span class="ident">to_string</span>(),
             <span class="ident">module</span>,
             <span class="ident">entrypoint</span>,
-            <span class="ident">initial_handle</span>,
-        }
+        })
     }
+}
 
-    <span class="kw">fn</span> <span class="ident">validate_entrypoint</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">abi</span> <span class="op">=</span> <span class="ident">WasmInterface</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">config_name</span>.<span class="ident">clone</span>(), <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">clone</span>());
+<span class="kw">impl</span> <span class="kw">super</span>::<span class="ident">Node</span> <span class="kw">for</span> <span class="ident">WasmNode</span> {
+    <span class="doccomment">/// Runs this instance of a Wasm Node.</span>
+    <span class="kw">fn</span> <span class="ident">run</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>, <span class="ident">handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>) {
+        <span class="macro">debug</span><span class="macro">!</span>(
+            <span class="string">&quot;{}: running entrypoint &#39;{}&#39;&quot;</span>,
+            <span class="self">self</span>.<span class="ident">node_name</span>, <span class="self">self</span>.<span class="ident">entrypoint</span>
+        );
         <span class="kw">let</span> <span class="ident">wasi_stub</span> <span class="op">=</span> <span class="ident">WasiStub</span>;
-        <span class="kw">let</span> <span class="ident">instance</span> <span class="op">=</span> <span class="ident">wasmi</span>::<span class="ident">ModuleInstance</span>::<span class="ident">new</span>(
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">module</span>,
-            <span class="kw-2">&amp;</span><span class="ident">wasmi</span>::<span class="ident">ImportsBuilder</span>::<span class="ident">new</span>()
-                .<span class="ident">with_resolver</span>(<span class="string">&quot;oak&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">abi</span>)
-                .<span class="ident">with_resolver</span>(<span class="string">&quot;wasi_snapshot_preview1&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">wasi_stub</span>),
-        )
-        .<span class="ident">expect</span>(<span class="string">&quot;failed to instantiate wasm module&quot;</span>)
-        .<span class="ident">assert_no_start</span>();
-
-        <span class="kw">let</span> <span class="ident">expected_signature</span> <span class="op">=</span> <span class="ident">wasmi</span>::<span class="ident">Signature</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span>[<span class="ident">ValueType</span>::<span class="ident">I64</span>][..], <span class="prelude-val">None</span>);
-
-        <span class="kw">let</span> <span class="ident">export</span> <span class="op">=</span> <span class="ident">instance</span>.<span class="ident">export_by_name</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">entrypoint</span>).<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
-            <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;entrypoint &#39;{}&#39; export not found&quot;</span>, <span class="self">self</span>.<span class="ident">entrypoint</span>);
-            <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
-        })<span class="question-mark">?</span>;
-
-        <span class="kw">let</span> <span class="ident">export_func</span> <span class="op">=</span> <span class="ident">export</span>.<span class="ident">as_func</span>().<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
-            <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;entrypoint &#39;{}&#39; export is not a function&quot;</span>, <span class="self">self</span>.<span class="ident">entrypoint</span>);
-            <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
-        })<span class="question-mark">?</span>;
-
-        <span class="kw">let</span> <span class="ident">export_func_signature</span> <span class="op">=</span> <span class="ident">export_func</span>.<span class="ident">signature</span>();
-        <span class="kw">if</span> <span class="ident">export_func_signature</span> <span class="op">=</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">expected_signature</span> {
-            <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;entrypoint &#39;{}&#39; export validated&quot;</span>, <span class="self">self</span>.<span class="ident">entrypoint</span>);
-            <span class="prelude-val">Ok</span>(())
-        } <span class="kw">else</span> {
-            <span class="macro">warn</span><span class="macro">!</span>(
-                <span class="string">&quot;entrypoint &#39;{}&#39; export has incorrect function signature: {:?}&quot;</span>,
-                <span class="self">self</span>.<span class="ident">entrypoint</span>, <span class="ident">export_func_signature</span>
-            );
-            <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>)
-        }
-    }
-
-    <span class="doccomment">/// Main node worker thread.</span>
-    <span class="kw">fn</span> <span class="ident">worker_thread</span>(<span class="self">self</span>) {
-        <span class="kw">let</span> <span class="ident">pretty_name</span> <span class="op">=</span> <span class="ident">pretty_name_for_thread</span>(<span class="kw-2">&amp;</span><span class="ident">thread</span>::<span class="ident">current</span>());
-        <span class="kw">let</span> <span class="ident">wasi_stub</span> <span class="op">=</span> <span class="ident">WasiStub</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">abi</span> <span class="op">=</span> <span class="ident">WasmInterface</span>::<span class="ident">new</span>(<span class="ident">pretty_name</span>, <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">clone</span>());
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">abi</span> <span class="op">=</span> <span class="ident">WasmInterface</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">node_name</span>, <span class="ident">runtime</span>);
 
         <span class="kw">let</span> <span class="ident">instance</span> <span class="op">=</span> <span class="ident">wasmi</span>::<span class="ident">ModuleInstance</span>::<span class="ident">new</span>(
             <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">module</span>,
@@ -1655,46 +1653,14 @@
         <span class="ident">instance</span>
             .<span class="ident">invoke_export</span>(
                 <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">entrypoint</span>,
-                <span class="kw-2">&amp;</span>[<span class="ident">wasmi</span>::<span class="ident">RuntimeValue</span>::<span class="ident">I64</span>(<span class="self">self</span>.<span class="ident">initial_handle</span> <span class="kw">as</span> <span class="ident">i64</span>)],
+                <span class="kw-2">&amp;</span>[<span class="ident">wasmi</span>::<span class="ident">RuntimeValue</span>::<span class="ident">I64</span>(<span class="ident">handle</span> <span class="kw">as</span> <span class="ident">i64</span>)],
                 <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">abi</span>,
             )
             .<span class="ident">expect</span>(<span class="string">&quot;failed to execute export&quot;</span>);
-
-        <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">exit_node</span>();
-    }
-}
-
-<span class="kw">impl</span> <span class="ident">Display</span> <span class="kw">for</span> <span class="ident">WasmNode</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Formatter</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">fmt</span>::<span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;WasmNode({})&quot;</span>, <span class="self">self</span>.<span class="ident">config_name</span>)
-    }
-}
-
-<span class="kw">impl</span> <span class="kw">super</span>::<span class="ident">Node</span> <span class="kw">for</span> <span class="ident">WasmNode</span> {
-    <span class="doccomment">/// Starts this instance of a Wasm Node.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// If the entry point is not found, returns `Err(OakStatus::ErrInvalidArgs)` immediately.</span>
-    <span class="kw">fn</span> <span class="ident">start</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">JoinHandle</span><span class="op">&lt;</span>()<span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="macro">debug</span><span class="macro">!</span>(
-            <span class="string">&quot;Node::start(): discovering &#39;{}&#39; &#39;{}&#39;&quot;</span>,
-            <span class="self">self</span>.<span class="ident">config_name</span>, <span class="self">self</span>.<span class="ident">entrypoint</span>
+            <span class="string">&quot;{}: entrypoint &#39;{}&#39; completed&quot;</span>,
+            <span class="self">self</span>.<span class="ident">node_name</span>, <span class="self">self</span>.<span class="ident">entrypoint</span>
         );
-
-        <span class="comment">// wasmi can&#39;t enumerate exports at creation, so we have to do it here per instance spawned</span>
-        <span class="comment">// as the entrypoint could be anything. We do it before spawning the child thread so</span>
-        <span class="comment">// that we can return an error code immediately if appropriate.</span>
-        <span class="self">self</span>.<span class="ident">validate_entrypoint</span>()<span class="question-mark">?</span>;
-
-        <span class="macro">debug</span><span class="macro">!</span>(
-            <span class="string">&quot;Node::start(): starting &#39;{}&#39; &#39;{}&#39;&quot;</span>,
-            <span class="self">self</span>.<span class="ident">config_name</span>, <span class="self">self</span>.<span class="ident">entrypoint</span>
-        );
-
-        <span class="kw">let</span> <span class="ident">thread_handle</span> <span class="op">=</span> <span class="ident">thread</span>::<span class="ident">Builder</span>::<span class="ident">new</span>()
-            .<span class="ident">name</span>(<span class="self">self</span>.<span class="ident">to_string</span>())
-            .<span class="ident">spawn</span>(<span class="kw">move</span> <span class="op">|</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">worker_thread</span>())
-            .<span class="ident">expect</span>(<span class="string">&quot;failed to spawn thread&quot;</span>);
-        <span class="prelude-val">Ok</span>(<span class="ident">thread_handle</span>)
     }
 }
 </pre></div>

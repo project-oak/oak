@@ -151,16 +151,6 @@
 <span id="151">151</span>
 <span id="152">152</span>
 <span id="153">153</span>
-<span id="154">154</span>
-<span id="155">155</span>
-<span id="156">156</span>
-<span id="157">157</span>
-<span id="158">158</span>
-<span id="159">159</span>
-<span id="160">160</span>
-<span id="161">161</span>
-<span id="162">162</span>
-<span id="163">163</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -180,12 +170,10 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">runtime</span>::<span class="ident">RuntimeProxy</span>;
 <span class="kw">use</span> <span class="ident">log</span>::<span class="ident">debug</span>;
-<span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">OakStatus</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">net</span>::{<span class="ident">AddrParseError</span>, <span class="ident">SocketAddr</span>},
     <span class="ident">string</span>::<span class="ident">String</span>,
     <span class="ident">sync</span>::<span class="ident">Arc</span>,
-    <span class="ident">thread</span>::<span class="ident">JoinHandle</span>,
 };
 <span class="kw">use</span> <span class="ident">tonic</span>::<span class="ident">transport</span>::<span class="ident">Identity</span>;
 
@@ -194,19 +182,11 @@
 <span class="kw">mod</span> <span class="ident">logger</span>;
 <span class="kw">mod</span> <span class="ident">wasm</span>;
 
-<span class="doccomment">/// A trait implemented by every Node and pseudo-Node.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// Nodes must not do any work until the [`Node::start`] method is invoked.</span>
+<span class="doccomment">/// Trait encapsulating execution of a Node or pseudo-Node.</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Node</span> {
-    <span class="doccomment">/// Starts executing the Node.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// This method will be invoked in a blocking fashion by the [`Runtime`], therefore Node</span>
-    <span class="doccomment">/// implementations should make sure that they create a separate background worker thread to</span>
-    <span class="doccomment">/// execute actual work, and return its [`JoinHandle`] as soon as possible. The worker thread</span>
-    <span class="doccomment">/// may in turn create additional sub-threads if necessary.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// [`Runtime`]: crate::runtime::Runtime</span>
-    <span class="kw">fn</span> <span class="ident">start</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">JoinHandle</span><span class="op">&lt;</span>()<span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span>;
+    <span class="doccomment">/// Execute the Node, using the provided `Runtime` reference and initial handle.  The method</span>
+    <span class="doccomment">/// should continue execution until the Node terminates.</span>
+    <span class="kw">fn</span> <span class="ident">run</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>, <span class="ident">handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>);
 }
 
 <span class="doccomment">/// A `Configuration` corresponds to an entry from a `ApplicationConfiguration`. It is the</span>
@@ -281,47 +261,47 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Configuration</span> {
-    <span class="doccomment">/// Creates a new Node instance corresponding to the [`Configuration`] `self`.</span>
+    <span class="doccomment">/// Creates a new Node instance corresponding to the [`Configuration`].</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// On success returns a boxed [`Node`] that may be started by invoking the [`Node::start`]</span>
-    <span class="doccomment">/// method.</span>
+    <span class="doccomment">/// On success returns a boxed [`Node`] that can be run with [`Node::run`].</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_node</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">config_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="comment">// Used for pretty debugging</span>
-        <span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>,
+        <span class="ident">node_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="comment">// Used for pretty debugging</span>
+        <span class="ident">config_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
         <span class="ident">entrypoint</span>: <span class="ident">String</span>,
-        <span class="ident">initial_handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Node</span><span class="op">&gt;</span> {
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Node</span> <span class="op">+</span> <span class="ident">Send</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="macro">debug</span><span class="macro">!</span>(
-            <span class="string">&quot;{:?}: create_node(&#39;{}&#39;, &#39;{}&#39;, {})&quot;</span>,
-            <span class="ident">runtime</span>.<span class="ident">node_id</span>, <span class="ident">config_name</span>, <span class="ident">entrypoint</span>, <span class="ident">initial_handle</span>
+            <span class="string">&quot;create_node(&#39;{}&#39;: &#39;{}&#39;.&#39;{}&#39;)&quot;</span>,
+            <span class="ident">node_name</span>, <span class="ident">config_name</span>, <span class="ident">entrypoint</span>
         );
         <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">Configuration</span>::<span class="ident">LogNode</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">logger</span>::<span class="ident">LogNode</span>::<span class="ident">new</span>(<span class="ident">config_name</span>, <span class="ident">runtime</span>, <span class="ident">initial_handle</span>))
-            }
+            <span class="ident">Configuration</span>::<span class="ident">LogNode</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">logger</span>::<span class="ident">LogNode</span>::<span class="ident">new</span>(<span class="ident">node_name</span>))),
             <span class="ident">Configuration</span>::<span class="ident">GrpcServerNode</span> {
                 <span class="ident">address</span>,
                 <span class="ident">tls_identity</span>,
-            } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">grpc</span>::<span class="ident">server</span>::<span class="ident">GrpcServerNode</span>::<span class="ident">new</span>(
-                <span class="ident">config_name</span>,
-                <span class="ident">runtime</span>,
+            } <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">grpc</span>::<span class="ident">server</span>::<span class="ident">GrpcServerNode</span>::<span class="ident">new</span>(
+                <span class="ident">node_name</span>,
                 <span class="kw-2">*</span><span class="ident">address</span>,
                 <span class="ident">tls_identity</span>.<span class="ident">clone</span>(),
-                <span class="ident">initial_handle</span>,
-            )),
-            <span class="ident">Configuration</span>::<span class="ident">WasmNode</span> { <span class="ident">module</span> } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">wasm</span>::<span class="ident">WasmNode</span>::<span class="ident">new</span>(
-                <span class="ident">config_name</span>,
-                <span class="ident">runtime</span>,
-                <span class="ident">module</span>.<span class="ident">clone</span>(),
-                <span class="ident">entrypoint</span>,
-                <span class="ident">initial_handle</span>,
-            )),
-            <span class="ident">Configuration</span>::<span class="ident">External</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">external</span>::<span class="ident">PseudoNode</span>::<span class="ident">new</span>(
-                <span class="ident">config_name</span>,
-                <span class="ident">runtime</span>,
-                <span class="ident">initial_handle</span>,
-            )),
+            ))),
+            <span class="ident">Configuration</span>::<span class="ident">WasmNode</span> { <span class="ident">module</span> } <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">match</span> <span class="ident">wasm</span>::<span class="ident">WasmNode</span>::<span class="ident">new</span>(<span class="ident">node_name</span>, <span class="ident">module</span>.<span class="ident">clone</span>(), <span class="ident">entrypoint</span>) {
+                    <span class="prelude-val">Some</span>(<span class="ident">node</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">node</span>)),
+                    <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+                }
+            }
+            <span class="ident">Configuration</span>::<span class="ident">External</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="prelude-val">Some</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">external</span>::<span class="ident">PseudoNode</span>::<span class="ident">new</span>(<span class="ident">node_name</span>, <span class="ident">config_name</span>)))
+            }
+        }
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">node_subname</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">entrypoint</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
+        <span class="kw">match</span> <span class="self">self</span> {
+            <span class="ident">Configuration</span>::<span class="ident">LogNode</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;LogNode&quot;</span>.<span class="ident">to_string</span>(),
+            <span class="ident">Configuration</span>::<span class="ident">GrpcServerNode</span> { .. } <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;GrpcServerNode&quot;</span>.<span class="ident">to_string</span>(),
+            <span class="ident">Configuration</span>::<span class="ident">WasmNode</span> { .. } <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;WasmNode-{}&quot;</span>, <span class="ident">entrypoint</span>),
+            <span class="ident">Configuration</span>::<span class="ident">External</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;ExternalPseudoNode&quot;</span>.<span class="ident">to_string</span>(),
         }
     }
 }

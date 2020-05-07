@@ -53,20 +53,6 @@
 <span id="53">53</span>
 <span id="54">54</span>
 <span id="55">55</span>
-<span id="56">56</span>
-<span id="57">57</span>
-<span id="58">58</span>
-<span id="59">59</span>
-<span id="60">60</span>
-<span id="61">61</span>
-<span id="62">62</span>
-<span id="63">63</span>
-<span id="64">64</span>
-<span id="65">65</span>
-<span id="66">66</span>
-<span id="67">67</span>
-<span id="68">68</span>
-<span id="69">69</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -105,20 +91,6 @@
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">message</span>::<span class="ident">NodeMessage</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">runtime</span>::{<span class="ident">NodeId</span>, <span class="ident">RuntimeProxy</span>};
-
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">thread</span>::<span class="ident">Thread</span>;
-
-<span class="doccomment">/// Formats the thread for logging. Threads should be given a name with</span>
-<span class="doccomment">/// [`std::thread::Builder::name`] to make the output more readable.</span>
-<span class="kw">fn</span> <span class="ident">pretty_name_for_thread</span>(<span class="ident">thread_handle</span>: <span class="kw-2">&amp;</span><span class="ident">Thread</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
-    <span class="macro">format</span><span class="macro">!</span>(
-        <span class="string">&quot;{:?}:{}&quot;</span>,
-        <span class="ident">thread_handle</span>.<span class="ident">id</span>(),
-        <span class="comment">// Note: Use &quot;&lt;unnamed&gt;&quot; to make it stand out in the logs (and</span>
-        <span class="comment">// hopefully fixed).</span>
-        <span class="ident">thread_handle</span>.<span class="ident">name</span>().<span class="ident">unwrap_or</span>(<span class="string">&quot;&lt;unnamed&gt;&quot;</span>)
-    )
-}
 
 <span class="doccomment">/// Configuration options that govern the behaviour of the Runtime itself.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>

@@ -1355,7 +1355,7 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">message</span>::{<span class="ident">Message</span>, <span class="ident">NodeMessage</span>},
     <span class="ident">metrics</span>::<span class="ident">METRICS</span>,
-    <span class="ident">node</span>, <span class="ident">pretty_name_for_thread</span>,
+    <span class="ident">node</span>,
     <span class="ident">runtime</span>::<span class="ident">channel</span>::{<span class="ident">with_reader_channel</span>, <span class="ident">with_writer_channel</span>, <span class="ident">Channel</span>},
 };
 <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">sync</span>::<span class="ident">atomic</span>::{<span class="ident">AtomicBool</span>, <span class="ident">AtomicU64</span>, <span class="ident">Ordering</span>::<span class="ident">SeqCst</span>};
@@ -1394,7 +1394,7 @@
 
 <span class="kw">struct</span> <span class="ident">NodeInfo</span> {
     <span class="doccomment">/// Name for the Node in debugging output.</span>
-    <span class="ident">pretty_name</span>: <span class="ident">String</span>,
+    <span class="ident">name</span>: <span class="ident">String</span>,
 
     <span class="doccomment">/// The Label associated with this Node.</span>
     <span class="doccomment">///</span>
@@ -1405,14 +1405,19 @@
 
     <span class="doccomment">/// Map of ABI handles to channels.</span>
     <span class="ident">abi_handles</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">oak_abi</span>::<span class="ident">Handle</span>, <span class="ident">ChannelHalf</span><span class="op">&gt;</span>,
+
+    <span class="doccomment">/// If the Node is currently running, holds the [`JoinHandle`] for its thread</span>
+    <span class="doccomment">/// (with one small exception, when the Runtime is in the process of closing</span>
+    <span class="doccomment">/// down and the [`JoinHandle`] is held by the shutdown processing code).</span>
+    <span class="ident">join_handle</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">JoinHandle</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Debug</span> <span class="kw">for</span> <span class="ident">NodeInfo</span> {
     <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="prelude-ty">Result</span> {
         <span class="macro">write</span><span class="macro">!</span>(
             <span class="ident">f</span>,
-            <span class="string">&quot;NodeInfo {{&#39;{}&#39;, label={:?}, handles=[&quot;</span>,
-            <span class="self">self</span>.<span class="ident">pretty_name</span>, <span class="self">self</span>.<span class="ident">label</span>
+            <span class="string">&quot;NodeInfo {{&#39;{}&#39;, label={:?}, join_handle={:?}, handles=[&quot;</span>,
+            <span class="self">self</span>.<span class="ident">name</span>, <span class="self">self</span>.<span class="ident">label</span>, <span class="self">self</span>.<span class="ident">join_handle</span>,
         )<span class="question-mark">?</span>;
         <span class="macro">write</span><span class="macro">!</span>(
             <span class="ident">f</span>,
@@ -1524,10 +1529,6 @@
     <span class="doccomment">/// Runtime-specific state for each Node instance.</span>
     <span class="ident">node_infos</span>: <span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">NodeId</span>, <span class="ident">NodeInfo</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 
-    <span class="doccomment">/// [`JoinHandle`]s of the currently running Node instances, so that [`Runtime::stop`] can wait</span>
-    <span class="doccomment">/// for termination of all of them.</span>
-    <span class="ident">node_join_handles</span>: <span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">NodeId</span>, <span class="ident">JoinHandle</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-
     <span class="ident">next_node_id</span>: <span class="ident">AtomicU64</span>,
 
     <span class="ident">aux_servers</span>: <span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">AuxServer</span><span class="op">&gt;</span><span class="op">&gt;</span>,
@@ -1609,7 +1610,6 @@
             <span class="ident">next_channel_id</span>: <span class="ident">AtomicU64</span>::<span class="ident">new</span>(<span class="number">0</span>),
 
             <span class="ident">node_infos</span>: <span class="ident">RwLock</span>::<span class="ident">new</span>(<span class="ident">HashMap</span>::<span class="ident">new</span>()),
-            <span class="ident">node_join_handles</span>: <span class="ident">Mutex</span>::<span class="ident">new</span>(<span class="ident">HashMap</span>::<span class="ident">new</span>()),
 
             <span class="ident">next_node_id</span>: <span class="ident">AtomicU64</span>::<span class="ident">new</span>(<span class="number">0</span>),
 
@@ -1618,7 +1618,7 @@
         <span class="kw">let</span> <span class="ident">proxy</span> <span class="op">=</span> <span class="ident">runtime</span>.<span class="ident">proxy_for_new_node</span>();
         <span class="ident">proxy</span>.<span class="ident">runtime</span>.<span class="ident">node_configure_instance</span>(
             <span class="ident">proxy</span>.<span class="ident">node_id</span>,
-            <span class="string">&quot;implicit.initial&quot;</span>.<span class="ident">to_string</span>(),
+            <span class="string">&quot;implicit.initial&quot;</span>,
             <span class="kw-2">&amp;</span><span class="ident">Label</span>::<span class="ident">public_trusted</span>(),
         );
         <span class="ident">proxy</span>
@@ -1723,17 +1723,11 @@
                     <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>,
                     <span class="string">r###&quot;    {} [label=&quot;{}&quot; URL=&quot;{}&quot;]&quot;###</span>,
                     <span class="ident">node_id</span>.<span class="ident">dot_id</span>(),
-                    <span class="ident">node_info</span>.<span class="ident">pretty_name</span>,
+                    <span class="ident">node_info</span>.<span class="ident">name</span>,
                     <span class="ident">node_id</span>.<span class="ident">html_path</span>(),
                 )
                 .<span class="ident">unwrap</span>();
-                <span class="kw">if</span> <span class="self">self</span>
-                    .<span class="ident">node_join_handles</span>
-                    .<span class="ident">lock</span>()
-                    .<span class="ident">unwrap</span>()
-                    .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">node_id</span>)
-                    .<span class="ident">is_none</span>()
-                {
+                <span class="kw">if</span> <span class="ident">node_info</span>.<span class="ident">join_handle</span>.<span class="ident">is_none</span>() {
                     <span class="macro">write</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>, <span class="string">&quot; [style=dashed]&quot;</span>).<span class="ident">unwrap</span>();
                 }
                 <span class="macro">writeln</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>).<span class="ident">unwrap</span>();
@@ -1866,16 +1860,12 @@
                 <span class="kw">let</span> <span class="ident">node_info</span> <span class="op">=</span> <span class="ident">node_infos</span>.<span class="ident">get</span>(<span class="ident">node_id</span>).<span class="ident">unwrap</span>();
                 <span class="macro">write</span><span class="macro">!</span>(
                     <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>,
-                    <span class="string">r###&quot;&lt;li&gt;&lt;a href=&quot;{}&quot;&gt;{:?}&lt;/a&gt; =&gt; &lt;tt&gt;{:?}&quot;###</span>,
+                    <span class="string">r###&quot;&lt;li&gt;&lt;a href=&quot;{}&quot;&gt;{:?}&lt;/a&gt; =&gt; &lt;tt&gt;{:?}&lt;/tt&gt;&quot;###</span>,
                     <span class="ident">node_id</span>.<span class="ident">html_path</span>(),
                     <span class="ident">node_id</span>,
                     <span class="ident">node_info</span>
                 )
                 .<span class="ident">unwrap</span>();
-                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">join_handle</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">node_join_handles</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>().<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">node_id</span>) {
-                    <span class="macro">write</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>, <span class="string">&quot;, join_handle={:?}&quot;</span>, <span class="ident">join_handle</span>).<span class="ident">unwrap</span>();
-                }
-                <span class="macro">writeln</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>, <span class="string">&quot;&lt;/tt&gt;&quot;</span>).<span class="ident">unwrap</span>();
             }
         }
         <span class="macro">writeln</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>, <span class="string">&quot;&lt;/ul&gt;&quot;</span>).<span class="ident">unwrap</span>();
@@ -1888,8 +1878,8 @@
         <span class="kw">let</span> <span class="ident">node_infos</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">node_infos</span>.<span class="ident">read</span>().<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="ident">node_info</span> <span class="op">=</span> <span class="ident">node_infos</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">node_id</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">s</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">new</span>();
-        <span class="macro">write</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>, <span class="string">&quot;&lt;h2&gt;{}&lt;/h2&gt;&quot;</span>, <span class="ident">node_info</span>.<span class="ident">pretty_name</span>).<span class="ident">unwrap</span>();
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">join_handle</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">node_join_handles</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>().<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">node_id</span>) {
+        <span class="macro">write</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>, <span class="string">&quot;&lt;h2&gt;{}&lt;/h2&gt;&quot;</span>, <span class="ident">node_info</span>.<span class="ident">name</span>).<span class="ident">unwrap</span>();
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">join_handle</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">node_info</span>.<span class="ident">join_handle</span> {
             <span class="macro">write</span><span class="macro">!</span>(
                 <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>,
                 <span class="string">&quot;&lt;p&gt;Node thread is currently running, join_handle={:?}&quot;</span>,
@@ -1923,7 +1913,7 @@
             <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>,
             <span class="string">r###&quot;&lt;h2&gt;&lt;a href=&quot;{}&quot;&gt;Node {}&lt;/a&gt; Handle {}&lt;/h2&gt;&quot;###</span>,
             <span class="ident">node_id</span>.<span class="ident">html_path</span>(),
-            <span class="ident">node_info</span>.<span class="ident">pretty_name</span>,
+            <span class="ident">node_info</span>.<span class="ident">name</span>,
             <span class="ident">handle</span>,
         )
         .<span class="ident">unwrap</span>();
@@ -1956,26 +1946,35 @@
         <span class="comment">// for any additional work to be finished here. This may take an arbitrary amount of time,</span>
         <span class="comment">// depending on the work that the Node thread has to perform, but at least we know that the</span>
         <span class="comment">// it will not be able to enter again in a blocking state.</span>
-        <span class="kw">for</span> (<span class="ident">node_id</span>, <span class="ident">instance</span>) <span class="kw">in</span> <span class="self">self</span>
-            .<span class="ident">node_join_handles</span>
-            .<span class="ident">lock</span>()
-            .<span class="ident">expect</span>(<span class="string">&quot;could not acquire lock on node_join_handles&quot;</span>)
-            .<span class="ident">drain</span>()
-        {
-            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;join thread for {:?}...&quot;</span>, <span class="ident">node_id</span>);
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">instance</span>.<span class="ident">join</span>() {
-                <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;could not terminate node: {:?}&quot;</span>, <span class="ident">err</span>);
+        <span class="kw">let</span> <span class="ident">join_handles</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">take_join_handles</span>();
+        <span class="kw">for</span> (<span class="ident">node_id</span>, <span class="ident">join_handle_opt</span>) <span class="kw">in</span> <span class="ident">join_handles</span> {
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">join_handle</span>) <span class="op">=</span> <span class="ident">join_handle_opt</span> {
+                <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;join thread for {:?} ...&quot;</span>, <span class="ident">node_id</span>);
+                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">join_handle</span>.<span class="ident">join</span>() {
+                    <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;could not join node {:?}: {:?}&quot;</span>, <span class="ident">node_id</span>, <span class="ident">err</span>);
+                }
+                <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;join thread for {:?}...done&quot;</span>, <span class="ident">node_id</span>);
             }
-            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;join thread for {:?}...done&quot;</span>, <span class="ident">node_id</span>);
         }
     }
 
-    <span class="kw">fn</span> <span class="ident">notify_all_waiters</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-        <span class="comment">// Hold the write lock and wake up any Node threads blocked on</span>
-        <span class="comment">// a `Channel`.</span>
-        <span class="kw">let</span> <span class="ident">node_infos</span> <span class="op">=</span> <span class="self">self</span>
+    <span class="comment">// Move all of the Node join handles out of the `node_infos` tracker.</span>
+    <span class="kw">fn</span> <span class="ident">take_join_handles</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">NodeId</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">JoinHandle</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">node_infos</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">node_infos</span>
             .<span class="ident">write</span>()
+            .<span class="ident">expect</span>(<span class="string">&quot;could not acquire lock on node_infos&quot;</span>);
+        <span class="ident">node_infos</span>
+            .<span class="ident">iter_mut</span>()
+            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">id</span>, <span class="ident">info</span>)<span class="op">|</span> (<span class="kw-2">*</span><span class="ident">id</span>, <span class="ident">info</span>.<span class="ident">join_handle</span>.<span class="ident">take</span>()))
+            .<span class="ident">collect</span>()
+    }
+
+    <span class="kw">fn</span> <span class="ident">notify_all_waiters</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+        <span class="comment">// Hold the write lock and wake up any Node threads blocked on a `Channel`.</span>
+        <span class="kw">let</span> <span class="ident">node_infos</span> <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">node_infos</span>
+            .<span class="ident">read</span>()
             .<span class="ident">expect</span>(<span class="string">&quot;could not acquire lock on node_infos&quot;</span>);
         <span class="kw">for</span> <span class="ident">node_id</span> <span class="kw">in</span> <span class="ident">node_infos</span>.<span class="ident">keys</span>().<span class="ident">sorted</span>() {
             <span class="kw">let</span> <span class="ident">node_info</span> <span class="op">=</span> <span class="ident">node_infos</span>.<span class="ident">get</span>(<span class="ident">node_id</span>).<span class="ident">unwrap</span>();
@@ -2203,17 +2202,17 @@
             }
 
             <span class="macro">debug</span><span class="macro">!</span>(
-                <span class="string">&quot;{:?}: wait_on_channels: channels not ready, parking thread {}&quot;</span>,
+                <span class="string">&quot;{:?}: wait_on_channels: channels not ready, parking thread {:?}&quot;</span>,
                 <span class="ident">node_id</span>,
-                <span class="ident">pretty_name_for_thread</span>(<span class="kw-2">&amp;</span><span class="ident">thread</span>::<span class="ident">current</span>())
+                <span class="ident">thread</span>::<span class="ident">current</span>()
             );
 
             <span class="ident">thread</span>::<span class="ident">park</span>();
 
             <span class="macro">debug</span><span class="macro">!</span>(
-                <span class="string">&quot;{:?}: wait_on_channels: thread {} re-woken&quot;</span>,
+                <span class="string">&quot;{:?}: wait_on_channels: thread {:?} re-woken&quot;</span>,
                 <span class="ident">node_id</span>,
-                <span class="ident">pretty_name_for_thread</span>(<span class="kw-2">&amp;</span><span class="ident">thread</span>::<span class="ident">current</span>())
+                <span class="ident">thread</span>::<span class="ident">current</span>()
             );
         }
         <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrTerminated</span>)
@@ -2431,13 +2430,17 @@
         );
     }
 
-    <span class="doccomment">/// Add an [`NodeId`] [`JoinHandle`] pair to the [`Runtime`]. This method temporarily holds the</span>
-    <span class="doccomment">/// [`Runtime::node_join_handles`] lock.</span>
+    <span class="doccomment">/// Add the [`JoinHandle`] for a running Node to `NodeInfo`. The provided `NodeId` value</span>
+    <span class="doccomment">/// must already be present in `self.node_infos`.</span>
     <span class="kw">fn</span> <span class="ident">add_node_join_handle</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">node_join_handle</span>: <span class="ident">JoinHandle</span><span class="op">&lt;</span>()<span class="op">&gt;</span>) {
-        <span class="self">self</span>.<span class="ident">node_join_handles</span>
-            .<span class="ident">lock</span>()
-            .<span class="ident">expect</span>(<span class="string">&quot;could not acquire lock on node_join_handles&quot;</span>)
-            .<span class="ident">insert</span>(<span class="ident">node_id</span>, <span class="ident">node_join_handle</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">node_infos</span> <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">node_infos</span>
+            .<span class="ident">write</span>()
+            .<span class="ident">expect</span>(<span class="string">&quot;could not acquire lock on node_infos&quot;</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">node_info</span> <span class="op">=</span> <span class="ident">node_infos</span>
+            .<span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="ident">node_id</span>)
+            .<span class="ident">expect</span>(<span class="string">&quot;node ID not in node_infos&quot;</span>);
+        <span class="ident">node_info</span>.<span class="ident">join_handle</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">node_join_handle</span>);
     }
 
     <span class="doccomment">/// Thread safe method that attempts to create a Node within the [`Runtime`] corresponding to a</span>
@@ -2476,11 +2479,13 @@
 
         <span class="kw">let</span> <span class="ident">new_node_proxy</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">clone</span>().<span class="ident">proxy_for_new_node</span>();
         <span class="kw">let</span> <span class="ident">new_node_id</span> <span class="op">=</span> <span class="ident">new_node_proxy</span>.<span class="ident">node_id</span>;
-        <span class="self">self</span>.<span class="ident">node_configure_instance</span>(
-            <span class="ident">new_node_id</span>,
-            <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}.{}&quot;</span>, <span class="ident">config_name</span>, <span class="ident">entrypoint</span>),
-            <span class="ident">label</span>,
+        <span class="kw">let</span> <span class="ident">new_node_name</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
+            <span class="string">&quot;{}.{}({})&quot;</span>,
+            <span class="ident">config_name</span>,
+            <span class="ident">config</span>.<span class="ident">node_subname</span>(<span class="ident">entrypoint</span>),
+            <span class="ident">new_node_id</span>.<span class="number">0</span>
         );
+        <span class="self">self</span>.<span class="ident">node_configure_instance</span>(<span class="ident">new_node_id</span>, <span class="kw-2">&amp;</span><span class="ident">new_node_name</span>, <span class="ident">label</span>);
         <span class="kw">let</span> <span class="ident">initial_handle</span> <span class="op">=</span> <span class="ident">new_node_proxy</span>
             .<span class="ident">runtime</span>
             .<span class="ident">new_abi_handle</span>(<span class="ident">new_node_proxy</span>.<span class="ident">node_id</span>, <span class="ident">reader</span>.<span class="ident">clone</span>());
@@ -2491,30 +2496,25 @@
 
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{:?}: create node instance {:?}&quot;</span>, <span class="ident">node_id</span>, <span class="ident">new_node_id</span>);
         <span class="comment">// This only creates a Node instance, but does not start it.</span>
-        <span class="kw">let</span> <span class="ident">instance</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">create_node</span>(
-            <span class="ident">config_name</span>,
-            <span class="ident">new_node_proxy</span>,
-            <span class="ident">entrypoint</span>.<span class="ident">to_owned</span>(),
-            <span class="ident">initial_handle</span>,
-        );
+        <span class="kw">let</span> <span class="ident">instance</span> <span class="op">=</span> <span class="ident">config</span>
+            .<span class="ident">create_node</span>(<span class="kw-2">&amp;</span><span class="ident">new_node_name</span>, <span class="ident">config_name</span>, <span class="ident">entrypoint</span>.<span class="ident">to_owned</span>())
+            .<span class="ident">ok_or</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>)<span class="question-mark">?</span>;
 
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{:?}: start node instance {:?}&quot;</span>, <span class="ident">node_id</span>, <span class="ident">new_node_id</span>);
-        <span class="self">self</span>.<span class="ident">node_start_instance</span>(<span class="ident">new_node_id</span>, <span class="ident">instance</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">node_start_instance</span>(<span class="kw-2">&amp;</span><span class="ident">new_node_name</span>, <span class="ident">instance</span>, <span class="ident">new_node_proxy</span>, <span class="ident">initial_handle</span>)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="doccomment">/// Starts a newly created Node instance, by first initializing the necessary [`NodeInfo`] data</span>
-    <span class="doccomment">/// structure in [`Runtime`], allowing it to access the provided [`ChannelHalf`]s, then</span>
-    <span class="doccomment">/// calling [`Node::start`] on the instance, and finally storing a [`JoinHandle`] from the</span>
-    <span class="doccomment">/// running instance in [`Runtime::node_join_handles`] so that it can later be terminated.</span>
-    <span class="doccomment">/// The `pretty_name` parameter is only used for diagnostic/debugging output.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// [`Node::start`]: crate::node::Node::start</span>
+    <span class="doccomment">/// Starts running a newly created Node instance on a new thread.  The join handle</span>
+    <span class="doccomment">/// for the new thread is stored in the corresponding [`NodeInfo`].</span>
+    <span class="doccomment">/// The `node_name` parameter is only used for diagnostic/debugging output.</span>
     <span class="kw">fn</span> <span class="ident">node_start_instance</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
-        <span class="ident">node_instance</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="kw">crate</span>::<span class="ident">node</span>::<span class="ident">Node</span><span class="op">&gt;</span>,
+        <span class="self">self</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>,
+        <span class="ident">node_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
+        <span class="ident">node_instance</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="kw">crate</span>::<span class="ident">node</span>::<span class="ident">Node</span> <span class="op">+</span> <span class="ident">Send</span><span class="op">&gt;</span>,
+        <span class="ident">node_proxy</span>: <span class="ident">RuntimeProxy</span>,
+        <span class="ident">initial_handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="comment">// Try to start the Node instance, and store the join handle.</span>
         <span class="comment">//</span>
@@ -2526,13 +2526,17 @@
         <span class="comment">// below, because that takes ownership of the instance itself.</span>
         <span class="comment">//</span>
         <span class="comment">// We also want no locks to be held while the instance is starting.</span>
-        <span class="kw">let</span> <span class="ident">node_join_handle</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">node_instance</span>.<span class="ident">start</span>() {
-            <span class="prelude-val">Ok</span>(<span class="ident">join_handle</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">join_handle</span>,
-            <span class="prelude-val">Err</span>(<span class="ident">status</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="self">self</span>.<span class="ident">remove_node_id</span>(<span class="ident">node_id</span>);
-                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">status</span>);
-            }
-        };
+        <span class="kw">let</span> <span class="ident">node_id</span> <span class="op">=</span> <span class="ident">node_proxy</span>.<span class="ident">node_id</span>;
+        <span class="kw">let</span> <span class="ident">runtime</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">clone</span>();
+        <span class="kw">let</span> <span class="ident">node_join_handle</span> <span class="op">=</span> <span class="ident">thread</span>::<span class="ident">Builder</span>::<span class="ident">new</span>()
+            .<span class="ident">name</span>(<span class="ident">node_name</span>.<span class="ident">to_string</span>())
+            .<span class="ident">spawn</span>(<span class="kw">move</span> <span class="op">|</span><span class="op">|</span> {
+                <span class="ident">node_instance</span>.<span class="ident">run</span>(<span class="ident">node_proxy</span>, <span class="ident">initial_handle</span>);
+                <span class="comment">// It&#39;s now safe to remove the state for this Node, as there&#39;s nothing left</span>
+                <span class="comment">// that can invoke `Runtime` functionality for it.</span>
+                <span class="ident">runtime</span>.<span class="ident">remove_node_id</span>(<span class="ident">node_id</span>)
+            })
+            .<span class="ident">expect</span>(<span class="string">&quot;failed to spawn thread&quot;</span>);
 
         <span class="comment">// Regardless of the result of `Node::start`, insert the now running instance to the list of</span>
         <span class="comment">// running instances (by moving it), so that `Node::stop` will be called on it eventually.</span>
@@ -2543,13 +2547,14 @@
     }
 
     <span class="comment">// Configure data structures for a Node instance.</span>
-    <span class="kw">fn</span> <span class="ident">node_configure_instance</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">pretty_name</span>: <span class="ident">String</span>, <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>) {
+    <span class="kw">fn</span> <span class="ident">node_configure_instance</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">node_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>) {
         <span class="self">self</span>.<span class="ident">add_node_info</span>(
             <span class="ident">node_id</span>,
             <span class="ident">NodeInfo</span> {
-                <span class="ident">pretty_name</span>,
+                <span class="ident">name</span>: <span class="ident">node_name</span>.<span class="ident">to_string</span>(),
                 <span class="ident">label</span>: <span class="ident">label</span>.<span class="ident">clone</span>(),
                 <span class="ident">abi_handles</span>: <span class="ident">HashMap</span>::<span class="ident">new</span>(),
+                <span class="ident">join_handle</span>: <span class="prelude-val">None</span>,
             },
         );
     }
@@ -2599,11 +2604,6 @@
     <span class="doccomment">/// See [`Runtime::is_terminating`].</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_terminating</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
         <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">is_terminating</span>()
-    }
-
-    <span class="doccomment">/// See [`Runtime::remove_node_id`].</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">exit_node</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-        <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">remove_node_id</span>(<span class="self">self</span>.<span class="ident">node_id</span>)
     }
 
     <span class="doccomment">/// See [`Runtime::node_create`].</span>
