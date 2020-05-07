@@ -26,6 +26,8 @@ pub use oak_abi::proto::{
 
 pub mod client;
 mod invocation;
+pub mod server;
+
 pub use invocation::Invocation;
 
 /// Result type that uses a [`Status`] type for error values.
