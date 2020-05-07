@@ -42,32 +42,25 @@ pub struct GrpcServerNode {
     address: SocketAddr,
     /// Loaded files containing a server TLS key and certificates.
     tls_identity: Identity,
-    /// Channel handle used for writing invocations.
-    /// Is set after the [`GrpcServerNode::init_channel_writer`] is called.
-    channel_writer: Option<oak_abi::Handle>,
 }
 
 impl GrpcServerNode {
     /// Creates a new [`GrpcServerNode`] instance, but does not start it.
-    ///
-    /// `channel_writer` is initialized with `None`, and is filled in at `run`-time.
     pub fn new(node_name: &str, address: SocketAddr, tls_identity: Identity) -> Self {
         Self {
             node_name: node_name.to_string(),
             address,
             tls_identity,
-            channel_writer: None,
         }
     }
 
     /// Reads an [`oak_abi::Handle`] from a channel specified by `handle`.
     /// Returns an error if couldn't read from the channel or if received a wrong number of handles
     /// (not equal to 1).
-    fn init_channel_writer(
-        &mut self,
+    fn get_channel_writer(
         runtime: &RuntimeProxy,
         handle: oak_abi::Handle,
-    ) -> Result<(), OakStatus> {
+    ) -> Result<oak_abi::Handle, OakStatus> {
         let read_status = runtime.wait_on_channels(&[handle]).map_err(|error| {
             error!("Couldn't wait on the initial reader handle: {:?}", error);
             OakStatus::ErrInternal
@@ -102,26 +95,23 @@ impl GrpcServerNode {
             error!("Couldn't read channel: {:?}", read_status[0]);
             Err(OakStatus::ErrInternal)
         }?;
-        self.channel_writer = Some(channel_writer);
 
-        info!("Channel writer received: {:?}", self.channel_writer);
-        Ok(())
+        info!("Channel writer received: {:?}", channel_writer);
+        Ok(channel_writer)
     }
 }
 
 /// Oak Node implementation for the gRPC server.
 impl Node for GrpcServerNode {
-    fn run(mut self: Box<Self>, runtime: RuntimeProxy, handle: oak_abi::Handle) {
+    fn run(self: Box<Self>, runtime: RuntimeProxy, handle: oak_abi::Handle) {
         // Receive a `channel_writer` handle used to pass handles for temporary channels.
         info!("{}: Waiting for a channel writer", self.node_name);
-        self.init_channel_writer(&runtime, handle)
-            .expect("Couldn't initialialize a channel writer");
+        let channel_writer = GrpcServerNode::get_channel_writer(&runtime, handle)
+            .expect("Couldn't initialize a channel writer");
 
         let handler = HttpRequestHandler {
             runtime,
-            writer: self
-                .channel_writer
-                .expect("Channel writer is not initialized"),
+            writer: channel_writer,
         };
 
         // Handles incoming TLS connections, unpacks HTTP/2 requests and forwards them to
