@@ -1159,17 +1159,11 @@ impl Runtime {
         debug!("{:?}: create node instance {:?}", node_id, new_node_id);
         // This only creates a Node instance, but does not start it.
         let instance = config
-            .create_node(
-                &new_node_name,
-                new_node_proxy,
-                config_name,
-                entrypoint.to_owned(),
-                initial_handle,
-            )
+            .create_node(&new_node_name, config_name, entrypoint.to_owned())
             .ok_or(OakStatus::ErrInvalidArgs)?;
 
         debug!("{:?}: start node instance {:?}", node_id, new_node_id);
-        self.node_start_instance(new_node_id, &new_node_name, instance)?;
+        self.node_start_instance(&new_node_name, instance, new_node_proxy, initial_handle)?;
 
         Ok(())
     }
@@ -1179,9 +1173,10 @@ impl Runtime {
     /// The `node_name` parameter is only used for diagnostic/debugging output.
     fn node_start_instance(
         self: Arc<Self>,
-        node_id: NodeId,
         node_name: &str,
         node_instance: Box<dyn crate::node::Node + Send>,
+        node_proxy: RuntimeProxy,
+        initial_handle: oak_abi::Handle,
     ) -> Result<(), OakStatus> {
         // Try to start the Node instance, and store the join handle.
         //
@@ -1193,11 +1188,12 @@ impl Runtime {
         // below, because that takes ownership of the instance itself.
         //
         // We also want no locks to be held while the instance is starting.
+        let node_id = node_proxy.node_id;
         let runtime = self.clone();
         let node_join_handle = thread::Builder::new()
             .name(node_name.to_string())
             .spawn(move || {
-                node_instance.run();
+                node_instance.run(node_proxy, initial_handle);
                 // It's now safe to remove the state for this Node, as there's nothing left
                 // that can invoke `Runtime` functionality for it.
                 runtime.remove_node_id(node_id)

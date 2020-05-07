@@ -30,8 +30,9 @@ mod wasm;
 
 /// Trait encapsulating execution of a Node or pseudo-Node.
 pub trait Node {
-    /// Execute the Node.  The method should continue execution until the Node terminates.
-    fn run(self: Box<Self>);
+    /// Execute the Node, using the provided `Runtime` reference and initial handle.  The method
+    /// should continue execution until the Node terminates.
+    fn run(self: Box<Self>, runtime: RuntimeProxy, handle: oak_abi::Handle);
 }
 
 /// A `Configuration` corresponds to an entry from a `ApplicationConfiguration`. It is the
@@ -112,58 +113,40 @@ impl Configuration {
     pub fn create_node(
         &self,
         node_name: &str, // Used for pretty debugging
-        runtime: RuntimeProxy,
         config_name: &str,
         entrypoint: String,
-        initial_handle: oak_abi::Handle,
     ) -> Option<Box<dyn Node + Send>> {
         debug!(
-            "{:?}: create_node('{}', '{}', {})",
-            runtime.node_id, node_name, entrypoint, initial_handle
+            "create_node('{}': '{}'.'{}')",
+            node_name, config_name, entrypoint
         );
         match self {
-            Configuration::LogNode => Some(Box::new(logger::LogNode::new(
-                node_name,
-                runtime,
-                initial_handle,
-            ))),
+            Configuration::LogNode => Some(Box::new(logger::LogNode::new(node_name))),
             Configuration::GrpcServerNode {
                 address,
                 tls_identity,
             } => Some(Box::new(grpc::server::GrpcServerNode::new(
                 node_name,
-                runtime,
                 *address,
                 tls_identity.clone(),
-                initial_handle,
             ))),
-            Configuration::WasmNode { module } => match wasm::WasmNode::new(
-                node_name,
-                runtime,
-                module.clone(),
-                entrypoint,
-                initial_handle,
-            ) {
-                Some(node) => Some(Box::new(node)),
-                None => None,
-            },
-            Configuration::External => Some(Box::new(external::PseudoNode::new(
-                node_name,
-                runtime,
-                config_name,
-                initial_handle,
-            ))),
+            Configuration::WasmNode { module } => {
+                match wasm::WasmNode::new(node_name, module.clone(), entrypoint) {
+                    Some(node) => Some(Box::new(node)),
+                    None => None,
+                }
+            }
+            Configuration::External => {
+                Some(Box::new(external::PseudoNode::new(node_name, config_name)))
+            }
         }
     }
 
     pub fn node_subname(&self, entrypoint: &str) -> String {
         match self {
             Configuration::LogNode => "LogNode".to_string(),
-            Configuration::GrpcServerNode {
-                address: _,
-                tls_identity: _,
-            } => "GrpcServerNode".to_string(),
-            Configuration::WasmNode { module: _ } => format!("WasmNode-{}", entrypoint),
+            Configuration::GrpcServerNode { .. } => "GrpcServerNode".to_string(),
+            Configuration::WasmNode { .. } => format!("WasmNode-{}", entrypoint),
             Configuration::External => "ExternalPseudoNode".to_string(),
         }
     }

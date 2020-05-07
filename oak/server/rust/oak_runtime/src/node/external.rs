@@ -35,41 +35,32 @@ pub fn register_factory(factory: NodeFactory) {
 pub struct PseudoNode {
     node_name: String,
     config_name: String,
-    runtime: RuntimeProxy,
-    reader: oak_abi::Handle,
 }
 
 impl PseudoNode {
-    pub fn new(
-        node_name: &str,
-        runtime: RuntimeProxy,
-        config_name: &str,
-        reader: oak_abi::Handle,
-    ) -> Self {
+    pub fn new(node_name: &str, config_name: &str) -> Self {
         Self {
             node_name: node_name.to_string(),
             config_name: config_name.to_string(),
-            runtime,
-            reader,
         }
     }
 }
 
 impl super::Node for PseudoNode {
-    fn run(self: Box<Self>) {
+    fn run(self: Box<Self>, runtime: RuntimeProxy, handle: oak_abi::Handle) {
         let factory_fn: NodeFactory = FACTORY
             .read()
             .expect("unlock failed")
             .expect("no registered factory");
         info!(
-            "{}: invoke external node factory with reader={:?} on thread {:?}",
+            "{}: invoke external node factory with handle={} on thread {:?}",
             self.node_name,
-            self.reader,
+            handle,
             thread::current(),
         );
-        factory_fn(&self.config_name, self.runtime.node_id, self.reader);
+        factory_fn(&self.config_name, runtime.node_id, handle);
 
         info!("{} pseudo-Node execution complete", self.node_name);
-        let _ = self.runtime.channel_close(self.reader);
+        let _ = runtime.channel_close(handle);
     }
 }

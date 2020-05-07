@@ -16,7 +16,7 @@
 
 use super::*;
 
-type NodeBody = dyn Fn(&RuntimeProxy) -> Result<(), OakStatus> + Send + Sync;
+type NodeBody = dyn Fn(RuntimeProxy) -> Result<(), OakStatus> + Send + Sync;
 
 /// Runs the provided function as if it were the body of a [`Node`] implementation, which is
 /// instantiated by the [`Runtime`] with the provided [`Label`].
@@ -31,13 +31,12 @@ fn run_node_body(node_label: Label, node_body: Box<NodeBody>) {
     let proxy = crate::RuntimeProxy::create_runtime(configuration);
 
     struct TestNode {
-        runtime: RuntimeProxy,
         node_body: Box<NodeBody>,
     };
 
     impl crate::node::Node for TestNode {
-        fn run(self: Box<Self>) {
-            let _ = (self.node_body)(&self.runtime);
+        fn run(self: Box<Self>, runtime: RuntimeProxy, _handle: oak_abi::Handle) {
+            let _ = (self.node_body)(runtime);
         }
     }
 
@@ -49,14 +48,13 @@ fn run_node_body(node_label: Label, node_body: Box<NodeBody>) {
         .runtime
         .node_configure_instance(new_node_id, "test_module.test_function", &node_label);
 
-    let node_instance = TestNode {
-        runtime: test_proxy,
-        node_body,
-    };
-    let result =
-        proxy
-            .runtime
-            .node_start_instance(new_node_id, &new_node_name, Box::new(node_instance));
+    let node_instance = TestNode { node_body };
+    let result = proxy.runtime.node_start_instance(
+        &new_node_name,
+        Box::new(node_instance),
+        test_proxy,
+        oak_abi::INVALID_HANDLE,
+    );
     assert_eq!(Ok(()), result);
 }
 
@@ -82,9 +80,7 @@ fn create_node_success() {
         Box::new(|runtime| {
             let (_write_handle, read_handle) = runtime.channel_create(&Label::public_trusted());
             let result =
-                runtime
-                    .clone()
-                    .node_create("log", "unused", &Label::public_trusted(), read_handle);
+                runtime.node_create("log", "unused", &Label::public_trusted(), read_handle);
             assert_eq!(Ok(()), result);
             Ok(())
         }),
@@ -98,7 +94,7 @@ fn create_node_invalid_configuration() {
         Label::public_trusted(),
         Box::new(|runtime| {
             let (_write_handle, read_handle) = runtime.channel_create(&Label::public_trusted());
-            let result = runtime.clone().node_create(
+            let result = runtime.node_create(
                 "invalid-configuration-name",
                 "unused",
                 &Label::public_trusted(),
@@ -128,9 +124,7 @@ fn create_node_more_public_label() {
         Box::new(|runtime| {
             let (_write_handle, read_handle) = runtime.channel_create(&Label::public_trusted());
             let result =
-                runtime
-                    .clone()
-                    .node_create("log", "unused", &Label::public_trusted(), read_handle);
+                runtime.node_create("log", "unused", &Label::public_trusted(), read_handle);
             assert_eq!(Err(OakStatus::ErrPermissionDenied), result);
             Ok(())
         }),
