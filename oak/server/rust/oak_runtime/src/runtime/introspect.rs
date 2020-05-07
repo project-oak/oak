@@ -23,6 +23,8 @@ use log::info;
 use regex::Regex;
 use std::{net::SocketAddr, sync::Arc};
 
+/// Wrap a string holding a Graphviz Dot graph description in an HTML template
+/// suitable for live display.
 // TODO(#672): Shift to a templating library.
 fn dot_wrap(title: &str, graph: &str) -> String {
     format!(
@@ -50,6 +52,7 @@ fn dot_wrap(title: &str, graph: &str) -> String {
     )
 }
 
+/// Wrap a body of text in an HTML template suitable for display.
 fn html_wrap(title: &str, body: &str) -> String {
     format!(
         r###"
@@ -90,6 +93,7 @@ fn find_ids(path: &str, kind: &str) -> Option<(u64, u64)> {
     Some((id, subid))
 }
 
+// Handler for a single HTTP request to the introspection server.
 fn handle_request(
     req: Request<Body>,
     runtime: Arc<Runtime>,
@@ -158,6 +162,8 @@ async fn make_server(port: u16, runtime: Arc<Runtime>) {
     info!("introspection server terminated with {:?}", result);
 }
 
+// Start running an introspection server on the given port, running until the `notify_receiver` is
+// triggered.
 pub fn serve(
     port: u16,
     runtime: Arc<Runtime>,

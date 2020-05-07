@@ -53,7 +53,7 @@ const ABI_USIZE: ValueType = ValueType::I32;
 /// wrappers around the equivalent methods in `RuntimeProxy`, translating values between Wasm linear
 /// memory and Rust types.
 struct WasmInterface {
-    /// A configuration and thread specific Node name for pretty printing.
+    /// A per-instance Node name for pretty printing.
     pretty_name: String,
 
     /// A reference to the memory used by the `wasmi` interpreter. Host ABI functions using Wasm
@@ -480,7 +480,7 @@ impl wasmi::Externals for WasmInterface {
     /// Invocation of a host function specified by registered index.  Acts as a wrapper for
     /// the relevant native function, just:
     /// - checking argument types (which should be correct as `wasmi` will only pass through those
-    ///   types that were specified when the host function was registered with `resolv_func`.
+    ///   types that were specified when the host function was registered with `resolv_func`).
     /// - mapping resulting return/error values.
     fn invoke_index(
         &mut self,
@@ -665,7 +665,9 @@ impl wasmi::ModuleImportResolver for WasmInterfaceStub {
 }
 
 // Stub implementation of WASI exported functions, to allow partially-ported
-// applications to be run.
+// applications that have references to WASI functions to be loaded. Note
+// that if the the application actually tries to *use* the WASI functions
+// at runtime, a panic will be triggered.
 // TODO(#817): remove WASI stubs
 struct WasiStub;
 

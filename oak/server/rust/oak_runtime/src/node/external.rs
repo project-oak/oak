@@ -23,10 +23,15 @@ use std::{sync::RwLock, thread};
 // mechanism when the runtime's main() is in Rust.
 pub type NodeFactory = fn(config_name: &str, node_id: NodeId, handle: oak_abi::Handle);
 
+// Global callback used to create pseudo-Nodes of types that are not
+// supported by the Rust Runtime.
 lazy_static! {
     static ref FACTORY: RwLock<Option<NodeFactory>> = RwLock::new(None);
 }
 
+/// Register a pseudo-Node creation factory function.  This callback will be invoked (on a new
+/// thread) to start and run any pseudo-Node types that are not supported by the core Rust
+/// Runtime.
 pub fn register_factory(factory: NodeFactory) {
     info!("register external node factory");
     *FACTORY.write().unwrap() = Some(factory);

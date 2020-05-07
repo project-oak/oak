@@ -20,6 +20,7 @@ use oak_abi::proto::oak::log::{Level, LogMessage};
 use prost::Message;
 use std::string::String;
 
+/// Logging pseudo-Node.
 pub struct LogNode {
     node_name: String,
 }
@@ -34,6 +35,8 @@ impl LogNode {
 }
 
 impl super::Node for LogNode {
+    /// Main execution loop for the logging pseudo-Node just waits for incoming
+    /// `LogMessage`s and outputs them.
     fn run(self: Box<Self>, runtime: RuntimeProxy, handle: oak_abi::Handle) {
         loop {
             // An error indicates the Runtime is terminating. We ignore it here and keep trying to
@@ -65,6 +68,8 @@ impl super::Node for LogNode {
     }
 }
 
+/// Translate a log level as encoded in a `LogMessage` into the corresponding
+/// enum value from the [`log` crate](https://crates.io/crates/log).
 fn to_level(level: i32) -> log::Level {
     match Level::from_i32(level).unwrap_or(Level::UnknownLevel) {
         Level::UnknownLevel => log::Level::Error,
