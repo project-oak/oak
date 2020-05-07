@@ -21,7 +21,11 @@ use crate::{
 };
 use hyper::service::Service;
 use log::{debug, error, info};
-use oak_abi::{label::Label, proto::oak::encap::GrpcRequest, ChannelReadStatus, OakStatus};
+use oak_abi::{
+    label::Label,
+    proto::oak::encap::{GrpcRequest, GrpcResponse},
+    ChannelReadStatus, OakStatus,
+};
 use prost::Message;
 use std::{
     net::SocketAddr,
@@ -316,7 +320,7 @@ impl GrpcRequestHandler {
             self.runtime
                 .channel_read(response_reader)
                 .map_err(|error| {
-                    error!("Couldn't read from a temporary gRPC channel: {:?}", error);
+                    error!("Couldn't read from the temporary gRPC channel: {:?}", error);
                     error
                 })
                 .map(|message| {
@@ -326,9 +330,18 @@ impl GrpcRequestHandler {
                         m.data
                     })
                 })
+                .and_then(|response| {
+                    // Return the serialized message body.
+                    GrpcResponse::decode(response.as_slice())
+                        .map_err(|error| {
+                            error!("Couldn't parse the GrpcResponse message: {}", error);
+                            OakStatus::ErrInternal
+                        })
+                        .map(|message| message.rsp_msg)
+                })
         } else {
             error!(
-                "Couldn't read from a temporary gRPC channel: {:?}",
+                "Couldn't read from the temporary gRPC channel: {:?}",
                 read_status[0]
             );
             Err(OakStatus::ErrInternal)

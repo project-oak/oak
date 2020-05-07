@@ -16,7 +16,7 @@
 
 //! Functionality to help Oak Nodes create gRPC pseudo-Nodes.
 
-use crate::{ReadHandle, OakStatus};
+use crate::{OakStatus, ReadHandle};
 
 /// Default name for predefined Node configuration that corresponds to a gRPC pseudo-Node.
 pub const DEFAULT_CONFIG_NAME: &str = "grpc_server";
@@ -44,6 +44,6 @@ pub fn init(config: &str) -> std::result::Result<ReadHandle, OakStatus> {
         .expect("Couldn't write to a channel");
     crate::channel_close(write_handle.handle).expect("Couldn't close a channel");
     crate::channel_close(invocation_write_handle.handle).expect("Couldn't close a channel");
-    
+
     Ok(invocation_read_handle)
 }
