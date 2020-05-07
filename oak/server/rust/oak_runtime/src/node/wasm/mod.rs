@@ -530,113 +530,137 @@ impl wasmi::Externals for WasmInterface {
 }
 
 impl wasmi::ModuleImportResolver for WasmInterface {
-    /// A resolver function, mapping function names to an index and a type signature.
     fn resolve_func(
         &self,
         field_name: &str,
         signature: &wasmi::Signature,
     ) -> Result<wasmi::FuncRef, wasmi::Error> {
-        // The types in the signatures correspond to the parameters from
-        // /oak/server/rust/oak_abi/src/lib.rs
-        let (index, sig) = match field_name {
-            "node_create" => (
-                NODE_CREATE,
-                wasmi::Signature::new(
-                    &[
-                        ABI_USIZE,      // config_buf
-                        ABI_USIZE,      // config_len
-                        ABI_USIZE,      // entrypoint_buf
-                        ABI_USIZE,      // entrypoint_len
-                        ABI_USIZE,      // label_buf
-                        ABI_USIZE,      // label_len
-                        ValueType::I64, // handle
-                    ][..],
-                    Some(ValueType::I32),
-                ),
-            ),
-            "random_get" => (
-                RANDOM_GET,
-                wasmi::Signature::new(
-                    &[
-                        ABI_USIZE, // buf
-                        ABI_USIZE, // len
-                    ][..],
-                    Some(ValueType::I32),
-                ),
-            ),
-            "channel_close" => (
-                CHANNEL_CLOSE,
-                wasmi::Signature::new(
-                    &[
-                        ValueType::I64, // handle
-                    ][..],
-                    Some(ValueType::I32),
-                ),
-            ),
-            "channel_create" => (
-                CHANNEL_CREATE,
-                wasmi::Signature::new(
-                    &[
-                        ABI_USIZE, // write
-                        ABI_USIZE, // read
-                    ][..],
-                    Some(ValueType::I32),
-                ),
-            ),
-            "channel_write" => (
-                CHANNEL_WRITE,
-                wasmi::Signature::new(
-                    &[
-                        ValueType::I64, // handle
-                        ABI_USIZE,      // buf
-                        ABI_USIZE,      // size
-                        ABI_USIZE,      // handle_buf
-                        ValueType::I32, // handle_count
-                    ][..],
-                    Some(ValueType::I32),
-                ),
-            ),
-            "channel_read" => (
-                CHANNEL_READ,
-                wasmi::Signature::new(
-                    &[
-                        ValueType::I64, // handle
-                        ABI_USIZE,      // buf
-                        ABI_USIZE,      // size
-                        ABI_USIZE,      // actual_size
-                        ABI_USIZE,      // handle_buf
-                        ValueType::I32, // handle_count
-                        ABI_USIZE,      // actual_handle_count
-                    ][..],
-                    Some(ValueType::I32),
-                ),
-            ),
-            "wait_on_channels" => (
-                WAIT_ON_CHANNELS,
-                wasmi::Signature::new(
-                    &[
-                        ABI_USIZE,      // buf
-                        ValueType::I32, // count
-                    ][..],
-                    Some(ValueType::I32),
-                ),
-            ),
-            _ => {
-                return Err(wasmi::Error::Instantiation(format!(
-                    "Export {} not found",
-                    field_name
-                )))
-            }
-        };
+        oak_resolve_func(field_name, signature)
+    }
+}
 
-        if &sig != signature {
+/// A resolver function, mapping Oak host function names to an index and a type signature.
+fn oak_resolve_func(
+    field_name: &str,
+    signature: &wasmi::Signature,
+) -> Result<wasmi::FuncRef, wasmi::Error> {
+    // The types in the signatures correspond to the parameters from
+    // /oak/server/rust/oak_abi/src/lib.rs
+    let (index, sig) = match field_name {
+        "node_create" => (
+            NODE_CREATE,
+            wasmi::Signature::new(
+                &[
+                    ABI_USIZE,      // config_buf
+                    ABI_USIZE,      // config_len
+                    ABI_USIZE,      // entrypoint_buf
+                    ABI_USIZE,      // entrypoint_len
+                    ABI_USIZE,      // label_buf
+                    ABI_USIZE,      // label_len
+                    ValueType::I64, // handle
+                ][..],
+                Some(ValueType::I32),
+            ),
+        ),
+        "random_get" => (
+            RANDOM_GET,
+            wasmi::Signature::new(
+                &[
+                    ABI_USIZE, // buf
+                    ABI_USIZE, // len
+                ][..],
+                Some(ValueType::I32),
+            ),
+        ),
+        "channel_close" => (
+            CHANNEL_CLOSE,
+            wasmi::Signature::new(
+                &[
+                    ValueType::I64, // handle
+                ][..],
+                Some(ValueType::I32),
+            ),
+        ),
+        "channel_create" => (
+            CHANNEL_CREATE,
+            wasmi::Signature::new(
+                &[
+                    ABI_USIZE, // write
+                    ABI_USIZE, // read
+                ][..],
+                Some(ValueType::I32),
+            ),
+        ),
+        "channel_write" => (
+            CHANNEL_WRITE,
+            wasmi::Signature::new(
+                &[
+                    ValueType::I64, // handle
+                    ABI_USIZE,      // buf
+                    ABI_USIZE,      // size
+                    ABI_USIZE,      // handle_buf
+                    ValueType::I32, // handle_count
+                ][..],
+                Some(ValueType::I32),
+            ),
+        ),
+        "channel_read" => (
+            CHANNEL_READ,
+            wasmi::Signature::new(
+                &[
+                    ValueType::I64, // handle
+                    ABI_USIZE,      // buf
+                    ABI_USIZE,      // size
+                    ABI_USIZE,      // actual_size
+                    ABI_USIZE,      // handle_buf
+                    ValueType::I32, // handle_count
+                    ABI_USIZE,      // actual_handle_count
+                ][..],
+                Some(ValueType::I32),
+            ),
+        ),
+        "wait_on_channels" => (
+            WAIT_ON_CHANNELS,
+            wasmi::Signature::new(
+                &[
+                    ABI_USIZE,      // buf
+                    ValueType::I32, // count
+                ][..],
+                Some(ValueType::I32),
+            ),
+        ),
+        _ => {
             return Err(wasmi::Error::Instantiation(format!(
-                "Export `{}` doesnt match expected type {:?}",
-                field_name, signature
-            )));
+                "Export {} not found",
+                field_name
+            )))
         }
+    };
 
-        Ok(wasmi::FuncInstance::alloc_host(sig, index))
+    if &sig != signature {
+        return Err(wasmi::Error::Instantiation(format!(
+            "Export `{}` doesnt match expected type {:?}",
+            field_name, signature
+        )));
+    }
+
+    Ok(wasmi::FuncInstance::alloc_host(sig, index))
+}
+
+/// Stub version of `WasmInterface`, to allow checks of entrypoint signatures
+/// and host function linking to be validated, without needing to construct
+/// a full `WasmInterface` object.
+struct WasmInterfaceStub;
+
+impl wasmi::ModuleImportResolver for WasmInterfaceStub {
+    // For validating Oak Wasm modules, we provide exactly the same set of
+    // host functions and signatures as the full `WasmInterface does.
+    fn resolve_func(
+        &self,
+        field_name: &str,
+        signature: &wasmi::Signature,
+    ) -> Result<wasmi::FuncRef, wasmi::Error> {
+        oak_resolve_func(field_name, signature)
     }
 }
 
@@ -711,17 +735,13 @@ impl wasmi::ModuleImportResolver for WasiStub {
     }
 }
 
-fn validate_entrypoint(
-    runtime: RuntimeProxy,
-    module: &wasmi::Module,
-    entrypoint: &str,
-) -> Result<(), OakStatus> {
-    let abi = WasmInterface::new(&"validate_entrypoint", runtime);
+fn validate_entrypoint(module: &wasmi::Module, entrypoint: &str) -> Result<(), OakStatus> {
+    let abi_stub = WasmInterfaceStub;
     let wasi_stub = WasiStub;
     let instance = wasmi::ModuleInstance::new(
         &module,
         &wasmi::ImportsBuilder::new()
-            .with_resolver("oak", &abi)
+            .with_resolver("oak", &abi_stub)
             .with_resolver("wasi_snapshot_preview1", &wasi_stub),
     )
     .expect("failed to instantiate wasm module")
@@ -754,43 +774,33 @@ fn validate_entrypoint(
 
 pub struct WasmNode {
     node_name: String,
-    runtime: RuntimeProxy,
     module: Arc<wasmi::Module>,
     entrypoint: String,
-    initial_handle: oak_abi::Handle,
 }
 
 impl WasmNode {
     /// Creates a new [`WasmNode`] instance, but does not start it.
     /// May fail if the provided Wasm module is not valid.
-    pub fn new(
-        node_name: &str,
-        runtime: RuntimeProxy,
-        module: Arc<wasmi::Module>,
-        entrypoint: String,
-        initial_handle: oak_abi::Handle,
-    ) -> Option<Self> {
-        validate_entrypoint(runtime.clone(), &module, &entrypoint).ok()?;
+    pub fn new(node_name: &str, module: Arc<wasmi::Module>, entrypoint: String) -> Option<Self> {
+        validate_entrypoint(&module, &entrypoint).ok()?;
 
         Some(Self {
             node_name: node_name.to_string(),
-            runtime,
             module,
             entrypoint,
-            initial_handle,
         })
     }
 }
 
 impl super::Node for WasmNode {
     /// Runs this instance of a Wasm Node.
-    fn run(self: Box<Self>) {
+    fn run(self: Box<Self>, runtime: RuntimeProxy, handle: oak_abi::Handle) {
         debug!(
             "{}: running entrypoint '{}'",
             self.node_name, self.entrypoint
         );
         let wasi_stub = WasiStub;
-        let mut abi = WasmInterface::new(&self.node_name, self.runtime.clone());
+        let mut abi = WasmInterface::new(&self.node_name, runtime);
 
         let instance = wasmi::ModuleInstance::new(
             &self.module,
@@ -810,7 +820,7 @@ impl super::Node for WasmNode {
         instance
             .invoke_export(
                 &self.entrypoint,
-                &[wasmi::RuntimeValue::I64(self.initial_handle as i64)],
+                &[wasmi::RuntimeValue::I64(handle as i64)],
                 &mut abi,
             )
             .expect("failed to execute export");

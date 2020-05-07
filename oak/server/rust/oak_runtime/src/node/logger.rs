@@ -22,30 +22,26 @@ use std::string::String;
 
 pub struct LogNode {
     node_name: String,
-    runtime: RuntimeProxy,
-    reader: oak_abi::Handle,
 }
 
 impl LogNode {
     /// Creates a new [`LogNode`] instance, but does not start it.
-    pub fn new(node_name: &str, runtime: RuntimeProxy, reader: oak_abi::Handle) -> Self {
+    pub fn new(node_name: &str) -> Self {
         Self {
             node_name: node_name.to_string(),
-            runtime,
-            reader,
         }
     }
 }
 
 impl super::Node for LogNode {
-    fn run(self: Box<Self>) {
+    fn run(self: Box<Self>, runtime: RuntimeProxy, handle: oak_abi::Handle) {
         loop {
             // An error indicates the Runtime is terminating. We ignore it here and keep trying to
             // read in case a Wasm Node wants to emit remaining messages. We will return
             // once the channel is closed.
-            let _ = self.runtime.wait_on_channels(&[self.reader]);
+            let _ = runtime.wait_on_channels(&[handle]);
 
-            match self.runtime.channel_read(self.reader) {
+            match runtime.channel_read(handle) {
                 Ok(Some(message)) => match LogMessage::decode(&*message.data) {
                     Ok(msg) => log!(
                         target: &format!("{}:{}", msg.file, msg.line),
@@ -65,7 +61,7 @@ impl super::Node for LogNode {
             }
         }
         info!("{} logger execution complete", self.node_name);
-        let _ = self.runtime.channel_close(self.reader);
+        let _ = runtime.channel_close(handle);
     }
 }
 

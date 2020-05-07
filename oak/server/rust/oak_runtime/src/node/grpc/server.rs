@@ -34,23 +34,14 @@ use tonic::{
 };
 
 /// Struct that represents a gRPC server pseudo-Node.
-///
-/// For each gRPC request from a client, gRPC server pseudo-Node creates a pair of temporary
-/// channels (to write a request to and to read a response from) and passes corresponding handles to
-/// the [`GrpcServerNode::channel_writer`].
 #[derive(Clone)]
 pub struct GrpcServerNode {
     /// Pseudo-Node name.
     node_name: String,
-    /// Reference to a Runtime that corresponds to a Node that created a gRPC server pseudo-Node.
-    runtime: RuntimeProxy,
     /// Server address to listen client requests on.
     address: SocketAddr,
     /// Loaded files containing a server TLS key and certificates.
     tls_identity: Identity,
-    /// Channel handle used for reading a [`GrpcServerNode::channel_writer`] once the gRPC server
-    /// pseudo-Node has started.
-    initial_reader: oak_abi::Handle,
     /// Channel handle used for writing invocations.
     /// Is set after the [`GrpcServerNode::init_channel_writer`] is called.
     channel_writer: Option<oak_abi::Handle>,
@@ -60,38 +51,31 @@ impl GrpcServerNode {
     /// Creates a new [`GrpcServerNode`] instance, but does not start it.
     ///
     /// `channel_writer` is initialized with `None`, and is filled in at `run`-time.
-    pub fn new(
-        node_name: &str,
-        runtime: RuntimeProxy,
-        address: SocketAddr,
-        tls_identity: Identity,
-        initial_reader: oak_abi::Handle,
-    ) -> Self {
+    pub fn new(node_name: &str, address: SocketAddr, tls_identity: Identity) -> Self {
         Self {
             node_name: node_name.to_string(),
-            runtime,
             address,
             tls_identity,
-            initial_reader,
             channel_writer: None,
         }
     }
 
-    /// Reads an [`oak_abi::Handle`] from a channel specified by [`GrpcServerNode::initial_reader`].
+    /// Reads an [`oak_abi::Handle`] from a channel specified by `handle`.
     /// Returns an error if couldn't read from the channel or if received a wrong number of handles
     /// (not equal to 1).
-    fn init_channel_writer(&mut self) -> Result<(), OakStatus> {
-        let read_status = self
-            .runtime
-            .wait_on_channels(&[self.initial_reader])
-            .map_err(|error| {
-                error!("Couldn't wait on the initial reader handle: {:?}", error);
-                OakStatus::ErrInternal
-            })?;
+    fn init_channel_writer(
+        &mut self,
+        runtime: &RuntimeProxy,
+        handle: oak_abi::Handle,
+    ) -> Result<(), OakStatus> {
+        let read_status = runtime.wait_on_channels(&[handle]).map_err(|error| {
+            error!("Couldn't wait on the initial reader handle: {:?}", error);
+            OakStatus::ErrInternal
+        })?;
 
         let channel_writer = if read_status[0] == ChannelReadStatus::ReadReady {
-            self.runtime
-                .channel_read(self.initial_reader)
+            runtime
+                .channel_read(handle)
                 .map_err(|error| {
                     error!("Couldn't read from the initial reader handle {:?}", error);
                     OakStatus::ErrInternal
@@ -127,14 +111,14 @@ impl GrpcServerNode {
 
 /// Oak Node implementation for the gRPC server.
 impl Node for GrpcServerNode {
-    fn run(mut self: Box<Self>) {
+    fn run(mut self: Box<Self>, runtime: RuntimeProxy, handle: oak_abi::Handle) {
         // Receive a `channel_writer` handle used to pass handles for temporary channels.
         info!("{}: Waiting for a channel writer", self.node_name);
-        self.init_channel_writer()
+        self.init_channel_writer(&runtime, handle)
             .expect("Couldn't initialialize a channel writer");
 
         let handler = HttpRequestHandler {
-            runtime: self.runtime.clone(),
+            runtime,
             writer: self
                 .channel_writer
                 .expect("Channel writer is not initialized"),
@@ -277,7 +261,7 @@ impl GrpcRequestHandler {
     }
 
     /// Handles a gRPC request, forwards it to a temporary channel and sends handles for this
-    /// channel to the [`GrpcServerNode::channel_writer`].
+    /// channel to the [`GrpcRequestHandler::writer`].
     /// Returns an [`oak_abi::Handle`] for reading a gRPC response from.
     fn handle_grpc_request(&self, request: GrpcRequest) -> Result<oak_abi::Handle, OakStatus> {
         // Create a pair of temporary channels to pass the gRPC request and to receive the response.
