@@ -79,8 +79,7 @@ OakRuntime::OakRuntime(const application::ApplicationConfiguration& config,
           absl::make_unique<std::string>(storage_config.address());
     } else if (node_config.has_grpc_client_config()) {
       const application::GrpcClientConfiguration& grpc_config = node_config.grpc_client_config();
-      grpc_client_config_[node_config.name()] =
-          absl::make_unique<std::string>(grpc_config.address());
+      grpc_client_config_[node_config.name()] = absl::make_unique<std::string>(grpc_config.uri());
     } else if (node_config.has_roughtime_client_config()) {
       roughtime_client_config_[node_config.name()] =
           absl::make_unique<application::RoughtimeClientConfiguration>(

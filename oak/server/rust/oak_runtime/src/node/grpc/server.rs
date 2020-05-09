@@ -131,9 +131,9 @@ impl Node for GrpcServerNode {
             // Use simple scheduler that runs all tasks on the current-thread.
             // https://docs.rs/tokio/0.2.16/tokio/runtime/index.html#basic-scheduler
             .basic_scheduler()
-            // Enables the I/O driver.
+            // Enables the I/O driver and the time driver.
             // Necessary for using net, process, signal, and I/O types on the Tokio runtime.
-            .enable_io()
+            .enable_all()
             .build()
             .expect("Couldn't create an Async runtime");
 

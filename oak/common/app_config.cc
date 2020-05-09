@@ -86,7 +86,7 @@ void AddGrpcClientToConfig(ApplicationConfiguration* config, const std::string& 
   NodeConfiguration* node_config = config->add_node_configs();
   node_config->set_name(kGrpcClientConfigName);
   application::GrpcClientConfiguration* grpc_config = node_config->mutable_grpc_client_config();
-  grpc_config->set_address(grpc_address);
+  grpc_config->set_uri(grpc_address);
 }
 
 void SetGrpcPortInConfig(ApplicationConfiguration* config, const int16_t grpc_port) {

@@ -33,9 +33,6 @@ use std::{thread, time::Duration};
 use tonic::transport::{Certificate, Channel, ClientTlsConfig, Uri};
 
 /// Struct that represents a gRPC client pseudo-Node.
-///
-/// Reads gRPC invocations from the [`receiver`], sends gRPC requests to an external gRPC service
-/// and writes gRPC responses back to the invocation channel.
 pub struct GrpcClientNode {
     /// Pseudo-Node name.
     node_name: String,
@@ -57,7 +54,8 @@ impl GrpcClientNode {
         }
     }
 
-    /// Main loop that handles gRPC invocations.
+    /// Main loop that handles gRPC invocations from the `receiver`, sends gRPC requests to an
+    /// external gRPC service and writes gRPC responses back to the invocation channel.
     async fn handle_loop(&self, receiver: Receiver) -> Result<(), OakStatus> {
         // Connect to an external gRPC service.
         let mut handler = loop {
@@ -120,9 +118,9 @@ impl Node for GrpcClientNode {
             // Use simple scheduler that runs all tasks on the current-thread.
             // https://docs.rs/tokio/0.2.16/tokio/runtime/index.html#basic-scheduler
             .basic_scheduler()
-            // Enables the I/O driver.
+            // Enables the I/O driver and the time driver.
             // Necessary for using net, process, signal, and I/O types on the Tokio runtime.
-            .enable_io()
+            .enable_all()
             .build()
             .expect("Couldn't create an Async runtime");
 

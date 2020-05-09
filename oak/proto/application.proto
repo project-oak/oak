@@ -82,9 +82,9 @@ message GrpcServerConfiguration {
   // `address` is represented as an "ip_address:tcp_port" string.
   string address = 1;
   // Loaded private RSA key file used by a gRPC server pseudo-Node.
-  bytes grpc_tls_private_key = 2;
+  string grpc_tls_private_key = 2;
   // Loaded PEM encoded X.509 TLS certificate file used by a gRPC server pseudo-Node.
-  bytes grpc_tls_certificate = 3;
+  string grpc_tls_certificate = 3;
 }
 
 // GrpcClientConfiguration describes the configuration of a gRPC client
