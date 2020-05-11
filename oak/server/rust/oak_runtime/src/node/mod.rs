@@ -145,8 +145,8 @@ impl Configuration {
         }
     }
 
-    // Generate a description of a Node or pseudo-Node that is started with the given entrypoint.
-    // (In practice, only Wasm nodes pay attention to the entrypoint).
+    /// Generate a description of a Node or pseudo-Node that is started with the given entrypoint.
+    /// (In practice, only Wasm nodes pay attention to the entrypoint).
     pub fn node_subname(&self, entrypoint: &str) -> String {
         match self {
             Configuration::LogNode => "LogNode".to_string(),

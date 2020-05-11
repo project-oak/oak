@@ -150,7 +150,7 @@ pub struct AuxServer {
 }
 
 impl AuxServer {
-    // Start a new auxiliary server, running on its own thread.
+    /// Start a new auxiliary server, running on its own thread.
     fn new<F: FnOnce(u16, Arc<Runtime>, tokio::sync::oneshot::Receiver<()>) + 'static + Send>(
         name: &str,
         port: u16,
@@ -206,6 +206,7 @@ pub struct Runtime {
 // Methods which translate between ABI handles (Node-relative u64 values) and `ChannelHalf`
 // values.
 impl Runtime {
+    /// Register a [`ChannelHalf`] with a Node, returning the new handle value for it.
     fn new_abi_handle(&self, node_id: NodeId, half: ChannelHalf) -> oak_abi::Handle {
         let mut node_infos = self.node_infos.write().unwrap();
         let node_info = node_infos.get_mut(&node_id).expect("Invalid node_id");
@@ -221,7 +222,7 @@ impl Runtime {
             }
         }
     }
-    // Remove the handle from the Node's handle table.
+    /// Remove the handle from the Node's handle table.
     fn drop_abi_handle(&self, node_id: NodeId, handle: oak_abi::Handle) -> Result<(), OakStatus> {
         let mut node_infos = self.node_infos.write().unwrap();
         let node_info = node_infos.get_mut(&node_id).expect("Invalid node_id");
@@ -231,6 +232,7 @@ impl Runtime {
             .ok_or(OakStatus::ErrBadHandle)
             .map(|_half| ())
     }
+    /// Convert an ABI handle to an internal [`ChannelHalf`].
     fn abi_to_half(
         &self,
         node_id: NodeId,
@@ -245,6 +247,8 @@ impl Runtime {
         trace!("{:?}: map ABI handle {} to {:?}", node_id, handle, half);
         Ok(half.clone())
     }
+    /// Convert an ABI handle to an internal [`ChannelHalf`], but fail
+    /// the operation if the handle is not for the read half of the channel.
     fn abi_to_read_half(
         &self,
         node_id: NodeId,
@@ -256,6 +260,8 @@ impl Runtime {
             ChannelHalfDirection::Write => Err(OakStatus::ErrBadHandle),
         }
     }
+    /// Convert an ABI handle to an internal [`ChannelHalf`], but fail
+    /// the operation if the handle is not for the write half of the channel.
     fn abi_to_write_half(
         &self,
         node_id: NodeId,
@@ -362,7 +368,7 @@ impl RuntimeProxy {
         self.runtime.graph()
     }
 
-    /// Signaling termination to a [`Runtime`] and wait for its Node threads to terminate.
+    /// Signal termination to a [`Runtime`] and wait for its Node threads to terminate.
     pub fn stop_runtime(&self) {
         self.runtime.stop()
     }
@@ -593,12 +599,12 @@ impl Runtime {
         Some(s)
     }
 
-    /// Returns whether the [`Runtime`] is terminating.
+    /// Return whether the [`Runtime`] is terminating.
     pub fn is_terminating(&self) -> bool {
         self.terminating.load(SeqCst)
     }
 
-    /// Signaling termination to a [`Runtime`] and wait for its Node threads to terminate.
+    /// Signal termination to a [`Runtime`] and wait for its Node threads to terminate.
     fn stop(&self) {
         info!("stopping runtime instance");
 
@@ -629,7 +635,7 @@ impl Runtime {
         }
     }
 
-    // Move all of the Node join handles out of the `node_infos` tracker.
+    /// Move all of the Node join handles out of the `node_infos` tracker and return them.
     fn take_join_handles(&self) -> Vec<(NodeId, Option<JoinHandle<()>>)> {
         let mut node_infos = self
             .node_infos
@@ -641,7 +647,7 @@ impl Runtime {
             .collect()
     }
 
-    // Notify all Nodes that are waiting on any channels to wake up.
+    /// Notify all Nodes that are waiting on any channels to wake up.
     fn notify_all_waiters(&self) {
         // Hold the write lock and wake up any Node threads blocked on a `Channel`.
         let node_infos = self
@@ -909,7 +915,7 @@ impl Runtime {
         })
     }
 
-    // Translate the Node-relative handles in the `NodeMessage` to channel halves.
+    /// Translate the Node-relative handles in the `NodeMessage` to channel halves.
     fn message_from(&self, node_msg: NodeMessage, node_id: NodeId) -> Result<Message, OakStatus> {
         Ok(Message {
             data: node_msg.data,
@@ -1024,8 +1030,8 @@ impl Runtime {
         })
     }
 
-    // Translate a Message to include ABI handles (which are relative to this Node) rather than
-    // internal channel references.
+    /// Translate a Message to include ABI handles (which are relative to this Node) rather than
+    /// internal channel references.
     fn node_message_from(&self, msg: Message, node_id: NodeId) -> NodeMessage {
         NodeMessage {
             data: msg.data,
@@ -1088,6 +1094,7 @@ impl Runtime {
         self.update_nodes_count_metric();
     }
 
+    /// Update the node count metric with the current value.
     fn update_nodes_count_metric(&self) {
         METRICS.runtime_nodes_count.set(
             self.node_infos
@@ -1213,7 +1220,7 @@ impl Runtime {
         Ok(())
     }
 
-    // Configure data structures for a Node instance.
+    /// Configure data structures for a Node instance.
     fn node_configure_instance(&self, node_id: NodeId, node_name: &str, label: &Label) {
         self.add_node_info(
             node_id,
@@ -1226,6 +1233,8 @@ impl Runtime {
         );
     }
 
+    /// Create a [`RuntimeProxy`] instance for a new Node, creating the new [`NodeId`]
+    /// value along the way.
     fn proxy_for_new_node(self: Arc<Self>) -> RuntimeProxy {
         RuntimeProxy {
             runtime: self.clone(),
@@ -1234,6 +1243,8 @@ impl Runtime {
     }
 }
 
+/// Manual implementation of the [`Drop`] trait to ensure that all components of
+/// the [`Runtime`] are stopped before the object is dropped.
 impl Drop for Runtime {
     fn drop(&mut self) {
         self.stop();

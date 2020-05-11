@@ -44,8 +44,8 @@ const WASI_STUB: usize = 7;
 // of Wasm would use different types.
 type AbiPointer = u32;
 type AbiPointerOffset = u32;
-// Wasm type identifier for position/offset values in linear memory.  Any future 64-bit version of
-// Wasm would use a different value.
+/// Wasm type identifier for position/offset values in linear memory.  Any future 64-bit version of
+/// Wasm would use a different value.
 const ABI_USIZE: ValueType = ValueType::I32;
 
 /// `WasmInterface` holds runtime values for a particular execution instance of Wasm, running a
@@ -653,8 +653,9 @@ fn oak_resolve_func(
 struct WasmInterfaceStub;
 
 impl wasmi::ModuleImportResolver for WasmInterfaceStub {
-    // For validating Oak Wasm modules, we provide exactly the same set of
-    // host functions and signatures as the full `WasmInterface does.
+    /// Provide exactly the same set of host functions and signatures
+    /// as the full [`WasmInterface`] does, so that Oak Wasm modules
+    /// can be validated.
     fn resolve_func(
         &self,
         field_name: &str,
@@ -664,10 +665,10 @@ impl wasmi::ModuleImportResolver for WasmInterfaceStub {
     }
 }
 
-// Stub implementation of WASI exported functions, to allow partially-ported
-// applications that have references to WASI functions to be loaded. Note
-// that if the the application actually tries to *use* the WASI functions
-// at runtime, a panic will be triggered.
+/// Stub implementation of WASI exported functions, to allow partially-ported
+/// applications that have references to WASI functions to be loaded. Note
+/// that if the the application actually tries to *use* the WASI functions
+/// at runtime, a panic will be triggered.
 // TODO(#817): remove WASI stubs
 struct WasiStub;
 
