@@ -29,13 +29,13 @@ policies are enforced and propagated as data move from enclave to enclave.
 
 Further information is included in the following documents:
 
+- [Oak Development](docs/development.md) covers practical steps for getting a
+  development Oak system up and running.
 - [Oak Concepts](docs/concepts.md) describes the key concepts involved in Oak
   applications.
 - [Oak ABI](docs/abi.md) documents the core Oak ABI.
 - [Oak SDK](docs/sdk.md) describes the SDK that is provided on top of the Oak
   ABI, to allow more convenient development of Oak applications.
-- [Oak Development](docs/development.md) covers practical steps for getting a
-  development Oak system up and running.
 - [Programming Oak](docs/programming-oak.md) discusses programming for the Oak
   system.
 
