@@ -100,27 +100,27 @@ impl ChannelHalf {
         ChannelHalf { channel, direction }
     }
 
-    // Get read-only access to the channel's messages.  For debugging/introspection
-    // purposes.
+    /// Get read-only access to the channel's messages.  For debugging/introspection
+    /// purposes.
     pub fn get_messages(&self) -> RwLockReadGuard<Messages> {
         self.channel.messages.read().unwrap()
     }
 
-    // Wake any threads waiting on the underlying channel.
+    /// Wake any threads waiting on the underlying channel.
     pub fn wake_waiters(&self) {
         self.channel.wake_waiters();
     }
 }
 
-/// Manual implementation of the `Clone` trait to keep the counts for the underlying [`Channel`] in
-/// sync.
+/// Manual implementation of the [`Clone`] trait to keep the counts for the underlying [`Channel`]
+/// in sync.
 impl Clone for ChannelHalf {
     fn clone(&self) -> Self {
         ChannelHalf::new(self.channel.clone(), self.direction)
     }
 }
 
-/// Manual implementation of the `Drop` trait to keep the counts for the underlying [`Channel`] in
+/// Manual implementation of the [`Drop`] trait to keep the counts for the underlying [`Channel`] in
 /// sync.
 impl Drop for ChannelHalf {
     fn drop(&mut self) {
@@ -269,7 +269,7 @@ impl Channel {
         self.reader_count.fetch_add(1, SeqCst)
     }
 
-    /// Add the given `Thread` reference into the collection of `Thread`s waiting on this
+    /// Add the given [`Thread`] reference into the collection of [`Thread`]s waiting on this
     /// [`Channel`]'s readability.  Threads waiting on the [`Channel`] will be woken when
     /// data is available, or if the [`Channel`] becomes orphaned (no writers left).
     pub fn add_waiter(&self, thread: &Arc<Thread>) {
@@ -279,7 +279,7 @@ impl Channel {
             .insert(thread.id(), Arc::downgrade(thread));
     }
 
-    /// Wake any `Thread`s that are waiting on the [`Channel`].
+    /// Wake any [`Thread`]s that are waiting on the [`Channel`].
     pub fn wake_waiters(&self) {
         // Unpark (wake up) all waiting threads that still have live references. The first thread
         // woken can immediately read the message, and others might find `messages` is empty before
