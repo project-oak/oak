@@ -83,6 +83,8 @@ async fn make_server(port: u16) -> Result<(), hyper::error::Error> {
     server.await
 }
 
+// Start running a metrics server on the given port, running until the `notify_receiver` is
+// triggered.
 pub fn start_metrics_server(
     port: u16,
     _runtime: Arc<Runtime>,

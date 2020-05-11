@@ -35,10 +35,11 @@ pub trait Node {
     fn run(self: Box<Self>, runtime: RuntimeProxy, handle: oak_abi::Handle);
 }
 
-/// A `Configuration` corresponds to an entry from a `ApplicationConfiguration`. It is the
-/// static implementation specific configuration shared between instances.
+/// A [`Configuration`] corresponds to a [`NodeConfiguration`] protobuf message, with parsed
+/// and validated configuration information.
+///
+/// [`NodeConfiguration`]: crate::proto::oak::application::NodeConfiguration
 pub enum Configuration {
-    /// The configuration for a logging pseudo-Node.
     LogNode,
 
     /// The configuration for a gRPC server pseudo-Node that contains an `address` to listen on and
@@ -53,13 +54,15 @@ pub enum Configuration {
     // instance, but wasmi doesn't allow this. We make do with having a copyable
     // `Arc<wasmi::Module>` that we pass to new Nodes, and clone to to spawn new
     // `wasmi::ModuleInstances`.
-    WasmNode { module: Arc<wasmi::Module> },
+    WasmNode {
+        module: Arc<wasmi::Module>,
+    },
 
     /// The configuration for an externally provided pseudo-Node.
     External,
 }
 
-/// A enumeration for errors occuring when building `Configuration` from protobuf types.
+/// An enumeration for errors occuring when building [`Configuration`] from protobuf types.
 #[derive(Debug)]
 pub enum ConfigurationError {
     AddressParsingError(AddrParseError),
@@ -142,6 +145,8 @@ impl Configuration {
         }
     }
 
+    /// Generate a description of a Node or pseudo-Node that is started with the given entrypoint.
+    /// (In practice, only Wasm nodes pay attention to the entrypoint).
     pub fn node_subname(&self, entrypoint: &str) -> String {
         match self {
             Configuration::LogNode => "LogNode".to_string(),

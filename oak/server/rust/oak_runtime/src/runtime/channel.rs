@@ -28,7 +28,9 @@ use std::{
 
 type Messages = VecDeque<Message>;
 
-/// We use a `HashMap` keyed by `ThreadId` to prevent build up of stale `Weak<Thread>`s.
+/// A `HashMap` of waiting threads, keyed by `ThreadId`.
+///
+/// Implemented as a `HashMap` to prevent build up of stale `Weak<Thread>`s.
 ///
 /// That is: If a thread waiting/blocked on a channel is woken by a different channel, its
 /// `Weak<Thread>` will remain in the first channel's waiting_thread member. If a thread keeps
@@ -41,7 +43,7 @@ type WaitingThreads = Mutex<HashMap<ThreadId, Weak<Thread>>>;
 /// The internal implementation of a channel representation backed by a `VecDeque<Message>`.
 ///
 /// Channels are reference counted using `Arc<Channel>`, which are always in the form of a
-/// `ChannelHalf` object that references one end of the `Channel` (read or write) and which
+/// [`ChannelHalf`] object that references one end of the [`Channel`] (read or write) and which
 /// is included in the `reader_count` or `writer_count`.
 pub struct Channel {
     // An internal identifier for this channel. Purely for disambiguation in debugging output.
@@ -60,7 +62,7 @@ pub struct Channel {
     /// Threads can be woken up spuriously without issue.
     waiting_threads: WaitingThreads,
 
-    /// The Label associated with this channel.
+    /// The `Label` associated with this channel.
     ///
     /// This is set at channel creation time and does not change after that.
     ///
@@ -88,8 +90,8 @@ pub struct ChannelHalf {
 }
 
 impl ChannelHalf {
-    // Constructor for `ChannelHalf` keeps the underlying channel's reader/writer count
-    // up-to-date.
+    /// Constructor for [`ChannelHalf`] keeps the underlying [`Channel`]'s reader/writer count
+    /// up-to-date.
     pub fn new(channel: Arc<Channel>, direction: ChannelHalfDirection) -> Self {
         match direction {
             ChannelHalfDirection::Write => channel.inc_writer_count(),
@@ -98,26 +100,28 @@ impl ChannelHalf {
         ChannelHalf { channel, direction }
     }
 
-    // Get read-only access to the channel's messages.  For debugging/introspection
-    // purposes.
+    /// Get read-only access to the channel's messages.  For debugging/introspection
+    /// purposes.
     pub fn get_messages(&self) -> RwLockReadGuard<Messages> {
         self.channel.messages.read().unwrap()
     }
 
-    // Wake any threads waiting on the underlying channel.
+    /// Wake any threads waiting on the underlying channel.
     pub fn wake_waiters(&self) {
         self.channel.wake_waiters();
     }
 }
 
-// Manual implementation of the `Clone` trait to keep the counts for the underlying channel in sync.
+/// Manual implementation of the [`Clone`] trait to keep the counts for the underlying [`Channel`]
+/// in sync.
 impl Clone for ChannelHalf {
     fn clone(&self) -> Self {
         ChannelHalf::new(self.channel.clone(), self.direction)
     }
 }
 
-// Manual implementation of the `Drop` trait to keep the counts for the underlying channel in sync.
+/// Manual implementation of the [`Drop`] trait to keep the counts for the underlying [`Channel`] in
+/// sync.
 impl Drop for ChannelHalf {
     fn drop(&mut self) {
         match self.direction {
@@ -265,9 +269,9 @@ impl Channel {
         self.reader_count.fetch_add(1, SeqCst)
     }
 
-    /// Insert the given `thread` reference into `thread_id` slot of the HashMap of waiting
-    /// channels attached to an underlying channel. This allows the channel to wake up any waiting
-    /// channels by calling `thread::unpark` on all the threads it knows about.
+    /// Add the given [`Thread`] reference into the collection of [`Thread`]s waiting on this
+    /// [`Channel`]'s readability.  Threads waiting on the [`Channel`] will be woken when
+    /// data is available, or if the [`Channel`] becomes orphaned (no writers left).
     pub fn add_waiter(&self, thread: &Arc<Thread>) {
         self.waiting_threads
             .lock()
@@ -275,6 +279,7 @@ impl Channel {
             .insert(thread.id(), Arc::downgrade(thread));
     }
 
+    /// Wake any [`Thread`]s that are waiting on the [`Channel`].
     pub fn wake_waiters(&self) {
         // Unpark (wake up) all waiting threads that still have live references. The first thread
         // woken can immediately read the message, and others might find `messages` is empty before

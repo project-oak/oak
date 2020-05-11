@@ -93,7 +93,7 @@ impl std::fmt::Debug for NodeInfo {
     }
 }
 
-/// An identifier for a Node that is opaque for type safety.
+/// A unique internal identifier for a Node or pseudo-Node instance.
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug, PartialOrd, Ord)]
 pub struct NodeId(pub u64);
 
@@ -121,14 +121,18 @@ impl HtmlPath for (NodeId, oak_abi::Handle) {
     }
 }
 
+/// Internal version of the [`ApplicationConfiguration`] protobuf, holding
+/// the same information but parsed and verified.
+///
+/// [`ApplicationConfiguration`]: crate::proto::oak::application::ApplicationConfiguration
 pub struct Configuration {
     pub nodes: HashMap<String, node::Configuration>,
     pub entry_module: String,
     pub entrypoint: String,
 }
 
-/// Helper types to determine if `try_read_message` was called with not enough `bytes_capacity`
-/// and/or `handles_capacity`.
+/// Helper types to indicate whether a channel read operation has succeed or has failed with not
+/// enough `bytes_capacity` and/or `handles_capacity`.
 pub enum NodeReadStatus {
     Success(NodeMessage),
     NeedsCapacity(usize, usize),
@@ -146,6 +150,7 @@ pub struct AuxServer {
 }
 
 impl AuxServer {
+    /// Start a new auxiliary server, running on its own thread.
     fn new<F: FnOnce(u16, Arc<Runtime>, tokio::sync::oneshot::Receiver<()>) + 'static + Send>(
         name: &str,
         port: u16,
@@ -167,6 +172,8 @@ impl AuxServer {
 }
 
 impl Drop for AuxServer {
+    /// Dropping an auxiliary server involves notifying it that it should terminate,
+    /// then joining its thread.
     fn drop(&mut self) {
         let join_handle = self.join_handle.take();
         let notify_sender = self.notify_sender.take();
@@ -199,6 +206,7 @@ pub struct Runtime {
 // Methods which translate between ABI handles (Node-relative u64 values) and `ChannelHalf`
 // values.
 impl Runtime {
+    /// Register a [`ChannelHalf`] with a Node, returning the new handle value for it.
     fn new_abi_handle(&self, node_id: NodeId, half: ChannelHalf) -> oak_abi::Handle {
         let mut node_infos = self.node_infos.write().unwrap();
         let node_info = node_infos.get_mut(&node_id).expect("Invalid node_id");
@@ -214,7 +222,7 @@ impl Runtime {
             }
         }
     }
-    // Remove the handle from the Node's handle table.
+    /// Remove the handle from the Node's handle table.
     fn drop_abi_handle(&self, node_id: NodeId, handle: oak_abi::Handle) -> Result<(), OakStatus> {
         let mut node_infos = self.node_infos.write().unwrap();
         let node_info = node_infos.get_mut(&node_id).expect("Invalid node_id");
@@ -224,6 +232,7 @@ impl Runtime {
             .ok_or(OakStatus::ErrBadHandle)
             .map(|_half| ())
     }
+    /// Convert an ABI handle to an internal [`ChannelHalf`].
     fn abi_to_half(
         &self,
         node_id: NodeId,
@@ -238,6 +247,8 @@ impl Runtime {
         trace!("{:?}: map ABI handle {} to {:?}", node_id, handle, half);
         Ok(half.clone())
     }
+    /// Convert an ABI handle to an internal [`ChannelHalf`], but fail
+    /// the operation if the handle is not for the read half of the channel.
     fn abi_to_read_half(
         &self,
         node_id: NodeId,
@@ -249,6 +260,8 @@ impl Runtime {
             ChannelHalfDirection::Write => Err(OakStatus::ErrBadHandle),
         }
     }
+    /// Convert an ABI handle to an internal [`ChannelHalf`], but fail
+    /// the operation if the handle is not for the write half of the channel.
     fn abi_to_write_half(
         &self,
         node_id: NodeId,
@@ -288,12 +301,11 @@ impl RuntimeProxy {
 
     /// Configures and runs the protobuf specified Application [`Configuration`].
     ///
-    /// After starting a [`Runtime`], calling [`Runtime::stop`] will send termination signals to
-    /// Nodes and wait for them to terminate.
+    /// After starting a [`Runtime`], calling [`Runtime::stop`] will notify all Nodes that they
+    /// should terminate, and wait for them to terminate.
     ///
-    /// Returns a writeable [`oak_abi::Handle`] to send messages into the [`Runtime`]. To receive
-    /// messages, creating a new channel and passing the write [`oak_abi::Handle`] into the
-    /// Runtime will enable messages to be read back out.
+    /// Returns a writable [`oak_abi::Handle`] to send messages into the initial Node created from
+    /// the configuration.
     pub fn start_runtime(
         &self,
         runtime_config: crate::RuntimeConfiguration,
@@ -356,8 +368,7 @@ impl RuntimeProxy {
         self.runtime.graph()
     }
 
-    /// Thread safe method for signaling termination to a [`Runtime`] and waiting for its Node
-    /// threads to terminate.
+    /// Signal termination to a [`Runtime`] and wait for its Node threads to terminate.
     pub fn stop_runtime(&self) {
         self.runtime.stop()
     }
@@ -511,6 +522,7 @@ impl Runtime {
         s
     }
 
+    /// Generate an HTML page that describes the internal state of the [`Runtime`].
     #[cfg(feature = "oak_debug")]
     pub fn html(&self) -> String {
         let mut s = String::new();
@@ -534,6 +546,7 @@ impl Runtime {
         s
     }
 
+    /// Generate an HTML page that describes the internal state of a specific Node.
     #[cfg(feature = "oak_debug")]
     pub fn html_for_node(&self, id: u64) -> Option<String> {
         let node_id = NodeId(id);
@@ -564,9 +577,12 @@ impl Runtime {
         }
         Some(s)
     }
+
+    /// Generate an HTML page that describes the channel accessible via an ABI handle for the
+    /// specified Node.
     #[cfg(feature = "oak_debug")]
-    pub fn html_for_handle(&self, id: u64, handle: oak_abi::Handle) -> Option<String> {
-        let node_id = NodeId(id);
+    pub fn html_for_handle(&self, node_id: u64, handle: oak_abi::Handle) -> Option<String> {
+        let node_id = NodeId(node_id);
         let node_infos = self.node_infos.read().unwrap();
         let node_info = node_infos.get(&node_id)?;
         let half = node_info.abi_handles.get(&handle)?;
@@ -583,13 +599,12 @@ impl Runtime {
         Some(s)
     }
 
-    /// Thread safe method for determining if the [`Runtime`] is terminating.
+    /// Return whether the [`Runtime`] is terminating.
     pub fn is_terminating(&self) -> bool {
         self.terminating.load(SeqCst)
     }
 
-    /// Thread safe method for signaling termination to a [`Runtime`] and waiting for its Node
-    /// threads to terminate.
+    /// Signal termination to a [`Runtime`] and wait for its Node threads to terminate.
     fn stop(&self) {
         info!("stopping runtime instance");
 
@@ -620,7 +635,7 @@ impl Runtime {
         }
     }
 
-    // Move all of the Node join handles out of the `node_infos` tracker.
+    /// Move all of the Node join handles out of the `node_infos` tracker and return them.
     fn take_join_handles(&self) -> Vec<(NodeId, Option<JoinHandle<()>>)> {
         let mut node_infos = self
             .node_infos
@@ -632,6 +647,7 @@ impl Runtime {
             .collect()
     }
 
+    /// Notify all Nodes that are waiting on any channels to wake up.
     fn notify_all_waiters(&self) {
         // Hold the write lock and wake up any Node threads blocked on a `Channel`.
         let node_infos = self
@@ -663,21 +679,21 @@ impl Runtime {
         node_info.label.clone()
     }
 
-    /// Returns a clone of the [`Label`] associated with the provided reader `channel_handle`.
+    /// Returns a clone of the [`Label`] associated with the provided reader `channel_half`.
     ///
-    /// Returns an error if `channel_handle` is invalid.
+    /// Returns an error if `channel_half` is not a valid read half.
     fn get_reader_channel_label(&self, channel_half: &ChannelHalf) -> Result<Label, OakStatus> {
         with_reader_channel(channel_half, |channel| Ok(channel.label.clone()))
     }
 
-    /// Returns a clone of the [`Label`] associated with the provided writer `channel_handle`.
+    /// Returns a clone of the [`Label`] associated with the provided writer `channel_half`.
     ///
-    /// Returns an error if `channel_handle` is invalid.
+    /// Returns an error if `channel_half` is not a valid write half.
     fn get_writer_channel_label(&self, channel_half: &ChannelHalf) -> Result<Label, OakStatus> {
         with_writer_channel(channel_half, |channel| Ok(channel.label.clone()))
     }
 
-    /// Returns whether the calling Node is allowed to read from the provided channel, according to
+    /// Returns whether the given Node is allowed to read from the provided channel, according to
     /// their respective [`Label`]s.
     fn validate_can_read_from_channel(
         &self,
@@ -707,7 +723,7 @@ impl Runtime {
         }
     }
 
-    /// Returns whether the calling Node is allowed to read from all the provided channels,
+    /// Returns whether the given Node is allowed to read from all the provided channels,
     /// according to their respective [`Label`]s.
     fn validate_can_read_from_channels(
         &self,
@@ -724,7 +740,7 @@ impl Runtime {
         }
     }
 
-    /// Returns whether the calling Node is allowed to write to the provided channel, according to
+    /// Returns whether the given Node is allowed to write to the provided channel, according to
     /// their respective [`Label`]s.
     fn validate_can_write_to_channel(
         &self,
@@ -754,7 +770,7 @@ impl Runtime {
         }
     }
 
-    /// Creates a new [`Channel`] and returns a `(writer handle, reader handle)` pair.
+    /// Creates a new [`Channel`] and returns a `(writer, reader)` pair of `oak_abi::Handle`s.
     ///
     /// [`Channel`]: crate::runtime::channel::Channel
     fn channel_create(&self, node_id: NodeId, label: &Label) -> (oak_abi::Handle, oak_abi::Handle) {
@@ -782,9 +798,7 @@ impl Runtime {
         (write_handle, read_handle)
     }
 
-    /// Reads the statuses from a slice of `ChannelHalf`s.
-    /// [`ChannelReadStatus::InvalidChannel`] is set for `None` readers in the slice. For `Some(_)`
-    /// readers, the result is set from a call to `has_message`.
+    /// Reads the readable statuses for a slice of `ChannelHalf`s.
     fn readers_statuses(&self, node_id: NodeId, readers: &[ChannelHalf]) -> Vec<ChannelReadStatus> {
         readers
             .iter()
@@ -795,20 +809,17 @@ impl Runtime {
             .collect()
     }
 
-    /// Waits on a slice of `ChannelHalf`s, blocking until one of the following conditions:
-    /// - If the [`Runtime`] is terminating this will return immediately with an `ErrTerminated`
-    ///   status for each channel.
-    /// - If all readers are in an erroneous status, e.g. when all channels are orphaned, this will
-    ///   immediately return the channels statuses.
-    /// - If any of the channels is able to read a message, the corresponding element in the
-    ///   returned vector will be set to `Ok(ReadReady)`, with `Ok(NotReady)` signaling the channel
-    ///   has no message available
+    /// Waits on a slice of `ChannelHalf`s, blocking until one of the following conditions occurs:
+    /// - If the [`Runtime`] is terminating, return immediately with an `ErrTerminated` overall
+    ///   status.
+    /// - If all provided read channels are in an erroneous status, e.g. when all channels are
+    ///   orphaned, fill in the returned status vector and return an overall `Ok` status.
+    /// - If any of the channels is able to read a message, set the corresponding element in the
+    ///   returned status vector to `ReadReady`, and return an overall `Ok` status.
     ///
     /// In particular, if there is at least one channel in good status and no messages on said
     /// channel available, [`Runtime::wait_on_channels`] will continue to block until a message is
     /// available.
-    ///
-    /// [`Runtime`]: crate::runtime::Runtime
     fn wait_on_channels(
         &self,
         node_id: NodeId,
@@ -904,7 +915,7 @@ impl Runtime {
         })
     }
 
-    // Translate the Node-relative handles in the `NodeMessage` to channel halves.
+    /// Translate the Node-relative handles in the `NodeMessage` to channel halves.
     fn message_from(&self, node_msg: NodeMessage, node_id: NodeId) -> Result<Message, OakStatus> {
         Ok(Message {
             data: node_msg.data,
@@ -916,7 +927,7 @@ impl Runtime {
         })
     }
 
-    /// Thread safe. Read a message from a channel. Fails with [`OakStatus::ErrChannelClosed`] if
+    /// Read a message from a channel. Fails with [`OakStatus::ErrChannelClosed`] if
     /// the underlying channel is empty and has been orphaned.
     fn channel_read(
         &self,
@@ -943,7 +954,7 @@ impl Runtime {
         }
     }
 
-    /// Thread safe. This function returns:
+    /// Determine the readable status of a channel, returning:
     /// - [`ChannelReadStatus::ReadReady`] if there is at least one message in the channel.
     /// - [`ChannelReadStatus::Orphaned`] if there are no messages and there are no writers
     /// - [`ChannelReadStatus::NotReady`] if there are no messages but there are some writers
@@ -964,13 +975,13 @@ impl Runtime {
         })
     }
 
-    /// Thread safe. Reads a message from the channel if `bytes_capacity` and `handles_capacity` are
-    /// large enough to accept the message. Fails with `OakStatus::ErrChannelClosed` if the
-    /// underlying channel has been orphaned _and_ is empty. If there was not enough
-    /// `bytes_capacity` or `handles_capacity`, `try_read_message` returns
-    /// `Some(ReadStatus::NeedsCapacity(needed_bytes_capacity,needed_handles_capacity))`. Does not
-    /// guarantee that the next call will succeed after capacity adjustments as another thread may
-    /// have read the original message.
+    /// Reads a message from the channel if `bytes_capacity` and `handles_capacity` are large
+    /// enough to accept the message. Fails with `OakStatus::ErrChannelClosed` if the underlying
+    /// channel has been orphaned _and_ is empty. If there was not enough `bytes_capacity` or
+    /// `handles_capacity`, `try_read_message` returns the required capacity values in
+    /// `Some(NodeReadStatus::NeedsCapacity(needed_bytes_capacity,needed_handles_capacity))`. Does
+    /// not guarantee that the next call will succeed after capacity adjustments as another Node
+    /// may have read the original message.
     fn channel_try_read_message(
         &self,
         node_id: NodeId,
@@ -1019,8 +1030,8 @@ impl Runtime {
         })
     }
 
-    // Translate a Message to include ABI handles (which are relative to this Node) rather than
-    // internal channel references.
+    /// Translate a Message to include ABI handles (which are relative to this Node) rather than
+    /// internal channel references.
     fn node_message_from(&self, msg: Message, node_id: NodeId) -> NodeMessage {
         NodeMessage {
             data: msg.data,
@@ -1083,6 +1094,7 @@ impl Runtime {
         self.update_nodes_count_metric();
     }
 
+    /// Update the node count metric with the current value.
     fn update_nodes_count_metric(&self) {
         METRICS.runtime_nodes_count.set(
             self.node_infos
@@ -1105,9 +1117,9 @@ impl Runtime {
         node_info.join_handle = Some(node_join_handle);
     }
 
-    /// Thread safe method that attempts to create a Node within the [`Runtime`] corresponding to a
-    /// given module name and entrypoint. The `reader: ChannelReader` is passed to the newly
-    /// created Node.
+    /// Create a Node within the [`Runtime`] corresponding to a given module name and
+    /// entrypoint. The channel identified by `initial_handle` is installed in the new
+    /// Node's handle table and the new handle value is passed to the newly created Node.
     ///
     /// The caller also specifies a [`Label`], which is assigned to the newly created Node. See
     /// <https://github.com/project-oak/oak/blob/master/docs/concepts.md#labels> for more
@@ -1115,7 +1127,7 @@ impl Runtime {
     ///
     /// This method is defined on [`Arc`] and not [`Runtime`] itself, so that
     /// the [`Arc`] can clone itself and be included in a [`RuntimeProxy`] object
-    /// to be given to a new Node.
+    /// to be given to a new Node instance.
     fn node_create(
         self: Arc<Self>,
         node_id: NodeId,
@@ -1208,7 +1220,7 @@ impl Runtime {
         Ok(())
     }
 
-    // Configure data structures for a Node instance.
+    /// Configure data structures for a Node instance.
     fn node_configure_instance(&self, node_id: NodeId, node_name: &str, label: &Label) {
         self.add_node_info(
             node_id,
@@ -1221,6 +1233,8 @@ impl Runtime {
         );
     }
 
+    /// Create a [`RuntimeProxy`] instance for a new Node, creating the new [`NodeId`]
+    /// value along the way.
     fn proxy_for_new_node(self: Arc<Self>) -> RuntimeProxy {
         RuntimeProxy {
             runtime: self.clone(),
@@ -1229,6 +1243,8 @@ impl Runtime {
     }
 }
 
+/// Manual implementation of the [`Drop`] trait to ensure that all components of
+/// the [`Runtime`] are stopped before the object is dropped.
 impl Drop for Runtime {
     fn drop(&mut self) {
         self.stop();
@@ -1248,7 +1264,7 @@ impl Drop for Runtime {
 /// impersonate each other.
 ///
 /// Individual methods simply forward to corresponding methods on the underlying [`Runtime`], by
-/// partially applying the first argument.
+/// partially applying the first argument (the stored [`NodeId`]).
 #[derive(Clone)]
 pub struct RuntimeProxy {
     runtime: Arc<Runtime>,

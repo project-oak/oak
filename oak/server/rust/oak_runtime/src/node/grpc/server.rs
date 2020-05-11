@@ -159,7 +159,7 @@ struct HttpRequestHandler {
     writer: oak_abi::Handle,
 }
 
-// Set a mandatory prefix for all gRPC requests processed by a gRPC pseudo-Node.
+/// Set a mandatory prefix for all gRPC requests processed by a gRPC pseudo-Node.
 impl NamedService for HttpRequestHandler {
     const NAME: &'static str = "oak";
 }
@@ -173,8 +173,8 @@ impl Service<http::Request<hyper::Body>> for HttpRequestHandler {
         Poll::Ready(Ok(()))
     }
 
-    // Decodes an unary gRPC request using a [`VecCodec`] and processes it with
-    // [`tonic::server::Grpc::unary`] and a [`GrpcRequestHandler`].
+    /// Decodes an unary gRPC request using a [`VecCodec`] and processes it with
+    /// [`tonic::server::Grpc::unary`] and a [`GrpcRequestHandler`].
     fn call(&mut self, request: http::Request<hyper::Body>) -> Self::Future {
         let grpc_handler = GrpcRequestHandler::new(
             self.runtime.clone(),
