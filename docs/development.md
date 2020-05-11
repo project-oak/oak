@@ -1,54 +1,104 @@
 # Oak Development
 
+- [Meta-Advice](#meta-advice)
+- [Prerequisites](#prerequisites)
+- [Run Example Application](#run-example-application)
+  - [Build Application](#build-application)
+  - [Build Runtime Server](#build-runtime-server)
+  - [Run Runtime Server](#run-runtime-server)
+  - [Run Example Client](#run-example-client)
+
+## Meta-Advice
+
+For any open-source project, the best way of figuring out what prerequisites and
+dependendencies are required is to look at the projects continuous integration
+(CI) scripts and configuration.
+
+For Oak, the CI system is currently
+[Google Cloud Build](https://cloud.google.com/cloud-build), so the top-level
+[`cloudbuild.yaml`](/cloudbuild.yaml) file holds the project's definitive
+configuration, dependencies and build scripts.
+
 ## Prerequisites
 
-We use Docker to install the base dependencies that need to exist at the system
-level, e.g. the [Rust compiler](https://www.rust-lang.org/tools/install) and the
-[Bazel build system](https://bazel.build); these steps are detailed in
-[`Dockerfile`](/Dockerfile). See
-https://docs.docker.com/engine/reference/builder/ for more information.
+The key prerequisites are:
 
-Inside Docker, we use Bazel to version, install and build any non-Rust
-dependencies, including our own code. Dependencies are listed in
-[`WORKSPACE`](/WORKSPACE). See
-https://docs.bazel.build/versions/master/external.html for more information.
+- **Docker**: If you want to use Docker to ensure an exact match with the
+  project's official build environment, follow the
+  [Docker install instructions](https://docs.docker.com/install).
 
-To set up your development environment, you need the following applications. For
-the accurate versions required for a successful build please consult the current
-[`Dockerfile`](/Dockerfile).
+  If you want to work on the project without using Docker, you should
+  synchronize your installed versions of all tools with those specified in the
+  [`Dockerfile`](/Dockerfile).
 
-- **Docker**: follow
-  [Docker install instructions](https://docs.docker.com/install)
-- **Bazel**: follow
-  [Bazel install instructions](https://docs.bazel.build/versions/master/install.html)
-- **Rust**:
-  - Follow install instructions from https://rustup.rs/:
+- **Rust**: The [Rust toolchain](https://www.rust-lang.org/tools/install) and
+  ancillary tools are required for building the project's source. Note that we
+  also [require](https://github.com/project-oak/oak/issues/969) a nightly build
+  of Rust; check the [`Dockerfile`](/Dockerfile) for the specific version.
+  - Follow install instructions from https://rustup.rs/, roughly:
     - `curl https://sh.rustup.rs -sSf > /tmp/rustup`
     - `less /tmp/rustup` (inspect downloaded script before running it)
     - `sh /tmp/rustup` (follow on-screen instructions -- option 1 is fine to
       start with)
     - add `source $HOME/.cargo/env` to your shell init script (e.g. `.bashrc` or
       `.zshrc`)
-  - Add WebAssembly target to be able to compile to WebAssembly (see
+  - Add the WebAssembly target to add support for producing WebAssembly binaries
+    (see
     [Rust Platform Support](https://forge.rust-lang.org/release/platform-support.html)):
-    - `rustup target add wasm32-unknown-unknown`
-- **Protocol Buffers**: install the protobuf compiler with:
-  `apt install protobuf-compiler`
+    `rustup target add wasm32-unknown-unknown`
+  - Install additional tools (e.g. `rustfmt` and `clippy`) as indicated by the
+    [`Dockerfile`](/Dockerfile) contents.
+  - Install [`cargo raze`](https://github.com/google/cargo-raze), which allows
+    the Bazel build system (below) to build Rust crates.
+- **Bazel**: The [Bazel build system](https://bazel.build) is used for building
+  C++ code and managing its dependencies. These dependencies are listed in the
+  top-level [`WORKSPACE`](/WORKSPACE) file; see the
+  [Bazel docs](https://docs.bazel.build/versions/master/external.html) for more
+  information. Follow the
+  [Bazel install instructions](https://docs.bazel.build/versions/master/install.html).
+- **Protocol Buffers**: Install the appropriate version of the protobuf compiler
+  from the
+  [releases page](https://github.com/protocolbuffers/protobuf/releases).
 
-[Step by step instructions for installing Oak on Ubuntu 18.04](/INSTALL.md)
-shows how to install the prerequisites starting off with a clean Ubuntu install.
+These prerequisites cover what's needed to build the core codebase, and to run
+the top-level build scripts described in the sections below.
+
+A full development environment for the project also includes various extra
+tools, for example for linting and synchronizing documentation. As ever, the
+[`Dockerfile`](/Dockerfile) holds the details, but the scripts under
+[`scripts/`](/scripts) also indicate what's needed for different steps.
 
 ## Run Example Application
 
-The following command runs both an Oak server (as a background process) and an
-Oak application client:
+Running one of the example Oak applications will confirm that all core
+prerequisites have been installed. Run one inside Docker with:
 
 ```bash
 ./scripts/docker_run ./scripts/run_example -e hello_world
 ```
 
-This command consists of steps described in the following subsections, all
-performed inside Docker.
+or, if all prerequisites are available on the local system, outside of Docker:
+
+```bash
+./scripts/run_example -e hello_world
+```
+
+That script:
+
+- builds the Oak Runtime (a combination of C++ and Rust, built to run on the
+  host system)
+- builds a particular example, including both:
+  - the Oak Application itself (Rust code that is compiled to a WebAssembly
+    binary)
+  - an external client (C++ code built to run on the host system)
+- starts the Runtime as a background process, passing it the compiled
+  WebAssembly for the Oak Application (which it then runs in a WebAssembly
+  engine)
+- runs the external client for the Application
+- closes everything down.
+
+Those steps are broken down in the following subsections; this helps figure out
+where the problem is if something goes wrong.
 
 ### Build Application
 
@@ -64,33 +114,84 @@ This binary application configuration file includes the compiled Wasm code for
 the Oak Application, embedded in a serialized protocol buffer that also includes
 the Application's configuration.
 
-### Run Server
+The `scripts/build_example` script also builds (using Bazel) the corresponding
+client code for the Oak Application, to produce a binary that runs on the host
+system. Because the client talks to the Oak Application over gRPC, the client
+can be written in any language that supports gRPC; most of the example clients
+are written in C++, but there are clients in
+[Go](/examples/translator/client/translator.go) and
+[Rust](/examples/authentication/client/src/main.rs).
 
-The following command builds and runs an Oak Server instance inside Docker,
-running a specific Oak Application.
+### Build Runtime Server
+
+The following command builds the Oak Runtime server. An initial build will take
+some time, but subsequent builds should be cached and so run much faster.
+
+```bash
+./scripts/build_server
+```
+
+The Oak Server can also be built with support for the sanitizers provided by
+Clang, by adding options like
+[`-s asan`](https://clang.llvm.org/docs/AddressSanitizer.html) and
+[`-s tsan`](https://clang.llvm.org/docs/ThreadSanitizer.html) to the invocation
+of `scripts/build_server`.
+
+### Run Runtime Server
+
+The following command builds and runs an Oak Server instance, running a specific
+Oak Application (which must already have been compiled into WebAssembly and
+built into a serialized configuration, as [described above](#build-application).
 
 ```bash
 ./scripts/run_server -e hello_world
 ```
 
-The Oak Server can also be built in debug mode, as well as using any of the
-sanitizers Clang supports (e.g.
-[asan](https://clang.llvm.org/docs/AddressSanitizer.html),
-[tsan](https://clang.llvm.org/docs/ThreadSanitizer.html) etc.). Details about
-available build variants can be found in the [`.bazelrc`](/.bazelrc) file.
-
-For example, the following command builds and run Oak Local Server with TSAN
-enabled. Replace `tsan` with other configurations for different sanitisers:
+The `scripts/run_server` script also supports and passes through the build
+variant flags described in the previous section; for example, the following
+command builds and runs the Oak Runtime with TSAN enabled:
 
 ```bash
 ./scripts/run_server -s tsan -e hello_world
 ```
 
-### Run Client
+In the end, you should end up with an Oak server running, end with log output
+something like:
+
+```log
+2020-05-11 10:14:14,952 INFO  [sdk/rust/oak/src/lib.rs:460] starting event loop
+2020-05-11 10:14:14,952 DEBUG [oak_runtime::runtime] NodeId(2): wait_on_channels: channels not ready, parking thread Thread { id: ThreadId(4), name: Some("log.LogNode(2)") }
+2020-05-11 10:14:14,955 DEBUG [oak_runtime::node::wasm] hello_world.WasmNode-oak_main(1): wait_on_channels(1114152, 1)
+2020-05-11 10:14:14,955 DEBUG [oak_runtime::runtime] NodeId(1): wait_on_channels: channels not ready, parking thread Thread { id: ThreadId(3), name: Some("hello_world.WasmNode-oak_main(1)") }
+```
+
+### Run Example Client
 
 The following command (run in a separate terminal) compiles the code for the
-client of an example Oak Application, and runs it locally.
+client of an example Oak Application (as [described above](#build-application)),
+and runs the client code locally.
 
 ```bash
 ./scripts/run_example -s none -e hello_world
+```
+
+The `-s none` option indicates that the script expects to find an
+already-running Oak Runtime (from the previous section), rather than launching
+an Oak Runtime instance of its own.
+
+The client should run to completion and give output something like:
+
+```log
+I0511 10:15:29.539814 244858 hello_world.cc:66] Connecting to Oak Application: 127.0.0.1:8080
+I0511 10:15:29.541366 244858 hello_world.cc:36] Request: WORLD
+I0511 10:15:29.558292 244858 hello_world.cc:43] Response: HELLO WORLD!
+I0511 10:15:29.558353 244858 hello_world.cc:36] Request: MONDO
+I0511 10:15:29.568802 244858 hello_world.cc:43] Response: HELLO MONDO!
+I0511 10:15:29.568862 244858 hello_world.cc:36] Request: 世界
+I0511 10:15:29.578845 244858 hello_world.cc:43] Response: HELLO 世界!
+I0511 10:15:29.578902 244858 hello_world.cc:36] Request: MONDE
+I0511 10:15:29.585346 244858 hello_world.cc:43] Response: HELLO MONDE!
+I0511 10:15:29.585389 244858 hello_world.cc:50] Request: WORLDS
+I0511 10:15:29.591434 244858 hello_world.cc:57] Response: HELLO WORLDS!
+I0511 10:15:29.593106 244858 hello_world.cc:57] Response: HELLO AGAIN WORLDS!
 ```
