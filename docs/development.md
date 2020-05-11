@@ -2,6 +2,7 @@
 
 - [Quick Start](#quick-start)
 - [Meta-Advice](#meta-advice)
+- [Docker vs. Native](#docker-vs-native)
 - [Prerequisites](#prerequisites)
 - [Run Example Application](#run-example-application)
   - [Build Application](#build-application)
@@ -45,17 +46,28 @@ For Oak, the CI system is currently
 [`cloudbuild.yaml`](/cloudbuild.yaml) file holds the project's definitive
 configuration, dependencies and build scripts.
 
+## Docker vs. Native
+
+The Cloudbuild setup for the project relies on a project
+[`Dockerfile`](/Dockerfile) to capture precise toolchain dependencies and
+versions. This also allows local use of Docker to match this build environment,
+using the following wrapper scripts:
+
+- [`scripts/docker_pull`](/scripts/docker_pull) retrieves the project's most
+  recent cached Docker image(s).
+- [`scripts/docker_run`](/scripts/docker_run) runs its arguments within Docker,
+  so can be used as a prefix for any commands described later in this document.
+- [`scripts/docker_sh`](/scripts/docker_sh) runs an interactive shell within
+  Docker. This can also be used to run any commands described later in this
+  document.
+
+If you want to work on the project without using Docker, you should synchronize
+your installed versions of all the tools described in the next section with the
+versions installed in the [`Dockerfile`](/Dockerfile).
+
 ## Prerequisites
 
-The key prerequisites are:
-
-- **Docker**: If you want to use Docker to ensure an exact match with the
-  project's official build environment, follow the
-  [Docker install instructions](https://docs.docker.com/install).
-
-  If you want to work on the project without using Docker, you should
-  synchronize your installed versions of all tools with those specified in the
-  [`Dockerfile`](/Dockerfile).
+The key prerequisites for the project are:
 
 - **Rust**: The [Rust toolchain](https://www.rust-lang.org/tools/install) and
   ancillary tools are required for building the project's source. Note that we
