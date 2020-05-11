@@ -40,8 +40,8 @@ easier.
 
 To use these helpers, an Oak Node should be a `struct` of some kind to represent
 the internal state of the Node itself (which may be empty), implement the
-[`Node`](https://project-oak.github.io/oak/doc/oak/trait.Node.html) trait for
-it, then define an
+[`oak::Node`](https://project-oak.github.io/oak/doc/oak/trait.Node.html) trait
+for it, then define an
 [`entrypoint`](https://project-oak.github.io/oak/doc/oak/macro.entrypoint.html)
 so the Oak SDK knows how to instantiate it:
 
@@ -76,8 +76,8 @@ struct Node {
 
 Under the covers the
 [`entrypoint!`](https://project-oak.github.io/oak/doc/oak/macro.entrypoint.html)
-macro implements a function identified by the name of the entrypoint for you,
-with the following default behaviour:
+macro implements an [external function](abi.md#exported-function) identified by
+the name of the entrypoint for you, with the following default behaviour:
 
 - Take the channel handle passed to the entrypoint and use it for gRPC input.
 - Take the newly constructed instance of the Node `struct` returned from the
@@ -107,12 +107,37 @@ trait (which provides an automatic implementation of the
 [machine learning example](https://github.com/project-oak/oak/blob/master/examples/machine_learning/module/rust/src/lib.rs)
 demonstrates this.
 
+#### Panic Handling
+
+Any Rust panic originating in an Oak Node must be caught before going through
+the Wasm FFI boundary. If you use the `entrypoint!` macro, this is done for you,
+but a manually implemented Node should use the
+[`catch_unwind`](https://doc.rust-lang.org/std/panic/fn.catch_unwind.html)
+method from the Rust standard library:
+
+<!-- prettier-ignore-start -->
+[embedmd]:# (../examples/abitest/module_0/rust/src/lib.rs Rust /^#.*no_mangle.*/ /^}/)
+```Rust
+#[no_mangle]
+pub extern "C" fn frontend_oak_main(in_handle: u64) {
+    let _ = std::panic::catch_unwind(|| {
+        oak::set_panic_hook();
+        let node = FrontendNode::new();
+        let dispatcher = OakAbiTestServiceDispatcher::new(node);
+        oak::run_event_loop(dispatcher, in_handle);
+    });
+}
+```
+<!-- prettier-ignore-end -->
+
 ### Generated gRPC service code
 
 The Oak SDK provides `oak_utils::compile_protos` to autogenerate Rust code from
 a [gRPC service definition](https://grpc.io/docs/guides/concepts/). Adding a
 `build.rs` file to the Node that uses this function results in a generated file
-appearing in `src/proto/<service>_grpc.rs`.
+`<service>_grpc.rs` appearing under the crate's build
+[`OUT_DIR`](https://doc.rust-lang.org/cargo/reference/environment-variables.html)
+(by default).
 
 <!-- prettier-ignore-start -->
 [embedmd]:# (../examples/hello_world/module/rust/build.rs Rust /fn main/ /^}/)
@@ -347,7 +372,7 @@ down that channel. The application may choose to use protobuf-encoded messages
 (as gRPC does) for its internal communications, or something else entirely (e.g.
 the [serde crate](https://crates.io/crates/serde)).
 
-Regardless of how the application communicates with the new Node, the typical
+Regardless of how the Application communicates with the new Node, the typical
 pattern for the existing Node is to:
 
 - Create a new channel with the
@@ -357,7 +382,8 @@ pattern for the existing Node is to:
   [`node_create`](https://project-oak.github.io/oak/doc/oak/fn.node_create.html)
   host function, passing in the handle for the read half of the new channel.
 - Afterwards, close the local handle for the read half, as it is no longer
-  needed.
+  needed, and use the local handle for the write half to send messages to the
+  new Node instance.
 
 For example, the [example Chat application](../examples/chat) creates a Node for
 each chat room and saves off the write handle that will be used to send messages
@@ -455,14 +481,14 @@ This has a little bit of boilerplate to explain:
   entrypoint would typically be set up by the
   [`oak::entrypoint!`](https://project-oak.github.io/oak/doc/oak/macro.entrypoint.html)
   macro [described above](#per-node-boilerplate)).
-- The injection of the gRPC request has to specify the method name (in
-  `oak_tests::grpc_request`).
+- The injection of the gRPC request has to specify the method name (in the call
+  to `oak_tests::grpc_request()`).
 - The per-Node thread needs to be stopped at the end of the test
   (`oak_runtime::stop`).
 
 However, this extra complication does allow the Node to be tested in a way that
 is closer to real execution, and (more importantly) allows testing of a Node
-that makes use of the functionality of the Oak TCB.
+that makes use of the functionality of the Oak Runtime.
 
 ### Testing Multi-Node Applications
 
@@ -483,26 +509,5 @@ to configure and run the Runtime.
 
     let (runtime, entry_channel) =
         oak_runtime::configure_and_run(configuration, oak_runtime::RuntimeConfiguration::default())
-```
-<!-- prettier-ignore-end -->
-
-Any Rust panic originating in an Oak Node must be caught before going through
-the Wasm FFI boundary. If you use the `derive(OakExports)` macro, this is
-performed for you. To implement this manually you can use the method
-[`catch_unwind`](https://doc.rust-lang.org/std/panic/fn.catch_unwind.html) from
-the Rust standard library:
-
-<!-- prettier-ignore-start -->
-[embedmd]:# (../examples/abitest/module_0/rust/src/lib.rs Rust /^#.*no_mangle.*/ /^}/)
-```Rust
-#[no_mangle]
-pub extern "C" fn frontend_oak_main(in_handle: u64) {
-    let _ = std::panic::catch_unwind(|| {
-        oak::set_panic_hook();
-        let node = FrontendNode::new();
-        let dispatcher = OakAbiTestServiceDispatcher::new(node);
-        oak::run_event_loop(dispatcher, in_handle);
-    });
-}
 ```
 <!-- prettier-ignore-end -->
