@@ -593,7 +593,7 @@ impl Runtime {
         Some(s)
     }
 
-    /// Determine whether the [`Runtime`] is terminating.
+    /// Returns whether the [`Runtime`] is terminating.
     pub fn is_terminating(&self) -> bool {
         self.terminating.load(SeqCst)
     }
