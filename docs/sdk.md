@@ -2,7 +2,8 @@
 
 Project Oak provides a Rust SDK with helper functions to facilitate interactions
 with the Oak Runtime from Rust code compiled to WebAssembly. This provides
-idiomatic Rust abstractions over the lower level WebAssembly interface.
+idiomatic Rust abstractions over the lower level
+[WebAssembly interface](abi.md).
 
 This page gives a summary of the functionality available in this SDK; refer to
 the [generated documentation](https://project-oak.github.io/oak) for more
@@ -19,13 +20,16 @@ includes:
   and `usize` [integer types described in the Oak ABI](abi.md#integer-types)
   definition are mapped to the Rust integer types with the same names.
 - A [`Handle`](https://project-oak.github.io/oak/doc/oak_abi/type.Handle.html)
-  type alias for `u64`.
+  type alias for `u64` channel handle values.
 - Constants used on the ABI (such as the
   [`INVALID_HANDLE`](https://project-oak.github.io/oak/doc/oak_abi/constant.INVALID_HANDLE.html)
   value).
 - Enum types (generated from the
   [master protocol buffer definitions](../oak/proto/oak_api.proto)) for
   [operation and channel status values](abi.md#integer-types).
+- Generated Rust code corresponding to
+  [protocol buffer message types](abi.md#protocol-buffer-messages) that are used
+  as part of the Oak ABI.
 
 ## `oak` Crate
 
@@ -54,7 +58,7 @@ helper, to ensure that Rust `panic`s are logged.
 ### `oak::io` Module
 
 The [`oak::io`](https://project-oak.github.io/oak/doc/oak/io/index.html) module
-provides a higher level abstraction to allow Rust object to be communicated
+provides a higher level abstraction to allow Rust objects to be communicated
 between Nodes.
 
 The

@@ -47,8 +47,9 @@ type.
 Three specific sets of integer values are also used in the ABI:
 
 - Many operations take a `u64` **handle** value; these values are Node-specific
-  and non-zero (zero is reserved to indicate an invalid handle), and reference a
-  particular [channel](concepts.md#channels).
+  and non-zero (zero is reserved to indicate an invalid handle), and reference
+  one half &ndash; read or write &ndash; of a particular
+  [channel](concepts.md#channels).
 - Many ABI operations return a `u32` **status** value, indicating the result of
   the operation. The possible values for this are defined in the `OakStatus`
   enum in [oak_api.proto](/oak/proto/oak_api.proto).
@@ -59,12 +60,13 @@ Three specific sets of integer values are also used in the ABI:
 
 ## Exported Function
 
-Each Oak Module must expose at least one **exported function** as a
+Each Oak WebAssembly module must expose at least one **exported function** as a
 [WebAssembly export](https://webassembly.github.io/spec/core/syntax/modules.html#exports),
 with signature `fn(u64) -> ()`. This function is invoked when the Oak Manager
 executes the Oak Node; a handle for the read half of an initial channel is
 passed in as a parameter. The name of this entrypoint function for a Node is
-provided as part of the Application configuration.
+provided as part of the
+[Application configuration](/oak/proto/application.proto).
 
 The entrypoint function for each Node should perform its own event loop, reading
 incoming messages that arrive on the read halves of its channels, sending
@@ -89,14 +91,14 @@ functions** as
 `wait_on_channels(usize, u32) -> u32` blocks until data is available for reading
 from one of the specified channel handles. The channel handles are encoded in a
 buffer that holds N contiguous 9-byte chunks, each of which is made up of an
-8-byte channel handle value (little-endian u64) followed by a single channel
+8-byte channel handle value (little-endian `u64`) followed by a single channel
 status byte. Invalid handles will have an `INVALID_CHANNEL` status, but
 `wait_on_channels` return value will only fail for internal errors or if _all_
 channels are invalid.
 
 If reading from any of the specified (valid) channels would violate
 [information flow control](/docs/concepts.md#labels), returns
-`PERMISSION_DENIED`.
+`ERR_PERMISSION_DENIED`.
 
 - arg 0: Address of handle status buffer
 - arg 1: Count N of handles provided
@@ -112,14 +114,14 @@ returned handles in the location provided by arg 6.
 If the provided spaces for data (args 1 and 2) or handles (args 4 and 5) are not
 large enough for the read operation, then no data is written to the destination
 buffers, and the function returns either `BUFFER_TOO_SMALL` or
-`HANDLE_SPACE_TOO_SMALL`; in either case, the required sizes is written in the
+`HANDLE_SPACE_TOO_SMALL`; in either case, the required sizes are written in the
 spaces provided by args 3 and 6.
 
 If no messages are available on the channel, returns `CHANNEL_EMPTY`.
 
 If reading from the specified channel would violate
 [information flow control](/docs/concepts.md#labels), returns
-`PERMISSION_DENIED`.
+`ERR_PERMISSION_DENIED`.
 
 - arg 0: Handle to channel receive half
 - arg 1: Destination buffer address
@@ -143,7 +145,7 @@ to the specified channel, together with any associated handles.
 
 If writing to the specified channel would violate
 [information flow control](/docs/concepts.md#labels), returns
-`PERMISSION_DENIED`.
+`ERR_PERMISSION_DENIED`.
 
 - arg 0: Handle to channel send half
 - arg 1: Source buffer address holding message
@@ -184,7 +186,7 @@ creating non-WebAssembly Nodes.
 
 If creating the specified node would violate
 [information flow control](/docs/concepts.md#labels), returns
-`PERMISSION_DENIED`.
+`ERR_PERMISSION_DENIED`.
 
 - arg 0: Source buffer holding node configuration name
 - arg 1: Node configuration name size in bytes
