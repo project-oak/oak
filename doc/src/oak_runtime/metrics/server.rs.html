@@ -94,6 +94,8 @@
 <span id="94">94</span>
 <span id="95">95</span>
 <span id="96">96</span>
+<span id="97">97</span>
+<span id="98">98</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -180,6 +182,8 @@
     <span class="ident">server</span>.<span class="kw">await</span>
 }
 
+<span class="comment">// Start running a metrics server on the given port, running until the `notify_receiver` is</span>
+<span class="comment">// triggered.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start_metrics_server</span>(
     <span class="ident">port</span>: <span class="ident">u16</span>,
     <span class="ident">_runtime</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Runtime</span><span class="op">&gt;</span>,

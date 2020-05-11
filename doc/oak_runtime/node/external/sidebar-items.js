@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["register_factory",""]],"struct":[["PseudoNode",""]],"type":[["NodeFactory",""]]});
+initSidebarItems({"fn":[["register_factory","Register a pseudo-Node creation factory function.  This callback will be invoked (on a new thread) to start and run any pseudo-Node types that are not supported by the core Rust Runtime."]],"struct":[["PseudoNode",""]],"type":[["NodeFactory","Function pointer type for callbacks from Rust code into C/C++ code for pseudo-Node creation."]]});

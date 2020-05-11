@@ -151,6 +151,11 @@
 <span id="151">151</span>
 <span id="152">152</span>
 <span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -189,10 +194,11 @@
     <span class="kw">fn</span> <span class="ident">run</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>, <span class="ident">handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>);
 }
 
-<span class="doccomment">/// A `Configuration` corresponds to an entry from a `ApplicationConfiguration`. It is the</span>
-<span class="doccomment">/// static implementation specific configuration shared between instances.</span>
+<span class="doccomment">/// A [`Configuration`] corresponds to a [`NodeConfiguration`] protobuf message, with parsed</span>
+<span class="doccomment">/// and validated configuration information.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// [`NodeConfiguration`]: crate::proto::oak::application::NodeConfiguration</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Configuration</span> {
-    <span class="doccomment">/// The configuration for a logging pseudo-Node.</span>
     <span class="ident">LogNode</span>,
 
     <span class="doccomment">/// The configuration for a gRPC server pseudo-Node that contains an `address` to listen on and</span>
@@ -207,13 +213,15 @@
     <span class="comment">// instance, but wasmi doesn&#39;t allow this. We make do with having a copyable</span>
     <span class="comment">// `Arc&lt;wasmi::Module&gt;` that we pass to new Nodes, and clone to to spawn new</span>
     <span class="comment">// `wasmi::ModuleInstances`.</span>
-    <span class="ident">WasmNode</span> { <span class="ident">module</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">wasmi</span>::<span class="ident">Module</span><span class="op">&gt;</span> },
+    <span class="ident">WasmNode</span> {
+        <span class="ident">module</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">wasmi</span>::<span class="ident">Module</span><span class="op">&gt;</span>,
+    },
 
     <span class="doccomment">/// The configuration for an externally provided pseudo-Node.</span>
     <span class="ident">External</span>,
 }
 
-<span class="doccomment">/// A enumeration for errors occuring when building `Configuration` from protobuf types.</span>
+<span class="doccomment">/// An enumeration for errors occuring when building [`Configuration`] from protobuf types.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ConfigurationError</span> {
     <span class="ident">AddressParsingError</span>(<span class="ident">AddrParseError</span>),
@@ -296,6 +304,8 @@
         }
     }
 
+    <span class="doccomment">/// Generate a description of a Node or pseudo-Node that is started with the given entrypoint.</span>
+    <span class="doccomment">/// (In practice, only Wasm nodes pay attention to the entrypoint).</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">node_subname</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">entrypoint</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
         <span class="kw">match</span> <span class="self">self</span> {
             <span class="ident">Configuration</span>::<span class="ident">LogNode</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;LogNode&quot;</span>.<span class="ident">to_string</span>(),

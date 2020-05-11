@@ -510,7 +510,7 @@
     <span class="ident">writer</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
 }
 
-<span class="comment">// Set a mandatory prefix for all gRPC requests processed by a gRPC pseudo-Node.</span>
+<span class="doccomment">/// Set a mandatory prefix for all gRPC requests processed by a gRPC pseudo-Node.</span>
 <span class="kw">impl</span> <span class="ident">NamedService</span> <span class="kw">for</span> <span class="ident">HttpRequestHandler</span> {
     <span class="kw">const</span> <span class="ident">NAME</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;oak&quot;</span>;
 }
@@ -524,8 +524,8 @@
         <span class="ident">Poll</span>::<span class="ident">Ready</span>(<span class="prelude-val">Ok</span>(()))
     }
 
-    <span class="comment">// Decodes an unary gRPC request using a [`VecCodec`] and processes it with</span>
-    <span class="comment">// [`tonic::server::Grpc::unary`] and a [`GrpcRequestHandler`].</span>
+    <span class="doccomment">/// Decodes an unary gRPC request using a [`VecCodec`] and processes it with</span>
+    <span class="doccomment">/// [`tonic::server::Grpc::unary`] and a [`GrpcRequestHandler`].</span>
     <span class="kw">fn</span> <span class="ident">call</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">request</span>: <span class="ident">http</span>::<span class="ident">Request</span><span class="op">&lt;</span><span class="ident">hyper</span>::<span class="ident">Body</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>::<span class="ident">Future</span> {
         <span class="kw">let</span> <span class="ident">grpc_handler</span> <span class="op">=</span> <span class="ident">GrpcRequestHandler</span>::<span class="ident">new</span>(
             <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">clone</span>(),

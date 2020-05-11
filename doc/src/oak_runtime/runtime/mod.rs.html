@@ -1335,6 +1335,22 @@
 <span id="1335">1335</span>
 <span id="1336">1336</span>
 <span id="1337">1337</span>
+<span id="1338">1338</span>
+<span id="1339">1339</span>
+<span id="1340">1340</span>
+<span id="1341">1341</span>
+<span id="1342">1342</span>
+<span id="1343">1343</span>
+<span id="1344">1344</span>
+<span id="1345">1345</span>
+<span id="1346">1346</span>
+<span id="1347">1347</span>
+<span id="1348">1348</span>
+<span id="1349">1349</span>
+<span id="1350">1350</span>
+<span id="1351">1351</span>
+<span id="1352">1352</span>
+<span id="1353">1353</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -1431,7 +1447,7 @@
     }
 }
 
-<span class="doccomment">/// An identifier for a Node that is opaque for type safety.</span>
+<span class="doccomment">/// A unique internal identifier for a Node or pseudo-Node instance.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>, <span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Debug</span>, <span class="ident">PartialOrd</span>, <span class="ident">Ord</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">NodeId</span>(<span class="kw">pub</span> <span class="ident">u64</span>);
 
@@ -1459,14 +1475,18 @@
     }
 }
 
+<span class="doccomment">/// Internal version of the [`ApplicationConfiguration`] protobuf, holding</span>
+<span class="doccomment">/// the same information but parsed and verified.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// [`ApplicationConfiguration`]: crate::proto::oak::application::ApplicationConfiguration</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Configuration</span> {
     <span class="kw">pub</span> <span class="ident">nodes</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">node</span>::<span class="ident">Configuration</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">entry_module</span>: <span class="ident">String</span>,
     <span class="kw">pub</span> <span class="ident">entrypoint</span>: <span class="ident">String</span>,
 }
 
-<span class="doccomment">/// Helper types to determine if `try_read_message` was called with not enough `bytes_capacity`</span>
-<span class="doccomment">/// and/or `handles_capacity`.</span>
+<span class="doccomment">/// Helper types to indicate whether a channel read operation has succeed or has failed with not</span>
+<span class="doccomment">/// enough `bytes_capacity` and/or `handles_capacity`.</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">NodeReadStatus</span> {
     <span class="ident">Success</span>(<span class="ident">NodeMessage</span>),
     <span class="ident">NeedsCapacity</span>(<span class="ident">usize</span>, <span class="ident">usize</span>),
@@ -1484,6 +1504,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">AuxServer</span> {
+    <span class="doccomment">/// Start a new auxiliary server, running on its own thread.</span>
     <span class="kw">fn</span> <span class="ident">new</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FnOnce</span>(<span class="ident">u16</span>, <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Runtime</span><span class="op">&gt;</span>, <span class="ident">tokio</span>::<span class="ident">sync</span>::<span class="ident">oneshot</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>) <span class="op">+</span> <span class="lifetime">&#39;static</span> <span class="op">+</span> <span class="ident">Send</span><span class="op">&gt;</span>(
         <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
         <span class="ident">port</span>: <span class="ident">u16</span>,
@@ -1505,6 +1526,8 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">AuxServer</span> {
+    <span class="doccomment">/// Dropping an auxiliary server involves notifying it that it should terminate,</span>
+    <span class="doccomment">/// then joining its thread.</span>
     <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
         <span class="kw">let</span> <span class="ident">join_handle</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">join_handle</span>.<span class="ident">take</span>();
         <span class="kw">let</span> <span class="ident">notify_sender</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">notify_sender</span>.<span class="ident">take</span>();
@@ -1537,6 +1560,7 @@
 <span class="comment">// Methods which translate between ABI handles (Node-relative u64 values) and `ChannelHalf`</span>
 <span class="comment">// values.</span>
 <span class="kw">impl</span> <span class="ident">Runtime</span> {
+    <span class="doccomment">/// Register a [`ChannelHalf`] with a Node, returning the new handle value for it.</span>
     <span class="kw">fn</span> <span class="ident">new_abi_handle</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">half</span>: <span class="ident">ChannelHalf</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">oak_abi</span>::<span class="ident">Handle</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">node_infos</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">node_infos</span>.<span class="ident">write</span>().<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="ident">node_info</span> <span class="op">=</span> <span class="ident">node_infos</span>.<span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="ident">node_id</span>).<span class="ident">expect</span>(<span class="string">&quot;Invalid node_id&quot;</span>);
@@ -1552,7 +1576,7 @@
             }
         }
     }
-    <span class="comment">// Remove the handle from the Node&#39;s handle table.</span>
+    <span class="doccomment">/// Remove the handle from the Node&#39;s handle table.</span>
     <span class="kw">fn</span> <span class="ident">drop_abi_handle</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">node_infos</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">node_infos</span>.<span class="ident">write</span>().<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="ident">node_info</span> <span class="op">=</span> <span class="ident">node_infos</span>.<span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="ident">node_id</span>).<span class="ident">expect</span>(<span class="string">&quot;Invalid node_id&quot;</span>);
@@ -1562,6 +1586,7 @@
             .<span class="ident">ok_or</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrBadHandle</span>)
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">_half</span><span class="op">|</span> ())
     }
+    <span class="doccomment">/// Convert an ABI handle to an internal [`ChannelHalf`].</span>
     <span class="kw">fn</span> <span class="ident">abi_to_half</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
@@ -1576,6 +1601,8 @@
         <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{:?}: map ABI handle {} to {:?}&quot;</span>, <span class="ident">node_id</span>, <span class="ident">handle</span>, <span class="ident">half</span>);
         <span class="prelude-val">Ok</span>(<span class="ident">half</span>.<span class="ident">clone</span>())
     }
+    <span class="doccomment">/// Convert an ABI handle to an internal [`ChannelHalf`], but fail</span>
+    <span class="doccomment">/// the operation if the handle is not for the read half of the channel.</span>
     <span class="kw">fn</span> <span class="ident">abi_to_read_half</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
@@ -1587,6 +1614,8 @@
             <span class="ident">ChannelHalfDirection</span>::<span class="ident">Write</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrBadHandle</span>),
         }
     }
+    <span class="doccomment">/// Convert an ABI handle to an internal [`ChannelHalf`], but fail</span>
+    <span class="doccomment">/// the operation if the handle is not for the write half of the channel.</span>
     <span class="kw">fn</span> <span class="ident">abi_to_write_half</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
@@ -1626,12 +1655,11 @@
 
     <span class="doccomment">/// Configures and runs the protobuf specified Application [`Configuration`].</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// After starting a [`Runtime`], calling [`Runtime::stop`] will send termination signals to</span>
-    <span class="doccomment">/// Nodes and wait for them to terminate.</span>
+    <span class="doccomment">/// After starting a [`Runtime`], calling [`Runtime::stop`] will notify all Nodes that they</span>
+    <span class="doccomment">/// should terminate, and wait for them to terminate.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// Returns a writeable [`oak_abi::Handle`] to send messages into the [`Runtime`]. To receive</span>
-    <span class="doccomment">/// messages, creating a new channel and passing the write [`oak_abi::Handle`] into the</span>
-    <span class="doccomment">/// Runtime will enable messages to be read back out.</span>
+    <span class="doccomment">/// Returns a writable [`oak_abi::Handle`] to send messages into the initial Node created from</span>
+    <span class="doccomment">/// the configuration.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start_runtime</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">runtime_config</span>: <span class="kw">crate</span>::<span class="ident">RuntimeConfiguration</span>,
@@ -1694,8 +1722,7 @@
         <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">graph</span>()
     }
 
-    <span class="doccomment">/// Thread safe method for signaling termination to a [`Runtime`] and waiting for its Node</span>
-    <span class="doccomment">/// threads to terminate.</span>
+    <span class="doccomment">/// Signal termination to a [`Runtime`] and wait for its Node threads to terminate.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">stop_runtime</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
         <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">stop</span>()
     }
@@ -1849,6 +1876,7 @@
         <span class="ident">s</span>
     }
 
+    <span class="doccomment">/// Generate an HTML page that describes the internal state of the [`Runtime`].</span>
     <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">html</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">s</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">new</span>();
@@ -1872,6 +1900,7 @@
         <span class="ident">s</span>
     }
 
+    <span class="doccomment">/// Generate an HTML page that describes the internal state of a specific Node.</span>
     <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">html_for_node</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">id</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">node_id</span> <span class="op">=</span> <span class="ident">NodeId</span>(<span class="ident">id</span>);
@@ -1902,9 +1931,12 @@
         }
         <span class="prelude-val">Some</span>(<span class="ident">s</span>)
     }
+
+    <span class="doccomment">/// Generate an HTML page that describes the channel accessible via an ABI handle for the</span>
+    <span class="doccomment">/// specified Node.</span>
     <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">html_for_handle</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">id</span>: <span class="ident">u64</span>, <span class="ident">handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">node_id</span> <span class="op">=</span> <span class="ident">NodeId</span>(<span class="ident">id</span>);
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">html_for_handle</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">u64</span>, <span class="ident">handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">node_id</span> <span class="op">=</span> <span class="ident">NodeId</span>(<span class="ident">node_id</span>);
         <span class="kw">let</span> <span class="ident">node_infos</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">node_infos</span>.<span class="ident">read</span>().<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="ident">node_info</span> <span class="op">=</span> <span class="ident">node_infos</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">node_id</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">half</span> <span class="op">=</span> <span class="ident">node_info</span>.<span class="ident">abi_handles</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">handle</span>)<span class="question-mark">?</span>;
@@ -1921,13 +1953,12 @@
         <span class="prelude-val">Some</span>(<span class="ident">s</span>)
     }
 
-    <span class="doccomment">/// Thread safe method for determining if the [`Runtime`] is terminating.</span>
+    <span class="doccomment">/// Return whether the [`Runtime`] is terminating.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_terminating</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
         <span class="self">self</span>.<span class="ident">terminating</span>.<span class="ident">load</span>(<span class="ident">SeqCst</span>)
     }
 
-    <span class="doccomment">/// Thread safe method for signaling termination to a [`Runtime`] and waiting for its Node</span>
-    <span class="doccomment">/// threads to terminate.</span>
+    <span class="doccomment">/// Signal termination to a [`Runtime`] and wait for its Node threads to terminate.</span>
     <span class="kw">fn</span> <span class="ident">stop</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;stopping runtime instance&quot;</span>);
 
@@ -1958,7 +1989,7 @@
         }
     }
 
-    <span class="comment">// Move all of the Node join handles out of the `node_infos` tracker.</span>
+    <span class="doccomment">/// Move all of the Node join handles out of the `node_infos` tracker and return them.</span>
     <span class="kw">fn</span> <span class="ident">take_join_handles</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">NodeId</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">JoinHandle</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">node_infos</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">node_infos</span>
@@ -1970,6 +2001,7 @@
             .<span class="ident">collect</span>()
     }
 
+    <span class="doccomment">/// Notify all Nodes that are waiting on any channels to wake up.</span>
     <span class="kw">fn</span> <span class="ident">notify_all_waiters</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
         <span class="comment">// Hold the write lock and wake up any Node threads blocked on a `Channel`.</span>
         <span class="kw">let</span> <span class="ident">node_infos</span> <span class="op">=</span> <span class="self">self</span>
@@ -2001,21 +2033,21 @@
         <span class="ident">node_info</span>.<span class="ident">label</span>.<span class="ident">clone</span>()
     }
 
-    <span class="doccomment">/// Returns a clone of the [`Label`] associated with the provided reader `channel_handle`.</span>
+    <span class="doccomment">/// Returns a clone of the [`Label`] associated with the provided reader `channel_half`.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// Returns an error if `channel_handle` is invalid.</span>
+    <span class="doccomment">/// Returns an error if `channel_half` is not a valid read half.</span>
     <span class="kw">fn</span> <span class="ident">get_reader_channel_label</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">channel_half</span>: <span class="kw-2">&amp;</span><span class="ident">ChannelHalf</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Label</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="ident">with_reader_channel</span>(<span class="ident">channel_half</span>, <span class="op">|</span><span class="ident">channel</span><span class="op">|</span> <span class="prelude-val">Ok</span>(<span class="ident">channel</span>.<span class="ident">label</span>.<span class="ident">clone</span>()))
     }
 
-    <span class="doccomment">/// Returns a clone of the [`Label`] associated with the provided writer `channel_handle`.</span>
+    <span class="doccomment">/// Returns a clone of the [`Label`] associated with the provided writer `channel_half`.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// Returns an error if `channel_handle` is invalid.</span>
+    <span class="doccomment">/// Returns an error if `channel_half` is not a valid write half.</span>
     <span class="kw">fn</span> <span class="ident">get_writer_channel_label</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">channel_half</span>: <span class="kw-2">&amp;</span><span class="ident">ChannelHalf</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Label</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="ident">with_writer_channel</span>(<span class="ident">channel_half</span>, <span class="op">|</span><span class="ident">channel</span><span class="op">|</span> <span class="prelude-val">Ok</span>(<span class="ident">channel</span>.<span class="ident">label</span>.<span class="ident">clone</span>()))
     }
 
-    <span class="doccomment">/// Returns whether the calling Node is allowed to read from the provided channel, according to</span>
+    <span class="doccomment">/// Returns whether the given Node is allowed to read from the provided channel, according to</span>
     <span class="doccomment">/// their respective [`Label`]s.</span>
     <span class="kw">fn</span> <span class="ident">validate_can_read_from_channel</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
@@ -2045,7 +2077,7 @@
         }
     }
 
-    <span class="doccomment">/// Returns whether the calling Node is allowed to read from all the provided channels,</span>
+    <span class="doccomment">/// Returns whether the given Node is allowed to read from all the provided channels,</span>
     <span class="doccomment">/// according to their respective [`Label`]s.</span>
     <span class="kw">fn</span> <span class="ident">validate_can_read_from_channels</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
@@ -2062,7 +2094,7 @@
         }
     }
 
-    <span class="doccomment">/// Returns whether the calling Node is allowed to write to the provided channel, according to</span>
+    <span class="doccomment">/// Returns whether the given Node is allowed to write to the provided channel, according to</span>
     <span class="doccomment">/// their respective [`Label`]s.</span>
     <span class="kw">fn</span> <span class="ident">validate_can_write_to_channel</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
@@ -2092,7 +2124,7 @@
         }
     }
 
-    <span class="doccomment">/// Creates a new [`Channel`] and returns a `(writer handle, reader handle)` pair.</span>
+    <span class="doccomment">/// Creates a new [`Channel`] and returns a `(writer, reader)` pair of `oak_abi::Handle`s.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`Channel`]: crate::runtime::channel::Channel</span>
     <span class="kw">fn</span> <span class="ident">channel_create</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">oak_abi</span>::<span class="ident">Handle</span>, <span class="ident">oak_abi</span>::<span class="ident">Handle</span>) {
@@ -2120,9 +2152,7 @@
         (<span class="ident">write_handle</span>, <span class="ident">read_handle</span>)
     }
 
-    <span class="doccomment">/// Reads the statuses from a slice of `ChannelHalf`s.</span>
-    <span class="doccomment">/// [`ChannelReadStatus::InvalidChannel`] is set for `None` readers in the slice. For `Some(_)`</span>
-    <span class="doccomment">/// readers, the result is set from a call to `has_message`.</span>
+    <span class="doccomment">/// Reads the readable statuses for a slice of `ChannelHalf`s.</span>
     <span class="kw">fn</span> <span class="ident">readers_statuses</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">readers</span>: <span class="kw-2">&amp;</span>[<span class="ident">ChannelHalf</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ChannelReadStatus</span><span class="op">&gt;</span> {
         <span class="ident">readers</span>
             .<span class="ident">iter</span>()
@@ -2133,20 +2163,17 @@
             .<span class="ident">collect</span>()
     }
 
-    <span class="doccomment">/// Waits on a slice of `ChannelHalf`s, blocking until one of the following conditions:</span>
-    <span class="doccomment">/// - If the [`Runtime`] is terminating this will return immediately with an `ErrTerminated`</span>
-    <span class="doccomment">///   status for each channel.</span>
-    <span class="doccomment">/// - If all readers are in an erroneous status, e.g. when all channels are orphaned, this will</span>
-    <span class="doccomment">///   immediately return the channels statuses.</span>
-    <span class="doccomment">/// - If any of the channels is able to read a message, the corresponding element in the</span>
-    <span class="doccomment">///   returned vector will be set to `Ok(ReadReady)`, with `Ok(NotReady)` signaling the channel</span>
-    <span class="doccomment">///   has no message available</span>
+    <span class="doccomment">/// Waits on a slice of `ChannelHalf`s, blocking until one of the following conditions occurs:</span>
+    <span class="doccomment">/// - If the [`Runtime`] is terminating, return immediately with an `ErrTerminated` overall</span>
+    <span class="doccomment">///   status.</span>
+    <span class="doccomment">/// - If all provided read channels are in an erroneous status, e.g. when all channels are</span>
+    <span class="doccomment">///   orphaned, fill in the returned status vector and return an overall `Ok` status.</span>
+    <span class="doccomment">/// - If any of the channels is able to read a message, set the corresponding element in the</span>
+    <span class="doccomment">///   returned status vector to `ReadReady`, and return an overall `Ok` status.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// In particular, if there is at least one channel in good status and no messages on said</span>
     <span class="doccomment">/// channel available, [`Runtime::wait_on_channels`] will continue to block until a message is</span>
     <span class="doccomment">/// available.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// [`Runtime`]: crate::runtime::Runtime</span>
     <span class="kw">fn</span> <span class="ident">wait_on_channels</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
@@ -2242,7 +2269,7 @@
         })
     }
 
-    <span class="comment">// Translate the Node-relative handles in the `NodeMessage` to channel halves.</span>
+    <span class="doccomment">/// Translate the Node-relative handles in the `NodeMessage` to channel halves.</span>
     <span class="kw">fn</span> <span class="ident">message_from</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_msg</span>: <span class="ident">NodeMessage</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Message</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="prelude-val">Ok</span>(<span class="ident">Message</span> {
             <span class="ident">data</span>: <span class="ident">node_msg</span>.<span class="ident">data</span>,
@@ -2254,7 +2281,7 @@
         })
     }
 
-    <span class="doccomment">/// Thread safe. Read a message from a channel. Fails with [`OakStatus::ErrChannelClosed`] if</span>
+    <span class="doccomment">/// Read a message from a channel. Fails with [`OakStatus::ErrChannelClosed`] if</span>
     <span class="doccomment">/// the underlying channel is empty and has been orphaned.</span>
     <span class="kw">fn</span> <span class="ident">channel_read</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
@@ -2281,7 +2308,7 @@
         }
     }
 
-    <span class="doccomment">/// Thread safe. This function returns:</span>
+    <span class="doccomment">/// Determine the readable status of a channel, returning:</span>
     <span class="doccomment">/// - [`ChannelReadStatus::ReadReady`] if there is at least one message in the channel.</span>
     <span class="doccomment">/// - [`ChannelReadStatus::Orphaned`] if there are no messages and there are no writers</span>
     <span class="doccomment">/// - [`ChannelReadStatus::NotReady`] if there are no messages but there are some writers</span>
@@ -2302,13 +2329,13 @@
         })
     }
 
-    <span class="doccomment">/// Thread safe. Reads a message from the channel if `bytes_capacity` and `handles_capacity` are</span>
-    <span class="doccomment">/// large enough to accept the message. Fails with `OakStatus::ErrChannelClosed` if the</span>
-    <span class="doccomment">/// underlying channel has been orphaned _and_ is empty. If there was not enough</span>
-    <span class="doccomment">/// `bytes_capacity` or `handles_capacity`, `try_read_message` returns</span>
-    <span class="doccomment">/// `Some(ReadStatus::NeedsCapacity(needed_bytes_capacity,needed_handles_capacity))`. Does not</span>
-    <span class="doccomment">/// guarantee that the next call will succeed after capacity adjustments as another thread may</span>
-    <span class="doccomment">/// have read the original message.</span>
+    <span class="doccomment">/// Reads a message from the channel if `bytes_capacity` and `handles_capacity` are large</span>
+    <span class="doccomment">/// enough to accept the message. Fails with `OakStatus::ErrChannelClosed` if the underlying</span>
+    <span class="doccomment">/// channel has been orphaned _and_ is empty. If there was not enough `bytes_capacity` or</span>
+    <span class="doccomment">/// `handles_capacity`, `try_read_message` returns the required capacity values in</span>
+    <span class="doccomment">/// `Some(NodeReadStatus::NeedsCapacity(needed_bytes_capacity,needed_handles_capacity))`. Does</span>
+    <span class="doccomment">/// not guarantee that the next call will succeed after capacity adjustments as another Node</span>
+    <span class="doccomment">/// may have read the original message.</span>
     <span class="kw">fn</span> <span class="ident">channel_try_read_message</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
@@ -2357,8 +2384,8 @@
         })
     }
 
-    <span class="comment">// Translate a Message to include ABI handles (which are relative to this Node) rather than</span>
-    <span class="comment">// internal channel references.</span>
+    <span class="doccomment">/// Translate a Message to include ABI handles (which are relative to this Node) rather than</span>
+    <span class="doccomment">/// internal channel references.</span>
     <span class="kw">fn</span> <span class="ident">node_message_from</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">msg</span>: <span class="ident">Message</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NodeMessage</span> {
         <span class="ident">NodeMessage</span> {
             <span class="ident">data</span>: <span class="ident">msg</span>.<span class="ident">data</span>,
@@ -2421,6 +2448,7 @@
         <span class="self">self</span>.<span class="ident">update_nodes_count_metric</span>();
     }
 
+    <span class="doccomment">/// Update the node count metric with the current value.</span>
     <span class="kw">fn</span> <span class="ident">update_nodes_count_metric</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
         <span class="ident">METRICS</span>.<span class="ident">runtime_nodes_count</span>.<span class="ident">set</span>(
             <span class="self">self</span>.<span class="ident">node_infos</span>
@@ -2443,9 +2471,9 @@
         <span class="ident">node_info</span>.<span class="ident">join_handle</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">node_join_handle</span>);
     }
 
-    <span class="doccomment">/// Thread safe method that attempts to create a Node within the [`Runtime`] corresponding to a</span>
-    <span class="doccomment">/// given module name and entrypoint. The `reader: ChannelReader` is passed to the newly</span>
-    <span class="doccomment">/// created Node.</span>
+    <span class="doccomment">/// Create a Node within the [`Runtime`] corresponding to a given module name and</span>
+    <span class="doccomment">/// entrypoint. The channel identified by `initial_handle` is installed in the new</span>
+    <span class="doccomment">/// Node&#39;s handle table and the new handle value is passed to the newly created Node.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// The caller also specifies a [`Label`], which is assigned to the newly created Node. See</span>
     <span class="doccomment">/// &lt;https://github.com/project-oak/oak/blob/master/docs/concepts.md#labels&gt; for more</span>
@@ -2453,7 +2481,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// This method is defined on [`Arc`] and not [`Runtime`] itself, so that</span>
     <span class="doccomment">/// the [`Arc`] can clone itself and be included in a [`RuntimeProxy`] object</span>
-    <span class="doccomment">/// to be given to a new Node.</span>
+    <span class="doccomment">/// to be given to a new Node instance.</span>
     <span class="kw">fn</span> <span class="ident">node_create</span>(
         <span class="self">self</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
@@ -2546,7 +2574,7 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="comment">// Configure data structures for a Node instance.</span>
+    <span class="doccomment">/// Configure data structures for a Node instance.</span>
     <span class="kw">fn</span> <span class="ident">node_configure_instance</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">node_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>) {
         <span class="self">self</span>.<span class="ident">add_node_info</span>(
             <span class="ident">node_id</span>,
@@ -2559,6 +2587,8 @@
         );
     }
 
+    <span class="doccomment">/// Create a [`RuntimeProxy`] instance for a new Node, creating the new [`NodeId`]</span>
+    <span class="doccomment">/// value along the way.</span>
     <span class="kw">fn</span> <span class="ident">proxy_for_new_node</span>(<span class="self">self</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">RuntimeProxy</span> {
         <span class="ident">RuntimeProxy</span> {
             <span class="ident">runtime</span>: <span class="self">self</span>.<span class="ident">clone</span>(),
@@ -2567,6 +2597,8 @@
     }
 }
 
+<span class="doccomment">/// Manual implementation of the [`Drop`] trait to ensure that all components of</span>
+<span class="doccomment">/// the [`Runtime`] are stopped before the object is dropped.</span>
 <span class="kw">impl</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">Runtime</span> {
     <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
         <span class="self">self</span>.<span class="ident">stop</span>();
@@ -2586,7 +2618,7 @@
 <span class="doccomment">/// impersonate each other.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// Individual methods simply forward to corresponding methods on the underlying [`Runtime`], by</span>
-<span class="doccomment">/// partially applying the first argument.</span>
+<span class="doccomment">/// partially applying the first argument (the stored [`NodeId`]).</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RuntimeProxy</span> {
     <span class="ident">runtime</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Runtime</span><span class="op">&gt;</span>,
