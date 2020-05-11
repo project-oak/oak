@@ -102,6 +102,10 @@ pub struct GrpcClientConfiguration {
     /// service.
     #[prost(string, tag="2")]
     pub root_tls_certificate: std::string::String,
+    /// The endpoint address of the external gRPC service.
+    /// `address` is represented as an "ip_address:tcp_port" string.
+    #[prost(string, tag="3")]
+    pub address: std::string::String,
 }
 /// RoughtimeClientConfiguration describes the configuration of a Roughtime
 /// client pseudo-Node (which is provided by the Oak Runtime), with the

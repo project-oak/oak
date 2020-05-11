@@ -7,7 +7,7 @@ node_configs {
 node_configs {
   name: "grpc-client"
   grpc_client_config {
-    uri: "127.0.0.1:8888"
+    address: "127.0.0.1:8888"
   }
 }
 node_configs {

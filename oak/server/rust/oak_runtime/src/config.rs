@@ -102,6 +102,7 @@ pub fn from_protobuf(
                 Some(ConfigType::GrpcClientConfig(GrpcClientConfiguration {
                     uri,
                     root_tls_certificate,
+                    address: _,
                 })) => node::Configuration::GrpcClientNode {
                     uri: uri
                         .parse()

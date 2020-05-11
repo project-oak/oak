@@ -10,7 +10,7 @@ node_configs {
 node_configs {
   name: "grpc-client"
   grpc_client_config {
-    uri: "localhost:9999"
+    address: "localhost:9999"
   }
 }
 initial_node_config_name: "app"

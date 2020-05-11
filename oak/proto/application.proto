@@ -97,6 +97,9 @@ message GrpcClientConfiguration {
   // Loaded PEM encoded X.509 TLS root certificate file used to authenticate an external gRPC
   // service.
   string root_tls_certificate = 2;
+  // The endpoint address of the external gRPC service.
+  // `address` is represented as an "ip_address:tcp_port" string.
+  string address = 3;
 }
 
 // RoughtimeClientConfiguration describes the configuration of a Roughtime

@@ -118,9 +118,12 @@ impl Node for GrpcClientNode {
             // Use simple scheduler that runs all tasks on the current-thread.
             // https://docs.rs/tokio/0.2.16/tokio/runtime/index.html#basic-scheduler
             .basic_scheduler()
-            // Enables the I/O driver and the time driver.
+            // Enables the I/O driver.
             // Necessary for using net, process, signal, and I/O types on the Tokio runtime.
-            .enable_all()
+            .enable_io()
+            // Enables the time driver.
+            // Necessary for creating a Tokio Runtime.
+            .enable_time()
             .build()
             .expect("Couldn't create an Async runtime");
 
@@ -193,8 +196,11 @@ fn from_tonic_status(status: tonic::Status) -> oak_abi::proto::google::rpc::Stat
         code: status.code() as i32,
         message: status.message().to_string(),
         details: vec![prost_types::Any {
+            // `type_url` parameter is not used by Oak Nodes.
+            type_url: "".to_string(),
+            // Request status details that have been sent back by an external gRPC service, are
+            // propagated to an Oak Node that has created this request.
             value: status.details().to_vec(),
-            ..Default::default()
         }],
     }
 }

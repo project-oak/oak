@@ -14,15 +14,13 @@
 // limitations under the License.
 //
 
+use crate::{runtime::RuntimeProxy, NodeMessage};
 use log::{debug, error};
-use prost::Message;
-
 use oak_abi::{
     proto::oak::encap::{GrpcRequest, GrpcResponse},
     ChannelReadStatus, Handle, OakStatus,
 };
-
-use crate::{runtime::RuntimeProxy, NodeMessage};
+use prost::Message;
 
 /// Wrapper for a [`Handle`] that is responsible for sending messages to an Oak channel.
 /// Uses [`RuntimeProxy`] to send messages to a specific Oak Node.
@@ -120,7 +118,7 @@ impl Invocation {
     pub fn send_response(&self, response: GrpcResponse) -> Result<(), OakStatus> {
         let mut bytes = Vec::new();
         response.encode(&mut bytes).map_err(|error| {
-            error!("failed to serialize gRPC response: {}", error);
+            error!("Couldn't serialize gRPC response: {}", error);
             OakStatus::ErrInternal
         })?;
 

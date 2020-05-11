@@ -29,13 +29,13 @@ node_configs {
 node_configs {
   name: "grpc-client"
   grpc_client_config {
-    uri: "localhost:7878"
+    address: "localhost:7878"
   }
 }
 node_configs {
   name: "absent-grpc-client"
   grpc_client_config {
-    uri: "test.invalid:9999"
+    address: "test.invalid:9999"
   }
 }
 node_configs {

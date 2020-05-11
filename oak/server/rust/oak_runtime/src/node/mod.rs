@@ -117,13 +117,10 @@ pub fn check_port(address: &SocketAddr) -> Result<(), ConfigurationError> {
 
 /// Checks if URI contains the "Host" element.
 pub fn check_uri(uri: &Uri) -> Result<(), ConfigurationError> {
-    match uri
-        .authority()
+    uri.authority()
         .filter(|authority| !authority.host().is_empty())
-    {
-        Some(_) => Ok(()),
-        None => Err(ConfigurationError::NoHostElement),
-    }
+        .map(|_| ())
+        .ok_or(ConfigurationError::NoHostElement)
 }
 
 impl Configuration {
