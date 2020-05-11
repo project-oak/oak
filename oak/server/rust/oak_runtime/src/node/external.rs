@@ -19,13 +19,15 @@ use lazy_static::lazy_static;
 use log::info;
 use std::{sync::RwLock, thread};
 
+/// Function pointer type for callbacks from Rust code into C/C++ code for
+/// pseudo-Node creation.
 // TODO(#724): shift to a more explicit external pseudo-Node creation
 // mechanism when the runtime's main() is in Rust.
 pub type NodeFactory = fn(config_name: &str, node_id: NodeId, handle: oak_abi::Handle);
 
-// Global callback used to create pseudo-Nodes of types that are not
-// supported by the Rust Runtime.
 lazy_static! {
+    /// Global callback used to create pseudo-Nodes of types that are not
+    /// supported by the Rust Runtime.
     static ref FACTORY: RwLock<Option<NodeFactory>> = RwLock::new(None);
 }
 
