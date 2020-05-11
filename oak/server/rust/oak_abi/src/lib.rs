@@ -109,15 +109,23 @@ extern "C" {
         handle_count: u32,
     ) -> u32;
 
-    /// Create a new unidirectional channel.
+    /// Create a new unidirectional Channel.
     ///
-    /// Returns handles for the the write and read halves of the channel in
-    /// the spaces given by `write` and `read`.
+    /// Returns handles for the the write and read halves of the Channel in the spaces given by
+    /// `write` and `read`.
+    ///
+    /// The label to assign to the newly created Channel is provided in the memory area given by
+    /// `label_buf` and `label_len`.
     ///
     /// Returns the status of the operation, as an [`OakStatus`] value.
     ///
     /// [`OakStatus`]: crate::OakStatus
-    pub fn channel_create(write: *mut u64, read: *mut u64) -> u32;
+    pub fn channel_create(
+        write: *mut u64,
+        read: *mut u64,
+        label_buf: *const u8,
+        label_len: usize,
+    ) -> u32;
 
     /// Close a channel.
     ///
@@ -128,13 +136,16 @@ extern "C" {
     /// [`OakStatus`]: crate::OakStatus
     pub fn channel_close(handle: u64) -> u32;
 
-    /// Create a new Node instance running code identified by configuration
-    /// name and entrypoint; the entrypoint is only used when creating a
-    /// WebAssembly Node; it is ignored when creating a pseudo-Node.
+    /// Create a new Node instance running code identified by configuration name and entrypoint; the
+    /// entrypoint is only used when creating a WebAssembly Node; it is ignored when creating a
+    /// pseudo-Node.
     ///
-    /// The configuration name is provided in the memory area given by
-    /// `config_buf` and `config_len`; the entrypoint name is provided in the
-    /// memory area given by `entrypoint_buf` and `entrypoint_len`.
+    /// The configuration name is provided in the memory area given by `config_buf` and
+    /// `config_len`; the entrypoint name is provided in the memory area given by `entrypoint_buf`
+    /// and `entrypoint_len`.
+    ///
+    /// The label to assign to the newly created Node is provided in the memory area given by
+    /// `label_buf` and `label_len`.
     ///
     /// Returns the status of the operation, as an [`OakStatus`] value.
     ///

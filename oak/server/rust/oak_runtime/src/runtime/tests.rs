@@ -20,7 +20,7 @@ type NodeBody = dyn Fn(RuntimeProxy) -> Result<(), OakStatus> + Send + Sync;
 
 /// Runs the provided function as if it were the body of a [`Node`] implementation, which is
 /// instantiated by the [`Runtime`] with the provided [`Label`].
-fn run_node_body(node_label: Label, node_body: Box<NodeBody>) {
+fn run_node_body(node_label: &Label, node_body: Box<NodeBody>) {
     let configuration = crate::runtime::Configuration {
         nodes: maplit::hashmap![
             "log".to_string() => crate::node::Configuration::LogNode,
@@ -58,29 +58,111 @@ fn run_node_body(node_label: Label, node_body: Box<NodeBody>) {
     assert_eq!(Ok(()), result);
 }
 
-/// Create a test Node that creates a channel and succeeds.
+/// Returns a non-trivial label for testing.
+fn test_label() -> Label {
+    Label {
+        secrecy_tags: vec![oak_abi::label::authorization_bearer_token_hmac_tag(&[
+            1, 1, 1,
+        ])],
+        integrity_tags: vec![],
+    }
+}
+
+/// Checks that a panic in the node body actually causes the test case to fail, and does not
+/// accidentally get ignored.
 #[test]
-fn create_channel_success() {
+#[ignore]
+#[should_panic]
+fn panic_check() {
+    let label = test_label();
     run_node_body(
-        Label::public_trusted(),
-        Box::new(|runtime| {
+        &label,
+        Box::new(|_runtime| {
+            panic!("testing that panic works");
+        }),
+    );
+}
+
+/// Create a test Node that creates a Channel with the same label and succeeds.
+#[test]
+fn create_channel_same_label_ok() {
+    let label = test_label();
+    let label_clone = label.clone();
+    run_node_body(
+        &label,
+        Box::new(move |runtime| {
             // Attempt to perform an operation that requires the [`Runtime`] to have created an
             // appropriate [`NodeInfo`] instance.
-            let (_write_handle, _read_handle) = runtime.channel_create(&Label::public_trusted());
+            let result = runtime.channel_create(&label_clone);
+            assert_eq!(true, result.is_ok());
             Ok(())
         }),
     );
 }
 
-/// Create a test Node that creates a Node and succeeds.
+/// Create a test Node that creates a Channel with a less secret label and fails.
+///
+/// If this succeeded, it would be a violation of information flow control, since the original
+/// secret Node would be able to spawn "less secret / public" Channels and use their side effects as
+/// a covert channel to exfiltrate secret data.
 #[test]
-fn create_node_success() {
+fn create_channel_less_secret_label_err() {
+    let initial_label = Label {
+        secrecy_tags: vec![oak_abi::label::authorization_bearer_token_hmac_tag(&[
+            1, 1, 1,
+        ])],
+        integrity_tags: vec![],
+    };
+    let less_secret_label = Label {
+        secrecy_tags: vec![],
+        integrity_tags: vec![],
+    };
     run_node_body(
-        Label::public_trusted(),
-        Box::new(|runtime| {
-            let (_write_handle, read_handle) = runtime.channel_create(&Label::public_trusted());
-            let result =
-                runtime.node_create("log", "unused", &Label::public_trusted(), read_handle);
+        &initial_label,
+        Box::new(move |runtime| {
+            let result = runtime.channel_create(&less_secret_label);
+            assert_eq!(Err(OakStatus::ErrPermissionDenied), result);
+            Ok(())
+        }),
+    );
+}
+
+/// Create a test Node that creates a Channel with a less secret label and succeeds.
+#[test]
+fn create_channel_more_secret_label_ok() {
+    let initial_label = Label {
+        secrecy_tags: vec![oak_abi::label::authorization_bearer_token_hmac_tag(&[
+            1, 1, 1,
+        ])],
+        integrity_tags: vec![],
+    };
+    let more_secret_label = Label {
+        secrecy_tags: vec![
+            oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]),
+            oak_abi::label::authorization_bearer_token_hmac_tag(&[2, 2, 2]),
+        ],
+        integrity_tags: vec![],
+    };
+    run_node_body(
+        &initial_label,
+        Box::new(move |runtime| {
+            let result = runtime.channel_create(&more_secret_label);
+            assert_eq!(true, result.is_ok());
+            Ok(())
+        }),
+    );
+}
+
+/// Create a test Node that creates a Node with the same label and succeeds.
+#[test]
+fn create_node_same_label_ok() {
+    let label = test_label();
+    let label_clone = label.clone();
+    run_node_body(
+        &label,
+        Box::new(move |runtime| {
+            let (_write_handle, read_handle) = runtime.channel_create(&label_clone)?;
+            let result = runtime.node_create("log", "unused", &label_clone, read_handle);
             assert_eq!(Ok(()), result);
             Ok(())
         }),
@@ -89,15 +171,17 @@ fn create_node_success() {
 
 /// Create a test Node that creates a Node with a non-existing configuration name and fails.
 #[test]
-fn create_node_invalid_configuration() {
+fn create_node_invalid_configuration_err() {
+    let label = test_label();
+    let label_clone = label.clone();
     run_node_body(
-        Label::public_trusted(),
-        Box::new(|runtime| {
-            let (_write_handle, read_handle) = runtime.channel_create(&Label::public_trusted());
+        &label,
+        Box::new(move |runtime| {
+            let (_write_handle, read_handle) = runtime.channel_create(&label_clone)?;
             let result = runtime.node_create(
                 "invalid-configuration-name",
                 "unused",
-                &Label::public_trusted(),
+                &label_clone,
                 read_handle,
             );
             assert_eq!(Err(OakStatus::ErrInvalidArgs), result);
@@ -106,26 +190,58 @@ fn create_node_invalid_configuration() {
     );
 }
 
-/// Create a test Node that creates a Node with a more public label and fails.
+/// Create a test Node that creates a Node with a less secret label and fails.
 ///
 /// If this succeeded, it would be a violation of information flow control, since the original
-/// secret Node would be able to spawn "public" Nodes and use their side effects as a covert
-/// channel to exfiltrate secret data.
+/// secret Node would be able to spawn "less secret / public" Nodes and use their side effects as a
+/// covert channel to exfiltrate secret data.
 #[test]
-fn create_node_more_public_label() {
-    let secret_label = Label {
+fn create_node_less_secret_label_err() {
+    let initial_label = Label {
         secrecy_tags: vec![oak_abi::label::authorization_bearer_token_hmac_tag(&[
             1, 1, 1,
         ])],
         integrity_tags: vec![],
     };
+    let less_secret_label = Label {
+        secrecy_tags: vec![],
+        integrity_tags: vec![],
+    };
+    let initial_label_clone = initial_label.clone();
     run_node_body(
-        secret_label,
-        Box::new(|runtime| {
-            let (_write_handle, read_handle) = runtime.channel_create(&Label::public_trusted());
-            let result =
-                runtime.node_create("log", "unused", &Label::public_trusted(), read_handle);
+        &initial_label,
+        Box::new(move |runtime| {
+            let (_write_handle, read_handle) = runtime.channel_create(&initial_label_clone)?;
+            let result = runtime.node_create("log", "unused", &less_secret_label, read_handle);
             assert_eq!(Err(OakStatus::ErrPermissionDenied), result);
+            Ok(())
+        }),
+    );
+}
+
+/// Create a test Node that creates a Node with a more secret label and succeeds.
+#[test]
+fn create_node_more_secret_label_ok() {
+    let initial_label = Label {
+        secrecy_tags: vec![oak_abi::label::authorization_bearer_token_hmac_tag(&[
+            1, 1, 1,
+        ])],
+        integrity_tags: vec![],
+    };
+    let more_secret_label = Label {
+        secrecy_tags: vec![
+            oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]),
+            oak_abi::label::authorization_bearer_token_hmac_tag(&[2, 2, 2]),
+        ],
+        integrity_tags: vec![],
+    };
+    let initial_label_clone = initial_label.clone();
+    run_node_body(
+        &initial_label,
+        Box::new(move |runtime| {
+            let (_write_handle, read_handle) = runtime.channel_create(&initial_label_clone)?;
+            let result = runtime.node_create("log", "unused", &more_secret_label, read_handle);
+            assert_eq!(Ok(()), result);
             Ok(())
         }),
     );
@@ -133,11 +249,13 @@ fn create_node_more_public_label() {
 
 #[test]
 fn wait_on_channels_immediately_returns_if_any_channel_is_orphaned() {
+    let label = test_label();
+    let label_clone = label.clone();
     run_node_body(
-        Label::public_trusted(),
-        Box::new(|runtime| {
-            let (write_handle_0, read_handle_0) = runtime.channel_create(&Label::public_trusted());
-            let (_write_handle_1, read_handle_1) = runtime.channel_create(&Label::public_trusted());
+        &label,
+        Box::new(move |runtime| {
+            let (write_handle_0, read_handle_0) = runtime.channel_create(&label_clone)?;
+            let (_write_handle_1, read_handle_1) = runtime.channel_create(&label_clone)?;
 
             // Close the write_handle; this should make the channel Orphaned
             let result = runtime.channel_close(write_handle_0);
@@ -158,10 +276,12 @@ fn wait_on_channels_immediately_returns_if_any_channel_is_orphaned() {
 
 #[test]
 fn wait_on_channels_blocks_if_all_channels_have_status_not_ready() {
+    let label = test_label();
+    let label_clone = label.clone();
     run_node_body(
-        Label::public_trusted(),
-        Box::new(|runtime| {
-            let (write_handle, read_handle) = runtime.channel_create(&Label::public_trusted());
+        &label,
+        Box::new(move |runtime| {
+            let (write_handle, read_handle) = runtime.channel_create(&label_clone)?;
 
             // Change the status of the channel concurrently, to unpark the waiting thread.
             let runtime_copy = runtime.clone();
@@ -185,11 +305,13 @@ fn wait_on_channels_blocks_if_all_channels_have_status_not_ready() {
 
 #[test]
 fn wait_on_channels_immediately_returns_if_any_channel_is_invalid() {
+    let label = test_label();
+    let label_clone = label.clone();
     run_node_body(
-        Label::public_trusted(),
-        Box::new(|runtime| {
-            let (write_handle, _read_handle) = runtime.channel_create(&Label::public_trusted());
-            let (_write_handle, read_handle) = runtime.channel_create(&Label::public_trusted());
+        &label,
+        Box::new(move |runtime| {
+            let (write_handle, _read_handle) = runtime.channel_create(&label_clone)?;
+            let (_write_handle, read_handle) = runtime.channel_create(&label_clone)?;
 
             let result = runtime.wait_on_channels(&[write_handle, read_handle]);
             assert_eq!(
@@ -206,8 +328,9 @@ fn wait_on_channels_immediately_returns_if_any_channel_is_invalid() {
 
 #[test]
 fn wait_on_channels_immediately_returns_if_the_input_list_is_empty() {
+    let label = test_label();
     run_node_body(
-        Label::public_trusted(),
+        &label,
         Box::new(|runtime| {
             let result = runtime.wait_on_channels(&[]);
             assert_eq!(Ok(Vec::<ChannelReadStatus>::new()), result);

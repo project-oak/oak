@@ -17,6 +17,7 @@
 //! Wrappers for Oak SDK types to allow their use with [`std::io`].
 
 use crate::OakStatus;
+use oak_abi::label::Label;
 use std::io;
 
 mod decodable;
@@ -32,6 +33,13 @@ pub use sender::Sender;
 /// Create a new channel for transmission of `Encodable` and `Decodable` types.
 pub fn channel_create<T: Encodable + Decodable>() -> Result<(Sender<T>, Receiver<T>), OakStatus> {
     let (wh, rh) = crate::channel_create()?;
+    Ok((Sender::<T>::new(wh), Receiver::<T>::new(rh)))
+}
+
+pub fn channel_create_with_label<T: Encodable + Decodable>(
+    label: &Label,
+) -> Result<(Sender<T>, Receiver<T>), OakStatus> {
+    let (wh, rh) = crate::channel_create_with_label(label)?;
     Ok((Sender::<T>::new(wh), Receiver::<T>::new(rh)))
 }
 

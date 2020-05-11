@@ -15,23 +15,11 @@ output.
 Build and run the Backend with the following command:
 
 ```bash
+export RUST_LOG=info
 cargo run --release --package=aggregator_backend
 ```
 
 Backend code is in the `backend` directory.
-
-### Client
-
-Simple client that connects to the Aggregator and sends a data sample via gRPC.
-
-Build and run the Client with the following command:
-
-```bash
-./scripts/build_example -e aggregator
-./bazel-client-bin/examples/aggregator/client/client --address=127.0.0.1:8080 --bucket=test --data=1:10,2:20,3:30
-```
-
-Client code is in the `client` directory.
 
 ### Aggregator
 
@@ -47,12 +35,37 @@ a Sparse Vector - a dictionary with integer keys.
 Build and run the Aggregator with the following command:
 
 ```bash
+./scripts/build_example -e aggregator
 ./scripts/build_server -s base
-./bazel-bin/oak/server/loader/oak_runner --application=./bazel-client-bin/examples/aggregator/config/config.bin
+./bazel-clang-bin/oak/server/loader/oak_runner \
+  --application=./bazel-client-bin/examples/aggregator/config/config.bin \
+  --private_key=./examples/certs/local/local.key \
+  --cert_chain=./examples/certs/local/local.pem
 ```
 
 Aggregator code is in `common` and `module` directories (where `common` defines
 a generic Aggregator data structure).
+
+### Client
+
+Simple client that connects to the Aggregator and sends a data sample via gRPC.
+
+Build and run the Client with the following command:
+
+```bash
+./scripts/build_example -e aggregator
+./bazel-client-bin/examples/aggregator/client/client \
+  --address=127.0.0.1:8080 \
+  --ca_cert=./examples/certs/local/local.pem \
+  --bucket=test \
+  --data=1:10,2:20,3:30
+```
+
+A common use case is to keep running the client until the aggregation threshold
+is reached, at which point the aggregator should release the aggregated data to
+the backend over gRPC.
+
+Client code is in the `client` directory.
 
 ## Deployment
 

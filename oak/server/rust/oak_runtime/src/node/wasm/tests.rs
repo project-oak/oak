@@ -33,7 +33,7 @@ fn start_node<S: AsRef<[u8]>>(buffer: S, entrypoint: &str) -> Result<(), OakStat
         },
     );
     let proxy = RuntimeProxy::create_runtime(configuration);
-    let (_write_handle, read_handle) = proxy.channel_create(&Label::public_trusted());
+    let (_write_handle, read_handle) = proxy.channel_create(&Label::public_trusted())?;
 
     let result = proxy.node_create(
         "test_module",

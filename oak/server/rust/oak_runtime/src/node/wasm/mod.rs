@@ -210,16 +210,18 @@ impl WasmInterface {
         self.runtime.channel_close(handle)
     }
 
-    /// Corresponds to the host ABI function [`channel_create: (usize, usize) ->
+    /// Corresponds to the host ABI function [`channel_create: (usize, usize, usize, usize) ->
     /// u32`](oak_abi::channel_create).
     fn channel_create(
         &mut self,
         write_addr: AbiPointer,
         read_addr: AbiPointer,
+        label_ptr: AbiPointer,
+        label_length: AbiPointerOffset,
     ) -> Result<(), OakStatus> {
         debug!(
-            "{}: channel_create({}, {})",
-            self.pretty_name, write_addr, read_addr
+            "{}: channel_create({}, {}, {}, {})",
+            self.pretty_name, write_addr, read_addr, label_ptr, label_length
         );
 
         if self.runtime.is_terminating() {
@@ -230,10 +232,25 @@ impl WasmInterface {
         self.validate_ptr(write_addr, 8)?;
         self.validate_ptr(read_addr, 8)?;
 
-        let (write_handle, read_handle) = self
-            .runtime
-            // TODO(#630): Let caller provide this label via the Wasm ABI.
-            .channel_create(&Label::public_trusted());
+        let label_bytes = self
+            .get_memory()
+            .get(label_ptr, label_length as usize)
+            .map_err(|err| {
+                error!(
+                    "{}: channel_create(): Unable to read label from guest memory: {:?}",
+                    self.pretty_name, err
+                );
+                OakStatus::ErrInvalidArgs
+            })?;
+        let label = Label::deserialize(&label_bytes).ok_or_else(|| {
+            error!(
+                "{}: channel_create: could not deserialize label",
+                self.pretty_name
+            );
+            OakStatus::ErrInvalidArgs
+        })?;
+
+        let (write_handle, read_handle) = self.runtime.channel_create(&label)?;
 
         debug!(
             "{}: channel_create() -> ({}, {})",
@@ -504,9 +521,12 @@ impl wasmi::Externals for WasmInterface {
                 map_host_errors(self.random_get(args.nth_checked(0)?, args.nth_checked(1)?))
             }
             CHANNEL_CLOSE => map_host_errors(self.channel_close(args.nth_checked(0)?)),
-            CHANNEL_CREATE => {
-                map_host_errors(self.channel_create(args.nth_checked(0)?, args.nth_checked(1)?))
-            }
+            CHANNEL_CREATE => map_host_errors(self.channel_create(
+                args.nth_checked(0)?,
+                args.nth_checked(1)?,
+                args.nth_checked(2)?,
+                args.nth_checked(3)?,
+            )),
             CHANNEL_WRITE => map_host_errors(self.channel_write(
                 args.nth_checked(0)?,
                 args.nth_checked(1)?,
@@ -588,8 +608,10 @@ fn oak_resolve_func(
             CHANNEL_CREATE,
             wasmi::Signature::new(
                 &[
-                    ABI_USIZE, // write
-                    ABI_USIZE, // read
+                    ABI_USIZE, // write handle (out)
+                    ABI_USIZE, // read handle (out)
+                    ABI_USIZE, // label_buf
+                    ABI_USIZE, // label_len
                 ][..],
                 Some(ValueType::I32),
             ),
@@ -614,10 +636,10 @@ fn oak_resolve_func(
                     ValueType::I64, // handle
                     ABI_USIZE,      // buf
                     ABI_USIZE,      // size
-                    ABI_USIZE,      // actual_size
+                    ABI_USIZE,      // actual_size (out)
                     ABI_USIZE,      // handle_buf
                     ValueType::I32, // handle_count
-                    ABI_USIZE,      // actual_handle_count
+                    ABI_USIZE,      // actual_handle_count (out)
                 ][..],
                 Some(ValueType::I32),
             ),
