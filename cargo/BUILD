@@ -18,7 +18,7 @@ alias(
 )
 alias(
     name = "futures",
-    actual = "@raze__futures__0_3_4//:futures",
+    actual = "@raze__futures__0_3_5//:futures",
 )
 alias(
     name = "http",
@@ -34,7 +34,7 @@ alias(
 )
 alias(
     name = "itertools",
-    actual = "@raze__itertools__0_8_2//:itertools",
+    actual = "@raze__itertools__0_9_0//:itertools",
 )
 alias(
     name = "lazy_static",
@@ -65,8 +65,12 @@ alias(
     actual = "@raze__regex__1_3_7//:regex",
 )
 alias(
+    name = "rustls",
+    actual = "@raze__rustls__0_16_0//:rustls",
+)
+alias(
     name = "signal_hook",
-    actual = "@raze__signal_hook__0_1_13//:signal_hook",
+    actual = "@raze__signal_hook__0_1_15//:signal_hook",
 )
 alias(
     name = "simple_logger",

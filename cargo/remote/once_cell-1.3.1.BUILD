@@ -12,7 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "notice", # "MIT"
+  "restricted", # "MIT OR Apache-2.0"
 ])
 
 load(
@@ -23,34 +23,29 @@ load(
 )
 
 
+# Unsupported target "bench" with type "example" omitted
+# Unsupported target "bench_acquire" with type "example" omitted
+# Unsupported target "bench_vs_lazy_static" with type "example" omitted
+# Unsupported target "lazy_static" with type "example" omitted
 
 rust_library(
-    name = "clap",
+    name = "once_cell",
     crate_root = "src/lib.rs",
     crate_type = "lib",
-    edition = "2015",
+    edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__ansi_term__0_11_0//:ansi_term",
-        "@raze__atty__0_2_14//:atty",
-        "@raze__bitflags__1_2_1//:bitflags",
-        "@raze__strsim__0_8_0//:strsim",
-        "@raze__textwrap__0_11_0//:textwrap",
-        "@raze__unicode_width__0_1_7//:unicode_width",
-        "@raze__vec_map__0_8_1//:vec_map",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "2.33.0",
+    version = "1.3.1",
     crate_features = [
-        "ansi_term",
-        "atty",
-        "color",
-        "default",
-        "strsim",
-        "suggestions",
-        "vec_map",
+        "std",
     ],
 )
 
+# Unsupported target "reentrant_init_deadlocks" with type "example" omitted
+# Unsupported target "regex" with type "example" omitted
+# Unsupported target "test" with type "test" omitted
+# Unsupported target "test_synchronization" with type "example" omitted

@@ -70,7 +70,7 @@ rust_library(
     edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__clap__2_33_0//:clap",
+        "@raze__clap__2_33_1//:clap",
         "@raze__lazy_static__1_4_0//:lazy_static",
         "@raze__structopt_derive__0_4_7//:structopt_derive",
     ],

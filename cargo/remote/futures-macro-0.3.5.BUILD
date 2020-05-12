@@ -25,21 +25,22 @@ load(
 
 
 rust_library(
-    name = "futures_sink",
+    name = "futures_macro",
     crate_root = "src/lib.rs",
-    crate_type = "lib",
+    crate_type = "proc-macro",
     edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
+        "@raze__proc_macro_hack__0_5_15//:proc_macro_hack",
+        "@raze__proc_macro2__1_0_10//:proc_macro2",
+        "@raze__quote__1_0_3//:quote",
+        "@raze__syn__1_0_18//:syn",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.3.4",
+    version = "0.3.5",
     crate_features = [
-        "alloc",
-        "default",
-        "std",
     ],
 )
 

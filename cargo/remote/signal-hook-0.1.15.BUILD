@@ -12,7 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "restricted", # "MIT OR Apache-2.0"
+  "notice", # "Apache-2.0,MIT"
 ])
 
 load(
@@ -23,26 +23,28 @@ load(
 )
 
 
+# Unsupported target "cleanup" with type "test" omitted
+# Unsupported target "cleanup_indirect" with type "test" omitted
+# Unsupported target "default" with type "test" omitted
+# Unsupported target "iterator" with type "test" omitted
 
 rust_library(
-    name = "futures_executor",
+    name = "signal_hook",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__futures_core__0_3_4//:futures_core",
-        "@raze__futures_task__0_3_4//:futures_task",
-        "@raze__futures_util__0_3_4//:futures_util",
+        "@raze__libc__0_2_69//:libc",
+        "@raze__signal_hook_registry__1_2_0//:signal_hook_registry",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.3.4",
+    version = "0.1.15",
     crate_features = [
-        "std",
     ],
 )
 
-# Unsupported target "local_pool" with type "test" omitted
-# Unsupported target "thread_notify" with type "bench" omitted
+# Unsupported target "tokio" with type "test" omitted
+# Unsupported target "version" with type "test" omitted

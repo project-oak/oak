@@ -170,12 +170,12 @@ def raze_fetch_remote_crates():
     )
 
     _new_http_archive(
-        name = "raze__clap__2_33_0",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/clap/clap-2.33.0.crate",
+        name = "raze__clap__2_33_1",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/clap/clap-2.33.1.crate",
         type = "tar.gz",
-        strip_prefix = "clap-2.33.0",
+        strip_prefix = "clap-2.33.1",
 
-        build_file = Label("//cargo/remote:clap-2.33.0.BUILD"),
+        build_file = Label("//cargo/remote:clap-2.33.1.BUILD"),
     )
 
     _new_http_archive(
@@ -224,84 +224,84 @@ def raze_fetch_remote_crates():
     )
 
     _new_http_archive(
-        name = "raze__futures__0_3_4",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/futures/futures-0.3.4.crate",
+        name = "raze__futures__0_3_5",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/futures/futures-0.3.5.crate",
         type = "tar.gz",
-        strip_prefix = "futures-0.3.4",
+        strip_prefix = "futures-0.3.5",
 
-        build_file = Label("//cargo/remote:futures-0.3.4.BUILD"),
+        build_file = Label("//cargo/remote:futures-0.3.5.BUILD"),
     )
 
     _new_http_archive(
-        name = "raze__futures_channel__0_3_4",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/futures-channel/futures-channel-0.3.4.crate",
+        name = "raze__futures_channel__0_3_5",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/futures-channel/futures-channel-0.3.5.crate",
         type = "tar.gz",
-        strip_prefix = "futures-channel-0.3.4",
+        strip_prefix = "futures-channel-0.3.5",
 
-        build_file = Label("//cargo/remote:futures-channel-0.3.4.BUILD"),
+        build_file = Label("//cargo/remote:futures-channel-0.3.5.BUILD"),
     )
 
     _new_http_archive(
-        name = "raze__futures_core__0_3_4",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/futures-core/futures-core-0.3.4.crate",
+        name = "raze__futures_core__0_3_5",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/futures-core/futures-core-0.3.5.crate",
         type = "tar.gz",
-        strip_prefix = "futures-core-0.3.4",
+        strip_prefix = "futures-core-0.3.5",
 
-        build_file = Label("//cargo/remote:futures-core-0.3.4.BUILD"),
+        build_file = Label("//cargo/remote:futures-core-0.3.5.BUILD"),
     )
 
     _new_http_archive(
-        name = "raze__futures_executor__0_3_4",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/futures-executor/futures-executor-0.3.4.crate",
+        name = "raze__futures_executor__0_3_5",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/futures-executor/futures-executor-0.3.5.crate",
         type = "tar.gz",
-        strip_prefix = "futures-executor-0.3.4",
+        strip_prefix = "futures-executor-0.3.5",
 
-        build_file = Label("//cargo/remote:futures-executor-0.3.4.BUILD"),
+        build_file = Label("//cargo/remote:futures-executor-0.3.5.BUILD"),
     )
 
     _new_http_archive(
-        name = "raze__futures_io__0_3_4",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/futures-io/futures-io-0.3.4.crate",
+        name = "raze__futures_io__0_3_5",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/futures-io/futures-io-0.3.5.crate",
         type = "tar.gz",
-        strip_prefix = "futures-io-0.3.4",
+        strip_prefix = "futures-io-0.3.5",
 
-        build_file = Label("//cargo/remote:futures-io-0.3.4.BUILD"),
+        build_file = Label("//cargo/remote:futures-io-0.3.5.BUILD"),
     )
 
     _new_http_archive(
-        name = "raze__futures_macro__0_3_4",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/futures-macro/futures-macro-0.3.4.crate",
+        name = "raze__futures_macro__0_3_5",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/futures-macro/futures-macro-0.3.5.crate",
         type = "tar.gz",
-        strip_prefix = "futures-macro-0.3.4",
+        strip_prefix = "futures-macro-0.3.5",
 
-        build_file = Label("//cargo/remote:futures-macro-0.3.4.BUILD"),
+        build_file = Label("//cargo/remote:futures-macro-0.3.5.BUILD"),
     )
 
     _new_http_archive(
-        name = "raze__futures_sink__0_3_4",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/futures-sink/futures-sink-0.3.4.crate",
+        name = "raze__futures_sink__0_3_5",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/futures-sink/futures-sink-0.3.5.crate",
         type = "tar.gz",
-        strip_prefix = "futures-sink-0.3.4",
+        strip_prefix = "futures-sink-0.3.5",
 
-        build_file = Label("//cargo/remote:futures-sink-0.3.4.BUILD"),
+        build_file = Label("//cargo/remote:futures-sink-0.3.5.BUILD"),
     )
 
     _new_http_archive(
-        name = "raze__futures_task__0_3_4",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/futures-task/futures-task-0.3.4.crate",
+        name = "raze__futures_task__0_3_5",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/futures-task/futures-task-0.3.5.crate",
         type = "tar.gz",
-        strip_prefix = "futures-task-0.3.4",
+        strip_prefix = "futures-task-0.3.5",
 
-        build_file = Label("//cargo/remote:futures-task-0.3.4.BUILD"),
+        build_file = Label("//cargo/remote:futures-task-0.3.5.BUILD"),
     )
 
     _new_http_archive(
-        name = "raze__futures_util__0_3_4",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/futures-util/futures-util-0.3.4.crate",
+        name = "raze__futures_util__0_3_5",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/futures-util/futures-util-0.3.5.crate",
         type = "tar.gz",
-        strip_prefix = "futures-util-0.3.4",
+        strip_prefix = "futures-util-0.3.5",
 
-        build_file = Label("//cargo/remote:futures-util-0.3.4.BUILD"),
+        build_file = Label("//cargo/remote:futures-util-0.3.5.BUILD"),
     )
 
     _new_http_archive(
@@ -401,6 +401,15 @@ def raze_fetch_remote_crates():
         strip_prefix = "itertools-0.8.2",
 
         build_file = Label("//cargo/remote:itertools-0.8.2.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__itertools__0_9_0",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/itertools/itertools-0.9.0.crate",
+        type = "tar.gz",
+        strip_prefix = "itertools-0.9.0",
+
+        build_file = Label("//cargo/remote:itertools-0.9.0.BUILD"),
     )
 
     _new_http_archive(
@@ -545,6 +554,15 @@ def raze_fetch_remote_crates():
         strip_prefix = "num-traits-0.2.11",
 
         build_file = Label("//cargo/remote:num-traits-0.2.11.BUILD"),
+    )
+
+    _new_http_archive(
+        name = "raze__once_cell__1_3_1",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/once_cell/once_cell-1.3.1.crate",
+        type = "tar.gz",
+        strip_prefix = "once_cell-1.3.1",
+
+        build_file = Label("//cargo/remote:once_cell-1.3.1.BUILD"),
     )
 
     _new_http_archive(
@@ -791,12 +809,12 @@ def raze_fetch_remote_crates():
     )
 
     _new_http_archive(
-        name = "raze__signal_hook__0_1_13",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/signal-hook/signal-hook-0.1.13.crate",
+        name = "raze__signal_hook__0_1_15",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/signal-hook/signal-hook-0.1.15.crate",
         type = "tar.gz",
-        strip_prefix = "signal-hook-0.1.13",
+        strip_prefix = "signal-hook-0.1.15",
 
-        build_file = Label("//cargo/remote:signal-hook-0.1.13.BUILD"),
+        build_file = Label("//cargo/remote:signal-hook-0.1.15.BUILD"),
     )
 
     _new_http_archive(
@@ -1187,12 +1205,12 @@ def raze_fetch_remote_crates():
     )
 
     _new_http_archive(
-        name = "raze__vec_map__0_8_1",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/vec_map/vec_map-0.8.1.crate",
+        name = "raze__vec_map__0_8_2",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/vec_map/vec_map-0.8.2.crate",
         type = "tar.gz",
-        strip_prefix = "vec_map-0.8.1",
+        strip_prefix = "vec_map-0.8.2",
 
-        build_file = Label("//cargo/remote:vec_map-0.8.1.BUILD"),
+        build_file = Label("//cargo/remote:vec_map-0.8.2.BUILD"),
     )
 
     _new_http_archive(

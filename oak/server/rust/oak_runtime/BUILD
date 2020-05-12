@@ -41,6 +41,7 @@ rust_library(
         "//cargo:prost_types",
         "//cargo:rand",
         "//cargo:regex",
+        "//cargo:rustls",
         "//cargo:tokio",
         "//cargo:tonic",
         "//cargo:wasmi",

@@ -12,7 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "restricted", # "MIT OR Apache-2.0"
+  "notice", # "MIT"
 ])
 
 load(
@@ -25,20 +25,32 @@ load(
 
 
 rust_library(
-    name = "futures_task",
+    name = "clap",
     crate_root = "src/lib.rs",
     crate_type = "lib",
-    edition = "2018",
+    edition = "2015",
     srcs = glob(["**/*.rs"]),
     deps = [
+        "@raze__ansi_term__0_11_0//:ansi_term",
+        "@raze__atty__0_2_14//:atty",
+        "@raze__bitflags__1_2_1//:bitflags",
+        "@raze__strsim__0_8_0//:strsim",
+        "@raze__textwrap__0_11_0//:textwrap",
+        "@raze__unicode_width__0_1_7//:unicode_width",
+        "@raze__vec_map__0_8_2//:vec_map",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.3.4",
+    version = "2.33.1",
     crate_features = [
-        "alloc",
-        "std",
+        "ansi_term",
+        "atty",
+        "color",
+        "default",
+        "strsim",
+        "suggestions",
+        "vec_map",
     ],
 )
 

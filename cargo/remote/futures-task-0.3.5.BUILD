@@ -25,18 +25,21 @@ load(
 
 
 rust_library(
-    name = "futures_io",
+    name = "futures_task",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
+        "@raze__once_cell__1_3_1//:once_cell",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.3.4",
+    version = "0.3.5",
     crate_features = [
+        "alloc",
+        "once_cell",
         "std",
     ],
 )

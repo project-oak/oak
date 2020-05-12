@@ -32,7 +32,7 @@ rust_library(
     srcs = glob(["**/*.rs"]),
     deps = [
         "@raze__async_stream_impl__0_2_1//:async_stream_impl",
-        "@raze__futures_core__0_3_4//:futures_core",
+        "@raze__futures_core__0_3_5//:futures_core",
     ],
     rustc_flags = [
         "--cap-lints=allow",

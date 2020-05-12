@@ -31,7 +31,7 @@ rust_library(
     edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__futures_core__0_3_4//:futures_core",
+        "@raze__futures_core__0_3_5//:futures_core",
         "@raze__log__0_4_8//:log",
         "@raze__pin_project__0_4_9//:pin_project",
         "@raze__tokio__0_2_19//:tokio",

@@ -35,9 +35,9 @@ rust_library(
     deps = [
         "@raze__bytes__0_5_4//:bytes",
         "@raze__fnv__1_0_6//:fnv",
-        "@raze__futures_core__0_3_4//:futures_core",
-        "@raze__futures_sink__0_3_4//:futures_sink",
-        "@raze__futures_util__0_3_4//:futures_util",
+        "@raze__futures_core__0_3_5//:futures_core",
+        "@raze__futures_sink__0_3_5//:futures_sink",
+        "@raze__futures_util__0_3_5//:futures_util",
         "@raze__http__0_2_1//:http",
         "@raze__indexmap__1_0_2//:indexmap",
         "@raze__log__0_4_8//:log",

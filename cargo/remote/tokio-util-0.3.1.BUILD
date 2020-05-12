@@ -37,8 +37,8 @@ rust_library(
     srcs = glob(["**/*.rs"]),
     deps = [
         "@raze__bytes__0_5_4//:bytes",
-        "@raze__futures_core__0_3_4//:futures_core",
-        "@raze__futures_sink__0_3_4//:futures_sink",
+        "@raze__futures_core__0_3_5//:futures_core",
+        "@raze__futures_sink__0_3_5//:futures_sink",
         "@raze__log__0_4_8//:log",
         "@raze__pin_project_lite__0_1_4//:pin_project_lite",
         "@raze__tokio__0_2_19//:tokio",
