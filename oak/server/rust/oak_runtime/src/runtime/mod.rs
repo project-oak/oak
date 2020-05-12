@@ -723,23 +723,6 @@ impl Runtime {
         }
     }
 
-    /// Returns whether the given Node is allowed to read from all the provided channels,
-    /// according to their respective [`Label`]s.
-    fn validate_can_read_from_channels(
-        &self,
-        node_id: NodeId,
-        channel_halves: &[ChannelHalf],
-    ) -> Result<(), OakStatus> {
-        let all_channel_halves_ok = channel_halves
-            .iter()
-            .all(|half| self.validate_can_read_from_channel(node_id, half).is_ok());
-        if all_channel_halves_ok {
-            Ok(())
-        } else {
-            Err(OakStatus::ErrPermissionDenied)
-        }
-    }
-
     /// Returns whether the given Node is allowed to write to the provided channel, according to
     /// their respective [`Label`]s.
     fn validate_can_write_to_channel(
@@ -809,17 +792,25 @@ impl Runtime {
             .collect()
     }
 
-    /// Waits on a slice of `ChannelHalf`s, blocking until one of the following conditions occurs:
-    /// - If the [`Runtime`] is terminating, return immediately with an `ErrTerminated` overall
-    ///   status.
-    /// - If all provided read channels are in an erroneous status, e.g. when all channels are
-    ///   orphaned, fill in the returned status vector and return an overall `Ok` status.
-    /// - If any of the channels is able to read a message, set the corresponding element in the
-    ///   returned status vector to `ReadReady`, and return an overall `Ok` status.
+    // TODO(#970): Improve the documentation.
+    /// Waits on a slice of `ChannelHalf`s, blocking until one of the following conditions:
+    /// - If the [`Runtime`] is terminating this will return immediately with an `ErrTerminated`
+    ///   status for each channel.
+    /// - If any of the readers is in an erroneous status, e.g. when a channel is orphaned, this
+    ///   will immediately return with all the channels statuses set in the returned vector.
+    /// - If any of the channels is able to read a message, the corresponding element in the
+    ///   returned vector will be set to `Ok(ReadReady)`, with `Ok(NotReady)` signaling the channel
+    ///   has no message available.
     ///
-    /// In particular, if there is at least one channel in good status and no messages on said
-    /// channel available, [`Runtime::wait_on_channels`] will continue to block until a message is
-    /// available.
+    /// In particular, if all channels are in a good status but no messages are available on any of
+    /// the channels (i.e., all channels have status [`ChannelReadStatus::NotReady`]),
+    /// [`Runtime::wait_on_channels`] will continue to block until a message is available on one of
+    /// the channels, or one of the channels is orphaned.
+    ///
+    /// Invariant: The returned vector of [`ChannelReadStatus`] values will be in 1-1
+    /// correspondence with the passed-in vector of [`oak_abi::Handle`]s.
+    ///
+    /// [`Runtime`]: crate::runtime::Runtime
     fn wait_on_channels(
         &self,
         node_id: NodeId,
@@ -835,8 +826,6 @@ impl Runtime {
                 readers.push(half);
             }
         }
-
-        self.validate_can_read_from_channels(node_id, &readers)?;
 
         let thread = thread::current();
         while !self.is_terminating() {
@@ -859,18 +848,15 @@ impl Runtime {
                 })?;
             }
             let statuses = self.readers_statuses(node_id, &readers);
+            // Transcribe the status for valid channels back to the original position
+            // in the list of all statuses.
+            for i in 0..readers.len() {
+                all_statuses[reader_pos[i]] = statuses[i];
+            }
 
-            let all_unreadable = statuses.iter().all(|&s| {
-                s == ChannelReadStatus::InvalidChannel || s == ChannelReadStatus::Orphaned
-            });
-            let any_ready = statuses.iter().any(|&s| s == ChannelReadStatus::ReadReady);
+            let all_not_ready = statuses.iter().all(|&s| s == ChannelReadStatus::NotReady);
 
-            if all_unreadable || any_ready {
-                // Transcribe the status for valid channels back to the original position
-                // in the list of all statuses.
-                for i in 0..readers.len() {
-                    all_statuses[reader_pos[i]] = statuses[i];
-                }
+            if !all_not_ready || read_handles.is_empty() || readers.len() != read_handles.len() {
                 return Ok(all_statuses);
             }
 
@@ -955,15 +941,23 @@ impl Runtime {
     }
 
     /// Determine the readable status of a channel, returning:
-    /// - [`ChannelReadStatus::ReadReady`] if there is at least one message in the channel.
-    /// - [`ChannelReadStatus::Orphaned`] if there are no messages and there are no writers
-    /// - [`ChannelReadStatus::NotReady`] if there are no messages but there are some writers
+    /// - `Ok`([`ChannelReadStatus::ReadReady`]) if there is at least one message in the channel.
+    /// - `Ok`([`ChannelReadStatus::Orphaned`]) if there are no messages and there are no writers.
+    /// - `Ok`([`ChannelReadStatus::NotReady`]) if there are no messages but there are some writers.
+    /// - `Ok`([`ChannelReadStatus::PermissionDenied`]) if the node does not have permission to read
+    ///   from the channel.
+    /// - `Err`([`OakStatus::ErrBadHandle`]) if the input handle does not indicate the read half of
+    ///   a channel.
     fn channel_status(
         &self,
         node_id: NodeId,
         half: &ChannelHalf,
     ) -> Result<ChannelReadStatus, OakStatus> {
-        self.validate_can_read_from_channel(node_id, half)?;
+        if let Err(OakStatus::ErrPermissionDenied) =
+            self.validate_can_read_from_channel(node_id, half)
+        {
+            return Ok(ChannelReadStatus::PermissionDenied);
+        };
         with_reader_channel(half, |channel| {
             Ok(if channel.messages.read().unwrap().front().is_some() {
                 ChannelReadStatus::ReadReady

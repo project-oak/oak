@@ -89,16 +89,14 @@ functions** as
 ### wait_on_channels
 
 `wait_on_channels(usize, u32) -> u32` blocks until data is available for reading
-from one of the specified channel handles. The channel handles are encoded in a
-buffer that holds N contiguous 9-byte chunks, each of which is made up of an
-8-byte channel handle value (little-endian `u64`) followed by a single channel
-status byte. Invalid handles will have an `INVALID_CHANNEL` status, but
-`wait_on_channels` return value will only fail for internal errors or if _all_
-channels are invalid.
-
-If reading from any of the specified (valid) channels would violate
-[information flow control](/docs/concepts.md#labels), returns
-`ERR_PERMISSION_DENIED`.
+from one of the specified channel handles, unless any of the channels is
+invalid, orphaned, or violates the
+[information flow control](/docs/concepts.md#labels). The channel handles are
+encoded in a buffer that holds N contiguous 9-byte chunks, each of which is made
+up of an 8-byte channel handle value (little-endian u64) followed by a single
+channel status byte. Invalid handles will have an `INVALID_CHANNEL`, `ORPHANED`,
+or `PERMISSION_DENIED` status, but `wait_on_channels` return value will only
+fail for internal errors or if _all_ channels are invalid.
 
 - arg 0: Address of handle status buffer
 - arg 1: Count N of handles provided
