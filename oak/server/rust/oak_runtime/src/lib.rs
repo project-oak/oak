@@ -26,6 +26,7 @@
 pub mod proto;
 
 pub mod config;
+pub mod io;
 pub mod message;
 pub mod metrics;
 pub mod node;

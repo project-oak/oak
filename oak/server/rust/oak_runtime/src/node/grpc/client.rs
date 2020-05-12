@@ -15,11 +15,9 @@
 //
 
 use crate::{
+    io::Receiver,
     node::{
-        grpc::{
-            codec::VecCodec,
-            io::{Invocation, Receiver},
-        },
+        grpc::{codec::VecCodec, invocation::Invocation},
         Node,
     },
     runtime::RuntimeProxy,
@@ -54,9 +52,9 @@ impl GrpcClientNode {
         }
     }
 
-    /// Main loop that handles gRPC invocations from the `receiver`, sends gRPC requests to an
+    /// Main loop that handles gRPC invocations from the `handle`, sends gRPC requests to an
     /// external gRPC service and writes gRPC responses back to the invocation channel.
-    async fn handle_loop(&self, receiver: Receiver) -> Result<(), OakStatus> {
+    async fn handle_loop(&self, runtime: RuntimeProxy, handle: Handle) -> Result<(), OakStatus> {
         // Connect to an external gRPC service.
         let mut handler = loop {
             if let Ok(handler) = self.connect().await {
@@ -67,12 +65,14 @@ impl GrpcClientNode {
             }
         };
 
+        // Create a [`Receiver`] used for reading gRPC invocations.
+        let receiver = Receiver::<Invocation>::new(handle);
         loop {
             // Read a gRPC invocation from the [`Receiver`].
-            let invocation = Invocation::read(&receiver)?;
+            let invocation = receiver.receive(&runtime)?;
 
             // Receive a request from the invocation channel.
-            let request = invocation.receive_request()?;
+            let request = invocation.receive(&runtime)?;
             debug!("Incoming gRPC request: {:?}", request);
 
             // Send an unary request to an external gRPC service and wait for the response.
@@ -80,7 +80,7 @@ impl GrpcClientNode {
 
             // Send a response back to the invocation channel.
             debug!("Sending gRPC response: {:?}", response);
-            invocation.send_response(response)?;
+            invocation.send(response, &runtime)?;
         }
     }
 
@@ -109,9 +109,6 @@ impl GrpcClientNode {
 /// Oak Node implementation for the gRPC client pseudo-Node.
 impl Node for GrpcClientNode {
     fn run(self: Box<Self>, runtime: RuntimeProxy, handle: Handle) {
-        // Create a [`Receiver`] used for reading gRPC invocations.
-        let receiver = Receiver::new(runtime, handle);
-
         // Create an Async runtime for executing futures.
         // https://docs.rs/tokio/
         let mut async_runtime = tokio::runtime::Builder::new()
@@ -132,7 +129,7 @@ impl Node for GrpcClientNode {
             "{}: Starting gRPC client pseudo-Node thread",
             self.node_name
         );
-        let result = async_runtime.block_on(self.handle_loop(receiver));
+        let result = async_runtime.block_on(self.handle_loop(runtime, handle));
         info!(
             "{}: Exiting gRPC client pseudo-Node thread {:?}",
             self.node_name, result
