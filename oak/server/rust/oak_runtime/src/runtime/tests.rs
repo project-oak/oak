@@ -15,12 +15,23 @@
 //
 
 use super::*;
+use std::sync::Once;
+
+static LOG_INIT_ONCE: Once = Once::new();
+
+pub fn init_logging() {
+    LOG_INIT_ONCE.call_once(|| {
+        // Logger panics if it is initalized more than once.
+        simple_logger::init_by_env();
+    });
+}
 
 type NodeBody = dyn Fn(RuntimeProxy) -> Result<(), OakStatus> + Send + Sync;
 
 /// Runs the provided function as if it were the body of a [`Node`] implementation, which is
 /// instantiated by the [`Runtime`] with the provided [`Label`].
 fn run_node_body(node_label: &Label, node_body: Box<NodeBody>) {
+    init_logging();
     let configuration = crate::runtime::Configuration {
         nodes: maplit::hashmap![
             "log".to_string() => crate::node::Configuration::LogNode,
@@ -28,6 +39,7 @@ fn run_node_body(node_label: &Label, node_body: Box<NodeBody>) {
         entry_module: "test_module".to_string(),
         entrypoint: "test_function".to_string(),
     };
+    info!("Create runtime for test");
     let proxy = crate::RuntimeProxy::create_runtime(configuration);
 
     struct TestNode {
@@ -41,6 +53,7 @@ fn run_node_body(node_label: &Label, node_body: Box<NodeBody>) {
     }
 
     // Create a new Node.
+    info!("Create test Node");
     let test_proxy = proxy.clone().runtime.proxy_for_new_node();
     let new_node_id = test_proxy.node_id;
     let new_node_name = format!("TestNode({})", new_node_id.0);
@@ -49,6 +62,7 @@ fn run_node_body(node_label: &Label, node_body: Box<NodeBody>) {
         .node_configure_instance(new_node_id, "test_module.test_function", &node_label);
 
     let node_instance = TestNode { node_body };
+    info!("Start test Node instance");
     let result = proxy.runtime.node_start_instance(
         &new_node_name,
         Box::new(node_instance),

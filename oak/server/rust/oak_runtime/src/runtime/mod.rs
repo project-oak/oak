@@ -38,7 +38,7 @@ mod channel;
 #[cfg(feature = "oak_debug")]
 mod introspect;
 #[cfg(test)]
-mod tests;
+pub mod tests;
 
 pub use channel::{ChannelHalf, ChannelHalfDirection};
 
