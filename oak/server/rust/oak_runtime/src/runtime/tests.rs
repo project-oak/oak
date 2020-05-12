@@ -63,13 +63,25 @@ fn run_node_body(node_label: &Label, node_body: Box<NodeBody>) {
 
     let node_instance = TestNode { node_body };
     info!("Start test Node instance");
-    let result = proxy.runtime.node_start_instance(
-        &new_node_name,
-        Box::new(node_instance),
-        test_proxy,
-        oak_abi::INVALID_HANDLE,
-    );
-    assert_eq!(Ok(()), result);
+    let join_handle = proxy
+        .runtime
+        .clone()
+        .node_start_instance(
+            &new_node_name,
+            Box::new(node_instance),
+            test_proxy,
+            oak_abi::INVALID_HANDLE,
+        )
+        .expect("failed to start test Node");
+
+    // Wait for test Node execution to complete before terminating,
+    // so that any ABI functions invoked by the test Node don't just
+    // return `ErrTerminated`.
+    join_handle.join().expect("test thread panicked!");
+
+    info!("Stop runtime..");
+    proxy.stop_runtime();
+    info!("Stop runtime..done");
 }
 
 /// Returns a non-trivial label for testing.

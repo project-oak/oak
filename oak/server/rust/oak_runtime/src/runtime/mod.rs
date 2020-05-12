@@ -1186,13 +1186,21 @@ impl Runtime {
             .ok_or(OakStatus::ErrInvalidArgs)?;
 
         debug!("{:?}: start node instance {:?}", node_id, new_node_id);
-        self.node_start_instance(&new_node_name, instance, new_node_proxy, initial_handle)?;
+        let node_join_handle = self.clone().node_start_instance(
+            &new_node_name,
+            instance,
+            new_node_proxy,
+            initial_handle,
+        )?;
+
+        // Insert the now running instance to the list of running instances (by moving it), so that
+        // `Node::stop` will be called on it eventually.
+        self.add_node_join_handle(node_id, node_join_handle);
 
         Ok(())
     }
 
-    /// Starts running a newly created Node instance on a new thread.  The join handle
-    /// for the new thread is stored in the corresponding [`NodeInfo`].
+    /// Starts running a newly created Node instance on a new thread.
     /// The `node_name` parameter is only used for diagnostic/debugging output.
     fn node_start_instance(
         self: Arc<Self>,
@@ -1200,8 +1208,8 @@ impl Runtime {
         node_instance: Box<dyn crate::node::Node + Send>,
         node_proxy: RuntimeProxy,
         initial_handle: oak_abi::Handle,
-    ) -> Result<(), OakStatus> {
-        // Try to start the Node instance, and store the join handle.
+    ) -> Result<JoinHandle<()>, OakStatus> {
+        // Try to start the Node instance.
         //
         // In order for this to work correctly, the `NodeInfo` entry must already exist in
         // `Runtime`, which is why we could not start this instance before the call to
@@ -1212,23 +1220,18 @@ impl Runtime {
         //
         // We also want no locks to be held while the instance is starting.
         let node_id = node_proxy.node_id;
-        let runtime = self.clone();
         let node_join_handle = thread::Builder::new()
             .name(node_name.to_string())
             .spawn(move || {
                 node_instance.run(node_proxy, initial_handle);
                 // It's now safe to remove the state for this Node, as there's nothing left
                 // that can invoke `Runtime` functionality for it.
-                runtime.remove_node_id(node_id)
+                self.remove_node_id(node_id)
             })
             .expect("failed to spawn thread");
+        // Note: self has been moved into the thread running the closure.
 
-        // Regardless of the result of `Node::start`, insert the now running instance to the list of
-        // running instances (by moving it), so that `Node::stop` will be called on it eventually.
-        self.add_node_join_handle(node_id, node_join_handle);
-
-        // Return the result of `Node::start`.
-        Ok(())
+        Ok(node_join_handle)
     }
 
     /// Configure data structures for a Node instance.
