@@ -1345,12 +1345,6 @@
 <span id="1345">1345</span>
 <span id="1346">1346</span>
 <span id="1347">1347</span>
-<span id="1348">1348</span>
-<span id="1349">1349</span>
-<span id="1350">1350</span>
-<span id="1351">1351</span>
-<span id="1352">1352</span>
-<span id="1353">1353</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -2077,23 +2071,6 @@
         }
     }
 
-    <span class="doccomment">/// Returns whether the given Node is allowed to read from all the provided channels,</span>
-    <span class="doccomment">/// according to their respective [`Label`]s.</span>
-    <span class="kw">fn</span> <span class="ident">validate_can_read_from_channels</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
-        <span class="ident">channel_halves</span>: <span class="kw-2">&amp;</span>[<span class="ident">ChannelHalf</span>],
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">all_channel_halves_ok</span> <span class="op">=</span> <span class="ident">channel_halves</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">all</span>(<span class="op">|</span><span class="ident">half</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">validate_can_read_from_channel</span>(<span class="ident">node_id</span>, <span class="ident">half</span>).<span class="ident">is_ok</span>());
-        <span class="kw">if</span> <span class="ident">all_channel_halves_ok</span> {
-            <span class="prelude-val">Ok</span>(())
-        } <span class="kw">else</span> {
-            <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrPermissionDenied</span>)
-        }
-    }
-
     <span class="doccomment">/// Returns whether the given Node is allowed to write to the provided channel, according to</span>
     <span class="doccomment">/// their respective [`Label`]s.</span>
     <span class="kw">fn</span> <span class="ident">validate_can_write_to_channel</span>(
@@ -2163,17 +2140,25 @@
             .<span class="ident">collect</span>()
     }
 
-    <span class="doccomment">/// Waits on a slice of `ChannelHalf`s, blocking until one of the following conditions occurs:</span>
-    <span class="doccomment">/// - If the [`Runtime`] is terminating, return immediately with an `ErrTerminated` overall</span>
-    <span class="doccomment">///   status.</span>
-    <span class="doccomment">/// - If all provided read channels are in an erroneous status, e.g. when all channels are</span>
-    <span class="doccomment">///   orphaned, fill in the returned status vector and return an overall `Ok` status.</span>
-    <span class="doccomment">/// - If any of the channels is able to read a message, set the corresponding element in the</span>
-    <span class="doccomment">///   returned status vector to `ReadReady`, and return an overall `Ok` status.</span>
+    <span class="comment">// TODO(#970): Improve the documentation.</span>
+    <span class="doccomment">/// Waits on a slice of `ChannelHalf`s, blocking until one of the following conditions:</span>
+    <span class="doccomment">/// - If the [`Runtime`] is terminating this will return immediately with an `ErrTerminated`</span>
+    <span class="doccomment">///   status for each channel.</span>
+    <span class="doccomment">/// - If any of the readers is in an erroneous status, e.g. when a channel is orphaned, this</span>
+    <span class="doccomment">///   will immediately return with all the channels statuses set in the returned vector.</span>
+    <span class="doccomment">/// - If any of the channels is able to read a message, the corresponding element in the</span>
+    <span class="doccomment">///   returned vector will be set to `Ok(ReadReady)`, with `Ok(NotReady)` signaling the channel</span>
+    <span class="doccomment">///   has no message available.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// In particular, if there is at least one channel in good status and no messages on said</span>
-    <span class="doccomment">/// channel available, [`Runtime::wait_on_channels`] will continue to block until a message is</span>
-    <span class="doccomment">/// available.</span>
+    <span class="doccomment">/// In particular, if all channels are in a good status but no messages are available on any of</span>
+    <span class="doccomment">/// the channels (i.e., all channels have status [`ChannelReadStatus::NotReady`]),</span>
+    <span class="doccomment">/// [`Runtime::wait_on_channels`] will continue to block until a message is available on one of</span>
+    <span class="doccomment">/// the channels, or one of the channels is orphaned.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Invariant: The returned vector of [`ChannelReadStatus`] values will be in 1-1</span>
+    <span class="doccomment">/// correspondence with the passed-in vector of [`oak_abi::Handle`]s.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// [`Runtime`]: crate::runtime::Runtime</span>
     <span class="kw">fn</span> <span class="ident">wait_on_channels</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
@@ -2189,8 +2174,6 @@
                 <span class="ident">readers</span>.<span class="ident">push</span>(<span class="ident">half</span>);
             }
         }
-
-        <span class="self">self</span>.<span class="ident">validate_can_read_from_channels</span>(<span class="ident">node_id</span>, <span class="kw-2">&amp;</span><span class="ident">readers</span>)<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">thread</span> <span class="op">=</span> <span class="ident">thread</span>::<span class="ident">current</span>();
         <span class="kw">while</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">is_terminating</span>() {
@@ -2213,18 +2196,15 @@
                 })<span class="question-mark">?</span>;
             }
             <span class="kw">let</span> <span class="ident">statuses</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">readers_statuses</span>(<span class="ident">node_id</span>, <span class="kw-2">&amp;</span><span class="ident">readers</span>);
+            <span class="comment">// Transcribe the status for valid channels back to the original position</span>
+            <span class="comment">// in the list of all statuses.</span>
+            <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">readers</span>.<span class="ident">len</span>() {
+                <span class="ident">all_statuses</span>[<span class="ident">reader_pos</span>[<span class="ident">i</span>]] <span class="op">=</span> <span class="ident">statuses</span>[<span class="ident">i</span>];
+            }
 
-            <span class="kw">let</span> <span class="ident">all_unreadable</span> <span class="op">=</span> <span class="ident">statuses</span>.<span class="ident">iter</span>().<span class="ident">all</span>(<span class="op">|</span><span class="kw-2">&amp;</span><span class="ident">s</span><span class="op">|</span> {
-                <span class="ident">s</span> <span class="op">=</span><span class="op">=</span> <span class="ident">ChannelReadStatus</span>::<span class="ident">InvalidChannel</span> <span class="op">|</span><span class="op">|</span> <span class="ident">s</span> <span class="op">=</span><span class="op">=</span> <span class="ident">ChannelReadStatus</span>::<span class="ident">Orphaned</span>
-            });
-            <span class="kw">let</span> <span class="ident">any_ready</span> <span class="op">=</span> <span class="ident">statuses</span>.<span class="ident">iter</span>().<span class="ident">any</span>(<span class="op">|</span><span class="kw-2">&amp;</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span> <span class="op">=</span><span class="op">=</span> <span class="ident">ChannelReadStatus</span>::<span class="ident">ReadReady</span>);
+            <span class="kw">let</span> <span class="ident">all_not_ready</span> <span class="op">=</span> <span class="ident">statuses</span>.<span class="ident">iter</span>().<span class="ident">all</span>(<span class="op">|</span><span class="kw-2">&amp;</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span> <span class="op">=</span><span class="op">=</span> <span class="ident">ChannelReadStatus</span>::<span class="ident">NotReady</span>);
 
-            <span class="kw">if</span> <span class="ident">all_unreadable</span> <span class="op">|</span><span class="op">|</span> <span class="ident">any_ready</span> {
-                <span class="comment">// Transcribe the status for valid channels back to the original position</span>
-                <span class="comment">// in the list of all statuses.</span>
-                <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">readers</span>.<span class="ident">len</span>() {
-                    <span class="ident">all_statuses</span>[<span class="ident">reader_pos</span>[<span class="ident">i</span>]] <span class="op">=</span> <span class="ident">statuses</span>[<span class="ident">i</span>];
-                }
+            <span class="kw">if</span> <span class="op">!</span><span class="ident">all_not_ready</span> <span class="op">|</span><span class="op">|</span> <span class="ident">read_handles</span>.<span class="ident">is_empty</span>() <span class="op">|</span><span class="op">|</span> <span class="ident">readers</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">read_handles</span>.<span class="ident">len</span>() {
                 <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">all_statuses</span>);
             }
 
@@ -2309,15 +2289,23 @@
     }
 
     <span class="doccomment">/// Determine the readable status of a channel, returning:</span>
-    <span class="doccomment">/// - [`ChannelReadStatus::ReadReady`] if there is at least one message in the channel.</span>
-    <span class="doccomment">/// - [`ChannelReadStatus::Orphaned`] if there are no messages and there are no writers</span>
-    <span class="doccomment">/// - [`ChannelReadStatus::NotReady`] if there are no messages but there are some writers</span>
+    <span class="doccomment">/// - `Ok`([`ChannelReadStatus::ReadReady`]) if there is at least one message in the channel.</span>
+    <span class="doccomment">/// - `Ok`([`ChannelReadStatus::Orphaned`]) if there are no messages and there are no writers.</span>
+    <span class="doccomment">/// - `Ok`([`ChannelReadStatus::NotReady`]) if there are no messages but there are some writers.</span>
+    <span class="doccomment">/// - `Ok`([`ChannelReadStatus::PermissionDenied`]) if the node does not have permission to read</span>
+    <span class="doccomment">///   from the channel.</span>
+    <span class="doccomment">/// - `Err`([`OakStatus::ErrBadHandle`]) if the input handle does not indicate the read half of</span>
+    <span class="doccomment">///   a channel.</span>
     <span class="kw">fn</span> <span class="ident">channel_status</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
         <span class="ident">half</span>: <span class="kw-2">&amp;</span><span class="ident">ChannelHalf</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ChannelReadStatus</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">validate_can_read_from_channel</span>(<span class="ident">node_id</span>, <span class="ident">half</span>)<span class="question-mark">?</span>;
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrPermissionDenied</span>) <span class="op">=</span>
+            <span class="self">self</span>.<span class="ident">validate_can_read_from_channel</span>(<span class="ident">node_id</span>, <span class="ident">half</span>)
+        {
+            <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">ChannelReadStatus</span>::<span class="ident">PermissionDenied</span>);
+        };
         <span class="ident">with_reader_channel</span>(<span class="ident">half</span>, <span class="op">|</span><span class="ident">channel</span><span class="op">|</span> {
             <span class="prelude-val">Ok</span>(<span class="kw">if</span> <span class="ident">channel</span>.<span class="ident">messages</span>.<span class="ident">read</span>().<span class="ident">unwrap</span>().<span class="ident">front</span>().<span class="ident">is_some</span>() {
                 <span class="ident">ChannelReadStatus</span>::<span class="ident">ReadReady</span>
