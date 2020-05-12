@@ -82,7 +82,7 @@ fn get_int_metric_value(all_metrics: &str, metric_name: &str) -> Option<i64> {
 
 #[test]
 fn test_metrics_gives_the_correct_number_of_nodes() {
-    env_logger::init();
+    simple_logger::init_by_env();
 
     // Start the Runtime, including a metrics server.
     let (runtime, _initial_handle) = common::start_runtime().expect("Starting the Runtime failed!");
