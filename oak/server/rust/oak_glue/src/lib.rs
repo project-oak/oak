@@ -325,7 +325,10 @@ pub unsafe extern "C" fn glue_channel_create(node_id: u64, write: *mut u64, read
     debug!("{{{}}}: channel_create({:?}, {:?})", node_id, write, read);
     let proxy = proxy_for_node(node_id);
     let (write_handle, read_handle) =
-        proxy.channel_create(&oak_abi::label::Label::public_trusted());
+        match proxy.channel_create(&oak_abi::label::Label::public_trusted()) {
+            Ok(r) => r,
+            Err(s) => return s as u32,
+        };
     *write = write_handle;
     *read = read_handle;
     debug!(

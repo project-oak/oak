@@ -34,6 +34,7 @@ use aggregator_common::ThresholdAggregator;
 use data::SparseVector;
 use log::{debug, error};
 use oak::grpc;
+use oak_abi::label::{tag, Label, Tag, TlsEndpointTag};
 use proto::{Aggregator, AggregatorClient, AggregatorDispatcher, Sample};
 use std::{collections::HashMap, convert::TryFrom};
 
@@ -92,7 +93,23 @@ impl AggregatorNode {
             bucket, svec
         );
 
-        match oak::grpc::client::Client::new("grpc-client", "").map(AggregatorClient) {
+        // Create a gRPC client Node with a less restrictive label than the current Node.
+        // In particular, the secrecy component of the current Node label includes the "aggregator"
+        // WebAssembly hash, which is declassified as part of the gRPC client Node creation. This is
+        // only allowed if the current Node actually has the appropriate capability (i.e. the
+        // correct WebAssembly module hash) as specified by the label component being removed, as
+        // set by the client.
+        let label = Label {
+            secrecy_tags: vec![Tag {
+                tag: Some(tag::Tag::TlsEndpointTag(TlsEndpointTag {
+                    certificate_subject_alternative_name: "google.com".to_string(),
+                })),
+            }],
+            integrity_tags: vec![],
+        };
+        match oak::grpc::client::Client::new_with_label("grpc-client", "", &label)
+            .map(AggregatorClient)
+        {
             Some(grpc_client) => {
                 let res = grpc_client.submit_sample(Sample {
                     bucket,

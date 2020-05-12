@@ -158,13 +158,21 @@ in Fuchsia.
 
 ### channel_create
 
-`channel_create: (usize, usize) -> u32` creates a new unidirectional channel and
-return the channel handles for its read and write halves.
+`channel_create: (usize, usize, usize, usize) -> u32` creates a new
+unidirectional channel assigning the label specified by args 2 and 3 to the
+newly created Channel, and returns the channel handles for its read and write
+halves as output parameters in args 0 and 1.
+
+If creating the specified Channel would violate
+[information flow control](/docs/concepts.md#labels), returns
+`ERR_PERMISSION_DENIED`.
 
 - arg 0: Address of an 8-byte location that will receive the handle for the
   write half of the channel (as a little-endian u64).
 - arg 1: Address of an 8-byte location that will receive the handle for the read
   half of the channel (as a little-endian u64).
+- arg 2: Source buffer holding label
+- arg 3: Label size in bytes
 - return 0: Status of operation
 
 ### channel_close
@@ -178,11 +186,12 @@ return the channel handles for its read and write halves.
 
 `node_create: (usize, usize, usize, usize, usize, usize, u64) -> u32` creates a
 new Node running the Node configuration identified by args 0 and 1, using the
-entrypoint specified by args 2 and 3, passing in an initial handle to the read
-half of a channel identified by arg 4. The entrypoint name is ignored when
-creating non-WebAssembly Nodes.
+entrypoint specified by args 2 and 3, assigning the label specified by args 4
+and 5 to the newly created Node, passing in an initial handle to the read half
+of a channel identified by arg 6. The entrypoint name is ignored when creating
+non-WebAssembly Nodes.
 
-If creating the specified node would violate
+If creating the specified Node would violate
 [information flow control](/docs/concepts.md#labels), returns
 `ERR_PERMISSION_DENIED`.
 

@@ -22,7 +22,7 @@ use crate::{
 };
 use core::sync::atomic::{AtomicBool, AtomicU64, Ordering::SeqCst};
 use itertools::Itertools;
-use log::{debug, error, info, trace};
+use log::{debug, error, info, trace, warn};
 use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
 use rand::RngCore;
 use std::{
@@ -342,7 +342,7 @@ impl RuntimeProxy {
 
         // When first starting, we assign the least privileged label to the channel connecting the
         // outside world to the entry point Node.
-        let (write_handle, read_handle) = self.channel_create(&Label::public_trusted());
+        let (write_handle, read_handle) = self.channel_create(&Label::public_trusted())?;
         debug!(
             "{:?}: created initial channel ({}, {})",
             self.node_id, write_handle, read_handle,
@@ -756,8 +756,19 @@ impl Runtime {
     /// Creates a new [`Channel`] and returns a `(writer, reader)` pair of `oak_abi::Handle`s.
     ///
     /// [`Channel`]: crate::runtime::channel::Channel
-    fn channel_create(&self, node_id: NodeId, label: &Label) -> (oak_abi::Handle, oak_abi::Handle) {
-        // TODO(#630): Check whether the calling Node can create a Node with the specified label.
+    fn channel_create(
+        &self,
+        node_id: NodeId,
+        label: &Label,
+    ) -> Result<(oak_abi::Handle, oak_abi::Handle), OakStatus> {
+        let node_label = self.get_node_label(node_id);
+        if !node_label.flows_to(label) {
+            warn!(
+                "channel_create: label {:?} does not flow to label {:?}",
+                node_label, label
+            );
+            return Err(OakStatus::ErrPermissionDenied);
+        }
         // First get a pair of `ChannelHalf` objects.
         let channel_id = self.next_channel_id.fetch_add(1, SeqCst);
         let channel = Channel::new(channel_id, label);
@@ -778,7 +789,7 @@ impl Runtime {
             write_handle,
             read_handle,
         );
-        (write_handle, read_handle)
+        Ok((write_handle, read_handle))
     }
 
     /// Reads the readable statuses for a slice of `ChannelHalf`s.
@@ -1135,10 +1146,16 @@ impl Runtime {
         }
 
         let reader = self.abi_to_read_half(node_id, initial_handle)?;
+
         let node_label = self.get_node_label(node_id);
         if !node_label.flows_to(label) {
+            warn!(
+                "node_create: label {:?} does not flow to label {:?}",
+                node_label, label
+            );
             return Err(OakStatus::ErrPermissionDenied);
         }
+
         let config = self
             .configuration
             .nodes
@@ -1296,7 +1313,10 @@ impl RuntimeProxy {
     }
 
     /// See [`Runtime::channel_create`].
-    pub fn channel_create(&self, label: &Label) -> (oak_abi::Handle, oak_abi::Handle) {
+    pub fn channel_create(
+        &self,
+        label: &Label,
+    ) -> Result<(oak_abi::Handle, oak_abi::Handle), OakStatus> {
         self.runtime.channel_create(self.node_id, label)
     }
 
