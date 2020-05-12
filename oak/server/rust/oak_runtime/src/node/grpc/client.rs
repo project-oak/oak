@@ -56,14 +56,7 @@ impl GrpcClientNode {
     /// external gRPC service and writes gRPC responses back to the invocation channel.
     async fn handle_loop(&self, runtime: RuntimeProxy, handle: Handle) -> Result<(), OakStatus> {
         // Connect to an external gRPC service.
-        let mut handler = loop {
-            if let Ok(handler) = self.connect().await {
-                break handler;
-            } else {
-                // Retry to connect after 5 seconds.
-                thread::sleep(Duration::from_secs(5));
-            }
-        };
+        let mut handler = self.connect().await?;
 
         // Create a [`Receiver`] used for reading gRPC invocations.
         let receiver = Receiver::<Invocation>::new(handle);
