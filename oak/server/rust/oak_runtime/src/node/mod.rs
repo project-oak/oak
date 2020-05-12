@@ -128,7 +128,7 @@ pub fn check_uri(uri: &Uri) -> Result<(), ConfigurationError> {
 }
 
 /// Check the correctness of a PEM encoded TLS certificate.
-pub fn load_certificate(certitiface: &String) -> Result<Certificate, ConfigurationError> {
+pub fn load_certificate(certitiface: &str) -> Result<Certificate, ConfigurationError> {
     use rustls::internal::pemfile::certs;
 
     let mut cursor = std::io::Cursor::new(certitiface);
