@@ -16,7 +16,7 @@
 
 use crate::{
     node,
-    node::{check_uri, load_wasm},
+    node::{check_uri, load_certificate, load_wasm},
     proto::oak::application::{
         node_configuration::ConfigType, ApplicationConfiguration, GrpcClientConfiguration,
         GrpcServerConfiguration, LogConfiguration, NodeConfiguration, WebAssemblyConfiguration,
@@ -27,7 +27,7 @@ use itertools::Itertools;
 use log::{error, warn};
 use oak_abi::OakStatus;
 use std::collections::HashMap;
-use tonic::transport::{Certificate, Identity};
+use tonic::transport::Identity;
 
 /// Create an application configuration.
 ///
@@ -117,7 +117,12 @@ pub fn from_protobuf(
                                 Err(OakStatus::ErrInvalidArgs)
                             }
                         })?,
-                    root_tls_certificate: Certificate::from_pem(root_tls_certificate),
+                    root_tls_certificate: load_certificate(root_tls_certificate).map_err(
+                        |error| {
+                            error!("Error loading root certificate: {:?}", error);
+                            OakStatus::ErrInvalidArgs
+                        },
+                    )?,
                 },
                 Some(ConfigType::WasmConfig(WebAssemblyConfiguration { module_bytes, .. })) => {
                     load_wasm(&module_bytes).map_err(|error| {

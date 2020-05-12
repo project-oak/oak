@@ -33,6 +33,7 @@ prost = "*"
 prost-types = "*"
 rand = "*"
 regex = { version = "1", optional = true }
+rustls = "*"
 tokio = { version = "*", features = ["io-driver", "macros", "rt-core", "time"] }
 # Using an old version that is supported by `cargo-raze`:
 # https://github.com/google/cargo-raze/issues/41#issuecomment-592274128

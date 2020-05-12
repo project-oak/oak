@@ -72,6 +72,7 @@ pub enum ConfigurationError {
     AddressParsingError(AddrParseError),
     IncorrectPort,
     NoHostElement,
+    CertificateParsingError,
     WasmiModuleInializationError(wasmi::Error),
 }
 
@@ -89,6 +90,9 @@ impl std::fmt::Display for ConfigurationError {
             }
             ConfigurationError::IncorrectPort => write!(f, "Incorrect port (must be > 1023)"),
             ConfigurationError::NoHostElement => write!(f, "URI doesn't contain the Host element"),
+            ConfigurationError::CertificateParsingError => {
+                write!(f, "Error parsing PEM encoded TLS certificate")
+            }
             ConfigurationError::WasmiModuleInializationError(e) => {
                 write!(f, "Failed to initialize wasmi::Module: {}", e)
             }
@@ -121,6 +125,17 @@ pub fn check_uri(uri: &Uri) -> Result<(), ConfigurationError> {
         .filter(|authority| !authority.host().is_empty())
         .map(|_| ())
         .ok_or(ConfigurationError::NoHostElement)
+}
+
+/// Check the correctness of a PEM encoded TLS certificate.
+pub fn load_certificate(certitiface: &String) -> Result<Certificate, ConfigurationError> {
+    use rustls::internal::pemfile::certs;
+
+    let mut cursor = std::io::Cursor::new(certitiface);
+    // `rustls` doesn't specify certificate parsing errors.
+    certs(&mut cursor).map_err(|_| ConfigurationError::CertificateParsingError)?;
+
+    Ok(Certificate::from_pem(certitiface))
 }
 
 impl Configuration {
