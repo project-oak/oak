@@ -91,7 +91,7 @@ message GrpcServerConfiguration {
 // pseudo-Node (which is provided by the Oak Runtime), connected to a specific
 // external (non-Oak) gRPC service.
 message GrpcClientConfiguration {
-  // The URI component of a gRPC request. Must contain the "Host" element.
+  // The URI component of a gRPC server endpoint. Must contain the "Host" element.
   // https://docs.rs/tonic/0.2.1/tonic/transport/struct.Uri.html
   string uri = 1;
   // Loaded PEM encoded X.509 TLS root certificate file used to authenticate an external gRPC

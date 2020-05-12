@@ -132,7 +132,8 @@ pub fn load_certificate(certitiface: &String) -> Result<Certificate, Configurati
     use rustls::internal::pemfile::certs;
 
     let mut cursor = std::io::Cursor::new(certitiface);
-    // `rustls` doesn't specify certificate parsing errors.
+    // `rustls` doesn't specify certificate parsing errors:
+    // https://docs.rs/rustls/0.17.0/rustls/internal/pemfile/fn.certs.html
     certs(&mut cursor).map_err(|_| ConfigurationError::CertificateParsingError)?;
 
     Ok(Certificate::from_pem(certitiface))

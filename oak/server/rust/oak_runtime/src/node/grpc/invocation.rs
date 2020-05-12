@@ -54,11 +54,15 @@ impl Decodable for Invocation {
 }
 
 impl Invocation {
-    pub fn receive(&self, runtime: &RuntimeProxy) -> Result<GrpcRequest, OakStatus> {
+    pub fn receive_request(&self, runtime: &RuntimeProxy) -> Result<GrpcRequest, OakStatus> {
         self.receiver.receive(runtime)
     }
 
-    pub fn send(&self, response: GrpcResponse, runtime: &RuntimeProxy) -> Result<(), OakStatus> {
+    pub fn send_response(
+        &self,
+        response: GrpcResponse,
+        runtime: &RuntimeProxy,
+    ) -> Result<(), OakStatus> {
         self.sender.send(response, runtime)
     }
 }

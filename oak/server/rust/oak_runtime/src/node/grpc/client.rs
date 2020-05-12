@@ -34,7 +34,7 @@ use tonic::transport::{Certificate, Channel, ClientTlsConfig, Uri};
 pub struct GrpcClientNode {
     /// Pseudo-Node name.
     node_name: String,
-    /// The URI component of a gRPC request. Must contain the "Host" element.
+    /// The URI component of a gRPC server endpoint. Must contain the "Host" element.
     /// https://docs.rs/tonic/0.2.1/tonic/transport/struct.Uri.html
     uri: Uri,
     // Loaded PEM encoded X.509 TLS root certificate file used to authenticate an external gRPC
@@ -72,7 +72,7 @@ impl GrpcClientNode {
             let invocation = receiver.receive(&runtime)?;
 
             // Receive a request from the invocation channel.
-            let request = invocation.receive(&runtime)?;
+            let request = invocation.receive_request(&runtime)?;
             debug!("Incoming gRPC request: {:?}", request);
 
             // Send an unary request to an external gRPC service and wait for the response.
@@ -80,7 +80,7 @@ impl GrpcClientNode {
 
             // Send a response back to the invocation channel.
             debug!("Sending gRPC response: {:?}", response);
-            invocation.send(response, &runtime)?;
+            invocation.send_response(response, &runtime)?;
         }
     }
 

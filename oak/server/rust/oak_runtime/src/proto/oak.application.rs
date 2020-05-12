@@ -94,7 +94,7 @@ pub struct GrpcServerConfiguration {
 /// external (non-Oak) gRPC service.
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GrpcClientConfiguration {
-    /// The URI component of a gRPC request. Must contain the "Host" element.
+    /// The URI component of a gRPC server endpoint. Must contain the "Host" element.
     /// https://docs.rs/tonic/0.2.1/tonic/transport/struct.Uri.html
     #[prost(string, tag="1")]
     pub uri: std::string::String,

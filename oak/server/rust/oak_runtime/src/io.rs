@@ -68,7 +68,7 @@ impl<T: Decodable> Receiver<T> {
         }
     }
 
-    /// Waits and reads a [`Message`] from the [`Receiver::handle`].
+    /// Waits, reads and decodes a message from the [`Receiver::handle`].
     pub fn receive(&self, runtime: &RuntimeProxy) -> Result<T, OakStatus> {
         let read_status = runtime.wait_on_channels(&[self.handle])?;
 
@@ -103,7 +103,7 @@ impl<T: Encodable> Sender<T> {
         }
     }
 
-    /// Sends a [`Message`] to the [`Sender::handle`].
+    /// Encodes and sends a message to the [`Sender::handle`].
     pub fn send(&self, message: T, runtime: &RuntimeProxy) -> Result<(), OakStatus> {
         runtime.channel_write(self.handle, message.encode()?)
     }
