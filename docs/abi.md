@@ -86,11 +86,10 @@ functions** as
 [WebAssembly imports](https://webassembly.github.io/spec/core/syntax/modules.html#imports)
 (all of them defined in the `oak` module):
 
-### wait_on_channels
+### `wait_on_channels`
 
-`wait_on_channels(usize, u32) -> u32` blocks until data is available for reading
-from one of the specified channel handles, unless any of the channels is
-invalid, orphaned, or violates the
+Blocks until data is available for reading from one of the specified channel
+handles, unless any of the channels is invalid, orphaned, or violates the
 [information flow control](/docs/concepts.md#labels). The channel handles are
 encoded in a buffer that holds N contiguous 9-byte chunks, each of which is made
 up of an 8-byte channel handle value (little-endian u64) followed by a single
@@ -98,22 +97,21 @@ channel status byte. Invalid handles will have an `INVALID_CHANNEL`, `ORPHANED`,
 or `PERMISSION_DENIED` status, but `wait_on_channels` return value will only
 fail for internal errors or if _all_ channels are invalid.
 
-- arg 0: Address of handle status buffer
-- arg 1: Count N of handles provided
-- return 0: Status of operation
+- `param[0]: usize`: Address of handle status buffer
+- `param[1]: u32`: Count N of handles provided
+- `result[0]: u32`: Status of operation
 
-### channel_read
+### `channel_read`
 
-`channel_read(u64, usize, usize, usize, usize, u32, usize) -> u32` reads a
-single message and associated channel handles from the specified channel,
-setting the size of the data in the location provided by arg 3, and the count of
-returned handles in the location provided by arg 6.
+Reads a single message and associated channel handles from the specified
+channel, setting the size of the data in the location provided by `param[3]`,
+and the count of returned handles in the location provided by `param[6]`.
 
-If the provided spaces for data (args 1 and 2) or handles (args 4 and 5) are not
-large enough for the read operation, then no data is written to the destination
-buffers, and the function returns either `BUFFER_TOO_SMALL` or
-`HANDLE_SPACE_TOO_SMALL`; in either case, the required sizes are written in the
-spaces provided by args 3 and 6.
+If the provided spaces for data (`param[1]` and `param[2]`) or handles
+(`param[4]` and `param[5]`) are not large enough for the read operation, then no
+data is written to the destination buffers, and the function returns either
+`BUFFER_TOO_SMALL` or `HANDLE_SPACE_TOO_SMALL`; in either case, the required
+sizes are written in the spaces provided by `param[3]` and `param[6]`.
 
 If no messages are available on the channel, returns `CHANNEL_EMPTY`.
 
@@ -121,96 +119,95 @@ If reading from the specified channel would violate
 [information flow control](/docs/concepts.md#labels), returns
 `ERR_PERMISSION_DENIED`.
 
-- arg 0: Handle to channel receive half
-- arg 1: Destination buffer address
-- arg 2: Destination buffer size in bytes
-- arg 3: Address of a 4-byte location that will receive the number of bytes in
-  the message (as a little-endian u32).
-- arg 4: Destination handle array buffer (to receive little-endian u64 values)
-- arg 5: Destination handle array count
-- arg 6: Address of a 4-byte location that will receive the number of handles
-  retrieved with the message (as a little-endian u32)
-- return 0: Status of operation
+- `param[0]: u64`: Handle to channel receive half
+- `param[1]: usize`: Destination buffer address
+- `param[2]: usize`: Destination buffer size in bytes
+- `param[3]: usize`: Address of a 4-byte location that will receive the number
+  of bytes in the message (as a little-endian u32).
+- `param[4]: usize`: Destination handle array buffer (to receive little-endian
+  u64 values)
+- `param[5]: u32`: Destination handle array count
+- `param[6]: usize`: Address of a 4-byte location that will receive the number
+  of handles retrieved with the message (as a little-endian u32)
+- `result[0]: u32`: Status of operation
 
 Similar to
 [`zx_channel_read`](https://fuchsia.dev/fuchsia-src/zircon/syscalls/channel_read)
 in Fuchsia.
 
-### channel_write
+### `channel_write`
 
-`channel_write: (u64, usize, usize, usize, u32) -> u32` writes a single message
-to the specified channel, together with any associated handles.
+Writes a single message to the specified channel, together with any associated
+handles.
 
 If writing to the specified channel would violate
 [information flow control](/docs/concepts.md#labels), returns
 `ERR_PERMISSION_DENIED`.
 
-- arg 0: Handle to channel send half
-- arg 1: Source buffer address holding message
-- arg 2: Source buffer size in bytes
-- arg 3: Source handle array (of little-endian u64 values)
-- arg 4: Source handle array count
-- return 0: Status of operation
+- `param[0]: u64`: Handle to channel send half
+- `param[1]: usize`: Source buffer address holding message
+- `param[2]: usize`: Source buffer size in bytes
+- `param[3]: usize`: Source handle array (of little-endian u64 values)
+- `param[4]: u32`: Source handle array count
+- `result[0]: u32`: Status of operation
 
 Similar to
 [`zx_channel_write`](https://fuchsia.dev/fuchsia-src/zircon/syscalls/channel_write)
 in Fuchsia.
 
-### channel_create
+### `channel_create`
 
-`channel_create: (usize, usize, usize, usize) -> u32` creates a new
-unidirectional channel assigning the label specified by args 2 and 3 to the
-newly created Channel, and returns the channel handles for its read and write
-halves as output parameters in args 0 and 1.
+Creates a new unidirectional channel assigning the label specified by `param[2]`
+and `param[3]` to the newly created Channel, and returns the channel handles for
+its read and write halves as output parameters in `param[0]` and `param[1]`.
 
 If creating the specified Channel would violate
 [information flow control](/docs/concepts.md#labels), returns
 `ERR_PERMISSION_DENIED`.
 
-- arg 0: Address of an 8-byte location that will receive the handle for the
-  write half of the channel (as a little-endian u64).
-- arg 1: Address of an 8-byte location that will receive the handle for the read
-  half of the channel (as a little-endian u64).
-- arg 2: Source buffer holding label
-- arg 3: Label size in bytes
-- return 0: Status of operation
+- `param[0]: usize`: Address of an 8-byte location that will receive the handle
+  for the write half of the channel (as a little-endian u64).
+- `param[1]: usize`: Address of an 8-byte location that will receive the handle
+  for the read half of the channel (as a little-endian u64).
+- `param[2]: usize`: Source buffer holding label
+- `param[3]: usize`: Label size in bytes
+- `result[0]: u32`: Status of operation
 
-### channel_close
+### `channel_close`
 
-`channel_close: (u64) -> u32` closes the channel identified by arg 0.
+Closes the channel identified by `param[0]`.
 
-- arg 0: Handle to channel
-- return 0: Status of operation
+- `param[0]: u64`: Handle to channel
+- `result[0]: u32`: Status of operation
 
-### node_create
+### `node_create`
 
-`node_create: (usize, usize, usize, usize, usize, usize, u64) -> u32` creates a
-new Node running the Node configuration identified by args 0 and 1, using the
-entrypoint specified by args 2 and 3, assigning the label specified by args 4
-and 5 to the newly created Node, passing in an initial handle to the read half
-of a channel identified by arg 6. The entrypoint name is ignored when creating
-non-WebAssembly Nodes.
+Creates a new Node running the Node configuration identified by `param[0]` and
+`param[1]`, using the entrypoint specified by `param[2]` and `param[3]`,
+assigning the label specified by `param[4]` and `param[5]` to the newly created
+Node, passing in an initial handle to the read half of a channel identified by
+`param[6]`. The entrypoint name is ignored when creating non-WebAssembly Nodes.
 
 If creating the specified Node would violate
 [information flow control](/docs/concepts.md#labels), returns
 `ERR_PERMISSION_DENIED`.
 
-- arg 0: Source buffer holding node configuration name
-- arg 1: Node configuration name size in bytes
-- arg 2: Source buffer holding entrypoint name
-- arg 3: Entrypoint name size in bytes
-- arg 4: Source buffer holding label
-- arg 5: Label size in bytes
-- arg 6: Handle to channel
-- return 0: Status of operation
+- `param[0]: usize`: Source buffer holding node configuration name
+- `param[1]: usize`: Node configuration name size in bytes
+- `param[2]: usize`: Source buffer holding entrypoint name
+- `param[3]: usize`: Entrypoint name size in bytes
+- `param[4]: usize`: Source buffer holding label
+- `param[5]: usize`: Label size in bytes
+- `param[6]: usize`: Handle to channel
+- `result[0]: u32`: Status of operation
 
 ### random_get
 
-`random_get: (usize, usize) -> u32` fills a buffer with random bytes.
+Fills a buffer with random bytes.
 
-- arg 0: Destination buffer
-- arg 1: Destination buffer size in bytes
-- return 0: Status of operation
+- `param[0]: usize`: Destination buffer
+- `param[1]: usize`: Destination buffer size in bytes
+- `result[0]: u32`: Status of operation
 
 ## Protocol Buffer Messages
 
