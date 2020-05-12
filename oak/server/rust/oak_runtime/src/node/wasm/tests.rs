@@ -20,6 +20,7 @@ use std::collections::HashMap;
 use wat::{parse_file, parse_str};
 
 fn start_node<S: AsRef<[u8]>>(buffer: S, entrypoint: &str) -> Result<(), OakStatus> {
+    crate::runtime::tests::init_logging();
     let mut configuration = crate::runtime::Configuration {
         nodes: HashMap::new(),
         entry_module: "test_module".to_string(),
