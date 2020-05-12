@@ -27,7 +27,6 @@ use oak_abi::{
     proto::oak::encap::{GrpcRequest, GrpcResponse},
     Handle, OakStatus,
 };
-use std::{thread, time::Duration};
 use tonic::transport::{Certificate, Channel, ClientTlsConfig, Uri};
 
 /// Struct that represents a gRPC client pseudo-Node.
