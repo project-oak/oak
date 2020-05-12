@@ -851,13 +851,6 @@
 <span id="851">851</span>
 <span id="852">852</span>
 <span id="853">853</span>
-<span id="854">854</span>
-<span id="855">855</span>
-<span id="856">856</span>
-<span id="857">857</span>
-<span id="858">858</span>
-<span id="859">859</span>
-<span id="860">860</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -953,8 +946,7 @@
         }
     }
 
-    <span class="doccomment">/// Corresponds to the host ABI function [`node_create: (usize, usize, usize, usize,</span>
-    <span class="doccomment">/// u64) -&gt; u32`](oak_abi::node_create).</span>
+    <span class="doccomment">/// Corresponds to the host ABI function [`node_create`](https://github.com/project-oak/oak/blob/master/docs/abi.md#node_create).</span>
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">too_many_arguments</span>)]</span>
     <span class="kw">fn</span> <span class="ident">node_create</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
@@ -1044,8 +1036,7 @@
             .<span class="ident">node_create</span>(<span class="kw-2">&amp;</span><span class="ident">config_name</span>, <span class="kw-2">&amp;</span><span class="ident">entrypoint</span>, <span class="kw-2">&amp;</span><span class="ident">label</span>, <span class="ident">initial_handle</span>)
     }
 
-    <span class="doccomment">/// Corresponds to the host ABI function [`random_get: (usize, usize) -&gt;</span>
-    <span class="doccomment">/// u32`](oak_abi::random_get).</span>
+    <span class="doccomment">/// Corresponds to the host ABI function [`random_get`](https://github.com/project-oak/oak/blob/master/docs/abi.md#random_get).</span>
     <span class="kw">fn</span> <span class="ident">random_get</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">dest</span>: <span class="ident">AbiPointer</span>, <span class="ident">dest_length</span>: <span class="ident">AbiPointerOffset</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="macro">debug</span><span class="macro">!</span>(
             <span class="string">&quot;{}: random_get({}, {})&quot;</span>,
@@ -1064,15 +1055,13 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="doccomment">/// Corresponds to the host ABI function [`channel_close: (u64) -&gt;</span>
-    <span class="doccomment">/// u32`](oak_abi::channel_close).</span>
+    <span class="doccomment">/// Corresponds to the host ABI function [`channel_close`](https://github.com/project-oak/oak/blob/master/docs/abi.md#channel_close).</span>
     <span class="kw">fn</span> <span class="ident">channel_close</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{}: channel_close({})&quot;</span>, <span class="self">self</span>.<span class="ident">pretty_name</span>, <span class="ident">handle</span>);
         <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">channel_close</span>(<span class="ident">handle</span>)
     }
 
-    <span class="doccomment">/// Corresponds to the host ABI function [`channel_create: (usize, usize, usize, usize) -&gt;</span>
-    <span class="doccomment">/// u32`](oak_abi::channel_create).</span>
+    <span class="doccomment">/// Corresponds to the host ABI function [`channel_create`](https://github.com/project-oak/oak/blob/master/docs/abi.md#channel_create).</span>
     <span class="kw">fn</span> <span class="ident">channel_create</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">write_addr</span>: <span class="ident">AbiPointer</span>,
@@ -1139,8 +1128,7 @@
             })
     }
 
-    <span class="doccomment">/// Corresponds to the host ABI function [`channel_write: (u64, usize, usize, usize, u32) -&gt;</span>
-    <span class="doccomment">/// u32`](oak_abi::channel_write).</span>
+    <span class="doccomment">/// Corresponds to the host ABI function [`channel_write`](https://github.com/project-oak/oak/blob/master/docs/abi.md#channel_write).</span>
     <span class="kw">fn</span> <span class="ident">channel_write</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">writer_handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
@@ -1187,8 +1175,7 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="doccomment">/// Corresponds to the host ABI function [`channel_read: (u64, usize, usize, usize, usize, u32,</span>
-    <span class="doccomment">/// usize) -&gt; u32`](oak_abi::channel_read).</span>
+    <span class="doccomment">/// Corresponds to the host ABI function [`channel_read`](https://github.com/project-oak/oak/blob/master/docs/abi.md#channel_read).</span>
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">too_many_arguments</span>)]</span>
     <span class="kw">fn</span> <span class="ident">channel_read</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
@@ -1290,8 +1277,7 @@
         }
     }
 
-    <span class="doccomment">/// Corresponds to the host ABI function [`wait_on_channels: (usize, u32) -&gt;</span>
-    <span class="doccomment">/// u32`](oak_abi::wait_on_channels).</span>
+    <span class="doccomment">/// Corresponds to the host ABI function [`wait_on_channels`](https://github.com/project-oak/oak/blob/master/docs/abi.md#wait_on_channels).</span>
     <span class="kw">fn</span> <span class="ident">wait_on_channels</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">status_buff</span>: <span class="ident">AbiPointer</span>,
