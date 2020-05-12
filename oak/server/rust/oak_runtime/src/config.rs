@@ -102,7 +102,7 @@ pub fn from_protobuf(
                 Some(ConfigType::GrpcClientConfig(GrpcClientConfiguration {
                     uri,
                     root_tls_certificate,
-                    address: _,
+                    address,
                 })) => node::Configuration::GrpcClientNode {
                     uri: uri
                         .parse()
@@ -123,6 +123,7 @@ pub fn from_protobuf(
                             OakStatus::ErrInvalidArgs
                         },
                     )?,
+                    address: address.to_string(),
                 },
                 Some(ConfigType::WasmConfig(WebAssemblyConfiguration { module_bytes, .. })) => {
                     load_wasm(&module_bytes).map_err(|error| {

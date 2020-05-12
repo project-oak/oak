@@ -53,6 +53,7 @@ pub enum Configuration {
     GrpcClientNode {
         uri: Uri,
         root_tls_certificate: Certificate,
+        address: String,
     },
 
     /// The configuration for a Wasm Node.
@@ -167,6 +168,7 @@ impl Configuration {
             Configuration::GrpcClientNode {
                 uri,
                 root_tls_certificate,
+                address: _,
             } => Some(Box::new(grpc::client::GrpcClientNode::new(
                 node_name,
                 uri.clone(),
