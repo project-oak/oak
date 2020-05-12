@@ -1819,6 +1819,21 @@
 <span id="1819">1819</span>
 <span id="1820">1820</span>
 <span id="1821">1821</span>
+<span id="1822">1822</span>
+<span id="1823">1823</span>
+<span id="1824">1824</span>
+<span id="1825">1825</span>
+<span id="1826">1826</span>
+<span id="1827">1827</span>
+<span id="1828">1828</span>
+<span id="1829">1829</span>
+<span id="1830">1830</span>
+<span id="1831">1831</span>
+<span id="1832">1832</span>
+<span id="1833">1833</span>
+<span id="1834">1834</span>
+<span id="1835">1835</span>
+<span id="1836">1836</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -2187,7 +2202,15 @@
 <span class="kw">fn</span> <span class="ident">channel_create_raw</span>() <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">u64</span>, <span class="ident">u64</span>, <span class="ident">u32</span>) {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">w</span> <span class="op">=</span> <span class="number">0u64</span>;
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">r</span> <span class="op">=</span> <span class="number">0u64</span>;
-    <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">oak_abi</span>::<span class="ident">channel_create</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">w</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u64</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">r</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u64</span>) };
+    <span class="kw">let</span> <span class="ident">label_bytes</span> <span class="op">=</span> <span class="ident">Label</span>::<span class="ident">public_trusted</span>().<span class="ident">serialize</span>();
+    <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="kw">unsafe</span> {
+        <span class="ident">oak_abi</span>::<span class="ident">channel_create</span>(
+            <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">w</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u64</span>,
+            <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">r</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u64</span>,
+            <span class="ident">label_bytes</span>.<span class="ident">as_ptr</span>(),
+            <span class="ident">label_bytes</span>.<span class="ident">len</span>(),
+        )
+    };
     (<span class="ident">w</span>, <span class="ident">r</span>, <span class="ident">result</span>)
 }
 
@@ -2195,16 +2218,23 @@
     <span class="kw">fn</span> <span class="ident">test_channel_create_raw</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TestResult</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">write</span> <span class="op">=</span> <span class="number">0u64</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">read</span> <span class="op">=</span> <span class="number">0u64</span>;
-        <span class="kw">unsafe</span> {
-            <span class="macro">expect_eq</span><span class="macro">!</span>(
-                <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span> <span class="kw">as</span> <span class="ident">u32</span>,
-                <span class="ident">oak_abi</span>::<span class="ident">channel_create</span>(<span class="ident">invalid_raw_offset</span>(), <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">read</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u64</span>)
-            );
-            <span class="macro">expect_eq</span><span class="macro">!</span>(
-                <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span> <span class="kw">as</span> <span class="ident">u32</span>,
-                <span class="ident">oak_abi</span>::<span class="ident">channel_create</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">write</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u64</span>, <span class="ident">invalid_raw_offset</span>())
-            );
-        }
+        <span class="kw">let</span> <span class="ident">label_bytes</span> <span class="op">=</span> <span class="ident">Label</span>::<span class="ident">public_trusted</span>().<span class="ident">serialize</span>();
+        <span class="macro">expect_eq</span><span class="macro">!</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span> <span class="kw">as</span> <span class="ident">u32</span>, <span class="kw">unsafe</span> {
+            <span class="ident">oak_abi</span>::<span class="ident">channel_create</span>(
+                <span class="ident">invalid_raw_offset</span>(),
+                <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">read</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u64</span>,
+                <span class="ident">label_bytes</span>.<span class="ident">as_ptr</span>(),
+                <span class="ident">label_bytes</span>.<span class="ident">len</span>(),
+            )
+        });
+        <span class="macro">expect_eq</span><span class="macro">!</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span> <span class="kw">as</span> <span class="ident">u32</span>, <span class="kw">unsafe</span> {
+            <span class="ident">oak_abi</span>::<span class="ident">channel_create</span>(
+                <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">write</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u64</span>,
+                <span class="ident">invalid_raw_offset</span>(),
+                <span class="ident">label_bytes</span>.<span class="ident">as_ptr</span>(),
+                <span class="ident">label_bytes</span>.<span class="ident">len</span>(),
+            )
+        });
         <span class="prelude-val">Ok</span>(())
     }
 

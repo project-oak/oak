@@ -156,6 +156,17 @@
 <span id="156">156</span>
 <span id="157">157</span>
 <span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -268,15 +279,23 @@
         <span class="ident">handle_count</span>: <span class="ident">u32</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u32</span>;
 
-    <span class="doccomment">/// Create a new unidirectional channel.</span>
+    <span class="doccomment">/// Create a new unidirectional Channel.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// Returns handles for the the write and read halves of the channel in</span>
-    <span class="doccomment">/// the spaces given by `write` and `read`.</span>
+    <span class="doccomment">/// Returns handles for the the write and read halves of the Channel in the spaces given by</span>
+    <span class="doccomment">/// `write` and `read`.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// The label to assign to the newly created Channel is provided in the memory area given by</span>
+    <span class="doccomment">/// `label_buf` and `label_len`.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Returns the status of the operation, as an [`OakStatus`] value.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`OakStatus`]: crate::OakStatus</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_create</span>(<span class="ident">write</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u64</span>, <span class="ident">read</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u32</span>;
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_create</span>(
+        <span class="ident">write</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u64</span>,
+        <span class="ident">read</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u64</span>,
+        <span class="ident">label_buf</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">u8</span>,
+        <span class="ident">label_len</span>: <span class="ident">usize</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u32</span>;
 
     <span class="doccomment">/// Close a channel.</span>
     <span class="doccomment">///</span>
@@ -287,13 +306,16 @@
     <span class="doccomment">/// [`OakStatus`]: crate::OakStatus</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_close</span>(<span class="ident">handle</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u32</span>;
 
-    <span class="doccomment">/// Create a new Node instance running code identified by configuration</span>
-    <span class="doccomment">/// name and entrypoint; the entrypoint is only used when creating a</span>
-    <span class="doccomment">/// WebAssembly Node; it is ignored when creating a pseudo-Node.</span>
+    <span class="doccomment">/// Create a new Node instance running code identified by configuration name and entrypoint; the</span>
+    <span class="doccomment">/// entrypoint is only used when creating a WebAssembly Node; it is ignored when creating a</span>
+    <span class="doccomment">/// pseudo-Node.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// The configuration name is provided in the memory area given by</span>
-    <span class="doccomment">/// `config_buf` and `config_len`; the entrypoint name is provided in the</span>
-    <span class="doccomment">/// memory area given by `entrypoint_buf` and `entrypoint_len`.</span>
+    <span class="doccomment">/// The configuration name is provided in the memory area given by `config_buf` and</span>
+    <span class="doccomment">/// `config_len`; the entrypoint name is provided in the memory area given by `entrypoint_buf`</span>
+    <span class="doccomment">/// and `entrypoint_len`.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// The label to assign to the newly created Node is provided in the memory area given by</span>
+    <span class="doccomment">/// `label_buf` and `label_len`.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Returns the status of the operation, as an [`OakStatus`] value.</span>
     <span class="doccomment">///</span>

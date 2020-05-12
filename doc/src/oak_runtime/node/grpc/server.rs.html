@@ -611,9 +611,9 @@
     <span class="kw">fn</span> <span class="ident">handle_grpc_request</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">request</span>: <span class="ident">GrpcRequest</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">oak_abi</span>::<span class="ident">Handle</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="comment">// Create a pair of temporary channels to pass the gRPC request and to receive the response.</span>
         <span class="kw">let</span> (<span class="ident">request_writer</span>, <span class="ident">request_reader</span>) <span class="op">=</span>
-            <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">channel_create</span>(<span class="kw-2">&amp;</span><span class="ident">Label</span>::<span class="ident">public_trusted</span>());
+            <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">channel_create</span>(<span class="kw-2">&amp;</span><span class="ident">Label</span>::<span class="ident">public_trusted</span>())<span class="question-mark">?</span>;
         <span class="kw">let</span> (<span class="ident">response_writer</span>, <span class="ident">response_reader</span>) <span class="op">=</span>
-            <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">channel_create</span>(<span class="kw-2">&amp;</span><span class="ident">Label</span>::<span class="ident">public_trusted</span>());
+            <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">channel_create</span>(<span class="kw-2">&amp;</span><span class="ident">Label</span>::<span class="ident">public_trusted</span>())<span class="question-mark">?</span>;
 
         <span class="comment">// Create an invocation message and attach the method-invocation specific channels to it.</span>
         <span class="comment">//</span>

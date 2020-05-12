@@ -73,6 +73,14 @@
 <span id="73">73</span>
 <span id="74">74</span>
 <span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
+<span id="79">79</span>
+<span id="80">80</span>
+<span id="81">81</span>
+<span id="82">82</span>
+<span id="83">83</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -93,6 +101,7 @@
 <span class="doccomment">//! Wrappers for Oak SDK types to allow their use with [`std::io`].</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">OakStatus</span>;
+<span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">label</span>::<span class="ident">Label</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>;
 
 <span class="kw">mod</span> <span class="ident">decodable</span>;
@@ -108,6 +117,13 @@
 <span class="doccomment">/// Create a new channel for transmission of `Encodable` and `Decodable` types.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_create</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Encodable</span> <span class="op">+</span> <span class="ident">Decodable</span><span class="op">&gt;</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
     <span class="kw">let</span> (<span class="ident">wh</span>, <span class="ident">rh</span>) <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">channel_create</span>()<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>((<span class="ident">Sender</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>::<span class="ident">new</span>(<span class="ident">wh</span>), <span class="ident">Receiver</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>::<span class="ident">new</span>(<span class="ident">rh</span>)))
+}
+
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_create_with_label</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Encodable</span> <span class="op">+</span> <span class="ident">Decodable</span><span class="op">&gt;</span>(
+    <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> (<span class="ident">wh</span>, <span class="ident">rh</span>) <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">channel_create_with_label</span>(<span class="ident">label</span>)<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>((<span class="ident">Sender</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>::<span class="ident">new</span>(<span class="ident">wh</span>), <span class="ident">Receiver</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>::<span class="ident">new</span>(<span class="ident">rh</span>)))
 }
 
