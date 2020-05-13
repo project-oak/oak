@@ -21,6 +21,7 @@ use std::{
     string::String,
     sync::Arc,
 };
+use tokio::sync::oneshot;
 use tonic::transport::{Certificate, Identity, Uri};
 
 pub mod external;
@@ -30,9 +31,17 @@ mod wasm;
 
 /// Trait encapsulating execution of a Node or pseudo-Node.
 pub trait Node {
-    /// Execute the Node, using the provided `Runtime` reference and initial handle.  The method
+    /// Execute the Node, using the provided `Runtime` reference and initial handle. The method
     /// should continue execution until the Node terminates.
-    fn run(self: Box<Self>, runtime: RuntimeProxy, handle: oak_abi::Handle);
+    ///
+    /// `notify_receiver` receives a notification from the Runtime upon termination. This
+    /// notification can be used by the Node to gracefully shut down.
+    fn run(
+        self: Box<Self>,
+        runtime: RuntimeProxy,
+        handle: oak_abi::Handle,
+        notify_receiver: oneshot::Receiver<()>,
+    );
 }
 
 /// A [`Configuration`] corresponds to a [`NodeConfiguration`] protobuf message, with parsed

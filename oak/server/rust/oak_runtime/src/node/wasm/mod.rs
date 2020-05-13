@@ -23,6 +23,7 @@ use log::{debug, error, info, warn};
 use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
 use rand::RngCore;
 use std::{string::String, sync::Arc};
+use tokio::sync::oneshot;
 use wasmi::ValueType;
 
 #[cfg(test)]
@@ -815,7 +816,12 @@ impl WasmNode {
 
 impl super::Node for WasmNode {
     /// Runs this instance of a Wasm Node.
-    fn run(self: Box<Self>, runtime: RuntimeProxy, handle: oak_abi::Handle) {
+    fn run(
+        self: Box<Self>,
+        runtime: RuntimeProxy,
+        handle: oak_abi::Handle,
+        _notify_receiver: oneshot::Receiver<()>,
+    ) {
         debug!(
             "{}: running entrypoint '{}'",
             self.node_name, self.entrypoint

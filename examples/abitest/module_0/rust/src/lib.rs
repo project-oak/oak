@@ -27,7 +27,7 @@ use oak_abi::label::Label;
 use prost::Message;
 use proto::{
     AbiTestRequest, AbiTestResponse, GrpcTestRequest, GrpcTestResponse, OakAbiTestService,
-    OakAbiTestServiceClient, OakAbiTestServiceDispatcher,
+    OakAbiTestServiceDispatcher,
 };
 use rand::Rng;
 use std::{collections::HashMap, convert::TryInto};
@@ -45,8 +45,10 @@ struct FrontendNode {
     storage: Option<oak::storage::Storage>,
     absent_storage: Option<oak::storage::Storage>,
     storage_name: Vec<u8>,
-    grpc_service: Option<OakAbiTestServiceClient>,
-    absent_grpc_service: Option<OakAbiTestServiceClient>,
+    // TODO(#874): Run abitest with Rust loader in order to provide gRPC client with a CA.
+    // grpc_service: Option<OakAbiTestServiceClient>,
+    // TODO(#953, #954): Add streaming support for gRPC and re-enable all of the tests.
+    // absent_grpc_service: Option<OakAbiTestServiceClient>,
     roughtime: Option<oak::roughtime::Roughtime>,
     misconfigured_roughtime: Option<oak::roughtime::Roughtime>,
 }
@@ -105,10 +107,11 @@ impl FrontendNode {
             storage: oak::storage::Storage::default(),
             absent_storage: oak::storage::Storage::new("absent-storage"),
             storage_name: storage_name.as_bytes().to_vec(),
-            grpc_service: oak::grpc::client::Client::new("grpc-client", "ignored")
-                .map(OakAbiTestServiceClient),
-            absent_grpc_service: oak::grpc::client::Client::new("absent-grpc-client", "ignored")
-                .map(OakAbiTestServiceClient),
+            // TODO(#874): Run abitest with Rust loader in order to provide gRPC client with a CA.
+            // grpc_service: oak::grpc::client::Client::new("grpc-client", "ignored")
+            //     .map(OakAbiTestServiceClient),
+            // absent_grpc_service: oak::grpc::client::Client::new("absent-grpc-client", "ignored")
+            //     .map(OakAbiTestServiceClient),
             roughtime: oak::roughtime::Roughtime::new("roughtime-client"),
             misconfigured_roughtime: oak::roughtime::Roughtime::new("roughtime-misconfig"),
         }
@@ -190,15 +193,17 @@ impl OakAbiTestService for FrontendNode {
         tests.insert("BackendRoundtrip", FrontendNode::test_backend_roundtrip);
         tests.insert("Storage", FrontendNode::test_storage);
         tests.insert("AbsentStorage", FrontendNode::test_absent_storage);
-        tests.insert(
-            "GrpcClientUnaryMethod",
-            FrontendNode::test_grpc_client_unary_method,
-        );
-        tests.insert(
-            "GrpcClientServerStreamingMethod",
-            FrontendNode::test_grpc_client_server_streaming_method,
-        );
-        tests.insert("AbsentGrpcClient", FrontendNode::test_absent_grpc_client);
+        // TODO(#874): Run abitest with Rust loader in order to provide gRPC client with a CA.
+        // tests.insert(
+        //     "GrpcClientUnaryMethod",
+        //     FrontendNode::test_grpc_client_unary_method,
+        // );
+        // TODO(#953, #954): Add streaming support for gRPC and re-enable all of the tests.
+        // tests.insert(
+        //     "GrpcClientServerStreamingMethod",
+        //     FrontendNode::test_grpc_client_server_streaming_method,
+        // );
+        // tests.insert("AbsentGrpcClient", FrontendNode::test_absent_grpc_client);
         tests.insert("RoughtimeClient", FrontendNode::test_roughtime_client);
         tests.insert(
             "MisconfiguredRoughtimeClient",
@@ -1593,149 +1598,152 @@ impl FrontendNode {
 
         Ok(())
     }
-    fn test_grpc_client_unary_method(&mut self) -> TestResult {
-        let grpc_stub = self.grpc_service.as_ref().ok_or_else(|| {
-            Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "no gRPC client channel available",
-            ))
-        })?;
+    // TODO(#874): Run abitest with Rust loader in order to provide gRPC client with a CA.
+    // fn test_grpc_client_unary_method(&mut self) -> TestResult {
+    //     let grpc_stub = self.grpc_service.as_ref().ok_or_else(|| {
+    //         Box::new(std::io::Error::new(
+    //             std::io::ErrorKind::Other,
+    //             "no gRPC client channel available",
+    //         ))
+    //     })?;
 
-        // Successful unary method invocation of external service via gRPC client pseudo-Node.
-        let ok_req = GrpcTestRequest {
-            method_result: Some(proto::grpc_test_request::MethodResult::OkText(
-                "test".to_string(),
-            )),
-        };
-        let ok_rsp = GrpcTestResponse {
-            text: "test".to_string(),
-        };
-        expect_eq!(grpc_stub.unary_method(ok_req), Ok(ok_rsp));
+    //     // Successful unary method invocation of external service via gRPC client pseudo-Node.
+    //     let ok_req = GrpcTestRequest {
+    //         method_result: Some(proto::grpc_test_request::MethodResult::OkText(
+    //             "test".to_string(),
+    //         )),
+    //     };
+    //     let ok_rsp = GrpcTestResponse {
+    //         text: "test".to_string(),
+    //     };
+    //     expect_eq!(grpc_stub.unary_method(ok_req), Ok(ok_rsp));
 
-        // Errored unary method invocation of external service via gRPC client pseudo-Node.
-        let err_req = GrpcTestRequest {
-            method_result: Some(proto::grpc_test_request::MethodResult::ErrCode(
-                grpc::Code::FailedPrecondition as i32,
-            )),
-        };
-        let result = grpc_stub.unary_method(err_req);
-        expect_matches!(result, Err(_));
-        expect_eq!(
-            grpc::Code::FailedPrecondition as i32,
-            result.unwrap_err().code
-        );
+    //     // Errored unary method invocation of external service via gRPC client pseudo-Node.
+    //     let err_req = GrpcTestRequest {
+    //         method_result: Some(proto::grpc_test_request::MethodResult::ErrCode(
+    //             grpc::Code::FailedPrecondition as i32,
+    //         )),
+    //     };
+    //     let result = grpc_stub.unary_method(err_req);
+    //     expect_matches!(result, Err(_));
+    //     expect_eq!(
+    //         grpc::Code::FailedPrecondition as i32,
+    //         result.unwrap_err().code
+    //     );
 
-        Ok(())
-    }
-    fn test_grpc_client_server_streaming_method(&mut self) -> TestResult {
-        let grpc_stub = self.grpc_service.as_ref().ok_or_else(|| {
-            Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "no gRPC client channel available",
-            ))
-        })?;
-        // Successful server-streaming method invocation of external service via
-        // gRPC client pseudo-Node.
-        let ok_req = GrpcTestRequest {
-            method_result: Some(proto::grpc_test_request::MethodResult::OkText(
-                "test".to_string(),
-            )),
-        };
-        let ok_rsp = GrpcTestResponse {
-            text: "test".to_string(),
-        };
-        let receiver = grpc_stub
-            .server_streaming_method(ok_req)
-            .map_err(from_proto)?;
-        let mut count = 0;
-        loop {
-            match receiver.receive() {
-                Ok(grpc_rsp) => {
-                    // TODO(#592): get typed response directly from receiver.
-                    expect_eq!(
-                        oak::grpc::Code::Ok as i32,
-                        grpc_rsp.status.unwrap_or_default().code
-                    );
-                    let rsp = GrpcTestResponse::decode(grpc_rsp.rsp_msg.as_slice())
-                        .expect("failed to parse GrpcTestResponse");
-                    expect_eq!(rsp.clone(), ok_rsp.clone());
-                    count += 1;
-                }
-                Err(OakError::OakStatus(OakStatus::ErrBadHandle)) => break,
-                Err(OakError::OakStatus(OakStatus::ErrChannelClosed)) => break,
-                Err(e) => return Err(Box::new(e)),
-            }
-        }
-        expect_eq!(2, count);
-        receiver.close().expect("failed to close receiver");
+    //     Ok(())
+    // }
+    // TODO(#953, #954): Add streaming support for gRPC and re-enable all of the tests.
+    // fn test_grpc_client_server_streaming_method(&mut self) -> TestResult {
+    //     let grpc_stub = self.grpc_service.as_ref().ok_or_else(|| {
+    //         Box::new(std::io::Error::new(
+    //             std::io::ErrorKind::Other,
+    //             "no gRPC client channel available",
+    //         ))
+    //     })?;
+    //     // Successful server-streaming method invocation of external service via
+    //     // gRPC client pseudo-Node.
+    //     let ok_req = GrpcTestRequest {
+    //         method_result: Some(proto::grpc_test_request::MethodResult::OkText(
+    //             "test".to_string(),
+    //         )),
+    //     };
+    //     let ok_rsp = GrpcTestResponse {
+    //         text: "test".to_string(),
+    //     };
+    //     let receiver = grpc_stub
+    //         .server_streaming_method(ok_req)
+    //         .map_err(from_proto)?;
+    //     let mut count = 0;
+    //     loop {
+    //         match receiver.receive() {
+    //             Ok(grpc_rsp) => {
+    //                 // TODO(#592): get typed response directly from receiver.
+    //                 expect_eq!(
+    //                     oak::grpc::Code::Ok as i32,
+    //                     grpc_rsp.status.unwrap_or_default().code
+    //                 );
+    //                 let rsp = GrpcTestResponse::decode(grpc_rsp.rsp_msg.as_slice())
+    //                     .expect("failed to parse GrpcTestResponse");
+    //                 expect_eq!(rsp.clone(), ok_rsp.clone());
+    //                 count += 1;
+    //             }
+    //             Err(OakError::OakStatus(OakStatus::ErrBadHandle)) => break,
+    //             Err(OakError::OakStatus(OakStatus::ErrChannelClosed)) => break,
+    //             Err(e) => return Err(Box::new(e)),
+    //         }
+    //     }
+    //     expect_eq!(2, count);
+    //     receiver.close().expect("failed to close receiver");
 
-        // Errored server-streaming method invocation of external service via
-        // gRPC client pseudo-Node.
-        let err_req = GrpcTestRequest {
-            method_result: Some(proto::grpc_test_request::MethodResult::ErrCode(
-                grpc::Code::FailedPrecondition as i32,
-            )),
-        };
-        let receiver = grpc_stub
-            .server_streaming_method(err_req)
-            .map_err(from_proto)?;
-        let mut seen_err_code = false;
-        loop {
-            match receiver.receive() {
-                Ok(grpc_rsp) => {
-                    expect_eq!(
-                        grpc::Code::FailedPrecondition as i32,
-                        grpc_rsp.status.unwrap_or_default().code
-                    );
-                    seen_err_code = true;
-                }
-                Err(OakError::OakStatus(OakStatus::ErrBadHandle)) => break,
-                Err(OakError::OakStatus(OakStatus::ErrChannelClosed)) => break,
-                Err(e) => return Err(Box::new(e)),
-            }
-        }
-        expect!(seen_err_code);
-        receiver.close().expect("failed to close receiver");
-        Ok(())
-    }
-    fn test_absent_grpc_client(&mut self) -> TestResult {
-        // Expect to have a channel to a gRPC client pseudo-Node, but the remote
-        // gRPC service is unavailable.
-        let grpc_stub = self.absent_grpc_service.as_ref().ok_or_else(|| {
-            Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "no gRPC client channel available",
-            ))
-        })?;
-        let req = GrpcTestRequest {
-            method_result: Some(proto::grpc_test_request::MethodResult::OkText(
-                "test".to_string(),
-            )),
-        };
+    //     // Errored server-streaming method invocation of external service via
+    //     // gRPC client pseudo-Node.
+    //     let err_req = GrpcTestRequest {
+    //         method_result: Some(proto::grpc_test_request::MethodResult::ErrCode(
+    //             grpc::Code::FailedPrecondition as i32,
+    //         )),
+    //     };
+    //     let receiver = grpc_stub
+    //         .server_streaming_method(err_req)
+    //         .map_err(from_proto)?;
+    //     let mut seen_err_code = false;
+    //     loop {
+    //         match receiver.receive() {
+    //             Ok(grpc_rsp) => {
+    //                 expect_eq!(
+    //                     grpc::Code::FailedPrecondition as i32,
+    //                     grpc_rsp.status.unwrap_or_default().code
+    //                 );
+    //                 seen_err_code = true;
+    //             }
+    //             Err(OakError::OakStatus(OakStatus::ErrBadHandle)) => break,
+    //             Err(OakError::OakStatus(OakStatus::ErrChannelClosed)) => break,
+    //             Err(e) => return Err(Box::new(e)),
+    //         }
+    //     }
+    //     expect!(seen_err_code);
+    //     receiver.close().expect("failed to close receiver");
+    //     Ok(())
+    // }
+    // TODO(#953, #954): Add streaming support for gRPC and re-enable all of the tests.
+    // fn test_absent_grpc_client(&mut self) -> TestResult {
+    //     // Expect to have a channel to a gRPC client pseudo-Node, but the remote
+    //     // gRPC service is unavailable.
+    //     let grpc_stub = self.absent_grpc_service.as_ref().ok_or_else(|| {
+    //         Box::new(std::io::Error::new(
+    //             std::io::ErrorKind::Other,
+    //             "no gRPC client channel available",
+    //         ))
+    //     })?;
+    //     let req = GrpcTestRequest {
+    //         method_result: Some(proto::grpc_test_request::MethodResult::OkText(
+    //             "test".to_string(),
+    //         )),
+    //     };
 
-        // Attempting to invoke any sort of method should fail.
-        let result = grpc_stub.unary_method(req.clone());
-        info!("absent.unary_method() -> {:?}", result);
-        expect_matches!(result, Err(_));
+    //     // Attempting to invoke any sort of method should fail.
+    //     let result = grpc_stub.unary_method(req.clone());
+    //     info!("absent.unary_method() -> {:?}", result);
+    //     expect_matches!(result, Err(_));
 
-        info!("absent.server_streaming_method()");
-        let receiver = grpc_stub.server_streaming_method(req).map_err(from_proto)?;
-        loop {
-            let result = receiver.receive();
-            info!("absent.server_streaming_method().receive() -> {:?}", result);
-            match result {
-                Ok(grpc_rsp) => {
-                    expect!(grpc_rsp.status.unwrap_or_default().code != grpc::Code::Ok as i32);
-                }
-                Err(OakError::OakStatus(OakStatus::ErrBadHandle)) => break,
-                Err(OakError::OakStatus(OakStatus::ErrChannelClosed)) => break,
-                Err(e) => return Err(Box::new(e)),
-            }
-        }
-        receiver.close().expect("failed to close receiver");
+    //     info!("absent.server_streaming_method()");
+    //     let receiver = grpc_stub.server_streaming_method(req).map_err(from_proto)?;
+    //     loop {
+    //         let result = receiver.receive();
+    //         info!("absent.server_streaming_method().receive() -> {:?}", result);
+    //         match result {
+    //             Ok(grpc_rsp) => {
+    //                 expect!(grpc_rsp.status.unwrap_or_default().code != grpc::Code::Ok as i32);
+    //             }
+    //             Err(OakError::OakStatus(OakStatus::ErrBadHandle)) => break,
+    //             Err(OakError::OakStatus(OakStatus::ErrChannelClosed)) => break,
+    //             Err(e) => return Err(Box::new(e)),
+    //         }
+    //     }
+    //     receiver.close().expect("failed to close receiver");
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
     fn test_roughtime_client(&mut self) -> TestResult {
         let roughtime = self.roughtime.as_mut().ok_or_else(|| {

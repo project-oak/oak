@@ -34,6 +34,7 @@ use std::{
     thread,
     thread::JoinHandle,
 };
+use tokio::sync::oneshot;
 
 mod channel;
 #[cfg(feature = "oak_debug")]
@@ -55,6 +56,42 @@ pub trait HtmlPath {
     fn html_path(&self) -> String;
 }
 
+struct NodeStopper {
+    /// Handle used for joining the Node thread.
+    join_handle: JoinHandle<()>,
+
+    /// A notification sender object whose receiver is sent to the Node.
+    /// The agreement is that the Runtime will notify the Node upon termination
+    /// and then start waiting on the join handle. It's up to the Node to figure
+    /// out how to actually terminate when receiving a notification.
+    notify_sender: oneshot::Sender<()>,
+}
+
+impl NodeStopper {
+    /// Sends a notification to the Node and joins its thread.
+    fn stop_node(self) -> thread::Result<()> {
+        self.notify_sender
+            .send(())
+            // Notification errors are discarded since not all of the Nodes save
+            // and use the [`oneshot::Receiver`].
+            .unwrap_or_else(|error| {
+                warn!("Couldn't send notification: {:?}", error);
+            });
+        self.join_handle.join()
+    }
+}
+
+impl std::fmt::Debug for NodeStopper {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{{join_handle={:?}, notify_sender={:?}}}",
+            self.join_handle, self.notify_sender,
+        )?;
+        write!(f, "]}}")
+    }
+}
+
 struct NodeInfo {
     /// Name for the Node in debugging output.
     name: String,
@@ -69,18 +106,18 @@ struct NodeInfo {
     /// Map of ABI handles to channels.
     abi_handles: HashMap<oak_abi::Handle, ChannelHalf>,
 
-    /// If the Node is currently running, holds the [`JoinHandle`] for its thread
-    /// (with one small exception, when the Runtime is in the process of closing
-    /// down and the [`JoinHandle`] is held by the shutdown processing code).
-    join_handle: Option<JoinHandle<()>>,
+    /// If the Node is currently running, holds the [`NodeStopper`] (with one
+    /// small exception, when the Runtime is in the process of closing down and
+    /// the [`NodeStopper`] is held by the shutdown processing code).
+    node_stopper: Option<NodeStopper>,
 }
 
 impl std::fmt::Debug for NodeInfo {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "NodeInfo {{'{}', label={:?}, join_handle={:?}, handles=[",
-            self.name, self.label, self.join_handle,
+            "NodeInfo {{'{}', label={:?}, node_stopper={:?}, handles=[",
+            self.name, self.label, self.node_stopper,
         )?;
         write!(
             f,
@@ -409,7 +446,7 @@ impl Runtime {
                     node_id.html_path(),
                 )
                 .unwrap();
-                if node_info.join_handle.is_none() {
+                if node_info.node_stopper.is_none() {
                     write!(&mut s, " [style=dashed]").unwrap();
                 }
                 writeln!(&mut s).unwrap();
@@ -563,11 +600,11 @@ impl Runtime {
         let node_info = node_infos.get(&node_id)?;
         let mut s = String::new();
         write!(&mut s, "<h2>{}</h2>", node_info.name).unwrap();
-        if let Some(join_handle) = &node_info.join_handle {
+        if let Some(node_stopper) = &node_info.node_stopper {
             write!(
                 &mut s,
                 "<p>Node thread is currently running, join_handle={:?}",
-                join_handle
+                node_stopper.join_handle
             )
             .unwrap();
         } else {
@@ -632,27 +669,27 @@ impl Runtime {
         // for any additional work to be finished here. This may take an arbitrary amount of time,
         // depending on the work that the Node thread has to perform, but at least we know that the
         // it will not be able to enter again in a blocking state.
-        let join_handles = self.take_join_handles();
-        for (node_id, join_handle_opt) in join_handles {
-            if let Some(join_handle) = join_handle_opt {
-                debug!("join thread for {:?} ...", node_id);
-                if let Err(err) = join_handle.join() {
-                    error!("could not join node {:?}: {:?}", node_id, err);
+        let node_stoppers = self.take_node_stoppers();
+        for (node_id, node_stopper_opt) in node_stoppers {
+            if let Some(node_stopper) = node_stopper_opt {
+                debug!("stopping node {:?} ...", node_id);
+                if let Err(err) = node_stopper.stop_node() {
+                    error!("could not stop node {:?}: {:?}", node_id, err);
                 }
-                debug!("join thread for {:?}...done", node_id);
+                debug!("stopping node {:?}...done", node_id);
             }
         }
     }
 
-    /// Move all of the Node join handles out of the `node_infos` tracker and return them.
-    fn take_join_handles(&self) -> Vec<(NodeId, Option<JoinHandle<()>>)> {
+    /// Move all of the [`NodeStopper`] objects out of the `node_infos` tracker and return them.
+    fn take_node_stoppers(&self) -> Vec<(NodeId, Option<NodeStopper>)> {
         let mut node_infos = self
             .node_infos
             .write()
             .expect("could not acquire lock on node_infos");
         node_infos
             .iter_mut()
-            .map(|(id, info)| (*id, info.join_handle.take()))
+            .map(|(id, info)| (*id, info.node_stopper.take()))
             .collect()
     }
 
@@ -1108,9 +1145,9 @@ impl Runtime {
         self.update_nodes_count_metric();
     }
 
-    /// Add the [`JoinHandle`] for a running Node to `NodeInfo`. The provided `NodeId` value
-    /// must already be present in `self.node_infos`.
-    fn add_node_join_handle(&self, node_id: NodeId, node_join_handle: JoinHandle<()>) {
+    /// Add the [`NodeStopper`] for a running Node to `NodeInfo`.
+    /// The provided [`NodeId`] value must already be present in [`Runtime::node_infos`].
+    fn add_node_stopper(&self, node_id: NodeId, node_stopper: NodeStopper) {
         let mut node_infos = self
             .node_infos
             .write()
@@ -1118,7 +1155,7 @@ impl Runtime {
         let mut node_info = node_infos
             .get_mut(&node_id)
             .expect("node ID not in node_infos");
-        node_info.join_handle = Some(node_join_handle);
+        node_info.node_stopper = Some(node_stopper);
     }
 
     /// Create a Node within the [`Runtime`] corresponding to a given module name and
@@ -1185,7 +1222,7 @@ impl Runtime {
             .ok_or(OakStatus::ErrInvalidArgs)?;
 
         debug!("{:?}: start node instance {:?}", node_id, new_node_id);
-        let node_join_handle = self.clone().node_start_instance(
+        let node_stopper = self.clone().node_start_instance(
             &new_node_name,
             instance,
             new_node_proxy,
@@ -1194,7 +1231,7 @@ impl Runtime {
 
         // Insert the now running instance to the list of running instances (by moving it), so that
         // `Node::stop` will be called on it eventually.
-        self.add_node_join_handle(node_id, node_join_handle);
+        self.add_node_stopper(node_id, node_stopper);
 
         Ok(())
     }
@@ -1207,7 +1244,7 @@ impl Runtime {
         node_instance: Box<dyn crate::node::Node + Send>,
         node_proxy: RuntimeProxy,
         initial_handle: oak_abi::Handle,
-    ) -> Result<JoinHandle<()>, OakStatus> {
+    ) -> Result<NodeStopper, OakStatus> {
         // Try to start the Node instance.
         //
         // In order for this to work correctly, the `NodeInfo` entry must already exist in
@@ -1219,10 +1256,11 @@ impl Runtime {
         //
         // We also want no locks to be held while the instance is starting.
         let node_id = node_proxy.node_id;
+        let (node_notify_sender, node_notify_receiver) = tokio::sync::oneshot::channel::<()>();
         let node_join_handle = thread::Builder::new()
             .name(node_name.to_string())
             .spawn(move || {
-                node_instance.run(node_proxy, initial_handle);
+                node_instance.run(node_proxy, initial_handle, node_notify_receiver);
                 // It's now safe to remove the state for this Node, as there's nothing left
                 // that can invoke `Runtime` functionality for it.
                 self.remove_node_id(node_id)
@@ -1230,7 +1268,10 @@ impl Runtime {
             .expect("failed to spawn thread");
         // Note: self has been moved into the thread running the closure.
 
-        Ok(node_join_handle)
+        Ok(NodeStopper {
+            join_handle: node_join_handle,
+            notify_sender: node_notify_sender,
+        })
     }
 
     /// Configure data structures for a Node instance.
@@ -1241,7 +1282,7 @@ impl Runtime {
                 name: node_name.to_string(),
                 label: label.clone(),
                 abi_handles: HashMap::new(),
-                join_handle: None,
+                node_stopper: None,
             },
         );
     }
