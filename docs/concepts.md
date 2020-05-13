@@ -4,6 +4,7 @@
 - [Oak Node](#oak-node)
   - [WebAssembly](#webassembly)
 - [Channels](#channels)
+  - [Invocations](#invocations)
 - [Labels](#labels)
 - [Pseudo-Nodes](#pseudo-nodes)
 - [Oak Application](#oak-application)
@@ -83,6 +84,35 @@ When a Node receives the message, these Runtime-internal references are
 converted to _different_ handle values, newly assigned (by the Runtime) in the
 numbering space of the receiving Node. (This is analogous to the
 [transfer of file descriptors between different UNIX processes](https://en.wikipedia.org/wiki/File_descriptor#File_descriptors_as_capabilities).)
+
+### Invocations
+
+The _invocation pattern_ is used for several kinds of interaction between Nodes
+in Oak, and helps to illustrate the use of Channels. In this pattern, Node A has
+an invocation channel to Node B, and it gets Node B to do things for it by
+sending an invocation message down this Channel. The invocation message contains
+no data, but instead contains references to two other ephemeral Channels:
+
+- A reference to the read half of a _request Channel_ that is used to send
+  request messages from A to B.
+- A reference to the write half of a _response Channel_ that is used to send
+  response messages from B to A.
+
+<!-- From: -->
+<!-- https://docs.google.com/drawings/d/1-wHDIo1JcXAJg3jrJa54H0x-dLwjjD3U2YZIc_amctQ -->
+<img src="images/InvocationPattern.png" width="550">
+
+Node A keeps hold of a handle for the write half of the request channel, and
+sends requests to it. It then reads responses from the read half of the response
+channel until the operation is complete, then closes both ephemeral Channel
+handles.
+
+Node B acts on the invocation message by reading one or more request messages
+from the first handle; once it has performed the requested functionality, it
+sends one or more response messages via the second handle, and closes both of
+its ephemeral Channel handles.
+
+<img src="images/InvocationPattern.gif" width="550">
 
 ## Labels
 
