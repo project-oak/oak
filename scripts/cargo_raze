@@ -8,6 +8,7 @@ cd cargo || exit 1
 # Remove existing raze-generated BUILD files before regenerating, so
 # the files for removed/upgraded deps get cleared.
 rm -f remote/*
+cargo build
 cargo raze
 # `remote/ring-0.16.12.BUILD` contains manually added environment
 # variables that were added to solve #890:

@@ -27,7 +27,7 @@ use log::info;
 use oak_runtime::{configure_and_run, proto::oak::application::ApplicationConfiguration};
 use prost::Message;
 use std::{
-    fs::File,
+    fs::{read_to_string, File},
     io::Read,
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -36,7 +36,9 @@ use std::{
 };
 use structopt::StructOpt;
 
-use oak_runtime::proto::oak::application::node_configuration::ConfigType::GrpcServerConfig;
+use oak_runtime::proto::oak::application::node_configuration::ConfigType::{
+    GrpcClientConfig, GrpcServerConfig,
+};
 
 #[derive(StructOpt, Clone)]
 #[structopt(about = "Oak Loader")]
@@ -50,6 +52,11 @@ pub struct Opt {
         help = "PEM encoded X.509 TLS certificate file used by gRPC server pseudo-Nodes."
     )]
     grpc_tls_certificate: String,
+    #[structopt(
+        long,
+        help = "PEM encoded X.509 TLS root certificate file used to authenticate an external gRPC service."
+    )]
+    root_tls_certificate: String,
     #[structopt(long, default_value = "3030", help = "Metrics server port number.")]
     metrics_port: u16,
     #[structopt(long, help = "Starts the Runtime without a metrics server.")]
@@ -86,12 +93,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut app_config = ApplicationConfiguration::decode(app_config_data.as_ref())?;
 
     // Assign a TLS identity to all gRPC server nodes in the application configuration.
-    let grpc_tls_private_key = read_file(&opt.grpc_tls_private_key)?;
-    let grpc_tls_certificate = read_file(&opt.grpc_tls_certificate)?;
+    let grpc_tls_private_key = read_to_string(&opt.grpc_tls_private_key)?;
+    let grpc_tls_certificate = read_to_string(&opt.grpc_tls_certificate)?;
+    let root_tls_certificate = read_to_string(&opt.root_tls_certificate)?;
     for node in &mut app_config.node_configs {
         if let Some(GrpcServerConfig(ref mut grpc_server_config)) = node.config_type {
             grpc_server_config.grpc_tls_private_key = grpc_tls_private_key.clone();
             grpc_server_config.grpc_tls_certificate = grpc_tls_certificate.clone();
+        } else if let Some(GrpcClientConfig(ref mut grpc_client_config)) = node.config_type {
+            grpc_client_config.root_tls_certificate = root_tls_certificate.clone();
         }
     }
 

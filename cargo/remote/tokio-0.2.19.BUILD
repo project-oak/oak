@@ -122,7 +122,7 @@ rust_library(
     deps = [
         "@raze__bytes__0_5_4//:bytes",
         "@raze__fnv__1_0_6//:fnv",
-        "@raze__futures_core__0_3_4//:futures_core",
+        "@raze__futures_core__0_3_5//:futures_core",
         "@raze__iovec__0_1_4//:iovec",
         "@raze__lazy_static__1_4_0//:lazy_static",
         "@raze__memchr__2_3_3//:memchr",

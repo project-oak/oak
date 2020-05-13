@@ -25,7 +25,7 @@ load(
 
 
 rust_library(
-    name = "futures_core",
+    name = "futures_io",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     edition = "2018",
@@ -35,10 +35,8 @@ rust_library(
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.3.4",
+    version = "0.3.5",
     crate_features = [
-        "alloc",
-        "default",
         "std",
     ],
 )

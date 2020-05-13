@@ -42,9 +42,9 @@ rust_library(
     srcs = glob(["**/*.rs"]),
     deps = [
         "@raze__bytes__0_5_4//:bytes",
-        "@raze__futures_channel__0_3_4//:futures_channel",
-        "@raze__futures_core__0_3_4//:futures_core",
-        "@raze__futures_util__0_3_4//:futures_util",
+        "@raze__futures_channel__0_3_5//:futures_channel",
+        "@raze__futures_core__0_3_5//:futures_core",
+        "@raze__futures_util__0_3_5//:futures_util",
         "@raze__h2__0_2_4//:h2",
         "@raze__http__0_2_1//:http",
         "@raze__http_body__0_3_1//:http_body",

@@ -21,7 +21,7 @@ use std::{
     string::String,
     sync::Arc,
 };
-use tonic::transport::Identity;
+use tonic::transport::{Certificate, Identity, Uri};
 
 pub mod external;
 mod grpc;
@@ -49,6 +49,14 @@ pub enum Configuration {
         tls_identity: Identity,
     },
 
+    /// The configuration for a gRPC server pseudo-Node that contains a URI and an X.509 root TLS
+    /// certificate.
+    GrpcClientNode {
+        uri: Uri,
+        root_tls_certificate: Certificate,
+        address: String,
+    },
+
     /// The configuration for a Wasm Node.
     // It would be better to store a list of exported methods and copyable Wasm interpreter
     // instance, but wasmi doesn't allow this. We make do with having a copyable
@@ -67,6 +75,8 @@ pub enum Configuration {
 pub enum ConfigurationError {
     AddressParsingError(AddrParseError),
     IncorrectPort,
+    NoHostElement,
+    CertificateParsingError,
     WasmiModuleInializationError(wasmi::Error),
 }
 
@@ -83,6 +93,10 @@ impl std::fmt::Display for ConfigurationError {
                 write!(f, "Failed to parse an address: {}", e)
             }
             ConfigurationError::IncorrectPort => write!(f, "Incorrect port (must be > 1023)"),
+            ConfigurationError::NoHostElement => write!(f, "URI doesn't contain the Host element"),
+            ConfigurationError::CertificateParsingError => {
+                write!(f, "Error parsing PEM encoded TLS certificate")
+            }
             ConfigurationError::WasmiModuleInializationError(e) => {
                 write!(f, "Failed to initialize wasmi::Module: {}", e)
             }
@@ -109,6 +123,26 @@ pub fn check_port(address: &SocketAddr) -> Result<(), ConfigurationError> {
     }
 }
 
+/// Checks if URI contains the "Host" element.
+pub fn check_uri(uri: &Uri) -> Result<(), ConfigurationError> {
+    uri.authority()
+        .filter(|authority| !authority.host().is_empty())
+        .map(|_| ())
+        .ok_or(ConfigurationError::NoHostElement)
+}
+
+/// Check the correctness of a PEM encoded TLS certificate.
+pub fn load_certificate(certitiface: &str) -> Result<Certificate, ConfigurationError> {
+    use rustls::internal::pemfile::certs;
+
+    let mut cursor = std::io::Cursor::new(certitiface);
+    // `rustls` doesn't specify certificate parsing errors:
+    // https://docs.rs/rustls/0.17.0/rustls/internal/pemfile/fn.certs.html
+    certs(&mut cursor).map_err(|_| ConfigurationError::CertificateParsingError)?;
+
+    Ok(Certificate::from_pem(certitiface))
+}
+
 impl Configuration {
     /// Creates a new Node instance corresponding to the [`Configuration`].
     ///
@@ -133,6 +167,16 @@ impl Configuration {
                 *address,
                 tls_identity.clone(),
             ))),
+
+            Configuration::GrpcClientNode {
+                uri,
+                root_tls_certificate,
+                address: _,
+            } => Some(Box::new(grpc::client::GrpcClientNode::new(
+                node_name,
+                uri.clone(),
+                root_tls_certificate.clone(),
+            ))),
             Configuration::WasmNode { module } => {
                 match wasm::WasmNode::new(node_name, module.clone(), entrypoint) {
                     Some(node) => Some(Box::new(node)),
@@ -151,6 +195,7 @@ impl Configuration {
         match self {
             Configuration::LogNode => "LogNode".to_string(),
             Configuration::GrpcServerNode { .. } => "GrpcServerNode".to_string(),
+            Configuration::GrpcClientNode { .. } => "GrpcClientNode".to_string(),
             Configuration::WasmNode { .. } => format!("WasmNode-{}", entrypoint),
             Configuration::External => "ExternalPseudoNode".to_string(),
         }

@@ -12,7 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "notice", # "MIT"
+  "notice", # "MIT,Apache-2.0"
 ])
 
 load(
@@ -25,20 +25,17 @@ load(
 
 
 rust_library(
-    name = "tower_discover",
+    name = "vec_map",
     crate_root = "src/lib.rs",
     crate_type = "lib",
-    edition = "2018",
+    edition = "2015",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__futures_core__0_3_5//:futures_core",
-        "@raze__pin_project__0_4_9//:pin_project",
-        "@raze__tower_service__0_3_0//:tower_service",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.3.0",
+    version = "0.8.2",
     crate_features = [
     ],
 )

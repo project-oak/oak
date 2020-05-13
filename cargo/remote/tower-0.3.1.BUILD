@@ -32,7 +32,7 @@ rust_library(
     edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__futures_core__0_3_4//:futures_core",
+        "@raze__futures_core__0_3_5//:futures_core",
         "@raze__tower_buffer__0_3_0//:tower_buffer",
         "@raze__tower_discover__0_3_0//:tower_discover",
         "@raze__tower_layer__0_3_0//:tower_layer",

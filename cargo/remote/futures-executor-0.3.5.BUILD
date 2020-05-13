@@ -12,7 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "notice", # "MIT,Apache-2.0"
+  "restricted", # "MIT OR Apache-2.0"
 ])
 
 load(
@@ -25,18 +25,24 @@ load(
 
 
 rust_library(
-    name = "vec_map",
+    name = "futures_executor",
     crate_root = "src/lib.rs",
     crate_type = "lib",
-    edition = "2015",
+    edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
+        "@raze__futures_core__0_3_5//:futures_core",
+        "@raze__futures_task__0_3_5//:futures_task",
+        "@raze__futures_util__0_3_5//:futures_util",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.8.1",
+    version = "0.3.5",
     crate_features = [
+        "std",
     ],
 )
 
+# Unsupported target "local_pool" with type "test" omitted
+# Unsupported target "thread_notify" with type "bench" omitted

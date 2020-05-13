@@ -134,6 +134,9 @@ impl Node for GrpcServerNode {
             // Enables the I/O driver.
             // Necessary for using net, process, signal, and I/O types on the Tokio runtime.
             .enable_io()
+            // Enables the time driver.
+            // Necessary for creating a Tokio Runtime.
+            .enable_time()
             .build()
             .expect("Couldn't create an Async runtime");
 
