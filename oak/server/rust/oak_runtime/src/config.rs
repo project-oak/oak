@@ -18,8 +18,8 @@ use crate::{
     node,
     node::load_wasm,
     proto::oak::application::{
-        node_configuration::ConfigType, ApplicationConfiguration, GrpcClientConfiguration,
-        GrpcServerConfiguration, LogConfiguration, NodeConfiguration, WebAssemblyConfiguration,
+        node_configuration::ConfigType, ApplicationConfiguration, GrpcServerConfiguration,
+        LogConfiguration, NodeConfiguration, WebAssemblyConfiguration,
     },
     runtime, RuntimeProxy,
 };
