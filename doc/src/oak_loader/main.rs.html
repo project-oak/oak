@@ -143,6 +143,16 @@
 <span id="143">143</span>
 <span id="144">144</span>
 <span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -173,7 +183,7 @@
 <span class="kw">use</span> <span class="ident">oak_runtime</span>::{<span class="ident">configure_and_run</span>, <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::<span class="ident">ApplicationConfiguration</span>};
 <span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
-    <span class="ident">fs</span>::<span class="ident">File</span>,
+    <span class="ident">fs</span>::{<span class="ident">read_to_string</span>, <span class="ident">File</span>},
     <span class="ident">io</span>::<span class="ident">Read</span>,
     <span class="ident">sync</span>::{
         <span class="ident">atomic</span>::{<span class="ident">AtomicBool</span>, <span class="ident">Ordering</span>},
@@ -182,7 +192,9 @@
 };
 <span class="kw">use</span> <span class="ident">structopt</span>::<span class="ident">StructOpt</span>;
 
-<span class="kw">use</span> <span class="ident">oak_runtime</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::<span class="ident">node_configuration</span>::<span class="ident">ConfigType</span>::<span class="ident">GrpcServerConfig</span>;
+<span class="kw">use</span> <span class="ident">oak_runtime</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::<span class="ident">node_configuration</span>::<span class="ident">ConfigType</span>::{
+    <span class="ident">GrpcClientConfig</span>, <span class="ident">GrpcServerConfig</span>,
+};
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>)]</span>
 <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">about</span> <span class="op">=</span> <span class="string">&quot;Oak Loader&quot;</span>)]</span>
@@ -196,6 +208,11 @@
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;PEM encoded X.509 TLS certificate file used by gRPC server pseudo-Nodes.&quot;</span>
     )]</span>
     <span class="ident">grpc_tls_certificate</span>: <span class="ident">String</span>,
+    <span class="attribute">#[<span class="ident">structopt</span>(
+        <span class="ident">long</span>,
+        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;PEM encoded X.509 TLS root certificate file used to authenticate an external gRPC service.&quot;</span>
+    )]</span>
+    <span class="ident">root_tls_certificate</span>: <span class="ident">String</span>,
     <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;3030&quot;</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;Metrics server port number.&quot;</span>)]</span>
     <span class="ident">metrics_port</span>: <span class="ident">u16</span>,
     <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;Starts the Runtime without a metrics server.&quot;</span>)]</span>
@@ -232,12 +249,15 @@
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">app_config</span> <span class="op">=</span> <span class="ident">ApplicationConfiguration</span>::<span class="ident">decode</span>(<span class="ident">app_config_data</span>.<span class="ident">as_ref</span>())<span class="question-mark">?</span>;
 
     <span class="comment">// Assign a TLS identity to all gRPC server nodes in the application configuration.</span>
-    <span class="kw">let</span> <span class="ident">grpc_tls_private_key</span> <span class="op">=</span> <span class="ident">read_file</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">grpc_tls_private_key</span>)<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">grpc_tls_certificate</span> <span class="op">=</span> <span class="ident">read_file</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">grpc_tls_certificate</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">grpc_tls_private_key</span> <span class="op">=</span> <span class="ident">read_to_string</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">grpc_tls_private_key</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">grpc_tls_certificate</span> <span class="op">=</span> <span class="ident">read_to_string</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">grpc_tls_certificate</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">root_tls_certificate</span> <span class="op">=</span> <span class="ident">read_to_string</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">root_tls_certificate</span>)<span class="question-mark">?</span>;
     <span class="kw">for</span> <span class="ident">node</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">app_config</span>.<span class="ident">node_configs</span> {
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">GrpcServerConfig</span>(<span class="kw-2">ref</span> <span class="kw-2">mut</span> <span class="ident">grpc_server_config</span>)) <span class="op">=</span> <span class="ident">node</span>.<span class="ident">config_type</span> {
             <span class="ident">grpc_server_config</span>.<span class="ident">grpc_tls_private_key</span> <span class="op">=</span> <span class="ident">grpc_tls_private_key</span>.<span class="ident">clone</span>();
             <span class="ident">grpc_server_config</span>.<span class="ident">grpc_tls_certificate</span> <span class="op">=</span> <span class="ident">grpc_tls_certificate</span>.<span class="ident">clone</span>();
+        } <span class="kw">else</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">GrpcClientConfig</span>(<span class="kw-2">ref</span> <span class="kw-2">mut</span> <span class="ident">grpc_client_config</span>)) <span class="op">=</span> <span class="ident">node</span>.<span class="ident">config_type</span> {
+            <span class="ident">grpc_client_config</span>.<span class="ident">root_tls_certificate</span> <span class="op">=</span> <span class="ident">root_tls_certificate</span>.<span class="ident">clone</span>();
         }
     }
 

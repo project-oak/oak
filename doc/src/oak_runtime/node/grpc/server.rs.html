@@ -348,6 +348,9 @@
 <span id="348">348</span>
 <span id="349">349</span>
 <span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -485,6 +488,9 @@
             <span class="comment">// Enables the I/O driver.</span>
             <span class="comment">// Necessary for using net, process, signal, and I/O types on the Tokio runtime.</span>
             .<span class="ident">enable_io</span>()
+            <span class="comment">// Enables the time driver.</span>
+            <span class="comment">// Necessary for creating a Tokio Runtime.</span>
+            .<span class="ident">enable_time</span>()
             .<span class="ident">build</span>()
             .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t create an Async runtime&quot;</span>);
 
