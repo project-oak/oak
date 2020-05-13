@@ -68,8 +68,21 @@ write to respectively. Each half of a Channel is identified by a **handle**,
 which is used as a parameter to the corresponding
 [host function](abi.md#host-functions) calls. Channel handles are integer values
 that are specific to a particular Node (like per-process UNIX file descriptors),
-so handle value 3 for Node A identify a different Channel than handle value 3
+so handle value 3 for Node A identifies a different Channel than handle value 3
 for Node B (unless there happens to be a coincidence of numbering).
+
+The messages that are sent over Channels hold two types of content, data and
+handles. The data component is just a collection of bytes, but the handles
+component allows references to underlying Channels to be copied between Nodes.
+
+The Node that sends a message includes handle values from its own per-Node
+numbering space; the Runtime translates these handles into internal references
+to the relevant Channel object.
+
+When a Node receives the message, these Runtime-internal references are
+converted to _different_ handle values, newly assigned (by the Runtime) in the
+numbering space of the receiving Node. (This is analogous to the
+[transfer of file descriptors between different UNIX processes](https://en.wikipedia.org/wiki/File_descriptor#File_descriptors_as_capabilities).)
 
 ## Labels
 
