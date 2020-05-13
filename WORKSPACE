@@ -73,6 +73,17 @@ http_archive(
     ],
 )
 
+# Java rules
+http_archive(
+    name = "rules_java",
+    #sha256 = "ff1710c6f2a880784abe6aa9a6fcb6c4cbfc2cf3e5d81ef5d92dddc8ef537864",
+    strip_prefix = "rules_java-9eb38ebffbaf4414fa3d2292b28e604a256dd5a5",
+    urls = [
+        # Head commit on 2020-01-14.
+        "https://github.com/bazelbuild/rules_java/archive/9eb38ebffbaf4414fa3d2292b28e604a256dd5a5.zip",
+    ],
+)
+
 # BoringSSL
 http_archive(
     name = "boringssl",
@@ -131,15 +142,19 @@ http_archive(
     ],
 )
 
-# TODO: Create a deps function for the googleapis repo.
+# Java gRPC support for Android examples
 http_archive(
     name = "io_grpc_grpc_java",
-    sha256 = "9d23d9fec84e24bd3962f5ef9d1fd61ce939d3f649a22bcab0f19e8167fae8ef",
-    strip_prefix = "grpc-java-1.20.0",
+    #sha256 = "9d23d9fec84e24bd3962f5ef9d1fd61ce939d3f649a22bcab0f19e8167fae8ef",
+    strip_prefix = "grpc-java-1.29.0",
     urls = [
-        "https://github.com/grpc/grpc-java/archive/v1.20.0.zip",
+        "https://github.com/grpc/grpc-java/archive/v1.29.0.zip",
     ],
 )
+
+load("@io_grpc_grpc_java//:repositories.bzl", "grpc_java_repositories")
+
+grpc_java_repositories()
 
 # TODO: Create a deps function for the googleapis repo.
 http_archive(
@@ -293,10 +308,6 @@ grpc_deps()
 load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
 
 grpc_extra_deps()
-
-load("@io_grpc_grpc_java//:repositories.bzl", "grpc_java_repositories")
-
-grpc_java_repositories()
 
 http_archive(
     name = "io_bazel_rules_go",

@@ -14,8 +14,8 @@
 # limitations under the License.
 #
 
-load("@rules_cc//cc:defs.bzl", "cc_library")
 load("@rules_android//android:rules.bzl", "android_binary", "android_library")
+load("@rules_cc//cc:defs.bzl", "cc_library")
 
 package(
     licenses = ["notice"],
@@ -46,5 +46,8 @@ android_binary(
     name = "client_app",
     custom_package = "com.google.oak.aggregator",
     manifest = "AndroidManifest.xml",
-    deps = [":client_activity"],
+    deps = [
+        ":client_activity",
+        "//examples/certs:gcp_certs",
+    ],
 )
