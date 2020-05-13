@@ -16,7 +16,7 @@
 
 use crate::{
     node,
-    node::{check_uri, load_certificate, load_wasm},
+    node::load_wasm,
     proto::oak::application::{
         node_configuration::ConfigType, ApplicationConfiguration, GrpcClientConfiguration,
         GrpcServerConfiguration, LogConfiguration, NodeConfiguration, WebAssemblyConfiguration,
