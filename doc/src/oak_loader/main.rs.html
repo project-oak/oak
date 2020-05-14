@@ -153,6 +153,7 @@
 <span id="153">153</span>
 <span id="154">154</span>
 <span id="155">155</span>
+<span id="156">156</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -177,7 +178,8 @@
 <span class="doccomment">//! cargo run --package=oak_loader -- \</span>
 <span class="doccomment">//!     --application=&lt;APP_CONFIG_PATH&gt; \</span>
 <span class="doccomment">//!     --grpc-tls-private-key=&lt;PRIVATE_KEY_PATH&gt; \</span>
-<span class="doccomment">//!     --grpc-tls-certificate=&lt;CERTIFICATE_PATH&gt;</span>
+<span class="doccomment">//!     --grpc-tls-certificate=&lt;CERTIFICATE_PATH&gt; \</span>
+<span class="doccomment">//!     --root-tls-certificate=&lt;CERTIFICATE_PATH&gt;</span>
 
 <span class="kw">use</span> <span class="ident">log</span>::<span class="ident">info</span>;
 <span class="kw">use</span> <span class="ident">oak_runtime</span>::{<span class="ident">configure_and_run</span>, <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::<span class="ident">ApplicationConfiguration</span>};
@@ -248,7 +250,7 @@
     <span class="kw">let</span> <span class="ident">app_config_data</span> <span class="op">=</span> <span class="ident">read_file</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">application</span>)<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">app_config</span> <span class="op">=</span> <span class="ident">ApplicationConfiguration</span>::<span class="ident">decode</span>(<span class="ident">app_config_data</span>.<span class="ident">as_ref</span>())<span class="question-mark">?</span>;
 
-    <span class="comment">// Assign a TLS identity to all gRPC server nodes in the application configuration.</span>
+    <span class="comment">// Assign a TLS identity to all gRPC server and client nodes in the application configuration.</span>
     <span class="kw">let</span> <span class="ident">grpc_tls_private_key</span> <span class="op">=</span> <span class="ident">read_to_string</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">grpc_tls_private_key</span>)<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">grpc_tls_certificate</span> <span class="op">=</span> <span class="ident">read_to_string</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">grpc_tls_certificate</span>)<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">root_tls_certificate</span> <span class="op">=</span> <span class="ident">read_to_string</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">root_tls_certificate</span>)<span class="question-mark">?</span>;
