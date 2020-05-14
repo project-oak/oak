@@ -1365,6 +1365,9 @@
 <span id="1365">1365</span>
 <span id="1366">1366</span>
 <span id="1367">1367</span>
+<span id="1368">1368</span>
+<span id="1369">1369</span>
+<span id="1370">1370</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -1406,7 +1409,7 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>)]</span>
 <span class="kw">mod</span> <span class="ident">introspect</span>;
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span>;
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">tests</span>;
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">channel</span>::{<span class="ident">ChannelHalf</span>, <span class="ident">ChannelHalfDirection</span>};
 
@@ -2554,13 +2557,21 @@
             .<span class="ident">ok_or</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>)<span class="question-mark">?</span>;
 
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{:?}: start node instance {:?}&quot;</span>, <span class="ident">node_id</span>, <span class="ident">new_node_id</span>);
-        <span class="self">self</span>.<span class="ident">node_start_instance</span>(<span class="kw-2">&amp;</span><span class="ident">new_node_name</span>, <span class="ident">instance</span>, <span class="ident">new_node_proxy</span>, <span class="ident">initial_handle</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">node_join_handle</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">clone</span>().<span class="ident">node_start_instance</span>(
+            <span class="kw-2">&amp;</span><span class="ident">new_node_name</span>,
+            <span class="ident">instance</span>,
+            <span class="ident">new_node_proxy</span>,
+            <span class="ident">initial_handle</span>,
+        )<span class="question-mark">?</span>;
+
+        <span class="comment">// Insert the now running instance to the list of running instances (by moving it), so that</span>
+        <span class="comment">// `Node::stop` will be called on it eventually.</span>
+        <span class="self">self</span>.<span class="ident">add_node_join_handle</span>(<span class="ident">node_id</span>, <span class="ident">node_join_handle</span>);
 
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="doccomment">/// Starts running a newly created Node instance on a new thread.  The join handle</span>
-    <span class="doccomment">/// for the new thread is stored in the corresponding [`NodeInfo`].</span>
+    <span class="doccomment">/// Starts running a newly created Node instance on a new thread.</span>
     <span class="doccomment">/// The `node_name` parameter is only used for diagnostic/debugging output.</span>
     <span class="kw">fn</span> <span class="ident">node_start_instance</span>(
         <span class="self">self</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>,
@@ -2568,8 +2579,8 @@
         <span class="ident">node_instance</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="kw">crate</span>::<span class="ident">node</span>::<span class="ident">Node</span> <span class="op">+</span> <span class="ident">Send</span><span class="op">&gt;</span>,
         <span class="ident">node_proxy</span>: <span class="ident">RuntimeProxy</span>,
         <span class="ident">initial_handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="comment">// Try to start the Node instance, and store the join handle.</span>
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">JoinHandle</span><span class="op">&lt;</span>()<span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+        <span class="comment">// Try to start the Node instance.</span>
         <span class="comment">//</span>
         <span class="comment">// In order for this to work correctly, the `NodeInfo` entry must already exist in</span>
         <span class="comment">// `Runtime`, which is why we could not start this instance before the call to</span>
@@ -2580,23 +2591,18 @@
         <span class="comment">//</span>
         <span class="comment">// We also want no locks to be held while the instance is starting.</span>
         <span class="kw">let</span> <span class="ident">node_id</span> <span class="op">=</span> <span class="ident">node_proxy</span>.<span class="ident">node_id</span>;
-        <span class="kw">let</span> <span class="ident">runtime</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">node_join_handle</span> <span class="op">=</span> <span class="ident">thread</span>::<span class="ident">Builder</span>::<span class="ident">new</span>()
             .<span class="ident">name</span>(<span class="ident">node_name</span>.<span class="ident">to_string</span>())
             .<span class="ident">spawn</span>(<span class="kw">move</span> <span class="op">|</span><span class="op">|</span> {
                 <span class="ident">node_instance</span>.<span class="ident">run</span>(<span class="ident">node_proxy</span>, <span class="ident">initial_handle</span>);
                 <span class="comment">// It&#39;s now safe to remove the state for this Node, as there&#39;s nothing left</span>
                 <span class="comment">// that can invoke `Runtime` functionality for it.</span>
-                <span class="ident">runtime</span>.<span class="ident">remove_node_id</span>(<span class="ident">node_id</span>)
+                <span class="self">self</span>.<span class="ident">remove_node_id</span>(<span class="ident">node_id</span>)
             })
             .<span class="ident">expect</span>(<span class="string">&quot;failed to spawn thread&quot;</span>);
+        <span class="comment">// Note: self has been moved into the thread running the closure.</span>
 
-        <span class="comment">// Regardless of the result of `Node::start`, insert the now running instance to the list of</span>
-        <span class="comment">// running instances (by moving it), so that `Node::stop` will be called on it eventually.</span>
-        <span class="self">self</span>.<span class="ident">add_node_join_handle</span>(<span class="ident">node_id</span>, <span class="ident">node_join_handle</span>);
-
-        <span class="comment">// Return the result of `Node::start`.</span>
-        <span class="prelude-val">Ok</span>(())
+        <span class="prelude-val">Ok</span>(<span class="ident">node_join_handle</span>)
     }
 
     <span class="doccomment">/// Configure data structures for a Node instance.</span>
