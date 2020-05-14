@@ -4,6 +4,7 @@
 - [Oak Node](#oak-node)
   - [WebAssembly](#webassembly)
 - [Channels](#channels)
+  - [Orphaned Channels](#orphaned-channels)
   - [Invocations](#invocations)
 - [Labels](#labels)
 - [Pseudo-Nodes](#pseudo-nodes)
@@ -84,6 +85,24 @@ When a Node receives the message, these Runtime-internal references are
 converted to _different_ handle values, newly assigned (by the Runtime) in the
 numbering space of the receiving Node. (This is analogous to the
 [transfer of file descriptors between different UNIX processes](https://en.wikipedia.org/wiki/File_descriptor#File_descriptors_as_capabilities).)
+
+### Orphaned Channels
+
+A Channel is considered _orphaned_ in particular direction if operations on the
+Channel in that direction will never accomplish anything.
+
+- The read half of a Channel is orphaned if there are no live references to the
+  write half of the Channel, and the Channel is empty. A read operation on an
+  orphaned Channel will return `ErrChannelClosed`, indicating that no read
+  operations on the Channel will ever succeed in future.
+- The write half of a Channel is orphaned if there are no live references to the
+  read half of the Channel, regardless of whether the Channel currently contains
+  messages or not. A write operation on an orphaned Channel will return
+  `ErrChannelClosed`, indicating that any attempt to write messages to the
+  Channel would just result in loss of the message.
+
+A Channel that is orphaned in both read and write directions is a Channel that
+has no live references to it, and is dropped.
 
 ### Invocations
 
