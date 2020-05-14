@@ -97,6 +97,8 @@ public class MainActivity extends Activity {
     TrustManagerFactory trustManagerFactory =
         TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
     trustManagerFactory.init(keyStore);
+    // Using TLSv1.2, as TLSv1.3 requires minSdkVersion of 29.
+    // Reference: https://developer.android.com/reference/javax/net/ssl/SSLContext
     SSLContext tlsContext = SSLContext.getInstance("TLSv1.2");
     // Use highest priority KeyManager and default SecureRandom implementation.
     tlsContext.init(null, trustManagerFactory.getTrustManagers(), null);
