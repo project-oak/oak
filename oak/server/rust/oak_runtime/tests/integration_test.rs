@@ -61,7 +61,7 @@ mod common {
         info!("Reading the metrics.");
         let client = Client::new();
 
-        let uri = format!("http://localhost:{}", &super::METRICS_PORT)
+        let uri = format!("http://localhost:{}/metrics", &super::METRICS_PORT)
             .parse::<Uri>()
             .expect("Could not parse URI.");
 
@@ -92,8 +92,8 @@ fn test_metrics_gives_the_correct_number_of_nodes() {
         .block_on(common::read_metrics())
         .expect("Reading the metrics failed.");
 
-    let value = get_int_metric_value(&res, "runtime_nodes_count");
-    assert_eq!(value, Some(2));
+    let value = get_int_metric_value(&res, "runtime_nodes_total");
+    assert_eq!(value, Some(2), "{}", &res);
 
     runtime.stop_runtime();
 }

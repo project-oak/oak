@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+use http::{method::Method, StatusCode};
 use hyper::{
     header::CONTENT_TYPE,
     service::{make_service_fn, service_fn},
@@ -42,9 +43,9 @@ impl std::fmt::Display for MetricsServerError {
 
 impl std::error::Error for MetricsServerError {}
 
-async fn serve_metrics(_req: Request<Body>) -> Result<Response<Body>, MetricsServerError> {
+async fn handle_metrics_request(runtime: &Runtime) -> Result<Response<Body>, MetricsServerError> {
     let encoder = TextEncoder::new();
-    let metric_families = prometheus::gather();
+    let metric_families = runtime.gather_metrics();
     let mut buffer = vec![];
     encoder.encode(&metric_families, &mut buffer).map_err(|e| {
         MetricsServerError::EncodingError(format!("Could not encode metrics data: {}", e))
@@ -53,7 +54,7 @@ async fn serve_metrics(_req: Request<Body>) -> Result<Response<Body>, MetricsSer
     info!("Metrics size: {}", buffer.len());
 
     Response::builder()
-        .status(http::StatusCode::OK)
+        .status(StatusCode::OK)
         .header(CONTENT_TYPE, encoder.format_type())
         .body(Body::from(buffer))
         .map_err(|e| {
@@ -61,17 +62,39 @@ async fn serve_metrics(_req: Request<Body>) -> Result<Response<Body>, MetricsSer
         })
 }
 
-async fn make_server(port: u16, notify_receiver: tokio::sync::oneshot::Receiver<()>) {
+async fn serve_metrics(
+    runtime: Arc<Runtime>,
+    req: Request<Body>,
+) -> Result<Response<Body>, MetricsServerError> {
+    match (req.method(), req.uri().path()) {
+        (&Method::GET, "/metrics") => handle_metrics_request(&runtime).await,
+        _ => Ok(Response::builder()
+            .status(StatusCode::NOT_FOUND)
+            .body(Body::from("Not Found!\n"))
+            .unwrap()),
+    }
+}
+
+async fn make_server(
+    port: u16,
+    runtime: Arc<Runtime>,
+    notify_receiver: tokio::sync::oneshot::Receiver<()>,
+) {
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
 
     // A `Service` is needed for every connection, so this
-    // creates one from the `process_metrics` function.
-    let make_svc = make_service_fn(|_conn| async {
-        // service_fn converts our function into a `Service`
-        Ok::<_, hyper::Error>(service_fn(serve_metrics))
+    // creates one from the `serve_metrics` function.
+    let make_service = make_service_fn(move |_conn| {
+        let runtime = runtime.clone();
+        async move {
+            Ok::<_, hyper::Error>(service_fn(move |req| {
+                let runtime = runtime.clone();
+                serve_metrics(runtime, req)
+            }))
+        }
     });
 
-    let server = Server::bind(&addr).serve(make_svc);
+    let server = Server::bind(&addr).serve(make_service);
     let graceful = server.with_graceful_shutdown(async {
         // Treat notification failure the same as a notification.
         let _ = notify_receiver.await;
@@ -91,9 +114,9 @@ async fn make_server(port: u16, notify_receiver: tokio::sync::oneshot::Receiver<
 // triggered.
 pub fn start_metrics_server(
     port: u16,
-    _runtime: Arc<Runtime>,
+    runtime: Arc<Runtime>,
     notify_receiver: tokio::sync::oneshot::Receiver<()>,
 ) {
     let mut tokio_runtime = tokio::runtime::Runtime::new().expect("Couldn't create Tokio runtime");
-    tokio_runtime.block_on(make_server(port, notify_receiver));
+    tokio_runtime.block_on(make_server(port, runtime, notify_receiver));
 }

@@ -15,53 +15,126 @@
 //
 
 use prometheus::{
-    opts, register_histogram, register_int_counter, register_int_gauge, Histogram, IntCounter,
-    IntGauge,
+    proto::MetricFamily, HistogramOpts, HistogramVec, IntCounterVec, IntGauge, Opts, Registry,
 };
 
 pub mod server;
 
-/// Struct that collects all the metrics in one place
-pub struct Metrics {
-    pub grpc_request_duration: Histogram,
-    pub grpc_requests_total: IntCounter,
-    pub grpc_response_size: Histogram,
-    pub runtime_nodes_count: IntGauge,
+/// Helper struct with functions for creating and registering metrics.
+struct MetricsBuilder {
+    pub registry: Registry,
 }
 
-// TODO(#899): For testability implement a trait with methods for updating the metrics.
-// TODO(#899): Instead of using a global Registry, the Runtime should instantiate and manage the
-// Registry
-impl Metrics {
-    fn new() -> Self {
+/// Mostly copied from https://github.com/grpc-ecosystem/java-grpc-prometheus
+#[derive(Clone)]
+pub struct GrpcServerMetrics {
+    /// Total number of RPCs started on the server.
+    pub grpc_server_started_total: IntCounterVec,
+    /// Total number of RPCs completed on the server, regardless of success or failure.
+    pub grpc_server_handled_total: IntCounterVec,
+    /// Histogram of response latency of RPCs handled by the server, in seconds.
+    pub grpc_server_handled_latency_seconds: HistogramVec,
+    /// Histogram of response sizes of RPCs handled by the server.
+    pub grpc_response_size_bytes: HistogramVec,
+}
+
+/// Struct that collects all metrics for monitoring the Oak Runtime.
+#[derive(Clone)]
+pub struct RuntimeMetrics {
+    pub runtime_nodes_total: IntGauge,
+}
+
+/// Struct that collects all the metrics in one place
+#[derive(Clone)]
+pub struct Metrics {
+    registry: Registry,
+    pub runtime_metrics: RuntimeMetrics,
+    pub grpc_server_metrics: GrpcServerMetrics,
+}
+
+impl MetricsBuilder {
+    pub fn new() -> Self {
         Self {
-            grpc_request_duration: register_histogram!(
-                "grpc_request_duration_seconds",
-                "The gRPC request latencies in seconds."
-            )
-            .expect("Creating grpc_request_duration_seconds metric failed."),
+            registry: Registry::new(),
+        }
+    }
 
-            grpc_requests_total: register_int_counter!(opts!(
-                "grpc_requests_total",
-                "Total number of gRPC requests received."
-            ))
-            .expect("Creating grpc_requests_total metric failed."),
+    fn register<T: 'static + prometheus::core::Collector + Clone>(&self, metric: T) -> T {
+        self.registry.register(Box::new(metric.clone())).unwrap();
+        metric
+    }
+}
 
-            grpc_response_size: register_histogram!(
+fn counter_vec(metric_name: &str, labels: &[&str], help: &str) -> IntCounterVec {
+    let opts = Opts::new(metric_name, help);
+    IntCounterVec::new(opts, labels).unwrap()
+}
+
+fn histogram_vec(metric_name: &str, label: &[&str], help: &str) -> HistogramVec {
+    let opts = HistogramOpts::new(metric_name, help);
+    HistogramVec::new(opts, label).unwrap()
+}
+
+fn int_gauge(metric_name: &str, help: &str) -> IntGauge {
+    let opts = Opts::new(metric_name, help);
+    IntGauge::with_opts(opts).unwrap()
+}
+
+impl GrpcServerMetrics {
+    fn new(builder: &MetricsBuilder) -> Self {
+        GrpcServerMetrics {
+            grpc_server_started_total: builder.register(counter_vec(
+                "grpc_server_started_total",
+                &["method_name"],
+                "Total number of RPCs started on the server.",
+            )),
+            grpc_server_handled_total: builder.register(counter_vec(
+                "grpc_server_handled_total",
+                &["method_name", "status_code"],
+                "Total number of RPCs completed on the server, regardless of success or failure.",
+            )),
+            grpc_server_handled_latency_seconds: builder.register(histogram_vec(
+                "grpc_server_handled_latency_seconds",
+                &["method_name"],
+                "Histogram of response latency of RPCs handled by the server.",
+            )),
+            grpc_response_size_bytes: builder.register(histogram_vec(
                 "grpc_response_size_bytes",
-                "The gRPC response sizes in bytes."
-            )
-            .expect("Creating grpc_response_size_bytes metric failed."),
-
-            runtime_nodes_count: register_int_gauge!(opts!(
-                "runtime_nodes_count",
-                "Number of nodes in the runtime."
-            ))
-            .expect("Creating runtime_nodes_count metric failed."),
+                &["method_name"],
+                "Histogram of response sizes of RPCs handled by the server.",
+            )),
         }
     }
 }
 
-lazy_static::lazy_static! {
-    pub static ref METRICS: Metrics = Metrics::new();
+impl RuntimeMetrics {
+    fn new(builder: &MetricsBuilder) -> Self {
+        RuntimeMetrics {
+            runtime_nodes_total: builder.register(int_gauge(
+                "runtime_nodes_total",
+                "Number of nodes in the runtime.",
+            )),
+        }
+    }
+}
+
+impl Metrics {
+    pub fn new() -> Self {
+        let builder = MetricsBuilder::new();
+        Self {
+            runtime_metrics: RuntimeMetrics::new(&builder),
+            grpc_server_metrics: GrpcServerMetrics::new(&builder),
+            registry: builder.registry,
+        }
+    }
+
+    pub fn gather(&self) -> Vec<MetricFamily> {
+        self.registry.gather()
+    }
+}
+
+impl Default for Metrics {
+    fn default() -> Self {
+        Metrics::new()
+    }
 }
