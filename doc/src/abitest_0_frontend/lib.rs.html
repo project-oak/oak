@@ -1834,6 +1834,45 @@
 <span id="1834">1834</span>
 <span id="1835">1835</span>
 <span id="1836">1836</span>
+<span id="1837">1837</span>
+<span id="1838">1838</span>
+<span id="1839">1839</span>
+<span id="1840">1840</span>
+<span id="1841">1841</span>
+<span id="1842">1842</span>
+<span id="1843">1843</span>
+<span id="1844">1844</span>
+<span id="1845">1845</span>
+<span id="1846">1846</span>
+<span id="1847">1847</span>
+<span id="1848">1848</span>
+<span id="1849">1849</span>
+<span id="1850">1850</span>
+<span id="1851">1851</span>
+<span id="1852">1852</span>
+<span id="1853">1853</span>
+<span id="1854">1854</span>
+<span id="1855">1855</span>
+<span id="1856">1856</span>
+<span id="1857">1857</span>
+<span id="1858">1858</span>
+<span id="1859">1859</span>
+<span id="1860">1860</span>
+<span id="1861">1861</span>
+<span id="1862">1862</span>
+<span id="1863">1863</span>
+<span id="1864">1864</span>
+<span id="1865">1865</span>
+<span id="1866">1866</span>
+<span id="1867">1867</span>
+<span id="1868">1868</span>
+<span id="1869">1869</span>
+<span id="1870">1870</span>
+<span id="1871">1871</span>
+<span id="1872">1872</span>
+<span id="1873">1873</span>
+<span id="1874">1874</span>
+<span id="1875">1875</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -1991,8 +2030,12 @@
             <span class="ident">FrontendNode</span>::<span class="ident">test_channel_write_handle</span>,
         );
         <span class="ident">tests</span>.<span class="ident">insert</span>(
-            <span class="string">&quot;ChannelWriteOrphan&quot;</span>,
-            <span class="ident">FrontendNode</span>::<span class="ident">test_channel_write_orphan</span>,
+            <span class="string">&quot;ChannelWriteOrphanEmpty&quot;</span>,
+            <span class="ident">FrontendNode</span>::<span class="ident">test_channel_write_orphan_empty</span>,
+        );
+        <span class="ident">tests</span>.<span class="ident">insert</span>(
+            <span class="string">&quot;ChannelWriteOrphanFull&quot;</span>,
+            <span class="ident">FrontendNode</span>::<span class="ident">test_channel_write_orphan_full</span>,
         );
         <span class="ident">tests</span>.<span class="ident">insert</span>(
             <span class="string">&quot;ChannelHandleRecovered&quot;</span>,
@@ -2474,10 +2517,26 @@
     <span class="kw">fn</span> <span class="ident">test_channel_read_orphan</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TestResult</span> {
         <span class="kw">let</span> (<span class="ident">out_channel</span>, <span class="ident">in_channel</span>) <span class="op">=</span> <span class="ident">oak</span>::<span class="ident">channel_create</span>().<span class="ident">unwrap</span>();
 
+        <span class="comment">// Write a message to the channel.</span>
+        <span class="kw">let</span> <span class="ident">buf</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="number">0x01</span>];
+        <span class="macro">expect_eq</span><span class="macro">!</span>(<span class="prelude-val">Ok</span>(()), <span class="ident">oak</span>::<span class="ident">channel_write</span>(<span class="ident">out_channel</span>, <span class="kw-2">&amp;</span><span class="ident">buf</span>, <span class="kw-2">&amp;</span>[]));
+
         <span class="comment">// Drop the only write handle for this channel.</span>
         <span class="macro">expect_eq</span><span class="macro">!</span>(<span class="prelude-val">Ok</span>(()), <span class="ident">oak</span>::<span class="ident">channel_close</span>(<span class="ident">out_channel</span>.<span class="ident">handle</span>));
 
-        <span class="comment">// An attempt to read now fails.</span>
+        <span class="comment">// Channel is not yet read orphaned, because there is a message</span>
+        <span class="comment">// available.</span>
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buffer</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>::<span class="ident">with_capacity</span>(<span class="number">5</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">handles</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">with_capacity</span>(<span class="number">5</span>);
+        <span class="macro">expect_eq</span><span class="macro">!</span>(
+            <span class="prelude-val">Ok</span>(()),
+            <span class="ident">oak</span>::<span class="ident">channel_read</span>(<span class="ident">in_channel</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buffer</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">handles</span>)
+        );
+        <span class="macro">expect_eq</span><span class="macro">!</span>(<span class="number">1</span>, <span class="ident">buffer</span>.<span class="ident">len</span>());
+        <span class="macro">expect_eq</span><span class="macro">!</span>(<span class="number">0</span>, <span class="ident">handles</span>.<span class="ident">len</span>());
+
+        <span class="comment">// Now the channel is empty, a second attempt to read fails</span>
+        <span class="comment">// because the channel is orphaned.</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buffer</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>::<span class="ident">with_capacity</span>(<span class="number">5</span>);
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">handles</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">with_capacity</span>(<span class="number">5</span>);
         <span class="macro">expect_eq</span><span class="macro">!</span>(
@@ -2580,7 +2639,7 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn</span> <span class="ident">test_channel_write_orphan</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TestResult</span> {
+    <span class="kw">fn</span> <span class="ident">test_channel_write_orphan_empty</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TestResult</span> {
         <span class="kw">let</span> (<span class="ident">out_channel</span>, <span class="ident">in_channel</span>) <span class="op">=</span> <span class="ident">oak</span>::<span class="ident">channel_create</span>().<span class="ident">unwrap</span>();
 
         <span class="comment">// Close the only read handle for the channel.</span>
@@ -2592,7 +2651,26 @@
             <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrChannelClosed</span>),
             <span class="ident">oak</span>::<span class="ident">channel_write</span>(<span class="ident">out_channel</span>, <span class="kw-2">&amp;</span><span class="ident">data</span>, <span class="kw-2">&amp;</span>[])
         );
+        <span class="macro">expect_eq</span><span class="macro">!</span>(<span class="prelude-val">Ok</span>(()), <span class="ident">oak</span>::<span class="ident">channel_close</span>(<span class="ident">out_channel</span>.<span class="ident">handle</span>));
 
+        <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="kw">fn</span> <span class="ident">test_channel_write_orphan_full</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TestResult</span> {
+        <span class="kw">let</span> (<span class="ident">out_channel</span>, <span class="ident">in_channel</span>) <span class="op">=</span> <span class="ident">oak</span>::<span class="ident">channel_create</span>().<span class="ident">unwrap</span>();
+
+        <span class="comment">// Ensure that there are messages pending on the channel.</span>
+        <span class="kw">let</span> <span class="ident">data</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="number">0x01</span>, <span class="number">0x02</span>, <span class="number">0x03</span>, <span class="number">0x04</span>, <span class="number">0x05</span>, <span class="number">0x06</span>, <span class="number">0x07</span>, <span class="number">0x08</span>];
+        <span class="macro">expect_eq</span><span class="macro">!</span>(<span class="prelude-val">Ok</span>(()), <span class="ident">oak</span>::<span class="ident">channel_write</span>(<span class="ident">out_channel</span>, <span class="kw-2">&amp;</span><span class="ident">data</span>, <span class="kw-2">&amp;</span>[]));
+        <span class="macro">expect_eq</span><span class="macro">!</span>(<span class="prelude-val">Ok</span>(()), <span class="ident">oak</span>::<span class="ident">channel_write</span>(<span class="ident">out_channel</span>, <span class="kw-2">&amp;</span><span class="ident">data</span>, <span class="kw-2">&amp;</span>[]));
+        <span class="macro">expect_eq</span><span class="macro">!</span>(<span class="prelude-val">Ok</span>(()), <span class="ident">oak</span>::<span class="ident">channel_write</span>(<span class="ident">out_channel</span>, <span class="kw-2">&amp;</span><span class="ident">data</span>, <span class="kw-2">&amp;</span>[]));
+
+        <span class="comment">// Once there&#39;s no way to read from the channel, writing fails.</span>
+        <span class="macro">expect_eq</span><span class="macro">!</span>(<span class="prelude-val">Ok</span>(()), <span class="ident">oak</span>::<span class="ident">channel_close</span>(<span class="ident">in_channel</span>.<span class="ident">handle</span>));
+        <span class="macro">expect_eq</span><span class="macro">!</span>(
+            <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrChannelClosed</span>),
+            <span class="ident">oak</span>::<span class="ident">channel_write</span>(<span class="ident">out_channel</span>, <span class="kw-2">&amp;</span><span class="ident">data</span>, <span class="kw-2">&amp;</span>[])
+        );
         <span class="macro">expect_eq</span><span class="macro">!</span>(<span class="prelude-val">Ok</span>(()), <span class="ident">oak</span>::<span class="ident">channel_close</span>(<span class="ident">out_channel</span>.<span class="ident">handle</span>));
         <span class="prelude-val">Ok</span>(())
     }
