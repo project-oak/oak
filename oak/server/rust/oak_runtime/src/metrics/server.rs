@@ -61,7 +61,7 @@ async fn serve_metrics(_req: Request<Body>) -> Result<Response<Body>, MetricsSer
         })
 }
 
-async fn make_server(port: u16) -> Result<(), hyper::error::Error> {
+async fn make_server(port: u16, notify_receiver: tokio::sync::oneshot::Receiver<()>) {
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
 
     // A `Service` is needed for every connection, so this
@@ -72,15 +72,19 @@ async fn make_server(port: u16) -> Result<(), hyper::error::Error> {
     });
 
     let server = Server::bind(&addr).serve(make_svc);
-
+    let graceful = server.with_graceful_shutdown(async {
+        // Treat notification failure the same as a notification.
+        let _ = notify_receiver.await;
+    });
     info!(
         "{:?}: Started metrics server on port {:?}",
         std::thread::current().id(),
         port
     );
 
-    // Run this server for... forever!
-    server.await
+    // Run until asked to terminate...
+    let result = graceful.await;
+    info!("metrics server terminated with {:?}", result);
 }
 
 // Start running a metrics server on the given port, running until the `notify_receiver` is
@@ -91,8 +95,5 @@ pub fn start_metrics_server(
     notify_receiver: tokio::sync::oneshot::Receiver<()>,
 ) {
     let mut tokio_runtime = tokio::runtime::Runtime::new().expect("Couldn't create Tokio runtime");
-    tokio_runtime.block_on(futures::future::select(
-        Box::pin(make_server(port)),
-        notify_receiver,
-    ));
+    tokio_runtime.block_on(make_server(port, notify_receiver));
 }
