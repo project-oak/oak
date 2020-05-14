@@ -47,7 +47,7 @@ struct FrontendNode {
     storage_name: Vec<u8>,
     // TODO(#874): Run abitest with Rust loader in order to provide gRPC client with a CA.
     // grpc_service: Option<OakAbiTestServiceClient>,
-    // TODO(#953, #954): Add streaming support for gRPC and re-enable all of the tests.
+    // TODO(#953): Add streaming support for gRPC and re-enable all of the tests.
     // absent_grpc_service: Option<OakAbiTestServiceClient>,
     roughtime: Option<oak::roughtime::Roughtime>,
     misconfigured_roughtime: Option<oak::roughtime::Roughtime>,
@@ -198,7 +198,7 @@ impl OakAbiTestService for FrontendNode {
         //     "GrpcClientUnaryMethod",
         //     FrontendNode::test_grpc_client_unary_method,
         // );
-        // TODO(#953, #954): Add streaming support for gRPC and re-enable all of the tests.
+        // TODO(#953): Add streaming support for gRPC and re-enable all of the tests.
         // tests.insert(
         //     "GrpcClientServerStreamingMethod",
         //     FrontendNode::test_grpc_client_server_streaming_method,
@@ -1633,7 +1633,7 @@ impl FrontendNode {
 
     //     Ok(())
     // }
-    // TODO(#953, #954): Add streaming support for gRPC and re-enable all of the tests.
+    // TODO(#953): Add streaming support for gRPC and re-enable all of the tests.
     // fn test_grpc_client_server_streaming_method(&mut self) -> TestResult {
     //     let grpc_stub = self.grpc_service.as_ref().ok_or_else(|| {
     //         Box::new(std::io::Error::new(
@@ -1658,7 +1658,7 @@ impl FrontendNode {
     //     loop {
     //         match receiver.receive() {
     //             Ok(grpc_rsp) => {
-    //                 // TODO(#592): get typed response directly from receiver.
+    // TODO(#592): get typed response directly from receiver.
     //                 expect_eq!(
     //                     oak::grpc::Code::Ok as i32,
     //                     grpc_rsp.status.unwrap_or_default().code
@@ -1705,7 +1705,7 @@ impl FrontendNode {
     //     receiver.close().expect("failed to close receiver");
     //     Ok(())
     // }
-    // TODO(#953, #954): Add streaming support for gRPC and re-enable all of the tests.
+    // TODO(#953): Add streaming support for gRPC and re-enable all of the tests.
     // fn test_absent_grpc_client(&mut self) -> TestResult {
     //     // Expect to have a channel to a gRPC client pseudo-Node, but the remote
     //     // gRPC service is unavailable.
