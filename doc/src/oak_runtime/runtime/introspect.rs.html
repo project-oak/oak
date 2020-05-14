@@ -175,6 +175,11 @@
 <span id="175">175</span>
 <span id="176">176</span>
 <span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -313,7 +318,11 @@
     <span class="prelude-val">Ok</span>(<span class="ident">not_found</span>)
 }
 
-<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">make_server</span>(<span class="ident">port</span>: <span class="ident">u16</span>, <span class="ident">runtime</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Runtime</span><span class="op">&gt;</span>) {
+<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">make_server</span>(
+    <span class="ident">port</span>: <span class="ident">u16</span>,
+    <span class="ident">runtime</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Runtime</span><span class="op">&gt;</span>,
+    <span class="ident">notify_receiver</span>: <span class="ident">tokio</span>::<span class="ident">sync</span>::<span class="ident">oneshot</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
+) {
     <span class="comment">// Construct our SocketAddr to listen on...</span>
     <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">SocketAddr</span>::<span class="ident">from</span>(([<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>], <span class="ident">port</span>));
     <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;starting introspection server on {:?}&quot;</span>, <span class="ident">addr</span>);
@@ -334,9 +343,13 @@
 
     <span class="comment">// Then bind and serve...</span>
     <span class="kw">let</span> <span class="ident">server</span> <span class="op">=</span> <span class="ident">Server</span>::<span class="ident">bind</span>(<span class="kw-2">&amp;</span><span class="ident">addr</span>).<span class="ident">serve</span>(<span class="ident">make_service</span>);
+    <span class="kw">let</span> <span class="ident">graceful</span> <span class="op">=</span> <span class="ident">server</span>.<span class="ident">with_graceful_shutdown</span>(<span class="kw">async</span> {
+        <span class="comment">// Treat notification failure the same as a notification.</span>
+        <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">notify_receiver</span>.<span class="kw">await</span>;
+    });
 
     <span class="comment">// And run until asked to terminate...</span>
-    <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">server</span>.<span class="kw">await</span>;
+    <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">graceful</span>.<span class="kw">await</span>;
     <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;introspection server terminated with {:?}&quot;</span>, <span class="ident">result</span>);
 }
 
@@ -348,10 +361,7 @@
     <span class="ident">notify_receiver</span>: <span class="ident">tokio</span>::<span class="ident">sync</span>::<span class="ident">oneshot</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
 ) {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tokio_runtime</span> <span class="op">=</span> <span class="ident">tokio</span>::<span class="ident">runtime</span>::<span class="ident">Runtime</span>::<span class="ident">new</span>().<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t create Tokio runtime&quot;</span>);
-    <span class="ident">tokio_runtime</span>.<span class="ident">block_on</span>(<span class="ident">futures</span>::<span class="ident">future</span>::<span class="ident">select</span>(
-        <span class="ident">Box</span>::<span class="ident">pin</span>(<span class="ident">make_server</span>(<span class="ident">port</span>, <span class="ident">runtime</span>)),
-        <span class="ident">notify_receiver</span>,
-    ));
+    <span class="ident">tokio_runtime</span>.<span class="ident">block_on</span>(<span class="ident">make_server</span>(<span class="ident">port</span>, <span class="ident">runtime</span>, <span class="ident">notify_receiver</span>));
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../";window.currentCrate = "oak_runtime";</script><script src="../../../aliases.js"></script><script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script><script defer src="../../../search-index.js"></script></body></html>
