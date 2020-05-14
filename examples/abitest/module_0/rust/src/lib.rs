@@ -154,8 +154,12 @@ impl OakAbiTestService for FrontendNode {
             FrontendNode::test_channel_write_handle,
         );
         tests.insert(
-            "ChannelWriteOrphan",
-            FrontendNode::test_channel_write_orphan,
+            "ChannelWriteOrphanEmpty",
+            FrontendNode::test_channel_write_orphan_empty,
+        );
+        tests.insert(
+            "ChannelWriteOrphanFull",
+            FrontendNode::test_channel_write_orphan_full,
         );
         tests.insert(
             "ChannelHandleRecovered",
@@ -637,10 +641,26 @@ impl FrontendNode {
     fn test_channel_read_orphan(&mut self) -> TestResult {
         let (out_channel, in_channel) = oak::channel_create().unwrap();
 
+        // Write a message to the channel.
+        let buf = vec![0x01];
+        expect_eq!(Ok(()), oak::channel_write(out_channel, &buf, &[]));
+
         // Drop the only write handle for this channel.
         expect_eq!(Ok(()), oak::channel_close(out_channel.handle));
 
-        // An attempt to read now fails.
+        // Channel is not yet read orphaned, because there is a message
+        // available.
+        let mut buffer = Vec::<u8>::with_capacity(5);
+        let mut handles = Vec::with_capacity(5);
+        expect_eq!(
+            Ok(()),
+            oak::channel_read(in_channel, &mut buffer, &mut handles)
+        );
+        expect_eq!(1, buffer.len());
+        expect_eq!(0, handles.len());
+
+        // Now the channel is empty, a second attempt to read fails
+        // because the channel is orphaned.
         let mut buffer = Vec::<u8>::with_capacity(5);
         let mut handles = Vec::with_capacity(5);
         expect_eq!(
@@ -743,7 +763,7 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_channel_write_orphan(&mut self) -> TestResult {
+    fn test_channel_write_orphan_empty(&mut self) -> TestResult {
         let (out_channel, in_channel) = oak::channel_create().unwrap();
 
         // Close the only read handle for the channel.
@@ -755,7 +775,26 @@ impl FrontendNode {
             Err(OakStatus::ErrChannelClosed),
             oak::channel_write(out_channel, &data, &[])
         );
+        expect_eq!(Ok(()), oak::channel_close(out_channel.handle));
 
+        Ok(())
+    }
+
+    fn test_channel_write_orphan_full(&mut self) -> TestResult {
+        let (out_channel, in_channel) = oak::channel_create().unwrap();
+
+        // Ensure that there are messages pending on the channel.
+        let data = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
+        expect_eq!(Ok(()), oak::channel_write(out_channel, &data, &[]));
+        expect_eq!(Ok(()), oak::channel_write(out_channel, &data, &[]));
+        expect_eq!(Ok(()), oak::channel_write(out_channel, &data, &[]));
+
+        // Once there's no way to read from the channel, writing fails.
+        expect_eq!(Ok(()), oak::channel_close(in_channel.handle));
+        expect_eq!(
+            Err(OakStatus::ErrChannelClosed),
+            oak::channel_write(out_channel, &data, &[])
+        );
         expect_eq!(Ok(()), oak::channel_close(out_channel.handle));
         Ok(())
     }
