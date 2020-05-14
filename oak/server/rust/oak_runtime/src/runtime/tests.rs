@@ -47,7 +47,12 @@ fn run_node_body(node_label: &Label, node_body: Box<NodeBody>) {
     };
 
     impl crate::node::Node for TestNode {
-        fn run(self: Box<Self>, runtime: RuntimeProxy, _handle: oak_abi::Handle) {
+        fn run(
+            self: Box<Self>,
+            runtime: RuntimeProxy,
+            _handle: oak_abi::Handle,
+            _notify_receiver: oneshot::Receiver<()>,
+        ) {
             let _ = (self.node_body)(runtime);
         }
     }
@@ -63,7 +68,7 @@ fn run_node_body(node_label: &Label, node_body: Box<NodeBody>) {
 
     let node_instance = TestNode { node_body };
     info!("Start test Node instance");
-    let join_handle = proxy
+    let node_stopper = proxy
         .runtime
         .clone()
         .node_start_instance(
@@ -77,7 +82,7 @@ fn run_node_body(node_label: &Label, node_body: Box<NodeBody>) {
     // Wait for test Node execution to complete before terminating,
     // so that any ABI functions invoked by the test Node don't just
     // return `ErrTerminated`.
-    join_handle.join().expect("test thread panicked!");
+    node_stopper.stop_node().expect("test thread panicked!");
 
     info!("Stop runtime..");
     proxy.stop_runtime();

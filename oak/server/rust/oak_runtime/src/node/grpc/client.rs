@@ -27,6 +27,7 @@ use oak_abi::{
     proto::oak::encap::{GrpcRequest, GrpcResponse},
     Handle, OakStatus,
 };
+use tokio::sync::oneshot;
 use tonic::transport::{Certificate, Channel, ClientTlsConfig, Uri};
 
 /// Struct that represents a gRPC client pseudo-Node.
@@ -100,7 +101,12 @@ impl GrpcClientNode {
 
 /// Oak Node implementation for the gRPC client pseudo-Node.
 impl Node for GrpcClientNode {
-    fn run(self: Box<Self>, runtime: RuntimeProxy, handle: Handle) {
+    fn run(
+        self: Box<Self>,
+        runtime: RuntimeProxy,
+        handle: Handle,
+        notify_receiver: oneshot::Receiver<()>,
+    ) {
         // Create an Async runtime for executing futures.
         // https://docs.rs/tokio/
         let mut async_runtime = tokio::runtime::Builder::new()
@@ -121,11 +127,11 @@ impl Node for GrpcClientNode {
             "{}: Starting gRPC client pseudo-Node thread",
             self.node_name
         );
-        let result = async_runtime.block_on(self.handle_loop(runtime, handle));
-        info!(
-            "{}: Exiting gRPC client pseudo-Node thread {:?}",
-            self.node_name, result
-        );
+        async_runtime.block_on(futures::future::select(
+            Box::pin(self.handle_loop(runtime, handle)),
+            notify_receiver,
+        ));
+        info!("{}: Exiting gRPC client pseudo-Node thread", self.node_name);
     }
 }
 

@@ -19,6 +19,7 @@ use log::{error, info, log};
 use oak_abi::proto::oak::log::{Level, LogMessage};
 use prost::Message;
 use std::string::String;
+use tokio::sync::oneshot;
 
 /// Logging pseudo-Node.
 pub struct LogNode {
@@ -37,7 +38,12 @@ impl LogNode {
 impl super::Node for LogNode {
     /// Main execution loop for the logging pseudo-Node just waits for incoming
     /// `LogMessage`s and outputs them.
-    fn run(self: Box<Self>, runtime: RuntimeProxy, handle: oak_abi::Handle) {
+    fn run(
+        self: Box<Self>,
+        runtime: RuntimeProxy,
+        handle: oak_abi::Handle,
+        _notify_receiver: oneshot::Receiver<()>,
+    ) {
         loop {
             // An error indicates the Runtime is terminating. We ignore it here and keep trying to
             // read in case a Wasm Node wants to emit remaining messages. We will return

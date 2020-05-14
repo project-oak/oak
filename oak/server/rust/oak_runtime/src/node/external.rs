@@ -18,6 +18,7 @@ use crate::{NodeId, RuntimeProxy};
 use lazy_static::lazy_static;
 use log::info;
 use std::{sync::RwLock, thread};
+use tokio::sync::oneshot;
 
 /// Function pointer type for callbacks from Rust code into C/C++ code for
 /// pseudo-Node creation.
@@ -54,7 +55,12 @@ impl PseudoNode {
 }
 
 impl super::Node for PseudoNode {
-    fn run(self: Box<Self>, runtime: RuntimeProxy, handle: oak_abi::Handle) {
+    fn run(
+        self: Box<Self>,
+        runtime: RuntimeProxy,
+        handle: oak_abi::Handle,
+        _notify_receiver: oneshot::Receiver<()>,
+    ) {
         let factory_fn: NodeFactory = FACTORY
             .read()
             .expect("unlock failed")
