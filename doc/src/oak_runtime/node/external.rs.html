@@ -71,6 +71,12 @@
 <span id="71">71</span>
 <span id="72">72</span>
 <span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
+<span id="79">79</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -92,6 +98,7 @@
 <span class="kw">use</span> <span class="ident">lazy_static</span>::<span class="ident">lazy_static</span>;
 <span class="kw">use</span> <span class="ident">log</span>::<span class="ident">info</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">sync</span>::<span class="ident">RwLock</span>, <span class="ident">thread</span>};
+<span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">sync</span>::<span class="ident">oneshot</span>;
 
 <span class="doccomment">/// Function pointer type for callbacks from Rust code into C/C++ code for</span>
 <span class="doccomment">/// pseudo-Node creation.</span>
@@ -128,7 +135,12 @@
 }
 
 <span class="kw">impl</span> <span class="kw">super</span>::<span class="ident">Node</span> <span class="kw">for</span> <span class="ident">PseudoNode</span> {
-    <span class="kw">fn</span> <span class="ident">run</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>, <span class="ident">handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>) {
+    <span class="kw">fn</span> <span class="ident">run</span>(
+        <span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>,
+        <span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>,
+        <span class="ident">handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
+        <span class="ident">_notify_receiver</span>: <span class="ident">oneshot</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
+    ) {
         <span class="kw">let</span> <span class="ident">factory_fn</span>: <span class="ident">NodeFactory</span> <span class="op">=</span> <span class="ident">FACTORY</span>
             .<span class="ident">read</span>()
             .<span class="ident">expect</span>(<span class="string">&quot;unlock failed&quot;</span>)

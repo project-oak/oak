@@ -851,6 +851,12 @@
 <span id="851">851</span>
 <span id="852">852</span>
 <span id="853">853</span>
+<span id="854">854</span>
+<span id="855">855</span>
+<span id="856">856</span>
+<span id="857">857</span>
+<span id="858">858</span>
+<span id="859">859</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -877,6 +883,7 @@
 <span class="kw">use</span> <span class="ident">oak_abi</span>::{<span class="ident">label</span>::<span class="ident">Label</span>, <span class="ident">ChannelReadStatus</span>, <span class="ident">OakStatus</span>};
 <span class="kw">use</span> <span class="ident">rand</span>::<span class="ident">RngCore</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">string</span>::<span class="ident">String</span>, <span class="ident">sync</span>::<span class="ident">Arc</span>};
+<span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">sync</span>::<span class="ident">oneshot</span>;
 <span class="kw">use</span> <span class="ident">wasmi</span>::<span class="ident">ValueType</span>;
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
@@ -1669,7 +1676,12 @@
 
 <span class="kw">impl</span> <span class="kw">super</span>::<span class="ident">Node</span> <span class="kw">for</span> <span class="ident">WasmNode</span> {
     <span class="doccomment">/// Runs this instance of a Wasm Node.</span>
-    <span class="kw">fn</span> <span class="ident">run</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>, <span class="ident">handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>) {
+    <span class="kw">fn</span> <span class="ident">run</span>(
+        <span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>,
+        <span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>,
+        <span class="ident">handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
+        <span class="ident">_notify_receiver</span>: <span class="ident">oneshot</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
+    ) {
         <span class="macro">debug</span><span class="macro">!</span>(
             <span class="string">&quot;{}: running entrypoint &#39;{}&#39;&quot;</span>,
             <span class="self">self</span>.<span class="ident">node_name</span>, <span class="self">self</span>.<span class="ident">entrypoint</span>

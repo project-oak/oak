@@ -80,6 +80,12 @@
 <span id="80">80</span>
 <span id="81">81</span>
 <span id="82">82</span>
+<span id="83">83</span>
+<span id="84">84</span>
+<span id="85">85</span>
+<span id="86">86</span>
+<span id="87">87</span>
+<span id="88">88</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -102,6 +108,7 @@
 <span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">log</span>::{<span class="ident">Level</span>, <span class="ident">LogMessage</span>};
 <span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">String</span>;
+<span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">sync</span>::<span class="ident">oneshot</span>;
 
 <span class="doccomment">/// Logging pseudo-Node.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">LogNode</span> {
@@ -120,7 +127,12 @@
 <span class="kw">impl</span> <span class="kw">super</span>::<span class="ident">Node</span> <span class="kw">for</span> <span class="ident">LogNode</span> {
     <span class="doccomment">/// Main execution loop for the logging pseudo-Node just waits for incoming</span>
     <span class="doccomment">/// `LogMessage`s and outputs them.</span>
-    <span class="kw">fn</span> <span class="ident">run</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>, <span class="ident">handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>) {
+    <span class="kw">fn</span> <span class="ident">run</span>(
+        <span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>,
+        <span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>,
+        <span class="ident">handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
+        <span class="ident">_notify_receiver</span>: <span class="ident">oneshot</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
+    ) {
         <span class="kw">loop</span> {
             <span class="comment">// An error indicates the Runtime is terminating. We ignore it here and keep trying to</span>
             <span class="comment">// read in case a Wasm Node wants to emit remaining messages. We will return</span>

@@ -193,6 +193,12 @@
 <span id="193">193</span>
 <span id="194">194</span>
 <span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -223,6 +229,7 @@
     <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">encap</span>::{<span class="ident">GrpcRequest</span>, <span class="ident">GrpcResponse</span>},
     <span class="ident">Handle</span>, <span class="ident">OakStatus</span>,
 };
+<span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">sync</span>::<span class="ident">oneshot</span>;
 <span class="kw">use</span> <span class="ident">tonic</span>::<span class="ident">transport</span>::{<span class="ident">Certificate</span>, <span class="ident">Channel</span>, <span class="ident">ClientTlsConfig</span>, <span class="ident">Uri</span>};
 
 <span class="doccomment">/// Struct that represents a gRPC client pseudo-Node.</span>
@@ -296,7 +303,12 @@
 
 <span class="doccomment">/// Oak Node implementation for the gRPC client pseudo-Node.</span>
 <span class="kw">impl</span> <span class="ident">Node</span> <span class="kw">for</span> <span class="ident">GrpcClientNode</span> {
-    <span class="kw">fn</span> <span class="ident">run</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>, <span class="ident">handle</span>: <span class="ident">Handle</span>) {
+    <span class="kw">fn</span> <span class="ident">run</span>(
+        <span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>,
+        <span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>,
+        <span class="ident">handle</span>: <span class="ident">Handle</span>,
+        <span class="ident">notify_receiver</span>: <span class="ident">oneshot</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
+    ) {
         <span class="comment">// Create an Async runtime for executing futures.</span>
         <span class="comment">// https://docs.rs/tokio/</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">async_runtime</span> <span class="op">=</span> <span class="ident">tokio</span>::<span class="ident">runtime</span>::<span class="ident">Builder</span>::<span class="ident">new</span>()
@@ -317,11 +329,11 @@
             <span class="string">&quot;{}: Starting gRPC client pseudo-Node thread&quot;</span>,
             <span class="self">self</span>.<span class="ident">node_name</span>
         );
-        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">async_runtime</span>.<span class="ident">block_on</span>(<span class="self">self</span>.<span class="ident">handle_loop</span>(<span class="ident">runtime</span>, <span class="ident">handle</span>));
-        <span class="macro">info</span><span class="macro">!</span>(
-            <span class="string">&quot;{}: Exiting gRPC client pseudo-Node thread {:?}&quot;</span>,
-            <span class="self">self</span>.<span class="ident">node_name</span>, <span class="ident">result</span>
-        );
+        <span class="ident">async_runtime</span>.<span class="ident">block_on</span>(<span class="ident">futures</span>::<span class="ident">future</span>::<span class="ident">select</span>(
+            <span class="ident">Box</span>::<span class="ident">pin</span>(<span class="self">self</span>.<span class="ident">handle_loop</span>(<span class="ident">runtime</span>, <span class="ident">handle</span>)),
+            <span class="ident">notify_receiver</span>,
+        ));
+        <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;{}: Exiting gRPC client pseudo-Node thread&quot;</span>, <span class="self">self</span>.<span class="ident">node_name</span>);
     }
 }
 

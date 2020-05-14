@@ -1386,6 +1386,47 @@
 <span id="1386">1386</span>
 <span id="1387">1387</span>
 <span id="1388">1388</span>
+<span id="1389">1389</span>
+<span id="1390">1390</span>
+<span id="1391">1391</span>
+<span id="1392">1392</span>
+<span id="1393">1393</span>
+<span id="1394">1394</span>
+<span id="1395">1395</span>
+<span id="1396">1396</span>
+<span id="1397">1397</span>
+<span id="1398">1398</span>
+<span id="1399">1399</span>
+<span id="1400">1400</span>
+<span id="1401">1401</span>
+<span id="1402">1402</span>
+<span id="1403">1403</span>
+<span id="1404">1404</span>
+<span id="1405">1405</span>
+<span id="1406">1406</span>
+<span id="1407">1407</span>
+<span id="1408">1408</span>
+<span id="1409">1409</span>
+<span id="1410">1410</span>
+<span id="1411">1411</span>
+<span id="1412">1412</span>
+<span id="1413">1413</span>
+<span id="1414">1414</span>
+<span id="1415">1415</span>
+<span id="1416">1416</span>
+<span id="1417">1417</span>
+<span id="1418">1418</span>
+<span id="1419">1419</span>
+<span id="1420">1420</span>
+<span id="1421">1421</span>
+<span id="1422">1422</span>
+<span id="1423">1423</span>
+<span id="1424">1424</span>
+<span id="1425">1425</span>
+<span id="1426">1426</span>
+<span id="1427">1427</span>
+<span id="1428">1428</span>
+<span id="1429">1429</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -1423,6 +1464,7 @@
     <span class="ident">thread</span>,
     <span class="ident">thread</span>::<span class="ident">JoinHandle</span>,
 };
+<span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">sync</span>::<span class="ident">oneshot</span>;
 
 <span class="kw">mod</span> <span class="ident">channel</span>;
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>)]</span>
@@ -1444,6 +1486,42 @@
     <span class="kw">fn</span> <span class="ident">html_path</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span>;
 }
 
+<span class="kw">struct</span> <span class="ident">NodeStopper</span> {
+    <span class="doccomment">/// Handle used for joining the Node thread.</span>
+    <span class="ident">join_handle</span>: <span class="ident">JoinHandle</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
+
+    <span class="doccomment">/// A notification sender object whose receiver is sent to the Node.</span>
+    <span class="doccomment">/// The agreement is that the Runtime will notify the Node upon termination</span>
+    <span class="doccomment">/// and then start waiting on the join handle. It&#39;s up to the Node to figure</span>
+    <span class="doccomment">/// out how to actually terminate when receiving a notification.</span>
+    <span class="ident">notify_sender</span>: <span class="ident">oneshot</span>::<span class="ident">Sender</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">NodeStopper</span> {
+    <span class="doccomment">/// Sends a notification to the Node and joins its thread.</span>
+    <span class="kw">fn</span> <span class="ident">stop_node</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">thread</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">notify_sender</span>
+            .<span class="ident">send</span>(())
+            <span class="comment">// Notification errors are discarded since not all of the Nodes save</span>
+            <span class="comment">// and use the [`oneshot::Receiver`].</span>
+            .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
+                <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t send notification: {:?}&quot;</span>, <span class="ident">error</span>);
+            });
+        <span class="self">self</span>.<span class="ident">join_handle</span>.<span class="ident">join</span>()
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Debug</span> <span class="kw">for</span> <span class="ident">NodeStopper</span> {
+    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="prelude-ty">Result</span> {
+        <span class="macro">write</span><span class="macro">!</span>(
+            <span class="ident">f</span>,
+            <span class="string">&quot;{{join_handle={:?}, notify_sender={:?}}}&quot;</span>,
+            <span class="self">self</span>.<span class="ident">join_handle</span>, <span class="self">self</span>.<span class="ident">notify_sender</span>,
+        )<span class="question-mark">?</span>;
+        <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;]}}&quot;</span>)
+    }
+}
+
 <span class="kw">struct</span> <span class="ident">NodeInfo</span> {
     <span class="doccomment">/// Name for the Node in debugging output.</span>
     <span class="ident">name</span>: <span class="ident">String</span>,
@@ -1458,18 +1536,18 @@
     <span class="doccomment">/// Map of ABI handles to channels.</span>
     <span class="ident">abi_handles</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">oak_abi</span>::<span class="ident">Handle</span>, <span class="ident">ChannelHalf</span><span class="op">&gt;</span>,
 
-    <span class="doccomment">/// If the Node is currently running, holds the [`JoinHandle`] for its thread</span>
-    <span class="doccomment">/// (with one small exception, when the Runtime is in the process of closing</span>
-    <span class="doccomment">/// down and the [`JoinHandle`] is held by the shutdown processing code).</span>
-    <span class="ident">join_handle</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">JoinHandle</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// If the Node is currently running, holds the [`NodeStopper`] (with one</span>
+    <span class="doccomment">/// small exception, when the Runtime is in the process of closing down and</span>
+    <span class="doccomment">/// the [`NodeStopper`] is held by the shutdown processing code).</span>
+    <span class="ident">node_stopper</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NodeStopper</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Debug</span> <span class="kw">for</span> <span class="ident">NodeInfo</span> {
     <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="prelude-ty">Result</span> {
         <span class="macro">write</span><span class="macro">!</span>(
             <span class="ident">f</span>,
-            <span class="string">&quot;NodeInfo {{&#39;{}&#39;, label={:?}, join_handle={:?}, handles=[&quot;</span>,
-            <span class="self">self</span>.<span class="ident">name</span>, <span class="self">self</span>.<span class="ident">label</span>, <span class="self">self</span>.<span class="ident">join_handle</span>,
+            <span class="string">&quot;NodeInfo {{&#39;{}&#39;, label={:?}, node_stopper={:?}, handles=[&quot;</span>,
+            <span class="self">self</span>.<span class="ident">name</span>, <span class="self">self</span>.<span class="ident">label</span>, <span class="self">self</span>.<span class="ident">node_stopper</span>,
         )<span class="question-mark">?</span>;
         <span class="macro">write</span><span class="macro">!</span>(
             <span class="ident">f</span>,
@@ -1798,7 +1876,7 @@
                     <span class="ident">node_id</span>.<span class="ident">html_path</span>(),
                 )
                 .<span class="ident">unwrap</span>();
-                <span class="kw">if</span> <span class="ident">node_info</span>.<span class="ident">join_handle</span>.<span class="ident">is_none</span>() {
+                <span class="kw">if</span> <span class="ident">node_info</span>.<span class="ident">node_stopper</span>.<span class="ident">is_none</span>() {
                     <span class="macro">write</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>, <span class="string">&quot; [style=dashed]&quot;</span>).<span class="ident">unwrap</span>();
                 }
                 <span class="macro">writeln</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>).<span class="ident">unwrap</span>();
@@ -1952,11 +2030,11 @@
         <span class="kw">let</span> <span class="ident">node_info</span> <span class="op">=</span> <span class="ident">node_infos</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">node_id</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">s</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">new</span>();
         <span class="macro">write</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>, <span class="string">&quot;&lt;h2&gt;{}&lt;/h2&gt;&quot;</span>, <span class="ident">node_info</span>.<span class="ident">name</span>).<span class="ident">unwrap</span>();
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">join_handle</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">node_info</span>.<span class="ident">join_handle</span> {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">node_stopper</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">node_info</span>.<span class="ident">node_stopper</span> {
             <span class="macro">write</span><span class="macro">!</span>(
                 <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>,
                 <span class="string">&quot;&lt;p&gt;Node thread is currently running, join_handle={:?}&quot;</span>,
-                <span class="ident">join_handle</span>
+                <span class="ident">node_stopper</span>.<span class="ident">join_handle</span>
             )
             .<span class="ident">unwrap</span>();
         } <span class="kw">else</span> {
@@ -2021,27 +2099,27 @@
         <span class="comment">// for any additional work to be finished here. This may take an arbitrary amount of time,</span>
         <span class="comment">// depending on the work that the Node thread has to perform, but at least we know that the</span>
         <span class="comment">// it will not be able to enter again in a blocking state.</span>
-        <span class="kw">let</span> <span class="ident">join_handles</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">take_join_handles</span>();
-        <span class="kw">for</span> (<span class="ident">node_id</span>, <span class="ident">join_handle_opt</span>) <span class="kw">in</span> <span class="ident">join_handles</span> {
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">join_handle</span>) <span class="op">=</span> <span class="ident">join_handle_opt</span> {
-                <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;join thread for {:?} ...&quot;</span>, <span class="ident">node_id</span>);
-                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">join_handle</span>.<span class="ident">join</span>() {
-                    <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;could not join node {:?}: {:?}&quot;</span>, <span class="ident">node_id</span>, <span class="ident">err</span>);
+        <span class="kw">let</span> <span class="ident">node_stoppers</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">take_node_stoppers</span>();
+        <span class="kw">for</span> (<span class="ident">node_id</span>, <span class="ident">node_stopper_opt</span>) <span class="kw">in</span> <span class="ident">node_stoppers</span> {
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">node_stopper</span>) <span class="op">=</span> <span class="ident">node_stopper_opt</span> {
+                <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;stopping node {:?} ...&quot;</span>, <span class="ident">node_id</span>);
+                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">node_stopper</span>.<span class="ident">stop_node</span>() {
+                    <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;could not stop node {:?}: {:?}&quot;</span>, <span class="ident">node_id</span>, <span class="ident">err</span>);
                 }
-                <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;join thread for {:?}...done&quot;</span>, <span class="ident">node_id</span>);
+                <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;stopping node {:?}...done&quot;</span>, <span class="ident">node_id</span>);
             }
         }
     }
 
-    <span class="doccomment">/// Move all of the Node join handles out of the `node_infos` tracker and return them.</span>
-    <span class="kw">fn</span> <span class="ident">take_join_handles</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">NodeId</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">JoinHandle</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
+    <span class="doccomment">/// Move all of the [`NodeStopper`] objects out of the `node_infos` tracker and return them.</span>
+    <span class="kw">fn</span> <span class="ident">take_node_stoppers</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">NodeId</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NodeStopper</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">node_infos</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">node_infos</span>
             .<span class="ident">write</span>()
             .<span class="ident">expect</span>(<span class="string">&quot;could not acquire lock on node_infos&quot;</span>);
         <span class="ident">node_infos</span>
             .<span class="ident">iter_mut</span>()
-            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">id</span>, <span class="ident">info</span>)<span class="op">|</span> (<span class="kw-2">*</span><span class="ident">id</span>, <span class="ident">info</span>.<span class="ident">join_handle</span>.<span class="ident">take</span>()))
+            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">id</span>, <span class="ident">info</span>)<span class="op">|</span> (<span class="kw-2">*</span><span class="ident">id</span>, <span class="ident">info</span>.<span class="ident">node_stopper</span>.<span class="ident">take</span>()))
             .<span class="ident">collect</span>()
     }
 
@@ -2497,9 +2575,9 @@
         <span class="self">self</span>.<span class="ident">update_nodes_count_metric</span>();
     }
 
-    <span class="doccomment">/// Add the [`JoinHandle`] for a running Node to `NodeInfo`. The provided `NodeId` value</span>
-    <span class="doccomment">/// must already be present in `self.node_infos`.</span>
-    <span class="kw">fn</span> <span class="ident">add_node_join_handle</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">node_join_handle</span>: <span class="ident">JoinHandle</span><span class="op">&lt;</span>()<span class="op">&gt;</span>) {
+    <span class="doccomment">/// Add the [`NodeStopper`] for a running Node to `NodeInfo`.</span>
+    <span class="doccomment">/// The provided [`NodeId`] value must already be present in [`Runtime::node_infos`].</span>
+    <span class="kw">fn</span> <span class="ident">add_node_stopper</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">node_stopper</span>: <span class="ident">NodeStopper</span>) {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">node_infos</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">node_infos</span>
             .<span class="ident">write</span>()
@@ -2507,7 +2585,7 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">node_info</span> <span class="op">=</span> <span class="ident">node_infos</span>
             .<span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="ident">node_id</span>)
             .<span class="ident">expect</span>(<span class="string">&quot;node ID not in node_infos&quot;</span>);
-        <span class="ident">node_info</span>.<span class="ident">join_handle</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">node_join_handle</span>);
+        <span class="ident">node_info</span>.<span class="ident">node_stopper</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">node_stopper</span>);
     }
 
     <span class="doccomment">/// Create a Node within the [`Runtime`] corresponding to a given module name and</span>
@@ -2574,7 +2652,7 @@
             .<span class="ident">ok_or</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>)<span class="question-mark">?</span>;
 
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{:?}: start node instance {:?}&quot;</span>, <span class="ident">node_id</span>, <span class="ident">new_node_id</span>);
-        <span class="kw">let</span> <span class="ident">node_join_handle</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">clone</span>().<span class="ident">node_start_instance</span>(
+        <span class="kw">let</span> <span class="ident">node_stopper</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">clone</span>().<span class="ident">node_start_instance</span>(
             <span class="kw-2">&amp;</span><span class="ident">new_node_name</span>,
             <span class="ident">instance</span>,
             <span class="ident">new_node_proxy</span>,
@@ -2583,7 +2661,7 @@
 
         <span class="comment">// Insert the now running instance to the list of running instances (by moving it), so that</span>
         <span class="comment">// `Node::stop` will be called on it eventually.</span>
-        <span class="self">self</span>.<span class="ident">add_node_join_handle</span>(<span class="ident">node_id</span>, <span class="ident">node_join_handle</span>);
+        <span class="self">self</span>.<span class="ident">add_node_stopper</span>(<span class="ident">node_id</span>, <span class="ident">node_stopper</span>);
 
         <span class="prelude-val">Ok</span>(())
     }
@@ -2596,7 +2674,7 @@
         <span class="ident">node_instance</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="kw">crate</span>::<span class="ident">node</span>::<span class="ident">Node</span> <span class="op">+</span> <span class="ident">Send</span><span class="op">&gt;</span>,
         <span class="ident">node_proxy</span>: <span class="ident">RuntimeProxy</span>,
         <span class="ident">initial_handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">JoinHandle</span><span class="op">&lt;</span>()<span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">NodeStopper</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="comment">// Try to start the Node instance.</span>
         <span class="comment">//</span>
         <span class="comment">// In order for this to work correctly, the `NodeInfo` entry must already exist in</span>
@@ -2608,10 +2686,11 @@
         <span class="comment">//</span>
         <span class="comment">// We also want no locks to be held while the instance is starting.</span>
         <span class="kw">let</span> <span class="ident">node_id</span> <span class="op">=</span> <span class="ident">node_proxy</span>.<span class="ident">node_id</span>;
+        <span class="kw">let</span> (<span class="ident">node_notify_sender</span>, <span class="ident">node_notify_receiver</span>) <span class="op">=</span> <span class="ident">tokio</span>::<span class="ident">sync</span>::<span class="ident">oneshot</span>::<span class="ident">channel</span>::<span class="op">&lt;</span>()<span class="op">&gt;</span>();
         <span class="kw">let</span> <span class="ident">node_join_handle</span> <span class="op">=</span> <span class="ident">thread</span>::<span class="ident">Builder</span>::<span class="ident">new</span>()
             .<span class="ident">name</span>(<span class="ident">node_name</span>.<span class="ident">to_string</span>())
             .<span class="ident">spawn</span>(<span class="kw">move</span> <span class="op">|</span><span class="op">|</span> {
-                <span class="ident">node_instance</span>.<span class="ident">run</span>(<span class="ident">node_proxy</span>, <span class="ident">initial_handle</span>);
+                <span class="ident">node_instance</span>.<span class="ident">run</span>(<span class="ident">node_proxy</span>, <span class="ident">initial_handle</span>, <span class="ident">node_notify_receiver</span>);
                 <span class="comment">// It&#39;s now safe to remove the state for this Node, as there&#39;s nothing left</span>
                 <span class="comment">// that can invoke `Runtime` functionality for it.</span>
                 <span class="self">self</span>.<span class="ident">remove_node_id</span>(<span class="ident">node_id</span>)
@@ -2619,7 +2698,10 @@
             .<span class="ident">expect</span>(<span class="string">&quot;failed to spawn thread&quot;</span>);
         <span class="comment">// Note: self has been moved into the thread running the closure.</span>
 
-        <span class="prelude-val">Ok</span>(<span class="ident">node_join_handle</span>)
+        <span class="prelude-val">Ok</span>(<span class="ident">NodeStopper</span> {
+            <span class="ident">join_handle</span>: <span class="ident">node_join_handle</span>,
+            <span class="ident">notify_sender</span>: <span class="ident">node_notify_sender</span>,
+        })
     }
 
     <span class="doccomment">/// Configure data structures for a Node instance.</span>
@@ -2630,7 +2712,7 @@
                 <span class="ident">name</span>: <span class="ident">node_name</span>.<span class="ident">to_string</span>(),
                 <span class="ident">label</span>: <span class="ident">label</span>.<span class="ident">clone</span>(),
                 <span class="ident">abi_handles</span>: <span class="ident">HashMap</span>::<span class="ident">new</span>(),
-                <span class="ident">join_handle</span>: <span class="prelude-val">None</span>,
+                <span class="ident">node_stopper</span>: <span class="prelude-val">None</span>,
             },
         );
     }
