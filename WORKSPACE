@@ -142,7 +142,7 @@ http_archive(
     ],
 )
 
-# Java gRPC support for Android examples
+# Java gRPC support for Android examples.
 http_archive(
     name = "io_grpc_grpc_java",
     #sha256 = "9d23d9fec84e24bd3962f5ef9d1fd61ce939d3f649a22bcab0f19e8167fae8ef",
