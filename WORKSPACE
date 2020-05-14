@@ -76,10 +76,10 @@ http_archive(
 # Java rules
 http_archive(
     name = "rules_java",
-    #sha256 = "ff1710c6f2a880784abe6aa9a6fcb6c4cbfc2cf3e5d81ef5d92dddc8ef537864",
+    sha256 = "7f4772b0ee2b46a042870c844e9c208e8a0960a953a079236a4bbd785e471275",
     strip_prefix = "rules_java-9eb38ebffbaf4414fa3d2292b28e604a256dd5a5",
     urls = [
-        # Head commit on 2020-01-14.
+        # Head commit on 2020-02-18.
         "https://github.com/bazelbuild/rules_java/archive/9eb38ebffbaf4414fa3d2292b28e604a256dd5a5.zip",
     ],
 )

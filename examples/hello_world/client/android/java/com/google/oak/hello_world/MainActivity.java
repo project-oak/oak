@@ -28,6 +28,7 @@ import java.io.InputStream;
 import java.security.KeyStore;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
+import java.util.Optional;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
@@ -59,21 +60,25 @@ public class MainActivity extends Activity {
     Log.v("Oak", "Say Hello");
     TextView helloTextView = findViewById(R.id.helloTextView);
 
-    // TODO(#988): Move blocking call ouf of UI thread.
-    String reply = sayHello(address, "World");
-    Log.v("Oak", "Response is: " + reply);
-    helloTextView.setText(reply);
+    // TODO(#988): Move blocking call out of UI thread.
+    Optional<String> reply = sayHello(address, "World");
+    if (reply.isPresent()) {
+      Log.v("Oak", "Response is: " + reply.get());
+      helloTextView.setText(reply.get());
+    } else {
+      helloTextView.setText("Unexpected Error!");
+    }
   }
 
   /** Calls the sayHello gRPC endpoint and returns the reply. */
-  private String sayHello(String address, String name) {
+  private Optional<String> sayHello(String address, String name) {
     try {
-      return HelloWorldGrpc.newBlockingStub(createChannel(address))
-          .sayHello(HelloRequest.newBuilder().setGreeting(name).build())
-          .getReply();
+      return Optional.of(HelloWorldGrpc.newBlockingStub(createChannel(address))
+                             .sayHello(HelloRequest.newBuilder().setGreeting(name).build())
+                             .getReply());
     } catch (Exception exception) {
       Log.e("Oak", "Exception", exception);
-      return "Unexpected error!";
+      return Optional.empty();
     }
   }
 

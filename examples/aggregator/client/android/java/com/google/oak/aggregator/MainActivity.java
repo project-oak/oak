@@ -26,6 +26,7 @@ import com.google.oak.aggregator.R;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /** Main class for the Oak Android "Aggregator" application. */
@@ -79,8 +80,13 @@ public class MainActivity extends Activity {
     String address = addressInput.getText().toString();
 
     if (!address.equals(rpcAddress)) {
+      Optional<String> caCert = getCaCertificate();
+      if (!caCert.isPresent()) {
+        // TODO(#991): Notify user of failure.
+        return;
+      }
       Log.v("Oak", "Create channel to: " + address);
-      createChannel(address, getCaCertificate());
+      createChannel(address, caCert.get());
       rpcAddress = address;
     }
 
@@ -107,19 +113,19 @@ public class MainActivity extends Activity {
     EditText thirdValueInput = findViewById(R.id.thirdValueInput);
     values.add(Float.parseFloat(thirdValueInput.getText().toString()));
 
-    // TODO(#988): Move blocking call ouf of UI thread.
+    // TODO(#988): Move blocking call out of UI thread.
     submitSample(bucket, indices, values);
   }
 
   /** Gets the custom CA certificate from the assets folder. */
-  private String getCaCertificate() {
+  private Optional<String> getCaCertificate() {
     try {
-      return new BufferedReader(new InputStreamReader(getAssets().open("ca.pem")))
-          .lines()
-          .collect(Collectors.joining("\n"));
+      return Optional.of(new BufferedReader(new InputStreamReader(getAssets().open("ca.pem")))
+                             .lines()
+                             .collect(Collectors.joining("\n")));
     } catch (Exception exception) {
       Log.w("Oak", "getCaCertificate", exception);
-      return "";
+      return Optional.empty();
     }
   }
 
