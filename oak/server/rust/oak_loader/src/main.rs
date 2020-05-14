@@ -21,7 +21,8 @@
 //! cargo run --package=oak_loader -- \
 //!     --application=<APP_CONFIG_PATH> \
 //!     --grpc-tls-private-key=<PRIVATE_KEY_PATH> \
-//!     --grpc-tls-certificate=<CERTIFICATE_PATH>
+//!     --grpc-tls-certificate=<CERTIFICATE_PATH> \
+//!     --root-tls-certificate=<CERTIFICATE_PATH>
 
 use log::info;
 use oak_runtime::{configure_and_run, proto::oak::application::ApplicationConfiguration};
@@ -92,7 +93,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app_config_data = read_file(&opt.application)?;
     let mut app_config = ApplicationConfiguration::decode(app_config_data.as_ref())?;
 
-    // Assign a TLS identity to all gRPC server nodes in the application configuration.
+    // Assign a TLS identity to all gRPC server and client nodes in the application configuration.
     let grpc_tls_private_key = read_to_string(&opt.grpc_tls_private_key)?;
     let grpc_tls_certificate = read_to_string(&opt.grpc_tls_certificate)?;
     let root_tls_certificate = read_to_string(&opt.root_tls_certificate)?;
