@@ -22,59 +22,91 @@ import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
+import io.grpc.ManagedChannel;
+import io.grpc.okhttp.OkHttpChannelBuilder;
+import java.io.InputStream;
+import java.security.KeyStore;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateFactory;
+import java.util.Optional;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManagerFactory;
 
-import com.google.oak.hello_world.R;
-
-/*
- * Main class for the Oak Android "Hello, World" app.
- */
+/** Main activity for the Oak Android "Hello, World" app. */
 public class MainActivity extends Activity {
-  static {
-    // Load native library.
-    System.loadLibrary("client_app");
-  }
-
+  /** Handles initial setup on creation of the activity. */
   @Override
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    
+
     Log.v("Oak", "Start application");
     setContentView(R.layout.activity_main);
-    
+
     Button helloButton = findViewById(R.id.helloButton);
-    helloButton.setOnClickListener(v -> onClick());
+    helloButton.setOnClickListener(v -> helloButtonOnClick());
 
     // Set default address.
     // Android emulator forwards `10.0.2.2` to the host machine.
     // https://developer.android.com/studio/run/emulator-networking
     EditText addressInput = findViewById(R.id.addressInput);
-    addressInput.setText("10.0.2.2:8888");
+    addressInput.setText("10.0.2.2:8080");
   }
 
-  @Override
-  public void onDestroy() {
-    super.onDestroy();
-  }
-
-  public void onClick() {
+  /** Handles click events from the helloButton. */
+  public void helloButtonOnClick() {
     EditText addressInput = findViewById(R.id.addressInput);
     String address = addressInput.getText().toString();
-
-    if (!address.equals(rpcAddress)) {
-      Log.v("Oak", "Create channel to: " + address);
-      createChannel(address);
-      rpcAddress = address;
-    }
-
     Log.v("Oak", "Say Hello");
     TextView helloTextView = findViewById(R.id.helloTextView);
-    String responce = sayHello("World");
-    Log.v("Oak", "Responce is: " + responce);
-    helloTextView.setText(responce);
+
+    // TODO(#988): Move blocking call out of UI thread.
+    Optional<String> reply = sayHello(address, "World");
+    if (reply.isPresent()) {
+      Log.v("Oak", "Response is: " + reply.get());
+      helloTextView.setText(reply.get());
+    } else {
+      helloTextView.setText("Unexpected Error!");
+    }
   }
 
-  private native void createChannel(String address);
-  private native String sayHello(String name);
+  /** Calls the sayHello gRPC endpoint and returns the reply. */
+  private Optional<String> sayHello(String address, String name) {
+    try {
+      return Optional.of(HelloWorldGrpc.newBlockingStub(createChannel(address))
+                             .sayHello(HelloRequest.newBuilder().setGreeting(name).build())
+                             .getReply());
+    } catch (Exception exception) {
+      Log.e("Oak", "Exception", exception);
+      return Optional.empty();
+    }
+  }
 
-  private String rpcAddress;
+  /** Creates a TLS channel. */
+  private ManagedChannel createChannel(String address) throws Exception {
+    return OkHttpChannelBuilder.forTarget(address)
+        .useTransportSecurity()
+        .sslSocketFactory(getSocketFactory())
+        .build();
+  }
+
+  /** Gets a socket factory configured with a custom CA certificate to trust. */
+  private SSLSocketFactory getSocketFactory() throws Exception {
+    InputStream rawCertificate = getAssets().open("ca.pem");
+    Certificate certificate =
+        CertificateFactory.getInstance("X.509").generateCertificate(rawCertificate);
+    KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+    // No stored keystore file or password.
+    keyStore.load(null, null);
+    keyStore.setCertificateEntry("local_ca", certificate);
+    TrustManagerFactory trustManagerFactory =
+        TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+    trustManagerFactory.init(keyStore);
+    // Using TLSv1.2, as TLSv1.3 requires minSdkVersion of 29.
+    // Reference: https://developer.android.com/reference/javax/net/ssl/SSLContext
+    SSLContext tlsContext = SSLContext.getInstance("TLSv1.2");
+    // Use highest priority KeyManager and default SecureRandom implementation.
+    tlsContext.init(null, trustManagerFactory.getTrustManagers(), null);
+    return tlsContext.getSocketFactory();
+  }
 }

@@ -16,33 +16,34 @@
 
 package com.google.oak.aggregator;
 
-import java.util.ArrayList;
-
 import android.app.Activity;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
-
 import com.google.oak.aggregator.R;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
-/*
- * Main class for the Oak Android "Aggregator" application.
- */
+/** Main class for the Oak Android "Aggregator" application. */
 public class MainActivity extends Activity {
   static {
     // Load native library.
     System.loadLibrary("client_app");
   }
 
+  /** Handles initial setup on creation of the activity. */
   @Override
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    
+
     Log.v("Oak", "Start application");
     setContentView(R.layout.activity_main);
-    
+
     Button submitButton = findViewById(R.id.submitButton);
     submitButton.setOnClickListener(v -> onClick());
 
@@ -73,18 +74,24 @@ public class MainActivity extends Activity {
     addressInput.setText("35.246.87.178:8080");
   }
 
+  /** Handles click events from the submitButton. */
   public void onClick() {
     EditText addressInput = findViewById(R.id.addressInput);
     String address = addressInput.getText().toString();
 
     if (!address.equals(rpcAddress)) {
+      Optional<String> caCert = getCaCertificate();
+      if (!caCert.isPresent()) {
+        // TODO(#991): Notify user of failure.
+        return;
+      }
       Log.v("Oak", "Create channel to: " + address);
-      createChannel(address);
+      createChannel(address, caCert.get());
       rpcAddress = address;
     }
 
     Log.v("Oak", "Submit Sample");
-  
+
     EditText bucketInput = findViewById(R.id.bucketInput);
     String bucket = bucketInput.getText().toString();
 
@@ -106,11 +113,23 @@ public class MainActivity extends Activity {
     EditText thirdValueInput = findViewById(R.id.thirdValueInput);
     values.add(Float.parseFloat(thirdValueInput.getText().toString()));
 
+    // TODO(#988): Move blocking call out of UI thread.
     submitSample(bucket, indices, values);
   }
 
-  // TODO(#717): Use Java version of gRPC without invoking JNI.
-  private native void createChannel(String address);
+  /** Gets the custom CA certificate from the assets folder. */
+  private Optional<String> getCaCertificate() {
+    try {
+      return Optional.of(new BufferedReader(new InputStreamReader(getAssets().open("ca.pem")))
+                             .lines()
+                             .collect(Collectors.joining("\n")));
+    } catch (Exception exception) {
+      Log.w("Oak", "getCaCertificate", exception);
+      return Optional.empty();
+    }
+  }
+
+  private native void createChannel(String address, String caCert);
   private native void submitSample(
       String bucket, ArrayList<Integer> indices, ArrayList<Float> values);
 

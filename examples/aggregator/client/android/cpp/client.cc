@@ -42,10 +42,11 @@ JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
 // Create gRPC channel to the `jaddress`.
 JNIEXPORT void JNICALL Java_com_google_oak_aggregator_MainActivity_createChannel(JNIEnv* env,
                                                                                  jobject /*this*/,
-                                                                                 jstring jaddress) {
+                                                                                 jstring jaddress,
+                                                                                 jstring jca_cert) {
   auto address = env->GetStringUTFChars(jaddress, 0);
-  // TODO(#722): Add support for specifying a CA cert.
-  kChannel = Aggregator::NewStub(oak::ApplicationClient::CreateTlsChannel(address));
+  auto ca_cert = env->GetStringUTFChars(jca_cert, 0);
+  kChannel = Aggregator::NewStub(oak::ApplicationClient::CreateTlsChannel(address, ca_cert));
   JNI_LOG("gRPC channel has been created");
 }
 

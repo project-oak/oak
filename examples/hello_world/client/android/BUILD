@@ -14,23 +14,10 @@
 # limitations under the License.
 #
 
-load("@rules_cc//cc:defs.bzl", "cc_library")
 load("@rules_android//android:rules.bzl", "android_binary", "android_library")
 
 package(
     licenses = ["notice"],
-)
-
-cc_library(
-    name = "native_client",
-    srcs = ["cpp/client.cc"],
-    copts = ["-std=c++11"],
-    deps = [
-        "//examples/hello_world/proto:hello_world_cc_grpc",
-        "//oak/client:application_client",
-        "@com_github_grpc_grpc//:grpc++",
-    ],
-    alwayslink = 1,
 )
 
 android_library(
@@ -39,12 +26,23 @@ android_library(
     custom_package = "com.google.oak.hello_world",
     manifest = "AndroidManifest.xml",
     resource_files = glob(["java/com/google/oak/hello_world/res/**"]),
-    deps = [":native_client"],
+    deps = [
+        "//examples/hello_world/proto:hello_world_java_grpc",
+        "//examples/hello_world/proto:hello_world_java_proto_lite",
+        "@io_grpc_grpc_java//api",
+        "@io_grpc_grpc_java//core",
+        "@io_grpc_grpc_java//okhttp",
+        "@io_grpc_grpc_java//protobuf",
+        "@io_grpc_grpc_java//stub",
+    ],
 )
 
 android_binary(
     name = "client_app",
     custom_package = "com.google.oak.hello_world",
     manifest = "AndroidManifest.xml",
-    deps = [":client_activity"],
+    deps = [
+        ":client_activity",
+        "//examples/certs:local_certs",
+    ],
 )
