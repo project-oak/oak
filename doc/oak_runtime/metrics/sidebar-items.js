@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["server",""]],"struct":[["METRICS",""],["Metrics","Struct that collects all the metrics in one place"]]});
+initSidebarItems({"mod":[["server",""]],"struct":[["GrpcServerMetrics","Mostly copied from https://github.com/grpc-ecosystem/java-grpc-prometheus"],["Metrics","Struct that collects all the metrics in one place"],["RuntimeMetrics","Struct that collects all metrics for monitoring the Oak Runtime."]]});

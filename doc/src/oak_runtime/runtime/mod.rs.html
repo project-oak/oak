@@ -1368,6 +1368,24 @@
 <span id="1368">1368</span>
 <span id="1369">1369</span>
 <span id="1370">1370</span>
+<span id="1371">1371</span>
+<span id="1372">1372</span>
+<span id="1373">1373</span>
+<span id="1374">1374</span>
+<span id="1375">1375</span>
+<span id="1376">1376</span>
+<span id="1377">1377</span>
+<span id="1378">1378</span>
+<span id="1379">1379</span>
+<span id="1380">1380</span>
+<span id="1381">1381</span>
+<span id="1382">1382</span>
+<span id="1383">1383</span>
+<span id="1384">1384</span>
+<span id="1385">1385</span>
+<span id="1386">1386</span>
+<span id="1387">1387</span>
+<span id="1388">1388</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -1387,7 +1405,7 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">message</span>::{<span class="ident">Message</span>, <span class="ident">NodeMessage</span>},
-    <span class="ident">metrics</span>::<span class="ident">METRICS</span>,
+    <span class="ident">metrics</span>::<span class="ident">Metrics</span>,
     <span class="ident">node</span>,
     <span class="ident">runtime</span>::<span class="ident">channel</span>::{<span class="ident">with_reader_channel</span>, <span class="ident">with_writer_channel</span>, <span class="ident">Channel</span>},
 };
@@ -1395,6 +1413,7 @@
 <span class="kw">use</span> <span class="ident">itertools</span>::<span class="ident">Itertools</span>;
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">error</span>, <span class="ident">info</span>, <span class="ident">trace</span>, <span class="ident">warn</span>};
 <span class="kw">use</span> <span class="ident">oak_abi</span>::{<span class="ident">label</span>::<span class="ident">Label</span>, <span class="ident">ChannelReadStatus</span>, <span class="ident">OakStatus</span>};
+<span class="kw">use</span> <span class="ident">prometheus</span>::<span class="ident">proto</span>::<span class="ident">MetricFamily</span>;
 <span class="kw">use</span> <span class="ident">rand</span>::<span class="ident">RngCore</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections</span>::<span class="ident">HashMap</span>,
@@ -1572,6 +1591,8 @@
     <span class="ident">next_node_id</span>: <span class="ident">AtomicU64</span>,
 
     <span class="ident">aux_servers</span>: <span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">AuxServer</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+
+    <span class="kw">pub</span> <span class="ident">metrics_data</span>: <span class="ident">Metrics</span>,
 }
 
 <span class="comment">// Methods which translate between ABI handles (Node-relative u64 values) and `ChannelHalf`</span>
@@ -1644,6 +1665,10 @@
             <span class="ident">ChannelHalfDirection</span>::<span class="ident">Write</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">half</span>),
         }
     }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">gather_metrics</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">MetricFamily</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">metrics_data</span>.<span class="ident">gather</span>()
+    }
 }
 
 <span class="comment">// Methods on `RuntimeProxy` for managing the core `Runtime` instance.</span>
@@ -1660,6 +1685,8 @@
             <span class="ident">next_node_id</span>: <span class="ident">AtomicU64</span>::<span class="ident">new</span>(<span class="number">0</span>),
 
             <span class="ident">aux_servers</span>: <span class="ident">Mutex</span>::<span class="ident">new</span>(<span class="ident">Vec</span>::<span class="ident">new</span>()),
+
+            <span class="ident">metrics_data</span>: <span class="ident">Metrics</span>::<span class="ident">new</span>(),
         });
         <span class="kw">let</span> <span class="ident">proxy</span> <span class="op">=</span> <span class="ident">runtime</span>.<span class="ident">proxy_for_new_node</span>();
         <span class="ident">proxy</span>.<span class="ident">runtime</span>.<span class="ident">node_configure_instance</span>(
@@ -2470,16 +2497,6 @@
         <span class="self">self</span>.<span class="ident">update_nodes_count_metric</span>();
     }
 
-    <span class="doccomment">/// Update the node count metric with the current value.</span>
-    <span class="kw">fn</span> <span class="ident">update_nodes_count_metric</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-        <span class="ident">METRICS</span>.<span class="ident">runtime_nodes_count</span>.<span class="ident">set</span>(
-            <span class="self">self</span>.<span class="ident">node_infos</span>
-                .<span class="ident">read</span>()
-                .<span class="ident">expect</span>(<span class="string">&quot;could not acquire lock on node_infos&quot;</span>)
-                .<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">i64</span>,
-        );
-    }
-
     <span class="doccomment">/// Add the [`JoinHandle`] for a running Node to `NodeInfo`. The provided `NodeId` value</span>
     <span class="doccomment">/// must already be present in `self.node_infos`.</span>
     <span class="kw">fn</span> <span class="ident">add_node_join_handle</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">node_join_handle</span>: <span class="ident">JoinHandle</span><span class="op">&lt;</span>()<span class="op">&gt;</span>) {
@@ -2626,6 +2643,21 @@
             <span class="ident">node_id</span>: <span class="self">self</span>.<span class="ident">new_node_id</span>(),
         }
     }
+
+    <span class="doccomment">/// Update the node count metric with the current value.</span>
+    <span class="kw">fn</span> <span class="ident">update_nodes_count_metric</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+        <span class="self">self</span>.<span class="ident">metrics_data</span>
+            .<span class="ident">runtime_metrics</span>
+            .<span class="ident">runtime_nodes_total</span>
+            .<span class="ident">set</span>(<span class="self">self</span>.<span class="ident">get_nodes_count</span>());
+    }
+
+    <span class="kw">fn</span> <span class="ident">get_nodes_count</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">i64</span> {
+        <span class="self">self</span>.<span class="ident">node_infos</span>
+            .<span class="ident">read</span>()
+            .<span class="ident">expect</span>(<span class="string">&quot;could not acquire lock on node_infos&quot;</span>)
+            .<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">i64</span>
+    }
 }
 
 <span class="doccomment">/// Manual implementation of the [`Drop`] trait to ensure that all components of</span>
@@ -2737,6 +2769,10 @@
             <span class="ident">bytes_capacity</span>,
             <span class="ident">handles_capacity</span>,
         )
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">metrics_data</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Metrics</span> {
+        <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">metrics_data</span>.<span class="ident">clone</span>()
     }
 }
 </pre></div>
