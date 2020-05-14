@@ -135,7 +135,11 @@ fn handle_request(
     Ok(not_found)
 }
 
-async fn make_server(port: u16, runtime: Arc<Runtime>) {
+async fn make_server(
+    port: u16,
+    runtime: Arc<Runtime>,
+    notify_receiver: tokio::sync::oneshot::Receiver<()>,
+) {
     // Construct our SocketAddr to listen on...
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
     info!("starting introspection server on {:?}", addr);
@@ -156,9 +160,13 @@ async fn make_server(port: u16, runtime: Arc<Runtime>) {
 
     // Then bind and serve...
     let server = Server::bind(&addr).serve(make_service);
+    let graceful = server.with_graceful_shutdown(async {
+        // Treat notification failure the same as a notification.
+        let _ = notify_receiver.await;
+    });
 
     // And run until asked to terminate...
-    let result = server.await;
+    let result = graceful.await;
     info!("introspection server terminated with {:?}", result);
 }
 
@@ -170,8 +178,5 @@ pub fn serve(
     notify_receiver: tokio::sync::oneshot::Receiver<()>,
 ) {
     let mut tokio_runtime = tokio::runtime::Runtime::new().expect("Couldn't create Tokio runtime");
-    tokio_runtime.block_on(futures::future::select(
-        Box::pin(make_server(port, runtime)),
-        notify_receiver,
-    ));
+    tokio_runtime.block_on(make_server(port, runtime, notify_receiver));
 }
