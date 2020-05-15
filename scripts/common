@@ -4,6 +4,7 @@
 set -o errexit
 set -o nounset
 set -o xtrace
+set -o pipefail
 
 # Set the default Rust log level.
 # https://docs.rs/env_logger
