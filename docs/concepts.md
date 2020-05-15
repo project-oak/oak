@@ -249,12 +249,34 @@ allowed (via two uni-directional Channels) if
 `(L_a ⊑ L_b) ∧ (L_b ⊑ L_a) ⇒ L_a = L_b`, i.e. if `a` and `b` have identical
 secrecy and integrity.
 
+#### Downgrades
+
+A Node may have the privilege to remove one or more secrecy tags
+(**declassification**) and / or add one or more integrity tags
+(**endorsement**). Both of these operations are instances of **downgrade**
+operations (which is a more general concept).
+
+The set of tags that may be downgraded by a Node is determined by the Oak
+Runtime based on the initial or current state of the Node. For instance, the Oak
+Runtime grants the privilege to declassify user tags to each instance of gRPC
+Server Node, which is trusted to only use it in order to declassify data for the
+user that is in fact currently authenticated over a gRPC connection.
+
+When Node A attempts to create another Node B, it specifies the desired label
+for B, which is checked by the Oak Runtime to be allowed by the "flows to"
+relationship, but A does not have a way to influence the privilege of B; this is
+always entirely determined by the Oak Runtime itself, which is trusted to assign
+the appropriate privilege to all Nodes.
+
+#### References
+
 More details on Information Flow Control may be found in the following
 references:
 
 - [Information Flow Control for Standard OS Abstractions](https://pdos.csail.mit.edu/papers/flume-sosp07.pdf)
 - [Flow-Limited Authorization](https://www.cs.cornell.edu/andru/papers/flam/flam-csf15.pdf)
 - [Integrity Considerations for Secure Computer Systems](http://seclab.cs.ucdavis.edu/projects/history/papers/biba75.pdf)
+- [Protecting Privacy using the Decentralized Label Model](https://www.cs.cornell.edu/andru/papers/iflow-tosem.pdf)
 
 ### gRPC and user labels
 

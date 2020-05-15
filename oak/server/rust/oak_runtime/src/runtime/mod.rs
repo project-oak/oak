@@ -23,11 +23,14 @@ use crate::{
 use core::sync::atomic::{AtomicBool, AtomicU64, Ordering::SeqCst};
 use itertools::Itertools;
 use log::{debug, error, info, trace, warn};
-use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
+use oak_abi::{
+    label::{Label, Tag},
+    ChannelReadStatus, OakStatus,
+};
 use prometheus::proto::MetricFamily;
 use rand::RngCore;
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     fmt::Write,
     string::String,
     sync::{Arc, Mutex, RwLock},
@@ -103,6 +106,9 @@ struct NodeInfo {
     /// See https://github.com/project-oak/oak/blob/master/docs/concepts.md#labels
     label: Label,
 
+    /// The downgrading privilege of this Node.
+    privilege: NodePrivilege,
+
     /// Map of ABI handles to channels.
     abi_handles: HashMap<oak_abi::Handle, ChannelHalf>,
 
@@ -110,6 +116,18 @@ struct NodeInfo {
     /// small exception, when the Runtime is in the process of closing down and
     /// the [`NodeStopper`] is held by the shutdown processing code).
     node_stopper: Option<NodeStopper>,
+}
+
+/// The downgrading (declassification + endorsement) privilege associated with a Node instance.
+///
+/// See https://github.com/project-oak/oak/blob/master/docs/concepts.md#downgrades
+#[derive(Debug, Default, Clone)]
+pub struct NodePrivilege {
+    /// Tags that may be declassified (removed from the secrecy component of a label) by the Node.
+    can_declassify_secrecy_tags: HashSet<Tag>,
+
+    /// Tags that may be endorsed (added to the integrity component of a label) by the Node.
+    can_endorse_integrity_tags: HashSet<Tag>,
 }
 
 impl std::fmt::Debug for NodeInfo {
@@ -341,6 +359,7 @@ impl RuntimeProxy {
             proxy.node_id,
             "implicit.initial",
             &Label::public_trusted(),
+            &NodePrivilege::default(),
         );
         proxy
     }
@@ -729,6 +748,42 @@ impl Runtime {
         node_info.label.clone()
     }
 
+    /// Returns the least restrictive (i.e. least secret, most trusted) label that this Node may
+    /// downgrade to. This takes into account all the [downgrade privilege](NodeInfo::privilege)
+    /// that the node possesses.
+    fn get_node_downgraded_label(&self, node_id: NodeId) -> Label {
+        // Original (static) Node label.
+        let node_label = self.get_node_label(node_id);
+        // Retrieve the set of tags that the node may downgrade.
+        let node_privilege = self.get_node_privilege(node_id);
+        Label {
+            // Remove all the secrecy tags that the Node may declassify.
+            secrecy_tags: node_label
+                .secrecy_tags
+                .iter()
+                .filter(|t| !node_privilege.can_declassify_secrecy_tags.contains(t))
+                .cloned()
+                .collect(),
+            // Add all the integrity tags that the Node may endorse.
+            integrity_tags: node_label
+                .integrity_tags
+                .iter()
+                .chain(node_privilege.can_endorse_integrity_tags.iter())
+                .cloned()
+                .collect(),
+        }
+    }
+
+    /// Returns a clone of the [`NodePrivilege`] of the provided Node.
+    fn get_node_privilege(&self, node_id: NodeId) -> NodePrivilege {
+        let node_infos = self
+            .node_infos
+            .read()
+            .expect("could not acquire lock on node_infos");
+        let node_info = node_infos.get(&node_id).expect("invalid node_id");
+        node_info.privilege.clone()
+    }
+
     /// Returns a clone of the [`Label`] associated with the provided reader `channel_half`.
     ///
     /// Returns an error if `channel_half` is not a valid read half.
@@ -743,62 +798,67 @@ impl Runtime {
         with_writer_channel(channel_half, |channel| Ok(channel.label.clone()))
     }
 
-    /// Returns whether the given Node is allowed to read from the provided channel, according to
-    /// their respective [`Label`]s.
+    /// Returns whether the given Node is allowed to read from the provided channel read half,
+    /// according to their respective [`Label`]s.
     fn validate_can_read_from_channel(
         &self,
         node_id: NodeId,
         channel_half: &ChannelHalf,
     ) -> Result<(), OakStatus> {
-        trace!(
-            "{:?}: validating readability of {:?}",
-            node_id,
-            channel_half
-        );
-
-        let node_label = self.get_node_label(node_id);
         let channel_label = self.get_reader_channel_label(&channel_half)?;
+        self.validate_can_read_from_label(node_id, &channel_label)
+    }
+
+    /// Returns whether the given Node is allowed to read from an entity with the provided
+    /// [`Label`], taking into account all the [downgrade privilege](NodeInfo::privilege) the Node
+    /// possesses.
+    fn validate_can_read_from_label(
+        &self,
+        node_id: NodeId,
+        label: &Label,
+    ) -> Result<(), OakStatus> {
+        let downgraded_node_label = self.get_node_downgraded_label(node_id);
         trace!(
-            "{:?}: node_label={:?}, channel_label={:?}",
+            "{:?}: can {:?} read from {:?}?",
             node_id,
-            node_label,
-            channel_label
+            downgraded_node_label,
+            label
         );
-        if channel_label.flows_to(&node_label) {
-            trace!("{:?}: can read from channel {:?}", node_id, channel_half);
+        if label.flows_to(&downgraded_node_label) {
+            trace!("{:?}: can read from {:?}", node_id, label);
             Ok(())
         } else {
-            debug!("{:?}: cannot read from channel {:?}", node_id, channel_half);
+            debug!("{:?}: cannot read from {:?}", node_id, label);
             Err(OakStatus::ErrPermissionDenied)
         }
     }
 
-    /// Returns whether the given Node is allowed to write to the provided channel, according to
-    /// their respective [`Label`]s.
+    /// Returns whether the given Node is allowed to write to the provided channel write half,
+    /// according to their respective [`Label`]s.
     fn validate_can_write_to_channel(
         &self,
         node_id: NodeId,
         channel_half: &ChannelHalf,
     ) -> Result<(), OakStatus> {
-        trace!(
-            "{:?}: validating writability of {:?}",
-            node_id,
-            channel_half
-        );
-
-        let node_label = self.get_node_label(node_id);
         let channel_label = self.get_writer_channel_label(&channel_half)?;
+        self.validate_can_write_to_label(node_id, &channel_label)
+    }
+
+    /// Returns whether the given Node is allowed to write to an entity with the provided [`Label`],
+    /// taking into account all the [downgrade privilege](NodeInfo::privilege) the Node possesses.
+    fn validate_can_write_to_label(&self, node_id: NodeId, label: &Label) -> Result<(), OakStatus> {
+        let downgraded_node_label = self.get_node_downgraded_label(node_id);
         trace!(
-            "{:?}: node_label={:?}, channel_label={:?}",
+            "{:?}: can {:?} write to {:?}?",
             node_id,
-            node_label,
-            channel_label
+            downgraded_node_label,
+            label
         );
-        if node_label.flows_to(&channel_label) {
-            trace!("{:?}: can write to channel {:?}", node_id, channel_half);
+        if downgraded_node_label.flows_to(&label) {
+            trace!("{:?}: can write to {:?}", node_id, label);
             Ok(())
         } else {
-            debug!("{:?}: cannot write to channel {:?}", node_id, channel_half);
+            debug!("{:?}: cannot write to {:?}", node_id, label);
             Err(OakStatus::ErrPermissionDenied)
         }
     }
@@ -811,14 +871,7 @@ impl Runtime {
         node_id: NodeId,
         label: &Label,
     ) -> Result<(oak_abi::Handle, oak_abi::Handle), OakStatus> {
-        let node_label = self.get_node_label(node_id);
-        if !node_label.flows_to(label) {
-            warn!(
-                "channel_create: label {:?} does not flow to label {:?}",
-                node_label, label
-            );
-            return Err(OakStatus::ErrPermissionDenied);
-        }
+        self.validate_can_write_to_label(node_id, label)?;
         // First get a pair of `ChannelHalf` objects.
         let channel_id = self.next_channel_id.fetch_add(1, SeqCst);
         let channel = Channel::new(channel_id, label);
@@ -1184,17 +1237,9 @@ impl Runtime {
         if self.is_terminating() {
             return Err(OakStatus::ErrTerminated);
         }
+        self.validate_can_write_to_label(node_id, label)?;
 
         let reader = self.abi_to_read_half(node_id, initial_handle)?;
-
-        let node_label = self.get_node_label(node_id);
-        if !node_label.flows_to(label) {
-            warn!(
-                "node_create: label {:?} does not flow to label {:?}",
-                node_label, label
-            );
-            return Err(OakStatus::ErrPermissionDenied);
-        }
 
         let config = self
             .configuration
@@ -1210,7 +1255,12 @@ impl Runtime {
             config.node_subname(entrypoint),
             new_node_id.0
         );
-        self.node_configure_instance(new_node_id, &new_node_name, label);
+        self.node_configure_instance(
+            new_node_id,
+            &new_node_name,
+            label,
+            &NodePrivilege::default(),
+        );
         let initial_handle = new_node_proxy
             .runtime
             .new_abi_handle(new_node_proxy.node_id, reader.clone());
@@ -1279,12 +1329,19 @@ impl Runtime {
     }
 
     /// Configure data structures for a Node instance.
-    fn node_configure_instance(&self, node_id: NodeId, node_name: &str, label: &Label) {
+    fn node_configure_instance(
+        &self,
+        node_id: NodeId,
+        node_name: &str,
+        label: &Label,
+        privilege: &NodePrivilege,
+    ) {
         self.add_node_info(
             node_id,
             NodeInfo {
                 name: node_name.to_string(),
                 label: label.clone(),
+                privilege: privilege.clone(),
                 abi_handles: HashMap::new(),
                 node_stopper: None,
             },
