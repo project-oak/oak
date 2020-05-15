@@ -12,7 +12,6 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
         android:textSize="32dp"
-        android:textColor="@color/green"
         android:text="@string/empty"/>
 
     <EditText
