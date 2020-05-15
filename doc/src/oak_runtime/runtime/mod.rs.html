@@ -1431,6 +1431,63 @@
 <span id="1431">1431</span>
 <span id="1432">1432</span>
 <span id="1433">1433</span>
+<span id="1434">1434</span>
+<span id="1435">1435</span>
+<span id="1436">1436</span>
+<span id="1437">1437</span>
+<span id="1438">1438</span>
+<span id="1439">1439</span>
+<span id="1440">1440</span>
+<span id="1441">1441</span>
+<span id="1442">1442</span>
+<span id="1443">1443</span>
+<span id="1444">1444</span>
+<span id="1445">1445</span>
+<span id="1446">1446</span>
+<span id="1447">1447</span>
+<span id="1448">1448</span>
+<span id="1449">1449</span>
+<span id="1450">1450</span>
+<span id="1451">1451</span>
+<span id="1452">1452</span>
+<span id="1453">1453</span>
+<span id="1454">1454</span>
+<span id="1455">1455</span>
+<span id="1456">1456</span>
+<span id="1457">1457</span>
+<span id="1458">1458</span>
+<span id="1459">1459</span>
+<span id="1460">1460</span>
+<span id="1461">1461</span>
+<span id="1462">1462</span>
+<span id="1463">1463</span>
+<span id="1464">1464</span>
+<span id="1465">1465</span>
+<span id="1466">1466</span>
+<span id="1467">1467</span>
+<span id="1468">1468</span>
+<span id="1469">1469</span>
+<span id="1470">1470</span>
+<span id="1471">1471</span>
+<span id="1472">1472</span>
+<span id="1473">1473</span>
+<span id="1474">1474</span>
+<span id="1475">1475</span>
+<span id="1476">1476</span>
+<span id="1477">1477</span>
+<span id="1478">1478</span>
+<span id="1479">1479</span>
+<span id="1480">1480</span>
+<span id="1481">1481</span>
+<span id="1482">1482</span>
+<span id="1483">1483</span>
+<span id="1484">1484</span>
+<span id="1485">1485</span>
+<span id="1486">1486</span>
+<span id="1487">1487</span>
+<span id="1488">1488</span>
+<span id="1489">1489</span>
+<span id="1490">1490</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -1457,11 +1514,14 @@
 <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">sync</span>::<span class="ident">atomic</span>::{<span class="ident">AtomicBool</span>, <span class="ident">AtomicU64</span>, <span class="ident">Ordering</span>::<span class="ident">SeqCst</span>};
 <span class="kw">use</span> <span class="ident">itertools</span>::<span class="ident">Itertools</span>;
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">error</span>, <span class="ident">info</span>, <span class="ident">trace</span>, <span class="ident">warn</span>};
-<span class="kw">use</span> <span class="ident">oak_abi</span>::{<span class="ident">label</span>::<span class="ident">Label</span>, <span class="ident">ChannelReadStatus</span>, <span class="ident">OakStatus</span>};
+<span class="kw">use</span> <span class="ident">oak_abi</span>::{
+    <span class="ident">label</span>::{<span class="ident">Label</span>, <span class="ident">Tag</span>},
+    <span class="ident">ChannelReadStatus</span>, <span class="ident">OakStatus</span>,
+};
 <span class="kw">use</span> <span class="ident">prometheus</span>::<span class="ident">proto</span>::<span class="ident">MetricFamily</span>;
 <span class="kw">use</span> <span class="ident">rand</span>::<span class="ident">RngCore</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
-    <span class="ident">collections</span>::<span class="ident">HashMap</span>,
+    <span class="ident">collections</span>::{<span class="ident">HashMap</span>, <span class="ident">HashSet</span>},
     <span class="ident">fmt</span>::<span class="ident">Write</span>,
     <span class="ident">string</span>::<span class="ident">String</span>,
     <span class="ident">sync</span>::{<span class="ident">Arc</span>, <span class="ident">Mutex</span>, <span class="ident">RwLock</span>},
@@ -1537,6 +1597,9 @@
     <span class="doccomment">/// See https://github.com/project-oak/oak/blob/master/docs/concepts.md#labels</span>
     <span class="ident">label</span>: <span class="ident">Label</span>,
 
+    <span class="doccomment">/// The downgrading privilege of this Node.</span>
+    <span class="ident">privilege</span>: <span class="ident">NodePrivilege</span>,
+
     <span class="doccomment">/// Map of ABI handles to channels.</span>
     <span class="ident">abi_handles</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">oak_abi</span>::<span class="ident">Handle</span>, <span class="ident">ChannelHalf</span><span class="op">&gt;</span>,
 
@@ -1544,6 +1607,18 @@
     <span class="doccomment">/// small exception, when the Runtime is in the process of closing down and</span>
     <span class="doccomment">/// the [`NodeStopper`] is held by the shutdown processing code).</span>
     <span class="ident">node_stopper</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NodeStopper</span><span class="op">&gt;</span>,
+}
+
+<span class="doccomment">/// The downgrading (declassification + endorsement) privilege associated with a Node instance.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// See https://github.com/project-oak/oak/blob/master/docs/concepts.md#downgrades</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Default</span>, <span class="ident">Clone</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">NodePrivilege</span> {
+    <span class="doccomment">/// Tags that may be declassified (removed from the secrecy component of a label) by the Node.</span>
+    <span class="ident">can_declassify_secrecy_tags</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">Tag</span><span class="op">&gt;</span>,
+
+    <span class="doccomment">/// Tags that may be endorsed (added to the integrity component of a label) by the Node.</span>
+    <span class="ident">can_endorse_integrity_tags</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">Tag</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Debug</span> <span class="kw">for</span> <span class="ident">NodeInfo</span> {
@@ -1775,6 +1850,7 @@
             <span class="ident">proxy</span>.<span class="ident">node_id</span>,
             <span class="string">&quot;implicit.initial&quot;</span>,
             <span class="kw-2">&amp;</span><span class="ident">Label</span>::<span class="ident">public_trusted</span>(),
+            <span class="kw-2">&amp;</span><span class="ident">NodePrivilege</span>::<span class="ident">default</span>(),
         );
         <span class="ident">proxy</span>
     }
@@ -2163,6 +2239,42 @@
         <span class="ident">node_info</span>.<span class="ident">label</span>.<span class="ident">clone</span>()
     }
 
+    <span class="doccomment">/// Returns the least restrictive (i.e. least secret, most trusted) label that this Node may</span>
+    <span class="doccomment">/// downgrade to. This takes into account all the [downgrade privilege](NodeInfo::privilege)</span>
+    <span class="doccomment">/// that the node possesses.</span>
+    <span class="kw">fn</span> <span class="ident">get_node_downgraded_label</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Label</span> {
+        <span class="comment">// Original (static) Node label.</span>
+        <span class="kw">let</span> <span class="ident">node_label</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_node_label</span>(<span class="ident">node_id</span>);
+        <span class="comment">// Retrieve the set of tags that the node may downgrade.</span>
+        <span class="kw">let</span> <span class="ident">node_privilege</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_node_privilege</span>(<span class="ident">node_id</span>);
+        <span class="ident">Label</span> {
+            <span class="comment">// Remove all the secrecy tags that the Node may declassify.</span>
+            <span class="ident">secrecy_tags</span>: <span class="ident">node_label</span>
+                .<span class="ident">secrecy_tags</span>
+                .<span class="ident">iter</span>()
+                .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">t</span><span class="op">|</span> <span class="op">!</span><span class="ident">node_privilege</span>.<span class="ident">can_declassify_secrecy_tags</span>.<span class="ident">contains</span>(<span class="ident">t</span>))
+                .<span class="ident">cloned</span>()
+                .<span class="ident">collect</span>(),
+            <span class="comment">// Add all the integrity tags that the Node may endorse.</span>
+            <span class="ident">integrity_tags</span>: <span class="ident">node_label</span>
+                .<span class="ident">integrity_tags</span>
+                .<span class="ident">iter</span>()
+                .<span class="ident">chain</span>(<span class="ident">node_privilege</span>.<span class="ident">can_endorse_integrity_tags</span>.<span class="ident">iter</span>())
+                .<span class="ident">cloned</span>()
+                .<span class="ident">collect</span>(),
+        }
+    }
+
+    <span class="doccomment">/// Returns a clone of the [`NodePrivilege`] of the provided Node.</span>
+    <span class="kw">fn</span> <span class="ident">get_node_privilege</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NodePrivilege</span> {
+        <span class="kw">let</span> <span class="ident">node_infos</span> <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">node_infos</span>
+            .<span class="ident">read</span>()
+            .<span class="ident">expect</span>(<span class="string">&quot;could not acquire lock on node_infos&quot;</span>);
+        <span class="kw">let</span> <span class="ident">node_info</span> <span class="op">=</span> <span class="ident">node_infos</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">node_id</span>).<span class="ident">expect</span>(<span class="string">&quot;invalid node_id&quot;</span>);
+        <span class="ident">node_info</span>.<span class="ident">privilege</span>.<span class="ident">clone</span>()
+    }
+
     <span class="doccomment">/// Returns a clone of the [`Label`] associated with the provided reader `channel_half`.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Returns an error if `channel_half` is not a valid read half.</span>
@@ -2177,62 +2289,67 @@
         <span class="ident">with_writer_channel</span>(<span class="ident">channel_half</span>, <span class="op">|</span><span class="ident">channel</span><span class="op">|</span> <span class="prelude-val">Ok</span>(<span class="ident">channel</span>.<span class="ident">label</span>.<span class="ident">clone</span>()))
     }
 
-    <span class="doccomment">/// Returns whether the given Node is allowed to read from the provided channel, according to</span>
-    <span class="doccomment">/// their respective [`Label`]s.</span>
+    <span class="doccomment">/// Returns whether the given Node is allowed to read from the provided channel read half,</span>
+    <span class="doccomment">/// according to their respective [`Label`]s.</span>
     <span class="kw">fn</span> <span class="ident">validate_can_read_from_channel</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
         <span class="ident">channel_half</span>: <span class="kw-2">&amp;</span><span class="ident">ChannelHalf</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="macro">trace</span><span class="macro">!</span>(
-            <span class="string">&quot;{:?}: validating readability of {:?}&quot;</span>,
-            <span class="ident">node_id</span>,
-            <span class="ident">channel_half</span>
-        );
-
-        <span class="kw">let</span> <span class="ident">node_label</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_node_label</span>(<span class="ident">node_id</span>);
         <span class="kw">let</span> <span class="ident">channel_label</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_reader_channel_label</span>(<span class="kw-2">&amp;</span><span class="ident">channel_half</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">validate_can_read_from_label</span>(<span class="ident">node_id</span>, <span class="kw-2">&amp;</span><span class="ident">channel_label</span>)
+    }
+
+    <span class="doccomment">/// Returns whether the given Node is allowed to read from an entity with the provided</span>
+    <span class="doccomment">/// [`Label`], taking into account all the [downgrade privilege](NodeInfo::privilege) the Node</span>
+    <span class="doccomment">/// possesses.</span>
+    <span class="kw">fn</span> <span class="ident">validate_can_read_from_label</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
+        <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">downgraded_node_label</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_node_downgraded_label</span>(<span class="ident">node_id</span>);
         <span class="macro">trace</span><span class="macro">!</span>(
-            <span class="string">&quot;{:?}: node_label={:?}, channel_label={:?}&quot;</span>,
+            <span class="string">&quot;{:?}: can {:?} read from {:?}?&quot;</span>,
             <span class="ident">node_id</span>,
-            <span class="ident">node_label</span>,
-            <span class="ident">channel_label</span>
+            <span class="ident">downgraded_node_label</span>,
+            <span class="ident">label</span>
         );
-        <span class="kw">if</span> <span class="ident">channel_label</span>.<span class="ident">flows_to</span>(<span class="kw-2">&amp;</span><span class="ident">node_label</span>) {
-            <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{:?}: can read from channel {:?}&quot;</span>, <span class="ident">node_id</span>, <span class="ident">channel_half</span>);
+        <span class="kw">if</span> <span class="ident">label</span>.<span class="ident">flows_to</span>(<span class="kw-2">&amp;</span><span class="ident">downgraded_node_label</span>) {
+            <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{:?}: can read from {:?}&quot;</span>, <span class="ident">node_id</span>, <span class="ident">label</span>);
             <span class="prelude-val">Ok</span>(())
         } <span class="kw">else</span> {
-            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{:?}: cannot read from channel {:?}&quot;</span>, <span class="ident">node_id</span>, <span class="ident">channel_half</span>);
+            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{:?}: cannot read from {:?}&quot;</span>, <span class="ident">node_id</span>, <span class="ident">label</span>);
             <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrPermissionDenied</span>)
         }
     }
 
-    <span class="doccomment">/// Returns whether the given Node is allowed to write to the provided channel, according to</span>
-    <span class="doccomment">/// their respective [`Label`]s.</span>
+    <span class="doccomment">/// Returns whether the given Node is allowed to write to the provided channel write half,</span>
+    <span class="doccomment">/// according to their respective [`Label`]s.</span>
     <span class="kw">fn</span> <span class="ident">validate_can_write_to_channel</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
         <span class="ident">channel_half</span>: <span class="kw-2">&amp;</span><span class="ident">ChannelHalf</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="macro">trace</span><span class="macro">!</span>(
-            <span class="string">&quot;{:?}: validating writability of {:?}&quot;</span>,
-            <span class="ident">node_id</span>,
-            <span class="ident">channel_half</span>
-        );
-
-        <span class="kw">let</span> <span class="ident">node_label</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_node_label</span>(<span class="ident">node_id</span>);
         <span class="kw">let</span> <span class="ident">channel_label</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_writer_channel_label</span>(<span class="kw-2">&amp;</span><span class="ident">channel_half</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">validate_can_write_to_label</span>(<span class="ident">node_id</span>, <span class="kw-2">&amp;</span><span class="ident">channel_label</span>)
+    }
+
+    <span class="doccomment">/// Returns whether the given Node is allowed to write to an entity with the provided [`Label`],</span>
+    <span class="doccomment">/// taking into account all the [downgrade privilege](NodeInfo::privilege) the Node possesses.</span>
+    <span class="kw">fn</span> <span class="ident">validate_can_write_to_label</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">downgraded_node_label</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_node_downgraded_label</span>(<span class="ident">node_id</span>);
         <span class="macro">trace</span><span class="macro">!</span>(
-            <span class="string">&quot;{:?}: node_label={:?}, channel_label={:?}&quot;</span>,
+            <span class="string">&quot;{:?}: can {:?} write to {:?}?&quot;</span>,
             <span class="ident">node_id</span>,
-            <span class="ident">node_label</span>,
-            <span class="ident">channel_label</span>
+            <span class="ident">downgraded_node_label</span>,
+            <span class="ident">label</span>
         );
-        <span class="kw">if</span> <span class="ident">node_label</span>.<span class="ident">flows_to</span>(<span class="kw-2">&amp;</span><span class="ident">channel_label</span>) {
-            <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{:?}: can write to channel {:?}&quot;</span>, <span class="ident">node_id</span>, <span class="ident">channel_half</span>);
+        <span class="kw">if</span> <span class="ident">downgraded_node_label</span>.<span class="ident">flows_to</span>(<span class="kw-2">&amp;</span><span class="ident">label</span>) {
+            <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{:?}: can write to {:?}&quot;</span>, <span class="ident">node_id</span>, <span class="ident">label</span>);
             <span class="prelude-val">Ok</span>(())
         } <span class="kw">else</span> {
-            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{:?}: cannot write to channel {:?}&quot;</span>, <span class="ident">node_id</span>, <span class="ident">channel_half</span>);
+            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{:?}: cannot write to {:?}&quot;</span>, <span class="ident">node_id</span>, <span class="ident">label</span>);
             <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrPermissionDenied</span>)
         }
     }
@@ -2245,14 +2362,7 @@
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
         <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">oak_abi</span>::<span class="ident">Handle</span>, <span class="ident">oak_abi</span>::<span class="ident">Handle</span>), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">node_label</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_node_label</span>(<span class="ident">node_id</span>);
-        <span class="kw">if</span> <span class="op">!</span><span class="ident">node_label</span>.<span class="ident">flows_to</span>(<span class="ident">label</span>) {
-            <span class="macro">warn</span><span class="macro">!</span>(
-                <span class="string">&quot;channel_create: label {:?} does not flow to label {:?}&quot;</span>,
-                <span class="ident">node_label</span>, <span class="ident">label</span>
-            );
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrPermissionDenied</span>);
-        }
+        <span class="self">self</span>.<span class="ident">validate_can_write_to_label</span>(<span class="ident">node_id</span>, <span class="ident">label</span>)<span class="question-mark">?</span>;
         <span class="comment">// First get a pair of `ChannelHalf` objects.</span>
         <span class="kw">let</span> <span class="ident">channel_id</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">next_channel_id</span>.<span class="ident">fetch_add</span>(<span class="number">1</span>, <span class="ident">SeqCst</span>);
         <span class="kw">let</span> <span class="ident">channel</span> <span class="op">=</span> <span class="ident">Channel</span>::<span class="ident">new</span>(<span class="ident">channel_id</span>, <span class="ident">label</span>);
@@ -2618,17 +2728,9 @@
         <span class="kw">if</span> <span class="self">self</span>.<span class="ident">is_terminating</span>() {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrTerminated</span>);
         }
+        <span class="self">self</span>.<span class="ident">validate_can_write_to_label</span>(<span class="ident">node_id</span>, <span class="ident">label</span>)<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">reader</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">abi_to_read_half</span>(<span class="ident">node_id</span>, <span class="ident">initial_handle</span>)<span class="question-mark">?</span>;
-
-        <span class="kw">let</span> <span class="ident">node_label</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_node_label</span>(<span class="ident">node_id</span>);
-        <span class="kw">if</span> <span class="op">!</span><span class="ident">node_label</span>.<span class="ident">flows_to</span>(<span class="ident">label</span>) {
-            <span class="macro">warn</span><span class="macro">!</span>(
-                <span class="string">&quot;node_create: label {:?} does not flow to label {:?}&quot;</span>,
-                <span class="ident">node_label</span>, <span class="ident">label</span>
-            );
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrPermissionDenied</span>);
-        }
 
         <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">configuration</span>
@@ -2644,7 +2746,12 @@
             <span class="ident">config</span>.<span class="ident">node_subname</span>(<span class="ident">entrypoint</span>),
             <span class="ident">new_node_id</span>.<span class="number">0</span>
         );
-        <span class="self">self</span>.<span class="ident">node_configure_instance</span>(<span class="ident">new_node_id</span>, <span class="kw-2">&amp;</span><span class="ident">new_node_name</span>, <span class="ident">label</span>);
+        <span class="self">self</span>.<span class="ident">node_configure_instance</span>(
+            <span class="ident">new_node_id</span>,
+            <span class="kw-2">&amp;</span><span class="ident">new_node_name</span>,
+            <span class="ident">label</span>,
+            <span class="kw-2">&amp;</span><span class="ident">NodePrivilege</span>::<span class="ident">default</span>(),
+        );
         <span class="kw">let</span> <span class="ident">initial_handle</span> <span class="op">=</span> <span class="ident">new_node_proxy</span>
             .<span class="ident">runtime</span>
             .<span class="ident">new_abi_handle</span>(<span class="ident">new_node_proxy</span>.<span class="ident">node_id</span>, <span class="ident">reader</span>.<span class="ident">clone</span>());
@@ -2713,12 +2820,19 @@
     }
 
     <span class="doccomment">/// Configure data structures for a Node instance.</span>
-    <span class="kw">fn</span> <span class="ident">node_configure_instance</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">node_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>) {
+    <span class="kw">fn</span> <span class="ident">node_configure_instance</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
+        <span class="ident">node_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
+        <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>,
+        <span class="ident">privilege</span>: <span class="kw-2">&amp;</span><span class="ident">NodePrivilege</span>,
+    ) {
         <span class="self">self</span>.<span class="ident">add_node_info</span>(
             <span class="ident">node_id</span>,
             <span class="ident">NodeInfo</span> {
                 <span class="ident">name</span>: <span class="ident">node_name</span>.<span class="ident">to_string</span>(),
                 <span class="ident">label</span>: <span class="ident">label</span>.<span class="ident">clone</span>(),
+                <span class="ident">privilege</span>: <span class="ident">privilege</span>.<span class="ident">clone</span>(),
                 <span class="ident">abi_handles</span>: <span class="ident">HashMap</span>::<span class="ident">new</span>(),
                 <span class="ident">node_stopper</span>: <span class="prelude-val">None</span>,
             },
