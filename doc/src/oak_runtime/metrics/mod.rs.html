@@ -138,6 +138,11 @@
 <span id="138">138</span>
 <span id="139">139</span>
 <span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -183,6 +188,7 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RuntimeMetrics</span> {
     <span class="kw">pub</span> <span class="ident">runtime_nodes_total</span>: <span class="ident">IntGauge</span>,
+    <span class="kw">pub</span> <span class="ident">runtime_health_check</span>: <span class="ident">IntGauge</span>,
 }
 
 <span class="doccomment">/// Struct that collects all the metrics in one place</span>
@@ -254,6 +260,10 @@
             <span class="ident">runtime_nodes_total</span>: <span class="ident">builder</span>.<span class="ident">register</span>(<span class="ident">int_gauge</span>(
                 <span class="string">&quot;runtime_nodes_total&quot;</span>,
                 <span class="string">&quot;Number of nodes in the runtime.&quot;</span>,
+            )),
+            <span class="ident">runtime_health_check</span>: <span class="ident">builder</span>.<span class="ident">register</span>(<span class="ident">int_gauge</span>(
+                <span class="string">&quot;runtime_health_check&quot;</span>,
+                <span class="string">&quot;Health indicator for the runtime.&quot;</span>,
             )),
         }
     }
