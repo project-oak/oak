@@ -358,6 +358,10 @@ impl RuntimeProxy {
     ) -> Result<oak_abi::Handle, OakStatus> {
         let module_name = self.runtime.configuration.entry_module.clone();
         let entrypoint = self.runtime.configuration.entrypoint.clone();
+        self.metrics_data()
+            .runtime_metrics
+            .runtime_health_check
+            .set(1);
 
         if cfg!(feature = "oak_debug") {
             if let Some(port) = runtime_config.introspect_port {
