@@ -42,6 +42,7 @@ pub struct GrpcServerMetrics {
 #[derive(Clone)]
 pub struct RuntimeMetrics {
     pub runtime_nodes_total: IntGauge,
+    pub runtime_health_check: IntGauge,
 }
 
 /// Struct that collects all the metrics in one place
@@ -113,6 +114,10 @@ impl RuntimeMetrics {
             runtime_nodes_total: builder.register(int_gauge(
                 "runtime_nodes_total",
                 "Number of nodes in the runtime.",
+            )),
+            runtime_health_check: builder.register(int_gauge(
+                "runtime_health_check",
+                "Health indicator for the runtime.",
             )),
         }
     }
