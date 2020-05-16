@@ -64,7 +64,7 @@ pub struct Opt {
         help = "PEM encoded X.509 TLS root certificate file used to authenticate an external gRPC service."
     )]
     root_tls_certificate: String,
-    #[structopt(long, default_value = "3030", help = "Metrics server port number.")]
+    #[structopt(long, default_value = "9090", help = "Metrics server port number.")]
     metrics_port: u16,
     #[structopt(long, help = "Starts the Runtime without a metrics server.")]
     no_metrics: bool,

@@ -102,7 +102,7 @@ pub unsafe extern "C" fn glue_start(
             }
         };
         let runtime_config = oak_runtime::RuntimeConfiguration {
-            metrics_port: Some(3030),
+            metrics_port: Some(9090),
             introspect_port: Some(1909),
         };
         info!(

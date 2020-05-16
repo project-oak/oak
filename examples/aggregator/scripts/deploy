@@ -6,11 +6,39 @@ readonly GLOBAL_SCRIPTS_DIR="${GLOBAL_ROOT_DIR}/scripts/"
 # shellcheck source=scripts/common
 source "${GLOBAL_SCRIPTS_DIR}/common"
 
-"${SCRIPTS_DIR}/undeploy" || true
+metrics=0
+
+while getopts "mh" opt; do
+  case "${opt}" in
+    h)
+      echo -e "Usage: ${0} [-m]
+Deploy aggregator objects. 
+  -m    In addition, deploy the metrics collector.
+  -h    Print Help (this message) and exit"
+      exit 0;;
+    m)
+      metrics=1;;
+    *)
+      echo "Invalid argument: ${OPTARG}"
+      exit 1;;
+  esac
+done
+
+if [[ $metrics == 0 ]]
+then 
+  "${SCRIPTS_DIR}/undeploy" || true
+else
+  "${SCRIPTS_DIR}/undeploy" -m || true
+fi
 
 gcloud container clusters get-credentials aggregator --zone=europe-west2-a
 kubectl create secret generic tls-private-key \
   --from-file="${GLOBAL_ROOT_DIR}/examples/certs/gcp/gcp.key" \
   --from-file="${GLOBAL_ROOT_DIR}/examples/certs/gcp/gcp.pem" \
   --from-file="${GLOBAL_ROOT_DIR}/examples/certs/gcp/ca.pem"
-kubectl apply --filename="${GLOBAL_ROOT_DIR}/examples/aggregator/gcp/pod.yaml"
+kubectl apply --filename="${GLOBAL_ROOT_DIR}/examples/aggregator/gcp/deployment.yaml"
+
+if [[ $metrics == 1 ]]
+then 
+  kubectl apply --filename="${GLOBAL_ROOT_DIR}/examples/aggregator/gcp/metrics-sidecar.yaml"
+fi
