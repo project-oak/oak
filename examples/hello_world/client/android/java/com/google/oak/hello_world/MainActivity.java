@@ -78,21 +78,20 @@ public class MainActivity extends Activity {
     String address = addressInput.getText().toString();
     Log.v("Oak", "Say Hello");
     TextView helloTextView = findViewById(R.id.helloTextView);
-    backgroundHandler.post(
-        new HelloWorker(getApplicationContext(), address, "World", helloTextView));
+    backgroundHandler.post(new HelloWorker(getApplicationContext(), address, helloTextView));
   }
 
   /** Worker to perform blocking tasks on the background HandlerThread. */
   private static class HelloWorker implements Runnable {
+    private static final String NAME = "World";
+
     private Context context;
     private String address;
-    private String name;
     private WeakReference<TextView> target;
 
-    private HelloWorker(Context context, String address, String name, TextView target) {
+    private HelloWorker(Context context, String address, TextView target) {
       this.context = context;
       this.address = address;
-      this.name = name;
       this.target = new WeakReference(target);
     }
 
@@ -103,22 +102,16 @@ public class MainActivity extends Activity {
         Log.v("Oak", "Response is: " + reply.get());
         TextView helloTextView = target.get();
         if (helloTextView != null) {
-          helloTextView.post(new Runnable() {
-            @Override
-            public void run() {
-              helloTextView.setTextColor(Color.GREEN);
-              helloTextView.setText(reply.get());
-            }
+          helloTextView.post(() -> {
+            helloTextView.setTextColor(Color.GREEN);
+            helloTextView.setText(reply.get());
           });
         }
       } else {
         TextView helloTextView = target.get();
-        helloTextView.post(new Runnable() {
-          @Override
-          public void run() {
-            helloTextView.setTextColor(Color.RED);
-            helloTextView.setText("Unexpected Error!");
-          }
+        helloTextView.post(() -> {
+          helloTextView.setTextColor(Color.RED);
+          helloTextView.setText("Unexpected Error!");
         });
       }
     }
@@ -127,7 +120,7 @@ public class MainActivity extends Activity {
     private Optional<String> sayHello() {
       try {
         return Optional.of(HelloWorldGrpc.newBlockingStub(createChannel(address))
-                               .sayHello(HelloRequest.newBuilder().setGreeting(name).build())
+                               .sayHello(HelloRequest.newBuilder().setGreeting(NAME).build())
                                .getReply());
       } catch (Exception exception) {
         Log.e("Oak", "Exception", exception);

@@ -107,7 +107,7 @@ public class MainActivity extends Activity {
 
     TextView resultTextView = findViewById(R.id.resultTextView);
     resultTextView.setText("");
-    
+
     try {
       EditText firstKeyInput = findViewById(R.id.firstKeyInput);
       indices.add(Integer.parseInt(firstKeyInput.getText().toString()));
@@ -164,23 +164,17 @@ public class MainActivity extends Activity {
       if (submitData()) {
         TextView resultTextView = target.get();
         if (resultTextView != null) {
-          resultTextView.post(new Runnable() {
-            @Override
-            public void run() {
-              resultTextView.setTextColor(Color.GREEN);
-              resultTextView.setText("Success!");
-            }
+          resultTextView.post(() -> {
+            resultTextView.setTextColor(Color.GREEN);
+            resultTextView.setText("Success!");
           });
         }
       } else {
         TextView resultTextView = target.get();
         if (resultTextView != null) {
-          resultTextView.post(new Runnable() {
-            @Override
-            public void run() {
-              resultTextView.setTextColor(Color.RED);
-              resultTextView.setText("Unexpected Error!");
-            }
+          resultTextView.post(() -> {
+            resultTextView.setTextColor(Color.RED);
+            resultTextView.setText("Unexpected Error!");
           });
         }
       }
