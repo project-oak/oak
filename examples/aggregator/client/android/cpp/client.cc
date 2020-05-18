@@ -51,7 +51,7 @@ JNIEXPORT void JNICALL Java_com_google_oak_aggregator_MainActivity_createChannel
 }
 
 // Send data sample to the gRPC channel `kChannel`.
-JNIEXPORT void JNICALL Java_com_google_oak_aggregator_MainActivity_submitSample(
+JNIEXPORT jboolean JNICALL Java_com_google_oak_aggregator_MainActivity_submitSample(
     JNIEnv* env, jobject /*this*/, jstring jbucket, jobject jindices, jobject jvalues) {
   // Get Java classes and methods.
   jclass ArrayListClass = env->FindClass("java/util/ArrayList");
@@ -97,19 +97,21 @@ JNIEXPORT void JNICALL Java_com_google_oak_aggregator_MainActivity_submitSample(
     env->DeleteLocalRef(jvalue);
   }
 
-  // Submit sample.
-  grpc::Status status = kChannel->SubmitSample(&context, request, &response);
-  if (status.ok()) {
-    JNI_LOG("Sample has been submitted");
-  } else {
-    JNI_LOG("Could not submit sample: %d : %s", status.error_code(),
-            status.error_message().c_str());
-  }
-
   // Clear class references.
   env->DeleteLocalRef(ArrayListClass);
   env->DeleteLocalRef(IntegerClass);
   env->DeleteLocalRef(FloatClass);
+
+  // Submit sample.
+  grpc::Status status = kChannel->SubmitSample(&context, request, &response);
+  if (status.ok()) {
+    JNI_LOG("Sample has been submitted");
+    return true;
+  } else {
+    JNI_LOG("Could not submit sample: %d : %s", status.error_code(),
+            status.error_message().c_str());
+    return false;
+  }
 }
 
 }  // extern "C"
