@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include <cassert>
+
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 #include "examples/running_average/proto/running_average.grpc.pb.h"
@@ -84,9 +86,11 @@ int main(int argc, char** argv) {
   // Retrieve average.
   int average_0 = retrieve_average(stub_0.get());
   LOG(INFO) << "client 0 average: " << average_0;
+  assert(average_0 == 100);
 
   int average_1 = retrieve_average(stub_1.get());
   LOG(INFO) << "client 1 average: " << average_1;
+  assert(average_1 == 100);
 
   return EXIT_SUCCESS;
 }
