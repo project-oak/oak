@@ -24,10 +24,13 @@
 //!     --grpc-tls-certificate=<CERTIFICATE_PATH> \
 //!     --root-tls-certificate=<CERTIFICATE_PATH>
 
-use log::info;
+use anyhow::anyhow;
+use core::str::FromStr;
+use log::{debug, info};
 use oak_runtime::{configure_and_run, proto::oak::application::ApplicationConfiguration};
 use prost::Message;
 use std::{
+    collections::HashMap,
     fs::{read_to_string, File},
     io::Read,
     sync::{
@@ -37,11 +40,15 @@ use std::{
 };
 use structopt::StructOpt;
 
-use oak_runtime::proto::oak::application::node_configuration::ConfigType::{
-    GrpcClientConfig, GrpcServerConfig,
+#[cfg(test)]
+mod tests;
+
+use oak_runtime::proto::oak::application::{
+    node_configuration::ConfigType::{GrpcClientConfig, GrpcServerConfig},
+    ConfigMap,
 };
 
-#[derive(StructOpt, Clone)]
+#[derive(StructOpt, Clone, Debug)]
 #[structopt(about = "Oak Loader")]
 pub struct Opt {
     #[structopt(long, help = "Application configuration file.")]
@@ -70,24 +77,76 @@ pub struct Opt {
     introspect_port: u16,
     #[structopt(long, help = "Starts the Runtime without an introspection server.")]
     no_introspect: bool,
+    #[structopt(
+        long,
+        help = "Configuration files to expose to the Oak Application, each in key=filename format."
+    )]
+    config_files: Vec<ConfigEntry>,
 }
 
-fn read_file(filename: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+/// A specification of a configuration entry as human readable key and a path to a file whose
+/// contents constitutes the actual value.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ConfigEntry {
+    key: String,
+    filename: String,
+}
+
+impl FromStr for ConfigEntry {
+    type Err = anyhow::Error;
+    fn from_str(v: &str) -> Result<Self, Self::Err> {
+        let parts = v.split('=').collect::<Vec<_>>();
+        if parts.len() != 2 {
+            return Err(anyhow!("could not parse config entry: {}", v));
+        }
+        Ok(ConfigEntry {
+            key: parts[0].to_string(),
+            filename: parts[1].to_string(),
+        })
+    }
+}
+
+fn read_file(filename: &str) -> anyhow::Result<Vec<u8>> {
     let mut file = File::open(filename)
-        .map_err(|error| format!("Failed to open file <{}>: {:?}", filename, error))?;
+        .map_err(|error| anyhow!("Failed to open file <{}>: {:?}", filename, error))?;
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer)
-        .map_err(|error| format!("Failed to read file <{}>: {:?}", filename, error))?;
+        .map_err(|error| anyhow!("Failed to read file <{}>: {:?}", filename, error))?;
     Ok(buffer)
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn parse_config_files(config_entries: &[ConfigEntry]) -> anyhow::Result<HashMap<String, Vec<u8>>> {
+    let mut file_map = HashMap::new();
+    for config_entry in config_entries {
+        if file_map.contains_key(&config_entry.key) {
+            return Err(anyhow!("duplicate config entry key: {}", config_entry.key));
+        }
+        let file_content = read_file(&config_entry.filename)?;
+        file_map.insert(config_entry.key.to_string(), file_content);
+    }
+    Ok(file_map)
+}
+
+pub fn parse_config_map(config_files: &[ConfigEntry]) -> anyhow::Result<ConfigMap> {
+    Ok(ConfigMap {
+        items: parse_config_files(config_files)?,
+    })
+}
+
+fn main() -> anyhow::Result<()> {
     if cfg!(feature = "oak_debug") {
         simple_logger::init_by_env();
     } else {
         eprintln!("No debugging output configured at build time");
     }
     let opt = Opt::from_args();
+    debug!("parsed opts: {:?}", opt);
+
+    let config_map = parse_config_map(&opt.config_files)?;
+    // We only log the keys here, since the values may be secret.
+    debug!("parsed config map entries: {:?}", config_map.items.keys());
+    // TODO(#689): Pass the `config_map` object to the Runtime instance, and make it available to
+    // the running Oak Application.
 
     // Load application configuration.
     let app_config_data = read_file(&opt.application)?;
@@ -129,7 +188,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Start the Runtime from the given config.
     info!("starting Runtime, config {:?}", runtime_config);
     let (runtime, initial_handle) = configure_and_run(app_config, runtime_config)
-        .map_err(|status| format!("status {:?}", status))?;
+        .map_err(|status| anyhow!("status {:?}", status))?;
     info!(
         "initial node {:?} with write handle {:?}",
         runtime.node_id, initial_handle

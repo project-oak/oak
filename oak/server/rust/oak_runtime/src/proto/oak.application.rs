@@ -140,3 +140,15 @@ pub struct RoughtimeServer {
     #[prost(string, tag="4")]
     pub public_key_base64: std::string::String,
 }
+/// A serialized list of key-value pairs that are specified as command line flags to the Oak Loader
+/// binary, and are made available to the initial Node of the running Oak Application.
+///
+/// Keys are human readable strings and usually correspond to file names.
+///
+/// Values are raw binary blobs and usually correspond to file contents, which must be interpreted by
+/// the running Oak Application.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ConfigMap {
+    #[prost(map="string, bytes", tag="1")]
+    pub items: ::std::collections::HashMap<std::string::String, std::vec::Vec<u8>>,
+}

@@ -28,6 +28,7 @@ rust_binary(
     ],
     edition = "2018",
     deps = [
+        "//cargo:anyhow",
         "//cargo:log",
         "//cargo:prost",
         "//cargo:signal_hook",
