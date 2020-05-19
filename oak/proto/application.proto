@@ -125,3 +125,14 @@ message RoughtimeServer {
   uint32 port = 3;
   string public_key_base64 = 4;
 }
+
+// A serialized list of key-value pairs that are specified as command line flags to the Oak Loader
+// binary, and are made available to the initial Node of the running Oak Application.
+//
+// Keys are human readable strings and usually correspond to file names.
+//
+// Values are raw binary blobs and usually correspond to file contents, which must be interpreted by
+// the running Oak Application.
+message ConfigMap {
+  map<string, bytes> items = 1;
+}

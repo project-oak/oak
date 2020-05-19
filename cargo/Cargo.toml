@@ -7,6 +7,7 @@ version = "0.0.0"
 path = "fake_lib.rs"
 
 [dependencies]
+anyhow = "*"
 byteorder = "*"
 bytes = "*"
 futures = "*"

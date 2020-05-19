@@ -9,6 +9,10 @@ licenses([
   "notice" # See individual crates for specific licenses
 ])
 alias(
+    name = "anyhow",
+    actual = "@raze__anyhow__1_0_28//:anyhow",
+)
+alias(
     name = "byteorder",
     actual = "@raze__byteorder__1_3_4//:byteorder",
 )
