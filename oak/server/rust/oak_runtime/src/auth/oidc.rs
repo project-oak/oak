@@ -14,8 +14,8 @@
 // limitations under the License.
 //
 
-//! Utilities for exchanging authorisation codes for identity tokens and validating the resulting
-//! tokens.
+//! OpenID Connect utilities for exchanging authorisation codes for identity tokens, and decoding
+//! and validating identity tokens.
 //!
 //! For reference, see:
 //! https://developers.google.com/identity/protocols/oauth2/openid-connect#exchangecode
@@ -101,6 +101,34 @@ struct Key {
     /// Base64 encoded RSA modulus.
     #[serde(rename = "n")]
     modulus: String,
+}
+
+/// Top-level container for the downloaded OpenID Connect JSON client secret file.
+///
+/// See: https://developers.google.com/api-client-library/dotnet/guide/aaa_client_secrets
+#[derive(Deserialize, Debug)]
+struct ClientInfoWrapper {
+    /// The client information for an installed application.
+    installed: ClientInfo,
+}
+
+/// The OpenID Connect client ID and client secret contained in the donwloaded JSON file.
+///
+/// See: https://developers.google.com/api-client-library/dotnet/guide/aaa_client_secrets
+#[derive(Clone, Deserialize, Debug)]
+pub struct ClientInfo {
+    /// The client ID.
+    pub client_id: String,
+    /// The client secret.
+    pub client_secret: String,
+    /* TODO(#923): Check whether we should be using auth_uri, token_uri and
+     * auth_provider_x509_cert_url. */
+}
+
+/// Parses the content of the downloaded OpenID Connect client secret file.
+pub fn parse_client_info_json(client_info_json: &str) -> Result<ClientInfo, Box<dyn error::Error>> {
+    let wrapper: ClientInfoWrapper = serde_json::from_str(&client_info_json)?;
+    Ok(wrapper.installed)
 }
 
 /// Exchanges an authorisation code for an ID token and validates the token.

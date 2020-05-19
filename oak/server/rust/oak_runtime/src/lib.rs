@@ -23,6 +23,9 @@
 //! be enabled in development, as it destroys the privacy guarantees of the
 //! platform by providing easy channels for the exfiltration of private data.
 
+pub mod proto;
+
+pub mod auth;
 pub mod config;
 pub mod io;
 pub mod message;
@@ -30,6 +33,7 @@ pub mod metrics;
 pub mod node;
 pub mod runtime;
 
+use auth::oidc::ClientInfo;
 use tonic::transport::{Certificate, Identity};
 
 pub use config::configure_and_run;
@@ -52,6 +56,9 @@ pub struct RuntimeConfiguration {
 pub struct GrpcConfiguration {
     /// TLS identity to use for all gRPC Server Nodes.
     pub grpc_server_tls_identity: Option<Identity>,
+
+    /// OpenID Connect Authentiction client information.
+    pub oidc_client_info: Option<ClientInfo>,
 
     /// Root TLS certificate to use for all gRPC Client Nodes.
     // TODO(#999): Remove user-configurable root CA.

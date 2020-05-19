@@ -28,7 +28,7 @@ use anyhow::anyhow;
 use core::str::FromStr;
 use log::{debug, info};
 use oak_abi::proto::oak::application::{ApplicationConfiguration, ConfigMap};
-use oak_runtime::config::configure_and_run;
+use oak_runtime::{auth::oidc::parse_client_info_json, config::configure_and_run};
 use prost::Message;
 use std::{
     collections::HashMap,
@@ -62,6 +62,11 @@ pub struct Opt {
         help = "PEM encoded X.509 TLS root certificate file used to authenticate an external gRPC service."
     )]
     root_tls_certificate: String,
+    #[structopt(
+        long,
+        help = "Path to the downloaded JSON encoded client identity file for OpenID Connect. (Optional)"
+    )]
+    oidc_client: Option<String>,
     #[structopt(long, default_value = "9090", help = "Metrics server port number.")]
     metrics_port: u16,
     #[structopt(long, help = "Starts the Runtime without a metrics server.")]
@@ -179,12 +184,23 @@ fn main() -> anyhow::Result<()> {
     let grpc_tls_private_key = read_to_string(&opt.grpc_tls_private_key)?;
     let grpc_tls_certificate = read_to_string(&opt.grpc_tls_certificate)?;
     let root_tls_certificate = read_to_string(&opt.root_tls_certificate)?;
+    let oidc_client_info = match opt.oidc_client {
+        Some(oidc_client) => {
+            let oidc_file = read_to_string(oidc_client)?;
+            Some(
+                parse_client_info_json(&oidc_file)
+                    .map_err(|error| anyhow!("Failed to parse json: {:?}", error))?,
+            )
+        }
+        _ => None,
+    };
     let grpc_configuration = oak_runtime::GrpcConfiguration {
         grpc_server_tls_identity: Some(Identity::from_pem(
             grpc_tls_certificate,
             grpc_tls_private_key,
         )),
         grpc_client_root_tls_certificate: Some(load_certificate(&root_tls_certificate)?),
+        oidc_client_info,
     };
 
     // Start the Runtime from the given config.

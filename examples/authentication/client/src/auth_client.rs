@@ -19,7 +19,7 @@ use tonic::transport::{Certificate, Channel, ClientTlsConfig};
 use url::Url;
 
 pub mod proto {
-    tonic::include_proto!("oak.examples.authentication");
+    tonic::include_proto!("oak.authentication");
 }
 
 /// Creates an `AuthenticationClient` that trusts certificates signed by the root certificate stored
@@ -52,10 +52,10 @@ pub async fn get_authentication_request_url(
     let response = auth_client.get_auth_parameters(request).await?.into_inner();
 
     let mut auth_endpoint = Url::parse(&response.auth_endpoint).unwrap();
-    // TODO(#886): Consider retrieving scope from server.
+    // TODO(#922): Consider retrieving scope from server.
     let scope = "openid email";
     let redirect_url = format!("http://{}", redirect_address);
-    // TODO(#886): Retrieve state and code challenge from server and add to request.
+    // TODO(#922): Retrieve state and code challenge from server and add to request.
     auth_endpoint
         .query_pairs_mut()
         .append_pair("scope", scope)

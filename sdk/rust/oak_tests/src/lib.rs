@@ -100,6 +100,7 @@ pub fn run_single_module(
             // an invalid value here, even though it will still fail when instantiating the actual
             // gRPC client.
             grpc_client_root_tls_certificate: Some(Certificate::from_pem("invalid-cert")),
+            oidc_client_info: None,
         },
     )
 }
