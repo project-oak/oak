@@ -8,7 +8,7 @@ source "${GLOBAL_SCRIPTS_DIR}/common"
 
 "${SCRIPTS_DIR}/undeploy" || true
 
-gcloud container clusters get-credentials aggregator
+gcloud container clusters get-credentials aggregator --zone=europe-west2-a
 kubectl create secret generic tls-private-key \
   --from-file="${GLOBAL_ROOT_DIR}/examples/certs/gcp/gcp.key" \
   --from-file="${GLOBAL_ROOT_DIR}/examples/certs/gcp/gcp.pem" \
