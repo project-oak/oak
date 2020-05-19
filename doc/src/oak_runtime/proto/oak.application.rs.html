@@ -140,6 +140,18 @@
 <span id="140">140</span>
 <span id="141">141</span>
 <span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">/// An ApplicationConfiguration represents a unit of deployment in Oak.</span>
 <span class="doccomment">///</span>
@@ -282,6 +294,18 @@
     <span class="kw">pub</span> <span class="ident">port</span>: <span class="ident">u32</span>,
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;4&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">public_key_base64</span>: <span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">String</span>,
+}
+<span class="doccomment">/// A serialized list of key-value pairs that are specified as command line flags to the Oak Loader</span>
+<span class="doccomment">/// binary, and are made available to the initial Node of the running Oak Application.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// Keys are human readable strings and usually correspond to file names.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// Values are raw binary blobs and usually correspond to file contents, which must be interpreted by</span>
+<span class="doccomment">/// the running Oak Application.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, ::<span class="ident">prost</span>::<span class="ident">Message</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ConfigMap</span> {
+    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">map</span><span class="op">=</span><span class="string">&quot;string, bytes&quot;</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">items</span>: ::<span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">String</span>, <span class="ident">std</span>::<span class="ident">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../";window.currentCrate = "oak_runtime";</script><script src="../../../aliases.js"></script><script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script><script defer src="../../../search-index.js"></script></body></html>

@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["main",""],["read_file",""]],"struct":[["Opt",""]]});
+initSidebarItems({"fn":[["main",""],["parse_config_files",""],["parse_config_map",""],["read_file",""]],"struct":[["ConfigEntry","A specification of a configuration entry as human readable key and a path to a file whose contents constitutes the actual value."],["Opt",""]]});
