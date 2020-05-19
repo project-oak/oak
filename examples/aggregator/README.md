@@ -101,6 +101,6 @@ Deployment requires Docker images to be uploaded to the
 following command:
 
 ```bash
-./scripts/build_example -e aggregator -i
+./scripts/build_example -e aggregator -i base
 ./examples/aggregator/scripts/docker_push
 ```
