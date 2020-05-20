@@ -23,7 +23,10 @@
 //! cargo run --package=runner
 //! ```
 
-use std::{io::Read, path::PathBuf};
+use std::{
+    io::Read,
+    path::{Path, PathBuf},
+};
 use structopt::StructOpt;
 
 mod internal;
@@ -31,8 +34,143 @@ use internal::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let opt = Opt::from_args();
+
+    let steps = match opt.cmd {
+        Command::BuildExamples(ref opt) => build_examples(&opt),
+        Command::BuildServer(ref opt) => build_server(&opt),
+        Command::RunTests => run_tests(),
+    };
     // TODO(#396): Add support for running individual commands via command line flags.
-    let root = Step::Multiple {
+    let statuses = run_step(&Context::root(&opt), &steps);
+
+    // If the overall status value is an error, terminate with a nonzero exit code.
+    if statuses.contains(&StatusResultValue::Error) {
+        std::process::exit(1);
+    }
+
+    Ok(())
+}
+
+fn build_examples(opt: &BuildExamples) -> Step {
+    match opt.variant.as_str() {
+        "rust" => Step::Multiple {
+            name: "root".to_string(),
+            steps: examples()
+                .filter(is_cargo_toml_file)
+                .filter(|entry| {
+                    // Exclude Cargo.toml files of targets that are not meant to be compiled to
+                    // Wasm (e.g. auxiliary binaries).
+                    (*entry != PathBuf::from("./examples/aggregator/backend/Cargo.toml"))
+                        && (*entry != PathBuf::from("./examples/authentication/server/Cargo.toml"))
+                        && (*entry != PathBuf::from("./examples/authentication/client/Cargo.toml"))
+                })
+                .map(to_string)
+                .map(|entry| build_wasm_module(&entry))
+                .collect(),
+        },
+        "cpp" => unimplemented!("C++ examples not implemented yet"),
+        v => panic!("unknown variant: {}", v),
+    }
+}
+
+fn build_wasm_module(manifest_path: &str) -> Step {
+    Step::Single {
+        name: manifest_path.to_string(),
+        runnable: cmd(
+            "cargo",
+            &[
+                "build",
+                "--release",
+                "--target=wasm32-unknown-unknown",
+                &format!("--manifest-path={}", manifest_path),
+            ],
+        ),
+    }
+}
+
+fn is_mac_os() -> bool {
+    cfg!(macos)
+}
+
+fn bazel_build_flags() -> Vec<String> {
+    let mut flags = vec![
+        "--remote_cache=https://storage.googleapis.com/oak-bazel-cache".to_string(),
+        "--block_for_lock=false".to_string(),
+        "--show_timestamps".to_string(),
+    ];
+
+    const OAK_REMOTE_CACHE_KEY: &str = "./.oak_remote_cache_key.json";
+    if Path::new(OAK_REMOTE_CACHE_KEY).exists() {
+        flags.push(format!("--google_credentials={}", OAK_REMOTE_CACHE_KEY));
+    } else {
+        flags.push("--remote_upload_local_results=false".to_string());
+    };
+
+    flags
+}
+
+fn as_ref(v: &[String]) -> Vec<&str> {
+    v.iter().map(|x| x.as_ref()).collect()
+}
+
+fn bazel_build(extra_build_flags: &[&str], targets: &[&str]) -> Box<dyn Runnable> {
+    let mut flags = Vec::new();
+    flags.push("build");
+
+    let b = bazel_build_flags();
+    flags.extend(as_ref(&b));
+
+    flags.extend(extra_build_flags);
+    flags.push("--");
+    flags.extend(targets);
+    cmd("bazel", &flags)
+}
+
+fn build_server(opt: &BuildServer) -> Step {
+    match opt.variant.as_str() {
+        "rust" => Step::Single {
+            name: "build rust server".to_string(),
+            runnable: cmd(
+                "cargo",
+                &[
+                    "build",
+                    "--release",
+                    "--target=x86_64-unknown-linux-musl",
+                    "--package=oak_loader",
+                ],
+            ),
+        },
+        v => {
+            let config = match v {
+                "base" => {
+                    if is_mac_os() {
+                        "darwin"
+                    } else {
+                        "clang"
+                    }
+                }
+                "logless" => "clang-logless",
+                "arm" => "armv8",
+                "asan" => "asan",
+                "tsan" => "tsan",
+                _ => panic!("unknown variant: {}", v),
+            };
+            Step::Single {
+                name: "build cpp server".to_string(),
+                runnable: bazel_build(
+                    &[&format!("--config={}", config)],
+                    &[
+                        "//oak/server/loader:oak_runner",
+                        "//oak/server/storage:storage_server",
+                    ],
+                ),
+            }
+        }
+    }
+}
+
+fn run_tests() -> Step {
+    Step::Multiple {
         name: "root".to_string(),
         steps: vec![
             run_buildifier(),
@@ -45,15 +183,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             run_bazel_build(),
             run_bazel_test(),
         ],
-    };
-    let statuses = run_step(&Context::root(&opt), &root);
-
-    // If the overall status value is an error, terminate with a nonzero exit code.
-    if statuses.contains(&StatusResultValue::Error) {
-        std::process::exit(1);
     }
+}
 
-    Ok(())
+/// Returns all the files under the examples directory.
+fn examples() -> impl Iterator<Item = PathBuf> {
+    let walker = walkdir::WalkDir::new("./examples").into_iter();
+    walker
+        .filter_entry(|e| !is_ignored_entry(e))
+        .filter_map(Result::ok)
+        .map(|e| e.into_path())
 }
 
 /// Return whether to ignore the specified path. This is used by the `walker` package to efficiently
