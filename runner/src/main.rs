@@ -359,6 +359,10 @@ fn is_ignored_entry(entry: &walkdir::DirEntry) -> bool {
     is_ignored_path(&path)
 }
 
+fn is_regular_file(path: &PathBuf) -> bool {
+    path.is_file()
+}
+
 /// Return an iterator of all the first-party and non-ignored files in the repository, which can be
 /// then additionally filtered by the caller.
 fn source_files() -> impl Iterator<Item = PathBuf> {
@@ -367,6 +371,7 @@ fn source_files() -> impl Iterator<Item = PathBuf> {
         .filter_entry(|e| !is_ignored_entry(e))
         .filter_map(Result::ok)
         .map(|e| e.into_path())
+        .filter(is_regular_file)
 }
 
 /// Return an iterator of all known Cargo Manifest files that define workspaces.
