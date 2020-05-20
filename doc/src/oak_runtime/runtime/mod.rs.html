@@ -1488,6 +1488,8 @@
 <span id="1488">1488</span>
 <span id="1489">1489</span>
 <span id="1490">1490</span>
+<span id="1491">1491</span>
+<span id="1492">1492</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -1726,7 +1728,9 @@
         <span class="kw">let</span> <span class="ident">notify_sender</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">notify_sender</span>.<span class="ident">take</span>();
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">notify_sender</span>) <span class="op">=</span> <span class="ident">notify_sender</span> {
             <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;stopping {} server&quot;</span>, <span class="self">self</span>.<span class="ident">name</span>);
-            <span class="ident">notify_sender</span>.<span class="ident">send</span>(()).<span class="ident">unwrap</span>();
+            <span class="comment">// The auxiliary server may already have stopped, so ignore</span>
+            <span class="comment">// errors when sending the stop notification.</span>
+            <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">notify_sender</span>.<span class="ident">send</span>(());
         }
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">join_handle</span>) <span class="op">=</span> <span class="ident">join_handle</span> {
             <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">join_handle</span>.<span class="ident">join</span>();
