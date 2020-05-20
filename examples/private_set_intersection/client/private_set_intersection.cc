@@ -87,17 +87,25 @@ int main(int argc, char** argv) {
   std::vector<std::string> set_1{"b", "c", "d"};
   SubmitSet(stub_1.get(), set_1);
 
+  std::set<std::string> expected_set{"b", "c"};
+
   // Retrieve intersection.
   std::vector<std::string> intersection_0 = RetrieveIntersection(stub_0.get());
   LOG(INFO) << "client 0 intersection:";
   for (auto item : intersection_0) {
     LOG(INFO) << "- " << item;
   }
+  if (std::set<std::string>(intersection_0.begin(), intersection_0.end()) != expected_set) {
+    LOG(FATAL) << "Unexpected set";
+  }
 
   std::vector<std::string> intersection_1 = RetrieveIntersection(stub_1.get());
   LOG(INFO) << "client 1 intersection:";
   for (auto item : intersection_1) {
     LOG(INFO) << "- " << item;
+  }
+  if (std::set<std::string>(intersection_1.begin(), intersection_1.end()) != expected_set) {
+    LOG(FATAL) << "Unexpected set";
   }
 
   return EXIT_SUCCESS;

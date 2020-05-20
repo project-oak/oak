@@ -83,10 +83,16 @@ int main(int argc, char** argv) {
 
   // Retrieve average.
   int average_0 = retrieve_average(stub_0.get());
-  LOG(INFO) << "client 0 average: " << average_0;
+  LOG(INFO) << "Client 0 average: " << average_0;
+  if (average_0 != 100) {
+    LOG(FATAL) << "Unexpected average: " << average_0;
+  }
 
   int average_1 = retrieve_average(stub_1.get());
-  LOG(INFO) << "client 1 average: " << average_1;
+  LOG(INFO) << "Client 1 average: " << average_1;
+  if (average_1 != 100) {
+    LOG(FATAL) << "Unexpected average: " << average_0;
+  }
 
   return EXIT_SUCCESS;
 }
