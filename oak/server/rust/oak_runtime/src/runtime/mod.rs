@@ -235,7 +235,9 @@ impl Drop for AuxServer {
         let notify_sender = self.notify_sender.take();
         if let Some(notify_sender) = notify_sender {
             info!("stopping {} server", self.name);
-            notify_sender.send(()).unwrap();
+            // The auxiliary server may already have stopped, so ignore
+            // errors when sending the stop notification.
+            let _ = notify_sender.send(());
         }
         if let Some(join_handle) = join_handle {
             let result = join_handle.join();
