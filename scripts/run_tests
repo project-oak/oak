@@ -13,9 +13,9 @@ source "$SCRIPTS_DIR/common"
 
 export RUST_BACKTRACE=1
 
+cargo clippy --all-targets -- --deny=warnings
 cargo test --all-targets
 cargo test --doc
-cargo clippy --all-targets -- --deny=warnings
 
 bazel_build_flags+=( '--keep_going' )
 
