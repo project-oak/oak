@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-#include <cassert>
-
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 #include "examples/private_set_intersection/proto/private_set_intersection.grpc.pb.h"
@@ -97,14 +95,18 @@ int main(int argc, char** argv) {
   for (auto item : intersection_0) {
     LOG(INFO) << "- " << item;
   }
-  assert(std::set<std::string>(intersection_0.begin(), intersection_0.end()) == expected_set);
+  if (std::set<std::string>(intersection_0.begin(), intersection_0.end()) != expected_set) {
+    LOG(FATAL) << "Unexpected set";
+  }
 
   std::vector<std::string> intersection_1 = RetrieveIntersection(stub_1.get());
   LOG(INFO) << "client 1 intersection:";
   for (auto item : intersection_1) {
     LOG(INFO) << "- " << item;
   }
-  assert(std::set<std::string>(intersection_1.begin(), intersection_1.end()) == expected_set);
+  if (std::set<std::string>(intersection_1.begin(), intersection_1.end()) != expected_set) {
+    LOG(FATAL) << "Unexpected set";
+  }
 
   return EXIT_SUCCESS;
 }
