@@ -15,9 +15,13 @@
 //
 
 use crate::internal::{status_combine, SingleStatusResult, StatusResultValue};
+use lazy_static::lazy_static;
+use log::warn;
 use regex::Regex;
+use serde::Deserialize;
 use std::{
-    io::{BufRead, BufReader},
+    collections::HashMap,
+    io::{BufRead, BufReader, Read},
     path::PathBuf,
 };
 
@@ -57,20 +61,50 @@ impl TodoChecker {
                 }
             };
 
-            results.push(self.check_line(&line, i + 1));
+            // Only check GitHub issue status if it's available.
+            results.push(self.check_line(&line, i + 1, issue_data_available()));
         }
         status_combine(results.into_iter())
     }
 
-    fn check_line(&self, line: &str, line_number: usize) -> SingleStatusResult {
+    fn check_line(&self, line: &str, line_number: usize, check_status: bool) -> SingleStatusResult {
         let mut logs = Vec::new();
         let mut result = StatusResultValue::Ok;
         if let Some(captures) = self.todo_re.captures(&line) {
             if let Some(details) = captures.name("details") {
                 if let Some(captures) = self.details_re.captures(details.as_str()) {
-                    let issue = captures.name("id").unwrap();
-                    // TODO: check that this issue is currently open
-                    let _issue = issue.as_str().parse::<u32>().unwrap();
+                    if check_status {
+                        let issue = captures
+                            .name("id")
+                            .unwrap()
+                            .as_str()
+                            .parse::<u32>()
+                            .unwrap();
+                        match issue_info(issue) {
+                            None => {
+                                logs.push(format!(
+                                    "{}:{}: {}DO with issue number {} unknown at GitHub",
+                                    self.path.to_str().unwrap(),
+                                    line_number,
+                                    "TO",
+                                    issue
+                                ));
+                                result = StatusResultValue::Error;
+                            }
+                            Some(info) => {
+                                if info.state != "open" {
+                                    logs.push(format!(
+                                        "{}:{}: {}DO with issue number {} marked closed at GitHub",
+                                        self.path.to_str().unwrap(),
+                                        line_number,
+                                        "TO",
+                                        issue
+                                    ));
+                                    result = StatusResultValue::Error;
+                                }
+                            }
+                        }
+                    }
                 } else {
                     logs.push(format!(
                         "{}:{}: {}DO with malformed issue details",
@@ -97,6 +131,102 @@ impl TodoChecker {
     }
 }
 
+#[derive(Clone, Debug, Deserialize)]
+struct IssueInfo {
+    number: u32,
+    title: String,
+    state: String,
+}
+
+lazy_static! {
+    // GitHub API is rate limited so ensure we only get the list of issues once.
+    static ref ISSUE_INFO: Option<HashMap<u32, IssueInfo>> = get_github_issues();
+}
+
+fn issue_data_available() -> bool {
+    ISSUE_INFO.is_some()
+}
+
+fn issue_info(id: u32) -> Option<IssueInfo> {
+    if let Some(info_map) = &*ISSUE_INFO {
+        if let Some(info) = info_map.get(&id) {
+            Some(info.clone())
+        } else {
+            None
+        }
+    } else {
+        None
+    }
+}
+
+// Get raw JSON issues from the given url. Returns the JSON body if found, and a next URL.
+fn get_issues_from(url: &str) -> (Option<String>, Option<String>) {
+    let mut rsp = match reqwest::blocking::Client::builder()
+        .user_agent("rust-reqwest")
+        .build()
+        .unwrap()
+        .get(url)
+        .send()
+    {
+        Ok(rsp) => rsp,
+        Err(err) => {
+            warn!("Failed to retrieve issues from GitHub: {:?}", err);
+            return (None, None);
+        }
+    };
+
+    let mut next = None;
+    let mut body = String::new();
+    rsp.read_to_string(&mut body).unwrap();
+    if rsp.status().is_success() {
+        // Look for a 'next' entry in the link header.
+        if let Ok(link_map) =
+            parse_link_header::parse(rsp.headers()[reqwest::header::LINK].to_str().unwrap())
+        {
+            if let Some(link) = link_map.get(&Some("next".to_string())) {
+                next = Some(link.raw_uri.clone());
+            }
+        }
+        (Some(body), next)
+    } else {
+        warn!(
+            "Failed to retrieve issues from GitHub, status {:?}",
+            rsp.status()
+        );
+        (None, next)
+    }
+}
+
+fn get_github_issues() -> Option<HashMap<u32, IssueInfo>> {
+    let mut info_map = HashMap::new();
+    let mut next_url = Some(
+        "https://api.github.com/repos/project-oak/oak/issues?per_page=100&state=all".to_string(),
+    );
+
+    while let Some(url) = next_url {
+        let (json_data, next) = get_issues_from(&url);
+        if json_data.is_none() {
+            warn!(
+                "No JSON data from {:?}, GitHub issue checking unavailable",
+                url
+            );
+            return None;
+        };
+        let values: Vec<IssueInfo> = match serde_json::from_str(&json_data.unwrap()) {
+            Ok(v) => v,
+            Err(err) => {
+                warn!("Failed to parse JSON from GitHub: {:?}", err);
+                return None;
+            }
+        };
+        for info in values {
+            info_map.insert(info.number, info);
+        }
+        next_url = next;
+    }
+    Some(info_map)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -109,8 +239,8 @@ mod tests {
             value: StatusResultValue::Ok,
             logs: "".to_string(),
         };
-        assert_eq!(ok, checker.check_line("// comment", 42));
-        assert_eq!(ok, checker.check_line("// TDO: not quite", 42));
+        assert_eq!(ok, checker.check_line("// comment", 42, false));
+        assert_eq!(ok, checker.check_line("// TDO: not quite", 42, false));
     }
 
     #[test]
@@ -122,11 +252,11 @@ mod tests {
         };
         assert_eq!(
             fail,
-            checker.check_line(&format!("// {}DO: no number", "TO"), 42)
+            checker.check_line(&format!("// {}DO: no number", "TO"), 42, false),
         );
         assert_eq!(
             fail,
-            checker.check_line(&format!("# {}DO: no number", "TO"), 42)
+            checker.check_line(&format!("# {}DO: no number", "TO"), 42, false),
         );
     }
 
@@ -138,7 +268,7 @@ mod tests {
                 value: StatusResultValue::Error,
                 logs: format!("no-file:42: {}DO with malformed issue details", "TO"),
             },
-            checker.check_line(&format!("// TO{}(123): no hash", "DO"), 42)
+            checker.check_line(&format!("// TO{}(123): no hash", "DO"), 42, false)
         );
     }
 }

@@ -35,6 +35,7 @@ mod todo_check;
 use todo_check::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    simple_logger::init_by_env();
     let opt = Opt::from_args();
 
     let steps = match opt.cmd {
