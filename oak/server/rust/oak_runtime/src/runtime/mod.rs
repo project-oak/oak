@@ -123,8 +123,9 @@ struct NodeInfo {
 /// See https://github.com/project-oak/oak/blob/master/docs/concepts.md#downgrades
 #[derive(Debug, Default, Clone)]
 pub struct NodePrivilege {
-    /// Tags that may be declassified (removed from the secrecy component of a label) by the Node.
-    can_declassify_secrecy_tags: HashSet<Tag>,
+    /// Tags that may be declassified (removed from the confidentiality component of a label) by
+    /// the Node.
+    can_declassify_confidentiality_tags: HashSet<Tag>,
 
     /// Tags that may be endorsed (added to the integrity component of a label) by the Node.
     can_endorse_integrity_tags: HashSet<Tag>,
@@ -759,11 +760,15 @@ impl Runtime {
         // Retrieve the set of tags that the node may downgrade.
         let node_privilege = self.get_node_privilege(node_id);
         Label {
-            // Remove all the secrecy tags that the Node may declassify.
-            secrecy_tags: node_label
-                .secrecy_tags
+            // Remove all the confidentiality tags that the Node may declassify.
+            confidentiality_tags: node_label
+                .confidentiality_tags
                 .iter()
-                .filter(|t| !node_privilege.can_declassify_secrecy_tags.contains(t))
+                .filter(|t| {
+                    !node_privilege
+                        .can_declassify_confidentiality_tags
+                        .contains(t)
+                })
                 .cloned()
                 .collect(),
             // Add all the integrity tags that the Node may endorse.

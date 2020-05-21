@@ -5,12 +5,12 @@
 #[derive(Eq, Hash)]
 pub struct Label {
     #[prost(message, repeated, tag="1")]
-    pub secrecy_tags: ::std::vec::Vec<Tag>,
+    pub confidentiality_tags: ::std::vec::Vec<Tag>,
     #[prost(message, repeated, tag="2")]
     pub integrity_tags: ::std::vec::Vec<Tag>,
 }
-/// Tag represents a category of secrecy or integrity that is associated with data within Oak, and
-/// refers to a Node or family of Nodes which are able to declassify data with that tag.
+/// Tag represents a category of confidentiality or integrity that is associated with data within
+/// Oak, and refers to a Node or family of Nodes which are able to declassify data with that tag.
 ///
 /// For instance, a tag may refer to a user connected over gRPC, or to the functionality implemented
 /// by a WebAssembly Node, and this would require that data with those tags are declassified by the
@@ -44,7 +44,7 @@ pub struct GrpcTag {
     /// s such that h = HMAC-SHA256(s, "oak-grpc-bearer-token-1").
     ///
     /// We don't use the raw token t as the tag itself because labels are considered public by default,
-    /// so the secrecy of the token would be compromised immediately.
+    /// so the confidentiality of the token would be compromised immediately.
     #[prost(bytes, tag="1")]
     pub authorization_bearer_token_hmac: std::vec::Vec<u8>,
 }
@@ -66,7 +66,7 @@ pub struct WebAssemblyModuleTag {
 #[derive(Eq, Hash)]
 pub struct TlsEndpointTag {
     /// The Subject Alternative Name (SAN) of a certificate that a remote endpoint must be able to
-    /// present in order to be allowed to receive data with this secrecy tag.
+    /// present in order to be allowed to receive data with this confidentiality tag.
     ///
     /// In general a certificate may have multiple SANs; an HTTP or gRPC client pseudo-node connected
     /// to a remote endpoint with multiple SANs is able to declassify data with a TlsEndpointTag

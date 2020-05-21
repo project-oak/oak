@@ -94,14 +94,14 @@ impl AggregatorNode {
         );
 
         // Create a gRPC client Node with a less restrictive label than the current Node.
-        // In particular, the secrecy component of the current Node label includes the "aggregator"
-        // WebAssembly hash, which is declassified as part of the gRPC client Node creation. This is
-        // only allowed if the current Node actually has the appropriate capability (i.e. the
-        // correct WebAssembly module hash) as specified by the label component being removed, as
-        // set by the client.
-        // TODO(#814): Uncomment and use correct secrecy labels.
+        // In particular, the confidentiality component of the current Node label includes the
+        // "aggregator" WebAssembly hash, which is declassified as part of the gRPC client
+        // Node creation. This is only allowed if the current Node actually has the
+        // appropriate capability (i.e. the correct WebAssembly module hash) as specified by
+        // the label component being removed, as set by the client.
+        // TODO(#814): Uncomment and use correct confidentiality labels.
         // let label = Label {
-        //     secrecy_tags: vec![Tag {
+        //     confidentiality_tags: vec![Tag {
         //         tag: Some(tag::Tag::TlsEndpointTag(TlsEndpointTag {
         //             certificate_subject_alternative_name: "google.com".to_string(),
         //         })),

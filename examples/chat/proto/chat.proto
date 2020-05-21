@@ -25,8 +25,8 @@ message CreateRoomRequest {
   // should create a random bearer token of sufficient entropy to use as the room ID.
   //
   // TODO(#212): Once more of the labelling / policy system is implemented in the Oak Runtime, the
-  // secrecy of each chat room will not be based on the secrecy of this value, rather by the labels
-  // attached to individual messages by the various clients.
+  // confidentiality of each chat room will not be based on the confidentiality of this value,
+  // rather by the labels attached to individual messages by the various clients.
   bytes room_id = 1;
 
   // Bearer token used to administer the room; knowledge of this value allows control over the room

@@ -28,7 +28,7 @@ following:
 2020-05-11 17:24:18,770 DEBUG [oak_runtime::runtime] waking waiters on NodeId(0) handle 11172775277784258633 => Channel 0 WRITE
 2020-05-11 17:24:18,770 INFO  [oak_runtime::runtime] Runtime instance dropped
 2020-05-11 17:24:18,770 DEBUG [oak_runtime::runtime::channel] last writer for channel 0 gone, wake waiters
-2020-05-11 17:24:18,770 DEBUG [oak_runtime::runtime::channel] dropping Channel object Channel { id=0, #readers=0, #writers=0, label=Label { secrecy_tags: [], integrity_tags: [] } }
+2020-05-11 17:24:18,770 DEBUG [oak_runtime::runtime::channel] dropping Channel object Channel { id=0, #readers=0, #writers=0, label=Label { confidentiality_tags: [], integrity_tags: [] } }
 ```
 
 The remainder of this document explores what's going on under the covers here,
