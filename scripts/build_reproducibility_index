@@ -13,8 +13,7 @@ source "$SCRIPTS_DIR/common"
 # List of artifacts that are expected to be reproducibly built.
 readonly REPRODUCIBLE_ARTIFACTS=(
   ./target/wasm32-unknown-unknown/release/*.wasm
-  # TODO(#725): Include this line when `./scripts/build_server -s rust` actually builds the binary.
-  # ./target/x86_64-unknown-linux-musl/release/oak_loader
+  ./target/x86_64-unknown-linux-musl/release/oak_loader
 )
 
 # Index file containing hashes of the reproducible artifacts, alongside their file names.
