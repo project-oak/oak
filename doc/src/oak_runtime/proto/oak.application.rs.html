@@ -142,16 +142,6 @@
 <span id="142">142</span>
 <span id="143">143</span>
 <span id="144">144</span>
-<span id="145">145</span>
-<span id="146">146</span>
-<span id="147">147</span>
-<span id="148">148</span>
-<span id="149">149</span>
-<span id="150">150</span>
-<span id="151">151</span>
-<span id="152">152</span>
-<span id="153">153</span>
-<span id="154">154</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">/// An ApplicationConfiguration represents a unit of deployment in Oak.</span>
 <span class="doccomment">///</span>
@@ -237,12 +227,6 @@
     <span class="doccomment">/// `address` is represented as an &quot;ip_address:tcp_port&quot; string.</span>
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">address</span>: <span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">String</span>,
-    <span class="doccomment">/// Loaded private RSA key file used by a gRPC server pseudo-Node.</span>
-    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;2&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">grpc_tls_private_key</span>: <span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">String</span>,
-    <span class="doccomment">/// Loaded PEM encoded X.509 TLS certificate file used by a gRPC server pseudo-Node.</span>
-    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;3&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">grpc_tls_certificate</span>: <span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">String</span>,
 }
 <span class="doccomment">/// GrpcClientConfiguration describes the configuration of a gRPC client</span>
 <span class="doccomment">/// pseudo-Node (which is provided by the Oak Runtime), connected to a specific</span>
@@ -253,13 +237,9 @@
     <span class="doccomment">/// https://docs.rs/tonic/0.2.1/tonic/transport/struct.Uri.html</span>
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">uri</span>: <span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">String</span>,
-    <span class="doccomment">/// Loaded PEM encoded X.509 TLS root certificate file used to authenticate an external gRPC</span>
-    <span class="doccomment">/// service.</span>
-    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;2&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">root_tls_certificate</span>: <span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">String</span>,
     <span class="doccomment">/// The endpoint address of the external gRPC service.</span>
     <span class="doccomment">/// `address` is represented as an &quot;ip_address:tcp_port&quot; string.</span>
-    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;3&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;2&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">address</span>: <span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">String</span>,
 }
 <span class="doccomment">/// RoughtimeClientConfiguration describes the configuration of a Roughtime</span>

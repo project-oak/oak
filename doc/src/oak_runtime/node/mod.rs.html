@@ -217,14 +217,6 @@
 <span id="217">217</span>
 <span id="218">218</span>
 <span id="219">219</span>
-<span id="220">220</span>
-<span id="221">221</span>
-<span id="222">222</span>
-<span id="223">223</span>
-<span id="224">224</span>
-<span id="225">225</span>
-<span id="226">226</span>
-<span id="227">227</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -242,7 +234,7 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">runtime</span>::<span class="ident">RuntimeProxy</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">runtime</span>::<span class="ident">RuntimeProxy</span>, <span class="ident">GrpcConfiguration</span>};
 <span class="kw">use</span> <span class="ident">log</span>::<span class="ident">debug</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">net</span>::{<span class="ident">AddrParseError</span>, <span class="ident">SocketAddr</span>},
@@ -250,7 +242,7 @@
     <span class="ident">sync</span>::<span class="ident">Arc</span>,
 };
 <span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">sync</span>::<span class="ident">oneshot</span>;
-<span class="kw">use</span> <span class="ident">tonic</span>::<span class="ident">transport</span>::{<span class="ident">Certificate</span>, <span class="ident">Identity</span>, <span class="ident">Uri</span>};
+<span class="kw">use</span> <span class="ident">tonic</span>::<span class="ident">transport</span>::<span class="ident">Uri</span>;
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">external</span>;
 <span class="kw">mod</span> <span class="ident">grpc</span>;
@@ -285,14 +277,12 @@
     <span class="doccomment">/// a TLS identity that consists of a private RSA key and an X.509 TLS certificate.</span>
     <span class="ident">GrpcServerNode</span> {
         <span class="ident">address</span>: <span class="ident">SocketAddr</span>,
-        <span class="ident">tls_identity</span>: <span class="ident">Identity</span>,
     },
 
     <span class="doccomment">/// The configuration for a gRPC server pseudo-Node that contains a URI and an X.509 root TLS</span>
     <span class="doccomment">/// certificate.</span>
     <span class="ident">GrpcClientNode</span> {
         <span class="ident">uri</span>: <span class="ident">Uri</span>,
-        <span class="ident">root_tls_certificate</span>: <span class="ident">Certificate</span>,
         <span class="ident">address</span>: <span class="ident">String</span>,
     },
 
@@ -376,18 +366,6 @@
         .<span class="ident">ok_or</span>(<span class="ident">ConfigurationError</span>::<span class="ident">NoHostElement</span>)
 }
 
-<span class="doccomment">/// Check the correctness of a PEM encoded TLS certificate.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">load_certificate</span>(<span class="ident">certitiface</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Certificate</span>, <span class="ident">ConfigurationError</span><span class="op">&gt;</span> {
-    <span class="kw">use</span> <span class="ident">rustls</span>::<span class="ident">internal</span>::<span class="ident">pemfile</span>::<span class="ident">certs</span>;
-
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cursor</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">Cursor</span>::<span class="ident">new</span>(<span class="ident">certitiface</span>);
-    <span class="comment">// `rustls` doesn&#39;t specify certificate parsing errors:</span>
-    <span class="comment">// https://docs.rs/rustls/0.17.0/rustls/internal/pemfile/fn.certs.html</span>
-    <span class="ident">certs</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">ConfigurationError</span>::<span class="ident">CertificateParsingError</span>)<span class="question-mark">?</span>;
-
-    <span class="prelude-val">Ok</span>(<span class="ident">Certificate</span>::<span class="ident">from_pem</span>(<span class="ident">certitiface</span>))
-}
-
 <span class="kw">impl</span> <span class="ident">Configuration</span> {
     <span class="doccomment">/// Creates a new Node instance corresponding to the [`Configuration`].</span>
     <span class="doccomment">///</span>
@@ -397,6 +375,7 @@
         <span class="ident">node_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="comment">// Used for pretty debugging</span>
         <span class="ident">config_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
         <span class="ident">entrypoint</span>: <span class="ident">String</span>,
+        <span class="ident">grpc_configuration</span>: <span class="kw-2">&amp;</span><span class="ident">GrpcConfiguration</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Node</span> <span class="op">+</span> <span class="ident">Send</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="macro">debug</span><span class="macro">!</span>(
             <span class="string">&quot;create_node(&#39;{}&#39;: &#39;{}&#39;.&#39;{}&#39;)&quot;</span>,
@@ -404,23 +383,28 @@
         );
         <span class="kw">match</span> <span class="self">self</span> {
             <span class="ident">Configuration</span>::<span class="ident">LogNode</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">logger</span>::<span class="ident">LogNode</span>::<span class="ident">new</span>(<span class="ident">node_name</span>))),
-            <span class="ident">Configuration</span>::<span class="ident">GrpcServerNode</span> {
-                <span class="ident">address</span>,
-                <span class="ident">tls_identity</span>,
-            } <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">grpc</span>::<span class="ident">server</span>::<span class="ident">GrpcServerNode</span>::<span class="ident">new</span>(
-                <span class="ident">node_name</span>,
-                <span class="kw-2">*</span><span class="ident">address</span>,
-                <span class="ident">tls_identity</span>.<span class="ident">clone</span>(),
-            ))),
-            <span class="ident">Configuration</span>::<span class="ident">GrpcClientNode</span> {
-                <span class="ident">uri</span>,
-                <span class="ident">root_tls_certificate</span>,
-                <span class="ident">address</span>: <span class="kw">_</span>,
-            } <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">grpc</span>::<span class="ident">client</span>::<span class="ident">GrpcClientNode</span>::<span class="ident">new</span>(
-                <span class="ident">node_name</span>,
-                <span class="ident">uri</span>.<span class="ident">clone</span>(),
-                <span class="ident">root_tls_certificate</span>.<span class="ident">clone</span>(),
-            ))),
+            <span class="ident">Configuration</span>::<span class="ident">GrpcServerNode</span> { <span class="ident">address</span> } <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="prelude-val">Some</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">grpc</span>::<span class="ident">server</span>::<span class="ident">GrpcServerNode</span>::<span class="ident">new</span>(
+                    <span class="ident">node_name</span>,
+                    <span class="kw-2">*</span><span class="ident">address</span>,
+                    <span class="ident">grpc_configuration</span>
+                        .<span class="ident">grpc_server_tls_identity</span>
+                        .<span class="ident">as_ref</span>()
+                        .<span class="ident">expect</span>(<span class="string">&quot;no gRPC server TLS identity provided&quot;</span>)
+                        .<span class="ident">clone</span>(),
+                )))
+            }
+            <span class="ident">Configuration</span>::<span class="ident">GrpcClientNode</span> { <span class="ident">uri</span>, <span class="ident">address</span>: <span class="kw">_</span> } <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="prelude-val">Some</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">grpc</span>::<span class="ident">client</span>::<span class="ident">GrpcClientNode</span>::<span class="ident">new</span>(
+                    <span class="ident">node_name</span>,
+                    <span class="ident">uri</span>.<span class="ident">clone</span>(),
+                    <span class="ident">grpc_configuration</span>
+                        .<span class="ident">grpc_client_root_tls_certificate</span>
+                        .<span class="ident">as_ref</span>()
+                        .<span class="ident">expect</span>(<span class="string">&quot;no gRPC client root TLS certificate provided&quot;</span>)
+                        .<span class="ident">clone</span>(),
+                )))
+            }
             <span class="ident">Configuration</span>::<span class="ident">WasmNode</span> { <span class="ident">module</span> } <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">match</span> <span class="ident">wasm</span>::<span class="ident">WasmNode</span>::<span class="ident">new</span>(<span class="ident">node_name</span>, <span class="ident">module</span>.<span class="ident">clone</span>(), <span class="ident">entrypoint</span>) {
                     <span class="prelude-val">Some</span>(<span class="ident">node</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">node</span>)),

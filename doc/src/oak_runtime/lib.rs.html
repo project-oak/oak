@@ -54,6 +54,11 @@
 <span id="54">54</span>
 <span id="55">55</span>
 <span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -89,13 +94,14 @@
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">node</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">runtime</span>;
 
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">config</span>::{<span class="ident">application_configuration</span>, <span class="ident">configure_and_run</span>};
+<span class="kw">use</span> <span class="ident">tonic</span>::<span class="ident">transport</span>::{<span class="ident">Certificate</span>, <span class="ident">Identity</span>};
 
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">config</span>::{<span class="ident">application_configuration</span>, <span class="ident">configure_and_run</span>};
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">message</span>::<span class="ident">NodeMessage</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">runtime</span>::{<span class="ident">NodeId</span>, <span class="ident">RuntimeProxy</span>};
 
 <span class="doccomment">/// Configuration options that govern the behaviour of the Runtime itself.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Default</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RuntimeConfiguration</span> {
     <span class="doccomment">/// Port to run a metrics server on, if provided.</span>
     <span class="kw">pub</span> <span class="ident">metrics_port</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>,
@@ -103,13 +109,17 @@
     <span class="kw">pub</span> <span class="ident">introspect_port</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">RuntimeConfiguration</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="ident">RuntimeConfiguration</span> {
-            <span class="ident">metrics_port</span>: <span class="prelude-val">None</span>,
-            <span class="ident">introspect_port</span>: <span class="prelude-val">None</span>,
-        }
-    }
+<span class="doccomment">/// Configuration options related to gRPC pseudo-Nodes.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// `Debug` is intentionally not implemented in order to avoid accidentally logging secrets.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Default</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GrpcConfiguration</span> {
+    <span class="doccomment">/// TLS identity to use for all gRPC Server Nodes.</span>
+    <span class="kw">pub</span> <span class="ident">grpc_server_tls_identity</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Identity</span><span class="op">&gt;</span>,
+
+    <span class="doccomment">/// Root TLS certificate to use for all gRPC Client Nodes.</span>
+    <span class="comment">// TODO(#999): Remove user-configurable root CA.</span>
+    <span class="kw">pub</span> <span class="ident">grpc_client_root_tls_certificate</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Certificate</span><span class="op">&gt;</span>,
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "oak_runtime";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>

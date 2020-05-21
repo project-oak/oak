@@ -213,6 +213,14 @@
 <span id="213">213</span>
 <span id="214">214</span>
 <span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
+<span id="218">218</span>
+<span id="219">219</span>
+<span id="220">220</span>
+<span id="221">221</span>
+<span id="222">222</span>
+<span id="223">223</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -243,7 +251,10 @@
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="ident">anyhow</span>;
 <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">str</span>::<span class="ident">FromStr</span>;
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">info</span>};
-<span class="kw">use</span> <span class="ident">oak_runtime</span>::{<span class="ident">configure_and_run</span>, <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::<span class="ident">ApplicationConfiguration</span>};
+<span class="kw">use</span> <span class="ident">oak_runtime</span>::{
+    <span class="ident">configure_and_run</span>,
+    <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::{<span class="ident">ApplicationConfiguration</span>, <span class="ident">ConfigMap</span>},
+};
 <span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections</span>::<span class="ident">HashMap</span>,
@@ -255,14 +266,10 @@
     },
 };
 <span class="kw">use</span> <span class="ident">structopt</span>::<span class="ident">StructOpt</span>;
+<span class="kw">use</span> <span class="ident">tonic</span>::<span class="ident">transport</span>::{<span class="ident">Certificate</span>, <span class="ident">Identity</span>};
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span>;
-
-<span class="kw">use</span> <span class="ident">oak_runtime</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::{
-    <span class="ident">node_configuration</span>::<span class="ident">ConfigType</span>::{<span class="ident">GrpcClientConfig</span>, <span class="ident">GrpcServerConfig</span>},
-    <span class="ident">ConfigMap</span>,
-};
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
 <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">about</span> <span class="op">=</span> <span class="string">&quot;Oak Loader&quot;</span>)]</span>
@@ -349,6 +356,18 @@
     })
 }
 
+<span class="doccomment">/// Check the correctness of a PEM encoded TLS certificate.</span>
+<span class="kw">fn</span> <span class="ident">load_certificate</span>(<span class="ident">certificate</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Certificate</span><span class="op">&gt;</span> {
+    <span class="kw">use</span> <span class="ident">rustls</span>::<span class="ident">internal</span>::<span class="ident">pemfile</span>::<span class="ident">certs</span>;
+
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cursor</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">Cursor</span>::<span class="ident">new</span>(<span class="ident">certificate</span>);
+    <span class="comment">// `rustls` doesn&#39;t specify certificate parsing errors:</span>
+    <span class="comment">// https://docs.rs/rustls/0.17.0/rustls/internal/pemfile/fn.certs.html</span>
+    <span class="ident">certs</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>).<span class="ident">map_err</span>(<span class="op">|</span>()<span class="op">|</span> <span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;could not parse TLS certificate&quot;</span>))<span class="question-mark">?</span>;
+
+    <span class="prelude-val">Ok</span>(<span class="ident">Certificate</span>::<span class="ident">from_pem</span>(<span class="ident">certificate</span>))
+}
+
 <span class="kw">fn</span> <span class="ident">main</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="kw">if</span> <span class="macro">cfg</span><span class="macro">!</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>) {
         <span class="ident">simple_logger</span>::<span class="ident">init_by_env</span>();
@@ -366,45 +385,42 @@
 
     <span class="comment">// Load application configuration.</span>
     <span class="kw">let</span> <span class="ident">app_config_data</span> <span class="op">=</span> <span class="ident">read_file</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">application</span>)<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">app_config</span> <span class="op">=</span> <span class="ident">ApplicationConfiguration</span>::<span class="ident">decode</span>(<span class="ident">app_config_data</span>.<span class="ident">as_ref</span>())<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">application_configuration</span> <span class="op">=</span> <span class="ident">ApplicationConfiguration</span>::<span class="ident">decode</span>(<span class="ident">app_config_data</span>.<span class="ident">as_ref</span>())<span class="question-mark">?</span>;
 
-    <span class="comment">// Assign a TLS identity to all gRPC server and client nodes in the application configuration.</span>
+    <span class="comment">// Create Runtime config.</span>
+    <span class="kw">let</span> <span class="ident">runtime_configuration</span> <span class="op">=</span> <span class="ident">oak_runtime</span>::<span class="ident">RuntimeConfiguration</span> {
+        <span class="ident">metrics_port</span>: <span class="kw">if</span> <span class="macro">cfg</span><span class="macro">!</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>) <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="op">!</span><span class="ident">opt</span>.<span class="ident">no_metrics</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">opt</span>.<span class="ident">metrics_port</span>)
+        } <span class="kw">else</span> {
+            <span class="prelude-val">None</span>
+        },
+        <span class="ident">introspect_port</span>: <span class="kw">if</span> <span class="macro">cfg</span><span class="macro">!</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>) <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="op">!</span><span class="ident">opt</span>.<span class="ident">no_introspect</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">opt</span>.<span class="ident">introspect_port</span>)
+        } <span class="kw">else</span> {
+            <span class="prelude-val">None</span>
+        },
+    };
+
+    <span class="comment">// Create the overall gRPC configuration.</span>
     <span class="kw">let</span> <span class="ident">grpc_tls_private_key</span> <span class="op">=</span> <span class="ident">read_to_string</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">grpc_tls_private_key</span>)<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">grpc_tls_certificate</span> <span class="op">=</span> <span class="ident">read_to_string</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">grpc_tls_certificate</span>)<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">root_tls_certificate</span> <span class="op">=</span> <span class="ident">read_to_string</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">root_tls_certificate</span>)<span class="question-mark">?</span>;
-    <span class="kw">for</span> <span class="ident">node</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">app_config</span>.<span class="ident">node_configs</span> {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">GrpcServerConfig</span>(<span class="kw-2">ref</span> <span class="kw-2">mut</span> <span class="ident">grpc_server_config</span>)) <span class="op">=</span> <span class="ident">node</span>.<span class="ident">config_type</span> {
-            <span class="ident">grpc_server_config</span>.<span class="ident">grpc_tls_private_key</span> <span class="op">=</span> <span class="ident">grpc_tls_private_key</span>.<span class="ident">clone</span>();
-            <span class="ident">grpc_server_config</span>.<span class="ident">grpc_tls_certificate</span> <span class="op">=</span> <span class="ident">grpc_tls_certificate</span>.<span class="ident">clone</span>();
-        } <span class="kw">else</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">GrpcClientConfig</span>(<span class="kw-2">ref</span> <span class="kw-2">mut</span> <span class="ident">grpc_client_config</span>)) <span class="op">=</span> <span class="ident">node</span>.<span class="ident">config_type</span> {
-            <span class="ident">grpc_client_config</span>.<span class="ident">root_tls_certificate</span> <span class="op">=</span> <span class="ident">root_tls_certificate</span>.<span class="ident">clone</span>();
-        }
-    }
-
-    <span class="comment">// Create Runtime config.</span>
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>)]</span>
-    <span class="kw">let</span> <span class="ident">runtime_config</span> <span class="op">=</span> <span class="ident">oak_runtime</span>::<span class="ident">RuntimeConfiguration</span> {
-        <span class="ident">metrics_port</span>: <span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">no_metrics</span> {
-            <span class="prelude-val">None</span>
-        } <span class="kw">else</span> {
-            <span class="prelude-val">Some</span>(<span class="ident">opt</span>.<span class="ident">metrics_port</span>)
-        },
-        <span class="ident">introspect_port</span>: <span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">no_introspect</span> {
-            <span class="prelude-val">None</span>
-        } <span class="kw">else</span> {
-            <span class="prelude-val">Some</span>(<span class="ident">opt</span>.<span class="ident">introspect_port</span>)
-        },
-    };
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>))]</span>
-    <span class="kw">let</span> <span class="ident">runtime_config</span> <span class="op">=</span> <span class="ident">oak_runtime</span>::<span class="ident">RuntimeConfiguration</span> {
-        <span class="ident">metrics_port</span>: <span class="prelude-val">None</span>,
-        <span class="ident">introspect_port</span>: <span class="prelude-val">None</span>,
+    <span class="kw">let</span> <span class="ident">grpc_configuration</span> <span class="op">=</span> <span class="ident">oak_runtime</span>::<span class="ident">GrpcConfiguration</span> {
+        <span class="ident">grpc_server_tls_identity</span>: <span class="prelude-val">Some</span>(<span class="ident">Identity</span>::<span class="ident">from_pem</span>(
+            <span class="ident">grpc_tls_certificate</span>,
+            <span class="ident">grpc_tls_private_key</span>,
+        )),
+        <span class="ident">grpc_client_root_tls_certificate</span>: <span class="prelude-val">Some</span>(<span class="ident">load_certificate</span>(<span class="kw-2">&amp;</span><span class="ident">root_tls_certificate</span>)<span class="question-mark">?</span>),
     };
 
     <span class="comment">// Start the Runtime from the given config.</span>
-    <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;starting Runtime, config {:?}&quot;</span>, <span class="ident">runtime_config</span>);
-    <span class="kw">let</span> (<span class="ident">runtime</span>, <span class="ident">initial_handle</span>) <span class="op">=</span> <span class="ident">configure_and_run</span>(<span class="ident">app_config</span>, <span class="ident">runtime_config</span>)
-        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">status</span><span class="op">|</span> <span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;status {:?}&quot;</span>, <span class="ident">status</span>))<span class="question-mark">?</span>;
+    <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;starting Runtime, config {:?}&quot;</span>, <span class="ident">runtime_configuration</span>);
+    <span class="kw">let</span> (<span class="ident">runtime</span>, <span class="ident">initial_handle</span>) <span class="op">=</span> <span class="ident">configure_and_run</span>(
+        <span class="ident">application_configuration</span>,
+        <span class="ident">runtime_configuration</span>,
+        <span class="ident">grpc_configuration</span>,
+    )
+    .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">status</span><span class="op">|</span> <span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;could not start runtime, status: {:?}&quot;</span>, <span class="ident">status</span>))<span class="question-mark">?</span>;
     <span class="macro">info</span><span class="macro">!</span>(
         <span class="string">&quot;initial node {:?} with write handle {:?}&quot;</span>,
         <span class="ident">runtime</span>.<span class="ident">node_id</span>, <span class="ident">initial_handle</span>

@@ -148,17 +148,6 @@
 <span id="148">148</span>
 <span id="149">149</span>
 <span id="150">150</span>
-<span id="151">151</span>
-<span id="152">152</span>
-<span id="153">153</span>
-<span id="154">154</span>
-<span id="155">155</span>
-<span id="156">156</span>
-<span id="157">157</span>
-<span id="158">158</span>
-<span id="159">159</span>
-<span id="160">160</span>
-<span id="161">161</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -178,7 +167,7 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">node</span>,
-    <span class="ident">node</span>::{<span class="ident">check_uri</span>, <span class="ident">load_certificate</span>, <span class="ident">load_wasm</span>},
+    <span class="ident">node</span>::{<span class="ident">check_uri</span>, <span class="ident">load_wasm</span>},
     <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::{
         <span class="ident">node_configuration</span>::<span class="ident">ConfigType</span>, <span class="ident">ApplicationConfiguration</span>, <span class="ident">GrpcClientConfiguration</span>,
         <span class="ident">GrpcServerConfiguration</span>, <span class="ident">LogConfiguration</span>, <span class="ident">NodeConfiguration</span>, <span class="ident">RoughtimeClientConfiguration</span>,
@@ -190,7 +179,6 @@
 <span class="kw">use</span> <span class="ident">log</span>::<span class="ident">error</span>;
 <span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">OakStatus</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">HashMap</span>;
-<span class="kw">use</span> <span class="ident">tonic</span>::<span class="ident">transport</span>::<span class="ident">Identity</span>;
 
 <span class="doccomment">/// Create an application configuration.</span>
 <span class="doccomment">///</span>
@@ -251,43 +239,32 @@
                     <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>);
                 }
                 <span class="prelude-val">Some</span>(<span class="ident">ConfigType</span>::<span class="ident">LogConfig</span>(<span class="kw">_</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">node</span>::<span class="ident">Configuration</span>::<span class="ident">LogNode</span>,
-                <span class="prelude-val">Some</span>(<span class="ident">ConfigType</span>::<span class="ident">GrpcServerConfig</span>(<span class="ident">GrpcServerConfiguration</span> {
-                    <span class="ident">address</span>,
-                    <span class="ident">grpc_tls_private_key</span>,
-                    <span class="ident">grpc_tls_certificate</span>,
-                })) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">node</span>::<span class="ident">Configuration</span>::<span class="ident">GrpcServerNode</span> {
-                    <span class="ident">address</span>: <span class="ident">address</span>.<span class="ident">parse</span>().<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
-                        <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Incorrect gRPC server address: {:?}&quot;</span>, <span class="ident">error</span>);
-                        <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
-                    })<span class="question-mark">?</span>,
-                    <span class="ident">tls_identity</span>: <span class="ident">Identity</span>::<span class="ident">from_pem</span>(<span class="ident">grpc_tls_certificate</span>, <span class="ident">grpc_tls_private_key</span>),
-                },
-                <span class="prelude-val">Some</span>(<span class="ident">ConfigType</span>::<span class="ident">GrpcClientConfig</span>(<span class="ident">GrpcClientConfiguration</span> {
-                    <span class="ident">uri</span>,
-                    <span class="ident">root_tls_certificate</span>,
-                    <span class="ident">address</span>,
-                })) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">node</span>::<span class="ident">Configuration</span>::<span class="ident">GrpcClientNode</span> {
-                    <span class="ident">uri</span>: <span class="ident">uri</span>
-                        .<span class="ident">parse</span>()
-                        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
-                            <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Error parsing URI {}: {:?}&quot;</span>, <span class="ident">uri</span>, <span class="ident">error</span>);
+                <span class="prelude-val">Some</span>(<span class="ident">ConfigType</span>::<span class="ident">GrpcServerConfig</span>(<span class="ident">GrpcServerConfiguration</span> { <span class="ident">address</span> })) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="ident">node</span>::<span class="ident">Configuration</span>::<span class="ident">GrpcServerNode</span> {
+                        <span class="ident">address</span>: <span class="ident">address</span>.<span class="ident">parse</span>().<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
+                            <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Incorrect gRPC server address: {:?}&quot;</span>, <span class="ident">error</span>);
                             <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
-                        })
-                        .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">uri</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">check_uri</span>(<span class="kw-2">&amp;</span><span class="ident">uri</span>) {
-                            <span class="prelude-val">Ok</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">uri</span>),
-                            <span class="prelude-val">Err</span>(<span class="ident">error</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                                <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Incorrect URI {}: {:?}&quot;</span>, <span class="ident">uri</span>, <span class="ident">error</span>);
-                                <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>)
-                            }
                         })<span class="question-mark">?</span>,
-                    <span class="ident">root_tls_certificate</span>: <span class="ident">load_certificate</span>(<span class="ident">root_tls_certificate</span>).<span class="ident">map_err</span>(
-                        <span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
-                            <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Error loading root certificate: {:?}&quot;</span>, <span class="ident">error</span>);
-                            <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
-                        },
-                    )<span class="question-mark">?</span>,
-                    <span class="ident">address</span>: <span class="ident">address</span>.<span class="ident">to_string</span>(),
-                },
+                    }
+                }
+                <span class="prelude-val">Some</span>(<span class="ident">ConfigType</span>::<span class="ident">GrpcClientConfig</span>(<span class="ident">GrpcClientConfiguration</span> { <span class="ident">uri</span>, <span class="ident">address</span> })) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="ident">node</span>::<span class="ident">Configuration</span>::<span class="ident">GrpcClientNode</span> {
+                        <span class="ident">uri</span>: <span class="ident">uri</span>
+                            .<span class="ident">parse</span>()
+                            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
+                                <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Error parsing URI {}: {:?}&quot;</span>, <span class="ident">uri</span>, <span class="ident">error</span>);
+                                <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
+                            })
+                            .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">uri</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">check_uri</span>(<span class="kw-2">&amp;</span><span class="ident">uri</span>) {
+                                <span class="prelude-val">Ok</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">uri</span>),
+                                <span class="prelude-val">Err</span>(<span class="ident">error</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                                    <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Incorrect URI {}: {:?}&quot;</span>, <span class="ident">uri</span>, <span class="ident">error</span>);
+                                    <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>)
+                                }
+                            })<span class="question-mark">?</span>,
+                        <span class="ident">address</span>: <span class="ident">address</span>.<span class="ident">to_string</span>(),
+                    }
+                }
                 <span class="prelude-val">Some</span>(<span class="ident">ConfigType</span>::<span class="ident">WasmConfig</span>(<span class="ident">WebAssemblyConfiguration</span> { <span class="ident">module_bytes</span>, .. })) <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="ident">load_wasm</span>(<span class="kw-2">&amp;</span><span class="ident">module_bytes</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
                         <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Error loading Wasm module: {}&quot;</span>, <span class="ident">error</span>);
@@ -313,12 +290,13 @@
 <span class="doccomment">/// passing the write [`oak_abi::Handle`] into the runtime will enable messages to be read</span>
 <span class="doccomment">/// back out from the [`RuntimeProxy`].</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">configure_and_run</span>(
-    <span class="ident">app_config</span>: <span class="ident">ApplicationConfiguration</span>,
-    <span class="ident">runtime_config</span>: <span class="kw">crate</span>::<span class="ident">RuntimeConfiguration</span>,
+    <span class="ident">application_configuration</span>: <span class="ident">ApplicationConfiguration</span>,
+    <span class="ident">runtime_configuration</span>: <span class="kw">crate</span>::<span class="ident">RuntimeConfiguration</span>,
+    <span class="ident">grpc_configuration</span>: <span class="kw">crate</span>::<span class="ident">GrpcConfiguration</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">RuntimeProxy</span>, <span class="ident">oak_abi</span>::<span class="ident">Handle</span>), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">configuration</span> <span class="op">=</span> <span class="ident">from_protobuf</span>(<span class="ident">app_config</span>)<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">proxy</span> <span class="op">=</span> <span class="ident">RuntimeProxy</span>::<span class="ident">create_runtime</span>(<span class="ident">configuration</span>);
-    <span class="kw">let</span> <span class="ident">handle</span> <span class="op">=</span> <span class="ident">proxy</span>.<span class="ident">start_runtime</span>(<span class="ident">runtime_config</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">configuration</span> <span class="op">=</span> <span class="ident">from_protobuf</span>(<span class="ident">application_configuration</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">proxy</span> <span class="op">=</span> <span class="ident">RuntimeProxy</span>::<span class="ident">create_runtime</span>(<span class="ident">configuration</span>, <span class="ident">grpc_configuration</span>);
+    <span class="kw">let</span> <span class="ident">handle</span> <span class="op">=</span> <span class="ident">proxy</span>.<span class="ident">start_runtime</span>(<span class="ident">runtime_configuration</span>)<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>((<span class="ident">proxy</span>, <span class="ident">handle</span>))
 }
 </pre></div>

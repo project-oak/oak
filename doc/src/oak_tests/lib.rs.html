@@ -185,6 +185,9 @@
 <span id="185">185</span>
 <span id="186">186</span>
 <span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -205,7 +208,6 @@
 <span class="doccomment">//! Test utilities to help with unit testing of Oak SDK code.</span>
 
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">info</span>};
-
 <span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">HashMap</span>, <span class="ident">process</span>::<span class="ident">Command</span>};
 
@@ -272,7 +274,11 @@
         <span class="ident">entrypoint_name</span>,
     );
 
-    <span class="ident">oak_runtime</span>::<span class="ident">configure_and_run</span>(<span class="ident">configuration</span>, <span class="ident">oak_runtime</span>::<span class="ident">RuntimeConfiguration</span>::<span class="ident">default</span>())
+    <span class="ident">oak_runtime</span>::<span class="ident">configure_and_run</span>(
+        <span class="ident">configuration</span>,
+        <span class="ident">oak_runtime</span>::<span class="ident">RuntimeConfiguration</span>::<span class="ident">default</span>(),
+        <span class="ident">oak_runtime</span>::<span class="ident">GrpcConfiguration</span>::<span class="ident">default</span>(),
+    )
 }
 
 <span class="comment">// TODO(#543): move this to oak_runtime as it&#39;s not test-specific</span>
