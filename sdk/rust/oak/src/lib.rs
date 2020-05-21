@@ -451,7 +451,7 @@ pub trait Node<T: crate::io::Decodable> {
 
 /// Run an event loop on the provided `node`:
 ///
-/// - wait for new messages on the provided channel `in_handle`
+/// - wait for new messages on the provided channel `in_channel`
 /// - if the runtime signals that the Node was terminated while waiting, then exit the event loop
 /// - otherwise, read the available message via the provided channel handle
 /// - decode the message from (bytes + handles) to the specified type `T`
@@ -460,10 +460,11 @@ pub trait Node<T: crate::io::Decodable> {
 ///
 /// Note the loop is only interrupted if the Node is terminated while waiting. Other errors are just
 /// logged, and the event loop continues with the next iteration.
-pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(mut node: N, in_handle: u64) {
-    let in_channel = crate::ReadHandle {
-        handle: crate::Handle::from_raw(in_handle),
-    };
+
+pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(
+    mut node: N,
+    in_channel: crate::ReadHandle,
+) {
     if !in_channel.handle.is_valid() {
         error!("invalid input handle");
         return;
@@ -517,8 +518,7 @@ pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(mut node: N, in_handl
 
 /// Register a new Node entrypoint.
 ///
-/// This registers the entrypoint name and the expression used to construct the
-/// Node instance. The returned object should implement the [`Node`](trait.Node.html) trait.
+/// This registers the entrypoint name and the expression that runs an event loop.
 ///
 /// ```
 /// # struct DummyCommand;
@@ -538,7 +538,11 @@ pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(mut node: N, in_handl
 ///     # }
 /// }
 ///
-/// oak::entrypoint!(dummy => DummyNode::default());
+/// oak::entrypoint!(dummy => |_in_channel| {
+///     let dispatcher = DummyNode::default();
+///     let grpc_channel = oak::grpc::server::init_default();
+///     oak::run_event_loop(dispatcher, grpc_channel);
+/// });
 ///
 /// # fn main() {}
 /// ```
@@ -569,16 +573,18 @@ pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(mut node: N, in_handl
 /// #     }
 /// # }
 /// #
-/// oak::entrypoint!(its_complicated => {
+/// oak::entrypoint!(its_complicated => |_in_channel| {
 ///     init_all_the_things();
-///     DummyNode::default()
+///     let dispatcher = DummyNode::default();
+///     let grpc_channel = oak::grpc::server::init_default();
+///     oak::run_event_loop(dispatcher, grpc_channel);
 /// });
 /// #
 /// # fn main() {}
 /// ```
 #[macro_export]
 macro_rules! entrypoint {
-    ($name:ident => $node:expr) => {
+    ($name:ident => $main_function:expr) => {
         // Do not mangle these functions when running unit tests, because the Rust unit test
         // framework will add a `pub extern "C" fn main()` containing the test runner. This can
         // cause clashes when $name = main. We don't fully omit it in tests so that compile errors
@@ -592,7 +598,11 @@ macro_rules! entrypoint {
             let _ = ::std::panic::catch_unwind(|| {
                 ::oak::set_panic_hook();
 
-                ::oak::run_event_loop($node, in_handle);
+                // Run the Node's `main` function.
+                let in_channel = ::oak::ReadHandle {
+                    handle: ::oak::Handle::from_raw(in_handle),
+                };
+                $main_function(in_channel);
             });
         }
     };

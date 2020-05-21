@@ -23,7 +23,7 @@
 #include "oak/client/application_client.h"
 #include "oak/common/nonce_generator.h"
 
-ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak application to connect to");
+ABSL_FLAG(std::string, address, "localhost:8080", "Address of the Oak application to connect to");
 ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate");
 
 using ::oak::examples::running_average::GetAverageResponse;

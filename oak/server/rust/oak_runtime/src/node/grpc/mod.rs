@@ -18,3 +18,23 @@ pub mod client;
 mod codec;
 mod invocation;
 pub mod server;
+
+/// Converts [`tonic::Status`] to [`oak_abi::proto::google::rpc::Status`].
+fn from_tonic_status(status: tonic::Status) -> oak_abi::proto::google::rpc::Status {
+    oak_abi::proto::google::rpc::Status {
+        code: status.code() as i32,
+        message: status.message().to_string(),
+        details: vec![prost_types::Any {
+            // `type_url` parameter is not used by Oak Nodes.
+            type_url: "".to_string(),
+            // Request status details that have been sent back by an external gRPC service, are
+            // propagated to an Oak Node that has created this request.
+            value: status.details().to_vec(),
+        }],
+    }
+}
+
+/// Converts [`oak_abi::proto::google::rpc::Status`] to [`tonic::Status`].
+fn to_tonic_status(status: oak_abi::proto::google::rpc::Status) -> tonic::Status {
+    tonic::Status::new(tonic::Code::from_i32(status.code), status.message)
+}

@@ -11,8 +11,9 @@ futures-core = "*"
 futures-util = "*"
 log = "*"
 prost = "*"
+structopt = "*"
 tokio = { version = "*", features = ["fs", "macros", "sync", "stream"] }
-tonic = { version = "*", features = ["tls"] }
+tonic = { version = "=0.1.1", features = ["tls"] }
 
 [build-dependencies]
 tonic-build = "*"

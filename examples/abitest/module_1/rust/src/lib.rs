@@ -25,11 +25,11 @@ use std::collections::HashSet;
 // response is written to a fresh channel, and the read handle for that new channel
 // is what's sent back to the frontend.
 #[no_mangle]
-pub extern "C" fn backend_oak_main(handle: u64) {
+pub extern "C" fn backend_oak_main(in_handle: u64) {
     let _ = std::panic::catch_unwind(|| {
         oak::set_panic_hook();
 
-        match inner_main(handle) {
+        match inner_main(in_handle) {
             Err(oak::OakStatus::ErrTerminated) => {
                 info!("node terminated");
             }

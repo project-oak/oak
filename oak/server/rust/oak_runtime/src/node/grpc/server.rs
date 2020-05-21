@@ -15,7 +15,10 @@
 //
 
 use crate::{
-    node::{grpc::codec::VecCodec, Node},
+    node::{
+        grpc::{codec::VecCodec, to_tonic_status},
+        Node,
+    },
     runtime::RuntimeProxy,
 };
 use hyper::service::Service;
@@ -38,7 +41,6 @@ use tonic::{
 };
 
 /// Struct that represents a gRPC server pseudo-Node.
-#[derive(Clone)]
 pub struct GrpcServerNode {
     /// Pseudo-Node name.
     node_name: String,
@@ -111,7 +113,7 @@ impl Node for GrpcServerNode {
         self: Box<Self>,
         runtime: RuntimeProxy,
         handle: oak_abi::Handle,
-        notify_receiver: oneshot::Receiver<()>,
+        _notify_receiver: oneshot::Receiver<()>,
     ) {
         // Receive a `channel_writer` handle used to pass handles for temporary channels.
         info!("{}: Waiting for a channel writer", self.node_name);
@@ -128,10 +130,12 @@ impl Node for GrpcServerNode {
         let server = tonic::transport::Server::builder()
             .tls_config(tonic::transport::ServerTlsConfig::new().identity(self.tls_identity))
             .add_service(handler)
-            .serve_with_shutdown(self.address, async {
-                // Treat notification failure the same as a notification.
-                let _ = notify_receiver.await;
-            });
+            // TODO(#1002): Fix gRPC server termination with [`oneshot::Receiver`].
+            // .serve_with_shutdown(self.address, async {
+            //     // Treat notification failure the same as a notification.
+            //     let _ = notify_receiver.await;
+            // });
+            .serve(self.address);
 
         // Create an Async runtime for executing futures.
         // https://docs.rs/tokio/
@@ -155,10 +159,9 @@ impl Node for GrpcServerNode {
         );
         let result = async_runtime.block_on(server);
         info!(
-            "{}: Exiting gRPC server pseudo-Node thread {:?}",
+            "{}: Exiting gRPC server pseudo-Node thread: {:?}",
             self.node_name, result
         );
-        info!("{}: Exiting gRPC server pseudo-Node thread", self.node_name);
     }
 }
 
@@ -267,7 +270,13 @@ impl UnaryService<Vec<u8>> for GrpcRequestHandler {
             // Send a gRPC response back to the client.
             debug!("Sending a gRPC response: {:?}", response);
             timer.observe_duration();
-            Ok(tonic::Response::new(response))
+            match response.status {
+                None => Ok(tonic::Response::new(response.rsp_msg)),
+                Some(status) if status.code == oak_abi::proto::google::rpc::Code::Ok as i32 => {
+                    Ok(tonic::Response::new(response.rsp_msg))
+                }
+                Some(status) => Err(to_tonic_status(status)),
+            }
         };
 
         Box::pin(future)
@@ -336,7 +345,10 @@ impl GrpcRequestHandler {
 
     /// Processes a gRPC response from a channel represented by `response_reader` and returns an
     /// HTTP response body.
-    fn handle_grpc_response(&self, response_reader: oak_abi::Handle) -> Result<Vec<u8>, OakStatus> {
+    fn handle_grpc_response(
+        &self,
+        response_reader: oak_abi::Handle,
+    ) -> Result<GrpcResponse, OakStatus> {
         let read_status = self
             .runtime
             .wait_on_channels(&[response_reader])
@@ -366,12 +378,10 @@ impl GrpcRequestHandler {
                 })
                 .and_then(|response| {
                     // Return the serialized message body.
-                    GrpcResponse::decode(response.as_slice())
-                        .map_err(|error| {
-                            error!("Couldn't parse the GrpcResponse message: {}", error);
-                            OakStatus::ErrInternal
-                        })
-                        .map(|message| message.rsp_msg)
+                    GrpcResponse::decode(response.as_slice()).map_err(|error| {
+                        error!("Couldn't parse the GrpcResponse message: {}", error);
+                        OakStatus::ErrInternal
+                    })
                 })
         } else {
             error!(

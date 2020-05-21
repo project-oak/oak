@@ -5,11 +5,12 @@ readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
 # shellcheck source=scripts/common
 source "${GLOBAL_SCRIPTS_DIR}/common"
 
-"${GLOBAL_SCRIPTS_DIR}/build_server" -s base
+"${GLOBAL_SCRIPTS_DIR}/build_server" -s rust
+"${GLOBAL_SCRIPTS_DIR}/build_example" -e aggregator
 
 readonly APPLICATION="${PWD}/bazel-client-bin/examples/aggregator/config/config.bin"
-exec ./bazel-bin/oak/server/loader/oak_runner \
+exec cargo run --release --target=x86_64-unknown-linux-musl --package=oak_loader -- \
   --application="${APPLICATION}" \
-  --ca_cert="${SCRIPTS_DIR}/../examples/certs/local/ca.pem" \
-  --cert_chain="${SCRIPTS_DIR}/../examples/certs/local/local.pem" \
-  --private_key="${SCRIPTS_DIR}/../examples/certs/local/local.key"
+  --grpc-tls-private-key="${GLOBAL_SCRIPTS_DIR}/../examples/certs/local/local.key" \
+  --grpc-tls-certificate="${GLOBAL_SCRIPTS_DIR}/../examples/certs/local/local.pem" \
+  --root-tls-certificate="${GLOBAL_SCRIPTS_DIR}/../examples/certs/local/ca.pem"

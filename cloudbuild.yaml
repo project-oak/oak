@@ -52,13 +52,13 @@ steps:
     waitFor: ['build_server_no_debug']
     timeout: 60m
     entrypoint: 'bash'
-    args: ['./scripts/build_server', '-s', 'base']
+    args: ['./scripts/build_server', '-s', 'rust']
   - name: 'gcr.io/oak-ci/oak:latest'
-    id: build_server_rust
+    id: build_server_base
     waitFor: ['bazel_init']
     timeout: 60m
     entrypoint: 'bash'
-    args: ['./scripts/build_server', '-s', 'rust']
+    args: ['./scripts/build_server', '-s', 'base']
 
   # Package the Hello World application in a Docker image.
   - name: 'gcr.io/oak-ci/oak:latest'
@@ -66,7 +66,7 @@ steps:
     waitFor: ['build_server']
     timeout: 60m
     entrypoint: 'bash'
-    args: ['./scripts/build_example', '-e', 'hello_world', '-i', 'base']
+    args: ['./scripts/build_example', '-e', 'hello_world', '-i', 'rust']
 
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_tests
@@ -87,7 +87,7 @@ steps:
     id: run_examples
     timeout: 60m
     entrypoint: 'bash'
-    args: ['./scripts/run_examples', '-s', 'base']
+    args: ['./scripts/run_examples', '-s', 'rust']
   # TODO(#942): Reenable `run_examples` with `asan` and `tsan`.
   # - name: 'gcr.io/oak-ci/oak:latest'
   #   id: run_examples_asan

@@ -28,7 +28,7 @@
 #include "oak/common/nonce_generator.h"
 
 ABSL_FLAG(bool, test, false, "Run a non-interactive version of chat application for testing");
-ABSL_FLAG(std::string, address, "127.0.0.1:8080", "Address of the Oak application to connect to");
+ABSL_FLAG(std::string, address, "localhost:8080", "Address of the Oak application to connect to");
 ABSL_FLAG(std::string, room_id, "",
           "Base64-encoded room ID to join (only used if room_name is blank)");
 ABSL_FLAG(std::string, handle, "", "User handle to display");

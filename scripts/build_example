@@ -10,7 +10,7 @@ docker_config=''
 while getopts "e:l:di:h" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-h] [-l rust|cpp] [-i base|logless] [-d] -e EXAMPLE
+      echo -e "Usage: ${0} [-h] [-l rust|cpp] [-i rust|base|logless] [-d] -e EXAMPLE
 
 Build the given example Oak Application and client.
 
@@ -22,6 +22,7 @@ Options:
   -d    Build C++ code for example using debug mode
   -i    This flag enables packaging the application into a Docker image,
         and specifies the version of the Oak server, used by the application:
+          - rust: Rust version of the server
           - base: base version of the server
           - logless: base version of the server with debug logging compiled out
   -h    Print Help (this message) and exit"
@@ -34,6 +35,8 @@ Options:
       compilation_mode='dbg';;
     i)
       case "${OPTARG}" in
+        rust)
+          docker_config='clang';;
         base)
           docker_config='clang';;
         logless)
@@ -63,13 +66,11 @@ case "${language}" in
     if [[ "${EXAMPLE}" == "hello_world" ]]; then
       # `hello_world` example has an optional additional `translator` module.
       cargo build --release --target=wasm32-unknown-unknown --manifest-path="examples/translator/module/rust/Cargo.toml"
-      bazel --output_base="${CACHE_DIR}/client" build "${bazel_build_flags[@]}" "//examples/hello_world/config:config_translator"
     elif [[ "${EXAMPLE}" == "aggregator" ]]; then
       # `aggregator` example has an additional Backend Docker image
       cargo build --release --package=aggregator_backend
     fi
-    bazel --output_base="${CACHE_DIR}/client" build "${bazel_build_flags[@]}" "//examples/${EXAMPLE}/config:config"
-    ;;
+    bazel --output_base="${CACHE_DIR}/client" build "${bazel_build_flags[@]}" "//examples/${EXAMPLE}/config:config";;
   cpp)
     # `config_cpp` depends on a Wasm module, so it should be built with `wasm32` or `emscripten`.
     readonly BUILD_RULES=(
@@ -91,11 +92,6 @@ case "${language}" in
 esac
 
 if [[ -n "${docker_config}" ]]; then
-  if [[ "${language}" != "rust" ]]; then
-    echo "Docker images are only supported for Rust modules"
-    exit 1
-  fi
-
   bazel build "${bazel_build_flags[@]}" "--config=${docker_config}" "//examples/${EXAMPLE}/server:${EXAMPLE}_image.tar"
 
   # `aggregator` example has an additional Backend Docker image.

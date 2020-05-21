@@ -28,7 +28,23 @@ use proto::{
     aggregator_server::{Aggregator, AggregatorServer},
     Sample,
 };
-use tonic::{transport::Server, Request, Response, Status};
+use structopt::StructOpt;
+use tonic::{
+    transport::{Identity, Server, ServerTlsConfig},
+    Request, Response, Status,
+};
+
+#[derive(StructOpt, Clone)]
+#[structopt(about = "Aggregator Backend")]
+pub struct Opt {
+    #[structopt(long, help = "Private RSA key file used by gRPC server.")]
+    grpc_tls_private_key: String,
+    #[structopt(
+        long,
+        help = "PEM encoded X.509 TLS certificate file used by gRPC server."
+    )]
+    grpc_tls_certificate: String,
+}
 
 #[derive(Default)]
 pub struct AggregatorBackend;
@@ -48,12 +64,20 @@ impl Aggregator for AggregatorBackend {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
-    let address = "127.0.0.1:8888".parse()?;
+    let opt = Opt::from_args();
+
+    let private_key = tokio::fs::read(&opt.grpc_tls_private_key).await?;
+    let certificate = tokio::fs::read(&opt.grpc_tls_certificate).await?;
+
+    let identity = Identity::from_pem(certificate, private_key);
+
+    let address = "[::]:8888".parse()?;
     let handler = AggregatorBackend::default();
 
     info!("Starting the backend server at {:?}", address);
 
     Server::builder()
+        .tls_config(ServerTlsConfig::new().identity(identity))
         .add_service(AggregatorServer::new(handler))
         .serve(address)
         .await?;

@@ -146,14 +146,27 @@ struct Config {
     test_animals: Vec<Animal>,
 }
 
-oak::entrypoint!(oak_main => {
+oak::entrypoint!(oak_main => |in_channel| {
     oak::logger::init_default();
-    Node {
+    let node = Node {
         training_set_size: 1000,
         test_set_size: 1000,
         config: None,
         model: NaiveBayes::new(),
-    }
+    };
+    oak::run_event_loop(node, in_channel);
+});
+
+oak::entrypoint!(grpc_oak_main => |_in_channel| {
+    oak::logger::init_default();
+    let node = Node {
+        training_set_size: 1000,
+        test_set_size: 1000,
+        config: None,
+        model: NaiveBayes::new(),
+    };
+    let grpc_channel = oak::grpc::server::init_default();
+    oak::run_event_loop(node, grpc_channel);
 });
 
 struct Node {

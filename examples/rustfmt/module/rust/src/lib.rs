@@ -21,9 +21,17 @@ mod proto {
 use oak::grpc;
 use proto::{FormatRequest, FormatResponse, FormatService, FormatServiceDispatcher};
 
-oak::entrypoint!(oak_main => {
+oak::entrypoint!(oak_main => |in_channel| {
     oak::logger::init_default();
-    FormatServiceDispatcher::new(Node)
+    let dispatcher = FormatServiceDispatcher::new(Node);
+    oak::run_event_loop(dispatcher, in_channel);
+});
+
+oak::entrypoint!(grpc_oak_main => |_in_channel| {
+    oak::logger::init_default();
+    let dispatcher = FormatServiceDispatcher::new(Node);
+    let grpc_channel = oak::grpc::server::init_default();
+    oak::run_event_loop(dispatcher, grpc_channel);
 });
 
 struct Node;
