@@ -82,12 +82,6 @@ pub struct GrpcServerConfiguration {
     /// `address` is represented as an "ip_address:tcp_port" string.
     #[prost(string, tag="1")]
     pub address: std::string::String,
-    /// Loaded private RSA key file used by a gRPC server pseudo-Node.
-    #[prost(string, tag="2")]
-    pub grpc_tls_private_key: std::string::String,
-    /// Loaded PEM encoded X.509 TLS certificate file used by a gRPC server pseudo-Node.
-    #[prost(string, tag="3")]
-    pub grpc_tls_certificate: std::string::String,
 }
 /// GrpcClientConfiguration describes the configuration of a gRPC client
 /// pseudo-Node (which is provided by the Oak Runtime), connected to a specific
@@ -98,13 +92,9 @@ pub struct GrpcClientConfiguration {
     /// https://docs.rs/tonic/0.2.1/tonic/transport/struct.Uri.html
     #[prost(string, tag="1")]
     pub uri: std::string::String,
-    /// Loaded PEM encoded X.509 TLS root certificate file used to authenticate an external gRPC
-    /// service.
-    #[prost(string, tag="2")]
-    pub root_tls_certificate: std::string::String,
     /// The endpoint address of the external gRPC service.
     /// `address` is represented as an "ip_address:tcp_port" string.
-    #[prost(string, tag="3")]
+    #[prost(string, tag="2")]
     pub address: std::string::String,
 }
 /// RoughtimeClientConfiguration describes the configuration of a Roughtime

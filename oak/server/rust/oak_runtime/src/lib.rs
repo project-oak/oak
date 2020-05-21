@@ -32,13 +32,14 @@ pub mod metrics;
 pub mod node;
 pub mod runtime;
 
-pub use config::{application_configuration, configure_and_run};
+use tonic::transport::{Certificate, Identity};
 
+pub use config::{application_configuration, configure_and_run};
 pub use message::NodeMessage;
 pub use runtime::{NodeId, RuntimeProxy};
 
 /// Configuration options that govern the behaviour of the Runtime itself.
-#[derive(Debug)]
+#[derive(Default, Debug)]
 pub struct RuntimeConfiguration {
     /// Port to run a metrics server on, if provided.
     pub metrics_port: Option<u16>,
@@ -46,11 +47,15 @@ pub struct RuntimeConfiguration {
     pub introspect_port: Option<u16>,
 }
 
-impl Default for RuntimeConfiguration {
-    fn default() -> Self {
-        RuntimeConfiguration {
-            metrics_port: None,
-            introspect_port: None,
-        }
-    }
+/// Configuration options related to gRPC pseudo-Nodes.
+///
+/// `Debug` is intentionally not implemented in order to avoid accidentally logging secrets.
+#[derive(Default)]
+pub struct GrpcConfiguration {
+    /// TLS identity to use for all gRPC Server Nodes.
+    pub grpc_server_tls_identity: Option<Identity>,
+
+    /// Root TLS certificate to use for all gRPC Client Nodes.
+    // TODO(#999): Remove user-configurable root CA.
+    pub grpc_client_root_tls_certificate: Option<Certificate>,
 }

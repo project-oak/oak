@@ -17,7 +17,6 @@
 //! Test utilities to help with unit testing of Oak SDK code.
 
 use log::{debug, info};
-
 use prost::Message;
 use std::{collections::HashMap, process::Command};
 
@@ -84,7 +83,11 @@ pub fn run_single_module(
         entrypoint_name,
     );
 
-    oak_runtime::configure_and_run(configuration, oak_runtime::RuntimeConfiguration::default())
+    oak_runtime::configure_and_run(
+        configuration,
+        oak_runtime::RuntimeConfiguration::default(),
+        oak_runtime::GrpcConfiguration::default(),
+    )
 }
 
 // TODO(#543): move this to oak_runtime as it's not test-specific

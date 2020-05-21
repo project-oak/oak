@@ -15,7 +15,7 @@
 //
 
 use super::*;
-use crate::RuntimeProxy;
+use crate::{GrpcConfiguration, RuntimeProxy};
 use std::collections::HashMap;
 use wat::{parse_file, parse_str};
 
@@ -33,7 +33,7 @@ fn start_node<S: AsRef<[u8]>>(buffer: S, entrypoint: &str) -> Result<(), OakStat
             module: Arc::new(module),
         },
     );
-    let proxy = RuntimeProxy::create_runtime(configuration);
+    let proxy = RuntimeProxy::create_runtime(configuration, GrpcConfiguration::default());
     let (_write_handle, read_handle) = proxy.channel_create(&Label::public_trusted())?;
 
     let result = proxy.node_create(

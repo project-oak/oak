@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::runtime::RuntimeProxy;
+use crate::{runtime::RuntimeProxy, GrpcConfiguration};
 use log::debug;
 use std::{
     net::{AddrParseError, SocketAddr},
@@ -22,7 +22,7 @@ use std::{
     sync::Arc,
 };
 use tokio::sync::oneshot;
-use tonic::transport::{Certificate, Identity, Uri};
+use tonic::transport::Uri;
 
 pub mod external;
 mod grpc;
@@ -57,14 +57,12 @@ pub enum Configuration {
     /// a TLS identity that consists of a private RSA key and an X.509 TLS certificate.
     GrpcServerNode {
         address: SocketAddr,
-        tls_identity: Identity,
     },
 
     /// The configuration for a gRPC server pseudo-Node that contains a URI and an X.509 root TLS
     /// certificate.
     GrpcClientNode {
         uri: Uri,
-        root_tls_certificate: Certificate,
         address: String,
     },
 
@@ -148,18 +146,6 @@ pub fn check_uri(uri: &Uri) -> Result<(), ConfigurationError> {
         .ok_or(ConfigurationError::NoHostElement)
 }
 
-/// Check the correctness of a PEM encoded TLS certificate.
-pub fn load_certificate(certitiface: &str) -> Result<Certificate, ConfigurationError> {
-    use rustls::internal::pemfile::certs;
-
-    let mut cursor = std::io::Cursor::new(certitiface);
-    // `rustls` doesn't specify certificate parsing errors:
-    // https://docs.rs/rustls/0.17.0/rustls/internal/pemfile/fn.certs.html
-    certs(&mut cursor).map_err(|_| ConfigurationError::CertificateParsingError)?;
-
-    Ok(Certificate::from_pem(certitiface))
-}
-
 impl Configuration {
     /// Creates a new Node instance corresponding to the [`Configuration`].
     ///
@@ -169,6 +155,7 @@ impl Configuration {
         node_name: &str, // Used for pretty debugging
         config_name: &str,
         entrypoint: String,
+        grpc_configuration: &GrpcConfiguration,
     ) -> Option<Box<dyn Node + Send>> {
         debug!(
             "create_node('{}': '{}'.'{}')",
@@ -176,23 +163,28 @@ impl Configuration {
         );
         match self {
             Configuration::LogNode => Some(Box::new(logger::LogNode::new(node_name))),
-            Configuration::GrpcServerNode {
-                address,
-                tls_identity,
-            } => Some(Box::new(grpc::server::GrpcServerNode::new(
-                node_name,
-                *address,
-                tls_identity.clone(),
-            ))),
-            Configuration::GrpcClientNode {
-                uri,
-                root_tls_certificate,
-                address: _,
-            } => Some(Box::new(grpc::client::GrpcClientNode::new(
-                node_name,
-                uri.clone(),
-                root_tls_certificate.clone(),
-            ))),
+            Configuration::GrpcServerNode { address } => {
+                Some(Box::new(grpc::server::GrpcServerNode::new(
+                    node_name,
+                    *address,
+                    grpc_configuration
+                        .grpc_server_tls_identity
+                        .as_ref()
+                        .expect("no gRPC server TLS identity provided")
+                        .clone(),
+                )))
+            }
+            Configuration::GrpcClientNode { uri, address: _ } => {
+                Some(Box::new(grpc::client::GrpcClientNode::new(
+                    node_name,
+                    uri.clone(),
+                    grpc_configuration
+                        .grpc_client_root_tls_certificate
+                        .as_ref()
+                        .expect("no gRPC client root TLS certificate provided")
+                        .clone(),
+                )))
+            }
             Configuration::WasmNode { module } => {
                 match wasm::WasmNode::new(node_name, module.clone(), entrypoint) {
                     Some(node) => Some(Box::new(node)),
