@@ -297,7 +297,7 @@ impl Cmd {
                 .stdout(stdout)
                 .stderr(stderr)
                 .spawn()
-                .expect("could not spawn command");
+                .unwrap_or_else(|_| panic!("could not spawn command '{}'", self.executable));
 
             Running {
                 command: command_string,
