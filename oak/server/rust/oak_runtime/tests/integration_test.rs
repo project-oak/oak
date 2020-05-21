@@ -17,13 +17,11 @@
 const METRICS_PORT: u16 = 9876;
 
 mod common {
-    use oak_runtime::runtime::RuntimeProxy;
-
     use hyper::{Client, Uri};
     use log::info;
     use maplit::hashmap;
     use oak_abi::OakStatus;
-    use oak_runtime::config;
+    use oak_runtime::{config, runtime::RuntimeProxy, GrpcConfiguration};
     use wat::parse_str;
 
     pub fn start_runtime() -> Result<(RuntimeProxy, oak_abi::Handle), OakStatus> {
@@ -54,6 +52,7 @@ mod common {
                 metrics_port: Some(crate::METRICS_PORT),
                 introspect_port: None,
             },
+            GrpcConfiguration::default(),
         )
     }
 

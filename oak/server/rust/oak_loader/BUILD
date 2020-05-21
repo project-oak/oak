@@ -31,9 +31,11 @@ rust_binary(
         "//cargo:anyhow",
         "//cargo:log",
         "//cargo:prost",
+        "//cargo:rustls",
         "//cargo:signal_hook",
         "//cargo:simple_logger",
         "//cargo:structopt",
+        "//cargo:tonic",
         "//oak/server/rust/oak_runtime",
     ],
 )

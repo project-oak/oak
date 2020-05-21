@@ -27,7 +27,10 @@
 use anyhow::anyhow;
 use core::str::FromStr;
 use log::{debug, info};
-use oak_runtime::{configure_and_run, proto::oak::application::ApplicationConfiguration};
+use oak_runtime::{
+    configure_and_run,
+    proto::oak::application::{ApplicationConfiguration, ConfigMap},
+};
 use prost::Message;
 use std::{
     collections::HashMap,
@@ -39,14 +42,10 @@ use std::{
     },
 };
 use structopt::StructOpt;
+use tonic::transport::{Certificate, Identity};
 
 #[cfg(test)]
 mod tests;
-
-use oak_runtime::proto::oak::application::{
-    node_configuration::ConfigType::{GrpcClientConfig, GrpcServerConfig},
-    ConfigMap,
-};
 
 #[derive(StructOpt, Clone, Debug)]
 #[structopt(about = "Oak Loader")]
@@ -133,6 +132,18 @@ pub fn parse_config_map(config_files: &[ConfigEntry]) -> anyhow::Result<ConfigMa
     })
 }
 
+/// Check the correctness of a PEM encoded TLS certificate.
+fn load_certificate(certificate: &str) -> anyhow::Result<Certificate> {
+    use rustls::internal::pemfile::certs;
+
+    let mut cursor = std::io::Cursor::new(certificate);
+    // `rustls` doesn't specify certificate parsing errors:
+    // https://docs.rs/rustls/0.17.0/rustls/internal/pemfile/fn.certs.html
+    certs(&mut cursor).map_err(|()| anyhow!("could not parse TLS certificate"))?;
+
+    Ok(Certificate::from_pem(certificate))
+}
+
 fn main() -> anyhow::Result<()> {
     if cfg!(feature = "oak_debug") {
         simple_logger::init_by_env();
@@ -150,45 +161,42 @@ fn main() -> anyhow::Result<()> {
 
     // Load application configuration.
     let app_config_data = read_file(&opt.application)?;
-    let mut app_config = ApplicationConfiguration::decode(app_config_data.as_ref())?;
+    let application_configuration = ApplicationConfiguration::decode(app_config_data.as_ref())?;
 
-    // Assign a TLS identity to all gRPC server and client nodes in the application configuration.
+    // Create Runtime config.
+    let runtime_configuration = oak_runtime::RuntimeConfiguration {
+        metrics_port: if cfg!(feature = "oak_debug") && !opt.no_metrics {
+            Some(opt.metrics_port)
+        } else {
+            None
+        },
+        introspect_port: if cfg!(feature = "oak_debug") && !opt.no_introspect {
+            Some(opt.introspect_port)
+        } else {
+            None
+        },
+    };
+
+    // Create the overall gRPC configuration.
     let grpc_tls_private_key = read_to_string(&opt.grpc_tls_private_key)?;
     let grpc_tls_certificate = read_to_string(&opt.grpc_tls_certificate)?;
     let root_tls_certificate = read_to_string(&opt.root_tls_certificate)?;
-    for node in &mut app_config.node_configs {
-        if let Some(GrpcServerConfig(ref mut grpc_server_config)) = node.config_type {
-            grpc_server_config.grpc_tls_private_key = grpc_tls_private_key.clone();
-            grpc_server_config.grpc_tls_certificate = grpc_tls_certificate.clone();
-        } else if let Some(GrpcClientConfig(ref mut grpc_client_config)) = node.config_type {
-            grpc_client_config.root_tls_certificate = root_tls_certificate.clone();
-        }
-    }
-
-    // Create Runtime config.
-    #[cfg(feature = "oak_debug")]
-    let runtime_config = oak_runtime::RuntimeConfiguration {
-        metrics_port: if opt.no_metrics {
-            None
-        } else {
-            Some(opt.metrics_port)
-        },
-        introspect_port: if opt.no_introspect {
-            None
-        } else {
-            Some(opt.introspect_port)
-        },
-    };
-    #[cfg(not(feature = "oak_debug"))]
-    let runtime_config = oak_runtime::RuntimeConfiguration {
-        metrics_port: None,
-        introspect_port: None,
+    let grpc_configuration = oak_runtime::GrpcConfiguration {
+        grpc_server_tls_identity: Some(Identity::from_pem(
+            grpc_tls_certificate,
+            grpc_tls_private_key,
+        )),
+        grpc_client_root_tls_certificate: Some(load_certificate(&root_tls_certificate)?),
     };
 
     // Start the Runtime from the given config.
-    info!("starting Runtime, config {:?}", runtime_config);
-    let (runtime, initial_handle) = configure_and_run(app_config, runtime_config)
-        .map_err(|status| anyhow!("status {:?}", status))?;
+    info!("starting Runtime, config {:?}", runtime_configuration);
+    let (runtime, initial_handle) = configure_and_run(
+        application_configuration,
+        runtime_configuration,
+        grpc_configuration,
+    )
+    .map_err(|status| anyhow!("could not start runtime, status: {:?}", status))?;
     info!(
         "initial node {:?} with write handle {:?}",
         runtime.node_id, initial_handle

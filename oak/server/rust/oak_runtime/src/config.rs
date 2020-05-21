@@ -16,7 +16,7 @@
 
 use crate::{
     node,
-    node::{check_uri, load_certificate, load_wasm},
+    node::{check_uri, load_wasm},
     proto::oak::application::{
         node_configuration::ConfigType, ApplicationConfiguration, GrpcClientConfiguration,
         GrpcServerConfiguration, LogConfiguration, NodeConfiguration, RoughtimeClientConfiguration,
@@ -28,7 +28,6 @@ use itertools::Itertools;
 use log::error;
 use oak_abi::OakStatus;
 use std::collections::HashMap;
-use tonic::transport::Identity;
 
 /// Create an application configuration.
 ///
@@ -89,43 +88,32 @@ pub fn from_protobuf(
                     return Err(OakStatus::ErrInvalidArgs);
                 }
                 Some(ConfigType::LogConfig(_)) => node::Configuration::LogNode,
-                Some(ConfigType::GrpcServerConfig(GrpcServerConfiguration {
-                    address,
-                    grpc_tls_private_key,
-                    grpc_tls_certificate,
-                })) => node::Configuration::GrpcServerNode {
-                    address: address.parse().map_err(|error| {
-                        error!("Incorrect gRPC server address: {:?}", error);
-                        OakStatus::ErrInvalidArgs
-                    })?,
-                    tls_identity: Identity::from_pem(grpc_tls_certificate, grpc_tls_private_key),
-                },
-                Some(ConfigType::GrpcClientConfig(GrpcClientConfiguration {
-                    uri,
-                    root_tls_certificate,
-                    address,
-                })) => node::Configuration::GrpcClientNode {
-                    uri: uri
-                        .parse()
-                        .map_err(|error| {
-                            error!("Error parsing URI {}: {:?}", uri, error);
+                Some(ConfigType::GrpcServerConfig(GrpcServerConfiguration { address })) => {
+                    node::Configuration::GrpcServerNode {
+                        address: address.parse().map_err(|error| {
+                            error!("Incorrect gRPC server address: {:?}", error);
                             OakStatus::ErrInvalidArgs
-                        })
-                        .and_then(|uri| match check_uri(&uri) {
-                            Ok(_) => Ok(uri),
-                            Err(error) => {
-                                error!("Incorrect URI {}: {:?}", uri, error);
-                                Err(OakStatus::ErrInvalidArgs)
-                            }
                         })?,
-                    root_tls_certificate: load_certificate(root_tls_certificate).map_err(
-                        |error| {
-                            error!("Error loading root certificate: {:?}", error);
-                            OakStatus::ErrInvalidArgs
-                        },
-                    )?,
-                    address: address.to_string(),
-                },
+                    }
+                }
+                Some(ConfigType::GrpcClientConfig(GrpcClientConfiguration { uri, address })) => {
+                    node::Configuration::GrpcClientNode {
+                        uri: uri
+                            .parse()
+                            .map_err(|error| {
+                                error!("Error parsing URI {}: {:?}", uri, error);
+                                OakStatus::ErrInvalidArgs
+                            })
+                            .and_then(|uri| match check_uri(&uri) {
+                                Ok(_) => Ok(uri),
+                                Err(error) => {
+                                    error!("Incorrect URI {}: {:?}", uri, error);
+                                    Err(OakStatus::ErrInvalidArgs)
+                                }
+                            })?,
+                        address: address.to_string(),
+                    }
+                }
                 Some(ConfigType::WasmConfig(WebAssemblyConfiguration { module_bytes, .. })) => {
                     load_wasm(&module_bytes).map_err(|error| {
                         error!("Error loading Wasm module: {}", error);
@@ -151,11 +139,12 @@ pub fn from_protobuf(
 /// passing the write [`oak_abi::Handle`] into the runtime will enable messages to be read
 /// back out from the [`RuntimeProxy`].
 pub fn configure_and_run(
-    app_config: ApplicationConfiguration,
-    runtime_config: crate::RuntimeConfiguration,
+    application_configuration: ApplicationConfiguration,
+    runtime_configuration: crate::RuntimeConfiguration,
+    grpc_configuration: crate::GrpcConfiguration,
 ) -> Result<(RuntimeProxy, oak_abi::Handle), OakStatus> {
-    let configuration = from_protobuf(app_config)?;
-    let proxy = RuntimeProxy::create_runtime(configuration);
-    let handle = proxy.start_runtime(runtime_config)?;
+    let configuration = from_protobuf(application_configuration)?;
+    let proxy = RuntimeProxy::create_runtime(configuration, grpc_configuration);
+    let handle = proxy.start_runtime(runtime_configuration)?;
     Ok((proxy, handle))
 }

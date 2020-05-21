@@ -19,6 +19,7 @@ use crate::{
     metrics::Metrics,
     node,
     runtime::channel::{with_reader_channel, with_writer_channel, Channel},
+    GrpcConfiguration,
 };
 use core::sync::atomic::{AtomicBool, AtomicU64, Ordering::SeqCst};
 use itertools::Itertools;
@@ -249,7 +250,9 @@ impl Drop for AuxServer {
 
 /// Runtime structure for configuring and running a set of Oak Nodes.
 pub struct Runtime {
-    configuration: Configuration,
+    application_configuration: Configuration,
+    grpc_configuration: GrpcConfiguration,
+
     terminating: AtomicBool,
 
     next_channel_id: AtomicU64,
@@ -343,9 +346,13 @@ impl Runtime {
 // Methods on `RuntimeProxy` for managing the core `Runtime` instance.
 impl RuntimeProxy {
     /// Creates a [`Runtime`] instance with a single initial Node configured, and no channels.
-    pub fn create_runtime(configuration: Configuration) -> RuntimeProxy {
+    pub fn create_runtime(
+        configuration: Configuration,
+        grpc_configuration: GrpcConfiguration,
+    ) -> RuntimeProxy {
         let runtime = Arc::new(Runtime {
-            configuration,
+            application_configuration: configuration,
+            grpc_configuration,
             terminating: AtomicBool::new(false),
             next_channel_id: AtomicU64::new(0),
 
@@ -378,8 +385,8 @@ impl RuntimeProxy {
         &self,
         runtime_config: crate::RuntimeConfiguration,
     ) -> Result<oak_abi::Handle, OakStatus> {
-        let module_name = self.runtime.configuration.entry_module.clone();
-        let entrypoint = self.runtime.configuration.entrypoint.clone();
+        let module_name = self.runtime.application_configuration.entry_module.clone();
+        let entrypoint = self.runtime.application_configuration.entrypoint.clone();
         self.metrics_data()
             .runtime_metrics
             .runtime_health_check
@@ -1249,7 +1256,7 @@ impl Runtime {
         let reader = self.abi_to_read_half(node_id, initial_handle)?;
 
         let config = self
-            .configuration
+            .application_configuration
             .nodes
             .get(config_name)
             .ok_or(OakStatus::ErrInvalidArgs)?;
@@ -1279,7 +1286,12 @@ impl Runtime {
         debug!("{:?}: create node instance {:?}", node_id, new_node_id);
         // This only creates a Node instance, but does not start it.
         let instance = config
-            .create_node(&new_node_name, config_name, entrypoint.to_owned())
+            .create_node(
+                &new_node_name,
+                config_name,
+                entrypoint.to_owned(),
+                &self.grpc_configuration,
+            )
             .ok_or(OakStatus::ErrInvalidArgs)?;
 
         debug!("{:?}: start node instance {:?}", node_id, new_node_id);

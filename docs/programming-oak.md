@@ -237,8 +237,6 @@ node_configs {
   name: "grpc-server"
   grpc_server_config {
     address: "[::]:8080"
-    grpc_tls_private_key: "<bytes>"
-    grpc_tls_certificate: "<bytes>"
   }
 }
 node_configs {
@@ -531,7 +529,6 @@ to configure and run the Runtime.
         FRONTEND_ENTRYPOINT_NAME,
     );
 
-    let (runtime, entry_channel) =
-        oak_runtime::configure_and_run(configuration, oak_runtime::RuntimeConfiguration::default())
+    let (runtime, entry_channel) = oak_runtime::configure_and_run(
 ```
 <!-- prettier-ignore-end -->

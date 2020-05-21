@@ -19,7 +19,8 @@ use lazy_static::lazy_static;
 use log::{debug, error, info, warn};
 use oak_abi::OakStatus;
 use oak_runtime::{
-    proto::oak::application::ApplicationConfiguration, runtime::RuntimeProxy, NodeId,
+    proto::oak::application::ApplicationConfiguration, runtime::RuntimeProxy, GrpcConfiguration,
+    NodeId,
 };
 use prost::Message;
 use std::{convert::TryInto, io::Cursor, sync::RwLock};
@@ -115,14 +116,17 @@ pub unsafe extern "C" fn glue_start(
 
         // Configure the Rust Runtime, and run the gRPC server pseudo-Node as the implicit
         // initial Node.
-        let (grpc_proxy, grpc_handle) =
-            match oak_runtime::configure_and_run(app_config, runtime_config) {
-                Ok(p) => p,
-                Err(status) => {
-                    error!("Failed to start runtime: {:?}", status);
-                    return oak_abi::INVALID_HANDLE;
-                }
-            };
+        let (grpc_proxy, grpc_handle) = match oak_runtime::configure_and_run(
+            app_config,
+            runtime_config,
+            GrpcConfiguration::default(),
+        ) {
+            Ok(p) => p,
+            Err(status) => {
+                error!("Failed to start runtime: {:?}", status);
+                return oak_abi::INVALID_HANDLE;
+            }
+        };
         *node_id = grpc_proxy.node_id.0;
         info!(
             "runtime started, grpc_node_id={}, grpc_handle={}",
