@@ -1881,6 +1881,12 @@
 <span id="1881">1881</span>
 <span id="1882">1882</span>
 <span id="1883">1883</span>
+<span id="1884">1884</span>
+<span id="1885">1885</span>
+<span id="1886">1886</span>
+<span id="1887">1887</span>
+<span id="1888">1888</span>
+<span id="1889">1889</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -1911,7 +1917,7 @@
 <span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span>;
 <span class="kw">use</span> <span class="ident">proto</span>::{
     <span class="ident">AbiTestRequest</span>, <span class="ident">AbiTestResponse</span>, <span class="ident">GrpcTestRequest</span>, <span class="ident">GrpcTestResponse</span>, <span class="ident">OakAbiTestService</span>,
-    <span class="ident">OakAbiTestServiceDispatcher</span>,
+    <span class="ident">OakAbiTestServiceClient</span>, <span class="ident">OakAbiTestServiceDispatcher</span>,
 };
 <span class="kw">use</span> <span class="ident">rand</span>::<span class="ident">Rng</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">HashMap</span>, <span class="ident">convert</span>::<span class="ident">TryInto</span>};
@@ -1929,10 +1935,8 @@
     <span class="ident">storage</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">oak</span>::<span class="ident">storage</span>::<span class="ident">Storage</span><span class="op">&gt;</span>,
     <span class="ident">absent_storage</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">oak</span>::<span class="ident">storage</span>::<span class="ident">Storage</span><span class="op">&gt;</span>,
     <span class="ident">storage_name</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-    <span class="comment">// TODO(#874): Run abitest with Rust loader in order to provide gRPC client with a CA.</span>
-    <span class="comment">// grpc_service: Option&lt;OakAbiTestServiceClient&gt;,</span>
-    <span class="comment">// TODO(#953): Add streaming support for gRPC and re-enable all of the tests.</span>
-    <span class="comment">// absent_grpc_service: Option&lt;OakAbiTestServiceClient&gt;,</span>
+    <span class="ident">grpc_service</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">OakAbiTestServiceClient</span><span class="op">&gt;</span>,
+    <span class="ident">absent_grpc_service</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">OakAbiTestServiceClient</span><span class="op">&gt;</span>,
     <span class="ident">roughtime</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">oak</span>::<span class="ident">roughtime</span>::<span class="ident">Roughtime</span><span class="op">&gt;</span>,
     <span class="ident">misconfigured_roughtime</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">oak</span>::<span class="ident">roughtime</span>::<span class="ident">Roughtime</span><span class="op">&gt;</span>,
 }
@@ -1991,11 +1995,10 @@
             <span class="ident">storage</span>: <span class="ident">oak</span>::<span class="ident">storage</span>::<span class="ident">Storage</span>::<span class="ident">default</span>(),
             <span class="ident">absent_storage</span>: <span class="ident">oak</span>::<span class="ident">storage</span>::<span class="ident">Storage</span>::<span class="ident">new</span>(<span class="string">&quot;absent-storage&quot;</span>),
             <span class="ident">storage_name</span>: <span class="ident">storage_name</span>.<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>(),
-            <span class="comment">// TODO(#874): Run abitest with Rust loader in order to provide gRPC client with a CA.</span>
-            <span class="comment">// grpc_service: oak::grpc::client::Client::new(&quot;grpc-client&quot;, &quot;ignored&quot;)</span>
-            <span class="comment">//     .map(OakAbiTestServiceClient),</span>
-            <span class="comment">// absent_grpc_service: oak::grpc::client::Client::new(&quot;absent-grpc-client&quot;, &quot;ignored&quot;)</span>
-            <span class="comment">//     .map(OakAbiTestServiceClient),</span>
+            <span class="ident">grpc_service</span>: <span class="ident">oak</span>::<span class="ident">grpc</span>::<span class="ident">client</span>::<span class="ident">Client</span>::<span class="ident">new</span>(<span class="string">&quot;grpc-client&quot;</span>, <span class="string">&quot;ignored&quot;</span>)
+                .<span class="ident">map</span>(<span class="ident">OakAbiTestServiceClient</span>),
+            <span class="ident">absent_grpc_service</span>: <span class="ident">oak</span>::<span class="ident">grpc</span>::<span class="ident">client</span>::<span class="ident">Client</span>::<span class="ident">new</span>(<span class="string">&quot;absent-grpc-client&quot;</span>, <span class="string">&quot;ignored&quot;</span>)
+                .<span class="ident">map</span>(<span class="ident">OakAbiTestServiceClient</span>),
             <span class="ident">roughtime</span>: <span class="ident">oak</span>::<span class="ident">roughtime</span>::<span class="ident">Roughtime</span>::<span class="ident">new</span>(<span class="string">&quot;roughtime-client&quot;</span>),
             <span class="ident">misconfigured_roughtime</span>: <span class="ident">oak</span>::<span class="ident">roughtime</span>::<span class="ident">Roughtime</span>::<span class="ident">new</span>(<span class="string">&quot;roughtime-misconfig&quot;</span>),
         }
@@ -2008,7 +2011,21 @@
         <span class="ident">oak</span>::<span class="ident">set_panic_hook</span>();
         <span class="kw">let</span> <span class="ident">node</span> <span class="op">=</span> <span class="ident">FrontendNode</span>::<span class="ident">new</span>();
         <span class="kw">let</span> <span class="ident">dispatcher</span> <span class="op">=</span> <span class="ident">OakAbiTestServiceDispatcher</span>::<span class="ident">new</span>(<span class="ident">node</span>);
-        <span class="ident">oak</span>::<span class="ident">run_event_loop</span>(<span class="ident">dispatcher</span>, <span class="ident">in_handle</span>);
+        <span class="kw">let</span> <span class="ident">in_channel</span> <span class="op">=</span> ::<span class="ident">oak</span>::<span class="ident">ReadHandle</span> {
+            <span class="ident">handle</span>: ::<span class="ident">oak</span>::<span class="ident">Handle</span>::<span class="ident">from_raw</span>(<span class="ident">in_handle</span>),
+        };
+        <span class="ident">oak</span>::<span class="ident">run_event_loop</span>(<span class="ident">dispatcher</span>, <span class="ident">in_channel</span>);
+    });
+}
+
+<span class="attribute">#[<span class="ident">no_mangle</span>]</span>
+<span class="kw">pub</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span> <span class="ident">grpc_frontend_oak_main</span>(<span class="ident">_in_handle</span>: <span class="ident">u64</span>) {
+    <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">panic</span>::<span class="ident">catch_unwind</span>(<span class="op">|</span><span class="op">|</span> {
+        <span class="ident">oak</span>::<span class="ident">set_panic_hook</span>();
+        <span class="kw">let</span> <span class="ident">node</span> <span class="op">=</span> <span class="ident">FrontendNode</span>::<span class="ident">new</span>();
+        <span class="kw">let</span> <span class="ident">dispatcher</span> <span class="op">=</span> <span class="ident">OakAbiTestServiceDispatcher</span>::<span class="ident">new</span>(<span class="ident">node</span>);
+        <span class="kw">let</span> <span class="ident">grpc_channel</span> <span class="op">=</span> <span class="ident">oak</span>::<span class="ident">grpc</span>::<span class="ident">server</span>::<span class="ident">init_default</span>();
+        <span class="ident">oak</span>::<span class="ident">run_event_loop</span>(<span class="ident">dispatcher</span>, <span class="ident">grpc_channel</span>);
     });
 }
 
@@ -2077,17 +2094,15 @@
         <span class="ident">tests</span>.<span class="ident">insert</span>(<span class="string">&quot;BackendRoundtrip&quot;</span>, <span class="ident">FrontendNode</span>::<span class="ident">test_backend_roundtrip</span>);
         <span class="ident">tests</span>.<span class="ident">insert</span>(<span class="string">&quot;Storage&quot;</span>, <span class="ident">FrontendNode</span>::<span class="ident">test_storage</span>);
         <span class="ident">tests</span>.<span class="ident">insert</span>(<span class="string">&quot;AbsentStorage&quot;</span>, <span class="ident">FrontendNode</span>::<span class="ident">test_absent_storage</span>);
-        <span class="comment">// TODO(#874): Run abitest with Rust loader in order to provide gRPC client with a CA.</span>
-        <span class="comment">// tests.insert(</span>
-        <span class="comment">//     &quot;GrpcClientUnaryMethod&quot;,</span>
-        <span class="comment">//     FrontendNode::test_grpc_client_unary_method,</span>
-        <span class="comment">// );</span>
-        <span class="comment">// TODO(#953): Add streaming support for gRPC and re-enable all of the tests.</span>
-        <span class="comment">// tests.insert(</span>
-        <span class="comment">//     &quot;GrpcClientServerStreamingMethod&quot;,</span>
-        <span class="comment">//     FrontendNode::test_grpc_client_server_streaming_method,</span>
-        <span class="comment">// );</span>
-        <span class="comment">// tests.insert(&quot;AbsentGrpcClient&quot;, FrontendNode::test_absent_grpc_client);</span>
+        <span class="ident">tests</span>.<span class="ident">insert</span>(
+            <span class="string">&quot;GrpcClientUnaryMethod&quot;</span>,
+            <span class="ident">FrontendNode</span>::<span class="ident">test_grpc_client_unary_method</span>,
+        );
+        <span class="ident">tests</span>.<span class="ident">insert</span>(
+            <span class="string">&quot;GrpcClientServerStreamingMethod&quot;</span>,
+            <span class="ident">FrontendNode</span>::<span class="ident">test_grpc_client_server_streaming_method</span>,
+        );
+        <span class="ident">tests</span>.<span class="ident">insert</span>(<span class="string">&quot;AbsentGrpcClient&quot;</span>, <span class="ident">FrontendNode</span>::<span class="ident">test_absent_grpc_client</span>);
         <span class="ident">tests</span>.<span class="ident">insert</span>(<span class="string">&quot;RoughtimeClient&quot;</span>, <span class="ident">FrontendNode</span>::<span class="ident">test_roughtime_client</span>);
         <span class="ident">tests</span>.<span class="ident">insert</span>(
             <span class="string">&quot;MisconfiguredRoughtimeClient&quot;</span>,
@@ -3482,152 +3497,149 @@
 
         <span class="prelude-val">Ok</span>(())
     }
-    <span class="comment">// TODO(#874): Run abitest with Rust loader in order to provide gRPC client with a CA.</span>
-    <span class="comment">// fn test_grpc_client_unary_method(&amp;mut self) -&gt; TestResult {</span>
-    <span class="comment">//     let grpc_stub = self.grpc_service.as_ref().ok_or_else(|| {</span>
-    <span class="comment">//         Box::new(std::io::Error::new(</span>
-    <span class="comment">//             std::io::ErrorKind::Other,</span>
-    <span class="comment">//             &quot;no gRPC client channel available&quot;,</span>
-    <span class="comment">//         ))</span>
-    <span class="comment">//     })?;</span>
+    <span class="kw">fn</span> <span class="ident">test_grpc_client_unary_method</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TestResult</span> {
+        <span class="kw">let</span> <span class="ident">grpc_stub</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">grpc_service</span>.<span class="ident">as_ref</span>().<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
+            <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(
+                <span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">Other</span>,
+                <span class="string">&quot;no gRPC client channel available&quot;</span>,
+            ))
+        })<span class="question-mark">?</span>;
 
-    <span class="comment">//     // Successful unary method invocation of external service via gRPC client pseudo-Node.</span>
-    <span class="comment">//     let ok_req = GrpcTestRequest {</span>
-    <span class="comment">//         method_result: Some(proto::grpc_test_request::MethodResult::OkText(</span>
-    <span class="comment">//             &quot;test&quot;.to_string(),</span>
-    <span class="comment">//         )),</span>
-    <span class="comment">//     };</span>
-    <span class="comment">//     let ok_rsp = GrpcTestResponse {</span>
-    <span class="comment">//         text: &quot;test&quot;.to_string(),</span>
-    <span class="comment">//     };</span>
-    <span class="comment">//     expect_eq!(grpc_stub.unary_method(ok_req), Ok(ok_rsp));</span>
+        <span class="comment">// Successful unary method invocation of external service via gRPC client pseudo-Node.</span>
+        <span class="kw">let</span> <span class="ident">ok_req</span> <span class="op">=</span> <span class="ident">GrpcTestRequest</span> {
+            <span class="ident">method_result</span>: <span class="prelude-val">Some</span>(<span class="ident">proto</span>::<span class="ident">grpc_test_request</span>::<span class="ident">MethodResult</span>::<span class="ident">OkText</span>(
+                <span class="string">&quot;test&quot;</span>.<span class="ident">to_string</span>(),
+            )),
+        };
+        <span class="kw">let</span> <span class="ident">ok_rsp</span> <span class="op">=</span> <span class="ident">GrpcTestResponse</span> {
+            <span class="ident">text</span>: <span class="string">&quot;test&quot;</span>.<span class="ident">to_string</span>(),
+        };
+        <span class="macro">expect_eq</span><span class="macro">!</span>(<span class="ident">grpc_stub</span>.<span class="ident">unary_method</span>(<span class="ident">ok_req</span>), <span class="prelude-val">Ok</span>(<span class="ident">ok_rsp</span>));
 
-    <span class="comment">//     // Errored unary method invocation of external service via gRPC client pseudo-Node.</span>
-    <span class="comment">//     let err_req = GrpcTestRequest {</span>
-    <span class="comment">//         method_result: Some(proto::grpc_test_request::MethodResult::ErrCode(</span>
-    <span class="comment">//             grpc::Code::FailedPrecondition as i32,</span>
-    <span class="comment">//         )),</span>
-    <span class="comment">//     };</span>
-    <span class="comment">//     let result = grpc_stub.unary_method(err_req);</span>
-    <span class="comment">//     expect_matches!(result, Err(_));</span>
-    <span class="comment">//     expect_eq!(</span>
-    <span class="comment">//         grpc::Code::FailedPrecondition as i32,</span>
-    <span class="comment">//         result.unwrap_err().code</span>
-    <span class="comment">//     );</span>
+        <span class="comment">// Errored unary method invocation of external service via gRPC client pseudo-Node.</span>
+        <span class="kw">let</span> <span class="ident">err_req</span> <span class="op">=</span> <span class="ident">GrpcTestRequest</span> {
+            <span class="ident">method_result</span>: <span class="prelude-val">Some</span>(<span class="ident">proto</span>::<span class="ident">grpc_test_request</span>::<span class="ident">MethodResult</span>::<span class="ident">ErrCode</span>(
+                <span class="ident">grpc</span>::<span class="ident">Code</span>::<span class="ident">FailedPrecondition</span> <span class="kw">as</span> <span class="ident">i32</span>,
+            )),
+        };
+        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">grpc_stub</span>.<span class="ident">unary_method</span>(<span class="ident">err_req</span>);
+        <span class="macro">expect_matches</span><span class="macro">!</span>(<span class="ident">result</span>, <span class="prelude-val">Err</span>(<span class="kw">_</span>));
+        <span class="macro">expect_eq</span><span class="macro">!</span>(
+            <span class="ident">grpc</span>::<span class="ident">Code</span>::<span class="ident">FailedPrecondition</span> <span class="kw">as</span> <span class="ident">i32</span>,
+            <span class="ident">result</span>.<span class="ident">unwrap_err</span>().<span class="ident">code</span>
+        );
 
-    <span class="comment">//     Ok(())</span>
-    <span class="comment">// }</span>
-    <span class="comment">// TODO(#953): Add streaming support for gRPC and re-enable all of the tests.</span>
-    <span class="comment">// fn test_grpc_client_server_streaming_method(&amp;mut self) -&gt; TestResult {</span>
-    <span class="comment">//     let grpc_stub = self.grpc_service.as_ref().ok_or_else(|| {</span>
-    <span class="comment">//         Box::new(std::io::Error::new(</span>
-    <span class="comment">//             std::io::ErrorKind::Other,</span>
-    <span class="comment">//             &quot;no gRPC client channel available&quot;,</span>
-    <span class="comment">//         ))</span>
-    <span class="comment">//     })?;</span>
-    <span class="comment">//     // Successful server-streaming method invocation of external service via</span>
-    <span class="comment">//     // gRPC client pseudo-Node.</span>
-    <span class="comment">//     let ok_req = GrpcTestRequest {</span>
-    <span class="comment">//         method_result: Some(proto::grpc_test_request::MethodResult::OkText(</span>
-    <span class="comment">//             &quot;test&quot;.to_string(),</span>
-    <span class="comment">//         )),</span>
-    <span class="comment">//     };</span>
-    <span class="comment">//     let ok_rsp = GrpcTestResponse {</span>
-    <span class="comment">//         text: &quot;test&quot;.to_string(),</span>
-    <span class="comment">//     };</span>
-    <span class="comment">//     let receiver = grpc_stub</span>
-    <span class="comment">//         .server_streaming_method(ok_req)</span>
-    <span class="comment">//         .map_err(from_proto)?;</span>
-    <span class="comment">//     let mut count = 0;</span>
-    <span class="comment">//     loop {</span>
-    <span class="comment">//         match receiver.receive() {</span>
-    <span class="comment">//             Ok(grpc_rsp) =&gt; {</span>
-    <span class="comment">// TODO(#592): get typed response directly from receiver.</span>
-    <span class="comment">//                 expect_eq!(</span>
-    <span class="comment">//                     oak::grpc::Code::Ok as i32,</span>
-    <span class="comment">//                     grpc_rsp.status.unwrap_or_default().code</span>
-    <span class="comment">//                 );</span>
-    <span class="comment">//                 let rsp = GrpcTestResponse::decode(grpc_rsp.rsp_msg.as_slice())</span>
-    <span class="comment">//                     .expect(&quot;failed to parse GrpcTestResponse&quot;);</span>
-    <span class="comment">//                 expect_eq!(rsp.clone(), ok_rsp.clone());</span>
-    <span class="comment">//                 count += 1;</span>
-    <span class="comment">//             }</span>
-    <span class="comment">//             Err(OakError::OakStatus(OakStatus::ErrBadHandle)) =&gt; break,</span>
-    <span class="comment">//             Err(OakError::OakStatus(OakStatus::ErrChannelClosed)) =&gt; break,</span>
-    <span class="comment">//             Err(e) =&gt; return Err(Box::new(e)),</span>
-    <span class="comment">//         }</span>
-    <span class="comment">//     }</span>
-    <span class="comment">//     expect_eq!(2, count);</span>
-    <span class="comment">//     receiver.close().expect(&quot;failed to close receiver&quot;);</span>
+        <span class="prelude-val">Ok</span>(())
+    }
+    <span class="kw">fn</span> <span class="ident">test_grpc_client_server_streaming_method</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TestResult</span> {
+        <span class="kw">let</span> <span class="ident">grpc_stub</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">grpc_service</span>.<span class="ident">as_ref</span>().<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
+            <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(
+                <span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">Other</span>,
+                <span class="string">&quot;no gRPC client channel available&quot;</span>,
+            ))
+        })<span class="question-mark">?</span>;
+        <span class="comment">// Successful server-streaming method invocation of external service via</span>
+        <span class="comment">// gRPC client pseudo-Node.</span>
+        <span class="kw">let</span> <span class="ident">ok_req</span> <span class="op">=</span> <span class="ident">GrpcTestRequest</span> {
+            <span class="ident">method_result</span>: <span class="prelude-val">Some</span>(<span class="ident">proto</span>::<span class="ident">grpc_test_request</span>::<span class="ident">MethodResult</span>::<span class="ident">OkText</span>(
+                <span class="string">&quot;test&quot;</span>.<span class="ident">to_string</span>(),
+            )),
+        };
+        <span class="kw">let</span> <span class="ident">ok_rsp</span> <span class="op">=</span> <span class="ident">GrpcTestResponse</span> {
+            <span class="ident">text</span>: <span class="string">&quot;test&quot;</span>.<span class="ident">to_string</span>(),
+        };
+        <span class="kw">let</span> <span class="ident">receiver</span> <span class="op">=</span> <span class="ident">grpc_stub</span>
+            .<span class="ident">server_streaming_method</span>(<span class="ident">ok_req</span>)
+            .<span class="ident">map_err</span>(<span class="ident">from_proto</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">count</span> <span class="op">=</span> <span class="number">0</span>;
+        <span class="kw">loop</span> {
+            <span class="kw">match</span> <span class="ident">receiver</span>.<span class="ident">receive</span>() {
+                <span class="prelude-val">Ok</span>(<span class="ident">grpc_rsp</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="comment">// TODO(#592): get typed response directly from receiver.</span>
+                    <span class="macro">expect_eq</span><span class="macro">!</span>(
+                        <span class="ident">oak</span>::<span class="ident">grpc</span>::<span class="ident">Code</span>::<span class="prelude-val">Ok</span> <span class="kw">as</span> <span class="ident">i32</span>,
+                        <span class="ident">grpc_rsp</span>.<span class="ident">status</span>.<span class="ident">unwrap_or_default</span>().<span class="ident">code</span>
+                    );
+                    <span class="kw">let</span> <span class="ident">rsp</span> <span class="op">=</span> <span class="ident">GrpcTestResponse</span>::<span class="ident">decode</span>(<span class="ident">grpc_rsp</span>.<span class="ident">rsp_msg</span>.<span class="ident">as_slice</span>())
+                        .<span class="ident">expect</span>(<span class="string">&quot;failed to parse GrpcTestResponse&quot;</span>);
+                    <span class="macro">expect_eq</span><span class="macro">!</span>(<span class="ident">rsp</span>.<span class="ident">clone</span>(), <span class="ident">ok_rsp</span>.<span class="ident">clone</span>());
+                    <span class="ident">count</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
+                }
+                <span class="prelude-val">Err</span>(<span class="ident">OakError</span>::<span class="ident">OakStatus</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrBadHandle</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">break</span>,
+                <span class="prelude-val">Err</span>(<span class="ident">OakError</span>::<span class="ident">OakStatus</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrChannelClosed</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">break</span>,
+                <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">e</span>)),
+            }
+        }
+        <span class="macro">expect_eq</span><span class="macro">!</span>(<span class="number">2</span>, <span class="ident">count</span>);
+        <span class="ident">receiver</span>.<span class="ident">close</span>().<span class="ident">expect</span>(<span class="string">&quot;failed to close receiver&quot;</span>);
 
-    <span class="comment">//     // Errored server-streaming method invocation of external service via</span>
-    <span class="comment">//     // gRPC client pseudo-Node.</span>
-    <span class="comment">//     let err_req = GrpcTestRequest {</span>
-    <span class="comment">//         method_result: Some(proto::grpc_test_request::MethodResult::ErrCode(</span>
-    <span class="comment">//             grpc::Code::FailedPrecondition as i32,</span>
-    <span class="comment">//         )),</span>
-    <span class="comment">//     };</span>
-    <span class="comment">//     let receiver = grpc_stub</span>
-    <span class="comment">//         .server_streaming_method(err_req)</span>
-    <span class="comment">//         .map_err(from_proto)?;</span>
-    <span class="comment">//     let mut seen_err_code = false;</span>
-    <span class="comment">//     loop {</span>
-    <span class="comment">//         match receiver.receive() {</span>
-    <span class="comment">//             Ok(grpc_rsp) =&gt; {</span>
-    <span class="comment">//                 expect_eq!(</span>
-    <span class="comment">//                     grpc::Code::FailedPrecondition as i32,</span>
-    <span class="comment">//                     grpc_rsp.status.unwrap_or_default().code</span>
-    <span class="comment">//                 );</span>
-    <span class="comment">//                 seen_err_code = true;</span>
-    <span class="comment">//             }</span>
-    <span class="comment">//             Err(OakError::OakStatus(OakStatus::ErrBadHandle)) =&gt; break,</span>
-    <span class="comment">//             Err(OakError::OakStatus(OakStatus::ErrChannelClosed)) =&gt; break,</span>
-    <span class="comment">//             Err(e) =&gt; return Err(Box::new(e)),</span>
-    <span class="comment">//         }</span>
-    <span class="comment">//     }</span>
-    <span class="comment">//     expect!(seen_err_code);</span>
-    <span class="comment">//     receiver.close().expect(&quot;failed to close receiver&quot;);</span>
-    <span class="comment">//     Ok(())</span>
-    <span class="comment">// }</span>
-    <span class="comment">// TODO(#953): Add streaming support for gRPC and re-enable all of the tests.</span>
-    <span class="comment">// fn test_absent_grpc_client(&amp;mut self) -&gt; TestResult {</span>
-    <span class="comment">//     // Expect to have a channel to a gRPC client pseudo-Node, but the remote</span>
-    <span class="comment">//     // gRPC service is unavailable.</span>
-    <span class="comment">//     let grpc_stub = self.absent_grpc_service.as_ref().ok_or_else(|| {</span>
-    <span class="comment">//         Box::new(std::io::Error::new(</span>
-    <span class="comment">//             std::io::ErrorKind::Other,</span>
-    <span class="comment">//             &quot;no gRPC client channel available&quot;,</span>
-    <span class="comment">//         ))</span>
-    <span class="comment">//     })?;</span>
-    <span class="comment">//     let req = GrpcTestRequest {</span>
-    <span class="comment">//         method_result: Some(proto::grpc_test_request::MethodResult::OkText(</span>
-    <span class="comment">//             &quot;test&quot;.to_string(),</span>
-    <span class="comment">//         )),</span>
-    <span class="comment">//     };</span>
+        <span class="comment">// Errored server-streaming method invocation of external service via</span>
+        <span class="comment">// gRPC client pseudo-Node.</span>
+        <span class="kw">let</span> <span class="ident">err_req</span> <span class="op">=</span> <span class="ident">GrpcTestRequest</span> {
+            <span class="ident">method_result</span>: <span class="prelude-val">Some</span>(<span class="ident">proto</span>::<span class="ident">grpc_test_request</span>::<span class="ident">MethodResult</span>::<span class="ident">ErrCode</span>(
+                <span class="ident">grpc</span>::<span class="ident">Code</span>::<span class="ident">FailedPrecondition</span> <span class="kw">as</span> <span class="ident">i32</span>,
+            )),
+        };
+        <span class="kw">let</span> <span class="ident">receiver</span> <span class="op">=</span> <span class="ident">grpc_stub</span>
+            .<span class="ident">server_streaming_method</span>(<span class="ident">err_req</span>)
+            .<span class="ident">map_err</span>(<span class="ident">from_proto</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">seen_err_code</span> <span class="op">=</span> <span class="bool-val">false</span>;
+        <span class="kw">loop</span> {
+            <span class="kw">match</span> <span class="ident">receiver</span>.<span class="ident">receive</span>() {
+                <span class="prelude-val">Ok</span>(<span class="ident">grpc_rsp</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="macro">expect_eq</span><span class="macro">!</span>(
+                        <span class="ident">grpc</span>::<span class="ident">Code</span>::<span class="ident">FailedPrecondition</span> <span class="kw">as</span> <span class="ident">i32</span>,
+                        <span class="ident">grpc_rsp</span>.<span class="ident">status</span>.<span class="ident">unwrap_or_default</span>().<span class="ident">code</span>
+                    );
+                    <span class="ident">seen_err_code</span> <span class="op">=</span> <span class="bool-val">true</span>;
+                }
+                <span class="prelude-val">Err</span>(<span class="ident">OakError</span>::<span class="ident">OakStatus</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrBadHandle</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">break</span>,
+                <span class="prelude-val">Err</span>(<span class="ident">OakError</span>::<span class="ident">OakStatus</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrChannelClosed</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">break</span>,
+                <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">e</span>)),
+            }
+        }
+        <span class="macro">expect</span><span class="macro">!</span>(<span class="ident">seen_err_code</span>);
+        <span class="ident">receiver</span>.<span class="ident">close</span>().<span class="ident">expect</span>(<span class="string">&quot;failed to close receiver&quot;</span>);
+        <span class="prelude-val">Ok</span>(())
+    }
+    <span class="kw">fn</span> <span class="ident">test_absent_grpc_client</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TestResult</span> {
+        <span class="comment">// Expect to have a channel to a gRPC client pseudo-Node, but the remote</span>
+        <span class="comment">// gRPC service is unavailable.</span>
+        <span class="kw">let</span> <span class="ident">grpc_stub</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">absent_grpc_service</span>.<span class="ident">as_ref</span>().<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
+            <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(
+                <span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">Other</span>,
+                <span class="string">&quot;no gRPC client channel available&quot;</span>,
+            ))
+        })<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">req</span> <span class="op">=</span> <span class="ident">GrpcTestRequest</span> {
+            <span class="ident">method_result</span>: <span class="prelude-val">Some</span>(<span class="ident">proto</span>::<span class="ident">grpc_test_request</span>::<span class="ident">MethodResult</span>::<span class="ident">OkText</span>(
+                <span class="string">&quot;test&quot;</span>.<span class="ident">to_string</span>(),
+            )),
+        };
 
-    <span class="comment">//     // Attempting to invoke any sort of method should fail.</span>
-    <span class="comment">//     let result = grpc_stub.unary_method(req.clone());</span>
-    <span class="comment">//     info!(&quot;absent.unary_method() -&gt; {:?}&quot;, result);</span>
-    <span class="comment">//     expect_matches!(result, Err(_));</span>
+        <span class="comment">// Attempting to invoke any sort of method should fail.</span>
+        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">grpc_stub</span>.<span class="ident">unary_method</span>(<span class="ident">req</span>.<span class="ident">clone</span>());
+        <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;absent.unary_method() -&gt; {:?}&quot;</span>, <span class="ident">result</span>);
+        <span class="macro">expect_matches</span><span class="macro">!</span>(<span class="ident">result</span>, <span class="prelude-val">Err</span>(<span class="kw">_</span>));
 
-    <span class="comment">//     info!(&quot;absent.server_streaming_method()&quot;);</span>
-    <span class="comment">//     let receiver = grpc_stub.server_streaming_method(req).map_err(from_proto)?;</span>
-    <span class="comment">//     loop {</span>
-    <span class="comment">//         let result = receiver.receive();</span>
-    <span class="comment">//         info!(&quot;absent.server_streaming_method().receive() -&gt; {:?}&quot;, result);</span>
-    <span class="comment">//         match result {</span>
-    <span class="comment">//             Ok(grpc_rsp) =&gt; {</span>
-    <span class="comment">//                 expect!(grpc_rsp.status.unwrap_or_default().code != grpc::Code::Ok as i32);</span>
-    <span class="comment">//             }</span>
-    <span class="comment">//             Err(OakError::OakStatus(OakStatus::ErrBadHandle)) =&gt; break,</span>
-    <span class="comment">//             Err(OakError::OakStatus(OakStatus::ErrChannelClosed)) =&gt; break,</span>
-    <span class="comment">//             Err(e) =&gt; return Err(Box::new(e)),</span>
-    <span class="comment">//         }</span>
-    <span class="comment">//     }</span>
-    <span class="comment">//     receiver.close().expect(&quot;failed to close receiver&quot;);</span>
+        <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;absent.server_streaming_method()&quot;</span>);
+        <span class="kw">let</span> <span class="ident">receiver</span> <span class="op">=</span> <span class="ident">grpc_stub</span>.<span class="ident">server_streaming_method</span>(<span class="ident">req</span>).<span class="ident">map_err</span>(<span class="ident">from_proto</span>)<span class="question-mark">?</span>;
+        <span class="kw">loop</span> {
+            <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">receiver</span>.<span class="ident">receive</span>();
+            <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;absent.server_streaming_method().receive() -&gt; {:?}&quot;</span>, <span class="ident">result</span>);
+            <span class="kw">match</span> <span class="ident">result</span> {
+                <span class="prelude-val">Ok</span>(<span class="ident">grpc_rsp</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="macro">expect</span><span class="macro">!</span>(<span class="ident">grpc_rsp</span>.<span class="ident">status</span>.<span class="ident">unwrap_or_default</span>().<span class="ident">code</span> <span class="op">!</span><span class="op">=</span> <span class="ident">grpc</span>::<span class="ident">Code</span>::<span class="prelude-val">Ok</span> <span class="kw">as</span> <span class="ident">i32</span>);
+                }
+                <span class="prelude-val">Err</span>(<span class="ident">OakError</span>::<span class="ident">OakStatus</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrBadHandle</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">break</span>,
+                <span class="prelude-val">Err</span>(<span class="ident">OakError</span>::<span class="ident">OakStatus</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrChannelClosed</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">break</span>,
+                <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">e</span>)),
+            }
+        }
+        <span class="ident">receiver</span>.<span class="ident">close</span>().<span class="ident">expect</span>(<span class="string">&quot;failed to close receiver&quot;</span>);
 
-    <span class="comment">//     Ok(())</span>
-    <span class="comment">// }</span>
+        <span class="prelude-val">Ok</span>(())
+    }
 
     <span class="kw">fn</span> <span class="ident">test_roughtime_client</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TestResult</span> {
         <span class="kw">let</span> <span class="ident">roughtime</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">roughtime</span>.<span class="ident">as_mut</span>().<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {

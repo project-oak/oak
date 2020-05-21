@@ -1,4 +1,5 @@
 (function() {var implementors = {};
+implementors["aggregator_backend"] = [{"text":"impl StructOptInternal for <a class=\"struct\" href=\"aggregator_backend/struct.Opt.html\" title=\"struct aggregator_backend::Opt\">Opt</a>","synthetic":false,"types":["aggregator_backend::Opt"]}];
 implementors["auth_client"] = [{"text":"impl StructOptInternal for <a class=\"struct\" href=\"auth_client/struct.Opt.html\" title=\"struct auth_client::Opt\">Opt</a>","synthetic":false,"types":["auth_client::Opt"]}];
 implementors["auth_server"] = [{"text":"impl StructOptInternal for <a class=\"struct\" href=\"auth_server/struct.Opt.html\" title=\"struct auth_server::Opt\">Opt</a>","synthetic":false,"types":["auth_server::Opt"]}];
 implementors["oak_loader"] = [{"text":"impl StructOptInternal for <a class=\"struct\" href=\"oak_loader/struct.Opt.html\" title=\"struct oak_loader::Opt\">Opt</a>","synthetic":false,"types":["oak_loader::Opt"]}];

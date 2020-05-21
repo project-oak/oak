@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["main",""]],"mod":[["proto",""]],"struct":[["AggregatorBackend",""]]});
+initSidebarItems({"fn":[["main",""]],"mod":[["proto",""]],"struct":[["AggregatorBackend",""],["Opt",""]]});

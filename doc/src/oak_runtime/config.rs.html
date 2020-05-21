@@ -181,12 +181,13 @@
     <span class="ident">node</span>::{<span class="ident">check_uri</span>, <span class="ident">load_certificate</span>, <span class="ident">load_wasm</span>},
     <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::{
         <span class="ident">node_configuration</span>::<span class="ident">ConfigType</span>, <span class="ident">ApplicationConfiguration</span>, <span class="ident">GrpcClientConfiguration</span>,
-        <span class="ident">GrpcServerConfiguration</span>, <span class="ident">LogConfiguration</span>, <span class="ident">NodeConfiguration</span>, <span class="ident">WebAssemblyConfiguration</span>,
+        <span class="ident">GrpcServerConfiguration</span>, <span class="ident">LogConfiguration</span>, <span class="ident">NodeConfiguration</span>, <span class="ident">RoughtimeClientConfiguration</span>,
+        <span class="ident">StorageProxyConfiguration</span>, <span class="ident">WebAssemblyConfiguration</span>,
     },
     <span class="ident">runtime</span>, <span class="ident">RuntimeProxy</span>,
 };
 <span class="kw">use</span> <span class="ident">itertools</span>::<span class="ident">Itertools</span>;
-<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">error</span>, <span class="ident">warn</span>};
+<span class="kw">use</span> <span class="ident">log</span>::<span class="ident">error</span>;
 <span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">OakStatus</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">HashMap</span>;
 <span class="kw">use</span> <span class="ident">tonic</span>::<span class="ident">transport</span>::<span class="ident">Identity</span>;
@@ -293,13 +294,12 @@
                         <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
                     })<span class="question-mark">?</span>
                 }
-                <span class="prelude-val">Some</span>(<span class="ident">node_config</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="macro">warn</span><span class="macro">!</span>(
-                        <span class="string">&quot;Assuming pseudo-Node of type {:?} implemented externally!&quot;</span>,
-                        <span class="ident">node_config</span>
-                    );
-                    <span class="ident">node</span>::<span class="ident">Configuration</span>::<span class="ident">External</span>
+                <span class="prelude-val">Some</span>(<span class="ident">ConfigType</span>::<span class="ident">StorageConfig</span>(<span class="ident">StorageProxyConfiguration</span> { .. })) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="ident">node</span>::<span class="ident">Configuration</span>::<span class="ident">StorageNode</span>
                 }
+                <span class="prelude-val">Some</span>(<span class="ident">ConfigType</span>::<span class="ident">RoughtimeClientConfig</span>(<span class="ident">RoughtimeClientConfiguration</span> {
+                    ..
+                })) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">node</span>::<span class="ident">Configuration</span>::<span class="ident">RoughtimeClientNode</span>,
             },
         );
     }

@@ -597,6 +597,16 @@
 <span id="597">597</span>
 <span id="598">598</span>
 <span id="599">599</span>
+<span id="600">600</span>
+<span id="601">601</span>
+<span id="602">602</span>
+<span id="603">603</span>
+<span id="604">604</span>
+<span id="605">605</span>
+<span id="606">606</span>
+<span id="607">607</span>
+<span id="608">608</span>
+<span id="609">609</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -1051,7 +1061,7 @@
 
 <span class="doccomment">/// Run an event loop on the provided `node`:</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// - wait for new messages on the provided channel `in_handle`</span>
+<span class="doccomment">/// - wait for new messages on the provided channel `in_channel`</span>
 <span class="doccomment">/// - if the runtime signals that the Node was terminated while waiting, then exit the event loop</span>
 <span class="doccomment">/// - otherwise, read the available message via the provided channel handle</span>
 <span class="doccomment">/// - decode the message from (bytes + handles) to the specified type `T`</span>
@@ -1060,10 +1070,11 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// Note the loop is only interrupted if the Node is terminated while waiting. Other errors are just</span>
 <span class="doccomment">/// logged, and the event loop continues with the next iteration.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_event_loop</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">Decodable</span>, <span class="ident">N</span>: <span class="ident">Node</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">mut</span> <span class="ident">node</span>: <span class="ident">N</span>, <span class="ident">in_handle</span>: <span class="ident">u64</span>) {
-    <span class="kw">let</span> <span class="ident">in_channel</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">ReadHandle</span> {
-        <span class="ident">handle</span>: <span class="kw">crate</span>::<span class="ident">Handle</span>::<span class="ident">from_raw</span>(<span class="ident">in_handle</span>),
-    };
+
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_event_loop</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">Decodable</span>, <span class="ident">N</span>: <span class="ident">Node</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>(
+    <span class="kw-2">mut</span> <span class="ident">node</span>: <span class="ident">N</span>,
+    <span class="ident">in_channel</span>: <span class="kw">crate</span>::<span class="ident">ReadHandle</span>,
+) {
     <span class="kw">if</span> <span class="op">!</span><span class="ident">in_channel</span>.<span class="ident">handle</span>.<span class="ident">is_valid</span>() {
         <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;invalid input handle&quot;</span>);
         <span class="kw">return</span>;
@@ -1117,8 +1128,7 @@
 
 <span class="doccomment">/// Register a new Node entrypoint.</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// This registers the entrypoint name and the expression used to construct the</span>
-<span class="doccomment">/// Node instance. The returned object should implement the [`Node`](trait.Node.html) trait.</span>
+<span class="doccomment">/// This registers the entrypoint name and the expression that runs an event loop.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// ```</span>
 <span class="doccomment">/// # struct DummyCommand;</span>
@@ -1138,7 +1148,11 @@
 <span class="doccomment">///     # }</span>
 <span class="doccomment">/// }</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// oak::entrypoint!(dummy =&gt; DummyNode::default());</span>
+<span class="doccomment">/// oak::entrypoint!(dummy =&gt; |_in_channel| {</span>
+<span class="doccomment">///     let dispatcher = DummyNode::default();</span>
+<span class="doccomment">///     let grpc_channel = oak::grpc::server::init_default();</span>
+<span class="doccomment">///     oak::run_event_loop(dispatcher, grpc_channel);</span>
+<span class="doccomment">/// });</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// # fn main() {}</span>
 <span class="doccomment">/// ```</span>
@@ -1169,16 +1183,18 @@
 <span class="doccomment">/// #     }</span>
 <span class="doccomment">/// # }</span>
 <span class="doccomment">/// #</span>
-<span class="doccomment">/// oak::entrypoint!(its_complicated =&gt; {</span>
+<span class="doccomment">/// oak::entrypoint!(its_complicated =&gt; |_in_channel| {</span>
 <span class="doccomment">///     init_all_the_things();</span>
-<span class="doccomment">///     DummyNode::default()</span>
+<span class="doccomment">///     let dispatcher = DummyNode::default();</span>
+<span class="doccomment">///     let grpc_channel = oak::grpc::server::init_default();</span>
+<span class="doccomment">///     oak::run_event_loop(dispatcher, grpc_channel);</span>
 <span class="doccomment">/// });</span>
 <span class="doccomment">/// #</span>
 <span class="doccomment">/// # fn main() {}</span>
 <span class="doccomment">/// ```</span>
 <span class="attribute">#[<span class="ident">macro_export</span>]</span>
 <span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">entrypoint</span> {
-    (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">name</span>:<span class="ident">ident</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">node</span>:<span class="ident">expr</span>) <span class="op">=</span><span class="op">&gt;</span> {
+    (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">name</span>:<span class="ident">ident</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">main_function</span>:<span class="ident">expr</span>) <span class="op">=</span><span class="op">&gt;</span> {
         <span class="comment">// Do not mangle these functions when running unit tests, because the Rust unit test</span>
         <span class="comment">// framework will add a `pub extern &quot;C&quot; fn main()` containing the test runner. This can</span>
         <span class="comment">// cause clashes when $name = main. We don&#39;t fully omit it in tests so that compile errors</span>
@@ -1192,7 +1208,11 @@
             <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> ::<span class="ident">std</span>::<span class="ident">panic</span>::<span class="ident">catch_unwind</span>(<span class="op">|</span><span class="op">|</span> {
                 ::<span class="ident">oak</span>::<span class="ident">set_panic_hook</span>();
 
-                ::<span class="ident">oak</span>::<span class="ident">run_event_loop</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">node</span>, <span class="ident">in_handle</span>);
+                <span class="comment">// Run the Node&#39;s `main` function.</span>
+                <span class="kw">let</span> <span class="ident">in_channel</span> <span class="op">=</span> ::<span class="ident">oak</span>::<span class="ident">ReadHandle</span> {
+                    <span class="ident">handle</span>: ::<span class="ident">oak</span>::<span class="ident">Handle</span>::<span class="ident">from_raw</span>(<span class="ident">in_handle</span>),
+                };
+                <span class="macro-nonterminal">$</span><span class="macro-nonterminal">main_function</span>(<span class="ident">in_channel</span>);
             });
         }
     };

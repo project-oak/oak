@@ -73,6 +73,14 @@
 <span id="73">73</span>
 <span id="74">74</span>
 <span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
+<span id="79">79</span>
+<span id="80">80</span>
+<span id="81">81</span>
+<span id="82">82</span>
+<span id="83">83</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -99,9 +107,17 @@
     <span class="ident">TranslateRequest</span>, <span class="ident">TranslateResponse</span>, <span class="ident">Translator</span>, <span class="ident">TranslatorDispatcher</span>,
 };
 
-<span class="ident">oak</span>::<span class="macro">entrypoint</span><span class="macro">!</span>(<span class="ident">oak_main</span> <span class="op">=</span><span class="op">&gt;</span> {
+<span class="ident">oak</span>::<span class="macro">entrypoint</span><span class="macro">!</span>(<span class="ident">oak_main</span> <span class="op">=</span><span class="op">&gt;</span> <span class="op">|</span><span class="ident">in_channel</span><span class="op">|</span> {
     <span class="ident">oak</span>::<span class="ident">logger</span>::<span class="ident">init_default</span>();
-    <span class="ident">TranslatorDispatcher</span>::<span class="ident">new</span>(<span class="ident">Node</span>)
+    <span class="kw">let</span> <span class="ident">dispatcher</span> <span class="op">=</span> <span class="ident">TranslatorDispatcher</span>::<span class="ident">new</span>(<span class="ident">Node</span>);
+    <span class="ident">oak</span>::<span class="ident">run_event_loop</span>(<span class="ident">dispatcher</span>, <span class="ident">in_channel</span>);
+});
+
+<span class="ident">oak</span>::<span class="macro">entrypoint</span><span class="macro">!</span>(<span class="ident">grpc_oak_main</span> <span class="op">=</span><span class="op">&gt;</span> <span class="op">|</span><span class="ident">_in_channel</span><span class="op">|</span> {
+    <span class="ident">oak</span>::<span class="ident">logger</span>::<span class="ident">init_default</span>();
+    <span class="kw">let</span> <span class="ident">dispatcher</span> <span class="op">=</span> <span class="ident">TranslatorDispatcher</span>::<span class="ident">new</span>(<span class="ident">Node</span>);
+    <span class="kw">let</span> <span class="ident">grpc_channel</span> <span class="op">=</span> <span class="ident">oak</span>::<span class="ident">grpc</span>::<span class="ident">server</span>::<span class="ident">init_default</span>();
+    <span class="ident">oak</span>::<span class="ident">run_event_loop</span>(<span class="ident">dispatcher</span>, <span class="ident">grpc_channel</span>);
 });
 
 <span class="kw">struct</span> <span class="ident">Node</span>;

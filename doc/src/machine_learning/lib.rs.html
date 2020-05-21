@@ -267,6 +267,19 @@
 <span id="267">267</span>
 <span id="268">268</span>
 <span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -416,14 +429,27 @@
     <span class="ident">test_animals</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Animal</span><span class="op">&gt;</span>,
 }
 
-<span class="ident">oak</span>::<span class="macro">entrypoint</span><span class="macro">!</span>(<span class="ident">oak_main</span> <span class="op">=</span><span class="op">&gt;</span> {
+<span class="ident">oak</span>::<span class="macro">entrypoint</span><span class="macro">!</span>(<span class="ident">oak_main</span> <span class="op">=</span><span class="op">&gt;</span> <span class="op">|</span><span class="ident">in_channel</span><span class="op">|</span> {
     <span class="ident">oak</span>::<span class="ident">logger</span>::<span class="ident">init_default</span>();
-    <span class="ident">Node</span> {
+    <span class="kw">let</span> <span class="ident">node</span> <span class="op">=</span> <span class="ident">Node</span> {
         <span class="ident">training_set_size</span>: <span class="number">1000</span>,
         <span class="ident">test_set_size</span>: <span class="number">1000</span>,
         <span class="ident">config</span>: <span class="prelude-val">None</span>,
         <span class="ident">model</span>: <span class="ident">NaiveBayes</span>::<span class="ident">new</span>(),
-    }
+    };
+    <span class="ident">oak</span>::<span class="ident">run_event_loop</span>(<span class="ident">node</span>, <span class="ident">in_channel</span>);
+});
+
+<span class="ident">oak</span>::<span class="macro">entrypoint</span><span class="macro">!</span>(<span class="ident">grpc_oak_main</span> <span class="op">=</span><span class="op">&gt;</span> <span class="op">|</span><span class="ident">_in_channel</span><span class="op">|</span> {
+    <span class="ident">oak</span>::<span class="ident">logger</span>::<span class="ident">init_default</span>();
+    <span class="kw">let</span> <span class="ident">node</span> <span class="op">=</span> <span class="ident">Node</span> {
+        <span class="ident">training_set_size</span>: <span class="number">1000</span>,
+        <span class="ident">test_set_size</span>: <span class="number">1000</span>,
+        <span class="ident">config</span>: <span class="prelude-val">None</span>,
+        <span class="ident">model</span>: <span class="ident">NaiveBayes</span>::<span class="ident">new</span>(),
+    };
+    <span class="kw">let</span> <span class="ident">grpc_channel</span> <span class="op">=</span> <span class="ident">oak</span>::<span class="ident">grpc</span>::<span class="ident">server</span>::<span class="ident">init_default</span>();
+    <span class="ident">oak</span>::<span class="ident">run_event_loop</span>(<span class="ident">node</span>, <span class="ident">grpc_channel</span>);
 });
 
 <span class="kw">struct</span> <span class="ident">Node</span> {

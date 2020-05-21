@@ -210,6 +210,21 @@
 <span id="210">210</span>
 <span id="211">211</span>
 <span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
+<span id="218">218</span>
+<span id="219">219</span>
+<span id="220">220</span>
+<span id="221">221</span>
+<span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -240,6 +255,8 @@
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">external</span>;
 <span class="kw">mod</span> <span class="ident">grpc</span>;
 <span class="kw">mod</span> <span class="ident">logger</span>;
+<span class="kw">mod</span> <span class="ident">roughtime</span>;
+<span class="kw">mod</span> <span class="ident">storage</span>;
 <span class="kw">mod</span> <span class="ident">wasm</span>;
 
 <span class="doccomment">/// Trait encapsulating execution of a Node or pseudo-Node.</span>
@@ -287,6 +304,12 @@
     <span class="ident">WasmNode</span> {
         <span class="ident">module</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">wasmi</span>::<span class="ident">Module</span><span class="op">&gt;</span>,
     },
+
+    <span class="doccomment">/// The configuration for a storage Node.</span>
+    <span class="ident">StorageNode</span>,
+
+    <span class="doccomment">/// The configuration for a Roughtime client Node.</span>
+    <span class="ident">RoughtimeClientNode</span>,
 
     <span class="doccomment">/// The configuration for an externally provided pseudo-Node.</span>
     <span class="ident">External</span>,
@@ -389,7 +412,6 @@
                 <span class="kw-2">*</span><span class="ident">address</span>,
                 <span class="ident">tls_identity</span>.<span class="ident">clone</span>(),
             ))),
-
             <span class="ident">Configuration</span>::<span class="ident">GrpcClientNode</span> {
                 <span class="ident">uri</span>,
                 <span class="ident">root_tls_certificate</span>,
@@ -405,6 +427,12 @@
                     <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
                 }
             }
+
+            <span class="ident">Configuration</span>::<span class="ident">StorageNode</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">storage</span>::<span class="ident">StorageNode</span>::<span class="ident">new</span>(<span class="ident">node_name</span>))),
+            <span class="ident">Configuration</span>::<span class="ident">RoughtimeClientNode</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="prelude-val">Some</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">roughtime</span>::<span class="ident">RoughtimeClientNode</span>::<span class="ident">new</span>(<span class="ident">node_name</span>)))
+            }
+
             <span class="ident">Configuration</span>::<span class="ident">External</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="prelude-val">Some</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">external</span>::<span class="ident">PseudoNode</span>::<span class="ident">new</span>(<span class="ident">node_name</span>, <span class="ident">config_name</span>)))
             }
@@ -419,6 +447,8 @@
             <span class="ident">Configuration</span>::<span class="ident">GrpcServerNode</span> { .. } <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;GrpcServerNode&quot;</span>.<span class="ident">to_string</span>(),
             <span class="ident">Configuration</span>::<span class="ident">GrpcClientNode</span> { .. } <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;GrpcClientNode&quot;</span>.<span class="ident">to_string</span>(),
             <span class="ident">Configuration</span>::<span class="ident">WasmNode</span> { .. } <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;WasmNode-{}&quot;</span>, <span class="ident">entrypoint</span>),
+            <span class="ident">Configuration</span>::<span class="ident">StorageNode</span> { .. } <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;StorageNode&quot;</span>.<span class="ident">to_string</span>(),
+            <span class="ident">Configuration</span>::<span class="ident">RoughtimeClientNode</span> { .. } <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;RoughtimeClientNode&quot;</span>.<span class="ident">to_string</span>(),
             <span class="ident">Configuration</span>::<span class="ident">External</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;ExternalPseudoNode&quot;</span>.<span class="ident">to_string</span>(),
         }
     }

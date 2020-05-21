@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["oak_main",""]]});
+initSidebarItems({"fn":[["grpc_oak_main",""],["oak_main",""]]});
