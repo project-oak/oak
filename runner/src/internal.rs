@@ -95,11 +95,11 @@ impl Context {
 }
 
 /// The outcome of an individual step of execution.
-#[derive(PartialEq, Eq, Clone, Hash)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Clone, Hash)]
 pub enum StatusResultValue {
+    Skipped,
     Ok,
     Error,
-    Skipped,
 }
 
 impl std::fmt::Display for StatusResultValue {
@@ -112,13 +112,40 @@ impl std::fmt::Display for StatusResultValue {
     }
 }
 
+/// The outcome of an individual step of execution, including logged details.
+#[derive(Debug, PartialEq, Eq, PartialOrd, Hash)]
 pub struct SingleStatusResult {
-    value: StatusResultValue,
-    logs: String,
+    pub value: StatusResultValue,
+    pub logs: String,
 }
 
-/// An execution step, which may be a single `Cmd`, or a collection of sub-steps.
+pub fn status_combine<I>(iter: I) -> SingleStatusResult
+where
+    I: IntoIterator<Item = SingleStatusResult>,
+{
+    let mut value = StatusResultValue::Skipped;
+    let mut logs = vec![];
+    for result in iter {
+        if result.value > value {
+            value = result.value;
+        }
+        if !result.logs.is_empty() {
+            logs.push(result.logs);
+        }
+    }
+    SingleStatusResult {
+        value,
+        logs: logs.join("\n"),
+    }
+}
+
+/// An execution step, which may be involve one or more external `Cmd`s, or which may
+/// be implemented by Rust code in this crate.
 pub enum Step {
+    Internal {
+        name: String,
+        execute: fn() -> SingleStatusResult,
+    },
     Single {
         name: String,
         command: Cmd,
@@ -153,6 +180,29 @@ where
 /// status results from the single or multiple steps that were executed.
 pub fn run_step(context: &Context, step: &Step) -> HashSet<StatusResultValue> {
     match step {
+        Step::Internal { name, execute } => {
+            let context = context.child(name);
+
+            eprintln!("{} ⊢ ... ", context.prefix);
+            let start = Instant::now();
+            let status = execute();
+            let end = Instant::now();
+            let elapsed = end.duration_since(start);
+
+            eprintln!("{} ⊢ {} [{:.0?}]", context.prefix, status.value, elapsed);
+            if (status.value == StatusResultValue::Error || context.opt.logs)
+                && !status.logs.is_empty()
+            {
+                eprintln!("{} {}", context.prefix, "╔════════════════════════".blue());
+                for line in status.logs.lines() {
+                    eprintln!("{} {} {}", context.prefix, "║".blue(), line);
+                }
+                eprintln!("{} {}", context.prefix, "╚════════════════════════".blue());
+            }
+            let mut values = HashSet::new();
+            values.insert(status.value);
+            values
+        }
         Step::Single { name, command } => {
             let context = context.child(name);
 

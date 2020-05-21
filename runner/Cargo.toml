@@ -7,6 +7,7 @@ license = "Apache-2.0"
 
 [dependencies]
 colored = "*"
-walkdir = "*"
-structopt = "*"
 nix = "*"
+regex = "*"
+structopt = "*"
+walkdir = "*"

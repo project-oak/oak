@@ -31,6 +31,8 @@ use structopt::StructOpt;
 
 mod internal;
 use internal::*;
+mod todo_check;
+use todo_check::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let opt = Opt::from_args();
@@ -247,6 +249,7 @@ fn run_tests() -> Step {
             run_cargo_clippy(),
             run_bazel_build(),
             run_bazel_test(),
+            perform_todo_check(),
         ],
     }
 }
@@ -413,6 +416,15 @@ fn is_cargo_workspace_file(path: &PathBuf) -> bool {
     contents.contains("[workspace]")
 }
 
+/// Return whether the provided path refers to a shell script file, by looking at the first
+/// two bytes of the file.
+fn is_shell_script(path: &PathBuf) -> bool {
+    let mut file = std::fs::File::open(path).expect("could not open file");
+    let mut prefix = [0u8; 2];
+    let len = file.read(&mut prefix[..]).unwrap();
+    len == 2 && prefix[0] == b'#' && prefix[1] == b'!'
+}
+
 fn run_buildifier() -> Step {
     Step::Multiple {
         name: "buildifier".to_string(),
@@ -546,6 +558,19 @@ fn run_bazel_test() -> Step {
     Step::Single {
         name: "bazel test".to_string(),
         command: Cmd::new("bazel", &["test", "--", "//oak/...:all"]),
+    }
+}
+
+fn perform_todo_check() -> Step {
+    Step::Internal {
+        name: format!("{}DO check", "TO"),
+        execute: || {
+            let statuses = source_files()
+                .filter(|entry| !is_shell_script(entry))
+                .map(|entry| TodoChecker::new(&entry).run());
+            let status: SingleStatusResult = status_combine(statuses);
+            status
+        },
     }
 }
 
