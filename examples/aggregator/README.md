@@ -36,7 +36,7 @@ Build and run the Aggregator with the following command:
 
 ```bash
 ./scripts/build_example -e aggregator
-./scripts/build_server -s base
+./scripts/build_server -s rust
 ./bazel-clang-bin/oak/server/loader/oak_runner \
   --application=./bazel-client-bin/examples/aggregator/config/config.bin \
   --private_key=./examples/certs/local/local.key \
@@ -101,6 +101,6 @@ Deployment requires Docker images to be uploaded to the
 following command:
 
 ```bash
-./scripts/build_example -e aggregator -i base
+./scripts/build_example -e aggregator -i rust
 ./examples/aggregator/scripts/docker_push
 ```
