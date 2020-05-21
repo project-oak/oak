@@ -20,15 +20,15 @@ use super::*;
 fn serialize_deserialize() {
     let labels = vec![
         Label {
-            secrecy_tags: vec![],
+            confidentiality_tags: vec![],
             integrity_tags: vec![],
         },
         Label {
-            secrecy_tags: vec![authorization_bearer_token_hmac_tag(&[0, 0, 0])],
+            confidentiality_tags: vec![authorization_bearer_token_hmac_tag(&[0, 0, 0])],
             integrity_tags: vec![authorization_bearer_token_hmac_tag(&[1, 1, 1])],
         },
         Label {
-            secrecy_tags: vec![
+            confidentiality_tags: vec![
                 authorization_bearer_token_hmac_tag(&[0, 0, 0]),
                 authorization_bearer_token_hmac_tag(&[0, 0, 0]),
             ],
@@ -38,7 +38,7 @@ fn serialize_deserialize() {
             ],
         },
         Label {
-            secrecy_tags: vec![
+            confidentiality_tags: vec![
                 authorization_bearer_token_hmac_tag(&[0, 0, 0]),
                 authorization_bearer_token_hmac_tag(&[1, 1, 1]),
             ],
@@ -62,34 +62,34 @@ fn label_flow() {
 
     let public_trusted = Label::public_trusted();
 
-    // A label that corresponds to the secrecy of tag_0.
+    // A label that corresponds to the confidentiality of tag_0.
     //
     // A Node or channel with this label may have observed data related to tag_0.
     let label_0 = Label {
-        secrecy_tags: vec![tag_0.clone()],
+        confidentiality_tags: vec![tag_0.clone()],
         integrity_tags: vec![],
     };
 
-    // A label that corresponds to the secrecy of tag_1.
+    // A label that corresponds to the confidentiality of tag_1.
     //
     // A Node or channel with this label may have observed data related to tag_1.
     let label_1 = Label {
-        secrecy_tags: vec![tag_1.clone()],
+        confidentiality_tags: vec![tag_1.clone()],
         integrity_tags: vec![],
     };
 
-    // A label that corresponds to the combined secrecy of both tag_0 and tag_1.
+    // A label that corresponds to the combined confidentiality of both tag_0 and tag_1.
     //
     // A Node or channel with this label may have observed data related to tag_0 and tag_1.
     let label_0_1 = Label {
-        secrecy_tags: vec![tag_0.clone(), tag_1.clone()],
+        confidentiality_tags: vec![tag_0.clone(), tag_1.clone()],
         integrity_tags: vec![],
     };
 
     // A label identical to `label_0_1`, but in which tags appear in a different order. This
     // should not make any difference in terms of what the label actually represent.
     let label_1_0 = Label {
-        secrecy_tags: vec![tag_1, tag_0],
+        confidentiality_tags: vec![tag_1, tag_0],
         integrity_tags: vec![],
     };
 

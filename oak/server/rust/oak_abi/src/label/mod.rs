@@ -49,7 +49,7 @@ impl crate::proto::oak::label::Label {
     /// A Node or channel with this label has only observed public data and is trusted by no one.
     pub fn public_trusted() -> Self {
         Label {
-            secrecy_tags: vec![],
+            confidentiality_tags: vec![],
             integrity_tags: vec![],
         }
     }
@@ -58,15 +58,15 @@ impl crate::proto::oak::label::Label {
     pub fn flows_to(&self, other: &Self) -> bool {
         #![allow(clippy::mutable_key_type)]
 
-        let self_secrecy_tags: HashSet<_> = self.secrecy_tags.iter().collect();
-        let other_secrecy_tags: HashSet<_> = other.secrecy_tags.iter().collect();
+        let self_confidentiality_tags: HashSet<_> = self.confidentiality_tags.iter().collect();
+        let other_confidentiality_tags: HashSet<_> = other.confidentiality_tags.iter().collect();
         let self_integrity_tags: HashSet<_> = self.integrity_tags.iter().collect();
         let other_integrity_tags: HashSet<_> = other.integrity_tags.iter().collect();
 
         // The target label must have (compared to the self label):
-        // - same or more secrecy tags
+        // - same or more confidentiality tags
         // - same or fewer integrity tags
-        self_secrecy_tags.is_subset(&other_secrecy_tags)
+        self_confidentiality_tags.is_subset(&other_confidentiality_tags)
             && other_integrity_tags.is_subset(&self_integrity_tags)
     }
 }

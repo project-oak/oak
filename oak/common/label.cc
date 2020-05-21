@@ -43,9 +43,10 @@ oak::label::Label DeserializeLabel(const std::string& label_bytes) {
 
 oak::label::Label AuthorizationBearerTokenLabel(const std::string& authorization_token_hmac) {
   oak::label::Label label;
-  auto* secrecy_tag = label.add_secrecy_tags();
+  auto* confidentiality_tag = label.add_confidentiality_tags();
   auto* integrity_tag = label.add_integrity_tags();
-  secrecy_tag->mutable_grpc_tag()->set_authorization_bearer_token_hmac(authorization_token_hmac);
+  confidentiality_tag->mutable_grpc_tag()->set_authorization_bearer_token_hmac(
+      authorization_token_hmac);
   // We set integrity tag here, even though it would make more sense for the server to determine
   // what integrity tag to assign to the incoming message, based on the authentication mechanism
   // used (e.g. the actual bearer token, rather than its HMAC).
@@ -56,9 +57,10 @@ oak::label::Label AuthorizationBearerTokenLabel(const std::string& authorization
 
 oak::label::Label WebAssemblyModuleAttestationLabel(const std::string& module_attestation) {
   oak::label::Label label;
-  auto* secrecy_tag = label.add_secrecy_tags();
+  auto* confidentiality_tag = label.add_confidentiality_tags();
   auto* integrity_tag = label.add_integrity_tags();
-  secrecy_tag->mutable_web_assembly_module_tag()->set_module_attestation(module_attestation);
+  confidentiality_tag->mutable_web_assembly_module_tag()->set_module_attestation(
+      module_attestation);
   integrity_tag->mutable_web_assembly_module_tag()->set_module_attestation(module_attestation);
   return label;
 }

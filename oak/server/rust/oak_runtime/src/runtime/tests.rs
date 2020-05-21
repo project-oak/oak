@@ -96,7 +96,7 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
 /// Returns a non-trivial label for testing.
 fn test_label() -> Label {
     Label {
-        secrecy_tags: vec![oak_abi::label::authorization_bearer_token_hmac_tag(&[
+        confidentiality_tags: vec![oak_abi::label::authorization_bearer_token_hmac_tag(&[
             1, 1, 1,
         ])],
         integrity_tags: vec![],
@@ -147,11 +147,11 @@ fn create_channel_less_secret_label_err() {
     let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
     let tag_1 = oak_abi::label::authorization_bearer_token_hmac_tag(&[2, 2, 2]);
     let initial_label = Label {
-        secrecy_tags: vec![tag_0, tag_1.clone()],
+        confidentiality_tags: vec![tag_0, tag_1.clone()],
         integrity_tags: vec![],
     };
     let less_secret_label = Label {
-        secrecy_tags: vec![tag_1],
+        confidentiality_tags: vec![tag_1],
         integrity_tags: vec![],
     };
     run_node_body(
@@ -166,18 +166,18 @@ fn create_channel_less_secret_label_err() {
 }
 
 /// Create a test Node that creates a Channel with a less secret label and succeeds, because the
-/// node is granted the ability to declassify the removed secrecy tag.
+/// node is granted the ability to declassify the removed confidentiality tag.
 #[test]
 fn create_channel_less_secret_label_declassification_ok() {
     let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
     let tag_1 = oak_abi::label::authorization_bearer_token_hmac_tag(&[2, 2, 2]);
     let other_tag = oak_abi::label::authorization_bearer_token_hmac_tag(&[3, 3, 3]);
     let initial_label = Label {
-        secrecy_tags: vec![tag_0.clone(), tag_1.clone()],
+        confidentiality_tags: vec![tag_0.clone(), tag_1.clone()],
         integrity_tags: vec![],
     };
     let less_secret_label = Label {
-        secrecy_tags: vec![tag_1],
+        confidentiality_tags: vec![tag_1],
         integrity_tags: vec![],
     };
     run_node_body(
@@ -185,7 +185,7 @@ fn create_channel_less_secret_label_declassification_ok() {
         // Grant this node the privilege to declassify `tag_0` and another unrelated tag, and
         // endorse another unrelated tag.
         &NodePrivilege {
-            can_declassify_secrecy_tags: hashset! { tag_0, other_tag.clone() },
+            can_declassify_confidentiality_tags: hashset! { tag_0, other_tag.clone() },
             can_endorse_integrity_tags: hashset! { other_tag },
         },
         Box::new(move |runtime| {
@@ -197,17 +197,17 @@ fn create_channel_less_secret_label_declassification_ok() {
 }
 
 /// Create a test Node that creates a Channel with a less secret label and fails, because the node
-/// is granted the ability to endorse (rather than declassify) the removed secrecy tag.
+/// is granted the ability to endorse (rather than declassify) the removed confidentiality tag.
 #[test]
 fn create_channel_less_secret_label_no_privilege_err() {
     let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
     let tag_1 = oak_abi::label::authorization_bearer_token_hmac_tag(&[2, 2, 2]);
     let initial_label = Label {
-        secrecy_tags: vec![tag_0.clone(), tag_1.clone()],
+        confidentiality_tags: vec![tag_0.clone(), tag_1.clone()],
         integrity_tags: vec![],
     };
     let less_secret_label = Label {
-        secrecy_tags: vec![tag_1],
+        confidentiality_tags: vec![tag_1],
         integrity_tags: vec![],
     };
     run_node_body(
@@ -215,7 +215,7 @@ fn create_channel_less_secret_label_no_privilege_err() {
         // Grant this node the privilege to endorse (rather than declassify) `tag_0`, which in this
         // case is useless, so it should still fail.
         &NodePrivilege {
-            can_declassify_secrecy_tags: hashset! {},
+            can_declassify_confidentiality_tags: hashset! {},
             can_endorse_integrity_tags: hashset! { tag_0 },
         },
         Box::new(move |runtime| {
@@ -234,11 +234,11 @@ fn create_channel_more_secret_label_ok() {
     let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
     let tag_1 = oak_abi::label::authorization_bearer_token_hmac_tag(&[2, 2, 2]);
     let initial_label = Label {
-        secrecy_tags: vec![tag_0.clone()],
+        confidentiality_tags: vec![tag_0.clone()],
         integrity_tags: vec![],
     };
     let more_secret_label = Label {
-        secrecy_tags: vec![tag_0, tag_1],
+        confidentiality_tags: vec![tag_0, tag_1],
         integrity_tags: vec![],
     };
     run_node_body(
@@ -300,11 +300,11 @@ fn create_node_invalid_configuration_err() {
 fn create_node_less_secret_label_err() {
     let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
     let initial_label = Label {
-        secrecy_tags: vec![tag_0],
+        confidentiality_tags: vec![tag_0],
         integrity_tags: vec![],
     };
     let less_secret_label = Label {
-        secrecy_tags: vec![],
+        confidentiality_tags: vec![],
         integrity_tags: vec![],
     };
     let initial_label_clone = initial_label.clone();
@@ -326,11 +326,11 @@ fn create_node_more_secret_label_ok() {
     let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
     let tag_1 = oak_abi::label::authorization_bearer_token_hmac_tag(&[2, 2, 2]);
     let initial_label = Label {
-        secrecy_tags: vec![tag_0.clone()],
+        confidentiality_tags: vec![tag_0.clone()],
         integrity_tags: vec![],
     };
     let more_secret_label = Label {
-        secrecy_tags: vec![tag_0, tag_1],
+        confidentiality_tags: vec![tag_0, tag_1],
         integrity_tags: vec![],
     };
     let initial_label_clone = initial_label.clone();
