@@ -64,7 +64,7 @@ container_image(
     name = "oak_docker",
     base = "@cc_image//image",
     files = [
-        "//:target/release/oak_loader",
+        "//:target/x86_64-unknown-linux-musl/release/oak_loader",
     ],
     ports = [
         "8080/tcp",  # Oak Application gRPC port.
