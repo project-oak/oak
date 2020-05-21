@@ -133,7 +133,7 @@
     <span class="doccomment">/// A Node or channel with this label has only observed public data and is trusted by no one.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">public_trusted</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="ident">Label</span> {
-            <span class="ident">secrecy_tags</span>: <span class="macro">vec</span><span class="macro">!</span>[],
+            <span class="ident">confidentiality_tags</span>: <span class="macro">vec</span><span class="macro">!</span>[],
             <span class="ident">integrity_tags</span>: <span class="macro">vec</span><span class="macro">!</span>[],
         }
     }
@@ -142,15 +142,15 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">flows_to</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
         <span class="attribute">#![<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">mutable_key_type</span>)]</span>
 
-        <span class="kw">let</span> <span class="ident">self_secrecy_tags</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">secrecy_tags</span>.<span class="ident">iter</span>().<span class="ident">collect</span>();
-        <span class="kw">let</span> <span class="ident">other_secrecy_tags</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">other</span>.<span class="ident">secrecy_tags</span>.<span class="ident">iter</span>().<span class="ident">collect</span>();
+        <span class="kw">let</span> <span class="ident">self_confidentiality_tags</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">confidentiality_tags</span>.<span class="ident">iter</span>().<span class="ident">collect</span>();
+        <span class="kw">let</span> <span class="ident">other_confidentiality_tags</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">other</span>.<span class="ident">confidentiality_tags</span>.<span class="ident">iter</span>().<span class="ident">collect</span>();
         <span class="kw">let</span> <span class="ident">self_integrity_tags</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">integrity_tags</span>.<span class="ident">iter</span>().<span class="ident">collect</span>();
         <span class="kw">let</span> <span class="ident">other_integrity_tags</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">other</span>.<span class="ident">integrity_tags</span>.<span class="ident">iter</span>().<span class="ident">collect</span>();
 
         <span class="comment">// The target label must have (compared to the self label):</span>
-        <span class="comment">// - same or more secrecy tags</span>
+        <span class="comment">// - same or more confidentiality tags</span>
         <span class="comment">// - same or fewer integrity tags</span>
-        <span class="ident">self_secrecy_tags</span>.<span class="ident">is_subset</span>(<span class="kw-2">&amp;</span><span class="ident">other_secrecy_tags</span>)
+        <span class="ident">self_confidentiality_tags</span>.<span class="ident">is_subset</span>(<span class="kw-2">&amp;</span><span class="ident">other_confidentiality_tags</span>)
             <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="ident">other_integrity_tags</span>.<span class="ident">is_subset</span>(<span class="kw-2">&amp;</span><span class="ident">self_integrity_tags</span>)
     }
 }

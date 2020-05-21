@@ -1490,6 +1490,11 @@
 <span id="1490">1490</span>
 <span id="1491">1491</span>
 <span id="1492">1492</span>
+<span id="1493">1493</span>
+<span id="1494">1494</span>
+<span id="1495">1495</span>
+<span id="1496">1496</span>
+<span id="1497">1497</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -1616,8 +1621,9 @@
 <span class="doccomment">/// See https://github.com/project-oak/oak/blob/master/docs/concepts.md#downgrades</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Default</span>, <span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">NodePrivilege</span> {
-    <span class="doccomment">/// Tags that may be declassified (removed from the secrecy component of a label) by the Node.</span>
-    <span class="ident">can_declassify_secrecy_tags</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">Tag</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Tags that may be declassified (removed from the confidentiality component of a label) by</span>
+    <span class="doccomment">/// the Node.</span>
+    <span class="ident">can_declassify_confidentiality_tags</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">Tag</span><span class="op">&gt;</span>,
 
     <span class="doccomment">/// Tags that may be endorsed (added to the integrity component of a label) by the Node.</span>
     <span class="ident">can_endorse_integrity_tags</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">Tag</span><span class="op">&gt;</span>,
@@ -2252,11 +2258,15 @@
         <span class="comment">// Retrieve the set of tags that the node may downgrade.</span>
         <span class="kw">let</span> <span class="ident">node_privilege</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_node_privilege</span>(<span class="ident">node_id</span>);
         <span class="ident">Label</span> {
-            <span class="comment">// Remove all the secrecy tags that the Node may declassify.</span>
-            <span class="ident">secrecy_tags</span>: <span class="ident">node_label</span>
-                .<span class="ident">secrecy_tags</span>
+            <span class="comment">// Remove all the confidentiality tags that the Node may declassify.</span>
+            <span class="ident">confidentiality_tags</span>: <span class="ident">node_label</span>
+                .<span class="ident">confidentiality_tags</span>
                 .<span class="ident">iter</span>()
-                .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">t</span><span class="op">|</span> <span class="op">!</span><span class="ident">node_privilege</span>.<span class="ident">can_declassify_secrecy_tags</span>.<span class="ident">contains</span>(<span class="ident">t</span>))
+                .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">t</span><span class="op">|</span> {
+                    <span class="op">!</span><span class="ident">node_privilege</span>
+                        .<span class="ident">can_declassify_confidentiality_tags</span>
+                        .<span class="ident">contains</span>(<span class="ident">t</span>)
+                })
                 .<span class="ident">cloned</span>()
                 .<span class="ident">collect</span>(),
             <span class="comment">// Add all the integrity tags that the Node may endorse.</span>

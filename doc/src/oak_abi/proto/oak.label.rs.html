@@ -87,12 +87,12 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Eq</span>, <span class="ident">Hash</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Label</span> {
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">repeated</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">secrecy_tags</span>: ::<span class="ident">std</span>::<span class="ident">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Tag</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">confidentiality_tags</span>: ::<span class="ident">std</span>::<span class="ident">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Tag</span><span class="op">&gt;</span>,
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">repeated</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;2&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">integrity_tags</span>: ::<span class="ident">std</span>::<span class="ident">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Tag</span><span class="op">&gt;</span>,
 }
-<span class="doccomment">/// Tag represents a category of secrecy or integrity that is associated with data within Oak, and</span>
-<span class="doccomment">/// refers to a Node or family of Nodes which are able to declassify data with that tag.</span>
+<span class="doccomment">/// Tag represents a category of confidentiality or integrity that is associated with data within</span>
+<span class="doccomment">/// Oak, and refers to a Node or family of Nodes which are able to declassify data with that tag.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// For instance, a tag may refer to a user connected over gRPC, or to the functionality implemented</span>
 <span class="doccomment">/// by a WebAssembly Node, and this would require that data with those tags are declassified by the</span>
@@ -126,7 +126,7 @@
     <span class="doccomment">/// s such that h = HMAC-SHA256(s, &quot;oak-grpc-bearer-token-1&quot;).</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// We don&#39;t use the raw token t as the tag itself because labels are considered public by default,</span>
-    <span class="doccomment">/// so the secrecy of the token would be compromised immediately.</span>
+    <span class="doccomment">/// so the confidentiality of the token would be compromised immediately.</span>
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">bytes</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">authorization_bearer_token_hmac</span>: <span class="ident">std</span>::<span class="ident">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
 }
@@ -148,7 +148,7 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Eq</span>, <span class="ident">Hash</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TlsEndpointTag</span> {
     <span class="doccomment">/// The Subject Alternative Name (SAN) of a certificate that a remote endpoint must be able to</span>
-    <span class="doccomment">/// present in order to be allowed to receive data with this secrecy tag.</span>
+    <span class="doccomment">/// present in order to be allowed to receive data with this confidentiality tag.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// In general a certificate may have multiple SANs; an HTTP or gRPC client pseudo-node connected</span>
     <span class="doccomment">/// to a remote endpoint with multiple SANs is able to declassify data with a TlsEndpointTag</span>

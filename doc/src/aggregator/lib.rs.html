@@ -266,14 +266,14 @@
         );
 
         <span class="comment">// Create a gRPC client Node with a less restrictive label than the current Node.</span>
-        <span class="comment">// In particular, the secrecy component of the current Node label includes the &quot;aggregator&quot;</span>
-        <span class="comment">// WebAssembly hash, which is declassified as part of the gRPC client Node creation. This is</span>
-        <span class="comment">// only allowed if the current Node actually has the appropriate capability (i.e. the</span>
-        <span class="comment">// correct WebAssembly module hash) as specified by the label component being removed, as</span>
-        <span class="comment">// set by the client.</span>
-        <span class="comment">// TODO(#814): Uncomment and use correct secrecy labels.</span>
+        <span class="comment">// In particular, the confidentiality component of the current Node label includes the</span>
+        <span class="comment">// &quot;aggregator&quot; WebAssembly hash, which is declassified as part of the gRPC client</span>
+        <span class="comment">// Node creation. This is only allowed if the current Node actually has the</span>
+        <span class="comment">// appropriate capability (i.e. the correct WebAssembly module hash) as specified by</span>
+        <span class="comment">// the label component being removed, as set by the client.</span>
+        <span class="comment">// TODO(#814): Uncomment and use correct confidentiality labels.</span>
         <span class="comment">// let label = Label {</span>
-        <span class="comment">//     secrecy_tags: vec![Tag {</span>
+        <span class="comment">//     confidentiality_tags: vec![Tag {</span>
         <span class="comment">//         tag: Some(tag::Tag::TlsEndpointTag(TlsEndpointTag {</span>
         <span class="comment">//             certificate_subject_alternative_name: &quot;google.com&quot;.to_string(),</span>
         <span class="comment">//         })),</span>

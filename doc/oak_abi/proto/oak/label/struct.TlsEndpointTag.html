@@ -4,7 +4,7 @@
 <p>Applies to both the HTTP and gRPC client pseudo-nodes.</p>
 </div><h2 id='fields' class='fields small-section-header'>
                        Fields<a href='#fields' class='anchor'></a></h2><span id="structfield.certificate_subject_alternative_name" class="structfield small-section-header"><a href="#structfield.certificate_subject_alternative_name" class="anchor field"></a><code id="certificate_subject_alternative_name.v">certificate_subject_alternative_name: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a></code></span><div class='docblock'><p>The Subject Alternative Name (SAN) of a certificate that a remote endpoint must be able to
-present in order to be allowed to receive data with this secrecy tag.</p>
+present in order to be allowed to receive data with this confidentiality tag.</p>
 <p>In general a certificate may have multiple SANs; an HTTP or gRPC client pseudo-node connected
 to a remote endpoint with multiple SANs is able to declassify data with a TlsEndpointTag
 referring to any of these SANs.</p>
