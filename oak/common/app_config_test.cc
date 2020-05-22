@@ -52,47 +52,14 @@ class ApplicationConfigurationTest : public ::testing::Test {
   const std::string kTmpFilename = "oak/common/testdata/tmp.bin";
 };
 
-TEST_F(ApplicationConfigurationTest, Default) {
-  std::unique_ptr<ApplicationConfiguration> got = DefaultConfig("<bytes>");
-  std::unique_ptr<ApplicationConfiguration> want =
-      ConfigFrom("oak/common/testdata/barenode.textproto");
-  ASSERT_EQ(want->DebugString(), got->DebugString());
-  ASSERT_EQ(true, ValidApplicationConfig(*got));
-}
-
 TEST_F(ApplicationConfigurationTest, ReadWriteFile) {
+  auto want = ConfigFrom("oak/common/testdata/default.textproto");
+
   std::ifstream existing_file(kTmpFilename, std::ifstream::in);
   ASSERT_FALSE(existing_file.is_open());
-  std::unique_ptr<ApplicationConfiguration> want = DefaultConfig("<bytes>");
   WriteConfigToFile(want.get(), kTmpFilename);
+
   std::unique_ptr<ApplicationConfiguration> got = ReadConfigFromFile(kTmpFilename);
-  ASSERT_EQ(want->DebugString(), got->DebugString());
-  ASSERT_EQ(true, ValidApplicationConfig(*got));
-}
-
-TEST_F(ApplicationConfigurationTest, DefaultPlusLogging) {
-  std::unique_ptr<ApplicationConfiguration> got = DefaultConfig("<bytes>");
-  AddLoggingToConfig(got.get());
-  std::unique_ptr<ApplicationConfiguration> want =
-      ConfigFrom("oak/common/testdata/lognode.textproto");
-  ASSERT_EQ(want->DebugString(), got->DebugString());
-  ASSERT_EQ(true, ValidApplicationConfig(*got));
-}
-
-TEST_F(ApplicationConfigurationTest, DefaultPlusStorage) {
-  std::unique_ptr<ApplicationConfiguration> got = DefaultConfig("<bytes>");
-  AddStorageToConfig(got.get(), "localhost:8888");
-  std::unique_ptr<ApplicationConfiguration> want =
-      ConfigFrom("oak/common/testdata/storagenode.textproto");
-  ASSERT_EQ(want->DebugString(), got->DebugString());
-  ASSERT_EQ(true, ValidApplicationConfig(*got));
-}
-
-TEST_F(ApplicationConfigurationTest, DefaultPlusGrpcClient) {
-  std::unique_ptr<ApplicationConfiguration> got = DefaultConfig("<bytes>");
-  AddGrpcClientToConfig(got.get(), "localhost:9999");
-  std::unique_ptr<ApplicationConfiguration> want =
-      ConfigFrom("oak/common/testdata/grpcclient.textproto");
   ASSERT_EQ(want->DebugString(), got->DebugString());
   ASSERT_EQ(true, ValidApplicationConfig(*got));
 }

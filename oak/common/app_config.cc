@@ -28,32 +28,6 @@ using ::oak::application::NodeConfiguration;
 
 namespace oak {
 
-namespace {
-
-constexpr int16_t kDefaultGrpcPort = 8080;
-
-// Conventional names for the configuration of Nodes.
-constexpr char kAppConfigName[] = "app";
-constexpr char kAppEntrypointName[] = "oak_main";
-constexpr char kLogConfigName[] = "log";
-constexpr char kStorageConfigName[] = "storage";
-constexpr char kGrpcClientConfigName[] = "grpc-client";
-
-}  // namespace
-
-std::unique_ptr<ApplicationConfiguration> DefaultConfig(const std::string& module_bytes) {
-  auto config = absl::make_unique<ApplicationConfiguration>();
-
-  config->set_initial_node_config_name(kAppConfigName);
-  NodeConfiguration* node_config = config->add_node_configs();
-  node_config->set_name(kAppConfigName);
-  application::WebAssemblyConfiguration* code = node_config->mutable_wasm_config();
-  code->set_module_bytes(module_bytes);
-  config->set_initial_entrypoint_name(kAppEntrypointName);
-
-  return config;
-}
-
 std::unique_ptr<ApplicationConfiguration> ReadConfigFromFile(const std::string& filename) {
   auto config = absl::make_unique<ApplicationConfiguration>();
 
@@ -66,26 +40,6 @@ std::unique_ptr<ApplicationConfiguration> ReadConfigFromFile(const std::string& 
 void WriteConfigToFile(const ApplicationConfiguration* config, const std::string& filename) {
   std::string data = config->SerializeAsString();
   utils::write_file(data, filename);
-}
-
-void AddLoggingToConfig(ApplicationConfiguration* config) {
-  NodeConfiguration* node_config = config->add_node_configs();
-  node_config->set_name(kLogConfigName);
-  node_config->mutable_log_config();
-}
-
-void AddStorageToConfig(ApplicationConfiguration* config, const std::string& storage_address) {
-  NodeConfiguration* node_config = config->add_node_configs();
-  node_config->set_name(kStorageConfigName);
-  application::StorageProxyConfiguration* storage = node_config->mutable_storage_config();
-  storage->set_address(storage_address);
-}
-
-void AddGrpcClientToConfig(ApplicationConfiguration* config, const std::string& grpc_address) {
-  NodeConfiguration* node_config = config->add_node_configs();
-  node_config->set_name(kGrpcClientConfigName);
-  application::GrpcClientConfiguration* grpc_config = node_config->mutable_grpc_client_config();
-  grpc_config->set_address(grpc_address);
 }
 
 bool ValidApplicationConfig(const ApplicationConfiguration& config) {
