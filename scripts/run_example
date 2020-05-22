@@ -5,24 +5,21 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 source "${SCRIPTS_DIR}/common"
 
 language="rust"
-server="rust"
+server="base"
 buildargs=""
 serverargs=""
 while getopts "s:l:de:vh" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-h] [-s rust|base|logless|asan|tsan|none] [-l rust|cpp] [-d] [-v] -e EXAMPLE [-- CLIENT_ARGS]
+      echo -e "Usage: ${0} [-h] [-s base|logless|none] [-l rust|cpp] [-d] [-v] -e EXAMPLE [-- CLIENT_ARGS]
 
 Build and run the given example Oak Application and client.
 
 Options:
   -e    Example application name (required)
   -s    Server type used to run examples:
-          - rust: Rust version of the server (default)
-          - base: base version of the server
+          - base: base version of the server (default)
           - logless: base version of the server with debug logging compiled out
-          - asan: server with address sanitizer
-          - tsan: server with thread sanitizer
           - none: run an application client without a server
   -d    Build C++ code for example using debug mode
   -l    Example application variant:
@@ -36,7 +33,7 @@ Options after -- will be passed to the example client program."
       language="${OPTARG}";;
     s)
       case "${OPTARG}" in
-        base|logless|rust|asan|tsan|none)
+        base|logless|none)
           server="${OPTARG}";;
         *)
           echo "Invalid server type: ${OPTARG}"
@@ -60,12 +57,6 @@ if [[ -z "${EXAMPLE+z}" ]]; then
   exit 1
 fi
 
-if [[ "${server}" == "tsan" ]]; then
-  # Set flags for TSAN runs (https://github.com/google/sanitizers/wiki/ThreadSanitizerFlags):
-  #  - exit on error
-  #  - don't check atomics (false positive on absl::MutexLock, github.com/google/sanitizers/issues/953)
-  export TSAN_OPTIONS="halt_on_error=1 report_atomic_races=0"
-fi
 
 if [[ "${server}" != "none" ]]; then
   "${SCRIPTS_DIR}/build_example" ${buildargs} -l "${language}" -e "${EXAMPLE}"
@@ -84,7 +75,7 @@ fi
 if [[ "${EXAMPLE}" == 'abitest' ]]; then
   # TODO(#953): Add streaming support for gRPC and re-enable all of the tests.
   readonly ADDITIONAL_ARGS=("--test_exclude=(ServerStreamingMethodOK|ServerStreamingMethodErr|GrpcClientServerStreamingMethod|AbsentGrpcClient|Storage|AbsentStorage|RoughtimeClient|MisconfiguredRoughtimeClient)")
-  
+
   readonly TLS_ARGS=(
     "--ca_cert=${SCRIPTS_DIR}/../examples/certs/local/ca.pem"
     "--cert_chain=${SCRIPTS_DIR}/../examples/certs/local/local.pem"

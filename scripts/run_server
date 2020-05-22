@@ -5,11 +5,11 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 source "${SCRIPTS_DIR}/common"
 
 language="rust"
-server="rust"
+server="base"
 while getopts "s:a:l:e:vh" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-s rust|base|logless|arm|asan|tsan] [-l rust|cpp] (-a APPLICATION | -e EXAMPLE) [-v]
+      echo -e "Usage: ${0} [-s base|logless] [-l rust|cpp] (-a APPLICATION | -e EXAMPLE) [-v]
 
 Run a particular Oak Application in the Oak Runtime.
 Either the -a APPLICATION or the -e EXAMPLE option is required.
@@ -17,12 +17,8 @@ Either the -a APPLICATION or the -e EXAMPLE option is required.
   -a    Path to a serialized application configuration file
   -e    Example application name
   -s    Server type:
-          - rust: Rust version of the server (default)
           - base: base version of the server
           - logless: base version of the server with debug logging compiled out
-          - arm: server for ARM architecture
-          - asan: server with address sanitizer
-          - tsan: server with thread santizer
   -l    Example application variant (if -e specified):
           - rust (used by default)
           - cpp
@@ -33,7 +29,7 @@ Either the -a APPLICATION or the -e EXAMPLE option is required.
       language="${OPTARG}";;
     s)
       case "${OPTARG}" in
-        base|logless|rust|arm|asan|tsan)
+        base|logless)
           server="${OPTARG}";;
         *)
           echo "Invalid server type: ${OPTARG}"
@@ -78,17 +74,8 @@ fi
 
 # Launching the server requires a `--application=<dir>/config.bin` flag.
 # `exec` is necessary for the `run_example` script to be able to get a PID of a background server.
-if [[ "${server}" == "rust" ]]; then
-  exec cargo run --release --target=x86_64-unknown-linux-musl --package=oak_loader -- \
+exec cargo run --release --target=x86_64-unknown-linux-musl --package=oak_loader -- \
     --application="${APPLICATION}" \
     --grpc-tls-private-key="${SCRIPTS_DIR}/../examples/certs/local/local.key" \
     --grpc-tls-certificate="${SCRIPTS_DIR}/../examples/certs/local/local.pem" \
     --root-tls-certificate="${SCRIPTS_DIR}/../examples/certs/local/ca.pem"
-else
-  # We use a different symlink prefix for clang-based artifacts.
-  exec ./bazel-clang-bin/oak/server/loader/oak_runner \
-    --application="${APPLICATION}" \
-    --ca_cert="${SCRIPTS_DIR}/../examples/certs/local/ca.pem" \
-    --cert_chain="${SCRIPTS_DIR}/../examples/certs/local/local.pem" \
-    --private_key="${SCRIPTS_DIR}/../examples/certs/local/local.key"
-fi
