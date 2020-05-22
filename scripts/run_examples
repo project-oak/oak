@@ -34,16 +34,11 @@ while getopts "s:l:h" opt; do
   esac
 done
 
-# TODO(#1009): Re-enable C++ examples after supporting them with Rust Oak Loader.
-if [[ "${languages}" == "cpp" ]]; then
-  echo "C++ examples are currently not supported"
-  exit 1
-fi
-
 # Run all examples.
 for language in ${languages}; do
   # TODO(#594): Re-enable rustfmt when upstream rustc internal error is fixed.
-  examples="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/'"${language}"'$' | cut -d'/' -f2 | uniq | grep -v rustfmt)"
+  # TODO(#1009): Re-enable C++ tensorflow example after supporting them with Rust Oak Loader.
+  examples="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/'"${language}"'$' | cut -d'/' -f2 | uniq | grep -v rustfmt | grep -v tensorflow)"
   for example in ${examples}; do
     if [[ "${example}" == "chat" ]]; then
         "${SCRIPTS_DIR}/run_example" -s "${server}" -l "${language}" -e chat -- --test
