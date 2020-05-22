@@ -36,7 +36,7 @@
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_format.h"
 #include "client.h"
-#include "oak/common/logging.h"
+#include "glog/logging.h"
 #include "oak/common/nonce_generator.h"
 #include "oak/server/time/roughtime_util.h"
 #include "third_party/asylo/status_macros.h"
@@ -190,8 +190,8 @@ StatusOr<RoughtimeInterval> RoughtimeClient::GetIntervalFromServer(
                                   server.name.c_str(), timestamp_microseconds));
   }
 
-  OAK_LOG(INFO) << "Time from " << server.name << ": " << timestamp_microseconds << " +/- "
-                << radius_microseconds;
+  LOG(INFO) << "Time from " << server.name << ": " << timestamp_microseconds << " +/- "
+            << radius_microseconds;
   return RoughtimeInterval{(timestamp_microseconds - radius_microseconds),
                            (timestamp_microseconds + radius_microseconds)};
 }
@@ -210,9 +210,9 @@ RoughtimeClient::RoughtimeClient(const std::vector<RoughtimeServerSpec>& servers
                                    ? max_radius_microseconds
                                    : roughtime::kDefaultMaxRadiusMicroseconds) {
   if (static_cast<size_t>(min_overlapping_intervals_) > servers_.size()) {
-    OAK_LOG(ERROR) << "Misconfigured client: requires " << min_overlapping_intervals_
-                   << " overlapping intervals but only " << servers_.size()
-                   << " servers configured; all requests will fail!";
+    LOG(ERROR) << "Misconfigured client: requires " << min_overlapping_intervals_
+               << " overlapping intervals but only " << servers_.size()
+               << " servers configured; all requests will fail!";
   }
 }
 
@@ -223,8 +223,8 @@ StatusOr<::roughtime::rough_time_t> RoughtimeClient::GetRoughTime() {
     if (interval_or_status.ok()) {
       valid_intervals.push_back(interval_or_status.ValueOrDie());
     } else {
-      OAK_LOG(WARNING) << "Could not get status from " << server.name << ":"
-                       << interval_or_status.status();
+      LOG(WARNING) << "Could not get status from " << server.name << ":"
+                   << interval_or_status.status();
     }
   }
 

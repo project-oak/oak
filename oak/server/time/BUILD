@@ -40,10 +40,10 @@ cc_library(
     hdrs = ["roughtime_client.h"],
     deps = [
         ":roughtime_util",
-        "//oak/common:logging",
         "//oak/common:nonce_generator",
         "//third_party/asylo:status_macros",
         "//third_party/asylo:statusor",
+        "@com_github_google_glog//:glog",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
@@ -64,7 +64,7 @@ cc_test(
     tags = ["local"],
     deps = [
         ":roughtime_client",
-        "//oak/common:logging",
+        "@com_github_google_glog//:glog",
         "@gtest//:gtest_main",
     ],
 )
