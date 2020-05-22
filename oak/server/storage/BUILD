@@ -36,7 +36,7 @@ cc_binary(
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
         "@com_google_absl//absl/strings",
-        "//oak/common:logging",
+        "@com_github_google_glog//:glog",
     ],
 )
 
@@ -100,7 +100,6 @@ cc_library(
     ],
     deps = [
         ":storage_provider",
-        "//oak/common:logging",
         "//oak/proto:storage_cc_grpc",
         "@com_github_grpc_grpc//:grpc++",
     ],
@@ -117,7 +116,6 @@ cc_library(
 #    ],
 #    deps = [
 #        ":storage_provider",
-#        "//oak/common:logging",
 #        "@com_github_grpc_grpc//:grpc++",
 #        # TODO: Fix grpc::Status.
 #        #        "@com_google_googleapis//google/spanner/v1:spanner_cc_grpc",
@@ -130,7 +128,7 @@ cc_library(
     hdrs = ["memory_provider.h"],
     deps = [
         ":storage_provider",
-        "//oak/common:logging",
+        "@com_github_google_glog//:glog",
         "@com_google_absl//absl/strings",
     ],
 )
