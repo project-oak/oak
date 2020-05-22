@@ -21,16 +21,6 @@ package(
 )
 
 cc_library(
-    name = "handles",
-    srcs = ["handles.cc"],
-    hdrs = ["handles.h"],
-    visibility = ["//visibility:public"],
-    deps = [
-        "@com_google_absl//absl/base",
-    ],
-)
-
-cc_library(
     name = "hmac",
     srcs = ["hmac.cc"],
     hdrs = ["hmac.h"],
