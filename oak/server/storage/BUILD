@@ -41,45 +41,6 @@ cc_binary(
 )
 
 cc_library(
-    name = "storage_node",
-    srcs = ["storage_node.cc"],
-    hdrs = [
-        "storage_node.h",
-    ],
-    deps = [
-        ":storage_processor",
-        "//oak/common:handles",
-        "//oak/common:logging",
-        "//oak/proto:grpc_encap_cc_proto",
-        "//oak/proto:storage_service_cc_proto",
-        "//oak/server:invocation",
-        "//oak/server:oak_node",
-        "//third_party/asylo:cleansing_types",
-        "//third_party/asylo:statusor",
-        "@com_github_grpc_grpc//:grpc++",
-        "@com_google_absl//absl/memory",
-        "@com_google_absl//absl/status",
-    ],
-)
-
-cc_library(
-    name = "storage_processor",
-    srcs = ["storage_processor.cc"],
-    hdrs = ["storage_processor.h"],
-    deps = [
-        "//oak/common:logging",
-        "//oak/proto:storage_cc_grpc",
-        "//third_party/asylo:cleansing_types",
-        "//third_party/asylo:status_macros",
-        "//third_party/asylo:statusor",
-        "@boringssl//:crypto",
-        "@com_github_grpc_grpc//:grpc++",
-        "@com_google_absl//absl/memory",
-        "@com_google_absl//absl/status",
-    ],
-)
-
-cc_library(
     name = "storage_provider",
     hdrs = [
         "storage_provider.h",
