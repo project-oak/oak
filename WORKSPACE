@@ -276,10 +276,6 @@ rust_repository_set(
     version = "nightly",
 )
 
-load("//cargo:crates.bzl", "raze_fetch_remote_crates")
-
-raze_fetch_remote_crates()
-
 # Bazel rules for Android applications.
 http_archive(
     name = "rules_android",

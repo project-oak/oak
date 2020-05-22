@@ -86,8 +86,6 @@ The key prerequisites for the project are:
     `rustup target add wasm32-unknown-unknown`
   - Install additional tools (e.g. `rustfmt` and `clippy`) as indicated by the
     [`Dockerfile`](/Dockerfile) contents.
-  - Install [`cargo raze`](https://github.com/google/cargo-raze), which allows
-    the Bazel build system (below) to build Rust crates.
 - **Bazel**: The [Bazel build system](https://bazel.build) is used for building
   C++ code and managing its dependencies. These dependencies are listed in the
   top-level [`WORKSPACE`](/WORKSPACE) file; see the

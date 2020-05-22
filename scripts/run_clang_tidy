@@ -19,9 +19,8 @@ readonly CLANG_TIDY_FLAGS=(
 )
 
 # Generate compilation database.
-# Clang is required to successfully build targets created by `cargo raze`.
-# `hmac_test` cannon be built with Clang (#936).
-bazel build '--config=clang' "${bazel_build_flags[@]}" -- //oak/...:all -//oak/common:hmac_test
+# TODO(#936): re-enable `hmac_test` (which cannot be built with Clang).
+bazel build "${bazel_build_flags[@]}" -- //oak/...:all -//oak/common:hmac_test
 ./scripts/generate_compilation_database
 
 # Run clang-tidy.
