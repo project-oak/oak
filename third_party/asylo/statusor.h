@@ -24,7 +24,7 @@
 #include "absl/base/attributes.h"
 #include "absl/meta/type_traits.h"
 #include "absl/status/status.h"
-#include "oak/common/logging.h"
+#include "glog/logging.h"
 #include "third_party/asylo/cleanup.h"
 
 namespace oak {
@@ -141,7 +141,7 @@ class StatusOr {
   /// \param status The non-OK Status object to initalize to.
   StatusOr(const absl::Status &status) : variant_(status), has_value_(false) {
     if (status.ok()) {
-      OAK_LOG(FATAL) << "Cannot instantiate StatusOr with Status::OkStatus()";
+      LOG(FATAL) << "Cannot instantiate StatusOr with Status::OkStatus()";
     }
   }
 
@@ -303,8 +303,8 @@ class StatusOr {
   /// \return The stored `T` value.
   const T &ValueOrDie() const & {
     if (!ok()) {
-      OAK_LOG(FATAL) << "Object does not have a usable value, instead contains status: "
-                     << status();
+      LOG(FATAL) << "Object does not have a usable value, instead contains status: "
+                 << status();
     }
     return variant_.value_;
   }
@@ -317,8 +317,8 @@ class StatusOr {
   /// \return The stored `T` value.
   T &ValueOrDie() & {
     if (!ok()) {
-      OAK_LOG(FATAL) << "Object does not have a usable value, instead contains status: "
-                     << status();
+      LOG(FATAL) << "Object does not have a usable value, instead contains status: "
+                 << status();
     }
     return variant_.value_;
   }
@@ -333,8 +333,8 @@ class StatusOr {
   /// \return The stored `T` value.
   T ValueOrDie() && {
     if (!ok()) {
-      OAK_LOG(FATAL) << "Object does not have a usable value, instead contains status: "
-                     << status();
+      LOG(FATAL) << "Object does not have a usable value, instead contains status: "
+                 << status();
     }
 
     // Invalidate this StatusOr object before returning control to caller.
@@ -363,7 +363,7 @@ class StatusOr {
   void OverwriteValueWithStatus(U &&status) {
 #ifndef NDEBUG
     if (!ok()) {
-      OAK_LOG(FATAL) << "Object does not have a value to change from";
+      LOG(FATAL) << "Object does not have a value to change from";
     }
 #endif
     variant_.value_.~T();
