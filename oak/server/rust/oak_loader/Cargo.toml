@@ -21,9 +21,7 @@ rustls = "*"
 signal-hook = "*"
 simple_logger = "*"
 structopt = "*"
-# Using an old version that is supported by `cargo-raze`:
-# https://github.com/google/cargo-raze/issues/41#issuecomment-592274128
-tonic = { version = "=0.1.1", features = ["tls"] }
+tonic = { version = "*", features = ["tls"] }
 
 [dev-dependencies]
 maplit = "*"
