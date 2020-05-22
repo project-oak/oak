@@ -29,7 +29,6 @@ cc_library(
         ":label_metadata",
         "//oak/common:app_config",
         "//oak/common:hmac",
-        "//oak/common:logging",
         "//oak/common:nonce_generator",
         "@com_github_grpc_grpc//:grpc++",
     ],
