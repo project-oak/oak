@@ -15,8 +15,7 @@
 //
 
 fn main() {
-    // TODO(#850): get Prost code generation working in Bazel.
-    oak_utils::compile_protos_to(
+    oak_utils::compile_protos(
         &[
             "../../../../oak/proto/grpc_encap.proto",
             "../../../../oak/proto/label.proto",
@@ -26,6 +25,5 @@ fn main() {
             "../../../../third_party/google/rpc/status.proto",
         ],
         &["../../../.."],
-        "src/proto/",
     );
 }

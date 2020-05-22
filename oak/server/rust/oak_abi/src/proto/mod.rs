@@ -16,22 +16,22 @@
 
 pub mod google {
     pub mod rpc {
-        include!("google.rpc.rs");
+        include!(concat!(env!("OUT_DIR"), "/google.rpc.rs"));
     }
 }
 
 pub mod oak {
-    include!("oak_abi.rs");
+    include!(concat!(env!("OUT_DIR"), "/oak_abi.rs"));
 
     pub mod label {
-        include!("oak.label.rs");
+        include!(concat!(env!("OUT_DIR"), "/oak.label.rs"));
     }
 
     pub mod encap {
-        include!("oak.encap.rs");
+        include!(concat!(env!("OUT_DIR"), "/oak.encap.rs"));
     }
 
     pub mod log {
-        include!("oak.log.rs");
+        include!(concat!(env!("OUT_DIR"), "/oak.log.rs"));
     }
 }
