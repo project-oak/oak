@@ -52,21 +52,16 @@ steps:
     waitFor: ['build_server_no_debug']
     timeout: 60m
     entrypoint: 'bash'
-    args: ['./scripts/build_server', '-s', 'rust']
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: build_server_base
-    waitFor: ['bazel_init']
-    timeout: 60m
-    entrypoint: 'bash'
     args: ['./scripts/build_server', '-s', 'base']
 
+  # TODO: get Docker build of Rust runtime working
   # Package the Hello World application in a Docker image.
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: build_server_docker
-    waitFor: ['build_server']
-    timeout: 60m
-    entrypoint: 'bash'
-    args: ['./scripts/build_example', '-e', 'hello_world', '-i', 'rust']
+  #- name: 'gcr.io/oak-ci/oak:latest'
+  #  id: build_server_docker
+  #  waitFor: ['build_server']
+  #  timeout: 60m
+  #  entrypoint: 'bash'
+  #  args: ['./scripts/build_example', '-e', 'hello_world', '-i', 'base']
 
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_tests
@@ -87,20 +82,7 @@ steps:
     id: run_examples
     timeout: 60m
     entrypoint: 'bash'
-    args: ['./scripts/run_examples', '-s', 'rust']
-  # TODO(#942): Reenable `run_examples` with `asan` and `tsan`.
-  # - name: 'gcr.io/oak-ci/oak:latest'
-  #   id: run_examples_asan
-  #   waitFor: ['run_examples']
-  #   timeout: 60m
-  #   entrypoint: 'bash'
-  #   args: ['./scripts/run_examples', '-s', 'asan']
-  # - name: 'gcr.io/oak-ci/oak:latest'
-  #   id: run_examples_tsan
-  #   waitFor: ['run_examples_asan']
-  #   timeout: 60m
-  #   entrypoint: 'bash'
-  #   args: ['./scripts/run_examples', '-s', 'tsan']
+    args: ['./scripts/run_examples', '-s', 'base']
 
   # Run clang-tidy after the examples finish running, since they share the same `output_base`.
   - name: 'gcr.io/oak-ci/oak:latest'
