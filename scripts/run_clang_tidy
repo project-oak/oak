@@ -19,8 +19,7 @@ readonly CLANG_TIDY_FLAGS=(
 )
 
 # Generate compilation database.
-# TODO(#936): re-enable `hmac_test` (which cannot be built with Clang).
-bazel build "${bazel_build_flags[@]}" -- //oak/...:all -//oak/common:hmac_test
+bazel build "${bazel_build_flags[@]}" -- //oak/...:all
 ./scripts/generate_compilation_database
 
 # Run clang-tidy.

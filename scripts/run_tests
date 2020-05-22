@@ -19,9 +19,6 @@ cargo test --doc
 
 bazel_build_flags+=( '--keep_going' )
 
-bazel build "${bazel_build_flags[@]}" -- //oak/...:all -//oak/common:hmac_test
-# `hmac_test` cannon be built with Clang (#936).
-bazel build "${bazel_build_flags[@]}" -- //oak/common:hmac_test
+bazel build "${bazel_build_flags[@]}" -- //oak/...:all
 
-bazel test '--config=clang' "${bazel_build_flags[@]}" -- //oak/...:all -//oak/common:hmac_test
-bazel test "${bazel_build_flags[@]}" -- //oak/common:hmac_test
+bazel test "${bazel_build_flags[@]}" -- //oak/...:all
