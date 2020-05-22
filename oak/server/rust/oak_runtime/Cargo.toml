@@ -14,9 +14,6 @@ oak_debug = ["regex"]
 default = ["oak_debug"]
 
 [dependencies]
-# Note that if new dependencies are added here:
-#  - they need to be synced to //cargo/Cargo.toml
-#  - `./scripts/cargo_raze` needs re-running, and the results checked in
 byteorder = { version = "*", default-features = false }
 bytes = "*"
 futures = "*"
