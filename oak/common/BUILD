@@ -21,15 +21,6 @@ package(
 )
 
 cc_library(
-    name = "logging",
-    hdrs = ["logging.h"],
-    visibility = ["//visibility:public"],
-    deps = [
-        "@com_github_google_glog//:glog",
-    ],
-)
-
-cc_library(
     name = "handles",
     srcs = ["handles.cc"],
     hdrs = ["handles.h"],

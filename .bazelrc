@@ -1,6 +1,3 @@
-# Enable Oak debug features (which have the potential to leak information).
-build:oak-debug --copt=-DOAK_DEBUG
-
 # Toolchain for compiling C++ code to wasm32.
 build:wasm32 --crosstool_top=//toolchain:clang
 build:wasm32 --host_crosstool_top=@bazel_tools//tools/cpp:toolchain
@@ -39,17 +36,10 @@ build:clang-base --copt=-DGRPC_BAZEL_BUILD
 # Use a different symlink prefix for clang-based artifacts.
 build:clang-base --symlink_prefix=bazel-clang-
 
-build:clang --config=oak-debug
 build:clang --config=clang-base
 build:clang --crosstool_top=//toolchain:clang
 build:clang --host_crosstool_top=@bazel_tools//tools/cpp:toolchain
 build:clang --cpu=k8
-
-# The clang-logless config builds without OAK_DEBUG set.
-build:clang-logless --config=clang-base
-build:clang-logless --crosstool_top=//toolchain:clang
-build:clang-logless --host_crosstool_top=@bazel_tools//tools/cpp:toolchain
-build:clang-logless --cpu=k8
 
 # armv8 build
 build:armv8 --crosstool_top=//toolchain:clang
