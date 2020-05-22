@@ -56,6 +56,5 @@ node_configs {
     min_overlapping_intervals: 99
   }
 }
-grpc_port: 8080
 initial_node_config_name: "frontend-config"
 initial_entrypoint_name: "grpc_frontend_oak_main"

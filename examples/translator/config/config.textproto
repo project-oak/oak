@@ -14,6 +14,5 @@ node_configs {
   name: "log"
   log_config {}
 }
-grpc_port: 8080
 initial_node_config_name: "app"
 initial_entrypoint_name: "grpc_oak_main"

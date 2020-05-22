@@ -97,21 +97,6 @@ TEST_F(ApplicationConfigurationTest, DefaultPlusGrpcClient) {
   ASSERT_EQ(true, ValidApplicationConfig(*got));
 }
 
-TEST_F(ApplicationConfigurationTest, DefaultPlusGrpcPort) {
-  std::unique_ptr<ApplicationConfiguration> got = DefaultConfig("<bytes>");
-  SetGrpcPortInConfig(got.get(), 8888);
-  std::unique_ptr<ApplicationConfiguration> want =
-      ConfigFrom("oak/common/testdata/grpcport.textproto");
-  ASSERT_EQ(want->DebugString(), got->DebugString());
-  ASSERT_EQ(true, ValidApplicationConfig(*got));
-}
-
-TEST_F(ApplicationConfigurationTest, InvalidGrpcPort) {
-  std::unique_ptr<ApplicationConfiguration> config = DefaultConfig("<bytes>");
-  SetGrpcPortInConfig(config.get(), 53);  // <= 1023 not allowed
-  ASSERT_EQ(false, ValidApplicationConfig(*config));
-}
-
 TEST_F(ApplicationConfigurationTest, Valid) {
   auto config = ConfigFrom("oak/common/testdata/default.textproto");
   ASSERT_EQ(true, ValidApplicationConfig(*config));
