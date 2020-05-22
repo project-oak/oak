@@ -22,7 +22,6 @@
 #include "oak/client/label_metadata.h"
 #include "oak/common/hmac.h"
 #include "oak/common/label.h"
-#include "oak/common/logging.h"
 #include "oak/common/nonce_generator.h"
 #include "oak/common/utils.h"
 
