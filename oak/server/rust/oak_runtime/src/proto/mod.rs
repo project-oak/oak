@@ -16,6 +16,6 @@
 
 pub mod oak {
     pub mod application {
-        include!("oak.application.rs");
+        include!(concat!(env!("OUT_DIR"), "/oak.application.rs"));
     }
 }

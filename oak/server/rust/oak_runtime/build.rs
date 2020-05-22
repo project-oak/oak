@@ -15,10 +15,8 @@
 //
 
 fn main() {
-    // TODO(#850): get Prost code generation working in Bazel.
-    oak_utils::compile_protos_to(
+    oak_utils::compile_protos(
         &["../../../../oak/proto/application.proto"],
         &["../../../../oak/proto"],
-        "src/proto/",
     );
 }
