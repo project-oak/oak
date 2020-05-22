@@ -43,7 +43,6 @@ constexpr char kGrpcClientConfigName[] = "grpc-client";
 
 std::unique_ptr<ApplicationConfiguration> DefaultConfig(const std::string& module_bytes) {
   auto config = absl::make_unique<ApplicationConfiguration>();
-  config->set_grpc_port(kDefaultGrpcPort);
 
   config->set_initial_node_config_name(kAppConfigName);
   NodeConfiguration* node_config = config->add_node_configs();
@@ -89,17 +88,7 @@ void AddGrpcClientToConfig(ApplicationConfiguration* config, const std::string& 
   grpc_config->set_address(grpc_address);
 }
 
-void SetGrpcPortInConfig(ApplicationConfiguration* config, const int16_t grpc_port) {
-  config->set_grpc_port(grpc_port);
-}
-
 bool ValidApplicationConfig(const ApplicationConfiguration& config) {
-  // Check for valid port.
-  if (config.grpc_port() <= 1023) {
-    LOG(ERROR) << "Invalid gRPC port";
-    return false;
-  }
-
   // Check name uniqueness for NodeConfiguration.
   std::set<std::string> config_names;
   std::set<std::string> wasm_names;

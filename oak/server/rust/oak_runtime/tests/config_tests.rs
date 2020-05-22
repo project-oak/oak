@@ -45,7 +45,6 @@ fn test_app_config() {
             ],
             initial_node_config_name: "node".to_string(),
             initial_entrypoint_name: "main".to_string(),
-            grpc_port: 0
         },
         cfg
     );
@@ -84,7 +83,6 @@ fn test_app_config_multi() {
             ],
             initial_node_config_name: "node".to_string(),
             initial_entrypoint_name: "main".to_string(),
-            grpc_port: 0
         },
         cfg
     );
@@ -108,7 +106,6 @@ fn test_app_config_no_logger() {
             },],
             initial_node_config_name: "node".to_string(),
             initial_entrypoint_name: "main".to_string(),
-            grpc_port: 0
         },
         cfg
     );

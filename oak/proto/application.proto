@@ -36,8 +36,6 @@ message ApplicationConfiguration {
   // The name of an exported Web Assembly function in the initial Node to
   // be used as the Node's main entrypoint.
   string initial_entrypoint_name = 3;
-  // Port number used by the gRPC pseudo-node; must be >= 1024.
-  int32 grpc_port = 4;
 }
 
 // NodeConfiguration indicates the configuration of a created Node.

@@ -20,9 +20,6 @@ pub struct ApplicationConfiguration {
     /// be used as the Node's main entrypoint.
     #[prost(string, tag="3")]
     pub initial_entrypoint_name: std::string::String,
-    /// Port number used by the gRPC pseudo-node; must be >= 1024.
-    #[prost(int32, tag="4")]
-    pub grpc_port: i32,
 }
 /// NodeConfiguration indicates the configuration of a created Node.
 #[derive(Clone, PartialEq, ::prost::Message)]

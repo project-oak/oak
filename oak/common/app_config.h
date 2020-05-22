@@ -47,10 +47,6 @@ void AddStorageToConfig(application::ApplicationConfiguration* config,
 void AddGrpcClientToConfig(application::ApplicationConfiguration* config,
                            const std::string& grpc_address);
 
-// Modify application configuration to make the gRPC server use a specific,
-// non-default, port.
-void SetGrpcPortInConfig(application::ApplicationConfiguration* config, const int16_t grpc_port);
-
 // Checks whether the given ApplicationConfiguration is valid.
 bool ValidApplicationConfig(const application::ApplicationConfiguration& config);
 

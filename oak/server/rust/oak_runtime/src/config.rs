@@ -63,7 +63,6 @@ pub fn application_configuration<S: ::std::hash::BuildHasher>(
         node_configs: nodes,
         initial_node_config_name: initial_node.into(),
         initial_entrypoint_name: entrypoint.into(),
-        ..Default::default()
     }
 }
 
