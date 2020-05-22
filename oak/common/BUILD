@@ -120,7 +120,7 @@ cc_binary(
     srcs = ["app_config_serializer.cc"],
     visibility = ["//visibility:public"],
     deps = [
-        "//oak/common:app_config",
+        ":app_config",
         "//oak/common:utils",
         "@com_github_google_glog//:glog",
         "@com_google_absl//absl/flags:flag",

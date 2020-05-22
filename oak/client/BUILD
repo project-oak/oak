@@ -27,9 +27,9 @@ cc_library(
     deps = [
         ":authorization_bearer_token_metadata",
         ":label_metadata",
-        "//oak/common:app_config",
         "//oak/common:hmac",
         "//oak/common:nonce_generator",
+        "//oak/common:utils",
         "@com_github_grpc_grpc//:grpc++",
     ],
 )
