@@ -4,18 +4,15 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "${SCRIPTS_DIR}/common"
 
-server="rust"
+server="base"
 languages="rust"
 while getopts "s:l:h" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-s rust|base|logless|asan|tsan] [-l rust|cpp]
+      echo -e "Usage: ${0} [-s base|logless] [-l rust|cpp]
   -s    Server type used to run examples:
-          - rust: Rust version of the server (default)
-          - base: base version of the server
+          - base: base version of the server (default)
           - logless: base version of the server with debug logging compiled out
-          - asan: server with address sanitizer
-          - tsan: server with thread santizer
   -l    Run examples implemented in which language:
           - rust (default)
           - cpp
@@ -25,7 +22,7 @@ while getopts "s:l:h" opt; do
       languages="${OPTARG}";;
     s)
       case "${OPTARG}" in
-        base|logless|rust|asan|tsan)
+        base|logless)
           server="${OPTARG}";;
         *)
           echo "Invalid server type: ${OPTARG}"

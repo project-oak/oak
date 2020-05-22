@@ -11,7 +11,7 @@ docker_config=''
 while getopts "e:l:di:h" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-h] [-l rust|cpp] [-i rust|base|logless] [-d] -e EXAMPLE
+      echo -e "Usage: ${0} [-h] [-l rust|cpp] [-i base|logless] [-d] -e EXAMPLE
 
 Build the given example Oak Application and client.
 
@@ -23,7 +23,6 @@ Options:
   -d    Build C++ code for example using debug mode
   -i    This flag enables packaging the application into a Docker image,
         and specifies the version of the Oak server, used by the application:
-          - rust: Rust version of the server
           - base: base version of the server
           - logless: base version of the server with debug logging compiled out
   -h    Print Help (this message) and exit"
@@ -37,8 +36,6 @@ Options:
     i)
       server="${OPTARG}"
       case "${OPTARG}" in
-        rust)
-          docker_config='clang';;
         base)
           docker_config='clang';;
         logless)

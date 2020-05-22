@@ -45,7 +45,7 @@ jobs:
 
       # Build artifacts that are supposed to be reproducible.
       - name: Build Rust server
-        run: ./scripts/docker_run ./scripts/build_server -s rust
+        run: ./scripts/docker_run ./scripts/build_server -s base
 
       - name: Build examples
         run: ./scripts/docker_run ./scripts/build_examples
