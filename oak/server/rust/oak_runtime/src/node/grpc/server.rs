@@ -113,7 +113,7 @@ impl Node for GrpcServerNode {
         self: Box<Self>,
         runtime: RuntimeProxy,
         handle: oak_abi::Handle,
-        _notify_receiver: oneshot::Receiver<()>,
+        notify_receiver: oneshot::Receiver<()>,
     ) {
         // Receive a `channel_writer` handle used to pass handles for temporary channels.
         info!("{}: Waiting for a channel writer", self.node_name);
@@ -130,12 +130,10 @@ impl Node for GrpcServerNode {
         let server = tonic::transport::Server::builder()
             .tls_config(tonic::transport::ServerTlsConfig::new().identity(self.tls_identity))
             .add_service(handler)
-            // TODO(#1002): Fix gRPC server termination with [`oneshot::Receiver`].
-            // .serve_with_shutdown(self.address, async {
-            //     // Treat notification failure the same as a notification.
-            //     let _ = notify_receiver.await;
-            // });
-            .serve(self.address);
+            .serve_with_shutdown(self.address, async {
+                // Treat notification failure the same as a notification.
+                let _ = notify_receiver.await;
+            });
 
         // Create an Async runtime for executing futures.
         // https://docs.rs/tokio/
