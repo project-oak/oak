@@ -1231,6 +1231,7 @@ impl Runtime {
         let mut node_info = node_infos
             .get_mut(&node_id)
             .expect("node ID not in node_infos");
+        assert!(node_info.node_stopper.is_none());
         node_info.node_stopper = Some(node_stopper);
     }
 
@@ -1309,7 +1310,7 @@ impl Runtime {
 
         // Insert the now running instance to the list of running instances (by moving it), so that
         // `Node::stop` will be called on it eventually.
-        self.add_node_stopper(node_id, node_stopper);
+        self.add_node_stopper(new_node_id, node_stopper);
 
         Ok(())
     }

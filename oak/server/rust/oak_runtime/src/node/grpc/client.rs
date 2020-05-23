@@ -104,7 +104,7 @@ impl Node for GrpcClientNode {
         mut self: Box<Self>,
         runtime: RuntimeProxy,
         handle: Handle,
-        _notify_receiver: oneshot::Receiver<()>,
+        notify_receiver: oneshot::Receiver<()>,
     ) {
         // Create an Async runtime for executing futures.
         // https://docs.rs/tokio/
@@ -126,16 +126,11 @@ impl Node for GrpcClientNode {
             "{}: Starting gRPC client pseudo-Node thread",
             self.node_name
         );
-        let result = async_runtime.block_on(self.handle_loop(runtime, handle));
-        // TODO(#1002): Fix gRPC client termination with [`oneshot::Receiver`].
-        // async_runtime.block_on(futures::future::select(
-        //     Box::pin(self.handle_loop(runtime, handle)),
-        //     notify_receiver,
-        // ));
-        info!(
-            "{}: Exiting gRPC client pseudo-Node thread: {:?}",
-            self.node_name, result
-        );
+        async_runtime.block_on(futures::future::select(
+            Box::pin(self.handle_loop(runtime, handle)),
+            notify_receiver,
+        ));
+        info!("{}: Exiting gRPC client pseudo-Node thread", self.node_name);
     }
 }
 
