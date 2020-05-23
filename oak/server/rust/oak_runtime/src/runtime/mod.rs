@@ -758,8 +758,8 @@ impl Runtime {
         node_info.label.clone()
     }
 
-    /// Returns the least restrictive (i.e. least secret, most trusted) label that this Node may
-    /// downgrade to. This takes into account all the [downgrade privilege](NodeInfo::privilege)
+    /// Returns the least restrictive (i.e. least confidential, most trusted) label that this Node
+    /// may downgrade to. This takes into account all the [downgrade privilege](NodeInfo::privilege)
     /// that the node possesses.
     fn get_node_downgraded_label(&self, node_id: NodeId) -> Label {
         // Original (static) Node label.
