@@ -20,7 +20,7 @@ find . \
     \( -type f -name BUILD -or -name WORKSPACE -or -name '*.bzl' \) \
   \) -exec buildifier -lint=warn -mode=check {} +
 
-find . \
+readonly MISSING_LICENSES=$(find . \
   \(  \
     -not \( -path ./.git -prune \) -and \
     -not \( -path ./bazel-cache -prune \) -and \
@@ -29,7 +29,11 @@ find . \
     -not \( -path ./target -prune \) -and \
     -not \( -path ./third_party -prune \) \
     \( -type f -name BUILD \) \
-  \) -exec grep --files-without-match '^    licenses = \["notice"\],$' {} + && (echo 'missing license directive in BUILD file'; exit 1)
+  \) -exec grep --files-without-match '^    licenses = \["notice"\],$' {} +)
+if [[ -n "$MISSING_LICENSES" ]] ; then
+  echo "missing license directive in BUILD file(s): $MISSING_LICENSES"
+  exit 1
+fi
 
 # Check shell scripts for common mistakes.
 find scripts -type f -exec shellcheck {} +

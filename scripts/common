@@ -66,6 +66,23 @@ else
   )
 fi
 
+declare -a cargo_build_flags
+
+cargo_build_flags+=(
+  '--release'
+)
+
+if [[ "${OSTYPE}" == "darwin"*  ]]; then
+  bazel_build_flags+=( '--config=darwin' )
+else
+  # The -linux-musl target is the officially supported way of producing fully
+  # static binaries from a Rust program.  However, musl is explicitly built
+  # on the Linux syscalll layer, and so is not available on macOS.
+  cargo_build_flags+=(
+    '--target=x86_64-unknown-linux-musl'
+  )
+fi
+
 # kill_pid tries to kill the given pid(s), first softly then more aggressively.
 kill_pid() {
   local pids=( "$@" )
