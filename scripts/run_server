@@ -72,9 +72,11 @@ fi
 
 "${SCRIPTS_DIR}/build_server" -s "${server}"
 
+
+
 # Launching the server requires a `--application=<dir>/config.bin` flag.
 # `exec` is necessary for the `run_example` script to be able to get a PID of a background server.
-exec cargo run --release --target=x86_64-unknown-linux-musl --package=oak_loader -- \
+exec cargo run "${cargo_build_flags[@]}" --package=oak_loader -- \
     --application="${APPLICATION}" \
     --grpc-tls-private-key="${SCRIPTS_DIR}/../examples/certs/local/local.key" \
     --grpc-tls-certificate="${SCRIPTS_DIR}/../examples/certs/local/local.pem" \
