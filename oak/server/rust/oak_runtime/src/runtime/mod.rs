@@ -61,6 +61,8 @@ pub trait HtmlPath {
 }
 
 struct NodeStopper {
+    node_name: String,
+
     /// Handle used for joining the Node thread.
     join_handle: JoinHandle<()>,
 
@@ -74,14 +76,18 @@ struct NodeStopper {
 impl NodeStopper {
     /// Sends a notification to the Node and joins its thread.
     fn stop_node(self) -> thread::Result<()> {
+        let node_name = &self.node_name;
         self.notify_sender
             .send(())
             // Notification errors are discarded since not all of the Nodes save
             // and use the [`oneshot::Receiver`].
             .unwrap_or_else(|error| {
-                warn!("Couldn't send notification: {:?}", error);
+                warn!("Couldn't send notification to {}: {:?}", node_name, error);
             });
-        self.join_handle.join()
+        debug!("join thread for node {}...", self.node_name);
+        let result = self.join_handle.join();
+        debug!("join thread for node {}...done", self.node_name);
+        result
     }
 }
 
@@ -89,10 +95,9 @@ impl std::fmt::Debug for NodeStopper {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{{join_handle={:?}, notify_sender={:?}}}",
-            self.join_handle, self.notify_sender,
-        )?;
-        write!(f, "]}}")
+            "{{node_name='{}', join_handle={:?}, notify_sender={:?}}}",
+            self.node_name, self.join_handle, self.notify_sender,
+        )
     }
 }
 
@@ -705,11 +710,11 @@ impl Runtime {
         let node_stoppers = self.take_node_stoppers();
         for (node_id, node_stopper_opt) in node_stoppers {
             if let Some(node_stopper) = node_stopper_opt {
-                debug!("stopping node {:?} ...", node_id);
+                info!("stopping node {:?} ...", node_id);
                 if let Err(err) = node_stopper.stop_node() {
                     error!("could not stop node {:?}: {:?}", node_id, err);
                 }
-                debug!("stopping node {:?}...done", node_id);
+                info!("stopping node {:?}...done", node_id);
             }
         }
     }
@@ -1342,6 +1347,7 @@ impl Runtime {
         // Note: self has been moved into the thread running the closure.
 
         Ok(NodeStopper {
+            node_name: node_name.to_string(),
             join_handle: node_join_handle,
             notify_sender: node_notify_sender,
         })
