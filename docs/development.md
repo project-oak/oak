@@ -167,12 +167,6 @@ some time, but subsequent builds should be cached and so run much faster.
 ./scripts/build_server
 ```
 
-The Oak Server can also be built with support for the sanitizers provided by
-Clang, by adding options like
-[`-s asan`](https://clang.llvm.org/docs/AddressSanitizer.html) and
-[`-s tsan`](https://clang.llvm.org/docs/ThreadSanitizer.html) to the invocation
-of `scripts/build_server`.
-
 ### Run Runtime Server
 
 The following command builds and runs an Oak Server instance, running a specific
@@ -181,14 +175,6 @@ built into a serialized configuration, as [described above](#build-application).
 
 ```bash
 ./scripts/run_server -e hello_world
-```
-
-The `scripts/run_server` script also supports and passes through the build
-variant flags described in the previous section; for example, the following
-command builds and runs the Oak Runtime with TSAN enabled:
-
-```bash
-./scripts/run_server -s tsan -e hello_world
 ```
 
 In the end, you should end up with an Oak server running, end with log output

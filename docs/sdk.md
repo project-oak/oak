@@ -46,9 +46,9 @@ types for easier use.
   or
   [`WriteHandle`](https://project-oak.github.io/oak/doc/oak/struct.WriteHandle.html)
   wrapper `struct`s for handles whose directionality is known.
-- Read channel readiness is handled with `Vec<oak::ReadHandle>` types rather
-  than raw memory.
-- Channel read operations automatically re-size the outputs to accomodate the
+- Read channel readiness is handled with `Vec<oak::ReadHandle>` and
+  `Vec<oak::ChannelReadStatus>` types rather than raw memory.
+- Channel read operations automatically re-size the outputs to accommodate the
   contents of read messages.
 
 The `oak` crate also provides the
@@ -85,10 +85,9 @@ trait, to allow use of the
 
 The [`oak::grpc`](https://project-oak.github.io/oak/doc/oak/grpc/index.html)
 module holds functionality that is helpful for interacting with the outside
-world over gRPC, either via the implicit
-[gRPC server pseudo-Node](concepts.md#pseudo-nodes) that has a channel to the
-Application's initial Node, or via an explicitly created gRPC client
-pseudo-Node.
+world over gRPC, either via an explicitly created
+[gRPC server pseudo-Node](concepts.md#pseudo-nodes), or via an explicitly
+created gRPC client pseudo-Node.
 
 An Oak Node that acts as a gRPC server typically implements the
 [`oak::grpc::ServerNode`](https://project-oak.github.io/oak/doc/oak/grpc/trait.ServerNode.html)
