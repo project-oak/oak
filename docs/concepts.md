@@ -309,9 +309,7 @@ of **pseudo-Nodes**.
 These pseudo-Nodes present as normal Nodes to the 'normal' Nodes in an Oak
 Application:
 
-- Pseudo-Node instances are created with `node_create()` as for Wasm Nodes (with
-  the exception of the gRPC pseudo-Node, which is automatically created at
-  Application start-of-day).
+- Pseudo-Node instances are created with `node_create()` as for Wasm Nodes.
 - Nodes exchange messages with the pseudo-Nodes over Channels.
 
 However, the pseudo-Nodes are implemented as part of the Oak Runtime (executing
@@ -321,13 +319,10 @@ outside world.
 The available pseudo-Nodes are:
 
 - **gRPC server pseudo-Node**: Provides a 'front door' for external interaction
-  with an Oak Application, by implementing a gRPC service. The Oak Runtime
-  automatically creates a gRPC server pseudo-Node at Application start-of-day
-  (and so gRPC server pseudo-Nodes cannot be created with `node_create()`).
-  External method invocations of the Application's gRPC service are delivered to
-  a channel that connects from the pseudo-Node to the initial Node of the
-  Application, as a message with no data bytes but with two attached handles (in
-  the following order):
+  with an Oak Application, by implementing a gRPC service. External method
+  invocations of the Application's gRPC service are delivered to a channel that
+  connects from the pseudo-Node to a Node of the Application, as a message with
+  no data bytes but with two attached handles (in the following order):
   - A handle for the read half of a channel holding the inbound request, ready
     for the Node to read.
   - A handle for the write half of a channel that the Node should write the
@@ -364,27 +359,28 @@ at runtime (with `node_create()`).
 
 An **Oak Application** is a set of Oak Nodes running within the same enclave,
 and connected by unidirectional channels. The initial connectivity graph
-consists of:
-
-- A gRPC pseudo-Node.
-- An initial Application Node.
-- A single channel from the gRPC pseudo-Node to the initial Application Node.
+consists of a single Application Node with no associated channel.
 
 Once the Application is running, new Nodes can be created (with
 `node_create()`), new channels can be created (with `channel_create()`) and the
 handles to either half of the channel may be passed between Nodes (over
 channels).
 
+Typically, the first Application Node creates a
+[gRPC server pseudo-Node](#pseudo-nodes) and sets up a channel from the
+pseudo-Node to the Application, on which [gRPC method invocations](#invocations)
+are delivered.
+
 The allowed contents of the Nodes, and the initial Node to run, are specified by
 an [Application Configuration](/oak/proto/application.proto).
 
-Once a new Oak Application is initialized and its endpoint available, clients
-may connect to it using individually end-to-end encrypted, authenticated and
-attested channels. The remote attestation process proves to the client that the
-remote enclave is indeed running a genuine Oak Runtime and will therefore obey
-the policies set on the Oak Node; the Oak Runtime itself may then optionally
-prove additional details about the Oak Module and its properties, which may
-require reasoning about its internal structure.
+Once a new Oak Application is initialized and its gRPC endpoint available,
+clients may connect to it using individually end-to-end encrypted, authenticated
+and attested channels. The [remote attestation](#remote-attestation) process
+proves to the client that the remote enclave is indeed running a genuine Oak
+Runtime and will therefore obey the policies set on the Oak Node; the Oak
+Runtime itself may then optionally prove additional details about the Oak Module
+and its properties, which may require reasoning about its internal structure.
 
 ## Remote Attestation
 

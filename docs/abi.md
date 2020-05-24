@@ -74,10 +74,10 @@ outgoing messages over the write halves of channels. The entrypoint function is
 generally expected to run forever, but may return if the Node choses to
 terminate (whether expectedly or unexpectedly).
 
-Each Oak Application starts with a single initial Oak Node; this Node receives
-as its initial handle the read half of a channel that receives notifications of
-gRPC method invocations from an implicit
-[gRPC server pseudo-Node](concepts.md#pseudo-nodes).
+Each Oak Application starts with a single initial Oak Node. This Node receives
+an invalid handle as its initial handle, and will typically create a
+[gRPC server pseudo-Node](concepts.md#pseudo-nodes) to allow communication from
+the outside world to happen.
 
 ## Host Functions
 
