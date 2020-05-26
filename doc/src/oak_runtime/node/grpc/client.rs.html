@@ -225,6 +225,20 @@
 <span id="225">225</span>
 <span id="226">226</span>
 <span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
+<span id="232">232</span>
+<span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
+<span id="236">236</span>
+<span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -246,13 +260,16 @@
     <span class="ident">io</span>::<span class="ident">Receiver</span>,
     <span class="ident">node</span>::{
         <span class="ident">grpc</span>::{<span class="ident">codec</span>::<span class="ident">VecCodec</span>, <span class="ident">from_tonic_status</span>, <span class="ident">invocation</span>::<span class="ident">Invocation</span>},
-        <span class="ident">Node</span>,
+        <span class="ident">ConfigurationError</span>, <span class="ident">Node</span>,
     },
     <span class="ident">runtime</span>::<span class="ident">RuntimeProxy</span>,
 };
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">error</span>, <span class="ident">info</span>};
 <span class="kw">use</span> <span class="ident">oak_abi</span>::{
-    <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">encap</span>::{<span class="ident">GrpcRequest</span>, <span class="ident">GrpcResponse</span>},
+    <span class="ident">proto</span>::<span class="ident">oak</span>::{
+        <span class="ident">application</span>::<span class="ident">GrpcClientConfiguration</span>,
+        <span class="ident">encap</span>::{<span class="ident">GrpcRequest</span>, <span class="ident">GrpcResponse</span>},
+    },
     <span class="ident">Handle</span>, <span class="ident">OakStatus</span>,
 };
 <span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">sync</span>::<span class="ident">oneshot</span>;
@@ -266,19 +283,30 @@
     <span class="ident">handler</span>: <span class="ident">GrpcRequestHandler</span>,
 }
 
+<span class="doccomment">/// Checks if URI contains the &quot;Host&quot; element.</span>
+<span class="kw">fn</span> <span class="ident">check_uri</span>(<span class="ident">uri</span>: <span class="kw-2">&amp;</span><span class="ident">Uri</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">ConfigurationError</span><span class="op">&gt;</span> {
+    <span class="ident">uri</span>.<span class="ident">authority</span>()
+        .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">authority</span><span class="op">|</span> <span class="op">!</span><span class="ident">authority</span>.<span class="ident">host</span>().<span class="ident">is_empty</span>())
+        .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> ())
+        .<span class="ident">ok_or</span>(<span class="ident">ConfigurationError</span>::<span class="ident">NoHostElement</span>)
+}
+
 <span class="kw">impl</span> <span class="ident">GrpcClientNode</span> {
     <span class="doccomment">/// Creates a new [`GrpcClientNode`] instance, but does not start it.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Arguments:</span>
-    <span class="doccomment">/// * `node_name` - Pseudo-Node name.</span>
-    <span class="doccomment">/// * `uri` - The URI component of a gRPC server endpoint. Must contain the &quot;Host&quot; element.</span>
-    <span class="doccomment">/// * `root_tls_certificate` - Loaded PEM encoded X.509 TLS root certificate file used to</span>
-    <span class="doccomment">///   authenticate an external gRPC service.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">node_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">uri</span>: <span class="ident">Uri</span>, <span class="ident">root_tls_certificate</span>: <span class="ident">Certificate</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
+        <span class="ident">node_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
+        <span class="ident">config</span>: <span class="ident">GrpcClientConfiguration</span>,
+        <span class="ident">root_tls_certificate</span>: <span class="ident">Certificate</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">ConfigurationError</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">uri</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">uri</span>.<span class="ident">parse</span>().<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
+            <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Error parsing URI {}: {:?}&quot;</span>, <span class="ident">config</span>.<span class="ident">uri</span>, <span class="ident">error</span>);
+            <span class="ident">ConfigurationError</span>::<span class="ident">IncorrectURI</span>
+        })<span class="question-mark">?</span>;
+        <span class="ident">check_uri</span>(<span class="kw-2">&amp;</span><span class="ident">uri</span>)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
             <span class="ident">node_name</span>: <span class="ident">node_name</span>.<span class="ident">to_string</span>(),
             <span class="ident">handler</span>: <span class="ident">GrpcRequestHandler</span>::<span class="ident">new</span>(<span class="ident">uri</span>, <span class="ident">root_tls_certificate</span>),
-        }
+        })
     }
 
     <span class="doccomment">/// Main loop that handles gRPC invocations from the `handle`, sends gRPC requests to an</span>

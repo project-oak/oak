@@ -148,7 +148,6 @@
 <span id="148">148</span>
 <span id="149">149</span>
 <span id="150">150</span>
-<span id="151">151</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -166,7 +165,7 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
-<span class="kw">use</span> <span class="ident">abitest_common</span>::{<span class="ident">InternalMessage</span>, <span class="ident">LOG_CONFIG_NAME</span>};
+<span class="kw">use</span> <span class="ident">abitest_common</span>::<span class="ident">InternalMessage</span>;
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">error</span>, <span class="ident">info</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">HashSet</span>;
 
@@ -194,8 +193,7 @@
 }
 
 <span class="kw">fn</span> <span class="ident">inner_main</span>(<span class="ident">in_handle</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">oak</span>::<span class="ident">OakStatus</span><span class="op">&gt;</span> {
-    <span class="ident">oak</span>::<span class="ident">logger</span>::<span class="ident">init</span>(<span class="ident">log</span>::<span class="ident">Level</span>::<span class="ident">Debug</span>, <span class="ident">LOG_CONFIG_NAME</span>)
-        .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t initialize logging node!&quot;</span>);
+    <span class="ident">oak</span>::<span class="ident">logger</span>::<span class="ident">init</span>(<span class="ident">log</span>::<span class="ident">Level</span>::<span class="ident">Debug</span>).<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t initialize logging node!&quot;</span>);
     <span class="kw">let</span> <span class="ident">in_channel</span> <span class="op">=</span> <span class="ident">oak</span>::<span class="ident">ReadHandle</span> {
         <span class="ident">handle</span>: <span class="ident">oak</span>::<span class="ident">Handle</span>::<span class="ident">from_raw</span>(<span class="ident">in_handle</span>),
     };

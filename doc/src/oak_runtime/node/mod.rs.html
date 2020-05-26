@@ -132,91 +132,6 @@
 <span id="132">132</span>
 <span id="133">133</span>
 <span id="134">134</span>
-<span id="135">135</span>
-<span id="136">136</span>
-<span id="137">137</span>
-<span id="138">138</span>
-<span id="139">139</span>
-<span id="140">140</span>
-<span id="141">141</span>
-<span id="142">142</span>
-<span id="143">143</span>
-<span id="144">144</span>
-<span id="145">145</span>
-<span id="146">146</span>
-<span id="147">147</span>
-<span id="148">148</span>
-<span id="149">149</span>
-<span id="150">150</span>
-<span id="151">151</span>
-<span id="152">152</span>
-<span id="153">153</span>
-<span id="154">154</span>
-<span id="155">155</span>
-<span id="156">156</span>
-<span id="157">157</span>
-<span id="158">158</span>
-<span id="159">159</span>
-<span id="160">160</span>
-<span id="161">161</span>
-<span id="162">162</span>
-<span id="163">163</span>
-<span id="164">164</span>
-<span id="165">165</span>
-<span id="166">166</span>
-<span id="167">167</span>
-<span id="168">168</span>
-<span id="169">169</span>
-<span id="170">170</span>
-<span id="171">171</span>
-<span id="172">172</span>
-<span id="173">173</span>
-<span id="174">174</span>
-<span id="175">175</span>
-<span id="176">176</span>
-<span id="177">177</span>
-<span id="178">178</span>
-<span id="179">179</span>
-<span id="180">180</span>
-<span id="181">181</span>
-<span id="182">182</span>
-<span id="183">183</span>
-<span id="184">184</span>
-<span id="185">185</span>
-<span id="186">186</span>
-<span id="187">187</span>
-<span id="188">188</span>
-<span id="189">189</span>
-<span id="190">190</span>
-<span id="191">191</span>
-<span id="192">192</span>
-<span id="193">193</span>
-<span id="194">194</span>
-<span id="195">195</span>
-<span id="196">196</span>
-<span id="197">197</span>
-<span id="198">198</span>
-<span id="199">199</span>
-<span id="200">200</span>
-<span id="201">201</span>
-<span id="202">202</span>
-<span id="203">203</span>
-<span id="204">204</span>
-<span id="205">205</span>
-<span id="206">206</span>
-<span id="207">207</span>
-<span id="208">208</span>
-<span id="209">209</span>
-<span id="210">210</span>
-<span id="211">211</span>
-<span id="212">212</span>
-<span id="213">213</span>
-<span id="214">214</span>
-<span id="215">215</span>
-<span id="216">216</span>
-<span id="217">217</span>
-<span id="218">218</span>
-<span id="219">219</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -235,14 +150,11 @@
 <span class="comment">//</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">runtime</span>::<span class="ident">RuntimeProxy</span>, <span class="ident">GrpcConfiguration</span>};
-<span class="kw">use</span> <span class="ident">log</span>::<span class="ident">debug</span>;
-<span class="kw">use</span> <span class="ident">std</span>::{
-    <span class="ident">net</span>::{<span class="ident">AddrParseError</span>, <span class="ident">SocketAddr</span>},
-    <span class="ident">string</span>::<span class="ident">String</span>,
-    <span class="ident">sync</span>::<span class="ident">Arc</span>,
+<span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::{
+    <span class="ident">node_configuration</span>::<span class="ident">ConfigType</span>, <span class="ident">ApplicationConfiguration</span>, <span class="ident">LogConfiguration</span>, <span class="ident">NodeConfiguration</span>,
 };
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">net</span>::<span class="ident">AddrParseError</span>;
 <span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">sync</span>::<span class="ident">oneshot</span>;
-<span class="kw">use</span> <span class="ident">tonic</span>::<span class="ident">transport</span>::<span class="ident">Uri</span>;
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">external</span>;
 <span class="kw">mod</span> <span class="ident">grpc</span>;
@@ -252,8 +164,8 @@
 <span class="kw">mod</span> <span class="ident">wasm</span>;
 
 <span class="doccomment">/// Trait encapsulating execution of a Node or pseudo-Node.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Node</span> {
-    <span class="doccomment">/// Execute the Node, using the provided `Runtime` reference and initial handle. The method</span>
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Node</span>: <span class="ident">Send</span> {
+    <span class="doccomment">/// Execute the Node, using the provided `Runtime` reference and initial handle.  The method</span>
     <span class="doccomment">/// should continue execution until the Node terminates.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// `notify_receiver` receives a notification from the Runtime upon termination. This</span>
@@ -266,52 +178,17 @@
     );
 }
 
-<span class="doccomment">/// A [`Configuration`] corresponds to a [`NodeConfiguration`] protobuf message, with parsed</span>
-<span class="doccomment">/// and validated configuration information.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// [`NodeConfiguration`]: crate::proto::oak::application::NodeConfiguration</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Configuration</span> {
-    <span class="ident">LogNode</span>,
-
-    <span class="doccomment">/// The configuration for a gRPC server pseudo-Node that contains an `address` to listen on and</span>
-    <span class="doccomment">/// a TLS identity that consists of a private RSA key and an X.509 TLS certificate.</span>
-    <span class="ident">GrpcServerNode</span> {
-        <span class="ident">address</span>: <span class="ident">SocketAddr</span>,
-    },
-
-    <span class="doccomment">/// The configuration for a gRPC server pseudo-Node that contains a URI and an X.509 root TLS</span>
-    <span class="doccomment">/// certificate.</span>
-    <span class="ident">GrpcClientNode</span> {
-        <span class="ident">uri</span>: <span class="ident">Uri</span>,
-        <span class="ident">address</span>: <span class="ident">String</span>,
-    },
-
-    <span class="doccomment">/// The configuration for a Wasm Node.</span>
-    <span class="comment">// It would be better to store a list of exported methods and copyable Wasm interpreter</span>
-    <span class="comment">// instance, but wasmi doesn&#39;t allow this. We make do with having a copyable</span>
-    <span class="comment">// `Arc&lt;wasmi::Module&gt;` that we pass to new Nodes, and clone to to spawn new</span>
-    <span class="comment">// `wasmi::ModuleInstances`.</span>
-    <span class="ident">WasmNode</span> {
-        <span class="ident">module</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">wasmi</span>::<span class="ident">Module</span><span class="op">&gt;</span>,
-    },
-
-    <span class="doccomment">/// The configuration for a storage Node.</span>
-    <span class="ident">StorageNode</span>,
-
-    <span class="doccomment">/// The configuration for a Roughtime client Node.</span>
-    <span class="ident">RoughtimeClientNode</span>,
-
-    <span class="doccomment">/// The configuration for an externally provided pseudo-Node.</span>
-    <span class="ident">External</span>,
-}
-
-<span class="doccomment">/// An enumeration for errors occuring when building [`Configuration`] from protobuf types.</span>
+<span class="doccomment">/// A enumeration for errors occuring when creating a new [`Node`] instance.</span>
+<span class="comment">// TODO(#1027): Improve or delete this enum.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ConfigurationError</span> {
     <span class="ident">AddressParsingError</span>(<span class="ident">AddrParseError</span>),
     <span class="ident">IncorrectPort</span>,
+    <span class="ident">IncorrectURI</span>,
     <span class="ident">NoHostElement</span>,
     <span class="ident">CertificateParsingError</span>,
+    <span class="ident">IncorrectWebAssemblyModuleName</span>,
+    <span class="ident">InvalidNodeConfiguration</span>,
     <span class="ident">WasmiModuleInializationError</span>(<span class="ident">wasmi</span>::<span class="ident">Error</span>),
 }
 
@@ -328,10 +205,15 @@
                 <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Failed to parse an address: {}&quot;</span>, <span class="ident">e</span>)
             }
             <span class="ident">ConfigurationError</span>::<span class="ident">IncorrectPort</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Incorrect port (must be &gt; 1023)&quot;</span>),
+            <span class="ident">ConfigurationError</span>::<span class="ident">IncorrectURI</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Incorrect URI&quot;</span>),
             <span class="ident">ConfigurationError</span>::<span class="ident">NoHostElement</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;URI doesn&#39;t contain the Host element&quot;</span>),
             <span class="ident">ConfigurationError</span>::<span class="ident">CertificateParsingError</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Error parsing PEM encoded TLS certificate&quot;</span>)
             }
+            <span class="ident">ConfigurationError</span>::<span class="ident">IncorrectWebAssemblyModuleName</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Incorrect WebAssembly module name&quot;</span>)
+            }
+            <span class="ident">ConfigurationError</span>::<span class="ident">InvalidNodeConfiguration</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Invalid NodeConfiguration&quot;</span>),
             <span class="ident">ConfigurationError</span>::<span class="ident">WasmiModuleInializationError</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Failed to initialize wasmi::Module: {}&quot;</span>, <span class="ident">e</span>)
             }
@@ -339,102 +221,50 @@
     }
 }
 
-<span class="doccomment">/// Loads a Wasm module into a Node configuration, returning an error if `wasmi` failed to load the</span>
-<span class="doccomment">/// module.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">load_wasm</span>(<span class="ident">wasm_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Configuration</span>, <span class="ident">ConfigurationError</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">module</span> <span class="op">=</span> <span class="ident">wasmi</span>::<span class="ident">Module</span>::<span class="ident">from_buffer</span>(<span class="ident">wasm_bytes</span>)
-        .<span class="ident">map_err</span>(<span class="ident">ConfigurationError</span>::<span class="ident">WasmiModuleInializationError</span>)<span class="question-mark">?</span>;
-    <span class="prelude-val">Ok</span>(<span class="ident">Configuration</span>::<span class="ident">WasmNode</span> {
-        <span class="ident">module</span>: <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">module</span>),
-    })
-}
-
-<span class="doccomment">/// Checks if port is greater than 1023.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">check_port</span>(<span class="ident">address</span>: <span class="kw-2">&amp;</span><span class="ident">SocketAddr</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">ConfigurationError</span><span class="op">&gt;</span> {
-    <span class="kw">if</span> <span class="ident">address</span>.<span class="ident">port</span>() <span class="op">&gt;</span> <span class="number">1023</span> {
-        <span class="prelude-val">Ok</span>(())
-    } <span class="kw">else</span> {
-        <span class="prelude-val">Err</span>(<span class="ident">ConfigurationError</span>::<span class="ident">IncorrectPort</span>)
-    }
-}
-
-<span class="doccomment">/// Checks if URI contains the &quot;Host&quot; element.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">check_uri</span>(<span class="ident">uri</span>: <span class="kw-2">&amp;</span><span class="ident">Uri</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">ConfigurationError</span><span class="op">&gt;</span> {
-    <span class="ident">uri</span>.<span class="ident">authority</span>()
-        .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">authority</span><span class="op">|</span> <span class="op">!</span><span class="ident">authority</span>.<span class="ident">host</span>().<span class="ident">is_empty</span>())
-        .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> ())
-        .<span class="ident">ok_or</span>(<span class="ident">ConfigurationError</span>::<span class="ident">NoHostElement</span>)
-}
-
-<span class="kw">impl</span> <span class="ident">Configuration</span> {
-    <span class="doccomment">/// Creates a new Node instance corresponding to the [`Configuration`].</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// On success returns a boxed [`Node`] that can be run with [`Node::run`].</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_node</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">node_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="comment">// Used for pretty debugging</span>
-        <span class="ident">config_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-        <span class="ident">entrypoint</span>: <span class="ident">String</span>,
-        <span class="ident">grpc_configuration</span>: <span class="kw-2">&amp;</span><span class="ident">GrpcConfiguration</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Node</span> <span class="op">+</span> <span class="ident">Send</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="macro">debug</span><span class="macro">!</span>(
-            <span class="string">&quot;create_node(&#39;{}&#39;: &#39;{}&#39;.&#39;{}&#39;)&quot;</span>,
-            <span class="ident">node_name</span>, <span class="ident">config_name</span>, <span class="ident">entrypoint</span>
-        );
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">Configuration</span>::<span class="ident">LogNode</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">logger</span>::<span class="ident">LogNode</span>::<span class="ident">new</span>(<span class="ident">node_name</span>))),
-            <span class="ident">Configuration</span>::<span class="ident">GrpcServerNode</span> { <span class="ident">address</span> } <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="prelude-val">Some</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">grpc</span>::<span class="ident">server</span>::<span class="ident">GrpcServerNode</span>::<span class="ident">new</span>(
-                    <span class="ident">node_name</span>,
-                    <span class="kw-2">*</span><span class="ident">address</span>,
-                    <span class="ident">grpc_configuration</span>
-                        .<span class="ident">grpc_server_tls_identity</span>
-                        .<span class="ident">as_ref</span>()
-                        .<span class="ident">expect</span>(<span class="string">&quot;no gRPC server TLS identity provided&quot;</span>)
-                        .<span class="ident">clone</span>(),
-                )))
-            }
-            <span class="ident">Configuration</span>::<span class="ident">GrpcClientNode</span> { <span class="ident">uri</span>, <span class="ident">address</span>: <span class="kw">_</span> } <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="prelude-val">Some</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">grpc</span>::<span class="ident">client</span>::<span class="ident">GrpcClientNode</span>::<span class="ident">new</span>(
-                    <span class="ident">node_name</span>,
-                    <span class="ident">uri</span>.<span class="ident">clone</span>(),
-                    <span class="ident">grpc_configuration</span>
-                        .<span class="ident">grpc_client_root_tls_certificate</span>
-                        .<span class="ident">as_ref</span>()
-                        .<span class="ident">expect</span>(<span class="string">&quot;no gRPC client root TLS certificate provided&quot;</span>)
-                        .<span class="ident">clone</span>(),
-                )))
-            }
-            <span class="ident">Configuration</span>::<span class="ident">WasmNode</span> { <span class="ident">module</span> } <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">match</span> <span class="ident">wasm</span>::<span class="ident">WasmNode</span>::<span class="ident">new</span>(<span class="ident">node_name</span>, <span class="ident">module</span>.<span class="ident">clone</span>(), <span class="ident">entrypoint</span>) {
-                    <span class="prelude-val">Some</span>(<span class="ident">node</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">node</span>)),
-                    <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
-                }
-            }
-
-            <span class="ident">Configuration</span>::<span class="ident">StorageNode</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">storage</span>::<span class="ident">StorageNode</span>::<span class="ident">new</span>(<span class="ident">node_name</span>))),
-            <span class="ident">Configuration</span>::<span class="ident">RoughtimeClientNode</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="prelude-val">Some</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">roughtime</span>::<span class="ident">RoughtimeClientNode</span>::<span class="ident">new</span>(<span class="ident">node_name</span>)))
-            }
-
-            <span class="ident">Configuration</span>::<span class="ident">External</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="prelude-val">Some</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">external</span>::<span class="ident">PseudoNode</span>::<span class="ident">new</span>(<span class="ident">node_name</span>, <span class="ident">config_name</span>)))
-            }
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_node</span>(
+    <span class="ident">application_configuration</span>: <span class="kw-2">&amp;</span><span class="ident">ApplicationConfiguration</span>,
+    <span class="ident">node_configuration</span>: <span class="kw-2">&amp;</span><span class="ident">NodeConfiguration</span>,
+    <span class="ident">grpc_configuration</span>: <span class="kw-2">&amp;</span><span class="ident">GrpcConfiguration</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Node</span><span class="op">&gt;</span>, <span class="ident">ConfigurationError</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">node_name</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">node_configuration</span>.<span class="ident">name</span>;
+    <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">node_configuration</span>.<span class="ident">config_type</span> {
+        <span class="prelude-val">Some</span>(<span class="ident">ConfigType</span>::<span class="ident">LogConfig</span>(<span class="ident">LogConfiguration</span> {})) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="prelude-val">Ok</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">logger</span>::<span class="ident">LogNode</span>::<span class="ident">new</span>(<span class="ident">node_name</span>)))
         }
-    }
-
-    <span class="doccomment">/// Generate a description of a Node or pseudo-Node that is started with the given entrypoint.</span>
-    <span class="doccomment">/// (In practice, only Wasm nodes pay attention to the entrypoint).</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">node_subname</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">entrypoint</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">Configuration</span>::<span class="ident">LogNode</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;LogNode&quot;</span>.<span class="ident">to_string</span>(),
-            <span class="ident">Configuration</span>::<span class="ident">GrpcServerNode</span> { .. } <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;GrpcServerNode&quot;</span>.<span class="ident">to_string</span>(),
-            <span class="ident">Configuration</span>::<span class="ident">GrpcClientNode</span> { .. } <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;GrpcClientNode&quot;</span>.<span class="ident">to_string</span>(),
-            <span class="ident">Configuration</span>::<span class="ident">WasmNode</span> { .. } <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;WasmNode-{}&quot;</span>, <span class="ident">entrypoint</span>),
-            <span class="ident">Configuration</span>::<span class="ident">StorageNode</span> { .. } <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;StorageNode&quot;</span>.<span class="ident">to_string</span>(),
-            <span class="ident">Configuration</span>::<span class="ident">RoughtimeClientNode</span> { .. } <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;RoughtimeClientNode&quot;</span>.<span class="ident">to_string</span>(),
-            <span class="ident">Configuration</span>::<span class="ident">External</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;ExternalPseudoNode&quot;</span>.<span class="ident">to_string</span>(),
+        <span class="prelude-val">Some</span>(<span class="ident">ConfigType</span>::<span class="ident">GrpcServerConfig</span>(<span class="ident">config</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="prelude-val">Ok</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">grpc</span>::<span class="ident">server</span>::<span class="ident">GrpcServerNode</span>::<span class="ident">new</span>(
+                <span class="ident">node_name</span>,
+                <span class="ident">config</span>.<span class="ident">clone</span>(),
+                <span class="ident">grpc_configuration</span>
+                    .<span class="ident">grpc_server_tls_identity</span>
+                    .<span class="ident">as_ref</span>()
+                    .<span class="ident">expect</span>(<span class="string">&quot;no gRPC server TLS identity provided to Oak Runtime&quot;</span>)
+                    .<span class="ident">clone</span>(),
+            )<span class="question-mark">?</span>))
         }
+        <span class="prelude-val">Some</span>(<span class="ident">ConfigType</span>::<span class="ident">WasmConfig</span>(<span class="ident">config</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">wasm</span>::<span class="ident">WasmNode</span>::<span class="ident">new</span>(
+            <span class="ident">node_name</span>,
+            <span class="ident">application_configuration</span>,
+            <span class="ident">config</span>.<span class="ident">clone</span>(),
+        )<span class="question-mark">?</span>)),
+        <span class="prelude-val">Some</span>(<span class="ident">ConfigType</span>::<span class="ident">GrpcClientConfig</span>(<span class="ident">config</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="prelude-val">Ok</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">grpc</span>::<span class="ident">client</span>::<span class="ident">GrpcClientNode</span>::<span class="ident">new</span>(
+                <span class="ident">node_name</span>,
+                <span class="ident">config</span>.<span class="ident">clone</span>(),
+                <span class="ident">grpc_configuration</span>
+                    .<span class="ident">grpc_client_root_tls_certificate</span>
+                    .<span class="ident">as_ref</span>()
+                    .<span class="ident">expect</span>(<span class="string">&quot;no gRPC client root TLS certificate provided to Oak Runtime&quot;</span>)
+                    .<span class="ident">clone</span>(),
+            )<span class="question-mark">?</span>))
+        }
+        <span class="prelude-val">Some</span>(<span class="ident">ConfigType</span>::<span class="ident">RoughtimeClientConfig</span>(<span class="ident">_config</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="prelude-val">Ok</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">roughtime</span>::<span class="ident">RoughtimeClientNode</span>::<span class="ident">new</span>(<span class="ident">node_name</span>)))
+        }
+        <span class="prelude-val">Some</span>(<span class="ident">ConfigType</span>::<span class="ident">StorageConfig</span>(<span class="ident">_config</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="prelude-val">Ok</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">storage</span>::<span class="ident">StorageNode</span>::<span class="ident">new</span>(<span class="ident">node_name</span>)))
+        }
+        <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">ConfigurationError</span>::<span class="ident">InvalidNodeConfiguration</span>),
     }
 }
 </pre></div>

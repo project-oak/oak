@@ -1,1 +1,1 @@
-initSidebarItems({"constant":[["LOG_CONFIG_NAME",""]],"struct":[["InternalMessage",""]]});
+initSidebarItems({"struct":[["InternalMessage",""]]});

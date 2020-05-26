@@ -57,8 +57,6 @@
 <span id="57">57</span>
 <span id="58">58</span>
 <span id="59">59</span>
-<span id="60">60</span>
-<span id="61">61</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -85,8 +83,6 @@
 <span class="doccomment">//! be enabled in development, as it destroys the privacy guarantees of the</span>
 <span class="doccomment">//! platform by providing easy channels for the exfiltration of private data.</span>
 
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">proto</span>;
-
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">config</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">io</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">message</span>;
@@ -96,7 +92,7 @@
 
 <span class="kw">use</span> <span class="ident">tonic</span>::<span class="ident">transport</span>::{<span class="ident">Certificate</span>, <span class="ident">Identity</span>};
 
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">config</span>::{<span class="ident">application_configuration</span>, <span class="ident">configure_and_run</span>};
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">config</span>::<span class="ident">configure_and_run</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">message</span>::<span class="ident">NodeMessage</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">runtime</span>::{<span class="ident">NodeId</span>, <span class="ident">RuntimeProxy</span>};
 

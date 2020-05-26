@@ -875,12 +875,20 @@
 <span class="comment">//</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">node</span>::<span class="ident">ConfigurationError</span>,
     <span class="ident">runtime</span>::{<span class="ident">NodeReadStatus</span>, <span class="ident">RuntimeProxy</span>},
     <span class="ident">NodeMessage</span>,
 };
 <span class="kw">use</span> <span class="ident">byteorder</span>::{<span class="ident">ByteOrder</span>, <span class="ident">LittleEndian</span>};
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">error</span>, <span class="ident">info</span>, <span class="ident">warn</span>};
-<span class="kw">use</span> <span class="ident">oak_abi</span>::{<span class="ident">label</span>::<span class="ident">Label</span>, <span class="ident">ChannelReadStatus</span>, <span class="ident">OakStatus</span>};
+<span class="kw">use</span> <span class="ident">oak_abi</span>::{
+    <span class="ident">label</span>::<span class="ident">Label</span>,
+    <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::{
+        <span class="ident">ApplicationConfiguration</span>, <span class="ident">NodeConfiguration</span>, <span class="ident">WebAssemblyConfiguration</span>,
+    },
+    <span class="ident">ChannelReadStatus</span>, <span class="ident">OakStatus</span>,
+};
+<span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span> <span class="kw">as</span> <span class="kw">_</span>;
 <span class="kw">use</span> <span class="ident">rand</span>::<span class="ident">RngCore</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">string</span>::<span class="ident">String</span>, <span class="ident">sync</span>::<span class="ident">Arc</span>};
 <span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">sync</span>::<span class="ident">oneshot</span>;
@@ -957,22 +965,15 @@
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">too_many_arguments</span>)]</span>
     <span class="kw">fn</span> <span class="ident">node_create</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">name_ptr</span>: <span class="ident">AbiPointer</span>,
-        <span class="ident">name_length</span>: <span class="ident">AbiPointerOffset</span>,
-        <span class="ident">entrypoint_ptr</span>: <span class="ident">AbiPointer</span>,
-        <span class="ident">entrypoint_length</span>: <span class="ident">AbiPointerOffset</span>,
+        <span class="ident">config_ptr</span>: <span class="ident">AbiPointer</span>,
+        <span class="ident">config_length</span>: <span class="ident">AbiPointerOffset</span>,
         <span class="ident">label_ptr</span>: <span class="ident">AbiPointer</span>,
         <span class="ident">label_length</span>: <span class="ident">AbiPointerOffset</span>,
         <span class="ident">initial_handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="macro">debug</span><span class="macro">!</span>(
-            <span class="string">&quot;{}: node_create({}, {}, {}, {}, {})&quot;</span>,
-            <span class="self">self</span>.<span class="ident">pretty_name</span>,
-            <span class="ident">name_ptr</span>,
-            <span class="ident">name_length</span>,
-            <span class="ident">entrypoint_ptr</span>,
-            <span class="ident">entrypoint_length</span>,
-            <span class="ident">initial_handle</span>
+            <span class="string">&quot;{}: node_create({}, {}, {})&quot;</span>,
+            <span class="self">self</span>.<span class="ident">pretty_name</span>, <span class="ident">config_ptr</span>, <span class="ident">config_length</span>, <span class="ident">initial_handle</span>
         );
 
         <span class="kw">if</span> <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">is_terminating</span>() {
@@ -980,37 +981,20 @@
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrTerminated</span>);
         }
 
-        <span class="kw">let</span> <span class="ident">config_name_bytes</span> <span class="op">=</span> <span class="self">self</span>
+        <span class="kw">let</span> <span class="ident">config_bytes</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">get_memory</span>()
-            .<span class="ident">get</span>(<span class="ident">name_ptr</span>, <span class="ident">name_length</span> <span class="kw">as</span> <span class="ident">usize</span>)
+            .<span class="ident">get</span>(<span class="ident">config_ptr</span>, <span class="ident">config_length</span> <span class="kw">as</span> <span class="ident">usize</span>)
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
                 <span class="macro">error</span><span class="macro">!</span>(
-                    <span class="string">&quot;{}: node_create(): Unable to read name from guest memory: {:?}&quot;</span>,
+                    <span class="string">&quot;{}: node_create(): Unable to read config from guest memory: {:?}&quot;</span>,
                     <span class="self">self</span>.<span class="ident">pretty_name</span>, <span class="ident">err</span>
                 );
                 <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
             })<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">config_name</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">from_utf8</span>(<span class="ident">config_name_bytes</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-            <span class="macro">error</span><span class="macro">!</span>(
-                <span class="string">&quot;{}: node_create(): Unable to parse config_name: {:?}&quot;</span>,
-                <span class="self">self</span>.<span class="ident">pretty_name</span>, <span class="ident">err</span>
-            );
-            <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
-        })<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">entrypoint_bytes</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">get_memory</span>()
-            .<span class="ident">get</span>(<span class="ident">entrypoint_ptr</span>, <span class="ident">entrypoint_length</span> <span class="kw">as</span> <span class="ident">usize</span>)
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-                <span class="macro">error</span><span class="macro">!</span>(
-                    <span class="string">&quot;{}: node_create(): Unable to read entrypoint from guest memory: {:?}&quot;</span>,
-                    <span class="self">self</span>.<span class="ident">pretty_name</span>, <span class="ident">err</span>
-                );
-                <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
-            })<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">entrypoint</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">from_utf8</span>(<span class="ident">entrypoint_bytes</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-            <span class="macro">error</span><span class="macro">!</span>(
-                <span class="string">&quot;{}: node_create(): Unable to parse entrypoint: {:?}&quot;</span>,
+        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">NodeConfiguration</span>::<span class="ident">decode</span>(<span class="ident">config_bytes</span>.<span class="ident">as_ref</span>()).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+            <span class="macro">warn</span><span class="macro">!</span>(
+                <span class="string">&quot;{}: node_create(): Could not parse node configuration: {:?}&quot;</span>,
                 <span class="self">self</span>.<span class="ident">pretty_name</span>, <span class="ident">err</span>
             );
             <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
@@ -1035,12 +1019,19 @@
         })<span class="question-mark">?</span>;
 
         <span class="macro">debug</span><span class="macro">!</span>(
-            <span class="string">&quot;{}: node_create(&#39;{}&#39;, &#39;{}&#39;, {:?})&quot;</span>,
-            <span class="self">self</span>.<span class="ident">pretty_name</span>, <span class="ident">config_name</span>, <span class="ident">entrypoint</span>, <span class="ident">label</span>
+            <span class="string">&quot;{}: node_create({:?}, {:?})&quot;</span>,
+            <span class="self">self</span>.<span class="ident">pretty_name</span>, <span class="ident">config</span>, <span class="ident">label</span>
         );
 
         <span class="self">self</span>.<span class="ident">runtime</span>
-            .<span class="ident">node_create</span>(<span class="kw-2">&amp;</span><span class="ident">config_name</span>, <span class="kw-2">&amp;</span><span class="ident">entrypoint</span>, <span class="kw-2">&amp;</span><span class="ident">label</span>, <span class="ident">initial_handle</span>)
+            .<span class="ident">node_create</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>, <span class="kw-2">&amp;</span><span class="ident">label</span>, <span class="ident">initial_handle</span>)
+            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+                <span class="macro">error</span><span class="macro">!</span>(
+                    <span class="string">&quot;{}: node_create(): Could not create node: {:?}&quot;</span>,
+                    <span class="self">self</span>.<span class="ident">pretty_name</span>, <span class="ident">err</span>
+                );
+                <span class="ident">err</span>
+            })
     }
 
     <span class="doccomment">/// Corresponds to the host ABI function [`random_get`](https://github.com/project-oak/oak/blob/master/docs/abi.md#random_get).</span>
@@ -1368,8 +1359,6 @@
                 <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">2</span>)<span class="question-mark">?</span>,
                 <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">3</span>)<span class="question-mark">?</span>,
                 <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">4</span>)<span class="question-mark">?</span>,
-                <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">5</span>)<span class="question-mark">?</span>,
-                <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">6</span>)<span class="question-mark">?</span>,
             )),
             <span class="ident">RANDOM_GET</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="ident">map_host_errors</span>(<span class="self">self</span>.<span class="ident">random_get</span>(<span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">0</span>)<span class="question-mark">?</span>, <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">1</span>)<span class="question-mark">?</span>))
@@ -1430,8 +1419,6 @@
                 <span class="kw-2">&amp;</span>[
                     <span class="ident">ABI_USIZE</span>,      <span class="comment">// config_buf</span>
                     <span class="ident">ABI_USIZE</span>,      <span class="comment">// config_len</span>
-                    <span class="ident">ABI_USIZE</span>,      <span class="comment">// entrypoint_buf</span>
-                    <span class="ident">ABI_USIZE</span>,      <span class="comment">// entrypoint_len</span>
                     <span class="ident">ABI_USIZE</span>,      <span class="comment">// label_buf</span>
                     <span class="ident">ABI_USIZE</span>,      <span class="comment">// label_len</span>
                     <span class="ident">ValueType</span>::<span class="ident">I64</span>, <span class="comment">// handle</span>
@@ -1657,19 +1644,32 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">WasmNode</span> {
     <span class="ident">node_name</span>: <span class="ident">String</span>,
     <span class="ident">module</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">wasmi</span>::<span class="ident">Module</span><span class="op">&gt;</span>,
-    <span class="ident">entrypoint</span>: <span class="ident">String</span>,
+    <span class="ident">entrypoint_name</span>: <span class="ident">String</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">WasmNode</span> {
     <span class="doccomment">/// Creates a new [`WasmNode`] instance, but does not start it.</span>
     <span class="doccomment">/// May fail if the provided Wasm module is not valid.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">node_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">module</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">wasmi</span>::<span class="ident">Module</span><span class="op">&gt;</span>, <span class="ident">entrypoint</span>: <span class="ident">String</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="ident">validate_entrypoint</span>(<span class="kw-2">&amp;</span><span class="ident">module</span>, <span class="kw-2">&amp;</span><span class="ident">entrypoint</span>).<span class="ident">ok</span>()<span class="question-mark">?</span>;
-
-        <span class="prelude-val">Some</span>(<span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
+        <span class="ident">node_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
+        <span class="ident">application_configuration</span>: <span class="kw-2">&amp;</span><span class="ident">ApplicationConfiguration</span>,
+        <span class="ident">node_configuration</span>: <span class="ident">WebAssemblyConfiguration</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">ConfigurationError</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">wasm_module_bytes</span> <span class="op">=</span> <span class="ident">application_configuration</span>
+            .<span class="ident">wasm_modules</span>
+            .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">node_configuration</span>.<span class="ident">wasm_module_name</span>)
+            .<span class="ident">ok_or</span>(<span class="ident">ConfigurationError</span>::<span class="ident">IncorrectWebAssemblyModuleName</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">module</span> <span class="op">=</span> <span class="ident">wasmi</span>::<span class="ident">Module</span>::<span class="ident">from_buffer</span>(<span class="kw-2">&amp;</span><span class="ident">wasm_module_bytes</span>)
+            .<span class="ident">map_err</span>(<span class="ident">ConfigurationError</span>::<span class="ident">WasmiModuleInializationError</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">entrypoint_name</span> <span class="op">=</span> <span class="ident">node_configuration</span>.<span class="ident">wasm_entrypoint_name</span>;
+        <span class="ident">validate_entrypoint</span>(<span class="kw-2">&amp;</span><span class="ident">module</span>, <span class="kw-2">&amp;</span><span class="ident">entrypoint_name</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+            <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;could not validate entrypoint: {:?}&quot;</span>, <span class="ident">err</span>);
+            <span class="ident">ConfigurationError</span>::<span class="ident">IncorrectWebAssemblyModuleName</span>
+        })<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
             <span class="ident">node_name</span>: <span class="ident">node_name</span>.<span class="ident">to_string</span>(),
-            <span class="ident">module</span>,
-            <span class="ident">entrypoint</span>,
+            <span class="ident">module</span>: <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">module</span>),
+            <span class="ident">entrypoint_name</span>,
         })
     }
 }
@@ -1684,7 +1684,7 @@
     ) {
         <span class="macro">debug</span><span class="macro">!</span>(
             <span class="string">&quot;{}: running entrypoint &#39;{}&#39;&quot;</span>,
-            <span class="self">self</span>.<span class="ident">node_name</span>, <span class="self">self</span>.<span class="ident">entrypoint</span>
+            <span class="self">self</span>.<span class="ident">node_name</span>, <span class="self">self</span>.<span class="ident">entrypoint_name</span>
         );
         <span class="kw">let</span> <span class="ident">wasi_stub</span> <span class="op">=</span> <span class="ident">WasiStub</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">abi</span> <span class="op">=</span> <span class="ident">WasmInterface</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">node_name</span>, <span class="ident">runtime</span>);
@@ -1706,14 +1706,14 @@
 
         <span class="ident">instance</span>
             .<span class="ident">invoke_export</span>(
-                <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">entrypoint</span>,
+                <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">entrypoint_name</span>,
                 <span class="kw-2">&amp;</span>[<span class="ident">wasmi</span>::<span class="ident">RuntimeValue</span>::<span class="ident">I64</span>(<span class="ident">handle</span> <span class="kw">as</span> <span class="ident">i64</span>)],
                 <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">abi</span>,
             )
             .<span class="ident">expect</span>(<span class="string">&quot;failed to execute export&quot;</span>);
         <span class="macro">debug</span><span class="macro">!</span>(
             <span class="string">&quot;{}: entrypoint &#39;{}&#39; completed&quot;</span>,
-            <span class="self">self</span>.<span class="ident">node_name</span>, <span class="self">self</span>.<span class="ident">entrypoint</span>
+            <span class="self">self</span>.<span class="ident">node_name</span>, <span class="self">self</span>.<span class="ident">entrypoint_name</span>
         );
     }
 }

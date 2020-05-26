@@ -1,1 +1,1 @@
-initSidebarItems({"constant":[["DEFAULT_CONFIG_NAME","Default name for predefined Node config that corresponds to a storage pseudo-Node."]],"struct":[["Storage","Local representation of the connection to an external storage service."]]});
+initSidebarItems({"struct":[["Storage","Local representation of the connection to an external storage service."]]});

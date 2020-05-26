@@ -188,6 +188,20 @@
 <span id="188">188</span>
 <span id="189">189</span>
 <span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -208,8 +222,13 @@
 <span class="doccomment">//! Test utilities to help with unit testing of Oak SDK code.</span>
 
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">info</span>};
+<span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::{
+    <span class="ident">node_configuration</span>::<span class="ident">ConfigType</span>, <span class="ident">ApplicationConfiguration</span>, <span class="ident">NodeConfiguration</span>,
+    <span class="ident">WebAssemblyConfiguration</span>,
+};
 <span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">HashMap</span>, <span class="ident">process</span>::<span class="ident">Command</span>};
+<span class="kw">use</span> <span class="ident">tonic</span>::<span class="ident">transport</span>::<span class="ident">Certificate</span>;
 
 <span class="comment">// TODO(#544): re-enable unit tests of SDK functionality</span>
 
@@ -236,21 +255,20 @@
     <span class="ident">std</span>::<span class="ident">fs</span>::<span class="ident">read</span>(<span class="ident">path</span>)
 }
 
-<span class="kw">const</span> <span class="ident">DEFAULT_LOG_CONFIG_NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;log&quot;</span>;
 <span class="kw">const</span> <span class="ident">DEFAULT_ENTRYPOINT_NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;oak_main&quot;</span>;
 <span class="kw">const</span> <span class="ident">DEFAULT_MODULE_MANIFEST</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;Cargo.toml&quot;</span>;
 <span class="kw">const</span> <span class="ident">MODULE_WASM_SUFFIX</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;.wasm&quot;</span>;
 
-<span class="doccomment">/// Convenience helper to build and run a single-Node Application with the</span>
-<span class="doccomment">/// given module name, using the default name &quot;oak_main&quot; for its entrypoint.</span>
+<span class="doccomment">/// Convenience helper to build and run a single-Node Application with the given module name, using</span>
+<span class="doccomment">/// the default name &quot;oak_main&quot; for its entrypoint.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_single_module_default</span>(
     <span class="ident">module_config_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">oak_runtime</span>::<span class="ident">RuntimeProxy</span>, <span class="ident">oak_abi</span>::<span class="ident">Handle</span>), <span class="ident">oak</span>::<span class="ident">OakStatus</span><span class="op">&gt;</span> {
     <span class="ident">run_single_module</span>(<span class="ident">module_config_name</span>, <span class="ident">DEFAULT_ENTRYPOINT_NAME</span>)
 }
 
-<span class="doccomment">/// Convenience helper to build and run a single-Node application with the</span>
-<span class="doccomment">/// given module name, using the provided entrypoint name.</span>
+<span class="doccomment">/// Convenience helper to build and run a single-Node application with the given module name, using</span>
+<span class="doccomment">/// the provided entrypoint name.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_single_module</span>(
     <span class="ident">module_config_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">entrypoint_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
@@ -267,23 +285,33 @@
     .<span class="ident">cloned</span>()
     .<span class="ident">collect</span>();
 
-    <span class="kw">let</span> <span class="ident">configuration</span> <span class="op">=</span> <span class="ident">oak_runtime</span>::<span class="ident">application_configuration</span>(
-        <span class="ident">wasm</span>,
-        <span class="ident">DEFAULT_LOG_CONFIG_NAME</span>,
-        <span class="ident">module_config_name</span>,
-        <span class="ident">entrypoint_name</span>,
-    );
+    <span class="kw">let</span> <span class="ident">application_configuration</span> <span class="op">=</span> <span class="ident">ApplicationConfiguration</span> {
+        <span class="ident">wasm_modules</span>: <span class="ident">wasm</span>,
+        <span class="ident">initial_node_configuration</span>: <span class="prelude-val">Some</span>(<span class="ident">NodeConfiguration</span> {
+            <span class="ident">name</span>: <span class="string">&quot;test&quot;</span>.<span class="ident">to_string</span>(),
+            <span class="ident">config_type</span>: <span class="prelude-val">Some</span>(<span class="ident">ConfigType</span>::<span class="ident">WasmConfig</span>(<span class="ident">WebAssemblyConfiguration</span> {
+                <span class="ident">wasm_module_name</span>: <span class="ident">module_config_name</span>.<span class="ident">to_string</span>(),
+                <span class="ident">wasm_entrypoint_name</span>: <span class="ident">entrypoint_name</span>.<span class="ident">to_string</span>(),
+            })),
+        }),
+    };
 
     <span class="ident">oak_runtime</span>::<span class="ident">configure_and_run</span>(
-        <span class="ident">configuration</span>,
+        <span class="ident">application_configuration</span>,
         <span class="ident">oak_runtime</span>::<span class="ident">RuntimeConfiguration</span>::<span class="ident">default</span>(),
-        <span class="ident">oak_runtime</span>::<span class="ident">GrpcConfiguration</span>::<span class="ident">default</span>(),
+        <span class="ident">oak_runtime</span>::<span class="ident">GrpcConfiguration</span> {
+            <span class="ident">grpc_server_tls_identity</span>: <span class="prelude-val">None</span>,
+            <span class="comment">// Some of the tests require a gRPC client, so we populate the required certificate with</span>
+            <span class="comment">// an invalid value here, even though it will still fail when instantiating the actual</span>
+            <span class="comment">// gRPC client.</span>
+            <span class="ident">grpc_client_root_tls_certificate</span>: <span class="prelude-val">Some</span>(<span class="ident">Certificate</span>::<span class="ident">from_pem</span>(<span class="string">&quot;invalid-cert&quot;</span>)),
+        },
     )
 }
 
 <span class="comment">// TODO(#543): move this to oak_runtime as it&#39;s not test-specific</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">grpc_request</span><span class="op">&lt;</span><span class="ident">R</span>, <span class="ident">Q</span><span class="op">&gt;</span>(
-    <span class="ident">proxy</span>: <span class="kw-2">&amp;</span><span class="ident">oak_runtime</span>::<span class="ident">runtime</span>::<span class="ident">RuntimeProxy</span>,
+    <span class="ident">proxy</span>: <span class="kw-2">&amp;</span><span class="ident">oak_runtime</span>::<span class="ident">RuntimeProxy</span>,
     <span class="ident">handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
     <span class="ident">method_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">req</span>: <span class="kw-2">&amp;</span><span class="ident">R</span>,

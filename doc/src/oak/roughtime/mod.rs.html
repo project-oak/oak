@@ -48,10 +48,6 @@
 <span id="48">48</span>
 <span id="49">49</span>
 <span id="50">50</span>
-<span id="51">51</span>
-<span id="52">52</span>
-<span id="53">53</span>
-<span id="54">54</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -75,10 +71,9 @@
     <span class="ident">grpc</span>,
     <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">roughtime</span>::{<span class="ident">RoughTimeRequest</span>, <span class="ident">RoughtimeServiceClient</span>},
 };
-
-<span class="doccomment">/// Default name for predefined Node config that corresponds to a Roughtime</span>
-<span class="doccomment">/// pseudo-Node.</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">DEFAULT_CONFIG_NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;roughtime&quot;</span>;
+<span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::{
+    <span class="ident">node_configuration</span>::<span class="ident">ConfigType</span>, <span class="ident">NodeConfiguration</span>, <span class="ident">RoughtimeClientConfiguration</span>,
+};
 
 <span class="doccomment">/// Local representation of the connection to an external Roughtime service.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Roughtime</span> {
@@ -86,16 +81,13 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Roughtime</span> {
-    <span class="doccomment">/// Create a default `Roughtime` instance assuming the default pre-defined</span>
-    <span class="doccomment">/// name (`&quot;roughtime&quot;`) identifying Roughtime pseudo-Node config.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Roughtime</span><span class="op">&gt;</span> {
-        <span class="ident">Roughtime</span>::<span class="ident">new</span>(<span class="ident">DEFAULT_CONFIG_NAME</span>)
-    }
-
-    <span class="doccomment">/// Create a `Roughtime` instance using the given name identifying Roughtime</span>
-    <span class="doccomment">/// pseudo-Node configuration.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Roughtime</span><span class="op">&gt;</span> {
-        <span class="kw">crate</span>::<span class="ident">grpc</span>::<span class="ident">client</span>::<span class="ident">Client</span>::<span class="ident">new</span>(<span class="ident">config</span>, <span class="string">&quot;oak_main&quot;</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">client</span><span class="op">|</span> <span class="ident">Roughtime</span> {
+    <span class="doccomment">/// Creates a [`Roughtime`] instance using the given configuration.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">RoughtimeClientConfiguration</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Roughtime</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">NodeConfiguration</span> {
+            <span class="ident">name</span>: <span class="string">&quot;roughtime&quot;</span>.<span class="ident">to_string</span>(),
+            <span class="ident">config_type</span>: <span class="prelude-val">Some</span>(<span class="ident">ConfigType</span>::<span class="ident">RoughtimeClientConfig</span>(<span class="ident">config</span>.<span class="ident">clone</span>())),
+        };
+        <span class="kw">crate</span>::<span class="ident">grpc</span>::<span class="ident">client</span>::<span class="ident">Client</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">client</span><span class="op">|</span> <span class="ident">Roughtime</span> {
             <span class="ident">client</span>: <span class="ident">RoughtimeServiceClient</span>(<span class="ident">client</span>),
         })
     }

@@ -169,6 +169,9 @@
 <span id="169">169</span>
 <span id="170">170</span>
 <span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -280,8 +283,11 @@
         <span class="comment">//     }],</span>
         <span class="comment">//     integrity_tags: vec![],</span>
         <span class="comment">// };</span>
-        <span class="kw">match</span> <span class="ident">oak</span>::<span class="ident">grpc</span>::<span class="ident">client</span>::<span class="ident">Client</span>::<span class="ident">new_with_label</span>(<span class="string">&quot;grpc-client&quot;</span>, <span class="string">&quot;&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">Label</span>::<span class="ident">public_trusted</span>())
-            .<span class="ident">map</span>(<span class="ident">AggregatorClient</span>)
+        <span class="kw">match</span> <span class="ident">oak</span>::<span class="ident">grpc</span>::<span class="ident">client</span>::<span class="ident">Client</span>::<span class="ident">new_with_label</span>(
+            <span class="kw-2">&amp;</span><span class="ident">oak</span>::<span class="ident">node_config</span>::<span class="ident">grpc_client</span>(<span class="string">&quot;127.0.0.1:8888&quot;</span>),
+            <span class="kw-2">&amp;</span><span class="ident">Label</span>::<span class="ident">public_trusted</span>(),
+        )
+        .<span class="ident">map</span>(<span class="ident">AggregatorClient</span>)
         {
             <span class="prelude-val">Some</span>(<span class="ident">grpc_client</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">grpc_client</span>.<span class="ident">submit_sample</span>(<span class="ident">Sample</span> {
@@ -338,7 +344,7 @@
 <span class="ident">oak</span>::<span class="macro">entrypoint</span><span class="macro">!</span>(<span class="ident">grpc_oak_main</span> <span class="op">=</span><span class="op">&gt;</span> <span class="op">|</span><span class="ident">_in_channel</span><span class="op">|</span> {
     <span class="ident">oak</span>::<span class="ident">logger</span>::<span class="ident">init_default</span>();
     <span class="kw">let</span> <span class="ident">dispatcher</span> <span class="op">=</span> <span class="ident">AggregatorDispatcher</span>::<span class="ident">new</span>(<span class="ident">AggregatorNode</span>::<span class="ident">new</span>());
-    <span class="kw">let</span> <span class="ident">grpc_channel</span> <span class="op">=</span> <span class="ident">oak</span>::<span class="ident">grpc</span>::<span class="ident">server</span>::<span class="ident">init_default</span>();
+    <span class="kw">let</span> <span class="ident">grpc_channel</span> <span class="op">=</span> <span class="ident">oak</span>::<span class="ident">grpc</span>::<span class="ident">server</span>::<span class="ident">init</span>(<span class="string">&quot;[::]:8080&quot;</span>).<span class="ident">expect</span>(<span class="string">&quot;could not create gRPC server pseudo-Node&quot;</span>);
     <span class="ident">oak</span>::<span class="ident">run_event_loop</span>(<span class="ident">dispatcher</span>, <span class="ident">grpc_channel</span>);
 });
 </pre></div>

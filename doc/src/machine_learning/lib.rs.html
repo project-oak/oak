@@ -280,6 +280,7 @@
 <span id="280">280</span>
 <span id="281">281</span>
 <span id="282">282</span>
+<span id="283">283</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -448,7 +449,8 @@
         <span class="ident">config</span>: <span class="prelude-val">None</span>,
         <span class="ident">model</span>: <span class="ident">NaiveBayes</span>::<span class="ident">new</span>(),
     };
-    <span class="kw">let</span> <span class="ident">grpc_channel</span> <span class="op">=</span> <span class="ident">oak</span>::<span class="ident">grpc</span>::<span class="ident">server</span>::<span class="ident">init_default</span>();
+    <span class="kw">let</span> <span class="ident">grpc_channel</span> <span class="op">=</span>
+        <span class="ident">oak</span>::<span class="ident">grpc</span>::<span class="ident">server</span>::<span class="ident">init</span>(<span class="string">&quot;[::]:8080&quot;</span>).<span class="ident">expect</span>(<span class="string">&quot;could not create gRPC server pseudo-Node&quot;</span>);
     <span class="ident">oak</span>::<span class="ident">run_event_loop</span>(<span class="ident">node</span>, <span class="ident">grpc_channel</span>);
 });
 
