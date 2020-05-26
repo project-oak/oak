@@ -3,9 +3,9 @@ const protoLoader = require('@grpc/proto-loader');
 const grpc = require('@grpc/grpc-js');
 
 const CERT_PATH = __dirname + '/../../../certs/local/ca.pem';
-const PROT_PAH = __dirname + '/../../proto/hello_world.proto';
+const PROTO_PAH = __dirname + '/../../proto/hello_world.proto';
 
-const packageDefinition = protoLoader.loadSync(PROT_PAH);
+const packageDefinition = protoLoader.loadSync(PROTO_PAH);
 const helloWorldProto = grpc.loadPackageDefinition(packageDefinition).oak
   .examples.hello_world;
 const credentials = grpc.credentials.createSsl(fs.readFileSync(CERT_PATH));
