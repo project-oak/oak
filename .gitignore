@@ -12,6 +12,9 @@
 # Cargo cache.
 /cargo-cache/
 
+# Node modules.
+**/node_modules/
+
 # Generated vscode files.
 **/.vscode/
 
