@@ -38,7 +38,7 @@
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">oak</span> {
     <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">application</span> {
-        <span class="macro">include</span><span class="macro">!</span>(<span class="string">&quot;oak.application.rs&quot;</span>);
+        <span class="macro">include</span><span class="macro">!</span>(<span class="macro">concat</span><span class="macro">!</span>(<span class="macro">env</span><span class="macro">!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak.application.rs&quot;</span>));
     }
 }
 </pre></div>

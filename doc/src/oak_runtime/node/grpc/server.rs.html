@@ -390,8 +390,6 @@
 <span id="390">390</span>
 <span id="391">391</span>
 <span id="392">392</span>
-<span id="393">393</span>
-<span id="394">394</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -508,7 +506,7 @@
         <span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>,
         <span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>,
         <span class="ident">handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
-        <span class="ident">_notify_receiver</span>: <span class="ident">oneshot</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
+        <span class="ident">notify_receiver</span>: <span class="ident">oneshot</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
     ) {
         <span class="comment">// Receive a `channel_writer` handle used to pass handles for temporary channels.</span>
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;{}: Waiting for a channel writer&quot;</span>, <span class="self">self</span>.<span class="ident">node_name</span>);
@@ -525,12 +523,10 @@
         <span class="kw">let</span> <span class="ident">server</span> <span class="op">=</span> <span class="ident">tonic</span>::<span class="ident">transport</span>::<span class="ident">Server</span>::<span class="ident">builder</span>()
             .<span class="ident">tls_config</span>(<span class="ident">tonic</span>::<span class="ident">transport</span>::<span class="ident">ServerTlsConfig</span>::<span class="ident">new</span>().<span class="ident">identity</span>(<span class="self">self</span>.<span class="ident">tls_identity</span>))
             .<span class="ident">add_service</span>(<span class="ident">handler</span>)
-            <span class="comment">// TODO(#1002): Fix gRPC server termination with [`oneshot::Receiver`].</span>
-            <span class="comment">// .serve_with_shutdown(self.address, async {</span>
-            <span class="comment">//     // Treat notification failure the same as a notification.</span>
-            <span class="comment">//     let _ = notify_receiver.await;</span>
-            <span class="comment">// });</span>
-            .<span class="ident">serve</span>(<span class="self">self</span>.<span class="ident">address</span>);
+            .<span class="ident">serve_with_shutdown</span>(<span class="self">self</span>.<span class="ident">address</span>, <span class="kw">async</span> {
+                <span class="comment">// Treat notification failure the same as a notification.</span>
+                <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">notify_receiver</span>.<span class="kw">await</span>;
+            });
 
         <span class="comment">// Create an Async runtime for executing futures.</span>
         <span class="comment">// https://docs.rs/tokio/</span>

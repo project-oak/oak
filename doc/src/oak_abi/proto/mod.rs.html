@@ -54,23 +54,23 @@
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">google</span> {
     <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">rpc</span> {
-        <span class="macro">include</span><span class="macro">!</span>(<span class="string">&quot;google.rpc.rs&quot;</span>);
+        <span class="macro">include</span><span class="macro">!</span>(<span class="macro">concat</span><span class="macro">!</span>(<span class="macro">env</span><span class="macro">!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/google.rpc.rs&quot;</span>));
     }
 }
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">oak</span> {
-    <span class="macro">include</span><span class="macro">!</span>(<span class="string">&quot;oak_abi.rs&quot;</span>);
+    <span class="macro">include</span><span class="macro">!</span>(<span class="macro">concat</span><span class="macro">!</span>(<span class="macro">env</span><span class="macro">!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak_abi.rs&quot;</span>));
 
     <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">label</span> {
-        <span class="macro">include</span><span class="macro">!</span>(<span class="string">&quot;oak.label.rs&quot;</span>);
+        <span class="macro">include</span><span class="macro">!</span>(<span class="macro">concat</span><span class="macro">!</span>(<span class="macro">env</span><span class="macro">!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak.label.rs&quot;</span>));
     }
 
     <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">encap</span> {
-        <span class="macro">include</span><span class="macro">!</span>(<span class="string">&quot;oak.encap.rs&quot;</span>);
+        <span class="macro">include</span><span class="macro">!</span>(<span class="macro">concat</span><span class="macro">!</span>(<span class="macro">env</span><span class="macro">!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak.encap.rs&quot;</span>));
     }
 
     <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">log</span> {
-        <span class="macro">include</span><span class="macro">!</span>(<span class="string">&quot;oak.log.rs&quot;</span>);
+        <span class="macro">include</span><span class="macro">!</span>(<span class="macro">concat</span><span class="macro">!</span>(<span class="macro">env</span><span class="macro">!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak.log.rs&quot;</span>));
     }
 }
 </pre></div>

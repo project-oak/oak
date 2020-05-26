@@ -225,11 +225,6 @@
 <span id="225">225</span>
 <span id="226">226</span>
 <span id="227">227</span>
-<span id="228">228</span>
-<span id="229">229</span>
-<span id="230">230</span>
-<span id="231">231</span>
-<span id="232">232</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -337,7 +332,7 @@
         <span class="kw-2">mut</span> <span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>,
         <span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>,
         <span class="ident">handle</span>: <span class="ident">Handle</span>,
-        <span class="ident">_notify_receiver</span>: <span class="ident">oneshot</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
+        <span class="ident">notify_receiver</span>: <span class="ident">oneshot</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
     ) {
         <span class="comment">// Create an Async runtime for executing futures.</span>
         <span class="comment">// https://docs.rs/tokio/</span>
@@ -359,16 +354,11 @@
             <span class="string">&quot;{}: Starting gRPC client pseudo-Node thread&quot;</span>,
             <span class="self">self</span>.<span class="ident">node_name</span>
         );
-        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">async_runtime</span>.<span class="ident">block_on</span>(<span class="self">self</span>.<span class="ident">handle_loop</span>(<span class="ident">runtime</span>, <span class="ident">handle</span>));
-        <span class="comment">// TODO(#1002): Fix gRPC client termination with [`oneshot::Receiver`].</span>
-        <span class="comment">// async_runtime.block_on(futures::future::select(</span>
-        <span class="comment">//     Box::pin(self.handle_loop(runtime, handle)),</span>
-        <span class="comment">//     notify_receiver,</span>
-        <span class="comment">// ));</span>
-        <span class="macro">info</span><span class="macro">!</span>(
-            <span class="string">&quot;{}: Exiting gRPC client pseudo-Node thread: {:?}&quot;</span>,
-            <span class="self">self</span>.<span class="ident">node_name</span>, <span class="ident">result</span>
-        );
+        <span class="ident">async_runtime</span>.<span class="ident">block_on</span>(<span class="ident">futures</span>::<span class="ident">future</span>::<span class="ident">select</span>(
+            <span class="ident">Box</span>::<span class="ident">pin</span>(<span class="self">self</span>.<span class="ident">handle_loop</span>(<span class="ident">runtime</span>, <span class="ident">handle</span>)),
+            <span class="ident">notify_receiver</span>,
+        ));
+        <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;{}: Exiting gRPC client pseudo-Node thread&quot;</span>, <span class="self">self</span>.<span class="ident">node_name</span>);
     }
 }
 
