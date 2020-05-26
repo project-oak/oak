@@ -36,7 +36,7 @@ cc_binary(
         "-s AUTO_ARCHIVE_INDEXES=0",  # Necessary to remove console spam.
         "-s DISABLE_EXCEPTION_CATCHING=1",
         "-s ERROR_ON_UNDEFINED_SYMBOLS=0",
-        "-s EXPORTED_FUNCTIONS='[\"_oak_main\"]'",
+        "-s EXPORTED_FUNCTIONS='[\"_grpc_oak_main\"]'",
         "-s FILESYSTEM=0",
         "-s MALLOC=emmalloc",
         "-s STANDALONE_WASM=1",  # WASM file should run without JavaScript.
@@ -45,6 +45,7 @@ cc_binary(
     ],
     deps = [
         "//oak/module:oak_abi",
+        "//oak/module:oak_main",
         "//oak/module:placeholders",
         # TODO(#422): Sort out inclusion of protobuf files
         # "//oak/proto:oak_api_cc_proto",
@@ -68,7 +69,7 @@ cc_binary(
         "-s AUTO_ARCHIVE_INDEXES=0",  # Necessary to remove console spam.
         "-s DISABLE_EXCEPTION_CATCHING=1",
         "-s ERROR_ON_UNDEFINED_SYMBOLS=0",
-        "-s EXPORTED_FUNCTIONS='[\"_oak_main\"]'",
+        "-s EXPORTED_FUNCTIONS='[\"_grpc_oak_main\"]'",
         "-s FILESYSTEM=0",
         "-s MALLOC=emmalloc",
         "-s STANDALONE_WASM=1",  # WASM file should run without JavaScript.
@@ -78,6 +79,7 @@ cc_binary(
     ],
     deps = [
         "//oak/module:oak_abi",
+        "//oak/module:oak_main",
         "//oak/module:placeholders",
         # TODO(#422): Sort out inclusion of protobuf files
         # "//oak/proto:oak_api_cc_proto",

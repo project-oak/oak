@@ -31,3 +31,10 @@ cc_library(
     hdrs = ["placeholders.h"],
     visibility = ["//visibility:public"],
 )
+
+cc_library(
+    name = "oak_main",
+    srcs = ["oak_main.h"],
+    visibility = ["//visibility:public"],
+    deps = [":oak_abi"],
+)
