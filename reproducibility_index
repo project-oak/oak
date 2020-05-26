@@ -1,4 +1,4 @@
-516e0f2dad670df61067c1bf42b26d18a97d54fa82540da3bacc3f1c35643785  ./target/wasm32-unknown-unknown/release/abitest_0_frontend.wasm
+decf268bc29fcca1d10c433d0b87835285b85fde961c7e154a701d62a6546cba  ./target/wasm32-unknown-unknown/release/abitest_0_frontend.wasm
 b0841f70d32d423a83d731c0990546131ed394ace6a69a5fe0ca6fb06423999b  ./target/wasm32-unknown-unknown/release/abitest_1_backend.wasm
 8d7981c0ed6ee8447160495121ab3acae4d5d28e1ce4c6163055593ea1c424d9  ./target/wasm32-unknown-unknown/release/aggregator.wasm
 6d972065aede6b2e79c13ce73ff54e57ca2fe146a81610ae31df3ebfc8c55209  ./target/wasm32-unknown-unknown/release/chat.wasm
@@ -7,3 +7,4 @@ a6aee6a97cc394522ce4871879d8f7de66f218f43223d3a5ba5bcfc60541bdec  ./target/wasm3
 5fa2081c5279512fbca000284cab4802a76e83164dd59543ad7da32545f30e17  ./target/wasm32-unknown-unknown/release/private_set_intersection.wasm
 e814b30f662463c38b61916a51231f501217f780d472a1d48297a177a5b7d864  ./target/wasm32-unknown-unknown/release/running_average.wasm
 be0395b448aac0885c99d3b8884c41eb2fde8c838843dafdfc45aa71bb6451d6  ./target/wasm32-unknown-unknown/release/translator.wasm
+dff7d6df1f016173518d99c1f8a78e885c73a9466ceddaf90808f533b056e50c  ./target/x86_64-unknown-linux-musl/release/oak_loader
