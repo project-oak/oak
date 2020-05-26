@@ -2280,8 +2280,8 @@
         <span class="ident">node_info</span>.<span class="ident">label</span>.<span class="ident">clone</span>()
     }
 
-    <span class="doccomment">/// Returns the least restrictive (i.e. least secret, most trusted) label that this Node may</span>
-    <span class="doccomment">/// downgrade to. This takes into account all the [downgrade privilege](NodeInfo::privilege)</span>
+    <span class="doccomment">/// Returns the least restrictive (i.e. least confidential, most trusted) label that this Node</span>
+    <span class="doccomment">/// may downgrade to. This takes into account all the [downgrade privilege](NodeInfo::privilege)</span>
     <span class="doccomment">/// that the node possesses.</span>
     <span class="kw">fn</span> <span class="ident">get_node_downgraded_label</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Label</span> {
         <span class="comment">// Original (static) Node label.</span>
