@@ -26,6 +26,7 @@ cc_binary(
     srcs = ["hello_world.cc"],
     deps = [
         "//oak/module:oak_abi",
+        "//oak/module:oak_main",
         # TODO(#422): Sort out inclusion of protobuf files
         # "//oak/proto:oak_api_cc_proto",
     ],
