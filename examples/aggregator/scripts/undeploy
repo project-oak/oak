@@ -5,7 +5,32 @@ readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
 # shellcheck source=scripts/common
 source "${GLOBAL_SCRIPTS_DIR}/common"
 
+metrics=0
+
+while getopts "mh" opt; do
+  case "${opt}" in
+    h)
+      echo -e "Usage: ${0} [-m]
+Undeploy aggregator objects. 
+  -m    In addition, undeploy metrics related objects.
+  -h    Print Help (this message) and exit"
+      exit 0;;
+    m)
+      metrics=1;;
+    *)
+      echo "Invalid argument: ${OPTARG}"
+      exit 1;;
+  esac
+done
+
 gcloud container clusters get-credentials aggregator --zone=europe-west2-a
-kubectl delete secret tls-private-key
-kubectl delete service aggregator
-kubectl delete pod aggregator
+
+kubectl delete secret tls-private-key || true
+kubectl delete service aggregator || true
+kubectl delete deployment aggregator || true 
+
+if [[ $metrics == 1]]
+then
+    kubectl delete service prometheus-k8s -n agg-metrics || true
+    kubectl delete deployment metrics-sidecar -n agg-metrics || true
+fi

@@ -1,0 +1,165 @@
+# mostly copied from https://github.com/Stackdriver/stackdriver-prometheus-sidecar/blob/master/kube/full/prometheus.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agg-metrics
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: prometheus
+rules:
+  - apiGroups: ['']
+    resources:
+      - nodes
+      - nodes/proxy
+      - services
+      - endpoints
+      - pods
+    verbs: ['get', 'list', 'watch']
+  - apiGroups:
+      - extensions
+    resources:
+      - ingresses
+    verbs: ['get', 'list', 'watch']
+  - nonResourceURLs: ['/metrics']
+    verbs: ['get']
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+  namespace: agg-metrics
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus
+subjects:
+  - kind: ServiceAccount
+    name: prometheus
+    namespace: agg-metrics
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: prometheus-k8s
+  annotations:
+    prometheus.io/scrape: 'true'
+    prometheus.io/port: '9090'
+    prometheus.io/port2: '9091'
+  name: prometheus-k8s
+  namespace: agg-metrics
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Cluster
+  ports:
+    - name: prometheus
+      nodePort: 32388
+      port: 9090
+      protocol: TCP
+      targetPort: 9090
+    - name: sidecar
+      nodePort: 30183
+      port: 9091
+      protocol: TCP
+      targetPort: 9091
+  selector:
+    app: prometheus
+    prometheus: k8s
+  sessionAffinity: None
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metrics-sidecar
+  namespace: agg-metrics
+  labels:
+    app: metrics-sidecar
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: metrics-sidecar
+  template:
+    metadata:
+      labels:
+        app: metrics-sidecar
+    spec:
+      serviceAccount: prometheus
+      securityContext:
+        runAsUser: 0
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v2.18.1
+          args:
+            - --config.file=/etc/prometheus/config/prometheus.yml
+            - --storage.tsdb.path=/data
+            - --storage.tsdb.min-block-duration=15m
+            - --storage.tsdb.max-block-duration=4h
+            - --storage.tsdb.retention=48h
+          ports:
+            - name: prometheus
+              containerPort: 9090
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/prometheus/config
+            - name: metrics-volume
+              mountPath: /data
+        - name: stackdriver-prometheus-sidecar
+          # version 0.4.3 (with quay.io/prometheus/prometheus:v2.6.0) allows debugging:
+          # `kubectl exec -it <pod-name> -c stackdriver-prometheus-sidecar -- sh`
+          image: gcr.io/stackdriver-prometheus/stackdriver-prometheus-sidecar:0.6.4
+          imagePullPolicy: Always
+          args:
+            - --stackdriver.project-id=oak-ci
+            - --prometheus.wal-directory=/data/wal
+            - --prometheus.api-address=http://localhost:9090
+            - --stackdriver.kubernetes.location=europe-west2
+            - --stackdriver.kubernetes.cluster-name=aggregator
+            - --log.level=debug
+            # for debugging: to be removed, as it prevents sending the metrics to the Cloud Monitoring API.
+            # - --stackdriver.store-in-files-directory=/data/all
+          ports:
+            - name: sidecar
+              containerPort: 9091
+          volumeMounts:
+            - name: metrics-volume
+              mountPath: /data
+      volumes:
+        - name: config-volume
+          configMap:
+            name: prometheus-server-conf
+        - name: metrics-volume
+          emptyDir: {}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-server-conf
+  namespace: agg-metrics
+  labels:
+    name: prometheus-server-conf
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval:     15s # By default, scrape targets every 15 seconds.
+      
+    # A scrape configuration containing exactly one endpoint to scrape:
+    scrape_configs:
+      # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
+      - job_name: 'k8s-endpoints'
+        kubernetes_sd_configs:
+        - role: endpoints
+        relabel_configs:
+        # Keep useful labels that prometheus adds automatically.
+        # Ref: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#pod
+        - action: keep
+          source_labels:
+          - __meta_kubernetes_service_name
+          - __meta_kubernetes_endpoint_port_name

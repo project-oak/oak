@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aggregator
+  labels:
+    app: aggregator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aggregator
+  template:
+    metadata:
+      labels:
+        app: aggregator
+    spec:
+      containers:
+        - name: oak-application
+          image: gcr.io/oak-ci/oak-aggregator:latest
+          ports:
+            - containerPort: 8080
+              name: aggregator
+            - containerPort: 9090
+              name: metrics
+          volumeMounts:
+            - name: tls-secret
+              mountPath: '/etc/oak-secrets'
+              readOnly: true
+          args:
+            - --application=config.bin
+            - --grpc-tls-private-key=/etc/oak-secrets/gcp.key
+            - --grpc-tls-certificate=/etc/oak-secrets/gcp.pem
+            - --root-tls-certificate=/etc/oak-secrets/ca.pem
+          env:
+            - name: RUST_LOG
+              value: info
+        - name: backend
+          image: gcr.io/oak-ci/oak-aggregator-backend:latest
+          volumeMounts:
+            - name: tls-secret
+              mountPath: '/etc/oak-secrets'
+              readOnly: true
+          args:
+            - --grpc-tls-private-key=/etc/oak-secrets/gcp.key
+            - --grpc-tls-certificate=/etc/oak-secrets/gcp.pem
+          env:
+            - name: RUST_LOG
+              value: info
+      volumes:
+        - name: tls-secret
+          secret:
+            secretName: tls-private-key
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aggregator
+  labels:
+    app: aggregator
+spec:
+  selector:
+    app: aggregator
+  ports:
+    - port: 8080
+  type: LoadBalancer
+  # This IP address was reserved it Google Cloud. New IP addresses can be reserved at:
+  # https://pantheon.corp.google.com/networking/addresses/list?project=oak-ci
+  # IP that is used here must not be used anywhere else.
+  loadBalancerIP: '35.246.87.178'
