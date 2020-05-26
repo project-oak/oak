@@ -44,7 +44,7 @@ cc_binary(
         "-s WASM=1",
     ],
     deps = [
-        "//oak/module:defines",
+        "//oak/module:oak_abi",
         "//oak/module:placeholders",
         # TODO(#422): Sort out inclusion of protobuf files
         # "//oak/proto:oak_api_cc_proto",
@@ -77,7 +77,7 @@ cc_binary(
         "-s WASM=1",
     ],
     deps = [
-        "//oak/module:defines",
+        "//oak/module:oak_abi",
         "//oak/module:placeholders",
         # TODO(#422): Sort out inclusion of protobuf files
         # "//oak/proto:oak_api_cc_proto",
