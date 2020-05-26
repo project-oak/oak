@@ -84,10 +84,17 @@ steps:
     entrypoint: 'bash'
     args: ['./scripts/run_examples', '-s', 'base']
 
+  - name: 'gcr.io/oak-ci/oak:latest'
+    id: run_examples_cpp
+    waitFor: ['run_examples']
+    timeout: 60m
+    entrypoint: 'bash'
+    args: ['./scripts/run_examples', '-s', 'base', '-l', 'cpp']
+
   # Run clang-tidy after the examples finish running, since they share the same `output_base`.
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_clang_tidy
-    waitFor: ['run_examples']
+    waitFor: ['run_examples_cpp']
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/run_clang_tidy']
@@ -96,7 +103,7 @@ steps:
   # ignored by git.
   - name: 'gcr.io/oak-ci/oak:latest'
     id: git_check_diff
-    waitFor: ['git_init', 'run_clang_tidy', 'run_examples']
+    waitFor: ['git_init', 'run_clang_tidy', 'run_examples_cpp']
     timeout: 5m
     entrypoint: 'bash'
     args: ['./scripts/git_check_diff']
