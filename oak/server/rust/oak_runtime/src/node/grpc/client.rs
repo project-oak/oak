@@ -18,13 +18,16 @@ use crate::{
     io::Receiver,
     node::{
         grpc::{codec::VecCodec, from_tonic_status, invocation::Invocation},
-        Node,
+        ConfigurationError, Node,
     },
     runtime::RuntimeProxy,
 };
 use log::{debug, error, info};
 use oak_abi::{
-    proto::oak::encap::{GrpcRequest, GrpcResponse},
+    proto::oak::{
+        application::GrpcClientConfiguration,
+        encap::{GrpcRequest, GrpcResponse},
+    },
     Handle, OakStatus,
 };
 use tokio::sync::oneshot;
@@ -38,19 +41,30 @@ pub struct GrpcClientNode {
     handler: GrpcRequestHandler,
 }
 
+/// Checks if URI contains the "Host" element.
+fn check_uri(uri: &Uri) -> Result<(), ConfigurationError> {
+    uri.authority()
+        .filter(|authority| !authority.host().is_empty())
+        .map(|_| ())
+        .ok_or(ConfigurationError::NoHostElement)
+}
+
 impl GrpcClientNode {
     /// Creates a new [`GrpcClientNode`] instance, but does not start it.
-    ///
-    /// Arguments:
-    /// * `node_name` - Pseudo-Node name.
-    /// * `uri` - The URI component of a gRPC server endpoint. Must contain the "Host" element.
-    /// * `root_tls_certificate` - Loaded PEM encoded X.509 TLS root certificate file used to
-    ///   authenticate an external gRPC service.
-    pub fn new(node_name: &str, uri: Uri, root_tls_certificate: Certificate) -> Self {
-        Self {
+    pub fn new(
+        node_name: &str,
+        config: GrpcClientConfiguration,
+        root_tls_certificate: Certificate,
+    ) -> Result<Self, ConfigurationError> {
+        let uri = config.uri.parse().map_err(|error| {
+            error!("Error parsing URI {}: {:?}", config.uri, error);
+            ConfigurationError::IncorrectURI
+        })?;
+        check_uri(&uri)?;
+        Ok(Self {
             node_name: node_name.to_string(),
             handler: GrpcRequestHandler::new(uri, root_tls_certificate),
-        }
+        })
     }
 
     /// Main loop that handles gRPC invocations from the `handle`, sends gRPC requests to an

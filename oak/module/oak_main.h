@@ -44,9 +44,19 @@ WASM_EXPORT void grpc_oak_main(oak_abi::Handle _handle) {
   }
 
   // Create a gRPC server pseudo-Node
-  char config_name[] = "grpc-server";
-  result = node_create((uint8_t*)config_name, sizeof(config_name) - 1, nullptr, 0, nullptr, 0,
-                       read_handle);
+  // Manually create an encapsulated NodeConfiguration protobuf and send it back.
+  //    0a                     b00001.010 = tag 1 (NodeConfiguration.name), length-delimited field
+  //    0b                     length=11
+  //      677270635f736572     "grpc_server"
+  //    2a                     b00101.010 = tag 5 (NodeConfiguration.grpc_server_config)
+  //    0b                     length=11
+  //      0a                   b00001.010 = tag 1 (GrpcServerConfiguration.address)
+  //      09                   length=9
+  //        5b3a3a5d3a38303830 "[::]:8080"
+  char node_config[] =
+      "\x0a\x0b\x67\x72\x70\x63\x5f\x73\x65\x72\x76\x65\x72\x2a\x0b\x0a\x09\x5b\x3a\x3a\x5d\x3a\x38"
+      "\x30\x38\x30";
+  result = node_create((uint8_t*)node_config, sizeof(node_config) - 1, nullptr, 0, read_handle);
   if (result != oak_abi::OakStatus::OK) {
     return;
   }

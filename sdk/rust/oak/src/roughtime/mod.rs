@@ -20,10 +20,9 @@ use crate::{
     grpc,
     proto::oak::roughtime::{RoughTimeRequest, RoughtimeServiceClient},
 };
-
-/// Default name for predefined Node config that corresponds to a Roughtime
-/// pseudo-Node.
-pub const DEFAULT_CONFIG_NAME: &str = "roughtime";
+use oak_abi::proto::oak::application::{
+    node_configuration::ConfigType, NodeConfiguration, RoughtimeClientConfiguration,
+};
 
 /// Local representation of the connection to an external Roughtime service.
 pub struct Roughtime {
@@ -31,16 +30,13 @@ pub struct Roughtime {
 }
 
 impl Roughtime {
-    /// Create a default `Roughtime` instance assuming the default pre-defined
-    /// name (`"roughtime"`) identifying Roughtime pseudo-Node config.
-    pub fn default() -> Option<Roughtime> {
-        Roughtime::new(DEFAULT_CONFIG_NAME)
-    }
-
-    /// Create a `Roughtime` instance using the given name identifying Roughtime
-    /// pseudo-Node configuration.
-    pub fn new(config: &str) -> Option<Roughtime> {
-        crate::grpc::client::Client::new(config, "oak_main").map(|client| Roughtime {
+    /// Creates a [`Roughtime`] instance using the given configuration.
+    pub fn new(config: &RoughtimeClientConfiguration) -> Option<Roughtime> {
+        let config = NodeConfiguration {
+            name: "roughtime".to_string(),
+            config_type: Some(ConfigType::RoughtimeClientConfig(config.clone())),
+        };
+        crate::grpc::client::Client::new(&config).map(|client| Roughtime {
             client: RoughtimeServiceClient(client),
         })
     }

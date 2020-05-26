@@ -13,7 +13,7 @@ log = "*"
 prost = "*"
 structopt = "*"
 tokio = { version = "*", features = ["fs", "macros", "sync", "stream"] }
-tonic = { version = "=0.1.1", features = ["tls"] }
+tonic = { version = "*", features = ["tls"] }
 
 [build-dependencies]
 tonic-build = "*"

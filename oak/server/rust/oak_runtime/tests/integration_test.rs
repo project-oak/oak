@@ -20,7 +20,13 @@ mod common {
     use hyper::{Client, Uri};
     use log::info;
     use maplit::hashmap;
-    use oak_abi::OakStatus;
+    use oak_abi::{
+        proto::oak::application::{
+            node_configuration::ConfigType, ApplicationConfiguration, NodeConfiguration,
+            WebAssemblyConfiguration,
+        },
+        OakStatus,
+    };
     use oak_runtime::{config, runtime::RuntimeProxy, GrpcConfiguration};
     use wat::parse_str;
 
@@ -36,18 +42,22 @@ mod common {
         let binary = parse_str(wat).expect("Could not parse wat module.");
 
         // Create a runtime with one node
-        let cfg = oak_runtime::application_configuration(
-            hashmap![
-                "node".to_string() => binary,
-            ],
-            "lumberjack",
-            "node",
-            "oak_main",
-        );
+        let application_configuration = ApplicationConfiguration {
+            wasm_modules: hashmap! {
+                "module".to_string() => binary,
+            },
+            initial_node_configuration: Some(NodeConfiguration {
+                name: "test".to_string(),
+                config_type: Some(ConfigType::WasmConfig(WebAssemblyConfiguration {
+                    wasm_module_name: "module".to_string(),
+                    wasm_entrypoint_name: "oak_main".to_string(),
+                })),
+            }),
+        };
 
         info!("Starting the runtime with one node.");
         config::configure_and_run(
-            cfg,
+            application_configuration,
             oak_runtime::RuntimeConfiguration {
                 metrics_port: Some(crate::METRICS_PORT),
                 introspect_port: None,
@@ -68,7 +78,7 @@ mod common {
         info!("status: {}", res.status());
 
         let buf = hyper::body::to_bytes(res).await?;
-        Ok(std::str::from_utf8(&buf[..]).unwrap().to_string())
+        Ok(std::str::from_utf8(buf.as_ref()).unwrap().to_string())
     }
 }
 

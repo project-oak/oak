@@ -72,13 +72,7 @@ pub extern "C" fn channel_close(_handle: u64) -> u32 {
     panic!("stub function invoked!");
 }
 #[no_mangle]
-pub extern "C" fn node_create(
-    _config_buf: *const u8,
-    _config_len: usize,
-    _entrypoint_buf: *const u8,
-    _entrypoint_len: usize,
-    _handle: u64,
-) -> u32 {
+pub extern "C" fn node_create(_config_buf: *const u8, _config_len: usize, _handle: u64) -> u32 {
     panic!("stub function invoked!");
 }
 #[no_mangle]

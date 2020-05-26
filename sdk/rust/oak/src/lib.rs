@@ -16,6 +16,8 @@
 
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use log::{debug, error, info, warn};
+use oak_abi::proto::oak::application::NodeConfiguration;
+use prost::Message;
 use serde::{Deserialize, Serialize};
 
 // Re-export ABI constants that are also visible as part of the SDK API.
@@ -29,6 +31,7 @@ pub use error::OakError;
 pub mod grpc;
 pub mod io;
 pub mod logger;
+pub mod node_config;
 pub mod rand;
 pub mod roughtime;
 pub mod storage;
@@ -37,7 +40,7 @@ pub mod proto {
     pub mod oak {
         // The storage protobuf messages use the label.Label type which is built
         // in the `oak_abi` crate, so make it available here too.
-        use oak_abi::proto::oak::label;
+        pub use oak_abi::proto::oak::{application, label};
         pub mod storage {
             include!(concat!(env!("OUT_DIR"), "/oak.storage.rs"));
         }
@@ -351,12 +354,8 @@ pub fn channel_close(handle: Handle) -> Result<(), OakStatus> {
 }
 
 /// Similar to [`node_create_with_label`], but with a fixed label corresponding to "public trusted".
-pub fn node_create(
-    config_name: &str,
-    entrypoint_name: &str,
-    half: ReadHandle,
-) -> Result<(), OakStatus> {
-    node_create_with_label(config_name, entrypoint_name, &Label::public_trusted(), half)
+pub fn node_create(config: &NodeConfiguration, half: ReadHandle) -> Result<(), OakStatus> {
+    node_create_with_label(config, &Label::public_trusted(), half)
 }
 
 /// Creates a new Node running the configuration identified by `config_name`, running the entrypoint
@@ -368,18 +367,20 @@ pub fn node_create(
 ///
 /// See https://github.com/project-oak/oak/blob/master/docs/concepts.md#labels
 pub fn node_create_with_label(
-    config_name: &str,
-    entrypoint_name: &str,
+    config: &NodeConfiguration,
     label: &Label,
     half: ReadHandle,
 ) -> Result<(), OakStatus> {
     let label_bytes = label.serialize();
+    let mut config_bytes = Vec::new();
+    config.encode(&mut config_bytes).map_err(|err| {
+        warn!("Could not encode node configuration: {:?}", err);
+        OakStatus::ErrInvalidArgs
+    })?;
     let status = unsafe {
         oak_abi::node_create(
-            config_name.as_ptr(),
-            config_name.len(),
-            entrypoint_name.as_ptr(),
-            entrypoint_name.len(),
+            config_bytes.as_ptr(),
+            config_bytes.len(),
             label_bytes.as_ptr(),
             label_bytes.len(),
             half.handle.id,
@@ -425,7 +426,7 @@ pub fn set_panic_hook() {
         let msg = match payload.downcast_ref::<&'static str>() {
             Some(content) => *content,
             None => match payload.downcast_ref::<String>() {
-                Some(content) => &content[..],
+                Some(content) => content.as_ref(),
                 None => "<UNKNOWN MESSAGE>",
             },
         };
@@ -540,7 +541,8 @@ pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(
 ///
 /// oak::entrypoint!(dummy => |_in_channel| {
 ///     let dispatcher = DummyNode::default();
-///     let grpc_channel = oak::grpc::server::init_default();
+///     let grpc_channel = oak::grpc::server::init("[::]:8080")
+///         .expect("could not create gRPC server pseudo-node");
 ///     oak::run_event_loop(dispatcher, grpc_channel);
 /// });
 ///
@@ -576,7 +578,8 @@ pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(
 /// oak::entrypoint!(its_complicated => |_in_channel| {
 ///     init_all_the_things();
 ///     let dispatcher = DummyNode::default();
-///     let grpc_channel = oak::grpc::server::init_default();
+///     let grpc_channel = oak::grpc::server::init("[::]:8080")
+///         .expect("could not create gRPC server pseudo-node");
 ///     oak::run_event_loop(dispatcher, grpc_channel);
 /// });
 /// #

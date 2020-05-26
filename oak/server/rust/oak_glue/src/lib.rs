@@ -17,10 +17,10 @@
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use lazy_static::lazy_static;
 use log::{debug, error, info, warn};
-use oak_abi::OakStatus;
+use oak_abi::{proto::oak::application::ApplicationConfiguration, OakStatus};
 use oak_runtime::{
-    proto::oak::application::ApplicationConfiguration, runtime::RuntimeProxy, GrpcConfiguration,
-    NodeId,
+    runtime::{NodeId, RuntimeProxy},
+    GrpcConfiguration,
 };
 use prost::Message;
 use std::{convert::TryInto, io::Cursor, sync::RwLock};
@@ -39,14 +39,14 @@ type NodeFactory =
     extern "C" fn(data: usize, name: *const u8, name_len: u32, node_id: u64, handle: u64) -> ();
 
 struct Glue {
-    runtime: oak_runtime::RuntimeProxy,
+    runtime: oak_runtime::runtime::RuntimeProxy,
     factory: Option<NodeFactory>,
     factory_data: usize,
 }
 
 impl Glue {
     fn new(
-        runtime: oak_runtime::RuntimeProxy,
+        runtime: oak_runtime::runtime::RuntimeProxy,
         factory: Option<NodeFactory>,
         factory_data: usize,
     ) -> Self {
@@ -106,8 +106,8 @@ pub unsafe extern "C" fn glue_start(
             introspect_port: Some(1909),
         };
         info!(
-            "start runtime with initial config {}.{} {:?}",
-            app_config.initial_node_config_name, app_config.initial_entrypoint_name, runtime_config
+            "start runtime with application config {:?}, runtime config {:?}",
+            app_config, runtime_config
         );
 
         // Register callback for creating C++ pseudo-Nodes.

@@ -17,6 +17,7 @@
 fn main() {
     oak_utils::compile_protos(
         &[
+            "../../../../oak/proto/application.proto",
             "../../../../oak/proto/grpc_encap.proto",
             "../../../../oak/proto/label.proto",
             "../../../../oak/proto/log.proto",

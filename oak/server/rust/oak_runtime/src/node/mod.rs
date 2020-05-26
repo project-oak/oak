@@ -15,14 +15,11 @@
 //
 
 use crate::{runtime::RuntimeProxy, GrpcConfiguration};
-use log::debug;
-use std::{
-    net::{AddrParseError, SocketAddr},
-    string::String,
-    sync::Arc,
+use oak_abi::proto::oak::application::{
+    node_configuration::ConfigType, ApplicationConfiguration, LogConfiguration, NodeConfiguration,
 };
+use std::net::AddrParseError;
 use tokio::sync::oneshot;
-use tonic::transport::Uri;
 
 pub mod external;
 mod grpc;
@@ -32,8 +29,8 @@ mod storage;
 mod wasm;
 
 /// Trait encapsulating execution of a Node or pseudo-Node.
-pub trait Node {
-    /// Execute the Node, using the provided `Runtime` reference and initial handle. The method
+pub trait Node: Send {
+    /// Execute the Node, using the provided `Runtime` reference and initial handle.  The method
     /// should continue execution until the Node terminates.
     ///
     /// `notify_receiver` receives a notification from the Runtime upon termination. This
@@ -46,52 +43,17 @@ pub trait Node {
     );
 }
 
-/// A [`Configuration`] corresponds to a [`NodeConfiguration`] protobuf message, with parsed
-/// and validated configuration information.
-///
-/// [`NodeConfiguration`]: crate::proto::oak::application::NodeConfiguration
-pub enum Configuration {
-    LogNode,
-
-    /// The configuration for a gRPC server pseudo-Node that contains an `address` to listen on and
-    /// a TLS identity that consists of a private RSA key and an X.509 TLS certificate.
-    GrpcServerNode {
-        address: SocketAddr,
-    },
-
-    /// The configuration for a gRPC server pseudo-Node that contains a URI and an X.509 root TLS
-    /// certificate.
-    GrpcClientNode {
-        uri: Uri,
-        address: String,
-    },
-
-    /// The configuration for a Wasm Node.
-    // It would be better to store a list of exported methods and copyable Wasm interpreter
-    // instance, but wasmi doesn't allow this. We make do with having a copyable
-    // `Arc<wasmi::Module>` that we pass to new Nodes, and clone to to spawn new
-    // `wasmi::ModuleInstances`.
-    WasmNode {
-        module: Arc<wasmi::Module>,
-    },
-
-    /// The configuration for a storage Node.
-    StorageNode,
-
-    /// The configuration for a Roughtime client Node.
-    RoughtimeClientNode,
-
-    /// The configuration for an externally provided pseudo-Node.
-    External,
-}
-
-/// An enumeration for errors occuring when building [`Configuration`] from protobuf types.
+/// A enumeration for errors occuring when creating a new [`Node`] instance.
+// TODO(#1027): Improve or delete this enum.
 #[derive(Debug)]
 pub enum ConfigurationError {
     AddressParsingError(AddrParseError),
     IncorrectPort,
+    IncorrectURI,
     NoHostElement,
     CertificateParsingError,
+    IncorrectWebAssemblyModuleName,
+    InvalidNodeConfiguration,
     WasmiModuleInializationError(wasmi::Error),
 }
 
@@ -108,10 +70,15 @@ impl std::fmt::Display for ConfigurationError {
                 write!(f, "Failed to parse an address: {}", e)
             }
             ConfigurationError::IncorrectPort => write!(f, "Incorrect port (must be > 1023)"),
+            ConfigurationError::IncorrectURI => write!(f, "Incorrect URI"),
             ConfigurationError::NoHostElement => write!(f, "URI doesn't contain the Host element"),
             ConfigurationError::CertificateParsingError => {
                 write!(f, "Error parsing PEM encoded TLS certificate")
             }
+            ConfigurationError::IncorrectWebAssemblyModuleName => {
+                write!(f, "Incorrect WebAssembly module name")
+            }
+            ConfigurationError::InvalidNodeConfiguration => write!(f, "Invalid NodeConfiguration"),
             ConfigurationError::WasmiModuleInializationError(e) => {
                 write!(f, "Failed to initialize wasmi::Module: {}", e)
             }
@@ -119,101 +86,49 @@ impl std::fmt::Display for ConfigurationError {
     }
 }
 
-/// Loads a Wasm module into a Node configuration, returning an error if `wasmi` failed to load the
-/// module.
-pub fn load_wasm(wasm_bytes: &[u8]) -> Result<Configuration, ConfigurationError> {
-    let module = wasmi::Module::from_buffer(wasm_bytes)
-        .map_err(ConfigurationError::WasmiModuleInializationError)?;
-    Ok(Configuration::WasmNode {
-        module: Arc::new(module),
-    })
-}
-
-/// Checks if port is greater than 1023.
-pub fn check_port(address: &SocketAddr) -> Result<(), ConfigurationError> {
-    if address.port() > 1023 {
-        Ok(())
-    } else {
-        Err(ConfigurationError::IncorrectPort)
-    }
-}
-
-/// Checks if URI contains the "Host" element.
-pub fn check_uri(uri: &Uri) -> Result<(), ConfigurationError> {
-    uri.authority()
-        .filter(|authority| !authority.host().is_empty())
-        .map(|_| ())
-        .ok_or(ConfigurationError::NoHostElement)
-}
-
-impl Configuration {
-    /// Creates a new Node instance corresponding to the [`Configuration`].
-    ///
-    /// On success returns a boxed [`Node`] that can be run with [`Node::run`].
-    pub fn create_node(
-        &self,
-        node_name: &str, // Used for pretty debugging
-        config_name: &str,
-        entrypoint: String,
-        grpc_configuration: &GrpcConfiguration,
-    ) -> Option<Box<dyn Node + Send>> {
-        debug!(
-            "create_node('{}': '{}'.'{}')",
-            node_name, config_name, entrypoint
-        );
-        match self {
-            Configuration::LogNode => Some(Box::new(logger::LogNode::new(node_name))),
-            Configuration::GrpcServerNode { address } => {
-                Some(Box::new(grpc::server::GrpcServerNode::new(
-                    node_name,
-                    *address,
-                    grpc_configuration
-                        .grpc_server_tls_identity
-                        .as_ref()
-                        .expect("no gRPC server TLS identity provided")
-                        .clone(),
-                )))
-            }
-            Configuration::GrpcClientNode { uri, address: _ } => {
-                Some(Box::new(grpc::client::GrpcClientNode::new(
-                    node_name,
-                    uri.clone(),
-                    grpc_configuration
-                        .grpc_client_root_tls_certificate
-                        .as_ref()
-                        .expect("no gRPC client root TLS certificate provided")
-                        .clone(),
-                )))
-            }
-            Configuration::WasmNode { module } => {
-                match wasm::WasmNode::new(node_name, module.clone(), entrypoint) {
-                    Some(node) => Some(Box::new(node)),
-                    None => None,
-                }
-            }
-
-            Configuration::StorageNode => Some(Box::new(storage::StorageNode::new(node_name))),
-            Configuration::RoughtimeClientNode => {
-                Some(Box::new(roughtime::RoughtimeClientNode::new(node_name)))
-            }
-
-            Configuration::External => {
-                Some(Box::new(external::PseudoNode::new(node_name, config_name)))
-            }
+pub fn create_node(
+    application_configuration: &ApplicationConfiguration,
+    node_configuration: &NodeConfiguration,
+    grpc_configuration: &GrpcConfiguration,
+) -> Result<Box<dyn Node>, ConfigurationError> {
+    let node_name = &node_configuration.name;
+    match &node_configuration.config_type {
+        Some(ConfigType::LogConfig(LogConfiguration {})) => {
+            Ok(Box::new(logger::LogNode::new(node_name)))
         }
-    }
-
-    /// Generate a description of a Node or pseudo-Node that is started with the given entrypoint.
-    /// (In practice, only Wasm nodes pay attention to the entrypoint).
-    pub fn node_subname(&self, entrypoint: &str) -> String {
-        match self {
-            Configuration::LogNode => "LogNode".to_string(),
-            Configuration::GrpcServerNode { .. } => "GrpcServerNode".to_string(),
-            Configuration::GrpcClientNode { .. } => "GrpcClientNode".to_string(),
-            Configuration::WasmNode { .. } => format!("WasmNode-{}", entrypoint),
-            Configuration::StorageNode { .. } => "StorageNode".to_string(),
-            Configuration::RoughtimeClientNode { .. } => "RoughtimeClientNode".to_string(),
-            Configuration::External => "ExternalPseudoNode".to_string(),
+        Some(ConfigType::GrpcServerConfig(config)) => {
+            Ok(Box::new(grpc::server::GrpcServerNode::new(
+                node_name,
+                config.clone(),
+                grpc_configuration
+                    .grpc_server_tls_identity
+                    .as_ref()
+                    .expect("no gRPC server TLS identity provided to Oak Runtime")
+                    .clone(),
+            )?))
         }
+        Some(ConfigType::WasmConfig(config)) => Ok(Box::new(wasm::WasmNode::new(
+            node_name,
+            application_configuration,
+            config.clone(),
+        )?)),
+        Some(ConfigType::GrpcClientConfig(config)) => {
+            Ok(Box::new(grpc::client::GrpcClientNode::new(
+                node_name,
+                config.clone(),
+                grpc_configuration
+                    .grpc_client_root_tls_certificate
+                    .as_ref()
+                    .expect("no gRPC client root TLS certificate provided to Oak Runtime")
+                    .clone(),
+            )?))
+        }
+        Some(ConfigType::RoughtimeClientConfig(_config)) => {
+            Ok(Box::new(roughtime::RoughtimeClientNode::new(node_name)))
+        }
+        Some(ConfigType::StorageConfig(_config)) => {
+            Ok(Box::new(storage::StorageNode::new(node_name)))
+        }
+        None => Err(ConfigurationError::InvalidNodeConfiguration),
     }
 }

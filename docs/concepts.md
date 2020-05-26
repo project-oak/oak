@@ -362,17 +362,18 @@ and connected by unidirectional channels. The initial connectivity graph
 consists of a single Application Node with no associated channel.
 
 Once the Application is running, new Nodes can be created (with
-`node_create()`), new channels can be created (with `channel_create()`) and the
-handles to either half of the channel may be passed between Nodes (over
-channels).
+[`node_create`](/docs/abi.md#node_create)), new channels can be created (with
+[`channel_create`](/docs/abi.md#channel_create)) and the handles to either half
+of the channel may be passed between Nodes (over channels).
 
 Typically, the first Application Node creates a
 [gRPC server pseudo-Node](#pseudo-nodes) and sets up a channel from the
 pseudo-Node to the Application, on which [gRPC method invocations](#invocations)
 are delivered.
 
-The allowed contents of the Nodes, and the initial Node to run, are specified by
-an [Application Configuration](/oak/proto/application.proto).
+The list of allowed WebAssembly modules that can be used to instantiate
+WebAssembly Nodes, and the initial Node to run, are specified by an
+[Application Configuration](/oak/proto/application.proto).
 
 Once a new Oak Application is initialized and its gRPC endpoint available,
 clients may connect to it using individually end-to-end encrypted, authenticated

@@ -27,10 +27,8 @@
 use anyhow::anyhow;
 use core::str::FromStr;
 use log::{debug, info};
-use oak_runtime::{
-    configure_and_run,
-    proto::oak::application::{ApplicationConfiguration, ConfigMap},
-};
+use oak_abi::proto::oak::application::{ApplicationConfiguration, ConfigMap};
+use oak_runtime::config::configure_and_run;
 use prost::Message;
 use std::{
     collections::HashMap,

@@ -7,6 +7,7 @@ license = "Apache-2.0"
 
 [dependencies]
 byteorder = "*"
+cargo_metadata = "*"
 lazy_static = "*"
 log = { version = "*", features = ["std"] }
 oak = "=0.1.0"
@@ -14,4 +15,4 @@ oak_abi = "=0.1.0"
 oak_runtime = { version = "=0.1.0", features = ["test_build"] }
 prost = "*"
 rand = { version = "*" }
-cargo_metadata = "*"
+tonic = { version = "*", features = ["tls"] }

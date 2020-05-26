@@ -15,12 +15,20 @@
 //
 
 use crate::{
+    node::ConfigurationError,
     runtime::{NodeReadStatus, RuntimeProxy},
     NodeMessage,
 };
 use byteorder::{ByteOrder, LittleEndian};
 use log::{debug, error, info, warn};
-use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
+use oak_abi::{
+    label::Label,
+    proto::oak::application::{
+        ApplicationConfiguration, NodeConfiguration, WebAssemblyConfiguration,
+    },
+    ChannelReadStatus, OakStatus,
+};
+use prost::Message as _;
 use rand::RngCore;
 use std::{string::String, sync::Arc};
 use tokio::sync::oneshot;
@@ -97,22 +105,15 @@ impl WasmInterface {
     #[allow(clippy::too_many_arguments)]
     fn node_create(
         &self,
-        name_ptr: AbiPointer,
-        name_length: AbiPointerOffset,
-        entrypoint_ptr: AbiPointer,
-        entrypoint_length: AbiPointerOffset,
+        config_ptr: AbiPointer,
+        config_length: AbiPointerOffset,
         label_ptr: AbiPointer,
         label_length: AbiPointerOffset,
         initial_handle: oak_abi::Handle,
     ) -> Result<(), OakStatus> {
         debug!(
-            "{}: node_create({}, {}, {}, {}, {})",
-            self.pretty_name,
-            name_ptr,
-            name_length,
-            entrypoint_ptr,
-            entrypoint_length,
-            initial_handle
+            "{}: node_create({}, {}, {})",
+            self.pretty_name, config_ptr, config_length, initial_handle
         );
 
         if self.runtime.is_terminating() {
@@ -120,37 +121,20 @@ impl WasmInterface {
             return Err(OakStatus::ErrTerminated);
         }
 
-        let config_name_bytes = self
+        let config_bytes = self
             .get_memory()
-            .get(name_ptr, name_length as usize)
+            .get(config_ptr, config_length as usize)
             .map_err(|err| {
                 error!(
-                    "{}: node_create(): Unable to read name from guest memory: {:?}",
+                    "{}: node_create(): Unable to read config from guest memory: {:?}",
                     self.pretty_name, err
                 );
                 OakStatus::ErrInvalidArgs
             })?;
-        let config_name = String::from_utf8(config_name_bytes).map_err(|err| {
-            error!(
-                "{}: node_create(): Unable to parse config_name: {:?}",
-                self.pretty_name, err
-            );
-            OakStatus::ErrInvalidArgs
-        })?;
 
-        let entrypoint_bytes = self
-            .get_memory()
-            .get(entrypoint_ptr, entrypoint_length as usize)
-            .map_err(|err| {
-                error!(
-                    "{}: node_create(): Unable to read entrypoint from guest memory: {:?}",
-                    self.pretty_name, err
-                );
-                OakStatus::ErrInvalidArgs
-            })?;
-        let entrypoint = String::from_utf8(entrypoint_bytes).map_err(|err| {
-            error!(
-                "{}: node_create(): Unable to parse entrypoint: {:?}",
+        let config = NodeConfiguration::decode(config_bytes.as_ref()).map_err(|err| {
+            warn!(
+                "{}: node_create(): Could not parse node configuration: {:?}",
                 self.pretty_name, err
             );
             OakStatus::ErrInvalidArgs
@@ -175,12 +159,19 @@ impl WasmInterface {
         })?;
 
         debug!(
-            "{}: node_create('{}', '{}', {:?})",
-            self.pretty_name, config_name, entrypoint, label
+            "{}: node_create({:?}, {:?})",
+            self.pretty_name, config, label
         );
 
         self.runtime
-            .node_create(&config_name, &entrypoint, &label, initial_handle)
+            .node_create(&config, &label, initial_handle)
+            .map_err(|err| {
+                error!(
+                    "{}: node_create(): Could not create node: {:?}",
+                    self.pretty_name, err
+                );
+                err
+            })
     }
 
     /// Corresponds to the host ABI function [`random_get`](https://github.com/project-oak/oak/blob/master/docs/abi.md#random_get).
@@ -508,8 +499,6 @@ impl wasmi::Externals for WasmInterface {
                 args.nth_checked(2)?,
                 args.nth_checked(3)?,
                 args.nth_checked(4)?,
-                args.nth_checked(5)?,
-                args.nth_checked(6)?,
             )),
             RANDOM_GET => {
                 map_host_errors(self.random_get(args.nth_checked(0)?, args.nth_checked(1)?))
@@ -570,8 +559,6 @@ fn oak_resolve_func(
                 &[
                     ABI_USIZE,      // config_buf
                     ABI_USIZE,      // config_len
-                    ABI_USIZE,      // entrypoint_buf
-                    ABI_USIZE,      // entrypoint_len
                     ABI_USIZE,      // label_buf
                     ABI_USIZE,      // label_len
                     ValueType::I64, // handle
@@ -797,19 +784,32 @@ fn validate_entrypoint(module: &wasmi::Module, entrypoint: &str) -> Result<(), O
 pub struct WasmNode {
     node_name: String,
     module: Arc<wasmi::Module>,
-    entrypoint: String,
+    entrypoint_name: String,
 }
 
 impl WasmNode {
     /// Creates a new [`WasmNode`] instance, but does not start it.
     /// May fail if the provided Wasm module is not valid.
-    pub fn new(node_name: &str, module: Arc<wasmi::Module>, entrypoint: String) -> Option<Self> {
-        validate_entrypoint(&module, &entrypoint).ok()?;
-
-        Some(Self {
+    pub fn new(
+        node_name: &str,
+        application_configuration: &ApplicationConfiguration,
+        node_configuration: WebAssemblyConfiguration,
+    ) -> Result<Self, ConfigurationError> {
+        let wasm_module_bytes = application_configuration
+            .wasm_modules
+            .get(&node_configuration.wasm_module_name)
+            .ok_or(ConfigurationError::IncorrectWebAssemblyModuleName)?;
+        let module = wasmi::Module::from_buffer(&wasm_module_bytes)
+            .map_err(ConfigurationError::WasmiModuleInializationError)?;
+        let entrypoint_name = node_configuration.wasm_entrypoint_name;
+        validate_entrypoint(&module, &entrypoint_name).map_err(|err| {
+            warn!("could not validate entrypoint: {:?}", err);
+            ConfigurationError::IncorrectWebAssemblyModuleName
+        })?;
+        Ok(Self {
             node_name: node_name.to_string(),
-            module,
-            entrypoint,
+            module: Arc::new(module),
+            entrypoint_name,
         })
     }
 }
@@ -824,7 +824,7 @@ impl super::Node for WasmNode {
     ) {
         debug!(
             "{}: running entrypoint '{}'",
-            self.node_name, self.entrypoint
+            self.node_name, self.entrypoint_name
         );
         let wasi_stub = WasiStub;
         let mut abi = WasmInterface::new(&self.node_name, runtime);
@@ -846,14 +846,14 @@ impl super::Node for WasmNode {
 
         instance
             .invoke_export(
-                &self.entrypoint,
+                &self.entrypoint_name,
                 &[wasmi::RuntimeValue::I64(handle as i64)],
                 &mut abi,
             )
             .expect("failed to execute export");
         debug!(
             "{}: entrypoint '{}' completed",
-            self.node_name, self.entrypoint
+            self.node_name, self.entrypoint_name
         );
     }
 }

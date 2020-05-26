@@ -23,6 +23,10 @@ pub mod google {
 pub mod oak {
     include!(concat!(env!("OUT_DIR"), "/oak_abi.rs"));
 
+    pub mod application {
+        include!(concat!(env!("OUT_DIR"), "/oak.application.rs"));
+    }
+
     pub mod label {
         include!(concat!(env!("OUT_DIR"), "/oak.label.rs"));
     }

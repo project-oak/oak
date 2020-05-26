@@ -23,10 +23,9 @@ use crate::{
         StorageItem, StorageServiceClient,
     },
 };
-
-/// Default name for predefined Node config that corresponds to a storage
-/// pseudo-Node.
-pub const DEFAULT_CONFIG_NAME: &str = "storage";
+use oak_abi::proto::oak::application::{
+    node_configuration::ConfigType, NodeConfiguration, StorageProxyConfiguration,
+};
 
 /// Local representation of the connection to an external storage service.
 pub struct Storage {
@@ -34,16 +33,13 @@ pub struct Storage {
 }
 
 impl Storage {
-    /// Create a default `Storage` instance assuming the default pre-defined
-    /// name (`"storage"`) identifying storage Node config.
-    pub fn default() -> Option<Storage> {
-        Storage::new(DEFAULT_CONFIG_NAME)
-    }
-
-    /// Create a `Storage` instance using the given name identifying storage
-    /// Node configuration.
-    pub fn new(config: &str) -> Option<Storage> {
-        crate::grpc::client::Client::new(config, "oak_main").map(|client| Storage {
+    /// Creates a [`Storage`] instance using the given configuration.
+    pub fn new(config: &StorageProxyConfiguration) -> Option<Storage> {
+        crate::grpc::client::Client::new(&NodeConfiguration {
+            name: "storage".to_string(),
+            config_type: Some(ConfigType::StorageConfig(config.clone())),
+        })
+        .map(|client| Storage {
             client: StorageServiceClient(client),
         })
     }
