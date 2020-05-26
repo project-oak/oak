@@ -21,8 +21,8 @@ package(
 )
 
 cc_library(
-    name = "defines",
-    hdrs = ["defines.h"],
+    name = "oak_abi",
+    hdrs = ["oak_abi.h"],
     visibility = ["//visibility:public"],
 )
 

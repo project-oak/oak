@@ -25,7 +25,7 @@ cc_binary(
     name = "hello_world.wasm",
     srcs = ["hello_world.cc"],
     deps = [
-        "//oak/module:defines",
+        "//oak/module:oak_abi",
         # TODO(#422): Sort out inclusion of protobuf files
         # "//oak/proto:oak_api_cc_proto",
     ],

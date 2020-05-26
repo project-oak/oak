@@ -17,28 +17,12 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "oak/module/defines.h"  // for imports and exports
+#include "oak/module/oak_abi.h"
 #include "oak/module/placeholders.h"
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/kernels/register.h"
 #include "tensorflow/lite/model.h"
 #include "tensorflow/lite/optional_debug_tools.h"
-
-// Local copy of oak_api.pb.h contents for now.
-namespace oak {
-
-enum OakStatus {
-  OAK_STATUS_UNSPECIFIED = 0,
-  OK = 1,
-  ERR_BAD_HANDLE = 2,
-  ERR_INVALID_ARGS = 3,
-  ERR_CHANNEL_CLOSED = 4,
-  ERR_BUFFER_TOO_SMALL = 5,
-  ERR_OUT_OF_RANGE = 6,
-  ERR_INTERNAL = 7,
-};
-
-}  // namespace oak
 
 const char kModelBuffer[] = {
     0x18, 0x00, 0x00, 0x00, 0x54, 0x46, 0x4c, 0x33, 0x00, 0x00, 0x0e, 0x00, 0x14, 0x00, 0x04,
@@ -81,16 +65,7 @@ std::string init_tensorflow() {
   return std::string("Success: Model was loaded correctly");
 }
 
-WASM_IMPORT("oak") uint32_t wait_on_channels(uint8_t* buff, int32_t count);
-WASM_IMPORT("oak")
-uint32_t channel_read(uint64_t handle, uint8_t* buff, size_t usize, uint32_t* actual_size,
-                      uint64_t* handle_buff, size_t handle_count, uint32_t* actual_handle_count);
-WASM_IMPORT("oak")
-uint32_t channel_write(uint64_t handle, uint8_t* buff, size_t usize, uint8_t* handle_buff,
-                       size_t handle_count);
-WASM_IMPORT("oak") uint32_t channel_close(uint64_t handle);
-
-WASM_EXPORT void oak_main(uint64_t grpc_in_handle) {
+WASM_EXPORT void oak_main(oak_abi::Handle grpc_in_handle) {
   // TODO(#744): Add C++ helpers for dealing with handle notification space.
   uint8_t handle_space[9] = {
       static_cast<uint8_t>(grpc_in_handle & 0xff),
@@ -105,7 +80,7 @@ WASM_EXPORT void oak_main(uint64_t grpc_in_handle) {
   };
 
   while (true) {
-    int32_t result = wait_on_channels(handle_space, 1);
+    oak_abi::OakStatus result = wait_on_channels(handle_space, 1);
     if (result != oak::OakStatus::OK) {
       return;
     }
@@ -113,13 +88,13 @@ WASM_EXPORT void oak_main(uint64_t grpc_in_handle) {
     // Reading from main channel should return no bytes and a (read, write) pair of handles.
     uint32_t actual_size;
     uint32_t handle_count;
-    uint64_t handles[2];
+    oak_abi::Handle handles[2];
     channel_read(grpc_in_handle, nullptr, 0, &actual_size, handles, 2, &handle_count);
     if ((actual_size != 0) || (handle_count != 2)) {
       return;
     }
-    uint64_t req_handle = handles[0];
-    uint64_t rsp_handle = handles[1];
+    oak_abi::Handle req_handle = handles[0];
+    oak_abi::Handle rsp_handle = handles[1];
 
     // Read an incoming request from the read handle, expecting data but no handles.
     // (However, ignore its contents for now).

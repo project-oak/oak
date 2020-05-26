@@ -17,7 +17,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "oak/module/defines.h"  // for imports and exports
+#include "oak/module/oak_abi.h"
 
 // TODO(#422): Sort out inclusion of protobuf files
 // #include "oak/proto/oak_api.pb.h"
@@ -25,41 +25,14 @@
 // Local copy of oak_api.pb.h contents for now.
 namespace oak {
 
-enum OakStatus {
-  OAK_STATUS_UNSPECIFIED = 0,
-  OK = 1,
-  ERR_BAD_HANDLE = 2,
-  ERR_INVALID_ARGS = 3,
-  ERR_CHANNEL_CLOSED = 4,
-  ERR_BUFFER_TOO_SMALL = 5,
-  ERR_OUT_OF_RANGE = 6,
-  ERR_INTERNAL = 7,
-};
-
 }  // namespace oak
 
-WASM_IMPORT("oak") uint32_t wait_on_channels(uint8_t* buff, int32_t count);
-WASM_IMPORT("oak")
-uint32_t channel_read(uint64_t handle, uint8_t* buff, size_t usize, uint32_t* actual_size,
-                      uint64_t* handle_buff, size_t handle_count, uint32_t* actual_handle_count);
-WASM_IMPORT("oak")
-uint32_t channel_write(uint64_t handle, uint8_t* buff, size_t usize, uint8_t* handle_buff,
-                       size_t handle_count);
-WASM_IMPORT("oak") uint32_t channel_close(uint64_t handle);
-WASM_IMPORT("oak")
-uint32_t channel_create(uint64_t* write_handle, uint64_t* read_handle, uint8_t* label_buf,
-                        size_t label_size);
-WASM_IMPORT("oak")
-uint32_t node_create(uint8_t* config_buf, size_t config_size, uint8_t* entrypoint_buf,
-                     size_t entrypoint_size, uint8_t* label_buf, size_t label_size,
-                     uint64_t handle);
-
-WASM_EXPORT void grpc_oak_main(uint64_t _handle) {
+WASM_EXPORT void grpc_oak_main(oak_abi::Handle _handle) {
   // Create a channel to the gRPC server pseudo-Node.
-  uint64_t write_handle;
-  uint64_t read_handle;
-  uint32_t result = channel_create(&write_handle, &read_handle, nullptr, 0);
-  if (result != oak::OakStatus::OK) {
+  oak_abi::Handle write_handle;
+  oak_abi::Handle read_handle;
+  oak_abi::OakStatus result = channel_create(&write_handle, &read_handle, nullptr, 0);
+  if (result != oak_abi::OakStatus::OK) {
     return;
   }
 
@@ -67,20 +40,20 @@ WASM_EXPORT void grpc_oak_main(uint64_t _handle) {
   char config_name[] = "grpc-server";
   result = node_create((uint8_t*)config_name, sizeof(config_name) - 1, nullptr, 0, nullptr, 0,
                        read_handle);
-  if (result != oak::OakStatus::OK) {
+  if (result != oak_abi::OakStatus::OK) {
     return;
   }
   channel_close(read_handle);
 
   // Create a separate channel for receiving invocations and pass it to the gRPC pseudo-Node.
-  uint64_t grpc_out_handle;
-  uint64_t grpc_in_handle;
+  oak_abi::Handle grpc_out_handle;
+  oak_abi::Handle grpc_in_handle;
   result = channel_create(&grpc_out_handle, &grpc_in_handle, nullptr, 0);
-  if (result != oak::OakStatus::OK) {
+  if (result != oak_abi::OakStatus::OK) {
     return;
   }
   result = channel_write(write_handle, nullptr, 0, (uint8_t*)&grpc_out_handle, 1);
-  if (result != oak::OakStatus::OK) {
+  if (result != oak_abi::OakStatus::OK) {
     return;
   }
   channel_close(grpc_out_handle);
@@ -100,21 +73,21 @@ WASM_EXPORT void grpc_oak_main(uint64_t _handle) {
   };
 
   while (true) {
-    uint32_t result = wait_on_channels(handle_space, 1);
-    if (result != oak::OakStatus::OK) {
+    result = wait_on_channels(handle_space, 1);
+    if (result != oak_abi::OakStatus::OK) {
       return;
     }
 
     // Reading from main channel should give no data and a (read, write) pair of handles.
     uint32_t actual_size;
     uint32_t handle_count;
-    uint64_t handles[2];
+    oak_abi::Handle handles[2];
     channel_read(grpc_in_handle, nullptr, 0, &actual_size, handles, 2, &handle_count);
     if ((actual_size != 0) || (handle_count != 2)) {
       return;
     }
-    uint64_t req_handle = handles[0];
-    uint64_t rsp_handle = handles[1];
+    oak_abi::Handle req_handle = handles[0];
+    oak_abi::Handle rsp_handle = handles[1];
 
     // Read an incoming request from the read handle, expecting data but no handles.
     // (However, ignore its contents for now).
