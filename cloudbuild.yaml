@@ -70,13 +70,12 @@ steps:
     entrypoint: 'bash'
     args: ['./scripts/run_tests']
 
-  # TODO(#942): Reenable `run_tests_tsan`.
-  # - name: 'gcr.io/oak-ci/oak:latest'
-  #   id: run_tests_tsan
-  #   waitFor: ['run_tests']
-  #   timeout: 60m
-  #   entrypoint: 'bash'
-  #   args: ['./scripts/run_tests_tsan']
+  - name: 'gcr.io/oak-ci/oak:latest'
+    id: run_tests_tsan
+    waitFor: ['run_tests']
+    timeout: 60m
+    entrypoint: 'bash'
+    args: ['./scripts/run_tests_tsan']
 
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_examples
