@@ -24,9 +24,9 @@ pub struct Client {
 
 impl Client {
     /// Similar to [`Client::new_with_label`] but with a fixed label corresponding to "public
-    /// trusted".
+    /// untrusted".
     pub fn new(config: &NodeConfiguration) -> Option<Client> {
-        Client::new_with_label(config, &Label::public_trusted())
+        Client::new_with_label(config, &Label::public_untrusted())
     }
 
     /// Creates a new Node that implements a gRPC service, and if successful return a Client.

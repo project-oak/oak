@@ -34,7 +34,7 @@ fn start_node(wasm_module: Vec<u8>, entrypoint_name: &str) -> Result<(), OakStat
     };
     let proxy =
         RuntimeProxy::create_runtime(application_configuration, GrpcConfiguration::default());
-    let (_write_handle, read_handle) = proxy.channel_create(&Label::public_trusted())?;
+    let (_write_handle, read_handle) = proxy.channel_create(&Label::public_untrusted())?;
 
     let result = proxy.node_create(
         &NodeConfiguration {
@@ -44,7 +44,7 @@ fn start_node(wasm_module: Vec<u8>, entrypoint_name: &str) -> Result<(), OakStat
                 wasm_entrypoint_name: entrypoint_name.to_string(),
             })),
         },
-        &oak_abi::label::Label::public_trusted(),
+        &oak_abi::label::Label::public_untrusted(),
         read_handle,
     );
 

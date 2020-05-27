@@ -337,9 +337,9 @@ impl GrpcRequestHandler {
     fn handle_grpc_request(&self, request: GrpcRequest) -> Result<oak_abi::Handle, OakStatus> {
         // Create a pair of temporary channels to pass the gRPC request and to receive the response.
         let (request_writer, request_reader) =
-            self.runtime.channel_create(&Label::public_trusted())?;
+            self.runtime.channel_create(&Label::public_untrusted())?;
         let (response_writer, response_reader) =
-            self.runtime.channel_create(&Label::public_trusted())?;
+            self.runtime.channel_create(&Label::public_untrusted())?;
 
         // Create an invocation message and attach the method-invocation specific channels to it.
         //

@@ -316,9 +316,9 @@ pub fn channel_write(half: WriteHandle, buf: &[u8], handles: &[Handle]) -> Resul
 }
 
 /// Similar to [`channel_create_with_label`], but with a fixed label corresponding to "public
-/// trusted".
+/// untrusted".
 pub fn channel_create() -> Result<(WriteHandle, ReadHandle), OakStatus> {
-    channel_create_with_label(&Label::public_trusted())
+    channel_create_with_label(&Label::public_untrusted())
 }
 
 /// Create a new unidirectional channel.
@@ -353,9 +353,10 @@ pub fn channel_close(handle: Handle) -> Result<(), OakStatus> {
     result_from_status(status as i32, ())
 }
 
-/// Similar to [`node_create_with_label`], but with a fixed label corresponding to "public trusted".
+/// Similar to [`node_create_with_label`], but with a fixed label corresponding to "public
+/// untrusted".
 pub fn node_create(config: &NodeConfiguration, half: ReadHandle) -> Result<(), OakStatus> {
-    node_create_with_label(config, &Label::public_trusted(), half)
+    node_create_with_label(config, &Label::public_untrusted(), half)
 }
 
 /// Creates a new Node running the configuration identified by `config_name`, running the entrypoint

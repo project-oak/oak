@@ -60,7 +60,7 @@ fn label_flow() {
     let tag_0 = authorization_bearer_token_hmac_tag(&[0, 0, 0]);
     let tag_1 = authorization_bearer_token_hmac_tag(&[1, 1, 1]);
 
-    let public_trusted = Label::public_trusted();
+    let public_untrusted = Label::public_untrusted();
 
     // A label that corresponds to the confidentiality of tag_0.
     //
@@ -101,10 +101,10 @@ fn label_flow() {
     //       label_0    label_1
     //             \     /
     //              \   /
-    //          public_trusted
+    //          public_untrusted
 
     // Data with any label can flow to the same label.
-    assert_eq!(true, public_trusted.flows_to(&public_trusted));
+    assert_eq!(true, public_untrusted.flows_to(&public_untrusted));
     assert_eq!(true, label_0.flows_to(&label_0));
     assert_eq!(true, label_1.flows_to(&label_1));
     assert_eq!(true, label_0_1.flows_to(&label_0_1));
@@ -115,15 +115,15 @@ fn label_flow() {
     assert_eq!(true, label_0_1.flows_to(&label_1_0));
     assert_eq!(true, label_1_0.flows_to(&label_0_1));
 
-    // public_trusted data can flow to more private data;
-    assert_eq!(true, public_trusted.flows_to(&label_0));
-    assert_eq!(true, public_trusted.flows_to(&label_1));
-    assert_eq!(true, public_trusted.flows_to(&label_0_1));
+    // public_untrusted data can flow to more private data;
+    assert_eq!(true, public_untrusted.flows_to(&label_0));
+    assert_eq!(true, public_untrusted.flows_to(&label_1));
+    assert_eq!(true, public_untrusted.flows_to(&label_0_1));
 
-    // Private data cannot flow to public_trusted.
-    assert_eq!(false, label_0.flows_to(&public_trusted));
-    assert_eq!(false, label_1.flows_to(&public_trusted));
-    assert_eq!(false, label_0_1.flows_to(&public_trusted));
+    // Private data cannot flow to public_untrusted.
+    assert_eq!(false, label_0.flows_to(&public_untrusted));
+    assert_eq!(false, label_1.flows_to(&public_untrusted));
+    assert_eq!(false, label_0_1.flows_to(&public_untrusted));
 
     // Private data with non-comparable labels cannot flow to each other.
     assert_eq!(false, label_0.flows_to(&label_1));
