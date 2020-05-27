@@ -110,7 +110,7 @@ impl AggregatorNode {
         // };
         match oak::grpc::client::Client::new_with_label(
             &oak::node_config::grpc_client("127.0.0.1:8888"),
-            &Label::public_trusted(),
+            &Label::public_untrusted(),
         )
         .map(AggregatorClient)
         {

@@ -133,7 +133,7 @@ where
     // In most cases we do not care about labels, so we use the least privileged label for this
     // channel.
     let (req_write_handle, req_read_handle) = proxy
-        .channel_create(&oak_abi::label::Label::public_trusted())
+        .channel_create(&oak_abi::label::Label::public_untrusted())
         .expect("could not create channel");
     proxy
         .channel_write(req_write_handle, req_msg)
@@ -144,7 +144,7 @@ where
     // In most cases we do not care about labels, so we use the least privileged label for this
     // channel.
     let (rsp_write_handle, rsp_read_handle) = proxy
-        .channel_create(&oak_abi::label::Label::public_trusted())
+        .channel_create(&oak_abi::label::Label::public_untrusted())
         .expect("could not create channel");
 
     // Create a notification message and attach the method-invocation specific channels to it.

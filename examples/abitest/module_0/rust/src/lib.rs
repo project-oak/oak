@@ -409,7 +409,7 @@ unsafe fn invalid_raw_offset() -> *mut u64 {
 fn channel_create_raw() -> (u64, u64, u32) {
     let mut w = 0u64;
     let mut r = 0u64;
-    let label_bytes = Label::public_trusted().serialize();
+    let label_bytes = Label::public_untrusted().serialize();
     let result = unsafe {
         oak_abi::channel_create(
             &mut w as *mut u64,
@@ -425,7 +425,7 @@ impl FrontendNode {
     fn test_channel_create_raw(&mut self) -> TestResult {
         let mut write = 0u64;
         let mut read = 0u64;
-        let label_bytes = Label::public_trusted().serialize();
+        let label_bytes = Label::public_untrusted().serialize();
         expect_eq!(OakStatus::ErrInvalidArgs as u32, unsafe {
             oak_abi::channel_create(
                 invalid_raw_offset(),
@@ -1215,7 +1215,7 @@ impl FrontendNode {
     fn test_node_create_raw(&mut self) -> TestResult {
         let (_, in_channel, _) = channel_create_raw();
 
-        let valid_label_bytes = Label::public_trusted().serialize();
+        let valid_label_bytes = Label::public_untrusted().serialize();
 
         // This sequence of bytes should not deserialize as a [`oak_abi::proto::policy::Label`] or
         // [`oak_abi::proto::oak::application::NodeConfiguration`] protobuf. We make sure

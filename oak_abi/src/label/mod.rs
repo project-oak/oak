@@ -47,7 +47,7 @@ impl crate::proto::oak::label::Label {
     /// Return the least privileged label.
     ///
     /// A Node or channel with this label has only observed public data and is trusted by no one.
-    pub fn public_trusted() -> Self {
+    pub fn public_untrusted() -> Self {
         Label {
             confidentiality_tags: vec![],
             integrity_tags: vec![],
