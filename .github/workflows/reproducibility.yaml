@@ -66,11 +66,15 @@ jobs:
           cd ./out
           git add .
           git status
-          git diff --staged
+          git diff --staged | tee ../reproducibility_index.diff
 
       # Print out the index to the logs of the action.
       - name: Print Reproducibility Index
         run: cat ./reproducibility_index
+
+      # Print out the index diff (compared to the previous commit) to the logs of the action.
+      - name: Print Reproducibility Index diff
+        run: cat ./reproducibility_index.diff
 
       # From the "out" folder, commit the results and push to the `hashes` branch.
       # This step only applies to `push` events (not `pull_request`), even if there are no actual
@@ -94,7 +98,8 @@ jobs:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
             const fs = require('fs').promises;
-            const file_content = await fs.readFile('./reproducibility_index');
+            const reproducibility_index_content = await fs.readFile('./reproducibility_index');
+            const reproducibility_index_diff_content = await fs.readFile('./reproducibility_index.diff');
 
             const opts = await github.repos.listPullRequestsAssociatedWithCommit({
               owner: context.repo.owner,
@@ -114,5 +119,15 @@ jobs:
               issue_number: issues[0].number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: 'Reproducibility index:\n\n```\n' + file_content + '\n```\n'
-            });
+              body: `Reproducibility Index:
+
+            \`\`\`
+            ${reproducibility_index_content}
+            \`\`\`
+
+            Reproducibility Index diff:
+
+            \`\`\`diff
+            ${reproducibility_index_diff_content}
+            \`\`\`
+            `});
