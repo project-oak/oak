@@ -1,0 +1,40 @@
+---
+kind: pipeline
+name: build
+
+steps:
+  # Make sure image builds
+  - name: build
+    image: plugins/docker
+
+trigger:
+  ref:
+    exclude:
+      - refs/tags/v*
+
+---
+kind: pipeline
+name: release
+
+steps:
+  # Release image to DockerHub
+  - name: release
+    image: plugins/docker
+    settings:
+      repo: int08h/roughenough
+      tags:
+        - ${DRONE_TAG}
+      username:
+        from_secret: docker-username
+      password:
+        from_secret: docker-password
+    when:
+      ref:
+        - refs/tags/v*
+
+trigger:
+  event:
+    - tag
+  ref:
+    - refs/tags/v*
+
