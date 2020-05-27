@@ -339,7 +339,7 @@
     <span class="comment">// In most cases we do not care about labels, so we use the least privileged label for this</span>
     <span class="comment">// channel.</span>
     <span class="kw">let</span> (<span class="ident">req_write_handle</span>, <span class="ident">req_read_handle</span>) <span class="op">=</span> <span class="ident">proxy</span>
-        .<span class="ident">channel_create</span>(<span class="kw-2">&amp;</span><span class="ident">oak_abi</span>::<span class="ident">label</span>::<span class="ident">Label</span>::<span class="ident">public_trusted</span>())
+        .<span class="ident">channel_create</span>(<span class="kw-2">&amp;</span><span class="ident">oak_abi</span>::<span class="ident">label</span>::<span class="ident">Label</span>::<span class="ident">public_untrusted</span>())
         .<span class="ident">expect</span>(<span class="string">&quot;could not create channel&quot;</span>);
     <span class="ident">proxy</span>
         .<span class="ident">channel_write</span>(<span class="ident">req_write_handle</span>, <span class="ident">req_msg</span>)
@@ -350,7 +350,7 @@
     <span class="comment">// In most cases we do not care about labels, so we use the least privileged label for this</span>
     <span class="comment">// channel.</span>
     <span class="kw">let</span> (<span class="ident">rsp_write_handle</span>, <span class="ident">rsp_read_handle</span>) <span class="op">=</span> <span class="ident">proxy</span>
-        .<span class="ident">channel_create</span>(<span class="kw-2">&amp;</span><span class="ident">oak_abi</span>::<span class="ident">label</span>::<span class="ident">Label</span>::<span class="ident">public_trusted</span>())
+        .<span class="ident">channel_create</span>(<span class="kw-2">&amp;</span><span class="ident">oak_abi</span>::<span class="ident">label</span>::<span class="ident">Label</span>::<span class="ident">public_untrusted</span>())
         .<span class="ident">expect</span>(<span class="string">&quot;could not create channel&quot;</span>);
 
     <span class="comment">// Create a notification message and attach the method-invocation specific channels to it.</span>
