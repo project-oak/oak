@@ -6,7 +6,6 @@ source "${SCRIPTS_DIR}/common"
 
 language="rust"
 compilation_mode='fastbuild'
-server=''
 docker_config=''
 while getopts "e:l:di:h" opt; do
   case "${opt}" in
@@ -34,16 +33,7 @@ Options:
     d)
       compilation_mode='dbg';;
     i)
-      server="${OPTARG}"
-      case "${OPTARG}" in
-        base)
-          docker_config='clang';;
-        logless)
-          docker_config='clang-logless';;
-        *)
-          echo "Invalid server type: ${OPTARG}"
-          exit 1;;
-      esac;;
+      docker_config="${OPTARG}";;
     *)
       echo "Invalid argument: ${OPTARG}"
       exit 1;;
@@ -91,11 +81,11 @@ case "${language}" in
 esac
 
 if [[ -n "${docker_config}" ]]; then
-  "${SCRIPTS_DIR}/build_server" -s "${server}"
+  "${SCRIPTS_DIR}/build_server" -s "${docker_config}"
   if [[ "${EXAMPLE}" == "tensorflow" ]]; then
     bazel --output_base="${CACHE_DIR}/emscripten" build "${bazel_build_flags[@]}" --config=emscripten //examples/tensorflow/server:tensorflow_image.tar
   else
-    bazel build "${bazel_build_flags[@]}" "--config=${docker_config}" "//examples/${EXAMPLE}/server:${EXAMPLE}_image.tar"
+    bazel build "${bazel_build_flags[@]}" "--config=clang" "//examples/${EXAMPLE}/server:${EXAMPLE}_image.tar"
   fi
 
   # `aggregator` example has an additional Backend Docker image.
