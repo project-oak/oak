@@ -7,7 +7,6 @@ ALIASES["aggregator"] = {};
 ALIASES["aggregator_backend"] = {};
 ALIASES["aggregator_common"] = {};
 ALIASES["auth_client"] = {};
-ALIASES["auth_server"] = {};
 ALIASES["chat"] = {};
 ALIASES["expect"] = {};
 ALIASES["hello_world"] = {};

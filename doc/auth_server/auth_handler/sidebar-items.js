@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["build_service",""]],"mod":[["proto",""]],"struct":[["AuthenticationHandler","Service implementation to handle authentication requests."]]});

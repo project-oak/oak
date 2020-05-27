@@ -57,6 +57,13 @@
 <span id="57">57</span>
 <span id="58">58</span>
 <span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
+<span id="62">62</span>
+<span id="63">63</span>
+<span id="64">64</span>
+<span id="65">65</span>
+<span id="66">66</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -83,6 +90,9 @@
 <span class="doccomment">//! be enabled in development, as it destroys the privacy guarantees of the</span>
 <span class="doccomment">//! platform by providing easy channels for the exfiltration of private data.</span>
 
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">proto</span>;
+
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">auth</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">config</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">io</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">message</span>;
@@ -90,6 +100,7 @@
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">node</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">runtime</span>;
 
+<span class="kw">use</span> <span class="ident">auth</span>::<span class="ident">oidc_utils</span>::<span class="ident">ClientInfo</span>;
 <span class="kw">use</span> <span class="ident">tonic</span>::<span class="ident">transport</span>::{<span class="ident">Certificate</span>, <span class="ident">Identity</span>};
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">config</span>::<span class="ident">configure_and_run</span>;
@@ -112,6 +123,9 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GrpcConfiguration</span> {
     <span class="doccomment">/// TLS identity to use for all gRPC Server Nodes.</span>
     <span class="kw">pub</span> <span class="ident">grpc_server_tls_identity</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Identity</span><span class="op">&gt;</span>,
+
+    <span class="doccomment">/// OpenID Connect Authentiction client information.</span>
+    <span class="kw">pub</span> <span class="ident">oidc_client_info</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ClientInfo</span><span class="op">&gt;</span>,
 
     <span class="doccomment">/// Root TLS certificate to use for all gRPC Client Nodes.</span>
     <span class="comment">// TODO(#999): Remove user-configurable root CA.</span>

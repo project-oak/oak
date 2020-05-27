@@ -202,6 +202,7 @@
 <span id="202">202</span>
 <span id="203">203</span>
 <span id="204">204</span>
+<span id="205">205</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -301,6 +302,7 @@
         <span class="ident">oak_runtime</span>::<span class="ident">RuntimeConfiguration</span>::<span class="ident">default</span>(),
         <span class="ident">oak_runtime</span>::<span class="ident">GrpcConfiguration</span> {
             <span class="ident">grpc_server_tls_identity</span>: <span class="prelude-val">None</span>,
+            <span class="ident">oidc_client_info</span>: <span class="prelude-val">None</span>,
             <span class="comment">// Some of the tests require a gRPC client, so we populate the required certificate with</span>
             <span class="comment">// an invalid value here, even though it will still fail when instantiating the actual</span>
             <span class="comment">// gRPC client.</span>

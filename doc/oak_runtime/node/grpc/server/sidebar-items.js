@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["GrpcServerNode","Struct that represents a gRPC server pseudo-Node."]]});
