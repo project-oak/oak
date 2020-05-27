@@ -17,14 +17,14 @@
 fn main() {
     oak_utils::compile_protos(
         &[
-            "../../../../oak/proto/application.proto",
-            "../../../../oak/proto/grpc_encap.proto",
-            "../../../../oak/proto/label.proto",
-            "../../../../oak/proto/log.proto",
-            "../../../../oak/proto/oak_abi.proto",
-            "../../../../third_party/google/rpc/code.proto",
-            "../../../../third_party/google/rpc/status.proto",
+            "../oak/proto/application.proto",
+            "../oak/proto/grpc_encap.proto",
+            "../oak/proto/label.proto",
+            "../oak/proto/log.proto",
+            "../oak/proto/oak_abi.proto",
+            "../third_party/google/rpc/code.proto",
+            "../third_party/google/rpc/status.proto",
         ],
-        &["../../../.."],
+        &[".."],
     );
 }
