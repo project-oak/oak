@@ -204,7 +204,7 @@ an Oak Runtime instance of its own.
 The client should run to completion and give output something like:
 
 ```log
-I0511 10:15:29.539814 244858 hello_world.cc:66] Connecting to Oak Application: 127.0.0.1:8080
+I0511 10:15:29.539814 244858 hello_world.cc:66] Connecting to Oak Application: localhost:8080
 I0511 10:15:29.541366 244858 hello_world.cc:36] Request: WORLD
 I0511 10:15:29.558292 244858 hello_world.cc:43] Response: HELLO WORLD!
 I0511 10:15:29.558353 244858 hello_world.cc:36] Request: MONDO

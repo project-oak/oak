@@ -55,7 +55,7 @@ Build and run the Client with the following command:
 ```bash
 ./scripts/build_example -e aggregator
 ./bazel-client-bin/examples/aggregator/client/client \
-  --address=127.0.0.1:8080 \
+  --address=localhost:8080 \
   --ca_cert=./examples/certs/local/ca.pem \
   --bucket=test \
   --data=1:10,2:20,3:30
