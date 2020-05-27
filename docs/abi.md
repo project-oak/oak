@@ -202,7 +202,7 @@ If creating the specified Node would violate
 - `param[4]: usize`: Handle to channel
 - `result[0]: u32`: Status of operation
 
-### random_get
+### `random_get`
 
 Fills a buffer with random bytes.
 
