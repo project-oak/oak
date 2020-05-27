@@ -7,4 +7,4 @@ b0fd14f5f3bf92e1e3f87f81673c75231891fd94844423ca7bd1406ac0b67a77  ./target/wasm3
 56dc8b22013c1407d54796970d68c679e9527c796e983facce58716811c94567  ./target/wasm32-unknown-unknown/release/private_set_intersection.wasm
 63b2e0cc081afc32b832270b7b51dde15283e3359f25b6405b03beca65814ae5  ./target/wasm32-unknown-unknown/release/running_average.wasm
 27d2e5e653229e89fea8610c61434957e999e409a995528fd67a7679618c3e8d  ./target/wasm32-unknown-unknown/release/translator.wasm
-d16ebb2b095c789cd0a9e249627637c82a6d60b857532ff0eb0c6455a9a6a857  ./target/x86_64-unknown-linux-musl/release/oak_loader
+cad49b83df868bd7ed6b4bb42554c88f79b8eeda4f9202e6c89f127db26314e0  ./target/x86_64-unknown-linux-musl/release/oak_loader
