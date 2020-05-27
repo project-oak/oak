@@ -40,13 +40,13 @@ This will emit a trace line that holds the information needed to:
 - join the chat room (with `--room_id`).
 
 ```log
-2019-10-24 10:47:20  INFO  chat.cc : 242 : Join this room with --address=localhost:32889 --room_id=NKsceNlg69UbcvryfzmFGnMv9qnZ0DYh6u6gJxujnPPxvHsxMehoD368sumKawVaq9WaSkzrcStoNYLvVNdzhA==
+2019-10-24 10:47:20  INFO  chat.cc : 242 : Join this room with --address=localhost:8080 --room_id=NKsceNlg69UbcvryfzmFGnMv9qnZ0DYh6u6gJxujnPPxvHsxMehoD368sumKawVaq9WaSkzrcStoNYLvVNdzhA==
 ```
 
 Another party can then join the same chat room by using these arguments:
 
 ```bash
-./scripts/run_example -s none -e chat -- --address=localhost:32889 --room_id=NKsceNlg69UbcvryfzmFGnMv9qnZ0DYh6u6gJxujnPPxvHsxMehoD368sumKawVaq9WaSkzrcStoNYLvVNdzhA==
+./scripts/run_example -s none -e chat -- --address=localhost:8080 --room_id=NKsceNlg69UbcvryfzmFGnMv9qnZ0DYh6u6gJxujnPPxvHsxMehoD368sumKawVaq9WaSkzrcStoNYLvVNdzhA==
 ```
 
 Alternatively, another party can create a new chat room running on the same Oak
@@ -54,14 +54,14 @@ Application by just copying the `--address` argument, but specifying a new room
 name:
 
 ```bash
-./scripts/run_example -s none -e chat -- --address=localhost:32889
+./scripts/run_example -s none -e chat -- --address=localhost:8080
 ```
 
 This will again emit a trace line with the information needed to join this new
 room (on the same server):
 
 ```log
-2019-10-24 11:04:40  INFO  chat.cc : 242 : Join this room with --address=localhost:32889 --room_id=msSGas1Ie2rtGIvG0bLa2Jh3ODjO35nix46R3j2iYjAcB8zDcJpn/P2DD7c0yB1NMmfoipBSAePJzlXjknm8gg==
+2019-10-24 11:04:40  INFO  chat.cc : 242 : Join this room with --address=localhost:8080 --room_id=msSGas1Ie2rtGIvG0bLa2Jh3ODjO35nix46R3j2iYjAcB8zDcJpn/P2DD7c0yB1NMmfoipBSAePJzlXjknm8gg==
 ```
 
 ## CI Invocation
