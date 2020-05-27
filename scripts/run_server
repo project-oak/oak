@@ -6,10 +6,10 @@ source "${SCRIPTS_DIR}/common"
 
 language="rust"
 server="base"
-while getopts "s:a:l:e:vh" opt; do
+while getopts "s:a:l:e:c:vh" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-s base|logless] [-l rust|cpp] (-a APPLICATION | -e EXAMPLE) [-v]
+      echo -e "Usage: ${0} [-s base|logless] [-l rust|cpp] (-a APPLICATION | -e EXAMPLE) [-c OIDC_CLIENT] [-v]
 
 Run a particular Oak Application in the Oak Runtime.
 Either the -a APPLICATION or the -e EXAMPLE option is required.
@@ -22,6 +22,7 @@ Either the -a APPLICATION or the -e EXAMPLE option is required.
   -l    Example application variant (if -e specified):
           - rust (used by default)
           - cpp
+  -c    Path to the downloaded JSON-encoded OpenID Connect client identity file
   -v    Enable verbose/debug output
   -h    Print Help (this message) and exit"
       exit 0;;
@@ -39,6 +40,8 @@ Either the -a APPLICATION or the -e EXAMPLE option is required.
       readonly APPLICATION="${OPTARG}";;
     e)
       readonly EXAMPLE="${OPTARG}";;
+    c)
+      readonly OIDC_CLIENT="${OPTARG}";;
     v)
       RUST_LOG='debug';;
     *)
@@ -65,6 +68,10 @@ if [[ -n ${EXAMPLE+x} ]]; then
   esac
 fi
 
+if [[ -n "${OIDC_CLIENT+x}" ]]; then
+  readonly ADDITIONAL_ARGS=("--oidc-client=${OIDC_CLIENT}")
+fi
+
 if [[ -z "${APPLICATION+z}" ]]; then
   echo "Missing required option: -a APPLICATION or -e EXAMPLE"
   exit 1
@@ -72,12 +79,11 @@ fi
 
 "${SCRIPTS_DIR}/build_server" -s "${server}"
 
-
-
 # Launching the server requires a `--application=<dir>/config.bin` flag.
 # `exec` is necessary for the `run_example` script to be able to get a PID of a background server.
 exec cargo run "${cargo_build_flags[@]}" --package=oak_loader -- \
     --application="${APPLICATION}" \
     --grpc-tls-private-key="${SCRIPTS_DIR}/../examples/certs/local/local.key" \
     --grpc-tls-certificate="${SCRIPTS_DIR}/../examples/certs/local/local.pem" \
-    --root-tls-certificate="${SCRIPTS_DIR}/../examples/certs/local/ca.pem"
+    --root-tls-certificate="${SCRIPTS_DIR}/../examples/certs/local/ca.pem" \
+    "${ADDITIONAL_ARGS[@]}"

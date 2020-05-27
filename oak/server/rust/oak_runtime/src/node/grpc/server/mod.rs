@@ -15,7 +15,7 @@
 //
 
 use crate::{
-    auth::oidc::ClientInfo,
+    auth::oidc_utils::ClientInfo,
     node::{
         grpc::{codec::VecCodec, to_tonic_status},
         ConfigurationError, Node,
@@ -54,7 +54,7 @@ pub struct GrpcServerNode {
     address: SocketAddr,
     /// Loaded files containing a server TLS key and certificates.
     tls_identity: Identity,
-    /// OpenID Connect Authentication client infromation.
+    /// OpenID Connect Authentication client information.
     oidc_client_info: Option<ClientInfo>,
 }
 
@@ -145,25 +145,30 @@ impl Node for GrpcServerNode {
         let channel_writer = GrpcServerNode::get_channel_writer(&runtime, handle)
             .expect("Couldn't initialize a channel writer");
 
-        // Handles incoming authentication gRCP requests
+        // Handles incoming authentication gRPC requests
         let auth_handler = match self.oidc_client_info {
-            Some(auth_config) => {
-                auth::oidc::build_service(&auth_config.client_id, &auth_config.client_secret)
-            }
+            Some(auth_config) => auth::oidc_service::build_service(
+                &auth_config.client_id,
+                &auth_config.client_secret,
+            ),
             // TODO(#1021): Add better handling to cases where the client info is not supplied.
-            _ => auth::oidc::build_service("", ""),
+            _ => auth::oidc_service::build_service("", ""),
         };
 
         // Handles incoming TLS connections, unpacks HTTP/2 requests and forwards them to
         // [`HttpRequestHandler::handle`].
-        let http_handler = HttpRequestHandler {
+        let generic_handler = HttpRequestHandler {
             runtime,
             writer: channel_writer,
         };
 
         let server = tonic::transport::Server::builder()
             .tls_config(tonic::transport::ServerTlsConfig::new().identity(self.tls_identity))
-            .add_service(http_handler)
+            // The order for adding services are important. The namespaces of the services are
+            // checked in the reverse order to which it was added. The `generic_handler` should
+            // be added first so that it is checked last, otherwise it would handle requests
+            // intended for other services.
+            .add_service(generic_handler)
             .add_service(auth_handler)
             .serve_with_shutdown(self.address, async {
                 // Treat notification failure the same as a notification.

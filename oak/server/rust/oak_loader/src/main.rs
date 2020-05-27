@@ -28,7 +28,7 @@ use anyhow::anyhow;
 use core::str::FromStr;
 use log::{debug, info};
 use oak_abi::proto::oak::application::{ApplicationConfiguration, ConfigMap};
-use oak_runtime::{auth::oidc::parse_client_info_json, config::configure_and_run};
+use oak_runtime::{auth::oidc_utils::parse_client_info_json, config::configure_and_run};
 use prost::Message;
 use std::{
     collections::HashMap,
@@ -64,7 +64,8 @@ pub struct Opt {
     root_tls_certificate: String,
     #[structopt(
         long,
-        help = "Path to the downloaded JSON encoded client identity file for OpenID Connect. (Optional)"
+        help = "Path to the downloaded JSON-encoded client identity file for OpenID Connect. \
+        OpenID Connect authentication will not be available if this parameter is not specified."
     )]
     oidc_client: Option<String>,
     #[structopt(long, default_value = "9090", help = "Metrics server port number.")]

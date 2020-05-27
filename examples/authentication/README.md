@@ -18,7 +18,7 @@ service. The client ID can be created as described in
 https://developers.google.com/identity/protocols/oauth2/openid-connect#getcredentials
 
 The Oak server can be run with the OpenID Connect authentication service enabled
-using:
+using the --oidc-client flag:
 
 ```bash
 cargo run --package=oak_loader -- \
@@ -34,7 +34,7 @@ accessible to authorized users):
 https://pantheon.corp.google.com/apis/credentials/oauthclient/691249393555-0h52jim9ni9clkpd5chi82q9ccn44ebm.apps.googleusercontent.com?project=oak-ci
 
 Click on `DOWNLOAD JSON` and save the file. This file contains sensitive
-information, so do not share this file or add it to the repository.
+information, so **do not share this file or add it to the repository**.
 
 To test the authentication client application with the downloaded file, ensure
 that the "Hello World" example has been built by running:
@@ -46,12 +46,9 @@ that the "Hello World" example has been built by running:
 Then run the server using:
 
 ```bash
-cargo run --package=oak_loader -- \
-    --application=./bazel-client-bin/examples/hello_world/config/config.bin \
-    --grpc-tls-private-key=./examples/certs/local/local.key \
-    --grpc-tls-certificate=./examples/certs/local/local.pem \
-    --root-tls-certificate=./examples/certs/local/ca.pem \
-    --oidc-client=${HOME}/Downloads/client_secret_691249393555-0h52jim9ni9clkpd5chi82q9ccn44ebm.apps.googleusercontent.com.json
+./scripts/run_server \
+    -e hello_world \
+    -c ./client_secret_691249393555-0h52jim9ni9clkpd5chi82q9ccn44ebm.apps.googleusercontent.com.json
 ```
 
 While the Oak server is running with the OpenID Connect authentication service

@@ -17,7 +17,7 @@
 //! gRPC service implementation for handling OpenID Connect authentication requests from clients.
 
 use crate::{
-    auth::oidc::exchange_code_for_token,
+    auth::oidc_utils::exchange_code_for_token,
     proto::oak::authentication::{
         authentication_server::{Authentication, AuthenticationServer},
         AuthParameters, IdentityTokenRequest, IdentityTokenResponse,

@@ -33,7 +33,7 @@ pub mod metrics;
 pub mod node;
 pub mod runtime;
 
-use auth::oidc::ClientInfo;
+use auth::oidc_utils::ClientInfo;
 use tonic::transport::{Certificate, Identity};
 
 pub use config::configure_and_run;

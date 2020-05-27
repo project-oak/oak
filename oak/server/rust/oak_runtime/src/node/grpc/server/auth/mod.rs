@@ -14,4 +14,4 @@
 // limitations under the License.
 //
 
-pub mod oidc;
+pub mod oidc_service;
