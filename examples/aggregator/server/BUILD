@@ -15,7 +15,7 @@
 #
 
 load("@io_bazel_rules_docker//container:container.bzl", "container_image")
-load("//oak/server/loader:oak_docker.bzl", "oak_docker")
+load("//oak/server:oak_docker.bzl", "oak_docker")
 
 package(
     licenses = ["notice"],

@@ -54,14 +54,13 @@ steps:
     entrypoint: 'bash'
     args: ['./scripts/build_server', '-s', 'base']
 
-  # TODO: get Docker build of Rust runtime working
   # Package the Hello World application in a Docker image.
-  #- name: 'gcr.io/oak-ci/oak:latest'
-  #  id: build_server_docker
-  #  waitFor: ['build_server']
-  #  timeout: 60m
-  #  entrypoint: 'bash'
-  #  args: ['./scripts/build_example', '-e', 'hello_world', '-i', 'base']
+  - name: 'gcr.io/oak-ci/oak:latest'
+    id: build_server_docker
+    waitFor: ['build_server']
+    timeout: 60m
+    entrypoint: 'bash'
+    args: ['./scripts/build_example', '-e', 'hello_world', '-i', 'base']
 
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_tests

@@ -1,5 +1,5 @@
 #
-# Copyright 2020 The Project Oak Authors
+# Copyright 2018 The Project Oak Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,16 +14,24 @@
 # limitations under the License.
 #
 
-load("//oak/server:oak_docker.bzl", "oak_docker")
+load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 
 package(
+    default_visibility = [
+        "//examples:__subpackages__",
+        "//oak/server:__subpackages__",
+    ],
     licenses = ["notice"],
 )
 
-oak_docker(
-    name = "hello_world_image",
-    application = "//examples/hello_world/config:config",
+container_image(
+    name = "oak_docker",
+    base = "@cc_image//image",
+    files = [
+        "//:target/x86_64-unknown-linux-musl/release/oak_loader",
+    ],
     ports = [
         "8080/tcp",  # Oak Application gRPC port.
     ],
+    repository = "gcr.io/oak-ci",
 )
