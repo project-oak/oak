@@ -8,7 +8,6 @@ members = [
   "examples/aggregator/common",
   "examples/aggregator/module/rust",
   "examples/authentication/client",
-  "examples/authentication/server",
   "examples/chat/module/rust",
   "examples/hello_world/module/rust",
   "examples/machine_learning/module/rust",

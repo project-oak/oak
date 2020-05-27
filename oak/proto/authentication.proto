@@ -16,7 +16,7 @@
 
 syntax = "proto3";
 
-package oak.examples.authentication;
+package oak.authentication;
 
 import "google/protobuf/empty.proto";
 
@@ -24,7 +24,7 @@ import "google/protobuf/empty.proto";
 message AuthParameters {
   string client_id = 1;
   string auth_endpoint = 2;
-  // TODO(#886): Add support for scope, state and code challenge.
+  // TODO(#922): Add support for scope, state and code challenge.
 }
 
 // Request for exchanging an authorisation code for an identity token.

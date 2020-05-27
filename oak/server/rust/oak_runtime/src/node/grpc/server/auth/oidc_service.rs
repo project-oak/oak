@@ -14,18 +14,16 @@
 // limitations under the License.
 //
 
-//! gRPC service implementation for handling authentication requests from clients.
+//! gRPC service implementation for handling OpenID Connect authentication requests from clients.
 
-use crate::token_exchanger;
-use proto::{
-    authentication_server::{Authentication, AuthenticationServer},
-    AuthParameters, IdentityTokenRequest, IdentityTokenResponse,
+use crate::{
+    auth::oidc_utils::exchange_code_for_token,
+    proto::oak::authentication::{
+        authentication_server::{Authentication, AuthenticationServer},
+        AuthParameters, IdentityTokenRequest, IdentityTokenResponse,
+    },
 };
 use tonic::{Request, Response, Status};
-
-pub mod proto {
-    tonic::include_proto!("oak.examples.authentication");
-}
 
 pub fn build_service(
     client_id: &str,
@@ -74,7 +72,7 @@ impl Authentication for AuthenticationHandler {
         &self,
         request: Request<IdentityTokenRequest>,
     ) -> Result<Response<IdentityTokenResponse>, Status> {
-        match token_exchanger::exchange_code_for_token(
+        match exchange_code_for_token(
             &request.into_inner().auth_code,
             &self.client_id,
             &self.client_secret,

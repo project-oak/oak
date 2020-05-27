@@ -33,15 +33,9 @@ pub struct Opt {
     #[structopt(
         long,
         help = "Address of the Oak application to connect to.",
-        default_value = "https://127.0.0.1:8080"
+        default_value = "https://localhost:8080"
     )]
     address: String,
-    #[structopt(
-        long,
-        help = "Address of the authentication server.",
-        default_value = "https://localhost:8081"
-    )]
-    auth_server: String,
     #[structopt(
         long,
         help = "Address to listen on for the OAuth redirect.",
@@ -51,7 +45,7 @@ pub struct Opt {
     #[structopt(
         long,
         help = "Path to the PEM-encoded CA root certificate.",
-        default_value = "examples/certs/local/ca.pem"
+        default_value = "./examples/certs/local/ca.pem"
     )]
     ca_cert: String,
 }
@@ -60,7 +54,7 @@ pub struct Opt {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
     let opt = Opt::from_args();
-    let mut client = auth_client::build_auth_client(&opt.ca_cert, &opt.auth_server).await?;
+    let mut client = auth_client::build_auth_client(&opt.ca_cert, &opt.address).await?;
     let request_url =
         auth_client::get_authentication_request_url(&mut client, &opt.redirect_address).await?;
     let code = get_authentication_code(&opt.redirect_address, &request_url).await?;

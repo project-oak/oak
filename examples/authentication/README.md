@@ -10,26 +10,49 @@ localhost. The authentication code is extracted from the query string of the
 redirection URL and returned to the main thread.
 
 The authorisation code can then be exchanged for an identity token by the
-authentication server. The client calls the authentication server via gRPC to
-make this exchange.
+authentication service running as part of the Oak Runtime. The client calls the
+authentication service via gRPC to make this exchange.
 
-The server requires a valid OAuth Client ID, which can be created as described
-in
+The Oak server requires a valid OAuth Client ID to enable the authentication
+service. The client ID can be created as described in
 https://developers.google.com/identity/protocols/oauth2/openid-connect#getcredentials
 
-The server can be run using:
+The Oak server can be run with the OpenID Connect authentication service enabled
+using the --oidc-client flag:
 
 ```bash
-cargo run --package=auth_server -- \
-  --client-id=<CLIENT_ID> \
-  --client-secret=<CLIENT_SECRET>
+cargo run --package=oak_loader -- \
+    --application=<APP_CONFIG_PATH> \
+    --grpc-tls-private-key=<PRIVATE_KEY_PATH> \
+    --grpc-tls-certificate=<CERTIFICATE_PATH> \
+    --root-tls-certificate=<CERTIFICATE_PATH> \
+    --oidc-client=<OIDC_CLIENT_ID_PATH>
 ```
 
-Example values for `<CLIENT_ID>` and `<CLIENT_SECRET>` can be copied (only
-accessible to authorized users) from
+An example OpenID Connect Client Identity file can be downloaded from (only
+accessible to authorized users):
 https://pantheon.corp.google.com/apis/credentials/oauthclient/691249393555-0h52jim9ni9clkpd5chi82q9ccn44ebm.apps.googleusercontent.com?project=oak-ci
 
-While the server is running, the client can be executed using:
+Click on `DOWNLOAD JSON` and save the file. This file contains sensitive
+information, so **do not share this file or add it to the repository**.
+
+To test the authentication client application with the downloaded file, ensure
+that the "Hello World" example has been built by running:
+
+```bash
+./scripts/build_example -e hello_world
+```
+
+Then run the server using:
+
+```bash
+./scripts/run_server \
+    -e hello_world \
+    -c ./client_secret_691249393555-0h52jim9ni9clkpd5chi82q9ccn44ebm.apps.googleusercontent.com.json
+```
+
+While the Oak server is running with the OpenID Connect authentication service
+enabled, the client can be executed using:
 
 ```bash
 cargo run --package=auth_client

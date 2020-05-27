@@ -22,7 +22,7 @@ use std::net::AddrParseError;
 use tokio::sync::oneshot;
 
 pub mod external;
-mod grpc;
+pub mod grpc;
 mod logger;
 mod roughtime;
 mod storage;
@@ -105,6 +105,7 @@ pub fn create_node(
                     .as_ref()
                     .expect("no gRPC server TLS identity provided to Oak Runtime")
                     .clone(),
+                grpc_configuration.oidc_client_info.clone(),
             )?))
         }
         Some(ConfigType::WasmConfig(config)) => Ok(Box::new(wasm::WasmNode::new(

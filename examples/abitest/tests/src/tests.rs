@@ -59,6 +59,7 @@ fn test_abi() {
         oak_runtime::RuntimeConfiguration::default(),
         oak_runtime::GrpcConfiguration {
             grpc_server_tls_identity: None,
+            oidc_client_info: None,
             // Some of the tests require a gRPC client, so we populate the required certificate with
             // an invalid value here, even though it will still fail when instantiating the actual
             // gRPC client.
