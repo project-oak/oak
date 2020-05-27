@@ -54,7 +54,8 @@ pub struct GrpcServerNode {
     address: SocketAddr,
     /// Loaded files containing a server TLS key and certificates.
     tls_identity: Identity,
-    /// OpenID Connect Authentication client information.
+    /// OpenID Connect Authentication client information. A value of `None` will mean that the
+    /// server will not support OpenID Connect authentication.
     oidc_client_info: Option<ClientInfo>,
 }
 
