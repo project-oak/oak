@@ -16,7 +16,6 @@ ALIASES["oak_glue"] = {};
 ALIASES["oak_loader"] = {};
 ALIASES["oak_runtime"] = {};
 ALIASES["oak_tests"] = {};
-ALIASES["oak_utils"] = {};
 ALIASES["private_set_intersection"] = {};
 ALIASES["runner"] = {};
 ALIASES["running_average"] = {};
