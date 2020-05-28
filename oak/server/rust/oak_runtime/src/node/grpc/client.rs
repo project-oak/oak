@@ -17,7 +17,7 @@
 use crate::{
     io::Receiver,
     node::{
-        grpc::{codec::VecCodec, from_tonic_status, invocation::Invocation},
+        grpc::{codec::VecCodec, from_abi_status, from_tonic_status, invocation::Invocation},
         ConfigurationError, Node,
     },
     runtime::RuntimeProxy,
@@ -95,10 +95,18 @@ impl GrpcClientNode {
             debug!("Incoming gRPC request: {:?}", request);
 
             // Send an unary request to an external gRPC service and wait for the response.
-            let response = self.handler.unary_request(request).await.map_err(|error| {
-                error!("Couldn't send gRPC request: {:?}", error);
-                error
-            })?;
+            let response = self
+                .handler
+                .unary_request(request)
+                .await
+                .unwrap_or_else(|error| {
+                    error!("Couldn't send gRPC request: {:?}", error);
+                    GrpcResponse {
+                        rsp_msg: vec![],
+                        status: Some(from_abi_status(error)),
+                        last: true,
+                    }
+                });
 
             // Send a response back to the invocation channel.
             debug!("Sending gRPC response: {:?}", response);
