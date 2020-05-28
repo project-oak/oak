@@ -10,16 +10,22 @@ source "$SCRIPTS_DIR/common"
 # false positive warning removed (https://github.com/rust-lang/rust/pull/70789)
 export RUSTDOCFLAGS="-A unused_braces"
 
-DOCS_OUT="$(cargo doc --document-private-items --no-deps 2>&1)"
+paths=("." "oak_abi" "../oak_utils")
 
-# `cargo doc` produces warnings for incorrect paths. These warnings cannot be promoted to errors, so we use grep to detect them.
-if grep --ignore-case --quiet --regexp='^warning' <<< "$DOCS_OUT"; then
-  echo "Warnings found when generating the docs."
-  exit 1
-fi
+for i in "${paths[@]}"
+do
+  cd "$i"
+  DOCS_OUT="$(cargo doc --document-private-items --no-deps 2>&1)"
 
-# Check for any deadlinks in the generated docs.
-if ! cargo deadlinks --dir target/doc; then
-  echo "Found deadlinks in the generated docs."
-  exit 1
-fi
+  # `cargo doc` produces warnings for incorrect paths. These warnings cannot be promoted to errors, so we use grep to detect them.
+  if grep --ignore-case --quiet --regexp='^warning' <<< "$DOCS_OUT"; then
+    echo "Warnings found when generating the docs."
+    exit 1
+  fi
+
+  # Check for any deadlinks in the generated docs.
+  if ! cargo deadlinks --dir target/doc; then
+    echo "Found deadlinks in the generated docs."
+    exit 1
+  fi
+done

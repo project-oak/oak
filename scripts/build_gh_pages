@@ -12,7 +12,7 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "$SCRIPTS_DIR/common"
 
-readonly TARGET_DIR="${1:-}"
+readonly TARGET_DIR="$(cd "${1:-}" && pwd)"
 
 if [[ -z "${TARGET_DIR}" ]]; then
   echo 'target dir not specified'
@@ -29,25 +29,38 @@ if [[ -n "$(ls "${TARGET_DIR}"/*)" ]]; then
   exit 1
 fi
 
-# Generate docs directly in the target dir.
-cargo doc --no-deps --target-dir="${TARGET_DIR}"
+readonly CURRENT_DIR="$(pwd)"
 
-# Remove non-doc artifacts from the target dir.
-rm --recursive --force "${TARGET_DIR}/debug"
+paths=("." "oak_abi" "oak_utils")
+names=("oak" "oak_abi" "oak_utils")
+titles=("SDK" "ABI" "Utils")
 
-# Remove non-deterministic files.
-rm "${TARGET_DIR}/.rustc_info.json"
+for i in {0..2}; do
+  cd "${CURRENT_DIR}"
+  target="${TARGET_DIR}/${names[$i]}"
+  mkdir -p target
+  cd "${paths[$i]}"
 
-# The docs generated from the Cargo workspace do not include a workspace-level index, so we generate
-# one here and redirect to the Oak SDK documentation.
-cat <<-END > "${TARGET_DIR}/index.html"
+  # Generate docs directly in the target dir.
+  cargo doc --no-deps --target-dir="${target}"
+
+  # Remove non-doc artifacts from the target dir.
+  rm --recursive --force "${target}/debug"
+
+  # Remove non-deterministic files.
+  rm "${target}/.rustc_info.json"
+
+  # The docs generated from the Cargo workspace do not include a workspace-level index, so we generate
+  # one here and redirect to the Oak SDK documentation.
+cat <<-END > "${target}/index.html"
 <!DOCTYPE html>
 <html>
   <head>
-    <meta http-equiv="Refresh" content="0; url=./doc/oak/index.html" />
+    <meta http-equiv="Refresh" content="0; url=./doc/${names[$i]}/index.html" />
   </head>
   <body>
-    <p><a href="./doc/oak/index.html">Oak SDK main page</a></p>
+    <p><a href="./doc/${names[$i]}/index.html">Oak ${titles[$i]} main page</a></p>
   </body>
 </html>
 END
+done
