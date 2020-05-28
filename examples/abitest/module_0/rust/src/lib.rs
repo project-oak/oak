@@ -238,7 +238,14 @@ impl OakAbiTestService for FrontendNode {
             "GrpcClientServerStreamingMethod",
             FrontendNode::test_grpc_client_server_streaming_method,
         );
-        tests.insert("AbsentGrpcClient", FrontendNode::test_absent_grpc_client);
+        tests.insert(
+            "AbsentGrpcClientUnaryMethod",
+            FrontendNode::test_absent_grpc_client_unary_method,
+        );
+        tests.insert(
+            "AbsentGrpcClientServerStreamingMethod",
+            FrontendNode::test_absent_grpc_client_server_streaming_method,
+        );
         tests.insert("RoughtimeClient", FrontendNode::test_roughtime_client);
         tests.insert(
             "MisconfiguredRoughtimeClient",
@@ -1721,7 +1728,8 @@ impl FrontendNode {
         receiver.close().expect("failed to close receiver");
         Ok(())
     }
-    fn test_absent_grpc_client(&mut self) -> TestResult {
+
+    fn test_absent_grpc_client_unary_method(&mut self) -> TestResult {
         // Expect to have a channel to a gRPC client pseudo-Node, but the remote
         // gRPC service is unavailable.
         let grpc_stub = self.absent_grpc_service.as_ref().ok_or_else(|| {
@@ -1736,11 +1744,29 @@ impl FrontendNode {
             )),
         };
 
-        // Attempting to invoke any sort of method should fail.
-        let result = grpc_stub.unary_method(req.clone());
+        // Attempting to invoke a unary method should fail.
+        let result = grpc_stub.unary_method(req);
         info!("absent.unary_method() -> {:?}", result);
         expect_matches!(result, Err(_));
+        Ok(())
+    }
 
+    fn test_absent_grpc_client_server_streaming_method(&mut self) -> TestResult {
+        // Expect to have a channel to a gRPC client pseudo-Node, but the remote
+        // gRPC service is unavailable.
+        let grpc_stub = self.absent_grpc_service.as_ref().ok_or_else(|| {
+            Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "no gRPC client channel available",
+            ))
+        })?;
+        let req = GrpcTestRequest {
+            method_result: Some(proto::grpc_test_request::MethodResult::OkText(
+                "test".to_string(),
+            )),
+        };
+
+        // Attempting to invoke a server-streaming method should fail.
         info!("absent.server_streaming_method()");
         let receiver = grpc_stub.server_streaming_method(req).map_err(from_proto)?;
         loop {
