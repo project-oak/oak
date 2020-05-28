@@ -25,8 +25,8 @@ exports_files(srcs = glob(["*.textproto"]))
 serialized_config(
     name = "config",
     modules = {
-        "frontend_module": "//:target/wasm32-unknown-unknown/release/abitest_0_frontend.wasm",
-        "backend_module": "//:target/wasm32-unknown-unknown/release/abitest_1_backend.wasm",
+        "frontend_module": "//:examples/target/wasm32-unknown-unknown/release/abitest_0_frontend.wasm",
+        "backend_module": "//:examples/target/wasm32-unknown-unknown/release/abitest_1_backend.wasm",
     },
     textproto = ":config.textproto",
 )

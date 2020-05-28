@@ -29,7 +29,7 @@ exports_files(["LICENSE"])
 # These files are built via cargo outside of Bazel.
 exports_files(srcs = glob(["target/x86_64-unknown-linux-musl/release/*oak_loader"]))
 
-exports_files(srcs = glob(["target/wasm32-unknown-unknown/release/*.wasm"]))
+exports_files(srcs = glob(["examples/target/wasm32-unknown-unknown/release/*.wasm"]))
 
 # These files are necessary for the backend server in the Aggregator example application.
 exports_files(srcs = glob(["target/release/aggregator_*"]))
