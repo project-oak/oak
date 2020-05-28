@@ -25,6 +25,7 @@ members = [
   "runner",
   "sdk/rust/oak",
   "sdk/rust/oak_tests",
+  "third_party/roughenough",
 ]
 exclude = ["oak_abi", "oak_utils"]
 
@@ -64,3 +65,4 @@ split_grpc_proxy = { path = "experimental/split_grpc/proxy" }
 split_grpc_server = { path = "experimental/split_grpc/server" }
 # Third party.
 expect = { path = "third_party/expect" }
+roughenough = { path = "third_party/roughenough" }

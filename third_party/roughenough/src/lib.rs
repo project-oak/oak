@@ -13,7 +13,7 @@
 // limitations under the License.
 
 //!
-//! An implementation of the [Roughtime](https://roughtime.googlesource.com/roughtime)
+//! An client implementation of the [Roughtime](https://roughtime.googlesource.com/roughtime)
 //! secure time synchronization protocol.
 //!
 //! Roughtime aims to achieve rough time synchronisation in a secure way that doesn't
@@ -24,72 +24,16 @@
 //!
 //! Roughtime messages are represented by [`RtMessage`](struct.RtMessage.html) which
 //! implements the mapping of Roughtime `u32` [`tags`](enum.Tag.html) to byte-strings.
-//!
-//! # Keys and Signing
-//!
-//! Roughtime uses an [Ed25519](https://ed25519.cr.yp.to/) key pair as the server's
-//! long-term identity and a second key pair (signed by the long-term key) as a
-//! delegated on-line (ephemeral) key.
-//!
-//! [`LongTermKey`](key/struct.LongTermKey.html) and [`OnlineKey`](key/struct.OnlineKey.html)
-//! implement these elements of the protocol. The [`sign`](sign/index.html) module provides
-//! signing and verification operations.
-//!
-//! # Client
-//!
-//! A Roughtime client can be found in `src/bin/client.rs`. To run the client:
-//!
-//! ```bash
-//! $ cargo run --release --bin client roughtime.int08h.com 2002
-//! ```
-//!
-//! Consult the client's `--help` output for all runtime options.
-//!
-//! # Server
-//!
-//! The core Roughtime server implementation is in `src/server.rs` and the server's CLI can
-//! be found in `src/bin/roughenough-server.rs`.
-//!
-//! The server has multiple ways it can be configured,
-//! see [`ServerConfig`](config/trait.ServerConfig.html) for the configuration trait and
-//!
-//!
-
-#[macro_use]
-extern crate log;
 
 mod error;
+mod merkle;
 mod message;
+mod sign;
 mod tag;
 
-pub mod config;
-pub mod grease;
-pub mod key;
-pub mod kms;
-pub mod merkle;
-pub mod stats;
-pub mod server;
-pub mod sign;
+pub mod client;
 
-pub use crate::error::Error;
-pub use crate::message::RtMessage;
-pub use crate::tag::Tag;
-
-/// Version of Roughenough
-pub const VERSION: &str = "1.1.8";
-
-/// Roughenough version string enriched with any compile-time optional features
-pub fn roughenough_version() -> String {
-    let kms_str = if cfg!(feature = "awskms") {
-        " (+AWS KMS)"
-    } else if cfg!(feature = "gcpkms") {
-        " (+GCP KMS)"
-    } else {
-        ""
-    };
-
-    format!("{}{}", VERSION, kms_str)
-}
+pub use crate::{error::Error, message::RtMessage, tag::Tag};
 
 //  Constants and magic numbers of the Roughtime protocol
 

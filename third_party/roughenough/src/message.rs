@@ -13,16 +13,16 @@
 // limitations under the License.
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use std::collections::HashMap;
-use std::io::{Cursor, Read, Write};
-use std::iter::once;
+use std::{
+    collections::HashMap,
+    io::{Cursor, Read, Write},
+    iter::once,
+};
 
-use crate::error::Error;
-use crate::tag::Tag;
+use crate::{error::Error, tag::Tag};
 
 ///
 /// A Roughtime protocol message; a map of u32 tags to arbitrary byte-strings.
-///
 #[derive(Debug, Clone)]
 pub struct RtMessage {
     tags: Vec<Tag>,
@@ -35,7 +35,6 @@ impl RtMessage {
     /// ## Arguments
     ///
     /// * `num_fields` - Reserve space for this many fields.
-    ///
     pub fn new(num_fields: u32) -> Self {
         RtMessage {
             tags: Vec::with_capacity(num_fields as usize),
@@ -48,7 +47,6 @@ impl RtMessage {
     /// ## Arguments
     ///
     /// * `bytes` - On-the-wire representation
-    ///
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
         let bytes_len = bytes.len();
 
@@ -74,12 +72,8 @@ impl RtMessage {
     ///
     /// Intended _only_ for construction of deliberately bogus responses as part of [Roughtime's
     /// ecosystem](https://roughtime.googlesource.com/roughtime/+/HEAD/ECOSYSTEM.md#maintaining-a-healthy-software-ecosystem).
-    ///
     pub fn new_deliberately_invalid(tags: Vec<Tag>, values: Vec<Vec<u8>>) -> Self {
-        RtMessage {
-            tags,
-            values,
-        }
+        RtMessage { tags, values }
     }
 
     /// Internal function to create a single tag message
@@ -174,12 +168,10 @@ impl RtMessage {
     ///
     /// ## Arguments
     ///
-    /// * `tag` - The [`Tag`](enum.Tag.html) to add. Tags must be added in **strictly
-    ///   increasing order**, violating this will result in a
-    ///   [`Error::TagNotStrictlyIncreasing`](enum.Error.html).
+    /// * `tag` - The `Tag` to add. Tags must be added in **strictly increasing order**, violating
+    ///   this will result in a `Error::TagNotStrictlyIncreasing`.
     ///
     /// * `value` - Value for the tag.
-    ///
     pub fn add_field(&mut self, tag: Tag, value: &[u8]) -> Result<(), Error> {
         if let Some(last_tag) = self.tags.last() {
             if tag <= *last_tag {
@@ -197,8 +189,7 @@ impl RtMessage {
     ///
     /// ## Arguments
     ///
-    /// * `tag` - The [`Tag`](enum.Tag.html) to try and retrieve.
-    ///
+    /// * `tag` - The `Tag` to try and retrieve.
     pub fn get_field(&self, tag: Tag) -> Option<&[u8]> {
         for (i, self_tag) in self.tags.iter().enumerate() {
             if tag == *self_tag {
@@ -301,10 +292,9 @@ impl RtMessage {
 
 #[cfg(test)]
 mod test {
+    use crate::{message::*, tag::Tag};
     use byteorder::{LittleEndian, ReadBytesExt};
-    use crate::message::*;
     use std::io::{Cursor, Read};
-    use crate::tag::Tag;
 
     #[test]
     fn empty_message_size() {
@@ -318,7 +308,7 @@ mod test {
     #[test]
     fn single_field_message_size() {
         let mut msg = RtMessage::new(1);
-        msg.add_field(Tag::NONC, "1234".as_bytes()).unwrap();
+        msg.add_field(Tag::NONC, b"1234").unwrap();
 
         assert_eq!(msg.num_fields(), 1);
         // Single tag message is 4 (num_tags) + 4 (NONC) + 4 (value)
@@ -328,8 +318,8 @@ mod test {
     #[test]
     fn two_field_message_size() {
         let mut msg = RtMessage::new(2);
-        msg.add_field(Tag::NONC, "1234".as_bytes()).unwrap();
-        msg.add_field(Tag::PAD, "abcd".as_bytes()).unwrap();
+        msg.add_field(Tag::NONC, b"1234").unwrap();
+        msg.add_field(Tag::PAD, b"abcd").unwrap();
 
         assert_eq!(msg.num_fields(), 2);
         // Two tag message
@@ -456,8 +446,8 @@ mod test {
     #[should_panic(expected = "InvalidAlignment")]
     fn from_bytes_offset_past_end_of_message() {
         let mut msg = RtMessage::new(2);
-        msg.add_field(Tag::NONC, "1111".as_bytes()).unwrap();
-        msg.add_field(Tag::PAD, "aaaaaaaaa".as_bytes()).unwrap();
+        msg.add_field(Tag::NONC, b"1111").unwrap();
+        msg.add_field(Tag::PAD, b"aaaaaaaaa").unwrap();
 
         let mut bytes = msg.encode().unwrap();
         // set the PAD value offset to beyond end of the message
@@ -473,5 +463,4 @@ mod test {
         let bytes = &[0x02, 0, 0, 0, 4, 0, 0, 0, 0, 0];
         RtMessage::from_bytes(bytes).unwrap();
     }
-
 }
