@@ -22,20 +22,24 @@ use oak_abi::proto::oak::application::{
     WebAssemblyConfiguration,
 };
 use prost::Message;
-use std::{collections::HashMap, process::Command};
+use std::{collections::HashMap, path::PathBuf, process::Command};
 use tonic::transport::Certificate;
 
 // TODO(#544): re-enable unit tests of SDK functionality
 
 /// Uses cargo to compile a Rust manifest to Wasm bytes.
 pub fn compile_rust_wasm(cargo_path: &str, module_name: &str) -> std::io::Result<Vec<u8>> {
-    let mut cmd = cargo_metadata::MetadataCommand::new();
-    cmd.manifest_path(cargo_path);
-    let metadata = cmd.exec().unwrap();
+    // Use a separate target dir for Wasm build artifacts. The precise name is not relevant, but it
+    // should end with `target` so that it gets automatically ignored by our `.gitignore`.
+    let target_dir = PathBuf::from("oak_tests/target");
 
     Command::new("cargo")
         .args(&[
             "build",
+            &format!(
+                "--target-dir={}",
+                target_dir.to_str().expect("invalid target dir")
+            ),
             "--target=wasm32-unknown-unknown",
             &format!("--manifest-path={}", cargo_path),
         ])
@@ -43,11 +47,13 @@ pub fn compile_rust_wasm(cargo_path: &str, module_name: &str) -> std::io::Result
         .spawn()?
         .wait()?;
 
-    let mut path = metadata.target_directory;
-    path.push("wasm32-unknown-unknown/debug");
-    path.push(module_name);
+    let mut module_path = target_dir;
+    module_path.push("wasm32-unknown-unknown/debug");
+    module_path.push(module_name);
 
-    std::fs::read(path)
+    info!("compiled Wasm module path: {:?}", module_path);
+
+    std::fs::read(module_path)
 }
 
 const DEFAULT_ENTRYPOINT_NAME: &str = "oak_main";

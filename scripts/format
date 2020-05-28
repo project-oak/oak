@@ -15,7 +15,7 @@ find . \
     -not \( -path ./bazel-cache -prune \) -and \
     -not \( -path ./cargo-cache -prune \) -and \
     -not \( -path ./cargo -prune \) -and \
-    -not \( -path ./target -prune \) -and \
+    -not \( -path '*/target' -prune \) -and \
     -not \( -path ./third_party -prune \) \
     \( -type f -name BUILD -or -name WORKSPACE -or -name '*.bzl' \) \
   \) -exec buildifier -lint=warn -mode=fix {} +
@@ -25,7 +25,7 @@ find . \
     -not \( -path ./.git -prune \) -and \
     -not \( -path ./bazel-cache -prune \) -and \
     -not \( -path ./cargo-cache -prune \) -and \
-    -not \( -path ./target -prune \) -and \
+    -not \( -path '*/target' -prune \) -and \
     -not \( -path ./third_party -prune \) \
     \( -type f -name '*.h' -or -name '*.cc' -or -name '*.proto' \) \
   \) -exec clang-format -i -style=file {} +
@@ -37,7 +37,7 @@ find . \
     -not \( -path ./.git -prune \) -and \
     -not \( -path ./bazel-cache -prune \) -and \
     -not \( -path ./cargo-cache -prune \) -and \
-    -not \( -path ./target -prune \) -and \
+    -not \( -path '*/target' -prune \) -and \
     -not \( -path ./third_party -prune \) \
     \( -type f -name '*.md' -or -name '*.yaml' -or -name '*.toml' \) \
   \) -exec prettier --write {} +
@@ -47,7 +47,7 @@ find . \
     -not \( -path ./.git -prune \) -and \
     -not \( -path ./bazel-cache -prune \) -and \
     -not \( -path ./cargo-cache -prune \) -and \
-    -not \( -path ./target -prune \) -and \
+    -not \( -path '*/target' -prune \) -and \
     -not \( -path ./third_party -prune \) \
     \( -type f -name '*.md' \) \
   \) -exec markdownlint --fix {} +

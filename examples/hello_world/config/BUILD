@@ -26,8 +26,8 @@ exports_files(srcs = glob(["*.textproto"]))
 serialized_config(
     name = "config",
     modules = {
-        "app": "//:target/wasm32-unknown-unknown/release/hello_world.wasm",
-        "translator": "//:target/wasm32-unknown-unknown/release/translator.wasm",
+        "app": "//:examples/target/wasm32-unknown-unknown/release/hello_world.wasm",
+        "translator": "//:examples/target/wasm32-unknown-unknown/release/translator.wasm",
     },
     textproto = ":config.textproto",
 )
