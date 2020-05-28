@@ -22,6 +22,7 @@ members = [
   "oak/server/rust/oak_glue",
   "oak/server/rust/oak_loader",
   "oak/server/rust/oak_runtime",
+  "oak_abi",
   "runner",
   "sdk/rust/oak",
   "sdk/rust/oak_tests",
