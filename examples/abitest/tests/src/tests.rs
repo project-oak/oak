@@ -68,8 +68,7 @@ fn test_abi() {
     )
     .expect("unable to configure runtime with test wasm");
 
-    // TODO(#540): reinstate storage, gRPC client and Roughtime tests when Rust
-    // runtime supports them.
+    // Skip tests that require the existence of an external service.
     let mut req = AbiTestRequest::default();
     req.exclude = "(Storage|GrpcClient|Roughtime)".to_string();
 
