@@ -1,0 +1,58 @@
+[package]
+name = "roughenough"
+version = "1.1.8"
+repository = "https://github.com/int08h/roughenough"
+authors = ["Stuart Stock <stuart@int08h.com>", "Aaron Hill <aa1ronham@gmail.com>"]
+license = "Apache-2.0"
+description = "A Roughtime secure time sync server and client written in Rust"
+readme = "README.md"
+keywords = ["roughtime", "cryptography", "crypto"]
+edition = "2018"
+
+[badges]
+travis-ci = { repository = "int08h/roughenough", branch = "master" }
+
+[features]
+default = []
+awskms = ["rusoto_core", "rusoto_kms"]
+gcpkms = ["google-cloudkms1", "hyper", "hyper-rustls", "serde", "serde_json", "yup-oauth2"]
+
+[dependencies]
+base64 = "0.12"
+byteorder = "1"
+bytes = "0.4"
+chrono = "0.4"
+clap = "2"
+ctrlc = { version = "3.1", features = ["termination"] }
+hex = "0.4"
+humansize = "1.0"
+log = "0.4"
+mio = "0.6"
+mio-extras = "2.0"
+rand = "0.6"
+ring = "0.13"
+simple_logger = "1"
+untrusted = "0.6"
+yaml-rust = "0.4"
+
+# Used by 'awskms'
+rusoto_core = { version = "0.42", optional = true }
+rusoto_kms = { version = "0.42", optional = true }
+
+# Used by 'gcpkms'
+# google-cloudkms1 intentionally uses an old version of Hyper. See
+# https://github.com/Byron/google-apis-rs/issues/173 for more information.
+# Exact build date '1.0.10+20190626' not included to avoid Cargo warning 'semver metadata ignored'
+google-cloudkms1 = { version = "1.0.12", optional = true }
+hyper = { version = "^0.10", optional = true }
+hyper-rustls = { version = "^0.6", optional = true }
+serde = { version = "^1.0", optional = true }
+serde_json = { version = "^1.0", optional = true }
+yup-oauth2 = { version = "^1.0", optional = true }
+
+[dev-dependencies]
+criterion = "0.3"
+
+[[bench]]
+name = "roughenough-bench"
+harness = false
