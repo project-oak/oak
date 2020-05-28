@@ -11,5 +11,5 @@ prost = "*"
 prost-types = "*"
 
 [build-dependencies]
-oak_utils = "*"
+oak_utils = { path = "../oak_utils" }
 prost-build = "*"
