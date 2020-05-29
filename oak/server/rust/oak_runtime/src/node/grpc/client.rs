@@ -43,10 +43,6 @@ pub struct GrpcClientNode {
     /// Loaded PEM encoded X.509 TLS root certificate file used to authenticate an external gRPC
     /// service.
     root_tls_certificate: Certificate,
-    /// A gRPC client dispatcher that wraps a gRPC connection and encodes/decodes messages via a
-    /// provided codec. The value is assigned using [`GrpcClientNode::connect`] upon receiving
-    /// the first gRPC request.
-    dispatcher: Option<tonic::client::Grpc<tonic::transport::channel::Channel>>,
 }
 
 /// Checks if URI contains the "Host" element.
@@ -73,17 +69,12 @@ impl GrpcClientNode {
             node_name: node_name.to_string(),
             uri,
             root_tls_certificate,
-            dispatcher: None,
         })
     }
 
     /// Main loop that handles gRPC invocations from the `handle`, sends gRPC requests to an
     /// external gRPC service and writes gRPC responses back to the invocation channel.
-    async fn handle_loop(
-        &mut self,
-        runtime: RuntimeProxy,
-        handle: Handle,
-    ) -> Result<(), OakStatus> {
+    async fn handle_loop(&self, runtime: RuntimeProxy, handle: Handle) -> Result<(), OakStatus> {
         // Create a [`Receiver`] used for reading gRPC invocations.
         let receiver = Receiver::<Invocation>::new(handle);
         loop {
@@ -125,47 +116,14 @@ impl GrpcClientNode {
         }
     }
 
-    /// Creates a TLS connection to an external gRPC service.
-    async fn connect(&mut self) -> Result<(), OakStatus> {
-        debug!("Connecting to {}", self.uri);
-
-        // Create a TLS configuration.
-        let tls_config = ClientTlsConfig::new().ca_certificate(self.root_tls_certificate.clone());
-
-        // Connect to a remote gRPC service.
-        let connection = Channel::builder(self.uri.clone())
-            .tls_config(tls_config)
-            .connect()
-            .await
-            .map_err(|error| {
-                error!("Couldn't connect to {}: {:?}", self.uri, error);
-                OakStatus::ErrInternal
-            })?;
-
-        self.dispatcher = Some(tonic::client::Grpc::new(connection));
-        debug!("Connected to {}", self.uri);
-        Ok(())
-    }
-
-    /// Checks whether the [`GrpcRequestHandler::dispatcher`] is able to accept new requests.
-    async fn ready(&mut self) -> Result<(), OakStatus> {
-        self.dispatcher
-            .as_mut()
-            .expect("Handler is not connected to a gRPC service")
-            .ready()
-            .await
-            .map_err(|error| {
-                error!("Service was not ready: {}", error);
-                OakStatus::ErrInternal
-            })?;
-        Ok(())
-    }
-
     /// Sends an unary gRPC request wrapped in [`GrpcResponse`] to an external gRPC service.
-    async fn unary_request(&mut self, request: GrpcRequest) -> Result<GrpcResponse, OakStatus> {
+    async fn unary_request(&self, request: GrpcRequest) -> Result<GrpcResponse, OakStatus> {
         // Connect to an external gRPC service.
-        self.connect().await?;
-        self.ready().await?;
+        let mut dispatcher = self.connect().await?;
+        dispatcher.ready().await.map_err(|error| {
+            error!("Service was not ready: {}", error);
+            OakStatus::ErrInternal
+        })?;
 
         let codec = VecCodec::default();
         let path = request.method_name.parse().map_err(|error| {
@@ -174,9 +132,7 @@ impl GrpcClientNode {
         })?;
 
         // Send gRPC request and wait for the response.
-        self.dispatcher
-            .as_mut()
-            .expect("Handler is not connected to a gRPC service")
+        dispatcher
             .unary(tonic::Request::new(request.req_msg), path, codec)
             .await
             .map(|response| GrpcResponse {
@@ -192,12 +148,35 @@ impl GrpcClientNode {
                 })
             })
     }
+
+    /// Creates a TLS connection to an external gRPC service.
+    async fn connect(
+        &self,
+    ) -> Result<tonic::client::Grpc<tonic::transport::channel::Channel>, OakStatus> {
+        debug!("Connecting to {}", self.uri);
+
+        // Create a TLS configuration.
+        let tls_config = ClientTlsConfig::new().ca_certificate(self.root_tls_certificate.clone());
+
+        // Connect to a remote gRPC service.
+        let connection = Channel::builder(self.uri.clone())
+            .tls_config(tls_config)
+            .connect()
+            .await
+            .map_err(|error| {
+                error!("Couldn't connect to {}: {:?}", self.uri, error);
+                OakStatus::ErrInternal
+            })?;
+
+        debug!("Connected to {}", self.uri);
+        Ok(tonic::client::Grpc::new(connection))
+    }
 }
 
 /// Oak Node implementation for the gRPC client pseudo-Node.
 impl Node for GrpcClientNode {
     fn run(
-        mut self: Box<Self>,
+        self: Box<Self>,
         runtime: RuntimeProxy,
         handle: Handle,
         notify_receiver: oneshot::Receiver<()>,
