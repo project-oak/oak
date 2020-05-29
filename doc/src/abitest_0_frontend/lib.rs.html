@@ -1896,6 +1896,32 @@
 <span id="1896">1896</span>
 <span id="1897">1897</span>
 <span id="1898">1898</span>
+<span id="1899">1899</span>
+<span id="1900">1900</span>
+<span id="1901">1901</span>
+<span id="1902">1902</span>
+<span id="1903">1903</span>
+<span id="1904">1904</span>
+<span id="1905">1905</span>
+<span id="1906">1906</span>
+<span id="1907">1907</span>
+<span id="1908">1908</span>
+<span id="1909">1909</span>
+<span id="1910">1910</span>
+<span id="1911">1911</span>
+<span id="1912">1912</span>
+<span id="1913">1913</span>
+<span id="1914">1914</span>
+<span id="1915">1915</span>
+<span id="1916">1916</span>
+<span id="1917">1917</span>
+<span id="1918">1918</span>
+<span id="1919">1919</span>
+<span id="1920">1920</span>
+<span id="1921">1921</span>
+<span id="1922">1922</span>
+<span id="1923">1923</span>
+<span id="1924">1924</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -2137,7 +2163,14 @@
             <span class="string">&quot;GrpcClientServerStreamingMethod&quot;</span>,
             <span class="ident">FrontendNode</span>::<span class="ident">test_grpc_client_server_streaming_method</span>,
         );
-        <span class="ident">tests</span>.<span class="ident">insert</span>(<span class="string">&quot;AbsentGrpcClient&quot;</span>, <span class="ident">FrontendNode</span>::<span class="ident">test_absent_grpc_client</span>);
+        <span class="ident">tests</span>.<span class="ident">insert</span>(
+            <span class="string">&quot;AbsentGrpcClientUnaryMethod&quot;</span>,
+            <span class="ident">FrontendNode</span>::<span class="ident">test_absent_grpc_client_unary_method</span>,
+        );
+        <span class="ident">tests</span>.<span class="ident">insert</span>(
+            <span class="string">&quot;AbsentGrpcClientServerStreamingMethod&quot;</span>,
+            <span class="ident">FrontendNode</span>::<span class="ident">test_absent_grpc_client_server_streaming_method</span>,
+        );
         <span class="ident">tests</span>.<span class="ident">insert</span>(<span class="string">&quot;RoughtimeClient&quot;</span>, <span class="ident">FrontendNode</span>::<span class="ident">test_roughtime_client</span>);
         <span class="ident">tests</span>.<span class="ident">insert</span>(
             <span class="string">&quot;MisconfiguredRoughtimeClient&quot;</span>,
@@ -3620,7 +3653,8 @@
         <span class="ident">receiver</span>.<span class="ident">close</span>().<span class="ident">expect</span>(<span class="string">&quot;failed to close receiver&quot;</span>);
         <span class="prelude-val">Ok</span>(())
     }
-    <span class="kw">fn</span> <span class="ident">test_absent_grpc_client</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TestResult</span> {
+
+    <span class="kw">fn</span> <span class="ident">test_absent_grpc_client_unary_method</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TestResult</span> {
         <span class="comment">// Expect to have a channel to a gRPC client pseudo-Node, but the remote</span>
         <span class="comment">// gRPC service is unavailable.</span>
         <span class="kw">let</span> <span class="ident">grpc_stub</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">absent_grpc_service</span>.<span class="ident">as_ref</span>().<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
@@ -3635,11 +3669,29 @@
             )),
         };
 
-        <span class="comment">// Attempting to invoke any sort of method should fail.</span>
-        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">grpc_stub</span>.<span class="ident">unary_method</span>(<span class="ident">req</span>.<span class="ident">clone</span>());
+        <span class="comment">// Attempting to invoke a unary method should fail.</span>
+        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">grpc_stub</span>.<span class="ident">unary_method</span>(<span class="ident">req</span>);
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;absent.unary_method() -&gt; {:?}&quot;</span>, <span class="ident">result</span>);
         <span class="macro">expect_matches</span><span class="macro">!</span>(<span class="ident">result</span>, <span class="prelude-val">Err</span>(<span class="kw">_</span>));
+        <span class="prelude-val">Ok</span>(())
+    }
 
+    <span class="kw">fn</span> <span class="ident">test_absent_grpc_client_server_streaming_method</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TestResult</span> {
+        <span class="comment">// Expect to have a channel to a gRPC client pseudo-Node, but the remote</span>
+        <span class="comment">// gRPC service is unavailable.</span>
+        <span class="kw">let</span> <span class="ident">grpc_stub</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">absent_grpc_service</span>.<span class="ident">as_ref</span>().<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
+            <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(
+                <span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">Other</span>,
+                <span class="string">&quot;no gRPC client channel available&quot;</span>,
+            ))
+        })<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">req</span> <span class="op">=</span> <span class="ident">GrpcTestRequest</span> {
+            <span class="ident">method_result</span>: <span class="prelude-val">Some</span>(<span class="ident">proto</span>::<span class="ident">grpc_test_request</span>::<span class="ident">MethodResult</span>::<span class="ident">OkText</span>(
+                <span class="string">&quot;test&quot;</span>.<span class="ident">to_string</span>(),
+            )),
+        };
+
+        <span class="comment">// Attempting to invoke a server-streaming method should fail.</span>
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;absent.server_streaming_method()&quot;</span>);
         <span class="kw">let</span> <span class="ident">receiver</span> <span class="op">=</span> <span class="ident">grpc_stub</span>.<span class="ident">server_streaming_method</span>(<span class="ident">req</span>).<span class="ident">map_err</span>(<span class="ident">from_proto</span>)<span class="question-mark">?</span>;
         <span class="kw">loop</span> {

@@ -239,6 +239,14 @@
 <span id="239">239</span>
 <span id="240">240</span>
 <span id="241">241</span>
+<span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -259,7 +267,7 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">io</span>::<span class="ident">Receiver</span>,
     <span class="ident">node</span>::{
-        <span class="ident">grpc</span>::{<span class="ident">codec</span>::<span class="ident">VecCodec</span>, <span class="ident">from_tonic_status</span>, <span class="ident">invocation</span>::<span class="ident">Invocation</span>},
+        <span class="ident">grpc</span>::{<span class="ident">codec</span>::<span class="ident">VecCodec</span>, <span class="ident">from_abi_status</span>, <span class="ident">from_tonic_status</span>, <span class="ident">invocation</span>::<span class="ident">Invocation</span>},
         <span class="ident">ConfigurationError</span>, <span class="ident">Node</span>,
     },
     <span class="ident">runtime</span>::<span class="ident">RuntimeProxy</span>,
@@ -337,10 +345,18 @@
             <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Incoming gRPC request: {:?}&quot;</span>, <span class="ident">request</span>);
 
             <span class="comment">// Send an unary request to an external gRPC service and wait for the response.</span>
-            <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">handler</span>.<span class="ident">unary_request</span>(<span class="ident">request</span>).<span class="kw">await</span>.<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
-                <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t send gRPC request: {:?}&quot;</span>, <span class="ident">error</span>);
-                <span class="ident">error</span>
-            })<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="self">self</span>
+                .<span class="ident">handler</span>
+                .<span class="ident">unary_request</span>(<span class="ident">request</span>)
+                .<span class="kw">await</span>
+                .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
+                    <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t send gRPC request: {:?}&quot;</span>, <span class="ident">error</span>);
+                    <span class="ident">GrpcResponse</span> {
+                        <span class="ident">rsp_msg</span>: <span class="macro">vec</span><span class="macro">!</span>[],
+                        <span class="ident">status</span>: <span class="prelude-val">Some</span>(<span class="ident">from_abi_status</span>(<span class="ident">error</span>)),
+                        <span class="ident">last</span>: <span class="bool-val">true</span>,
+                    }
+                });
 
             <span class="comment">// Send a response back to the invocation channel.</span>
             <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Sending gRPC response: {:?}&quot;</span>, <span class="ident">response</span>);
