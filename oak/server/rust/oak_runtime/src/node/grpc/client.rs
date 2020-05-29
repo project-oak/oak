@@ -17,16 +17,16 @@
 use crate::{
     io::Receiver,
     node::{
-        grpc::{codec::VecCodec, from_abi_status, from_tonic_status, invocation::Invocation},
+        grpc::{codec::VecCodec, from_tonic_status, invocation::Invocation},
         ConfigurationError, Node,
     },
     runtime::RuntimeProxy,
 };
 use log::{debug, error, info};
 use oak_abi::{
-    proto::oak::{
-        application::GrpcClientConfiguration,
-        encap::{GrpcRequest, GrpcResponse},
+    proto::{
+        google::rpc,
+        oak::{application::GrpcClientConfiguration, encap::GrpcResponse},
     },
     Handle, OakStatus,
 };
@@ -78,81 +78,89 @@ impl GrpcClientNode {
         // Create a [`Receiver`] used for reading gRPC invocations.
         let receiver = Receiver::<Invocation>::new(handle);
         loop {
-            debug!("Waiting for gRPC invocations");
+            debug!("Waiting for gRPC invocation");
             // Read a gRPC invocation from the [`Receiver`].
             let invocation = receiver.receive(&runtime).map_err(|error| {
                 error!("Couldn't receive the invocation: {:?}", error);
                 error
             })?;
 
-            // Receive a request from the invocation channel.
-            let request = invocation.receive_request(&runtime).map_err(|error| {
-                error!(
-                    "Couldn't receive gRPC request from the invocation: {:?}",
-                    error
-                );
-                error
-            })?;
-            debug!("Incoming gRPC request: {:?}", request);
-
-            // Send an unary request to an external gRPC service and wait for the response.
-            let response = self.unary_request(request).await.unwrap_or_else(|error| {
-                error!("Couldn't send gRPC request: {:?}", error);
-                GrpcResponse {
-                    rsp_msg: vec![],
-                    status: Some(from_abi_status(error)),
-                    last: true,
-                }
-            });
-
-            // Send a response back to the invocation channel.
-            debug!("Sending gRPC response: {:?}", response);
-            invocation
-                .send_response(response, &runtime)
-                .map_err(|error| {
-                    error!("Couldn't send gRPC response to the invocation: {:?}", error);
-                    error
-                })?;
+            let result = self.process_invocation(&runtime, invocation).await;
+            if let Err(status) = result {
+                error!("Invocation processing failed: {:?}", status);
+            }
         }
     }
 
-    /// Sends an unary gRPC request wrapped in [`GrpcResponse`] to an external gRPC service.
-    async fn unary_request(&self, request: GrpcRequest) -> Result<GrpcResponse, OakStatus> {
+    /// Process a gRPC method invocation for an external gRPC service.
+    async fn process_invocation(
+        &self,
+        runtime: &RuntimeProxy,
+        invocation: Invocation,
+    ) -> Result<(), OakStatus> {
+        // Receive a request from the invocation channel.
+        let request = invocation.receive_request(&runtime).map_err(|error| {
+            invocation.send_error(rpc::Code::Internal, "Failed to read request", runtime);
+            error!(
+                "Couldn't read gRPC request from the invocation: {:?}",
+                error
+            );
+            error
+        })?;
+        debug!("Incoming gRPC request: {:?}", request);
+
         // Connect to an external gRPC service.
-        let mut dispatcher = self.connect().await?;
+        let mut dispatcher = self.connect().await.map_err(|error| {
+            error!("Couldn't connect to {}: {:?}", self.uri, error);
+            invocation.send_error(rpc::Code::NotFound, "Service connection failed", runtime);
+            OakStatus::ErrInternal
+        })?;
         dispatcher.ready().await.map_err(|error| {
             error!("Service was not ready: {}", error);
+            invocation.send_error(rpc::Code::NotFound, "Service not ready", runtime);
             OakStatus::ErrInternal
         })?;
 
         let codec = VecCodec::default();
         let path = request.method_name.parse().map_err(|error| {
             error!("Invalid URI {}: {}", request.method_name, error);
+            invocation.send_error(rpc::Code::InvalidArgument, "Invalid URI", runtime);
             OakStatus::ErrInternal
         })?;
 
-        // Send gRPC request and wait for the response.
-        dispatcher
+        // Send a request to the external gRPC service and wait for the response.
+        let response = match dispatcher
             .unary(tonic::Request::new(request.req_msg), path, codec)
             .await
-            .map(|response| GrpcResponse {
-                rsp_msg: response.into_inner(),
+        {
+            Ok(rsp) => GrpcResponse {
+                rsp_msg: rsp.into_inner(),
                 status: Some(from_tonic_status(tonic::Status::ok(""))),
                 last: true,
-            })
-            .or_else(|status| {
-                Ok(GrpcResponse {
-                    rsp_msg: vec![],
-                    status: Some(from_tonic_status(status)),
-                    last: true,
-                })
-            })
+            },
+            Err(status) => GrpcResponse {
+                rsp_msg: vec![],
+                status: Some(from_tonic_status(status)),
+                last: true,
+            },
+        };
+
+        // Send the response back to the invocation channel.
+        debug!("Sending gRPC response: {:?}", response);
+        invocation
+            .send_response(response, &runtime)
+            .map_err(|error| {
+                error!("Couldn't send gRPC response to the invocation: {:?}", error);
+                error
+            })?;
+        Ok(())
     }
 
     /// Creates a TLS connection to an external gRPC service.
     async fn connect(
         &self,
-    ) -> Result<tonic::client::Grpc<tonic::transport::channel::Channel>, OakStatus> {
+    ) -> Result<tonic::client::Grpc<tonic::transport::channel::Channel>, tonic::transport::Error>
+    {
         debug!("Connecting to {}", self.uri);
 
         // Create a TLS configuration.
@@ -162,11 +170,7 @@ impl GrpcClientNode {
         let connection = Channel::builder(self.uri.clone())
             .tls_config(tls_config)
             .connect()
-            .await
-            .map_err(|error| {
-                error!("Couldn't connect to {}: {:?}", self.uri, error);
-                OakStatus::ErrInternal
-            })?;
+            .await?;
 
         debug!("Connected to {}", self.uri);
         Ok(tonic::client::Grpc::new(connection))

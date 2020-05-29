@@ -73,4 +73,25 @@ impl Invocation {
     ) -> Result<(), OakStatus> {
         self.sender.send(response, runtime)
     }
+    /// Send an error response for the invocation.
+    pub fn send_error(
+        &self,
+        code: oak_abi::proto::google::rpc::Code,
+        msg: &str,
+        runtime: &RuntimeProxy,
+    ) {
+        error!("Fail invocation with {:?} '{}'", code, msg);
+        let _ = self.sender.send(
+            GrpcResponse {
+                rsp_msg: vec![],
+                status: Some(oak_abi::proto::google::rpc::Status {
+                    code: code as i32,
+                    message: msg.to_string(),
+                    details: vec![],
+                }),
+                last: true,
+            },
+            runtime,
+        );
+    }
 }
