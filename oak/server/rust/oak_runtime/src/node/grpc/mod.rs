@@ -20,8 +20,8 @@ mod codec;
 mod invocation;
 pub mod server;
 
-/// Converts [`tonic::Status`] to [`oak_abi::proto::google::rpc::Status`].
-fn from_tonic_status(status: tonic::Status) -> oak_abi::proto::google::rpc::Status {
+/// Converts [`tonic::Status`] to [`rpc::Status`].
+fn from_tonic_status(status: tonic::Status) -> rpc::Status {
     oak_abi::proto::google::rpc::Status {
         code: status.code() as i32,
         message: status.message().to_string(),
@@ -36,15 +36,6 @@ fn from_tonic_status(status: tonic::Status) -> oak_abi::proto::google::rpc::Stat
 }
 
 /// Converts [`oak_abi::proto::google::rpc::Status`] to [`tonic::Status`].
-fn to_tonic_status(status: oak_abi::proto::google::rpc::Status) -> tonic::Status {
+fn to_tonic_status(status: rpc::Status) -> tonic::Status {
     tonic::Status::new(tonic::Code::from_i32(status.code), status.message)
-}
-
-/// Converts [`oak_abi::OakStatus`] to [`oak_abi::proto::google::rpc::Status`].
-fn from_abi_status(status: oak_abi::OakStatus) -> oak_abi::proto::google::rpc::Status {
-    oak_abi::proto::google::rpc::Status {
-        code: rpc::Code::Internal as i32,
-        message: format!("Operation failed: {:?}", status),
-        details: vec![],
-    }
 }
