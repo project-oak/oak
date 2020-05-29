@@ -9,8 +9,6 @@
 - [Labels](#labels)
 - [Pseudo-Nodes](#pseudo-nodes)
 - [Oak Application](#oak-application)
-- [Oak Runner](#oak-runner)
-  - [Workflow](#workflow)
 - [Remote Attestation](#remote-attestation)
 - [Time](#time)
 
