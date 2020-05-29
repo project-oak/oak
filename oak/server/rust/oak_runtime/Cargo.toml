@@ -17,6 +17,8 @@ default = ["oak_debug"]
 byteorder = { version = "*", default-features = false }
 bytes = "*"
 futures = "*"
+futures-core = "*"
+futures-util = "*"
 http = "*"
 hyper = "*"
 itertools = "*"

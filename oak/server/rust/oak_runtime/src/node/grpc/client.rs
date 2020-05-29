@@ -17,7 +17,7 @@
 use crate::{
     io::Receiver,
     node::{
-        grpc::{codec::VecCodec, from_tonic_status, invocation::Invocation},
+        grpc::{codec::VecCodec, invocation::Invocation},
         ConfigurationError, Node,
     },
     runtime::RuntimeProxy,
@@ -85,10 +85,9 @@ impl GrpcClientNode {
                 error
             })?;
 
-            let result = self.process_invocation(&runtime, invocation).await;
-            if let Err(status) = result {
-                error!("Invocation processing failed: {:?}", status);
-            }
+            let result = self.process_invocation(&runtime, &invocation).await;
+            info!("Invocation processing finished: {:?}", result);
+            invocation.close(&runtime);
         }
     }
 
@@ -96,7 +95,7 @@ impl GrpcClientNode {
     async fn process_invocation(
         &self,
         runtime: &RuntimeProxy,
-        invocation: Invocation,
+        invocation: &Invocation,
     ) -> Result<(), OakStatus> {
         // Receive a request from the invocation channel.
         let request = invocation.receive_request(&runtime).map_err(|error| {
@@ -110,12 +109,13 @@ impl GrpcClientNode {
         debug!("Incoming gRPC request: {:?}", request);
 
         // Connect to an external gRPC service.
-        let mut dispatcher = self.connect().await.map_err(|error| {
+        // TOOD(#1057): persist and re-use the client/connection
+        let mut grpc_client = self.connect().await.map_err(|error| {
             error!("Couldn't connect to {}: {:?}", self.uri, error);
             invocation.send_error(rpc::Code::NotFound, "Service connection failed", runtime);
             OakStatus::ErrInternal
         })?;
-        dispatcher.ready().await.map_err(|error| {
+        grpc_client.ready().await.map_err(|error| {
             error!("Service was not ready: {}", error);
             invocation.send_error(rpc::Code::NotFound, "Service not ready", runtime);
             OakStatus::ErrInternal
@@ -128,31 +128,46 @@ impl GrpcClientNode {
             OakStatus::ErrInternal
         })?;
 
-        // Send a request to the external gRPC service and wait for the response.
-        let response = match dispatcher
-            .unary(tonic::Request::new(request.req_msg), path, codec)
+        // Forward the request to the external gRPC service and wait for the response(s).
+        let request = tonic::Request::new(request.req_msg);
+        let request_stream =
+            request.map(|m| futures_util::stream::once(futures_util::future::ready(m)));
+        let mut rsp_stream = grpc_client
+            .streaming(request_stream, path, codec)
             .await
-        {
-            Ok(rsp) => GrpcResponse {
-                rsp_msg: rsp.into_inner(),
-                status: Some(from_tonic_status(tonic::Status::ok(""))),
-                last: true,
-            },
-            Err(status) => GrpcResponse {
-                rsp_msg: vec![],
-                status: Some(from_tonic_status(status)),
-                last: true,
-            },
-        };
-
-        // Send the response back to the invocation channel.
-        debug!("Sending gRPC response: {:?}", response);
-        invocation
-            .send_response(response, &runtime)
             .map_err(|error| {
-                error!("Couldn't send gRPC response to the invocation: {:?}", error);
-                error
+                error!("Request failed: {}", error);
+                invocation.send_error(tonic_code_to_grpc(error.code()), error.message(), runtime);
+                OakStatus::ErrInternal
             })?;
+
+        let body_stream = rsp_stream.get_mut();
+        loop {
+            let message = body_stream.message().await.map_err(|error| {
+                error!("Failed to read response: {}", error);
+                invocation.send_error(rpc::Code::Internal, "Failed to read response", runtime);
+                OakStatus::ErrInternal
+            })?;
+
+            if let Some(message) = message {
+                let encap_rsp = GrpcResponse {
+                    rsp_msg: message,
+                    status: None,
+                    last: false,
+                };
+                // Send the response back to the invocation channel.
+                debug!("Sending gRPC response: {:?}", encap_rsp);
+                invocation
+                    .send_response(encap_rsp, &runtime)
+                    .map_err(|error| {
+                        error!("Couldn't send gRPC response to the invocation: {:?}", error);
+                        error
+                    })?;
+            } else {
+                debug!("No message available, close out method invocation");
+                break;
+            }
+        }
         Ok(())
     }
 
@@ -210,5 +225,28 @@ impl Node for GrpcClientNode {
             notify_receiver,
         ));
         info!("{}: Exiting gRPC client pseudo-Node thread", self.node_name);
+    }
+}
+
+fn tonic_code_to_grpc(code: tonic::Code) -> rpc::Code {
+    match code {
+        tonic::Code::Ok => rpc::Code::Ok,
+        tonic::Code::Cancelled => rpc::Code::Cancelled,
+        tonic::Code::Unknown => rpc::Code::Unknown,
+        tonic::Code::InvalidArgument => rpc::Code::InvalidArgument,
+        tonic::Code::DeadlineExceeded => rpc::Code::DeadlineExceeded,
+        tonic::Code::NotFound => rpc::Code::NotFound,
+        tonic::Code::AlreadyExists => rpc::Code::AlreadyExists,
+        tonic::Code::PermissionDenied => rpc::Code::PermissionDenied,
+        tonic::Code::ResourceExhausted => rpc::Code::ResourceExhausted,
+        tonic::Code::FailedPrecondition => rpc::Code::FailedPrecondition,
+        tonic::Code::Aborted => rpc::Code::Aborted,
+        tonic::Code::OutOfRange => rpc::Code::OutOfRange,
+        tonic::Code::Unimplemented => rpc::Code::Unimplemented,
+        tonic::Code::Internal => rpc::Code::Internal,
+        tonic::Code::Unavailable => rpc::Code::Unavailable,
+        tonic::Code::DataLoss => rpc::Code::DataLoss,
+        tonic::Code::Unauthenticated => rpc::Code::Unauthenticated,
+        _ => rpc::Code::Unknown,
     }
 }
