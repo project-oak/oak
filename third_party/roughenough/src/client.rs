@@ -192,8 +192,8 @@ mod test {
         .extract_time()
         .unwrap();
         assert!(verified);
-        assert_eq!(midpoint, 1590678436491959);
-        assert_eq!(radius, 1000000);
+        assert_eq!(midpoint, 1_590_678_436_491_959);
+        assert_eq!(radius, 1_000_000);
     }
 
     /// Test decoding, parsing and validating of a Roughtime response with an invalid signature.
@@ -236,8 +236,8 @@ mod test {
         .unwrap();
 
         assert!(!verified);
-        assert_eq!(midpoint, 1590678436491959);
-        assert_eq!(radius, 1000000);
+        assert_eq!(midpoint, 1_590_678_436_491_959);
+        assert_eq!(radius, 1_000_000);
     }
 
     #[test]
