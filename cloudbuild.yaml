@@ -36,7 +36,7 @@ steps:
   - name: 'gcr.io/oak-ci/oak:latest'
     id: bazel_init
     entrypoint: 'bazel'
-    waitFor: ['build_image']
+    waitFor: ['git_init']
     timeout: 5m
     args: ['info']
 
@@ -64,7 +64,7 @@ steps:
 
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_tests
-    waitFor: ['build_server']
+    waitFor: ['build_server_docker']
     timeout: 60m
     entrypoint: 'bash'
     args: ['./scripts/run_tests']
@@ -78,6 +78,7 @@ steps:
 
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_examples
+    waitFor: ['run_tests_tsan']
     timeout: 60m
     entrypoint: 'bash'
     args: ['./scripts/run_examples', '-s', 'base']
