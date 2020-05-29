@@ -501,16 +501,14 @@ impl Runtime {
     }
 
     /// Returns the least restrictive (i.e. least confidential, most trusted) label that this Node
-    /// may downgrade to. This takes into account all the [downgrade privilege](NodeInfo::privilege)
-    /// that the node possesses.
-    fn get_node_downgraded_label(&self, node_id: NodeId) -> Label {
-        // Original (static) Node label.
-        let node_label = self.get_node_label(node_id);
+    /// may downgrade `initial_label` to. This takes into account all the [downgrade
+    /// privilege](NodeInfo::privilege) that the node possesses.
+    fn get_node_downgraded_label(&self, node_id: NodeId, initial_label: &Label) -> Label {
         // Retrieve the set of tags that the node may downgrade.
         let node_privilege = self.get_node_privilege(node_id);
         Label {
             // Remove all the confidentiality tags that the Node may declassify.
-            confidentiality_tags: node_label
+            confidentiality_tags: initial_label
                 .confidentiality_tags
                 .iter()
                 .filter(|t| {
@@ -521,7 +519,7 @@ impl Runtime {
                 .cloned()
                 .collect(),
             // Add all the integrity tags that the Node may endorse.
-            integrity_tags: node_label
+            integrity_tags: initial_label
                 .integrity_tags
                 .iter()
                 .chain(node_privilege.can_endorse_integrity_tags.iter())
@@ -571,20 +569,25 @@ impl Runtime {
     fn validate_can_read_from_label(
         &self,
         node_id: NodeId,
-        label: &Label,
+        source_label: &Label,
     ) -> Result<(), OakStatus> {
-        let downgraded_node_label = self.get_node_downgraded_label(node_id);
+        // When reading from a Channel, we downgrade the Label of the Channel from which the Node is
+        // reading: the thing being downgraded is the data being read into the Node (protected by
+        // the Channel Label).
+        let downgraded_source_label = self.get_node_downgraded_label(node_id, source_label);
+        let target_label = self.get_node_label(node_id);
+        trace!("{:?}: original source label: {:?}?", node_id, source_label);
         trace!(
-            "{:?}: can {:?} read from {:?}?",
+            "{:?}: downgraded source label: {:?}?",
             node_id,
-            downgraded_node_label,
-            label
+            downgraded_source_label
         );
-        if label.flows_to(&downgraded_node_label) {
-            trace!("{:?}: can read from {:?}", node_id, label);
+        trace!("{:?}: target label: {:?}?", node_id, target_label);
+        if downgraded_source_label.flows_to(&target_label) {
+            trace!("{:?}: can read from {:?}", node_id, source_label);
             Ok(())
         } else {
-            debug!("{:?}: cannot read from {:?}", node_id, label);
+            debug!("{:?}: cannot read from {:?}", node_id, source_label);
             Err(OakStatus::ErrPermissionDenied)
         }
     }
@@ -602,19 +605,27 @@ impl Runtime {
 
     /// Returns whether the given Node is allowed to write to an entity with the provided [`Label`],
     /// taking into account all the [downgrade privilege](NodeInfo::privilege) the Node possesses.
-    fn validate_can_write_to_label(&self, node_id: NodeId, label: &Label) -> Result<(), OakStatus> {
-        let downgraded_node_label = self.get_node_downgraded_label(node_id);
+    fn validate_can_write_to_label(
+        &self,
+        node_id: NodeId,
+        target_label: &Label,
+    ) -> Result<(), OakStatus> {
+        // When writing to a Channel, we downgrade the Label of the Node itself: the thing being
+        // downgraded is the data inside the Node (protected by the Node Label).
+        let source_label = self.get_node_label(node_id);
+        let downgraded_source_label = self.get_node_downgraded_label(node_id, &source_label);
+        trace!("{:?}: original source label: {:?}?", node_id, source_label);
         trace!(
-            "{:?}: can {:?} write to {:?}?",
+            "{:?}: downgraded source label: {:?}?",
             node_id,
-            downgraded_node_label,
-            label
+            downgraded_source_label
         );
-        if downgraded_node_label.flows_to(&label) {
-            trace!("{:?}: can write to {:?}", node_id, label);
+        trace!("{:?}: target label: {:?}?", node_id, target_label);
+        if downgraded_source_label.flows_to(&target_label) {
+            trace!("{:?}: can write to {:?}", node_id, target_label);
             Ok(())
         } else {
-            debug!("{:?}: cannot write to {:?}", node_id, label);
+            debug!("{:?}: cannot write to {:?}", node_id, target_label);
             Err(OakStatus::ErrPermissionDenied)
         }
     }
