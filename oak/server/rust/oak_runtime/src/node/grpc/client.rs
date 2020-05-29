@@ -37,8 +37,16 @@ use tonic::transport::{Certificate, Channel, ClientTlsConfig, Uri};
 pub struct GrpcClientNode {
     /// Pseudo-Node name.
     node_name: String,
-    /// Handler that sends gRPC requests to an external gRPC service and returns gRPC responses.
-    handler: GrpcRequestHandler,
+    /// The URI component of a gRPC server endpoint. Must contain the "Host" element.
+    /// https://docs.rs/tonic/0.2.1/tonic/transport/struct.Uri.html
+    uri: Uri,
+    /// Loaded PEM encoded X.509 TLS root certificate file used to authenticate an external gRPC
+    /// service.
+    root_tls_certificate: Certificate,
+    /// A gRPC client dispatcher that wraps a gRPC connection and encodes/decodes messages via a
+    /// provided codec. The value is assigned using [`GrpcClientNode::connect`] upon receiving
+    /// the first gRPC request.
+    dispatcher: Option<tonic::client::Grpc<tonic::transport::channel::Channel>>,
 }
 
 /// Checks if URI contains the "Host" element.
@@ -63,7 +71,9 @@ impl GrpcClientNode {
         check_uri(&uri)?;
         Ok(Self {
             node_name: node_name.to_string(),
-            handler: GrpcRequestHandler::new(uri, root_tls_certificate),
+            uri,
+            root_tls_certificate,
+            dispatcher: None,
         })
     }
 
@@ -95,18 +105,14 @@ impl GrpcClientNode {
             debug!("Incoming gRPC request: {:?}", request);
 
             // Send an unary request to an external gRPC service and wait for the response.
-            let response = self
-                .handler
-                .unary_request(request)
-                .await
-                .unwrap_or_else(|error| {
-                    error!("Couldn't send gRPC request: {:?}", error);
-                    GrpcResponse {
-                        rsp_msg: vec![],
-                        status: Some(from_abi_status(error)),
-                        last: true,
-                    }
-                });
+            let response = self.unary_request(request).await.unwrap_or_else(|error| {
+                error!("Couldn't send gRPC request: {:?}", error);
+                GrpcResponse {
+                    rsp_msg: vec![],
+                    status: Some(from_abi_status(error)),
+                    last: true,
+                }
+            });
 
             // Send a response back to the invocation channel.
             debug!("Sending gRPC response: {:?}", response);
@@ -116,66 +122,6 @@ impl GrpcClientNode {
                     error!("Couldn't send gRPC response to the invocation: {:?}", error);
                     error
                 })?;
-        }
-    }
-}
-
-/// Oak Node implementation for the gRPC client pseudo-Node.
-impl Node for GrpcClientNode {
-    fn run(
-        mut self: Box<Self>,
-        runtime: RuntimeProxy,
-        handle: Handle,
-        notify_receiver: oneshot::Receiver<()>,
-    ) {
-        // Create an Async runtime for executing futures.
-        // https://docs.rs/tokio/
-        let mut async_runtime = tokio::runtime::Builder::new()
-            // Use simple scheduler that runs all tasks on the current-thread.
-            // https://docs.rs/tokio/0.2.16/tokio/runtime/index.html#basic-scheduler
-            .basic_scheduler()
-            // Enables the I/O driver.
-            // Necessary for using net, process, signal, and I/O types on the Tokio runtime.
-            .enable_io()
-            // Enables the time driver.
-            // Necessary for creating a Tokio Runtime.
-            .enable_time()
-            .build()
-            .expect("Couldn't create an Async runtime");
-
-        // Listen to incoming gRPC invocations.
-        info!(
-            "{}: Starting gRPC client pseudo-Node thread",
-            self.node_name
-        );
-        async_runtime.block_on(futures::future::select(
-            Box::pin(self.handle_loop(runtime, handle)),
-            notify_receiver,
-        ));
-        info!("{}: Exiting gRPC client pseudo-Node thread", self.node_name);
-    }
-}
-
-/// Sends gRPC requests to an external gRPC service and returns gRPC responses.
-struct GrpcRequestHandler {
-    /// The URI component of a gRPC server endpoint. Must contain the "Host" element.
-    /// https://docs.rs/tonic/0.2.1/tonic/transport/struct.Uri.html
-    uri: Uri,
-    /// Loaded PEM encoded X.509 TLS root certificate file used to authenticate an external gRPC
-    /// service.
-    root_tls_certificate: Certificate,
-    /// A gRPC client dispatcher that wraps a gRPC connection and encodes/decodes messages via a
-    /// provided codec. The value is assigned using [`GrpcRequestHandler::connect`] upon receiving
-    /// the first gRPC request.
-    dispatcher: Option<tonic::client::Grpc<tonic::transport::channel::Channel>>,
-}
-
-impl GrpcRequestHandler {
-    fn new(uri: Uri, root_tls_certificate: Certificate) -> Self {
-        Self {
-            uri,
-            root_tls_certificate,
-            dispatcher: None,
         }
     }
 
@@ -245,5 +191,41 @@ impl GrpcRequestHandler {
                     last: true,
                 })
             })
+    }
+}
+
+/// Oak Node implementation for the gRPC client pseudo-Node.
+impl Node for GrpcClientNode {
+    fn run(
+        mut self: Box<Self>,
+        runtime: RuntimeProxy,
+        handle: Handle,
+        notify_receiver: oneshot::Receiver<()>,
+    ) {
+        // Create an Async runtime for executing futures.
+        // https://docs.rs/tokio/
+        let mut async_runtime = tokio::runtime::Builder::new()
+            // Use simple scheduler that runs all tasks on the current-thread.
+            // https://docs.rs/tokio/0.2.16/tokio/runtime/index.html#basic-scheduler
+            .basic_scheduler()
+            // Enables the I/O driver.
+            // Necessary for using net, process, signal, and I/O types on the Tokio runtime.
+            .enable_io()
+            // Enables the time driver.
+            // Necessary for creating a Tokio Runtime.
+            .enable_time()
+            .build()
+            .expect("Couldn't create an Async runtime");
+
+        // Listen to incoming gRPC invocations.
+        info!(
+            "{}: Starting gRPC client pseudo-Node thread",
+            self.node_name
+        );
+        async_runtime.block_on(futures::future::select(
+            Box::pin(self.handle_loop(runtime, handle)),
+            notify_receiver,
+        ));
+        info!("{}: Exiting gRPC client pseudo-Node thread", self.node_name);
     }
 }
