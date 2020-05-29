@@ -29,8 +29,13 @@
 use anyhow::anyhow;
 use core::str::FromStr;
 use log::{debug, info};
-use oak_abi::proto::oak::application::{ApplicationConfiguration, ConfigMap};
-use oak_runtime::{auth::oidc_utils::parse_client_info_json, config::configure_and_run};
+use oak_abi::{
+    proto::oak::application::{ApplicationConfiguration, ConfigMap},
+    Handle,
+};
+use oak_runtime::{
+    auth::oidc_utils::parse_client_info_json, config::configure_and_run, io::Sender, RuntimeProxy,
+};
 use prost::Message;
 use rustls::internal::pemfile;
 use std::{
@@ -139,6 +144,24 @@ pub fn parse_config_map(config_entries: &[ConfigEntry]) -> anyhow::Result<Config
     Ok(ConfigMap { items: file_map })
 }
 
+pub fn parse_config_map(config_files: &[ConfigEntry]) -> anyhow::Result<ConfigMap> {
+    Ok(ConfigMap {
+        items: parse_config_files(config_files)?,
+    })
+}
+
+/// Send configuration map to the initial Oak Node.
+fn send_config_map(
+    config_map: ConfigMap,
+    runtime: &RuntimeProxy,
+    handle: Handle,
+) -> anyhow::Result<()> {
+    let sender = Sender::new(handle);
+    sender
+        .send(config_map, runtime)
+        .map_err(|status| anyhow!("could configuration map to the initial Node: {:?}", status))
+}
+
 /// Load a PEM encoded TLS certificate, performing (minimal) validation.
 fn load_certificate(certificate: &str) -> anyhow::Result<Certificate> {
     let mut cursor = std::io::Cursor::new(certificate);
@@ -218,6 +241,8 @@ fn main() -> anyhow::Result<()> {
         "initial node {:?} with write handle {:?}",
         runtime.node_id, initial_handle
     );
+
+    send_config_map(config_map, &runtime, initial_handle)?;
 
     let done = Arc::new(AtomicBool::new(false));
     signal_hook::flag::register(signal_hook::SIGINT, Arc::clone(&done))?;
