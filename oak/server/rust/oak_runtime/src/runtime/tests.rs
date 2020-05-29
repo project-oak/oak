@@ -226,7 +226,11 @@ fn create_channel_less_confidential_label_no_privilege_err() {
     );
 }
 
-/// Create a test Node that creates a Channel with a more confidential label and succeeds.
+/// Create a test Node with no privilege that:
+///
+/// - creates a Channel with a more confidential label and succeeds
+/// - writes to the newly created channel and succeeds
+/// - reads from the newly created channel and fails
 ///
 /// Data is always allowed to flow to more confidential labels.
 #[test]
@@ -247,6 +251,76 @@ fn create_channel_more_confidential_label_ok() {
         Box::new(move |runtime| {
             let result = runtime.channel_create(&more_confidential_label);
             assert_eq!(true, result.is_ok());
+
+            let (write_handle, read_handle) = result.unwrap();
+
+            {
+                // Writing to a more confidential Channel is allowed.
+                let message = NodeMessage {
+                    data: vec![14, 12, 88],
+                    handles: vec![],
+                };
+                let result = runtime.channel_write(write_handle, message);
+                assert_eq!(true, result.is_ok());
+            }
+
+            {
+                // Reading from a more confidential Channel is not allowed.
+                let result = runtime.channel_read(read_handle);
+                assert_eq!(false, result.is_ok());
+            }
+
+            Ok(())
+        }),
+    );
+}
+
+/// Create a test Node with downgrading privilege that:
+///
+/// - creates a Channel with a more confidential label and succeeds (same as previous test case)
+/// - writes to the newly created channel and succeeds (same as previous test case)
+/// - reads from the newly created channel and succeeds (different from previous test case, thanks
+///   to the newly added privilege)
+#[test]
+fn create_channel_more_confidential_label_privilege_ok() {
+    let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
+    let tag_1 = oak_abi::label::authorization_bearer_token_hmac_tag(&[2, 2, 2]);
+    let initial_label = Label {
+        confidentiality_tags: vec![tag_0.clone()],
+        integrity_tags: vec![],
+    };
+    let more_confidential_label = Label {
+        confidentiality_tags: vec![tag_0, tag_1.clone()],
+        integrity_tags: vec![],
+    };
+    run_node_body(
+        &initial_label,
+        &NodePrivilege {
+            can_declassify_confidentiality_tags: hashset! { tag_1 },
+            can_endorse_integrity_tags: hashset! {},
+        },
+        Box::new(move |runtime| {
+            let result = runtime.channel_create(&more_confidential_label);
+            assert_eq!(true, result.is_ok());
+
+            let (write_handle, read_handle) = result.unwrap();
+
+            {
+                // Writing to a more confidential Channel is allowed.
+                let message = NodeMessage {
+                    data: vec![14, 12, 88],
+                    handles: vec![],
+                };
+                let result = runtime.channel_write(write_handle, message);
+                assert_eq!(true, result.is_ok());
+            }
+
+            {
+                // Reading from a more confidential Channel is allowed because of the privilege.
+                let result = runtime.channel_read(read_handle);
+                assert_eq!(true, result.is_ok());
+            }
+
             Ok(())
         }),
     );
