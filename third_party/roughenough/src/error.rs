@@ -29,30 +29,30 @@ pub enum Error {
     /// Tag value length exceeds length of source bytes
     InvalidValueLength(Tag, u32),
 
-    /// Encoding failed. The associated `std::io::Error` should provide more information.
-    EncodingFailure(std::io::Error),
-
-    /// Request was less than 1024 bytes
-    RequestTooShort,
+    /// Decoding failed. The associated `std::io::Error` should provide more information.
+    DecodingFailure(std::io::Error),
 
     /// Offset was not 32-bit aligned
     InvalidAlignment(u32),
 
-    /// Offset is outside of valid message range
+    /// Offset is outside of valid message range.
     InvalidOffsetValue(u32),
 
-    /// Could not convert bytes to message because bytes were too short
+    /// Could not convert bytes to message because bytes were too short.
     MessageTooShort,
 
-    /// Otherwise invalid request
-    InvalidRequest,
-
-    /// Runtime configuration is invalid for the reason provided
-    InvalidConfiguration(String),
+    /// Internal error.
+    Internal,
 }
 
 impl From<std::io::Error> for Error {
     fn from(err: std::io::Error) -> Self {
-        Error::EncodingFailure(err)
+        Error::DecodingFailure(err)
+    }
+}
+
+impl From<ring::error::Unspecified> for Error {
+    fn from(_err: ring::error::Unspecified) -> Self {
+        Error::Internal
     }
 }
