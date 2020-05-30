@@ -54,6 +54,14 @@ impl Decodable for Invocation {
 }
 
 impl Invocation {
+    pub fn close(self, runtime: &RuntimeProxy) {
+        if let Err(err) = self.receiver.close(runtime) {
+            error!("Failed to close receiver channel in invocation: {:?}", err);
+        }
+        if let Err(err) = self.sender.close(runtime) {
+            error!("Failed to close sender channel in invocation: {:?}", err);
+        }
+    }
     pub fn receive_request(&self, runtime: &RuntimeProxy) -> Result<GrpcRequest, OakStatus> {
         self.receiver.receive(runtime)
     }
