@@ -14,13 +14,13 @@ default = ["oak_debug"]
 
 [dependencies]
 anyhow = "*"
+env_logger = "*"
 log = "*"
 oak_runtime = "=0.1.0"
 oak_abi = "=0.1.0"
 prost = "*"
 rustls = "*"
 signal-hook = "*"
-simple_logger = "*"
 structopt = "*"
 tonic = { version = "*", features = ["tls"] }
 

@@ -150,7 +150,7 @@ fn load_certificate(certificate: &str) -> anyhow::Result<Certificate> {
 
 fn main() -> anyhow::Result<()> {
     if cfg!(feature = "oak_debug") {
-        simple_logger::init_by_env();
+        env_logger::init();
     } else {
         eprintln!("No debugging output configured at build time");
     }
