@@ -68,6 +68,11 @@ impl<T: Decodable> Receiver<T> {
         }
     }
 
+    /// Close the underlying channel handle.
+    pub fn close(self, runtime: &RuntimeProxy) -> Result<(), OakStatus> {
+        runtime.channel_close(self.handle)
+    }
+
     /// Waits, reads and decodes a message from the [`Receiver::handle`].
     pub fn receive(&self, runtime: &RuntimeProxy) -> Result<T, OakStatus> {
         let read_status = runtime.wait_on_channels(&[self.handle])?;
@@ -101,6 +106,11 @@ impl<T: Encodable> Sender<T> {
             handle,
             phantom: std::marker::PhantomData,
         }
+    }
+
+    /// Close the underlying channel handle.
+    pub fn close(self, runtime: &RuntimeProxy) -> Result<(), OakStatus> {
+        runtime.channel_close(self.handle)
     }
 
     /// Encodes and sends a message to the [`Sender::handle`].
