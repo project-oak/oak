@@ -77,7 +77,7 @@ if [[ "${EXAMPLE}" == 'abitest' ]]; then
   # TODO(#1040): reinstate storage tests when Rust runtime supports them.
   # TODO(#954): reinstate gRPC client server-streaming tests when Rust runtime supports them.
   # TODO(#953): reinstate gRPC server server-streaming tests when Rust runtime supports them.
-  readonly ADDITIONAL_ARGS=("--test_exclude=(Roughtime|Storage|ServerStreamingMethod|GrpcClientServerStreamingMethod)")
+  readonly ADDITIONAL_ARGS=("--test_exclude=(Roughtime|Storage|GrpcServerServerStreamingMethod|GrpcClientServerStreamingMethod)")
 
   readonly TLS_ARGS=(
     "--ca_cert=${SCRIPTS_DIR}/../examples/certs/local/ca.pem"

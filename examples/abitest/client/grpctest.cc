@@ -25,15 +25,15 @@ using ::oak::examples::abitest::OakABITestService;
 
 // Simple manual test case registry.
 const std::map<std::string, GrpcTestFn> grpc_tests = {
-    {"UnaryMethodOK", test_unary_method_ok},
-    {"UnaryMethodErr", test_unary_method_err},
-    {"ServerStreamingMethodOK", test_server_streaming_method_ok},
-    {"ServerStreamingMethodErr", test_server_streaming_method_err},
+    {"GrpcServerUnaryMethodOK", test_unary_method_ok},
+    {"GrpcServerUnaryMethodErr", test_unary_method_err},
+    {"GrpcServerServerStreamingMethodOK", test_server_streaming_method_ok},
+    {"GrpcServerServerStreamingMethodErr", test_server_streaming_method_err},
     // TODO(#97): add tests for client-streaming methods when implemented.
-    {"DISABLED_ClientStreamingMethodOK", test_client_streaming_method_ok},
-    {"DISABLED_ClientStreamingMethodErr", test_client_streaming_method_err},
-    {"DISABLED_BidiStreamingMethodOK", test_bidi_streaming_method_ok},
-    {"DISABLED_BidiStreamingMethodErr", test_bidi_streaming_method_err},
+    {"DISABLED_GrpcServerClientStreamingMethodOK", test_client_streaming_method_ok},
+    {"DISABLED_GrpcServerClientStreamingMethodErr", test_client_streaming_method_err},
+    {"DISABLED_GrpcServerBidiStreamingMethodOK", test_bidi_streaming_method_ok},
+    {"DISABLED_GrpcServerBidiStreamingMethodErr", test_bidi_streaming_method_err},
 };
 
 bool test_unary_method_ok(OakABITestService::Stub* stub) {
