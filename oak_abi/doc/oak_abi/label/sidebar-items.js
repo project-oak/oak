@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["authorization_bearer_token_hmac_tag","Creates a [`Tag`] having as principal the provided authorization bearer token."]]});

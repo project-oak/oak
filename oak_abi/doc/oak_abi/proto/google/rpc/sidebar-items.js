@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Code","The canonical error codes for Google APIs."]],"struct":[["Status","The `Status` type defines a logical error model that is suitable for different programming environments, including REST APIs and RPC APIs. It is used by gRPC. The error model is designed to be:"]]});
