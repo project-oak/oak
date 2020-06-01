@@ -12,7 +12,6 @@ ALIASES["expect"] = {};
 ALIASES["hello_world"] = {};
 ALIASES["machine_learning"] = {};
 ALIASES["oak"] = {};
-ALIASES["oak_glue"] = {};
 ALIASES["oak_loader"] = {};
 ALIASES["oak_runtime"] = {};
 ALIASES["oak_tests"] = {};
