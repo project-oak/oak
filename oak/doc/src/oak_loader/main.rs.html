@@ -389,7 +389,7 @@
 
 <span class="kw">fn</span> <span class="ident">main</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="kw">if</span> <span class="macro">cfg</span><span class="macro">!</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>) {
-        <span class="ident">simple_logger</span>::<span class="ident">init_by_env</span>();
+        <span class="ident">env_logger</span>::<span class="ident">init</span>();
     } <span class="kw">else</span> {
         <span class="macro">eprintln</span><span class="macro">!</span>(<span class="string">&quot;No debugging output configured at build time&quot;</span>);
     }
