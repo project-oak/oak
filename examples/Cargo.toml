@@ -31,20 +31,6 @@ oak_runtime = { path = "../oak/server/rust/oak_runtime" }
 oak_tests = { path = "../sdk/rust/oak_tests" }
 oak_utils = { path = "../oak_utils" }
 # Examples.
-abitest_common = { path = "abitest/abitest_common" }
-abitest_0_frontend = { path = "abitest/module_0/rust" }
-abitest_1_backend = { path = "abitest/module_1/rust" }
-abitest_tests = { path = "abitest/tests" }
-aggregator = { path = "aggregator/module/rust" }
-aggregator_backend = { path = "aggregator/backend" }
-aggregator_common = { path = "aggregator/common" }
-chat = { path = "chat/module/rust" }
-hello_world = { path = "hello_world/module/rust" }
-machine_learning = { path = "machine_learning/module/rust" }
-private_set_intersection = { path = "private_set_intersection/module/rust" }
-running_average = { path = "running_average/module/rust" }
-rustfmt = { path = "rustfmt/module/rust" }
-translator = { path = "translator/module/rust" }
 translator_common = { path = "translator/common" }
 # Third party.
 expect = { path = "../third_party/expect" }
