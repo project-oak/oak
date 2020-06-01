@@ -1349,6 +1349,8 @@ dependencies = [
  "byteorder",
  "bytes",
  "futures",
+ "futures-core",
+ "futures-util",
  "http",
  "hyper",
  "itertools 0.9.0",
