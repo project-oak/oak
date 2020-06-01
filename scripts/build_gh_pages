@@ -29,25 +29,59 @@ if [[ -n "$(ls "${TARGET_DIR}"/*)" ]]; then
   exit 1
 fi
 
-# Generate docs directly in the target dir.
-cargo doc --no-deps --target-dir="${TARGET_DIR}"
+# Absolute path to the target directory, to make sure that docs are generated into the correct directory.
+readonly TARGET_ABS_PATH="$(realpath "${TARGET_DIR}")"
 
-# Remove non-doc artifacts from the target dir.
-rm --recursive --force "${TARGET_DIR}/debug"
+# All the dirs that we want to generate docs for.
+declare -ar SOURCE_PATHS=("." "oak_abi" "oak_utils")
+declare -ar TARGET_SUBDIRS=("oak" "oak_abi" "oak_utils")
 
-# Remove non-deterministic files.
-rm "${TARGET_DIR}/.rustc_info.json"
+# Titles used in the top-level index.html files. 
+declare -ar PAGE_TITLES=("SDK" "ABI" "Utils")
 
-# The docs generated from the Cargo workspace do not include a workspace-level index, so we generate
-# one here and redirect to the Oak SDK documentation.
-cat <<-END > "${TARGET_DIR}/index.html"
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta http-equiv="Refresh" content="0; url=./doc/oak/index.html" />
-  </head>
-  <body>
-    <p><a href="./doc/oak/index.html">Oak SDK main page</a></p>
-  </body>
-</html>
+readonly LEN=${#SOURCE_PATHS[@]}
+
+for ((i=0;i<LEN;i++)); do
+  (
+    cd "${SOURCE_PATHS[$i]}"
+
+    target_dir="${TARGET_ABS_PATH}/${TARGET_SUBDIRS[$i]}"
+    mkdir --parent "${target_dir}"
+
+    # Generate docs directly into the target dir.
+    cargo doc --no-deps --target-dir="${target_dir}"
+
+    # Remove non-doc artifacts from the target dir.
+    rm --recursive --force "${target_dir}/debug"
+
+    # Remove non-deterministic files.
+    rm "${target_dir}/.rustc_info.json"
+
+    # The docs generated from the Cargo workspace do not include a workspace-level index, so we generate
+    # one here and redirect to the appropriate documentation.
+    cat <<-END > "${target_dir}/index.html"
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta http-equiv="Refresh" content="0; url=./doc/${TARGET_SUBDIRS[$i]}/index.html" />
+        </head>
+        <body>
+          <p><a href="./doc/${TARGET_SUBDIRS[$i]}/index.html">Oak ${PAGE_TITLES[$i]} main page</a></p>
+        </body>
+      </html>
+END
+  )
+done
+
+# A top-level index so that visiting https://project-oak.github.io/oak/ goes somewhere helpful.
+cat <<-END > "${TARGET_ABS_PATH}/index.html"
+  <!DOCTYPE html>
+  <html>
+    <head>
+      <meta http-equiv="Refresh" content="0; url=./oak/doc/oak/index.html" />
+    </head>
+    <body>
+      <p><a href="./oak/doc/oak/index.html">Oak SDK main page</a></p>
+    </body>
+  </html>
 END
