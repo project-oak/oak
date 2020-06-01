@@ -44,7 +44,7 @@ fn build_wasm() -> std::io::Result<HashMap<String, Vec<u8>>> {
 
 #[test]
 fn test_abi() {
-    simple_logger::init_by_env();
+    env_logger::init();
 
     let application_configuration = ApplicationConfiguration {
         wasm_modules: build_wasm().expect("failed to build wasm modules"),

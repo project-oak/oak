@@ -51,7 +51,7 @@ fn submit_sample(
 
 #[test]
 fn test_aggregator() {
-    simple_logger::init_by_env();
+    env_logger::init();
 
     let (runtime, entry_handle) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
         .expect("Unable to configure runtime with test wasm!");

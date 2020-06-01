@@ -15,9 +15,9 @@ prost = "*"
 
 [dev-dependencies]
 assert_matches = "*"
+env_logger = "*"
 oak_runtime = "=0.1.0"
 oak_tests = "=0.1.0"
-simple_logger = "*"
 
 [build-dependencies]
 oak_utils = "*"
