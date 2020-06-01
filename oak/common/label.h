@@ -47,9 +47,13 @@ oak::label::Label DeserializeLabel(const std::string& label_bytes);
 // provided authorization bearer token.
 oak::label::Label AuthorizationBearerTokenLabel(const std::string& authorization_token_hmac);
 
-// Creates a label that only allows declassifying data for modules that match the
-// provided module attestation.
+// Creates a label that only allows declassifying data for modules that match the provided module
+// attestation.
 oak::label::Label WebAssemblyModuleAttestationLabel(const std::string& module_attestation);
+
+// Creates a public untrusted label, which is the least confidential and least trusted label and
+// applies no confidentiality restrictions to the data contained in the request.
+oak::label::Label PublicUntrustedLabel();
 
 }  // namespace oak
 

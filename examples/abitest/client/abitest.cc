@@ -212,8 +212,14 @@ int main(int argc, char** argv) {
   std::string address = absl::GetFlag(FLAGS_address);
   LOG(INFO) << "Connecting to Oak Application: " << address;
 
-  auto stub =
-      OakABITestService::NewStub(oak::ApplicationClient::CreateTlsChannel(address, ca_cert));
+  // TODO(#1066): Assign a more restrictive label.
+  oak::label::Label label = oak::PublicUntrustedLabel();
+  // Connect to the Oak Application.
+  auto stub = OakABITestService::NewStub(oak::ApplicationClient::CreateChannel(
+      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert), label));
+  if (stub == nullptr) {
+    LOG(FATAL) << "Failed to create application stub";
+  }
 
   bool success = true;
   if (absl::GetFlag(FLAGS_test_abi)) {

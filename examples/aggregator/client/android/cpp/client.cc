@@ -46,7 +46,10 @@ JNIEXPORT void JNICALL Java_com_google_oak_aggregator_MainActivity_createChannel
                                                                                  jstring jca_cert) {
   auto address = env->GetStringUTFChars(jaddress, 0);
   auto ca_cert = env->GetStringUTFChars(jca_cert, 0);
-  kChannel = Aggregator::NewStub(oak::ApplicationClient::CreateTlsChannel(address, ca_cert));
+  // TODO(#1066): Assign a more restrictive label.
+  oak::label::Label label = oak::PublicUntrustedLabel();
+  kChannel = Aggregator::NewStub(oak::ApplicationClient::CreateChannel(
+      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert), label));
   JNI_LOG("gRPC channel has been created");
 }
 

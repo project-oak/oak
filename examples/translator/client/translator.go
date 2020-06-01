@@ -50,6 +50,7 @@ func main() {
 	if err != nil {
 		glog.Exitf("Failed to set up TLS client credentials from %q: %v", *caCert, err)
 	}
+	// TODO(#1066): Use a more restrictive Label.
 	conn, err := grpc.Dial(*address, grpc.WithTransportCredentials(creds))
 	if err != nil {
 		glog.Exitf("Failed to dial Oak Application at %v: %v", *address, err)

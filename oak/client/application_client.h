@@ -97,22 +97,13 @@ class ApplicationClient {
     return grpc::CreateChannel(addr, composite_credentials);
   }
 
-  // Returns a gRPC Channel initialized with TLS channel credentials and a private authorization
-  // bearer token.
-  //
-  // See `private_authorization_bearer_token_call_credentials`.
-  static std::shared_ptr<grpc::Channel> CreateTlsChannel(std::string addr) {
-    return CreateChannel(addr, GetTlsChannelCredentials(),
-                         private_authorization_bearer_token_call_credentials());
-  }
-
-  // Returns a gRPC Channel initialized with Tls channel credentials and a non-default PEM-encoded
-  // CA root certificate, and a private authorization bearer token.
-  //
-  // See `private_authorization_bearer_token_call_credentials`.
-  static std::shared_ptr<grpc::Channel> CreateTlsChannel(std::string addr, std::string ca_cert) {
-    return CreateChannel(addr, GetTlsChannelCredentials(ca_cert),
-                         private_authorization_bearer_token_call_credentials());
+  // Returns a gRPC Channel connecting to the specified address, initialised with a fixed Oak Label.
+  static std::shared_ptr<grpc::Channel> CreateChannel(
+      std::string addr, std::shared_ptr<grpc::ChannelCredentials> channel_credentials,
+      oak::label::Label label) {
+    auto call_credentials =
+        grpc::MetadataCredentialsFromPlugin(absl::make_unique<LabelMetadata>(label));
+    return CreateChannel(addr, channel_credentials, call_credentials);
   }
 
   // Gets TLS channel credentials with default options.
