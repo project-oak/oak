@@ -1,21 +1,5 @@
 [workspace]
 members = [
-  "examples/abitest/abitest_common",
-  "examples/abitest/module_0/rust",
-  "examples/abitest/module_1/rust",
-  "examples/abitest/tests",
-  "examples/aggregator/backend",
-  "examples/aggregator/common",
-  "examples/aggregator/module/rust",
-  "examples/authentication/client",
-  "examples/chat/module/rust",
-  "examples/hello_world/module/rust",
-  "examples/machine_learning/module/rust",
-  "examples/private_set_intersection/module/rust",
-  "examples/running_average/module/rust",
-  "examples/rustfmt/module/rust",
-  "examples/translator/common",
-  "examples/translator/module/rust",
   "experimental/split_grpc/client",
   "experimental/split_grpc/proxy",
   "experimental/split_grpc/server",
@@ -42,26 +26,9 @@ oak_runtime = { path = "oak/server/rust/oak_runtime" }
 oak_tests = { path = "sdk/rust/oak_tests" }
 oak_utils = { path = "oak_utils" }
 runner = { path = "runner" }
-# Examples.
-abitest_common = { path = "examples/abitest/abitest_common" }
-abitest_0_frontend = { path = "examples/abitest/module_0/rust" }
-abitest_1_backend = { path = "examples/abitest/module_1/rust" }
-abitest_tests = { path = "examples/abitest/tests" }
-aggregator = { path = "examples/aggregator/module/rust" }
-aggregator_backend = { path = "examples/aggregator/backend" }
-aggregator_common = { path = "examples/aggregator/common" }
-chat = { path = "examples/chat/module/rust" }
-hello_world = { path = "examples/hello_world/module/rust" }
-machine_learning = { path = "examples/machine_learning/module/rust" }
-private_set_intersection = { path = "examples/private_set_intersection/module/rust" }
-running_average = { path = "examples/running_average/module/rust" }
-rustfmt = { path = "examples/rustfmt/module/rust" }
-translator = { path = "examples/translator/module/rust" }
-translator_common = { path = "examples/translator/common" }
 # Experimental
 split_grpc_client = { path = "experimental/split_grpc/client" }
 split_grpc_proxy = { path = "experimental/split_grpc/proxy" }
 split_grpc_server = { path = "experimental/split_grpc/server" }
 # Third party.
-expect = { path = "third_party/expect" }
 roughenough = { path = "third_party/roughenough" }

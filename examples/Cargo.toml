@@ -1,0 +1,36 @@
+[workspace]
+members = [
+  "abitest/abitest_common",
+  "abitest/module_0/rust",
+  "abitest/module_1/rust",
+  "abitest/tests",
+  "aggregator/backend",
+  "aggregator/common",
+  "aggregator/module/rust",
+  "authentication/client",
+  "chat/module/rust",
+  "hello_world/module/rust",
+  "machine_learning/module/rust",
+  "private_set_intersection/module/rust",
+  "running_average/module/rust",
+  "rustfmt/module/rust",
+  "translator/common",
+  "translator/module/rust",
+]
+
+# Patch dependencies on oak crates so that they refer to the versions within this same repository.
+#
+# From https://doc.rust-lang.org/book/ch14-03-cargo-workspaces.html :
+# > Cargo doesn’t assume that crates in a workspace will depend on each other, so we need to be
+# > explicit about the dependency relationships between the crates.
+[patch.crates-io]
+# Oak.
+oak = { path = "../sdk/rust/oak" }
+oak_abi = { path = "../oak_abi" }
+oak_runtime = { path = "../oak/server/rust/oak_runtime" }
+oak_tests = { path = "../sdk/rust/oak_tests" }
+oak_utils = { path = "../oak_utils" }
+# Examples.
+translator_common = { path = "translator/common" }
+# Third party.
+expect = { path = "../third_party/expect" }
