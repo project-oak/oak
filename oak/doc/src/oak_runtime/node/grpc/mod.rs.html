@@ -24,30 +24,6 @@
 <span id="24">24</span>
 <span id="25">25</span>
 <span id="26">26</span>
-<span id="27">27</span>
-<span id="28">28</span>
-<span id="29">29</span>
-<span id="30">30</span>
-<span id="31">31</span>
-<span id="32">32</span>
-<span id="33">33</span>
-<span id="34">34</span>
-<span id="35">35</span>
-<span id="36">36</span>
-<span id="37">37</span>
-<span id="38">38</span>
-<span id="39">39</span>
-<span id="40">40</span>
-<span id="41">41</span>
-<span id="42">42</span>
-<span id="43">43</span>
-<span id="44">44</span>
-<span id="45">45</span>
-<span id="46">46</span>
-<span id="47">47</span>
-<span id="48">48</span>
-<span id="49">49</span>
-<span id="50">50</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -71,33 +47,9 @@
 <span class="kw">mod</span> <span class="ident">invocation</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">server</span>;
 
-<span class="doccomment">/// Converts [`tonic::Status`] to [`oak_abi::proto::google::rpc::Status`].</span>
-<span class="kw">fn</span> <span class="ident">from_tonic_status</span>(<span class="ident">status</span>: <span class="ident">tonic</span>::<span class="ident">Status</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">google</span>::<span class="ident">rpc</span>::<span class="ident">Status</span> {
-    <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">google</span>::<span class="ident">rpc</span>::<span class="ident">Status</span> {
-        <span class="ident">code</span>: <span class="ident">status</span>.<span class="ident">code</span>() <span class="kw">as</span> <span class="ident">i32</span>,
-        <span class="ident">message</span>: <span class="ident">status</span>.<span class="ident">message</span>().<span class="ident">to_string</span>(),
-        <span class="ident">details</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">prost_types</span>::<span class="ident">Any</span> {
-            <span class="comment">// `type_url` parameter is not used by Oak Nodes.</span>
-            <span class="ident">type_url</span>: <span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>(),
-            <span class="comment">// Request status details that have been sent back by an external gRPC service, are</span>
-            <span class="comment">// propagated to an Oak Node that has created this request.</span>
-            <span class="ident">value</span>: <span class="ident">status</span>.<span class="ident">details</span>().<span class="ident">to_vec</span>(),
-        }],
-    }
-}
-
 <span class="doccomment">/// Converts [`oak_abi::proto::google::rpc::Status`] to [`tonic::Status`].</span>
-<span class="kw">fn</span> <span class="ident">to_tonic_status</span>(<span class="ident">status</span>: <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">google</span>::<span class="ident">rpc</span>::<span class="ident">Status</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">tonic</span>::<span class="ident">Status</span> {
+<span class="kw">fn</span> <span class="ident">to_tonic_status</span>(<span class="ident">status</span>: <span class="ident">rpc</span>::<span class="ident">Status</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">tonic</span>::<span class="ident">Status</span> {
     <span class="ident">tonic</span>::<span class="ident">Status</span>::<span class="ident">new</span>(<span class="ident">tonic</span>::<span class="ident">Code</span>::<span class="ident">from_i32</span>(<span class="ident">status</span>.<span class="ident">code</span>), <span class="ident">status</span>.<span class="ident">message</span>)
-}
-
-<span class="doccomment">/// Converts [`oak_abi::OakStatus`] to [`oak_abi::proto::google::rpc::Status`].</span>
-<span class="kw">fn</span> <span class="ident">from_abi_status</span>(<span class="ident">status</span>: <span class="ident">oak_abi</span>::<span class="ident">OakStatus</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">google</span>::<span class="ident">rpc</span>::<span class="ident">Status</span> {
-    <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">google</span>::<span class="ident">rpc</span>::<span class="ident">Status</span> {
-        <span class="ident">code</span>: <span class="ident">rpc</span>::<span class="ident">Code</span>::<span class="ident">Internal</span> <span class="kw">as</span> <span class="ident">i32</span>,
-        <span class="ident">message</span>: <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Operation failed: {:?}&quot;</span>, <span class="ident">status</span>),
-        <span class="ident">details</span>: <span class="macro">vec</span><span class="macro">!</span>[],
-    }
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../../";window.currentCrate = "oak_runtime";</script><script src="../../../../aliases.js"></script><script src="../../../../main.js"></script><script src="../../../../source-script.js"></script><script src="../../../../source-files.js"></script><script defer src="../../../../search-index.js"></script></body></html>
