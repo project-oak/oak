@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["_Inner",""]],"trait":[["Aggregator","Generated trait containing gRPC methods that should be implemented for use with AggregatorServer."]]});

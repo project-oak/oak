@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["get_authentication_code","Gets the OIDC authentication code by opening the default browser and extracting it from the resulting redirect URL."],["main",""]],"mod":[["auth_client",""],["redirect_handler",""]],"struct":[["Opt",""]]});

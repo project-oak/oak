@@ -1,1 +1,0 @@
-initSidebarItems({"mod":[["abi_test_response",""],["grpc_test_request",""]],"struct":[["AbiTestRequest",""],["AbiTestResponse",""],["GrpcTestRequest",""],["GrpcTestResponse",""],["OakAbiTestServiceClient",""],["OakAbiTestServiceDispatcher",""]],"trait":[["OakAbiTestService",""]]});
