@@ -35,3 +35,4 @@ oak_utils = { path = "../oak_utils" }
 translator_common = { path = "translator/common" }
 # Third party.
 expect = { path = "../third_party/expect" }
+roughenough = { path = "../third_party/roughenough" }
