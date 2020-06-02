@@ -33,6 +33,7 @@ pub struct Opt {
 #[derive(StructOpt, Clone)]
 pub enum Command {
     BuildExamples(BuildExamples),
+    RunExamples(RunExamples),
     BuildServer(BuildServer),
     RunTests,
 }
@@ -48,7 +49,17 @@ pub struct BuildExamples {
         help = "application variant: [rust, cpp]",
         default_value = "rust"
     )]
-    pub variant: String,
+    pub application_variant: String,
+}
+
+#[derive(StructOpt, Clone)]
+pub struct RunExamples {
+    #[structopt(
+        long,
+        help = "application variant: [rust, cpp]",
+        default_value = "rust"
+    )]
+    pub application_variant: String,
 }
 
 #[derive(StructOpt, Clone)]
@@ -103,20 +114,23 @@ impl std::fmt::Display for StatusResultValue {
 
 pub struct SingleStatusResult {
     value: StatusResultValue,
-    command: String,
     logs: String,
 }
 
-/// An execution step, which may be a single (dynamically dispatched) `Runnable`, or a collection of
-/// sub-steps.
+/// An execution step, which may be a single `Cmd`, or a collection of sub-steps.
 pub enum Step {
     Single {
         name: String,
-        runnable: Box<dyn Runnable>,
+        command: Cmd,
     },
     Multiple {
         name: String,
         steps: Vec<Step>,
+    },
+    WithBackground {
+        name: String,
+        background: Cmd,
+        foreground: Box<Step>,
     },
 }
 
@@ -135,30 +149,28 @@ where
     )
 }
 
-/// A runnable task which produces a single result.
-pub trait Runnable {
-    fn run(&self, opt: &Opt) -> SingleStatusResult;
-}
-
 /// Run the provided step, printing out information about the execution, and returning a set of
 /// status results from the single or multiple steps that were executed.
 pub fn run_step(context: &Context, step: &Step) -> HashSet<StatusResultValue> {
     match step {
-        Step::Single { name, runnable } => {
+        Step::Single { name, command } => {
             let context = context.child(name);
-            // Print three dots to indicate that a command is running, but no new line. The first
-            // log line below will complete the line.
-            eprint!("{} ... ", context.prefix);
 
             let start = Instant::now();
-            let status = runnable.run(&context.opt);
+            let running = command.run(&context.opt);
+
+            let command = if context.opt.commands || context.opt.dry_run {
+                format!("[{}]", running.command)
+            } else {
+                "".to_string()
+            };
+            eprintln!("{} ⊢ {} ... ", context.prefix, command);
+
+            let status = running.wait(&context.opt);
             let end = Instant::now();
             let elapsed = end.duration_since(start);
 
-            eprintln!("{} [{:.0?}]", status.value, elapsed);
-            if context.opt.commands || context.opt.dry_run {
-                eprintln!("{} ⊢ [{}]", context.prefix, status.command);
-            };
+            eprintln!("{} ⊢ {} [{:.0?}]", context.prefix, status.value, elapsed);
             if (status.value == StatusResultValue::Error || context.opt.logs)
                 && !status.logs.is_empty()
             {
@@ -191,96 +203,169 @@ pub fn run_step(context: &Context, step: &Step) -> HashSet<StatusResultValue> {
             );
             values
         }
+        Step::WithBackground {
+            name,
+            background,
+            foreground,
+        } => {
+            let context = context.child(name);
+            eprintln!("{} {{", context.prefix);
+
+            let mut running_background = background.run(&context.opt);
+            let background_command = if context.opt.commands || context.opt.dry_run {
+                format!("[{}]", running_background.command)
+            } else {
+                "".to_string()
+            };
+            eprintln!(
+                "{} ⊢ {} (background) ...",
+                context.prefix, background_command
+            );
+
+            // Small delay to make it more likely that the background process started.
+            std::thread::sleep(std::time::Duration::from_millis(2_000));
+
+            let values = run_step(&context, foreground);
+
+            running_background.kill();
+            eprintln!("{} ⊢ {} (waiting)", context.prefix, background_command,);
+            let background_status = running_background.wait(&context.opt);
+            eprintln!(
+                "{} ⊢ {} (finished) {}",
+                context.prefix, background_command, background_status.value
+            );
+            if (background_status.value == StatusResultValue::Error || context.opt.logs)
+                && !background_status.logs.is_empty()
+            {
+                eprintln!("{} {}", context.prefix, "╔════════════════════════".blue());
+                for line in background_status.logs.lines() {
+                    eprintln!("{} {} {}", context.prefix, "║".blue(), line);
+                }
+                eprintln!("{} {}", context.prefix, "╚════════════════════════".blue());
+            }
+
+            values
+        }
     }
 }
 
-/// A single command that implements the `Runnable` trait.
-struct Cmd {
+/// A single command.
+#[derive(Clone)]
+pub struct Cmd {
     executable: String,
     args: Vec<String>,
 }
 
 impl Cmd {
-    fn new(executable: &str, args: &[&str]) -> Self {
+    pub fn new<I, S>(executable: &str, args: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<str>,
+    {
         Cmd {
             executable: executable.to_string(),
-            args: args.iter().cloned().map(|s| s.to_string()).collect(),
+            args: args.into_iter().map(|s| s.as_ref().to_string()).collect(),
         }
     }
-}
-
-/// Convenience constructor for a boxed `Cmd`.
-pub fn cmd(executable: &str, args: &[&str]) -> Box<dyn Runnable> {
-    Box::new(Cmd::new(executable, args))
-}
-
-impl Runnable for Cmd {
     /// Run the provided command, printing a status message with the current prefix.
-    /// TODO(#396): Add ability to run commands in parallel.
     /// TODO(#396): Return one of three results: pass, fail, or internal error (e.g. if the binary
     /// to run was not found).
-    fn run(&self, opt: &Opt) -> SingleStatusResult {
-        // TODO(#396): Measure and print elapsed time.
-        // TODO(#396): Add dry-run mode that only prints the commands but does not actually run
-        // them.
+    fn run(&self, opt: &Opt) -> Running {
         std::io::stderr().flush().expect("could not flush stderr");
         let mut cmd = std::process::Command::new(&self.executable);
         cmd.args(&self.args);
         let command_string = format!("{:?}", cmd);
         if opt.dry_run {
-            SingleStatusResult {
-                value: StatusResultValue::Skipped,
+            Running {
                 command: command_string,
-                logs: "".to_string(),
+                process: None,
             }
         } else {
-            let mut child = cmd
-                .stdout(std::process::Stdio::piped())
-                .stderr(std::process::Stdio::piped())
+            // If the `logs` flag is enabled, inherit stdout and stderr from the main runner
+            // process.
+            let stdout = if opt.logs {
+                std::process::Stdio::inherit()
+            } else {
+                std::process::Stdio::piped()
+            };
+            let stderr = if opt.logs {
+                std::process::Stdio::inherit()
+            } else {
+                std::process::Stdio::piped()
+            };
+            let child = cmd
+                .stdout(stdout)
+                .stderr(stderr)
                 .spawn()
                 .expect("could not spawn command");
 
-            if opt.logs {
-                println!();
-                let out = child.stderr.as_mut().unwrap();
-                use std::io::BufRead;
-                for line in std::io::BufReader::new(out).lines() {
-                    println!("{}", line.unwrap());
+            Running {
+                command: command_string,
+                process: Some(child),
+            }
+        }
+    }
+}
+
+/// An instance of a running command.
+pub struct Running {
+    command: String,
+    process: Option<std::process::Child>,
+}
+
+impl Running {
+    /// Forces the running command to stop. Equivalent to sending `SIGINT`.
+    fn kill(&mut self) {
+        if let Some(ref mut child) = self.process {
+            // TODO(#396): Send increasingly stronger signals if the process fails to terminate
+            // within a given amount of time.
+            let pid = nix::unistd::Pid::from_raw(child.id() as i32);
+            nix::sys::signal::kill(pid, nix::sys::signal::Signal::SIGINT)
+                .expect("could not kill process");
+        }
+    }
+
+    /// Waits for the running command to spontaneously terminate.
+    fn wait(self, _opt: &Opt) -> SingleStatusResult {
+        let child = match self.process {
+            Some(child) => child,
+            None => {
+                return SingleStatusResult {
+                    logs: "".to_string(),
+                    value: StatusResultValue::Skipped,
                 }
             }
+        };
 
-            let output = child
-                .wait_with_output()
-                .expect("could not wait for command to terminate");
+        let output = child
+            .wait_with_output()
+            .expect("could not wait for command to terminate");
 
-            let mut logs = String::new();
-            {
-                let stdout =
-                    std::str::from_utf8(&output.stdout).expect("could not parse command stdout");
-                if !stdout.is_empty() {
-                    logs += &format!("════╡ stdout ╞════\n{}", stdout);
-                }
+        let mut logs = String::new();
+        {
+            let stdout =
+                std::str::from_utf8(&output.stdout).expect("could not parse command stdout");
+            if !stdout.is_empty() {
+                logs += &format!("════╡ stdout ╞════\n{}", stdout);
             }
-            {
-                let stderr =
-                    std::str::from_utf8(&output.stderr).expect("could not parse command stderr");
-                if !stderr.is_empty() {
-                    logs += &format!("════╡ stderr ╞════\n{}", stderr);
-                }
+        }
+        {
+            let stderr =
+                std::str::from_utf8(&output.stderr).expect("could not parse command stderr");
+            if !stderr.is_empty() {
+                logs += &format!("════╡ stderr ╞════\n{}", stderr);
             }
+        }
 
-            if output.status.success() {
-                SingleStatusResult {
-                    value: StatusResultValue::Ok,
-                    command: command_string,
-                    logs,
-                }
-            } else {
-                SingleStatusResult {
-                    value: StatusResultValue::Error,
-                    command: command_string,
-                    logs,
-                }
+        if output.status.success() {
+            SingleStatusResult {
+                value: StatusResultValue::Ok,
+                logs,
+            }
+        } else {
+            SingleStatusResult {
+                value: StatusResultValue::Error,
+                logs,
             }
         }
     }

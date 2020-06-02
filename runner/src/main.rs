@@ -37,6 +37,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let steps = match opt.cmd {
         Command::BuildExamples(ref opt) => build_examples(&opt),
+        Command::RunExamples(ref opt) => run_examples(&opt),
         Command::BuildServer(ref opt) => build_server(&opt),
         Command::RunTests => run_tests(),
     };
@@ -52,7 +53,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn build_examples(opt: &BuildExamples) -> Step {
-    match opt.variant.as_str() {
+    match opt.application_variant.as_str() {
         "rust" => Step::Multiple {
             name: "root".to_string(),
             steps: examples()
@@ -73,10 +74,74 @@ fn build_examples(opt: &BuildExamples) -> Step {
     }
 }
 
+fn run_examples(opt: &RunExamples) -> Step {
+    match opt.application_variant.as_str() {
+        "rust" => Step::Multiple {
+            name: "examples".to_string(),
+            /// TODO(#396): Check that all the example folders are covered by an entry here, or
+            /// explicitly ignored. This will probably require pulling out the `Vec<Example>` to a
+            /// top-level method first.
+            steps: vec![
+                Example {
+                    name: "abitest".to_string(),
+                    rust_module_names: vec!["module_0".to_string(), "module_1".to_string()],
+                    // TODO(#730): reinstate Roughtime tests when Rust runtime supports them.
+                    // TODO(#1040): reinstate storage tests when Rust runtime supports them.
+                    // TODO(#953): reinstate gRPC server server-streaming tests when Rust runtime
+                    // supports them.
+                    additional_client_flags: vec![
+                        "--cert_chain=../../../../../../../../examples/certs/local/local.pem"
+                            .to_string(),
+                        "--private_key=../../../../../../../../examples/certs/local/local.key"
+                            .to_string(),
+                        "--test_exclude=(Roughtime|Storage|GrpcServerServerStreamingMethod)"
+                            .to_string(),
+                    ],
+                },
+                Example {
+                    name: "aggregator".to_string(),
+                    rust_module_names: vec!["module".to_string()],
+                    additional_client_flags: vec![],
+                },
+                Example {
+                    name: "hello_world".to_string(),
+                    rust_module_names: vec!["module".to_string()],
+                    additional_client_flags: vec![],
+                },
+                Example {
+                    name: "machine_learning".to_string(),
+                    rust_module_names: vec!["module".to_string()],
+                    additional_client_flags: vec![],
+                },
+                Example {
+                    name: "private_set_intersection".to_string(),
+                    rust_module_names: vec!["module".to_string()],
+                    additional_client_flags: vec![],
+                },
+                Example {
+                    name: "running_average".to_string(),
+                    rust_module_names: vec!["module".to_string()],
+                    additional_client_flags: vec![],
+                },
+                Example {
+                    name: "translator".to_string(),
+                    rust_module_names: vec!["module".to_string()],
+                    additional_client_flags: vec![],
+                },
+            ]
+            .iter()
+            .map(|example| run_example(example))
+            .collect(),
+        },
+        "cpp" => unimplemented!("C++ examples not implemented yet"),
+        v => panic!("unknown variant: {}", v),
+    }
+}
+
 fn build_wasm_module(manifest_path: &str) -> Step {
     Step::Single {
         name: manifest_path.to_string(),
-        runnable: cmd(
+        command: Cmd::new(
             "cargo",
             &[
                 "build",
@@ -113,7 +178,7 @@ fn as_ref(v: &[String]) -> Vec<&str> {
     v.iter().map(|x| x.as_ref()).collect()
 }
 
-fn bazel_build(extra_build_flags: &[&str], targets: &[&str]) -> Box<dyn Runnable> {
+fn bazel_build(extra_build_flags: &[&str], targets: &[&str]) -> Cmd {
     let mut flags = Vec::new();
     flags.push("build");
 
@@ -123,14 +188,14 @@ fn bazel_build(extra_build_flags: &[&str], targets: &[&str]) -> Box<dyn Runnable
     flags.extend(extra_build_flags);
     flags.push("--");
     flags.extend(targets);
-    cmd("bazel", &flags)
+    Cmd::new("bazel", &flags)
 }
 
 fn build_server(opt: &BuildServer) -> Step {
     match opt.variant.as_str() {
         "rust" => Step::Single {
             name: "build rust server".to_string(),
-            runnable: cmd(
+            command: Cmd::new(
                 "cargo",
                 &[
                     "build",
@@ -157,7 +222,7 @@ fn build_server(opt: &BuildServer) -> Step {
             };
             Step::Single {
                 name: "build cpp server".to_string(),
-                runnable: bazel_build(
+                command: bazel_build(
                     &[&format!("--config={}", config)],
                     &[
                         "//oak/server/loader:oak_runner",
@@ -186,13 +251,94 @@ fn run_tests() -> Step {
     }
 }
 
-/// Returns all the files under the examples directory.
+/// Returns all the files and directories under the examples directory.
 fn examples() -> impl Iterator<Item = PathBuf> {
     let walker = walkdir::WalkDir::new("./examples").into_iter();
     walker
         .filter_entry(|e| !is_ignored_entry(e))
         .filter_map(Result::ok)
         .map(|e| e.into_path())
+}
+
+fn build_example_config(example_name: &str) -> Step {
+    Step::Single {
+        name: "build_config".to_string(),
+        command: Cmd::new(
+            "bazel",
+            &[
+                "build",
+                &format!("//examples/{}/config:config", example_name),
+            ],
+        ),
+    }
+}
+
+fn run_example_server(application_file: &str) -> Cmd {
+    Cmd::new(
+        "cargo",
+        &[
+            "run",
+            "--release",
+            "--target=x86_64-unknown-linux-musl",
+            "--package=oak_loader",
+            "--",
+            "--grpc-tls-private-key=./examples/certs/local/local.key",
+            "--grpc-tls-certificate=./examples/certs/local/local.pem",
+            "--root-tls-certificate=./examples/certs/local/ca.pem",
+            // TODO(#396): Add `--oidc-client` support.
+            &format!("--application={}", application_file),
+        ],
+    )
+}
+
+struct Example {
+    name: String,
+    rust_module_names: Vec<String>,
+    additional_client_flags: Vec<String>,
+}
+
+fn run_example(example: &Example) -> Step {
+    Step::Multiple {
+        name: example.name.to_string(),
+        steps: vec![
+            Step::Multiple {
+                name: "build_wasm_modules".to_string(),
+                steps: example
+                    .rust_module_names
+                    .iter()
+                    .map(|rust_module_name| {
+                        build_wasm_module(&format!(
+                            "examples/{}/{}/rust/Cargo.toml",
+                            example.name, rust_module_name
+                        ))
+                    })
+                    .collect(),
+            },
+            build_example_config(&example.name),
+            Step::WithBackground {
+                name: "run_server".to_string(),
+                background: run_example_server(&format!(
+                    "./bazel-bin/examples/{}/config/config.bin",
+                    example.name
+                )),
+                foreground: Box::new(Step::Single {
+                    name: "run_client".to_string(),
+                    command: Cmd::new(
+                        "bazel",
+                        vec![
+                            "run".to_string(),
+                            "--".to_string(),
+                            format!("//examples/{}/client:client", example.name),
+                            "--ca_cert=../../../../../../../../examples/certs/local/ca.pem"
+                                .to_string(),
+                        ]
+                        .iter()
+                        .chain(example.additional_client_flags.iter()),
+                    ),
+                }),
+            },
+        ],
+    }
 }
 
 /// Return whether to ignore the specified path. This is used by the `walker` package to efficiently
@@ -270,7 +416,7 @@ fn run_buildifier() -> Step {
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
-                runnable: cmd("buildifier", &["-lint=warn", "-mode=check", &entry]),
+                command: Cmd::new("buildifier", &["-lint=warn", "-mode=check", &entry]),
             })
             .collect(),
     }
@@ -284,7 +430,7 @@ fn run_prettier() -> Step {
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
-                runnable: cmd("prettier", &["--check", &entry]),
+                command: Cmd::new("prettier", &["--check", &entry]),
             })
             .collect(),
     }
@@ -298,7 +444,7 @@ fn run_embedmd() -> Step {
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
-                runnable: cmd("embedmd", &["-d", &entry]),
+                command: Cmd::new("embedmd", &["-d", &entry]),
             })
             .collect(),
     }
@@ -311,7 +457,7 @@ fn run_cargo_fmt() -> Step {
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
-                runnable: cmd(
+                command: Cmd::new(
                     "cargo",
                     &[
                         "fmt",
@@ -333,7 +479,7 @@ fn run_cargo_test() -> Step {
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
-                runnable: cmd(
+                command: Cmd::new(
                     "cargo",
                     &[
                         "test",
@@ -353,7 +499,7 @@ fn run_cargo_doc_test() -> Step {
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
-                runnable: cmd(
+                command: Cmd::new(
                     "cargo",
                     &["test", "--doc", &format!("--manifest-path={}", &entry)],
                 ),
@@ -369,7 +515,7 @@ fn run_cargo_clippy() -> Step {
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
-                runnable: cmd(
+                command: Cmd::new(
                     "cargo",
                     &[
                         "clippy",
@@ -387,24 +533,14 @@ fn run_cargo_clippy() -> Step {
 fn run_bazel_build() -> Step {
     Step::Single {
         name: "bazel build".to_string(),
-        runnable: cmd("bazel", &["build", "--", "//oak/...:all"]),
+        command: Cmd::new("bazel", &["build", "--", "//oak/...:all"]),
     }
 }
 
 fn run_bazel_test() -> Step {
     Step::Single {
         name: "bazel test".to_string(),
-        runnable: cmd(
-            "bazel",
-            // TODO(#396): Extract these targets with `bazel query` at runtime,
-            // based on some label or attribute.
-            &[
-                "test",
-                "//oak/server:host_tests",
-                "//oak/server/storage:host_tests",
-                "//oak/common:host_tests",
-            ],
-        ),
+        command: Cmd::new("bazel", &["test", "--", "//oak/...:all"]),
     }
 }
 
