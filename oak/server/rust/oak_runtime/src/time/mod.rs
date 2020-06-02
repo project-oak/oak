@@ -110,7 +110,7 @@ impl RoughtimeClient {
 
     /// Finds the interval that represents the overlap of the first `min_overlapping_intervals`
     /// overlapping intervals.
-    fn find_overlap(&self, intervals: &Vec<Interval>) -> Result<Interval, RoughtimeError> {
+    fn find_overlap(&self, intervals: &[Interval]) -> Result<Interval, RoughtimeError> {
         let mut max_count = 0;
         for interval in intervals {
             let mut count = 0;
@@ -172,24 +172,27 @@ impl RoughtimeClient {
         )?
         .extract_time()?;
 
-        match verified {
-            true => match radius {
-                radius if radius <= self.max_radius_microseconds => match midpoint {
-                    midpoint if midpoint > radius.into() => Ok(Interval {
+        if verified {
+            if radius <= self.max_radius_microseconds {
+                if midpoint > radius.into() {
+                    Ok(Interval {
                         min: midpoint.saturating_sub(radius.into()),
                         max: midpoint.saturating_add(radius.into()),
-                    }),
-                    _ => Err(RoughtimeError::MidPointTooSmall.into()),
-                },
-                _ => Err(RoughtimeError::RadiusTooLarge.into()),
-            },
-            _ => Err(RoughtimeError::InvalidSignature.into()),
+                    })
+                } else {
+                    Err(RoughtimeError::MidPointTooSmall.into())
+                }
+            } else {
+                Err(RoughtimeError::RadiusTooLarge.into())
+            }
+        } else {
+            Err(RoughtimeError::InvalidSignature.into())
         }
     }
 
     async fn send_roughtime_request(
         server: &RoughtimeServerSpec,
-        request: &Vec<u8>,
+        request: &[u8],
     ) -> std::io::Result<Vec<u8>> {
         let remote_addr = (&server.host[..], server.port)
             .to_socket_addrs()?
