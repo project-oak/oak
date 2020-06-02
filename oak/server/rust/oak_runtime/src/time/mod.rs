@@ -290,10 +290,40 @@ impl From<tokio::io::Error> for RoughtimeError {
     }
 }
 
+impl PartialEq for RoughtimeError {
+    fn eq(&self, other: &Self) -> bool {
+        match self {
+            RoughtimeError::InvalidSignature => match other {
+                RoughtimeError::InvalidSignature => true,
+                _ => false,
+            },
+            RoughtimeError::IoError(_) => match other {
+                RoughtimeError::IoError(_) => true,
+                _ => false,
+            },
+            RoughtimeError::MidPointTooSmall => match other {
+                RoughtimeError::MidPointTooSmall => true,
+                _ => false,
+            },
+            RoughtimeError::NotEnoughOverlappingIntervals { actual, expected } => match other {
+                RoughtimeError::NotEnoughOverlappingIntervals {
+                    actual: other_actual,
+                    expected: other_expected,
+                } => actual == other_actual && expected == other_expected,
+                _ => false,
+            },
+            RoughtimeError::RadiusTooLarge => match other {
+                RoughtimeError::RadiusTooLarge => true,
+                _ => false,
+            },
+        }
+    }
+}
+
 /// A time interval.
 ///
 /// Both `min` and `max` are interpreted as microseconds since the UNIX epoch.
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 struct Interval {
     min: u64,
     max: u64,
