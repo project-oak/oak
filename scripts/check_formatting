@@ -50,6 +50,9 @@ find scripts -type f -exec shellcheck {} +
 # if formatting has to be applied.
 cargo fmt --all -- --check
 
+# Check formatting for experimental Rust crates.
+cargo fmt --all --manifest-path=experimental/Cargo.toml -- --check
+
 find . \
   \(  \
     -not \( -path ./.git -prune \) -and \

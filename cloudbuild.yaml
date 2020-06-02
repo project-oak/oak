@@ -90,6 +90,13 @@ steps:
     entrypoint: 'bash'
     args: ['./scripts/run_examples', '-s', 'base', '-l', 'cpp']
 
+  - name: 'gcr.io/oak-ci/oak:latest'
+    id: build_experimental
+    waitFor: ['run_tests']
+    timeout: 60m
+    entrypoint: 'bash'
+    args: ['./scripts/build_experimental']
+
   # Run clang-tidy after the examples finish running, since they share the same `output_base`.
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_clang_tidy
