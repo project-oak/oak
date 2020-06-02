@@ -21,7 +21,6 @@ use oak_abi::proto::oak::application::{
 use std::net::AddrParseError;
 use tokio::sync::oneshot;
 
-pub mod external;
 pub mod grpc;
 mod logger;
 mod roughtime;
