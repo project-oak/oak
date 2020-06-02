@@ -16,7 +16,10 @@
 
 //! Functionality for different Node types.
 
-use crate::{runtime::RuntimeProxy, GrpcConfiguration};
+use crate::{
+    runtime::{NodePrivilege, RuntimeProxy},
+    GrpcConfiguration,
+};
 use oak_abi::proto::oak::application::{
     node_configuration::ConfigType, ApplicationConfiguration, LogConfiguration, NodeConfiguration,
 };
@@ -42,6 +45,10 @@ pub trait Node: Send {
         handle: oak_abi::Handle,
         notify_receiver: oneshot::Receiver<()>,
     );
+
+    fn get_privilege(&self) -> NodePrivilege {
+        NodePrivilege::default()
+    }
 }
 
 /// A enumeration for errors occuring when creating a new [`Node`] instance.

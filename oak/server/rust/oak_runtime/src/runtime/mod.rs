@@ -130,6 +130,18 @@ pub struct NodePrivilege {
     can_endorse_integrity_tags: HashSet<Tag>,
 }
 
+impl NodePrivilege {
+    pub fn new(
+        can_declassify_confidentiality_tags: HashSet<Tag>,
+        can_endorse_integrity_tags: HashSet<Tag>,
+    ) -> Self {
+        Self {
+            can_declassify_confidentiality_tags,
+            can_endorse_integrity_tags,
+        }
+    }
+}
+
 impl std::fmt::Debug for NodeInfo {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -1014,15 +1026,6 @@ impl Runtime {
         let new_node_proxy = self.clone().proxy_for_new_node();
         let new_node_id = new_node_proxy.node_id;
         let new_node_name = format!("{}({})", config.name, new_node_id.0);
-        self.node_configure_instance(
-            new_node_id,
-            &new_node_name,
-            label,
-            &NodePrivilege::default(),
-        );
-        let initial_handle = new_node_proxy
-            .runtime
-            .new_abi_handle(new_node_proxy.node_id, reader);
 
         // This only creates a Node instance, but does not start it.
         let instance = node::create_node(
@@ -1035,7 +1038,17 @@ impl Runtime {
             OakStatus::ErrInvalidArgs
         })?;
 
-        debug!("{:?}: start node instance {:?}", node_id, new_node_id);
+        let node_privilege = instance.get_privilege();
+
+        self.node_configure_instance(new_node_id, &new_node_name, label, &node_privilege);
+        let initial_handle = new_node_proxy
+            .runtime
+            .new_abi_handle(new_node_proxy.node_id, reader);
+
+        info!(
+            "{:?}: start node instance {:?} with privilege {:?}",
+            node_id, new_node_id, node_privilege
+        );
         let node_stopper = self.clone().node_start_instance(
             &new_node_name,
             instance,

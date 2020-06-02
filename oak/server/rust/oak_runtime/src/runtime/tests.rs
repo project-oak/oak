@@ -45,6 +45,7 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
 
     struct TestNode {
         node_body: Box<NodeBody>,
+        node_privilege: NodePrivilege,
     };
 
     impl crate::node::Node for TestNode {
@@ -55,6 +56,10 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
             _notify_receiver: oneshot::Receiver<()>,
         ) {
             let _ = (self.node_body)(runtime);
+        }
+
+        fn get_privilege(&self) -> NodePrivilege {
+            self.node_privilege.clone()
         }
     }
 
@@ -70,7 +75,10 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
         node_privilege,
     );
 
-    let node_instance = TestNode { node_body };
+    let node_instance = TestNode {
+        node_body,
+        node_privilege: node_privilege.clone(),
+    };
     info!("Start test Node instance");
     let node_stopper = proxy
         .runtime

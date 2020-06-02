@@ -59,7 +59,7 @@ message WebAssemblyModuleTag {
   // format.
   // TODO(#630): Replace this with identity assertions for multiple module
   // versions, based on a public verifiable log.
-  bytes module_attestation = 1;
+  bytes web_assembly_module_hash_sha_256 = 1;
 }
 
 // Policies related to HTTPS communication.

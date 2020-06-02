@@ -18,11 +18,12 @@
 
 use crate::{
     node::ConfigurationError,
-    runtime::{NodeReadStatus, RuntimeProxy},
+    runtime::{NodePrivilege, NodeReadStatus, RuntimeProxy},
     NodeMessage,
 };
 use byteorder::{ByteOrder, LittleEndian};
 use log::{debug, error, info, warn};
+use maplit::hashset;
 use oak_abi::{
     label::Label,
     proto::oak::application::{
@@ -32,6 +33,7 @@ use oak_abi::{
 };
 use prost::Message as _;
 use rand::RngCore;
+use sha2::digest::Digest;
 use std::{string::String, sync::Arc};
 use tokio::sync::oneshot;
 use wasmi::ValueType;
@@ -787,6 +789,7 @@ pub struct WasmNode {
     node_name: String,
     module: Arc<wasmi::Module>,
     entrypoint_name: String,
+    node_privilege: NodePrivilege,
 }
 
 impl WasmNode {
@@ -808,12 +811,29 @@ impl WasmNode {
             warn!("could not validate entrypoint: {:?}", err);
             ConfigurationError::IncorrectWebAssemblyModuleName
         })?;
+        // We compute the node privilege once and for all at start and just store it, since it does
+        // not change throughout the node execution.
+        let node_privilege = wasm_node_privilege(&wasm_module_bytes);
         Ok(Self {
             node_name: node_name.to_string(),
             module: Arc::new(module),
             entrypoint_name,
+            node_privilege,
         })
     }
+}
+
+/// Computes the [`NodePrivilege`] granted to a WebAssembly Node running the specified WebAssembly
+/// module.
+fn wasm_node_privilege(wasm_module_bytes: &[u8]) -> NodePrivilege {
+    let mut hasher = sha2::Sha256::new();
+    hasher.input(&wasm_module_bytes);
+    let wasm_module_hash = hasher.result();
+    debug!("Wasm module SHA-256 hash: {:x}", wasm_module_hash);
+    NodePrivilege::new(
+        hashset! { oak_abi::label::web_assembly_module_tag(&wasm_module_hash) },
+        hashset! { oak_abi::label::web_assembly_module_tag(&wasm_module_hash) },
+    )
 }
 
 impl super::Node for WasmNode {
@@ -857,5 +877,9 @@ impl super::Node for WasmNode {
             "{}: entrypoint '{}' completed",
             self.node_name, self.entrypoint_name
         );
+    }
+
+    fn get_privilege(&self) -> NodePrivilege {
+        self.node_privilege.clone()
     }
 }
