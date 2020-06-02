@@ -40,7 +40,7 @@ use database::load_database;
 use log::{debug, error};
 use oak::grpc;
 use proto::{
-    ListPointsOfInterestResponse, ListPointsOfInterestRequest, Location, PointOfInterest,
+    ListPointsOfInterestRequest, ListPointsOfInterestResponse, Location, PointOfInterest,
     TrustedInformationRetrieval, TrustedInformationRetrievalDispatcher,
 };
 
@@ -50,8 +50,8 @@ pub struct TrustedInformationRetrievalNode {
 }
 
 impl TrustedInformationRetrievalNode {
-    /// Returns a distance (in kilometers) between two locations using the Haversine formula (ignoring
-    /// height variations):
+    /// Returns a distance (in kilometers) between two locations using the Haversine formula
+    /// (ignoring height variations):
     /// https://en.wikipedia.org/wiki/Haversine_formula
     fn distance(first: Location, second: Location) -> f32 {
         let first_latitude_radians = first.latitude.to_radians();
@@ -60,14 +60,13 @@ impl TrustedInformationRetrievalNode {
         let latitude_difference_radians = (first.latitude - second.latitude).to_radians();
         let longitude_difference_radians = (first.longitude - second.longitude).to_radians();
 
-        let central_angle = 2.0 * (
-            (latitude_difference_radians / 2.0).sin().powi(2) + 
-            (
-                first_latitude_radians.cos() *
-                second_latitude_radians.cos() *
-                (longitude_difference_radians / 2.0).sin().powi(2)
-            )
-        ).sqrt().asin();
+        let central_angle = 2.0
+            * ((latitude_difference_radians / 2.0).sin().powi(2)
+                + (first_latitude_radians.cos()
+                    * second_latitude_radians.cos()
+                    * (longitude_difference_radians / 2.0).sin().powi(2)))
+            .sqrt()
+            .asin();
 
         // Earth radius in kilometers.
         let earth_radius = 6371.0_f32;

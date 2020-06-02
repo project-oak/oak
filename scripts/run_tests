@@ -13,9 +13,15 @@ source "$SCRIPTS_DIR/common"
 
 export RUST_BACKTRACE=1
 
-cargo clippy --all-targets -- --deny=warnings
-cargo test --all-targets
-cargo test --doc
+for crate in "${ALL_CRATES[@]}"; do
+    # Skip the experimental crates. They are covered in `build_experimental`.
+    if [[ $crate == "experimental" ]]; then
+        continue
+    fi
+    cargo clippy --all-targets --manifest-path="${crate}/Cargo.toml" -- --deny=warnings
+    cargo test --all-targets --manifest-path="${crate}/Cargo.toml"
+    cargo test --doc --manifest-path="${crate}/Cargo.toml"
+done
 
 bazel_build_flags+=( '--keep_going' )
 
