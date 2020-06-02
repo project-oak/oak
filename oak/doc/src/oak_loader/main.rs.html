@@ -236,6 +236,8 @@
 <span id="236">236</span>
 <span id="237">237</span>
 <span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -253,15 +255,17 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
-<span class="doccomment">//! An utility binary to run Oak Runtime.</span>
+<span class="doccomment">//! A utility binary to run Oak Runtime.</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! To invoke, run the following command from the root of the repository:</span>
+<span class="doccomment">//! Invoke with:</span>
 <span class="doccomment">//!</span>
+<span class="doccomment">//! ```shell</span>
 <span class="doccomment">//! cargo run --package=oak_loader -- \</span>
 <span class="doccomment">//!     --application=&lt;APP_CONFIG_PATH&gt; \</span>
 <span class="doccomment">//!     --grpc-tls-private-key=&lt;PRIVATE_KEY_PATH&gt; \</span>
 <span class="doccomment">//!     --grpc-tls-certificate=&lt;CERTIFICATE_PATH&gt; \</span>
 <span class="doccomment">//!     --root-tls-certificate=&lt;CERTIFICATE_PATH&gt;</span>
+<span class="doccomment">//! ```</span>
 
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="ident">anyhow</span>;
 <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">str</span>::<span class="ident">FromStr</span>;
@@ -269,6 +273,7 @@
 <span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::{<span class="ident">ApplicationConfiguration</span>, <span class="ident">ConfigMap</span>};
 <span class="kw">use</span> <span class="ident">oak_runtime</span>::{<span class="ident">auth</span>::<span class="ident">oidc_utils</span>::<span class="ident">parse_client_info_json</span>, <span class="ident">config</span>::<span class="ident">configure_and_run</span>};
 <span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span>;
+<span class="kw">use</span> <span class="ident">rustls</span>::<span class="ident">internal</span>::<span class="ident">pemfile</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections</span>::<span class="ident">HashMap</span>,
     <span class="ident">fs</span>::{<span class="ident">read_to_string</span>, <span class="ident">File</span>},
@@ -284,6 +289,7 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span>;
 
+<span class="doccomment">/// Command line options for the Oak loader.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
 <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">about</span> <span class="op">=</span> <span class="string">&quot;Oak Loader&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Opt</span> {
@@ -348,6 +354,7 @@
     }
 }
 
+<span class="doccomment">/// Read the contents of a file.</span>
 <span class="kw">fn</span> <span class="ident">read_file</span>(<span class="ident">filename</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">file</span> <span class="op">=</span> <span class="ident">File</span>::<span class="ident">open</span>(<span class="ident">filename</span>)
         .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;Failed to open file &lt;{}&gt;: {:?}&quot;</span>, <span class="ident">filename</span>, <span class="ident">error</span>))<span class="question-mark">?</span>;
@@ -357,36 +364,33 @@
     <span class="prelude-val">Ok</span>(<span class="ident">buffer</span>)
 }
 
-<span class="kw">fn</span> <span class="ident">parse_config_files</span>(<span class="ident">config_entries</span>: <span class="kw-2">&amp;</span>[<span class="ident">ConfigEntry</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+<span class="doccomment">/// Parse a collection of configuration entries and return the contents of</span>
+<span class="doccomment">/// the corresponding files as a [`ConfigMap`].</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">parse_config_map</span>(<span class="ident">config_entries</span>: <span class="kw-2">&amp;</span>[<span class="ident">ConfigEntry</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ConfigMap</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">file_map</span> <span class="op">=</span> <span class="ident">HashMap</span>::<span class="ident">new</span>();
     <span class="kw">for</span> <span class="ident">config_entry</span> <span class="kw">in</span> <span class="ident">config_entries</span> {
         <span class="kw">if</span> <span class="ident">file_map</span>.<span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="ident">config_entry</span>.<span class="ident">key</span>) {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;duplicate config entry key: {}&quot;</span>, <span class="ident">config_entry</span>.<span class="ident">key</span>));
         }
-        <span class="kw">let</span> <span class="ident">file_content</span> <span class="op">=</span> <span class="ident">read_file</span>(<span class="kw-2">&amp;</span><span class="ident">config_entry</span>.<span class="ident">filename</span>)<span class="question-mark">?</span>;
-        <span class="ident">file_map</span>.<span class="ident">insert</span>(<span class="ident">config_entry</span>.<span class="ident">key</span>.<span class="ident">to_string</span>(), <span class="ident">file_content</span>);
+        <span class="ident">file_map</span>.<span class="ident">insert</span>(
+            <span class="ident">config_entry</span>.<span class="ident">key</span>.<span class="ident">to_string</span>(),
+            <span class="ident">read_file</span>(<span class="kw-2">&amp;</span><span class="ident">config_entry</span>.<span class="ident">filename</span>)<span class="question-mark">?</span>,
+        );
     }
-    <span class="prelude-val">Ok</span>(<span class="ident">file_map</span>)
+    <span class="prelude-val">Ok</span>(<span class="ident">ConfigMap</span> { <span class="ident">items</span>: <span class="ident">file_map</span> })
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">parse_config_map</span>(<span class="ident">config_files</span>: <span class="kw-2">&amp;</span>[<span class="ident">ConfigEntry</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ConfigMap</span><span class="op">&gt;</span> {
-    <span class="prelude-val">Ok</span>(<span class="ident">ConfigMap</span> {
-        <span class="ident">items</span>: <span class="ident">parse_config_files</span>(<span class="ident">config_files</span>)<span class="question-mark">?</span>,
-    })
-}
-
-<span class="doccomment">/// Check the correctness of a PEM encoded TLS certificate.</span>
+<span class="doccomment">/// Load a PEM encoded TLS certificate, performing (minimal) validation.</span>
 <span class="kw">fn</span> <span class="ident">load_certificate</span>(<span class="ident">certificate</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Certificate</span><span class="op">&gt;</span> {
-    <span class="kw">use</span> <span class="ident">rustls</span>::<span class="ident">internal</span>::<span class="ident">pemfile</span>::<span class="ident">certs</span>;
-
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cursor</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">Cursor</span>::<span class="ident">new</span>(<span class="ident">certificate</span>);
     <span class="comment">// `rustls` doesn&#39;t specify certificate parsing errors:</span>
     <span class="comment">// https://docs.rs/rustls/0.17.0/rustls/internal/pemfile/fn.certs.html</span>
-    <span class="ident">certs</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>).<span class="ident">map_err</span>(<span class="op">|</span>()<span class="op">|</span> <span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;could not parse TLS certificate&quot;</span>))<span class="question-mark">?</span>;
+    <span class="ident">pemfile</span>::<span class="ident">certs</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>).<span class="ident">map_err</span>(<span class="op">|</span>()<span class="op">|</span> <span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;could not parse TLS certificate&quot;</span>))<span class="question-mark">?</span>;
 
     <span class="prelude-val">Ok</span>(<span class="ident">Certificate</span>::<span class="ident">from_pem</span>(<span class="ident">certificate</span>))
 }
 
+<span class="doccomment">/// Main execution point for the Oak loader.</span>
 <span class="kw">fn</span> <span class="ident">main</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="kw">if</span> <span class="macro">cfg</span><span class="macro">!</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>) {
         <span class="ident">env_logger</span>::<span class="ident">init</span>();

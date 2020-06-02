@@ -143,6 +143,8 @@
 <span id="143">143</span>
 <span id="144">144</span>
 <span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -159,6 +161,8 @@
 <span class="comment">// See the License for the specific language governing permissions and</span>
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
+
+<span class="doccomment">//! Functionality to expose metrics from a running Runtime.</span>
 
 <span class="kw">use</span> <span class="ident">prometheus</span>::{
     <span class="ident">proto</span>::<span class="ident">MetricFamily</span>, <span class="ident">HistogramOpts</span>, <span class="ident">HistogramVec</span>, <span class="ident">IntCounterVec</span>, <span class="ident">IntGauge</span>, <span class="ident">Opts</span>, <span class="ident">Registry</span>,

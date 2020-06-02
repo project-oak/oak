@@ -611,6 +611,10 @@
 <span id="611">611</span>
 <span id="612">612</span>
 <span id="613">613</span>
+<span id="614">614</span>
+<span id="615">615</span>
+<span id="616">616</span>
+<span id="617">617</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -627,6 +631,9 @@
 <span class="comment">// See the License for the specific language governing permissions and</span>
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
+
+<span class="doccomment">//! SDK functionality that provides idiomatic Rust wrappers around the</span>
+<span class="doccomment">//! underlying Oak platform functionality.</span>
 
 <span class="kw">use</span> <span class="ident">byteorder</span>::{<span class="ident">ReadBytesExt</span>, <span class="ident">WriteBytesExt</span>};
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">error</span>, <span class="ident">info</span>, <span class="ident">warn</span>};
@@ -651,6 +658,7 @@
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">storage</span>;
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">proto</span> {
+    <span class="doccomment">//! Auto-generated code derived from protocol buffer definitions.</span>
     <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">oak</span> {
         <span class="comment">// The storage protobuf messages use the label.Label type which is built</span>
         <span class="comment">// in the `oak_abi` crate, so make it available here too.</span>

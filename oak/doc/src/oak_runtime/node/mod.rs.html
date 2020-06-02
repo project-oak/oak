@@ -133,6 +133,8 @@
 <span id="133">133</span>
 <span id="134">134</span>
 <span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -150,6 +152,8 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
+<span class="doccomment">//! Functionality for different Node types.</span>
+
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">runtime</span>::<span class="ident">RuntimeProxy</span>, <span class="ident">GrpcConfiguration</span>};
 <span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::{
     <span class="ident">node_configuration</span>::<span class="ident">ConfigType</span>, <span class="ident">ApplicationConfiguration</span>, <span class="ident">LogConfiguration</span>, <span class="ident">NodeConfiguration</span>,
@@ -157,7 +161,6 @@
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">net</span>::<span class="ident">AddrParseError</span>;
 <span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">sync</span>::<span class="ident">oneshot</span>;
 
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">external</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">grpc</span>;
 <span class="kw">mod</span> <span class="ident">logger</span>;
 <span class="kw">mod</span> <span class="ident">roughtime</span>;
@@ -222,6 +225,7 @@
     }
 }
 
+<span class="doccomment">/// Create a new [`Node`] instance based on the provided configuration information.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_node</span>(
     <span class="ident">application_configuration</span>: <span class="kw-2">&amp;</span><span class="ident">ApplicationConfiguration</span>,
     <span class="ident">node_configuration</span>: <span class="kw-2">&amp;</span><span class="ident">NodeConfiguration</span>,
