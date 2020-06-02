@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["HelloWorldClient","As seen in https://grpc.io/docs/guides/concepts/."]]});

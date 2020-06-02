@@ -5,6 +5,3 @@ ALIASES["oak_runtime"] = {};
 ALIASES["oak_tests"] = {};
 ALIASES["roughenough"] = {};
 ALIASES["runner"] = {};
-ALIASES["split_grpc_client"] = {};
-ALIASES["split_grpc_proxy"] = {};
-ALIASES["split_grpc_server"] = {};

@@ -5,7 +5,4 @@ sourcesIndex["oak_runtime"] = {"name":"","dirs":[{"name":"auth","files":["mod.rs
 sourcesIndex["oak_tests"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["roughenough"] = {"name":"","files":["client.rs","error.rs","lib.rs","merkle.rs","message.rs","sign.rs","tag.rs"]};
 sourcesIndex["runner"] = {"name":"","files":["internal.rs","main.rs"]};
-sourcesIndex["split_grpc_client"] = {"name":"","files":["main.rs"]};
-sourcesIndex["split_grpc_proxy"] = {"name":"","files":["main.rs"]};
-sourcesIndex["split_grpc_server"] = {"name":"","files":["main.rs"]};
 createSourceSidebar();

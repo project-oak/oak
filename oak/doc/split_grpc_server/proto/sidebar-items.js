@@ -1,1 +1,0 @@
-initSidebarItems({"mod":[["hello_world_server","Generated server implementations."]],"struct":[["HelloRequest",""],["HelloResponse",""]]});
