@@ -14,15 +14,17 @@
 // limitations under the License.
 //
 
-//! An utility binary to run Oak Runtime.
+//! A utility binary to run Oak Runtime.
 //!
-//! To invoke, run the following command from the root of the repository:
+//! Invoke with:
 //!
+//! ```shell
 //! cargo run --package=oak_loader -- \
 //!     --application=<APP_CONFIG_PATH> \
 //!     --grpc-tls-private-key=<PRIVATE_KEY_PATH> \
 //!     --grpc-tls-certificate=<CERTIFICATE_PATH> \
 //!     --root-tls-certificate=<CERTIFICATE_PATH>
+//! ```
 
 use anyhow::anyhow;
 use core::str::FromStr;
@@ -30,6 +32,7 @@ use log::{debug, info};
 use oak_abi::proto::oak::application::{ApplicationConfiguration, ConfigMap};
 use oak_runtime::{auth::oidc_utils::parse_client_info_json, config::configure_and_run};
 use prost::Message;
+use rustls::internal::pemfile;
 use std::{
     collections::HashMap,
     fs::{read_to_string, File},
@@ -45,6 +48,7 @@ use tonic::transport::{Certificate, Identity};
 #[cfg(test)]
 mod tests;
 
+/// Command line options for the Oak loader.
 #[derive(StructOpt, Clone, Debug)]
 #[structopt(about = "Oak Loader")]
 pub struct Opt {
@@ -109,6 +113,7 @@ impl FromStr for ConfigEntry {
     }
 }
 
+/// Read the contents of a file.
 fn read_file(filename: &str) -> anyhow::Result<Vec<u8>> {
     let mut file = File::open(filename)
         .map_err(|error| anyhow!("Failed to open file <{}>: {:?}", filename, error))?;
@@ -118,36 +123,33 @@ fn read_file(filename: &str) -> anyhow::Result<Vec<u8>> {
     Ok(buffer)
 }
 
-fn parse_config_files(config_entries: &[ConfigEntry]) -> anyhow::Result<HashMap<String, Vec<u8>>> {
+/// Parse a collection of configuration entries and return the contents of
+/// the corresponding files as a [`ConfigMap`].
+pub fn parse_config_map(config_entries: &[ConfigEntry]) -> anyhow::Result<ConfigMap> {
     let mut file_map = HashMap::new();
     for config_entry in config_entries {
         if file_map.contains_key(&config_entry.key) {
             return Err(anyhow!("duplicate config entry key: {}", config_entry.key));
         }
-        let file_content = read_file(&config_entry.filename)?;
-        file_map.insert(config_entry.key.to_string(), file_content);
+        file_map.insert(
+            config_entry.key.to_string(),
+            read_file(&config_entry.filename)?,
+        );
     }
-    Ok(file_map)
+    Ok(ConfigMap { items: file_map })
 }
 
-pub fn parse_config_map(config_files: &[ConfigEntry]) -> anyhow::Result<ConfigMap> {
-    Ok(ConfigMap {
-        items: parse_config_files(config_files)?,
-    })
-}
-
-/// Check the correctness of a PEM encoded TLS certificate.
+/// Load a PEM encoded TLS certificate, performing (minimal) validation.
 fn load_certificate(certificate: &str) -> anyhow::Result<Certificate> {
-    use rustls::internal::pemfile::certs;
-
     let mut cursor = std::io::Cursor::new(certificate);
     // `rustls` doesn't specify certificate parsing errors:
     // https://docs.rs/rustls/0.17.0/rustls/internal/pemfile/fn.certs.html
-    certs(&mut cursor).map_err(|()| anyhow!("could not parse TLS certificate"))?;
+    pemfile::certs(&mut cursor).map_err(|()| anyhow!("could not parse TLS certificate"))?;
 
     Ok(Certificate::from_pem(certificate))
 }
 
+/// Main execution point for the Oak loader.
 fn main() -> anyhow::Result<()> {
     if cfg!(feature = "oak_debug") {
         env_logger::init();
