@@ -285,6 +285,91 @@
 <span id="285">285</span>
 <span id="286">286</span>
 <span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
+<span id="356">356</span>
+<span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
+<span id="361">361</span>
+<span id="362">362</span>
+<span id="363">363</span>
+<span id="364">364</span>
+<span id="365">365</span>
+<span id="366">366</span>
+<span id="367">367</span>
+<span id="368">368</span>
+<span id="369">369</span>
+<span id="370">370</span>
+<span id="371">371</span>
+<span id="372">372</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -321,6 +406,7 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Command</span> {
     <span class="ident">BuildExamples</span>(<span class="ident">BuildExamples</span>),
+    <span class="ident">RunExamples</span>(<span class="ident">RunExamples</span>),
     <span class="ident">BuildServer</span>(<span class="ident">BuildServer</span>),
     <span class="ident">RunTests</span>,
 }
@@ -336,7 +422,17 @@
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;application variant: [rust, cpp]&quot;</span>,
         <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;rust&quot;</span>
     )]</span>
-    <span class="kw">pub</span> <span class="ident">variant</span>: <span class="ident">String</span>,
+    <span class="kw">pub</span> <span class="ident">application_variant</span>: <span class="ident">String</span>,
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RunExamples</span> {
+    <span class="attribute">#[<span class="ident">structopt</span>(
+        <span class="ident">long</span>,
+        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;application variant: [rust, cpp]&quot;</span>,
+        <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;rust&quot;</span>
+    )]</span>
+    <span class="kw">pub</span> <span class="ident">application_variant</span>: <span class="ident">String</span>,
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>)]</span>
@@ -391,20 +487,23 @@
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SingleStatusResult</span> {
     <span class="ident">value</span>: <span class="ident">StatusResultValue</span>,
-    <span class="ident">command</span>: <span class="ident">String</span>,
     <span class="ident">logs</span>: <span class="ident">String</span>,
 }
 
-<span class="doccomment">/// An execution step, which may be a single (dynamically dispatched) `Runnable`, or a collection of</span>
-<span class="doccomment">/// sub-steps.</span>
+<span class="doccomment">/// An execution step, which may be a single `Cmd`, or a collection of sub-steps.</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Step</span> {
     <span class="ident">Single</span> {
         <span class="ident">name</span>: <span class="ident">String</span>,
-        <span class="ident">runnable</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Runnable</span><span class="op">&gt;</span>,
+        <span class="ident">command</span>: <span class="ident">Cmd</span>,
     },
     <span class="ident">Multiple</span> {
         <span class="ident">name</span>: <span class="ident">String</span>,
         <span class="ident">steps</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Step</span><span class="op">&gt;</span>,
+    },
+    <span class="ident">WithBackground</span> {
+        <span class="ident">name</span>: <span class="ident">String</span>,
+        <span class="ident">background</span>: <span class="ident">Cmd</span>,
+        <span class="ident">foreground</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">Step</span><span class="op">&gt;</span>,
     },
 }
 
@@ -423,30 +522,28 @@
     )
 }
 
-<span class="doccomment">/// A runnable task which produces a single result.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Runnable</span> {
-    <span class="kw">fn</span> <span class="ident">run</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">Opt</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SingleStatusResult</span>;
-}
-
 <span class="doccomment">/// Run the provided step, printing out information about the execution, and returning a set of</span>
 <span class="doccomment">/// status results from the single or multiple steps that were executed.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_step</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="ident">Context</span>, <span class="ident">step</span>: <span class="kw-2">&amp;</span><span class="ident">Step</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">StatusResultValue</span><span class="op">&gt;</span> {
     <span class="kw">match</span> <span class="ident">step</span> {
-        <span class="ident">Step</span>::<span class="ident">Single</span> { <span class="ident">name</span>, <span class="ident">runnable</span> } <span class="op">=</span><span class="op">&gt;</span> {
+        <span class="ident">Step</span>::<span class="ident">Single</span> { <span class="ident">name</span>, <span class="ident">command</span> } <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw">let</span> <span class="ident">context</span> <span class="op">=</span> <span class="ident">context</span>.<span class="ident">child</span>(<span class="ident">name</span>);
-            <span class="comment">// Print three dots to indicate that a command is running, but no new line. The first</span>
-            <span class="comment">// log line below will complete the line.</span>
-            <span class="macro">eprint</span><span class="macro">!</span>(<span class="string">&quot;{} ... &quot;</span>, <span class="ident">context</span>.<span class="ident">prefix</span>);
 
             <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="ident">Instant</span>::<span class="ident">now</span>();
-            <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="ident">runnable</span>.<span class="ident">run</span>(<span class="kw-2">&amp;</span><span class="ident">context</span>.<span class="ident">opt</span>);
+            <span class="kw">let</span> <span class="ident">running</span> <span class="op">=</span> <span class="ident">command</span>.<span class="ident">run</span>(<span class="kw-2">&amp;</span><span class="ident">context</span>.<span class="ident">opt</span>);
+
+            <span class="kw">let</span> <span class="ident">command</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">context</span>.<span class="ident">opt</span>.<span class="ident">commands</span> <span class="op">|</span><span class="op">|</span> <span class="ident">context</span>.<span class="ident">opt</span>.<span class="ident">dry_run</span> {
+                <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;[{}]&quot;</span>, <span class="ident">running</span>.<span class="ident">command</span>)
+            } <span class="kw">else</span> {
+                <span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>()
+            };
+            <span class="macro">eprintln</span><span class="macro">!</span>(<span class="string">&quot;{} ⊢ {} ... &quot;</span>, <span class="ident">context</span>.<span class="ident">prefix</span>, <span class="ident">command</span>);
+
+            <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="ident">running</span>.<span class="ident">wait</span>(<span class="kw-2">&amp;</span><span class="ident">context</span>.<span class="ident">opt</span>);
             <span class="kw">let</span> <span class="ident">end</span> <span class="op">=</span> <span class="ident">Instant</span>::<span class="ident">now</span>();
             <span class="kw">let</span> <span class="ident">elapsed</span> <span class="op">=</span> <span class="ident">end</span>.<span class="ident">duration_since</span>(<span class="ident">start</span>);
 
-            <span class="macro">eprintln</span><span class="macro">!</span>(<span class="string">&quot;{} [{:.0?}]&quot;</span>, <span class="ident">status</span>.<span class="ident">value</span>, <span class="ident">elapsed</span>);
-            <span class="kw">if</span> <span class="ident">context</span>.<span class="ident">opt</span>.<span class="ident">commands</span> <span class="op">|</span><span class="op">|</span> <span class="ident">context</span>.<span class="ident">opt</span>.<span class="ident">dry_run</span> {
-                <span class="macro">eprintln</span><span class="macro">!</span>(<span class="string">&quot;{} ⊢ [{}]&quot;</span>, <span class="ident">context</span>.<span class="ident">prefix</span>, <span class="ident">status</span>.<span class="ident">command</span>);
-            };
+            <span class="macro">eprintln</span><span class="macro">!</span>(<span class="string">&quot;{} ⊢ {} [{:.0?}]&quot;</span>, <span class="ident">context</span>.<span class="ident">prefix</span>, <span class="ident">status</span>.<span class="ident">value</span>, <span class="ident">elapsed</span>);
             <span class="kw">if</span> (<span class="ident">status</span>.<span class="ident">value</span> <span class="op">=</span><span class="op">=</span> <span class="ident">StatusResultValue</span>::<span class="ident">Error</span> <span class="op">|</span><span class="op">|</span> <span class="ident">context</span>.<span class="ident">opt</span>.<span class="ident">logs</span>)
                 <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="op">!</span><span class="ident">status</span>.<span class="ident">logs</span>.<span class="ident">is_empty</span>()
             {
@@ -479,96 +576,169 @@
             );
             <span class="ident">values</span>
         }
+        <span class="ident">Step</span>::<span class="ident">WithBackground</span> {
+            <span class="ident">name</span>,
+            <span class="ident">background</span>,
+            <span class="ident">foreground</span>,
+        } <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="kw">let</span> <span class="ident">context</span> <span class="op">=</span> <span class="ident">context</span>.<span class="ident">child</span>(<span class="ident">name</span>);
+            <span class="macro">eprintln</span><span class="macro">!</span>(<span class="string">&quot;{} {{&quot;</span>, <span class="ident">context</span>.<span class="ident">prefix</span>);
+
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">running_background</span> <span class="op">=</span> <span class="ident">background</span>.<span class="ident">run</span>(<span class="kw-2">&amp;</span><span class="ident">context</span>.<span class="ident">opt</span>);
+            <span class="kw">let</span> <span class="ident">background_command</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">context</span>.<span class="ident">opt</span>.<span class="ident">commands</span> <span class="op">|</span><span class="op">|</span> <span class="ident">context</span>.<span class="ident">opt</span>.<span class="ident">dry_run</span> {
+                <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;[{}]&quot;</span>, <span class="ident">running_background</span>.<span class="ident">command</span>)
+            } <span class="kw">else</span> {
+                <span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>()
+            };
+            <span class="macro">eprintln</span><span class="macro">!</span>(
+                <span class="string">&quot;{} ⊢ {} (background) ...&quot;</span>,
+                <span class="ident">context</span>.<span class="ident">prefix</span>, <span class="ident">background_command</span>
+            );
+
+            <span class="comment">// Small delay to make it more likely that the background process started.</span>
+            <span class="ident">std</span>::<span class="ident">thread</span>::<span class="ident">sleep</span>(<span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">Duration</span>::<span class="ident">from_millis</span>(<span class="number">2_000</span>));
+
+            <span class="kw">let</span> <span class="ident">values</span> <span class="op">=</span> <span class="ident">run_step</span>(<span class="kw-2">&amp;</span><span class="ident">context</span>, <span class="ident">foreground</span>);
+
+            <span class="ident">running_background</span>.<span class="ident">kill</span>();
+            <span class="macro">eprintln</span><span class="macro">!</span>(<span class="string">&quot;{} ⊢ {} (waiting)&quot;</span>, <span class="ident">context</span>.<span class="ident">prefix</span>, <span class="ident">background_command</span>,);
+            <span class="kw">let</span> <span class="ident">background_status</span> <span class="op">=</span> <span class="ident">running_background</span>.<span class="ident">wait</span>(<span class="kw-2">&amp;</span><span class="ident">context</span>.<span class="ident">opt</span>);
+            <span class="macro">eprintln</span><span class="macro">!</span>(
+                <span class="string">&quot;{} ⊢ {} (finished) {}&quot;</span>,
+                <span class="ident">context</span>.<span class="ident">prefix</span>, <span class="ident">background_command</span>, <span class="ident">background_status</span>.<span class="ident">value</span>
+            );
+            <span class="kw">if</span> (<span class="ident">background_status</span>.<span class="ident">value</span> <span class="op">=</span><span class="op">=</span> <span class="ident">StatusResultValue</span>::<span class="ident">Error</span> <span class="op">|</span><span class="op">|</span> <span class="ident">context</span>.<span class="ident">opt</span>.<span class="ident">logs</span>)
+                <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="op">!</span><span class="ident">background_status</span>.<span class="ident">logs</span>.<span class="ident">is_empty</span>()
+            {
+                <span class="macro">eprintln</span><span class="macro">!</span>(<span class="string">&quot;{} {}&quot;</span>, <span class="ident">context</span>.<span class="ident">prefix</span>, <span class="string">&quot;╔════════════════════════&quot;</span>.<span class="ident">blue</span>());
+                <span class="kw">for</span> <span class="ident">line</span> <span class="kw">in</span> <span class="ident">background_status</span>.<span class="ident">logs</span>.<span class="ident">lines</span>() {
+                    <span class="macro">eprintln</span><span class="macro">!</span>(<span class="string">&quot;{} {} {}&quot;</span>, <span class="ident">context</span>.<span class="ident">prefix</span>, <span class="string">&quot;║&quot;</span>.<span class="ident">blue</span>(), <span class="ident">line</span>);
+                }
+                <span class="macro">eprintln</span><span class="macro">!</span>(<span class="string">&quot;{} {}&quot;</span>, <span class="ident">context</span>.<span class="ident">prefix</span>, <span class="string">&quot;╚════════════════════════&quot;</span>.<span class="ident">blue</span>());
+            }
+
+            <span class="ident">values</span>
+        }
     }
 }
 
-<span class="doccomment">/// A single command that implements the `Runnable` trait.</span>
-<span class="kw">struct</span> <span class="ident">Cmd</span> {
+<span class="doccomment">/// A single command.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Cmd</span> {
     <span class="ident">executable</span>: <span class="ident">String</span>,
     <span class="ident">args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Cmd</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">executable</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">args</span>: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="ident">str</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span><span class="op">&lt;</span><span class="ident">I</span>, <span class="ident">S</span><span class="op">&gt;</span>(<span class="ident">executable</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">args</span>: <span class="ident">I</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>
+    <span class="kw">where</span>
+        <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">S</span><span class="op">&gt;</span>,
+        <span class="ident">S</span>: <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">str</span><span class="op">&gt;</span>,
+    {
         <span class="ident">Cmd</span> {
             <span class="ident">executable</span>: <span class="ident">executable</span>.<span class="ident">to_string</span>(),
-            <span class="ident">args</span>: <span class="ident">args</span>.<span class="ident">iter</span>().<span class="ident">cloned</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">to_string</span>()).<span class="ident">collect</span>(),
+            <span class="ident">args</span>: <span class="ident">args</span>.<span class="ident">into_iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">as_ref</span>().<span class="ident">to_string</span>()).<span class="ident">collect</span>(),
         }
     }
-}
-
-<span class="doccomment">/// Convenience constructor for a boxed `Cmd`.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">cmd</span>(<span class="ident">executable</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">args</span>: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="ident">str</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Runnable</span><span class="op">&gt;</span> {
-    <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">Cmd</span>::<span class="ident">new</span>(<span class="ident">executable</span>, <span class="ident">args</span>))
-}
-
-<span class="kw">impl</span> <span class="ident">Runnable</span> <span class="kw">for</span> <span class="ident">Cmd</span> {
     <span class="doccomment">/// Run the provided command, printing a status message with the current prefix.</span>
-    <span class="doccomment">/// TODO(#396): Add ability to run commands in parallel.</span>
     <span class="doccomment">/// TODO(#396): Return one of three results: pass, fail, or internal error (e.g. if the binary</span>
     <span class="doccomment">/// to run was not found).</span>
-    <span class="kw">fn</span> <span class="ident">run</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">Opt</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SingleStatusResult</span> {
-        <span class="comment">// TODO(#396): Measure and print elapsed time.</span>
-        <span class="comment">// TODO(#396): Add dry-run mode that only prints the commands but does not actually run</span>
-        <span class="comment">// them.</span>
+    <span class="kw">fn</span> <span class="ident">run</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">Opt</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Running</span> {
         <span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">stderr</span>().<span class="ident">flush</span>().<span class="ident">expect</span>(<span class="string">&quot;could not flush stderr&quot;</span>);
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cmd</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">process</span>::<span class="ident">Command</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">executable</span>);
         <span class="ident">cmd</span>.<span class="ident">args</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">args</span>);
         <span class="kw">let</span> <span class="ident">command_string</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">cmd</span>);
         <span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">dry_run</span> {
-            <span class="ident">SingleStatusResult</span> {
-                <span class="ident">value</span>: <span class="ident">StatusResultValue</span>::<span class="ident">Skipped</span>,
+            <span class="ident">Running</span> {
                 <span class="ident">command</span>: <span class="ident">command_string</span>,
-                <span class="ident">logs</span>: <span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>(),
+                <span class="ident">process</span>: <span class="prelude-val">None</span>,
             }
         } <span class="kw">else</span> {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">child</span> <span class="op">=</span> <span class="ident">cmd</span>
-                .<span class="ident">stdout</span>(<span class="ident">std</span>::<span class="ident">process</span>::<span class="ident">Stdio</span>::<span class="ident">piped</span>())
-                .<span class="ident">stderr</span>(<span class="ident">std</span>::<span class="ident">process</span>::<span class="ident">Stdio</span>::<span class="ident">piped</span>())
+            <span class="comment">// If the `logs` flag is enabled, inherit stdout and stderr from the main runner</span>
+            <span class="comment">// process.</span>
+            <span class="kw">let</span> <span class="ident">stdout</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">logs</span> {
+                <span class="ident">std</span>::<span class="ident">process</span>::<span class="ident">Stdio</span>::<span class="ident">inherit</span>()
+            } <span class="kw">else</span> {
+                <span class="ident">std</span>::<span class="ident">process</span>::<span class="ident">Stdio</span>::<span class="ident">piped</span>()
+            };
+            <span class="kw">let</span> <span class="ident">stderr</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">logs</span> {
+                <span class="ident">std</span>::<span class="ident">process</span>::<span class="ident">Stdio</span>::<span class="ident">inherit</span>()
+            } <span class="kw">else</span> {
+                <span class="ident">std</span>::<span class="ident">process</span>::<span class="ident">Stdio</span>::<span class="ident">piped</span>()
+            };
+            <span class="kw">let</span> <span class="ident">child</span> <span class="op">=</span> <span class="ident">cmd</span>
+                .<span class="ident">stdout</span>(<span class="ident">stdout</span>)
+                .<span class="ident">stderr</span>(<span class="ident">stderr</span>)
                 .<span class="ident">spawn</span>()
                 .<span class="ident">expect</span>(<span class="string">&quot;could not spawn command&quot;</span>);
 
-            <span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">logs</span> {
-                <span class="macro">println</span><span class="macro">!</span>();
-                <span class="kw">let</span> <span class="ident">out</span> <span class="op">=</span> <span class="ident">child</span>.<span class="ident">stderr</span>.<span class="ident">as_mut</span>().<span class="ident">unwrap</span>();
-                <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">BufRead</span>;
-                <span class="kw">for</span> <span class="ident">line</span> <span class="kw">in</span> <span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">BufReader</span>::<span class="ident">new</span>(<span class="ident">out</span>).<span class="ident">lines</span>() {
-                    <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">line</span>.<span class="ident">unwrap</span>());
+            <span class="ident">Running</span> {
+                <span class="ident">command</span>: <span class="ident">command_string</span>,
+                <span class="ident">process</span>: <span class="prelude-val">Some</span>(<span class="ident">child</span>),
+            }
+        }
+    }
+}
+
+<span class="doccomment">/// An instance of a running command.</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Running</span> {
+    <span class="ident">command</span>: <span class="ident">String</span>,
+    <span class="ident">process</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">std</span>::<span class="ident">process</span>::<span class="ident">Child</span><span class="op">&gt;</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">Running</span> {
+    <span class="doccomment">/// Forces the running command to stop. Equivalent to sending `SIGINT`.</span>
+    <span class="kw">fn</span> <span class="ident">kill</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="kw-2">ref</span> <span class="kw-2">mut</span> <span class="ident">child</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">process</span> {
+            <span class="comment">// TODO(#396): Send increasingly stronger signals if the process fails to terminate</span>
+            <span class="comment">// within a given amount of time.</span>
+            <span class="kw">let</span> <span class="ident">pid</span> <span class="op">=</span> <span class="ident">nix</span>::<span class="ident">unistd</span>::<span class="ident">Pid</span>::<span class="ident">from_raw</span>(<span class="ident">child</span>.<span class="ident">id</span>() <span class="kw">as</span> <span class="ident">i32</span>);
+            <span class="ident">nix</span>::<span class="ident">sys</span>::<span class="ident">signal</span>::<span class="ident">kill</span>(<span class="ident">pid</span>, <span class="ident">nix</span>::<span class="ident">sys</span>::<span class="ident">signal</span>::<span class="ident">Signal</span>::<span class="ident">SIGINT</span>)
+                .<span class="ident">expect</span>(<span class="string">&quot;could not kill process&quot;</span>);
+        }
+    }
+
+    <span class="doccomment">/// Waits for the running command to spontaneously terminate.</span>
+    <span class="kw">fn</span> <span class="ident">wait</span>(<span class="self">self</span>, <span class="ident">_opt</span>: <span class="kw-2">&amp;</span><span class="ident">Opt</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SingleStatusResult</span> {
+        <span class="kw">let</span> <span class="ident">child</span> <span class="op">=</span> <span class="kw">match</span> <span class="self">self</span>.<span class="ident">process</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">child</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">child</span>,
+            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">return</span> <span class="ident">SingleStatusResult</span> {
+                    <span class="ident">logs</span>: <span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>(),
+                    <span class="ident">value</span>: <span class="ident">StatusResultValue</span>::<span class="ident">Skipped</span>,
                 }
             }
+        };
 
-            <span class="kw">let</span> <span class="ident">output</span> <span class="op">=</span> <span class="ident">child</span>
-                .<span class="ident">wait_with_output</span>()
-                .<span class="ident">expect</span>(<span class="string">&quot;could not wait for command to terminate&quot;</span>);
+        <span class="kw">let</span> <span class="ident">output</span> <span class="op">=</span> <span class="ident">child</span>
+            .<span class="ident">wait_with_output</span>()
+            .<span class="ident">expect</span>(<span class="string">&quot;could not wait for command to terminate&quot;</span>);
 
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">logs</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">new</span>();
-            {
-                <span class="kw">let</span> <span class="ident">stdout</span> <span class="op">=</span>
-                    <span class="ident">std</span>::<span class="ident">str</span>::<span class="ident">from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">output</span>.<span class="ident">stdout</span>).<span class="ident">expect</span>(<span class="string">&quot;could not parse command stdout&quot;</span>);
-                <span class="kw">if</span> <span class="op">!</span><span class="ident">stdout</span>.<span class="ident">is_empty</span>() {
-                    <span class="ident">logs</span> <span class="op">+</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;════╡ stdout ╞════\n{}&quot;</span>, <span class="ident">stdout</span>);
-                }
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">logs</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">new</span>();
+        {
+            <span class="kw">let</span> <span class="ident">stdout</span> <span class="op">=</span>
+                <span class="ident">std</span>::<span class="ident">str</span>::<span class="ident">from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">output</span>.<span class="ident">stdout</span>).<span class="ident">expect</span>(<span class="string">&quot;could not parse command stdout&quot;</span>);
+            <span class="kw">if</span> <span class="op">!</span><span class="ident">stdout</span>.<span class="ident">is_empty</span>() {
+                <span class="ident">logs</span> <span class="op">+</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;════╡ stdout ╞════\n{}&quot;</span>, <span class="ident">stdout</span>);
             }
-            {
-                <span class="kw">let</span> <span class="ident">stderr</span> <span class="op">=</span>
-                    <span class="ident">std</span>::<span class="ident">str</span>::<span class="ident">from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">output</span>.<span class="ident">stderr</span>).<span class="ident">expect</span>(<span class="string">&quot;could not parse command stderr&quot;</span>);
-                <span class="kw">if</span> <span class="op">!</span><span class="ident">stderr</span>.<span class="ident">is_empty</span>() {
-                    <span class="ident">logs</span> <span class="op">+</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;════╡ stderr ╞════\n{}&quot;</span>, <span class="ident">stderr</span>);
-                }
+        }
+        {
+            <span class="kw">let</span> <span class="ident">stderr</span> <span class="op">=</span>
+                <span class="ident">std</span>::<span class="ident">str</span>::<span class="ident">from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">output</span>.<span class="ident">stderr</span>).<span class="ident">expect</span>(<span class="string">&quot;could not parse command stderr&quot;</span>);
+            <span class="kw">if</span> <span class="op">!</span><span class="ident">stderr</span>.<span class="ident">is_empty</span>() {
+                <span class="ident">logs</span> <span class="op">+</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;════╡ stderr ╞════\n{}&quot;</span>, <span class="ident">stderr</span>);
             }
+        }
 
-            <span class="kw">if</span> <span class="ident">output</span>.<span class="ident">status</span>.<span class="ident">success</span>() {
-                <span class="ident">SingleStatusResult</span> {
-                    <span class="ident">value</span>: <span class="ident">StatusResultValue</span>::<span class="prelude-val">Ok</span>,
-                    <span class="ident">command</span>: <span class="ident">command_string</span>,
-                    <span class="ident">logs</span>,
-                }
-            } <span class="kw">else</span> {
-                <span class="ident">SingleStatusResult</span> {
-                    <span class="ident">value</span>: <span class="ident">StatusResultValue</span>::<span class="ident">Error</span>,
-                    <span class="ident">command</span>: <span class="ident">command_string</span>,
-                    <span class="ident">logs</span>,
-                }
+        <span class="kw">if</span> <span class="ident">output</span>.<span class="ident">status</span>.<span class="ident">success</span>() {
+            <span class="ident">SingleStatusResult</span> {
+                <span class="ident">value</span>: <span class="ident">StatusResultValue</span>::<span class="prelude-val">Ok</span>,
+                <span class="ident">logs</span>,
+            }
+        } <span class="kw">else</span> {
+            <span class="ident">SingleStatusResult</span> {
+                <span class="ident">value</span>: <span class="ident">StatusResultValue</span>::<span class="ident">Error</span>,
+                <span class="ident">logs</span>,
             }
         }
     }
