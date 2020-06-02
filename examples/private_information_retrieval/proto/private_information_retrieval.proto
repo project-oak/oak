@@ -30,6 +30,14 @@ message PointOfInterest {
   Location location = 2;
 }
 
+message Request {
+  Location location = 1;
+}
+
+message Response {
+  PointOfInterest point_of_interest = 2;
+}
+
 service PrivateInformationRetrieval {
-  rpc GetNearestPointOfInterest(Location) returns (PointOfInterest);
+  rpc GetNearestPointOfInterest(Request) returns (Response);
 }

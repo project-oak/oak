@@ -49,7 +49,7 @@ dependencies = [
  "abitest_0_frontend",
  "abitest_1_backend",
  "assert_matches",
- "env_logger 0.6.2",
+ "env_logger 0.7.1",
  "log",
  "maplit",
  "oak",
@@ -75,7 +75,7 @@ version = "0.1.0"
 dependencies = [
  "aggregator_common",
  "assert_matches",
- "env_logger 0.6.2",
+ "env_logger 0.7.1",
  "itertools 0.9.0",
  "log",
  "maplit",
@@ -408,6 +408,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ddfc5b9aa5d4507acaf872de71051dfd0e309860e88966e1051e462a077aac4f"
 dependencies = [
  "bitflags",
+]
+
+[[package]]
+name = "colored"
+version = "1.9.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f4ffc801dacf156c5854b9df4f425a626539c3a6ef7893cc0c5084a23f0b6c59"
+dependencies = [
+ "atty",
+ "lazy_static",
+ "winapi 0.3.8",
 ]
 
 [[package]]
@@ -833,7 +844,7 @@ name = "hello_world"
 version = "0.1.0"
 dependencies = [
  "assert_matches",
- "env_logger 0.6.2",
+ "env_logger 0.7.1",
  "log",
  "oak",
  "oak_runtime",
@@ -1552,11 +1563,30 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "237a5ed80e274dbc66f86bd59c1e25edc039660be53194b5fe0a482e0f2612ea"
 
 [[package]]
+name = "private_information_retrieval"
+version = "0.1.0"
+dependencies = [
+ "assert_matches",
+ "itertools 0.9.0",
+ "log",
+ "maplit",
+ "oak",
+ "oak_abi",
+ "oak_runtime",
+ "oak_tests",
+ "oak_utils",
+ "prost",
+ "quick-xml",
+ "serde",
+ "simple_logger",
+]
+
+[[package]]
 name = "private_set_intersection"
 version = "0.1.0"
 dependencies = [
  "assert_matches",
- "env_logger 0.6.2",
+ "env_logger 0.7.1",
  "log",
  "oak",
  "oak_runtime",
@@ -1691,6 +1721,16 @@ name = "quick-error"
 version = "1.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a1d01941d82fa2ab50be1e79e6714289dd7cde78eba4c074bc5a4374f650dfe0"
+
+[[package]]
+name = "quick-xml"
+version = "0.18.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3cc440ee4802a86e357165021e3e255a9143724da31db1e2ea540214c96a0f82"
+dependencies = [
+ "memchr",
+ "serde",
+]
 
 [[package]]
 name = "quote"
@@ -1923,7 +1963,7 @@ name = "running_average"
 version = "0.1.0"
 dependencies = [
  "assert_matches",
- "env_logger 0.6.2",
+ "env_logger 0.7.1",
  "log",
  "oak",
  "oak_abi",
@@ -2484,6 +2524,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "simple_logger"
+version = "1.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fea0c4611f32f4c2bac73754f22dca1f57e6c1945e0590dae4e5f2a077b92367"
+dependencies = [
+ "atty",
+ "chrono",
+ "colored",
+ "log",
+ "winapi 0.3.8",
+]
+
+[[package]]
 name = "slab"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3016,7 +3069,7 @@ name = "translator"
 version = "0.1.0"
 dependencies = [
  "assert_matches",
- "env_logger 0.6.2",
+ "env_logger 0.7.1",
  "log",
  "oak",
  "oak_runtime",

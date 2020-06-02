@@ -14,14 +14,6 @@
 // limitations under the License.
 //
 
-//! Private Information Retrieval example for Project Oak.
-//!
-//! This shows how an Oak Node can aggregate data samples and report aggregated values if there are
-//! enough samples to hide individual contributors (enforces k-anonymity).
-//!
-//! Clients invoke the module by providing data samples that contain a bucket ID
-//! and a Sparse Vector - a dictionary with integer keys.
-
 use crate::proto::{Location, PointOfInterest};
 use log::{debug, error};
 use oak::OakError;
@@ -29,6 +21,8 @@ use oak_abi::proto::oak::application::ConfigMap;
 use quick_xml::de::from_str;
 use serde::Deserialize;
 
+/// Database structure represents internal XML fields from the following database:
+/// https://tfl.gov.uk/tfl/syndication/feeds/cycle-hire/livecyclehireupdates.xml
 #[derive(Debug, Deserialize, PartialEq)]
 struct Database {
     #[serde(rename = "lastUpdate", default)]
@@ -44,8 +38,10 @@ struct Station {
     name: String,
     #[serde(rename = "terminalName", default)]
     terminal_name: String,
-    lat: f32,
-    long: f32,
+    #[serde(rename = "lat", default)]
+    latitude_degrees: f32,
+    #[serde(rename = "long", default)]
+    longitude_degrees: f32,
     installed: bool,
     locked: bool,
     #[serde(rename = "installDate", default)]
@@ -54,11 +50,11 @@ struct Station {
     removal_date: String,
     temporary: bool,
     #[serde(rename = "nbBikes", default)]
-    nb_bikes: u32,
+    number_of_bikes: u32,
     #[serde(rename = "nbEmptyDocks", default)]
-    nb_empty_docks: u32,
+    number_of_empty_docks: u32,
     #[serde(rename = "nbDocks", default)]
-    nb_docks: u32,
+    number_of_docks: u32,
 }
 
 /// Load an XML database from [`oak::ReadHandle`] and parse it.
@@ -86,7 +82,10 @@ pub fn load_database(in_channel: oak::ReadHandle) -> Result<Vec<PointOfInterest>
 pub fn parse_database(xml_database: &[u8]) -> Result<Vec<PointOfInterest>, OakError> {
     let database: Database = from_str(
         String::from_utf8(xml_database.to_vec())
-            .expect("Couldn't convert vector to string")
+            .map_err(|error| {
+                error!("Couldn't convert vector to string: {:?}", error);
+                OakError::OakStatus(oak_abi::OakStatus::ErrInvalidArgs)
+            })?
             .as_ref(),
     )
     .map_err(|error| {
@@ -98,12 +97,12 @@ pub fn parse_database(xml_database: &[u8]) -> Result<Vec<PointOfInterest>, OakEr
         .stations
         .iter()
         // Filter out closed stations, and stations with no bikes.
-        .filter(|station| station.installed && !station.locked && station.removal_date == "")
+        .filter(|station| station.installed && !station.locked && station.removal_date.is_empty())
         .map(|station| PointOfInterest {
             name: station.name.to_string(),
             location: Some(Location {
-                latitude: station.lat,
-                longitude: station.long,
+                latitude: station.latitude_degrees,
+                longitude: station.longitude_degrees,
             }),
         })
         .collect();

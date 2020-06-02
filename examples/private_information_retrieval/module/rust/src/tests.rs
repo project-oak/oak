@@ -16,7 +16,8 @@
 
 use crate::{
     database::parse_database,
-    proto::{Location, PointOfInterest},
+    proto::{Location, PointOfInterest, Response, Request},
+    PrivateInformationRetrievalNode,
 };
 use assert_matches::assert_matches;
 use maplit::hashmap;
@@ -27,7 +28,7 @@ use oak_runtime::io::Encodable;
 const MODULE_CONFIG_NAME: &str = "private_information_retrieval";
 
 const XML_DATABASE: &str =
-"<?xml version=\"1.0\" encoding=\"utf-8\"?><stations lastUpdate=\"1590775020879\" version=\"2.0\">
+r#"<?xml version="1.0" encoding="utf-8"?><stations lastUpdate="1590775020879" version="2.0">
     <station>
         <id>1</id>
         <name>Uninstalled station</name>
@@ -88,7 +89,7 @@ const XML_DATABASE: &str =
         <nbEmptyDocks>1</nbEmptyDocks>
         <nbDocks>1</nbDocks>
     </station>
-</stations>";
+</stations>"#;
 
 fn send_database(
     runtime: &oak_runtime::RuntimeProxy,
@@ -106,10 +107,12 @@ fn submit_sample(
     entry_handle: oak_abi::Handle,
     latitude: f32,
     longitude: f32,
-) -> grpc::Result<PointOfInterest> {
-    let req = Location {
-        latitude,
-        longitude,
+) -> grpc::Result<Response> {
+    let req = Request {
+        location: Some(Location {
+            latitude,
+            longitude,
+        }),
     };
     oak_tests::grpc_request(
         &runtime,
@@ -143,22 +146,63 @@ fn test_private_information_retrieval() {
     // Test nearest point of interest
     assert_eq!(
         submit_sample(&runtime, entry_handle, 4.0, -10.0,),
-        Ok(PointOfInterest {
-            name: "Opened station 1".to_string(),
-            location: Some(Location {
-                latitude: 0.0,
-                longitude: 0.0,
+        Ok(Response {
+            point_of_interest: Some(PointOfInterest {
+                name: "Opened station 1".to_string(),
+                location: Some(Location {
+                    latitude: 0.0,
+                    longitude: 0.0,
+                }),
             }),
         }),
     );
     assert_eq!(
         submit_sample(&runtime, entry_handle, 9.0, -10.0,),
-        Ok(PointOfInterest {
-            name: "Opened station 2".to_string(),
-            location: Some(Location {
-                latitude: 10.0,
-                longitude: 0.0,
+        Ok(Response {
+            point_of_interest: Some(PointOfInterest {
+                name: "Opened station 2".to_string(),
+                location: Some(Location {
+                    latitude: 10.0,
+                    longitude: 0.0,
+                }),
             }),
         }),
+    );
+}
+
+fn distance(first: (f32, f32), second: (f32, f32)) -> f32 {
+    PrivateInformationRetrievalNode::distance(
+        Location {
+            latitude: first.0,
+            longitude: first.1,
+        },
+        Location {
+            latitude: second.0,
+            longitude: second.1,
+        },
+    )
+}
+
+#[test]
+fn test_distance() {
+    assert_eq!(
+        distance((0.0, 0.0), (0.0, 0.0)),
+        0.0,
+    );
+    assert_eq!(
+        distance((0.0, 0.0), (10.0, 10.0)),
+        1568.5204,
+    );
+    assert_eq!(
+        distance((10.0, 10.0), (-10.0, -10.0)),
+        3137.0413,
+    );
+    assert_eq!(
+        distance((0.0, 0.0), (0.0, 180.0)),
+        20015.088,
+    );
+    assert_eq!(
+        distance((90.0, 0.0), (-90.0, 180.0)),
+        20015.088,
     );
 }

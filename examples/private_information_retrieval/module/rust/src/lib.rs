@@ -41,6 +41,7 @@ use log::{debug, error};
 use oak::grpc;
 use proto::{
     Location, PointOfInterest, PrivateInformationRetrieval, PrivateInformationRetrievalDispatcher,
+    Response, Request,
 };
 
 /// Oak Node that contains an in-memory database of Points Of Interest.
@@ -49,11 +50,30 @@ pub struct PrivateInformationRetrievalNode {
 }
 
 impl PrivateInformationRetrievalNode {
-    /// Returns a Euclidean distance between two locations.
+    /// Returns a distance (in kilometers) between two locations using the Haversine formula (ignoring
+    /// height variations):
+    /// https://en.wikipedia.org/wiki/Haversine_formula
     fn distance(first: Location, second: Location) -> f32 {
-        let x = first.latitude - second.latitude;
-        let y = first.longitude - second.longitude;
-        (x * x + y * y).sqrt()
+        let first_latitude_radians = first.latitude.to_radians();
+        let second_latitude_radians = second.latitude.to_radians();
+
+        let latitude_difference_radians = (first.latitude - second.latitude).to_radians();
+        let longitude_difference_radians = (first.longitude - second.longitude).to_radians();
+
+        let central_angle = 2.0 * (
+            (latitude_difference_radians / 2.0).sin().powi(2) + 
+            (
+                first_latitude_radians.cos() *
+                second_latitude_radians.cos() *
+                (longitude_difference_radians / 2.0).sin().powi(2)
+            )
+        ).sqrt().asin();
+
+        // Earth radius in kilometers.
+        let earth_radius = 6371.0_f32;
+
+        // Compute distance.
+        earth_radius * central_angle
     }
 }
 
@@ -62,9 +82,14 @@ impl PrivateInformationRetrieval for PrivateInformationRetrievalNode {
     /// Find the nearest Point Of Interest based on linear search in the database.
     fn get_nearest_point_of_interest(
         &mut self,
-        location: Location,
-    ) -> grpc::Result<PointOfInterest> {
-        debug!("Received location: {:?}", location);
+        request: Request,
+    ) -> grpc::Result<Response> {
+        debug!("Received request: {:?}", request);
+        let location = request.location.ok_or_else(|| {
+            let err = "Location is not specified".to_string();
+            error!("Bad request: {:?}", err);
+            grpc::build_status(grpc::Code::InvalidArgument, &err)
+        })?;
         let nearest_point = self.points_of_interest.iter().fold(
             (None, f32::MAX),
             |(closest_point, min_distance), point| {
@@ -79,8 +104,10 @@ impl PrivateInformationRetrieval for PrivateInformationRetrievalNode {
         );
         match nearest_point.0 {
             Some(point) => {
-                debug!("Sending the nearest Point Of Interest: {:?}", point);
-                Ok(point)
+                debug!("Found the nearest Point Of Interest: {:?}", point);
+                Ok(Response {
+                    point_of_interest: Some(point),
+                })
             }
             None => {
                 let err = "Empty database".to_string();

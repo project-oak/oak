@@ -144,12 +144,6 @@ pub fn parse_config_map(config_entries: &[ConfigEntry]) -> anyhow::Result<Config
     Ok(ConfigMap { items: file_map })
 }
 
-pub fn parse_config_map(config_files: &[ConfigEntry]) -> anyhow::Result<ConfigMap> {
-    Ok(ConfigMap {
-        items: parse_config_files(config_files)?,
-    })
-}
-
 /// Send configuration map to the initial Oak Node.
 fn send_config_map(
     config_map: ConfigMap,
@@ -157,9 +151,12 @@ fn send_config_map(
     handle: Handle,
 ) -> anyhow::Result<()> {
     let sender = Sender::new(handle);
-    sender
-        .send(config_map, runtime)
-        .map_err(|status| anyhow!("could configuration map to the initial Node: {:?}", status))
+    sender.send(config_map, runtime).map_err(|status| {
+        anyhow!(
+            "could not send configuration map to the initial Node: {:?}",
+            status
+        )
+    })
 }
 
 /// Load a PEM encoded TLS certificate, performing (minimal) validation.

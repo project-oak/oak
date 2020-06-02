@@ -33,24 +33,27 @@ ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate
 using ::oak::examples::private_information_retrieval::Location;
 using ::oak::examples::private_information_retrieval::PointOfInterest;
 using ::oak::examples::private_information_retrieval::PrivateInformationRetrieval;
+using ::oak::examples::private_information_retrieval::Request;
+using ::oak::examples::private_information_retrieval::Response;
 
 void get_nearest_point_of_interest(PrivateInformationRetrieval::Stub* stub, float latitude,
                                    float longitude) {
   grpc::ClientContext context;
   LOG(INFO) << "Getting nearest point of interest:";
-  Location request;
-  request.set_latitude(latitude);
-  request.set_longitude(longitude);
-  PointOfInterest response;
+  Request request;
+  Location* location = request.mutable_location();
+  location->set_latitude(latitude);
+  location->set_longitude(longitude);
+  Response response;
   grpc::Status status = stub->GetNearestPointOfInterest(&context, request, &response);
   if (!status.ok()) {
     LOG(ERROR) << "Could not get nearest point of interest: " << status.error_code() << ": "
                << status.error_message();
   }
   LOG(INFO) << "Response:";
-  LOG(INFO) << " - name: " << response.name();
-  LOG(INFO) << " - latitude: " << response.location().latitude();
-  LOG(INFO) << " - longitude: " << response.location().longitude();
+  LOG(INFO) << " - name: " << response.point_of_interest().name();
+  LOG(INFO) << " - latitude: " << response.point_of_interest().location().latitude();
+  LOG(INFO) << " - longitude: " << response.point_of_interest().location().longitude();
 }
 
 int main(int argc, char** argv) {
@@ -69,12 +72,12 @@ int main(int argc, char** argv) {
     LOG(FATAL) << "Incorrect number of coordinates: " << location.size() << " (expected 2)";
   }
   float latitude;
-  if (!absl::SimpleAtof(location.front(), &latitude)) {
-    LOG(FATAL) << "Incorrect latitude: " << location.front();
+  if (!absl::SimpleAtof(location.front(), &latitude) && latitude >= -90.0 && latitude <= 90.0) {
+    LOG(FATAL) << "Latitude must be a valid floating point number >=-90 and <= 90.";
   }
   float longitude;
-  if (!absl::SimpleAtof(location.back(), &longitude)) {
-    LOG(FATAL) << "Incorrect longitude: " << location.back();
+  if (!absl::SimpleAtof(location.back(), &longitude) && longitude >= -180.0 && longitude <= 180.0) {
+    LOG(FATAL) << "Longitude must be a valid floating point number >= -180 and <= 180.";
   }
 
   // Get nearest point of interest from the server.
