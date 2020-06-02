@@ -1,8 +1,5 @@
 [workspace]
 members = [
-  "experimental/split_grpc/client",
-  "experimental/split_grpc/proxy",
-  "experimental/split_grpc/server",
   "oak/server/rust/oak_loader",
   "oak/server/rust/oak_runtime",
   "runner",
@@ -26,9 +23,5 @@ oak_runtime = { path = "oak/server/rust/oak_runtime" }
 oak_tests = { path = "sdk/rust/oak_tests" }
 oak_utils = { path = "oak_utils" }
 runner = { path = "runner" }
-# Experimental
-split_grpc_client = { path = "experimental/split_grpc/client" }
-split_grpc_proxy = { path = "experimental/split_grpc/proxy" }
-split_grpc_server = { path = "experimental/split_grpc/server" }
 # Third party.
 roughenough = { path = "third_party/roughenough" }

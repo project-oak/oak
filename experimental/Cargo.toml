@@ -1,0 +1,2 @@
+[workspace]
+members = ["split_grpc/client", "split_grpc/proxy", "split_grpc/server"]

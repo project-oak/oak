@@ -32,6 +32,9 @@ find . \
 
 cargo fmt --all
 
+# Format experimental crates.
+cargo fmt --all --manifest-path=experimental/Cargo.toml
+
 find . \
   \(  \
     -not \( -path ./.git -prune \) -and \
