@@ -153,11 +153,11 @@ impl RoughtimeClient {
         }
     }
 
-    /// Makes a Roughtime UDP request to a server.
+    /// Makes a Roughtime request to a server.
     async fn get_roughtime_from_server(
         &self,
         server: &RoughtimeServerSpec,
-    ) -> Result<Interval, Box<dyn std::error::Error>> {
+    ) -> Result<Interval, RoughtimeError> {
         let nonce = create_nonce()?;
         let request = make_request(&nonce)?;
         let response = Self::send_roughtime_request(server, &request).await?;
@@ -180,20 +180,21 @@ impl RoughtimeClient {
                         max: midpoint.saturating_add(radius.into()),
                     })
                 } else {
-                    Err(RoughtimeError::MidPointTooSmall.into())
+                    Err(RoughtimeError::MidPointTooSmall)
                 }
             } else {
-                Err(RoughtimeError::RadiusTooLarge.into())
+                Err(RoughtimeError::RadiusTooLarge)
             }
         } else {
-            Err(RoughtimeError::InvalidSignature.into())
+            Err(RoughtimeError::InvalidSignature)
         }
     }
 
+    /// Sends a request to a Roughtime server using UDP.
     async fn send_roughtime_request(
         server: &RoughtimeServerSpec,
         request: &[u8],
-    ) -> std::io::Result<Vec<u8>> {
+    ) -> tokio::io::Result<Vec<u8>> {
         let remote_addr = (&server.host[..], server.port)
             .to_socket_addrs()?
             .next()
@@ -262,16 +263,19 @@ fn get_default_servers() -> Vec<RoughtimeServerSpec> {
 /// Possible errors returned by the Roughtime client.
 #[derive(Debug)]
 pub enum RoughtimeError {
+    Base64Error(base64::DecodeError),
     InvalidSignature,
     IoError(tokio::io::Error),
     MidPointTooSmall,
     NotEnoughOverlappingIntervals { actual: usize, expected: usize },
     RadiusTooLarge,
+    RoughenoughError(roughenough::Error),
 }
 
 impl std::fmt::Display for RoughtimeError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            RoughtimeError::Base64Error(e) => write!(f, "Base64 error: {}", e),
             RoughtimeError::InvalidSignature => write!(f, "Could not verify signature."),
             RoughtimeError::IoError(e) => write!(f, "I/O error: {}", e),
             RoughtimeError::MidPointTooSmall => write!(f, "Midpoint too small."),
@@ -280,6 +284,7 @@ impl std::fmt::Display for RoughtimeError {
                 "Required {} overlapping intervals, but only found {}.",
                 expected, actual
             ),
+            RoughtimeError::RoughenoughError(e) => write!(f, "Roughenough error: {}", e),
             RoughtimeError::RadiusTooLarge => write!(f, "Radius too large."),
         }
     }
@@ -293,33 +298,15 @@ impl From<tokio::io::Error> for RoughtimeError {
     }
 }
 
-impl PartialEq for RoughtimeError {
-    fn eq(&self, other: &Self) -> bool {
-        match self {
-            RoughtimeError::InvalidSignature => match other {
-                RoughtimeError::InvalidSignature => true,
-                _ => false,
-            },
-            RoughtimeError::IoError(_) => match other {
-                RoughtimeError::IoError(_) => true,
-                _ => false,
-            },
-            RoughtimeError::MidPointTooSmall => match other {
-                RoughtimeError::MidPointTooSmall => true,
-                _ => false,
-            },
-            RoughtimeError::NotEnoughOverlappingIntervals { actual, expected } => match other {
-                RoughtimeError::NotEnoughOverlappingIntervals {
-                    actual: other_actual,
-                    expected: other_expected,
-                } => actual == other_actual && expected == other_expected,
-                _ => false,
-            },
-            RoughtimeError::RadiusTooLarge => match other {
-                RoughtimeError::RadiusTooLarge => true,
-                _ => false,
-            },
-        }
+impl From<roughenough::Error> for RoughtimeError {
+    fn from(err: roughenough::Error) -> Self {
+        RoughtimeError::RoughenoughError(err)
+    }
+}
+
+impl From<base64::DecodeError> for RoughtimeError {
+    fn from(err: base64::DecodeError) -> Self {
+        RoughtimeError::Base64Error(err)
     }
 }
 

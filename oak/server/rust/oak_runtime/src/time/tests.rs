@@ -17,6 +17,22 @@
 use super::*;
 use std::time::SystemTime;
 
+// Implements PartialEq to simplify testing assertions.
+impl PartialEq for RoughtimeError {
+    fn eq(&self, other: &Self) -> bool {
+        match self {
+            RoughtimeError::NotEnoughOverlappingIntervals { actual, expected } => match other {
+                RoughtimeError::NotEnoughOverlappingIntervals {
+                    actual: other_actual,
+                    expected: other_expected,
+                } => actual == other_actual && expected == other_expected,
+                _ => false,
+            },
+            _ => false,
+        }
+    }
+}
+
 #[test]
 fn test_valid_overlap_one_of_three() {
     let client = RoughtimeClient::new(vec![], 1, DEFAULT_MAX_RADIUS_MICROSECONDS);
