@@ -14,6 +14,9 @@
 // limitations under the License.
 //
 
+//! SDK functionality that provides idiomatic Rust wrappers around the
+//! underlying Oak platform functionality.
+
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use log::{debug, error, info, warn};
 use oak_abi::proto::oak::application::NodeConfiguration;
@@ -37,6 +40,7 @@ pub mod roughtime;
 pub mod storage;
 
 pub mod proto {
+    //! Auto-generated code derived from protocol buffer definitions.
     pub mod oak {
         // The storage protobuf messages use the label.Label type which is built
         // in the `oak_abi` crate, so make it available here too.
