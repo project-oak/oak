@@ -4,4 +4,6 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "${SCRIPTS_DIR}/common"
 
-cargo build "${cargo_build_flags[@]}"  --manifest-path=experimental/Cargo.toml
+cargo build "${cargo_build_flags[@]}" --manifest-path=experimental/Cargo.toml
+cargo clippy --all-targets --manifest-path=experimental/Cargo.toml -- --deny=warnings
+cargo test --all-targets --manifest-path=experimental/Cargo.toml
