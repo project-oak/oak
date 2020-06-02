@@ -111,7 +111,8 @@ pub fn run_single_module(
     )
 }
 
-// TODO(#543): move this to oak_runtime as it's not test-specific
+/// Inject a gRPC request into an Oak Application under test and return the corresponding
+/// response (or error).
 pub fn grpc_request<R, Q>(
     proxy: &oak_runtime::RuntimeProxy,
     handle: oak_abi::Handle,
