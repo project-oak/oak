@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+//! WebAssembly Node functionality.
+
 use crate::{
     node::ConfigurationError,
     runtime::{NodeReadStatus, RuntimeProxy},

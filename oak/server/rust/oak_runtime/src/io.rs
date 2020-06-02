@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+//! Helper types for data structures that can be transmitted over channels.
+
 use crate::{runtime::RuntimeProxy, NodeMessage};
 use log::error;
 use oak_abi::{ChannelReadStatus, Handle, OakStatus};

@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+//! Functionality for gRPC pseudo-Nodes.
+
 use oak_abi::proto::google::rpc;
 pub mod client;
 mod codec;

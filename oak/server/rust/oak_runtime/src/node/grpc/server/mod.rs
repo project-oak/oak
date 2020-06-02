@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+//! gRPC server pseudo-Node functionality.
+
 use crate::{
     auth::oidc_utils::ClientInfo,
     node::{

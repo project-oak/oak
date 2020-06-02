@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+//! Auto-generated code derived from protocol buffer definitions.
+
 pub mod oak {
     pub mod authentication {
         include!(concat!(env!("OUT_DIR"), "/oak.authentication.rs"));

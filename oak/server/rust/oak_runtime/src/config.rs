@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+//! Functionality covering configuration of a Runtime instance.
+
 use crate::RuntimeProxy;
 use oak_abi::{proto::oak::application::ApplicationConfiguration, OakStatus};
 
