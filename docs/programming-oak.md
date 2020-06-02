@@ -34,15 +34,15 @@ An Oak Node needs to provide a single
 execution begins. However, Node authors don't _have_ to implement this function
 themselves; for a Node which receives messages (a combination of bytes and
 handles) that can be
-[decoded](https://project-oak.github.io/oak/doc/oak/io/trait.Decodable.html)
+[decoded](https://project-oak.github.io/oak/oak/doc/oak/io/trait.Decodable.html)
 into a Rust type, there are helper functions in the Oak SDK that make this
 easier.
 
 To use these helpers, an Oak Node should be a `struct` of some kind to represent
 the internal state of the Node itself (which may be empty), implement the
-[`oak::Node`](https://project-oak.github.io/oak/doc/oak/trait.Node.html) trait
-for it, then define an
-[`entrypoint`](https://project-oak.github.io/oak/doc/oak/macro.entrypoint.html)
+[`oak::Node`](https://project-oak.github.io/oak/oak/doc/oak/trait.Node.html)
+trait for it, then define an
+[`entrypoint`](https://project-oak.github.io/oak/oak/doc/oak/macro.entrypoint.html)
 so the Oak SDK knows how to instantiate it.
 
 The defined entrypoint should run an `oak::run_event_loop` function that is
@@ -83,7 +83,7 @@ struct Node {
 <!-- prettier-ignore-end -->
 
 Under the covers the
-[`entrypoint!`](https://project-oak.github.io/oak/doc/oak/macro.entrypoint.html)
+[`entrypoint!`](https://project-oak.github.io/oak/oak/doc/oak/macro.entrypoint.html)
 macro converts the provided function body into an
 [external function](abi.md#exported-function) suitable for WebAssembly use,
 [taking care](#panic-handling) of
@@ -93,14 +93,14 @@ For Nodes that act as gRPC servers (the normal "front door" for an Oak
 Application), the easiest way to use a gRPC service implementation is to:
 
 - call the
-  [`oak::grpc::server::init_default()`](https://project-oak.github.io/oak/doc/oak/grpc/server/fn.init_default.html)
+  [`oak::grpc::server::init()`](https://project-oak.github.io/oak/oak/doc/oak/grpc/server/fn.init.html)
   helper from the Oak SDK to set up a
   [gRPC server pseudo-Node](concepts.md#pseudo-nodes) and acquire a channel to
   receive gRPC invocations on
 - wrap the Node `struct` in the automatically generated `Dispatcher`, as
-  described in the [next section](#generate-grpc-service-code)
+  described in the [next section](#generated-grpc-service-code)
 - pass the `Dispatcher` and the channel handle to the
-  [`run_event_loop()`](https://project-oak.github.io/oak/doc/oak/fn.run_event_loop.html)
+  [`run_event_loop()`](https://project-oak.github.io/oak/oak/doc/oak/fn.run_event_loop.html)
   function.
 
 <!-- prettier-ignore-start -->
@@ -117,10 +117,10 @@ oak::entrypoint!(grpc_oak_main => |_in_channel| {
 <!-- prettier-ignore-end -->
 
 Alternatively a Node can implement the
-[`oak::grpc::ServerNode`](https://project-oak.github.io/oak/doc/oak/grpc/trait.ServerNode.html)
+[`oak::grpc::ServerNode`](https://project-oak.github.io/oak/oak/doc/oak/grpc/trait.ServerNode.html)
 trait (which provides an automatic implementation of the
-[`Node`](https://project-oak.github.io/oak/doc/oak/trait.Node.html)) manually.
-The
+[`Node`](https://project-oak.github.io/oak/oak/doc/oak/trait.Node.html))
+manually. The
 [machine learning example](https://github.com/project-oak/oak/blob/master/examples/machine_learning/module/rust/src/lib.rs)
 demonstrates this.
 
@@ -386,10 +386,10 @@ Regardless of how the Application communicates with the new Node, the typical
 pattern for the existing Node is to:
 
 - Create a new channel with the
-  [`channel_create`](https://project-oak.github.io/oak/doc/oak/fn.channel_create.html)
+  [`channel_create`](https://project-oak.github.io/oak/oak/doc/oak/fn.channel_create.html)
   host function, receiving local handles for both halves of the channel.
 - Create a new Node instance with the
-  [`node_create`](https://project-oak.github.io/oak/doc/oak/fn.node_create.html)
+  [`node_create`](https://project-oak.github.io/oak/oak/doc/oak/fn.node_create.html)
   host function, passing in the handle for the read half of the new channel.
 - Afterwards, close the local handle for the read half, as it is no longer
   needed, and use the local handle for the write half to send messages to the
@@ -452,8 +452,8 @@ services.
 
 Regardless of how the code for an Oak Application is produced, it's always a
 good idea to write tests. The
-[oak_tests](https://project-oak.github.io/oak/doc/oak_tests/index.html) crate
-allows Node gRPC service methods to be tested with the [Oak SDK](sdk.md)
+[`oak_tests`](https://project-oak.github.io/oak/oak/doc/oak_tests/index.html)
+crate allows Node gRPC service methods to be tested with the [Oak SDK](sdk.md)
 framework via the Oak Runtime:
 
 <!-- prettier-ignore-start -->
