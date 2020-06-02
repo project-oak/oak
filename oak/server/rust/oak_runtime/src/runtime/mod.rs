@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+//! Core Runtime functionality, allowing manipulation of Nodes, channels and messages.
+
 use crate::{
     message::{Message, NodeMessage},
     metrics::Metrics,

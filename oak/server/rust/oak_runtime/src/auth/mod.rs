@@ -14,4 +14,6 @@
 // limitations under the License.
 //
 
+//! Authentication functionality.
+
 pub mod oidc_utils;

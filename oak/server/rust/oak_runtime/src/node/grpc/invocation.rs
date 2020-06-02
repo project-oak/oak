@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+//! Functionality for handling gRPC method invocations.
+
 use crate::{
     io::{Decodable, Receiver, Sender},
     runtime::RuntimeProxy,

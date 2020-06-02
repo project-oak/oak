@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+//! Functionality for different Node types.
+
 use crate::{runtime::RuntimeProxy, GrpcConfiguration};
 use oak_abi::proto::oak::application::{
     node_configuration::ConfigType, ApplicationConfiguration, LogConfiguration, NodeConfiguration,
@@ -85,6 +87,7 @@ impl std::fmt::Display for ConfigurationError {
     }
 }
 
+/// Create a new [`Node`] instance based on the provided configuration information.
 pub fn create_node(
     application_configuration: &ApplicationConfiguration,
     node_configuration: &NodeConfiguration,

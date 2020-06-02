@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+//! Functionality to expose metrics from a running Runtime.
+
 use prometheus::{
     proto::MetricFamily, HistogramOpts, HistogramVec, IntCounterVec, IntGauge, Opts, Registry,
 };

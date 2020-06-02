@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+//! gRPC client pseudo-Node functionality.
+
 use crate::{
     io::Receiver,
     node::{
