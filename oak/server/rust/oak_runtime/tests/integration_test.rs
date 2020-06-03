@@ -126,8 +126,8 @@ fn test_metrics_gives_the_correct_number_of_nodes() {
 #[ignore]
 /// Gets Roughtime from the live default servers with the default settings.
 ///
-/// This requires an internet connection and at least 3 of the default servers to be operational and
-/// accessible.
+/// This requires an internet connection, at least 3 of the default servers to be operational and
+/// accessible, and that the test host machine's system clock is roughly accurate.
 fn test_get_roughtime_live() {
     init_logging();
     let client = RoughtimeClient::default();

@@ -66,7 +66,7 @@ pub struct RoughtimeClient {
     min_overlapping_intervals: usize,
     /// The maximum radius returned by any server for the response to still be acceptable.
     max_radius_microseconds: u32,
-    /// The timeout for UDP sned and receive operations in seconds.
+    /// The timeout for UDP send and receive operations in seconds.
     timeout_seconds: u64,
     /// The number of time to retry getting Roughtime from a server in case of timeouts.
     server_retries: usize,
