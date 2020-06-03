@@ -96,8 +96,8 @@ pub fn parse_database(xml_database: &[u8]) -> Result<Vec<PointOfInterest>, OakEr
     let points_of_interest = database
         .stations
         .iter()
-        // Filter out closed stations, and stations with no bikes.
-        .filter(|station| station.installed && !station.locked && station.removal_date.is_empty())
+        // Filter out uninstalled, closed and removed stations, and stations with no bikes.
+        .filter(|station| station.installed && !station.locked && station.removal_date.is_empty() && station.number_of_bikes > 0)
         .map(|station| PointOfInterest {
             name: station.name.to_string(),
             location: Some(Location {

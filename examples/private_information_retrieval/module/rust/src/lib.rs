@@ -40,8 +40,8 @@ use database::load_database;
 use log::{debug, error};
 use oak::grpc;
 use proto::{
-    Location, PointOfInterest, PrivateInformationRetrieval, PrivateInformationRetrievalDispatcher,
-    Response, Request,
+    ListPointsOfInterestResponse, ListPointsOfInterestRequest, Location, PointOfInterest,
+    PrivateInformationRetrieval, PrivateInformationRetrievalDispatcher,
 };
 
 /// Oak Node that contains an in-memory database of Points Of Interest.
@@ -80,10 +80,10 @@ impl PrivateInformationRetrievalNode {
 /// A gRPC service implementation for the Private Information Retrieval example.
 impl PrivateInformationRetrieval for PrivateInformationRetrievalNode {
     /// Find the nearest Point Of Interest based on linear search in the database.
-    fn get_nearest_point_of_interest(
+    fn list_points_of_interest(
         &mut self,
-        request: Request,
-    ) -> grpc::Result<Response> {
+        request: ListPointsOfInterestRequest,
+    ) -> grpc::Result<ListPointsOfInterestResponse> {
         debug!("Received request: {:?}", request);
         let location = request.location.ok_or_else(|| {
             let err = "Location is not specified".to_string();
@@ -105,7 +105,7 @@ impl PrivateInformationRetrieval for PrivateInformationRetrievalNode {
         match nearest_point.0 {
             Some(point) => {
                 debug!("Found the nearest Point Of Interest: {:?}", point);
-                Ok(Response {
+                Ok(ListPointsOfInterestResponse {
                     point_of_interest: Some(point),
                 })
             }

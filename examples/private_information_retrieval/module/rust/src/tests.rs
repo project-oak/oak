@@ -16,7 +16,7 @@
 
 use crate::{
     database::parse_database,
-    proto::{Location, PointOfInterest, Response, Request},
+    proto::{ListPointsOfInterestResponse, ListPointsOfInterestRequest, Location, PointOfInterest},
     PrivateInformationRetrievalNode,
 };
 use assert_matches::assert_matches;
@@ -107,8 +107,8 @@ fn submit_sample(
     entry_handle: oak_abi::Handle,
     latitude: f32,
     longitude: f32,
-) -> grpc::Result<Response> {
-    let req = Request {
+) -> grpc::Result<ListPointsOfInterestResponse> {
+    let req = ListPointsOfInterestRequest {
         location: Some(Location {
             latitude,
             longitude,
@@ -117,7 +117,7 @@ fn submit_sample(
     oak_tests::grpc_request(
         &runtime,
         entry_handle,
-        "/oak.examples.private_information_retrieval.PrivateInformationRetrieval/GetNearestPointOfInterest",
+        "/oak.examples.private_information_retrieval.PrivateInformationRetrieval/ListPointsOfInterest",
         &req,
     )
 }
@@ -146,7 +146,7 @@ fn test_private_information_retrieval() {
     // Test nearest point of interest
     assert_eq!(
         submit_sample(&runtime, entry_handle, 4.0, -10.0,),
-        Ok(Response {
+        Ok(ListPointsOfInterestResponse {
             point_of_interest: Some(PointOfInterest {
                 name: "Opened station 1".to_string(),
                 location: Some(Location {
@@ -158,7 +158,7 @@ fn test_private_information_retrieval() {
     );
     assert_eq!(
         submit_sample(&runtime, entry_handle, 9.0, -10.0,),
-        Ok(Response {
+        Ok(ListPointsOfInterestResponse {
             point_of_interest: Some(PointOfInterest {
                 name: "Opened station 2".to_string(),
                 location: Some(Location {

@@ -30,14 +30,15 @@ message PointOfInterest {
   Location location = 2;
 }
 
-message Request {
+message ListPointsOfInterestRequest {
   Location location = 1;
 }
 
-message Response {
+message ListPointsOfInterestResponse {
   PointOfInterest point_of_interest = 2;
 }
 
 service PrivateInformationRetrieval {
-  rpc GetNearestPointOfInterest(Request) returns (Response);
+  // Find the nearest Point Of Interest based on linear search in the database.
+  rpc ListPointsOfInterest(ListPointsOfInterestRequest) returns (ListPointsOfInterestResponse);
 }

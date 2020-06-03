@@ -30,22 +30,22 @@ ABSL_FLAG(std::vector<std::string>, location, std::vector<std::string>{},
           "Requested location (latitude and longitude separated by comma)");
 ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate");
 
+using ::oak::examples::private_information_retrieval::ListPointsOfInterestRequest;
+using ::oak::examples::private_information_retrieval::ListPointsOfInterestResponse;
 using ::oak::examples::private_information_retrieval::Location;
 using ::oak::examples::private_information_retrieval::PointOfInterest;
 using ::oak::examples::private_information_retrieval::PrivateInformationRetrieval;
-using ::oak::examples::private_information_retrieval::Request;
-using ::oak::examples::private_information_retrieval::Response;
 
 void get_nearest_point_of_interest(PrivateInformationRetrieval::Stub* stub, float latitude,
                                    float longitude) {
   grpc::ClientContext context;
   LOG(INFO) << "Getting nearest point of interest:";
-  Request request;
+  ListPointsOfInterestRequest request;
   Location* location = request.mutable_location();
   location->set_latitude(latitude);
   location->set_longitude(longitude);
-  Response response;
-  grpc::Status status = stub->GetNearestPointOfInterest(&context, request, &response);
+  ListPointsOfInterestResponse response;
+  grpc::Status status = stub->ListPointsOfInterest(&context, request, &response);
   if (!status.ok()) {
     LOG(ERROR) << "Could not get nearest point of interest: " << status.error_code() << ": "
                << status.error_message();
