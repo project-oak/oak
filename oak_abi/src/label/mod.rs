@@ -81,3 +81,14 @@ pub fn authorization_bearer_token_hmac_tag(authorization_bearer_token_hmac: &[u8
         })),
     }
 }
+
+/// Creates a [`Tag`] having as principal the provided WebAssembly module SHA-256 hash.
+///
+/// See https://github.com/project-oak/oak/blob/master/oak/proto/label.proto
+pub fn web_assembly_module_tag(web_assembly_module_hash_sha_256: &[u8]) -> Tag {
+    Tag {
+        tag: Some(tag::Tag::WebAssemblyModuleTag(WebAssemblyModuleTag {
+            web_assembly_module_hash_sha_256: web_assembly_module_hash_sha_256.into(),
+        })),
+    }
+}

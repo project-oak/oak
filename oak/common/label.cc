@@ -51,11 +51,11 @@ oak::label::Label AuthorizationBearerTokenLabel(const std::string& authorization
   return label;
 }
 
-oak::label::Label WebAssemblyModuleAttestationLabel(const std::string& module_attestation) {
+oak::label::Label WebAssemblyModuleLabel(const std::string& web_assembly_module_hash_sha_256) {
   oak::label::Label label;
   auto* confidentiality_tag = label.add_confidentiality_tags();
-  confidentiality_tag->mutable_web_assembly_module_tag()->set_module_attestation(
-      module_attestation);
+  confidentiality_tag->mutable_web_assembly_module_tag()->set_web_assembly_module_hash_sha_256(
+      web_assembly_module_hash_sha_256);
   return label;
 }
 

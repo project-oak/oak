@@ -25,6 +25,7 @@ itertools = "*"
 jsonwebtoken = "*"
 lazy_static = "*"
 log = { version = "*" }
+maplit = "*"
 oak_abi = "=0.1.0"
 prometheus = { version = "0.8", features = [
   "nightly"
@@ -37,13 +38,13 @@ reqwest = { version = "*", default-features = false, features = ["rustls-tls"] }
 rustls = "*"
 serde = "*"
 serde_json = "*"
+sha2 = "*"
 tokio = { version = "*", features = ["io-driver", "macros", "rt-core", "time"] }
 tonic = { version = "*", features = ["tls"] }
 wasmi = { version = "*", default-features = false, features = ["core"] }
 
 [dev-dependencies]
 simple_logger = "*"
-maplit = "*"
 regex = "*"
 wat = "*"
 
