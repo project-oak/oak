@@ -262,7 +262,10 @@ impl RoughtimeClient {
         .await
         {
             Err(error) => {
-                warn!("Timed out receiving response from {}: {}", server.name, error);
+                warn!(
+                    "Timed out receiving response from {}: {}",
+                    server.name, error
+                );
                 return Err(RoughtimeError::TimeoutError);
             }
             Ok(result) => {
