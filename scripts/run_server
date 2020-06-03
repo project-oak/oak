@@ -50,6 +50,16 @@ Either the -a APPLICATION or the -e EXAMPLE option is required.
   esac
 done
 
+declare -a additional_args
+additional_args+=(
+  "--grpc-tls-private-key=${SCRIPTS_DIR}/../examples/certs/local/local.key"
+  "--grpc-tls-certificate=${SCRIPTS_DIR}/../examples/certs/local/local.pem"
+  "--root-tls-certificate=${SCRIPTS_DIR}/../examples/certs/local/ca.pem"
+)
+if [[ -n "${OIDC_CLIENT+x}" ]]; then
+  additional_args+=("--oidc-client=${OIDC_CLIENT}")
+fi
+
 if [[ -n ${EXAMPLE+x} ]]; then
   # Determine expected configuration file from example name and language variant.
   case "${language}" in
@@ -66,16 +76,12 @@ if [[ -n ${EXAMPLE+x} ]]; then
       echo "Invalid example variant: ${language}"
       exit 1;;
   esac
-fi
 
-declare -a ADDITIONAL_ARGS
-ADDITIONAL_ARGS+=(
-  "--grpc-tls-private-key=${SCRIPTS_DIR}/../examples/certs/local/local.key"
-  "--grpc-tls-certificate=${SCRIPTS_DIR}/../examples/certs/local/local.pem"
-  "--root-tls-certificate=${SCRIPTS_DIR}/../examples/certs/local/ca.pem"
-)
-if [[ -n "${OIDC_CLIENT+x}" ]]; then
-  readonly ADDITIONAL_ARGS+=("--oidc-client=${OIDC_CLIENT}")
+  if [[ "${EXAMPLE}" == "trusted_information_retrieval" ]]; then
+    additional_args+=(
+      "--config-files=database=./examples/trusted_information_retrieval/database.xml"
+    )
+  fi
 fi
 
 if [[ -z "${APPLICATION+z}" ]]; then
@@ -89,4 +95,4 @@ fi
 # `exec` is necessary for the `run_example` script to be able to get a PID of a background server.
 exec cargo run "${cargo_build_flags[@]}" --package=oak_loader -- \
     --application="${APPLICATION}" \
-    "${ADDITIONAL_ARGS[@]}"
+    "${additional_args[@]}"

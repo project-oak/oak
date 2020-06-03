@@ -11,6 +11,7 @@ members = [
   "chat/module/rust",
   "hello_world/module/rust",
   "machine_learning/module/rust",
+  "trusted_information_retrieval/module/rust",
   "private_set_intersection/module/rust",
   "running_average/module/rust",
   "rustfmt/module/rust",

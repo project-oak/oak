@@ -41,6 +41,8 @@ for language in ${languages}; do
   for example in ${examples}; do
     if [[ "${example}" == "chat" ]]; then
         "${SCRIPTS_DIR}/run_example" -s "${server}" -l "${language}" -e chat -- --test
+    elif [[ "${example}" == "trusted_information_retrieval" ]]; then
+        "${SCRIPTS_DIR}/run_example" -s "${server}" -l "${language}" -e trusted_information_retrieval -- --location 0.0,0.0
     else
         "${SCRIPTS_DIR}/run_example" -s "${server}" -l "${language}" -e "${example}"
     fi
