@@ -17,7 +17,7 @@
 //! Functionality to help Oak Nodes interact with gRPC.
 
 use crate::OakError;
-use log::error;
+use log::{error, warn};
 use oak_abi::proto::google::rpc;
 pub use oak_abi::proto::{
     google::rpc::*,
@@ -155,12 +155,35 @@ impl<T: ServerNode> crate::Node<Invocation> for T {
     /// to be written to.
     ///
     /// [`invoke`]: ServerNode::invoke
-    fn handle_command(
-        &mut self,
-        invocation: Invocation,
-    ) -> std::result::Result<(), crate::OakError> {
+    fn handle_command(&mut self, invocation: Invocation) -> std::result::Result<(), OakError> {
+        let response_writer = ChannelResponseWriter::new(invocation.response_sender);
+
         // Read a single encapsulated request message from the read half.
-        let req: GrpcRequest = invocation.request_receiver.receive()?;
+        let req: GrpcRequest = invocation.request_receiver.receive().map_err(|err| {
+            // TODO(#1078): If it's clear that the issue is caused by a too restrictive label
+            // (permission denied), then return a more specific error to the gRPC client.
+            warn!(
+                "could not receive gRPC request from gRPC invocation: {}",
+                err
+            );
+            // If anything fails while reading the gRPC request, then at least try to send a
+            // gRPC error response back to the gRPC client, rather than just returning from this
+            // method with `?`, since otherwise that would leave the gRPC client hanging
+            // forever.
+            // If sending this gRPC request also fails, we just log the error here and discard it,
+            // but we still return the original error to the caller of this function.
+            if let Err(err) = response_writer.close(Result::Err(build_status(
+                rpc::Code::InvalidArgument,
+                "could not process gRPC request",
+            ))) {
+                warn!(
+                    "could not send gRPC error back to gRPC client through gRPC invocation: {}",
+                    err
+                );
+            };
+            err
+        })?;
+
         // Since we are expecting a single message, close the channel immediately.
         // This will change when we implement client streaming (#97).
         invocation.request_receiver.close()?;
@@ -168,11 +191,7 @@ impl<T: ServerNode> crate::Node<Invocation> for T {
             // TODO(#97): Implement client streaming.
             panic!("Support for streaming requests not yet implemented");
         }
-        self.invoke(
-            &req.method_name,
-            req.req_msg.as_slice(),
-            ChannelResponseWriter::new(invocation.response_sender),
-        );
+        self.invoke(&req.method_name, req.req_msg.as_slice(), response_writer);
         Ok(())
     }
 }

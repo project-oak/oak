@@ -18,7 +18,7 @@
 //! underlying Oak platform functionality.
 
 use byteorder::{ReadBytesExt, WriteBytesExt};
-use log::{debug, error, info, warn};
+use log::{debug, error, info, trace, warn};
 use oak_abi::proto::oak::application::NodeConfiguration;
 use prost::Message;
 use serde::{Deserialize, Serialize};
@@ -147,17 +147,29 @@ impl Handle {
 /// Wrapper for a handle to the read half of a channel.
 ///
 /// For use when the underlying [`Handle`] is known to be for a receive half.
-#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Copy, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ReadHandle {
     pub handle: Handle,
+}
+
+impl std::fmt::Debug for ReadHandle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "ReadHandle({})", self.handle.id)
+    }
 }
 
 /// Wrapper for a handle to the send half of a channel.
 ///
 /// For use when the underlying [`Handle`] is known to be for a send half.
-#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Copy, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WriteHandle {
     pub handle: Handle,
+}
+
+impl std::fmt::Debug for WriteHandle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "WriteHandle({})", self.handle.id)
+    }
 }
 
 // Build a chunk of memory that is suitable for passing to oak_abi::wait_on_channels,
@@ -472,11 +484,11 @@ pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(
     in_channel: crate::ReadHandle,
 ) {
     if !in_channel.handle.is_valid() {
-        error!("invalid input handle");
+        error!("{:?}: invalid input handle", in_channel);
         return;
     }
     let receiver = crate::io::Receiver::new(in_channel);
-    info!("starting event loop on handle {:?}", in_channel);
+    info!("{:?}: starting event loop", in_channel);
     loop {
         // First wait until a message is available. If the Node was terminated while waiting, this
         // will return `ErrTerminated`, which indicates that the event loop should be terminated.
@@ -488,38 +500,38 @@ pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(
                 match status {
                     ErrTerminated => {
                         info!(
-                            "received termination status: {:?}; terminating event loop",
-                            status
+                            "{:?}: received termination status: {:?}; terminating event loop",
+                            in_channel, status
                         );
                         return;
                     }
                     ErrBadHandle | ErrChannelClosed | ErrPermissionDenied => {
                         warn!(
-                            "non-transient error waiting for command: {:?}; terminating event loop",
+                            "{:?}: non-transient error waiting for command: {:?}; terminating event loop",
+                            in_channel,
                             status
                         );
                         return;
                     }
                     _ => {
-                        warn!("(possibly) transient error waiting for command: {:?}; continuing event loop", status);
+                        warn!("{:?}: (possibly) transient error waiting for command: {:?}; continuing event loop", in_channel, status);
                         continue;
                     }
                 }
             }
-            Ok(()) => {}
+            Ok(()) => {
+                trace!("{:?}: wait over", in_channel);
+            }
         }
         match receiver.try_receive() {
             Ok(command) => {
-                info!("received command on handle {:?}", in_channel);
+                info!("{:?}: received command", in_channel);
                 if let Err(err) = node.handle_command(command) {
-                    error!("error handling command: {}", err);
+                    error!("{:?}: error handling command: {}", in_channel, err);
                 }
             }
             Err(err) => {
-                error!(
-                    "error receiving command on handle {:?}: {}",
-                    in_channel, err
-                );
+                error!("{:?}: error receiving command: {}", in_channel, err);
             }
         }
     }
