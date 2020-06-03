@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+//! Roughtime client implementation to provide a source of trusted time.
+
 use futures::future::join_all;
 use log::{debug, info, warn};
 use roughenough::{
@@ -29,16 +31,22 @@ use tokio::{net::UdpSocket, runtime::Runtime, time::timeout};
 #[cfg(test)]
 mod tests;
 
+/// Time is given as microseconds since the UNIX epoch (00:00:00 UTC on 1 January 1970).
+/// Leap seconds are linearly smeared over a 24-hour period. That is, the smear extends from
+/// UTC noon to noon over 86,401 or 86,399 SI seconds, and all the smeared seconds are the same
+/// length.
+pub type MicrosSinceEpoch = u64;
+
 pub const DEFAULT_MIN_OVERLAPPING_INTERVALS: usize = 3;
-pub const DEFAULT_MAX_RADIUS_MICROSECONDS: u32 = 60000000;
+pub const DEFAULT_MAX_RADIUS_MICROSECONDS: u32 = 60_000_000;
 pub const DEFAULT_TIMEOUT_SECONDS: u64 = 3;
 pub const DEFAULT_SERVER_RETRIES: usize = 3;
 const MAX_RESPONSE_SIZE: usize = 1024;
 
 /// Specifies the details of a Roughtime server.
 ///
-/// Only UDP is supported as a protocol and ED25519 as a public key type.
-pub struct RoughtimeServerSpec {
+/// Only UDP is supported as a protocol and Ed25519 as a public key type.
+pub struct RoughtimeServer {
     /// The name of the Roughtime server.
     name: String,
     /// The address of the Roughtime server.
@@ -50,14 +58,9 @@ pub struct RoughtimeServerSpec {
 }
 
 /// A client for requesting Roughtime from multiple servers.
-///
-/// Time is given as microseconds since the UNIX epoch (00:00:00 UTC on 1 January 1970).
-/// Leap seconds are linearly smeared over a 24-hour period. That is, the smear extends from
-/// UTC noon to noon over 86,401 or 86,399 SI seconds, and all the smeared seconds are the same
-/// length.
 pub struct RoughtimeClient {
     /// The list of Roughtime servers to use.
-    servers: Vec<RoughtimeServerSpec>,
+    servers: Vec<RoughtimeServer>,
     /// The minimum number of intervals from different servers that must overlap for the response
     /// to be considered valid.
     min_overlapping_intervals: usize,
@@ -83,7 +86,7 @@ impl RoughtimeClient {
 
     /// Creates a new Roughtime client.
     pub fn new(
-        servers: Vec<RoughtimeServerSpec>,
+        servers: Vec<RoughtimeServer>,
         min_overlapping_intervals: usize,
         max_radius_microseconds: u32,
         timeout_seconds: u64,
@@ -102,7 +105,7 @@ impl RoughtimeClient {
     ///
     /// It is calculated as the midpoint of the first `min_overlapping_intervals` overlap between
     /// the intervals returned from the servers.
-    pub fn get_roughtime(&self) -> Result<u64, RoughtimeError> {
+    pub fn get_roughtime(&self) -> Result<MicrosSinceEpoch, RoughtimeError> {
         let mut runtime = Runtime::new()?;
         let intervals = runtime.block_on(self.get_intervals_from_all_servers());
         let result = self.find_overlap(&intervals)?;
@@ -159,7 +162,7 @@ impl RoughtimeClient {
     }
 
     /// Gets the Roughtime interval from a single server.
-    async fn get_interval_from_server(&self, server: &RoughtimeServerSpec) -> Option<Interval> {
+    async fn get_interval_from_server(&self, server: &RoughtimeServer) -> Option<Interval> {
         match self.get_roughtime_from_server(server).await {
             Ok(interval) => Some(interval),
             Err(error) => {
@@ -172,13 +175,16 @@ impl RoughtimeClient {
     /// Makes a Roughtime request to a server.
     async fn get_roughtime_from_server(
         &self,
-        server: &RoughtimeServerSpec,
+        server: &RoughtimeServer,
     ) -> Result<Interval, RoughtimeError> {
         let nonce = create_nonce()?;
         let request = make_request(&nonce)?;
         let mut failed_attempts = 0;
         let response = loop {
-            match self.send_roughtime_request(server, &request).await {
+            match server
+                .send_roughtime_request(&request, self.timeout_seconds)
+                .await
+            {
                 Err(RoughtimeError::TimeoutError) => {
                     failed_attempts += 1;
                     if failed_attempts >= self.server_retries {
@@ -220,14 +226,16 @@ impl RoughtimeClient {
             Err(RoughtimeError::InvalidSignature)
         }
     }
+}
 
+impl RoughtimeServer {
     /// Sends a request to a Roughtime server using UDP.
     async fn send_roughtime_request(
         &self,
-        server: &RoughtimeServerSpec,
         request: &[u8],
+        timeout_seconds: u64,
     ) -> Result<Vec<u8>, RoughtimeError> {
-        let remote_addr = (&server.host[..], server.port)
+        let remote_addr = (&self.host[..], self.port)
             .to_socket_addrs()?
             .next()
             .unwrap();
@@ -240,14 +248,9 @@ impl RoughtimeClient {
         .unwrap();
         let mut socket = UdpSocket::bind(local_address).await?;
         socket.connect(&remote_addr).await?;
-        match timeout(
-            Duration::from_secs(self.timeout_seconds),
-            socket.send(request),
-        )
-        .await
-        {
+        match timeout(Duration::from_secs(timeout_seconds), socket.send(request)).await {
             Err(error) => {
-                warn!("Timed out sending request to {}: {}", server.name, error);
+                warn!("Timed out sending request to {}: {}", self.name, error);
                 return Err(RoughtimeError::TimeoutError);
             }
             Ok(result) => {
@@ -255,17 +258,9 @@ impl RoughtimeClient {
             }
         }
         let mut data = vec![0u8; MAX_RESPONSE_SIZE];
-        match timeout(
-            Duration::from_secs(self.timeout_seconds),
-            socket.recv(&mut data),
-        )
-        .await
-        {
+        match timeout(Duration::from_secs(timeout_seconds), socket.recv(&mut data)).await {
             Err(error) => {
-                warn!(
-                    "Timed out receiving response from {}: {}",
-                    server.name, error
-                );
+                warn!("Timed out receiving response from {}: {}", self.name, error);
                 return Err(RoughtimeError::TimeoutError);
             }
             Ok(result) => {
@@ -275,44 +270,43 @@ impl RoughtimeClient {
         Ok(data)
     }
 }
-
 /// Gets the default Roughtime servers in the ecosystem.
 ///
 /// Based on
 /// https://github.com/cloudflare/roughtime/blob/569dc6f5119970035fe0a008b83398d59363ed45/ecosystem.json
-pub fn get_default_servers() -> Vec<RoughtimeServerSpec> {
+pub fn get_default_servers() -> Vec<RoughtimeServer> {
     vec![
-        RoughtimeServerSpec {
+        RoughtimeServer {
             name: "Caesium".to_owned(),
             host: "caesium.tannerryan.ca".to_owned(),
             port: 2002,
             public_key_base64: "iBVjxg/1j7y1+kQUTBYdTabxCppesU/07D4PMDJk2WA=".to_owned(),
         },
-        RoughtimeServerSpec {
+        RoughtimeServer {
             name: "Chainpoint-Roughtime".to_owned(),
             host: "roughtime.chainpoint.org".to_owned(),
             port: 2002,
             public_key_base64: "bbT+RPS7zKX6w71ssPibzmwWqU9ffRV5oj2OresSmhE=".to_owned(),
         },
-        RoughtimeServerSpec {
+        RoughtimeServer {
             name: "Cloudflare-Roughtime".to_owned(),
             host: "roughtime.cloudflare.com".to_owned(),
             port: 2002,
             public_key_base64: "gD63hSj3ScS+wuOeGrubXlq35N1c5Lby/S+T7MNTjxo=".to_owned(),
         },
-        RoughtimeServerSpec {
+        RoughtimeServer {
             name: "Google-Sandbox-Roughtime".to_owned(),
             host: "roughtime.sandbox.google.com".to_owned(),
             port: 2002,
             public_key_base64: "etPaaIxcBMY1oUeGpwvPMCJMwlRVNxv51KK/tktoJTQ=".to_owned(),
         },
-        RoughtimeServerSpec {
+        RoughtimeServer {
             name: "int08h-Roughtime".to_owned(),
             host: "roughtime.int08h.com".to_owned(),
             port: 2002,
             public_key_base64: "AW5uAoTSTDfG5NfY1bTh08GUnOqlRb+HVhbJ3ODJvsE=".to_owned(),
         },
-        RoughtimeServerSpec {
+        RoughtimeServer {
             name: "ticktock".to_owned(),
             host: "ticktock.mixmin.net".to_owned(),
             port: 5333,
@@ -378,6 +372,6 @@ impl From<base64::DecodeError> for RoughtimeError {
 /// Both `min` and `max` are interpreted as microseconds since the UNIX epoch.
 #[derive(Clone, Debug, PartialEq)]
 struct Interval {
-    min: u64,
-    max: u64,
+    min: MicrosSinceEpoch,
+    max: MicrosSinceEpoch,
 }

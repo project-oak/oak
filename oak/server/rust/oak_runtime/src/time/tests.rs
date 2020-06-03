@@ -15,8 +15,6 @@
 //
 
 use super::*;
-use crate::runtime::tests::init_logging;
-use std::time::SystemTime;
 
 // Implements PartialEq to simplify testing assertions.
 impl PartialEq for RoughtimeError {
@@ -184,26 +182,5 @@ fn test_invalid_overlap_inverted_intervals() {
             expected: 3
         }),
         result
-    );
-}
-
-#[test]
-#[ignore]
-/// Gets Roughtime from the live default servers with the default settings.
-///
-/// This requires an internet connection and at least 3 of the default servers to be operational and
-/// accessible.
-fn test_get_roughtime_live() {
-    init_logging();
-    let client = RoughtimeClient::default();
-    let roughtime: u128 = client.get_roughtime().unwrap().into();
-    let current = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap()
-        .as_micros();
-
-    assert!(
-        roughtime.saturating_sub(DEFAULT_MAX_RADIUS_MICROSECONDS.into()) <= current
-            && roughtime.saturating_add(DEFAULT_MAX_RADIUS_MICROSECONDS.into()) >= current
     );
 }

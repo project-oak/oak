@@ -46,12 +46,20 @@ pub struct ParsedResponse {
 }
 
 /// Decodes, parses and validates Roughtime responses.
+///
+/// See https://roughtime.googlesource.com/roughtime/+/HEAD/PROTOCOL.md#processing-a-response
 pub struct ResponseHandler {
+    /// The 256-bit Ed25519 public key for validating the signature.
     pub_key: Vec<u8>,
+    /// The entire parsed message.
     msg: HashMap<Tag, Vec<u8>>,
+    /// The response.
     srep: HashMap<Tag, Vec<u8>>,
+    /// The full extracted certificate.
     cert: HashMap<Tag, Vec<u8>>,
+    /// The delegated key contained in the certificate
     dele: HashMap<Tag, Vec<u8>>,
+    /// The nonce sent in the original request.
     nonce: [u8; 64],
 }
 
