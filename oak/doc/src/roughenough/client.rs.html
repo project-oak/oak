@@ -286,13 +286,6 @@
 <span id="286">286</span>
 <span id="287">287</span>
 <span id="288">288</span>
-<span id="289">289</span>
-<span id="290">290</span>
-<span id="291">291</span>
-<span id="292">292</span>
-<span id="293">293</span>
-<span id="294">294</span>
-<span id="295">295</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright 2017-2019 int08h LLC</span>
 
@@ -309,7 +302,7 @@
 <span class="comment">// limitations under the License.</span>
 
 <span class="kw">use</span> <span class="kw">super</span>::{
-    <span class="ident">merkle</span>::<span class="ident">root_from_paths</span>, <span class="ident">sign</span>::<span class="ident">Verifier</span>, <span class="ident">RtMessage</span>, <span class="ident">Tag</span>, <span class="ident">CERTIFICATE_CONTEXT</span>,
+    <span class="ident">merkle</span>::<span class="ident">root_from_paths</span>, <span class="ident">sign</span>::<span class="ident">Verifier</span>, <span class="ident">Error</span>, <span class="ident">RtMessage</span>, <span class="ident">Tag</span>, <span class="ident">CERTIFICATE_CONTEXT</span>,
     <span class="ident">SIGNED_RESPONSE_CONTEXT</span>,
 };
 <span class="kw">use</span> <span class="ident">byteorder</span>::{<span class="ident">LittleEndian</span>, <span class="ident">ReadBytesExt</span>};
@@ -317,21 +310,21 @@
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">HashMap</span>;
 
 <span class="doccomment">/// Creates a 64 byte nonce.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_nonce</span>() <span class="op">-</span><span class="op">&gt;</span> [<span class="ident">u8</span>; <span class="number">64</span>] {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_nonce</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>[<span class="ident">u8</span>; <span class="number">64</span>], <span class="ident">Error</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">rand</span>::<span class="ident">SystemRandom</span>::<span class="ident">new</span>();
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">nonce</span> <span class="op">=</span> [<span class="number">0u8</span>; <span class="number">64</span>];
-    <span class="ident">rng</span>.<span class="ident">fill</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">nonce</span>).<span class="ident">unwrap</span>();
+    <span class="ident">rng</span>.<span class="ident">fill</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">nonce</span>)<span class="question-mark">?</span>;
 
-    <span class="ident">nonce</span>
+    <span class="prelude-val">Ok</span>(<span class="ident">nonce</span>)
 }
 
 <span class="doccomment">/// Converts a nonce to a Roughtime request.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">make_request</span>(<span class="ident">nonce</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">make_request</span>(<span class="ident">nonce</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">msg</span> <span class="op">=</span> <span class="ident">RtMessage</span>::<span class="ident">new</span>(<span class="number">1</span>);
-    <span class="ident">msg</span>.<span class="ident">add_field</span>(<span class="ident">Tag</span>::<span class="ident">NONC</span>, <span class="ident">nonce</span>).<span class="ident">unwrap</span>();
+    <span class="ident">msg</span>.<span class="ident">add_field</span>(<span class="ident">Tag</span>::<span class="ident">NONC</span>, <span class="ident">nonce</span>)<span class="question-mark">?</span>;
     <span class="ident">msg</span>.<span class="ident">pad_to_kilobyte</span>();
 
-    <span class="ident">msg</span>.<span class="ident">encode</span>().<span class="ident">unwrap</span>()
+    <span class="ident">msg</span>.<span class="ident">encode</span>()
 }
 
 <span class="doccomment">/// The parsed data extracted from a Roughtime response.</span>
@@ -342,73 +335,69 @@
 }
 
 <span class="doccomment">/// Decodes, parses and validates Roughtime responses.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// See https://roughtime.googlesource.com/roughtime/+/HEAD/PROTOCOL.md#processing-a-response</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ResponseHandler</span> {
-    <span class="ident">pub_key</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// The 256-bit Ed25519 public key for validating the signature.</span>
+    <span class="ident">pub_key</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// The entire parsed message.</span>
     <span class="ident">msg</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">Tag</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// The response.</span>
     <span class="ident">srep</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">Tag</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// The full extracted certificate.</span>
     <span class="ident">cert</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">Tag</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// The delegated key contained in the certificate</span>
     <span class="ident">dele</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">Tag</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// The nonce sent in the original request.</span>
     <span class="ident">nonce</span>: [<span class="ident">u8</span>; <span class="number">64</span>],
 }
 
 <span class="kw">impl</span> <span class="ident">ResponseHandler</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">pub_key</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">response</span>: <span class="ident">RtMessage</span>, <span class="ident">nonce</span>: [<span class="ident">u8</span>; <span class="number">64</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">ResponseHandler</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
+        <span class="ident">pub_key</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+        <span class="ident">response</span>: <span class="ident">RtMessage</span>,
+        <span class="ident">nonce</span>: [<span class="ident">u8</span>; <span class="number">64</span>],
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ResponseHandler</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="ident">response</span>.<span class="ident">into_hash_map</span>();
-        <span class="kw">let</span> <span class="ident">srep</span> <span class="op">=</span> <span class="ident">RtMessage</span>::<span class="ident">from_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">msg</span>[<span class="kw-2">&amp;</span><span class="ident">Tag</span>::<span class="ident">SREP</span>])
-            .<span class="ident">unwrap</span>()
-            .<span class="ident">into_hash_map</span>();
-        <span class="kw">let</span> <span class="ident">cert</span> <span class="op">=</span> <span class="ident">RtMessage</span>::<span class="ident">from_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">msg</span>[<span class="kw-2">&amp;</span><span class="ident">Tag</span>::<span class="ident">CERT</span>])
-            .<span class="ident">unwrap</span>()
-            .<span class="ident">into_hash_map</span>();
-        <span class="kw">let</span> <span class="ident">dele</span> <span class="op">=</span> <span class="ident">RtMessage</span>::<span class="ident">from_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">cert</span>[<span class="kw-2">&amp;</span><span class="ident">Tag</span>::<span class="ident">DELE</span>])
-            .<span class="ident">unwrap</span>()
-            .<span class="ident">into_hash_map</span>();
+        <span class="kw">let</span> <span class="ident">srep</span> <span class="op">=</span> <span class="ident">RtMessage</span>::<span class="ident">from_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">msg</span>[<span class="kw-2">&amp;</span><span class="ident">Tag</span>::<span class="ident">SREP</span>])<span class="question-mark">?</span>.<span class="ident">into_hash_map</span>();
+        <span class="kw">let</span> <span class="ident">cert</span> <span class="op">=</span> <span class="ident">RtMessage</span>::<span class="ident">from_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">msg</span>[<span class="kw-2">&amp;</span><span class="ident">Tag</span>::<span class="ident">CERT</span>])<span class="question-mark">?</span>.<span class="ident">into_hash_map</span>();
+        <span class="kw">let</span> <span class="ident">dele</span> <span class="op">=</span> <span class="ident">RtMessage</span>::<span class="ident">from_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">cert</span>[<span class="kw-2">&amp;</span><span class="ident">Tag</span>::<span class="ident">DELE</span>])<span class="question-mark">?</span>.<span class="ident">into_hash_map</span>();
 
-        <span class="ident">ResponseHandler</span> {
+        <span class="prelude-val">Ok</span>(<span class="ident">ResponseHandler</span> {
             <span class="ident">pub_key</span>,
             <span class="ident">msg</span>,
             <span class="ident">srep</span>,
             <span class="ident">cert</span>,
             <span class="ident">dele</span>,
             <span class="ident">nonce</span>,
-        }
+        })
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">extract_time</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">ParsedResponse</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">extract_time</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ParsedResponse</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">midpoint</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">srep</span>[<span class="kw-2">&amp;</span><span class="ident">Tag</span>::<span class="ident">MIDP</span>]
             .<span class="ident">as_slice</span>()
-            .<span class="ident">read_u64</span>::<span class="op">&lt;</span><span class="ident">LittleEndian</span><span class="op">&gt;</span>()
-            .<span class="ident">unwrap</span>();
+            .<span class="ident">read_u64</span>::<span class="op">&lt;</span><span class="ident">LittleEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">radius</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">srep</span>[<span class="kw-2">&amp;</span><span class="ident">Tag</span>::<span class="ident">RADI</span>]
             .<span class="ident">as_slice</span>()
-            .<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">LittleEndian</span><span class="op">&gt;</span>()
-            .<span class="ident">unwrap</span>();
+            .<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">LittleEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">verified</span> <span class="op">=</span> <span class="kw">if</span> <span class="self">self</span>.<span class="ident">pub_key</span>.<span class="ident">is_some</span>() {
-            <span class="self">self</span>.<span class="ident">validate_dele</span>()
-                <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="self">self</span>.<span class="ident">validate_srep</span>()
-                <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="self">self</span>.<span class="ident">validate_merkle</span>()
-                <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="self">self</span>.<span class="ident">validate_midpoint</span>(<span class="ident">midpoint</span>)
-        } <span class="kw">else</span> {
-            <span class="bool-val">false</span>
-        };
+        <span class="kw">let</span> <span class="ident">verified</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">validate_dele</span>()<span class="question-mark">?</span>
+            <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="self">self</span>.<span class="ident">validate_srep</span>()
+            <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="self">self</span>.<span class="ident">validate_merkle</span>()<span class="question-mark">?</span>
+            <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="self">self</span>.<span class="ident">validate_midpoint</span>(<span class="ident">midpoint</span>)<span class="question-mark">?</span>;
 
-        <span class="ident">ParsedResponse</span> {
+        <span class="prelude-val">Ok</span>(<span class="ident">ParsedResponse</span> {
             <span class="ident">verified</span>,
             <span class="ident">midpoint</span>,
             <span class="ident">radius</span>,
-        }
+        })
     }
 
-    <span class="kw">fn</span> <span class="ident">validate_dele</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
+    <span class="kw">fn</span> <span class="ident">validate_dele</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">bool</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">full_cert</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">from</span>(<span class="ident">CERTIFICATE_CONTEXT</span>.<span class="ident">as_bytes</span>());
         <span class="ident">full_cert</span>.<span class="ident">extend</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">cert</span>[<span class="kw-2">&amp;</span><span class="ident">Tag</span>::<span class="ident">DELE</span>]);
 
-        <span class="self">self</span>.<span class="ident">validate_sig</span>(
-            <span class="self">self</span>.<span class="ident">pub_key</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>(),
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">cert</span>[<span class="kw-2">&amp;</span><span class="ident">Tag</span>::<span class="ident">SIG</span>],
-            <span class="kw-2">&amp;</span><span class="ident">full_cert</span>,
-        )
+        <span class="prelude-val">Ok</span>(<span class="self">self</span>.<span class="ident">validate_sig</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">pub_key</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">cert</span>[<span class="kw-2">&amp;</span><span class="ident">Tag</span>::<span class="ident">SIG</span>], <span class="kw-2">&amp;</span><span class="ident">full_cert</span>))
     }
 
     <span class="kw">fn</span> <span class="ident">validate_srep</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
@@ -418,31 +407,24 @@
         <span class="self">self</span>.<span class="ident">validate_sig</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">dele</span>[<span class="kw-2">&amp;</span><span class="ident">Tag</span>::<span class="ident">PUBK</span>], <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">msg</span>[<span class="kw-2">&amp;</span><span class="ident">Tag</span>::<span class="ident">SIG</span>], <span class="kw-2">&amp;</span><span class="ident">full_srep</span>)
     }
 
-    <span class="kw">fn</span> <span class="ident">validate_merkle</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
-        <span class="kw">let</span> <span class="ident">srep</span> <span class="op">=</span> <span class="ident">RtMessage</span>::<span class="ident">from_bytes</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">msg</span>[<span class="kw-2">&amp;</span><span class="ident">Tag</span>::<span class="ident">SREP</span>])
-            .<span class="ident">unwrap</span>()
-            .<span class="ident">into_hash_map</span>();
-        <span class="kw">let</span> <span class="ident">index</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">msg</span>[<span class="kw-2">&amp;</span><span class="ident">Tag</span>::<span class="ident">INDX</span>]
-            .<span class="ident">as_slice</span>()
-            .<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">LittleEndian</span><span class="op">&gt;</span>()
-            .<span class="ident">unwrap</span>();
+    <span class="kw">fn</span> <span class="ident">validate_merkle</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">bool</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">srep</span> <span class="op">=</span> <span class="ident">RtMessage</span>::<span class="ident">from_bytes</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">msg</span>[<span class="kw-2">&amp;</span><span class="ident">Tag</span>::<span class="ident">SREP</span>])<span class="question-mark">?</span>.<span class="ident">into_hash_map</span>();
+        <span class="kw">let</span> <span class="ident">index</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">msg</span>[<span class="kw-2">&amp;</span><span class="ident">Tag</span>::<span class="ident">INDX</span>].<span class="ident">as_slice</span>().<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">LittleEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">paths</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">msg</span>[<span class="kw-2">&amp;</span><span class="ident">Tag</span>::<span class="ident">PATH</span>];
 
         <span class="kw">let</span> <span class="ident">hash</span> <span class="op">=</span> <span class="ident">root_from_paths</span>(<span class="ident">index</span> <span class="kw">as</span> <span class="ident">usize</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">nonce</span>, <span class="ident">paths</span>);
 
-        <span class="ident">hash</span> <span class="op">=</span><span class="op">=</span> <span class="ident">srep</span>[<span class="kw-2">&amp;</span><span class="ident">Tag</span>::<span class="ident">ROOT</span>]
+        <span class="prelude-val">Ok</span>(<span class="ident">hash</span> <span class="op">=</span><span class="op">=</span> <span class="ident">srep</span>[<span class="kw-2">&amp;</span><span class="ident">Tag</span>::<span class="ident">ROOT</span>])
     }
 
-    <span class="kw">fn</span> <span class="ident">validate_midpoint</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">midpoint</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
+    <span class="kw">fn</span> <span class="ident">validate_midpoint</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">midpoint</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">bool</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">mint</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">dele</span>[<span class="kw-2">&amp;</span><span class="ident">Tag</span>::<span class="ident">MINT</span>]
             .<span class="ident">as_slice</span>()
-            .<span class="ident">read_u64</span>::<span class="op">&lt;</span><span class="ident">LittleEndian</span><span class="op">&gt;</span>()
-            .<span class="ident">unwrap</span>();
+            .<span class="ident">read_u64</span>::<span class="op">&lt;</span><span class="ident">LittleEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">maxt</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">dele</span>[<span class="kw-2">&amp;</span><span class="ident">Tag</span>::<span class="ident">MAXT</span>]
             .<span class="ident">as_slice</span>()
-            .<span class="ident">read_u64</span>::<span class="op">&lt;</span><span class="ident">LittleEndian</span><span class="op">&gt;</span>()
-            .<span class="ident">unwrap</span>();
-        <span class="ident">midpoint</span> <span class="op">&gt;</span><span class="op">=</span> <span class="ident">mint</span> <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="ident">midpoint</span> <span class="op">&lt;</span><span class="op">=</span> <span class="ident">maxt</span>
+            .<span class="ident">read_u64</span>::<span class="op">&lt;</span><span class="ident">LittleEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="ident">midpoint</span> <span class="op">&gt;</span><span class="op">=</span> <span class="ident">mint</span> <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="ident">midpoint</span> <span class="op">&lt;</span><span class="op">=</span> <span class="ident">maxt</span>)
     }
 
     <span class="kw">fn</span> <span class="ident">validate_sig</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">public_key</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">sig</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
@@ -491,11 +473,13 @@
             <span class="ident">midpoint</span>,
             <span class="ident">radius</span>,
         } <span class="op">=</span> <span class="ident">ResponseHandler</span>::<span class="ident">new</span>(
-            <span class="prelude-val">Some</span>(<span class="ident">public_key</span>),
+            <span class="ident">public_key</span>,
             <span class="ident">RtMessage</span>::<span class="ident">from_bytes</span>(<span class="ident">response</span>.<span class="ident">as_ref</span>()).<span class="ident">unwrap</span>(),
             <span class="ident">nonce</span>.<span class="ident">to_owned</span>(),
         )
-        .<span class="ident">extract_time</span>();
+        .<span class="ident">unwrap</span>()
+        .<span class="ident">extract_time</span>()
+        .<span class="ident">unwrap</span>();
         <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">verified</span>);
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">midpoint</span>, <span class="number">1590678436491959</span>);
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">radius</span>, <span class="number">1000000</span>);
@@ -532,11 +516,13 @@
             <span class="ident">midpoint</span>,
             <span class="ident">radius</span>,
         } <span class="op">=</span> <span class="ident">ResponseHandler</span>::<span class="ident">new</span>(
-            <span class="prelude-val">Some</span>(<span class="ident">public_key</span>),
+            <span class="ident">public_key</span>,
             <span class="ident">RtMessage</span>::<span class="ident">from_bytes</span>(<span class="ident">response</span>.<span class="ident">as_ref</span>()).<span class="ident">unwrap</span>(),
             <span class="ident">nonce</span>.<span class="ident">to_owned</span>(),
         )
-        .<span class="ident">extract_time</span>();
+        .<span class="ident">unwrap</span>()
+        .<span class="ident">extract_time</span>()
+        .<span class="ident">unwrap</span>();
 
         <span class="macro">assert</span><span class="macro">!</span>(<span class="op">!</span><span class="ident">verified</span>);
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">midpoint</span>, <span class="number">1590678436491959</span>);
@@ -585,7 +571,7 @@
              0000000000000000000000000000000000000000000000000000000000000000&quot;</span>,
         )
         .<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">make_request</span>(<span class="ident">nonce</span>.<span class="ident">as_ref</span>());
+        <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">make_request</span>(<span class="ident">nonce</span>.<span class="ident">as_ref</span>()).<span class="ident">unwrap</span>();
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">request</span>, <span class="ident">expected_request</span>);
     }
 }
