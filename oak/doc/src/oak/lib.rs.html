@@ -615,6 +615,9 @@
 <span id="615">615</span>
 <span id="616">616</span>
 <span id="617">617</span>
+<span id="618">618</span>
+<span id="619">619</span>
+<span id="620">620</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -1094,7 +1097,7 @@
         <span class="kw">return</span>;
     }
     <span class="kw">let</span> <span class="ident">receiver</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">Receiver</span>::<span class="ident">new</span>(<span class="ident">in_channel</span>);
-    <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;starting event loop&quot;</span>);
+    <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;starting event loop on handle {:?}&quot;</span>, <span class="ident">in_channel</span>);
     <span class="kw">loop</span> {
         <span class="comment">// First wait until a message is available. If the Node was terminated while waiting, this</span>
         <span class="comment">// will return `ErrTerminated`, which indicates that the event loop should be terminated.</span>
@@ -1111,7 +1114,7 @@
                         );
                         <span class="kw">return</span>;
                     }
-                    <span class="ident">ErrBadHandle</span> <span class="op">|</span> <span class="ident">ErrChannelClosed</span> <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="ident">ErrBadHandle</span> <span class="op">|</span> <span class="ident">ErrChannelClosed</span> <span class="op">|</span> <span class="ident">ErrPermissionDenied</span> <span class="op">=</span><span class="op">&gt;</span> {
                         <span class="macro">warn</span><span class="macro">!</span>(
                             <span class="string">&quot;non-transient error waiting for command: {:?}; terminating event loop&quot;</span>,
                             <span class="ident">status</span>
@@ -1128,13 +1131,16 @@
         }
         <span class="kw">match</span> <span class="ident">receiver</span>.<span class="ident">try_receive</span>() {
             <span class="prelude-val">Ok</span>(<span class="ident">command</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;received command&quot;</span>);
+                <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;received command on handle {:?}&quot;</span>, <span class="ident">in_channel</span>);
                 <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">node</span>.<span class="ident">handle_command</span>(<span class="ident">command</span>) {
                     <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;error handling command: {}&quot;</span>, <span class="ident">err</span>);
                 }
             }
             <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;error receiving command: {}&quot;</span>, <span class="ident">err</span>);
+                <span class="macro">error</span><span class="macro">!</span>(
+                    <span class="string">&quot;error receiving command on handle {:?}: {}&quot;</span>,
+                    <span class="ident">in_channel</span>, <span class="ident">err</span>
+                );
             }
         }
     }

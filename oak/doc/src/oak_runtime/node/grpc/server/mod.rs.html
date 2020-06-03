@@ -433,6 +433,86 @@
 <span id="433">433</span>
 <span id="434">434</span>
 <span id="435">435</span>
+<span id="436">436</span>
+<span id="437">437</span>
+<span id="438">438</span>
+<span id="439">439</span>
+<span id="440">440</span>
+<span id="441">441</span>
+<span id="442">442</span>
+<span id="443">443</span>
+<span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
+<span id="447">447</span>
+<span id="448">448</span>
+<span id="449">449</span>
+<span id="450">450</span>
+<span id="451">451</span>
+<span id="452">452</span>
+<span id="453">453</span>
+<span id="454">454</span>
+<span id="455">455</span>
+<span id="456">456</span>
+<span id="457">457</span>
+<span id="458">458</span>
+<span id="459">459</span>
+<span id="460">460</span>
+<span id="461">461</span>
+<span id="462">462</span>
+<span id="463">463</span>
+<span id="464">464</span>
+<span id="465">465</span>
+<span id="466">466</span>
+<span id="467">467</span>
+<span id="468">468</span>
+<span id="469">469</span>
+<span id="470">470</span>
+<span id="471">471</span>
+<span id="472">472</span>
+<span id="473">473</span>
+<span id="474">474</span>
+<span id="475">475</span>
+<span id="476">476</span>
+<span id="477">477</span>
+<span id="478">478</span>
+<span id="479">479</span>
+<span id="480">480</span>
+<span id="481">481</span>
+<span id="482">482</span>
+<span id="483">483</span>
+<span id="484">484</span>
+<span id="485">485</span>
+<span id="486">486</span>
+<span id="487">487</span>
+<span id="488">488</span>
+<span id="489">489</span>
+<span id="490">490</span>
+<span id="491">491</span>
+<span id="492">492</span>
+<span id="493">493</span>
+<span id="494">494</span>
+<span id="495">495</span>
+<span id="496">496</span>
+<span id="497">497</span>
+<span id="498">498</span>
+<span id="499">499</span>
+<span id="500">500</span>
+<span id="501">501</span>
+<span id="502">502</span>
+<span id="503">503</span>
+<span id="504">504</span>
+<span id="505">505</span>
+<span id="506">506</span>
+<span id="507">507</span>
+<span id="508">508</span>
+<span id="509">509</span>
+<span id="510">510</span>
+<span id="511">511</span>
+<span id="512">512</span>
+<span id="513">513</span>
+<span id="514">514</span>
+<span id="515">515</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -461,7 +541,7 @@
     <span class="ident">runtime</span>::<span class="ident">RuntimeProxy</span>,
 };
 <span class="kw">use</span> <span class="ident">hyper</span>::<span class="ident">service</span>::<span class="ident">Service</span>;
-<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">error</span>, <span class="ident">info</span>};
+<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">error</span>, <span class="ident">info</span>, <span class="ident">warn</span>};
 <span class="kw">use</span> <span class="ident">oak_abi</span>::{
     <span class="ident">label</span>::<span class="ident">Label</span>,
     <span class="ident">proto</span>::<span class="ident">oak</span>::{
@@ -478,11 +558,19 @@
 <span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">sync</span>::<span class="ident">oneshot</span>;
 <span class="kw">use</span> <span class="ident">tonic</span>::{
     <span class="ident">codegen</span>::<span class="ident">BoxFuture</span>,
+    <span class="ident">metadata</span>::<span class="ident">MetadataMap</span>,
     <span class="ident">server</span>::{<span class="ident">Grpc</span>, <span class="ident">UnaryService</span>},
     <span class="ident">transport</span>::{<span class="ident">Identity</span>, <span class="ident">NamedService</span>},
 };
 
 <span class="kw">mod</span> <span class="ident">auth</span>;
+
+<span class="comment">// The `-bin` suffix allows sending binary data for this metadata key.</span>
+<span class="comment">//</span>
+<span class="comment">// See https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md.</span>
+<span class="comment">//</span>
+<span class="comment">// Keep in sync with /oak/common/label.cc.</span>
+<span class="kw">const</span> <span class="ident">OAK_LABEL_GRPC_METADATA_KEY</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;x-oak-label-bin&quot;</span>;
 
 <span class="doccomment">/// Struct that represents a gRPC server pseudo-Node.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GrpcServerNode</span> {
@@ -672,15 +760,16 @@
             <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">clone</span>(),
             <span class="self">self</span>.<span class="ident">writer</span>,
             <span class="ident">request</span>.<span class="ident">uri</span>().<span class="ident">path</span>().<span class="ident">to_string</span>(),
+            <span class="ident">MetadataMap</span>::<span class="ident">from_headers</span>(<span class="ident">request</span>.<span class="ident">headers</span>().<span class="ident">clone</span>()),
         );
 
         <span class="kw">let</span> <span class="ident">method_name</span> <span class="op">=</span> <span class="ident">request</span>.<span class="ident">uri</span>().<span class="ident">path</span>().<span class="ident">to_string</span>();
         <span class="kw">let</span> <span class="ident">metrics_data</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">metrics_data</span>();
         <span class="kw">let</span> <span class="ident">future</span> <span class="op">=</span> <span class="kw">async</span> <span class="kw">move</span> {
-            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Processing an HTTP/2 request: {:?}&quot;</span>, <span class="ident">request</span>);
+            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Processing HTTP/2 request: {:?}&quot;</span>, <span class="ident">request</span>);
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">grpc_service</span> <span class="op">=</span> <span class="ident">Grpc</span>::<span class="ident">new</span>(<span class="ident">VecCodec</span>::<span class="ident">default</span>());
             <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">grpc_service</span>.<span class="ident">unary</span>(<span class="ident">grpc_handler</span>, <span class="ident">request</span>).<span class="kw">await</span>;
-            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Sending an HTTP/2 response: {:?}&quot;</span>, <span class="ident">response</span>);
+            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Sending HTTP/2 response: {:?}&quot;</span>, <span class="ident">response</span>);
             <span class="kw">let</span> <span class="ident">stc</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">response</span>.<span class="ident">status</span>());
             <span class="ident">metrics_data</span>
                 .<span class="ident">grpc_server_metrics</span>
@@ -694,6 +783,60 @@
     }
 }
 
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">OakLabelError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">tonic</span>::<span class="ident">Status</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">v</span>: <span class="ident">OakLabelError</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="kw">match</span> <span class="ident">v</span> {
+            <span class="ident">OakLabelError</span>::<span class="ident">MissingLabel</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">tonic</span>::<span class="ident">Status</span>::<span class="ident">invalid_argument</span>(<span class="string">&quot;Missing Oak Label&quot;</span>),
+            <span class="ident">OakLabelError</span>::<span class="ident">MultipleLabels</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">tonic</span>::<span class="ident">Status</span>::<span class="ident">invalid_argument</span>(<span class="string">&quot;Multiple Oak Labels&quot;</span>),
+            <span class="ident">OakLabelError</span>::<span class="ident">InvalidLabel</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">tonic</span>::<span class="ident">Status</span>::<span class="ident">invalid_argument</span>(<span class="string">&quot;Invalid Oak Label&quot;</span>),
+        }
+    }
+}
+
+<span class="kw">enum</span> <span class="ident">OakLabelError</span> {
+    <span class="ident">MissingLabel</span>,
+    <span class="ident">MultipleLabels</span>,
+    <span class="ident">InvalidLabel</span>,
+}
+
+<span class="doccomment">/// Returns the [`Label`] defined as part of the the metadata of an incoming gRPC request.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// Returns an error if there is not exactly one label specified by the caller:</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// - no labels means that the caller did not specify any IFC restrictions, which is probably a</span>
+<span class="doccomment">///   mistake</span>
+<span class="doccomment">/// - more than one labels means that the caller specified multiple IFC restrictions; if the</span>
+<span class="doccomment">///   intention was to allow multiple alternative ones, they need to be combined in a single label,</span>
+<span class="doccomment">///   once conjunctions are supported</span>
+<span class="kw">fn</span> <span class="ident">get_oak_label</span>(<span class="ident">metadata_map</span>: <span class="kw-2">&amp;</span><span class="ident">MetadataMap</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Label</span>, <span class="ident">OakLabelError</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">labels</span> <span class="op">=</span> <span class="ident">metadata_map</span>
+        .<span class="ident">get_all_bin</span>(<span class="ident">OAK_LABEL_GRPC_METADATA_KEY</span>)
+        .<span class="ident">iter</span>()
+        .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+    <span class="kw">if</span> <span class="ident">labels</span>.<span class="ident">is_empty</span>() {
+        <span class="macro">warn</span><span class="macro">!</span>(
+            <span class="string">&quot;incorrect number of gRPC labels found: {}, expected: 1&quot;</span>,
+            <span class="ident">labels</span>.<span class="ident">len</span>()
+        );
+        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakLabelError</span>::<span class="ident">MissingLabel</span>);
+    }
+    <span class="kw">if</span> <span class="ident">labels</span>.<span class="ident">len</span>() <span class="op">&gt;</span><span class="op">=</span> <span class="number">2</span> {
+        <span class="macro">warn</span><span class="macro">!</span>(
+            <span class="string">&quot;incorrect number of gRPC labels found: {}, expected: 1&quot;</span>,
+            <span class="ident">labels</span>.<span class="ident">len</span>()
+        );
+        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakLabelError</span>::<span class="ident">MultipleLabels</span>);
+    }
+    <span class="kw">let</span> <span class="ident">label_bytes</span> <span class="op">=</span> <span class="ident">labels</span>[<span class="number">0</span>].<span class="ident">to_bytes</span>().<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+        <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;could not convert gRPC label to bytes: {}&quot;</span>, <span class="ident">err</span>);
+        <span class="ident">OakLabelError</span>::<span class="ident">InvalidLabel</span>
+    })<span class="question-mark">?</span>;
+    <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">label</span>::<span class="ident">Label</span>::<span class="ident">decode</span>(<span class="ident">label_bytes</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+        <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;could not parse gRPC label: {}&quot;</span>, <span class="ident">err</span>);
+        <span class="ident">OakLabelError</span>::<span class="ident">InvalidLabel</span>
+    })
+}
+
 <span class="doccomment">/// [`GrpcRequestHandler`] handles gRPC requests and generates gRPC responses.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
 <span class="kw">struct</span> <span class="ident">GrpcRequestHandler</span> {
@@ -703,6 +846,7 @@
     <span class="ident">writer</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
     <span class="doccomment">/// Name of the gRPC method that should be invoked.</span>
     <span class="ident">method_name</span>: <span class="ident">String</span>,
+    <span class="ident">metadata_map</span>: <span class="ident">MetadataMap</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">UnaryService</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">GrpcRequestHandler</span> {
@@ -711,9 +855,12 @@
 
     <span class="kw">fn</span> <span class="ident">call</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">request</span>: <span class="ident">tonic</span>::<span class="ident">Request</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>::<span class="ident">Future</span> {
         <span class="kw">let</span> <span class="ident">handler</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">clone</span>();
+
+        <span class="kw">let</span> <span class="ident">oak_label_result</span> <span class="op">=</span> <span class="ident">get_oak_label</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">metadata_map</span>);
+
         <span class="kw">let</span> <span class="ident">metrics_data</span> <span class="op">=</span> <span class="ident">handler</span>.<span class="ident">runtime</span>.<span class="ident">metrics_data</span>();
         <span class="kw">let</span> <span class="ident">future</span> <span class="op">=</span> <span class="kw">async</span> <span class="kw">move</span> {
-            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Processing a gRPC request: {:?}&quot;</span>, <span class="ident">request</span>);
+            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Processing gRPC request: {:?}&quot;</span>, <span class="ident">request</span>);
             <span class="ident">metrics_data</span>
                 .<span class="ident">grpc_server_metrics</span>
                 .<span class="ident">grpc_server_started_total</span>
@@ -725,6 +872,9 @@
                 .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="ident">handler</span>.<span class="ident">method_name</span>])
                 .<span class="ident">start_timer</span>();
 
+            <span class="kw">let</span> <span class="ident">oak_label</span> <span class="op">=</span> <span class="ident">oak_label_result</span><span class="question-mark">?</span>;
+            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;gRPC Oak Label: {:?}&quot;</span>, <span class="ident">oak_label</span>);
+
             <span class="comment">// Create a gRPC request.</span>
             <span class="comment">// TODO(#953): Add streaming support.</span>
             <span class="kw">let</span> <span class="ident">grpc_request</span> <span class="op">=</span> <span class="ident">GrpcRequest</span> {
@@ -735,17 +885,17 @@
 
             <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">handler</span>
                 <span class="comment">// Handle a gRPC request and send it into the Runtime.</span>
-                .<span class="ident">handle_grpc_request</span>(<span class="ident">grpc_request</span>)
+                .<span class="ident">handle_grpc_request</span>(<span class="ident">grpc_request</span>, <span class="kw-2">&amp;</span><span class="ident">oak_label</span>)
                 <span class="comment">// Read a gRPC response from the Runtime.</span>
                 .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">response_reader</span><span class="op">|</span> <span class="ident">handler</span>.<span class="ident">handle_grpc_response</span>(<span class="ident">response_reader</span>))
                 <span class="comment">// Convert an error to a gRPC error status without sending clients descriptions for</span>
                 <span class="comment">// internal errors.</span>
                 <span class="comment">// Errors are logged inside inside [`GrpcRequestHandler::handle_grpc_request`] and</span>
                 <span class="comment">// [`GrpcRequestHandler::handle_grpc_response`].</span>
-                .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">tonic</span>::<span class="ident">Status</span>::<span class="ident">new</span>(<span class="ident">tonic</span>::<span class="ident">Code</span>::<span class="ident">Internal</span>, <span class="string">&quot;&quot;</span>))<span class="question-mark">?</span>;
+                .<span class="ident">map_err</span>(<span class="op">|</span>()<span class="op">|</span> <span class="ident">tonic</span>::<span class="ident">Status</span>::<span class="ident">new</span>(<span class="ident">tonic</span>::<span class="ident">Code</span>::<span class="ident">Internal</span>, <span class="string">&quot;&quot;</span>))<span class="question-mark">?</span>;
 
             <span class="comment">// Send a gRPC response back to the client.</span>
-            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Sending a gRPC response: {:?}&quot;</span>, <span class="ident">response</span>);
+            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Sending gRPC response: {:?}&quot;</span>, <span class="ident">response</span>);
             <span class="ident">timer</span>.<span class="ident">observe_duration</span>();
             <span class="kw">match</span> <span class="ident">response</span>.<span class="ident">status</span> {
                 <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">tonic</span>::<span class="ident">Response</span>::<span class="ident">new</span>(<span class="ident">response</span>.<span class="ident">rsp_msg</span>)),
@@ -761,23 +911,42 @@
 }
 
 <span class="kw">impl</span> <span class="ident">GrpcRequestHandler</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>, <span class="ident">writer</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>, <span class="ident">method_name</span>: <span class="ident">String</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">new</span>(
+        <span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>,
+        <span class="ident">writer</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
+        <span class="ident">method_name</span>: <span class="ident">String</span>,
+        <span class="ident">metadata_map</span>: <span class="ident">MetadataMap</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">runtime</span>,
             <span class="ident">writer</span>,
             <span class="ident">method_name</span>,
+            <span class="ident">metadata_map</span>,
         }
     }
 
     <span class="doccomment">/// Handles a gRPC request, forwards it to a temporary channel and sends handles for this</span>
     <span class="doccomment">/// channel to the [`GrpcRequestHandler::writer`].</span>
     <span class="doccomment">/// Returns an [`oak_abi::Handle`] for reading a gRPC response from.</span>
-    <span class="kw">fn</span> <span class="ident">handle_grpc_request</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">request</span>: <span class="ident">GrpcRequest</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">oak_abi</span>::<span class="ident">Handle</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">handle_grpc_request</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">request</span>: <span class="ident">GrpcRequest</span>,
+        <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">oak_abi</span>::<span class="ident">Handle</span>, ()<span class="op">&gt;</span> {
         <span class="comment">// Create a pair of temporary channels to pass the gRPC request and to receive the response.</span>
+
+        <span class="comment">// The channel containing the request is created with the label specified by the caller.</span>
+        <span class="comment">// This will fail if the label has a non-empty integrity component.</span>
         <span class="kw">let</span> (<span class="ident">request_writer</span>, <span class="ident">request_reader</span>) <span class="op">=</span>
-            <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">channel_create</span>(<span class="kw-2">&amp;</span><span class="ident">Label</span>::<span class="ident">public_untrusted</span>())<span class="question-mark">?</span>;
-        <span class="kw">let</span> (<span class="ident">response_writer</span>, <span class="ident">response_reader</span>) <span class="op">=</span>
-            <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">channel_create</span>(<span class="kw-2">&amp;</span><span class="ident">Label</span>::<span class="ident">public_untrusted</span>())<span class="question-mark">?</span>;
+            <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">channel_create</span>(<span class="kw-2">&amp;</span><span class="ident">label</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+                <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;could not create gRPC request channel: {:?}&quot;</span>, <span class="ident">err</span>);
+            })<span class="question-mark">?</span>;
+        <span class="kw">let</span> (<span class="ident">response_writer</span>, <span class="ident">response_reader</span>) <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">runtime</span>
+            .<span class="ident">channel_create</span>(<span class="kw-2">&amp;</span><span class="ident">Label</span>::<span class="ident">public_untrusted</span>())
+            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+                <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;could not create gRPC response channel: {:?}&quot;</span>, <span class="ident">err</span>);
+            })<span class="question-mark">?</span>;
 
         <span class="comment">// Create an invocation message and attach the method-invocation specific channels to it.</span>
         <span class="comment">//</span>
@@ -795,7 +964,6 @@
         };
         <span class="ident">request</span>.<span class="ident">encode</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">message</span>.<span class="ident">data</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
             <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t serialize a GrpcRequest message: {}&quot;</span>, <span class="ident">error</span>);
-            <span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>
         })<span class="question-mark">?</span>;
 
         <span class="comment">// Send a message to the temporary channel.</span>
@@ -806,7 +974,6 @@
                     <span class="string">&quot;Couldn&#39;t write a message to the temporary channel: {:?}&quot;</span>,
                     <span class="ident">error</span>
                 );
-                <span class="ident">error</span>
             })<span class="question-mark">?</span>;
 
         <span class="comment">// Send an invocation message (with attached handles) to the Oak Node.</span>
@@ -814,7 +981,6 @@
             .<span class="ident">channel_write</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="ident">invocation</span>)
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
                 <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t write a gRPC invocation message: {:?}&quot;</span>, <span class="ident">error</span>);
-                <span class="ident">error</span>
             })<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="ident">response_reader</span>)
@@ -822,16 +988,12 @@
 
     <span class="doccomment">/// Processes a gRPC response from a channel represented by `response_reader` and returns an</span>
     <span class="doccomment">/// HTTP response body.</span>
-    <span class="kw">fn</span> <span class="ident">handle_grpc_response</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">response_reader</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">GrpcResponse</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">handle_grpc_response</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">response_reader</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">GrpcResponse</span>, ()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">read_status</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">runtime</span>
             .<span class="ident">wait_on_channels</span>(<span class="kw-2">&amp;</span>[<span class="ident">response_reader</span>])
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
                 <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t wait on the temporary gRPC channel: {:?}&quot;</span>, <span class="ident">error</span>);
-                <span class="ident">error</span>
             })<span class="question-mark">?</span>;
 
         <span class="kw">if</span> <span class="ident">read_status</span>[<span class="number">0</span>] <span class="op">=</span><span class="op">=</span> <span class="ident">ChannelReadStatus</span>::<span class="ident">ReadReady</span> {
@@ -839,7 +1001,6 @@
                 .<span class="ident">channel_read</span>(<span class="ident">response_reader</span>)
                 .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
                     <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t read from the temporary gRPC channel: {:?}&quot;</span>, <span class="ident">error</span>);
-                    <span class="ident">error</span>
                 })
                 .<span class="ident">map</span>(<span class="op">|</span><span class="ident">message</span><span class="op">|</span> {
                     <span class="comment">// Return an empty HTTP body if the `message` is None.</span>
@@ -857,7 +1018,6 @@
                     <span class="comment">// Return the serialized message body.</span>
                     <span class="ident">GrpcResponse</span>::<span class="ident">decode</span>(<span class="ident">response</span>.<span class="ident">as_slice</span>()).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
                         <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t parse the GrpcResponse message: {}&quot;</span>, <span class="ident">error</span>);
-                        <span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>
                     })
                 })
         } <span class="kw">else</span> {
@@ -865,7 +1025,7 @@
                 <span class="string">&quot;Couldn&#39;t read from the temporary gRPC channel: {:?}&quot;</span>,
                 <span class="ident">read_status</span>[<span class="number">0</span>]
             );
-            <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>)
+            <span class="prelude-val">Err</span>(())
         }
     }
 }

@@ -1874,7 +1874,7 @@
             <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{:?}: can write to {:?}&quot;</span>, <span class="ident">node_id</span>, <span class="ident">target_label</span>);
             <span class="prelude-val">Ok</span>(())
         } <span class="kw">else</span> {
-            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{:?}: cannot write to {:?}&quot;</span>, <span class="ident">node_id</span>, <span class="ident">target_label</span>);
+            <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;{:?}: cannot write to {:?}&quot;</span>, <span class="ident">node_id</span>, <span class="ident">target_label</span>);
             <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrPermissionDenied</span>)
         }
     }
