@@ -65,15 +65,21 @@ int main(int argc, char** argv) {
   oak::NonceGenerator<oak::kPerChannelNonceSizeBytes> nonce_generator;
   std::string authorization_bearer_token = oak::NonceToBytes(nonce_generator.NextNonce());
 
+  // TODO(#1066): Use a more restrictive Label, based on a bearer token shared between the two
+  // clients.
+  oak::label::Label label = oak::PublicUntrustedLabel();
+
   auto stub_0 = RunningAverage::NewStub(oak::ApplicationClient::CreateChannel(
-      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert),
-      oak::ApplicationClient::authorization_bearer_token_call_credentials(
-          authorization_bearer_token)));
+      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert), label));
+  if (stub_0 == nullptr) {
+    LOG(FATAL) << "Failed to create application stub";
+  }
 
   auto stub_1 = RunningAverage::NewStub(oak::ApplicationClient::CreateChannel(
-      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert),
-      oak::ApplicationClient::authorization_bearer_token_call_credentials(
-          authorization_bearer_token)));
+      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert), label));
+  if (stub_1 == nullptr) {
+    LOG(FATAL) << "Failed to create application stub";
+  }
 
   // Submit samples from different clients.
   submit_sample(stub_0.get(), 100);

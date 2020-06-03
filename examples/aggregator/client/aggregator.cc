@@ -24,6 +24,8 @@
 #include "glog/logging.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
+#include "oak/client/label_metadata.h"
+#include "oak/common/label.h"
 
 ABSL_FLAG(std::string, address, "localhost:8080", "Address of the Oak application to connect to");
 ABSL_FLAG(std::string, bucket, "", "Bucket under which to aggregate samples");
@@ -68,7 +70,15 @@ int main(int argc, char** argv) {
   std::string ca_cert = oak::ApplicationClient::LoadRootCert(absl::GetFlag(FLAGS_ca_cert));
   LOG(INFO) << "Connecting to Oak Application: " << address;
 
-  auto stub = Aggregator::NewStub(oak::ApplicationClient::CreateTlsChannel(address, ca_cert));
+  // TODO(#972): Use a more restrictive Label, including the WebAssembly module attestation of the
+  // aggregator functionality.
+  oak::label::Label label = oak::PublicUntrustedLabel();
+  // Connect to the Oak Application.
+  auto stub = Aggregator::NewStub(oak::ApplicationClient::CreateChannel(
+      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert), label));
+  if (stub == nullptr) {
+    LOG(FATAL) << "Failed to create application stub";
+  }
 
   // Parse arguments.
   auto bucket = absl::GetFlag(FLAGS_bucket);

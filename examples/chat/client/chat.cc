@@ -178,9 +178,11 @@ int main(int argc, char** argv) {
   std::string ca_cert = oak::ApplicationClient::LoadRootCert(absl::GetFlag(FLAGS_ca_cert));
   LOG(INFO) << "Connecting to Oak Application: " << address;
 
-  // Connect to the Oak Application.
   // TODO(#488): Use the token provided on command line for authorization and labelling of data.
-  auto stub = Chat::NewStub(oak::ApplicationClient::CreateTlsChannel(address, ca_cert));
+  oak::label::Label label = oak::PublicUntrustedLabel();
+  // Connect to the Oak Application.
+  auto stub = Chat::NewStub(oak::ApplicationClient::CreateChannel(
+      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert), label));
   if (stub == nullptr) {
     LOG(FATAL) << "Failed to create application stub";
   }

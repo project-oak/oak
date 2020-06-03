@@ -476,7 +476,7 @@ pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(
         return;
     }
     let receiver = crate::io::Receiver::new(in_channel);
-    info!("starting event loop");
+    info!("starting event loop on handle {:?}", in_channel);
     loop {
         // First wait until a message is available. If the Node was terminated while waiting, this
         // will return `ErrTerminated`, which indicates that the event loop should be terminated.
@@ -493,7 +493,7 @@ pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(
                         );
                         return;
                     }
-                    ErrBadHandle | ErrChannelClosed => {
+                    ErrBadHandle | ErrChannelClosed | ErrPermissionDenied => {
                         warn!(
                             "non-transient error waiting for command: {:?}; terminating event loop",
                             status
@@ -510,13 +510,16 @@ pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(
         }
         match receiver.try_receive() {
             Ok(command) => {
-                info!("received command");
+                info!("received command on handle {:?}", in_channel);
                 if let Err(err) = node.handle_command(command) {
                     error!("error handling command: {}", err);
                 }
             }
             Err(err) => {
-                error!("error receiving command: {}", err);
+                error!(
+                    "error receiving command on handle {:?}: {}",
+                    in_channel, err
+                );
             }
         }
     }

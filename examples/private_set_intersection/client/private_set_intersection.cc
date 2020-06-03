@@ -66,19 +66,15 @@ int main(int argc, char** argv) {
   std::string ca_cert = oak::ApplicationClient::LoadRootCert(absl::GetFlag(FLAGS_ca_cert));
   LOG(INFO) << "Connecting to Oak Application: " << address;
 
-  // Connect to the Oak Application from different clients sharing the same access token.
-  oak::NonceGenerator<oak::kPerChannelNonceSizeBytes> nonce_generator;
-  std::string authorization_bearer_token = oak::NonceToBytes(nonce_generator.NextNonce());
+  // TODO(#1066): Use a more restrictive Label, based on a bearer token shared between the two
+  // clients.
+  oak::label::Label label = oak::PublicUntrustedLabel();
 
   auto stub_0 = PrivateSetIntersection::NewStub(oak::ApplicationClient::CreateChannel(
-      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert),
-      oak::ApplicationClient::authorization_bearer_token_call_credentials(
-          authorization_bearer_token)));
+      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert), label));
 
   auto stub_1 = PrivateSetIntersection::NewStub(oak::ApplicationClient::CreateChannel(
-      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert),
-      oak::ApplicationClient::authorization_bearer_token_call_credentials(
-          authorization_bearer_token)));
+      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert), label));
 
   // Submit sets from different clients.
   std::vector<std::string> set_0{"a", "b", "c"};

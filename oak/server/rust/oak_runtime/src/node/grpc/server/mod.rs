@@ -25,7 +25,7 @@ use crate::{
     runtime::RuntimeProxy,
 };
 use hyper::service::Service;
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use oak_abi::{
     label::Label,
     proto::oak::{
@@ -42,11 +42,19 @@ use std::{
 use tokio::sync::oneshot;
 use tonic::{
     codegen::BoxFuture,
+    metadata::MetadataMap,
     server::{Grpc, UnaryService},
     transport::{Identity, NamedService},
 };
 
 mod auth;
+
+// The `-bin` suffix allows sending binary data for this metadata key.
+//
+// See https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md.
+//
+// Keep in sync with /oak/common/label.cc.
+const OAK_LABEL_GRPC_METADATA_KEY: &str = "x-oak-label-bin";
 
 /// Struct that represents a gRPC server pseudo-Node.
 pub struct GrpcServerNode {
@@ -236,15 +244,16 @@ impl Service<http::Request<hyper::Body>> for HttpRequestHandler {
             self.runtime.clone(),
             self.writer,
             request.uri().path().to_string(),
+            MetadataMap::from_headers(request.headers().clone()),
         );
 
         let method_name = request.uri().path().to_string();
         let metrics_data = self.runtime.metrics_data();
         let future = async move {
-            debug!("Processing an HTTP/2 request: {:?}", request);
+            debug!("Processing HTTP/2 request: {:?}", request);
             let mut grpc_service = Grpc::new(VecCodec::default());
             let response = grpc_service.unary(grpc_handler, request).await;
-            debug!("Sending an HTTP/2 response: {:?}", response);
+            debug!("Sending HTTP/2 response: {:?}", response);
             let stc = format!("{}", response.status());
             metrics_data
                 .grpc_server_metrics
@@ -258,6 +267,60 @@ impl Service<http::Request<hyper::Body>> for HttpRequestHandler {
     }
 }
 
+impl From<OakLabelError> for tonic::Status {
+    fn from(v: OakLabelError) -> Self {
+        match v {
+            OakLabelError::MissingLabel => tonic::Status::invalid_argument("Missing Oak Label"),
+            OakLabelError::MultipleLabels => tonic::Status::invalid_argument("Multiple Oak Labels"),
+            OakLabelError::InvalidLabel => tonic::Status::invalid_argument("Invalid Oak Label"),
+        }
+    }
+}
+
+enum OakLabelError {
+    MissingLabel,
+    MultipleLabels,
+    InvalidLabel,
+}
+
+/// Returns the [`Label`] defined as part of the the metadata of an incoming gRPC request.
+///
+/// Returns an error if there is not exactly one label specified by the caller:
+///
+/// - no labels means that the caller did not specify any IFC restrictions, which is probably a
+///   mistake
+/// - more than one labels means that the caller specified multiple IFC restrictions; if the
+///   intention was to allow multiple alternative ones, they need to be combined in a single label,
+///   once conjunctions are supported
+fn get_oak_label(metadata_map: &MetadataMap) -> Result<Label, OakLabelError> {
+    let labels = metadata_map
+        .get_all_bin(OAK_LABEL_GRPC_METADATA_KEY)
+        .iter()
+        .collect::<Vec<_>>();
+    if labels.is_empty() {
+        warn!(
+            "incorrect number of gRPC labels found: {}, expected: 1",
+            labels.len()
+        );
+        return Err(OakLabelError::MissingLabel);
+    }
+    if labels.len() >= 2 {
+        warn!(
+            "incorrect number of gRPC labels found: {}, expected: 1",
+            labels.len()
+        );
+        return Err(OakLabelError::MultipleLabels);
+    }
+    let label_bytes = labels[0].to_bytes().map_err(|err| {
+        warn!("could not convert gRPC label to bytes: {}", err);
+        OakLabelError::InvalidLabel
+    })?;
+    oak_abi::proto::oak::label::Label::decode(label_bytes).map_err(|err| {
+        warn!("could not parse gRPC label: {}", err);
+        OakLabelError::InvalidLabel
+    })
+}
+
 /// [`GrpcRequestHandler`] handles gRPC requests and generates gRPC responses.
 #[derive(Clone)]
 struct GrpcRequestHandler {
@@ -267,6 +330,7 @@ struct GrpcRequestHandler {
     writer: oak_abi::Handle,
     /// Name of the gRPC method that should be invoked.
     method_name: String,
+    metadata_map: MetadataMap,
 }
 
 impl UnaryService<Vec<u8>> for GrpcRequestHandler {
@@ -275,9 +339,12 @@ impl UnaryService<Vec<u8>> for GrpcRequestHandler {
 
     fn call(&mut self, request: tonic::Request<Vec<u8>>) -> Self::Future {
         let handler = self.clone();
+
+        let oak_label_result = get_oak_label(&self.metadata_map);
+
         let metrics_data = handler.runtime.metrics_data();
         let future = async move {
-            debug!("Processing a gRPC request: {:?}", request);
+            debug!("Processing gRPC request: {:?}", request);
             metrics_data
                 .grpc_server_metrics
                 .grpc_server_started_total
@@ -289,6 +356,9 @@ impl UnaryService<Vec<u8>> for GrpcRequestHandler {
                 .with_label_values(&[&handler.method_name])
                 .start_timer();
 
+            let oak_label = oak_label_result?;
+            debug!("gRPC Oak Label: {:?}", oak_label);
+
             // Create a gRPC request.
             // TODO(#953): Add streaming support.
             let grpc_request = GrpcRequest {
@@ -299,17 +369,17 @@ impl UnaryService<Vec<u8>> for GrpcRequestHandler {
 
             let response = handler
                 // Handle a gRPC request and send it into the Runtime.
-                .handle_grpc_request(grpc_request)
+                .handle_grpc_request(grpc_request, &oak_label)
                 // Read a gRPC response from the Runtime.
                 .and_then(|response_reader| handler.handle_grpc_response(response_reader))
                 // Convert an error to a gRPC error status without sending clients descriptions for
                 // internal errors.
                 // Errors are logged inside inside [`GrpcRequestHandler::handle_grpc_request`] and
                 // [`GrpcRequestHandler::handle_grpc_response`].
-                .map_err(|_| tonic::Status::new(tonic::Code::Internal, ""))?;
+                .map_err(|()| tonic::Status::new(tonic::Code::Internal, ""))?;
 
             // Send a gRPC response back to the client.
-            debug!("Sending a gRPC response: {:?}", response);
+            debug!("Sending gRPC response: {:?}", response);
             timer.observe_duration();
             match response.status {
                 None => Ok(tonic::Response::new(response.rsp_msg)),
@@ -325,23 +395,42 @@ impl UnaryService<Vec<u8>> for GrpcRequestHandler {
 }
 
 impl GrpcRequestHandler {
-    fn new(runtime: RuntimeProxy, writer: oak_abi::Handle, method_name: String) -> Self {
+    fn new(
+        runtime: RuntimeProxy,
+        writer: oak_abi::Handle,
+        method_name: String,
+        metadata_map: MetadataMap,
+    ) -> Self {
         Self {
             runtime,
             writer,
             method_name,
+            metadata_map,
         }
     }
 
     /// Handles a gRPC request, forwards it to a temporary channel and sends handles for this
     /// channel to the [`GrpcRequestHandler::writer`].
     /// Returns an [`oak_abi::Handle`] for reading a gRPC response from.
-    fn handle_grpc_request(&self, request: GrpcRequest) -> Result<oak_abi::Handle, OakStatus> {
+    fn handle_grpc_request(
+        &self,
+        request: GrpcRequest,
+        label: &Label,
+    ) -> Result<oak_abi::Handle, ()> {
         // Create a pair of temporary channels to pass the gRPC request and to receive the response.
+
+        // The channel containing the request is created with the label specified by the caller.
+        // This will fail if the label has a non-empty integrity component.
         let (request_writer, request_reader) =
-            self.runtime.channel_create(&Label::public_untrusted())?;
-        let (response_writer, response_reader) =
-            self.runtime.channel_create(&Label::public_untrusted())?;
+            self.runtime.channel_create(&label).map_err(|err| {
+                warn!("could not create gRPC request channel: {:?}", err);
+            })?;
+        let (response_writer, response_reader) = self
+            .runtime
+            .channel_create(&Label::public_untrusted())
+            .map_err(|err| {
+                warn!("could not create gRPC response channel: {:?}", err);
+            })?;
 
         // Create an invocation message and attach the method-invocation specific channels to it.
         //
@@ -359,7 +448,6 @@ impl GrpcRequestHandler {
         };
         request.encode(&mut message.data).map_err(|error| {
             error!("Couldn't serialize a GrpcRequest message: {}", error);
-            OakStatus::ErrInternal
         })?;
 
         // Send a message to the temporary channel.
@@ -370,7 +458,6 @@ impl GrpcRequestHandler {
                     "Couldn't write a message to the temporary channel: {:?}",
                     error
                 );
-                error
             })?;
 
         // Send an invocation message (with attached handles) to the Oak Node.
@@ -378,7 +465,6 @@ impl GrpcRequestHandler {
             .channel_write(self.writer, invocation)
             .map_err(|error| {
                 error!("Couldn't write a gRPC invocation message: {:?}", error);
-                error
             })?;
 
         Ok(response_reader)
@@ -386,16 +472,12 @@ impl GrpcRequestHandler {
 
     /// Processes a gRPC response from a channel represented by `response_reader` and returns an
     /// HTTP response body.
-    fn handle_grpc_response(
-        &self,
-        response_reader: oak_abi::Handle,
-    ) -> Result<GrpcResponse, OakStatus> {
+    fn handle_grpc_response(&self, response_reader: oak_abi::Handle) -> Result<GrpcResponse, ()> {
         let read_status = self
             .runtime
             .wait_on_channels(&[response_reader])
             .map_err(|error| {
                 error!("Couldn't wait on the temporary gRPC channel: {:?}", error);
-                error
             })?;
 
         if read_status[0] == ChannelReadStatus::ReadReady {
@@ -403,7 +485,6 @@ impl GrpcRequestHandler {
                 .channel_read(response_reader)
                 .map_err(|error| {
                     error!("Couldn't read from the temporary gRPC channel: {:?}", error);
-                    error
                 })
                 .map(|message| {
                     // Return an empty HTTP body if the `message` is None.
@@ -421,7 +502,6 @@ impl GrpcRequestHandler {
                     // Return the serialized message body.
                     GrpcResponse::decode(response.as_slice()).map_err(|error| {
                         error!("Couldn't parse the GrpcResponse message: {}", error);
-                        OakStatus::ErrInternal
                     })
                 })
         } else {
@@ -429,7 +509,7 @@ impl GrpcRequestHandler {
                 "Couldn't read from the temporary gRPC channel: {:?}",
                 read_status[0]
             );
-            Err(OakStatus::ErrInternal)
+            Err(())
         }
     }
 }

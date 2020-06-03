@@ -21,6 +21,7 @@
 #include "glog/logging.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
+#include "oak/common/label.h"
 
 ABSL_FLAG(std::string, address, "localhost:8080", "Address of the Oak application to connect to");
 ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate");
@@ -65,8 +66,14 @@ int main(int argc, char** argv) {
   std::string ca_cert = oak::ApplicationClient::LoadRootCert(absl::GetFlag(FLAGS_ca_cert));
   LOG(INFO) << "Connecting to Oak Application: " << address;
 
+  // TODO(#1066): Use a more restrictive Label.
+  oak::label::Label label = oak::PublicUntrustedLabel();
   // Connect to the Oak Application.
-  auto stub = HelloWorld::NewStub(oak::ApplicationClient::CreateTlsChannel(address, ca_cert));
+  auto stub = HelloWorld::NewStub(oak::ApplicationClient::CreateChannel(
+      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert), label));
+  if (stub == nullptr) {
+    LOG(FATAL) << "Failed to create application stub";
+  }
 
   // Perform multiple invocations of the same Oak Application, with different parameters.
   say_hello(stub.get(), "WORLD");

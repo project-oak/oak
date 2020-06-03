@@ -48,8 +48,14 @@ int main(int argc, char** argv) {
   std::string ca_cert = oak::ApplicationClient::LoadRootCert(absl::GetFlag(FLAGS_ca_cert));
   LOG(INFO) << "Connecting to Oak Application: " << address;
 
+  // TODO(#1066): Assign a more restrictive label.
+  oak::label::Label label = oak::PublicUntrustedLabel();
   // Connect to the Oak Application.
-  auto stub = Tensorflow::NewStub(oak::ApplicationClient::CreateTlsChannel(address, ca_cert));
+  auto stub = Tensorflow::NewStub(oak::ApplicationClient::CreateChannel(
+      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert), label));
+  if (stub == nullptr) {
+    LOG(FATAL) << "Failed to create application stub";
+  }
 
   // Initialize TensorFlow in Oak.
   init_tensorflow(stub.get());

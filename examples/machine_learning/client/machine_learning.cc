@@ -73,8 +73,14 @@ int main(int argc, char** argv) {
   std::string ca_cert = oak::ApplicationClient::LoadRootCert(absl::GetFlag(FLAGS_ca_cert));
   LOG(INFO) << "Connecting to Oak Application: " << address;
 
+  // TODO(#1066): Use a more restrictive Label.
+  oak::label::Label label = oak::PublicUntrustedLabel();
   // Connect to the Oak Application.
-  auto stub = MachineLearning::NewStub(oak::ApplicationClient::CreateTlsChannel(address, ca_cert));
+  auto stub = MachineLearning::NewStub(oak::ApplicationClient::CreateChannel(
+      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert), label));
+  if (stub == nullptr) {
+    LOG(FATAL) << "Failed to create application stub";
+  }
 
   // Perform multiple invocations of the same Oak Application, with different parameters.
   auto message_0 = send_data(stub.get());

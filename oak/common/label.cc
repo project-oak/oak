@@ -23,6 +23,8 @@ namespace oak {
 // The `-bin` suffix allows sending binary data for this metadata key.
 //
 // See https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md.
+//
+// Keep in sync with /oak/server/rust/oak_runtime/src/node/grpc/server/mod.rs.
 const char kOakLabelGrpcMetadataKey[] = "x-oak-label-bin";
 
 // The `-bin` suffix allows sending binary data for this metadata key.
@@ -44,24 +46,21 @@ oak::label::Label DeserializeLabel(const std::string& label_bytes) {
 oak::label::Label AuthorizationBearerTokenLabel(const std::string& authorization_token_hmac) {
   oak::label::Label label;
   auto* confidentiality_tag = label.add_confidentiality_tags();
-  auto* integrity_tag = label.add_integrity_tags();
   confidentiality_tag->mutable_grpc_tag()->set_authorization_bearer_token_hmac(
       authorization_token_hmac);
-  // We set integrity tag here, even though it would make more sense for the server to determine
-  // what integrity tag to assign to the incoming message, based on the authentication mechanism
-  // used (e.g. the actual bearer token, rather than its HMAC).
-  // Partly tracked in #420.
-  integrity_tag->mutable_grpc_tag()->set_authorization_bearer_token_hmac(authorization_token_hmac);
   return label;
 }
 
 oak::label::Label WebAssemblyModuleAttestationLabel(const std::string& module_attestation) {
   oak::label::Label label;
   auto* confidentiality_tag = label.add_confidentiality_tags();
-  auto* integrity_tag = label.add_integrity_tags();
   confidentiality_tag->mutable_web_assembly_module_tag()->set_module_attestation(
       module_attestation);
-  integrity_tag->mutable_web_assembly_module_tag()->set_module_attestation(module_attestation);
+  return label;
+}
+
+oak::label::Label PublicUntrustedLabel() {
+  oak::label::Label label;
   return label;
 }
 
