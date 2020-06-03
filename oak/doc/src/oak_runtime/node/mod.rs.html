@@ -135,6 +135,13 @@
 <span id="135">135</span>
 <span id="136">136</span>
 <span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -154,7 +161,10 @@
 
 <span class="doccomment">//! Functionality for different Node types.</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">runtime</span>::<span class="ident">RuntimeProxy</span>, <span class="ident">GrpcConfiguration</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">runtime</span>::{<span class="ident">NodePrivilege</span>, <span class="ident">RuntimeProxy</span>},
+    <span class="ident">GrpcConfiguration</span>,
+};
 <span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::{
     <span class="ident">node_configuration</span>::<span class="ident">ConfigType</span>, <span class="ident">ApplicationConfiguration</span>, <span class="ident">LogConfiguration</span>, <span class="ident">NodeConfiguration</span>,
 };
@@ -180,6 +190,10 @@
         <span class="ident">handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
         <span class="ident">notify_receiver</span>: <span class="ident">oneshot</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
     );
+
+    <span class="kw">fn</span> <span class="ident">get_privilege</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NodePrivilege</span> {
+        <span class="ident">NodePrivilege</span>::<span class="ident">default</span>()
+    }
 }
 
 <span class="doccomment">/// A enumeration for errors occuring when creating a new [`Node`] instance.</span>
