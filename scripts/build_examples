@@ -6,8 +6,7 @@ source "$SCRIPTS_DIR/common"
 
 # Run all examples.
 for language in rust cpp; do
-  # TODO(#594): Re-enable rustfmt when upstream rustc internal error is fixed.
-  examples="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/'"${language}"'$' | cut -d'/' -f2 | uniq | grep -v rustfmt)"
+  examples="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/'"${language}"'$' | cut -d'/' -f2 | uniq)"
   for example in ${examples}; do
     "${SCRIPTS_DIR}/build_example" -l "${language}" -e "${example}"
   done
