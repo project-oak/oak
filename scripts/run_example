@@ -76,8 +76,17 @@ if [[ "${EXAMPLE}" == 'abitest' ]]; then
   # TODO(#730): reinstate Roughtime tests when Rust runtime supports them.
   # TODO(#1040): reinstate storage tests when Rust runtime supports them.
   # TODO(#953): reinstate gRPC server server-streaming tests when Rust runtime supports them.
-  readonly ADDITIONAL_ARGS=("--test_exclude=(Roughtime|Storage|GrpcServerServerStreamingMethod)")
+  readonly ADDITIONAL_ARGS=('--test_exclude=(Roughtime|Storage|GrpcServerServerStreamingMethod)')
+elif [[ "${EXAMPLE}" == 'aggregator' ]]; then
+  readonly ADDITIONAL_ARGS=(
+    '--bucket=test'
+    '--data=1:10,2:20,3:30'
+  )
+else
+  readonly ADDITIONAL_ARGS=()
+fi
 
+if [[ "${EXAMPLE}" == 'abitest' ]]; then
   readonly TLS_ARGS=(
     "--ca_cert=${SCRIPTS_DIR}/../examples/certs/local/ca.pem"
     "--cert_chain=${SCRIPTS_DIR}/../examples/certs/local/local.pem"
@@ -88,10 +97,10 @@ fi
 
 # Run the application client.
 if [ $# -eq 0 ]; then
-  "./bazel-client-bin/examples/${EXAMPLE}/client/client" "${TLS_ARGS[@]}" "${ADDITIONAL_ARGS:-}"
+  "./bazel-client-bin/examples/${EXAMPLE}/client/client" "${TLS_ARGS[@]}" "${ADDITIONAL_ARGS[@]}"
 else
   readonly CLIENT_ARGS=("${@}")  # Choose client args provided after '--'.
-  "./bazel-client-bin/examples/${EXAMPLE}/client/client" "${TLS_ARGS[@]}" "${ADDITIONAL_ARGS:-}" "${CLIENT_ARGS[@]-}"
+  "./bazel-client-bin/examples/${EXAMPLE}/client/client" "${TLS_ARGS[@]}" "${ADDITIONAL_ARGS[@]}" "${CLIENT_ARGS[@]-}"
 fi
 
 kill_bg_pids
