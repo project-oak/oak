@@ -15,19 +15,24 @@
 //
 
 use futures::future::join_all;
-use log::warn;
+use log::{debug, info, warn};
 use roughenough::{
     client::{create_nonce, make_request, ParsedResponse, ResponseHandler},
     RtMessage,
 };
-use std::net::{SocketAddr, ToSocketAddrs as _};
-use tokio::{net::UdpSocket, runtime::Runtime};
+use std::{
+    net::{SocketAddr, ToSocketAddrs as _},
+    time::Duration,
+};
+use tokio::{net::UdpSocket, runtime::Runtime, time::timeout};
 
 #[cfg(test)]
 mod tests;
 
-const DEFAULT_MIN_OVERLAPPING_INTERVALS: usize = 3;
-const DEFAULT_MAX_RADIUS_MICROSECONDS: u32 = 60000000;
+pub const DEFAULT_MIN_OVERLAPPING_INTERVALS: usize = 3;
+pub const DEFAULT_MAX_RADIUS_MICROSECONDS: u32 = 60000000;
+pub const DEFAULT_TIMEOUT_SECONDS: u64 = 3;
+pub const DEFAULT_SERVER_RETRIES: usize = 3;
 const MAX_RESPONSE_SIZE: usize = 1024;
 
 /// Specifies the details of a Roughtime server.
@@ -58,6 +63,10 @@ pub struct RoughtimeClient {
     min_overlapping_intervals: usize,
     /// The maximum radius returned by any server for the response to still be acceptable.
     max_radius_microseconds: u32,
+    /// The timeout for UDP sned and receive operations in seconds.
+    timeout_seconds: u64,
+    /// The number of time to retry getting Roughtime from a server in case of timeouts.
+    server_retries: usize,
 }
 
 impl RoughtimeClient {
@@ -67,6 +76,8 @@ impl RoughtimeClient {
             servers: get_default_servers(),
             min_overlapping_intervals: DEFAULT_MIN_OVERLAPPING_INTERVALS,
             max_radius_microseconds: DEFAULT_MAX_RADIUS_MICROSECONDS,
+            timeout_seconds: DEFAULT_TIMEOUT_SECONDS,
+            server_retries: DEFAULT_SERVER_RETRIES,
         }
     }
 
@@ -75,11 +86,15 @@ impl RoughtimeClient {
         servers: Vec<RoughtimeServerSpec>,
         min_overlapping_intervals: usize,
         max_radius_microseconds: u32,
+        timeout_seconds: u64,
+        server_retries: usize,
     ) -> Self {
         RoughtimeClient {
             servers,
             min_overlapping_intervals,
             max_radius_microseconds,
+            timeout_seconds,
+            server_retries,
         }
     }
 
@@ -91,6 +106,7 @@ impl RoughtimeClient {
         let mut runtime = Runtime::new()?;
         let intervals = runtime.block_on(self.get_intervals_from_all_servers());
         let result = self.find_overlap(&intervals)?;
+        info!("Roughtime interval: min={}, max={}", result.min, result.max);
         Ok((result.min + result.max) / 2)
     }
 
@@ -160,7 +176,18 @@ impl RoughtimeClient {
     ) -> Result<Interval, RoughtimeError> {
         let nonce = create_nonce()?;
         let request = make_request(&nonce)?;
-        let response = Self::send_roughtime_request(server, &request).await?;
+        let mut failed_attempts = 0;
+        let response = loop {
+            match self.send_roughtime_request(server, &request).await {
+                Err(RoughtimeError::TimeoutError) => {
+                    failed_attempts += 1;
+                    if failed_attempts >= self.server_retries {
+                        break Err(RoughtimeError::TimeoutError);
+                    }
+                }
+                result => break result,
+            }
+        }?;
         let ParsedResponse {
             verified,
             midpoint,
@@ -171,6 +198,10 @@ impl RoughtimeClient {
             nonce.to_owned(),
         )?
         .extract_time()?;
+        debug!(
+            "Roughtime from {}: midpoint={}, radius={}, verified={}",
+            server.name, midpoint, radius, verified
+        );
 
         if verified {
             if radius <= self.max_radius_microseconds {
@@ -192,9 +223,10 @@ impl RoughtimeClient {
 
     /// Sends a request to a Roughtime server using UDP.
     async fn send_roughtime_request(
+        &self,
         server: &RoughtimeServerSpec,
         request: &[u8],
-    ) -> tokio::io::Result<Vec<u8>> {
+    ) -> Result<Vec<u8>, RoughtimeError> {
         let remote_addr = (&server.host[..], server.port)
             .to_socket_addrs()?
             .next()
@@ -208,9 +240,35 @@ impl RoughtimeClient {
         .unwrap();
         let mut socket = UdpSocket::bind(local_address).await?;
         socket.connect(&remote_addr).await?;
-        socket.send(request).await?;
+        match timeout(
+            Duration::from_secs(self.timeout_seconds),
+            socket.send(request),
+        )
+        .await
+        {
+            Err(error) => {
+                warn!("Timed out sending request to {}: {}", server.name, error);
+                return Err(RoughtimeError::TimeoutError);
+            }
+            Ok(result) => {
+                result?;
+            }
+        }
         let mut data = vec![0u8; MAX_RESPONSE_SIZE];
-        socket.recv(&mut data).await?;
+        match timeout(
+            Duration::from_secs(self.timeout_seconds),
+            socket.recv(&mut data),
+        )
+        .await
+        {
+            Err(error) => {
+                warn!("Timed out receiving response from {}: {}", server.name, error);
+                return Err(RoughtimeError::TimeoutError);
+            }
+            Ok(result) => {
+                result?;
+            }
+        }
         Ok(data)
     }
 }
@@ -219,7 +277,7 @@ impl RoughtimeClient {
 ///
 /// Based on
 /// https://github.com/cloudflare/roughtime/blob/569dc6f5119970035fe0a008b83398d59363ed45/ecosystem.json
-fn get_default_servers() -> Vec<RoughtimeServerSpec> {
+pub fn get_default_servers() -> Vec<RoughtimeServerSpec> {
     vec![
         RoughtimeServerSpec {
             name: "Caesium".to_owned(),
@@ -270,6 +328,7 @@ pub enum RoughtimeError {
     NotEnoughOverlappingIntervals { actual: usize, expected: usize },
     RadiusTooLarge,
     RoughenoughError(roughenough::Error),
+    TimeoutError,
 }
 
 impl std::fmt::Display for RoughtimeError {
@@ -286,6 +345,7 @@ impl std::fmt::Display for RoughtimeError {
             ),
             RoughtimeError::RoughenoughError(e) => write!(f, "Roughenough error: {}", e),
             RoughtimeError::RadiusTooLarge => write!(f, "Radius too large."),
+            RoughtimeError::TimeoutError => write!(f, "Network operation timed out."),
         }
     }
 }
