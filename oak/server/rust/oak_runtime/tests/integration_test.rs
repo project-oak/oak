@@ -14,7 +14,19 @@
 // limitations under the License.
 //
 
+use oak_runtime::time::{RoughtimeClient, DEFAULT_MAX_RADIUS_MICROSECONDS};
+use std::{sync::Once, time::SystemTime};
+
+static LOG_INIT_ONCE: Once = Once::new();
+
 const METRICS_PORT: u16 = 9876;
+
+fn init_logging() {
+    LOG_INIT_ONCE.call_once(|| {
+        // Logger panics if it is initalized more than once.
+        simple_logger::init_by_env();
+    });
+}
 
 mod common {
     use hyper::{Client, Uri};
@@ -91,7 +103,7 @@ fn get_int_metric_value(all_metrics: &str, metric_name: &str) -> Option<i64> {
 
 #[test]
 fn test_metrics_gives_the_correct_number_of_nodes() {
-    simple_logger::init_by_env();
+    init_logging();
 
     // Start the Runtime, including a metrics server.
     let (runtime, _initial_handle) = common::start_runtime().expect("Starting the Runtime failed!");
@@ -108,4 +120,25 @@ fn test_metrics_gives_the_correct_number_of_nodes() {
     assert_eq!(value, Some(1), "{}", &res);
 
     runtime.stop_runtime();
+}
+
+#[test]
+#[ignore]
+/// Gets Roughtime from the live default servers with the default settings.
+///
+/// This requires an internet connection, at least 3 of the default servers to be operational and
+/// accessible, and that the test host machine's system clock is roughly accurate.
+fn test_get_roughtime_live() {
+    init_logging();
+    let client = RoughtimeClient::default();
+    let roughtime: u128 = client.get_roughtime().unwrap().into();
+    let current = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap()
+        .as_micros();
+
+    assert!(
+        roughtime.saturating_sub(DEFAULT_MAX_RADIUS_MICROSECONDS.into()) <= current
+            && roughtime.saturating_add(DEFAULT_MAX_RADIUS_MICROSECONDS.into()) >= current
+    );
 }

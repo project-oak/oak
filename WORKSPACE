@@ -17,7 +17,7 @@
 workspace(name = "oak")
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository", "new_git_repository")
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 # Docker rules should be loaded in the beginning of the WORKSPACE file
 # to avoid diamond dependencies:
@@ -415,15 +415,6 @@ closure_repositories()
 load("@org_tensorflow//tensorflow:workspace.bzl", "tf_repositories")
 
 tf_repositories()
-
-# Roughtime
-new_git_repository(
-    name = "roughtime",
-    build_file = "//third_party/roughtime:roughtime.BUILD",
-    commit = "51f6971f5f06ec101e5fbcabe5a49477708540f3",
-    remote = "https://roughtime.googlesource.com/roughtime",
-    shallow_since = "1555608176 +0000",
-)
 
 # Bazel rules for packaging and deployment by Grakn Labs
 http_archive(

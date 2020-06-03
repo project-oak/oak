@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use super::{
-    merkle::root_from_paths, sign::Verifier, RtMessage, Tag, CERTIFICATE_CONTEXT,
+    merkle::root_from_paths, sign::Verifier, Error, RtMessage, Tag, CERTIFICATE_CONTEXT,
     SIGNED_RESPONSE_CONTEXT,
 };
 use byteorder::{LittleEndian, ReadBytesExt};
@@ -21,21 +21,21 @@ use ring::{rand, rand::SecureRandom as _};
 use std::collections::HashMap;
 
 /// Creates a 64 byte nonce.
-pub fn create_nonce() -> [u8; 64] {
+pub fn create_nonce() -> Result<[u8; 64], Error> {
     let rng = rand::SystemRandom::new();
     let mut nonce = [0u8; 64];
-    rng.fill(&mut nonce).unwrap();
+    rng.fill(&mut nonce)?;
 
-    nonce
+    Ok(nonce)
 }
 
 /// Converts a nonce to a Roughtime request.
-pub fn make_request(nonce: &[u8]) -> Vec<u8> {
+pub fn make_request(nonce: &[u8]) -> Result<Vec<u8>, Error> {
     let mut msg = RtMessage::new(1);
-    msg.add_field(Tag::NONC, nonce).unwrap();
+    msg.add_field(Tag::NONC, nonce)?;
     msg.pad_to_kilobyte();
 
-    msg.encode().unwrap()
+    msg.encode()
 }
 
 /// The parsed data extracted from a Roughtime response.
@@ -46,73 +46,69 @@ pub struct ParsedResponse {
 }
 
 /// Decodes, parses and validates Roughtime responses.
+///
+/// See https://roughtime.googlesource.com/roughtime/+/HEAD/PROTOCOL.md#processing-a-response
 pub struct ResponseHandler {
-    pub_key: Option<Vec<u8>>,
+    /// The 256-bit Ed25519 public key for validating the signature.
+    pub_key: Vec<u8>,
+    /// The entire parsed message.
     msg: HashMap<Tag, Vec<u8>>,
+    /// The response.
     srep: HashMap<Tag, Vec<u8>>,
+    /// The full extracted certificate.
     cert: HashMap<Tag, Vec<u8>>,
+    /// The delegated key contained in the certificate
     dele: HashMap<Tag, Vec<u8>>,
+    /// The nonce sent in the original request.
     nonce: [u8; 64],
 }
 
 impl ResponseHandler {
-    pub fn new(pub_key: Option<Vec<u8>>, response: RtMessage, nonce: [u8; 64]) -> ResponseHandler {
+    pub fn new(
+        pub_key: Vec<u8>,
+        response: RtMessage,
+        nonce: [u8; 64],
+    ) -> Result<ResponseHandler, Error> {
         let msg = response.into_hash_map();
-        let srep = RtMessage::from_bytes(&msg[&Tag::SREP])
-            .unwrap()
-            .into_hash_map();
-        let cert = RtMessage::from_bytes(&msg[&Tag::CERT])
-            .unwrap()
-            .into_hash_map();
-        let dele = RtMessage::from_bytes(&cert[&Tag::DELE])
-            .unwrap()
-            .into_hash_map();
+        let srep = RtMessage::from_bytes(&msg[&Tag::SREP])?.into_hash_map();
+        let cert = RtMessage::from_bytes(&msg[&Tag::CERT])?.into_hash_map();
+        let dele = RtMessage::from_bytes(&cert[&Tag::DELE])?.into_hash_map();
 
-        ResponseHandler {
+        Ok(ResponseHandler {
             pub_key,
             msg,
             srep,
             cert,
             dele,
             nonce,
-        }
+        })
     }
 
-    pub fn extract_time(&self) -> ParsedResponse {
+    pub fn extract_time(&self) -> Result<ParsedResponse, Error> {
         let midpoint = self.srep[&Tag::MIDP]
             .as_slice()
-            .read_u64::<LittleEndian>()
-            .unwrap();
+            .read_u64::<LittleEndian>()?;
         let radius = self.srep[&Tag::RADI]
             .as_slice()
-            .read_u32::<LittleEndian>()
-            .unwrap();
+            .read_u32::<LittleEndian>()?;
 
-        let verified = if self.pub_key.is_some() {
-            self.validate_dele()
-                && self.validate_srep()
-                && self.validate_merkle()
-                && self.validate_midpoint(midpoint)
-        } else {
-            false
-        };
+        let verified = self.validate_dele()?
+            && self.validate_srep()
+            && self.validate_merkle()?
+            && self.validate_midpoint(midpoint)?;
 
-        ParsedResponse {
+        Ok(ParsedResponse {
             verified,
             midpoint,
             radius,
-        }
+        })
     }
 
-    fn validate_dele(&self) -> bool {
+    fn validate_dele(&self) -> Result<bool, Error> {
         let mut full_cert = Vec::from(CERTIFICATE_CONTEXT.as_bytes());
         full_cert.extend(&self.cert[&Tag::DELE]);
 
-        self.validate_sig(
-            self.pub_key.as_ref().unwrap(),
-            &self.cert[&Tag::SIG],
-            &full_cert,
-        )
+        Ok(self.validate_sig(&self.pub_key, &self.cert[&Tag::SIG], &full_cert))
     }
 
     fn validate_srep(&self) -> bool {
@@ -122,31 +118,24 @@ impl ResponseHandler {
         self.validate_sig(&self.dele[&Tag::PUBK], &self.msg[&Tag::SIG], &full_srep)
     }
 
-    fn validate_merkle(&self) -> bool {
-        let srep = RtMessage::from_bytes(&self.msg[&Tag::SREP])
-            .unwrap()
-            .into_hash_map();
-        let index = self.msg[&Tag::INDX]
-            .as_slice()
-            .read_u32::<LittleEndian>()
-            .unwrap();
+    fn validate_merkle(&self) -> Result<bool, Error> {
+        let srep = RtMessage::from_bytes(&self.msg[&Tag::SREP])?.into_hash_map();
+        let index = self.msg[&Tag::INDX].as_slice().read_u32::<LittleEndian>()?;
         let paths = &self.msg[&Tag::PATH];
 
         let hash = root_from_paths(index as usize, &self.nonce, paths);
 
-        hash == srep[&Tag::ROOT]
+        Ok(hash == srep[&Tag::ROOT])
     }
 
-    fn validate_midpoint(&self, midpoint: u64) -> bool {
+    fn validate_midpoint(&self, midpoint: u64) -> Result<bool, Error> {
         let mint = self.dele[&Tag::MINT]
             .as_slice()
-            .read_u64::<LittleEndian>()
-            .unwrap();
+            .read_u64::<LittleEndian>()?;
         let maxt = self.dele[&Tag::MAXT]
             .as_slice()
-            .read_u64::<LittleEndian>()
-            .unwrap();
-        midpoint >= mint && midpoint <= maxt
+            .read_u64::<LittleEndian>()?;
+        Ok(midpoint >= mint && midpoint <= maxt)
     }
 
     fn validate_sig(&self, public_key: &[u8], sig: &[u8], data: &[u8]) -> bool {
@@ -195,11 +184,13 @@ mod test {
             midpoint,
             radius,
         } = ResponseHandler::new(
-            Some(public_key),
+            public_key,
             RtMessage::from_bytes(response.as_ref()).unwrap(),
             nonce.to_owned(),
         )
-        .extract_time();
+        .unwrap()
+        .extract_time()
+        .unwrap();
         assert!(verified);
         assert_eq!(midpoint, 1590678436491959);
         assert_eq!(radius, 1000000);
@@ -236,11 +227,13 @@ mod test {
             midpoint,
             radius,
         } = ResponseHandler::new(
-            Some(public_key),
+            public_key,
             RtMessage::from_bytes(response.as_ref()).unwrap(),
             nonce.to_owned(),
         )
-        .extract_time();
+        .unwrap()
+        .extract_time()
+        .unwrap();
 
         assert!(!verified);
         assert_eq!(midpoint, 1590678436491959);
@@ -289,7 +282,7 @@ mod test {
              0000000000000000000000000000000000000000000000000000000000000000",
         )
         .unwrap();
-        let request = make_request(nonce.as_ref());
+        let request = make_request(nonce.as_ref()).unwrap();
         assert_eq!(request, expected_request);
     }
 }

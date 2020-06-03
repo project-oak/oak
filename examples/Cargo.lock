@@ -1357,6 +1357,7 @@ dependencies = [
 name = "oak_runtime"
 version = "0.1.0"
 dependencies = [
+ "base64 0.11.0",
  "byteorder",
  "bytes",
  "futures",
@@ -1378,6 +1379,7 @@ dependencies = [
  "rand 0.7.3",
  "regex",
  "reqwest",
+ "roughenough",
  "rustls",
  "serde",
  "serde_json",
@@ -1929,6 +1931,16 @@ dependencies = [
  "untrusted",
  "web-sys",
  "winapi 0.3.8",
+]
+
+[[package]]
+name = "roughenough"
+version = "1.1.8"
+dependencies = [
+ "base64 0.11.0",
+ "byteorder",
+ "hex",
+ "ring",
 ]
 
 [[package]]

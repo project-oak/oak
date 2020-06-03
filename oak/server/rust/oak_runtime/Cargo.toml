@@ -16,6 +16,7 @@ default = ["oak_debug"]
 [dependencies]
 byteorder = { version = "*", default-features = false }
 bytes = "*"
+base64 = "*"
 futures = "*"
 futures-core = "*"
 futures-util = "*"
@@ -35,11 +36,19 @@ prost-types = "*"
 rand = "*"
 regex = { version = "1", optional = true }
 reqwest = { version = "*", default-features = false, features = ["rustls-tls"] }
+roughenough = "*"
 rustls = "*"
 serde = "*"
 serde_json = "*"
 sha2 = "*"
-tokio = { version = "*", features = ["io-driver", "macros", "rt-core", "time"] }
+tokio = { version = "*", features = [
+  "dns",
+  "io-driver",
+  "macros",
+  "rt-core",
+  "time",
+  "udp"
+] }
 tonic = { version = "*", features = ["tls"] }
 wasmi = { version = "*", default-features = false, features = ["core"] }
 

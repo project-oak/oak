@@ -32,6 +32,7 @@ pub mod message;
 pub mod metrics;
 pub mod node;
 pub mod runtime;
+pub mod time;
 
 use auth::oidc_utils::ClientInfo;
 use tonic::transport::{Certificate, Identity};
