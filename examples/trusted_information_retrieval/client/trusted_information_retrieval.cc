@@ -63,8 +63,14 @@ int main(int argc, char** argv) {
   std::string ca_cert = oak::ApplicationClient::LoadRootCert(absl::GetFlag(FLAGS_ca_cert));
   LOG(INFO) << "Connecting to Oak Application: " << address;
 
-  auto stub = TrustedInformationRetrieval::NewStub(
-      oak::ApplicationClient::CreateTlsChannel(address, ca_cert));
+  // TODO(#1066): Use a more restrictive Label.
+  oak::label::Label label = oak::PublicUntrustedLabel();
+  // Connect to the Oak Application.
+  auto stub = TrustedInformationRetrieval::NewStub(oak::ApplicationClient::CreateChannel(
+      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert), label));
+  if (stub == nullptr) {
+    LOG(FATAL) << "Failed to create application stub";
+  }
 
   // Parse arguments.
   auto location = absl::GetFlag(FLAGS_location);
