@@ -16,6 +16,9 @@ readonly SERVER_DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak-server'
 
 readonly CACHE_DIR='bazel-cache'
 
+# List all workspaces, and standalone crates.
+declare -ar ALL_CRATES=("oak_utils" "oak_abi" "." "examples" "experimental")
+
 # To set up remote cache write credentials:
 # - navigate to https://pantheon.corp.google.com/iam-admin/serviceaccounts?project=oak-ci
 # - click on "Create Service Account"

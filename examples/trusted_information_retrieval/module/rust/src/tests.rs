@@ -16,7 +16,7 @@
 
 use crate::{
     database::parse_database,
-    proto::{ListPointsOfInterestResponse, ListPointsOfInterestRequest, Location, PointOfInterest},
+    proto::{ListPointsOfInterestRequest, ListPointsOfInterestResponse, Location, PointOfInterest},
     TrustedInformationRetrievalNode,
 };
 use assert_matches::assert_matches;
@@ -27,8 +27,7 @@ use oak_runtime::io::Encodable;
 
 const MODULE_CONFIG_NAME: &str = "trusted_information_retrieval";
 
-const XML_DATABASE: &str =
-r#"<?xml version="1.0" encoding="utf-8"?><stations lastUpdate="1590775020879" version="2.0">
+const XML_DATABASE: &str = r#"<?xml version="1.0" encoding="utf-8"?><stations lastUpdate="1590775020879" version="2.0">
     <station>
         <id>1</id>
         <name>Uninstalled station</name>
@@ -185,24 +184,19 @@ fn distance(first: (f32, f32), second: (f32, f32)) -> f32 {
 
 #[test]
 fn test_distance() {
-    assert_eq!(
-        distance((0.0, 0.0), (0.0, 0.0)),
-        0.0,
-    );
-    assert_eq!(
-        distance((0.0, 0.0), (10.0, 10.0)),
-        1568.5204,
-    );
-    assert_eq!(
-        distance((10.0, 10.0), (-10.0, -10.0)),
-        3137.0413,
-    );
-    assert_eq!(
-        distance((0.0, 0.0), (0.0, 180.0)),
-        20015.088,
-    );
-    assert_eq!(
-        distance((90.0, 0.0), (-90.0, 180.0)),
-        20015.088,
-    );
+    assert_approx_eq(distance((0.0, 0.0), (0.0, 0.0)), 0.0);
+    assert_approx_eq(distance((0.0, 0.0), (10.0, 10.0)), 1568.5204);
+    assert_approx_eq(distance((10.0, 10.0), (-10.0, -10.0)), 3137.0413);
+    assert_approx_eq(distance((0.0, 0.0), (0.0, 180.0)), 20015.088);
+    assert_approx_eq(distance((90.0, 0.0), (-90.0, 180.0)), 20015.088);
+}
+
+fn assert_approx_eq(left: f32, right: f32) {
+    let left_abs = left.abs();
+    let right_abs = right.abs();
+    let diff = (left_abs - right_abs).abs();
+
+    if diff > f32::EPSILON {
+        panic!("{} is not equal to {}", left, right);
+    }
 }

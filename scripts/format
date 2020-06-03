@@ -30,10 +30,9 @@ find . \
     \( -type f -name '*.h' -or -name '*.cc' -or -name '*.proto' \) \
   \) -exec clang-format -i -style=file {} +
 
-cargo fmt --all
-
-# Format experimental crates.
-cargo fmt --all --manifest-path=experimental/Cargo.toml
+for crate in "${ALL_CRATES[@]}"; do
+  cargo fmt --all --manifest-path="${crate}/Cargo.toml"
+done
 
 find . \
   \(  \
