@@ -104,11 +104,11 @@ Application), the easiest way to use a gRPC service implementation is to:
   function.
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/rustfmt/module/rust/src/lib.rs Rust /oak::entrypoint!\(grpc_oak_main/ /^}/)
+[embedmd]:# (../examples/translator/module/rust/src/lib.rs Rust /oak::entrypoint!\(grpc_oak_main/ /^}/)
 ```Rust
 oak::entrypoint!(grpc_oak_main => |_in_channel| {
     oak::logger::init_default();
-    let dispatcher = FormatServiceDispatcher::new(Node);
+    let dispatcher = TranslatorDispatcher::new(Node);
     let grpc_channel =
         oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
     oak::run_event_loop(dispatcher, grpc_channel);
@@ -184,8 +184,8 @@ response types. The Oak Node implements the gRPC service by implementing this
 trait.
 
 ```Rust
-pub trait FormatService {
-    fn format(&mut self, req: super::rustfmt::FormatRequest) -> grpc::Result<super::rustfmt::FormatResponse>;
+pub trait Translator {
+    fn translate(&mut self, req: TranslateRequest) -> ::oak::grpc::Result<TranslateResponse>;
 }
 ```
 

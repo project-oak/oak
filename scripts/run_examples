@@ -36,8 +36,7 @@ done
 
 # Run all examples.
 for language in ${languages}; do
-  # TODO(#594): Re-enable rustfmt when upstream rustc internal error is fixed.
-  examples="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/'"${language}"'$' | cut -d'/' -f2 | uniq | grep -v rustfmt)"
+  examples="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/'"${language}"'$' | cut -d'/' -f2 | uniq)"
   for example in ${examples}; do
     if [[ "${example}" == "chat" ]]; then
         "${SCRIPTS_DIR}/run_example" -s "${server}" -l "${language}" -e chat -- --test
