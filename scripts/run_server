@@ -77,9 +77,9 @@ if [[ -n ${EXAMPLE+x} ]]; then
       exit 1;;
   esac
 
-  if [[ "${EXAMPLE}" == "private_information_retrieval" ]]; then
+  if [[ "${EXAMPLE}" == "trusted_information_retrieval" ]]; then
     additional_args+=(
-      "--config-files=database=./examples/private_information_retrieval/database.xml"
+      "--config-files=database=./examples/trusted_information_retrieval/database.xml"
     )
   fi
 fi
