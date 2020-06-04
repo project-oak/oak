@@ -24,7 +24,7 @@ const METRICS_PORT: u16 = 9876;
 fn init_logging() {
     LOG_INIT_ONCE.call_once(|| {
         // Logger panics if it is initalized more than once.
-        simple_logger::init_by_env();
+        env_logger::init();
     });
 }
 
