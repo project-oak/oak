@@ -334,6 +334,25 @@
 <span id="334">334</span>
 <span id="335">335</span>
 <span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -354,7 +373,7 @@
 <span class="doccomment">//! Functionality to help Oak Nodes interact with gRPC.</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">OakError</span>;
-<span class="kw">use</span> <span class="ident">log</span>::<span class="ident">error</span>;
+<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">error</span>, <span class="ident">warn</span>};
 <span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">google</span>::<span class="ident">rpc</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">proto</span>::{
     <span class="ident">google</span>::<span class="ident">rpc</span>::<span class="kw-2">*</span>,
@@ -492,12 +511,35 @@
     <span class="doccomment">/// to be written to.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`invoke`]: ServerNode::invoke</span>
-    <span class="kw">fn</span> <span class="ident">handle_command</span>(
-        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">invocation</span>: <span class="ident">Invocation</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">std</span>::<span class="ident">result</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="kw">crate</span>::<span class="ident">OakError</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">handle_command</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">invocation</span>: <span class="ident">Invocation</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">std</span>::<span class="ident">result</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakError</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">response_writer</span> <span class="op">=</span> <span class="ident">ChannelResponseWriter</span>::<span class="ident">new</span>(<span class="ident">invocation</span>.<span class="ident">response_sender</span>);
+
         <span class="comment">// Read a single encapsulated request message from the read half.</span>
-        <span class="kw">let</span> <span class="ident">req</span>: <span class="ident">GrpcRequest</span> <span class="op">=</span> <span class="ident">invocation</span>.<span class="ident">request_receiver</span>.<span class="ident">receive</span>()<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">req</span>: <span class="ident">GrpcRequest</span> <span class="op">=</span> <span class="ident">invocation</span>.<span class="ident">request_receiver</span>.<span class="ident">receive</span>().<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+            <span class="comment">// TODO(#1078): If it&#39;s clear that the issue is caused by a too restrictive label</span>
+            <span class="comment">// (permission denied), then return a more specific error to the gRPC client.</span>
+            <span class="macro">warn</span><span class="macro">!</span>(
+                <span class="string">&quot;could not receive gRPC request from gRPC invocation: {}&quot;</span>,
+                <span class="ident">err</span>
+            );
+            <span class="comment">// If anything fails while reading the gRPC request, then at least try to send a</span>
+            <span class="comment">// gRPC error response back to the gRPC client, rather than just returning from this</span>
+            <span class="comment">// method with `?`, since otherwise that would leave the gRPC client hanging</span>
+            <span class="comment">// forever.</span>
+            <span class="comment">// If sending this gRPC request also fails, we just log the error here and discard it,</span>
+            <span class="comment">// but we still return the original error to the caller of this function.</span>
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">response_writer</span>.<span class="ident">close</span>(<span class="prelude-ty">Result</span>::<span class="prelude-val">Err</span>(<span class="ident">build_status</span>(
+                <span class="ident">rpc</span>::<span class="ident">Code</span>::<span class="ident">InvalidArgument</span>,
+                <span class="string">&quot;could not process gRPC request&quot;</span>,
+            ))) {
+                <span class="macro">warn</span><span class="macro">!</span>(
+                    <span class="string">&quot;could not send gRPC error back to gRPC client through gRPC invocation: {}&quot;</span>,
+                    <span class="ident">err</span>
+                );
+            };
+            <span class="ident">err</span>
+        })<span class="question-mark">?</span>;
+
         <span class="comment">// Since we are expecting a single message, close the channel immediately.</span>
         <span class="comment">// This will change when we implement client streaming (#97).</span>
         <span class="ident">invocation</span>.<span class="ident">request_receiver</span>.<span class="ident">close</span>()<span class="question-mark">?</span>;
@@ -505,11 +547,7 @@
             <span class="comment">// TODO(#97): Implement client streaming.</span>
             <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Support for streaming requests not yet implemented&quot;</span>);
         }
-        <span class="self">self</span>.<span class="ident">invoke</span>(
-            <span class="kw-2">&amp;</span><span class="ident">req</span>.<span class="ident">method_name</span>,
-            <span class="ident">req</span>.<span class="ident">req_msg</span>.<span class="ident">as_slice</span>(),
-            <span class="ident">ChannelResponseWriter</span>::<span class="ident">new</span>(<span class="ident">invocation</span>.<span class="ident">response_sender</span>),
-        );
+        <span class="self">self</span>.<span class="ident">invoke</span>(<span class="kw-2">&amp;</span><span class="ident">req</span>.<span class="ident">method_name</span>, <span class="ident">req</span>.<span class="ident">req_msg</span>.<span class="ident">as_slice</span>(), <span class="ident">response_writer</span>);
         <span class="prelude-val">Ok</span>(())
     }
 }
