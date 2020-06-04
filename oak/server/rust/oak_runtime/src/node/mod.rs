@@ -133,9 +133,9 @@ pub fn create_node(
                     .clone(),
             )?))
         }
-        Some(ConfigType::RoughtimeClientConfig(_config)) => {
-            Ok(Box::new(roughtime::RoughtimeClientNode::new(node_name)))
-        }
+        Some(ConfigType::RoughtimeClientConfig(config)) => Ok(Box::new(
+            roughtime::RoughtimeClientNode::new(node_name, config),
+        )),
         Some(ConfigType::StorageConfig(_config)) => {
             Ok(Box::new(storage::StorageNode::new(node_name)))
         }

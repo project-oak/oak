@@ -19,7 +19,7 @@
 use oak_abi::proto::google::rpc;
 pub mod client;
 mod codec;
-mod invocation;
+pub mod invocation;
 pub mod server;
 
 /// Converts [`oak_abi::proto::google::rpc::Status`] to [`tonic::Status`].

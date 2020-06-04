@@ -18,18 +18,18 @@ syntax = "proto3";
 
 package oak.roughtime;
 
-message RoughTimeRequest {}
+message RoughtimeRequest {}
 
-message RoughTimeResponse {
+message RoughtimeResponse {
   // Time is UTC and is given as microseconds since the UNIX epoch (00:00:00 UTC
   // on 1 January 1970). Leap seconds are linearly smeared over a 24-hour
   // period. That is, the smear extends from UTC noon to noon over 86,401 or
   // 86,399 SI seconds, and all the smeared seconds are the same length.
-  uint64 rough_time_usec = 1;
+  uint64 roughtime_usec = 1;
 }
 
 // Interface exposed by the Roughtime client pseudo-Node to other nodes over a
 // pair of Oak Channels.
 service RoughtimeService {
-  rpc GetRoughTime(RoughTimeRequest) returns (RoughTimeResponse);
+  rpc GetRoughtime(RoughtimeRequest) returns (RoughtimeResponse);
 }

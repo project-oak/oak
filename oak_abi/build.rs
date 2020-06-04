@@ -15,13 +15,16 @@
 //
 
 fn main() {
-    oak_utils::compile_protos(
+    // Exclude generation of service code, as it would require a reference to the Oak SDK to
+    // compile.
+    oak_utils::compile_protos_without_services(
         &[
             "../oak/proto/application.proto",
             "../oak/proto/grpc_encap.proto",
             "../oak/proto/label.proto",
             "../oak/proto/log.proto",
             "../oak/proto/oak_abi.proto",
+            "../oak/proto/roughtime_service.proto",
             "../third_party/google/rpc/code.proto",
             "../third_party/google/rpc/status.proto",
         ],

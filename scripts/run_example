@@ -73,10 +73,9 @@ if [[ "${server}" != "none" ]]; then
 fi
 
 if [[ "${EXAMPLE}" == 'abitest' ]]; then
-  # TODO(#730): reinstate Roughtime tests when Rust runtime supports them.
   # TODO(#1040): reinstate storage tests when Rust runtime supports them.
   # TODO(#953): reinstate gRPC server server-streaming tests when Rust runtime supports them.
-  readonly ADDITIONAL_ARGS=('--test_exclude=(Roughtime|Storage|GrpcServerServerStreamingMethod)')
+  readonly ADDITIONAL_ARGS=('--test_exclude=(Storage|GrpcServerServerStreamingMethod)')
 elif [[ "${EXAMPLE}" == 'aggregator' ]]; then
   readonly ADDITIONAL_ARGS=(
     '--bucket=test'
