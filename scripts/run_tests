@@ -18,9 +18,9 @@ for crate in "${ALL_CRATES[@]}"; do
     if [[ $crate == "experimental" ]]; then
         continue
     fi
-    cargo clippy --all-targets --manifest-path="${crate}/Cargo.toml" -- --deny=warnings
-    cargo test --all-targets --manifest-path="${crate}/Cargo.toml"
-    cargo test --doc --manifest-path="${crate}/Cargo.toml"
+    time cargo clippy --all-targets --manifest-path="${crate}/Cargo.toml" -- --deny=warnings
+    time cargo test --all-targets --manifest-path="${crate}/Cargo.toml"
+    time cargo test --doc --manifest-path="${crate}/Cargo.toml"
 done
 
 bazel_build_flags+=( '--keep_going' )
