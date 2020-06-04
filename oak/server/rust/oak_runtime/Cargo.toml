@@ -53,7 +53,7 @@ tonic = { version = "*", features = ["tls"] }
 wasmi = { version = "*", default-features = false, features = ["core"] }
 
 [dev-dependencies]
-simple_logger = "*"
+env_logger = "*"
 regex = "*"
 wat = "*"
 
