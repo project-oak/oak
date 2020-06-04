@@ -14,7 +14,10 @@
 # limitations under the License.
 #
 
-workspace(name = "oak")
+workspace(
+    name = "oak",
+    managed_directories = {"@hello_world_npm": ["examples/hello_world/client/nodejs/node_modules"]},
+)
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
@@ -431,3 +434,21 @@ bazelbuild_rules_pkg()
 load("@graknlabs_bazel_distribution//packer:dependencies.bzl", "deploy_packer_dependencies")
 
 deploy_packer_dependencies()
+
+# Bazel rules for Node.js
+http_archive(
+    name = "build_bazel_rules_nodejs",
+    sha256 = "d14076339deb08e5460c221fae5c5e9605d2ef4848eee1f0c81c9ffdc1ab31c1",
+    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/1.6.1/rules_nodejs-1.6.1.tar.gz"],
+)
+
+load("@build_bazel_rules_nodejs//:index.bzl", "node_repositories")
+
+# Manage Node.js NPM deps via bazel
+load("@build_bazel_rules_nodejs//:index.bzl", "npm_install")
+
+npm_install(
+    name = "hello_world_npm",
+    package_json = "//examples/hello_world/client/nodejs:package.json",
+    package_lock_json = "//examples/hello_world/client/nodejs:package-lock.json",
+)

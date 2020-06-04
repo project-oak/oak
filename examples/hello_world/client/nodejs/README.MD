@@ -1,7 +1,7 @@
 # Node.js client example
 
 To run this client, one first neeeds to install its dependencies by running
-`npm ci` in its directory.
+`bazel build client` in its directory.
 
 Then start the server of this example from the Oak root:
 `./scripts/docker_run ./scripts/run_server -e hello_world`
