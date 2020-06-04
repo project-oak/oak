@@ -131,7 +131,7 @@ fn test_parse_database() {
 
 #[test]
 fn test_trusted_information_retrieval() {
-    simple_logger::init_by_env();
+    env_logger::init();
 
     let (runtime, entry_handle) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
         .expect("Unable to configure runtime with test wasm!");
