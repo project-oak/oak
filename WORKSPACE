@@ -351,6 +351,13 @@ go_repository(
 )
 
 go_repository(
+    name = "com_github_golang_protobuf",
+    importpath = "github.com/golang/protobuf",
+    sum = "h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=",
+    version = "v1.3.2",
+)
+
+go_repository(
     name = "org_golang_x_net",
     importpath = "golang.org/x/net",
     sum = "h1:oWX7TPOiFAMXLq8o0ikBYfCJVlRHBcsciT5bXOrH628=",
