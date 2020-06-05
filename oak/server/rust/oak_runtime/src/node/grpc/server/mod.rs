@@ -22,7 +22,7 @@ use crate::{
         grpc::{codec::VecCodec, to_tonic_status},
         ConfigurationError, Node,
     },
-    runtime::RuntimeProxy,
+    runtime::{ChannelHalfDirection, RuntimeProxy},
 };
 use hyper::service::Service;
 use log::{debug, error, info, warn};
@@ -123,7 +123,17 @@ impl GrpcServerNode {
                         })
                         .and_then(|m| {
                             if m.handles.len() == 1 {
-                                Ok(m.handles[0])
+                                let handle = m.handles[0];
+                                match runtime.channel_direction(handle)? {
+                                    ChannelHalfDirection::Write => Ok(handle),
+                                    ChannelHalfDirection::Read => {
+                                        error!(
+                                            "gRPC server pseudo-node should receive a writer handle, found reader handle {}",
+                                            handle
+                                        );
+                                        Err(OakStatus::ErrBadHandle)
+                                    },
+                                }
                             } else {
                                 error!(
                                     "gRPC server pseudo-node should receive a single writer handle, found {}",
