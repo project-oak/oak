@@ -1,0 +1,23 @@
+[package]
+name = "trusted_information_retrieval_client"
+version = "0.1.0"
+authors = ["Ivan Petrov <ivanpetrov@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = "*"
+env_logger = "*"
+futures-core = "*"
+futures-util = "*"
+log = "*"
+oak = "=0.1.0"
+oak_abi = "=0.1.0"
+prost = "*"
+structopt = "*"
+tokio = { version = "*", features = ["fs", "macros", "sync", "stream"] }
+tonic = { version = "*", features = ["tls"] }
+
+[build-dependencies]
+oak_utils = "*"
+tonic-build = "*"
