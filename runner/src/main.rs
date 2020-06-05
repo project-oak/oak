@@ -86,14 +86,13 @@ fn run_examples(opt: &RunExamples) -> Step {
                     name: "abitest".to_string(),
                     rust_module_names: vec!["module_0".to_string(), "module_1".to_string()],
                     // TODO(#1040): reinstate storage tests when Rust runtime supports them.
-                    // TODO(#953): reinstate gRPC server server-streaming tests when Rust runtime
                     // supports them.
                     additional_client_flags: vec![
                         "--cert_chain=../../../../../../../../examples/certs/local/local.pem"
                             .to_string(),
                         "--private_key=../../../../../../../../examples/certs/local/local.key"
                             .to_string(),
-                        "--test_exclude=(Storage|GrpcServerServerStreamingMethod)".to_string(),
+                        "--test_exclude=Storage".to_string(),
                     ],
                 },
                 Example {
