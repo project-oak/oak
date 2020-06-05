@@ -16,7 +16,10 @@ const client = new helloWorldProto.HelloWorld('localhost:8080', credentials);
 client.sayHello({ greeting: 'Node.js' }, (error, response) => {
   if (error) {
     console.error(error);
+    process.exit(1);
   } else {
     console.log(response.reply);
   }
 });
+
+process.exit(0);
