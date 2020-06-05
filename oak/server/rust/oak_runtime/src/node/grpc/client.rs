@@ -24,7 +24,7 @@ use crate::{
     },
     runtime::RuntimeProxy,
 };
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use oak_abi::{
     proto::{
         google::rpc,
@@ -45,6 +45,8 @@ pub struct GrpcClientNode {
     /// Loaded PEM encoded X.509 TLS root certificate file used to authenticate an external gRPC
     /// service.
     root_tls_certificate: Certificate,
+    /// gRPC client to allow re-use of connection across multiple method invocations.
+    grpc_client: Option<tonic::client::Grpc<tonic::transport::channel::Channel>>,
 }
 
 /// Checks if URI contains the "Host" element.
@@ -71,12 +73,17 @@ impl GrpcClientNode {
             node_name: node_name.to_string(),
             uri,
             root_tls_certificate,
+            grpc_client: None,
         })
     }
 
     /// Main loop that handles gRPC invocations from the `handle`, sends gRPC requests to an
     /// external gRPC service and writes gRPC responses back to the invocation channel.
-    async fn handle_loop(&self, runtime: RuntimeProxy, handle: Handle) -> Result<(), OakStatus> {
+    async fn handle_loop(
+        &mut self,
+        runtime: RuntimeProxy,
+        handle: Handle,
+    ) -> Result<(), OakStatus> {
         // Create a [`Receiver`] used for reading gRPC invocations.
         let receiver = Receiver::<Invocation>::new(handle);
         loop {
@@ -89,13 +96,20 @@ impl GrpcClientNode {
 
             let result = self.process_invocation(&runtime, &invocation).await;
             info!("Invocation processing finished: {:?}", result);
+            if result.is_err() {
+                warn!(
+                    "Error encountered; forcing re-connection next time around ({:?})",
+                    result
+                );
+                self.grpc_client = None;
+            }
             invocation.close(&runtime);
         }
     }
 
     /// Process a gRPC method invocation for an external gRPC service.
     async fn process_invocation(
-        &self,
+        &mut self,
         runtime: &RuntimeProxy,
         invocation: &Invocation,
     ) -> Result<(), OakStatus> {
@@ -110,13 +124,15 @@ impl GrpcClientNode {
         })?;
         debug!("Incoming gRPC request: {:?}", request);
 
-        // Connect to an external gRPC service.
-        // TOOD(#1057): persist and re-use the client/connection
-        let mut grpc_client = self.connect().await.map_err(|error| {
-            error!("Couldn't connect to {}: {:?}", self.uri, error);
-            invocation.send_error(rpc::Code::NotFound, "Service connection failed", runtime);
-            OakStatus::ErrInternal
-        })?;
+        if self.grpc_client.is_none() {
+            // Connect to an external gRPC service.
+            self.grpc_client = Some(self.connect().await.map_err(|error| {
+                error!("Couldn't connect to {}: {:?}", self.uri, error);
+                invocation.send_error(rpc::Code::NotFound, "Service connection failed", runtime);
+                OakStatus::ErrInternal
+            })?);
+        }
+        let grpc_client = self.grpc_client.as_mut().unwrap();
         grpc_client.ready().await.map_err(|error| {
             error!("Service was not ready: {}", error);
             invocation.send_error(rpc::Code::NotFound, "Service not ready", runtime);
@@ -134,14 +150,14 @@ impl GrpcClientNode {
         let request = tonic::Request::new(request.req_msg);
         let request_stream =
             request.map(|m| futures_util::stream::once(futures_util::future::ready(m)));
-        let mut rsp_stream = grpc_client
-            .streaming(request_stream, path, codec)
-            .await
-            .map_err(|error| {
-                error!("Request failed: {}", error);
+        let mut rsp_stream = match grpc_client.streaming(request_stream, path, codec).await {
+            Ok(rsp_stream) => rsp_stream,
+            Err(error) => {
+                error!("Request to remote service failed: {}", error);
                 invocation.send_error(tonic_code_to_grpc(error.code()), error.message(), runtime);
-                OakStatus::ErrInternal
-            })?;
+                return Ok(());
+            }
+        };
 
         let body_stream = rsp_stream.get_mut();
         loop {
@@ -170,6 +186,7 @@ impl GrpcClientNode {
                 break;
             }
         }
+
         Ok(())
     }
 
@@ -197,7 +214,7 @@ impl GrpcClientNode {
 /// Oak Node implementation for the gRPC client pseudo-Node.
 impl Node for GrpcClientNode {
     fn run(
-        self: Box<Self>,
+        mut self: Box<Self>,
         runtime: RuntimeProxy,
         handle: Handle,
         notify_receiver: oneshot::Receiver<()>,
