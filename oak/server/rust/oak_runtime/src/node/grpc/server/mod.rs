@@ -209,11 +209,18 @@ impl Node for GrpcServerNode {
             "{}: Starting gRPC server pseudo-Node on: {}",
             self.node_name, self.address
         );
-        let result = async_runtime.block_on(server);
-        info!(
-            "{}: Exiting gRPC server pseudo-Node thread: {:?}",
-            self.node_name, result
-        );
+        match async_runtime.block_on(server) {
+            Err(err) => warn!(
+                "{}: Error running gRPC server pseudo-Node: {}",
+                self.node_name, err
+            ),
+            Ok(()) => {
+                info!(
+                    "{}: Success running gRPC server pseudo-Node",
+                    self.node_name,
+                );
+            }
+        }
     }
 }
 
