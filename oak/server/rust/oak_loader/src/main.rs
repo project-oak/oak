@@ -28,7 +28,7 @@
 
 use anyhow::anyhow;
 use core::str::FromStr;
-use log::{debug, info};
+use log::{debug, error, info};
 use oak_abi::{
     proto::oak::application::{ApplicationConfiguration, ConfigMap},
     Handle,
@@ -239,7 +239,14 @@ fn main() -> anyhow::Result<()> {
         runtime.node_id, initial_handle
     );
 
+    // Pass in the config map over the initial channel.
     send_config_map(config_map, &runtime, initial_handle)?;
+    if let Err(err) = runtime.channel_close(initial_handle) {
+        error!(
+            "Failed to close initial handle {:?}: {:?}",
+            initial_handle, err
+        );
+    }
 
     let done = Arc::new(AtomicBool::new(false));
     signal_hook::flag::register(signal_hook::SIGINT, Arc::clone(&done))?;
