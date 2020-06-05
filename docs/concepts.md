@@ -1,7 +1,7 @@
 # Oak Concepts
 
 - [Oak Runtime](#oak-runtime)
-- [Oak Node](#oak-node)
+- [Nodes](#nodes)
   - [WebAssembly](#webassembly)
 - [Channels](#channels)
   - [Orphaned Channels](#orphaned-channels)
@@ -174,7 +174,7 @@ The following types of security principals are supported in Oak:
   running within an Oak Node
 
 Tags and Labels are represented as serialized
-[protobuf messages](/oak/proto/policy.proto).
+[protobuf messages](/oak/proto/label.proto).
 
 Any security principal may be used (as a tag) as part of confidentiality or
 integrity components, depending on the required use case.

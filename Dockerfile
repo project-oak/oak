@@ -87,13 +87,17 @@ ENV EM_CACHE "${emscripten_dir}/.emscripten_cache"
 RUN chmod --recursive go+wx "${EM_CACHE}"
 
 # Install Go.
-ARG golang_version=1.13.1
-ARG golang_sha256=94f874037b82ea5353f4061e543681a0e79657f787437974214629af8407d124
+ARG golang_version=1.14.4
+ARG golang_sha256=aed845e4185a0b2a3c3d5e1d0a35491702c55889192bb9c30e67a3de6849c067
 ARG golang_temp=/tmp/golang.tar.gz
 ENV GOROOT /usr/local/go
 ENV GOPATH ${HOME}/go
 ENV PATH "${GOROOT}/bin:${PATH}"
 ENV PATH "${GOPATH}/bin:${PATH}"
+# Enable Go module behaviour even in the presence of GOPATH; this way we can specify precise
+# versions via `go get`.
+# See https://dev.to/maelvls/why-is-go111module-everywhere-and-everything-about-go-modules-24k
+ENV GO111MODULE on
 RUN mkdir --parents ${GOROOT} \
   && curl --location https://dl.google.com/go/go${golang_version}.linux-amd64.tar.gz > ${golang_temp} \
   && sha256sum --binary ${golang_temp} && echo "${golang_sha256} *${golang_temp}" | sha256sum --check \
@@ -101,9 +105,13 @@ RUN mkdir --parents ${GOROOT} \
   && rm ${golang_temp} \
   && go version
 
-# Install embedmd (via Go).
-RUN go get github.com/campoy/embedmd \
+# Install embedmd (Markdown snippet embedder) (via Go).
+RUN go get github.com/campoy/embedmd@97c13d6 \
   && embedmd -v
+
+# Install liche (Markdown link checker) (via Go).
+RUN go get github.com/raviqqe/liche@f57a5d1 \
+  && liche --version
 
 # Install prettier and markdownlint (via Node.js).
 # https://prettier.io/
