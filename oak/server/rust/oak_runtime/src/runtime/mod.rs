@@ -24,7 +24,6 @@ use crate::{
     GrpcConfiguration,
 };
 use core::sync::atomic::{AtomicBool, AtomicU64, Ordering::SeqCst};
-use graph::DotGraph;
 use itertools::Itertools;
 use log::{debug, error, info, trace, warn};
 use oak_abi::{
@@ -76,7 +75,7 @@ impl NodeStopper {
             .send(())
             // Notification errors are discarded since not all of the Nodes save
             // and use the [`oneshot::Receiver`].
-            .unwrap_or_else(|_| {
+            .unwrap_or_else(|()| {
                 debug!("{} already droppped `notify_receiver`.", node_name);
             });
         debug!("join thread for node {}...", self.node_name);
