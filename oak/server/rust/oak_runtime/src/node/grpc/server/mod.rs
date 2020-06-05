@@ -155,6 +155,9 @@ impl Node for GrpcServerNode {
         info!("{}: Waiting for channel writer", self.node_name);
         let channel_writer = GrpcServerNode::get_channel_writer(&runtime, handle)
             .expect("Couldn't initialize channel writer");
+        if let Err(err) = runtime.channel_close(handle) {
+            error!("Failed to close initial inbound channel: {:?}", err);
+        }
 
         // Handles incoming authentication gRPC requests
         let auth_handler = match self.oidc_client_info {
@@ -463,6 +466,26 @@ impl GrpcRequestHandler {
                 error!("Couldn't write gRPC invocation message: {:?}", error);
             })?;
 
+        // Close all local handles except for the one that allows reading responses.
+        if let Err(err) = self.runtime.channel_close(request_writer) {
+            error!(
+                "Failed to close request writer channel for invocation: {:?}",
+                err
+            );
+        }
+        if let Err(err) = self.runtime.channel_close(request_reader) {
+            error!(
+                "Failed to close request reader channel for invocation: {:?}",
+                err
+            );
+        }
+        if let Err(err) = self.runtime.channel_close(response_writer) {
+            error!(
+                "Failed to close response writer channel for invocation: {:?}",
+                err
+            );
+        }
+
         Ok(response_reader)
     }
 
@@ -476,7 +499,7 @@ impl GrpcRequestHandler {
                 error!("Couldn't wait on the temporary gRPC channel: {:?}", error);
             })?;
 
-        if read_status[0] == ChannelReadStatus::ReadReady {
+        let result = if read_status[0] == ChannelReadStatus::ReadReady {
             self.runtime
                 .channel_read(response_reader)
                 .map_err(|error| {
@@ -506,6 +529,14 @@ impl GrpcRequestHandler {
                 read_status[0]
             );
             Err(())
+        };
+
+        if let Err(err) = self.runtime.channel_close(response_reader) {
+            error!(
+                "Failed to close response writer channel for invocation: {:?}",
+                err
+            );
         }
+        result
     }
 }
