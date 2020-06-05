@@ -104,9 +104,3 @@ bazel_build_flags+=(
 # Build the client with a different output_base so that we don't lose incremental state.
 # See https://docs.bazel.build/versions/master/command-line-reference.html#flag--output_base.
 bazel --output_base="${CACHE_DIR}/client" build "${bazel_build_flags[@]}" "//examples/${EXAMPLE}/client:all"
-
-# If a node client exists, install its dependencies
-nodejs_client="./examples/${EXAMPLE}/client/nodejs"
-if [ -d "${nodejs_client}" ]; then
-    npm ci --prefix ${nodejs_client}
-fi
