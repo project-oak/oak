@@ -187,9 +187,16 @@ impl RuntimeProxy {
         label: &Label,
         initial_handle: oak_abi::Handle,
     ) -> Result<(), OakStatus> {
-        self.runtime
+        debug!("{:?}: node_create({:?}, {:?})", self.node_id, config, label);
+        let result = self
+            .runtime
             .clone()
-            .node_create(self.node_id, config, label, initial_handle)
+            .node_create(self.node_id, config, label, initial_handle);
+        debug!(
+            "{:?}: node_create({:?}, {:?}) -> {:?}",
+            self.node_id, config, label, result
+        );
+        result
     }
 
     /// See [`Runtime::channel_create`].
@@ -197,12 +204,24 @@ impl RuntimeProxy {
         &self,
         label: &Label,
     ) -> Result<(oak_abi::Handle, oak_abi::Handle), OakStatus> {
-        self.runtime.channel_create(self.node_id, label)
+        debug!("{:?}: channel_create({:?})", self.node_id, label);
+        let result = self.runtime.channel_create(self.node_id, label);
+        debug!(
+            "{:?}: channel_create({:?}) -> {:?}",
+            self.node_id, label, result
+        );
+        result
     }
 
     /// See [`Runtime::channel_close`].
     pub fn channel_close(&self, handle: oak_abi::Handle) -> Result<(), OakStatus> {
-        self.runtime.channel_close(self.node_id, handle)
+        debug!("{:?}: channel_close({})", self.node_id, handle);
+        let result = self.runtime.channel_close(self.node_id, handle);
+        debug!(
+            "{:?}: channel_close({}) -> {:?}",
+            self.node_id, handle, result
+        );
+        result
     }
 
     /// See [`Runtime::wait_on_channels`].
@@ -210,7 +229,19 @@ impl RuntimeProxy {
         &self,
         read_handles: &[oak_abi::Handle],
     ) -> Result<Vec<ChannelReadStatus>, OakStatus> {
-        self.runtime.wait_on_channels(self.node_id, read_handles)
+        debug!(
+            "{:?}: wait_on_channels(count={})",
+            self.node_id,
+            read_handles.len()
+        );
+        let result = self.runtime.wait_on_channels(self.node_id, read_handles);
+        debug!(
+            "{:?}: wait_on_channels(count={}) -> {:?}",
+            self.node_id,
+            read_handles.len(),
+            result
+        );
+        result
     }
 
     /// See [`Runtime::channel_write`].
@@ -219,7 +250,16 @@ impl RuntimeProxy {
         write_handle: oak_abi::Handle,
         msg: NodeMessage,
     ) -> Result<(), OakStatus> {
-        self.runtime.channel_write(self.node_id, write_handle, msg)
+        debug!(
+            "{:?}: channel_write({}, {:?})",
+            self.node_id, write_handle, msg
+        );
+        let result = self.runtime.channel_write(self.node_id, write_handle, msg);
+        debug!(
+            "{:?}: channel_write({}, ...) -> {:?}",
+            self.node_id, write_handle, result
+        );
+        result
     }
 
     /// See [`Runtime::channel_read`].
@@ -227,7 +267,13 @@ impl RuntimeProxy {
         &self,
         read_handle: oak_abi::Handle,
     ) -> Result<Option<NodeMessage>, OakStatus> {
-        self.runtime.channel_read(self.node_id, read_handle)
+        debug!("{:?}: channel_read({})", self.node_id, read_handle,);
+        let result = self.runtime.channel_read(self.node_id, read_handle);
+        debug!(
+            "{:?}: channel_read({}) -> {:?}",
+            self.node_id, read_handle, result
+        );
+        result
     }
 
     /// See [`Runtime::channel_try_read_message`].
@@ -237,12 +283,21 @@ impl RuntimeProxy {
         bytes_capacity: usize,
         handles_capacity: usize,
     ) -> Result<Option<NodeReadStatus>, OakStatus> {
-        self.runtime.channel_try_read_message(
+        debug!(
+            "{:?}: channel_try_read({}, bytes_capacity={}, handles_capacity={})",
+            self.node_id, read_handle, bytes_capacity, handles_capacity
+        );
+        let result = self.runtime.channel_try_read_message(
             self.node_id,
             read_handle,
             bytes_capacity,
             handles_capacity,
-        )
+        );
+        debug!(
+            "{:?}: channel_try_read({}, bytes_capacity={}, handles_capacity={}) -> {:?}",
+            self.node_id, read_handle, bytes_capacity, handles_capacity, result
+        );
+        result
     }
 
     pub fn metrics_data(&self) -> Metrics {

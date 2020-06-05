@@ -22,7 +22,7 @@ use crate::{
     NodeMessage,
 };
 use byteorder::{ByteOrder, LittleEndian};
-use log::{debug, error, info, warn};
+use log::{debug, error, info, trace, warn};
 use maplit::hashset;
 use oak_abi::{
     label::Label,
@@ -115,9 +115,12 @@ impl WasmInterface {
         label_length: AbiPointerOffset,
         initial_handle: oak_abi::Handle,
     ) -> Result<(), OakStatus> {
-        debug!(
+        trace!(
             "{}: node_create({}, {}, {})",
-            self.pretty_name, config_ptr, config_length, initial_handle
+            self.pretty_name,
+            config_ptr,
+            config_length,
+            initial_handle
         );
 
         if self.runtime.is_terminating() {
@@ -162,11 +165,6 @@ impl WasmInterface {
             OakStatus::ErrInvalidArgs
         })?;
 
-        debug!(
-            "{}: node_create({:?}, {:?})",
-            self.pretty_name, config, label
-        );
-
         self.runtime
             .node_create(&config, &label, initial_handle)
             .map_err(|err| {
@@ -199,7 +197,6 @@ impl WasmInterface {
 
     /// Corresponds to the host ABI function [`channel_close`](https://github.com/project-oak/oak/blob/master/docs/abi.md#channel_close).
     fn channel_close(&mut self, handle: oak_abi::Handle) -> Result<(), OakStatus> {
-        debug!("{}: channel_close({})", self.pretty_name, handle);
         self.runtime.channel_close(handle)
     }
 
@@ -211,9 +208,13 @@ impl WasmInterface {
         label_ptr: AbiPointer,
         label_length: AbiPointerOffset,
     ) -> Result<(), OakStatus> {
-        debug!(
+        trace!(
             "{}: channel_create({}, {}, {}, {})",
-            self.pretty_name, write_addr, read_addr, label_ptr, label_length
+            self.pretty_name,
+            write_addr,
+            read_addr,
+            label_ptr,
+            label_length
         );
 
         if self.runtime.is_terminating() {
@@ -243,11 +244,6 @@ impl WasmInterface {
         })?;
 
         let (write_handle, read_handle) = self.runtime.channel_create(&label)?;
-
-        debug!(
-            "{}: channel_create() -> ({}, {})",
-            self.pretty_name, write_handle, read_handle
-        );
 
         self.get_memory()
             .set_value(write_addr, write_handle as i64)
@@ -279,9 +275,14 @@ impl WasmInterface {
         handles: AbiPointer,
         handles_count: AbiPointerOffset,
     ) -> Result<(), OakStatus> {
-        debug!(
+        trace!(
             "{}: channel_write({}, {}, {}, {}, {})",
-            self.pretty_name, writer_handle, source, source_length, handles, handles_count
+            self.pretty_name,
+            writer_handle,
+            source,
+            source_length,
+            handles,
+            handles_count
         );
 
         let data = self
@@ -331,7 +332,7 @@ impl WasmInterface {
         handles_capacity: AbiPointerOffset,
         actual_handle_count_addr: AbiPointer,
     ) -> Result<(), OakStatus> {
-        debug!(
+        trace!(
             "{}: channel_read({}, {}, {}, {}, {}, {}, {})",
             self.pretty_name,
             reader_handle,
@@ -425,9 +426,11 @@ impl WasmInterface {
         status_buff: AbiPointer,
         handles_count: AbiPointerOffset,
     ) -> Result<(), OakStatus> {
-        debug!(
+        trace!(
             "{}: wait_on_channels({}, {})",
-            self.pretty_name, status_buff, handles_count
+            self.pretty_name,
+            status_buff,
+            handles_count
         );
 
         let handles_raw: Vec<u8> = self
