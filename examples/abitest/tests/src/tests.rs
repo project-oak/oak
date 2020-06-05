@@ -20,8 +20,8 @@ use log::{error, info};
 use maplit::hashmap;
 use oak::grpc;
 use oak_abi::proto::oak::application::ApplicationConfiguration;
-use std::collections::HashMap;
-use tonic::transport::Certificate;
+use std::{collections::HashMap, fs::read_to_string};
+use tonic::transport::Identity;
 
 // Constants for Node config names that should match those in the textproto
 // config held in ../../client/config.h.
@@ -46,6 +46,21 @@ fn build_wasm() -> std::io::Result<HashMap<String, Vec<u8>>> {
 fn test_abi() {
     env_logger::init();
 
+    // Create a valid gRPC configuration to allow gRPC server pseudo-Node tests.
+    let grpc_tls_private_key = read_to_string("../../certs/local/local.key").unwrap();
+    let grpc_tls_certificate = read_to_string("../../certs/local/local.pem").unwrap();
+    let root_tls_certificate = read_to_string("../../certs/local/ca.pem").unwrap();
+    let grpc_configuration = oak_runtime::GrpcConfiguration {
+        grpc_server_tls_identity: Some(Identity::from_pem(
+            grpc_tls_certificate,
+            grpc_tls_private_key,
+        )),
+        grpc_client_root_tls_certificate: Some(
+            oak_runtime::config::load_certificate(&root_tls_certificate).unwrap(),
+        ),
+        oidc_client_info: None,
+    };
+
     let application_configuration = ApplicationConfiguration {
         wasm_modules: build_wasm().expect("failed to build wasm modules"),
         initial_node_configuration: Some(oak::node_config::wasm(
@@ -57,14 +72,7 @@ fn test_abi() {
     let (runtime, entry_channel) = oak_runtime::configure_and_run(
         application_configuration,
         oak_runtime::RuntimeConfiguration::default(),
-        oak_runtime::GrpcConfiguration {
-            grpc_server_tls_identity: None,
-            oidc_client_info: None,
-            // Some of the tests require a gRPC client, so we populate the required certificate with
-            // an invalid value here, even though it will still fail when instantiating the actual
-            // gRPC client.
-            grpc_client_root_tls_certificate: Some(Certificate::from_pem("invalid-cert")),
-        },
+        grpc_configuration,
     )
     .expect("unable to configure runtime with test wasm");
 

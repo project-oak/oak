@@ -563,14 +563,7 @@ configure and run the Runtime.
     let (runtime, entry_channel) = oak_runtime::configure_and_run(
         application_configuration,
         oak_runtime::RuntimeConfiguration::default(),
-        oak_runtime::GrpcConfiguration {
-            grpc_server_tls_identity: None,
-            oidc_client_info: None,
-            // Some of the tests require a gRPC client, so we populate the required certificate with
-            // an invalid value here, even though it will still fail when instantiating the actual
-            // gRPC client.
-            grpc_client_root_tls_certificate: Some(Certificate::from_pem("invalid-cert")),
-        },
+        grpc_configuration,
     )
     .expect("unable to configure runtime with test wasm");
 ```
