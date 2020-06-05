@@ -208,6 +208,7 @@ impl OakAbiTestService for FrontendNode {
         );
         tests.insert("NodeCreate", FrontendNode::test_node_create);
         tests.insert("NodeCreateRaw", FrontendNode::test_node_create_raw);
+        tests.insert("NodePanic", FrontendNode::test_node_panic);
         tests.insert("RandomGetRaw", FrontendNode::test_random_get_raw);
         tests.insert("RandomGet", FrontendNode::test_random_get);
         tests.insert("RandomRng", FrontendNode::test_random_rng);
@@ -1336,6 +1337,23 @@ impl FrontendNode {
         Ok(())
     }
 
+    fn test_node_panic(&mut self) -> TestResult {
+        let (out_handle, in_handle) = oak::channel_create().unwrap();
+        // Create a Node that panics. We can't see the panic, but the rest
+        // of the Application should continue.
+        expect_eq!(
+            Ok(()),
+            oak::node_create(
+                &oak::node_config::wasm(FRONTEND_MODULE_NAME, "panic_main"),
+                in_handle
+            )
+        );
+
+        expect_eq!(Ok(()), oak::channel_close(in_handle.handle));
+        expect_eq!(Ok(()), oak::channel_close(out_handle.handle));
+        Ok(())
+    }
+
     fn test_random_get_raw(&mut self) -> TestResult {
         unsafe {
             expect_eq!(
@@ -1928,3 +1946,7 @@ fn new_channel_chain(nest_count: u32) -> Result<oak::ReadHandle, Box<dyn std::er
     }
     Ok(inner_rh)
 }
+
+oak::entrypoint!(panic_main => |_in_channel| {
+    panic!("deliberate panic");
+});
