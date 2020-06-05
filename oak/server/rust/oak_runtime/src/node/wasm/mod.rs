@@ -869,13 +869,14 @@ impl super::Node for WasmNode {
             .as_memory()
             .cloned();
 
-        instance
-            .invoke_export(
-                &self.entrypoint_name,
-                &[wasmi::RuntimeValue::I64(handle as i64)],
-                &mut abi,
-            )
-            .expect("failed to execute export");
+        let result = instance.invoke_export(
+            &self.entrypoint_name,
+            &[wasmi::RuntimeValue::I64(handle as i64)],
+            &mut abi,
+        );
+        if let Err(err) = result {
+            error!("Invocation of Wasm entrypoint failed: {:?}", err);
+        }
         debug!(
             "{}: entrypoint '{}' completed",
             self.node_name, self.entrypoint_name
