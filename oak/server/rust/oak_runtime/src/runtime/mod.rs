@@ -325,6 +325,16 @@ impl Runtime {
         }
     }
 
+    /// Return the direction of an ABI handle.
+    pub fn abi_direction(
+        &self,
+        node_id: NodeId,
+        handle: oak_abi::Handle,
+    ) -> Result<ChannelHalfDirection, OakStatus> {
+        let half = self.abi_to_half(node_id, handle)?;
+        Ok(half.direction)
+    }
+
     pub fn gather_metrics(&self) -> Vec<MetricFamily> {
         self.metrics_data.gather()
     }
