@@ -168,6 +168,7 @@ pub struct NodeId(pub u64);
 
 /// Helper types to indicate whether a channel read operation has succeed or has failed with not
 /// enough `bytes_capacity` and/or `handles_capacity`.
+#[derive(Debug)]
 pub enum NodeReadStatus {
     Success(NodeMessage),
     NeedsCapacity(usize, usize),

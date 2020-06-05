@@ -32,8 +32,18 @@ pub struct Message {
 /// internal counterpart of the SDK's `Message` type, whereas the internal `Message`
 /// type above holds internal channel references that can be moved between different
 /// Node contexts.
-#[derive(Debug)]
 pub struct NodeMessage {
     pub data: Vec<u8>,
     pub handles: Vec<oak_abi::Handle>,
+}
+
+impl std::fmt::Debug for NodeMessage {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "NodeMessage {{ data: len={}, handles: {:?} }}",
+            self.data.len(),
+            self.handles
+        )
+    }
 }
