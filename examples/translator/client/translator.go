@@ -20,7 +20,9 @@ import (
 
 	"github.com/golang/glog"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/status"
 
 	translator_pb "github.com/project-oak/oak/examples/translator/proto"
 )
@@ -35,7 +37,14 @@ func translate(ctx context.Context, client translator_pb.TranslatorClient, text,
 	req := translator_pb.TranslateRequest{Text: text, FromLang: fromLang, ToLang: toLang}
 	rsp, err := client.Translate(ctx, &req)
 	if err != nil {
-		glog.Errorf("Could not perform Translate(%q, %q=>%q): %v", text, fromLang, toLang, err)
+		rpcStatus, ok := status.FromError(err)
+		if !ok {
+			glog.Fatalf("Could not perform Translate(%q, %q=>%q): internal error %v", text, fromLang, toLang, err)
+		}
+		if rpcStatus.Code() != codes.NotFound {
+			glog.Fatalf("Could not perform Translate(%q, %q=>%q): %v", text, fromLang, toLang, err)
+		}
+		glog.Errorf("Failed to Translate(%q, %q=>%q): not found", text, fromLang, toLang)
 		return
 	}
 	glog.Infof("Response: %q", rsp.TranslatedText)
