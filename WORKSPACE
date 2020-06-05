@@ -145,7 +145,7 @@ http_archive(
 # Java gRPC support for Android examples.
 http_archive(
     name = "io_grpc_grpc_java",
-    #sha256 = "9d23d9fec84e24bd3962f5ef9d1fd61ce939d3f649a22bcab0f19e8167fae8ef",
+    sha256 = "446ad7a2e85bbd05406dbf95232c7c49ed90de83b3b60cb2048b0c4c9f254d29",
     strip_prefix = "grpc-java-1.29.0",
     urls = [
         "https://github.com/grpc/grpc-java/archive/v1.29.0.zip",
