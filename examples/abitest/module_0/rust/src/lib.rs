@@ -50,8 +50,6 @@ struct FrontendNode {
     storage: Option<oak::storage::Storage>,
     absent_storage: Option<oak::storage::Storage>,
     storage_name: Vec<u8>,
-    grpc_service: Option<OakAbiTestServiceClient>,
-    absent_grpc_service: Option<OakAbiTestServiceClient>,
     roughtime: Option<oak::roughtime::Roughtime>,
     misconfigured_roughtime: Option<oak::roughtime::Roughtime>,
 }
@@ -119,14 +117,6 @@ impl FrontendNode {
                 address: "https://test.invalid:9999".to_string(),
             }),
             storage_name: storage_name.as_bytes().to_vec(),
-            grpc_service: oak::grpc::client::Client::new(&oak::node_config::grpc_client(
-                "https://localhost:7878",
-            ))
-            .map(OakAbiTestServiceClient),
-            absent_grpc_service: oak::grpc::client::Client::new(&oak::node_config::grpc_client(
-                "https://test.invalid:9999",
-            ))
-            .map(OakAbiTestServiceClient),
             roughtime: oak::roughtime::Roughtime::new(&RoughtimeClientConfiguration {
                 ..Default::default()
             }),
@@ -1624,7 +1614,11 @@ impl FrontendNode {
         Ok(())
     }
     fn test_grpc_client_unary_method(&mut self) -> TestResult {
-        let grpc_stub = self.grpc_service.as_ref().ok_or_else(|| {
+        let grpc_stub = oak::grpc::client::Client::new(&oak::node_config::grpc_client(
+            "https://localhost:7878",
+        ))
+        .map(OakAbiTestServiceClient)
+        .ok_or_else(|| {
             Box::new(std::io::Error::new(
                 std::io::ErrorKind::Other,
                 "no gRPC client channel available",
@@ -1658,7 +1652,11 @@ impl FrontendNode {
         Ok(())
     }
     fn test_grpc_client_server_streaming_method(&mut self) -> TestResult {
-        let grpc_stub = self.grpc_service.as_ref().ok_or_else(|| {
+        let grpc_stub = oak::grpc::client::Client::new(&oak::node_config::grpc_client(
+            "https://localhost:7878",
+        ))
+        .map(OakAbiTestServiceClient)
+        .ok_or_else(|| {
             Box::new(std::io::Error::new(
                 std::io::ErrorKind::Other,
                 "no gRPC client channel available",
@@ -1732,7 +1730,11 @@ impl FrontendNode {
     fn test_absent_grpc_client_unary_method(&mut self) -> TestResult {
         // Expect to have a channel to a gRPC client pseudo-Node, but the remote
         // gRPC service is unavailable.
-        let grpc_stub = self.absent_grpc_service.as_ref().ok_or_else(|| {
+        let grpc_stub = oak::grpc::client::Client::new(&oak::node_config::grpc_client(
+            "https://test.invalid:9999",
+        ))
+        .map(OakAbiTestServiceClient)
+        .ok_or_else(|| {
             Box::new(std::io::Error::new(
                 std::io::ErrorKind::Other,
                 "no gRPC client channel available",
@@ -1754,7 +1756,11 @@ impl FrontendNode {
     fn test_absent_grpc_client_server_streaming_method(&mut self) -> TestResult {
         // Expect to have a channel to a gRPC client pseudo-Node, but the remote
         // gRPC service is unavailable.
-        let grpc_stub = self.absent_grpc_service.as_ref().ok_or_else(|| {
+        let grpc_stub = oak::grpc::client::Client::new(&oak::node_config::grpc_client(
+            "https://test.invalid:9999",
+        ))
+        .map(OakAbiTestServiceClient)
+        .ok_or_else(|| {
             Box::new(std::io::Error::new(
                 std::io::ErrorKind::Other,
                 "no gRPC client channel available",
