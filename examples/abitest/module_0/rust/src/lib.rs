@@ -220,6 +220,23 @@ impl OakAbiTestService for FrontendNode {
         tests.insert("BackendRoundtrip", FrontendNode::test_backend_roundtrip);
         tests.insert("Storage", FrontendNode::test_storage);
         tests.insert("AbsentStorage", FrontendNode::test_absent_storage);
+        tests.insert("GrpcServerSecond", FrontendNode::test_grpc_server_second);
+        tests.insert(
+            "GrpcServerInvalidAddress",
+            FrontendNode::test_grpc_server_invalid_address,
+        );
+        tests.insert(
+            "GrpcServerFailNoHandle",
+            FrontendNode::test_grpc_server_fail_no_handle,
+        );
+        tests.insert(
+            "GrpcServerFailReadHandle",
+            FrontendNode::test_grpc_server_fail_read_handle,
+        );
+        tests.insert(
+            "GrpcServerFailTwoHandles",
+            FrontendNode::test_grpc_server_fail_two_handles,
+        );
         tests.insert(
             "GrpcClientUnaryMethod",
             FrontendNode::test_grpc_client_unary_method,
@@ -1611,6 +1628,69 @@ impl FrontendNode {
         expect_matches!(got, Err(_));
         expect_eq!(grpc::Code::Unavailable as i32, got.unwrap_err().code);
 
+        Ok(())
+    }
+
+    fn test_grpc_server_second(&mut self) -> TestResult {
+        // Create a second gRPC server Node on a different port.
+        let result = oak::grpc::server::init("[::]:8181");
+        expect_matches!(result, Ok(_));
+        let handle = result.unwrap();
+        // Close the only read-handle for the invocation handle, which should
+        // trigger the gRPC server pseudo-Node to terminate (but we can't
+        // check that here).
+        expect_eq!(Ok(()), oak::channel_close(handle.handle));
+        Ok(())
+    }
+
+    fn test_grpc_server_invalid_address(&mut self) -> TestResult {
+        // Attempt to create an additional gRPC server with an invalid local address.
+        expect_eq!(
+            Err(OakStatus::ErrInvalidArgs),
+            oak::grpc::server::init("10 Downing Street")
+        );
+        Ok(())
+    }
+
+    // Under the covers, the oak::grpc::server::init() helper performs
+    // several steps. Test various failure conditions for each of those steps.
+    // We can't really check any failures, but hopefully nothing crashes...
+    fn test_grpc_server_fail_no_handle(&mut self) -> TestResult {
+        let config = oak::node_config::grpc_server("[::]:8081");
+
+        // Rather than passing the newly-created Node a message with a write handle
+        // for an invocation channel in it, instead pass it a message with data.
+        let (wh, rh) = oak::channel_create().expect("could not create channel");
+        expect_eq!(Ok(()), oak::node_create(&config, rh));
+        oak::channel_write(wh, &[0x01, 0x02], &[]).expect("could not write to channel");
+        expect_eq!(Ok(()), oak::channel_close(rh.handle));
+        expect_eq!(Ok(()), oak::channel_close(wh.handle));
+        Ok(())
+    }
+    fn test_grpc_server_fail_read_handle(&mut self) -> TestResult {
+        let config = oak::node_config::grpc_server("[::]:8081");
+
+        // Rather than passing the newly-created Node a message with a write handle
+        // for an invocation channel in it, instead pass it a message with a single
+        // read handle.
+        let (wh, rh) = oak::channel_create().expect("could not create channel");
+        expect_eq!(Ok(()), oak::node_create(&config, rh));
+        oak::channel_write(wh, &[], &[rh.handle]).expect("could not write to channel");
+        expect_eq!(Ok(()), oak::channel_close(rh.handle));
+        expect_eq!(Ok(()), oak::channel_close(wh.handle));
+        Ok(())
+    }
+    fn test_grpc_server_fail_two_handles(&mut self) -> TestResult {
+        let config = oak::node_config::grpc_server("[::]:8081");
+
+        // Rather than passing the newly-created Node a message with a write handle
+        // for an invocation channel in it, instead pass it a message with a write
+        // handle and a read handle.
+        let (wh, rh) = oak::channel_create().expect("could not create channel");
+        expect_eq!(Ok(()), oak::node_create(&config, rh));
+        oak::channel_write(wh, &[], &[wh.handle, rh.handle]).expect("could not write to channel");
+        expect_eq!(Ok(()), oak::channel_close(rh.handle));
+        expect_eq!(Ok(()), oak::channel_close(wh.handle));
         Ok(())
     }
     fn test_grpc_client_unary_method(&mut self) -> TestResult {

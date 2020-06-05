@@ -20,6 +20,6 @@ tonic = { version = "*", features = ["tls"] }
 [dev-dependencies]
 assert_matches = "*"
 env_logger = "*"
+maplit = "*"
 oak_runtime = "=0.1.0"
 oak_tests = "=0.1.0"
-maplit = "*"
