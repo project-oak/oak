@@ -20,7 +20,10 @@
 use crate::{
     message::NodeMessage,
     metrics::Metrics,
-    runtime::{graph::DotGraph, AuxServer, NodeId, NodePrivilege, NodeReadStatus, Runtime},
+    runtime::{
+        graph::DotGraph, AuxServer, ChannelHalfDirection, NodeId, NodePrivilege, NodeReadStatus,
+        Runtime,
+    },
     GrpcConfiguration,
 };
 use core::sync::atomic::{AtomicBool, AtomicU64};
@@ -298,6 +301,14 @@ impl RuntimeProxy {
             self.node_id, read_handle, bytes_capacity, handles_capacity, result
         );
         result
+    }
+
+    /// Return the direction of an ABI handle.
+    pub fn channel_direction(
+        &self,
+        handle: oak_abi::Handle,
+    ) -> Result<ChannelHalfDirection, OakStatus> {
+        self.runtime.abi_direction(self.node_id, handle)
     }
 
     pub fn metrics_data(&self) -> Metrics {
