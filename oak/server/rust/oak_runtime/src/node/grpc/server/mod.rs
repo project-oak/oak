@@ -153,8 +153,16 @@ impl Node for GrpcServerNode {
     ) {
         // Receive a `channel_writer` handle used to pass handles for temporary channels.
         info!("{}: Waiting for channel writer", self.node_name);
-        let channel_writer = GrpcServerNode::get_channel_writer(&runtime, handle)
-            .expect("Couldn't initialize channel writer");
+        let channel_writer = match GrpcServerNode::get_channel_writer(&runtime, handle) {
+            Ok(writer) => writer,
+            Err(status) => {
+                error!(
+                    "Failed to retrieve invocation channel write handle: {:?}",
+                    status
+                );
+                return;
+            }
+        };
         if let Err(err) = runtime.channel_close(handle) {
             error!("Failed to close initial inbound channel: {:?}", err);
         }
