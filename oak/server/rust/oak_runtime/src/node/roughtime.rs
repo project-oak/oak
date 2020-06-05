@@ -25,7 +25,6 @@ use crate::{
         DEFAULT_MIN_OVERLAPPING_INTERVALS, DEFAULT_SERVER_RETRIES, DEFAULT_TIMEOUT_SECONDS,
     },
 };
-
 use log::{debug, error, info};
 use oak_abi::{
     proto::{
@@ -38,7 +37,7 @@ use oak_abi::{
     },
     OakStatus,
 };
-use prost::Message as _;
+use prost::Message;
 use tokio::sync::oneshot;
 
 /// Roughtime client pseudo-Node.
@@ -104,7 +103,7 @@ impl RoughtimeClientNode {
         match invocation.receive_request(runtime) {
             Ok(request) => {
                 if request.method_name != "/oak.roughtime.RoughtimeService/GetRoughtime" {
-                    let message = format!("Unknwon method_name: {}", request.method_name);
+                    let message = format!("Unknown method_name: {}", request.method_name);
                     invocation.send_error(Code::NotFound, &message, runtime);
                 }
                 if RoughtimeRequest::decode(request.req_msg.as_slice()).is_err() {
@@ -123,19 +122,19 @@ impl RoughtimeClientNode {
 
         match self.client.get_roughtime() {
             Ok(time) => {
-                let reply = RoughtimeResponse {
+                let response = RoughtimeResponse {
                     roughtime_usec: time,
                 };
                 let mut message = Vec::new();
-                match reply.encode(&mut message) {
+                match response.encode(&mut message) {
                     Ok(_) => {
-                        let response = GrpcResponse {
+                        let grpc_response = GrpcResponse {
                             rsp_msg: message,
                             status: None,
                             last: true,
                         };
                         let _ = invocation
-                            .send_response(response, runtime)
+                            .send_response(grpc_response, runtime)
                             .map_err(|error| {
                                 error!("Couldn't send the response: {:?}", error);
                             });
