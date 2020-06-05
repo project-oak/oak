@@ -100,8 +100,8 @@ For both commands, use the `-m` flag to deploy or undeploy the
 `metrics-sidecar`.
 
 Deployment requires Docker images to be uploaded to the
-[Cloud Container Registry](gcr.io/oak-ci/) (requires write-access) with the
-following command:
+[Cloud Container Registry](http://gcr.io/oak-ci/) (requires write-access) with
+the following command:
 
 ```bash
 ./scripts/build_example -e aggregator -i rust

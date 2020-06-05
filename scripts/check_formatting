@@ -82,6 +82,19 @@ find . \
     \( -type f -name '*.md' \) \
   \) -exec markdownlint {} +
 
+# We exclude the following URLs from the checks:
+# - https://groups.google.com/g/project-oak-discuss : not publicly accessible
+# - https://crates.io/crates : returns 404 (see https://github.com/raviqqe/liche/issues/39)
+find . \
+  \(  \
+    -not \( -path ./.git -prune \) -and \
+    -not \( -path ./bazel-cache -prune \) -and \
+    -not \( -path ./cargo-cache -prune \) -and \
+    -not \( -path '*/target' -prune \) -and \
+    -not \( -path ./third_party -prune \) \
+    \( -type f -name '*.md' \) \
+  \) -exec liche --document-root=. --exclude='(https://groups.google.com/g/project-oak-discuss|https://crates.io/crates)' {} +
+
 find . \
   \(  \
     -not \( -path ./bazel-cache -prune \) -and \
