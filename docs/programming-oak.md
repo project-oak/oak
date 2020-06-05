@@ -313,7 +313,12 @@ any language that supports gRPC can use the service. For example in Go:
 		glog.Exitf("Failed to set up TLS client credentials from %q: %v", *caCert, err)
 	}
 	// TODO(#1066): Use a more restrictive Label.
-	conn, err := grpc.Dial(*address, grpc.WithTransportCredentials(creds))
+	label := label_pb.Label{}
+	metadata, err := NewLabelMetadata(label)
+	if err != nil {
+		glog.Exitf("Failed to create label metadata for %v: %v", label, err)
+	}
+	conn, err := grpc.Dial(*address, grpc.WithTransportCredentials(creds), grpc.WithPerRPCCredentials(metadata))
 	if err != nil {
 		glog.Exitf("Failed to dial Oak Application at %v: %v", *address, err)
 	}
