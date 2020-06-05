@@ -30,6 +30,8 @@ go_binary(
         "//examples/translator/proto:translator_go_proto",
         "@com_github_golang_glog//:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_grpc//codes:go_default_library",
         "@org_golang_google_grpc//credentials:go_default_library",
+        "@org_golang_google_grpc//status:go_default_library",
     ],
 )
