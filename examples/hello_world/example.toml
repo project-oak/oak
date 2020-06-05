@@ -1,0 +1,13 @@
+name = "hello_world"
+
+[modules.module]
+build_system = "Cargo"
+cargo_manifest = "examples/hello_world/module/rust/Cargo.toml"
+
+[modules.translator]
+build_system = "Cargo"
+cargo_manifest = "examples/translator/module/rust/Cargo.toml"
+
+[clients.cpp]
+build_system = "Bazel"
+bazel_target = "//examples/hello_world/client:client"

@@ -1,0 +1,18 @@
+name = "abitest"
+
+[modules.module_0]
+build_system = "Cargo"
+cargo_manifest = "examples/abitest/module_0/rust/Cargo.toml"
+
+[modules.module_1]
+build_system = "Cargo"
+cargo_manifest = "examples/abitest/module_1/rust/Cargo.toml"
+
+[clients.cpp]
+build_system = "Bazel"
+bazel_target = "//examples/abitest/client:client"
+additional_args = [
+  "--test_exclude=(Roughtime|Storage|GrpcServerServerStreamingMethod)",
+  "--cert_chain=../../../../../../../../examples/certs/local/local.pem",
+  "--private_key=../../../../../../../../examples/certs/local/local.key",
+]

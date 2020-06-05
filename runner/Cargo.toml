@@ -10,3 +10,5 @@ colored = "*"
 walkdir = "*"
 structopt = "*"
 nix = "*"
+serde = { version = "*", features = ["derive"] }
+toml = "*"

@@ -24,6 +24,7 @@
 //! ```
 
 use std::{
+    collections::HashMap,
     io::Read,
     path::{Path, PathBuf},
 };
@@ -66,7 +67,7 @@ fn build_examples(opt: &BuildExamples) -> Step {
                         && (*entry != PathBuf::from("./examples/authentication/client/Cargo.toml"))
                 })
                 .map(to_string)
-                .map(|entry| build_wasm_module(&entry))
+                .map(|entry| build_wasm_module("example", &entry))
                 .collect(),
         },
         "cpp" => unimplemented!("C++ examples not implemented yet"),
@@ -75,69 +76,34 @@ fn build_examples(opt: &BuildExamples) -> Step {
 }
 
 fn run_examples(opt: &RunExamples) -> Step {
+    let examples: Vec<Example> = example_toml_files()
+        .map(|path| {
+            toml::from_str(&read_file(&path)).expect(&format!(
+                "could not parse example manifest file: {:?}",
+                path
+            ))
+        })
+        .collect();
+    eprintln!("parsed examples manifest files: {:?}", examples);
     match opt.application_variant.as_str() {
         "rust" => Step::Multiple {
             name: "examples".to_string(),
             /// TODO(#396): Check that all the example folders are covered by an entry here, or
             /// explicitly ignored. This will probably require pulling out the `Vec<Example>` to a
             /// top-level method first.
-            steps: vec![
-                Example {
-                    name: "abitest".to_string(),
-                    rust_module_names: vec!["module_0".to_string(), "module_1".to_string()],
-                    // TODO(#1040): reinstate storage tests when Rust runtime supports them.
-                    // supports them.
-                    additional_client_flags: vec![
-                        "--cert_chain=../../../../../../../../examples/certs/local/local.pem"
-                            .to_string(),
-                        "--private_key=../../../../../../../../examples/certs/local/local.key"
-                            .to_string(),
-                        "--test_exclude=Storage".to_string(),
-                    ],
-                },
-                Example {
-                    name: "aggregator".to_string(),
-                    rust_module_names: vec!["module".to_string()],
-                    additional_client_flags: vec![],
-                },
-                Example {
-                    name: "hello_world".to_string(),
-                    rust_module_names: vec!["module".to_string()],
-                    additional_client_flags: vec![],
-                },
-                Example {
-                    name: "machine_learning".to_string(),
-                    rust_module_names: vec!["module".to_string()],
-                    additional_client_flags: vec![],
-                },
-                Example {
-                    name: "private_set_intersection".to_string(),
-                    rust_module_names: vec!["module".to_string()],
-                    additional_client_flags: vec![],
-                },
-                Example {
-                    name: "running_average".to_string(),
-                    rust_module_names: vec!["module".to_string()],
-                    additional_client_flags: vec![],
-                },
-                Example {
-                    name: "translator".to_string(),
-                    rust_module_names: vec!["module".to_string()],
-                    additional_client_flags: vec![],
-                },
-            ]
-            .iter()
-            .map(|example| run_example(example))
-            .collect(),
+            steps: examples
+                .iter()
+                .map(|example| run_example(example))
+                .collect(),
         },
         "cpp" => unimplemented!("C++ examples not implemented yet"),
         v => panic!("unknown variant: {}", v),
     }
 }
 
-fn build_wasm_module(manifest_path: &str) -> Step {
+fn build_wasm_module(name: &str, manifest_path: &str) -> Step {
     Step::Single {
-        name: manifest_path.to_string(),
+        name: format!("wasm:{}:{}", name, manifest_path.to_string()),
         command: Cmd::new(
             "cargo",
             &[
@@ -288,10 +254,37 @@ fn run_example_server(application_file: &str) -> Cmd {
     )
 }
 
+#[derive(serde::Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 struct Example {
     name: String,
-    rust_module_names: Vec<String>,
-    additional_client_flags: Vec<String>,
+    modules: HashMap<String, Target>,
+    clients: HashMap<String, Client>,
+}
+
+#[derive(serde::Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+struct Target {
+    build_system: BuildSystem,
+    #[serde(default)]
+    bazel_target: String,
+    #[serde(default)]
+    cargo_manifest: String,
+}
+
+#[derive(serde::Deserialize, Debug)]
+enum BuildSystem {
+    Bazel,
+    Cargo,
+}
+
+#[derive(serde::Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+struct Client {
+    #[serde(flatten)]
+    target: Target,
+    #[serde(default)]
+    additional_args: Vec<String>,
 }
 
 fn run_example(example: &Example) -> Step {
@@ -301,13 +294,11 @@ fn run_example(example: &Example) -> Step {
             Step::Multiple {
                 name: "build_wasm_modules".to_string(),
                 steps: example
-                    .rust_module_names
+                    .modules
                     .iter()
-                    .map(|rust_module_name| {
-                        build_wasm_module(&format!(
-                            "examples/{}/{}/rust/Cargo.toml",
-                            example.name, rust_module_name
-                        ))
+                    .map(|(name, target)| match target.build_system {
+                        BuildSystem::Cargo => build_wasm_module(name, &target.cargo_manifest),
+                        BuildSystem::Bazel => todo!(),
                     })
                     .collect(),
             },
@@ -318,23 +309,39 @@ fn run_example(example: &Example) -> Step {
                     "./bazel-bin/examples/{}/config/config.bin",
                     example.name
                 )),
-                foreground: Box::new(Step::Single {
+                foreground: Box::new(Step::Multiple {
                     name: "run_client".to_string(),
-                    command: Cmd::new(
-                        "bazel",
-                        vec![
-                            "run".to_string(),
-                            "--".to_string(),
-                            format!("//examples/{}/client:client", example.name),
-                            "--ca_cert=../../../../../../../../examples/certs/local/ca.pem"
-                                .to_string(),
-                        ]
+                    steps: example
+                        .clients
                         .iter()
-                        .chain(example.additional_client_flags.iter()),
-                    ),
+                        .map(|(name, client)| match client.target.build_system {
+                            BuildSystem::Cargo => todo!(),
+                            BuildSystem::Bazel => run_client(name, &client),
+                        })
+                        .collect(),
                 }),
             },
         ],
+    }
+}
+
+fn run_client(name: &str, client: &Client) -> Step {
+    Step::Single {
+        name: format!("bazel:{}:{}", name, client.target.bazel_target),
+        command: Cmd::new(
+            "bazel",
+            vec![
+                vec![
+                    "run".to_string(),
+                    "--".to_string(),
+                    client.target.bazel_target.to_string(),
+                    "--ca_cert=../../../../../../../../examples/certs/local/ca.pem".to_string(),
+                ],
+                client.additional_args.clone(),
+            ]
+            .iter()
+            .flatten(),
+        ),
     }
 }
 
@@ -390,6 +397,23 @@ fn is_markdown_file(path: &PathBuf) -> bool {
 fn is_cargo_toml_file(path: &PathBuf) -> bool {
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
     filename == "Cargo.toml"
+}
+
+fn example_toml_files() -> impl Iterator<Item = PathBuf> {
+    source_files().filter(is_example_toml_file)
+}
+
+fn is_example_toml_file(path: &PathBuf) -> bool {
+    let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+    filename == "example.toml"
+}
+
+fn read_file(path: &PathBuf) -> String {
+    let mut file = std::fs::File::open(path).expect("could not open file");
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)
+        .expect("could not read file contents");
+    contents
 }
 
 /// Return whether the provided path refers to a workspace-level `Cargo.toml` file, by looking at
