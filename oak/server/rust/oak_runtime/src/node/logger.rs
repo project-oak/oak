@@ -18,7 +18,10 @@
 
 use crate::runtime::RuntimeProxy;
 use log::{error, info, log};
-use oak_abi::proto::oak::log::{Level, LogMessage};
+use oak_abi::{
+    proto::oak::log::{Level, LogMessage},
+    OakStatus,
+};
 use prost::Message;
 use std::string::String;
 use tokio::sync::oneshot;
@@ -65,6 +68,9 @@ impl super::Node for LogNode {
                     }
                 },
                 Ok(None) => {}
+                Err(OakStatus::ErrTerminated) | Err(OakStatus::ErrChannelClosed) => {
+                    break;
+                }
                 Err(status) => {
                     error!("{} Failed channel read: {:?}", self.node_name, status);
                     break;
