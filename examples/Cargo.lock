@@ -2148,10 +2148,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "env_logger",
- "futures-core",
- "futures-util",
  "log",
- "oak",
  "oak_abi",
  "oak_utils",
  "prost",

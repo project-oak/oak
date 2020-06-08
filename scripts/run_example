@@ -110,11 +110,4 @@ case "${client}" in
     ;;
 esac
 
-# if [ $# -eq 0 ]; then
-#   "./bazel-client-bin/examples/${EXAMPLE}/client/client" "${TLS_ARGS[@]}" "${ADDITIONAL_ARGS[@]-}"
-# else
-#   readonly CLIENT_ARGS=("${@}")  # Choose client args provided after '--'.
-#   "./bazel-client-bin/examples/${EXAMPLE}/client/client" "${TLS_ARGS[@]}" "${ADDITIONAL_ARGS[@]-}" "${CLIENT_ARGS[@]-}"
-# fi
-
 kill_bg_pids

@@ -29,7 +29,11 @@ use proto::{
     ListPointsOfInterestRequest, Location,
 };
 use structopt::StructOpt;
-use tonic::transport::{Certificate, Channel, ClientTlsConfig};
+use tonic::{
+    metadata::MetadataValue,
+    transport::{Certificate, Channel, ClientTlsConfig},
+    Request,
+};
 
 #[derive(StructOpt, Clone)]
 #[structopt(about = "Trusted Information Retrieval Client")]
@@ -48,7 +52,7 @@ pub struct Opt {
     grpc_client_root_tls_certificate: String,
     #[structopt(
         long,
-        help = "Requested location (latitude and longitude separated by comma)",
+        help = "Requested location (latitude and longitude separated by space)",
         default_value = ""
     )]
     location: Vec<f32>,
@@ -86,16 +90,15 @@ async fn main() -> anyhow::Result<()> {
         .expect("Error encoding label");
     let mut client = TrustedInformationRetrievalClient::with_interceptor(
         channel,
-        move |mut request: tonic::Request<()>| {
-            request.metadata_mut().insert_bin(
-                "x-oak-label-bin",
-                tonic::metadata::MetadataValue::from_bytes(label.as_ref()),
-            );
+        move |mut request: Request<()>| {
+            request
+                .metadata_mut()
+                .insert_bin("x-oak-label-bin", MetadataValue::from_bytes(label.as_ref()));
             Ok(request)
         },
     );
 
-    let request = tonic::Request::new(ListPointsOfInterestRequest {
+    let request = Request::new(ListPointsOfInterestRequest {
         location: Some(Location {
             latitude,
             longitude,
