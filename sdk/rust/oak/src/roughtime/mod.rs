@@ -18,7 +18,7 @@
 
 use crate::{
     grpc,
-    proto::oak::roughtime::{RoughtimeRequest, RoughtimeServiceClient},
+    proto::oak::roughtime::{GetRoughtimeRequest, RoughtimeServiceClient},
 };
 use oak_abi::proto::oak::application::{
     node_configuration::ConfigType, NodeConfiguration, RoughtimeClientConfiguration,
@@ -44,7 +44,7 @@ impl Roughtime {
     /// Get the current Roughtime value as a Duration since UNIX epoch.
     /// Note that leap seconds are linearly smeared over 24h.
     pub fn get_roughtime(&self) -> grpc::Result<std::time::Duration> {
-        let rsp = self.client.get_roughtime(RoughtimeRequest {})?;
+        let rsp = self.client.get_roughtime(GetRoughtimeRequest {})?;
         Ok(std::time::Duration::from_micros(rsp.roughtime_usec))
     }
 }

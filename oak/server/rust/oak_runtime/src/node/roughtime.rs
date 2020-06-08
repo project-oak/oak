@@ -32,7 +32,7 @@ use oak_abi::{
         oak::{
             application::RoughtimeClientConfiguration,
             encap::GrpcResponse,
-            roughtime::{RoughtimeRequest, RoughtimeResponse},
+            roughtime::{GetRoughtimeRequest, Roughtime},
         },
     },
     OakStatus,
@@ -49,26 +49,18 @@ pub struct RoughtimeClientNode {
 impl RoughtimeClientNode {
     /// Creates a new [`RoughtimeClientNode`] instance, but does not start it.
     pub fn new(node_name: &str, config: &RoughtimeClientConfiguration) -> Self {
-        let timeout_seconds = if config.timeout_seconds == 0 {
-            DEFAULT_TIMEOUT_SECONDS
-        } else {
-            config.timeout_seconds as u64
-        };
-        let server_retries = if config.server_retries == 0 {
-            DEFAULT_SERVER_RETRIES
-        } else {
-            config.server_retries as usize
-        };
-        let min_overlapping_intervals = if config.min_overlapping_intervals == 0 {
-            DEFAULT_MIN_OVERLAPPING_INTERVALS
-        } else {
-            config.min_overlapping_intervals as usize
-        };
-        let max_radius_microseconds = if config.max_radius_microseconds == 0 {
-            DEFAULT_MAX_RADIUS_MICROSECONDS
-        } else {
-            config.max_radius_microseconds
-        };
+        let timeout_seconds = config
+            .timeout_seconds
+            .map_or(DEFAULT_TIMEOUT_SECONDS, |value| value as u64);
+        let server_retries = config
+            .server_retries
+            .map_or(DEFAULT_SERVER_RETRIES, |value| value as usize);
+        let min_overlapping_intervals = config
+            .min_overlapping_intervals
+            .map_or(DEFAULT_MIN_OVERLAPPING_INTERVALS, |value| value as usize);
+        let max_radius_microseconds = config
+            .max_radius_microseconds
+            .unwrap_or(DEFAULT_MAX_RADIUS_MICROSECONDS);
         let servers = if config.servers.is_empty() {
             get_default_servers()
         } else {
@@ -102,11 +94,12 @@ impl RoughtimeClientNode {
     fn process_invocation(&self, runtime: &RuntimeProxy, invocation: &Invocation) {
         match invocation.receive_request(runtime) {
             Ok(request) => {
+                // TODO(#1113): Generate this code automatically.
                 if request.method_name != "/oak.roughtime.RoughtimeService/GetRoughtime" {
                     let message = format!("Unknown method_name: {}", request.method_name);
                     invocation.send_error(Code::NotFound, &message, runtime);
                 }
-                if RoughtimeRequest::decode(request.req_msg.as_slice()).is_err() {
+                if GetRoughtimeRequest::decode(request.req_msg.as_slice()).is_err() {
                     invocation.send_error(
                         Code::InvalidArgument,
                         "Could not parse request.",
@@ -122,7 +115,7 @@ impl RoughtimeClientNode {
 
         match self.client.get_roughtime() {
             Ok(time) => {
-                let response = RoughtimeResponse {
+                let response = Roughtime {
                     roughtime_usec: time,
                 };
                 let mut message = Vec::new();

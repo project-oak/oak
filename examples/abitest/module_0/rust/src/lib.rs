@@ -122,7 +122,7 @@ impl FrontendNode {
             }),
             misconfigured_roughtime: oak::roughtime::Roughtime::new(
                 &RoughtimeClientConfiguration {
-                    min_overlapping_intervals: 99,
+                    min_overlapping_intervals: Some(99),
                     ..Default::default()
                 },
             ),

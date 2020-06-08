@@ -18,6 +18,8 @@ syntax = "proto3";
 
 package oak.application;
 
+import "google/protobuf/wrappers.proto";
+
 // An ApplicationConfiguration represents a unit of deployment in Oak.
 //
 // A running Oak Application instance is built from a collection of
@@ -118,11 +120,11 @@ message RoughtimeClientConfiguration {
   // will be used if this is empty.
   repeated RoughtimeServer servers = 1;
   // Connection parameters; default values will be used if any parameter is
-  // zero.
-  uint32 min_overlapping_intervals = 2;
-  uint32 timeout_seconds = 3;
-  uint32 server_retries = 4;
-  uint32 max_radius_microseconds = 5;
+  // unset.
+  google.protobuf.UInt32Value min_overlapping_intervals = 2;
+  google.protobuf.UInt32Value timeout_seconds = 3;
+  google.protobuf.UInt32Value server_retries = 4;
+  google.protobuf.UInt32Value max_radius_microseconds = 5;
 }
 
 // Information to identify a particular Roughtime server.
