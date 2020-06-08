@@ -76,7 +76,7 @@ impl NodeStopper {
             // Notification errors are discarded since not all of the Nodes save
             // and use the [`oneshot::Receiver`].
             .unwrap_or_else(|()| {
-                debug!("{} already droppped `notify_receiver`.", node_name);
+                debug!("{} already dropped `notify_receiver`.", node_name);
             });
         debug!("join thread for node {}...", self.node_name);
         let result = self.join_handle.join();

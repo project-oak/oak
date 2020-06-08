@@ -147,7 +147,7 @@ pub trait ServerNode {
 }
 
 impl<T: ServerNode> crate::Node<Invocation> for T {
-    /// Handle incoming gRPC events for an [`ServerNode`].
+    /// Handle incoming gRPC events for a [`ServerNode`].
     ///
     /// Invoking the given `node`'s [`invoke`] method for each incoming request that
     /// arrives on the inbound channel as a serialized [`Invocation`] object,
