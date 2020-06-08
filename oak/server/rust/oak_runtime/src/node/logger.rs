@@ -18,7 +18,10 @@
 
 use crate::runtime::RuntimeProxy;
 use log::{error, info, log};
-use oak_abi::proto::oak::log::{Level, LogMessage};
+use oak_abi::{
+    proto::oak::log::{Level, LogMessage},
+    OakStatus,
+};
 use prost::Message;
 use std::string::String;
 use tokio::sync::oneshot;
@@ -50,6 +53,9 @@ impl super::Node for LogNode {
             // An error indicates the Runtime is terminating. We ignore it here and keep trying to
             // read in case a Wasm Node wants to emit remaining messages. We will return
             // once the channel is closed.
+            //
+            // TODO(#1100): Investigate option for improving code clarity and not busy-waiting
+            // during runtime termination.
             let _ = runtime.wait_on_channels(&[handle]);
 
             match runtime.channel_read(handle) {
@@ -65,6 +71,9 @@ impl super::Node for LogNode {
                     }
                 },
                 Ok(None) => {}
+                Err(OakStatus::ErrChannelClosed) => {
+                    break;
+                }
                 Err(status) => {
                     error!("{} Failed channel read: {:?}", self.node_name, status);
                     break;

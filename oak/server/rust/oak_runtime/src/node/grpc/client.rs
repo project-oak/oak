@@ -90,7 +90,11 @@ impl GrpcClientNode {
             debug!("Waiting for gRPC invocation");
             // Read a gRPC invocation from the [`Receiver`].
             let invocation = receiver.receive(&runtime).map_err(|error| {
-                error!("Couldn't receive the invocation: {:?}", error);
+                if error == OakStatus::ErrTerminated {
+                    debug!("gRPC client node is terminating.");
+                } else {
+                    error!("Couldn't receive the invocation: {:?}", error);
+                }
                 error
             })?;
 
