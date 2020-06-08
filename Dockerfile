@@ -57,12 +57,6 @@ RUN curl --location "${bazel_url}" > bazel.deb \
   && apt-get clean \
   && bazel version
 
-# Install Node.js and npm.
-RUN curl --location https://deb.nodesource.com/setup_12.x | bash - \
-  && apt-get install --no-install-recommends --yes nodejs \
-  && node --version \
-  && npm --version
-
 # Install the necessary binaries and SDKs, ordering them from the less frequently changed to the
 # more frequently changed.
 # See https://docs.docker.com/develop/develop-images/dockerfile_best-practices/#leverage-build-cache.
@@ -112,19 +106,6 @@ RUN go get github.com/campoy/embedmd@97c13d6 \
 # Install liche (Markdown link checker) (via Go).
 RUN go get github.com/raviqqe/liche@f57a5d1 \
   && liche --version
-
-# Install prettier and markdownlint (via Node.js).
-# https://prettier.io/
-# https://github.com/igorshubovych/markdownlint-cli
-ARG prettier_version=1.19.1
-ARG prettier_plugin_toml_version=0.3.1
-ARG markdownlint_version=0.22.0
-RUN npm install --global \
-  prettier@${prettier_version} \
-  prettier-plugin-toml@${prettier_plugin_toml_version} \
-  markdownlint-cli@${markdownlint_version} \
-  && prettier --version \
-  && markdownlint --version
 
 ARG hadolint_version=1.17.5
 ARG hadolint_sha256=20dd38bc0602040f19268adc14c3d1aae11af27b463af43f3122076baf827a35
@@ -196,3 +177,32 @@ RUN rustup component add \
 
 RUN cargo install cargo-deadlinks
 RUN cargo install cargo-deny
+
+# Install Node.js.
+RUN curl --location https://deb.nodesource.com/setup_12.x | bash - \
+  && apt-get install --no-install-recommends --yes nodejs \
+  && node --version \
+  && npm --version
+
+# Install yarn, a Node.js package manager.
+ENV YARN_VERSION 1.22.4
+RUN curl -fsSLO --compressed "https://yarnpkg.com/downloads/$YARN_VERSION/yarn-v$YARN_VERSION.tar.gz" \
+  && mkdir -p /opt \
+  && tar -xzf yarn-v$YARN_VERSION.tar.gz -C /opt/ \
+  && ln -s /opt/yarn-v$YARN_VERSION/bin/yarn /usr/local/bin/yarn \
+  && ln -s /opt/yarn-v$YARN_VERSION/bin/yarnpkg /usr/local/bin/yarnpkg \
+  && rm yarn-v$YARN_VERSION.tar.gz \
+  && yarn --version
+
+# Install prettier and markdownlint (via yarn / Node.js).
+# https://prettier.io/
+# https://github.com/igorshubovych/markdownlint-cli
+ARG prettier_version=1.19.1
+ARG prettier_plugin_toml_version=0.3.1
+ARG markdownlint_version=0.22.0
+RUN yarn global add \
+  prettier@${prettier_version} \
+  prettier-plugin-toml@${prettier_plugin_toml_version} \
+  markdownlint-cli@${markdownlint_version} \
+  && prettier --version \
+  && markdownlint --version

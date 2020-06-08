@@ -15,6 +15,13 @@
 # Node modules.
 **/node_modules/
 
+# Yarn cache
+/yarn-cache
+
+# Yarn logs & local config
+yarn-error.log
+.yarnrc
+
 # Generated vscode files.
 **/.vscode/
 
