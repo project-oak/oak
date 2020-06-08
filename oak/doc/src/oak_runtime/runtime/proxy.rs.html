@@ -304,6 +304,17 @@
 <span id="304">304</span>
 <span id="305">305</span>
 <span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -327,7 +338,10 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">message</span>::<span class="ident">NodeMessage</span>,
     <span class="ident">metrics</span>::<span class="ident">Metrics</span>,
-    <span class="ident">runtime</span>::{<span class="ident">graph</span>::<span class="ident">DotGraph</span>, <span class="ident">AuxServer</span>, <span class="ident">NodeId</span>, <span class="ident">NodePrivilege</span>, <span class="ident">NodeReadStatus</span>, <span class="ident">Runtime</span>},
+    <span class="ident">runtime</span>::{
+        <span class="ident">graph</span>::<span class="ident">DotGraph</span>, <span class="ident">AuxServer</span>, <span class="ident">ChannelHalfDirection</span>, <span class="ident">NodeId</span>, <span class="ident">NodePrivilege</span>, <span class="ident">NodeReadStatus</span>,
+        <span class="ident">Runtime</span>,
+    },
     <span class="ident">GrpcConfiguration</span>,
 };
 <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">sync</span>::<span class="ident">atomic</span>::{<span class="ident">AtomicBool</span>, <span class="ident">AtomicU64</span>};
@@ -605,6 +619,14 @@
             <span class="self">self</span>.<span class="ident">node_id</span>, <span class="ident">read_handle</span>, <span class="ident">bytes_capacity</span>, <span class="ident">handles_capacity</span>, <span class="ident">result</span>
         );
         <span class="ident">result</span>
+    }
+
+    <span class="doccomment">/// Return the direction of an ABI handle.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_direction</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ChannelHalfDirection</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">abi_direction</span>(<span class="self">self</span>.<span class="ident">node_id</span>, <span class="ident">handle</span>)
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">metrics_data</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Metrics</span> {

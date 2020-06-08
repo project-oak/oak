@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["configure_and_run","Configures a [`RuntimeProxy`] from the given protobuf [`ApplicationConfiguration`] and begins execution."]]});
+initSidebarItems({"fn":[["configure_and_run","Configures a [`RuntimeProxy`] from the given protobuf [`ApplicationConfiguration`] and begins execution."],["load_certificate","Load a PEM encoded TLS certificate, performing (minimal) validation."]]});
