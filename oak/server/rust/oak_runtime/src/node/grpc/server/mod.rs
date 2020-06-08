@@ -406,26 +406,37 @@ impl UnaryService<Vec<u8>> for GrpcInvocationHandler {
                 last: true,
             };
 
-            let response = handler
-                // Inject the encapsulated gRPC request into the Oak Application.
+            // Inject the encapsulated gRPC request into the Oak Application.
+            let response_iter = handler
                 .inject_grpc_request(grpc_request, &oak_label)
-                // Read an encapsulated gRPC response back from the Oak Application.
-                .and_then(|response_reader| handler.read_grpc_response(response_reader))
-                // Convert an error to a gRPC error status without sending client's descriptions for
-                // internal errors.  Errors are logged inside inside [`inject_grpc_request`] and
-                // [`read_grpc_response`].
                 .map_err(|()| tonic::Status::new(tonic::Code::Internal, ""))?;
 
-            // Return the inner gRPC response.
-            debug!("Sending gRPC response: {:?}", response);
-            timer.observe_duration();
-            match response.status {
-                None => Ok(tonic::Response::new(response.rsp_msg)),
-                Some(status) if status.code == oak_abi::proto::google::rpc::Code::Ok as i32 => {
-                    Ok(tonic::Response::new(response.rsp_msg))
+            // Iterate over the encapsulated gRPC responses read back from the Oak Application.
+            // TODO(#954): support server-streaming methods
+            let mut retval = Err(tonic::Status::new(tonic::Code::Internal, ""));
+            for response in response_iter {
+                metrics_data
+                    .grpc_server_metrics
+                    .grpc_response_size_bytes
+                    .with_label_values(&[&handler.method_name])
+                    .observe(response.rsp_msg.len() as f64);
+
+                debug!("Sending gRPC response: {:?}", response);
+                retval = match response.status {
+                    None => Ok(tonic::Response::new(response.rsp_msg)),
+                    Some(status) if status.code == oak_abi::proto::google::rpc::Code::Ok as i32 => {
+                        Ok(tonic::Response::new(response.rsp_msg))
+                    }
+                    Some(status) => Err(to_tonic_status(status)),
+                };
+
+                if response.last {
+                    break;
                 }
-                Some(status) => Err(to_tonic_status(status)),
             }
+
+            timer.observe_duration();
+            retval
         };
 
         Box::pin(future)
@@ -451,7 +462,7 @@ impl GrpcInvocationHandler {
         &self,
         request: GrpcRequest,
         label: &Label,
-    ) -> Result<oak_abi::Handle, ()> {
+    ) -> Result<GrpcResponseIterator, ()> {
         // Create a pair of temporary channels to pass the gRPC request and to receive the response.
 
         // The channel containing the request is created with the label specified by the caller.
@@ -522,53 +533,68 @@ impl GrpcInvocationHandler {
             );
         }
 
-        Ok(response_reader)
+        Ok(GrpcResponseIterator {
+            runtime: self.runtime.clone(),
+            response_reader,
+        })
     }
+}
 
-    /// Read an encapsulated gRPC response from the provided channel.
-    fn read_grpc_response(&self, response_reader: oak_abi::Handle) -> Result<GrpcResponse, ()> {
+struct GrpcResponseIterator {
+    runtime: RuntimeProxy,
+    response_reader: oak_abi::Handle,
+}
+
+/// Manual implementation of the `Drop` trait to ensure the response channel
+/// is always closed.
+impl Drop for GrpcResponseIterator {
+    fn drop(&mut self) {
+        if let Err(err) = self.runtime.channel_close(self.response_reader) {
+            error!("Failed to close gRPC response reader channel: {:?}", err);
+        }
+    }
+}
+
+impl Iterator for GrpcResponseIterator {
+    type Item = GrpcResponse;
+
+    /// Read a single encapsulated gRPC response from the provided channel.
+    fn next(&mut self) -> Option<Self::Item> {
         let read_status = self
             .runtime
-            .wait_on_channels(&[response_reader])
+            .wait_on_channels(&[self.response_reader])
             .map_err(|error| {
                 error!("Couldn't wait on the gRPC response channel: {:?}", error);
-            })?;
+            })
+            .ok()?;
 
-        let result = if read_status[0] == ChannelReadStatus::ReadReady {
-            self.runtime
-                .channel_read(response_reader)
-                .map_err(|error| {
-                    error!("Couldn't read from the gRPC response channel: {:?}", error);
-                })
-                .map(|message| {
-                    // Return an empty HTTP body if the `message` is None.
-                    message.map_or(vec![], |m| {
-                        self.runtime
-                            .metrics_data()
-                            .grpc_server_metrics
-                            .grpc_response_size_bytes
-                            .with_label_values(&[&self.method_name])
-                            .observe(m.data.len() as f64);
-                        m.data
-                    })
-                })
-                .and_then(|response| {
-                    // Return the serialized message body.
-                    GrpcResponse::decode(response.as_slice()).map_err(|error| {
-                        error!("Couldn't parse the GrpcResponse message: {}", error);
-                    })
-                })
+        if read_status[0] == ChannelReadStatus::ReadReady {
+            match self.runtime.channel_read(self.response_reader) {
+                Ok(Some(msg)) => match GrpcResponse::decode(msg.data.as_slice()) {
+                    Ok(grpc_rsp) => Some(grpc_rsp),
+                    Err(err) => {
+                        error!("Couldn't parse the GrpcResponse message: {}", err);
+                        None
+                    }
+                },
+                Ok(None) => {
+                    error!("No message available on gRPC response channel");
+                    None
+                }
+                Err(status) => {
+                    error!("Couldn't read from the gRPC response channel: {:?}", status);
+                    None
+                }
+            }
+        } else if read_status[0] == ChannelReadStatus::Orphaned {
+            debug!("gRPC response channel closed");
+            None
         } else {
             error!(
                 "Couldn't read from the gRPC response channel: {:?}",
                 read_status[0]
             );
-            Err(())
-        };
-
-        if let Err(err) = self.runtime.channel_close(response_reader) {
-            error!("Failed to close gRPC response channel: {:?}", err);
+            None
         }
-        result
     }
 }
