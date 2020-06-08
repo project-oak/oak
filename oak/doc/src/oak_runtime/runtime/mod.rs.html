@@ -1132,8 +1132,8 @@
             .<span class="ident">send</span>(())
             <span class="comment">// Notification errors are discarded since not all of the Nodes save</span>
             <span class="comment">// and use the [`oneshot::Receiver`].</span>
-            .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
-                <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t send notification to {}: {:?}&quot;</span>, <span class="ident">node_name</span>, <span class="ident">error</span>);
+            .<span class="ident">unwrap_or_else</span>(<span class="op">|</span>()<span class="op">|</span> {
+                <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{} already droppped `notify_receiver`.&quot;</span>, <span class="ident">node_name</span>);
             });
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;join thread for node {}...&quot;</span>, <span class="self">self</span>.<span class="ident">node_name</span>);
         <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">join_handle</span>.<span class="ident">join</span>();
