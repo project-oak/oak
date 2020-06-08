@@ -18,6 +18,7 @@
 
 use crate::RuntimeProxy;
 use oak_abi::{proto::oak::application::ApplicationConfiguration, OakStatus};
+use tonic::transport::Certificate;
 
 /// Configures a [`RuntimeProxy`] from the given protobuf [`ApplicationConfiguration`] and begins
 /// execution.
@@ -33,4 +34,14 @@ pub fn configure_and_run(
     let proxy = RuntimeProxy::create_runtime(application_configuration, grpc_configuration);
     let handle = proxy.start_runtime(runtime_configuration)?;
     Ok((proxy, handle))
+}
+
+/// Load a PEM encoded TLS certificate, performing (minimal) validation.
+pub fn load_certificate(certificate: &str) -> Result<Certificate, ()> {
+    let mut cursor = std::io::Cursor::new(certificate);
+    // `rustls` doesn't specify certificate parsing errors:
+    // https://docs.rs/rustls/0.17.0/rustls/internal/pemfile/fn.certs.html
+    rustls::internal::pemfile::certs(&mut cursor)?;
+
+    Ok(Certificate::from_pem(certificate))
 }
