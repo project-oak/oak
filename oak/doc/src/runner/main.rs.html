@@ -545,8 +545,6 @@
 <span id="545">545</span>
 <span id="546">546</span>
 <span id="547">547</span>
-<span id="548">548</span>
-<span id="549">549</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -635,7 +633,6 @@
                 <span class="ident">Example</span> {
                     <span class="ident">name</span>: <span class="string">&quot;abitest&quot;</span>.<span class="ident">to_string</span>(),
                     <span class="ident">rust_module_names</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;module_0&quot;</span>.<span class="ident">to_string</span>(), <span class="string">&quot;module_1&quot;</span>.<span class="ident">to_string</span>()],
-                    <span class="comment">// TODO(#730): reinstate Roughtime tests when Rust runtime supports them.</span>
                     <span class="comment">// TODO(#1040): reinstate storage tests when Rust runtime supports them.</span>
                     <span class="comment">// TODO(#953): reinstate gRPC server server-streaming tests when Rust runtime</span>
                     <span class="comment">// supports them.</span>
@@ -644,8 +641,7 @@
                             .<span class="ident">to_string</span>(),
                         <span class="string">&quot;--private_key=../../../../../../../../examples/certs/local/local.key&quot;</span>
                             .<span class="ident">to_string</span>(),
-                        <span class="string">&quot;--test_exclude=(Roughtime|Storage|GrpcServerServerStreamingMethod)&quot;</span>
-                            .<span class="ident">to_string</span>(),
+                        <span class="string">&quot;--test_exclude=(Storage|GrpcServerServerStreamingMethod)&quot;</span>.<span class="ident">to_string</span>(),
                     ],
                 },
                 <span class="ident">Example</span> {

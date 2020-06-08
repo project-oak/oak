@@ -198,6 +198,20 @@
 <span id="198">198</span>
 <span id="199">199</span>
 <span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -370,6 +384,7 @@
 {
     <span class="ident">compile_protos_with</span>(
         <span class="ident">prost_build</span>::<span class="ident">Config</span>::<span class="ident">new</span>().<span class="ident">out_dir</span>(<span class="ident">out_dir</span>),
+        <span class="bool-val">true</span>,
         <span class="ident">inputs</span>,
         <span class="ident">includes</span>,
     );
@@ -379,11 +394,22 @@
 <span class="kw">where</span>
     <span class="ident">P</span>: <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">std</span>::<span class="ident">path</span>::<span class="ident">Path</span><span class="op">&gt;</span>,
 {
-    <span class="ident">compile_protos_with</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">prost_build</span>::<span class="ident">Config</span>::<span class="ident">new</span>(), <span class="ident">inputs</span>, <span class="ident">includes</span>);
+    <span class="ident">compile_protos_with</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">prost_build</span>::<span class="ident">Config</span>::<span class="ident">new</span>(), <span class="bool-val">true</span>, <span class="ident">inputs</span>, <span class="ident">includes</span>);
 }
 
-<span class="kw">fn</span> <span class="ident">compile_protos_with</span><span class="op">&lt;</span><span class="ident">P</span><span class="op">&gt;</span>(<span class="ident">prost_config</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">prost_build</span>::<span class="ident">Config</span>, <span class="ident">inputs</span>: <span class="kw-2">&amp;</span>[<span class="ident">P</span>], <span class="ident">includes</span>: <span class="kw-2">&amp;</span>[<span class="ident">P</span>])
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">compile_protos_without_services</span><span class="op">&lt;</span><span class="ident">P</span><span class="op">&gt;</span>(<span class="ident">inputs</span>: <span class="kw-2">&amp;</span>[<span class="ident">P</span>], <span class="ident">includes</span>: <span class="kw-2">&amp;</span>[<span class="ident">P</span>])
 <span class="kw">where</span>
+    <span class="ident">P</span>: <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">std</span>::<span class="ident">path</span>::<span class="ident">Path</span><span class="op">&gt;</span>,
+{
+    <span class="ident">compile_protos_with</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">prost_build</span>::<span class="ident">Config</span>::<span class="ident">new</span>(), <span class="bool-val">false</span>, <span class="ident">inputs</span>, <span class="ident">includes</span>);
+}
+
+<span class="kw">fn</span> <span class="ident">compile_protos_with</span><span class="op">&lt;</span><span class="ident">P</span><span class="op">&gt;</span>(
+    <span class="ident">prost_config</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">prost_build</span>::<span class="ident">Config</span>,
+    <span class="ident">generate_services</span>: <span class="ident">bool</span>,
+    <span class="ident">inputs</span>: <span class="kw-2">&amp;</span>[<span class="ident">P</span>],
+    <span class="ident">includes</span>: <span class="kw-2">&amp;</span>[<span class="ident">P</span>],
+) <span class="kw">where</span>
     <span class="ident">P</span>: <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">std</span>::<span class="ident">path</span>::<span class="ident">Path</span><span class="op">&gt;</span>,
 {
     <span class="kw">for</span> <span class="ident">input</span> <span class="kw">in</span> <span class="ident">inputs</span> {
@@ -391,8 +417,10 @@
         <span class="comment">// https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath</span>
         <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;cargo:rerun-if-changed={}&quot;</span>, <span class="ident">input</span>.<span class="ident">as_ref</span>().<span class="ident">display</span>());
     }
+    <span class="kw">if</span> <span class="ident">generate_services</span> {
+        <span class="ident">prost_config</span>.<span class="ident">service_generator</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">OakServiceGenerator</span>));
+    }
     <span class="ident">prost_config</span>
-        .<span class="ident">service_generator</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">OakServiceGenerator</span>))
         <span class="comment">// We require label-related types to be comparable and hashable so that they can be used in</span>
         <span class="comment">// hash-based collections.</span>
         .<span class="ident">type_attribute</span>(<span class="string">&quot;.oak.label&quot;</span>, <span class="string">&quot;#[derive(Eq, Hash)]&quot;</span>)

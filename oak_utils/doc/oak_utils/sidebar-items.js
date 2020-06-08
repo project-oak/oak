@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["compile_protos",""],["compile_protos_to",""]]});
+initSidebarItems({"fn":[["compile_protos",""],["compile_protos_to",""],["compile_protos_without_services",""]]});

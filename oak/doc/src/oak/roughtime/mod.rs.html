@@ -69,7 +69,7 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">grpc</span>,
-    <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">roughtime</span>::{<span class="ident">RoughTimeRequest</span>, <span class="ident">RoughtimeServiceClient</span>},
+    <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">roughtime</span>::{<span class="ident">GetRoughtimeRequest</span>, <span class="ident">RoughtimeServiceClient</span>},
 };
 <span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::{
     <span class="ident">node_configuration</span>::<span class="ident">ConfigType</span>, <span class="ident">NodeConfiguration</span>, <span class="ident">RoughtimeClientConfiguration</span>,
@@ -95,8 +95,8 @@
     <span class="doccomment">/// Get the current Roughtime value as a Duration since UNIX epoch.</span>
     <span class="doccomment">/// Note that leap seconds are linearly smeared over 24h.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_roughtime</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">Duration</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">rsp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">get_rough_time</span>(<span class="ident">RoughTimeRequest</span> {})<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">Duration</span>::<span class="ident">from_micros</span>(<span class="ident">rsp</span>.<span class="ident">rough_time_usec</span>))
+        <span class="kw">let</span> <span class="ident">rsp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">get_roughtime</span>(<span class="ident">GetRoughtimeRequest</span> {})<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">Duration</span>::<span class="ident">from_micros</span>(<span class="ident">rsp</span>.<span class="ident">roughtime_usec</span>))
     }
 }
 </pre></div>

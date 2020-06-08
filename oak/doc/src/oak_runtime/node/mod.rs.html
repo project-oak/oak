@@ -278,9 +278,9 @@
                     .<span class="ident">clone</span>(),
             )<span class="question-mark">?</span>))
         }
-        <span class="prelude-val">Some</span>(<span class="ident">ConfigType</span>::<span class="ident">RoughtimeClientConfig</span>(<span class="ident">_config</span>)) <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="prelude-val">Ok</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">roughtime</span>::<span class="ident">RoughtimeClientNode</span>::<span class="ident">new</span>(<span class="ident">node_name</span>)))
-        }
+        <span class="prelude-val">Some</span>(<span class="ident">ConfigType</span>::<span class="ident">RoughtimeClientConfig</span>(<span class="ident">config</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Box</span>::<span class="ident">new</span>(
+            <span class="ident">roughtime</span>::<span class="ident">RoughtimeClientNode</span>::<span class="ident">new</span>(<span class="ident">node_name</span>, <span class="ident">config</span>),
+        )),
         <span class="prelude-val">Some</span>(<span class="ident">ConfigType</span>::<span class="ident">StorageConfig</span>(<span class="ident">_config</span>)) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="prelude-val">Ok</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">storage</span>::<span class="ident">StorageNode</span>::<span class="ident">new</span>(<span class="ident">node_name</span>)))
         }

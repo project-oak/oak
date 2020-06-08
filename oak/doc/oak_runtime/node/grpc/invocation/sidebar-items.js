@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Invocation","A gRPC invocation, consisting of exactly two channels: one to read incoming requests from the client (wrapped in a [`Receiver`]), and one to write outgoing responses to the client (wrapped in a [`Sender`])."]]});

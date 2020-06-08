@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["RoughTimeRequest",""],["RoughTimeResponse",""],["RoughtimeServiceClient",""],["RoughtimeServiceDispatcher",""]],"trait":[["RoughtimeService",""]]});
+initSidebarItems({"struct":[["GetRoughtimeRequest",""],["Roughtime",""],["RoughtimeServiceClient",""],["RoughtimeServiceDispatcher",""]],"trait":[["RoughtimeService",""]]});

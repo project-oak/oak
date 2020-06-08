@@ -375,6 +375,16 @@
 <span id="375">375</span>
 <span id="376">376</span>
 <span id="377">377</span>
+<span id="378">378</span>
+<span id="379">379</span>
+<span id="380">380</span>
+<span id="381">381</span>
+<span id="382">382</span>
+<span id="383">383</span>
+<span id="384">384</span>
+<span id="385">385</span>
+<span id="386">386</span>
+<span id="387">387</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -607,6 +617,16 @@
 }
 
 <span class="kw">impl</span> <span class="ident">RoughtimeServer</span> {
+    <span class="doccomment">/// Creates a new instance.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">host</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">port</span>: <span class="ident">u16</span>, <span class="ident">public_key_base64</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="ident">RoughtimeServer</span> {
+            <span class="ident">name</span>: <span class="ident">name</span>.<span class="ident">to_owned</span>(),
+            <span class="ident">host</span>: <span class="ident">host</span>.<span class="ident">to_owned</span>(),
+            <span class="ident">port</span>,
+            <span class="ident">public_key_base64</span>: <span class="ident">public_key_base64</span>.<span class="ident">to_owned</span>(),
+        }
+    }
+
     <span class="doccomment">/// Sends a request to a Roughtime server using UDP.</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">send_roughtime_request</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
